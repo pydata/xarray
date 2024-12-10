@@ -275,43 +275,33 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         expected = np.datetime64("2000-01-01", "ns")
         assert x[0].values == expected
 
-    dt64_data = pd.date_range("2000-01-01", periods=3)
+    @pytest.mark.filterwarnings("ignore:Converting non-default")
+    def test_datetime64_conversion(self):
+        times = pd.date_range("2000-01-01", periods=3)
+        for values in [
+            times,
+            times.values,
+            times.values.astype("datetime64[s]"),
+            times.to_pydatetime(),
+        ]:
+            v = self.cls(["t"], values)
+            assert v.dtype == np.dtype("datetime64[ns]")
+            assert_array_equal(v.values, times.values)
+            assert v.values.dtype == np.dtype("datetime64[ns]")
 
     @pytest.mark.filterwarnings("ignore:Converting non-default")
-    @pytest.mark.parametrize(
-        "values, unit",
-        [
-            (dt64_data, "ns"),
-            (dt64_data.values, "ns"),
-            (dt64_data.values.astype("datetime64[s]"), "s"),
-            (dt64_data.to_pydatetime(), "ns"),
-        ],
-    )
-    def test_datetime64_conversion(self, values, unit):
-        # todo: check, if this test is OK
-        v = self.cls(["t"], values)
-        assert v.dtype == np.dtype(f"datetime64[{unit}]")
-        assert_array_equal(v.values, self.dt64_data.values)
-        assert v.values.dtype == np.dtype(f"datetime64[{unit}]")
-
-    td64_data = pd.timedelta_range(start=0, periods=3)
-
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
-    @pytest.mark.parametrize(
-        "values, unit",
-        [
-            (td64_data, "ns"),
-            (td64_data.values, "ns"),
-            (td64_data.values.astype("timedelta64[s]"), "s"),
-            (td64_data.to_pytimedelta(), "ns"),
-        ],
-    )
-    def test_timedelta64_conversion(self, values, unit):
-        # todo: check, if this test is OK
-        v = self.cls(["t"], values)
-        assert v.dtype == np.dtype(f"timedelta64[{unit}]")
-        assert_array_equal(v.values, self.td64_data.values)
-        assert v.values.dtype == np.dtype(f"timedelta64[{unit}]")
+    def test_timedelta64_conversion(self):
+        times = pd.timedelta_range(start=0, periods=3)
+        for values in [
+            times,
+            times.values,
+            times.values.astype("timedelta64[s]"),
+            times.to_pytimedelta(),
+        ]:
+            v = self.cls(["t"], values)
+            assert v.dtype == np.dtype("timedelta64[ns]")
+            assert_array_equal(v.values, times.values)
+            assert v.values.dtype == np.dtype("timedelta64[ns]")
 
     def test_object_conversion(self):
         data = np.arange(5).astype(str).astype(object)
@@ -2387,6 +2377,7 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert actual.shape == expected.shape
         assert_equal(actual, expected)
 
+    @pytest.mark.xfail(reason="https://github.com/dask/dask/issues/11585")
     def test_multiindex(self):
         super().test_multiindex()
 
