@@ -3401,8 +3401,8 @@ class TestInstrumentedZarrStore:
             if has_zarr_v3:
                 expected = {
                     "set": 4,
-                    "get": 16,  # TODO: fixme upstream (should be 8)
-                    "list_dir": 3,  # TODO: fixme upstream (should be 2)
+                    "get": 9,  # TODO: fixme upstream (should be 8)
+                    "list_dir": 2,  # TODO: fixme upstream (should be 2)
                     "list_prefix": 0,
                 }
             else:
@@ -3424,8 +3424,8 @@ class TestInstrumentedZarrStore:
             if has_zarr_v3:
                 expected = {
                     "set": 4,
-                    "get": 16,  # TODO: fixme upstream (should be 8)
-                    "list_dir": 3,  # TODO: fixme upstream (should be 2)
+                    "get": 9,  # TODO: fixme upstream (should be 8)
+                    "list_dir": 2,  # TODO: fixme upstream (should be 2)
                     "list_prefix": 0,
                 }
             else:
@@ -3479,7 +3479,7 @@ class TestInstrumentedZarrStore:
                 expected = {
                     "set": 1,
                     "get": 3,
-                    "list_dir": 2,
+                    "list_dir": 0,
                     "list_prefix": 0,
                 }
             else:
@@ -3502,8 +3502,8 @@ class TestInstrumentedZarrStore:
             if has_zarr_v3:
                 expected = {
                     "set": 1,
-                    "get": 5,
-                    "list_dir": 2,
+                    "get": 4,
+                    "list_dir": 0,
                     "list_prefix": 0,
                 }
             else:
@@ -3525,7 +3525,7 @@ class TestInstrumentedZarrStore:
                 expected = {
                     "set": 0,
                     "get": 5,
-                    "list_dir": 1,
+                    "list_dir": 0,
                     "list_prefix": 0,
                 }
             else:
@@ -3567,12 +3567,25 @@ class TestZarrDirectoryStore(ZarrBase):
             yield tmp
 
     @contextlib.contextmanager
-    def create_store(self, cache_members: bool = False):
+    def create_store(self, **kwargs):
         with self.create_zarr_target() as store_target:
-            group = backends.ZarrStore.open_group(
-                store_target, mode="a", cache_members=cache_members
-            )
+            group = backends.ZarrStore.open_group(store_target, mode="a", **kwargs)
             yield group
+
+    def test_write_store(self) -> None:
+        # This test is overriden from the base implementation because we need to ensure
+        # that the members cache is off, as the `ZarrStore` instance is re-used in the
+        # test function. Refactoring the base version of this test to
+        # if this test is refactored to no longer re-use the store object, then
+        # this implementation can be removed.
+
+        expected = create_test_data()
+        with self.create_store(cache_members=False) as store:
+            expected.dump_to_store(store)
+            # we need to cf decode the store because it has time and
+            # non-dimension coordinates
+            with xr.decode_cf(store) as actual:
+                assert_allclose(expected, actual)
 
 
 @requires_zarr
