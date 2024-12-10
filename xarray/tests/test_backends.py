@@ -2278,7 +2278,10 @@ class ZarrBase(CFEncodedBase):
     def create_store(self, cache_members: bool = True):
         with self.create_zarr_target() as store_target:
             yield backends.ZarrStore.open_group(
-                store_target, mode="w", cache_members=cache_members, **self.version_kwargs
+                store_target,
+                mode="w",
+                cache_members=cache_members,
+                **self.version_kwargs,
             )
 
     def save(self, dataset, store_target, **kwargs):  # type: ignore[override]
@@ -2594,7 +2597,7 @@ class ZarrBase(CFEncodedBase):
 
             # put it back and try removing from a variable
             del zarr_group["var2"].attrs[self.DIMENSION_KEY]
-            
+
             with pytest.raises(KeyError):
                 with xr.decode_cf(store):
                     pass
@@ -3262,10 +3265,10 @@ class ZarrBase(CFEncodedBase):
     def test_cache_members(self) -> None:
         """
         Ensure that if `ZarrStore` is created with `cache_members` set to `True`,
-        a `ZarrStore` only inspects the underlying zarr group once, 
+        a `ZarrStore` only inspects the underlying zarr group once,
         and that the results of that inspection are cached.
 
-        Otherwise, `ZarrStore.members` should inspect the underlying zarr group each time it is 
+        Otherwise, `ZarrStore.members` should inspect the underlying zarr group each time it is
         invoked
         """
         with self.create_zarr_target() as store_target:
@@ -3290,14 +3293,12 @@ class ZarrBase(CFEncodedBase):
             # create a new array
             new_key = "baz"
             zstore_mut.zarr_group.create(name=new_key, shape=(1,), dtype="uint8")
-            
+
             observed_keys_1 = sorted(zstore_stat.array_keys())
             assert observed_keys_1 == array_keys
-            
+
             observed_keys_2 = sorted(zstore_mut.array_keys())
             assert observed_keys_2 == sorted(array_keys + [new_key])
-
-
 
 
 @requires_zarr
@@ -3564,7 +3565,9 @@ class TestZarrDirectoryStore(ZarrBase):
     @contextlib.contextmanager
     def create_store(self, cache_members: bool = True):
         with self.create_zarr_target() as store_target:
-            group = backends.ZarrStore.open_group(store_target, mode="a", cache_members=cache_members)
+            group = backends.ZarrStore.open_group(
+                store_target, mode="a", cache_members=cache_members
+            )
             yield group
 
 

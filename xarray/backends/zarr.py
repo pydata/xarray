@@ -666,7 +666,7 @@ class ZarrStore(AbstractWritableDataStore):
                 write_empty,
                 close_store_on_close,
                 use_zarr_fill_value_as_mask,
-                cache_members=cache_members
+                cache_members=cache_members,
             )
             for group in group_paths
         }
@@ -774,16 +774,18 @@ class ZarrStore(AbstractWritableDataStore):
     def _update_members(self, data: dict[str, ZarrArray]):
         if not self._cache_members:
             msg = (
-                'Updating the members cache is only valid if this object was created '
-                'with cache_members=True, but this object has `cache_members=False`.' 
-                f'You should update the zarr group directly.'
-                )
+                "Updating the members cache is only valid if this object was created "
+                "with cache_members=True, but this object has `cache_members=False`."
+                "You should update the zarr group directly."
+            )
             raise ValueError(msg)
         else:
             self._members = {**self.members, **data}
 
     def array_keys(self) -> tuple[str, ...]:
-        return tuple(key for (key, node) in self.members.items() if isinstance(node, ZarrArray))
+        return tuple(
+            key for (key, node) in self.members.items() if isinstance(node, ZarrArray)
+        )
 
     def arrays(self) -> tuple[tuple[str, ZarrArray], ...]:
         return tuple(
