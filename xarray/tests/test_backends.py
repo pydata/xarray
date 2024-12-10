@@ -3460,12 +3460,12 @@ class TestInstrumentedZarrStore:
                 }
             else:
                 expected = {
-                    "iter": 3,
+                    "iter": 1,
                     "contains": 16,
                     "setitem": 9,
-                    "getitem": 15,
-                    "listdir": 2,
-                    "list_prefix": 4,
+                    "getitem": 13,
+                    "listdir": 0,
+                    "list_prefix": 5,
                 }
 
             patches = self.make_patches(store)
@@ -3485,10 +3485,10 @@ class TestInstrumentedZarrStore:
             else:
                 expected = {
                     "iter": 1,
-                    "contains": 4,
+                    "contains": 6,
                     "setitem": 1,
-                    "getitem": 5,
-                    "listdir": 1,
+                    "getitem": 7,
+                    "listdir": 0,
                     "list_prefix": 0,
                 }
 
@@ -3508,11 +3508,11 @@ class TestInstrumentedZarrStore:
                 }
             else:
                 expected = {
-                    "iter": 2,
-                    "contains": 4,
+                    "iter": 1,
+                    "contains": 6,
                     "setitem": 1,
-                    "getitem": 6,
-                    "listdir": 2,
+                    "getitem": 8,
+                    "listdir": 0,
                     "list_prefix": 0,
                 }
 
@@ -3530,11 +3530,11 @@ class TestInstrumentedZarrStore:
                 }
             else:
                 expected = {
-                    "iter": 2,
-                    "contains": 4,
-                    "setitem": 1,
-                    "getitem": 6,
-                    "listdir": 2,
+                    "iter": 1,
+                    "contains": 6,
+                    "setitem": 0,
+                    "getitem": 8,
+                    "listdir": 0,
                     "list_prefix": 0,
                 }
 
