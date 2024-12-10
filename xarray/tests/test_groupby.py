@@ -636,7 +636,7 @@ def test_groupby_repr_datetime(obj) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:No index created for dimension id:UserWarning")
-@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
+@pytest.mark.filterwarnings("ignore:Converting non-default")
 @pytest.mark.filterwarnings("ignore:invalid value encountered in divide:RuntimeWarning")
 @pytest.mark.parametrize("shuffle", [True, False])
 @pytest.mark.parametrize(
@@ -1117,7 +1117,8 @@ def test_groupby_math_nD_group() -> None:
     expected = da.isel(x=slice(30)) - expanded_mean
     expected["labels"] = expected.labels.broadcast_like(expected.labels2d)
     expected["num"] = expected.num.broadcast_like(expected.num2d)
-    expected["num2d_bins"] = (("x", "y"), mean.num2d_bins.data[idxr])
+    # mean.num2d_bins.data is a pandas IntervalArray so needs to be put in `numpy` to allow indexing
+    expected["num2d_bins"] = (("x", "y"), mean.num2d_bins.data.to_numpy()[idxr])
     actual = g - mean
     assert_identical(expected, actual)
 
@@ -2198,9 +2199,9 @@ class TestDataArrayResample:
             assert_allclose(expected, actual, rtol=1e-16)
 
     @requires_scipy
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
+    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_upsample_interpolate_bug_2197(self) -> None:
-        dates = pd.date_range("2007-02-01", "2007-03-01", freq="D")
+        dates = pd.date_range("2007-02-01", "2007-03-01", freq="D", unit="s")
         da = xr.DataArray(np.arange(len(dates)), [("time", dates)])
         result = da.resample(time="ME").interpolate("linear")
         expected_times = np.array(
