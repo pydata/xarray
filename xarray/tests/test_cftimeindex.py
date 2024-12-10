@@ -1159,7 +1159,7 @@ def test_strftime_of_cftime_array(calendar):
 @pytest.mark.parametrize("unsafe", [False, True])
 def test_to_datetimeindex(calendar, unsafe):
     index = xr.cftime_range("2000", periods=5, calendar=calendar)
-    expected = pd.date_range("2000", periods=5)
+    expected = pd.date_range("2000", periods=5, unit="us")
 
     if calendar in _NON_STANDARD_CALENDARS and not unsafe:
         with pytest.warns(RuntimeWarning, match="non-standard"):
@@ -1176,7 +1176,11 @@ def test_to_datetimeindex(calendar, unsafe):
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
 def test_to_datetimeindex_out_of_range(calendar):
     index = xr.cftime_range("0001", periods=5, calendar=calendar)
-    with pytest.raises(ValueError, match="0001"):
+    # todo: needs discussion, do we need this test?
+    if calendar in _NON_STANDARD_CALENDARS:
+        with pytest.warns(RuntimeWarning, match="non-standard"):
+            index.to_datetimeindex()
+    else:
         index.to_datetimeindex()
 
 
@@ -1199,7 +1203,8 @@ def test_multiindex():
 @pytest.mark.parametrize("freq", ["3663s", "33min", "2h"])
 @pytest.mark.parametrize("method", ["floor", "ceil", "round"])
 def test_rounding_methods_against_datetimeindex(freq, method):
-    expected = pd.date_range("2000-01-02T01:03:51", periods=10, freq="1777s")
+    # todo: check, if setting to "us" is enough
+    expected = pd.date_range("2000-01-02T01:03:51", periods=10, freq="1777s", unit="us")
     expected = getattr(expected, method)(freq)
     result = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777s")
     result = getattr(result, method)(freq).to_datetimeindex()
