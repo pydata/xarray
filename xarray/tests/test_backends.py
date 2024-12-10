@@ -2275,10 +2275,10 @@ class ZarrBase(CFEncodedBase):
         raise NotImplementedError
 
     @contextlib.contextmanager
-    def create_store(self):
+    def create_store(self, cache_members: bool = True):
         with self.create_zarr_target() as store_target:
             yield backends.ZarrStore.open_group(
-                store_target, mode="w", **self.version_kwargs
+                store_target, mode="w", cache_members=cache_members, **self.version_kwargs
             )
 
     def save(self, dataset, store_target, **kwargs):  # type: ignore[override]
@@ -2572,7 +2572,7 @@ class ZarrBase(CFEncodedBase):
         skip_if_zarr_format_3("This test is unnecessary; no hidden Zarr keys")
 
         expected = create_test_data()
-        with self.create_store() as store:
+        with self.create_store(cache_members=False) as store:
             expected.dump_to_store(store)
             zarr_group = store.ds
 
@@ -2594,6 +2594,7 @@ class ZarrBase(CFEncodedBase):
 
             # put it back and try removing from a variable
             del zarr_group["var2"].attrs[self.DIMENSION_KEY]
+            
             with pytest.raises(KeyError):
                 with xr.decode_cf(store):
                     pass
@@ -3258,19 +3259,18 @@ class ZarrBase(CFEncodedBase):
                 assert original[name].chunks == actual_var.chunks
             assert original.chunks == actual.chunks
 
-    @pytest.mark.parametrize("cache_array_keys", [True, False])
-    def test_get_array_keys(self, cache_array_keys: bool) -> None:
+    def test_cache_members(self) -> None:
         """
-        Ensure that if `ZarrStore` is created with `cache_array_keys` set to `True`,
-        a `ZarrStore.get_array_keys` only invokes the `array_keys` function on the
-        `ZarrStore.zarr_group` instance once, and that the results of that call are cached.
+        Ensure that if `ZarrStore` is created with `cache_members` set to `True`,
+        a `ZarrStore` only inspects the underlying zarr group once, 
+        and that the results of that inspection are cached.
 
-        Otherwise, `ZarrStore.get_array_keys` instance should invoke the `array_keys`
-        each time it is called.
+        Otherwise, `ZarrStore.members` should inspect the underlying zarr group each time it is 
+        invoked
         """
         with self.create_zarr_target() as store_target:
-            zstore = backends.ZarrStore.open_group(
-                store_target, mode="w", cache_members=cache_array_keys
+            zstore_mut = backends.ZarrStore.open_group(
+                store_target, mode="w", cache_members=False
             )
 
             # ensure that the keys are sorted
@@ -3278,20 +3278,26 @@ class ZarrBase(CFEncodedBase):
 
             # create some arrays
             for ak in array_keys:
-                zstore.zarr_group.create(name=ak, shape=(1,), dtype="uint8")
+                zstore_mut.zarr_group.create(name=ak, shape=(1,), dtype="uint8")
 
-            observed_keys_0 = sorted(zstore.array_keys())
+            zstore_stat = backends.ZarrStore.open_group(
+                store_target, mode="r", cache_members=True
+            )
+
+            observed_keys_0 = sorted(zstore_stat.array_keys())
             assert observed_keys_0 == array_keys
 
             # create a new array
             new_key = "baz"
-            zstore.zarr_group.create(name=new_key, shape=(1,), dtype="uint8")
-            observed_keys_1 = sorted(zstore.array_keys())
+            zstore_mut.zarr_group.create(name=new_key, shape=(1,), dtype="uint8")
+            
+            observed_keys_1 = sorted(zstore_stat.array_keys())
+            assert observed_keys_1 == array_keys
+            
+            observed_keys_2 = sorted(zstore_mut.array_keys())
+            assert observed_keys_2 == sorted(array_keys + [new_key])
 
-            if cache_array_keys:
-                assert observed_keys_1 == array_keys
-            else:
-                assert observed_keys_1 == sorted(array_keys + [new_key])
+
 
 
 @requires_zarr
@@ -3556,9 +3562,9 @@ class TestZarrDirectoryStore(ZarrBase):
             yield tmp
 
     @contextlib.contextmanager
-    def create_store(self):
+    def create_store(self, cache_members: bool = True):
         with self.create_zarr_target() as store_target:
-            group = backends.ZarrStore.open_group(store_target, mode="a")
+            group = backends.ZarrStore.open_group(store_target, mode="a", cache_members=cache_members)
             yield group
 
 

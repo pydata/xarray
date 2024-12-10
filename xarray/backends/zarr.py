@@ -601,7 +601,7 @@ class ZarrStore(AbstractWritableDataStore):
 
     __slots__ = (
         "_append_dim",
-        "_cache_array_keys",
+        "_cache_members",
         "_close_store_on_close",
         "_consolidate_on_close",
         "_group",
@@ -634,7 +634,7 @@ class ZarrStore(AbstractWritableDataStore):
         zarr_format=None,
         use_zarr_fill_value_as_mask=None,
         write_empty: bool | None = None,
-        cache_array_keys: bool = False,
+        cache_members: bool = False,
     ):
         (
             zarr_group,
@@ -666,7 +666,7 @@ class ZarrStore(AbstractWritableDataStore):
                 write_empty,
                 close_store_on_close,
                 use_zarr_fill_value_as_mask,
-                cache_array_keys=cache_array_keys,
+                cache_members=cache_members
             )
             for group in group_paths
         }
@@ -748,31 +748,42 @@ class ZarrStore(AbstractWritableDataStore):
         self._write_empty = write_empty
         self._close_store_on_close = close_store_on_close
         self._use_zarr_fill_value_as_mask = use_zarr_fill_value_as_mask
+        self._cache_members: bool = cache_members
+        self._members: dict[str, ZarrArray | ZarrGroup] = {}
 
-        self._members: tuple[bool, dict[str, ZarrArray | ZarrGroup] | None]
-        if cache_members:
-            self._members = (True, None)
-        else:
-            self._members = (False, None)
+        if self._cache_members:
+            # initialize the cache
+            self._members = self._fetch_members()
 
     @property
-    def members(self) -> dict[str, ZarrArray | ZarrGroup]:
+    def members(self) -> dict[str, ZarrArray]:
         """
         Model the arrays and groups contained in self.zarr_group as a dict
         """
-        do_cache, old_members = self._members
-        if not do_cache or old_members is None:
-            # we explicitly only care about the arrays, which saves some IO
-            # in zarr v2
-            members = dict(self.zarr_group.arrays())
-            if do_cache:
-                self._members = (do_cache, members)
-            return members
+        if not self._cache_members:
+            return self._fetch_members()
         else:
-            return old_members
+            return self._members
+
+    def _fetch_members(self) -> dict[str, ZarrArray]:
+        """
+        Get the arrays and groups defined in the zarr group modelled by this Store
+        """
+        return dict(self.zarr_group.items())
+
+    def _update_members(self, data: dict[str, ZarrArray]):
+        if not self._cache_members:
+            msg = (
+                'Updating the members cache is only valid if this object was created '
+                'with cache_members=True, but this object has `cache_members=False`.' 
+                f'You should update the zarr group directly.'
+                )
+            raise ValueError(msg)
+        else:
+            self._members = {**self.members, **data}
 
     def array_keys(self) -> tuple[str, ...]:
-        return tuple(key for (key, _) in self.arrays())
+        return tuple(key for (key, node) in self.members.items() if isinstance(node, ZarrArray))
 
     def arrays(self) -> tuple[tuple[str, ZarrArray], ...]:
         return tuple(
@@ -1047,6 +1058,10 @@ class ZarrStore(AbstractWritableDataStore):
         else:
             zarr_array = self.zarr_group[name]
 
+        # update the model of the underlying zarr group
+        if self._cache_members:
+            self._update_members({name: zarr_array})
+        self._update_members({name: zarr_array})
         return zarr_array
 
     def _create_new_array(
@@ -1075,6 +1090,9 @@ class ZarrStore(AbstractWritableDataStore):
             **encoding,
         )
         zarr_array = _put_attrs(zarr_array, attrs)
+        # update the model of the underlying zarr group
+        if self._cache_members:
+            self._update_members({name: zarr_array})
         return zarr_array
 
     def set_variables(self, variables, check_encoding_set, writer, unlimited_dims=None):
@@ -1143,7 +1161,8 @@ class ZarrStore(AbstractWritableDataStore):
                     zarr_array.resize(new_shape)
 
                 zarr_shape = zarr_array.shape
-
+                # update the model of the members of the zarr group
+                self.members[name] = zarr_array
             region = tuple(write_region[dim] for dim in dims)
 
             # We need to do this for both new and existing variables to ensure we're not
