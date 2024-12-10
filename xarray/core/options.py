@@ -32,7 +32,6 @@ if TYPE_CHECKING:
         "use_numbagg",
         "use_opt_einsum",
         "use_flox",
-        "time_resolution",
     ]
 
     class T_Options(TypedDict):
@@ -60,7 +59,6 @@ if TYPE_CHECKING:
         use_flox: bool
         use_numbagg: bool
         use_opt_einsum: bool
-        time_resolution: Literal["s", "ms", "us", "ns"]
 
 
 OPTIONS: T_Options = {
@@ -88,12 +86,10 @@ OPTIONS: T_Options = {
     "use_flox": True,
     "use_numbagg": True,
     "use_opt_einsum": True,
-    "time_resolution": "s",
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
 _DISPLAY_OPTIONS = frozenset(["text", "html"])
-_TIME_RESOLUTION_OPTIONS = frozenset(["s", "ms", "us", "ns"])
 
 
 def _positive_integer(value: Any) -> bool:
@@ -121,7 +117,6 @@ _VALIDATORS = {
     "use_opt_einsum": lambda value: isinstance(value, bool),
     "use_flox": lambda value: isinstance(value, bool),
     "warn_for_unclosed_files": lambda value: isinstance(value, bool),
-    "time_resolution": _TIME_RESOLUTION_OPTIONS.__contains__,
 }
 
 
@@ -161,10 +156,6 @@ def _get_boolean_with_default(option: Options, default: bool) -> bool:
 
 def _get_keep_attrs(default: bool) -> bool:
     return _get_boolean_with_default("keep_attrs", default)
-
-
-def _get_datetime_resolution() -> Literal["s", "ms", "us", "ns"]:
-    return OPTIONS["time_resolution"]
 
 
 class set_options:

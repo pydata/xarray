@@ -332,45 +332,47 @@ Decoding of ``values`` with time unit specification like ``seconds since 1992-10
 
 2. ``standard``/``gregorian`` calendar and ``proleptic_gregorian`` are equivalent for any dates and reference times >= ``1582-10-15``. First the reference time is checked and any timezone information stripped off and in a second step, the minimum and maximum ``values`` are checked if they can be represented in the current reference time resolution. At the same time integer overflow would be caught. For ``standard``/``gregorian`` calendar the dates are checked to be >= ``1582-10-15``. If anything fails, the decoding is done with ``cftime``).
 
-3. As the time unit (here ``seconds``) and the resolution of the reference time ``1992-10-8 15:15:42.5 -6:00`` (here ``milliseconds``) might be different, this has to be aligned to the higher resolution (retrieve new unit). This is done by multiplying the ``values`` by the ratio of nanoseconds per time unit and nanoseconds per reference time unit. To not break consistency for ``NaT`` a mask is kept and re-introduced after the multiplication.
+3. As the unit (here ``seconds``) and the resolution of the reference time ``1992-10-8 15:15:42.5 -6:00`` (here ``milliseconds``) might be different, this has to be aligned to the higher resolution (retrieve new unit). User may also specify their wanted target resolution by setting kwarg ``time_unit`` to one of ``'s'``, ``'ms'``, ``'us'``, ``'ns'`` (default ``'ns'``). This will be included into the alignment process. This is done by multiplying the ``values`` by the ratio of nanoseconds per time unit and nanoseconds per reference time unit. To not break consistency for ``NaT`` a mask is kept and re-introduced after the multiplication.
 
-4. Finally, the ``values`` (``int64``) are cast to ``datetime64[unit]`` (using the above retrieved unit) and added to the reference time :py:class:`pandas.Timestamp`.
+4. Times encoded as floating point values are checked for fractional parts and the resolution is enhanced in an iterative process until a fitting resolution (or nansosecond) is found. A ``SerializationWarning`` is issued to make the user aware of the possibly problematic encoding.
+
+5. Finally, the ``values`` (``int64``) are cast to ``datetime64[unit]`` (using the above retrieved unit) and added to the reference time :py:class:`pandas.Timestamp`.
 
 .. ipython:: python
 
     calendar = "proleptic_gregorian"
     values = np.array([-1000 * 365, 0, 1000 * 365], dtype="int64")
     units = "days since 2000-01-01 00:00:00.000001"
-    dt = xr.coding.times.decode_cf_datetime(values, units, calendar)
+    dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
     print(dt)
     assert dt.dtype == "datetime64[us]"
 
     units = "microseconds since 2000-01-01 00:00:00"
-    dt = xr.coding.times.decode_cf_datetime(values, units, calendar)
+    dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
     print(dt)
     assert dt.dtype == "datetime64[us]"
 
     values = np.array([0, 0.25, 0.5, 0.75, 1.0], dtype="float64")
     units = "days since 2000-01-01 00:00:00.001"
-    dt = xr.coding.times.decode_cf_datetime(values, units, calendar)
+    dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
     print(dt)
     assert dt.dtype == "datetime64[ms]"
 
     values = np.array([0, 0.25, 0.5, 0.75, 1.0], dtype="float64")
     units = "hours since 2000-01-01"
-    dt = xr.coding.times.decode_cf_datetime(values, units, calendar)
+    dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
     print(dt)
     assert dt.dtype == "datetime64[s]"
 
     values = np.array([0, 0.25, 0.5, 0.75, 1.0], dtype="float64")
     units = "hours since 2000-01-01 00:00:00 03:30"
-    dt = xr.coding.times.decode_cf_datetime(values, units, calendar)
+    dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
     print(dt)
     assert dt.dtype == "datetime64[s]"
 
     values = np.array([-2002 * 365 - 121, -366, 365, 2000 * 365 + 119], dtype="int64")
     units = "days since 0001-01-01 00:00:00"
-    dt = xr.coding.times.decode_cf_datetime(values, units, calendar)
+    dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
     print(dt)
     assert dt.dtype == "datetime64[s]"
 

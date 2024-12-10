@@ -249,7 +249,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     >>> narr = NamedArray(("x",), data, {"units": "m"})  # TODO: Better name than narr?
     """
 
-    __slots__ = ("_data", "_dims", "_attrs")
+    __slots__ = ("_attrs", "_data", "_dims")
 
     _data: duckarray[Any, _DType_co]
     _dims: _Dims
@@ -669,6 +669,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     ) -> Self:
         data = array_func(results, *args, **kwargs)
         return type(self)(self._dims, data, attrs=self._attrs)
+
+    @overload
+    def get_axis_num(self, dim: str) -> int: ...  # type: ignore [overload-overlap]
 
     @overload
     def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]: ...

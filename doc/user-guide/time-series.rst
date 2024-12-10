@@ -23,8 +23,7 @@ Creating datetime64 data
 
 Xarray uses the numpy dtypes ``datetime64[unit]`` and ``timedelta64[unit]``
 (where unit is anything of "s", "ms", "us" and "ns") to represent datetime
-data, which offer vectorized (if sometimes buggy) operations with numpy and
-smooth integration with pandas.
+data, which offer vectorized operations with numpy and smooth integration with pandas.
 
 To convert to or create regular arrays of ``datetime64`` data, we recommend
 using :py:func:`pandas.to_datetime` and :py:func:`pandas.date_range`:
@@ -78,10 +77,14 @@ You can manual decode arrays in this form by passing a dataset to
 
     attrs = {"units": "hours since 2000-01-01"}
     ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
+    # Default decoding to 'ns'-resolution
     xr.decode_cf(ds)
+    # Decoding to 's'-resolution
+    coder = xr.CFDatetimeCoder(time_unit="s")
+    xr.decode_cf(ds, decode_times=coder)
 
-From xarray 2024.11 the resolution of the dates can be tuned between "s", "ms", "us" and "ns". One limitation of using ``datetime64[ns]`` is that it limits the native representation of dates to those that fall between the years 1678 and 2262, which gets increased significantly with lower resolutions. When a netCDF file contains dates outside of these bounds (or dates < 1582-10-15), dates will be returned as arrays of :py:class:`cftime.datetime` objects and a :py:class:`~xarray.CFTimeIndex` will be used for indexing.
-:py:class:`~xarray.CFTimeIndex` enables a subset of the indexing functionality of a :py:class:`pandas.DatetimeIndex` and is only fully compatible with the standalone version of ``cftime`` (not the version packaged with earlier versions ``netCDF4``).
+From xarray TODO: version the resolution of the dates can be tuned between "s", "ms", "us" and "ns". One limitation of using ``datetime64[ns]`` is that it limits the native representation of dates to those that fall between the years 1678 and 2262, which gets increased significantly with lower resolutions. When a netCDF file contains dates outside of these bounds (or dates < 1582-10-15), dates will be returned as arrays of :py:class:`cftime.datetime` objects and a :py:class:`~xarray.CFTimeIndex` will be used for indexing.
+:py:class:`~xarray.CFTimeIndex` enables a subset of the indexing functionality of a :py:class:`pandas.DatetimeIndex`.
 See :ref:`CFTimeIndex` for more information.
 
 Datetime indexing
@@ -90,8 +93,8 @@ Datetime indexing
 Xarray borrows powerful indexing machinery from pandas (see :ref:`indexing`).
 
 This allows for several useful and succinct forms of indexing, particularly for
-`datetime64` data. For example, we support indexing with strings for single
-items and with the `slice` object:
+``datetime64`` data. For example, we support indexing with strings for single
+items and with the ``slice`` object:
 
 .. ipython:: python
 
@@ -232,7 +235,7 @@ resampling group:
     ds.resample(time="6h").reduce(np.mean)
 
 You can also resample on the time dimension while applying reducing along other dimensions at the same time
-by specifying the `dim` keyword argument
+by specifying the ``dim`` keyword argument
 
 .. code-block:: python
 

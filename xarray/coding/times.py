@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import re
 import warnings
-from collections.abc import Callable, Hashable
+from collections.abc import Callable, Hashable, Iterator
 from datetime import datetime, timedelta
 from functools import partial
-from typing import Literal, Union, cast
+from typing import TYPE_CHECKING, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -24,9 +24,8 @@ from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
 from xarray.core.duck_array_ops import asarray, ravel, reshape
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
-from xarray.core.options import _get_datetime_resolution
 from xarray.core.pdcompat import _timestamp_as_unit, default_precision_timestamp
-from xarray.core.utils import emit_user_level_warning
+from xarray.core.utils import attempt_import, emit_user_level_warning
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import T_ChunkedArray, get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
@@ -37,7 +36,12 @@ try:
 except ImportError:
     cftime = None
 
-from xarray.core.types import CFCalendar, NPDatetimeUnitOptions, T_DuckArray
+from xarray.core.types import (
+    CFCalendar,
+    NPDatetimeUnitOptions,
+    PDDatetimeUnitOptions,
+    T_DuckArray,
+)
 
 T_Name = Union[Hashable, None]
 
@@ -218,7 +222,11 @@ def _unpack_time_unit_and_ref_date(
 
 
 def _decode_cf_datetime_dtype(
-    data, units: str, calendar: str | None, use_cftime: bool | None
+    data,
+    units: str,
+    calendar: str | None,
+    use_cftime: bool | None,
+    time_unit: PDDatetimeUnitOptions = "ns",
 ) -> np.dtype:
     # Verify that at least the first and last date can be decoded
     # successfully. Otherwise, tracebacks end up swallowed by
@@ -229,7 +237,9 @@ def _decode_cf_datetime_dtype(
     )
 
     try:
-        result = decode_cf_datetime(example_value, units, calendar, use_cftime)
+        result = decode_cf_datetime(
+            example_value, units, calendar, use_cftime, time_unit
+        )
     except Exception as err:
         calendar_msg = (
             "the default calendar" if calendar is None else f"calendar {calendar!r}"
@@ -249,8 +259,10 @@ def _decode_cf_datetime_dtype(
 def _decode_datetime_with_cftime(
     num_dates: np.ndarray, units: str, calendar: str
 ) -> np.ndarray:
-    if cftime is None:
-        raise ModuleNotFoundError("No module named 'cftime'")
+    if TYPE_CHECKING:
+        import cftime
+    else:
+        cftime = attempt_import("cftime")
     if num_dates.size > 0:
         return np.asarray(
             cftime.num2date(num_dates, units, calendar, only_use_cftime_datetimes=True)
@@ -305,8 +317,25 @@ def _check_date_is_after_shift(date: pd.Timestamp, calendar: str) -> None:
             )
 
 
+def _check_higher_resolution(
+    flat_num_dates: np.ndarray,
+    iter_unit: Iterator[PDDatetimeUnitOptions],
+) -> tuple[np.ndarray, PDDatetimeUnitOptions]:
+    """Iterate until fitting resolution found."""
+    new_time_unit: PDDatetimeUnitOptions = next(iter_unit)
+    if (np.unique(flat_num_dates % 1) > 0).any() and new_time_unit != "ns":
+        flat_num_dates, new_time_unit = _check_higher_resolution(
+            flat_num_dates * 1000,
+            iter_unit=iter_unit,
+        )
+    return flat_num_dates, new_time_unit
+
+
 def _decode_datetime_with_pandas(
-    flat_num_dates: np.ndarray, units: str, calendar: str
+    flat_num_dates: np.ndarray,
+    units: str,
+    calendar: str,
+    time_resolution: PDDatetimeUnitOptions = "ns",
 ) -> np.ndarray:
     if not _is_standard_calendar(calendar):
         raise OutOfBoundsDatetime(
@@ -326,7 +355,8 @@ def _decode_datetime_with_pandas(
     try:
         time_unit, ref_date = _unpack_time_unit_and_ref_date(units)
         ref_date = _align_reference_date_and_unit(ref_date, time_unit)
-        ref_date = _align_reference_date_and_unit(ref_date, _get_datetime_resolution())
+        # here the highest wanted resolution is set
+        ref_date = _align_reference_date_and_unit(ref_date, time_resolution)
     except ValueError as err:
         # ValueError is raised by pd.Timestamp for non-ISO timestamp
         # strings, in which case we fall back to using cftime
@@ -368,6 +398,24 @@ def _decode_datetime_with_pandas(
         flat_num_dates *= np.int64(ns_time_unit / ns_ref_date_unit)
         time_unit = ref_date.unit
 
+    # estimate fitting resolution for floating point values
+    # this iterates until all floats are fractionless or time_unit == "ns"
+    if flat_num_dates.dtype.kind == "f" and time_unit != "ns":
+        res: list[PDDatetimeUnitOptions] = ["s", "ms", "us", "ns"]
+        iter_unit = iter(res[res.index(cast(PDDatetimeUnitOptions, time_unit)) :])
+        flat_num_dates, new_time_unit = _check_higher_resolution(
+            flat_num_dates, iter_unit
+        )
+        if time_unit != new_time_unit:
+            msg = (
+                f"Can't decode floating point datetime to {time_unit!r} without "
+                f"precision loss, decoding to {new_time_unit!r} instead. "
+                f"To silence this warning use time_unit={new_time_unit!r} in call to "
+                f"decoding function."
+            )
+            emit_user_level_warning(msg, SerializationWarning)
+            time_unit = new_time_unit
+
     # Cast input ordinals to integers and properly handle NaN/NaT
     # to prevent casting NaN to int
     flat_num_dates_int = np.zeros_like(flat_num_dates, dtype=np.int64)
@@ -379,7 +427,11 @@ def _decode_datetime_with_pandas(
 
 
 def decode_cf_datetime(
-    num_dates, units: str, calendar: str | None = None, use_cftime: bool | None = None
+    num_dates,
+    units: str,
+    calendar: str | None = None,
+    use_cftime: bool | None = None,
+    time_unit: PDDatetimeUnitOptions = "ns",
 ) -> np.ndarray:
     """Given an array of numeric dates in netCDF format, convert it into a
     numpy array of date time objects.
@@ -402,7 +454,9 @@ def decode_cf_datetime(
 
     if use_cftime is None:
         try:
-            dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar)
+            dates = _decode_datetime_with_pandas(
+                flat_num_dates, units, calendar, time_unit
+            )
         except (KeyError, OutOfBoundsDatetime, OutOfBoundsTimedelta, OverflowError):
             dates = _decode_datetime_with_cftime(
                 flat_num_dates.astype(float), units, calendar
@@ -411,6 +465,11 @@ def decode_cf_datetime(
             cftype = type(dates[np.nanargmin(num_dates)])
             # create first day of gregorian calendar in current cf calendar type
             border = cftype(1582, 10, 15)
+            # "ns" boarders
+            # between ['1677-09-21T00:12:43.145224193', '2262-04-11T23:47:16.854775807']
+            lower = cftype(1677, 9, 21, 0, 12, 43, 145224)
+            upper = cftype(2262, 4, 11, 23, 47, 16, 854775)
+
             # todo: check if test for minimum date is enough
             if (
                 dates[np.nanargmin(num_dates)] < border
@@ -425,13 +484,31 @@ def decode_cf_datetime(
                         SerializationWarning,
                         stacklevel=3,
                     )
+            elif time_unit == "ns" and (
+                (
+                    dates[np.nanargmin(num_dates)] < lower
+                    or dates[np.nanargmin(num_dates)] > upper
+                )
+                or (
+                    dates[np.nanargmax(num_dates)] < lower
+                    or dates[np.nanargmax(num_dates)] > upper
+                )
+            ):
+                warnings.warn(
+                    "Unable to decode time axis into full "
+                    "numpy.datetime64 objects, continuing using "
+                    "cftime.datetime objects instead, reason: dates out "
+                    "of range",
+                    SerializationWarning,
+                    stacklevel=3,
+                )
             else:
                 if _is_standard_calendar(calendar):
-                    dates = cftime_to_nptime(dates)
+                    dates = cftime_to_nptime(dates, time_unit=time_unit)
     elif use_cftime:
         dates = _decode_datetime_with_cftime(flat_num_dates, units, calendar)
     else:
-        dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar)
+        dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar, time_unit)
 
     return reshape(dates, num_dates.shape)
 
@@ -441,7 +518,7 @@ def to_timedelta_unboxed(value, **kwargs):
     result = pd.to_timedelta(value, **kwargs).to_numpy()
     unique_timedeltas = np.unique(result[pd.notnull(result)])
     unit = _netcdf_to_numpy_timeunit(_infer_time_units_from_diff(unique_timedeltas))
-    if unit not in ["s", "ms", "us", "ns"]:
+    if unit not in {"s", "ms", "us", "ns"}:
         unit = "s"
     result = result.astype(f"timedelta64[{unit}]")
     assert np.issubdtype(result.dtype, "timedelta64")
@@ -462,7 +539,7 @@ def decode_cf_timedelta(num_timedeltas, units: str) -> np.ndarray:
     num_timedeltas = np.asarray(num_timedeltas)
     unit = _netcdf_to_numpy_timeunit(units)
     as_unit = unit
-    if unit not in ["s", "ms", "us", "ns"]:
+    if unit not in {"s", "ms", "us", "ns"}:
         as_unit = "s"
     result = (
         pd.to_timedelta(ravel(num_timedeltas), unit=unit).as_unit(as_unit).to_numpy()
@@ -553,7 +630,9 @@ def infer_timedelta_units(deltas) -> str:
     return _infer_time_units_from_diff(unique_timedeltas)
 
 
-def cftime_to_nptime(times, raise_on_invalid: bool = True) -> np.ndarray:
+def cftime_to_nptime(
+    times, raise_on_invalid: bool = True, time_unit: PDDatetimeUnitOptions = "ns"
+) -> np.ndarray:
     """Given an array of cftime.datetime objects, return an array of
     numpy.datetime64 objects of the same size
 
@@ -561,18 +640,12 @@ def cftime_to_nptime(times, raise_on_invalid: bool = True) -> np.ndarray:
     Otherwise, the invalid element is replaced by np.NaT."""
     times = np.asarray(times)
     new = []
-    dt: pd.Timestamp | Literal["NaT"]
+    dt: np.datetime64
     for _i, t in np.ndenumerate(times):
         try:
-            # todo: decide how to work with this
-            #  as initialized by string pd.Timestamp is defined only from year -9999-01-01 to 9999-12-31
-            # Use pandas.Timestamp in place of datetime.datetime, because
-            # NumPy casts it safely it np.datetime64[ns] for dates outside
-            # 1678 to 2262 (this is not currently the case for
-            # datetime.datetime).
-            dt = pd.Timestamp(
-                t.year, t.month, t.day, t.hour, t.minute, t.second, t.microsecond
-            )
+            # We expect either "us" resolution or "s" resolution depending on
+            # whether 'microseconds' are defined for the input or not.
+            dt = np.datetime64(t.isoformat()).astype(f"=M8[{time_unit}]")
         except ValueError as e:
             if raise_on_invalid:
                 raise ValueError(
@@ -580,8 +653,8 @@ def cftime_to_nptime(times, raise_on_invalid: bool = True) -> np.ndarray:
                     f"standard calendar.  Reason: {e}."
                 ) from e
             else:
-                dt = "NaT"
-        new.append(np.datetime64(dt))
+                dt = np.datetime64("NaT")
+        new.append(dt)
     return np.asarray(new).reshape(times.shape)
 
 
@@ -713,8 +786,10 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
     This method is more flexible than xarray's parsing using datetime64[ns]
     arrays but also slower because it loops over each element.
     """
-    if cftime is None:
-        raise ModuleNotFoundError("No module named 'cftime'")
+    if TYPE_CHECKING:
+        import cftime
+    else:
+        cftime = attempt_import("cftime")
 
     if np.issubdtype(dates.dtype, np.datetime64):
         # numpy's broken datetime conversion only works for us precision
@@ -1061,8 +1136,13 @@ def _lazily_encode_cf_timedelta(
 
 
 class CFDatetimeCoder(VariableCoder):
-    def __init__(self, use_cftime: bool | None = None) -> None:
+    def __init__(
+        self,
+        use_cftime: bool | None = None,
+        time_unit: PDDatetimeUnitOptions = "ns",
+    ) -> None:
         self.use_cftime = use_cftime
+        self.time_unit = time_unit
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(
@@ -1089,12 +1169,15 @@ class CFDatetimeCoder(VariableCoder):
 
             units = pop_to(attrs, encoding, "units")
             calendar = pop_to(attrs, encoding, "calendar")
-            dtype = _decode_cf_datetime_dtype(data, units, calendar, self.use_cftime)
+            dtype = _decode_cf_datetime_dtype(
+                data, units, calendar, self.use_cftime, self.time_unit
+            )
             transform = partial(
                 decode_cf_datetime,
                 units=units,
                 calendar=calendar,
                 use_cftime=self.use_cftime,
+                time_unit=self.time_unit,
             )
             data = lazy_elemwise_func(data, transform, dtype)
 

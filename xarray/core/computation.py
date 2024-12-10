@@ -24,6 +24,7 @@ import numpy as np
 
 from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.alignment import align, deep_align
+from xarray.core.array_api_compat import to_like_array
 from xarray.core.common import zeros_like
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.formatting import limit_lines
@@ -77,11 +78,11 @@ class _UFuncSignature:
     """
 
     __slots__ = (
-        "input_core_dims",
-        "output_core_dims",
+        "_all_core_dims",
         "_all_input_core_dims",
         "_all_output_core_dims",
-        "_all_core_dims",
+        "input_core_dims",
+        "output_core_dims",
     )
 
     def __init__(self, input_core_dims, output_core_dims=((),)):
@@ -1702,7 +1703,7 @@ def cross(
             )
 
     c = apply_ufunc(
-        np.cross,
+        duck_array_ops.cross,
         a,
         b,
         input_core_dims=[[dim], [dim]],
@@ -2170,13 +2171,14 @@ def _calc_idxminmax(
         chunks = dict(zip(array.dims, array.chunks, strict=True))
         dask_coord = chunkmanager.from_array(array[dim].data, chunks=chunks[dim])
         data = dask_coord[duck_array_ops.ravel(indx.data)]
-        res = indx.copy(data=duck_array_ops.reshape(data, indx.shape))
-        # we need to attach back the dim name
-        res.name = dim
     else:
-        res = array[dim][(indx,)]
-        # The dim is gone but we need to remove the corresponding coordinate.
-        del res.coords[dim]
+        arr_coord = to_like_array(array[dim].data, array.data)
+        data = arr_coord[duck_array_ops.ravel(indx.data)]
+
+    # rebuild like the argmin/max output, and rename as the dim name
+    data = duck_array_ops.reshape(data, indx.shape)
+    res = indx.copy(data=data)
+    res.name = dim
 
     if skipna or (skipna is None and array.dtype.kind in na_dtypes):
         # Put the NaN values back in after removing them
@@ -2252,7 +2254,7 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
     if not unify_chunks_args:
         return objects
 
-    chunkmanager = get_chunked_array_type(*[arg for arg in unify_chunks_args])
+    chunkmanager = get_chunked_array_type(*list(unify_chunks_args))
     _, chunked_data = chunkmanager.unify_chunks(*unify_chunks_args)
     chunked_data_iter = iter(chunked_data)
     out: list[Dataset | DataArray] = []

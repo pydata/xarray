@@ -29,6 +29,7 @@ from pandas.errors import OutOfBoundsDatetime
 
 import xarray as xr
 from xarray import (
+    CFDatetimeCoder,
     DataArray,
     Dataset,
     backends,
@@ -53,7 +54,7 @@ from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
-from xarray.core.options import _get_datetime_resolution, set_options
+from xarray.core.options import set_options
 from xarray.core.utils import module_available
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
@@ -78,6 +79,7 @@ from xarray.tests import (
     requires_h5netcdf_1_4_0_or_above,
     requires_h5netcdf_ros3,
     requires_iris,
+    requires_netcdf,
     requires_netCDF4,
     requires_netCDF4_1_6_2_or_above,
     requires_netCDF4_1_7_0_or_above,
@@ -641,6 +643,7 @@ class DatasetIOBase:
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
+    @requires_netcdf
     def test_roundtrip_example_1_netcdf(self) -> None:
         with open_example_dataset("example_1.nc") as expected:
             with self.roundtrip(expected) as actual:
@@ -854,7 +857,7 @@ class DatasetIOBase:
                     else:
                         raise TypeError(f"{type(obj.array)} is wrapped by {type(obj)}")
 
-        for _k, v in ds.variables.items():
+        for v in ds.variables.values():
             find_and_validate_array(v._data)
 
     def test_array_type_after_indexing(self) -> None:
@@ -968,8 +971,7 @@ class CFEncodedBase(DatasetIOBase):
         decoded = decoded_fn(dtype)
         encoded = encoded_fn(dtype)
         if decoded["x"].encoding["dtype"] == "u1" and not (
-            self.engine == "netcdf4"
-            and self.file_format is None
+            (self.engine == "netcdf4" and self.file_format is None)
             or self.file_format == "NETCDF4"
         ):
             pytest.skip("uint8 data can't be written to non-NetCDF4 data")
@@ -1133,13 +1135,11 @@ class CFEncodedBase(DatasetIOBase):
 
     def test_grid_mapping_and_bounds_are_not_coordinates_in_file(self) -> None:
         original = self._create_cf_dataset()
-        with create_tmp_file() as tmp_file:
-            original.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, decode_coords=False) as ds:
-                assert ds.coords["latitude"].attrs["bounds"] == "latitude_bnds"
-                assert ds.coords["longitude"].attrs["bounds"] == "longitude_bnds"
-                assert "coordinates" not in ds["variable"].attrs
-                assert "coordinates" not in ds.attrs
+        with self.roundtrip(original, open_kwargs={"decode_coords": False}) as ds:
+            assert ds.coords["latitude"].attrs["bounds"] == "latitude_bnds"
+            assert ds.coords["longitude"].attrs["bounds"] == "longitude_bnds"
+            assert "coordinates" not in ds["variable"].attrs
+            assert "coordinates" not in ds.attrs
 
     def test_coordinate_variables_after_dataset_roundtrip(self) -> None:
         original = self._create_cf_dataset()
@@ -1181,6 +1181,7 @@ class CFEncodedBase(DatasetIOBase):
                 assert_identical(actual, original["variable"].to_dataset())
 
     @requires_iris
+    @requires_netcdf
     def test_coordinate_variables_after_iris_roundtrip(self) -> None:
         original = self._create_cf_dataset()
         iris_cube = original["variable"].to_iris()
@@ -1201,36 +1202,30 @@ class CFEncodedBase(DatasetIOBase):
         )
         with self.roundtrip(original) as actual:
             assert_identical(actual, original)
-        with create_tmp_file() as tmp_file:
-            original.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, decode_coords=False) as ds:
-                assert equals_latlon(ds["temp"].attrs["coordinates"])
-                assert equals_latlon(ds["precip"].attrs["coordinates"])
-                assert "coordinates" not in ds.attrs
-                assert "coordinates" not in ds["lat"].attrs
-                assert "coordinates" not in ds["lon"].attrs
+        with self.roundtrip(original, open_kwargs=dict(decode_coords=False)) as ds:
+            assert equals_latlon(ds["temp"].attrs["coordinates"])
+            assert equals_latlon(ds["precip"].attrs["coordinates"])
+            assert "coordinates" not in ds.attrs
+            assert "coordinates" not in ds["lat"].attrs
+            assert "coordinates" not in ds["lon"].attrs
 
         modified = original.drop_vars(["temp", "precip"])
         with self.roundtrip(modified) as actual:
             assert_identical(actual, modified)
-        with create_tmp_file() as tmp_file:
-            modified.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, decode_coords=False) as ds:
-                assert equals_latlon(ds.attrs["coordinates"])
-                assert "coordinates" not in ds["lat"].attrs
-                assert "coordinates" not in ds["lon"].attrs
+        with self.roundtrip(modified, open_kwargs=dict(decode_coords=False)) as ds:
+            assert equals_latlon(ds.attrs["coordinates"])
+            assert "coordinates" not in ds["lat"].attrs
+            assert "coordinates" not in ds["lon"].attrs
 
         original["temp"].encoding["coordinates"] = "lat"
         with self.roundtrip(original) as actual:
             assert_identical(actual, original)
         original["precip"].encoding["coordinates"] = "lat"
-        with create_tmp_file() as tmp_file:
-            original.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, decode_coords=True) as ds:
-                assert "lon" not in ds["temp"].encoding["coordinates"]
-                assert "lon" not in ds["precip"].encoding["coordinates"]
-                assert "coordinates" not in ds["lat"].encoding
-                assert "coordinates" not in ds["lon"].encoding
+        with self.roundtrip(original, open_kwargs=dict(decode_coords=True)) as ds:
+            assert "lon" not in ds["temp"].encoding["coordinates"]
+            assert "lon" not in ds["precip"].encoding["coordinates"]
+            assert "coordinates" not in ds["lat"].encoding
+            assert "coordinates" not in ds["lon"].encoding
 
     def test_roundtrip_endian(self) -> None:
         skip_if_zarr_format_3("zarr v3 has not implemented endian support yet")
@@ -1618,9 +1613,7 @@ class NetCDF4Base(NetCDFBase):
                 ds.variables["time"][:] = np.arange(10) + 4
 
             expected = Dataset()
-            time = pd.date_range(
-                "1999-01-05", periods=10, unit=_get_datetime_resolution()
-            )
+            time = pd.date_range("1999-01-05", periods=10, unit="ns")
             encoding = {"units": units, "dtype": np.dtype("int32")}
             expected["time"] = ("time", time, {}, encoding)
 
@@ -1887,7 +1880,7 @@ class NetCDF4Base(NetCDFBase):
             cloud_type_dict = {"clear": 0, "cloudy": 1}
             with nc4.Dataset(tmp_file, mode="w") as nc:
                 nc.createDimension("time", size=2)
-                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                cloud_type = nc.createEnumType(np.uint8, "cloud_type", cloud_type_dict)
                 v = nc.createVariable(
                     "clouds",
                     cloud_type,
@@ -1934,7 +1927,7 @@ class NetCDF4Base(NetCDFBase):
             cloud_type_dict = {"clear": 0, "cloudy": 1, "missing": 255}
             with nc4.Dataset(tmp_file, mode="w") as nc:
                 nc.createDimension("time", size=2)
-                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                cloud_type = nc.createEnumType(np.uint8, "cloud_type", cloud_type_dict)
                 nc.createVariable(
                     "clouds",
                     cloud_type,
@@ -1983,7 +1976,7 @@ class NetCDF4Base(NetCDFBase):
             cloud_type_dict = {"clear": 0, "cloudy": 1, "missing": 255}
             with nc4.Dataset(tmp_file, mode="w") as nc:
                 nc.createDimension("time", size=2)
-                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                cloud_type = nc.createEnumType(np.uint8, "cloud_type", cloud_type_dict)
                 nc.createVariable(
                     "clouds",
                     cloud_type,
@@ -2330,7 +2323,9 @@ class ZarrBase(CFEncodedBase):
                     assert_identical(ds, expected)
 
     def test_non_existent_store(self) -> None:
-        with pytest.raises(FileNotFoundError, match="No such file or directory"):
+        with pytest.raises(
+            FileNotFoundError, match="(No such file or directory|Unable to find group)"
+        ):
             xr.open_zarr(f"{uuid.uuid4()}")
 
     @pytest.mark.skipif(has_zarr_v3, reason="chunk_store not implemented in zarr v3")
@@ -2560,6 +2555,7 @@ class ZarrBase(CFEncodedBase):
             # don't actually check equality because the data could be corrupted
             pass
 
+    @requires_netcdf
     def test_drop_encoding(self):
         with open_example_dataset("example_1.nc") as ds:
             encodings = {v: {**ds[v].encoding} for v in ds.data_vars}
@@ -3198,7 +3194,10 @@ class ZarrBase(CFEncodedBase):
             ds.to_zarr(store_target, **self.version_kwargs)
             ds_a = xr.open_zarr(store_target, **self.version_kwargs)
             assert_identical(ds, ds_a)
-            ds_b = xr.open_zarr(store_target, use_cftime=True, **self.version_kwargs)
+            decoder = CFDatetimeCoder(use_cftime=True)
+            ds_b = xr.open_zarr(
+                store_target, decode_times=decoder, **self.version_kwargs
+            )
             assert xr.coding.times.contains_cftime_datetimes(ds_b.time.variable)
 
     def test_write_read_select_write(self) -> None:
@@ -3282,7 +3281,7 @@ class TestInstrumentedZarrStore:
             pytest.skip("Instrumented tests only work on latest Zarr.")
 
         if has_zarr_v3:
-            kwargs = {"mode": "a"}
+            kwargs = {"read_only": False}
         else:
             kwargs = {}  # type: ignore[arg-type,unused-ignore]
 
@@ -3322,12 +3321,12 @@ class TestInstrumentedZarrStore:
 
         with self.create_zarr_target() as store:
             if has_zarr_v3:
-                # TOOD: verify these
+                # TODO: verify these
                 expected = {
-                    "set": 17,
-                    "get": 12,
+                    "set": 5,
+                    "get": 7,
                     "list_dir": 3,
-                    "list_prefix": 0,
+                    "list_prefix": 1,
                 }
             else:
                 expected = {
@@ -3349,7 +3348,7 @@ class TestInstrumentedZarrStore:
             # 6057128b: {'iter': 5, 'contains': 2, 'setitem': 5, 'getitem': 10, "listdir": 5, "list_prefix": 0}
             if has_zarr_v3:
                 expected = {
-                    "set": 10,
+                    "set": 4,
                     "get": 16,  # TODO: fixme upstream (should be 8)
                     "list_dir": 3,  # TODO: fixme upstream (should be 2)
                     "list_prefix": 0,
@@ -3372,7 +3371,7 @@ class TestInstrumentedZarrStore:
 
             if has_zarr_v3:
                 expected = {
-                    "set": 10,
+                    "set": 4,
                     "get": 16,  # TODO: fixme upstream (should be 8)
                     "list_dir": 3,  # TODO: fixme upstream (should be 2)
                     "list_prefix": 0,
@@ -3405,7 +3404,7 @@ class TestInstrumentedZarrStore:
                     "set": 5,
                     "get": 10,
                     "list_dir": 3,
-                    "list_prefix": 0,
+                    "list_prefix": 4,
                 }
             else:
                 expected = {
@@ -3499,7 +3498,7 @@ class TestZarrDictStore(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
         if has_zarr_v3:
-            yield zarr.storage.MemoryStore({}, mode="a")
+            yield zarr.storage.MemoryStore({}, read_only=False)
         else:
             yield {}
 
@@ -5519,6 +5518,8 @@ def test_source_encoding_always_present_with_fsspec() -> None:
         fs = fsspec.filesystem("file")
         with fs.open(tmp) as f, open_dataset(f) as ds:
             assert ds.encoding["source"] == tmp
+        with fs.open(tmp) as f, open_mfdataset([f]) as ds:
+            assert "foo" in ds
 
 
 def _assert_no_dates_out_of_range_warning(record):
@@ -5613,7 +5614,8 @@ def test_use_cftime_true(calendar, units_year) -> None:
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
         with warnings.catch_warnings(record=True) as record:
-            with open_dataset(tmp_file, use_cftime=True) as ds:
+            decoder = CFDatetimeCoder(use_cftime=True)
+            with open_dataset(tmp_file, decode_times=decoder) as ds:
                 assert_identical(expected_x, ds.x)
                 assert_identical(expected_time, ds.time)
             _assert_no_dates_out_of_range_warning(record)
@@ -5666,7 +5668,8 @@ def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year) -
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
         with pytest.raises((OutOfBoundsDatetime, ValueError)):
-            open_dataset(tmp_file, use_cftime=False)
+            decoder = CFDatetimeCoder(use_cftime=False)
+            open_dataset(tmp_file, decode_times=decoder)
 
 
 @requires_scipy_or_netCDF4
@@ -5684,7 +5687,8 @@ def test_use_cftime_false_nonstandard_calendar(calendar, units_year) -> None:
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
         with pytest.raises((OutOfBoundsDatetime, ValueError)):
-            open_dataset(tmp_file, use_cftime=False)
+            decoder = CFDatetimeCoder(use_cftime=False)
+            open_dataset(tmp_file, decode_times=decoder)
 
 
 @pytest.mark.parametrize("engine", ["netcdf4", "scipy"])
@@ -6499,3 +6503,24 @@ def test_zarr_safe_chunk_region(tmp_path):
     chunk = ds.isel(region)
     chunk = chunk.chunk()
     chunk.chunk().to_zarr(store, region=region)
+
+
+@requires_h5netcdf
+@requires_fsspec
+def test_h5netcdf_storage_options() -> None:
+    with create_tmp_files(2, allow_cleanup_failure=ON_WINDOWS) as (f1, f2):
+        ds1 = create_test_data()
+        ds1.to_netcdf(f1, engine="h5netcdf")
+
+        ds2 = create_test_data()
+        ds2.to_netcdf(f2, engine="h5netcdf")
+
+        files = [f"file://{f}" for f in [f1, f2]]
+        ds = xr.open_mfdataset(
+            files,
+            engine="h5netcdf",
+            concat_dim="time",
+            combine="nested",
+            storage_options={"skip_instance_cache": False},
+        )
+        assert_identical(xr.concat([ds1, ds2], dim="time"), ds)

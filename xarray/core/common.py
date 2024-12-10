@@ -214,6 +214,9 @@ class AbstractArray:
         return self._iter()
 
     @overload
+    def get_axis_num(self, dim: str) -> int: ...  # type: ignore [overload-overlap]
+
+    @overload
     def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]: ...
 
     @overload
@@ -352,7 +355,7 @@ class AttrAccessMixin:
 
     def _ipython_key_completions_(self) -> list[str]:
         """Provide method for the key-autocompletions in IPython.
-        See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
+        See https://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
         """
         items = {
@@ -496,7 +499,7 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
-            np.clip, self, min, max, keep_attrs=keep_attrs, dask="allowed"
+            duck_array_ops.clip, self, min, max, keep_attrs=keep_attrs, dask="allowed"
         )
 
     def get_index(self, key: Hashable) -> pd.Index:
@@ -1094,7 +1097,7 @@ class DataWithCoords(AttrAccessMixin):
                 f"Received {type(freq)} instead."
             )
 
-        rgrouper = ResolvedGrouper(grouper, group, self)
+        rgrouper = ResolvedGrouper(grouper, group, self, eagerly_compute_group=False)
 
         return resample_cls(
             self,
@@ -1760,7 +1763,7 @@ def _full_like_variable(
             **from_array_kwargs,
         )
     else:
-        data = np.full_like(other.data, fill_value, dtype=dtype)
+        data = duck_array_ops.full_like(other.data, fill_value, dtype=dtype)
 
     return Variable(dims=other.dims, data=data, attrs=other.attrs)
 

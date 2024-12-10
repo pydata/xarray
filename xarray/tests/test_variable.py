@@ -36,6 +36,7 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    has_dask_ge_2024_11_0,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -1078,7 +1079,7 @@ class TestVariable(VariableSubclassobjects):
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
         assert v.item() == 0
-        assert type(v.item()) is float  # noqa: E721
+        assert type(v.item()) is float
 
         v = IndexVariable("x", np.arange(5))
         assert 2 == v.searchsorted(2)
@@ -1613,7 +1614,7 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(ValueError, match=r"cannot select a dimension"):
             v.squeeze("y")
 
-    def test_get_axis_num(self):
+    def test_get_axis_num(self) -> None:
         v = Variable(["x", "y", "z"], np.random.randn(2, 3, 4))
         assert v.get_axis_num("x") == 0
         assert v.get_axis_num(["x"]) == (0,)
@@ -1621,6 +1622,11 @@ class TestVariable(VariableSubclassobjects):
         assert v.get_axis_num(["z", "y", "x"]) == (2, 1, 0)
         with pytest.raises(ValueError, match=r"not found in array dim"):
             v.get_axis_num("foobar")
+        # Test the type annotations: mypy will complain if the inferred
+        # type is wrong
+        v.get_axis_num("x") + 0
+        v.get_axis_num(["x"]) + ()
+        v.get_axis_num(("x", "y")) + ()
 
     def test_set_dims(self):
         v = Variable(["x"], [0, 1])
@@ -1881,9 +1887,16 @@ class TestVariable(VariableSubclassobjects):
     def test_quantile_chunked_dim_error(self):
         v = Variable(["x", "y"], self.d).chunk({"x": 2})
 
-        # this checks for ValueError in dask.array.apply_gufunc
-        with pytest.raises(ValueError, match=r"consists of multiple chunks"):
-            v.quantile(0.5, dim="x")
+        if has_dask_ge_2024_11_0:
+            # Dask rechunks
+            np.testing.assert_allclose(
+                v.compute().quantile(0.5, dim="x"), v.quantile(0.5, dim="x")
+            )
+
+        else:
+            # this checks for ValueError in dask.array.apply_gufunc
+            with pytest.raises(ValueError, match=r"consists of multiple chunks"):
+                v.quantile(0.5, dim="x")
 
     @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
@@ -1980,26 +1993,27 @@ class TestVariable(VariableSubclassobjects):
     def test_reduce_keepdims(self):
         v = Variable(["x", "y"], self.d)
 
-        assert_identical(
-            v.mean(keepdims=True), Variable(v.dims, np.mean(self.d, keepdims=True))
-        )
-        assert_identical(
-            v.mean(dim="x", keepdims=True),
-            Variable(v.dims, np.mean(self.d, axis=0, keepdims=True)),
-        )
-        assert_identical(
-            v.mean(dim="y", keepdims=True),
-            Variable(v.dims, np.mean(self.d, axis=1, keepdims=True)),
-        )
-        assert_identical(
-            v.mean(dim=["y", "x"], keepdims=True),
-            Variable(v.dims, np.mean(self.d, axis=(1, 0), keepdims=True)),
-        )
+        with set_options(use_numbagg=False):
+            assert_identical(
+                v.mean(keepdims=True), Variable(v.dims, np.mean(self.d, keepdims=True))
+            )
+            assert_identical(
+                v.mean(dim="x", keepdims=True),
+                Variable(v.dims, np.mean(self.d, axis=0, keepdims=True)),
+            )
+            assert_identical(
+                v.mean(dim="y", keepdims=True),
+                Variable(v.dims, np.mean(self.d, axis=1, keepdims=True)),
+            )
+            assert_identical(
+                v.mean(dim=["y", "x"], keepdims=True),
+                Variable(v.dims, np.mean(self.d, axis=(1, 0), keepdims=True)),
+            )
 
-        v = Variable([], 1.0)
-        assert_identical(
-            v.mean(keepdims=True), Variable([], np.mean(v.data, keepdims=True))
-        )
+            v = Variable([], 1.0)
+            assert_identical(
+                v.mean(keepdims=True), Variable([], np.mean(v.data, keepdims=True))
+            )
 
     @requires_dask
     def test_reduce_keepdims_dask(self):
@@ -2749,6 +2763,26 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         )
         assert_identical(ones_like(orig), full_like(orig, 1))
         assert_identical(ones_like(orig, dtype=int), full_like(orig, 1, dtype=int))
+
+    def test_numpy_ndarray_subclass(self):
+        class SubclassedArray(np.ndarray):
+            def __new__(cls, array, foo):
+                obj = np.asarray(array).view(cls)
+                obj.foo = foo
+                return obj
+
+        data = SubclassedArray([1, 2, 3], foo="bar")
+        actual = as_compatible_data(data)
+        assert isinstance(actual, SubclassedArray)
+        assert actual.foo == "bar"
+        assert_array_equal(data, actual)
+
+    def test_numpy_matrix(self):
+        with pytest.warns(PendingDeprecationWarning):
+            data = np.matrix([[1, 2], [3, 4]])
+        actual = as_compatible_data(data)
+        assert isinstance(actual, np.ndarray)
+        assert_array_equal(data, actual)
 
     def test_unsupported_type(self):
         # Non indexable type

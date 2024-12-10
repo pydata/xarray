@@ -40,7 +40,6 @@ from typing import Literal, cast
 
 import pandas as pd
 
-from xarray.core.options import _get_datetime_resolution
 from xarray.core.types import PDDatetimeUnitOptions
 
 
@@ -91,13 +90,9 @@ def _timestamp_as_unit(date: pd.Timestamp, unit: str) -> pd.Timestamp:
 def default_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
     """Return a Timestamp object with the default precision.
 
-    Xarray default is "ns". This can be overridden by setting
-    set_options(time_resolution="us") or any other resolution
-    of {"s", "ms", "us", "ns"}.
+    Xarray default is "ns".
     """
     dt = pd.Timestamp(*args, **kwargs)
-    units = ["s", "ms", "us", "ns"]
-    default = _get_datetime_resolution()
-    if units.index(default) > units.index(dt.unit):
-        dt = _timestamp_as_unit(dt, default)
+    if dt.unit != "ns":
+        dt = _timestamp_as_unit(dt, "ns")
     return dt

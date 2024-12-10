@@ -20,6 +20,7 @@ from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
+        T_Chunks,
         _Chunks,
         _DType,
         _DType_co,
@@ -75,7 +76,6 @@ def load_chunkmanagers(
             emit_user_level_warning(
                 f"Failed to load chunk manager entrypoint {entrypoint.name} due to {e}. Skipping.",
             )
-            pass
 
     available_chunkmanagers = {
         name: chunkmanager()
@@ -354,6 +354,34 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         --------
         dask.compute
         cubed.compute
+        """
+        raise NotImplementedError()
+
+    def shuffle(
+        self, x: T_ChunkedArray, indexer: list[list[int]], axis: int, chunks: T_Chunks
+    ) -> T_ChunkedArray:
+        raise NotImplementedError()
+
+    def persist(
+        self, *data: T_ChunkedArray | Any, **kwargs: Any
+    ) -> tuple[T_ChunkedArray | Any, ...]:
+        """
+        Persist one or more chunked arrays in memory.
+
+        Parameters
+        ----------
+        *data : object
+            Any number of objects. If an object is an instance of the chunked array type, it is persisted
+            as a chunked array in memory. All other types should be passed through unchanged.
+
+        Returns
+        -------
+        objs
+            The input, but with all chunked arrays now persisted in memory.
+
+        See Also
+        --------
+        dask.persist
         """
         raise NotImplementedError()
 

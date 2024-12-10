@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
@@ -31,6 +32,7 @@ CF_RELATED_DATA = (
     "formula_terms",
 )
 CF_RELATED_DATA_NEEDS_PARSING = (
+    "grid_mapping",
     "cell_measures",
     "formula_terms",
 )
@@ -207,7 +209,7 @@ def decode_cf_variable(
     var: Variable,
     concat_characters: bool = True,
     mask_and_scale: bool = True,
-    decode_times: bool = True,
+    decode_times: bool | times.CFDatetimeCoder = True,
     decode_endianness: bool = True,
     stack_char_dim: bool = True,
     use_cftime: bool | None = None,
@@ -234,7 +236,7 @@ def decode_cf_variable(
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue). If the _Unsigned attribute is present
         treat integer arrays as unsigned.
-    decode_times : bool
+    decode_times : bool or CFDatetimeCoder
         Decode cf times ("hours since 2000-01-01") to np.datetime64.
     decode_endianness : bool
         Decode arrays from non-native to native endianness.
@@ -252,6 +254,8 @@ def decode_cf_variable(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+        Usage of use_cftime as kwarg is deprecated, please initialize it with
+        CFDatetimeCoder and ``decode_times``.
 
     Returns
     -------
@@ -265,7 +269,7 @@ def decode_cf_variable(
     original_dtype = var.dtype
 
     if decode_timedelta is None:
-        decode_timedelta = decode_times
+        decode_timedelta = True if decode_times else False
 
     if concat_characters:
         if stack_char_dim:
@@ -289,7 +293,28 @@ def decode_cf_variable(
     if decode_timedelta:
         var = times.CFTimedeltaCoder().decode(var, name=name)
     if decode_times:
-        var = times.CFDatetimeCoder(use_cftime=use_cftime).decode(var, name=name)
+        # remove checks after end of deprecation cycle
+        if not isinstance(decode_times, times.CFDatetimeCoder):
+            if use_cftime is not None:
+                from warnings import warn
+
+                warn(
+                    "Usage of 'use_cftime' as kwarg is deprecated. "
+                    "Please initialize it with xarray.CFDatetimeCoder and "
+                    "'decode_times' kwarg.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+            decode_times = times.CFDatetimeCoder(use_cftime=use_cftime)
+        else:
+            if use_cftime is not None:
+                raise TypeError(
+                    "Usage of 'use_cftime' as kwarg is not allowed, "
+                    "if 'decode_times' is initialized with "
+                    "xarray.CFDatetimeCoder. Please add 'use_cftime' "
+                    "when initializing xarray.CFDatetimeCoder."
+                )
+        var = decode_times.decode(var, name=name)
 
     if decode_endianness and not var.dtype.isnative:
         var = variables.EndianCoder().decode(var)
@@ -368,13 +393,13 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
             and attrs["bounds"] in variables
         ):
             emit_user_level_warning(
-                f"Variable {name:s} has datetime type and a "
-                f"bounds variable but {name:s}.encoding does not have "
-                f"units specified. The units encodings for {name:s} "
+                f"Variable {name} has datetime type and a "
+                f"bounds variable but {name}.encoding does not have "
+                f"units specified. The units encodings for {name} "
                 f"and {attrs['bounds']} will be determined independently "
                 "and may not be equal, counter to CF-conventions. "
                 "If this is a concern, specify a units encoding for "
-                f"{name:s} before writing to a file.",
+                f"{name} before writing to a file.",
             )
 
         if has_date_units and "bounds" in attrs:
@@ -400,7 +425,9 @@ def decode_cf_variables(
     attributes: T_Attrs,
     concat_characters: bool | Mapping[str, bool] = True,
     mask_and_scale: bool | Mapping[str, bool] = True,
-    decode_times: bool | Mapping[str, bool] = True,
+    decode_times: bool
+    | times.CFDatetimeCoder
+    | Mapping[str, bool | times.CFDatetimeCoder] = True,
     decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
@@ -476,20 +503,41 @@ def decode_cf_variables(
         if decode_coords == "all":
             for attr_name in CF_RELATED_DATA:
                 if attr_name in var_attrs:
-                    attr_val = var_attrs[attr_name]
-                    if attr_name not in CF_RELATED_DATA_NEEDS_PARSING:
-                        var_names = attr_val.split()
-                    else:
-                        roles_and_names = [
-                            role_or_name
-                            for part in attr_val.split(":")
-                            for role_or_name in part.split()
-                        ]
-                        if len(roles_and_names) % 2 == 1:
-                            emit_user_level_warning(
-                                f"Attribute {attr_name:s} malformed"
-                            )
-                        var_names = roles_and_names[1::2]
+                    # fixes stray colon
+                    attr_val = var_attrs[attr_name].replace(" :", ":")
+                    var_names = attr_val.split()
+                    # if grid_mapping is a single string, do not enter here
+                    if (
+                        attr_name in CF_RELATED_DATA_NEEDS_PARSING
+                        and len(var_names) > 1
+                    ):
+                        # map the keys to list of strings
+                        # "A: b c d E: f g" returns
+                        # {"A": ["b", "c", "d"], "E": ["f", "g"]}
+                        roles_and_names = defaultdict(list)
+                        key = None
+                        for vname in var_names:
+                            if ":" in vname:
+                                key = vname.strip(":")
+                            else:
+                                if key is None:
+                                    raise ValueError(
+                                        f"First element {vname!r} of [{attr_val!r}] misses ':', "
+                                        f"cannot decode {attr_name!r}."
+                                    )
+                                roles_and_names[key].append(vname)
+                        # for grid_mapping keys are var_names
+                        if attr_name == "grid_mapping":
+                            var_names = list(roles_and_names.keys())
+                        else:
+                            # for cell_measures and formula_terms values are var names
+                            var_names = list(itertools.chain(*roles_and_names.values()))
+                            # consistency check (one element per key)
+                            if len(var_names) != len(roles_and_names.keys()):
+                                emit_user_level_warning(
+                                    f"Attribute {attr_name!r} has malformed content [{attr_val!r}], "
+                                    f"decoding {var_names!r} to coordinates."
+                                )
                     if all(var_name in variables for var_name in var_names):
                         new_vars[k].encoding[attr_name] = attr_val
                         coord_names.update(var_names)
@@ -500,7 +548,7 @@ def decode_cf_variables(
                             if proj_name not in variables
                         ]
                         emit_user_level_warning(
-                            f"Variable(s) referenced in {attr_name:s} not in variables: {referenced_vars_not_in_variables!s}",
+                            f"Variable(s) referenced in {attr_name} not in variables: {referenced_vars_not_in_variables}",
                         )
                     del var_attrs[attr_name]
 
@@ -516,7 +564,7 @@ def decode_cf(
     obj: T_DatasetOrAbstractstore,
     concat_characters: bool = True,
     mask_and_scale: bool = True,
-    decode_times: bool = True,
+    decode_times: bool | times.CFDatetimeCoder = True,
     decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | None = None,
@@ -535,7 +583,7 @@ def decode_cf(
     mask_and_scale : bool, optional
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
-    decode_times : bool, optional
+    decode_times : bool or xr.times.times.CFDatetimeCoder, optional
         Decode cf times (e.g., integers since "hours since 2000-01-01") to
         np.datetime64.
     decode_coords : bool or {"coordinates", "all"}, optional
@@ -560,6 +608,8 @@ def decode_cf(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+        Usage of use_cftime as kwarg is deprecated, please initialize it with
+        CFDatetimeCoder and ``decode_times``.
     decode_timedelta : bool, optional
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
@@ -613,7 +663,7 @@ def cf_decoder(
     attributes: T_Attrs,
     concat_characters: bool = True,
     mask_and_scale: bool = True,
-    decode_times: bool = True,
+    decode_times: bool | times.CFDatetimeCoder = True,
 ) -> tuple[T_Variables, T_Attrs]:
     """
     Decode a set of CF encoded variables and attributes.
@@ -630,7 +680,7 @@ def cf_decoder(
     mask_and_scale : bool
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
-    decode_times : bool
+    decode_times : bool | xr.times.times.CFDatetimeCoder
         Decode cf times ("hours since 2000-01-01") to np.datetime64.
 
     Returns
@@ -703,11 +753,8 @@ def _encode_coordinates(
             )
 
         # if coordinates set to None, don't write coordinates attribute
-        if (
-            "coordinates" in attrs
-            and attrs.get("coordinates") is None
-            or "coordinates" in encoding
-            and encoding.get("coordinates") is None
+        if ("coordinates" in attrs and attrs.get("coordinates") is None) or (
+            "coordinates" in encoding and encoding.get("coordinates") is None
         ):
             # make sure "coordinates" is removed from attrs/encoding
             attrs.pop("coordinates", None)
@@ -734,7 +781,7 @@ def _encode_coordinates(
     # the dataset faithfully. Because this serialization goes beyond CF
     # conventions, only do it if necessary.
     # Reference discussion:
-    # http://mailman.cgd.ucar.edu/pipermail/cf-metadata/2014/007571.html
+    # https://cfconventions.org/mailing-list-archive/Data/7400.html
     global_coordinates.difference_update(written_coords)
     if global_coordinates:
         attributes = dict(attributes)
@@ -807,7 +854,7 @@ def cf_encoder(variables: T_Variables, attributes: T_Attrs):
 
     # Remove attrs from bounds variables (issue #2921)
     for var in new_vars.values():
-        bounds = var.attrs["bounds"] if "bounds" in var.attrs else None
+        bounds = var.attrs.get("bounds")
         if bounds and bounds in new_vars:
             # see http://cfconventions.org/cf-conventions/cf-conventions.html#cell-boundaries
             for attr in [

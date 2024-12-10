@@ -17,7 +17,7 @@ to our :ref:`indexing <indexing>`.
 
 .. note::
 
-  ``interp`` requires `scipy` installed.
+  ``interp`` requires ``scipy`` installed.
 
 
 Scalar and 1-dimensional interpolation
@@ -132,10 +132,11 @@ It is now possible to safely compute the difference ``other - interpolated``.
 Interpolation methods
 ---------------------
 
-We use :py:class:`scipy.interpolate.interp1d` for 1-dimensional interpolation.
+We use either :py:class:`scipy.interpolate.interp1d` or special interpolants from
+:py:class:`scipy.interpolate` for 1-dimensional interpolation (see :py:meth:`~xarray.Dataset.interp`).
 For multi-dimensional interpolation, an attempt is first made to decompose the
 interpolation in a series of 1-dimensional interpolations, in which case
-:py:class:`scipy.interpolate.interp1d` is used. If a decomposition cannot be
+the relevant 1-dimensional interpolator is used. If a decomposition cannot be
 made (e.g. with advanced interpolation), :py:func:`scipy.interpolate.interpn` is
 used.
 

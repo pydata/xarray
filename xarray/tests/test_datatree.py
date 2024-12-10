@@ -69,6 +69,19 @@ class TestTreeCreation:
         with pytest.raises(TypeError):
             DataTree(dataset=xr.DataArray(42, name="foo"))  # type: ignore[arg-type]
 
+    def test_child_data_not_copied(self) -> None:
+        # regression test for https://github.com/pydata/xarray/issues/9683
+        class NoDeepCopy:
+            def __deepcopy__(self, memo):
+                raise TypeError("class can't be deepcopied")
+
+        da = xr.DataArray(NoDeepCopy())
+        ds = xr.Dataset({"var": da})
+        dt1 = xr.DataTree(ds)
+        dt2 = xr.DataTree(ds, children={"child": dt1})
+        dt3 = xr.DataTree.from_dict({"/": ds, "child": ds})
+        assert_identical(dt2, dt3)
+
 
 class TestFamilyTree:
     def test_dont_modify_children_inplace(self) -> None:
@@ -106,7 +119,7 @@ class TestFamilyTree:
 class TestNames:
     def test_child_gets_named_on_attach(self) -> None:
         sue = DataTree()
-        mary = DataTree(children={"Sue": sue})  # noqa
+        mary = DataTree(children={"Sue": sue})
         assert mary.children["Sue"].name == "Sue"
 
     def test_dataset_containing_slashes(self) -> None:
@@ -502,7 +515,7 @@ class TestSetItem:
     def test_grafted_subtree_retains_name(self) -> None:
         subtree = DataTree(name="original_subtree_name")
         root = DataTree(name="root")
-        root["new_subtree_name"] = subtree  # noqa
+        root["new_subtree_name"] = subtree
         assert subtree.name == "original_subtree_name"
 
     def test_setitem_new_empty_node(self) -> None:
@@ -2279,6 +2292,57 @@ class TestDask:
 
         assert actual.chunksizes == expected_chunksizes, "mismatching chunksizes"
         assert tree.chunksizes == original_chunksizes, "original tree was modified"
+
+    def test_persist(self):
+        ds1 = xr.Dataset({"a": ("x", np.arange(10))})
+        ds2 = xr.Dataset({"b": ("y", np.arange(5))})
+        ds3 = xr.Dataset({"c": ("z", np.arange(4))})
+        ds4 = xr.Dataset({"d": ("x", np.arange(-5, 5))})
+
+        def fn(x):
+            return 2 * x
+
+        expected = xr.DataTree.from_dict(
+            {
+                "/": fn(ds1).chunk({"x": 5}),
+                "/group1": fn(ds2).chunk({"y": 3}),
+                "/group2": fn(ds3).chunk({"z": 2}),
+                "/group1/subgroup1": fn(ds4).chunk({"x": 5}),
+            }
+        )
+        # Add trivial second layer to the task graph, persist should reduce to one
+        tree = xr.DataTree.from_dict(
+            {
+                "/": fn(ds1.chunk({"x": 5})),
+                "/group1": fn(ds2.chunk({"y": 3})),
+                "/group2": fn(ds3.chunk({"z": 2})),
+                "/group1/subgroup1": fn(ds4.chunk({"x": 5})),
+            }
+        )
+        original_chunksizes = tree.chunksizes
+        original_hlg_depths = {
+            node.path: len(node.dataset.__dask_graph__().layers)
+            for node in tree.subtree
+        }
+
+        actual = tree.persist()
+        actual_hlg_depths = {
+            node.path: len(node.dataset.__dask_graph__().layers)
+            for node in actual.subtree
+        }
+
+        assert_identical(actual, expected)
+
+        assert actual.chunksizes == original_chunksizes, "chunksizes were modified"
+        assert (
+            tree.chunksizes == original_chunksizes
+        ), "original chunksizes were modified"
+        assert all(
+            d == 1 for d in actual_hlg_depths.values()
+        ), "unexpected dask graph depth"
+        assert all(
+            d == 2 for d in original_hlg_depths.values()
+        ), "original dask graph was modified"
 
     def test_chunk(self):
         ds1 = xr.Dataset({"a": ("x", np.arange(10))})

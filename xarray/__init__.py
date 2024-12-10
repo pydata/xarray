@@ -1,6 +1,6 @@
 from importlib.metadata import version as _version
 
-from xarray import groupers, testing, tutorial
+from xarray import groupers, testing, tutorial, ufuncs
 from xarray.backends.api import (
     load_dataarray,
     load_dataset,
@@ -15,6 +15,7 @@ from xarray.backends.zarr import open_zarr
 from xarray.coding.cftime_offsets import cftime_range, date_range, date_range_like
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.frequencies import infer_freq
+from xarray.coding.times import CFDatetimeCoder
 from xarray.conventions import SerializationWarning, decode_cf
 from xarray.core.alignment import align, broadcast
 from xarray.core.combine import combine_by_coords, combine_nested
@@ -64,11 +65,12 @@ except Exception:
 
 # A hardcoded __all__ variable is necessary to appease
 # `mypy --strict` running in projects that import xarray.
-__all__ = (
+__all__ = (  # noqa: RUF022
     # Sub-packages
     "groupers",
     "testing",
     "tutorial",
+    "ufuncs",
     # Top-level functions
     "align",
     "apply_ufunc",
@@ -78,13 +80,13 @@ __all__ = (
     "combine_by_coords",
     "combine_nested",
     "concat",
+    "corr",
+    "cov",
+    "cross",
     "date_range",
     "date_range_like",
     "decode_cf",
     "dot",
-    "cov",
-    "corr",
-    "cross",
     "full_like",
     "get_options",
     "group_subtrees",
@@ -112,17 +114,18 @@ __all__ = (
     "where",
     "zeros_like",
     # Classes
+    "CFDatetimeCoder",
     "CFTimeIndex",
     "Context",
     "Coordinates",
     "DataArray",
-    "Dataset",
     "DataTree",
+    "Dataset",
     "Index",
     "IndexSelResult",
     "IndexVariable",
-    "Variable",
     "NamedArray",
+    "Variable",
     # Exceptions
     "InvalidTreeError",
     "MergeError",
@@ -130,6 +133,6 @@ __all__ = (
     "SerializationWarning",
     "TreeIsomorphismError",
     # Constants
-    "__version__",
     "ALL_DIMS",
+    "__version__",
 )

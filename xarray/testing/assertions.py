@@ -124,8 +124,8 @@ def assert_equal(a, b, check_dim_order: bool = True):
     numpy.testing.assert_array_equal
     """
     __tracebackhide__ = True
-    assert (
-        type(a) is type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
+    assert type(a) is type(b) or (
+        isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
     b = maybe_transpose_dims(a, b, check_dim_order)
     if isinstance(a, Variable | DataArray):
@@ -163,8 +163,8 @@ def assert_identical(a, b):
     assert_equal, assert_allclose, Dataset.equals, DataArray.equals
     """
     __tracebackhide__ = True
-    assert (
-        type(a) is type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
+    assert type(a) is type(b) or (
+        isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
     if isinstance(a, Variable):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
@@ -423,7 +423,7 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
         set(ds._variables),
     )
 
-    assert type(ds._dims) is dict, ds._dims  # noqa: E721
+    assert type(ds._dims) is dict, ds._dims
     assert all(isinstance(v, int) for v in ds._dims.values()), ds._dims
     var_dims: set[Hashable] = set()
     for v in ds._variables.values():
