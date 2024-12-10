@@ -468,7 +468,7 @@ def merge_data_and_coords(data_vars: DataVars, coords) -> _MergeResult:
     )
 
 
-class DataVariables(Mapping[Any, "DataArray"]):
+class DataVariables(Mapping[Any, "xarray.DataArray"]):
     __slots__ = ("_dataset",)
 
     def __init__(self, dataset: Dataset):
@@ -550,7 +550,7 @@ class Dataset(
     DataWithCoords,
     DatasetAggregations,
     DatasetArithmetic,
-    Mapping[Hashable, "DataArray"],
+    Mapping[Hashable, "xarray.DataArray"],
 ):
     """A multi-dimensional, in memory, array database.
 
