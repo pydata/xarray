@@ -407,10 +407,14 @@ class DatasetIOBase:
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
-    def test_write_store(self) -> None:
-        expected = create_test_data()
-        with self.roundtrip(expected) as actual:
-            assert_identical(actual, expected)
+def test_write_store(self) -> None: 
+     expected = create_test_data() 
+     with self.create_store() as store: 
+         expected.dump_to_store(store) 
+         # we need to cf decode the store because it has time and 
+         # non-dimension coordinates 
+         with xr.decode_cf(store) as actual: 
+             assert_allclose(expected, actual) 
 
     def check_dtypes_roundtripped(self, expected, actual):
         for k in expected.variables:
