@@ -292,7 +292,7 @@ work as a streaming operation, when run on arrays loaded from disk:
 .. ipython::
     :verbatim:
 
-    In [56]: rs = np.random.RandomState(0)
+    In [56]: rs = np.random.default_rng(0)
 
     In [57]: array1 = xr.DataArray(rs.randn(1000, 100000), dims=["place", "time"])  # 800MB
 

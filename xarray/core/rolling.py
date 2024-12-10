@@ -282,7 +282,8 @@ class DataArrayRolling(Rolling["DataArray"]):
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
         center : bool, default: False
-            Set the labels at the center of the window.
+            Set the labels at the center of the window. The default, False,
+            sets the labels at the right edge of the window.
 
         Returns
         -------
@@ -793,7 +794,8 @@ class DatasetRolling(Rolling["Dataset"]):
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
         center : bool or mapping of hashable to bool, default: False
-            Set the labels at the center of the window.
+            Set the labels at the center of the window. The default, False,
+            sets the labels at the right edge of the window.
 
         Returns
         -------
