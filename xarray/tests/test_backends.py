@@ -2279,7 +2279,7 @@ class ZarrBase(CFEncodedBase):
         raise NotImplementedError
 
     @contextlib.contextmanager
-    def create_store(self, cache_members: bool = True):
+    def create_store(self, cache_members: bool = False):
         with self.create_zarr_target() as store_target:
             yield backends.ZarrStore.open_group(
                 store_target,
@@ -3340,6 +3340,7 @@ class TestInstrumentedZarrStore:
         store = KVStore({}, **kwargs)  # type: ignore[arg-type,unused-ignore]
         yield store
 
+
     def make_patches(self, store):
         from unittest.mock import MagicMock
 
@@ -3376,18 +3377,18 @@ class TestInstrumentedZarrStore:
                 # TODO: verify these
                 expected = {
                     "set": 5,
-                    "get": 7,
-                    "list_dir": 3,
+                    "get": 4,
+                    "list_dir": 2,
                     "list_prefix": 1,
                 }
             else:
                 expected = {
-                    "iter": 2,
+                    "iter": 1,
                     "contains": 18,
                     "setitem": 10,
                     "getitem": 13,
-                    "listdir": 1,
-                    "list_prefix": 2,
+                    "listdir": 0,
+                    "list_prefix": 3,
                 }
 
             patches = self.make_patches(store)
@@ -3407,12 +3408,12 @@ class TestInstrumentedZarrStore:
                 }
             else:
                 expected = {
-                    "iter": 3,
-                    "contains": 9,
+                    "iter": 1,
+                    "contains": 11,
                     "setitem": 6,
-                    "getitem": 13,
-                    "listdir": 2,
-                    "list_prefix": 0,
+                    "getitem": 15,
+                    "listdir": 0,
+                    "list_prefix": 1,
                 }
 
             with patch.multiple(KVStore, **patches):
@@ -3430,12 +3431,12 @@ class TestInstrumentedZarrStore:
                 }
             else:
                 expected = {
-                    "iter": 3,
-                    "contains": 9,
+                    "iter": 1,
+                    "contains": 11,
                     "setitem": 6,
-                    "getitem": 13,
-                    "listdir": 2,
-                    "list_prefix": 0,
+                    "getitem": 15,
+                    "listdir": 0,
+                    "list_prefix": 1,
                 }
 
             with patch.multiple(KVStore, **patches):
@@ -3454,8 +3455,8 @@ class TestInstrumentedZarrStore:
             if has_zarr_v3:
                 expected = {
                     "set": 5,
-                    "get": 10,
-                    "list_dir": 3,
+                    "get": 2,
+                    "list_dir": 2,
                     "list_prefix": 4,
                 }
             else:
@@ -3463,7 +3464,7 @@ class TestInstrumentedZarrStore:
                     "iter": 3,
                     "contains": 16,
                     "setitem": 9,
-                    "getitem": 13,
+                    "getitem": 15,
                     "listdir": 2,
                     "list_prefix": 4,
                 }
@@ -3567,7 +3568,7 @@ class TestZarrDirectoryStore(ZarrBase):
             yield tmp
 
     @contextlib.contextmanager
-    def create_store(self, cache_members: bool = True):
+    def create_store(self, cache_members: bool = False):
         with self.create_zarr_target() as store_target:
             group = backends.ZarrStore.open_group(
                 store_target, mode="a", cache_members=cache_members
