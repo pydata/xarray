@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, cast, overload
 
 import numpy as np
 import pandas as pd
+from numpy.typing import DTypeLike
 from packaging.version import Version
 
 from xarray.core import duck_array_ops
@@ -32,8 +33,6 @@ from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import array_type, integer_types, is_chunked_array
 
 if TYPE_CHECKING:
-    from numpy.typing import DTypeLike
-
     from xarray.core.indexes import Index
     from xarray.core.types import Self
     from xarray.core.variable import Variable
