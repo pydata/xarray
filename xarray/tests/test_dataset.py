@@ -4917,8 +4917,8 @@ class TestDataset:
         assert expected.equals(actual), (expected, actual)
 
     def test_from_dataframe_categorical_dtype_index(self) -> None:
-        cat = pd.Categorical(list("abcd"))
-        df = pd.DataFrame({"f": cat}, index=cat)
+        cat = pd.CategoricalIndex(list("abcd"))
+        df = pd.DataFrame({"f": [0, 1, 2, 3]}, index=cat)
         ds = df.to_xarray()
         restored = ds.to_dataframe()
         df.index.name = (
