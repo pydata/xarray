@@ -572,6 +572,8 @@ def _localize(var, indexes_coords):
     """
     indexes = {}
     for dim, [x, new_x] in indexes_coords.items():
+        if is_chunked_array(new_x._data):
+            continue
         new_x_loaded = new_x.values
         minval = np.nanmin(new_x_loaded)
         maxval = np.nanmax(new_x_loaded)
