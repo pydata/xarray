@@ -399,6 +399,7 @@ def test_interpolate_nd_nd(method: InterpnOptions) -> None:
 
 
 @requires_scipy
+@pytest.mark.filterwarnings("ignore:All-NaN slice")
 def test_interpolate_nd_with_nan() -> None:
     """Interpolate an array with an nd indexer and `NaN` values."""
 
