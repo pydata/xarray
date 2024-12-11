@@ -292,12 +292,15 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
 @requires_scipy
 @pytest.mark.parametrize("method", get_args(InterpnOptions))
 @pytest.mark.parametrize(
-    "case", [pytest.param(3, id="no_chunk"), pytest.param(4, id="chunked")]
+    "case",
+    [
+        pytest.param(3, id="no_chunk"),
+        pytest.param(
+            4, id="chunked", marks=pytest.mark.skipif(not has_dask, reason="no dask")
+        ),
+    ],
 )
 def test_interpolate_nd(case: int, method: InterpnOptions, nd_interp_coords) -> None:
-    if not has_dask and case == 4:
-        pytest.skip("dask is not installed in the environment.")
-
     da = get_example_data(case)
 
     # grid -> grid
