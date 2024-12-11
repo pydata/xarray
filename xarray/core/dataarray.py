@@ -394,7 +394,7 @@ class DataArray(
         lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
         lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
       * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
-        reference_time  datetime64[ns] 8B 2014-09-05
+        reference_time  datetime64[s] 8B 2014-09-05
     Dimensions without coordinates: x, y
     Attributes:
         description:  Ambient temperature.
@@ -409,7 +409,7 @@ class DataArray(
         lon             float64 8B -99.32
         lat             float64 8B 42.21
         time            datetime64[ns] 8B 2014-09-08
-        reference_time  datetime64[ns] 8B 2014-09-05
+        reference_time  datetime64[s] 8B 2014-09-05
     Attributes:
         description:  Ambient temperature.
         units:        degC
@@ -6875,7 +6875,7 @@ class DataArray(
                [[nan, nan, nan],
                 [ 3.,  4.,  5.]]])
         Coordinates:
-          * x_bins   (x_bins) object 16B (5, 15] (15, 25]
+          * x_bins   (x_bins) interval[int64, right] 16B (5, 15] (15, 25]
           * letters  (letters) object 16B 'a' 'b'
         Dimensions without coordinates: y
 

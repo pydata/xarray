@@ -673,7 +673,7 @@ class Dataset(
         lat             (loc) float64 16B 42.25 42.21
       * instrument      (instrument) <U8 96B 'manufac1' 'manufac2' 'manufac3'
       * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
-        reference_time  datetime64[ns] 8B 2014-09-05
+        reference_time  datetime64[s] 8B 2014-09-05
     Dimensions without coordinates: loc
     Data variables:
         temperature     (loc, instrument, time) float64 192B 29.11 18.2 ... 9.063
@@ -692,7 +692,7 @@ class Dataset(
         lat             float64 8B 42.21
         instrument      <U8 32B 'manufac3'
         time            datetime64[ns] 8B 2014-09-06
-        reference_time  datetime64[ns] 8B 2014-09-05
+        reference_time  datetime64[s] 8B 2014-09-05
     Data variables:
         temperature     float64 8B -5.424
         precipitation   float64 8B 9.884
@@ -8911,7 +8911,7 @@ class Dataset(
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
           * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
-            reference_time  datetime64[ns] 8B 2014-09-05
+            reference_time  datetime64[s] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
             precipitation   (x, y, time) float64 96B 5.68 9.256 0.7104 ... 4.615 7.805
@@ -8926,7 +8926,7 @@ class Dataset(
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
           * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
-            reference_time  datetime64[ns] 8B 2014-09-05
+            reference_time  datetime64[s] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
             temperature     (x, y, time) float64 96B 29.11 18.2 22.83 ... 16.15 26.63
@@ -10528,7 +10528,7 @@ class Dataset(
         <xarray.Dataset> Size: 128B
         Dimensions:  (y: 3, x_bins: 2, letters: 2)
         Coordinates:
-          * x_bins   (x_bins) object 16B (5, 15] (15, 25]
+          * x_bins   (x_bins) interval[int64, right] 16B (5, 15] (15, 25]
           * letters  (letters) object 16B 'a' 'b'
         Dimensions without coordinates: y
         Data variables:

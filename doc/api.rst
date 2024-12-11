@@ -52,6 +52,7 @@ Creating a dataset
 
    Dataset
    decode_cf
+   CFDatetimeCoder
 
 Attributes
 ----------

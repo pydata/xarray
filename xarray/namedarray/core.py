@@ -17,6 +17,7 @@ from typing import (
 )
 
 import numpy as np
+import pandas as pd
 
 # TODO: get rid of this after migrating this class to array API
 from xarray.core import dtypes, formatting, formatting_html
@@ -834,7 +835,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if chunkmanager.is_chunked_array(data_old):
             data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
         else:
-            if not isinstance(data_old, ExplicitlyIndexed):
+            if pd.api.types.is_extension_array_dtype(data_old.dtype):
+                # One of PandasExtensionArray or PandasIndexingAdapter?
+                ndata = data_old.array.to_numpy()
+            elif not isinstance(data_old, ExplicitlyIndexed):
                 ndata = data_old
             else:
                 # Unambiguously handle array storage backends (like NetCDF4 and h5py)
@@ -845,7 +849,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 # Using OuterIndexer is a pragmatic choice: dask does not yet handle
                 # different indexing types in an explicit way:
                 # https://github.com/dask/dask/issues/2883
-                ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore[assignment]
+                ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)
 
             if is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
