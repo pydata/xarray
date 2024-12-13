@@ -1026,7 +1026,6 @@ class DataArray(
         drop: Literal[True],
     ) -> Self: ...
 
-    @_deprecate_positional_args("v2023.10.0")
     def reset_coords(
         self,
         names: Dims = None,
@@ -1364,7 +1363,6 @@ class DataArray(
         all_variables = [self.variable] + [c.variable for c in self.coords.values()]
         return get_chunksizes(all_variables)
 
-    @_deprecate_positional_args("v2023.10.0")
     def chunk(
         self,
         chunks: T_ChunksFreq = {},  # noqa: B006  # {} even though it's technically unsafe, is being used intentionally here (#4667)
@@ -1504,8 +1502,8 @@ class DataArray(
 
         See Also
         --------
-        Dataset.isel
-        DataArray.sel
+        :func:`Dataset.isel <Dataset.isel>`
+        :func:`DataArray.sel <DataArray.sel>`
 
         :doc:`xarray-tutorial:intermediate/indexing/indexing`
             Tutorial material on indexing with Xarray objects
@@ -1642,8 +1640,8 @@ class DataArray(
 
         See Also
         --------
-        Dataset.sel
-        DataArray.isel
+        :func:`Dataset.sel <Dataset.sel>`
+        :func:`DataArray.isel <DataArray.isel>`
 
         :doc:`xarray-tutorial:intermediate/indexing/indexing`
             Tutorial material on indexing with Xarray objects
@@ -1835,7 +1833,6 @@ class DataArray(
         ds = self._to_temp_dataset().thin(indexers, **indexers_kwargs)
         return self._from_temp_dataset(ds)
 
-    @_deprecate_positional_args("v2023.10.0")
     def broadcast_like(
         self,
         other: T_DataArrayOrSet,
@@ -1948,7 +1945,6 @@ class DataArray(
 
         return da
 
-    @_deprecate_positional_args("v2023.10.0")
     def reindex_like(
         self,
         other: T_DataArrayOrSet,
@@ -2135,7 +2131,6 @@ class DataArray(
             fill_value=fill_value,
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def reindex(
         self,
         indexers: Mapping[Any, Any] | None = None,
@@ -2960,7 +2955,6 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
-    @_deprecate_positional_args("v2023.10.0")
     def unstack(
         self,
         dim: Dims = None,
@@ -3385,7 +3379,6 @@ class DataArray(
         dataset = dataset.drop_isel(indexers=indexers, **indexers_kwargs)
         return self._from_temp_dataset(dataset)
 
-    @_deprecate_positional_args("v2023.10.0")
     def dropna(
         self,
         dim: Hashable,
@@ -4889,7 +4882,6 @@ class DataArray(
 
         return title
 
-    @_deprecate_positional_args("v2023.10.0")
     def diff(
         self,
         dim: Hashable,
@@ -5198,7 +5190,6 @@ class DataArray(
         ds = self._to_temp_dataset().sortby(variables, ascending=ascending)
         return self._from_temp_dataset(ds)
 
-    @_deprecate_positional_args("v2023.10.0")
     def quantile(
         self,
         q: ArrayLike,
@@ -5318,7 +5309,6 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
-    @_deprecate_positional_args("v2023.10.0")
     def rank(
         self,
         dim: Hashable,
@@ -5612,8 +5602,9 @@ class DataArray(
 
         See Also
         --------
-        dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
-        xarray.DataArray.map_blocks
+        :func:`dask.array.map_blocks <dask.array.map_blocks>`
+        :func:`xarray.apply_ufunc <xarray.apply_ufunc>`
+        :func:`xarray.Dataset.map_blocks <xarray.Dataset.map_blocks>`
 
         :doc:`xarray-tutorial:advanced/map_blocks/map_blocks`
             Advanced Tutorial on map_blocks with dask
@@ -5896,7 +5887,6 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
-    @_deprecate_positional_args("v2023.10.0")
     def idxmin(
         self,
         dim: Hashable | None = None,
@@ -5994,7 +5984,6 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def idxmax(
         self,
         dim: Hashable = None,
@@ -6092,7 +6081,6 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def argmin(
         self,
         dim: Dims = None,
@@ -6194,7 +6182,6 @@ class DataArray(
         else:
             return self._replace_maybe_drop_dims(result)
 
-    @_deprecate_positional_args("v2023.10.0")
     def argmax(
         self,
         dim: Dims = None,
@@ -6543,7 +6530,6 @@ class DataArray(
             kwargs=kwargs,
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def drop_duplicates(
         self,
         dim: Hashable | Iterable[Hashable],
@@ -6905,13 +6891,13 @@ class DataArray(
         :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
             Tutorial on :py:func:`~xarray.DataArray.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.DataArray.resample`
 
-        DataArray.groupby_bins
-        Dataset.groupby
-        core.groupby.DataArrayGroupBy
-        DataArray.coarsen
-        pandas.DataFrame.groupby
-        Dataset.resample
-        DataArray.resample
+        :external:py:meth:`pandas.DataFrame.groupby <pandas.DataFrame.groupby>`
+        :func:`DataArray.groupby_bins <DataArray.groupby_bins>`
+        :func:`Dataset.groupby <Dataset.groupby>`
+        :func:`core.groupby.DataArrayGroupBy <core.groupby.DataArrayGroupBy>`
+        :func:`DataArray.coarsen <DataArray.coarsen>`
+        :func:`Dataset.resample <Dataset.resample>`
+        :func:`DataArray.resample <DataArray.resample>`
         """
         from xarray.core.groupby import (
             DataArrayGroupBy,
@@ -7048,7 +7034,7 @@ class DataArray(
 
         See Also
         --------
-        Dataset.weighted
+        :func:`Dataset.weighted <Dataset.weighted>`
 
         :ref:`comput.weighted`
             User guide on weighted array reduction using :py:func:`~xarray.DataArray.weighted`
@@ -7081,7 +7067,8 @@ class DataArray(
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
         center : bool or Mapping to int, default: False
-            Set the labels at the center of the window.
+            Set the labels at the center of the window. The default, False,
+            sets the labels at the right edge of the window.
         **window_kwargs : optional
             The keyword arguments form of ``dim``.
             One of dim or window_kwargs must be provided.
@@ -7331,8 +7318,8 @@ class DataArray(
 
         See Also
         --------
-        core.rolling.DataArrayCoarsen
-        Dataset.coarsen
+        :class:`core.rolling.DataArrayCoarsen <core.rolling.DataArrayCoarsen>`
+        :func:`Dataset.coarsen <Dataset.coarsen>`
 
         :ref:`reshape.coarsen`
             User guide describing :py:func:`~xarray.DataArray.coarsen`

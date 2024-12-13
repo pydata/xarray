@@ -14,27 +14,41 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2024.11.1:
+.. _whats-new.2024.12.0:
 
-v.2024.11.1 (unreleased)
+v.2024.12.0 (unreleased)
 ------------------------
 
 New Features
 ~~~~~~~~~~~~
 - Add :py:func:`~xarray.show_backends` alias for :py:func:`~xarray.backends.list_engines` (:issue:`6577`, :pull:`9821`).
   By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
+- Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
+  duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
+  By `Sam Levang <https://github.com/slevang>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- Methods including ``dropna``, ``rank``, ``idxmax``, ``idxmin`` require
+  non-dimension arguments to be passed as keyword arguments. The previous
+  behavior, which allowed ``.idxmax('foo', 'all')`` was too easily confused with
+  ``'all'`` being a dimension. The updated equivalent is ``.idxmax('foo',
+  how='all')``. The previous behavior was deprecated in v2023.10.0.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Deprecations
 ~~~~~~~~~~~~
-
+- Finalize deprecation of ``closed`` parameters of :py:func:`cftime_range` and
+  :py:func:`date_range` (:pull:`9882`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix type annotations for ``get_axis_num``. (:issue:`9822`, :pull:`9827`).
+  By `Bruce Merry <https://github.com/bmerry>`_.
+- Fix unintended load on datasets when calling :py:meth:`DataArray.plot.scatter` (:pull:`9818`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -42,8 +56,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
-
+- Move non-CF related ``ensure_dtype_not_object`` from conventions to backends (:pull:`9828`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 .. _whats-new.2024.11.0:
 

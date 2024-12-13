@@ -65,7 +65,7 @@ except Exception:
 
 # A hardcoded __all__ variable is necessary to appease
 # `mypy --strict` running in projects that import xarray.
-__all__ = (
+__all__ = (  # noqa: RUF022
     # Sub-packages
     "groupers",
     "testing",
@@ -119,8 +119,8 @@ __all__ = (
     "Context",
     "Coordinates",
     "DataArray",
-    "Dataset",
     "DataTree",
+    "Dataset",
     "Index",
     "IndexSelResult",
     "IndexVariable",
@@ -133,6 +133,6 @@ __all__ = (
     "SerializationWarning",
     "TreeIsomorphismError",
     # Constants
-    "__version__",
     "ALL_DIMS",
+    "__version__",
 )
