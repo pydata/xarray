@@ -4185,7 +4185,7 @@ class Dataset(
             }
 
         variables: dict[Hashable, Variable] = {}
-        reindex: bool = False
+        reindex_vars: list[Hashable] = []
         for name, var in obj._variables.items():
             if name in indexers:
                 continue
@@ -4207,20 +4207,20 @@ class Dataset(
                 # booleans and objects and retains the dtype but inside
                 # this loop there might be some duplicate code that slows it
                 # down, therefore collect these signals and run it later:
-                reindex = True
+                reindex_vars.append(name)
             elif all(d not in indexers for d in var.dims):
                 # For anything else we can only keep variables if they
                 # are not dependent on any coords that are being
                 # interpolated along:
                 variables[name] = var
 
-        if reindex and (
+        if reindex_vars and (
             reindex_indexers := {
                 k: v for k, (_, v) in validated_indexers.items() if v.dims == (k,)
             }
         ):
             reindexed = alignment.reindex(
-                obj,
+                obj[reindex_vars],
                 indexers=reindex_indexers,
                 method=method_non_numeric,
                 exclude_vars=variables.keys(),
