@@ -92,7 +92,7 @@ def trailing_optional(xs):
     return xs[0] + optional(trailing_optional(xs[1:]))
 
 
-def build_pattern(date_sep=r"\-", datetime_sep=r"T", time_sep=r"\:"):
+def build_pattern(date_sep=r"\-", datetime_sep=r"T", time_sep=r"\:", micro_sep=r"."):
     pieces = [
         (None, "year", r"\d{4}"),
         (date_sep, "month", r"\d{2}"),
@@ -100,6 +100,7 @@ def build_pattern(date_sep=r"\-", datetime_sep=r"T", time_sep=r"\:"):
         (datetime_sep, "hour", r"\d{2}"),
         (time_sep, "minute", r"\d{2}"),
         (time_sep, "second", r"\d{2}"),
+        (micro_sep, "microsecond", r"\d{1,6}"),
     ]
     pattern_list = []
     for sep, name, sub_pattern in pieces:
@@ -131,11 +132,13 @@ def _parse_iso8601_with_reso(date_type, timestr):
     result = parse_iso8601_like(timestr)
     replace = {}
 
-    for attr in ["year", "month", "day", "hour", "minute", "second"]:
+    for attr in ["year", "month", "day", "hour", "minute", "second", "microsecond"]:
         value = result.get(attr, None)
         if value is not None:
             # Note ISO8601 conventions allow for fractional seconds.
             # TODO: Consider adding support for sub-second resolution?
+            if attr == "microsecond":
+                value = 10 ** (6 - len(value)) * int(value)
             replace[attr] = int(value)
             resolution = attr
     return default.replace(**replace), resolution
