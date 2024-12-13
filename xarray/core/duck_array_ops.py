@@ -317,7 +317,9 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
     if lazy_equiv is None:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", r"All-NaN (slice|axis) encountered")
-            return bool(array_all(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True)))
+            return bool(
+                array_all(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True))
+            )
     else:
         return lazy_equiv
 
