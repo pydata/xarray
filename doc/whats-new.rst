@@ -37,7 +37,9 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+- Finalize deprecation of ``closed`` parameters of :py:func:`cftime_range` and
+  :py:func:`date_range` (:pull:`9882`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Bug fixes
 ~~~~~~~~~
