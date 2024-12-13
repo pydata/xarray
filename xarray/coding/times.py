@@ -641,25 +641,38 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
     else:
         cftime = attempt_import("cftime")
 
+    dates = np.asarray(dates)
+    original_shape = dates.shape
+
     if np.issubdtype(dates.dtype, np.datetime64):
         # numpy's broken datetime conversion only works for us precision
         dates = dates.astype("M8[us]").astype(datetime)
 
-    def encode_datetime(d):
-        # Since netCDF files do not support storing float128 values, we ensure
-        # that float64 values are used by setting longdouble=False in num2date.
-        # This try except logic can be removed when xarray's minimum version of
-        # cftime is at least 1.6.2.
-        try:
-            return (
-                np.nan
-                if d is None
-                else cftime.date2num(d, units, calendar, longdouble=False)
-            )
-        except TypeError:
-            return np.nan if d is None else cftime.date2num(d, units, calendar)
+    dates = np.atleast_1d(dates)
 
-    return reshape(np.array([encode_datetime(d) for d in ravel(dates)]), dates.shape)
+    # Find all the None position
+    none_position = dates == None
+    filtered_dates = dates[~none_position]
+
+    # Since netCDF files do not support storing float128 values, we ensure
+    # that float64 values are used by setting longdouble=False in num2date.
+    # This try except logic can be removed when xarray's minimum version of
+    # cftime is at least 1.6.2.
+    try:
+        encoded_nums = cftime.date2num(
+            filtered_dates, units, calendar, longdouble=False
+        )
+    except TypeError:
+        encoded_nums = cftime.date2num(filtered_dates, units, calendar)
+
+    if filtered_dates.size == none_position.size:
+        return encoded_nums.reshape(original_shape)
+
+    # Create a full matrix of NaN
+    # And fill the num dates in the not NaN or None position
+    result = np.full(dates.shape, np.nan)
+    result[np.nonzero(~none_position)] = encoded_nums
+    return result.reshape(original_shape)
 
 
 def cast_to_int_if_safe(num) -> np.ndarray:
