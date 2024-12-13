@@ -19,9 +19,9 @@ from xarray import (
     date_range,
     decode_cf,
 )
+from xarray.coders import CFDatetimeCoder
 from xarray.coding.times import _STANDARD_CALENDARS as _STANDARD_CALENDARS_UNSORTED
 from xarray.coding.times import (
-    CFDatetimeCoder,
     _encode_datetime_with_cftime,
     _netcdf_to_numpy_timeunit,
     _numpy_to_netcdf_timeunit,

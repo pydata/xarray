@@ -1,6 +1,6 @@
 from importlib.metadata import version as _version
 
-from xarray import groupers, testing, tutorial, ufuncs
+from xarray import coders, groupers, testing, tutorial, ufuncs
 from xarray.backends.api import (
     load_dataarray,
     load_dataset,
@@ -15,7 +15,6 @@ from xarray.backends.zarr import open_zarr
 from xarray.coding.cftime_offsets import cftime_range, date_range, date_range_like
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.frequencies import infer_freq
-from xarray.coding.times import CFDatetimeCoder
 from xarray.conventions import SerializationWarning, decode_cf
 from xarray.core.alignment import align, broadcast
 from xarray.core.combine import combine_by_coords, combine_nested
@@ -67,6 +66,7 @@ except Exception:
 # `mypy --strict` running in projects that import xarray.
 __all__ = (  # noqa: RUF022
     # Sub-packages
+    "coders",
     "groupers",
     "testing",
     "tutorial",
@@ -114,7 +114,6 @@ __all__ = (  # noqa: RUF022
     "where",
     "zeros_like",
     # Classes
-    "CFDatetimeCoder",
     "CFTimeIndex",
     "Context",
     "Coordinates",

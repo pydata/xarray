@@ -52,7 +52,6 @@ Creating a dataset
 
    Dataset
    decode_cf
-   CFDatetimeCoder
 
 Attributes
 ----------
@@ -1093,6 +1092,17 @@ DataTree methods
 
 ..    Missing:
 ..    ``open_mfdatatree``
+
+Encoding/Decoding
+=================
+
+Coder objects
+-------------
+
+.. autosummary::
+   :toctree: generated/
+
+   coders.CFDatetimeCoder
 
 Coordinates objects
 ===================

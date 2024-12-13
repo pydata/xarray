@@ -29,7 +29,6 @@ from pandas.errors import OutOfBoundsDatetime
 
 import xarray as xr
 from xarray import (
-    CFDatetimeCoder,
     DataArray,
     Dataset,
     backends,
@@ -49,6 +48,7 @@ from xarray.backends.netCDF4_ import (
 )
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
+from xarray.coders import CFDatetimeCoder
 from xarray.coding.cftime_offsets import cftime_range
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
