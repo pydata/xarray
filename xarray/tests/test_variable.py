@@ -3081,37 +3081,11 @@ def test_pandas_two_only_datetime_conversion_warnings(
         (pd.timedelta_range("1", periods=1), "ns"),
         (timedelta(days=1), "us"),
         (np.array([timedelta(days=1)]), "ns"),
+        (pd.timedelta_range("1", periods=1).astype("timedelta64[s]"), "s"),
     ],
     ids=lambda x: f"{x}",
 )
 def test_timedelta_conversion_warning(values, unit) -> None:
-    # todo: needs discussion
-    # todo: check, if this test is OK
     dims = ["time"] if isinstance(values, np.ndarray | pd.Index) else []
     var = Variable(dims, values)
     assert var.dtype == np.dtype(f"timedelta64[{unit}]")
-
-
-def test_pandas_two_only_timedelta_conversion_warning() -> None:
-    # todo: test still needed?
-    # Note this test relies on a pandas feature that is only present in pandas
-    # 2.0.0 and above, and so for now cannot be parametrized.
-    data = pd.timedelta_range("1", periods=1).astype("timedelta64[s]")
-    var = Variable(["time"], data)
-
-    assert var.dtype == np.dtype("timedelta64[s]")
-
-
-@pytest.mark.parametrize(
-    ("index", "dtype"),
-    [
-        (pd.date_range("2000", periods=1), "datetime64"),
-        (pd.timedelta_range("1", periods=1), "timedelta64"),
-    ],
-    ids=lambda x: f"{x}",
-)
-def test_pandas_indexing_adapter_non_nanosecond_conversion(index, dtype) -> None:
-    # todo: test still needed?
-    data = PandasIndexingAdapter(index.astype(f"{dtype}[s]"))
-    var = Variable(["time"], data)
-    assert var.dtype == np.dtype(f"{dtype}[s]")
