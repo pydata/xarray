@@ -62,15 +62,13 @@ from xarray.coding.times import (
 )
 from xarray.core.common import _contains_datetime_like_objects, is_np_datetime_like
 from xarray.core.pdcompat import (
-    NoDefault,
     count_not_none,
     nanosecond_precision_timestamp,
-    no_default,
 )
 from xarray.core.utils import attempt_import, emit_user_level_warning
 
 if TYPE_CHECKING:
-    from xarray.core.types import InclusiveOptions, Self, SideOptions, TypeAlias
+    from xarray.core.types import InclusiveOptions, Self, TypeAlias
 
 
 DayOption: TypeAlias = Literal["start", "end"]
@@ -963,22 +961,6 @@ def _translate_closed_to_inclusive(closed):
     return inclusive
 
 
-def _infer_inclusive(
-    closed: NoDefault | SideOptions, inclusive: InclusiveOptions | None
-) -> InclusiveOptions:
-    """Follows code added in pandas #43504."""
-    if closed is not no_default and inclusive is not None:
-        raise ValueError(
-            "Following pandas, deprecated argument `closed` cannot be "
-            "passed if argument `inclusive` is not None."
-        )
-    if closed is not no_default:
-        return _translate_closed_to_inclusive(closed)
-    if inclusive is None:
-        return "both"
-    return inclusive
-
-
 def cftime_range(
     start=None,
     end=None,
@@ -986,8 +968,7 @@ def cftime_range(
     freq=None,
     normalize=False,
     name=None,
-    closed: NoDefault | SideOptions = no_default,
-    inclusive: None | InclusiveOptions = None,
+    inclusive: InclusiveOptions = "both",
     calendar="standard",
 ) -> CFTimeIndex:
     """Return a fixed frequency CFTimeIndex.
@@ -1006,16 +987,7 @@ def cftime_range(
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
         Name of the resulting index
-    closed : {None, "left", "right"}, default: "NO_DEFAULT"
-        Make the interval closed with respect to the given frequency to the
-        "left", "right", or both sides (None).
-
-        .. deprecated:: 2023.02.0
-            Following pandas, the ``closed`` parameter is deprecated in favor
-            of the ``inclusive`` parameter, and will be removed in a future
-            version of xarray.
-
-    inclusive : {None, "both", "neither", "left", "right"}, default None
+    inclusive : {"both", "neither", "left", "right"}, default "both"
         Include boundaries; whether to set each bound as closed or open.
 
         .. versionadded:: 2023.02.0
@@ -1193,8 +1165,6 @@ def cftime_range(
         offset = to_offset(freq)
         dates = np.array(list(_generate_range(start, end, periods, offset)))
 
-    inclusive = _infer_inclusive(closed, inclusive)
-
     if inclusive == "neither":
         left_closed = False
         right_closed = False
@@ -1229,8 +1199,7 @@ def date_range(
     tz=None,
     normalize=False,
     name=None,
-    closed: NoDefault | SideOptions = no_default,
-    inclusive: None | InclusiveOptions = None,
+    inclusive: InclusiveOptions = "both",
     calendar="standard",
     use_cftime=None,
 ):
@@ -1257,20 +1226,10 @@ def date_range(
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
         Name of the resulting index
-    closed : {None, "left", "right"}, default: "NO_DEFAULT"
-        Make the interval closed with respect to the given frequency to the
-        "left", "right", or both sides (None).
-
-        .. deprecated:: 2023.02.0
-            Following pandas, the `closed` parameter is deprecated in favor
-            of the `inclusive` parameter, and will be removed in a future
-            version of xarray.
-
-    inclusive : {None, "both", "neither", "left", "right"}, default: None
+    inclusive : {"both", "neither", "left", "right"}, default: "both"
         Include boundaries; whether to set each bound as closed or open.
 
         .. versionadded:: 2023.02.0
-
     calendar : str, default: "standard"
         Calendar type for the datetimes.
     use_cftime : boolean, optional
@@ -1293,8 +1252,6 @@ def date_range(
 
     if tz is not None:
         use_cftime = False
-
-    inclusive = _infer_inclusive(closed, inclusive)
 
     if _is_standard_calendar(calendar) and use_cftime is not True:
         try:
