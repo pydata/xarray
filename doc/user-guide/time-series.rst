@@ -22,7 +22,7 @@ Creating datetime64 data
 ------------------------
 
 Xarray uses the numpy dtypes ``datetime64[unit]`` and ``timedelta64[unit]``
-(where unit is anything of "s", "ms", "us" and "ns") to represent datetime
+(where unit is one of "s", "ms", "us" and "ns") to represent datetime
 data, which offer vectorized operations with numpy and smooth integration with pandas.
 
 To convert to or create regular arrays of ``datetime64`` data, we recommend
@@ -62,7 +62,7 @@ attribute like ``'days since 2000-01-01'``).
 .. note::
 
    When decoding/encoding datetimes for non-standard calendars or for dates
-   before 1582-10-15, xarray uses the `cftime`_ library.
+   before [1582-10-15](https://en.wikipedia.org/wiki/Gregorian_calendar), xarray uses the `cftime`_ library by default.
    It was previously packaged with the ``netcdf4-python`` package under the
    name ``netcdftime`` but is now distributed separately. ``cftime`` is an
    :ref:`optional dependency<installing>` of xarray.
@@ -80,7 +80,7 @@ You can manual decode arrays in this form by passing a dataset to
     # Default decoding to 'ns'-resolution
     xr.decode_cf(ds)
     # Decoding to 's'-resolution
-    coder = xr.CFDatetimeCoder(time_unit="s")
+    coder = xr.coders.CFDatetimeCoder(time_unit="s")
     xr.decode_cf(ds, decode_times=coder)
 
 From xarray TODO: version the resolution of the dates can be tuned between "s", "ms", "us" and "ns". One limitation of using ``datetime64[ns]`` is that it limits the native representation of dates to those that fall between the years 1678 and 2262, which gets increased significantly with lower resolutions. When a netCDF file contains dates outside of these bounds (or dates < 1582-10-15), dates will be returned as arrays of :py:class:`cftime.datetime` objects and a :py:class:`~xarray.CFTimeIndex` will be used for indexing.

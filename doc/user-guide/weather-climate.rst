@@ -64,7 +64,7 @@ Through the standalone ``cftime`` library and a custom subclass of
 :py:class:`pandas.Index`, xarray supports a subset of the indexing
 functionality enabled through the standard :py:class:`pandas.DatetimeIndex` for
 dates from non-standard calendars commonly used in climate science or dates
-using a standard calendar, but outside the `precision range`_ and dates prior 1582-10-15.
+using a standard calendar, but outside the `precision range`_ and dates [prior to 1582-10-15](https://en.wikipedia.org/wiki/Gregorian_calendar).
 
 .. note::
 
@@ -78,7 +78,7 @@ using a standard calendar, but outside the `precision range`_ and dates prior 15
    - Any dates are outside the time span limited by the resolution (from xarray version v2024.11)
 
    Otherwise pandas-compatible dates from a standard calendar will be
-   represented with the ``np.datetime64[unit]`` data type (where unit can be any of ["s", "ms", "us", "ns"], enabling the use of a :py:class:`pandas.DatetimeIndex` or arrays with dtype ``np.datetime64[unit]`` and their full set of associated features.
+   represented with the ``np.datetime64[unit]`` data type (where unit can be one of ["s", "ms", "us", "ns"], enabling the use of a :py:class:`pandas.DatetimeIndex` or arrays with dtype ``np.datetime64[unit]`` and their full set of associated features.
 
    As of pandas version 2.0.0, pandas supports non-nanosecond precision datetime
    values. From xarray version 2024.11 the relaxed non-nanosecond precision datetime values will be used.
@@ -132,7 +132,7 @@ Conversion between non-standard calendar and to/from pandas DatetimeIndexes is
 facilitated with the :py:meth:`xarray.Dataset.convert_calendar` method (also available as
 :py:meth:`xarray.DataArray.convert_calendar`). Here, like elsewhere in xarray, the ``use_cftime``
 argument controls which datetime backend is used in the output. The default (``None``) is to
-use ``pandas`` when possible, i.e. when the calendar is standard and dates starting with 1582-10-15.
+use ``pandas`` when possible, i.e. when the calendar is standard and dates [starting with 1582-10-15]((https://en.wikipedia.org/wiki/Gregorian_calendar)).
 
 .. ipython:: python
 
