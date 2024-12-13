@@ -1071,18 +1071,18 @@ def test_interp_vectorized_dask():
     # Synthetic dataset chunked in the two interpolation dimensions
     import dask.array as da
 
-    nt = 30
+    nt = 10
     nlat = 20
     nlon = 10
-    nq = 101
+    nq = 21
     ds = xr.Dataset(
         data_vars={
             "foo": (
                 ("lat", "lon", "dayofyear", "q"),
-                da.ones((nlat, nlon, nt, nq), chunks=(10, 10, 10, -1)),
-            ),  # FIXME
-            "bar": (("lat", "lon"), da.zeros((nlat, nlon), chunks=(10, 10))),
-        },  # FIXME
+                da.random.random((nlat, nlon, nt, nq), chunks=(10, 10, 10, -1)),
+            ),
+            "bar": (("lat", "lon"), da.random.random((nlat, nlon), chunks=(10, 10))),
+        },
         coords={
             "lat": np.linspace(-89.5, 89.6, nlat),
             "lon": np.linspace(-179.5, 179.6, nlon),
@@ -1093,7 +1093,9 @@ def test_interp_vectorized_dask():
 
     # Interpolate along non-chunked dimension
     with raise_if_dask_computes():
-        interp = ds.interp(q=ds["bar"], kwargs={"fill_value": None})  # FIXME
+        actual = ds.interp(q=ds["bar"], kwargs={"fill_value": None})
+    expected = ds.compute().interp(q=ds["bar"], kwargs={"fill_value": None})
+    assert_identical(actual, expected)
 
 
 @pytest.mark.parametrize(
