@@ -709,39 +709,60 @@ def interpolate_variable(
     else:
         func, kwargs = _get_interpolator_nd(method, **kwargs)
 
-    in_coords, out_coords = zip(*(v for v in indexes_coords.values()), strict=True)
-    broadcast_out_coords = broadcast_variables(*out_coords)
-    out_dims = broadcast_out_coords[0].dims
+    in_coords, result_coords = zip(*(v for v in indexes_coords.values()), strict=True)
+    # broadcast out manually to minize confusing behaviour
+    broadcast_result_coords = broadcast_variables(*result_coords)
+    result_dims = broadcast_result_coords[0].dims
 
-    input_core_dims = []
+    # input coordinates along which we are interpolation are core dimensions
+    # the corresponding output coordinates may or may not have the same name,
+    # so `all_in_core_dims` is also `exclude_dims`
     all_in_core_dims = set(indexes_coords)
-    output_broadcast_dims = set(
-        itertools.chain(dim for dim in out_dims if dim not in all_in_core_dims)
+
+    # any dimensions on the output that are present on the input, but are not being
+    # interpolated along are broadcast or loop dimensions along which we automatically
+    # vectorize. Consider the problem in
+    # https://github.com/pydata/xarray/issues/6799#issuecomment-2474126217
+    # In the following, dimension names are listed out in [].
+    # # da[time, q, lat, lon].interp(q=bar[lat,lon]). Here `lat`, `lon`
+    # are input dimensions, present on the output, along which we vectorize.
+    # We track these as "result broadcast dimensions".
+    # `q` is the only input core dimensions, and changes size (disappears)
+    # so it is in exclude_dims.
+    result_broadcast_dims = set(
+        itertools.chain(dim for dim in result_dims if dim not in all_in_core_dims)
     )
+
+    # remove any output broadcast dimensions from the list of core dimensions
+    output_core_dims = tuple(d for d in result_dims if d not in result_broadcast_dims)
+    input_core_dims = (
+        # all coordinates on the input that we interpolate along
+        [tuple(indexes_coords)]
+        # the input coordinates are always 1D at the moment, so we just need to list out their names
+        + [tuple(_.dims) for _ in in_coords]
+        # The last set of inputs are the coordinates we are interpolating to.
+        # These have been broadcast already for ease.
+        + [output_core_dims] * len(result_coords)
+    )
+    output_sizes = {k: broadcast_result_coords[0].sizes[k] for k in output_core_dims}
 
     # scipy.interpolate.interp1d always forces to float.
     dtype = float if not issubclass(var.dtype.type, np.inexact) else var.dtype
-
-    output_core_dims = tuple(d for d in out_dims if d not in output_broadcast_dims)
-    input_core_dims = (
-        [tuple(indexes_coords)]
-        + [tuple(d for d in _.dims if d in all_in_core_dims) for _ in in_coords]
-        + [output_core_dims] * len(out_coords)
-    )
-    output_sizes = {k: broadcast_out_coords[0].sizes[k] for k in output_core_dims}
     result = apply_ufunc(
         _interpnd,
         var,
         *in_coords,
-        *broadcast_out_coords,
+        *broadcast_result_coords,
         input_core_dims=input_core_dims,
         output_core_dims=[output_core_dims],
         exclude_dims=all_in_core_dims,
         dask="parallelized",
         kwargs=dict(interp_func=func, interp_kwargs=kwargs),
+        # TODO: deprecate and have the user rechunk themselves
         dask_gufunc_kwargs=dict(output_sizes=output_sizes, allow_rechunk=True),
         output_dtypes=[dtype],
-        vectorize=bool(output_broadcast_dims),
+        # if there are any broadcast dims on the result, we must vectorize on them
+        vectorize=bool(result_broadcast_dims),
         keep_attrs=True,
     )
     return result
