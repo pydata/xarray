@@ -1094,3 +1094,35 @@ def test_interp_vectorized_dask():
     # Interpolate along non-chunked dimension
     with raise_if_dask_computes():
         interp = ds.interp(q=ds["bar"], kwargs={"fill_value": None})  # FIXME
+
+
+@pytest.mark.parametrize(
+    "chunk",
+    [
+        pytest.param(
+            True, marks=pytest.mark.skipif(not has_dask, reason="requires_dask")
+        ),
+        False,
+    ],
+)
+def test_interp_vectorized_shared_dims(chunk):
+    # GH4463
+    da = xr.DataArray(
+        [[[1, 2, 3], [2, 3, 4]], [[1, 2, 3], [2, 3, 4]]],
+        dims=("t", "x", "y"),
+        coords={"x": [1, 2], "y": [1, 2, 3], "t": [10, 12]},
+    )
+    dy = xr.DataArray([1.5, 2.5], dims=("u",), coords={"u": [45, 55]})
+    dx = xr.DataArray(
+        [[1.5, 1.5], [1.5, 1.5]], dims=("t", "u"), coords={"u": [45, 55], "t": [10, 12]}
+    )
+    if chunk:
+        da = da.chunk(t=1)
+    with raise_if_dask_computes():
+        actual = da.interp(y=dy, x=dx, method="linear")
+    expected = xr.DataArray(
+        [[2, 3], [2, 3]],
+        dims=("t", "u"),
+        coords={"u": [45, 55], "t": [10, 12], "x": dx, "y": dy},
+    )
+    assert_identical(actual, expected)
