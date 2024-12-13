@@ -200,7 +200,7 @@ def decode_cf_variable(
 
                 warn(
                     "Usage of 'use_cftime' as kwarg is deprecated. "
-                    "Please initialize it with xarray.CFDatetimeCoder and "
+                    "Please initialize it with xarray.coders.CFDatetimeCoder and "
                     "'decode_times' kwarg.",
                     DeprecationWarning,
                     stacklevel=2,
@@ -211,8 +211,8 @@ def decode_cf_variable(
                 raise TypeError(
                     "Usage of 'use_cftime' as kwarg is not allowed, "
                     "if 'decode_times' is initialized with "
-                    "xarray.CFDatetimeCoder. Please add 'use_cftime' "
-                    "when initializing xarray.CFDatetimeCoder."
+                    "xarray.coders.CFDatetimeCoder. Please add 'use_cftime' "
+                    "when initializing xarray.coders.CFDatetimeCoder."
                 )
         var = decode_times.decode(var, name=name)
 
@@ -483,7 +483,7 @@ def decode_cf(
     mask_and_scale : bool, optional
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
-    decode_times : bool or xr.times.times.CFDatetimeCoder, optional
+    decode_times : bool or xr.coders.CFDatetimeCoder, optional
         Decode cf times (e.g., integers since "hours since 2000-01-01") to
         np.datetime64.
     decode_coords : bool or {"coordinates", "all"}, optional
@@ -580,7 +580,7 @@ def cf_decoder(
     mask_and_scale : bool
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
-    decode_times : bool | xr.times.times.CFDatetimeCoder
+    decode_times : bool | xr.coders.CFDatetimeCoder
         Decode cf times ("hours since 2000-01-01") to np.datetime64.
 
     Returns

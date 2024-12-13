@@ -18,6 +18,7 @@ from xarray import (
 )
 from xarray.backends.common import WritableCFDataStore
 from xarray.backends.memory import InMemoryDataStore
+from xarray.coders import CFDatetimeCoder
 from xarray.conventions import decode_cf
 from xarray.testing import assert_identical
 from xarray.tests import (
@@ -449,7 +450,7 @@ class TestDecodeCF:
         attrs = {"units": "days since 1900-01-01"}
         ds = decode_cf(
             Dataset({"time": ("time", [0, 1], attrs)}),
-            decode_times=coding.times.CFDatetimeCoder(time_unit=time_unit),
+            decode_times=CFDatetimeCoder(time_unit=time_unit),
         )
         assert f"(time) datetime64[{time_unit}]" in repr(ds)
 
@@ -534,7 +535,7 @@ class TestDecodeCF:
         )
 
         dsc = conventions.decode_cf(
-            ds, decode_times=coding.times.CFDatetimeCoder(time_unit=time_unit)
+            ds, decode_times=CFDatetimeCoder(time_unit=time_unit)
         )
         assert dsc.timedelta.dtype == np.dtype("m8[ns]")
         assert dsc.time.dtype == np.dtype(f"M8[{time_unit}]")
@@ -543,7 +544,7 @@ class TestDecodeCF:
         assert dsc.time.dtype == np.dtype("int64")
         dsc = conventions.decode_cf(
             ds,
-            decode_times=coding.times.CFDatetimeCoder(time_unit=time_unit),
+            decode_times=CFDatetimeCoder(time_unit=time_unit),
             decode_timedelta=False,
         )
         assert dsc.timedelta.dtype == np.dtype("int64")

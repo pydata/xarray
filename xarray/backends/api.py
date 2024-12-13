@@ -33,7 +33,7 @@ from xarray.backends.common import (
     _normalize_path,
 )
 from xarray.backends.locks import _get_scheduler
-from xarray.coding.times import CFDatetimeCoder
+from xarray.coders import CFDatetimeCoder
 from xarray.core import indexing
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
