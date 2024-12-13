@@ -45,6 +45,9 @@ Bug fixes
   By `Bruce Merry <https://github.com/bmerry>`_.
 - Fix unintended load on datasets when calling :py:meth:`DataArray.plot.scatter` (:pull:`9818`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Fix interpolation when non-numeric coordinate variables are present (:issue:`8099`, :issue:`9839`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~

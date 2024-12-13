@@ -4214,10 +4214,11 @@ class Dataset(
                 # interpolated along:
                 variables[name] = var
 
-        if reindex:
-            reindex_indexers = {
+        if reindex and (
+            reindex_indexers := {
                 k: v for k, (_, v) in validated_indexers.items() if v.dims == (k,)
             }
+        ):
             reindexed = alignment.reindex(
                 obj,
                 indexers=reindex_indexers,

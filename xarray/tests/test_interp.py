@@ -1055,3 +1055,20 @@ def test_interp1d_complex_out_of_bounds() -> None:
     expected = da.interp(time=3.5, kwargs=dict(fill_value=np.nan + np.nan * 1j))
     actual = da.interp(time=3.5)
     assert_identical(actual, expected)
+
+
+@requires_scipy
+def test_interp_non_numeric() -> None:
+    # regression test for GH8099, GH9839
+    ds = xr.Dataset({"x": ("a", np.arange(4))}, coords={"a": (np.arange(4) - 1.5)})
+    t = xr.DataArray(
+        np.random.randn(6).reshape((2, 3)) * 0.5,
+        dims=["r", "s"],
+        coords={"r": np.arange(2) - 0.5, "s": np.arange(3) - 1},
+    )
+    ds["m"] = ds.x > 1
+
+    actual = ds.interp(a=t, method="linear")
+    # with numeric only
+    expected = ds[["x"]].interp(a=t, method="linear")
+    assert_identical(actual[["x"]], expected)
