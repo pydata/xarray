@@ -1294,13 +1294,6 @@ def test_invalid_cftime_range_inputs(
         cftime_range(start, end, periods, freq, inclusive=inclusive)  # type: ignore[arg-type]
 
 
-def test_invalid_cftime_arg() -> None:
-    with pytest.warns(
-        FutureWarning, match="Following pandas, the `closed` parameter is deprecated"
-    ):
-        cftime_range("2000", "2001", None, "YE", closed="left")
-
-
 _CALENDAR_SPECIFIC_MONTH_END_TESTS = [
     ("noleap", [(2, 28), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
     ("all_leap", [(2, 29), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
@@ -1535,44 +1528,12 @@ def as_timedelta_not_implemented_error():
 
 
 @pytest.mark.parametrize("function", [cftime_range, date_range])
-def test_cftime_or_date_range_closed_and_inclusive_error(function: Callable) -> None:
-    if function == cftime_range and not has_cftime:
-        pytest.skip("requires cftime")
-
-    with pytest.raises(ValueError, match="Following pandas, deprecated"):
-        function("2000", periods=3, closed=None, inclusive="right")
-
-
-@pytest.mark.parametrize("function", [cftime_range, date_range])
 def test_cftime_or_date_range_invalid_inclusive_value(function: Callable) -> None:
     if function == cftime_range and not has_cftime:
         pytest.skip("requires cftime")
 
     with pytest.raises(ValueError, match="nclusive"):
         function("2000", periods=3, inclusive="foo")
-
-
-@pytest.mark.parametrize(
-    "function",
-    [
-        pytest.param(cftime_range, id="cftime", marks=requires_cftime),
-        pytest.param(date_range, id="date"),
-    ],
-)
-@pytest.mark.parametrize(
-    ("closed", "inclusive"), [(None, "both"), ("left", "left"), ("right", "right")]
-)
-def test_cftime_or_date_range_closed(
-    function: Callable,
-    closed: Literal["left", "right", None],
-    inclusive: Literal["left", "right", "both"],
-) -> None:
-    with pytest.warns(FutureWarning, match="Following pandas"):
-        result_closed = function("2000-01-01", "2000-01-04", freq="D", closed=closed)
-        result_inclusive = function(
-            "2000-01-01", "2000-01-04", freq="D", inclusive=inclusive
-        )
-        np.testing.assert_equal(result_closed.values, result_inclusive.values)
 
 
 @pytest.mark.parametrize("function", [cftime_range, date_range])
