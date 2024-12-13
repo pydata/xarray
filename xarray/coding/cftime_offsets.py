@@ -941,26 +941,6 @@ def _generate_range(start, end, periods, offset):
             current = next_date
 
 
-def _translate_closed_to_inclusive(closed):
-    """Follows code added in pandas #43504."""
-    emit_user_level_warning(
-        "Following pandas, the `closed` parameter is deprecated in "
-        "favor of the `inclusive` parameter, and will be removed in "
-        "a future version of xarray.",
-        FutureWarning,
-    )
-    if closed is None:
-        inclusive = "both"
-    elif closed in ("left", "right"):
-        inclusive = closed
-    else:
-        raise ValueError(
-            f"Argument `closed` must be either 'left', 'right', or None. "
-            f"Got {closed!r}."
-        )
-    return inclusive
-
-
 def cftime_range(
     start=None,
     end=None,
