@@ -1098,6 +1098,7 @@ def test_interp_vectorized_dask():
     assert_identical(actual, expected)
 
 
+@requires_scipy
 @pytest.mark.parametrize(
     "chunk",
     [
