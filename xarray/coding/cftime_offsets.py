@@ -64,7 +64,6 @@ from xarray.core.common import _contains_datetime_like_objects, is_np_datetime_l
 from xarray.core.pdcompat import (
     count_not_none,
     default_precision_timestamp,
-    no_default,
 )
 from xarray.core.utils import attempt_import, emit_user_level_warning
 
