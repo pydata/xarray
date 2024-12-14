@@ -899,7 +899,7 @@ def test_decompose(method: InterpOptions) -> None:
         for nscalar in range(interp_ndim + 1)
     ],
 )
-@pytest.mark.filterwarnings("ignore::dask.array.core.PerformanceWarning")
+@pytest.mark.filterwarnings("ignore:Increasing number of chunks")
 def test_interpolate_chunk_1d(
     method: InterpOptions, data_ndim, interp_ndim, nscalar, chunked: bool
 ) -> None:
