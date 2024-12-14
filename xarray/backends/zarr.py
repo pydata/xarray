@@ -807,8 +807,7 @@ class ZarrStore(AbstractWritableDataStore):
         # TODO: consider deprecating this in favor of zarr_group
         return self.zarr_group
 
-    def open_store_variable(self, name, zarr_array=None):
-        if zarr_array is None:
+    def open_store_variable(self, name):
             zarr_array = self.members[name]
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(zarr_array))
         try_nczarr = self._mode == "r"
