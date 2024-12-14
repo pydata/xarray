@@ -1135,9 +1135,7 @@ class ZarrStore(AbstractWritableDataStore):
                 else:
                     encoded_attrs[DIMENSION_KEY] = dims
 
-                encoding["exists_ok" if _zarr_v3() else "overwrite"] = (
-                    True if self._mode == "w" else False
-                )
+                encoding["overwrite"] = True if self._mode == "w" else False
 
                 zarr_array = self._create_new_array(
                     name=name,

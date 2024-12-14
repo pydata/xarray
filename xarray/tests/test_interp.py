@@ -1065,6 +1065,44 @@ def test_interp1d_complex_out_of_bounds() -> None:
     assert_identical(actual, expected)
 
 
+@requires_scipy
+def test_interp_non_numeric_1d() -> None:
+    ds = xr.Dataset(
+        {
+            "numeric": ("time", 1 + np.arange(0, 4, 1)),
+            "non_numeric": ("time", np.array(["a", "b", "c", "d"])),
+        },
+        coords={"time": (np.arange(0, 4, 1))},
+    )
+    actual = ds.interp(time=np.linspace(0, 3, 7))
+
+    expected = xr.Dataset(
+        {
+            "numeric": ("time", 1 + np.linspace(0, 3, 7)),
+            "non_numeric": ("time", np.array(["a", "b", "b", "c", "c", "d", "d"])),
+        },
+        coords={"time": np.linspace(0, 3, 7)},
+    )
+    xr.testing.assert_identical(actual, expected)
+
+
+@requires_scipy
+def test_interp_non_numeric_nd() -> None:
+    # regression test for GH8099, GH9839
+    ds = xr.Dataset({"x": ("a", np.arange(4))}, coords={"a": (np.arange(4) - 1.5)})
+    t = xr.DataArray(
+        np.random.randn(6).reshape((2, 3)) * 0.5,
+        dims=["r", "s"],
+        coords={"r": np.arange(2) - 0.5, "s": np.arange(3) - 1},
+    )
+    ds["m"] = ds.x > 1
+
+    actual = ds.interp(a=t, method="linear")
+    # with numeric only
+    expected = ds[["x"]].interp(a=t, method="linear")
+    assert_identical(actual[["x"]], expected)
+
+
 @requires_dask
 @requires_scipy
 def test_interp_vectorized_dask():
