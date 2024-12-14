@@ -592,7 +592,7 @@ def _localize(obj: T, indexes_coords: SourceDest) -> tuple[T, SourceDest]:
         imin, imax = index.get_indexer([minval, maxval], method="nearest")
         indexes[dim] = slice(max(imin - 2, 0), imax + 2)
         indexes_coords[dim] = (x[indexes[dim]], new_x)
-    return obj.isel(**indexes), indexes_coords
+    return obj.isel(**indexes), indexes_coords  # type: ignore[attr-defined]
 
 
 def _floatize_x(
@@ -654,7 +654,7 @@ def interp(
         # decompose the interpolation into a succession of independent interpolation.
         iter_indexes_coords = decompose_interp(indexes_coords)
     else:
-        iter_indexes_coords = (_ for _ in indexes_coords)
+        iter_indexes_coords = (_ for _ in [indexes_coords])
 
     for indep_indexes_coords in iter_indexes_coords:
         var = result
@@ -776,9 +776,9 @@ def _interp1d(
     """Core 1D array interpolation routine."""
     # x, new_x are tuples of size 1.
     x, new_x = x_[0], new_x_[0]
-    rslt = func(x, var, **kwargs)(ravel(new_x))
+    rslt = func(x.data, var, **kwargs)(ravel(new_x.data))
     if new_x.ndim > 1:
-        return reshape(rslt, (var.shape[:-1] + new_x.shape))
+        return reshape(rslt.data, (var.shape[:-1] + new_x.shape))
     if new_x.ndim == 0:
         return rslt[..., -1]
     return rslt
