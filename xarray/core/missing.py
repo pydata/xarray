@@ -7,7 +7,7 @@ from collections import ChainMap
 from collections.abc import Callable, Generator, Hashable, Sequence
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, get_args, overload
+from typing import TYPE_CHECKING, Any, TypeVar, get_args
 
 import numpy as np
 import pandas as pd
@@ -18,8 +18,11 @@ from xarray.core.computation import apply_ufunc
 from xarray.core.duck_array_ops import (
     datetime_to_numeric,
     push,
+    ravel,
     reshape,
+    stack,
     timedelta_to_numeric,
+    transpose,
 )
 from xarray.core.options import _get_keep_attrs
 from xarray.core.types import Interp1dOptions, InterpnOptions, InterpOptions
@@ -34,8 +37,12 @@ if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
-    InterpCallable = Callable[..., np.ndarray]
+    InterpCallable = Callable[..., np.ndarray]  # interpn
+    Interpolator = Callable[..., Callable[..., np.ndarray]]  # *Interpolator
+    # interpolator objects return callables that can be evaluated
     SourceDest = dict[Hashable, tuple[Variable, Variable]]
+
+    T = TypeVar("T")
 
 
 def _get_nan_block_lengths(
@@ -484,10 +491,7 @@ def _get_interpolator(
 
     returns interpolator class and keyword arguments for the class
     """
-    interp_class: (
-        type[NumpyInterpolator] | type[ScipyInterpolator] | type[SplineInterpolator]
-    )
-
+    interp_class: Interpolator
     interp1d_methods = get_args(Interp1dOptions)
     valid_methods = tuple(vv for v in get_args(InterpOptions) for vv in get_args(v))
 
@@ -573,19 +577,7 @@ def _get_valid_fill_mask(arr, dim, limit):
     ) <= limit
 
 
-@overload
-def _localize(
-    obj: Dataset, indexes_coords: SourceDest
-) -> tuple[Dataset, dict[Hashable, SourceDest]]: ...
-
-
-@overload
-def _localize(
-    obj: Variable, indexes_coords: SourceDest
-) -> tuple[Variable, dict[Hashable, SourceDest]]: ...
-
-
-def _localize(obj, indexes_coords):
+def _localize(obj: T, indexes_coords: SourceDest) -> tuple[T, SourceDest]:
     """Speed up for linear and nearest neighbor method.
     Only consider a subspace that is needed for the interpolation
     """
@@ -604,13 +596,11 @@ def _localize(obj, indexes_coords):
 
 
 def _floatize_x(
-    x: tuple[Variable, ...], new_x: tuple[Variable, ...]
+    x: list[Variable], new_x: list[Variable]
 ) -> tuple[list[Variable], list[Variable]]:
     """Make x and new_x float.
     This is particularly useful for datetime dtype.
     """
-    x = list(x)
-    new_x = list(new_x)
     for i in range(len(x)):
         if _contains_datetime_like_objects(x[i]):
             # Scipy casts coordinates to np.float64, which is not accurate
@@ -664,7 +654,7 @@ def interp(
         # decompose the interpolation into a succession of independent interpolation.
         iter_indexes_coords = decompose_interp(indexes_coords)
     else:
-        iter_indexes_coords = [indexes_coords]
+        iter_indexes_coords = (_ for _ in indexes_coords)
 
     for indep_indexes_coords in iter_indexes_coords:
         var = result
@@ -780,13 +770,13 @@ def _interp1d(
     var: Variable,
     x_: list[Variable],
     new_x_: list[Variable],
-    func: InterpCallable,
+    func: Interpolator,
     kwargs,
 ) -> np.ndarray:
     """Core 1D array interpolation routine."""
     # x, new_x are tuples of size 1.
     x, new_x = x_[0], new_x_[0]
-    rslt = func(x, var, **kwargs)(np.ravel(new_x))
+    rslt = func(x, var, **kwargs)(ravel(new_x))
     if new_x.ndim > 1:
         return reshape(rslt, (var.shape[:-1] + new_x.shape))
     if new_x.ndim == 0:
@@ -797,7 +787,7 @@ def _interp1d(
 def _interpnd(
     data: np.ndarray,
     *coords: np.ndarray,
-    interp_func: InterpCallable,
+    interp_func: Interpolator | InterpCallable,
     interp_kwargs,
     result_coord_core_dims: list[tuple[Hashable, ...]],
 ) -> np.ndarray:
@@ -813,10 +803,12 @@ def _interpnd(
     # Convert everything to Variables, since that makes applying
     # `_localize` and `_floatize_x` much easier
     x = [Variable([f"dim_{nconst + dim}"], _x) for dim, _x in enumerate(coords[:n_x])]
-    new_x = broadcast_variables(
-        *(
-            Variable(dims, _x)
-            for dims, _x in zip(result_coord_core_dims, coords[n_x:], strict=True)
+    new_x = list(
+        broadcast_variables(
+            *(
+                Variable(dims, _x)
+                for dims, _x in zip(result_coord_core_dims, coords[n_x:], strict=True)
+            )
         )
     )
     var = Variable([f"dim_{dim}" for dim in range(ndim)], data)
@@ -827,21 +819,25 @@ def _interpnd(
         }
         # simple speed up for the local interpolation
         var, indexes_coords = _localize(var, indexes_coords)
-        x, new_x = zip(*(indexes_coords[d] for d in indexes_coords), strict=True)
+        x, new_x = tuple(
+            list(_)
+            for _ in zip(*(indexes_coords[d] for d in indexes_coords), strict=True)
+        )
 
-    x, new_x = _floatize_x(x, new_x)
+    x_list, new_x_list = _floatize_x(x, new_x)
 
     if len(x) == 1:
-        return _interp1d(var, x, new_x, interp_func, interp_kwargs)
+        # TODO: narrow interp_func to interpolator here
+        return _interp1d(var, x_list, new_x_list, interp_func, interp_kwargs)  # type: ignore[arg-type]
 
     # move the interpolation axes to the start position
-    data = var._data.transpose(range(-len(x), var.ndim - len(x)))  # type: ignore[misc]
+    data = transpose(var._data, range(-len(x), var.ndim - len(x)))
 
     # stack new_x to 1 vector, with reshape
-    xi = np.stack([x1.data.ravel() for x1 in new_x], axis=-1)
-    rslt = interp_func(x, data, xi, **interp_kwargs)
+    xi = stack([x1.data.ravel() for x1 in new_x_list], axis=-1)
+    rslt: np.ndarray = interp_func(x_list, data, xi, **interp_kwargs)  # type: ignore[assignment]
     # move back the interpolation axes to the last position
-    rslt = rslt.transpose(range(-rslt.ndim + 1, 1))
+    rslt = transpose(rslt, range(-rslt.ndim + 1, 1))
     return reshape(rslt, rslt.shape[:-1] + new_x[0].shape)
 
 
@@ -849,11 +845,11 @@ def decompose_interp(indexes_coords: SourceDest) -> Generator[SourceDest, None]:
     """Decompose the interpolation into a succession of independent interpolation keeping the order"""
 
     dest_dims = [
-        dest[1].dims if dest[1].ndim > 0 else [dim]
+        dest[1].dims if dest[1].ndim > 0 else (dim,)
         for dim, dest in indexes_coords.items()
     ]
-    partial_dest_dims = []
-    partial_indexes_coords = {}
+    partial_dest_dims: list[tuple[Hashable, ...]] = []
+    partial_indexes_coords: SourceDest = {}
     for i, index_coords in enumerate(indexes_coords.items()):
         partial_indexes_coords.update([index_coords])
 
