@@ -40,7 +40,11 @@ Deprecations
 ~~~~~~~~~~~~
 - Time decoding related kwarg ``use_cftime`` is deprecated. Use keyword argument
   ``decode_times=CFDatetimeCoder(use_cftime=True)`` in the respective functions
-  instead.
+  instead (:pull:`9618`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Finalize deprecation of ``closed`` parameters of :py:func:`cftime_range` and
+  :py:func:`date_range` (:pull:`9882`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -48,6 +52,9 @@ Bug fixes
   By `Bruce Merry <https://github.com/bmerry>`_.
 - Fix unintended load on datasets when calling :py:meth:`DataArray.plot.scatter` (:pull:`9818`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Fix interpolation when non-numeric coordinate variables are present (:issue:`8099`, :issue:`9839`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
