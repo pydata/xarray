@@ -35,9 +35,23 @@ if has_cftime:
     standard_or_gregorian = "standard"
 
 
-def date_dict(year=None, month=None, day=None, hour=None, minute=None, second=None):
+def date_dict(
+    year=None,
+    month=None,
+    day=None,
+    hour=None,
+    minute=None,
+    second=None,
+    microsecond=None,
+):
     return dict(
-        year=year, month=month, day=day, hour=hour, minute=minute, second=second
+        year=year,
+        month=month,
+        day=day,
+        hour=hour,
+        minute=minute,
+        second=second,
+        microsecond=microsecond,
     )
 
 
@@ -100,7 +114,9 @@ def test_parse_iso8601_like(string, expected):
 
     with pytest.raises(ValueError):
         parse_iso8601_like(string + "3")
-        parse_iso8601_like(string + ".3")
+    if result["second"] is None:
+        with pytest.raises(ValueError):
+            parse_iso8601_like(string + ".3")
 
 
 _CFTIME_CALENDARS = [
