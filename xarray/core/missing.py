@@ -799,7 +799,7 @@ def _interpnd(
     *coords: np.ndarray,
     interp_func: InterpCallable,
     interp_kwargs,
-    result_coord_core_dims,
+    result_coord_core_dims: list[tuple[Hashable, ...]],
 ) -> np.ndarray:
     """
     Core nD array interpolation routine.
