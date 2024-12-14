@@ -757,6 +757,7 @@ class ZarrStore(AbstractWritableDataStore):
             # this cache is created here and never updated.
             # If the `ZarrStore` instance creates a new zarr array, or if an external process
             # removes an existing zarr array, then the cache will be invalid.
+            # We use this cache only to record any pre-existing arrays when the group was opened
             # create a new ZarrStore instance if you want to
             # capture the current state of the zarr group, or create a ZarrStore with
             # `cache_members` set to `False` to disable this cache and instead fetch members
