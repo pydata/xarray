@@ -24,8 +24,12 @@ New Features
 - Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
   duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
   By `Sam Levang <https://github.com/slevang>`_.
+- Add ``unit`` - keyword argument to :py:func:`date_range` and ``microsecond`` parsing to
+  iso8601-parser (:pull:`9885`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

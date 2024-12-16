@@ -68,7 +68,12 @@ from xarray.core.pdcompat import (
 from xarray.core.utils import attempt_import, emit_user_level_warning
 
 if TYPE_CHECKING:
-    from xarray.core.types import InclusiveOptions, Self, TypeAlias
+    from xarray.core.types import (
+        InclusiveOptions,
+        PDDatetimeUnitOptions,
+        Self,
+        TypeAlias,
+    )
 
 
 DayOption: TypeAlias = Literal["start", "end"]
@@ -963,7 +968,6 @@ def cftime_range(
         Include boundaries; whether to set each bound as closed or open.
 
         .. versionadded:: 2023.02.0
-
     calendar : str, default: "standard"
         Calendar type for the datetimes.
 
@@ -1172,6 +1176,7 @@ def date_range(
     normalize=False,
     name=None,
     inclusive: InclusiveOptions = "both",
+    unit: PDDatetimeUnitOptions = "ns",
     calendar="standard",
     use_cftime=None,
 ):
@@ -1202,6 +1207,10 @@ def date_range(
         Include boundaries; whether to set each bound as closed or open.
 
         .. versionadded:: 2023.02.0
+    unit : {"s", "ms", "us", "ns"}, default "ns"
+        Specify the desired resolution of the result.
+
+        .. versionadded:: 2024.12.0
     calendar : str, default: "standard"
         Calendar type for the datetimes.
     use_cftime : boolean, optional
@@ -1237,6 +1246,7 @@ def date_range(
                 normalize=normalize,
                 name=name,
                 inclusive=inclusive,
+                unit=unit,
             )
         except pd.errors.OutOfBoundsDatetime as err:
             if use_cftime is False:
