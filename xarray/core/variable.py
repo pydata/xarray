@@ -219,6 +219,7 @@ def _possibly_convert_objects(values):
     if (
         values.dtype.kind == "O"
         and as_series.dtype.kind == "O"
+        and as_series.size > 0
         and isinstance(as_series[0], datetime | pd.Timestamp)
     ):
         as_series = as_series.astype("=M8[us]")
