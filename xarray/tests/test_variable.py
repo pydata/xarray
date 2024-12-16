@@ -1086,8 +1086,8 @@ class TestVariable(VariableSubclassobjects):
         "values, unit",
         [
             (np.datetime64("2000-01-01"), "s"),
-            (pd.Timestamp("2000-01-01T00"), "s"),
-            (datetime(2000, 1, 1), "us"),
+            (pd.Timestamp("2000-01-01T00"), "ns"),
+            (datetime(2000, 1, 1), "ns"),
         ],
     )
     def test_datetime64_conversion_scalar(self, values, unit):
@@ -1102,8 +1102,8 @@ class TestVariable(VariableSubclassobjects):
         "values, unit",
         [
             (np.timedelta64(1, "D"), "s"),
-            (pd.Timedelta("1 day"), "us"),
-            (timedelta(days=1), "us"),
+            (pd.Timedelta("1 day"), "ns"),
+            (timedelta(days=1), "ns"),
         ],
     )
     def test_timedelta64_conversion_scalar(self, values, unit):
@@ -1126,12 +1126,12 @@ class TestVariable(VariableSubclassobjects):
     def test_0d_datetime(self):
         # todo: check, if this test is OK
         v = Variable([], pd.Timestamp("2000-01-01"))
-        assert v.dtype == np.dtype("datetime64[s]")
+        assert v.dtype == np.dtype("datetime64[ns]")
         assert v.values == np.datetime64("2000-01-01", "s")
 
     @pytest.mark.filterwarnings("ignore:Converting non-default")
     @pytest.mark.parametrize(
-        "values, unit", [(pd.to_timedelta("1s"), "us"), (np.timedelta64(1, "s"), "s")]
+        "values, unit", [(pd.to_timedelta("1s"), "ns"), (np.timedelta64(1, "s"), "s")]
     )
     def test_0d_timedelta(self, values, unit):
         # todo: check, if this test is OK
@@ -2679,7 +2679,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         actual = as_compatible_data(datetime(2000, 1, 1))
         assert np.asarray(expected) == actual
         assert np.ndarray is type(actual)
-        assert np.dtype("datetime64[us]") == actual.dtype
+        assert np.dtype("datetime64[ns]") == actual.dtype
 
     def test_tz_datetime(self) -> None:
         # todo: check, if this test is OK
@@ -3002,7 +3002,7 @@ class TestNumpyCoercion:
         (np.array([np.datetime64("2000-01-01", "ns")]), "ns"),
         (np.array([np.datetime64("2000-01-01", "s")]), "s"),
         (pd.date_range("2000", periods=1), "ns"),
-        (datetime(2000, 1, 1), "us"),
+        (datetime(2000, 1, 1), "ns"),
         (np.array([datetime(2000, 1, 1)]), "ns"),
         (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), "ns"),
         (
@@ -3079,7 +3079,7 @@ def test_pandas_two_only_datetime_conversion_warnings(
         (np.array([np.timedelta64(10, "ns")]), "ns"),
         (np.array([np.timedelta64(10, "s")]), "s"),
         (pd.timedelta_range("1", periods=1), "ns"),
-        (timedelta(days=1), "us"),
+        (timedelta(days=1), "ns"),
         (np.array([timedelta(days=1)]), "ns"),
         (pd.timedelta_range("1", periods=1).astype("timedelta64[s]"), "s"),
     ],
