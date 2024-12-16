@@ -3276,9 +3276,11 @@ class Dataset(
         subset = self[[name for name in self._variables if name not in is_chunked]]
 
         no_slices: list[list[int]] = [
-            list(range(*idx.indices(self.sizes[dim])))
-            if isinstance(idx, slice)
-            else idx
+            (
+                list(range(*idx.indices(self.sizes[dim])))
+                if isinstance(idx, slice)
+                else idx
+            )
             for idx in indices
         ]
         no_slices = [idx for idx in no_slices if idx]
@@ -4183,7 +4185,7 @@ class Dataset(
             }
 
         variables: dict[Hashable, Variable] = {}
-        reindex: bool = False
+        reindex_vars: list[Hashable] = []
         for name, var in obj._variables.items():
             if name in indexers:
                 continue
@@ -4205,19 +4207,20 @@ class Dataset(
                 # booleans and objects and retains the dtype but inside
                 # this loop there might be some duplicate code that slows it
                 # down, therefore collect these signals and run it later:
-                reindex = True
+                reindex_vars.append(name)
             elif all(d not in indexers for d in var.dims):
                 # For anything else we can only keep variables if they
                 # are not dependent on any coords that are being
                 # interpolated along:
                 variables[name] = var
 
-        if reindex:
-            reindex_indexers = {
+        if reindex_vars and (
+            reindex_indexers := {
                 k: v for k, (_, v) in validated_indexers.items() if v.dims == (k,)
             }
+        ):
             reindexed = alignment.reindex(
-                obj,
+                obj[reindex_vars],
                 indexers=reindex_indexers,
                 method=method_non_numeric,
                 exclude_vars=variables.keys(),
@@ -5102,7 +5105,6 @@ class Dataset(
             variables, coord_names=coord_names, indexes=indexes_
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def reset_index(
         self,
         dims_or_levels: Hashable | Sequence[Hashable],
@@ -5740,7 +5742,6 @@ class Dataset(
             variables, coord_names=coord_names, indexes=indexes
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def unstack(
         self,
         dim: Dims = None,
@@ -6502,7 +6503,6 @@ class Dataset(
             ds._variables[name] = var.transpose(*var_dims)
         return ds
 
-    @_deprecate_positional_args("v2023.10.0")
     def dropna(
         self,
         dim: Hashable,
@@ -7976,7 +7976,6 @@ class Dataset(
             if v in self.variables:
                 self.variables[v].attrs = other.variables[v].attrs
 
-    @_deprecate_positional_args("v2023.10.0")
     def diff(
         self,
         dim: Hashable,
@@ -8324,7 +8323,6 @@ class Dataset(
             indices[key] = order if ascending else order[::-1]
         return aligned_self.isel(indices)
 
-    @_deprecate_positional_args("v2023.10.0")
     def quantile(
         self,
         q: ArrayLike,
@@ -8505,7 +8503,6 @@ class Dataset(
         )
         return new.assign_coords(quantile=q)
 
-    @_deprecate_positional_args("v2023.10.0")
     def rank(
         self,
         dim: Hashable,
@@ -9476,7 +9473,6 @@ class Dataset(
         attrs = self._attrs if keep_attrs else None
         return self._replace_with_new_dims(variables, indexes=indexes, attrs=attrs)
 
-    @_deprecate_positional_args("v2023.10.0")
     def idxmin(
         self,
         dim: Hashable | None = None,
@@ -9575,7 +9571,6 @@ class Dataset(
             )
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def idxmax(
         self,
         dim: Hashable | None = None,
@@ -10258,7 +10253,6 @@ class Dataset(
 
         return result
 
-    @_deprecate_positional_args("v2023.10.0")
     def drop_duplicates(
         self,
         dim: Hashable | Iterable[Hashable],
