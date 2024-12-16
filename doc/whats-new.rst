@@ -24,7 +24,9 @@ New Features
 - Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
   duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
   By `Sam Levang <https://github.com/slevang>`_.
-
+- Add ``unit`` - keyword argument to :py:func:`date_range` and ``microsecond`` parsing to
+  iso8601-parser (:pull:`9885`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -37,7 +39,9 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+- Finalize deprecation of ``closed`` parameters of :py:func:`cftime_range` and
+  :py:func:`date_range` (:pull:`9882`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -45,6 +49,9 @@ Bug fixes
   By `Bruce Merry <https://github.com/bmerry>`_.
 - Fix unintended load on datasets when calling :py:meth:`DataArray.plot.scatter` (:pull:`9818`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Fix interpolation when non-numeric coordinate variables are present (:issue:`8099`, :issue:`9839`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
