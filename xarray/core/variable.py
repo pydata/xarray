@@ -6,7 +6,7 @@ import math
 import numbers
 import warnings
 from collections.abc import Callable, Hashable, Mapping, Sequence
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import partial
 from types import EllipsisType
 from typing import TYPE_CHECKING, Any, NoReturn, cast
@@ -205,10 +205,23 @@ def _maybe_wrap_data(data):
 
 
 def _possibly_convert_objects(values):
-    """Convert arrays of datetime.datetime and datetime.timedelta objects into
-    datetime64 and timedelta64, according to the pandas convention.
+    """Convert object arrays into datetime64 and timedelta64 according
+    to the pandas convention.
+
+    * datetime.datetime
+    * datetime.timedelta
+    * pd.Timestamp
+    * pd.Timedelta
     """
     as_series = pd.Series(values.ravel(), copy=False)
+    # When receiving objects which pd.Series can't resolve by its own
+    # we try astype-conversion to "us"-resolution for datetimes and pd.Timestamp.
+    if (
+        values.dtype.kind == "O"
+        and as_series.dtype.kind == "O"
+        and isinstance(as_series[0], datetime | pd.Timestamp)
+    ):
+        as_series = as_series.astype("=M8[us]")
     result = np.asarray(as_series).reshape(values.shape)
     if not result.flags.writeable:
         # GH8843, pandas copy-on-write mode creates read-only arrays by default
@@ -252,14 +265,6 @@ def as_compatible_data(
 
     if isinstance(data, tuple):
         data = utils.to_0d_object_array(data)
-
-    if isinstance(data, pd.Timestamp):
-        data = data.to_numpy()
-
-    if isinstance(data, datetime):
-        data = np.datetime64(data)
-    if isinstance(data, timedelta):
-        data = np.timedelta64(data)
 
     # we don't want nested self-described arrays
     if isinstance(data, pd.Series | pd.DataFrame):
