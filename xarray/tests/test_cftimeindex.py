@@ -134,7 +134,7 @@ ISO8601_LIKE_STRING_TESTS = {
     list(ISO8601_LIKE_STRING_TESTS.values()),
     ids=list(ISO8601_LIKE_STRING_TESTS.keys()),
 )
-@pytest.mark.parametrize("five", [False, True], ids=["4Y", "5Y"])
+@pytest.mark.parametrize("five-digit-year", [False, True], ids=["4Y", "5Y"])
 @pytest.mark.parametrize("sign", ["", "+", "-"], ids=["None", "plus", "minus"])
 def test_parse_iso8601_like(five, sign, string, expected):
     pre = "1" if five else ""
@@ -145,7 +145,11 @@ def test_parse_iso8601_like(five, sign, string, expected):
     assert result == expected
 
     # check malformed single digit addendum
-    # tests for year/month/day excluded as year can be 4 or 5 digits
+    # this check is only performed when we have at least "hour" given 
+    # like "1999010101", where a single added digit should raise
+    # for "1999" (year), "199901" (month) and "19990101" (day) 
+    # and a single added digit the string would just be interpreted 
+    # as having a 5-digit year.
     if result["microsecond"] is None and result["hour"] is not None:
         with pytest.raises(ValueError):
             parse_iso8601_like(datestring + "3")
