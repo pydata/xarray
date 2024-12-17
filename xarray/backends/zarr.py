@@ -1334,7 +1334,6 @@ def open_zarr(
     use_zarr_fill_value_as_mask=None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-    cache_members: bool = True,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -1488,7 +1487,6 @@ def open_zarr(
         "storage_options": storage_options,
         "zarr_version": zarr_version,
         "zarr_format": zarr_format,
-        "cache_members": cache_members,
     }
 
     ds = open_dataset(
