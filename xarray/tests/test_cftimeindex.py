@@ -134,10 +134,10 @@ ISO8601_LIKE_STRING_TESTS = {
     list(ISO8601_LIKE_STRING_TESTS.values()),
     ids=list(ISO8601_LIKE_STRING_TESTS.keys()),
 )
-@pytest.mark.parametrize("five-digit-year", [False, True], ids=["4Y", "5Y"])
+@pytest.mark.parametrize("five_digit_year", [False, True], ids=["4Y", "5Y"])
 @pytest.mark.parametrize("sign", ["", "+", "-"], ids=["None", "plus", "minus"])
-def test_parse_iso8601_like(five, sign, string, expected):
-    pre = "1" if five else ""
+def test_parse_iso8601_like(five_digit_year, sign, string, expected):
+    pre = "1" if five_digit_year else ""
     datestring = sign + pre + string
     result = parse_iso8601_like(datestring)
     expected = expected.copy()
