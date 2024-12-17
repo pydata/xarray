@@ -24,6 +24,7 @@ New Features
 - Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
   duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
   By `Sam Levang <https://github.com/slevang>`_.
+
 - Better performance for reading Zarr arrays in the ``ZarrStore`` class by caching the state of Zarr
 storage and avoiding redundant IO operations. Usage of the cache can be controlled via the
 ``cache_members`` parameter to ``ZarrStore``. When ``cache_members`` is ``True`` (the default), the
@@ -31,7 +32,6 @@ storage and avoiding redundant IO operations. Usage of the cache can be controll
 is then used when iterating over those Zarr arrays, which avoids IO operations and thereby reduces
 latency. (:issue:`9853`, :pull:`9861`). By `Davis Bennett <https://github.com/d-v-b>`_.
 
-new parameter, ``cache_members``.
 - Add ``unit`` - keyword argument to :py:func:`date_range` and ``microsecond`` parsing to
   iso8601-parser (:pull:`9885`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
