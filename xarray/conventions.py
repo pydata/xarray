@@ -155,8 +155,9 @@ def decode_cf_variable(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
-        Usage of use_cftime as kwarg is deprecated, please initialize it with
-        CFDatetimeCoder and ``decode_times``.
+
+        .. deprecated:: 2024.12.0
+           Please initialize it with ``CFDatetimeCoder`` and ``decode_times`` kwarg.
 
     Returns
     -------

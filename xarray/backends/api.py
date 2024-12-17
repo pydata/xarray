@@ -549,7 +549,8 @@ def open_dataset(
         This keyword may not be supported by all the backends.
     decode_times : bool, CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, use ``CFDatetimeCoder`` or leave them encoded as numbers.
+        into datetime objects. Otherwise, use ``CFDatetimeCoder`` or leave them
+        encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -573,8 +574,10 @@ def open_dataset(
         raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
+
         .. deprecated:: 2024.12.0
            Please initialize it with ``CFDatetimeCoder`` and ``decode_times`` kwarg.
+
     concat_characters : bool or dict-like, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -792,8 +795,10 @@ def open_dataarray(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error. This keyword may not be supported by all the backends.
-        Usage of 'use_cftime' as kwarg is deprecated. Please initialize it
-        with CFDatetimeCoder and 'decode_times' kwarg.
+
+        .. deprecated:: 2024.12.0
+           Please initialize it with ``CFDatetimeCoder`` and ``decode_times`` kwarg.
+
     concat_characters : bool, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -1003,8 +1008,10 @@ def open_datatree(
         raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
-        Usage of 'use_cftime' as kwarg is deprecated. Please initialize it
-        with CFDatetimeCoder and 'decode_times' kwarg.
+
+        .. deprecated:: 2024.12.0
+           Please initialize it with ``CFDatetimeCoder`` and ``decode_times`` kwarg.
+
     concat_characters : bool or dict-like, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -1227,8 +1234,10 @@ def open_groups(
         raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
-        Usage of 'use_cftime' as kwarg is deprecated. Please initialize it
-        with CFDatetimeCoder and 'decode_times' kwarg.
+
+        .. deprecated:: 2024.12.0
+           Please initialize it with ``CFDatetimeCoder`` and ``decode_times`` kwarg.
+
     concat_characters : bool or dict-like, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
