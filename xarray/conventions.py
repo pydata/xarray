@@ -197,7 +197,6 @@ def decode_cf_variable(
         # remove checks after end of deprecation cycle
         if not isinstance(decode_times, CFDatetimeCoder):
             if use_cftime is not None:
-                from warnings import warn
 
                 emit_user_level_warning(
                     "Usage of 'use_cftime' as kwarg is deprecated. "
