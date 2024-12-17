@@ -808,7 +808,7 @@ class ZarrStore(AbstractWritableDataStore):
         return self.zarr_group
 
     def open_store_variable(self, name):
-            zarr_array = self.members[name]
+        zarr_array = self.members[name]
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(zarr_array))
         try_nczarr = self._mode == "r"
         dimensions, attributes = _get_zarr_dims_and_attrs(
@@ -1490,7 +1490,7 @@ def open_zarr(
         "storage_options": storage_options,
         "zarr_version": zarr_version,
         "zarr_format": zarr_format,
-        "cache_array_keys": cache_array_keys,
+        "cache_members": cache_members,
     }
 
     ds = open_dataset(
