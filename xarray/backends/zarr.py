@@ -1560,7 +1560,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         store=None,
         engine=None,
         use_zarr_fill_value_as_mask=None,
-        cache_array_keys: bool = True,
+        cache_members: bool = True,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         if not store:
@@ -1576,7 +1576,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 zarr_version=zarr_version,
                 use_zarr_fill_value_as_mask=None,
                 zarr_format=zarr_format,
-                cache_members=cache_array_keys,
+                cache_members=cache_members,
             )
 
         store_entrypoint = StoreBackendEntrypoint()
