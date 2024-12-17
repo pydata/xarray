@@ -134,16 +134,26 @@ ISO8601_LIKE_STRING_TESTS = {
     list(ISO8601_LIKE_STRING_TESTS.values()),
     ids=list(ISO8601_LIKE_STRING_TESTS.keys()),
 )
-def test_parse_iso8601_like(string, expected):
-    result = parse_iso8601_like(string)
+@pytest.mark.parametrize("five", [False, True], ids=["4Y", "5Y"])
+@pytest.mark.parametrize("sign", ["", "+", "-"], ids=["None", "plus", "minus"])
+def test_parse_iso8601_like(five, sign, string, expected):
+    pre = "1" if five else ""
+    datestring = sign + pre + string
+    result = parse_iso8601_like(datestring)
+    expected = expected.copy()
+    expected.update(year=sign + pre + expected["year"])
     assert result == expected
 
-    if result["microsecond"] is None:
+    # check malformed single digit addendum
+    # tests for year/month/day excluded as year can be 4 or 5 digits
+    if result["microsecond"] is None and result["hour"] is not None:
         with pytest.raises(ValueError):
-            parse_iso8601_like(string + "3")
-    if result["second"] is None:
+            parse_iso8601_like(datestring + "3")
+
+    # check malformed floating point addendum
+    if result["second"] is None or result["microsecond"] is not None:
         with pytest.raises(ValueError):
-            parse_iso8601_like(string + ".3")
+            parse_iso8601_like(datestring + ".3")
 
 
 _CFTIME_CALENDARS = [
