@@ -199,7 +199,7 @@ def decode_cf_variable(
             if use_cftime is not None:
                 from warnings import warn
 
-                warn(
+                emit_user_level_warning(
                     "Usage of 'use_cftime' as kwarg is deprecated. "
                     "Please initialize it with CFDatetimeCoder and "
                     "'decode_times' kwarg.",
