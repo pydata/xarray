@@ -310,9 +310,10 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
 
 
 T = TypeVar("T")
+U = TypeVar("U")
 
 
-def _item_or_default(obj: Mapping[Any, T] | T, key: Hashable, default: T) -> T:
+def _item_or_default(obj: Mapping[Any, T | U] | T, key: Hashable, default: T) -> T | U:
     """
     Return item by key if obj is mapping and key is present, else return default value.
     """
@@ -461,7 +462,7 @@ def decode_cf(
     obj: T_DatasetOrAbstractstore,
     concat_characters: bool = True,
     mask_and_scale: bool = True,
-    decode_times: bool | CFDatetimeCoder = True,
+    decode_times: bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] = True,
     decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | None = None,
@@ -480,7 +481,7 @@ def decode_cf(
     mask_and_scale : bool, optional
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
-    decode_times : bool or CFDatetimeCoder, optional
+    decode_times : bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder], optional
         Decode cf times (e.g., integers since "hours since 2000-01-01") to
         np.datetime64.
     decode_coords : bool or {"coordinates", "all"}, optional
@@ -505,8 +506,10 @@ def decode_cf(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
-        Usage of use_cftime as kwarg is deprecated, please initialize it with
-        CFDatetimeCoder and ``decode_times``.
+
+        .. deprecated:: 2024.12.0
+           Please initialize it with ``CFDatetimeCoder`` and ``decode_times`` kwarg.
+
     decode_timedelta : bool, optional
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
@@ -560,7 +563,7 @@ def cf_decoder(
     attributes: T_Attrs,
     concat_characters: bool = True,
     mask_and_scale: bool = True,
-    decode_times: bool | CFDatetimeCoder = True,
+    decode_times: bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] = True,
 ) -> tuple[T_Variables, T_Attrs]:
     """
     Decode a set of CF encoded variables and attributes.
@@ -577,7 +580,7 @@ def cf_decoder(
     mask_and_scale : bool
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
-    decode_times : bool | CFDatetimeCoder
+    decode_times : bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder]
         Decode cf times ("hours since 2000-01-01") to np.datetime64.
 
     Returns
