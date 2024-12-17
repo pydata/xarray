@@ -2579,7 +2579,7 @@ class ZarrBase(CFEncodedBase):
         skip_if_zarr_format_3("This test is unnecessary; no hidden Zarr keys")
 
         expected = create_test_data()
-        with self.create_store(cache_members=False) as store:
+        with self.create_store() as store:
             expected.dump_to_store(store)
             zarr_group = store.ds
 
@@ -3565,27 +3565,6 @@ class TestZarrDirectoryStore(ZarrBase):
     def create_zarr_target(self):
         with create_tmp_file(suffix=".zarr") as tmp:
             yield tmp
-
-    @contextlib.contextmanager
-    def create_store(self, **kwargs):
-        with self.create_zarr_target() as store_target:
-            group = backends.ZarrStore.open_group(store_target, mode="a", **kwargs)
-            yield group
-
-    def test_write_store(self) -> None:
-        # This test is overriden from the base implementation because we need to ensure
-        # that the members cache is off, as the `ZarrStore` instance is re-used in the
-        # test function. Refactoring the base version of this test to
-        # if this test is refactored to no longer re-use the store object, then
-        # this implementation can be removed.
-
-        expected = create_test_data()
-        with self.create_store(cache_members=False) as store:
-            expected.dump_to_store(store)
-            # we need to cf decode the store because it has time and
-            # non-dimension coordinates
-            with xr.decode_cf(store) as actual:
-                assert_allclose(expected, actual)
 
 
 @requires_zarr
