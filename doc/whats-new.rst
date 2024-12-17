@@ -26,11 +26,11 @@ New Features
   By `Sam Levang <https://github.com/slevang>`_.
 
 - Better performance for reading Zarr arrays in the ``ZarrStore`` class by caching the state of Zarr
-storage and avoiding redundant IO operations. Usage of the cache can be controlled via the
-``cache_members`` parameter to ``ZarrStore``. When ``cache_members`` is ``True`` (the default), the
-``ZarrStore`` stores a snapshot of names and metadata of the in-scope Zarr arrays; this cache
-is then used when iterating over those Zarr arrays, which avoids IO operations and thereby reduces
-latency. (:issue:`9853`, :pull:`9861`). By `Davis Bennett <https://github.com/d-v-b>`_.
+  storage and avoiding redundant IO operations. Usage of the cache can be controlled via the
+  ``cache_members`` parameter to ``ZarrStore``. When ``cache_members`` is ``True`` (the default), the
+  ``ZarrStore`` stores a snapshot of names and metadata of the in-scope Zarr arrays; this cache
+  is then used when iterating over those Zarr arrays, which avoids IO operations and thereby reduces
+  latency. (:issue:`9853`, :pull:`9861`). By `Davis Bennett <https://github.com/d-v-b>`_.
 
 - Add ``unit`` - keyword argument to :py:func:`date_range` and ``microsecond`` parsing to
   iso8601-parser (:pull:`9885`).
