@@ -27,6 +27,9 @@ New Features
 - Add ``unit`` - keyword argument to :py:func:`date_range` and ``microsecond`` parsing to
   iso8601-parser (:pull:`9885`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Split out ``CFDatetimeCoder`` in ``xr.coders``, make ``decode_times`` keyword argument
+  consume ``CFDatetimeCoder``.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -45,6 +48,7 @@ Deprecations
 - Time decoding related kwarg ``use_cftime`` is deprecated. Use keyword argument
   ``decode_times=CFDatetimeCoder(use_cftime=True)`` in the respective functions
   instead.
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Bug fixes
 ~~~~~~~~~
