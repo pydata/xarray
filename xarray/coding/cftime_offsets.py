@@ -53,9 +53,10 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from xarray.coding.cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
+from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.times import (
     _is_standard_calendar,
+    _parse_iso8601_with_reso,
     _should_cftime_be_used,
     convert_time_or_go_back,
     format_cftime_datetime,

@@ -12,9 +12,11 @@ import xarray as xr
 from xarray.coding.cftimeindex import (
     CFTimeIndex,
     _parse_array_of_cftime_strings,
-    _parse_iso8601_with_reso,
     _parsed_string_to_bounds,
     assert_all_valid_date_type,
+)
+from xarray.coding.times import (
+    _parse_iso8601_with_reso,
     parse_iso8601_like,
 )
 from xarray.tests import (

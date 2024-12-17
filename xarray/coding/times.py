@@ -189,6 +189,76 @@ def _unpack_netcdf_time_units(units: str) -> tuple[str, str]:
     return delta_units, ref_date
 
 
+def named(name, pattern):
+    return "(?P<" + name + ">" + pattern + ")"
+
+
+def optional(x):
+    return "(?:" + x + ")?"
+
+
+def trailing_optional(xs):
+    if not xs:
+        return ""
+    return xs[0] + optional(trailing_optional(xs[1:]))
+
+
+def build_pattern(date_sep=r"\-", datetime_sep=r"T", time_sep=r"\:", micro_sep=r"."):
+    pieces = [
+        (None, "year", r"[+-]?\d{4,5}"),
+        (date_sep, "month", r"\d{2}"),
+        (date_sep, "day", r"\d{2}"),
+        (datetime_sep, "hour", r"\d{2}"),
+        (time_sep, "minute", r"\d{2}"),
+        (time_sep, "second", r"\d{2}"),
+        (micro_sep, "microsecond", r"\d{1,6}"),
+    ]
+    pattern_list = []
+    for sep, name, sub_pattern in pieces:
+        pattern_list.append((sep if sep else "") + named(name, sub_pattern))
+        # TODO: allow timezone offsets?
+    return "^" + trailing_optional(pattern_list) + "$"
+
+
+_BASIC_PATTERN = build_pattern(date_sep="", time_sep="")
+_EXTENDED_PATTERN = build_pattern()
+_CFTIME_PATTERN = build_pattern(datetime_sep=" ")
+_PATTERNS = [_BASIC_PATTERN, _EXTENDED_PATTERN, _CFTIME_PATTERN]
+
+
+def parse_iso8601_like(datetime_string):
+    for pattern in _PATTERNS:
+        match = re.match(pattern, datetime_string)
+        if match:
+            return match.groupdict()
+    raise ValueError(
+        f"no ISO-8601 or cftime-string-like match for string: {datetime_string}"
+    )
+
+
+def _parse_iso8601_with_reso(date_type, timestr):
+    default = date_type(1, 1, 1)
+    result = parse_iso8601_like(timestr)
+    replace = {}
+
+    for attr in ["year", "month", "day", "hour", "minute", "second", "microsecond"]:
+        value = result.get(attr, None)
+        if value is not None:
+            resolution = attr
+            if attr == "microsecond":
+                if len(value) <= 3:
+                    resolution = "millisecond"
+                # convert match string into valid microsecond value
+                value = 10 ** (6 - len(value)) * int(value)
+            replace[attr] = int(value)
+    return default.replace(**replace), resolution
+
+
+def _parse_iso8601_without_reso(date_type, datetime_str):
+    date, _ = _parse_iso8601_with_reso(date_type, datetime_str)
+    return date
+
+
 def _unpack_time_units_and_ref_date(units: str) -> tuple[str, pd.Timestamp]:
     # same us _unpack_netcdf_time_units but finalizes ref_date for
     # processing in encode_cf_datetime
