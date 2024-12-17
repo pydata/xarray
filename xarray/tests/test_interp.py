@@ -1105,7 +1105,7 @@ def test_interp_non_numeric_nd() -> None:
 
 @requires_dask
 @requires_scipy
-def test_interp_vectorized_dask():
+def test_interp_vectorized_dask() -> None:
     # Synthetic dataset chunked in the two interpolation dimensions
     import dask.array as da
 
@@ -1146,7 +1146,7 @@ def test_interp_vectorized_dask():
         False,
     ],
 )
-def test_interp_vectorized_shared_dims(chunk):
+def test_interp_vectorized_shared_dims(chunk: bool) -> None:
     # GH4463
     da = xr.DataArray(
         [[[1, 2, 3], [2, 3, 4]], [[1, 2, 3], [2, 3, 4]]],
