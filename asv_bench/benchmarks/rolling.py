@@ -3,7 +3,7 @@ import pandas as pd
 
 import xarray as xr
 
-from . import parameterized, randn, requires_dask
+from . import parameterized, randn
 
 nx = 3000
 long_nx = 30000
