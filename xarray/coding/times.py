@@ -381,7 +381,7 @@ def decode_cf_datetime(
             )
             # retrieve cftype
             cftype = type(dates[np.nanargmin(num_dates)])
-            # "ns" boarders
+            # "ns" borders
             # between ['1677-09-21T00:12:43.145224193', '2262-04-11T23:47:16.854775807']
             lower = cftype(1677, 9, 21, 0, 12, 43, 145224)
             upper = cftype(2262, 4, 11, 23, 47, 16, 854775)
