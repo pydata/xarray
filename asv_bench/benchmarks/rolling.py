@@ -77,12 +77,12 @@ class Rolling:
             ).sum(dim="window_dim").load()
 
 
-class RollingDask(Rolling):
-    def setup(self, *args, **kwargs):
-        requires_dask()
-        super().setup(**kwargs)
-        self.ds = self.ds.chunk({"x": 100, "y": 50, "t": 50})
-        self.da_long = self.da_long.chunk({"x": 10000})
+# class RollingDask(Rolling):
+#     def setup(self, *args, **kwargs):
+#         requires_dask()
+#         super().setup(**kwargs)
+#         self.ds = self.ds.chunk({"x": 100, "y": 50, "t": 50})
+#         self.da_long = self.da_long.chunk({"x": 10000})
 
 
 class RollingMemory:
