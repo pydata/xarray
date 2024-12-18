@@ -276,6 +276,13 @@ def test_list_engines() -> None:
     assert "store" in engines
 
 
+def test_show_engines() -> None:
+    from xarray import show_backends
+    from xarray.backends import list_engines
+
+    assert show_backends() == list_engines()
+
+
 def test_refresh_engines() -> None:
     from xarray.backends import list_engines, refresh_engines
 
