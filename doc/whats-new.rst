@@ -24,7 +24,9 @@ New Features
 - Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
   duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
   By `Sam Levang <https://github.com/slevang>`_.
-
+- Add ``unit`` - keyword argument to :py:func:`date_range` and ``microsecond`` parsing to
+  iso8601-parser (:pull:`9885`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -58,6 +60,10 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Move non-CF related ``ensure_dtype_not_object`` from conventions to backends (:pull:`9828`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Move handling of scalar datetimes into ``_possibly_convert_objects``
+  within ``as_compatible_data``. This is consistent with how lists of these objects
+  will be converted (:pull:`9900`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 .. _whats-new.2024.11.0:
