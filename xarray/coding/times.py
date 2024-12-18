@@ -189,6 +189,14 @@ def _unpack_netcdf_time_units(units: str) -> tuple[str, str]:
     return delta_units, ref_date
 
 
+def _maybe_strip_tz_from_timestamp(date: pd.Timestamp) -> pd.Timestamp:
+    # If the ref_date Timestamp is timezone-aware, convert to UTC and
+    # make it timezone-naive (GH 2649).
+    if date.tz is not None:
+        return date.tz_convert("UTC").tz_convert(None)
+    return date
+
+
 def _unpack_time_units_and_ref_date(units: str) -> tuple[str, pd.Timestamp]:
     # same us _unpack_netcdf_time_units but finalizes ref_date for
     # processing in encode_cf_datetime
@@ -196,10 +204,7 @@ def _unpack_time_units_and_ref_date(units: str) -> tuple[str, pd.Timestamp]:
     # TODO: the strict enforcement of nanosecond precision Timestamps can be
     # relaxed when addressing GitHub issue #7493.
     ref_date = nanosecond_precision_timestamp(_ref_date)
-    # If the ref_date Timestamp is timezone-aware, convert to UTC and
-    # make it timezone-naive (GH 2649).
-    if ref_date.tz is not None:
-        ref_date = ref_date.tz_convert(None)
+    ref_date = _maybe_strip_tz_from_timestamp(ref_date)
     return time_units, ref_date
 
 
