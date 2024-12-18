@@ -32,7 +32,12 @@ from xarray.core.indexes import Index, filter_indexes_from_coords
 from xarray.core.merge import merge_attrs, merge_coordinates_without_align
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import Dims, T_DataArray
-from xarray.core.utils import is_dict_like, is_scalar, parse_dims_as_set, result_name
+from xarray.core.utils import (
+    is_dict_like,
+    is_scalar,
+    parse_dims_as_set,
+    result_name,
+)
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
@@ -2166,19 +2171,17 @@ def _calc_idxminmax(
     indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
 
     # Handle chunked arrays (e.g. dask).
+    coord = array[dim]._variable.to_base_variable()
     if is_chunked_array(array.data):
         chunkmanager = get_chunked_array_type(array.data)
-        chunks = dict(zip(array.dims, array.chunks, strict=True))
-        dask_coord = chunkmanager.from_array(array[dim].data, chunks=chunks[dim])
-        data = dask_coord[duck_array_ops.ravel(indx.data)]
+        coord_array = chunkmanager.from_array(
+            array[dim].data, chunks=((array.sizes[dim],),)
+        )
+        coord = coord.copy(data=coord_array)
     else:
-        arr_coord = to_like_array(array[dim].data, array.data)
-        data = arr_coord[duck_array_ops.ravel(indx.data)]
+        coord = coord.copy(data=to_like_array(array[dim].data, array.data))
 
-    # rebuild like the argmin/max output, and rename as the dim name
-    data = duck_array_ops.reshape(data, indx.shape)
-    res = indx.copy(data=data)
-    res.name = dim
+    res = indx._replace(coord[(indx.variable,)]).rename(dim)
 
     if skipna or (skipna is None and array.dtype.kind in na_dtypes):
         # Put the NaN values back in after removing them
