@@ -38,7 +38,7 @@ ON_WINDOWS = sys.platform == "win32"
 
 
 def test_raise_if_dask_computes():
-    data = da.from_array(np.random.RandomState(0).randn(4, 6), chunks=(2, 2))
+    data = da.from_array(np.random.default_rng(0).random((4, 6)), chunks=(2, 2))
     with pytest.raises(RuntimeError, match=r"Too many computes"):
         with raise_if_dask_computes():
             data.compute()
@@ -77,7 +77,7 @@ class TestVariable(DaskTestCase):
 
     @pytest.fixture(autouse=True)
     def setUp(self):
-        self.values = np.random.RandomState(0).randn(4, 6)
+        self.values = np.random.default_rng(0).random((4, 6))
         self.data = da.from_array(self.values, chunks=(2, 2))
 
         self.eager_var = Variable(("x", "y"), self.values)
@@ -791,6 +791,7 @@ class TestDataArrayAndDataset(DaskTestCase):
 
 
 class TestToDaskDataFrame:
+    @pytest.mark.xfail(reason="https://github.com/dask/dask/issues/11584")
     def test_to_dask_dataframe(self):
         # Test conversion of Datasets to dask DataFrames
         x = np.random.randn(10)
