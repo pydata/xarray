@@ -6,7 +6,6 @@ import math
 import numbers
 import warnings
 from collections.abc import Callable, Hashable, Mapping, Sequence
-from datetime import timedelta
 from functools import partial
 from types import EllipsisType
 from typing import TYPE_CHECKING, Any, NoReturn, cast
@@ -232,10 +231,16 @@ def _as_nanosecond_precision(data):
 
 def _possibly_convert_objects(values):
     """Convert arrays of datetime.datetime and datetime.timedelta objects into
-    datetime64 and timedelta64, according to the pandas convention. For the time
-    being, convert any non-nanosecond precision DatetimeIndex or TimedeltaIndex
-    objects to nanosecond precision.  While pandas is relaxing this in version
-    2.0.0, in xarray we will need to make sure we are ready to handle
+    datetime64 and timedelta64, according to the pandas convention.
+
+    * datetime.datetime
+    * datetime.timedelta
+    * pd.Timestamp
+    * pd.Timedelta
+
+    For the time being, convert any non-nanosecond precision DatetimeIndex or
+    TimedeltaIndex objects to nanosecond precision.  While pandas is relaxing this
+    in version 2.0.0, in xarray we will need to make sure we are ready to handle
     non-nanosecond precision datetimes or timedeltas in our code before allowing
     such values to pass through unchanged.  Converting to nanosecond precision
     through pandas.Series objects ensures that datetimes and timedeltas are
@@ -304,13 +309,6 @@ def as_compatible_data(
 
     if isinstance(data, tuple):
         data = utils.to_0d_object_array(data)
-
-    if isinstance(data, pd.Timestamp):
-        # TODO: convert, handle datetime objects, too
-        data = np.datetime64(data.value, "ns")
-
-    if isinstance(data, timedelta):
-        data = np.timedelta64(getattr(data, "value", data), "ns")
 
     # we don't want nested self-described arrays
     if isinstance(data, pd.Series | pd.DataFrame):
