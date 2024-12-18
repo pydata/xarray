@@ -1817,9 +1817,9 @@ def test_minimize_graph_size():
 
 
 def test_idxmin_chunking():
-    # GH
+    # GH9425
     x, y, t = 100, 100, 10
-    rang = np.random.randn(t * x * y)
+    rang = np.arange(t * x * y)
     da = xr.DataArray(
         rang.reshape(t, x, y), coords={"time": range(t), "x": range(x), "y": range(y)}
     )
