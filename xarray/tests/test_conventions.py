@@ -446,7 +446,9 @@ class TestDecodeCF:
             assert "(time) object" in repr(ds)
 
         attrs = {"units": "days since 1900-01-01"}
-        ds = decode_cf(Dataset({"time": ("time", [0, 1], attrs)}))
+        ds = decode_cf(
+            Dataset({"time": ("time", [0, 1], attrs)}),
+        )
         assert "(time) datetime64[ns]" in repr(ds)
 
     @requires_cftime

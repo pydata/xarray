@@ -19,9 +19,9 @@ from xarray import (
     date_range,
     decode_cf,
 )
+from xarray.coders import CFDatetimeCoder
 from xarray.coding.times import _STANDARD_CALENDARS as _STANDARD_CALENDARS_UNSORTED
 from xarray.coding.times import (
-    CFDatetimeCoder,
     _encode_datetime_with_cftime,
     _netcdf_to_numpy_timeunit,
     _numpy_to_netcdf_timeunit,
@@ -123,7 +123,11 @@ def _all_cftime_date_types():
 @pytest.mark.filterwarnings("ignore:Ambiguous reference date string")
 @pytest.mark.filterwarnings("ignore:Times can't be serialized faithfully")
 @pytest.mark.parametrize(["num_dates", "units", "calendar"], _CF_DATETIME_TESTS)
-def test_cf_datetime(num_dates, units, calendar) -> None:
+def test_cf_datetime(
+    num_dates,
+    units,
+    calendar,
+) -> None:
     import cftime
 
     expected = cftime.num2date(
@@ -167,8 +171,8 @@ def test_decode_cf_datetime_overflow() -> None:
     units = "days since 2000-01-01 00:00:00"
 
     # date after 2262 and before 1678
-    days = (-117608, 95795)
-    expected = (datetime(1677, 12, 31), datetime(2262, 4, 12))
+    days = (-117710, 95795)
+    expected = (datetime(1677, 9, 20), datetime(2262, 4, 12))
 
     for i, day in enumerate(days):
         with warnings.catch_warnings():
@@ -277,15 +281,15 @@ def test_decode_dates_outside_timestamp_range(calendar) -> None:
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
+@pytest.mark.parametrize("num_time", [735368, [735368], [[735368]]])
 def test_decode_standard_calendar_single_element_inside_timestamp_range(
-    calendar,
+    calendar, num_time
 ) -> None:
     units = "days since 0001-01-01"
-    for num_time in [735368, [735368], [[735368]]]:
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "Unable to decode time axis")
-            actual = decode_cf_datetime(num_time, units, calendar=calendar)
-        assert actual.dtype == np.dtype("M8[ns]")
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "Unable to decode time axis")
+        actual = decode_cf_datetime(num_time, units, calendar=calendar)
+    assert actual.dtype == np.dtype("M8[ns]")
 
 
 @requires_cftime
@@ -628,10 +632,10 @@ def test_cf_timedelta_2d() -> None:
 @pytest.mark.parametrize(
     ["deltas", "expected"],
     [
-        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type, unused-ignore]
-        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type, unused-ignore]
-        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type, unused-ignore]
-        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type, unused-ignore]
+        (pd.to_timedelta(["1 day", "2 days"]), "days"),
+        (pd.to_timedelta(["1h", "1 day 1 hour"]), "hours"),
+        (pd.to_timedelta(["1m", "2m", np.nan]), "minutes"),
+        (pd.to_timedelta(["1m3s", "1m4s"]), "seconds"),
     ],
 )
 def test_infer_timedelta_units(deltas, expected) -> None:
@@ -675,7 +679,7 @@ def test_decode_cf(calendar) -> None:
         if calendar not in _STANDARD_CALENDARS:
             assert ds.test.dtype == np.dtype("O")
         else:
-            assert ds.test.dtype == np.dtype("M8[ns]")
+            assert ds.test.dtype == np.dtype("=M8[ns]")
 
 
 def test_decode_cf_time_bounds() -> None:
@@ -700,7 +704,7 @@ def test_decode_cf_time_bounds() -> None:
         "calendar": "standard",
     }
     dsc = decode_cf(ds)
-    assert dsc.time_bnds.dtype == np.dtype("M8[ns]")
+    assert dsc.time_bnds.dtype == np.dtype("=M8[ns]")
     dsc = decode_cf(ds, decode_times=False)
     assert dsc.time_bnds.dtype == np.dtype("int64")
 
@@ -1072,7 +1076,8 @@ def test_encode_decode_roundtrip_cftime(freq) -> None:
     )
     variable = Variable(["time"], times)
     encoded = conventions.encode_cf_variable(variable)
-    decoded = conventions.decode_cf_variable("time", encoded, use_cftime=True)
+    decoder = CFDatetimeCoder(use_cftime=True)
+    decoded = conventions.decode_cf_variable("time", encoded, decode_times=decoder)
     assert_equal(variable, decoded)
 
 
@@ -1182,7 +1187,7 @@ def test_decode_0size_datetime(use_cftime):
     if use_cftime and not has_cftime:
         pytest.skip()
 
-    dtype = object if use_cftime else "M8[ns]"
+    dtype = object if use_cftime else "=M8[ns]"
     expected = np.array([], dtype=dtype)
     actual = decode_cf_datetime(
         np.zeros(shape=0, dtype=np.int64),
@@ -1206,6 +1211,28 @@ def test_decode_float_datetime():
     actual = decode_cf_datetime(
         num_dates, units=units, calendar=calendar, use_cftime=False
     )
+    np.testing.assert_equal(actual, expected)
+
+
+def test_decode_float_datetime_with_decimals() -> None:
+    # test resolution enhancement for floats
+    values = np.array([0, 0.125, 0.25, 0.375, 0.75, 1.0], dtype="float32")
+    expected = np.array(
+        [
+            "2000-01-01T00:00:00.000",
+            "2000-01-01T00:00:00.125",
+            "2000-01-01T00:00:00.250",
+            "2000-01-01T00:00:00.375",
+            "2000-01-01T00:00:00.750",
+            "2000-01-01T00:00:01.000",
+        ],
+        dtype="=M8[ns]",
+    )
+
+    units = "seconds since 2000-01-01"
+    calendar = "standard"
+    actual = decode_cf_datetime(values, units, calendar)
+    assert actual.dtype == expected.dtype
     np.testing.assert_equal(actual, expected)
 
 
