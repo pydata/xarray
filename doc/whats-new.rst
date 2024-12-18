@@ -65,7 +65,7 @@ Internal Changes
   within ``as_compatible_data``. This is consistent with how lists of these objects
   will be converted (:pull:`9900`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- Refactor of time coding to prepare for realxing nanosecond restriction (:pull:`9906`).
+- Refactor of time coding to prepare for relaxing nanosecond restriction (:pull:`9906`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 .. _whats-new.2024.11.0:
