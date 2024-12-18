@@ -36,10 +36,12 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
+from typing import Literal, cast
 
 import pandas as pd
 from packaging.version import Version
+
+from xarray.core.types import PDDatetimeUnitOptions
 
 
 def count_not_none(*args) -> int:
@@ -71,6 +73,19 @@ no_default = (
     _NoDefault.no_default
 )  # Sentinel indicating the default value following pandas
 NoDefault = Literal[_NoDefault.no_default]  # For typing following pandas
+
+
+def timestamp_as_unit(date: pd.Timestamp, unit: str) -> pd.Timestamp:
+    # compatibility function for pandas issue
+    # where "as_unit" is not defined for pandas.Timestamp
+    # in pandas versions < 2.2
+    # can be removed minimum pandas version is >= 2.2
+    unit = cast(PDDatetimeUnitOptions, unit)
+    if hasattr(date, "as_unit"):
+        date = date.as_unit(unit)
+    elif hasattr(date, "_as_unit"):
+        date = date._as_unit(unit)
+    return date
 
 
 def nanosecond_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
