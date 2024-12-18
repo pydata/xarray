@@ -1,5 +1,9 @@
 version: 2
 
+sphinx:
+  configuration: doc/conf.py
+  fail_on_warning: true
+
 build:
   os: ubuntu-lts-latest
   tools:
@@ -13,8 +17,5 @@ build:
 
 conda:
   environment: ci/requirements/doc.yml
-
-sphinx:
-  fail_on_warning: true
 
 formats: []
