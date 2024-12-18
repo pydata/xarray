@@ -1324,7 +1324,7 @@ def _arrayize_vectorized_indexer(
 
 
 def _chunked_array_with_chunks_hint(
-    array, chunks, chunkmanager: ChunkManagerEntrypoint[Any]
+    array, chunks, chunkmanager: ChunkManagerEntrypoint
 ):
     """Create a chunked array using the chunks hint for dimensions of size > 1."""
 

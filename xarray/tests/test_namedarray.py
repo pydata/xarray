@@ -118,6 +118,12 @@ def check_duck_array_typevar(a: duckarray[Any, _DType]) -> duckarray[Any, _DType
         )
 
 
+def test_duckarray___array__() -> None:
+    x: duckarray[Any, Any] = np.array([1, 2, 3], dtype=np.int64)
+    y = np.array(x)
+    np.testing.assert_array_equal(y, x)
+
+
 class NamedArraySubclassobjects:
     @pytest.fixture
     def target(self, data: np.ndarray[Any, Any]) -> Any:
@@ -388,6 +394,13 @@ class TestNamedArray(NamedArraySubclassobjects):
         arrayapi_a: duckarray[Any, Any]  #  duckarray[Any, np.dtype[np.int64]]
         arrayapi_a = nxp.asarray([2.1, 4], dtype=nxp.int64)
         check_duck_array_typevar(arrayapi_a)
+
+    @pytest.mark.xfail(reason="pd.Index does not include an __array_function__")
+    def test_pd_index_duckarray(self) -> None:
+        import pandas as pd
+
+        a: duckarray[Any, Any] = pd.Index([])
+        check_duck_array_typevar(a)
 
     def test_new_namedarray(self) -> None:
         dtype_float = np.dtype(np.float32)

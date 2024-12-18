@@ -756,8 +756,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def chunk(
         self,
-        chunks: T_Chunks = {},  # noqa: B006  # even though it's unsafe, it is being used intentionally here (#4667)
-        chunked_array_type: str | ChunkManagerEntrypoint[Any] | None = None,
+        chunks: T_Chunks = {},  # noqa: B006 # even though it's unsafe, it is being used intentionally here (#4667)
+        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs: Any = None,
         **chunks_kwargs: Any,
     ) -> Self:
@@ -831,6 +831,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         chunkmanager = guess_chunkmanager(chunked_array_type)
 
         data_old = self._data
+        data_chunked: _chunkedarray[Any, _DType_co]
         if chunkmanager.is_chunked_array(data_old):
             data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
         else:
