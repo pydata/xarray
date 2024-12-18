@@ -12,9 +12,11 @@ import xarray as xr
 from xarray.coding.cftimeindex import (
     CFTimeIndex,
     _parse_array_of_cftime_strings,
-    _parse_iso8601_with_reso,
     _parsed_string_to_bounds,
     assert_all_valid_date_type,
+)
+from xarray.coding.times import (
+    _parse_iso8601_with_reso,
     parse_iso8601_like,
 )
 from xarray.tests import (
@@ -132,16 +134,30 @@ ISO8601_LIKE_STRING_TESTS = {
     list(ISO8601_LIKE_STRING_TESTS.values()),
     ids=list(ISO8601_LIKE_STRING_TESTS.keys()),
 )
-def test_parse_iso8601_like(string, expected):
-    result = parse_iso8601_like(string)
+@pytest.mark.parametrize("five_digit_year", [False, True], ids=["4Y", "5Y"])
+@pytest.mark.parametrize("sign", ["", "+", "-"], ids=["None", "plus", "minus"])
+def test_parse_iso8601_like(five_digit_year, sign, string, expected):
+    pre = "1" if five_digit_year else ""
+    datestring = sign + pre + string
+    result = parse_iso8601_like(datestring)
+    expected = expected.copy()
+    expected.update(year=sign + pre + expected["year"])
     assert result == expected
 
-    if result["microsecond"] is None:
+    # check malformed single digit addendum
+    # this check is only performed when we have at least "hour" given
+    # like "1999010101", where a single added digit should raise
+    # for "1999" (year), "199901" (month) and "19990101" (day)
+    # and a single added digit the string would just be interpreted
+    # as having a 5-digit year.
+    if result["microsecond"] is None and result["hour"] is not None:
         with pytest.raises(ValueError):
-            parse_iso8601_like(string + "3")
-    if result["second"] is None:
+            parse_iso8601_like(datestring + "3")
+
+    # check malformed floating point addendum
+    if result["second"] is None or result["microsecond"] is not None:
         with pytest.raises(ValueError):
-            parse_iso8601_like(string + ".3")
+            parse_iso8601_like(datestring + ".3")
 
 
 _CFTIME_CALENDARS = [
