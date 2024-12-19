@@ -645,7 +645,7 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
         try:
             with open(path, "rb") as f:
                 return read_magic_number_from_file(f, count)
-        except (FileNotFoundError, TypeError):
+        except (FileNotFoundError, IsADirectoryError, TypeError):
             pass
     return None
 
