@@ -74,6 +74,7 @@ if TYPE_CHECKING:
         T_ChunksFreq,
         ZarrWriteModes,
     )
+    from xarray.namedarray._typing import chunkedduckarray, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 # """
@@ -1954,9 +1955,8 @@ class DataTree(
             chunkmanager = get_chunked_array_type(*flat_lazy_data.values())
 
             # evaluate all the chunked arrays simultaneously
-            evaluated_data: tuple[np.ndarray[Any, Any], ...] = chunkmanager.compute(
-                *flat_lazy_data.values(), **kwargs
-            )
+            evaluated_data: tuple[duckarray[Any, Any], ...]
+            evaluated_data = chunkmanager.compute(*flat_lazy_data.values(), **kwargs)
 
             for (path, var_name), data in zip(
                 flat_lazy_data, evaluated_data, strict=False
@@ -2018,6 +2018,7 @@ class DataTree(
             chunkmanager = get_chunked_array_type(*flat_lazy_data.values())
 
             # evaluate all the dask arrays simultaneously
+            evaluated_data: tuple[chunkedduckarray[Any, Any], ...]
             evaluated_data = chunkmanager.persist(*flat_lazy_data.values(), **kwargs)
 
             for (path, var_name), data in zip(
