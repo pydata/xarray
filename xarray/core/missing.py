@@ -837,7 +837,7 @@ def _interpnd(
     data = transpose(var._data, range(-len(x), var.ndim - len(x)))
 
     # stack new_x to 1 vector, with reshape
-    xi = stack([duck_array_ops.ravel(x1.data) for x1 in new_x_list], axis=-1)
+    xi = stack([ravel(x1.data) for x1 in new_x_list], axis=-1)
     rslt: np.ndarray = interp_func(x_list, data, xi, **interp_kwargs)  # type: ignore[assignment]
     # move back the interpolation axes to the last position
     rslt = transpose(rslt, range(-rslt.ndim + 1, 1))
