@@ -802,7 +802,10 @@ def _interpnd(
 
     # Convert everything to Variables, since that makes applying
     # `_localize` and `_floatize_x` much easier
-    x = [Variable([f"dim_{nconst + dim}"], _x, fastpath=True) for dim, _x in enumerate(coords[:n_x])]
+    x = [
+        Variable([f"dim_{nconst + dim}"], _x, fastpath=True)
+        for dim, _x in enumerate(coords[:n_x])
+    ]
     new_x = list(
         broadcast_variables(
             *(
