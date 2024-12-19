@@ -36,7 +36,11 @@ try:
 except ImportError:
     cftime = None
 
-from xarray.core.types import CFCalendar, NPDatetimeUnitOptions, T_DuckArray
+from xarray.core.types import (
+    CFCalendar,
+    NPDatetimeUnitOptions,
+    T_DuckArray,
+)
 
 T_Name = Union[Hashable, None]
 
@@ -204,7 +208,10 @@ def _unpack_time_units_and_ref_date(units: str) -> tuple[str, pd.Timestamp]:
 
 
 def _decode_cf_datetime_dtype(
-    data, units: str, calendar: str | None, use_cftime: bool | None
+    data,
+    units: str,
+    calendar: str | None,
+    use_cftime: bool | None,
 ) -> np.dtype:
     # Verify that at least the first and last date can be decoded
     # successfully. Otherwise, tracebacks end up swallowed by
@@ -311,7 +318,10 @@ def _decode_datetime_with_pandas(
 
 
 def decode_cf_datetime(
-    num_dates, units: str, calendar: str | None = None, use_cftime: bool | None = None
+    num_dates,
+    units: str,
+    calendar: str | None = None,
+    use_cftime: bool | None = None,
 ) -> np.ndarray:
     """Given an array of numeric dates in netCDF format, convert it into a
     numpy array of date time objects.
@@ -974,7 +984,10 @@ def _lazily_encode_cf_timedelta(
 
 
 class CFDatetimeCoder(VariableCoder):
-    def __init__(self, use_cftime: bool | None = None) -> None:
+    def __init__(
+        self,
+        use_cftime: bool | None = None,
+    ) -> None:
         self.use_cftime = use_cftime
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
