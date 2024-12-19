@@ -2925,7 +2925,12 @@ class Dataset(
             elif is_scalar(v):
                 yield k, Variable((), v, attrs=self.coords[k].attrs)
             elif isinstance(v, np.ndarray):
-                yield k, Variable(dims=(k,), data=v, attrs=self.coords[k].attrs, fastpath=True)
+                yield (
+                    k,
+                    Variable(
+                        dims=(k,), data=v, attrs=self.coords[k].attrs, fastpath=True
+                    ),
+                )
             else:
                 raise TypeError(type(v))
 
