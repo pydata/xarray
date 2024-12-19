@@ -802,16 +802,16 @@ def _interpnd(
 
     # Convert everything to Variables, since that makes applying
     # `_localize` and `_floatize_x` much easier
-    x = [Variable([f"dim_{nconst + dim}"], _x) for dim, _x in enumerate(coords[:n_x])]
+    x = [Variable([f"dim_{nconst + dim}"], _x, fastpath=True) for dim, _x in enumerate(coords[:n_x])]
     new_x = list(
         broadcast_variables(
             *(
-                Variable(dims, _x)
+                Variable(dims, _x, fastpath=True)
                 for dims, _x in zip(result_coord_core_dims, coords[n_x:], strict=True)
             )
         )
     )
-    var = Variable([f"dim_{dim}" for dim in range(ndim)], data)
+    var = Variable([f"dim_{dim}" for dim in range(ndim)], data, fastpath=True)
 
     if interp_kwargs.get("method") in ["linear", "nearest"]:
         indexes_coords = {
@@ -834,7 +834,7 @@ def _interpnd(
     data = transpose(var._data, range(-len(x), var.ndim - len(x)))
 
     # stack new_x to 1 vector, with reshape
-    xi = stack([x1.data.ravel() for x1 in new_x_list], axis=-1)
+    xi = stack([duck_array_ops.ravel(x1.data) for x1 in new_x_list], axis=-1)
     rslt: np.ndarray = interp_func(x_list, data, xi, **interp_kwargs)  # type: ignore[assignment]
     # move back the interpolation axes to the last position
     rslt = transpose(rslt, range(-rslt.ndim + 1, 1))
