@@ -331,9 +331,15 @@ def _assert_indexes_invariants_checks(
     }
 
     index_vars = {
-        k for k, v in possible_coord_variables.items() if isinstance(v, IndexVariable)
+        k: v
+        for k, v in possible_coord_variables.items()
+        if isinstance(v, IndexVariable)
     }
-    assert indexes.keys() <= index_vars, (set(indexes), index_vars)
+    index_var_names = set(index_vars)
+    assert indexes.keys() <= index_var_names, (set(indexes), index_var_names)
+
+    for k, v in index_vars.items():
+        assert k == v.name, (k, v.name)
 
     # check pandas index wrappers vs. coordinate data adapters
     for k, index in indexes.items():
@@ -350,7 +356,7 @@ def _assert_indexes_invariants_checks(
         if isinstance(index, PandasMultiIndex):
             pd_index = index.index
             for name in index.index.names:
-                assert name in possible_coord_variables, (pd_index, index_vars)
+                assert name in possible_coord_variables, (pd_index, index_var_names)
                 var = possible_coord_variables[name]
                 assert (index.dim,) == var.dims, (pd_index, var)
                 assert index.level_coords_dtype[name] == var.dtype, (
