@@ -34,7 +34,7 @@ dependencies:
   - pip
   - pooch
   - pre-commit
-  - pydap
+  # - pydap
   - pytest
   - pytest-cov
   - pytest-env
