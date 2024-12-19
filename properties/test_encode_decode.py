@@ -11,10 +11,12 @@ pytest.importorskip("hypothesis")
 # isort: split
 
 import hypothesis.extra.numpy as npst
+import hypothesis.strategies as st
 import numpy as np
 from hypothesis import given
 
 import xarray as xr
+from xarray.coding.times import _parse_iso8601_without_reso
 from xarray.testing.strategies import variables
 
 
@@ -43,3 +45,10 @@ def test_CFScaleOffset_coder_roundtrip(original) -> None:
     coder = xr.coding.variables.CFScaleOffsetCoder()
     roundtripped = coder.decode(coder.encode(original))
     xr.testing.assert_identical(original, roundtripped)
+
+
+# TODO: add cftime.datetime
+@given(dt=st.datetimes())
+def test_iso8601_decode(dt):
+    iso = dt.isoformat()
+    assert dt == _parse_iso8601_without_reso(type(dt), iso)
