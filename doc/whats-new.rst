@@ -21,6 +21,8 @@ v.2024.12.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Add :py:func:`~xarray.show_backends` alias for :py:func:`~xarray.backends.list_engines` (:issue:`6577`, :pull:`9821`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 - Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
   duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
   By `Sam Levang <https://github.com/slevang>`_.
