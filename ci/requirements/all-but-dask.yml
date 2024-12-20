@@ -3,7 +3,6 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - black
   - aiobotocore
   - array-api-strict
   - boto3
@@ -16,18 +15,18 @@ dependencies:
   - h5py
   - hdf5
   - hypothesis
-  - lxml  # Optional dep of pydap
+  - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
   - numba
   - numbagg
-  - numpy<2
+  - numpy
   - packaging
   - pandas
   - pint>=0.22
   - pip
-  # - pydap
+  - pydap
   - pytest
   - pytest-cov
   - pytest-env

@@ -410,13 +410,15 @@ class TestPandasMultiIndex:
             "y": xr.Variable("y", pd.Index([1, 3, 2])),
         }
 
-        index = PandasMultiIndex.stack(prod_vars, "z")
+        index_xr = PandasMultiIndex.stack(prod_vars, "z")
 
-        assert index.dim == "z"
+        assert index_xr.dim == "z"
+        index_pd = index_xr.index
+        assert isinstance(index_pd, pd.MultiIndex)
         # TODO: change to tuple when pandas 3 is minimum
-        assert list(index.index.names) == ["x", "y"]
+        assert list(index_pd.names) == ["x", "y"]
         np.testing.assert_array_equal(
-            index.index.codes, [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]]
+            index_pd.codes, [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]]
         )
 
         with pytest.raises(
@@ -433,13 +435,15 @@ class TestPandasMultiIndex:
             "y": xr.Variable("y", pd.Index([1, 1, 2])),
         }
 
-        index = PandasMultiIndex.stack(prod_vars, "z")
+        index_xr = PandasMultiIndex.stack(prod_vars, "z")
+        index_pd = index_xr.index
+        assert isinstance(index_pd, pd.MultiIndex)
 
         np.testing.assert_array_equal(
-            index.index.codes, [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]]
+            index_pd.codes, [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]]
         )
-        np.testing.assert_array_equal(index.index.levels[0], ["b", "a"])
-        np.testing.assert_array_equal(index.index.levels[1], [1, 2])
+        np.testing.assert_array_equal(index_pd.levels[0], ["b", "a"])
+        np.testing.assert_array_equal(index_pd.levels[1], [1, 2])
 
     def test_unstack(self) -> None:
         pd_midx = pd.MultiIndex.from_product(
@@ -600,10 +604,7 @@ class TestIndexes:
 
         _, variables = indexes_and_vars
 
-        if isinstance(x_idx, Index):
-            index_type = Index
-        else:
-            index_type = pd.Index
+        index_type = Index if isinstance(x_idx, Index) else pd.Index
 
         return Indexes(indexes, variables, index_type=index_type)
 
@@ -666,20 +667,22 @@ class TestIndexes:
     def test_to_pandas_indexes(self, indexes) -> None:
         pd_indexes = indexes.to_pandas_indexes()
         assert isinstance(pd_indexes, Indexes)
-        assert all([isinstance(idx, pd.Index) for idx in pd_indexes.values()])
+        assert all(isinstance(idx, pd.Index) for idx in pd_indexes.values())
         assert indexes.variables == pd_indexes.variables
 
     def test_copy_indexes(self, indexes) -> None:
         copied, index_vars = indexes.copy_indexes()
 
         assert copied.keys() == indexes.keys()
-        for new, original in zip(copied.values(), indexes.values()):
+        for new, original in zip(copied.values(), indexes.values(), strict=True):
             assert new.equals(original)
         # check unique index objects preserved
         assert copied["z"] is copied["one"] is copied["two"]
 
         assert index_vars.keys() == indexes.variables.keys()
-        for new, original in zip(index_vars.values(), indexes.variables.values()):
+        for new, original in zip(
+            index_vars.values(), indexes.variables.values(), strict=True
+        ):
             assert_identical(new, original)
 
 

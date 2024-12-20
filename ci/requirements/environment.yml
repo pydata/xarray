@@ -26,7 +26,7 @@ dependencies:
   - numba
   - numbagg
   - numexpr
-  - numpy<2
+  - numpy>=2
   - opt_einsum
   - packaging
   - pandas
@@ -35,7 +35,8 @@ dependencies:
   - pooch
   - pre-commit
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
-  # - pydap
+  - pydap
+  - pydap-server
   - pytest
   - pytest-cov
   - pytest-env
@@ -48,3 +49,5 @@ dependencies:
   - toolz
   - typing_extensions
   - zarr
+  - pip:
+      - jax # no way to get cpu-only jaxlib from conda if gpu is present

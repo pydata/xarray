@@ -1,16 +1,20 @@
 from __future__ import annotations
 
+import pickle
+from unittest.mock import patch
+
 import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.tests import assert_allclose, assert_array_equal, mock
+import xarray.ufuncs as xu
+from xarray.tests import assert_allclose, assert_array_equal, mock, requires_dask
 from xarray.tests import assert_identical as assert_identical_
 
 
 def assert_identical(a, b):
     assert type(a) is type(b) or float(a) == float(b)
-    if isinstance(a, (xr.DataArray, xr.Dataset, xr.Variable)):
+    if isinstance(a, xr.DataArray | xr.Dataset | xr.Variable):
         assert_identical_(a, b)
     else:
         assert_array_equal(a, b)
@@ -155,3 +159,108 @@ def test_gufuncs():
     fake_gufunc = mock.Mock(signature="(n)->()", autospec=np.sin)
     with pytest.raises(NotImplementedError, match=r"generalized ufuncs"):
         xarray_obj.__array_ufunc__(fake_gufunc, "__call__", xarray_obj)
+
+
+class DuckArray(np.ndarray):
+    # Minimal subclassed duck array with its own self-contained namespace,
+    # which implements a few ufuncs
+    def __new__(cls, array):
+        obj = np.asarray(array).view(cls)
+        return obj
+
+    def __array_namespace__(self):
+        return DuckArray
+
+    @staticmethod
+    def sin(x):
+        return np.sin(x)
+
+    @staticmethod
+    def add(x, y):
+        return x + y
+
+
+class DuckArray2(DuckArray):
+    def __array_namespace__(self):
+        return DuckArray2
+
+
+class TestXarrayUfuncs:
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        self.x = xr.DataArray([1, 2, 3])
+        self.xd = xr.DataArray(DuckArray([1, 2, 3]))
+        self.xd2 = xr.DataArray(DuckArray2([1, 2, 3]))
+        self.xt = xr.DataArray(np.datetime64("2021-01-01", "ns"))
+
+    @pytest.mark.filterwarnings("ignore::RuntimeWarning")
+    @pytest.mark.parametrize("name", xu.__all__)
+    def test_ufuncs(self, name, request):
+        xu_func = getattr(xu, name)
+        np_func = getattr(np, name, None)
+        if np_func is None and np.lib.NumpyVersion(np.__version__) < "2.0.0":
+            pytest.skip(f"Ufunc {name} is not available in numpy {np.__version__}.")
+
+        if name == "isnat":
+            args = (self.xt,)
+        elif hasattr(np_func, "nin") and np_func.nin == 2:
+            args = (self.x, self.x)
+        else:
+            args = (self.x,)
+
+        expected = np_func(*args)
+        actual = xu_func(*args)
+
+        if name in ["angle", "iscomplex"]:
+            np.testing.assert_equal(expected, actual.values)
+        else:
+            assert_identical(actual, expected)
+
+    def test_ufunc_pickle(self):
+        a = 1.0
+        cos_pickled = pickle.loads(pickle.dumps(xu.cos))
+        assert_identical(cos_pickled(a), xu.cos(a))
+
+    def test_ufunc_scalar(self):
+        actual = xu.sin(1)
+        assert isinstance(actual, float)
+
+    def test_ufunc_duck_array_dataarray(self):
+        actual = xu.sin(self.xd)
+        assert isinstance(actual.data, DuckArray)
+
+    def test_ufunc_duck_array_variable(self):
+        actual = xu.sin(self.xd.variable)
+        assert isinstance(actual.data, DuckArray)
+
+    def test_ufunc_duck_array_dataset(self):
+        ds = xr.Dataset({"a": self.xd})
+        actual = xu.sin(ds)
+        assert isinstance(actual.a.data, DuckArray)
+
+    @requires_dask
+    def test_ufunc_duck_dask(self):
+        import dask.array as da
+
+        x = xr.DataArray(da.from_array(DuckArray(np.array([1, 2, 3]))))
+        actual = xu.sin(x)
+        assert isinstance(actual.data._meta, DuckArray)
+
+    @requires_dask
+    @pytest.mark.xfail(reason="dask ufuncs currently dispatch to numpy")
+    def test_ufunc_duck_dask_no_array_ufunc(self):
+        import dask.array as da
+
+        # dask ufuncs currently only preserve duck arrays that implement __array_ufunc__
+        with patch.object(DuckArray, "__array_ufunc__", new=None, create=True):
+            x = xr.DataArray(da.from_array(DuckArray(np.array([1, 2, 3]))))
+            actual = xu.sin(x)
+            assert isinstance(actual.data._meta, DuckArray)
+
+    def test_ufunc_mixed_arrays_compatible(self):
+        actual = xu.add(self.xd, self.x)
+        assert isinstance(actual.data, DuckArray)
+
+    def test_ufunc_mixed_arrays_incompatible(self):
+        with pytest.raises(ValueError, match=r"Mixed array types"):
+            xu.add(self.xd, self.xd2)

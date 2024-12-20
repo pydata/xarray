@@ -35,9 +35,23 @@ if has_cftime:
     standard_or_gregorian = "standard"
 
 
-def date_dict(year=None, month=None, day=None, hour=None, minute=None, second=None):
+def date_dict(
+    year=None,
+    month=None,
+    day=None,
+    hour=None,
+    minute=None,
+    second=None,
+    microsecond=None,
+):
     return dict(
-        year=year, month=month, day=day, hour=hour, minute=minute, second=second
+        year=year,
+        month=month,
+        day=day,
+        hour=hour,
+        minute=minute,
+        second=second,
+        microsecond=microsecond,
     )
 
 
@@ -86,6 +100,30 @@ ISO8601_LIKE_STRING_TESTS = {
             year="1999", month="01", day="01", hour="12", minute="34", second="56"
         ),
     ),
+    "microsecond-1": (
+        "19990101T123456.123456",
+        date_dict(
+            year="1999",
+            month="01",
+            day="01",
+            hour="12",
+            minute="34",
+            second="56",
+            microsecond="123456",
+        ),
+    ),
+    "microsecond-2": (
+        "19990101T123456.1",
+        date_dict(
+            year="1999",
+            month="01",
+            day="01",
+            hour="12",
+            minute="34",
+            second="56",
+            microsecond="1",
+        ),
+    ),
 }
 
 
@@ -98,9 +136,12 @@ def test_parse_iso8601_like(string, expected):
     result = parse_iso8601_like(string)
     assert result == expected
 
-    with pytest.raises(ValueError):
-        parse_iso8601_like(string + "3")
-        parse_iso8601_like(string + ".3")
+    if result["microsecond"] is None:
+        with pytest.raises(ValueError):
+            parse_iso8601_like(string + "3")
+    if result["second"] is None:
+        with pytest.raises(ValueError):
+            parse_iso8601_like(string + ".3")
 
 
 _CFTIME_CALENDARS = [
@@ -301,6 +342,7 @@ def test_cftimeindex_days_in_month_accessor(index):
         ("19990202T01", (1999, 2, 2, 1), "hour"),
         ("19990202T0101", (1999, 2, 2, 1, 1), "minute"),
         ("19990202T010156", (1999, 2, 2, 1, 1, 56), "second"),
+        ("19990202T010156.123456", (1999, 2, 2, 1, 1, 56, 123456), "microsecond"),
     ],
 )
 def test_parse_iso8601_with_reso(date_type, string, date_args, reso):
@@ -679,11 +721,11 @@ def test_indexing_in_series_loc(series, index, scalar_args, range_args):
 
 @requires_cftime
 def test_indexing_in_series_iloc(series, index):
-    expected = 1
-    assert series.iloc[0] == expected
+    expected1 = 1
+    assert series.iloc[0] == expected1
 
-    expected = pd.Series([1, 2], index=index[:2])
-    assert series.iloc[:2].equals(expected)
+    expected2 = pd.Series([1, 2], index=index[:2])
+    assert series.iloc[:2].equals(expected2)
 
 
 @requires_cftime
@@ -696,27 +738,27 @@ def test_series_dropna(index):
 
 @requires_cftime
 def test_indexing_in_dataframe_loc(df, index, scalar_args, range_args):
-    expected = pd.Series([1], name=index[0])
+    expected_s = pd.Series([1], name=index[0])
     for arg in scalar_args:
-        result = df.loc[arg]
-        assert result.equals(expected)
+        result_s = df.loc[arg]
+        assert result_s.equals(expected_s)
 
-    expected = pd.DataFrame([1, 2], index=index[:2])
+    expected_df = pd.DataFrame([1, 2], index=index[:2])
     for arg in range_args:
-        result = df.loc[arg]
-        assert result.equals(expected)
+        result_df = df.loc[arg]
+        assert result_df.equals(expected_df)
 
 
 @requires_cftime
 def test_indexing_in_dataframe_iloc(df, index):
-    expected = pd.Series([1], name=index[0])
-    result = df.iloc[0]
-    assert result.equals(expected)
-    assert result.equals(expected)
+    expected_s = pd.Series([1], name=index[0])
+    result_s = df.iloc[0]
+    assert result_s.equals(expected_s)
+    assert result_s.equals(expected_s)
 
-    expected = pd.DataFrame([1, 2], index=index[:2])
-    result = df.iloc[:2]
-    assert result.equals(expected)
+    expected_df = pd.DataFrame([1, 2], index=index[:2])
+    result_df = df.iloc[:2]
+    assert result_df.equals(expected_df)
 
 
 @requires_cftime
@@ -957,17 +999,17 @@ def test_cftimeindex_shift(index, freq) -> None:
 
 
 @requires_cftime
-def test_cftimeindex_shift_invalid_n() -> None:
+def test_cftimeindex_shift_invalid_periods() -> None:
     index = xr.cftime_range("2000", periods=3)
     with pytest.raises(TypeError):
-        index.shift("a", "D")
+        index.shift("a", "D")  # type: ignore[arg-type]
 
 
 @requires_cftime
 def test_cftimeindex_shift_invalid_freq() -> None:
     index = xr.cftime_range("2000", periods=3)
     with pytest.raises(TypeError):
-        index.shift(1, 1)
+        index.shift(1, 1)  # type: ignore[arg-type]
 
 
 @requires_cftime
@@ -1188,6 +1230,7 @@ def test_to_datetimeindex_feb_29(calendar):
         index.to_datetimeindex()
 
 
+@pytest.mark.xfail(reason="fails on pandas main branch")
 @requires_cftime
 def test_multiindex():
     index = xr.cftime_range("2001-01-01", periods=100, calendar="360_day")

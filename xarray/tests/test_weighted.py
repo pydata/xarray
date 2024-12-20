@@ -24,7 +24,7 @@ def test_weighted_non_DataArray_weights(as_dataset: bool) -> None:
         data = data.to_dataset(name="data")
 
     with pytest.raises(ValueError, match=r"`weights` must be a DataArray"):
-        data.weighted([1, 2])  # type: ignore
+        data.weighted([1, 2])  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("as_dataset", (True, False))

@@ -51,11 +51,16 @@ class ContStyle(AbstractStyle):
 
         >>> from xarray.core.datatree import DataTree
         >>> from xarray.core.datatree_render import RenderDataTree
-        >>> root = DataTree(name="root")
-        >>> s0 = DataTree(name="sub0", parent=root)
-        >>> s0b = DataTree(name="sub0B", parent=s0)
-        >>> s0a = DataTree(name="sub0A", parent=s0)
-        >>> s1 = DataTree(name="sub1", parent=root)
+        >>> root = DataTree.from_dict(
+        ...     {
+        ...         "/": None,
+        ...         "/sub0": None,
+        ...         "/sub0/sub0B": None,
+        ...         "/sub0/sub0A": None,
+        ...         "/sub1": None,
+        ...     },
+        ...     name="root",
+        ... )
         >>> print(RenderDataTree(root))
         <xarray.DataTree 'root'>
         Group: /
@@ -71,7 +76,7 @@ class RenderDataTree:
     def __init__(
         self,
         node: DataTree,
-        style=ContStyle(),
+        style=None,
         childiter: type = list,
         maxlevel: int | None = None,
     ):
@@ -98,11 +103,16 @@ class RenderDataTree:
         >>> from xarray import Dataset
         >>> from xarray.core.datatree import DataTree
         >>> from xarray.core.datatree_render import RenderDataTree
-        >>> root = DataTree(name="root", data=Dataset({"a": 0, "b": 1}))
-        >>> s0 = DataTree(name="sub0", parent=root, data=Dataset({"c": 2, "d": 3}))
-        >>> s0b = DataTree(name="sub0B", parent=s0, data=Dataset({"e": 4}))
-        >>> s0a = DataTree(name="sub0A", parent=s0, data=Dataset({"f": 5, "g": 6}))
-        >>> s1 = DataTree(name="sub1", parent=root, data=Dataset({"h": 7}))
+        >>> root = DataTree.from_dict(
+        ...     {
+        ...         "/": Dataset({"a": 0, "b": 1}),
+        ...         "/sub0": Dataset({"c": 2, "d": 3}),
+        ...         "/sub0/sub0B": Dataset({"e": 4}),
+        ...         "/sub0/sub0A": Dataset({"f": 5, "g": 6}),
+        ...         "/sub1": Dataset({"h": 7}),
+        ...     },
+        ...     name="root",
+        ... )
 
         # Simple one line:
 
@@ -151,6 +161,8 @@ class RenderDataTree:
         ├── sub0
         └── sub1
         """
+        if style is None:
+            style = ContStyle()
         if not isinstance(style, AbstractStyle):
             style = style()
         self.node = node
@@ -193,8 +205,8 @@ class RenderDataTree:
         classname = self.__class__.__name__
         args = [
             repr(self.node),
-            f"style={repr(self.style)}",
-            f"childiter={repr(self.childiter)}",
+            f"style={self.style!r}",
+            f"childiter={self.childiter!r}",
         ]
         return f"{classname}({', '.join(args)})"
 
@@ -208,17 +220,16 @@ class RenderDataTree:
         >>> from xarray import Dataset
         >>> from xarray.core.datatree import DataTree
         >>> from xarray.core.datatree_render import RenderDataTree
-        >>> root = DataTree(name="root")
-        >>> s0 = DataTree(name="sub0", parent=root)
-        >>> s0b = DataTree(
-        ...     name="sub0B", parent=s0, data=Dataset({"foo": 4, "bar": 109})
+        >>> root = DataTree.from_dict(
+        ...     {
+        ...         "/sub0/sub0B": Dataset({"foo": 4, "bar": 109}),
+        ...         "/sub0/sub0A": None,
+        ...         "/sub1/sub1A": None,
+        ...         "/sub1/sub1B": Dataset({"bar": 8}),
+        ...         "/sub1/sub1C/sub1Ca": None,
+        ...     },
+        ...     name="root",
         ... )
-        >>> s0a = DataTree(name="sub0A", parent=s0)
-        >>> s1 = DataTree(name="sub1", parent=root)
-        >>> s1a = DataTree(name="sub1A", parent=s1)
-        >>> s1b = DataTree(name="sub1B", parent=s1, data=Dataset({"bar": 8}))
-        >>> s1c = DataTree(name="sub1C", parent=s1)
-        >>> s1ca = DataTree(name="sub1Ca", parent=s1c)
         >>> print(RenderDataTree(root).by_attr("name"))
         root
         ├── sub0
@@ -238,7 +249,7 @@ class RenderDataTree:
                     if callable(attrname)
                     else getattr(node, attrname, "")
                 )
-                if isinstance(attr, (list, tuple)):
+                if isinstance(attr, list | tuple):
                     lines = attr
                 else:
                     lines = str(attr).split("\n")

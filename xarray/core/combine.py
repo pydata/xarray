@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import itertools
 from collections import Counter
-from collections.abc import Iterable, Sequence
-from typing import TYPE_CHECKING, Literal, Union
+from collections.abc import Iterable, Iterator, Sequence
+from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast
 
 import pandas as pd
 
@@ -15,14 +15,26 @@ from xarray.core.merge import merge
 from xarray.core.utils import iterate_nested
 
 if TYPE_CHECKING:
-    from xarray.core.types import CombineAttrsOptions, CompatOptions, JoinOptions
+    from xarray.core.types import (
+        CombineAttrsOptions,
+        CompatOptions,
+        JoinOptions,
+        NestedSequence,
+    )
 
 
-def _infer_concat_order_from_positions(datasets):
+T = TypeVar("T")
+
+
+def _infer_concat_order_from_positions(
+    datasets: NestedSequence[T],
+) -> dict[tuple[int, ...], T]:
     return dict(_infer_tile_ids_from_nested_list(datasets, ()))
 
 
-def _infer_tile_ids_from_nested_list(entry, current_pos):
+def _infer_tile_ids_from_nested_list(
+    entry: NestedSequence[T], current_pos: tuple[int, ...]
+) -> Iterator[tuple[tuple[int, ...], T]]:
     """
     Given a list of lists (of lists...) of objects, returns a iterator
     which returns a tuple containing the index of each object in the nested
@@ -44,11 +56,11 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
     combined_tile_ids : dict[tuple(int, ...), obj]
     """
 
-    if isinstance(entry, list):
+    if not isinstance(entry, str) and isinstance(entry, Sequence):
         for i, item in enumerate(entry):
             yield from _infer_tile_ids_from_nested_list(item, current_pos + (i,))
     else:
-        yield current_pos, entry
+        yield current_pos, cast(T, entry)
 
 
 def _ensure_same_types(series, dim):
@@ -89,10 +101,12 @@ def _infer_concat_order_from_coords(datasets):
             # Need to read coordinate values to do ordering
             indexes = [ds._indexes.get(dim) for ds in datasets]
             if any(index is None for index in indexes):
-                raise ValueError(
-                    "Every dimension needs a coordinate for "
-                    "inferring concatenation order"
+                error_msg = (
+                    f"Every dimension requires a corresponding 1D coordinate "
+                    f"and index for inferring concatenation order but the "
+                    f"coordinate '{dim}' has no corresponding index"
                 )
+                raise ValueError(error_msg)
 
             # TODO (benbovy, flexible indexes): support flexible indexes?
             indexes = [index.to_pandas_index() for index in indexes]
@@ -137,7 +151,8 @@ def _infer_concat_order_from_coords(datasets):
                 # Append positions along extra dimension to structure which
                 # encodes the multi-dimensional concatenation order
                 tile_ids = [
-                    tile_id + (position,) for tile_id, position in zip(tile_ids, order)
+                    tile_id + (position,)
+                    for tile_id, position in zip(tile_ids, order, strict=True)
                 ]
 
     if len(datasets) > 1 and not concat_dims:
@@ -146,7 +161,7 @@ def _infer_concat_order_from_coords(datasets):
             "order the datasets for concatenation"
         )
 
-    combined_ids = dict(zip(tile_ids, datasets))
+    combined_ids = dict(zip(tile_ids, datasets, strict=True))
 
     return combined_ids, concat_dims
 
@@ -305,7 +320,7 @@ def _combine_1d(
                     "xarray.combine_by_coords, or do it manually "
                     "with xarray.concat, xarray.merge and "
                     "xarray.align"
-                )
+                ) from err
             else:
                 raise
     else:
@@ -347,7 +362,7 @@ def _nested_combine(
         combined_ids = _infer_concat_order_from_positions(datasets)
     else:
         # Already sorted so just use the ids already passed
-        combined_ids = dict(zip(ids, datasets))
+        combined_ids = dict(zip(ids, datasets, strict=True))
 
     # Check that the inferred shape is combinable
     _check_shape_tile_ids(combined_ids)
@@ -570,7 +585,7 @@ def combine_nested(
     if mixed_datasets_and_arrays:
         raise ValueError("Can't combine datasets with unnamed arrays.")
 
-    if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
+    if isinstance(concat_dim, str | DataArray) or concat_dim is None:
         concat_dim = [concat_dim]
 
     # The IDs argument tells _nested_combine that datasets aren't yet sorted

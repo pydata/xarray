@@ -112,7 +112,9 @@ class TestOps:
             array([[8, 5, 2, nan], [nan, 13, 14, 15]]),
             array([[2, 5, 8], [13, 17, 21]]),
         ]
-        for axis, expected in zip([0, 1, 2, -3, -2, -1], 2 * expected_results):
+        for axis, expected in zip(
+            [0, 1, 2, -3, -2, -1], 2 * expected_results, strict=True
+        ):
             actual = first(self.x, axis)
             assert_array_equal(expected, actual)
 
@@ -133,7 +135,9 @@ class TestOps:
             array([[8, 9, 10, nan], [nan, 21, 18, 15]]),
             array([[2, 6, 10], [15, 18, 21]]),
         ]
-        for axis, expected in zip([0, 1, 2, -3, -2, -1], 2 * expected_results):
+        for axis, expected in zip(
+            [0, 1, 2, -3, -2, -1], 2 * expected_results, strict=True
+        ):
             actual = last(self.x, axis)
             assert_array_equal(expected, actual)
 
@@ -337,17 +341,17 @@ class TestArrayNotNullEquiv:
 
 def construct_dataarray(dim_num, dtype, contains_nan, dask):
     # dimnum <= 3
-    rng = np.random.RandomState(0)
+    rng = np.random.default_rng(0)
     shapes = [16, 8, 4][:dim_num]
     dims = ("x", "y", "z")[:dim_num]
 
     if np.issubdtype(dtype, np.floating):
-        array = rng.randn(*shapes).astype(dtype)
+        array = rng.random(shapes).astype(dtype)
     elif np.issubdtype(dtype, np.integer):
-        array = rng.randint(0, 10, size=shapes).astype(dtype)
+        array = rng.integers(0, 10, size=shapes).astype(dtype)
     elif np.issubdtype(dtype, np.bool_):
-        array = rng.randint(0, 1, size=shapes).astype(dtype)
-    elif dtype == str:
+        array = rng.integers(0, 1, size=shapes).astype(dtype)
+    elif dtype is str:
         array = rng.choice(["a", "b", "c", "d"], size=shapes)
     else:
         raise ValueError
@@ -386,12 +390,13 @@ def series_reduce(da, func, dim, **kwargs):
         se = da.to_series()
         return from_series_or_scalar(getattr(se, func)(**kwargs))
     else:
-        da1 = []
         dims = list(da.dims)
         dims.remove(dim)
         d = dims[0]
-        for i in range(len(da[d])):
-            da1.append(series_reduce(da.isel(**{d: i}), func, dim, **kwargs))
+        da1 = [
+            series_reduce(da.isel(**{d: i}), func, dim, **kwargs)
+            for i in range(len(da[d]))
+        ]
 
         if d in da.coords:
             return concat(da1, dim=da[d])
@@ -1003,7 +1008,8 @@ def test_least_squares(use_dask, skipna):
 
 @requires_dask
 @requires_bottleneck
-def test_push_dask():
+@pytest.mark.parametrize("method", ["sequential", "blelloch"])
+def test_push_dask(method):
     import bottleneck
     import dask.array
 
@@ -1013,13 +1019,18 @@ def test_push_dask():
         expected = bottleneck.push(array, axis=0, n=n)
         for c in range(1, 11):
             with raise_if_dask_computes():
-                actual = push(dask.array.from_array(array, chunks=c), axis=0, n=n)
+                actual = push(
+                    dask.array.from_array(array, chunks=c), axis=0, n=n, method=method
+                )
             np.testing.assert_equal(actual, expected)
 
         # some chunks of size-1 with NaN
         with raise_if_dask_computes():
             actual = push(
-                dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)), axis=0, n=n
+                dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)),
+                axis=0,
+                n=n,
+                method=method,
             )
         np.testing.assert_equal(actual, expected)
 

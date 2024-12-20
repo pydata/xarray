@@ -33,8 +33,9 @@
 
 import inspect
 import warnings
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable, TypeVar
+from typing import TypeVar
 
 from xarray.core.utils import emit_user_level_warning
 
@@ -107,8 +108,10 @@ def _deprecate_positional_args(version) -> Callable[[T], T]:
                     stacklevel=2,
                 )
 
-                zip_args = zip(kwonly_args[:n_extra_args], args[-n_extra_args:])
-                kwargs.update({name: arg for name, arg in zip_args})
+                zip_args = zip(
+                    kwonly_args[:n_extra_args], args[-n_extra_args:], strict=True
+                )
+                kwargs.update(zip_args)
 
                 return func(*args[:-n_extra_args], **kwargs)
 
@@ -141,4 +144,4 @@ def deprecate_dims(func: T, old_name="dims") -> T:
 
     # We're quite confident we're just returning `T` from this function, so it's fine to ignore typing
     # within the function.
-    return wrapper  # type: ignore
+    return wrapper  # type: ignore[return-value]

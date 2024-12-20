@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import functools
 import warnings
-from collections.abc import Hashable, Iterable, MutableMapping
-from typing import TYPE_CHECKING, Any, Callable, Literal, Union, cast, overload
+from collections.abc import Callable, Hashable, Iterable, MutableMapping
+from typing import TYPE_CHECKING, Any, Literal, Union, cast, overload
 
 import numpy as np
 import pandas as pd
 
 from xarray.core.alignment import broadcast
 from xarray.core.concat import concat
+from xarray.core.utils import attempt_import
 from xarray.plot.facetgrid import _easy_facetgrid
 from xarray.plot.utils import (
     _LINEWIDTH_RANGE,
@@ -225,7 +226,7 @@ def _prepare_plot1d_data(
     plts.update(
         {k: darray.coords[v] for k, v in coords_to_plot.items() if v is not None}
     )
-    plts = dict(zip(plts.keys(), broadcast(*(plts.values()))))
+    plts = dict(zip(plts.keys(), broadcast(*(plts.values())), strict=True))
 
     return plts
 
@@ -892,7 +893,10 @@ def _plot1d(plotfunc):
         # All 1d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
-        import matplotlib.pyplot as plt
+        if TYPE_CHECKING:
+            import matplotlib.pyplot as plt
+        else:
+            plt = attempt_import("matplotlib.pyplot")
 
         if subplot_kws is None:
             subplot_kws = dict()
@@ -961,7 +965,7 @@ def _plot1d(plotfunc):
             # Remove any nulls, .where(m, drop=True) doesn't work when m is
             # a dask array, so load the array to memory.
             # It will have to be loaded to memory at some point anyway:
-            darray = darray.load()
+            darray = darray.compute()
             darray = darray.where(darray.notnull(), drop=True)
         else:
             size_ = kwargs.pop("_size", linewidth)
@@ -1049,7 +1053,7 @@ def _plot1d(plotfunc):
                 cbar_kwargs["label"] = label_from_attrs(hueplt_norm.data)
 
             _add_colorbar(
-                primitive, ax, kwargs.get("cbar_ax", None), cbar_kwargs, cmap_params
+                primitive, ax, kwargs.get("cbar_ax"), cbar_kwargs, cmap_params
             )
 
         if add_legend_:
@@ -1108,7 +1112,9 @@ def _add_labels(
     """Set x, y, z labels."""
     add_labels = [add_labels] * 3 if isinstance(add_labels, bool) else add_labels
     axes: tuple[Literal["x", "y", "z"], ...] = ("x", "y", "z")
-    for axis, add_label, darray, suffix in zip(axes, add_labels, darrays, suffixes):
+    for axis, add_label, darray, suffix in zip(
+        axes, add_labels, darrays, suffixes, strict=True
+    ):
         if darray is None:
             continue
 
@@ -1668,7 +1674,7 @@ def _plot2d(plotfunc):
             if ax is None:
                 # TODO: Importing Axes3D is no longer necessary in matplotlib >= 3.2.
                 # Remove when minimum requirement of matplotlib is 3.2:
-                from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+                from mpl_toolkits.mplot3d import Axes3D
 
                 # delete so it does not end up in locals()
                 del Axes3D

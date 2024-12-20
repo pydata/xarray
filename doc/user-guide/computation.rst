@@ -30,7 +30,8 @@ numpy) over all array values:
 .. ipython:: python
 
     arr = xr.DataArray(
-        np.random.RandomState(0).randn(2, 3), [("x", ["a", "b"]), ("y", [10, 20, 30])]
+        np.random.default_rng(0).random((2, 3)),
+        [("x", ["a", "b"]), ("y", [10, 20, 30])],
     )
     arr - 3
     abs(arr)
@@ -50,7 +51,7 @@ Use :py:func:`~xarray.where` to conditionally switch between values:
 
     xr.where(arr > 0, "positive", "negative")
 
-Use `@` to compute the :py:func:`~xarray.dot` product:
+Use ``@`` to compute the :py:func:`~xarray.dot` product:
 
 .. ipython:: python
 
@@ -207,8 +208,8 @@ for more.
 Aggregation
 ===========
 
-Aggregation methods have been updated to take a `dim` argument instead of
-`axis`. This allows for very intuitive syntax for aggregation methods that are
+Aggregation methods have been updated to take a ``dim`` argument instead of
+``axis``. This allows for very intuitive syntax for aggregation methods that are
 applied along particular dimension(s):
 
 .. ipython:: python
@@ -426,7 +427,7 @@ However, the functions also take missing values in the data into account:
 
 .. ipython:: python
 
-    data = xr.DataArray([np.NaN, 2, 4])
+    data = xr.DataArray([np.nan, 2, 4])
     weights = xr.DataArray([8, 1, 1])
 
     data.weighted(weights).mean()
@@ -444,7 +445,7 @@ If the weights add up to to 0, ``sum`` returns 0:
 
     data.weighted(weights).sum()
 
-and ``mean``, ``std`` and ``var`` return ``NaN``:
+and ``mean``, ``std`` and ``var`` return ``nan``:
 
 .. ipython:: python
 
@@ -482,7 +483,7 @@ every 2 points along ``x`` dimension,
 
     da.coarsen(time=7, x=2).mean()
 
-:py:meth:`~xarray.DataArray.coarsen` raises an ``ValueError`` if the data
+:py:meth:`~xarray.DataArray.coarsen` raises a ``ValueError`` if the data
 length is not a multiple of the corresponding window size.
 You can choose ``boundary='trim'`` or ``boundary='pad'`` options for trimming
 the excess entries or padding ``nan`` to insufficient entries,
@@ -552,7 +553,7 @@ best fitting coefficients along a given dimension and for a given order,
     out = a.polyfit(dim="x", deg=1, full=True)
     out
 
-The method outputs a dataset containing the coefficients (and more if `full=True`).
+The method outputs a dataset containing the coefficients (and more if ``full=True``).
 The inverse operation is done with :py:meth:`~xarray.polyval`,
 
 .. ipython:: python

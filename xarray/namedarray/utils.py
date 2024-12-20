@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib
-import sys
 import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
 from functools import lru_cache
@@ -13,10 +12,7 @@ from packaging.version import Version
 from xarray.namedarray._typing import ErrorOptionsWithWarn, _DimsLike
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 10):
-        from typing import TypeGuard
-    else:
-        from typing_extensions import TypeGuard
+    from typing import TypeGuard
 
     from numpy.typing import NDArray
 
@@ -24,8 +20,8 @@ if TYPE_CHECKING:
         from dask.array.core import Array as DaskArray
         from dask.typing import DaskCollection
     except ImportError:
-        DaskArray = NDArray  # type: ignore
-        DaskCollection: Any = NDArray  # type: ignore
+        DaskArray = NDArray  # type: ignore[assignment, misc]
+        DaskCollection: Any = NDArray  # type: ignore[no-redef]
 
     from xarray.namedarray._typing import _Dim, duckarray
 
@@ -134,7 +130,8 @@ def drop_missing_dims(
     elif missing_dims == "warn":
         if invalid := set(supplied_dims) - set(dims):
             warnings.warn(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}",
+                stacklevel=2,
             )
 
         return [val for val in supplied_dims if val in dims or val is ...]

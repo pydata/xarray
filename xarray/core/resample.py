@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable, Hashable, Iterable, Sequence
+from typing import TYPE_CHECKING, Any
 
 from xarray.core._aggregations import (
     DataArrayResampleAggregations,
@@ -14,8 +14,9 @@ from xarray.core.types import Dims, InterpOptions, T_Xarray
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.types import T_Chunks
 
-from xarray.core.groupers import RESAMPLE_DIM
+from xarray.groupers import RESAMPLE_DIM
 
 
 class Resample(GroupBy[T_Xarray]):
@@ -57,6 +58,50 @@ class Resample(GroupBy[T_Xarray]):
         result = super()._flox_reduce(dim=dim, keep_attrs=keep_attrs, **kwargs)
         result = result.rename({RESAMPLE_DIM: self._group_dim})
         return result
+
+    def shuffle_to_chunks(self, chunks: T_Chunks = None):
+        """
+        Sort or "shuffle" the underlying object.
+
+        "Shuffle" means the object is sorted so that all group members occur sequentially,
+        in the same chunk. Multiple groups may occur in the same chunk.
+        This method is particularly useful for chunked arrays (e.g. dask, cubed).
+        particularly when you need to map a function that requires all members of a group
+        to be present in a single chunk. For chunked array types, the order of appearance
+        is not guaranteed, but will depend on the input chunking.
+
+        Parameters
+        ----------
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or tuple of int, optional
+            How to adjust chunks along dimensions not present in the array being grouped by.
+
+        Returns
+        -------
+        DataArrayGroupBy or DatasetGroupBy
+
+        Examples
+        --------
+        >>> import dask.array
+        >>> da = xr.DataArray(
+        ...     dims="time",
+        ...     data=dask.array.arange(10, chunks=1),
+        ...     coords={"time": xr.date_range("2001-01-01", freq="12h", periods=10)},
+        ...     name="a",
+        ... )
+        >>> shuffled = da.resample(time="2D").shuffle_to_chunks()
+        >>> shuffled
+        <xarray.DataArray 'a' (time: 10)> Size: 80B
+        dask.array<shuffle, shape=(10,), dtype=int64, chunksize=(4,), chunktype=numpy.ndarray>
+        Coordinates:
+          * time     (time) datetime64[ns] 80B 2001-01-01 ... 2001-01-05T12:00:00
+
+        See Also
+        --------
+        dask.dataframe.DataFrame.shuffle
+        dask.array.shuffle
+        """
+        (grouper,) = self.groupers
+        return self._shuffle_obj(chunks).drop_vars(RESAMPLE_DIM)
 
     def _drop_coords(self) -> T_Xarray:
         """Drop non-dimension coordinates along the resampled dimension."""
@@ -188,7 +233,9 @@ class Resample(GroupBy[T_Xarray]):
 
 
 # https://github.com/python/mypy/issues/9031
-class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations):  # type: ignore[misc]
+class DataArrayResample(  # type: ignore[misc]
+    Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations
+):
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
@@ -286,21 +333,9 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
         applied : DataArray
             The result of splitting, applying and combining this array.
         """
-        return self._map_maybe_warn(func, args, shortcut, warn_squeeze=True, **kwargs)
-
-    def _map_maybe_warn(
-        self,
-        func: Callable[..., Any],
-        args: tuple[Any, ...] = (),
-        shortcut: bool | None = False,
-        warn_squeeze: bool = True,
-        **kwargs: Any,
-    ) -> DataArray:
         # TODO: the argument order for Resample doesn't match that for its parent,
         # GroupBy
-        combined = super()._map_maybe_warn(
-            func, shortcut=shortcut, args=args, warn_squeeze=warn_squeeze, **kwargs
-        )
+        combined = super().map(func, shortcut=shortcut, args=args, **kwargs)
 
         # If the aggregation function didn't drop the original resampling
         # dimension, then we need to do so before we can rename the proxy
@@ -341,7 +376,9 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
 
 
 # https://github.com/python/mypy/issues/9031
-class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations):  # type: ignore[misc]
+class DatasetResample(  # type: ignore[misc]
+    Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations
+):
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def map(
@@ -380,18 +417,8 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAg
         applied : Dataset
             The result of splitting, applying and combining this dataset.
         """
-        return self._map_maybe_warn(func, args, shortcut, warn_squeeze=True, **kwargs)
-
-    def _map_maybe_warn(
-        self,
-        func: Callable[..., Any],
-        args: tuple[Any, ...] = (),
-        shortcut: bool | None = None,
-        warn_squeeze: bool = True,
-        **kwargs: Any,
-    ) -> Dataset:
         # ignore shortcut if set (for now)
-        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped(warn_squeeze))
+        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         combined = self._combine(applied)
 
         # If the aggregation function didn't drop the original resampling
@@ -457,27 +484,6 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAg
             removed.
         """
         return super().reduce(
-            func=func,
-            dim=dim,
-            axis=axis,
-            keep_attrs=keep_attrs,
-            keepdims=keepdims,
-            shortcut=shortcut,
-            **kwargs,
-        )
-
-    def _reduce_without_squeeze_warn(
-        self,
-        func: Callable[..., Any],
-        dim: Dims = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
-        keepdims: bool = False,
-        shortcut: bool = True,
-        **kwargs: Any,
-    ) -> Dataset:
-        return super()._reduce_without_squeeze_warn(
             func=func,
             dim=dim,
             axis=axis,

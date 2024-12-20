@@ -685,7 +685,6 @@
 
    conventions.decode_cf_variables
 
-   coding.variables.UnsignedIntegerCoder
    coding.variables.CFMaskCoder
    coding.variables.CFScaleOffsetCoder
 
@@ -694,3 +693,7 @@
 
    coding.times.CFTimedeltaCoder
    coding.times.CFDatetimeCoder
+
+   groupers.Grouper
+   groupers.Resampler
+   groupers.EncodedGroups

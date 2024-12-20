@@ -21,16 +21,15 @@ In order of increasing complexity, they are:
 - :py:class:`xarray.Variable`,
 - :py:class:`xarray.DataArray`,
 - :py:class:`xarray.Dataset`,
-- :py:class:`datatree.DataTree`.
+- :py:class:`xarray.DataTree`.
 
 The user guide lists only :py:class:`xarray.DataArray` and :py:class:`xarray.Dataset`,
 but :py:class:`~xarray.Variable` is the fundamental object internally,
-and :py:class:`~datatree.DataTree` is a natural generalisation of :py:class:`xarray.Dataset`.
+and :py:class:`~xarray.DataTree` is a natural generalisation of :py:class:`xarray.Dataset`.
 
 .. note::
 
-    Our :ref:`roadmap` includes plans both to document :py:class:`~xarray.Variable` as fully public API,
-    and to merge the `xarray-datatree <https://github.com/xarray-contrib/datatree>`_ package into xarray's main repository.
+    Our :ref:`roadmap` includes plans to document :py:class:`~xarray.Variable` as fully public API.
 
 Internally private :ref:`lazy indexing classes <internal design.lazy indexing>` are used to avoid loading more data than necessary,
 and flexible indexes classes (derived from :py:class:`~xarray.indexes.Index`) provide performant label-based lookups.
@@ -167,7 +166,7 @@ something interesting:
 
     var._data
 
-You're looking at one of xarray's internal `Lazy Indexing Classes`. These powerful classes are hidden from the user,
+You're looking at one of xarray's internal Lazy Indexing Classes. These powerful classes are hidden from the user,
 but provide important functionality.
 
 Calling the public :py:attr:`~xarray.Variable.data` property loads the underlying array into memory.

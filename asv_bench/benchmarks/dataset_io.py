@@ -7,8 +7,6 @@ import numpy as np
 import pandas as pd
 
 import xarray as xr
-from xarray.backends.api import open_datatree
-from xarray.core.datatree import DataTree
 
 from . import _skip_slow, parameterized, randint, randn, requires_dask
 
@@ -307,7 +305,7 @@ class IOMultipleNetCDF:
             ds.attrs = {"history": "created for xarray benchmarking"}
 
             self.ds_list.append(ds)
-            self.filenames_list.append("test_netcdf_%i.nc" % i)
+            self.filenames_list.append(f"test_netcdf_{i}.nc")
 
 
 class IOWriteMultipleNetCDF3(IOMultipleNetCDF):
@@ -556,7 +554,7 @@ class IONestedDataTree:
             for group in range(self.nchildren)
         }
         dtree = root | nested_tree1 | nested_tree2 | nested_tree3
-        self.dtree = DataTree.from_dict(dtree)
+        self.dtree = xr.DataTree.from_dict(dtree)
 
 
 class IOReadDataTreeNetCDF4(IONestedDataTree):
@@ -574,10 +572,10 @@ class IOReadDataTreeNetCDF4(IONestedDataTree):
         dtree.to_netcdf(filepath=self.filepath)
 
     def time_load_datatree_netcdf4(self):
-        open_datatree(self.filepath, engine="netcdf4").load()
+        xr.open_datatree(self.filepath, engine="netcdf4").load()
 
     def time_open_datatree_netcdf4(self):
-        open_datatree(self.filepath, engine="netcdf4")
+        xr.open_datatree(self.filepath, engine="netcdf4")
 
 
 class IOWriteNetCDFDask:
@@ -608,8 +606,8 @@ class IOWriteNetCDFDaskDistributed:
 
         try:
             import distributed
-        except ImportError:
-            raise NotImplementedError()
+        except ImportError as err:
+            raise NotImplementedError() from err
 
         self.client = distributed.Client()
         self.write = create_delayed_write()
@@ -714,7 +712,7 @@ class IOReadCustomEngine:
                         dims=("time",),
                         fastpath=True,
                     )
-                    for v in range(0, n_variables)
+                    for v in range(n_variables)
                 }
                 attributes = {}
 
@@ -724,7 +722,7 @@ class IOReadCustomEngine:
             def open_dataset(
                 self,
                 filename_or_obj: str | os.PathLike | None,
-                drop_variables: tuple[str] = None,
+                drop_variables: tuple[str, ...] | None = None,
                 *,
                 mask_and_scale=True,
                 decode_times=True,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Callable, Generic
+from collections.abc import Callable, Sequence
+from typing import Generic, cast
 
 import numpy as np
 import pandas as pd
@@ -45,7 +45,7 @@ def __extension_duck_array__stack(arr: T_ExtensionArray, axis: int):
 def __extension_duck_array__concatenate(
     arrays: Sequence[T_ExtensionArray], axis: int = 0, out=None
 ) -> T_ExtensionArray:
-    return type(arrays[0])._concat_same_type(arrays)
+    return type(arrays[0])._concat_same_type(arrays)  # type: ignore[attr-defined]
 
 
 @implements(np.where)
@@ -57,9 +57,9 @@ def __extension_duck_array__where(
         and isinstance(y, pd.Categorical)
         and x.dtype != y.dtype
     ):
-        x = x.add_categories(set(y.categories).difference(set(x.categories)))
-        y = y.add_categories(set(x.categories).difference(set(y.categories)))
-    return pd.Series(x).where(condition, pd.Series(y)).array
+        x = x.add_categories(set(y.categories).difference(set(x.categories)))  # type: ignore[assignment]
+        y = y.add_categories(set(x.categories).difference(set(y.categories)))  # type: ignore[assignment]
+    return cast(T_ExtensionArray, pd.Series(x).where(condition, pd.Series(y)).array)
 
 
 class PandasExtensionArray(Generic[T_ExtensionArray]):
@@ -106,7 +106,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
         return ufunc(*inputs, **kwargs)
 
     def __repr__(self):
-        return f"{type(self)}(array={repr(self.array)})"
+        return f"{type(self)}(array={self.array!r})"
 
     def __getattr__(self, attr: str) -> object:
         return getattr(self.array, attr)
@@ -116,7 +116,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
         if is_extension_array_dtype(item):
             return type(self)(item)
         if np.isscalar(item):
-            return type(self)(type(self.array)([item]))
+            return type(self)(type(self.array)([item]))  # type: ignore[call-arg]  # only subclasses with proper __init__ allowed
         return item
 
     def __setitem__(self, key, val):

@@ -45,6 +45,7 @@ import math
 import re
 import warnings
 from datetime import timedelta
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -57,12 +58,11 @@ from xarray.coding.times import (
 )
 from xarray.core.common import _contains_cftime_datetimes
 from xarray.core.options import OPTIONS
-from xarray.core.utils import is_scalar
+from xarray.core.utils import attempt_import, is_scalar
 
-try:
-    import cftime
-except ImportError:
-    cftime = None
+if TYPE_CHECKING:
+    from xarray.coding.cftime_offsets import BaseCFTimeOffset
+    from xarray.core.types import Self
 
 
 # constants for cftimeindex.repr
@@ -92,7 +92,7 @@ def trailing_optional(xs):
     return xs[0] + optional(trailing_optional(xs[1:]))
 
 
-def build_pattern(date_sep=r"\-", datetime_sep=r"T", time_sep=r"\:"):
+def build_pattern(date_sep=r"\-", datetime_sep=r"T", time_sep=r"\:", micro_sep=r"."):
     pieces = [
         (None, "year", r"\d{4}"),
         (date_sep, "month", r"\d{2}"),
@@ -100,6 +100,7 @@ def build_pattern(date_sep=r"\-", datetime_sep=r"T", time_sep=r"\:"):
         (datetime_sep, "hour", r"\d{2}"),
         (time_sep, "minute", r"\d{2}"),
         (time_sep, "second", r"\d{2}"),
+        (micro_sep, "microsecond", r"\d{1,6}"),
     ]
     pattern_list = []
     for sep, name, sub_pattern in pieces:
@@ -125,18 +126,18 @@ def parse_iso8601_like(datetime_string):
 
 
 def _parse_iso8601_with_reso(date_type, timestr):
-    if cftime is None:
-        raise ModuleNotFoundError("No module named 'cftime'")
+    _ = attempt_import("cftime")
 
     default = date_type(1, 1, 1)
     result = parse_iso8601_like(timestr)
     replace = {}
 
-    for attr in ["year", "month", "day", "hour", "minute", "second"]:
+    for attr in ["year", "month", "day", "hour", "minute", "second", "microsecond"]:
         value = result.get(attr, None)
         if value is not None:
-            # Note ISO8601 conventions allow for fractional seconds.
-            # TODO: Consider adding support for sub-second resolution?
+            if attr == "microsecond":
+                # convert match string into valid microsecond value
+                value = 10 ** (6 - len(value)) * int(value)
             replace[attr] = int(value)
             resolution = attr
     return default.replace(**replace), resolution
@@ -195,8 +196,10 @@ def _field_accessor(name, docstring=None, min_cftime_version="0.0"):
     """Adapted from pandas.tseries.index._field_accessor"""
 
     def f(self, min_cftime_version=min_cftime_version):
-        if cftime is None:
-            raise ModuleNotFoundError("No module named 'cftime'")
+        if TYPE_CHECKING:
+            import cftime
+        else:
+            cftime = attempt_import("cftime")
 
         if Version(cftime.__version__) >= Version(min_cftime_version):
             return get_date_field(self._data, name)
@@ -220,8 +223,10 @@ def get_date_type(self):
 
 
 def assert_all_valid_date_type(data):
-    if cftime is None:
-        raise ModuleNotFoundError("No module named 'cftime'")
+    if TYPE_CHECKING:
+        import cftime
+    else:
+        cftime = attempt_import("cftime")
 
     if len(data) > 0:
         sample = data[0]
@@ -434,8 +439,8 @@ class CFTimeIndex(pd.Index):
         parsed, resolution = _parse_iso8601_with_reso(self.date_type, key)
         try:
             loc = self._partial_date_slice(resolution, parsed)
-        except KeyError:
-            raise KeyError(key)
+        except KeyError as err:
+            raise KeyError(key) from err
         return loc
 
     def _get_nearest_indexer(self, target, limit, tolerance):
@@ -495,24 +500,28 @@ class CFTimeIndex(pd.Index):
         else:
             return series.iloc[self.get_loc(key)]
 
-    def __contains__(self, key):
+    def __contains__(self, key: Any) -> bool:
         """Adapted from
         pandas.tseries.base.DatetimeIndexOpsMixin.__contains__"""
         try:
             result = self.get_loc(key)
             return (
                 is_scalar(result)
-                or type(result) == slice
-                or (isinstance(result, np.ndarray) and result.size)
+                or isinstance(result, slice)
+                or (isinstance(result, np.ndarray) and result.size > 0)
             )
         except (KeyError, TypeError, ValueError):
             return False
 
-    def contains(self, key):
+    def contains(self, key: Any) -> bool:
         """Needed for .loc based partial-string indexing"""
         return self.__contains__(key)
 
-    def shift(self, n: int | float, freq: str | timedelta):
+    def shift(  # type: ignore[override]  # freq is typed Any, we are more precise
+        self,
+        periods: int | float,
+        freq: str | timedelta | BaseCFTimeOffset | None = None,
+    ) -> Self:
         """Shift the CFTimeIndex a multiple of the given frequency.
 
         See the documentation for :py:func:`~xarray.cftime_range` for a
@@ -520,9 +529,9 @@ class CFTimeIndex(pd.Index):
 
         Parameters
         ----------
-        n : int, float if freq of days or below
+        periods : int, float if freq of days or below
             Periods to shift by
-        freq : str or datetime.timedelta
+        freq : str, datetime.timedelta or BaseCFTimeOffset
             A frequency string or datetime.timedelta object to shift by
 
         Returns
@@ -546,51 +555,59 @@ class CFTimeIndex(pd.Index):
         CFTimeIndex([2000-02-01 12:00:00],
                     dtype='object', length=1, calendar='standard', freq=None)
         """
-        if isinstance(freq, timedelta):
-            return self + n * freq
-        elif isinstance(freq, str):
-            from xarray.coding.cftime_offsets import to_offset
+        from xarray.coding.cftime_offsets import BaseCFTimeOffset
 
-            return self + n * to_offset(freq)
-        else:
+        if freq is None:
+            # None type is required to be compatible with base pd.Index class
             raise TypeError(
-                f"'freq' must be of type str or datetime.timedelta, got {freq}."
+                f"`freq` argument cannot be None for {type(self).__name__}.shift"
             )
 
-    def __add__(self, other):
-        if isinstance(other, pd.TimedeltaIndex):
-            other = other.to_pytimedelta()
-        return CFTimeIndex(np.array(self) + other)
+        if isinstance(freq, timedelta):
+            return self + periods * freq
 
-    def __radd__(self, other):
+        if isinstance(freq, str | BaseCFTimeOffset):
+            from xarray.coding.cftime_offsets import to_offset
+
+            return self + periods * to_offset(freq)
+
+        raise TypeError(
+            f"'freq' must be of type str or datetime.timedelta, got {type(freq)}."
+        )
+
+    def __add__(self, other) -> Self:
         if isinstance(other, pd.TimedeltaIndex):
             other = other.to_pytimedelta()
-        return CFTimeIndex(other + np.array(self))
+        return type(self)(np.array(self) + other)
+
+    def __radd__(self, other) -> Self:
+        if isinstance(other, pd.TimedeltaIndex):
+            other = other.to_pytimedelta()
+        return type(self)(other + np.array(self))
 
     def __sub__(self, other):
         if _contains_datetime_timedeltas(other):
-            return CFTimeIndex(np.array(self) - other)
-        elif isinstance(other, pd.TimedeltaIndex):
-            return CFTimeIndex(np.array(self) - other.to_pytimedelta())
-        elif _contains_cftime_datetimes(np.array(other)):
+            return type(self)(np.array(self) - other)
+        if isinstance(other, pd.TimedeltaIndex):
+            return type(self)(np.array(self) - other.to_pytimedelta())
+        if _contains_cftime_datetimes(np.array(other)):
             try:
                 return pd.TimedeltaIndex(np.array(self) - np.array(other))
-            except OUT_OF_BOUNDS_TIMEDELTA_ERRORS:
+            except OUT_OF_BOUNDS_TIMEDELTA_ERRORS as err:
                 raise ValueError(
                     "The time difference exceeds the range of values "
                     "that can be expressed at the nanosecond resolution."
-                )
-        else:
-            return NotImplemented
+                ) from err
+        return NotImplemented
 
     def __rsub__(self, other):
         try:
             return pd.TimedeltaIndex(other - np.array(self))
-        except OUT_OF_BOUNDS_TIMEDELTA_ERRORS:
+        except OUT_OF_BOUNDS_TIMEDELTA_ERRORS as err:
             raise ValueError(
                 "The time difference exceeds the range of values "
                 "that can be expressed at the nanosecond resolution."
-            )
+            ) from err
 
     def to_datetimeindex(self, unsafe=False):
         """If possible, convert this index to a pandas.DatetimeIndex.
@@ -783,6 +800,15 @@ class CFTimeIndex(pd.Index):
         CFTimeIndex
         """
         return self._round_via_method(freq, _round_to_nearest_half_even)
+
+    @property
+    def is_leap_year(self):
+        if TYPE_CHECKING:
+            import cftime
+        else:
+            cftime = attempt_import("cftime")
+        func = np.vectorize(cftime.is_leap_year)
+        return func(self.year, calendar=self.calendar)
 
 
 def _parse_iso8601_without_reso(date_type, datetime_str):
