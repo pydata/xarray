@@ -495,7 +495,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         if self._single_group:
             full = tuple(
                 {self._single_group: v}
-                for v in range(0, self.data[self._single_group].size)
+                for v in range(self.data[self._single_group].size)
             )
             empty = (None,) * (self._nrow * self._ncol - len(full))
             name_d = full + empty
