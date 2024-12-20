@@ -3519,8 +3519,8 @@ def test_plot1d_lines_color(plotfunc: str, x="z", color="b") -> None:
         coll = ax.collections[0]
 
         # Make sure color is respected:
-        expected_color = to_rgba_array(color)
-        actual_color = coll.get_edgecolor()
+        expected_color = np.asarray(to_rgba_array(color))
+        actual_color = np.asarray(coll.get_edgecolor())
         np.testing.assert_allclose(expected_color, actual_color)
 
 
@@ -3543,7 +3543,7 @@ def test_plot1d_lines_linestyle(plotfunc: str, x="z", linestyle="dashed") -> Non
         coll = ax.collections[0]
 
         # Make sure linestyle is respected:
-        w = coll.get_linewidth().item()
+        w = np.atleast_1d(coll.get_linewidth())[0]
         expected_linestyle = [_scale_dashes(*_get_dash_pattern(linestyle), w)]
         actual_linestyle = coll.get_linestyle()
         assert expected_linestyle == actual_linestyle
