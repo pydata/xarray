@@ -847,6 +847,75 @@ And adding the z-axis
 For more advanced scatter plots, we recommend converting the relevant data variables
 to a pandas DataFrame and using the extensive plotting capabilities of ``seaborn``.
 
+Lines
+~~~~~
+
+.. ipython:: python
+    :suppress:
+
+    plt.close("all")
+
+:py:func:`xarray.plot.lines` calls matplotlib.collections.LineCollection under the hood,
+allowing multiple lines being drawn efficiently. It uses similar arguments as
+:py:func:`xarray.plot.scatter`.
+
+Let's return to the air temperature dataset:
+
+.. ipython:: python
+    :okwarning:
+
+    airtemps = xr.tutorial.open_dataset("air_temperature")
+    air = airtemps.air - 273.15
+    air.attrs = airtemps.air.attrs
+    air.attrs["units"] = "deg C"
+
+    @savefig lines_air_hue.png
+    air.isel(lon=10).plot.lines(x="time", hue="lat")
+
+Make it a little more transparent:
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig lines_air_hue_alpha.png
+    air.isel(lon=10).plot.lines(x="time", hue="lat", alpha=0.2)
+
+Zoom in a little on the x-axis, and compare a few latitudes and longitudes,
+group them using ``hue`` and ``linewidth``. The  ``linewidth`` kwarg works in
+a similar way as ``markersize`` kwarg for scatter plots, it lets you vary the
+line's size by variable value.
+
+.. ipython:: python
+    :okwarning:
+
+    air_zoom = air.isel(time=slice(1200, 1500), lat=[5, 10, 15], lon=[10, 15])
+
+    @savefig lines_hue_linewidth.png
+    air_zoom.plot.lines(x="time", hue="lat", linewidth="lon", add_colorbar=False)
+
+Lines can modify the linestyle but does not allow markers. Instead combine :py:func:`xarray.plot.lines`
+with :py:func:`xarray.plot.scatter`:
+
+.. ipython:: python
+    :okwarning:
+
+    air.isel(lat=10, lon=10)[:200].plot.lines(x="time", color="k", linestyle="dashed")
+    air.isel(lat=10, lon=10)[:200].plot.scatter(x="time", color="k", marker="^")
+    @savefig lines_linestyle_marker.png
+    plt.draw()
+
+
+Switching to another dataset with more variables we can analyse in similar
+fashion as :py:func:`xarray.plot.scatter`:
+
+.. ipython:: python
+    :okwarning:
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+    @savefig lines_xyhuewidthrowcol.png
+    ds.plot.lines(x="A", y="B", hue="y", linewidth="x", row="x", col="w")
+
 Quiver
 ~~~~~~
 
