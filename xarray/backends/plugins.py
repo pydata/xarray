@@ -132,6 +132,19 @@ def list_engines() -> dict[str, BackendEntrypoint]:
     return build_engines(entrypoints)
 
 
+def show_backends() -> dict[str, BackendEntrypoint]:
+    """
+    Return a dictionary of available engines and their BackendEntrypoint objects.
+
+    This function is an alias for ``xarray.backends.list_engines``.
+
+    Returns
+    -------
+    dictionary
+    """
+    return list_engines()
+
+
 def refresh_engines() -> None:
     """Refreshes the backend engines based on installed packages."""
     list_engines.cache_clear()

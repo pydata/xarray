@@ -36,6 +36,7 @@ Top-level functions
    dot
    polyval
    map_blocks
+   show_backends
    show_versions
    set_options
    get_options
