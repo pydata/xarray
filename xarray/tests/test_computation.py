@@ -1293,9 +1293,9 @@ def test_apply_dask_multiple_inputs() -> None:
             (x - x.mean(axis=-1, keepdims=True)) * (y - y.mean(axis=-1, keepdims=True))
         ).mean(axis=-1)
 
-    rs = np.random.RandomState(42)
-    array1 = da.from_array(rs.randn(4, 4), chunks=(2, 4))
-    array2 = da.from_array(rs.randn(4, 4), chunks=(2, 4))
+    rs = np.random.default_rng(42)
+    array1 = da.from_array(rs.random((4, 4)), chunks=(2, 4))
+    array2 = da.from_array(rs.random((4, 4)), chunks=(2, 4))
     data_array_1 = xr.DataArray(array1, dims=("x", "z"))
     data_array_2 = xr.DataArray(array2, dims=("y", "z"))
 
@@ -1561,7 +1561,7 @@ def arrays():
     )
 
     return [
-        da.isel(time=range(0, 18)),
+        da.isel(time=range(18)),
         da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(),
         xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"]),
         xr.DataArray([[1, 2], [np.nan, np.nan]], dims=["x", "time"]),

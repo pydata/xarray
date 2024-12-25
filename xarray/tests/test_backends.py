@@ -48,6 +48,7 @@ from xarray.backends.netCDF4_ import (
 )
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
+from xarray.backends.zarr import ZarrStore
 from xarray.coding.cftime_offsets import cftime_range
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
@@ -78,6 +79,7 @@ from xarray.tests import (
     requires_h5netcdf_1_4_0_or_above,
     requires_h5netcdf_ros3,
     requires_iris,
+    requires_netcdf,
     requires_netCDF4,
     requires_netCDF4_1_6_2_or_above,
     requires_netCDF4_1_7_0_or_above,
@@ -634,6 +636,7 @@ class DatasetIOBase:
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
+    @requires_netcdf
     def test_roundtrip_example_1_netcdf(self) -> None:
         with open_example_dataset("example_1.nc") as expected:
             with self.roundtrip(expected) as actual:
@@ -847,7 +850,7 @@ class DatasetIOBase:
                     else:
                         raise TypeError(f"{type(obj.array)} is wrapped by {type(obj)}")
 
-        for _k, v in ds.variables.items():
+        for v in ds.variables.values():
             find_and_validate_array(v._data)
 
     def test_array_type_after_indexing(self) -> None:
@@ -961,8 +964,7 @@ class CFEncodedBase(DatasetIOBase):
         decoded = decoded_fn(dtype)
         encoded = encoded_fn(dtype)
         if decoded["x"].encoding["dtype"] == "u1" and not (
-            self.engine == "netcdf4"
-            and self.file_format is None
+            (self.engine == "netcdf4" and self.file_format is None)
             or self.file_format == "NETCDF4"
         ):
             pytest.skip("uint8 data can't be written to non-NetCDF4 data")
@@ -1126,13 +1128,11 @@ class CFEncodedBase(DatasetIOBase):
 
     def test_grid_mapping_and_bounds_are_not_coordinates_in_file(self) -> None:
         original = self._create_cf_dataset()
-        with create_tmp_file() as tmp_file:
-            original.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, decode_coords=False) as ds:
-                assert ds.coords["latitude"].attrs["bounds"] == "latitude_bnds"
-                assert ds.coords["longitude"].attrs["bounds"] == "longitude_bnds"
-                assert "coordinates" not in ds["variable"].attrs
-                assert "coordinates" not in ds.attrs
+        with self.roundtrip(original, open_kwargs={"decode_coords": False}) as ds:
+            assert ds.coords["latitude"].attrs["bounds"] == "latitude_bnds"
+            assert ds.coords["longitude"].attrs["bounds"] == "longitude_bnds"
+            assert "coordinates" not in ds["variable"].attrs
+            assert "coordinates" not in ds.attrs
 
     def test_coordinate_variables_after_dataset_roundtrip(self) -> None:
         original = self._create_cf_dataset()
@@ -1174,6 +1174,7 @@ class CFEncodedBase(DatasetIOBase):
                 assert_identical(actual, original["variable"].to_dataset())
 
     @requires_iris
+    @requires_netcdf
     def test_coordinate_variables_after_iris_roundtrip(self) -> None:
         original = self._create_cf_dataset()
         iris_cube = original["variable"].to_iris()
@@ -1194,36 +1195,30 @@ class CFEncodedBase(DatasetIOBase):
         )
         with self.roundtrip(original) as actual:
             assert_identical(actual, original)
-        with create_tmp_file() as tmp_file:
-            original.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, decode_coords=False) as ds:
-                assert equals_latlon(ds["temp"].attrs["coordinates"])
-                assert equals_latlon(ds["precip"].attrs["coordinates"])
-                assert "coordinates" not in ds.attrs
-                assert "coordinates" not in ds["lat"].attrs
-                assert "coordinates" not in ds["lon"].attrs
+        with self.roundtrip(original, open_kwargs=dict(decode_coords=False)) as ds:
+            assert equals_latlon(ds["temp"].attrs["coordinates"])
+            assert equals_latlon(ds["precip"].attrs["coordinates"])
+            assert "coordinates" not in ds.attrs
+            assert "coordinates" not in ds["lat"].attrs
+            assert "coordinates" not in ds["lon"].attrs
 
         modified = original.drop_vars(["temp", "precip"])
         with self.roundtrip(modified) as actual:
             assert_identical(actual, modified)
-        with create_tmp_file() as tmp_file:
-            modified.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, decode_coords=False) as ds:
-                assert equals_latlon(ds.attrs["coordinates"])
-                assert "coordinates" not in ds["lat"].attrs
-                assert "coordinates" not in ds["lon"].attrs
+        with self.roundtrip(modified, open_kwargs=dict(decode_coords=False)) as ds:
+            assert equals_latlon(ds.attrs["coordinates"])
+            assert "coordinates" not in ds["lat"].attrs
+            assert "coordinates" not in ds["lon"].attrs
 
         original["temp"].encoding["coordinates"] = "lat"
         with self.roundtrip(original) as actual:
             assert_identical(actual, original)
         original["precip"].encoding["coordinates"] = "lat"
-        with create_tmp_file() as tmp_file:
-            original.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, decode_coords=True) as ds:
-                assert "lon" not in ds["temp"].encoding["coordinates"]
-                assert "lon" not in ds["precip"].encoding["coordinates"]
-                assert "coordinates" not in ds["lat"].encoding
-                assert "coordinates" not in ds["lon"].encoding
+        with self.roundtrip(original, open_kwargs=dict(decode_coords=True)) as ds:
+            assert "lon" not in ds["temp"].encoding["coordinates"]
+            assert "lon" not in ds["precip"].encoding["coordinates"]
+            assert "coordinates" not in ds["lat"].encoding
+            assert "coordinates" not in ds["lon"].encoding
 
     def test_roundtrip_endian(self) -> None:
         skip_if_zarr_format_3("zarr v3 has not implemented endian support yet")
@@ -1405,6 +1400,22 @@ class CFEncodedBase(DatasetIOBase):
         ds_reset = ds.reset_index("x")
         with self.roundtrip(ds_reset) as actual:
             assert_identical(actual, ds_reset)
+
+    @requires_dask
+    def test_string_object_warning(self) -> None:
+        original = Dataset(
+            {
+                "x": (
+                    [
+                        "y",
+                    ],
+                    np.array(["foo", "bar"], dtype=object),
+                )
+            }
+        ).chunk()
+        with pytest.warns(SerializationWarning, match="dask array with dtype=object"):
+            with self.roundtrip(original) as actual:
+                assert_identical(original, actual)
 
 
 class NetCDFBase(CFEncodedBase):
@@ -1879,7 +1890,7 @@ class NetCDF4Base(NetCDFBase):
             cloud_type_dict = {"clear": 0, "cloudy": 1}
             with nc4.Dataset(tmp_file, mode="w") as nc:
                 nc.createDimension("time", size=2)
-                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                cloud_type = nc.createEnumType(np.uint8, "cloud_type", cloud_type_dict)
                 v = nc.createVariable(
                     "clouds",
                     cloud_type,
@@ -1926,7 +1937,7 @@ class NetCDF4Base(NetCDFBase):
             cloud_type_dict = {"clear": 0, "cloudy": 1, "missing": 255}
             with nc4.Dataset(tmp_file, mode="w") as nc:
                 nc.createDimension("time", size=2)
-                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                cloud_type = nc.createEnumType(np.uint8, "cloud_type", cloud_type_dict)
                 nc.createVariable(
                     "clouds",
                     cloud_type,
@@ -1975,7 +1986,7 @@ class NetCDF4Base(NetCDFBase):
             cloud_type_dict = {"clear": 0, "cloudy": 1, "missing": 255}
             with nc4.Dataset(tmp_file, mode="w") as nc:
                 nc.createDimension("time", size=2)
-                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                cloud_type = nc.createEnumType(np.uint8, "cloud_type", cloud_type_dict)
                 nc.createVariable(
                     "clouds",
                     cloud_type,
@@ -2268,10 +2279,13 @@ class ZarrBase(CFEncodedBase):
         raise NotImplementedError
 
     @contextlib.contextmanager
-    def create_store(self):
+    def create_store(self, cache_members: bool = False):
         with self.create_zarr_target() as store_target:
             yield backends.ZarrStore.open_group(
-                store_target, mode="w", **self.version_kwargs
+                store_target,
+                mode="w",
+                cache_members=cache_members,
+                **self.version_kwargs,
             )
 
     def save(self, dataset, store_target, **kwargs):  # type: ignore[override]
@@ -2322,7 +2336,9 @@ class ZarrBase(CFEncodedBase):
                     assert_identical(ds, expected)
 
     def test_non_existent_store(self) -> None:
-        with pytest.raises(FileNotFoundError, match="No such file or directory"):
+        with pytest.raises(
+            FileNotFoundError, match="(No such file or directory|Unable to find group)"
+        ):
             xr.open_zarr(f"{uuid.uuid4()}")
 
     @pytest.mark.skipif(has_zarr_v3, reason="chunk_store not implemented in zarr v3")
@@ -2552,6 +2568,7 @@ class ZarrBase(CFEncodedBase):
             # don't actually check equality because the data could be corrupted
             pass
 
+    @requires_netcdf
     def test_drop_encoding(self):
         with open_example_dataset("example_1.nc") as ds:
             encodings = {v: {**ds[v].encoding} for v in ds.data_vars}
@@ -2584,6 +2601,7 @@ class ZarrBase(CFEncodedBase):
 
             # put it back and try removing from a variable
             del zarr_group["var2"].attrs[self.DIMENSION_KEY]
+
             with pytest.raises(KeyError):
                 with xr.decode_cf(store):
                     pass
@@ -2855,8 +2873,11 @@ class ZarrBase(CFEncodedBase):
 
         # check append mode for new variable
         with self.create_zarr_target() as store_target:
-            xr.concat([ds, ds_to_append], dim="time").to_zarr(
-                store_target, mode="w", **self.version_kwargs
+            combined = xr.concat([ds, ds_to_append], dim="time")
+            combined.to_zarr(store_target, mode="w", **self.version_kwargs)
+            assert_identical(
+                combined,
+                xr.open_dataset(store_target, engine="zarr", **self.version_kwargs),
             )
             ds_with_new_var.to_zarr(store_target, mode="a", **self.version_kwargs)
             combined = xr.concat([ds, ds_to_append], dim="time")
@@ -3245,6 +3266,44 @@ class ZarrBase(CFEncodedBase):
                 assert original[name].chunks == actual_var.chunks
             assert original.chunks == actual.chunks
 
+    def test_cache_members(self) -> None:
+        """
+        Ensure that if `ZarrStore` is created with `cache_members` set to `True`,
+        a `ZarrStore` only inspects the underlying zarr group once,
+        and that the results of that inspection are cached.
+
+        Otherwise, `ZarrStore.members` should inspect the underlying zarr group each time it is
+        invoked
+        """
+        with self.create_zarr_target() as store_target:
+            zstore_mut = backends.ZarrStore.open_group(
+                store_target, mode="w", cache_members=False
+            )
+
+            # ensure that the keys are sorted
+            array_keys = sorted(("foo", "bar"))
+
+            # create some arrays
+            for ak in array_keys:
+                zstore_mut.zarr_group.create(name=ak, shape=(1,), dtype="uint8")
+
+            zstore_stat = backends.ZarrStore.open_group(
+                store_target, mode="r", cache_members=True
+            )
+
+            observed_keys_0 = sorted(zstore_stat.array_keys())
+            assert observed_keys_0 == array_keys
+
+            # create a new array
+            new_key = "baz"
+            zstore_mut.zarr_group.create(name=new_key, shape=(1,), dtype="uint8")
+
+            observed_keys_1 = sorted(zstore_stat.array_keys())
+            assert observed_keys_1 == array_keys
+
+            observed_keys_2 = sorted(zstore_mut.array_keys())
+            assert observed_keys_2 == sorted(array_keys + [new_key])
+
 
 @requires_zarr
 @pytest.mark.skipif(
@@ -3274,7 +3333,7 @@ class TestInstrumentedZarrStore:
             pytest.skip("Instrumented tests only work on latest Zarr.")
 
         if has_zarr_v3:
-            kwargs = {"mode": "a"}
+            kwargs = {"read_only": False}
         else:
             kwargs = {}  # type: ignore[arg-type,unused-ignore]
 
@@ -3314,21 +3373,21 @@ class TestInstrumentedZarrStore:
 
         with self.create_zarr_target() as store:
             if has_zarr_v3:
-                # TOOD: verify these
+                # TODO: verify these
                 expected = {
-                    "set": 17,
-                    "get": 12,
-                    "list_dir": 3,
-                    "list_prefix": 0,
+                    "set": 5,
+                    "get": 4,
+                    "list_dir": 2,
+                    "list_prefix": 1,
                 }
             else:
                 expected = {
-                    "iter": 3,
+                    "iter": 1,
                     "contains": 18,
                     "setitem": 10,
                     "getitem": 13,
-                    "listdir": 2,
-                    "list_prefix": 2,
+                    "listdir": 0,
+                    "list_prefix": 3,
                 }
 
             patches = self.make_patches(store)
@@ -3341,19 +3400,19 @@ class TestInstrumentedZarrStore:
             # 6057128b: {'iter': 5, 'contains': 2, 'setitem': 5, 'getitem': 10, "listdir": 5, "list_prefix": 0}
             if has_zarr_v3:
                 expected = {
-                    "set": 10,
-                    "get": 16,  # TODO: fixme upstream (should be 8)
-                    "list_dir": 3,  # TODO: fixme upstream (should be 2)
+                    "set": 4,
+                    "get": 9,  # TODO: fixme upstream (should be 8)
+                    "list_dir": 2,  # TODO: fixme upstream (should be 2)
                     "list_prefix": 0,
                 }
             else:
                 expected = {
-                    "iter": 3,
-                    "contains": 9,
+                    "iter": 1,
+                    "contains": 11,
                     "setitem": 6,
-                    "getitem": 13,
-                    "listdir": 2,
-                    "list_prefix": 0,
+                    "getitem": 15,
+                    "listdir": 0,
+                    "list_prefix": 1,
                 }
 
             with patch.multiple(KVStore, **patches):
@@ -3364,19 +3423,19 @@ class TestInstrumentedZarrStore:
 
             if has_zarr_v3:
                 expected = {
-                    "set": 10,
-                    "get": 16,  # TODO: fixme upstream (should be 8)
-                    "list_dir": 3,  # TODO: fixme upstream (should be 2)
+                    "set": 4,
+                    "get": 9,  # TODO: fixme upstream (should be 8)
+                    "list_dir": 2,  # TODO: fixme upstream (should be 2)
                     "list_prefix": 0,
                 }
             else:
                 expected = {
-                    "iter": 3,
-                    "contains": 9,
+                    "iter": 1,
+                    "contains": 11,
                     "setitem": 6,
-                    "getitem": 13,
-                    "listdir": 2,
-                    "list_prefix": 0,
+                    "getitem": 15,
+                    "listdir": 0,
+                    "list_prefix": 1,
                 }
 
             with patch.multiple(KVStore, **patches):
@@ -3395,18 +3454,18 @@ class TestInstrumentedZarrStore:
             if has_zarr_v3:
                 expected = {
                     "set": 5,
-                    "get": 10,
-                    "list_dir": 3,
-                    "list_prefix": 0,
+                    "get": 2,
+                    "list_dir": 2,
+                    "list_prefix": 4,
                 }
             else:
                 expected = {
-                    "iter": 3,
+                    "iter": 1,
                     "contains": 16,
                     "setitem": 9,
                     "getitem": 13,
-                    "listdir": 2,
-                    "list_prefix": 4,
+                    "listdir": 0,
+                    "list_prefix": 5,
                 }
 
             patches = self.make_patches(store)
@@ -3420,16 +3479,16 @@ class TestInstrumentedZarrStore:
                 expected = {
                     "set": 1,
                     "get": 3,
-                    "list_dir": 2,
+                    "list_dir": 0,
                     "list_prefix": 0,
                 }
             else:
                 expected = {
-                    "iter": 2,
-                    "contains": 4,
+                    "iter": 1,
+                    "contains": 6,
                     "setitem": 1,
-                    "getitem": 4,
-                    "listdir": 2,
+                    "getitem": 7,
+                    "listdir": 0,
                     "list_prefix": 0,
                 }
 
@@ -3443,17 +3502,17 @@ class TestInstrumentedZarrStore:
             if has_zarr_v3:
                 expected = {
                     "set": 1,
-                    "get": 5,
-                    "list_dir": 2,
+                    "get": 4,
+                    "list_dir": 0,
                     "list_prefix": 0,
                 }
             else:
                 expected = {
-                    "iter": 2,
-                    "contains": 4,
+                    "iter": 1,
+                    "contains": 6,
                     "setitem": 1,
-                    "getitem": 6,
-                    "listdir": 2,
+                    "getitem": 8,
+                    "listdir": 0,
                     "list_prefix": 0,
                 }
 
@@ -3466,16 +3525,16 @@ class TestInstrumentedZarrStore:
                 expected = {
                     "set": 0,
                     "get": 5,
-                    "list_dir": 1,
+                    "list_dir": 0,
                     "list_prefix": 0,
                 }
             else:
                 expected = {
-                    "iter": 2,
-                    "contains": 4,
-                    "setitem": 1,
-                    "getitem": 6,
-                    "listdir": 2,
+                    "iter": 1,
+                    "contains": 6,
+                    "setitem": 0,
+                    "getitem": 8,
+                    "listdir": 0,
                     "list_prefix": 0,
                 }
 
@@ -3491,7 +3550,7 @@ class TestZarrDictStore(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
         if has_zarr_v3:
-            yield zarr.storage.MemoryStore({}, mode="a")
+            yield zarr.storage.MemoryStore({}, read_only=False)
         else:
             yield {}
 
@@ -3506,12 +3565,6 @@ class TestZarrDirectoryStore(ZarrBase):
     def create_zarr_target(self):
         with create_tmp_file(suffix=".zarr") as tmp:
             yield tmp
-
-    @contextlib.contextmanager
-    def create_store(self):
-        with self.create_zarr_target() as store_target:
-            group = backends.ZarrStore.open_group(store_target, mode="a")
-            yield group
 
 
 @requires_zarr
@@ -5511,6 +5564,8 @@ def test_source_encoding_always_present_with_fsspec() -> None:
         fs = fsspec.filesystem("file")
         with fs.open(tmp) as f, open_dataset(f) as ds:
             assert ds.encoding["source"] == tmp
+        with fs.open(tmp) as f, open_mfdataset([f]) as ds:
+            assert "foo" in ds
 
 
 def _assert_no_dates_out_of_range_warning(record):
@@ -6140,8 +6195,6 @@ class TestZarrRegionAuto:
             ds_region.to_zarr(tmp_path / "test.zarr", region={"x": "auto", "y": "auto"})
 
     def test_zarr_region_index_write(self, tmp_path):
-        from xarray.backends.zarr import ZarrStore
-
         x = np.arange(0, 50, 10)
         y = np.arange(0, 20, 2)
         data = np.ones((5, 10))
@@ -6479,7 +6532,7 @@ def test_zarr_safe_chunk_region(tmp_path):
         arr.isel(a=slice(5, -1)).chunk(a=5).to_zarr(store, region="auto", mode="r+")
 
     # Test if the code is detecting the last chunk correctly
-    data = np.random.RandomState(0).randn(2920, 25, 53)
+    data = np.random.default_rng(0).random((2920, 25, 53))
     ds = xr.Dataset({"temperature": (("time", "lat", "lon"), data)})
     chunks = {"time": 1000, "lat": 25, "lon": 53}
     ds.chunk(chunks).to_zarr(store, compute=False, mode="w")
@@ -6487,3 +6540,24 @@ def test_zarr_safe_chunk_region(tmp_path):
     chunk = ds.isel(region)
     chunk = chunk.chunk()
     chunk.chunk().to_zarr(store, region=region)
+
+
+@requires_h5netcdf
+@requires_fsspec
+def test_h5netcdf_storage_options() -> None:
+    with create_tmp_files(2, allow_cleanup_failure=ON_WINDOWS) as (f1, f2):
+        ds1 = create_test_data()
+        ds1.to_netcdf(f1, engine="h5netcdf")
+
+        ds2 = create_test_data()
+        ds2.to_netcdf(f2, engine="h5netcdf")
+
+        files = [f"file://{f}" for f in [f1, f2]]
+        ds = xr.open_mfdataset(
+            files,
+            engine="h5netcdf",
+            concat_dim="time",
+            combine="nested",
+            storage_options={"skip_instance_cache": False},
+        )
+        assert_identical(xr.concat([ds1, ds2], dim="time"), ds)

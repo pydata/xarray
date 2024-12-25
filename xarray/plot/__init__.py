@@ -22,15 +22,15 @@ from xarray.plot.dataset_plot import scatter
 from xarray.plot.facetgrid import FacetGrid
 
 __all__ = [
-    "plot",
-    "line",
-    "step",
+    "FacetGrid",
     "contour",
     "contourf",
     "hist",
     "imshow",
+    "line",
     "pcolormesh",
-    "FacetGrid",
+    "plot",
     "scatter",
+    "step",
     "surface",
 ]

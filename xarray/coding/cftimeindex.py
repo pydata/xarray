@@ -58,12 +58,7 @@ from xarray.coding.times import (
 )
 from xarray.core.common import _contains_cftime_datetimes
 from xarray.core.options import OPTIONS
-from xarray.core.utils import is_scalar
-
-try:
-    import cftime
-except ImportError:
-    cftime = None
+from xarray.core.utils import attempt_import, is_scalar
 
 if TYPE_CHECKING:
     from xarray.coding.cftime_offsets import BaseCFTimeOffset
@@ -97,7 +92,7 @@ def trailing_optional(xs):
     return xs[0] + optional(trailing_optional(xs[1:]))
 
 
-def build_pattern(date_sep=r"\-", datetime_sep=r"T", time_sep=r"\:"):
+def build_pattern(date_sep=r"\-", datetime_sep=r"T", time_sep=r"\:", micro_sep=r"."):
     pieces = [
         (None, "year", r"\d{4}"),
         (date_sep, "month", r"\d{2}"),
@@ -105,6 +100,7 @@ def build_pattern(date_sep=r"\-", datetime_sep=r"T", time_sep=r"\:"):
         (datetime_sep, "hour", r"\d{2}"),
         (time_sep, "minute", r"\d{2}"),
         (time_sep, "second", r"\d{2}"),
+        (micro_sep, "microsecond", r"\d{1,6}"),
     ]
     pattern_list = []
     for sep, name, sub_pattern in pieces:
@@ -130,18 +126,18 @@ def parse_iso8601_like(datetime_string):
 
 
 def _parse_iso8601_with_reso(date_type, timestr):
-    if cftime is None:
-        raise ModuleNotFoundError("No module named 'cftime'")
+    _ = attempt_import("cftime")
 
     default = date_type(1, 1, 1)
     result = parse_iso8601_like(timestr)
     replace = {}
 
-    for attr in ["year", "month", "day", "hour", "minute", "second"]:
+    for attr in ["year", "month", "day", "hour", "minute", "second", "microsecond"]:
         value = result.get(attr, None)
         if value is not None:
-            # Note ISO8601 conventions allow for fractional seconds.
-            # TODO: Consider adding support for sub-second resolution?
+            if attr == "microsecond":
+                # convert match string into valid microsecond value
+                value = 10 ** (6 - len(value)) * int(value)
             replace[attr] = int(value)
             resolution = attr
     return default.replace(**replace), resolution
@@ -200,8 +196,10 @@ def _field_accessor(name, docstring=None, min_cftime_version="0.0"):
     """Adapted from pandas.tseries.index._field_accessor"""
 
     def f(self, min_cftime_version=min_cftime_version):
-        if cftime is None:
-            raise ModuleNotFoundError("No module named 'cftime'")
+        if TYPE_CHECKING:
+            import cftime
+        else:
+            cftime = attempt_import("cftime")
 
         if Version(cftime.__version__) >= Version(min_cftime_version):
             return get_date_field(self._data, name)
@@ -225,8 +223,10 @@ def get_date_type(self):
 
 
 def assert_all_valid_date_type(data):
-    if cftime is None:
-        raise ModuleNotFoundError("No module named 'cftime'")
+    if TYPE_CHECKING:
+        import cftime
+    else:
+        cftime = attempt_import("cftime")
 
     if len(data) > 0:
         sample = data[0]
@@ -803,6 +803,10 @@ class CFTimeIndex(pd.Index):
 
     @property
     def is_leap_year(self):
+        if TYPE_CHECKING:
+            import cftime
+        else:
+            cftime = attempt_import("cftime")
         func = np.vectorize(cftime.is_leap_year)
         return func(self.year, calendar=self.calendar)
 
