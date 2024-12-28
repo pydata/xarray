@@ -171,7 +171,7 @@ class TestGetChunkManager:
     def test_fail_on_nonexistent_chunkmanager(
         self, register_dummy_chunkmanager
     ) -> None:
-        with pytest.raises(ValueError, match="unrecognized chunk manager foo"):
+        with pytest.raises(ValueError, match="unrecognized chunk manager 'foo'"):
             guess_chunkmanager("foo")
 
     @requires_dask
