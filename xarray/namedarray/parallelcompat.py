@@ -123,7 +123,8 @@ def guess_chunkmanager(
             )
         elif manager not in available_chunkmanagers:
             raise ValueError(
-                f"unrecognized chunk manager {manager!r} - must be one of: {list(available_chunkmanagers)}"
+                f"unrecognized chunk manager {manager!r} - must be one of the installed"
+                f" chunk managers: {list(available_chunkmanagers)}"
             )
 
         return available_chunkmanagers[manager]
