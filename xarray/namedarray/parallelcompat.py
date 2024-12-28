@@ -115,7 +115,7 @@ def guess_chunkmanager(
         if manager not in available_chunkmanagers and manager in KNOWN_CHUNKMANAGERS:
             raise ImportError(
                 f"chunk manager {manager!r} is not available."
-                f" Please make sure {KNOWN_CHUNKMANAGERS[manager]} is installed and importable."
+                f" Please make sure {KNOWN_CHUNKMANAGERS[manager]!r} is installed and importable."
             )
         elif len(available_chunkmanagers) == 0:
             raise ImportError(
