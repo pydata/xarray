@@ -270,7 +270,7 @@ def _check_date_for_units_since_refdate(
     delta = date * np.timedelta64(1, unit)
     if not np.isnan(delta):
         # this will raise on dtype overflow for integer dtypes
-        if date.dtype.kind in "iu" and not np.int64(delta) == date:
+        if date.dtype.kind in "u" and not np.int64(delta) == date:
             raise OutOfBoundsTimedelta(
                 "DType overflow in Datetime/Timedelta calculation."
             )
