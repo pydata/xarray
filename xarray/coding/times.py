@@ -278,7 +278,7 @@ def _check_date_for_units_since_refdate(
         # can't be represented in the current ref_date resolution
         return timestamp_as_unit(ref_date + delta, ref_date.unit)
     else:
-        # if date is exactly NaT (np.iinfo("int64").min) return refdate
+        # if date is exactly NaT (np.iinfo("int64").min) return NaT
         # to make follow-up checks work
         return pd.Timestamp("NaT")
 
