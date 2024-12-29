@@ -10,7 +10,6 @@ from hypothesis.errors import InvalidArgument
 import xarray as xr
 from xarray.core.types import T_DuckArray
 from xarray.core.utils import attempt_import
-from xarray.tests.test_coding_times import _all_cftime_date_types
 
 if TYPE_CHECKING:
     from xarray.core.types import _DTypeLikeNested, _ShapeLike
@@ -494,6 +493,8 @@ class CFTimeStategy(st.SearchStrategy):
 
 class CFTimeStrategyISO8601(st.SearchStrategy):
     def __init__(self):
+        from xarray.tests.test_coding_times import _all_cftime_date_types
+
         self.date_types = _all_cftime_date_types()
         self.calendars = list(self.date_types)
 
