@@ -280,7 +280,7 @@ def _check_date_for_units_since_refdate(
     else:
         # if date is exactly NaT (np.iinfo("int64").min) return refdate
         # to make follow-up checks work
-        return ref_date
+        return pd.NaT
 
 
 def _decode_datetime_with_pandas(
