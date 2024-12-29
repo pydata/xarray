@@ -5,6 +5,8 @@ These ones pass, just as you'd hope!
 
 """
 
+import warnings
+
 import pytest
 
 pytest.importorskip("hypothesis")
@@ -17,7 +19,8 @@ from hypothesis import given
 
 import xarray as xr
 from xarray.coding.times import _parse_iso8601_without_reso
-from xarray.testing.strategies import variables
+from xarray.testing.strategies import CFTimeStrategyISO8601, variables
+from xarray.tests import requires_cftime
 
 
 @pytest.mark.slow
@@ -47,8 +50,10 @@ def test_CFScaleOffset_coder_roundtrip(original) -> None:
     xr.testing.assert_identical(original, roundtripped)
 
 
-# TODO: add cftime.datetime
-@given(dt=st.datetimes())
+@requires_cftime
+@given(dt=st.datetimes() | CFTimeStrategyISO8601())
 def test_iso8601_decode(dt):
     iso = dt.isoformat()
-    assert dt == _parse_iso8601_without_reso(type(dt), iso)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*date/calendar/year zero.*")
+        assert dt == _parse_iso8601_without_reso(type(dt), iso)
