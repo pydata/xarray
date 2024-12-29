@@ -336,7 +336,7 @@ def _decode_datetime_with_pandas(
     # this should be safe, as errors would have been raised above
     ns_time_unit = _NS_PER_TIME_DELTA[time_unit]
     ns_ref_date_unit = _NS_PER_TIME_DELTA[ref_date.unit]
-    if flat_num_dates.dtype.kind in "iuf" and (ns_time_unit > ns_ref_date_unit):
+    if ns_time_unit > ns_ref_date_unit:
         flat_num_dates *= np.int64(ns_time_unit / ns_ref_date_unit)
         time_unit = ref_date.unit
 
