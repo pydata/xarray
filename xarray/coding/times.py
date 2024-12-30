@@ -241,7 +241,7 @@ def parse_iso8601_like(datetime_string: str) -> dict[str, str | None]:
     )
 
 
-def _parse_iso8601_with_reso(date_type, timestr):
+def _parse_iso8601(date_type, timestr):
     default = date_type(1, 1, 1)
     result = parse_iso8601_like(timestr)
     replace = {}
@@ -257,11 +257,6 @@ def _parse_iso8601_with_reso(date_type, timestr):
                 value = 10 ** (6 - len(value)) * int(value)
             replace[attr] = int(value)
     return default.replace(**replace), resolution
-
-
-def _parse_iso8601_without_reso(date_type, datetime_str):
-    date, _ = _parse_iso8601_with_reso(date_type, datetime_str)
-    return date
 
 
 def _unpack_time_units_and_ref_date(units: str) -> tuple[str, pd.Timestamp]:

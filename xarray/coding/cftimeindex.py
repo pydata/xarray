@@ -52,8 +52,7 @@ from packaging.version import Version
 
 from xarray.coding.times import (
     _STANDARD_CALENDARS,
-    _parse_iso8601_with_reso,
-    _parse_iso8601_without_reso,
+    _parse_iso8601,
     cftime_to_nptime,
     infer_calendar_name,
 )
@@ -372,7 +371,7 @@ class CFTimeIndex(pd.Index):
 
     def _get_string_slice(self, key):
         """Adapted from pandas.tseries.index.DatetimeIndex._get_string_slice"""
-        parsed, resolution = _parse_iso8601_with_reso(self.date_type, key)
+        parsed, resolution = _parse_iso8601(self.date_type, key)
         try:
             loc = self._partial_date_slice(resolution, parsed)
         except KeyError as err:
@@ -419,7 +418,7 @@ class CFTimeIndex(pd.Index):
         if not isinstance(label, str):
             return label
 
-        parsed, resolution = _parse_iso8601_with_reso(self.date_type, label)
+        parsed, resolution = _parse_iso8601(self.date_type, label)
         start, end = _parsed_string_to_bounds(self.date_type, resolution, parsed)
         if self.is_monotonic_decreasing and len(self) > 1:
             return end if side == "left" else start
@@ -764,9 +763,9 @@ def _parse_array_of_cftime_strings(strings, date_type):
     -------
     np.array
     """
-    return np.array(
-        [_parse_iso8601_without_reso(date_type, s) for s in strings.ravel()]
-    ).reshape(strings.shape)
+    return np.array([_parse_iso8601(date_type, s)[0] for s in strings.ravel()]).reshape(
+        strings.shape
+    )
 
 
 def _contains_datetime_timedeltas(array):

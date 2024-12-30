@@ -16,7 +16,7 @@ from xarray.coding.cftimeindex import (
     assert_all_valid_date_type,
 )
 from xarray.coding.times import (
-    _parse_iso8601_with_reso,
+    _parse_iso8601,
     parse_iso8601_like,
 )
 from xarray.tests import (
@@ -368,7 +368,7 @@ def test_cftimeindex_days_in_month_accessor(index):
 def test_parse_iso8601_with_reso(date_type, string, date_args, reso):
     expected_date = date_type(*date_args)
     expected_reso = reso
-    result_date, result_reso = _parse_iso8601_with_reso(date_type, string)
+    result_date, result_reso = _parse_iso8601(date_type, string)
     assert result_date == expected_date
     assert result_reso == expected_reso
 

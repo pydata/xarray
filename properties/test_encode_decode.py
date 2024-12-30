@@ -18,7 +18,7 @@ import numpy as np
 from hypothesis import given
 
 import xarray as xr
-from xarray.coding.times import _parse_iso8601_without_reso
+from xarray.coding.times import _parse_iso8601
 from xarray.testing.strategies import CFTimeStrategyISO8601, variables
 from xarray.tests import requires_cftime
 
@@ -56,4 +56,5 @@ def test_iso8601_decode(dt):
     iso = dt.isoformat()
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message=".*date/calendar/year zero.*")
-        assert dt == _parse_iso8601_without_reso(type(dt), iso)
+        parsed, _ = _parse_iso8601(type(dt), iso)
+        assert dt == parsed
