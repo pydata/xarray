@@ -35,8 +35,8 @@ New Features
 - Add ``unit`` - keyword argument to :py:func:`date_range` and ``microsecond`` parsing to
   iso8601-parser (:pull:`9885`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- Split out ``CFDatetimeCoder`` as public API in ``xr.coders``, make ``decode_times`` keyword argument
-  consume ``CFDatetimeCoder``.
+- Split out :py:class:`coders.CFDatetimeCoder` as public API in ``xr.coders``, make ``decode_times`` keyword argument
+  consume :py:class:`coders.CFDatetimeCoder`.
 
 
 Breaking changes

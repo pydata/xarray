@@ -157,7 +157,7 @@ def decode_cf_variable(
         raise an error.
 
         .. deprecated:: 2024.12.0
-           Please initialize it with ``CFDatetimeCoder`` and ``decode_times`` kwarg.
+           Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
 
     Returns
     -------
@@ -201,17 +201,20 @@ def decode_cf_variable(
                 emit_user_level_warning(
                     "Usage of 'use_cftime' as kwarg is deprecated. "
                     "Please initialize it with CFDatetimeCoder and "
-                    "'decode_times' kwarg.",
+                    "'decode_times' kwarg.\n",
+                    "Example usage:\n",
+                    "    time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)\n",
+                    "    ds = xr.open_dataset(decode_times=time_coder)\n",
                     DeprecationWarning,
                 )
             decode_times = CFDatetimeCoder(use_cftime=use_cftime)
         else:
             if use_cftime is not None:
                 raise TypeError(
-                    "Usage of 'use_cftime' as kwarg is not allowed, "
-                    "if 'decode_times' is initialized with "
-                    "CFDatetimeCoder. Please add 'use_cftime' "
-                    "when initializing CFDatetimeCoder."
+                    "Usage of 'use_cftime' as a kwarg is not allowed "
+                    "if a CFDatetimeCoder instance is passed to "
+                    "decode_times. Please set use_cftime "
+                    "when initializing CFDatetimeCoder instead."
                 )
         var = decode_times.decode(var, name=name)
 
@@ -508,7 +511,7 @@ def decode_cf(
         raise an error.
 
         .. deprecated:: 2024.12.0
-           Please initialize it with ``CFDatetimeCoder`` and ``decode_times`` kwarg.
+           Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
 
     decode_timedelta : bool, optional
         If True, decode variables and coordinates with time units in
