@@ -199,9 +199,9 @@ def decode_cf_variable(
         if not isinstance(decode_times, CFDatetimeCoder):
             if use_cftime is not None:
                 emit_user_level_warning(
-                    "Usage of 'use_cftime' as kwarg is deprecated. "
-                    "Please initialize it with CFDatetimeCoder and "
-                    "'decode_times' kwarg.\n",
+                    "Usage of 'use_cftime' as a kwarg is deprecated. "
+                    "Please pass a CFDatetimeCoder instance initialized "
+                    "with use_cftime to the decode_times kwarg instead.\n",
                     "Example usage:\n",
                     "    time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)\n",
                     "    ds = xr.open_dataset(decode_times=time_coder)\n",

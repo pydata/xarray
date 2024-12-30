@@ -1010,7 +1010,7 @@ def open_datatree(
         This keyword may not be supported by all the backends.
 
         .. deprecated:: 2024.12.0
-           Please initialize it with ``CFDatetimeCoder`` and ``decode_times`` kwarg.
+           Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
 
     concat_characters : bool or dict-like, optional
         If True, concatenate along the last dimension of character arrays to
