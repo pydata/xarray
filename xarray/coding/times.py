@@ -203,7 +203,12 @@ def trailing_optional(xs: list[str]) -> str:
     return xs[0] + optional(trailing_optional(xs[1:]))
 
 
-def build_pattern(date_sep: str = r"\-", datetime_sep: str = r"T", time_sep: str = r"\:", micro_sep: str = r".") -> str:
+def build_pattern(
+    date_sep: str = r"\-",
+    datetime_sep: str = r"T",
+    time_sep: str = r"\:",
+    micro_sep: str = r".",
+) -> str:
     pieces = [
         (None, "year", r"[+-]?\d{4,5}"),
         (date_sep, "month", r"\d{2}"),
