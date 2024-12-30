@@ -231,7 +231,7 @@ _CFTIME_PATTERN = build_pattern(datetime_sep=" ")
 _PATTERNS = [_BASIC_PATTERN, _EXTENDED_PATTERN, _CFTIME_PATTERN]
 
 
-def parse_iso8601_like(datetime_string: str) -> dict[str, str]:
+def parse_iso8601_like(datetime_string: str) -> dict[str, str | None]:
     for pattern in _PATTERNS:
         match = re.match(pattern, datetime_string)
         if match:
