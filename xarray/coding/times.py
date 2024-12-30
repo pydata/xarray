@@ -189,21 +189,21 @@ def _unpack_netcdf_time_units(units: str) -> tuple[str, str]:
     return delta_units, ref_date
 
 
-def named(name, pattern):
+def named(name: str, pattern: str) -> str:
     return "(?P<" + name + ">" + pattern + ")"
 
 
-def optional(x):
+def optional(x: str) -> str:
     return "(?:" + x + ")?"
 
 
-def trailing_optional(xs):
+def trailing_optional(xs: list[str]) -> str:
     if not xs:
         return ""
     return xs[0] + optional(trailing_optional(xs[1:]))
 
 
-def build_pattern(date_sep=r"\-", datetime_sep=r"T", time_sep=r"\:", micro_sep=r"."):
+def build_pattern(date_sep: str = r"\-", datetime_sep: str = r"T", time_sep: str = r"\:", micro_sep: str = r".") -> str:
     pieces = [
         (None, "year", r"[+-]?\d{4,5}"),
         (date_sep, "month", r"\d{2}"),
@@ -226,7 +226,7 @@ _CFTIME_PATTERN = build_pattern(datetime_sep=" ")
 _PATTERNS = [_BASIC_PATTERN, _EXTENDED_PATTERN, _CFTIME_PATTERN]
 
 
-def parse_iso8601_like(datetime_string):
+def parse_iso8601_like(datetime_string: str) -> dict[str, str]:
     for pattern in _PATTERNS:
         match = re.match(pattern, datetime_string)
         if match:
