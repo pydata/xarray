@@ -155,13 +155,13 @@ def _validate_dataset_names(dataset: Dataset) -> None:
                 raise ValueError(
                     f"Invalid name {name!r} for DataArray or Dataset key: "
                     "string must be length 1 or greater for "
-                    "serialization to netCDF files"
+                    "serialization to netCDF or zarr files"
                 )
         elif name is not None:
             raise TypeError(
                 f"Invalid name {name!r} for DataArray or Dataset key: "
                 "must be either a string or None for serialization to netCDF "
-                "files"
+                "or zarr files"
             )
 
     for k in dataset.variables:
