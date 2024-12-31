@@ -53,9 +53,10 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from xarray.coding.cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
+from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.times import (
     _is_standard_calendar,
+    _parse_iso8601,
     _should_cftime_be_used,
     convert_time_or_go_back,
     format_cftime_datetime,
@@ -843,7 +844,7 @@ def to_cftime_datetime(date_str_or_date, calendar=None):
                 "If converting a string to a cftime.datetime object, "
                 "a calendar type must be provided"
             )
-        date, _ = _parse_iso8601_with_reso(get_date_type(calendar), date_str_or_date)
+        date, _ = _parse_iso8601(get_date_type(calendar), date_str_or_date)
         return date
     elif isinstance(date_str_or_date, cftime.datetime):
         return date_str_or_date
