@@ -201,12 +201,94 @@ def _unpack_netcdf_time_units(units: str) -> tuple[str, str]:
     return delta_units, ref_date
 
 
+def named(name: str, pattern: str) -> str:
+    return "(?P<" + name + ">" + pattern + ")"
+
+
+def optional(x: str) -> str:
+    return "(?:" + x + ")?"
+
+
+def trailing_optional(xs: list[str]) -> str:
+    if not xs:
+        return ""
+    return xs[0] + optional(trailing_optional(xs[1:]))
+
+
+def build_pattern(
+    date_sep: str = r"\-",
+    datetime_sep: str = r"T",
+    time_sep: str = r"\:",
+    micro_sep: str = r".",
+) -> str:
+    pieces = [
+        (None, "year", r"[+-]?\d{4,5}"),
+        (date_sep, "month", r"\d{2}"),
+        (date_sep, "day", r"\d{2}"),
+        (datetime_sep, "hour", r"\d{2}"),
+        (time_sep, "minute", r"\d{2}"),
+        (time_sep, "second", r"\d{2}"),
+        (micro_sep, "microsecond", r"\d{1,6}"),
+    ]
+    pattern_list = []
+    for sep, name, sub_pattern in pieces:
+        pattern_list.append((sep if sep else "") + named(name, sub_pattern))
+        # TODO: allow timezone offsets?
+    return "^" + trailing_optional(pattern_list) + "$"
+
+
+_BASIC_PATTERN = build_pattern(date_sep="", time_sep="")
+_EXTENDED_PATTERN = build_pattern()
+_CFTIME_PATTERN = build_pattern(datetime_sep=" ")
+_PATTERNS = [_BASIC_PATTERN, _EXTENDED_PATTERN, _CFTIME_PATTERN]
+
+
+def parse_iso8601_like(datetime_string: str) -> dict[str, str | None]:
+    for pattern in _PATTERNS:
+        match = re.match(pattern, datetime_string)
+        if match:
+            return match.groupdict()
+    raise ValueError(
+        f"no ISO-8601 or cftime-string-like match for string: {datetime_string}"
+    )
+
+
+def _parse_iso8601(date_type, timestr):
+    default = date_type(1, 1, 1)
+    result = parse_iso8601_like(timestr)
+    replace = {}
+
+    for attr in ["year", "month", "day", "hour", "minute", "second", "microsecond"]:
+        value = result.get(attr, None)
+        if value is not None:
+            resolution = attr
+            if attr == "microsecond":
+                if len(value) <= 3:
+                    resolution = "millisecond"
+                # convert match string into valid microsecond value
+                value = 10 ** (6 - len(value)) * int(value)
+            replace[attr] = int(value)
+    return default.replace(**replace), resolution
+
+
 def _maybe_strip_tz_from_timestamp(date: pd.Timestamp) -> pd.Timestamp:
     # If the ref_date Timestamp is timezone-aware, convert to UTC and
     # make it timezone-naive (GH 2649).
     if date.tz is not None:
         date = date.tz_convert("UTC").tz_convert(None)
     return date
+
+
+def _unpack_time_unit_and_ref_date(
+    units: str,
+) -> tuple[NPDatetimeUnitOptions, pd.Timestamp]:
+    # same us _unpack_netcdf_time_units but finalizes time_unit and ref_date
+    # for processing in encode_cf_datetime
+    time_unit, _ref_date = _unpack_netcdf_time_units(units)
+    time_unit = _netcdf_to_numpy_timeunit(time_unit)
+    ref_date = pd.Timestamp(_ref_date)
+    ref_date = _maybe_strip_tz_from_timestamp(ref_date)
+    return time_unit, ref_date
 
 
 def _unpack_time_unit_and_ref_date(
