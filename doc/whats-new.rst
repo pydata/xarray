@@ -81,6 +81,9 @@ Internal Changes
   within ``as_compatible_data``. This is consistent with how lists of these objects
   will be converted (:pull:`9900`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Move ISO-8601 parser from coding.cftimeindex to coding.times to make it available there (prevents circular import), add capability to parse negative and/or five-digit years (:pull:`9899`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 .. _whats-new.2024.11.0:
 
