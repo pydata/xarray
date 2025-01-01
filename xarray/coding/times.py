@@ -262,18 +262,18 @@ def _parse_iso8601(date_type, timestr):
             replace[attr] = int(value)
     return default.replace(**replace), resolution
 
-  
+
  def _maybe_strip_tz_from_timestamp(date: pd.Timestamp) -> pd.Timestamp:
     # If the ref_date Timestamp is timezone-aware, convert to UTC and
     # make it timezone-naive (GH 2649).
     if date.tz is not None:
         return date.tz_convert("UTC").tz_convert(None)
-    return date 
-  
- 
+    return date
+
+
 def _unpack_time_unit_and_ref_date(
     units: str,
-) -> tuple[NPDatetimeUnitOptions, pd.Timestamp]: 
+) -> tuple[NPDatetimeUnitOptions, pd.Timestamp]:
     # same us _unpack_netcdf_time_units but finalizes ref_date for
     # processing in encode_cf_datetime
     time_unit, _ref_date = _unpack_netcdf_time_units(units)
