@@ -263,7 +263,7 @@ def _parse_iso8601(date_type, timestr):
     return default.replace(**replace), resolution
 
 
- def _maybe_strip_tz_from_timestamp(date: pd.Timestamp) -> pd.Timestamp:
+def _maybe_strip_tz_from_timestamp(date: pd.Timestamp) -> pd.Timestamp:
     # If the ref_date Timestamp is timezone-aware, convert to UTC and
     # make it timezone-naive (GH 2649).
     if date.tz is not None:
