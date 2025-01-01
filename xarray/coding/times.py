@@ -291,18 +291,6 @@ def _unpack_time_unit_and_ref_date(
     return time_unit, ref_date
 
 
-def _unpack_time_unit_and_ref_date(
-    units: str,
-) -> tuple[NPDatetimeUnitOptions, pd.Timestamp]:
-    # same us _unpack_netcdf_time_units but finalizes time_unit and ref_date
-    # for processing in encode_cf_datetime
-    time_unit, _ref_date = _unpack_netcdf_time_units(units)
-    time_unit = _netcdf_to_numpy_timeunit(time_unit)
-    ref_date = pd.Timestamp(_ref_date)
-    ref_date = _maybe_strip_tz_from_timestamp(ref_date)
-    return time_unit, ref_date
-
-
 def _decode_cf_datetime_dtype(
     data,
     units: str,
