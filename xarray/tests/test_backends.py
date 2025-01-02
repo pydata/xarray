@@ -2435,10 +2435,16 @@ class ZarrBase(CFEncodedBase):
         for chunks in good_chunks:
             kwargs = {"chunks": chunks}
             with assert_no_warnings():
-                with self.roundtrip(original, open_kwargs=kwargs) as actual:
-                    for k, v in actual.variables.items():
-                        # only index variables should be in memory
-                        assert v._in_memory == (k in actual.dims)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore",
+                        message=".*Zarr version 3 specification.*",
+                        category=UserWarning,
+                    )
+                    with self.roundtrip(original, open_kwargs=kwargs) as actual:
+                        for k, v in actual.variables.items():
+                            # only index variables should be in memory
+                            assert v._in_memory == (k in actual.dims)
 
     @requires_dask
     def test_deprecate_auto_chunk(self) -> None:
@@ -2985,8 +2991,14 @@ class ZarrBase(CFEncodedBase):
     def test_no_warning_from_open_emptydim_with_chunks(self) -> None:
         ds = Dataset({"x": (("a", "b"), np.empty((5, 0)))}).chunk({"a": 1})
         with assert_no_warnings():
-            with self.roundtrip(ds, open_kwargs=dict(chunks={"a": 1})) as ds_reload:
-                assert_identical(ds, ds_reload)
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    message=".*Zarr version 3 specification.*",
+                    category=UserWarning,
+                )
+                with self.roundtrip(ds, open_kwargs=dict(chunks={"a": 1})) as ds_reload:
+                    assert_identical(ds, ds_reload)
 
     @pytest.mark.parametrize("consolidated", [False, True, None])
     @pytest.mark.parametrize("compute", [False, True])
