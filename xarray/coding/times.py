@@ -450,16 +450,14 @@ def decode_cf_datetime(
                 flat_num_dates.astype(float), units, calendar
             )
             # retrieve cftype
-            cftype = type(dates[np.nanargmin(num_dates)])
+            dates_min = dates[np.nanargmin(num_dates)]
+            cftype = type(dates_min)
             # "ns" borders
             # between ['1677-09-21T00:12:43.145224193', '2262-04-11T23:47:16.854775807']
             lower = cftype(1677, 9, 21, 0, 12, 43, 145224)
             upper = cftype(2262, 4, 11, 23, 47, 16, 854775)
 
-            if (
-                dates[np.nanargmin(num_dates)] < lower
-                or dates[np.nanargmax(num_dates)] > upper
-            ):
+            if dates_min < lower or dates[np.nanargmax(num_dates)] > upper:
                 if _is_standard_calendar(calendar):
                     warnings.warn(
                         "Unable to decode time axis into full "
