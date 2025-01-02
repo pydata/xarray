@@ -167,8 +167,8 @@ def test_decode_cf_datetime_overflow() -> None:
     units = "days since 2000-01-01 00:00:00"
 
     # date after 2262 and before 1678
-    days = (-117608, 95795)
-    expected = (datetime(1677, 12, 31), datetime(2262, 4, 12))
+    days = (-117710, 95795)
+    expected = (datetime(1677, 9, 20), datetime(2262, 4, 12))
 
     for i, day in enumerate(days):
         with warnings.catch_warnings():
