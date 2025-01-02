@@ -156,7 +156,7 @@ def decode_cf_variable(
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
 
-        .. deprecated:: 2024.12.0
+        .. deprecated:: 2025.01.0
            Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
 
     Returns
@@ -510,7 +510,7 @@ def decode_cf(
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
 
-        .. deprecated:: 2024.12.0
+        .. deprecated:: 2025.01.0
            Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
 
     decode_timedelta : bool, optional
