@@ -302,7 +302,7 @@ def test_decode_standard_calendar_single_element_inside_timestamp_range(
             num_time, units, calendar=calendar, time_unit=time_unit
         )
 
-        assert actual.dtype == np.dtype(f"=M8[{time_unit}]")
+    assert actual.dtype == np.dtype(f"=M8[{time_unit}]")
 
 
 @requires_cftime
