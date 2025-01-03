@@ -36,7 +36,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal, cast
+from typing import Literal
 
 import pandas as pd
 
@@ -74,12 +74,13 @@ no_default = (
 NoDefault = Literal[_NoDefault.no_default]  # For typing following pandas
 
 
-def _timestamp_as_unit(date: pd.Timestamp, unit: str) -> pd.Timestamp:
-    # compatibility function for pandas issue
-    # where "as_unit" is not defined for pandas.Timestamp
-    # in pandas versions < 2.2
-    # can be removed minimum pandas version is >= 2.2
-    unit = cast(PDDatetimeUnitOptions, unit)
+def timestamp_as_unit(date: pd.Timestamp, unit: PDDatetimeUnitOptions) -> pd.Timestamp:
+    """Convert the underlying int64 representation to the given unit.
+
+    Compatibility function for pandas issue where "as_unit" is not defined
+    for pandas.Timestamp in pandas versions < 2.2. Can be removed minimum
+    pandas version is >= 2.2.
+    """
     if hasattr(date, "as_unit"):
         date = date.as_unit(unit)
     elif hasattr(date, "_as_unit"):
@@ -94,5 +95,5 @@ def default_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
     """
     dt = pd.Timestamp(*args, **kwargs)
     if dt.unit != "ns":
-        dt = _timestamp_as_unit(dt, "ns")
+        dt = timestamp_as_unit(dt, "ns")
     return dt
