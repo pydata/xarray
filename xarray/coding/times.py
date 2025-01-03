@@ -365,12 +365,14 @@ def _check_date_for_units_since_refdate(
         return pd.Timestamp("NaT")
 
 
-def _align_reference_date_and_unit(ref_date: pd.Timestamp, unit: str) -> pd.Timestamp:
+def _align_reference_date_and_unit(
+    ref_date: pd.Timestamp, unit: NPDatetimeUnitOptions
+) -> pd.Timestamp:
     # align to the highest needed resolution of ref_date or unit
     if np.timedelta64(1, ref_date.unit) > np.timedelta64(1, unit):
         # this will raise accordingly
         # if data can't be represented in the higher resolution
-        return timestamp_as_unit(ref_date, unit)
+        return timestamp_as_unit(ref_date, cast(PDDatetimeUnitOptions, unit))
     return ref_date
 
 
