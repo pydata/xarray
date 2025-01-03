@@ -181,7 +181,7 @@ def test_StackedBytesArray_vectorized_indexing() -> None:
 
     V = IndexerMaker(indexing.VectorizedIndexer)
     indexer = V[np.array([[0, 1], [1, 0]])]
-    actual = stacked.vindex[indexer]
+    actual = stacked[indexer]
     assert_array_equal(actual, expected)
 
 
