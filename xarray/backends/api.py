@@ -575,7 +575,7 @@ def open_dataset(
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
 
-        .. deprecated:: 2025.01.0
+        .. deprecated:: 2025.01.1
            Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
 
     concat_characters : bool or dict-like, optional
@@ -797,7 +797,7 @@ def open_dataarray(
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error. This keyword may not be supported by all the backends.
 
-        .. deprecated:: 2025.01.0
+        .. deprecated:: 2025.01.1
            Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
 
     concat_characters : bool, optional
@@ -1011,7 +1011,7 @@ def open_datatree(
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
 
-        .. deprecated:: 2025.01.0
+        .. deprecated:: 2025.01.1
            Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
 
     concat_characters : bool or dict-like, optional
@@ -1238,7 +1238,7 @@ def open_groups(
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
 
-        .. deprecated:: 2025.01.0
+        .. deprecated:: 2025.01.1
            Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
 
     concat_characters : bool or dict-like, optional

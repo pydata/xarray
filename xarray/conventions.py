@@ -161,6 +161,9 @@ def decode_cf_variable(
         .. deprecated:: 2025.01.0
            Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
 
+        .. deprecated:: 2025.01.1
+           Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
+
     Returns
     -------
     out : Variable
@@ -202,8 +205,8 @@ def decode_cf_variable(
             if use_cftime is not None:
                 emit_user_level_warning(
                     "Usage of 'use_cftime' as a kwarg is deprecated. "
-                    "Please pass a CFDatetimeCoder instance initialized "
-                    "with use_cftime to the decode_times kwarg instead.\n"
+                    "Please pass a 'CFDatetimeCoder' instance initialized "
+                    "with 'use_cftime' to the 'decode_times' kwarg instead.\n"
                     "Example usage:\n"
                     "    time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)\n"
                     "    ds = xr.open_dataset(decode_times=time_coder)\n",
@@ -214,9 +217,12 @@ def decode_cf_variable(
             if use_cftime is not None:
                 raise TypeError(
                     "Usage of 'use_cftime' as a kwarg is not allowed "
-                    "if a CFDatetimeCoder instance is passed to "
-                    "decode_times. Please set use_cftime "
-                    "when initializing CFDatetimeCoder instead."
+                    "if a 'CFDatetimeCoder' instance is passed to "
+                    "'decode_times'. Please set 'use_cftime' "
+                    "when initializing 'CFDatetimeCoder' instead.\n"
+                    "Example usage:\n"
+                    "    time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)\n"
+                    "    ds = xr.open_dataset(decode_times=time_coder)\n",
                 )
         var = decode_times.decode(var, name=name)
 
@@ -512,7 +518,7 @@ def decode_cf(
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
 
-        .. deprecated:: 2025.01.0
+        .. deprecated:: 2025.01.1
            Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
 
     decode_timedelta : bool, optional
