@@ -23,8 +23,8 @@ v2025.01.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 - Split out :py:class:`coders.CFDatetimeCoder` as public API in ``xr.coders``, make ``decode_times`` keyword argument
-  consume :py:class:`coders.CFDatetimeCoder`.
-
+  consume :py:class:`coders.CFDatetimeCoder` (:pull:`9901`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -32,7 +32,9 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+- Time decoding related kwarg ``use_cftime`` is deprecated. Use keyword argument
+  ``decode_times=CFDatetimeCoder(use_cftime=True)`` in :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_dataarray`, :py:func:`~xarray.open_datatree`, :py:func:`~xarray.open_groups`, :py:func:`~xarray.open_zarr` and :py:func:`~xarray.decode_cf` instead (:pull:`9901`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -86,9 +88,6 @@ Deprecations
 ~~~~~~~~~~~~
 - Finalize deprecation of ``closed`` parameters of :py:func:`cftime_range` and
   :py:func:`date_range` (:pull:`9882`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- Time decoding related kwarg ``use_cftime`` is deprecated. Use keyword argument
-  ``decode_times=CFDatetimeCoder(use_cftime=True)`` in :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_dataarray`, :py:func:`~xarray.open_datatree`, :py:func:`~xarray.open_groups`, :py:func:`~xarray.open_zarr` and :py:func:`~xarray.decode_cf` instead.
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Performance
