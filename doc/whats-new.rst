@@ -74,7 +74,7 @@ New Features
   latency. (:issue:`9853`, :pull:`9861`). By `Davis Bennett <https://github.com/d-v-b>`_.
 - Add ``unit`` - keyword argument to :py:func:`date_range` and ``microsecond`` parsing to
   iso8601-parser (:pull:`9885`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Breaking changes
@@ -88,10 +88,6 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-- Time decoding related kwarg ``use_cftime`` is deprecated. Use keyword argument
-  ``decode_times=CFDatetimeCoder(use_cftime=True)`` in the respective functions
-  instead (:pull:`9618`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Finalize deprecation of ``closed`` parameters of :py:func:`cftime_range` and
   :py:func:`date_range` (:pull:`9882`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.

@@ -74,14 +74,14 @@ using a standard calendar, but outside the `precision range`_ and dates [prior t
    any of the following are true:
 
    - The dates are from a non-standard calendar
-   - Any dates are outside the nanosecond-precision range (prior xarray version 2024.11)
-   - Any dates are outside the time span limited by the resolution (from xarray version v2024.11)
+   - Any dates are outside the nanosecond-precision range (prior xarray version 2025.01.1)
+   - Any dates are outside the time span limited by the resolution (from xarray version v2025.01.1)
 
    Otherwise pandas-compatible dates from a standard calendar will be
-   represented with the ``np.datetime64[unit]`` data type (where unit can be one of ["s", "ms", "us", "ns"], enabling the use of a :py:class:`pandas.DatetimeIndex` or arrays with dtype ``np.datetime64[unit]`` and their full set of associated features.
+   represented with the ``np.datetime64[unit]`` data type (where unit can be one of ["s", "ms", "us", "ns"]), enabling the use of a :py:class:`pandas.DatetimeIndex` or arrays with dtype ``np.datetime64[unit]`` and their full set of associated features.
 
    As of pandas version 2.0.0, pandas supports non-nanosecond precision datetime
-   values. From xarray version 2024.11 the relaxed non-nanosecond precision datetime values will be used.
+   values. From xarray version 2025.01.1 relaxed non-nanosecond precision datetime values can be parameterized via :py:class:`coders.CFDatetimeCoder` and ``decode_times` kwarg.
 
 For example, you can create a DataArray indexed by a time
 coordinate with dates from a no-leap calendar and a
