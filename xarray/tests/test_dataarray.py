@@ -30,7 +30,7 @@ from xarray import (
     broadcast,
     set_options,
 )
-from xarray.coding.times import CFDatetimeCoder
+from xarray.coders import CFDatetimeCoder
 from xarray.core import dtypes
 from xarray.core.common import full_like
 from xarray.core.coordinates import Coordinates
