@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import warnings
-from collections.abc import Callable, Hashable, Iterator
+from collections.abc import Callable, Hashable
 from datetime import datetime, timedelta
 from functools import partial
 from typing import TYPE_CHECKING, Union, cast
@@ -391,15 +391,15 @@ def _check_date_is_after_shift(date: pd.Timestamp, calendar: str) -> None:
 
 def _check_higher_resolution(
     flat_num_dates: np.ndarray,
-    iter_unit: Iterator[PDDatetimeUnitOptions],
+    time_unit: PDDatetimeUnitOptions,
 ) -> tuple[np.ndarray, PDDatetimeUnitOptions]:
     """Iterate until fitting resolution found."""
-    new_time_unit: PDDatetimeUnitOptions = next(iter_unit)
-    if (np.unique(flat_num_dates % 1) > 0).any() and new_time_unit != "ns":
-        flat_num_dates, new_time_unit = _check_higher_resolution(
-            flat_num_dates * 1000,
-            iter_unit=iter_unit,
-        )
+    res: list[PDDatetimeUnitOptions] = ["s", "ms", "us", "ns"]
+    new_units = res[res.index(cast(PDDatetimeUnitOptions, time_unit)) :]
+    for new_time_unit in new_units:
+        if not ((np.unique(flat_num_dates % 1) > 0).any() and new_time_unit != "ns"):
+            break
+        flat_num_dates *= 1000
     return flat_num_dates, new_time_unit
 
 
@@ -472,10 +472,8 @@ def _decode_datetime_with_pandas(
     # estimate fitting resolution for floating point values
     # this iterates until all floats are fractionless or time_unit == "ns"
     if flat_num_dates.dtype.kind == "f" and time_unit != "ns":
-        res: list[PDDatetimeUnitOptions] = ["s", "ms", "us", "ns"]
-        iter_unit = iter(res[res.index(cast(PDDatetimeUnitOptions, time_unit)) :])
         flat_num_dates, new_time_unit = _check_higher_resolution(
-            flat_num_dates, iter_unit
+            flat_num_dates, time_unit
         )
         if time_unit != new_time_unit:
             msg = (
