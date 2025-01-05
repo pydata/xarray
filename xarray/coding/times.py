@@ -385,7 +385,7 @@ def _check_date_is_after_shift(date: pd.Timestamp, calendar: str) -> None:
         if date < type(date)(1582, 10, 15):
             raise OutOfBoundsDatetime(
                 f"Dates before 1582-10-15 cannot be decoded "
-                f"with pandas using {calendar!r} calendar."
+                f"with pandas using {calendar!r} calendar: {date}"
             )
 
 
