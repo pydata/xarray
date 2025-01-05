@@ -6,7 +6,6 @@ import math
 import numbers
 import warnings
 from collections.abc import Callable, Hashable, Mapping, Sequence
-from datetime import datetime
 from functools import partial
 from types import EllipsisType
 from typing import TYPE_CHECKING, Any, NoReturn, cast
@@ -214,18 +213,6 @@ def _possibly_convert_objects(values):
     * pd.Timedelta
     """
     as_series = pd.Series(values.ravel(), copy=False)
-    # When receiving objects which pd.Series can't resolve by its own
-    # we try astype-conversion to "ns"-resolution for datetimes and pd.Timestamp.
-    if (
-        values.dtype.kind == "O"
-        and as_series.dtype.kind == "O"
-        and as_series.size > 0
-        and (
-            isinstance(as_series[0], datetime | pd.Timestamp)
-            or pd.api.types.is_datetime64_dtype(as_series[0])
-        )
-    ):
-        as_series = as_series.astype("=M8[ns]")
     result = np.asarray(as_series).reshape(values.shape)
     if not result.flags.writeable:
         # GH8843, pandas copy-on-write mode creates read-only arrays by default
