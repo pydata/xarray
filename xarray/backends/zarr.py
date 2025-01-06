@@ -481,7 +481,9 @@ def extract_zarr_variable_encoding(
         mode=mode,
         shape=shape,
     )
-    encoding["chunks"] = chunks or "auto"
+    if _zarr_v3() and chunks is None:
+        chunks = "auto"
+    encoding["chunks"] = chunks
     return encoding
 
 
@@ -827,9 +829,10 @@ class ZarrStore(AbstractWritableDataStore):
                 {
                     "compressors": zarr_array.compressors,
                     "filters": zarr_array.filters,
-                    # "serializer": zarr_array.serializer,
                 }
             )
+            if self.zarr_group.metadata.zarr_format == 3:
+                encoding.update({"serializer": zarr_array.serializer})
         else:
             encoding.update(
                 {
