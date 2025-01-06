@@ -2675,18 +2675,15 @@ class ZarrBase(CFEncodedBase):
             assert_identical(original, actual)
 
     def test_compressor_encoding(self) -> None:
-        from numcodecs.blosc import Blosc
-
-        original = create_test_data()
         # specify a custom compressor
-
+        original = create_test_data()
         if has_zarr_v3 and zarr.config.config["default_zarr_format"] == 3:
             encoding_key = "compressors"
             # all parameters need to be explicitly specified in order for the comparison to pass below
             encoding = {
                 "serializer": zarr.codecs.BytesCodec(endian="little"),
                 encoding_key: (
-                    Blosc(
+                    zarr.codecs.BloscCodec(
                         cname="zstd",
                         clevel=3,
                         shuffle="shuffle",
@@ -2696,8 +2693,11 @@ class ZarrBase(CFEncodedBase):
                 ),
             }
         else:
+            from numcodecs.blosc import Blosc
+
             encoding_key = "compressors" if has_zarr_v3 else "compressor"
-            encoding = {encoding_key: (Blosc(cname="zstd", clevel=3, shuffle=2),)}
+            comp = Blosc(cname="zstd", clevel=3, shuffle=2)
+            encoding = {encoding_key: (comp,) if has_zarr_v3 else comp}
 
         save_kwargs = dict(encoding={"var1": encoding})
 
