@@ -2841,9 +2841,12 @@ class ZarrBase(CFEncodedBase):
             import numcodecs
 
             encoding_value: Any
-            compressor = numcodecs.Blosc()
+            if has_zarr_v3 and zarr.config.config["default_zarr_format"] == 3:
+                compressor = zarr.codecs.BloscCodec()
+            else:
+                compressor = numcodecs.Blosc()
             encoding_key = "compressors" if has_zarr_v3 else "compressor"
-            encoding_value = compressor
+            encoding_value = (compressor,) if has_zarr_v3 else compressor
 
             encoding = {"da": {encoding_key: encoding_value}}
             ds.to_zarr(store_target, mode="w", encoding=encoding, **self.version_kwargs)
@@ -5469,7 +5472,7 @@ class TestDataArrayToNetCDF:
 @requires_zarr
 class TestDataArrayToZarr:
     def skip_if_zarr_python_3_and_zip_store(self, store) -> None:
-        if has_zarr_v3 and isinstance(store, zarr.storage.zip.ZipStore):
+        if has_zarr_v3 and isinstance(store, zarr.storage.ZipStore):
             pytest.skip(
                 reason="zarr-python 3.x doesn't support reopening ZipStore with a new mode."
             )
