@@ -5779,7 +5779,7 @@ def test_extract_zarr_variable_encoding() -> None:
     var = xr.Variable("x", [1, 2])
     actual = backends.zarr.extract_zarr_variable_encoding(var)
     assert "chunks" in actual
-    assert actual["chunks"] is None
+    assert actual["chunks"] == ("auto" if has_zarr_v3 else None)
 
     var = xr.Variable("x", [1, 2], encoding={"chunks": (1,)})
     actual = backends.zarr.extract_zarr_variable_encoding(var)
