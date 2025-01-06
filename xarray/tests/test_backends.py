@@ -134,21 +134,21 @@ else:
 
 
 @pytest.fixture(scope="module", params=ZARR_FORMATS)
-def default_zarr_version(request) -> Generator[None, None]:
+def default_zarr_format(request) -> Generator[None, None]:
     if has_zarr_v3:
-        with zarr.config.set(default_zarr_version=request.param):
+        with zarr.config.set(default_zarr_format=request.param):
             yield
     else:
         yield
 
 
 def skip_if_zarr_format_3(reason: str):
-    if has_zarr_v3 and zarr.config["default_zarr_version"] == 3:
+    if has_zarr_v3 and zarr.config["default_zarr_format"] == 3:
         pytest.skip(reason=f"Unsupported with zarr_format=3: {reason}")
 
 
 def skip_if_zarr_format_2(reason: str):
-    if not has_zarr_v3 or (zarr.config["default_zarr_version"] == 2):
+    if not has_zarr_v3 or (zarr.config["default_zarr_format"] == 2):
         pytest.skip(reason=f"Unsupported with zarr_format=2: {reason}")
 
 
@@ -2270,7 +2270,7 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
 
 
 @requires_zarr
-@pytest.mark.usefixtures("default_zarr_version")
+@pytest.mark.usefixtures("default_zarr_format")
 class ZarrBase(CFEncodedBase):
     DIMENSION_KEY = "_ARRAY_DIMENSIONS"
     zarr_version = 2
@@ -2675,40 +2675,35 @@ class ZarrBase(CFEncodedBase):
             assert_identical(original, actual)
 
     def test_compressor_encoding(self) -> None:
+        from numcodecs.blosc import Blosc
+
         original = create_test_data()
         # specify a custom compressor
 
-        if has_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
-            encoding_key = "codecs"
+        if has_zarr_v3 and zarr.config.config["default_zarr_format"] == 3:
+            encoding_key = "compressors"
             # all parameters need to be explicitly specified in order for the comparison to pass below
             encoding = {
+                "serializer": zarr.codecs.BytesCodec(endian="little"),
                 encoding_key: (
-                    zarr.codecs.BytesCodec(endian="little"),
-                    zarr.codecs.BloscCodec(
+                    Blosc(
                         cname="zstd",
                         clevel=3,
                         shuffle="shuffle",
                         typesize=8,
                         blocksize=0,
                     ),
-                )
+                ),
             }
         else:
-            from numcodecs.blosc import Blosc
-
-            encoding_key = "compressor"
-            encoding = {encoding_key: Blosc(cname="zstd", clevel=3, shuffle=2)}
+            encoding_key = "compressors" if has_zarr_v3 else "compressor"
+            encoding = {encoding_key: (Blosc(cname="zstd", clevel=3, shuffle=2),)}
 
         save_kwargs = dict(encoding={"var1": encoding})
 
         with self.roundtrip(original, save_kwargs=save_kwargs) as ds:
             enc = ds["var1"].encoding[encoding_key]
-            if has_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
-                # TODO: figure out a cleaner way to do this comparison
-                codecs = zarr.core.metadata.v3.parse_codecs(enc)
-                assert codecs == encoding[encoding_key]
-            else:
-                assert enc == encoding[encoding_key]
+            assert enc == encoding[encoding_key]
 
     def test_group(self) -> None:
         original = create_test_data()
@@ -2846,14 +2841,9 @@ class ZarrBase(CFEncodedBase):
             import numcodecs
 
             encoding_value: Any
-            if has_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
-                compressor = zarr.codecs.BloscCodec()
-                encoding_key = "codecs"
-                encoding_value = [zarr.codecs.BytesCodec(), compressor]
-            else:
-                compressor = numcodecs.Blosc()
-                encoding_key = "compressor"
-                encoding_value = compressor
+            compressor = numcodecs.Blosc()
+            encoding_key = "compressors" if has_zarr_v3 else "compressor"
+            encoding_value = compressor
 
             encoding = {"da": {encoding_key: encoding_value}}
             ds.to_zarr(store_target, mode="w", encoding=encoding, **self.version_kwargs)
@@ -6092,14 +6082,14 @@ class TestNCZarr:
 
 @requires_netCDF4
 @requires_dask
-@pytest.mark.usefixtures("default_zarr_version")
+@pytest.mark.usefixtures("default_zarr_format")
 def test_pickle_open_mfdataset_dataset():
     with open_example_mfdataset(["bears.nc"]) as ds:
         assert_identical(ds, pickle.loads(pickle.dumps(ds)))
 
 
 @requires_zarr
-@pytest.mark.usefixtures("default_zarr_version")
+@pytest.mark.usefixtures("default_zarr_format")
 def test_zarr_closing_internal_zip_store():
     store_name = "tmp.zarr.zip"
     original_da = DataArray(np.arange(12).reshape((3, 4)))
@@ -6110,7 +6100,7 @@ def test_zarr_closing_internal_zip_store():
 
 
 @requires_zarr
-@pytest.mark.usefixtures("default_zarr_version")
+@pytest.mark.usefixtures("default_zarr_format")
 class TestZarrRegionAuto:
     def test_zarr_region_auto_all(self, tmp_path):
         x = np.arange(0, 50, 10)
@@ -6286,7 +6276,7 @@ class TestZarrRegionAuto:
 
 
 @requires_zarr
-@pytest.mark.usefixtures("default_zarr_version")
+@pytest.mark.usefixtures("default_zarr_format")
 def test_zarr_region(tmp_path):
     x = np.arange(0, 50, 10)
     y = np.arange(0, 20, 2)
@@ -6315,7 +6305,7 @@ def test_zarr_region(tmp_path):
 
 @requires_zarr
 @requires_dask
-@pytest.mark.usefixtures("default_zarr_version")
+@pytest.mark.usefixtures("default_zarr_format")
 def test_zarr_region_chunk_partial(tmp_path):
     """
     Check that writing to partial chunks with `region` fails, assuming `safe_chunks=False`.
@@ -6336,7 +6326,7 @@ def test_zarr_region_chunk_partial(tmp_path):
 
 @requires_zarr
 @requires_dask
-@pytest.mark.usefixtures("default_zarr_version")
+@pytest.mark.usefixtures("default_zarr_format")
 def test_zarr_append_chunk_partial(tmp_path):
     t_coords = np.array([np.datetime64("2020-01-01").astype("datetime64[ns]")])
     data = np.ones((10, 10))
@@ -6374,7 +6364,7 @@ def test_zarr_append_chunk_partial(tmp_path):
 
 @requires_zarr
 @requires_dask
-@pytest.mark.usefixtures("default_zarr_version")
+@pytest.mark.usefixtures("default_zarr_format")
 def test_zarr_region_chunk_partial_offset(tmp_path):
     # https://github.com/pydata/xarray/pull/8459#issuecomment-1819417545
     store = tmp_path / "foo.zarr"
@@ -6394,7 +6384,7 @@ def test_zarr_region_chunk_partial_offset(tmp_path):
 
 @requires_zarr
 @requires_dask
-@pytest.mark.usefixtures("default_zarr_version")
+@pytest.mark.usefixtures("default_zarr_format")
 def test_zarr_safe_chunk_append_dim(tmp_path):
     store = tmp_path / "foo.zarr"
     data = np.ones((20,))
@@ -6445,7 +6435,7 @@ def test_zarr_safe_chunk_append_dim(tmp_path):
 
 @requires_zarr
 @requires_dask
-@pytest.mark.usefixtures("default_zarr_version")
+@pytest.mark.usefixtures("default_zarr_format")
 def test_zarr_safe_chunk_region(tmp_path):
     store = tmp_path / "foo.zarr"
 
