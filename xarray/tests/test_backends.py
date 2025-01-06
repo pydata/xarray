@@ -2439,7 +2439,7 @@ class ZarrBase(CFEncodedBase):
                 with warnings.catch_warnings():
                     warnings.filterwarnings(
                         "ignore",
-                        message=".*Zarr version 3 specification.*",
+                        message=".*Zarr format 3 specification.*",
                         category=UserWarning,
                     )
                     with self.roundtrip(original, open_kwargs=kwargs) as actual:
@@ -2988,7 +2988,7 @@ class ZarrBase(CFEncodedBase):
             with warnings.catch_warnings():
                 warnings.filterwarnings(
                     "ignore",
-                    message=".*Zarr version 3 specification.*",
+                    message=".*Zarr format 3 specification.*",
                     category=UserWarning,
                 )
                 with self.roundtrip(ds, open_kwargs=dict(chunks={"a": 1})) as ds_reload:
