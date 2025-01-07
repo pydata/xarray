@@ -132,7 +132,7 @@ Conversion between non-standard calendar and to/from pandas DatetimeIndexes is
 facilitated with the :py:meth:`xarray.Dataset.convert_calendar` method (also available as
 :py:meth:`xarray.DataArray.convert_calendar`). Here, like elsewhere in xarray, the ``use_cftime``
 argument controls which datetime backend is used in the output. The default (``None``) is to
-use ``pandas`` when possible, i.e. when the calendar is ``standard``/``gregorian`` and dates [starting with 1582-10-15]((https://en.wikipedia.org/wiki/Gregorian_calendar)). There is no such restriction when converting to ``proleptic_gregorian`` calendar.
+use ``pandas`` when possible, i.e. when the calendar is ``standard``/``gregorian`` and dates [starting with 1582-10-15]((https://en.wikipedia.org/wiki/Gregorian_calendar)). There is no such restriction when converting to a ``proleptic_gregorian`` calendar.
 
 .. ipython:: python
 
