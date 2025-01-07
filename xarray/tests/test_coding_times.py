@@ -1330,7 +1330,7 @@ def test_contains_cftime_lazy() -> None:
 
 
 @pytest.mark.parametrize(
-    "timestr, timeunit, dtype, fill_value, use_encoding",
+    "timestr, format, dtype, fill_value, use_encoding",
     [
         ("1677-09-21T00:12:43.145224193", "ns", np.int64, 20, True),
         ("1970-09-21T00:12:44.145224808", "ns", np.float64, 1e30, True),
@@ -1349,15 +1349,15 @@ def test_contains_cftime_lazy() -> None:
 )
 def test_roundtrip_datetime64_nanosecond_precision(
     timestr: str,
-    timeunit: Literal["ns", "us"],
+    format: Literal["ns", "us"],
     dtype: np.typing.DTypeLike,
     fill_value: int | float | None,
     use_encoding: bool,
     time_unit: PDDatetimeUnitOptions,
 ) -> None:
     # test for GH7817
-    time = np.datetime64(timestr, timeunit)
-    times = [np.datetime64("1970-01-01T00:00:00", timeunit), np.datetime64("NaT"), time]
+    time = np.datetime64(timestr, format)
+    times = [np.datetime64("1970-01-01T00:00:00", format), np.datetime64("NaT"), time]
 
     if use_encoding:
         encoding = dict(dtype=dtype, _FillValue=fill_value)
@@ -1365,12 +1365,12 @@ def test_roundtrip_datetime64_nanosecond_precision(
         encoding = {}
 
     var = Variable(["time"], times, encoding=encoding)
-    assert var.dtype == np.dtype(f"=M8[{timeunit}]")
+    assert var.dtype == np.dtype(f"=M8[{format}]")
 
     encoded_var = conventions.encode_cf_variable(var)
     assert (
         encoded_var.attrs["units"]
-        == f"{_numpy_to_netcdf_timeunit(timeunit)} since 1970-01-01 00:00:00"
+        == f"{_numpy_to_netcdf_timeunit(format)} since 1970-01-01 00:00:00"
     )
     assert encoded_var.attrs["calendar"] == "proleptic_gregorian"
     assert encoded_var.data.dtype == dtype
@@ -1379,14 +1379,14 @@ def test_roundtrip_datetime64_nanosecond_precision(
     )
 
     result_unit = (
-        timeunit
-        if np.timedelta64(1, timeunit) <= np.timedelta64(1, time_unit)
+        format
+        if np.timedelta64(1, format) <= np.timedelta64(1, time_unit)
         else time_unit
     )
     assert decoded_var.dtype == np.dtype(f"=M8[{result_unit}]")
     assert (
         decoded_var.encoding["units"]
-        == f"{_numpy_to_netcdf_timeunit(timeunit)} since 1970-01-01 00:00:00"
+        == f"{_numpy_to_netcdf_timeunit(format)} since 1970-01-01 00:00:00"
     )
     assert decoded_var.encoding["dtype"] == dtype
     assert decoded_var.encoding["calendar"] == "proleptic_gregorian"
