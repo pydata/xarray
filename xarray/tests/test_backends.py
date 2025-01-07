@@ -5831,7 +5831,7 @@ def test_open_fsspec() -> None:
     ds0 = ds.copy()
     # pd.to_timedelta returns ns-precision, but the example data is in second precision
     # so we need to fix this
-    ds0["time"] = ds.time + pd.to_timedelta("1 day").as_unit("s")
+    ds0["time"] = ds.time + np.timedelta64(1, "D")
     mm = m.get_mapper("out2.zarr")
     ds0.to_zarr(mm)  # old interface
 

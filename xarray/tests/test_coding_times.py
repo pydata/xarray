@@ -223,7 +223,9 @@ def test_decode_standard_calendar_inside_timestamp_range(
     time = cftime.date2num(times.to_pydatetime(), units, calendar=calendar)
     expected = times.values
     # for cftime we get "us" resolution
-    # ns resolution is handled by cftime, too (OutOfBounds)
+    # ns resolution is handled by cftime due to the reference date
+    # being out of bounds, but the times themselves are
+    # representable with nanosecond resolution.
     actual = decode_cf_datetime(time, units, calendar=calendar, time_unit=time_unit)
     assert actual.dtype == np.dtype(f"=M8[{time_unit}]")
     abs_diff = abs(actual - expected)

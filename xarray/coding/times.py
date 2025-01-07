@@ -541,8 +541,7 @@ def decode_cf_datetime(
             lower = cftype(1677, 9, 21, 0, 12, 43, 145224)
             upper = cftype(2262, 4, 11, 23, 47, 16, 854775)
 
-            # todo: check if test for minimum date is enough
-            if dates_min < border or dates_max < border:
+            if dates_min < border:
                 if _is_standard_calendar(calendar):
                     warnings.warn(
                         "Unable to decode time axis into full "

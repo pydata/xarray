@@ -216,9 +216,8 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
     def test_index_0d_timedelta64(self):
         td = timedelta(hours=1)
         # todo: discussion needed
-        td64 = np.timedelta64(td, "ns")
-        x = self.cls(["x"], [td64])
-        self._assertIndexedLikeNDArray(x, td64, np.dtype("timedelta64[ns]"))
+        x = self.cls(["x"], [np.timedelta64(td)])
+        self._assertIndexedLikeNDArray(x, np.timedelta64(td), np.dtype("timedelta64[us]"))
 
         x = self.cls(["x"], pd.to_timedelta([td]))
         self._assertIndexedLikeNDArray(x, np.timedelta64(td), "timedelta64[ns]")
@@ -1128,7 +1127,7 @@ class TestVariable(VariableSubclassobjects):
         # todo: check, if this test is OK
         v = Variable([], pd.Timestamp("2000-01-01"))
         assert v.dtype == np.dtype("datetime64[ns]")
-        assert v.values == np.datetime64("2000-01-01", "s")
+        assert v.values == np.datetime64("2000-01-01", "ns")
 
     @pytest.mark.filterwarnings("ignore:Converting non-default")
     @pytest.mark.parametrize(
@@ -2677,7 +2676,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         assert np.dtype("datetime64[ns]") == actual.dtype
         assert expected is source_ndarray(np.asarray(actual))
 
-        expected = np.datetime64("2000-01-01", "us")
+        expected = np.datetime64("2000-01-01", "ns")
         actual = as_compatible_data(datetime(2000, 1, 1))
         assert np.asarray(expected) == actual
         assert np.ndarray is type(actual)
@@ -3016,7 +3015,7 @@ class TestNumpyCoercion:
     ],
     ids=lambda x: f"{x}",
 )
-def test_datetime_conversion_warning(values, unit) -> None:
+def test_datetime_conversion(values, unit) -> None:
     # todo: needs discussion
     # todo: check, if this test is OK
     dims = ["time"] if isinstance(values, np.ndarray | pd.Index | pd.Series) else []
@@ -3087,7 +3086,7 @@ def test_pandas_two_only_datetime_conversion_warnings(
     ],
     ids=lambda x: f"{x}",
 )
-def test_timedelta_conversion_warning(values, unit) -> None:
+def test_timedelta_conversion(values, unit) -> None:
     dims = ["time"] if isinstance(values, np.ndarray | pd.Index) else []
     var = Variable(dims, values)
     assert var.dtype == np.dtype(f"timedelta64[{unit}]")
