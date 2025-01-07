@@ -1238,7 +1238,11 @@ def test_to_datetimeindex(calendar, unsafe):
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
 def test_to_datetimeindex_out_of_range(calendar):
     index = xr.cftime_range("0001", periods=5, calendar=calendar)
-    # todo: needs discussion, do we need this test?
+    # todo: suggestion from code review:
+    #  - still warn when converting from a non-standard calendar
+    #  to a proleptic Gregorian calendar
+    #  - also warn when converting from a Gregorian calendar
+    #  to a proleptic Gregorian calendar when dates fall before the reform
     if calendar in _NON_STANDARD_CALENDARS:
         with pytest.warns(RuntimeWarning, match="non-standard"):
             index.to_datetimeindex()

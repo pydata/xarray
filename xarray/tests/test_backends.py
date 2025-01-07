@@ -633,7 +633,10 @@ class DatasetIOBase:
                     assert actual.t.encoding["calendar"] == expected_calendar
 
     def test_roundtrip_timedelta_data(self) -> None:
-        # todo: check, if default unit "s" is enough
+        # todo: suggestion from review:
+        #  roundtrip large microsecond or coarser resolution timedeltas,
+        #  though we cannot test that until we fix the timedelta decoding
+        #  to support large ranges
         time_deltas = pd.to_timedelta(["1h", "2h", "NaT"]).as_unit("s")  # type: ignore[arg-type, unused-ignore]
         expected = Dataset({"td": ("td", time_deltas), "td0": time_deltas[0]})
         with self.roundtrip(expected) as actual:
@@ -5627,16 +5630,13 @@ def test_use_cftime_standard_calendar_default_in_range(calendar) -> None:
 @requires_cftime
 @requires_scipy_or_netCDF4
 @pytest.mark.parametrize("calendar", ["standard", "gregorian"])
-@pytest.mark.parametrize("units_year", [1500, 1582])
-def test_use_cftime_standard_calendar_default_out_of_range(
-    calendar, units_year
-) -> None:
+def test_use_cftime_standard_calendar_default_out_of_range(calendar) -> None:
     # todo: check, if we still need to test for two dates
     import cftime
 
     x = [0, 1]
     time = [0, 720]
-    units = f"days since {units_year}-01-01"
+    units = "days since 1582-01-01"
     original = DataArray(x, [("time", time)], name="x").to_dataset()
     for v in ["x", "time"]:
         original[v].attrs["units"] = units
@@ -5722,12 +5722,10 @@ def test_use_cftime_false_standard_calendar_in_range(calendar) -> None:
 
 @requires_scipy_or_netCDF4
 @pytest.mark.parametrize("calendar", ["standard", "gregorian"])
-@pytest.mark.parametrize("units_year", [1500, 1582])
-def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year) -> None:
-    # todo: check, if we still need to check for two dates
+def test_use_cftime_false_standard_calendar_out_of_range(calendar) -> None:
     x = [0, 1]
     time = [0, 720]
-    units = f"days since {units_year}-01-01"
+    units = "days since 1582-01-01"
     original = DataArray(x, [("time", time)], name="x").to_dataset()
     for v in ["x", "time"]:
         original[v].attrs["units"] = units

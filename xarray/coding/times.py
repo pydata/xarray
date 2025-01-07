@@ -543,22 +543,22 @@ def decode_cf_datetime(
 
             if dates_min < border:
                 if _is_standard_calendar(calendar):
-                    warnings.warn(
+                    emit_user_level_warning(
                         "Unable to decode time axis into full "
                         "numpy.datetime64 objects, continuing using "
-                        "cftime.datetime objects instead, reason: dates out "
-                        "of range",
+                        "cftime.datetime objects instead, reason: dates prior "
+                        "reform date (1582-10-15). To silence this warning specify "
+                        "'use_cftime=True'.",
                         SerializationWarning,
-                        stacklevel=3,
                     )
             elif time_unit == "ns" and (dates_min < lower or dates_max > upper):
-                warnings.warn(
+                emit_user_level_warning(
                     "Unable to decode time axis into full "
-                    "numpy.datetime64 objects, continuing using "
+                    "numpy.datetime64[ns] objects, continuing using "
                     "cftime.datetime objects instead, reason: dates out "
-                    "of range",
+                    "of range. To silence this warning use a coarser resolution "
+                    "'time_unit' or specify 'use_cftime=True'.",
                     SerializationWarning,
-                    stacklevel=3,
                 )
             else:
                 if _is_standard_calendar(calendar):
@@ -1114,7 +1114,6 @@ def _eagerly_encode_cf_timedelta(
     time_deltas = pd.TimedeltaIndex(ravel(timedeltas))
     # get resolution of TimedeltaIndex and align time_delta
     deltas_unit = time_deltas.unit
-    # todo: check, if this works in any case
     time_delta = time_delta.astype(f"=m8[{deltas_unit}]")
 
     # retrieve needed units to faithfully encode to int64
