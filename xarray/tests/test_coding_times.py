@@ -172,12 +172,18 @@ def test_decode_cf_datetime_overflow(time_unit: PDDatetimeUnitOptions) -> None:
     # date after 2262 and before 1678
     days = (-117710, 95795)
     expected = (datetime(1677, 9, 20), datetime(2262, 4, 12))
-
     for i, day in enumerate(days):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "Unable to decode time axis")
-            result = decode_cf_datetime(day, units, time_unit=time_unit)
+            result = decode_cf_datetime(
+                day, units, calendar="standard", time_unit=time_unit
+            )
         assert result == expected[i]
+        # additional check to see if type/dtypes are correct
+        if time_unit == "ns":
+            assert isinstance(result.item(), datetime)
+        else:
+            assert result.dtype == np.dtype(f"=M8[{time_unit}]")
 
 
 def test_decode_cf_datetime_non_standard_units() -> None:
