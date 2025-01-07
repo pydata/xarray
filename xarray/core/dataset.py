@@ -673,7 +673,7 @@ class Dataset(
         lat             (loc) float64 16B 42.25 42.21
       * instrument      (instrument) <U8 96B 'manufac1' 'manufac2' 'manufac3'
       * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
-        reference_time  datetime64[s] 8B 2014-09-05
+        reference_time  datetime64[ns] 8B 2014-09-05
     Dimensions without coordinates: loc
     Data variables:
         temperature     (loc, instrument, time) float64 192B 29.11 18.2 ... 9.063
@@ -692,7 +692,7 @@ class Dataset(
         lat             float64 8B 42.21
         instrument      <U8 32B 'manufac3'
         time            datetime64[ns] 8B 2014-09-06
-        reference_time  datetime64[s] 8B 2014-09-05
+        reference_time  datetime64[ns] 8B 2014-09-05
     Data variables:
         temperature     float64 8B -5.424
         precipitation   float64 8B 9.884
@@ -2921,19 +2921,11 @@ class Dataset(
         """Variant of _validate_indexers to be used for interpolation"""
         for k, v in self._validate_indexers(indexers):
             if isinstance(v, Variable):
-                if v.ndim == 1:
-                    yield k, v.to_index_variable()
-                else:
-                    yield k, v
-            elif isinstance(v, int):
+                yield k, v
+            elif is_scalar(v):
                 yield k, Variable((), v, attrs=self.coords[k].attrs)
             elif isinstance(v, np.ndarray):
-                if v.ndim == 0:
-                    yield k, Variable((), v, attrs=self.coords[k].attrs)
-                elif v.ndim == 1:
-                    yield k, IndexVariable((k,), v, attrs=self.coords[k].attrs)
-                else:
-                    raise AssertionError()  # Already tested by _validate_indexers
+                yield k, Variable(dims=(k,), data=v, attrs=self.coords[k].attrs)
             else:
                 raise TypeError(type(v))
 
@@ -4127,18 +4119,6 @@ class Dataset(
 
         coords = either_dict_or_kwargs(coords, coords_kwargs, "interp")
         indexers = dict(self._validate_interp_indexers(coords))
-
-        if coords:
-            # This avoids broadcasting over coordinates that are both in
-            # the original array AND in the indexing array. It essentially
-            # forces interpolation along the shared coordinates.
-            sdims = (
-                set(self.dims)
-                .intersection(*[set(nx.dims) for nx in indexers.values()])
-                .difference(coords.keys())
-            )
-            indexers.update({d: self.variables[d] for d in sdims})
-
         obj = self if assume_sorted else self.sortby(list(coords))
 
         def maybe_variable(obj, k):
@@ -4169,31 +4149,32 @@ class Dataset(
             for k, v in indexers.items()
         }
 
-        # optimization: subset to coordinate range of the target index
-        if method in ["linear", "nearest"]:
-            for k, v in validated_indexers.items():
-                obj, newidx = missing._localize(obj, {k: v})
-                validated_indexers[k] = newidx[k]
-
-        # optimization: create dask coordinate arrays once per Dataset
-        # rather than once per Variable when dask.array.unify_chunks is called later
-        # GH4739
-        if obj.__dask_graph__():
+        has_chunked_array = bool(
+            any(is_chunked_array(v._data) for v in obj._variables.values())
+        )
+        if has_chunked_array:
+            # optimization: subset to coordinate range of the target index
+            if method in ["linear", "nearest"]:
+                for k, v in validated_indexers.items():
+                    obj, newidx = missing._localize(obj, {k: v})
+                    validated_indexers[k] = newidx[k]
+            # optimization: create dask coordinate arrays once per Dataset
+            # rather than once per Variable when dask.array.unify_chunks is called later
+            # GH4739
             dask_indexers = {
                 k: (index.to_base_variable().chunk(), dest.to_base_variable().chunk())
                 for k, (index, dest) in validated_indexers.items()
             }
 
         variables: dict[Hashable, Variable] = {}
-        reindex: bool = False
+        reindex_vars: list[Hashable] = []
         for name, var in obj._variables.items():
             if name in indexers:
                 continue
 
-            if is_duck_dask_array(var.data):
-                use_indexers = dask_indexers
-            else:
-                use_indexers = validated_indexers
+            use_indexers = (
+                dask_indexers if is_duck_dask_array(var.data) else validated_indexers
+            )
 
             dtype_kind = var.dtype.kind
             if dtype_kind in "uifc":
@@ -4207,19 +4188,20 @@ class Dataset(
                 # booleans and objects and retains the dtype but inside
                 # this loop there might be some duplicate code that slows it
                 # down, therefore collect these signals and run it later:
-                reindex = True
+                reindex_vars.append(name)
             elif all(d not in indexers for d in var.dims):
                 # For anything else we can only keep variables if they
                 # are not dependent on any coords that are being
                 # interpolated along:
                 variables[name] = var
 
-        if reindex:
-            reindex_indexers = {
+        if reindex_vars and (
+            reindex_indexers := {
                 k: v for k, (_, v) in validated_indexers.items() if v.dims == (k,)
             }
+        ):
             reindexed = alignment.reindex(
-                obj,
+                obj[reindex_vars],
                 indexers=reindex_indexers,
                 method=method_non_numeric,
                 exclude_vars=variables.keys(),
@@ -8911,7 +8893,7 @@ class Dataset(
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
           * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
-            reference_time  datetime64[s] 8B 2014-09-05
+            reference_time  datetime64[ns] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
             precipitation   (x, y, time) float64 96B 5.68 9.256 0.7104 ... 4.615 7.805
@@ -8926,7 +8908,7 @@ class Dataset(
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
           * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
-            reference_time  datetime64[s] 8B 2014-09-05
+            reference_time  datetime64[ns] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
             temperature     (x, y, time) float64 96B 29.11 18.2 22.83 ... 16.15 26.63

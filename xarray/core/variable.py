@@ -6,7 +6,6 @@ import math
 import numbers
 import warnings
 from collections.abc import Callable, Hashable, Mapping, Sequence
-from datetime import datetime, timedelta
 from functools import partial
 from types import EllipsisType
 from typing import TYPE_CHECKING, Any, NoReturn, cast
@@ -76,14 +75,6 @@ if TYPE_CHECKING:
         T_VarPadConstantValues,
     )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
-
-
-NON_DEFAULTPRECISION_WARNING = (
-    "Converting non-default precision {case} values to default precision. "
-    "This warning is caused by passing non-default np.datetime64 or "
-    "np.timedelta64 values to the DataArray or Variable constructor; it can be "
-    "silenced by converting the values to default precision {res!r} ahead of time."
-)
 
 
 class MissingDimensionsError(ValueError):
@@ -204,8 +195,13 @@ def _maybe_wrap_data(data):
 
 
 def _possibly_convert_objects(values):
-    """Convert arrays of datetime.datetime and datetime.timedelta objects into
-    datetime64 and timedelta64, according to the pandas convention.
+    """Convert object arrays into datetime64 and timedelta64 according
+    to the pandas convention.
+
+    * datetime.datetime
+    * datetime.timedelta
+    * pd.Timestamp
+    * pd.Timedelta
     """
     as_series = pd.Series(values.ravel(), copy=False)
     result = np.asarray(as_series).reshape(values.shape)
@@ -251,14 +247,6 @@ def as_compatible_data(
 
     if isinstance(data, tuple):
         data = utils.to_0d_object_array(data)
-
-    if isinstance(data, pd.Timestamp):
-        data = data.to_numpy()
-
-    if isinstance(data, datetime):
-        data = np.datetime64(data)
-    if isinstance(data, timedelta):
-        data = np.timedelta64(data)
 
     # we don't want nested self-described arrays
     if isinstance(data, pd.Series | pd.DataFrame):

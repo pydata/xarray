@@ -52,7 +52,6 @@ Creating a dataset
 
    Dataset
    decode_cf
-   CFDatetimeCoder
 
 Attributes
 ----------
@@ -627,12 +626,14 @@ Attributes relating to the recursive tree-like structure of a ``DataTree``.
    DataTree.depth
    DataTree.width
    DataTree.subtree
+   DataTree.subtree_with_keys
    DataTree.descendants
    DataTree.siblings
    DataTree.lineage
    DataTree.parents
    DataTree.ancestors
    DataTree.groups
+   DataTree.xindexes
 
 Data Contents
 -------------
@@ -646,6 +647,7 @@ This interface echoes that of ``xarray.Dataset``.
    DataTree.dims
    DataTree.sizes
    DataTree.data_vars
+   DataTree.ds
    DataTree.coords
    DataTree.attrs
    DataTree.encoding
@@ -1093,6 +1095,17 @@ DataTree methods
 
 ..    Missing:
 ..    ``open_mfdatatree``
+
+Encoding/Decoding
+=================
+
+Coder objects
+-------------
+
+.. autosummary::
+   :toctree: generated/
+
+   coders.CFDatetimeCoder
 
 Coordinates objects
 ===================

@@ -2199,7 +2199,6 @@ class TestDataArrayResample:
             assert_allclose(expected, actual, rtol=1e-16)
 
     @requires_scipy
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_upsample_interpolate_bug_2197(self) -> None:
         dates = pd.date_range("2007-02-01", "2007-03-01", freq="D", unit="s")
         da = xr.DataArray(np.arange(len(dates)), [("time", dates)])
