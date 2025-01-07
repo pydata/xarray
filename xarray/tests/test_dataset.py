@@ -500,7 +500,6 @@ class TestDataset:
         actual = Dataset({"x": [5, 6, 7, 8, 9]})
         assert_identical(expected, actual)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_constructor_0d(self) -> None:
         expected = Dataset({"x": ([], 1)})
         for arg in [1, np.array(1), expected["x"]]:
@@ -6071,7 +6070,6 @@ class TestDataset:
         expected = ds + other.reindex_like(ds)
         assert_identical(expected, actual)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_dataset_math_errors(self) -> None:
         ds = self.make_example_math_dataset()
 

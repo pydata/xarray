@@ -214,7 +214,6 @@ class TestEncodeCFVariable:
         vars, attrs = conventions.encode_dataset_coordinates(ds)
         assert attrs["coordinates"] == "bar baz"
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_emit_coordinates_attribute_in_attrs(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
@@ -232,7 +231,6 @@ class TestEncodeCFVariable:
         assert enc["b"].attrs.get("coordinates") == "t"
         assert "coordinates" not in enc["b"].encoding
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_emit_coordinates_attribute_in_encoding(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},

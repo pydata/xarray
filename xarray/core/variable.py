@@ -78,14 +78,6 @@ if TYPE_CHECKING:
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
-NON_DEFAULTPRECISION_WARNING = (
-    "Converting non-default precision {case} values to default precision. "
-    "This warning is caused by passing non-default np.datetime64 or "
-    "np.timedelta64 values to the DataArray or Variable constructor; it can be "
-    "silenced by converting the values to default precision {res!r} ahead of time."
-)
-
-
 class MissingDimensionsError(ValueError):
     """Error class used when we can't safely guess a dimension name."""
 

@@ -200,7 +200,6 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         x = self.cls(["x"], [value])
         self._assertIndexedLikeNDArray(x, value, dtype)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_index_0d_datetime(self):
         d = datetime(2000, 1, 1)
         x = self.cls(["x"], [d])
@@ -212,7 +211,6 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         x = self.cls(["x"], pd.DatetimeIndex([d]))
         self._assertIndexedLikeNDArray(x, np.datetime64(d), "datetime64[ns]")
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_index_0d_timedelta64(self):
         td = timedelta(hours=1)
         # todo: discussion needed
@@ -255,7 +253,6 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         assert_array_equal(x[0].data, listarray.squeeze())
         assert_array_equal(x.squeeze().data, listarray.squeeze())
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_index_and_concat_datetime(self):
         # regression test for #125
         date_range = pd.date_range("2011-09-01", periods=10)
@@ -278,7 +275,6 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
 
     dt64_data = pd.date_range("2000-01-01", periods=3)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     @pytest.mark.parametrize(
         "values, unit",
         [
@@ -297,7 +293,6 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
 
     td64_data = pd.timedelta_range(start=0, periods=3)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     @pytest.mark.parametrize(
         "values, unit",
         [
@@ -319,13 +314,11 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         actual = self.cls("x", data)
         assert actual.dtype == data.dtype
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_datetime64_valid_range(self):
         # todo: test still needed?
         data = np.datetime64("1250-01-01", "us")
         self.cls(["t"], [data])
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_timedelta64_valid_range(self):
         # todo: test still needed?
         data = np.timedelta64("200000", "D")
@@ -1082,7 +1075,6 @@ class TestVariable(VariableSubclassobjects):
         v = IndexVariable("x", np.arange(5))
         assert 2 == v.searchsorted(2)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     @pytest.mark.parametrize(
         "values, unit",
         [
@@ -1098,7 +1090,6 @@ class TestVariable(VariableSubclassobjects):
         assert np.issubdtype(v.values, "datetime64")
         assert v.values.dtype == np.dtype(f"datetime64[{unit}]")
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     @pytest.mark.parametrize(
         "values, unit",
         [
@@ -1131,7 +1122,6 @@ class TestVariable(VariableSubclassobjects):
         assert v.dtype == np.dtype("datetime64[ns]")
         assert v.values == np.datetime64("2000-01-01", "ns")
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     @pytest.mark.parametrize(
         "values, unit", [(pd.to_timedelta("1s"), "ns"), (np.timedelta64(1, "s"), "s")]
     )
@@ -1579,7 +1569,6 @@ class TestVariable(VariableSubclassobjects):
             v.transpose(..., "not_a_dim", missing_dims="warn")
             assert_identical(expected_ell, actual)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_transpose_0d(self):
         for value in [
             3.5,
@@ -2656,7 +2645,6 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         assert_array_equal(expected, actual)
         assert actual.dtype == expected.dtype
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_datetime(self):
         # todo: check, if this test is OK
         expected = np.datetime64("2000-01-01")
