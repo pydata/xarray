@@ -105,7 +105,6 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
     lon = [0, 1, 2]
     nt1 = 3
     nt2 = 2
-    # todo: check, if all changes below are correct
     time1 = pd.date_range("2000-01-01", periods=nt1).as_unit("ns")
     time2 = pd.date_range("2000-02-01", periods=nt2).as_unit("ns")
     string_var = np.array(["a", "bc", "def"], dtype=object)

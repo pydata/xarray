@@ -3063,6 +3063,7 @@ def test_pandas_two_only_datetime_conversion_warnings(
     ids=lambda x: f"{x}",
 )
 def test_timedelta_conversion(values, unit) -> None:
+    # todo: check for redundancy
     dims = ["time"] if isinstance(values, np.ndarray | pd.Index) else []
     var = Variable(dims, values)
     assert var.dtype == np.dtype(f"timedelta64[{unit}]")
