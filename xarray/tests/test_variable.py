@@ -217,7 +217,9 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         td = timedelta(hours=1)
         # todo: discussion needed
         x = self.cls(["x"], [np.timedelta64(td)])
-        self._assertIndexedLikeNDArray(x, np.timedelta64(td), np.dtype("timedelta64[us]"))
+        self._assertIndexedLikeNDArray(
+            x, np.timedelta64(td), np.dtype("timedelta64[us]")
+        )
 
         x = self.cls(["x"], pd.to_timedelta([td]))
         self._assertIndexedLikeNDArray(x, np.timedelta64(td), "timedelta64[ns]")
