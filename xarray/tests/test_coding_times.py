@@ -626,9 +626,8 @@ def test_infer_cftime_datetime_units(calendar, date_args, expected) -> None:
     ],
 )
 def test_cf_timedelta(timedeltas, units, numbers) -> None:
-    # todo: check, if this test is OK
     if timedeltas == "NaT":
-        timedeltas = np.timedelta64("NaT", "s")
+        timedeltas = np.timedelta64("NaT", "ns")
     else:
         timedeltas = to_timedelta_unboxed(timedeltas)
     numbers = np.array(numbers)
@@ -644,7 +643,7 @@ def test_cf_timedelta(timedeltas, units, numbers) -> None:
         assert_array_equal(expected, actual)
         assert expected.dtype == actual.dtype
 
-    expected = np.timedelta64("NaT", "s")
+    expected = np.timedelta64("NaT", "ns")
     actual = decode_cf_timedelta(np.array(np.nan), "days")
     assert_array_equal(expected, actual)
     assert expected.dtype == actual.dtype
