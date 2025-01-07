@@ -1266,7 +1266,7 @@ def test_multiindex():
 @pytest.mark.parametrize("freq", ["3663s", "33min", "2h"])
 @pytest.mark.parametrize("method", ["floor", "ceil", "round"])
 def test_rounding_methods_against_datetimeindex(freq, method):
-    # todo: check, if setting to "us" is enough
+    # for now unit="us" seems good enough
     expected = pd.date_range("2000-01-02T01:03:51", periods=10, freq="1777s", unit="us")
     expected = getattr(expected, method)(freq)
     result = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777s")
