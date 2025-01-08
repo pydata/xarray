@@ -1483,9 +1483,10 @@ def open_mfdataset(
            those corresponding to other dimensions.
          * list of str: The listed coordinate variables will be concatenated,
            in addition the "minimal" coordinates.
-    parallel : bool, default: False
-        If True, the open and preprocess steps of this function will be
-        performed in parallel using ``dask.delayed``. Default is False.
+    parallel : 'dask', 'lithops', or False
+        Specify whether the open and preprocess steps of this function will be
+        performed in parallel using ``dask.delayed``, in parallel using ``lithops.map``, or in serial.
+        Default is False. Passing True is now a deprecated alias for passing 'dask'.
     join : {"outer", "inner", "left", "right", "exact", "override"}, default: "outer"
         String indicating how to combine differing indexes
         (excluding concat_dim) in objects
