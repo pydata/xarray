@@ -80,6 +80,7 @@ from xarray.tests import (
     requires_h5netcdf_1_4_0_or_above,
     requires_h5netcdf_ros3,
     requires_iris,
+    requires_lithops,
     requires_netcdf,
     requires_netCDF4,
     requires_netCDF4_1_6_2_or_above,
@@ -4444,8 +4445,10 @@ class TestParallel:
                         parallel=True,
                     )
 
-    #@requires_lithops
+    @requires_lithops
     def test_lithops_parallel(self) -> None:
+        # default configuration of lithops will use local executor
+
         original = Dataset({"foo": ("x", np.random.randn(10))})
         datasets = [original.isel(x=slice(5)), original.isel(x=slice(5, 10))]
         with create_tmp_file() as tmp1:
