@@ -33,6 +33,7 @@ from xarray.backends.common import (
     _normalize_path,
 )
 from xarray.backends.locks import _get_scheduler
+from xarray.coders import CFDatetimeCoder
 from xarray.core import indexing
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
@@ -54,7 +55,6 @@ if TYPE_CHECKING:
         from dask.delayed import Delayed
     except ImportError:
         Delayed = None  # type: ignore[assignment, misc]
-    from io import BufferedIOBase
 
     from xarray.backends.common import BackendEntrypoint
     from xarray.core.types import (
@@ -62,6 +62,7 @@ if TYPE_CHECKING:
         CompatOptions,
         JoinOptions,
         NestedSequence,
+        ReadBuffer,
         T_Chunks,
     )
 
@@ -155,13 +156,13 @@ def _validate_dataset_names(dataset: Dataset) -> None:
                 raise ValueError(
                     f"Invalid name {name!r} for DataArray or Dataset key: "
                     "string must be length 1 or greater for "
-                    "serialization to netCDF files"
+                    "serialization to netCDF or zarr files"
                 )
         elif name is not None:
             raise TypeError(
                 f"Invalid name {name!r} for DataArray or Dataset key: "
                 "must be either a string or None for serialization to netCDF "
-                "files"
+                "or zarr files"
             )
 
     for k in dataset.variables:
@@ -474,14 +475,17 @@ def _datatree_from_backend_datatree(
 
 
 def open_dataset(
-    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool | Mapping[str, bool] | None = None,
+    decode_times: bool
+    | CFDatetimeCoder
+    | Mapping[str, bool | CFDatetimeCoder]
+    | None = None,
     decode_timedelta: bool | Mapping[str, bool] | None = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
@@ -543,9 +547,10 @@ def open_dataset(
         be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
-    decode_times : bool or dict-like, optional
+    decode_times : bool, CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, leave them encoded as numbers.
+        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them
+        encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -569,6 +574,10 @@ def open_dataset(
         raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
+
+        .. deprecated:: 2025.01.1
+           Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
+
     concat_characters : bool or dict-like, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -691,14 +700,17 @@ def open_dataset(
 
 
 def open_dataarray(
-    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     *,
     engine: T_Engine | None = None,
     chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
-    decode_times: bool | None = None,
+    decode_times: bool
+    | CFDatetimeCoder
+    | Mapping[str, bool | CFDatetimeCoder]
+    | None = None,
     decode_timedelta: bool | None = None,
     use_cftime: bool | None = None,
     concat_characters: bool | None = None,
@@ -761,9 +773,11 @@ def open_dataarray(
         `missing_value` attribute contains multiple values a warning will be
         issued and all array values matching one of the multiple values will
         be replaced by NA. This keyword may not be supported by all the backends.
-    decode_times : bool, optional
+    decode_times : bool, CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, leave them encoded as numbers.
+        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them encoded as numbers.
+        Pass a mapping, e.g. ``{"my_variable": False}``,
+        to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
     decode_timedelta : bool, optional
         If True, decode variables and coordinates with time units in
@@ -781,6 +795,10 @@ def open_dataarray(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error. This keyword may not be supported by all the backends.
+
+        .. deprecated:: 2025.01.1
+           Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
+
     concat_characters : bool, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -896,14 +914,17 @@ def open_dataarray(
 
 
 def open_datatree(
-    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool | Mapping[str, bool] | None = None,
+    decode_times: bool
+    | CFDatetimeCoder
+    | Mapping[str, bool | CFDatetimeCoder]
+    | None = None,
     decode_timedelta: bool | Mapping[str, bool] | None = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
@@ -961,9 +982,9 @@ def open_datatree(
         be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
-    decode_times : bool or dict-like, optional
+    decode_times : bool, CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, leave them encoded as numbers.
+        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -987,6 +1008,10 @@ def open_datatree(
         raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
+
+        .. deprecated:: 2025.01.1
+           Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
+
     concat_characters : bool or dict-like, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -1111,14 +1136,17 @@ def open_datatree(
 
 
 def open_groups(
-    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool | Mapping[str, bool] | None = None,
+    decode_times: bool
+    | CFDatetimeCoder
+    | Mapping[str, bool | CFDatetimeCoder]
+    | None = None,
     decode_timedelta: bool | Mapping[str, bool] | None = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
@@ -1137,10 +1165,6 @@ def open_groups(
     and cannot be opened directly with ``open_datatree``. It is encouraged to use this function to inspect your data,
     then make the necessary changes to make the structure coercible to a `DataTree` object before calling `DataTree.from_dict()` and proceeding with your analysis.
 
-    Parameters
-    ----------
-    filename_or_obj : str, Path, file-like, or DataStore
-        Strings and Path objects are interpreted as a path to a netCDF file.
     Parameters
     ----------
     filename_or_obj : str, Path, file-like, or DataStore
@@ -1184,9 +1208,9 @@ def open_groups(
         be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
-    decode_times : bool or dict-like, optional
+    decode_times : bool, CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, leave them encoded as numbers.
+        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -1210,6 +1234,10 @@ def open_groups(
         raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
+
+        .. deprecated:: 2025.01.1
+           Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
+
     concat_characters : bool or dict-like, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -1338,7 +1366,10 @@ def open_groups(
 
 
 def open_mfdataset(
-    paths: str | os.PathLike | NestedSequence[str | os.PathLike],
+    paths: str
+    | os.PathLike
+    | ReadBuffer
+    | NestedSequence[str | os.PathLike | ReadBuffer],
     chunks: T_Chunks | None = None,
     concat_dim: (
         str
@@ -1541,7 +1572,7 @@ def open_mfdataset(
     if not paths:
         raise OSError("no files to open")
 
-    paths1d: list[str]
+    paths1d: list[str | ReadBuffer]
     if combine == "nested":
         if isinstance(concat_dim, str | DataArray) or concat_dim is None:
             concat_dim = [concat_dim]  # type: ignore[assignment]

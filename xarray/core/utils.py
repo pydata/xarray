@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import importlib
 import inspect
 import io
 import itertools
@@ -64,7 +65,7 @@ from collections.abc import (
 )
 from enum import Enum
 from pathlib import Path
-from types import EllipsisType
+from types import EllipsisType, ModuleType
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeGuard, TypeVar, overload
 
 import numpy as np
@@ -644,7 +645,7 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
         try:
             with open(path, "rb") as f:
                 return read_magic_number_from_file(f, count)
-        except (FileNotFoundError, TypeError):
+        except (FileNotFoundError, IsADirectoryError, TypeError):
             pass
     return None
 
@@ -1192,6 +1193,60 @@ def _resolve_doubly_passed_kwarg(
         )
 
     return kwargs_dict
+
+
+def attempt_import(module: str) -> ModuleType:
+    """Import an optional dependency, and raise an informative error on failure.
+
+    Parameters
+    ----------
+    module : str
+        Module to import. For example, ``'zarr'`` or ``'matplotlib.pyplot'``.
+
+    Returns
+    -------
+    module : ModuleType
+        The Imported module.
+
+    Raises
+    ------
+    ImportError
+        If the module could not be imported.
+
+    Notes
+    -----
+    Static type checkers will not be able to infer the type of the returned module,
+    so it is recommended to precede this function with a direct import of the module,
+    guarded by an ``if TYPE_CHECKING`` block, to preserve type checker functionality.
+    See the examples section below for a demonstration.
+
+    Examples
+    --------
+    >>> from xarray.core.utils import attempt_import
+    >>> if TYPE_CHECKING:
+    ...     import zarr
+    ... else:
+    ...     zarr = attempt_import("zarr")
+    ...
+    """
+    install_mapping = dict(nc_time_axis="nc-time-axis")
+    package_purpose = dict(
+        zarr="for working with Zarr stores",
+        cftime="for working with non-standard calendars",
+        matplotlib="for plotting",
+        hypothesis="for the `xarray.testing.strategies` submodule",
+    )
+    package_name = module.split(".")[0]  # e.g. "zarr" from "zarr.storage"
+    install_name = install_mapping.get(package_name, package_name)
+    reason = package_purpose.get(package_name, "")
+    try:
+        return importlib.import_module(module)
+    except (ImportError, ModuleNotFoundError) as e:
+        raise ImportError(
+            f"The {install_name} package is required {reason}"
+            " but could not be imported."
+            " Please install it with your package manager (e.g. conda or pip)."
+        ) from e
 
 
 _DEFAULT_NAME = ReprObject("<default-name>")

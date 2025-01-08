@@ -33,6 +33,7 @@ from xarray.tests import (
     assert_no_warnings,
     requires_cartopy,
     requires_cftime,
+    requires_dask,
     requires_matplotlib,
     requires_seaborn,
 )
@@ -89,19 +90,19 @@ def text_in_fig() -> set[str]:
     """
     Return the set of all text in the figure
     """
-    return {t.get_text() for t in plt.gcf().findobj(mpl.text.Text)}  # type: ignore[attr-defined] # mpl error?
+    return {t.get_text() for t in plt.gcf().findobj(mpl.text.Text)}
 
 
 def find_possible_colorbars() -> list[mpl.collections.QuadMesh]:
     # nb. this function also matches meshes from pcolormesh
-    return plt.gcf().findobj(mpl.collections.QuadMesh)  # type: ignore[return-value] # mpl error?
+    return plt.gcf().findobj(mpl.collections.QuadMesh)
 
 
 def substring_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
     """
     Return True if a substring is found anywhere in an axes
     """
-    alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}  # type: ignore[attr-defined] # mpl error?
+    alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}
     return any(substring in txt for txt in alltxt)
 
 
@@ -109,7 +110,7 @@ def substring_not_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
     """
     Return True if a substring is not found anywhere in an axes
     """
-    alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}  # type: ignore[attr-defined] # mpl error?
+    alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}
     check = [(substring not in txt) for txt in alltxt]
     return all(check)
 
@@ -121,7 +122,7 @@ def property_in_axes_text(
     Return True if the specified text in an axes
     has the property assigned to property_str
     """
-    alltxt: list[mpl.text.Text] = ax.findobj(mpl.text.Text)  # type: ignore[assignment]
+    alltxt: list[mpl.text.Text] = ax.findobj(mpl.text.Text)
     return all(
         plt.getp(t, property) == property_str
         for t in alltxt
@@ -1805,8 +1806,9 @@ class TestContour(Common2dMixin, PlotTestCase):
         artist = self.darray.plot.contour(levels=levels, colors=["k", "r", "w", "b"])
         cmap = artist.cmap
         assert isinstance(cmap, mpl.colors.ListedColormap)
-        colors = cmap.colors
-        assert isinstance(colors, list)
+        # non-optimal typing in matplotlib (ArrayLike)
+        # https://github.com/matplotlib/matplotlib/blob/84464dd085210fb57cc2419f0d4c0235391d97e6/lib/matplotlib/colors.pyi#L133
+        colors = cast(np.ndarray, cmap.colors)
 
         assert self._color_as_tuple(colors[1]) == (1.0, 0.0, 0.0)
         assert self._color_as_tuple(colors[2]) == (1.0, 1.0, 1.0)
@@ -3323,6 +3325,24 @@ def test_datarray_scatter(
             add_legend=add_legend,
             add_colorbar=add_colorbar,
         )
+
+
+@requires_dask
+@requires_matplotlib
+@pytest.mark.parametrize(
+    "plotfunc",
+    ["scatter"],
+)
+def test_dataarray_not_loading_inplace(plotfunc: str) -> None:
+    ds = xr.tutorial.scatter_example_dataset()
+    ds = ds.chunk()
+
+    with figure_context():
+        getattr(ds.A.plot, plotfunc)(x="x")
+
+    from dask.array import Array
+
+    assert isinstance(ds.A.data, Array)
 
 
 @requires_matplotlib

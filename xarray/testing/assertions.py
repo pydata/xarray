@@ -124,8 +124,8 @@ def assert_equal(a, b, check_dim_order: bool = True):
     numpy.testing.assert_array_equal
     """
     __tracebackhide__ = True
-    assert (
-        type(a) is type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
+    assert type(a) is type(b) or (
+        isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
     b = maybe_transpose_dims(a, b, check_dim_order)
     if isinstance(a, Variable | DataArray):
@@ -163,8 +163,8 @@ def assert_identical(a, b):
     assert_equal, assert_allclose, Dataset.equals, DataArray.equals
     """
     __tracebackhide__ = True
-    assert (
-        type(a) is type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
+    assert type(a) is type(b) or (
+        isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
     if isinstance(a, Variable):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")

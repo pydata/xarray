@@ -249,13 +249,6 @@ class TestEncodeCFVariable:
         assert enc["b"].attrs.get("coordinates") == "t"
         assert "coordinates" not in enc["b"].encoding
 
-    @requires_dask
-    def test_string_object_warning(self) -> None:
-        original = Variable(("x",), np.array(["foo", "bar"], dtype=object)).chunk()
-        with pytest.warns(SerializationWarning, match="dask array with dtype=object"):
-            encoded = conventions.encode_cf_variable(original)
-        assert_identical(original, encoded)
-
 
 @requires_cftime
 class TestDecodeCF:
@@ -453,7 +446,9 @@ class TestDecodeCF:
             assert "(time) object" in repr(ds)
 
         attrs = {"units": "days since 1900-01-01"}
-        ds = decode_cf(Dataset({"time": ("time", [0, 1], attrs)}))
+        ds = decode_cf(
+            Dataset({"time": ("time", [0, 1], attrs)}),
+        )
         assert "(time) datetime64[ns]" in repr(ds)
 
     @requires_cftime
@@ -591,18 +586,6 @@ class TestCFEncodedDataStore(CFEncodedBase):
     def test_encoding_kwarg_fixed_width_string(self) -> None:
         # CFEncodedInMemoryStore doesn't support explicit string encodings.
         pass
-
-
-@pytest.mark.parametrize(
-    "data",
-    [
-        np.array([["ab", "cdef", b"X"], [1, 2, "c"]], dtype=object),
-        np.array([["x", 1], ["y", 2]], dtype="object"),
-    ],
-)
-def test_infer_dtype_error_on_mixed_types(data):
-    with pytest.raises(ValueError, match="unable to infer dtype on variable"):
-        conventions._infer_dtype(data, "test")
 
 
 class TestDecodeCFVariableWithArrayUnits:

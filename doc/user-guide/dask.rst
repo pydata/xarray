@@ -292,7 +292,7 @@ work as a streaming operation, when run on arrays loaded from disk:
 .. ipython::
     :verbatim:
 
-    In [56]: rs = np.random.RandomState(0)
+    In [56]: rs = np.random.default_rng(0)
 
     In [57]: array1 = xr.DataArray(rs.randn(1000, 100000), dims=["place", "time"])  # 800MB
 
@@ -381,7 +381,7 @@ In this case, automatic inference has worked so let's check that the result is a
     mapped.identical(ds.time)
 
 Note that we use ``.load(scheduler="single-threaded")`` to execute the computation.
-This executes the Dask graph in `serial` using a for loop, but allows for printing to screen and other
+This executes the Dask graph in serial using a for loop, but allows for printing to screen and other
 debugging techniques. We can easily see that our function is receiving blocks of shape 10x180x180 and
 the returned result is identical to ``ds.time`` as expected.
 
