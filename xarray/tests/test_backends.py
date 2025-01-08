@@ -4411,6 +4411,7 @@ def test_open_mfdataset_manyfiles(
             assert_identical(original, actual)
 
 
+@requires_netCDF4
 class TestParallel:
     def test_validate_parallel_kwarg(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
