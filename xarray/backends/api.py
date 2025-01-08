@@ -1615,6 +1615,16 @@ def open_mfdataset(
         getattr_ = dask.delayed(getattr)
         if preprocess is not None:
             preprocess = dask.delayed(preprocess)
+    elif parallel == "lithops":
+        import lithops
+
+        # TODO use RetryingFunctionExecutor instead?
+        fn_exec = lithops.FunctionExecutor()
+
+        # lithops doesn't have a delayed primitive
+        open_ = open_dataset
+        # TODO I don't know how best to chain this with the getattr
+        # getattr_ = getattr
     elif parallel is False:
         open_ = open_dataset
         getattr_ = getattr
@@ -1623,15 +1633,33 @@ def open_mfdataset(
             f"{parallel} is an invalid option for the keyword argument ``parallel``"
         )
 
-    datasets = [open_(p, **open_kwargs) for p in paths1d]
-    closers = [getattr_(ds, "_close") for ds in datasets]
-    if preprocess is not None:
-        datasets = [preprocess(ds) for ds in datasets]
+    if parallel == "dask":
+        datasets = [open_(p, **open_kwargs) for p in paths1d]
+        closers = [getattr_(ds, "_close") for ds in datasets]
+        if preprocess is not None:
+            datasets = [preprocess(ds) for ds in datasets]
 
-    if parallel:
         # calling compute here will return the datasets/file_objs lists,
         # the underlying datasets will still be stored as dask arrays
         datasets, closers = dask.compute(datasets, closers)
+    elif parallel == "lithops":
+
+        def generate_lazy_ds(path):
+            # allows passing the open_dataset function to lithops without evaluating it
+            ds = open_(path, **kwargs)
+            return ds
+
+        futures = fn_exec.map(generate_lazy_ds, paths1d)
+
+        # wait for all the serverless workers to finish, and send their resulting lazy datasets back to the client
+        # TODO do we need download_results?
+        completed_futures, _ = fn_exec.wait(futures, download_results=True)
+        datasets = completed_futures.get_result()
+    elif parallel is False:
+        virtual_datasets = [open_(p, **kwargs) for p in paths1d]
+        closers = [getattr_(ds, "_close") for ds in virtual_datasets]
+        if preprocess is not None:
+            virtual_datasets = [preprocess(ds) for ds in virtual_datasets]
 
     # Combine all datasets, closing them in case of a ValueError
     try:
@@ -1669,7 +1697,9 @@ def open_mfdataset(
             ds.close()
         raise
 
-    combined.set_close(partial(_multi_file_closer, closers))
+    # TODO remove if once closers added above
+    if parallel != "lithops":
+        combined.set_close(partial(_multi_file_closer, closers))
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:
