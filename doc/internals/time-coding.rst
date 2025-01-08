@@ -151,17 +151,17 @@ and :py:meth:`pandas.TimedeltaIndex.as_unit` respectively.
 
 .. ipython:: python
 
-    delta = pd.to_timedelta(1, unit="D")
-    print("Timedelta:", delta)
-    print("Timedelta as_unit('s'):", delta.as_unit("s"))
-    print("Timedelta to_numpy():", delta.as_unit("s").to_numpy())
+    delta = pd.to_timedelta(np.timedelta64(1, "D"))
+    print("Timedelta:", delta, np.asarray([delta.to_numpy()]).dtype)
+    print("Timedelta as_unit('ms'):", delta.as_unit("ms"))
+    print("Timedelta to_numpy():", delta.as_unit("ms").to_numpy())
     delta = pd.to_timedelta([0, 1, 2], unit="D")
     print("TimedeltaIndex:", delta)
-    print("TimedeltaIndex as_unit('s'):", delta.as_unit("s"))
-    print("TimedeltaIndex to_numpy():", delta.as_unit("s").to_numpy())
+    print("TimedeltaIndex as_unit('ms'):", delta.as_unit("ms"))
+    print("TimedeltaIndex to_numpy():", delta.as_unit("ms").to_numpy())
 
 .. note::
-    For the functionality in xarray the output resolution is converted from ``'ns'`` to the lowest needed resolution.
+    For the functionality in xarray the resolution is converted from ``'ns'`` to the lowest needed resolution when decoding.
 
 .. warning::
     Care has to be taken, as some configurations of input data will raise. The following shows, that we are safe to use :py:func:`pandas.to_timedelta` when providing :py:class:`numpy.timedelta64` as scalar or numpy array as input.
