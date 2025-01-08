@@ -616,7 +616,7 @@ class DatasetIOBase:
                     # proleptic gregorian will be decoded into numpy datetime64
                     # fixing to expectations
                     if actual.t.dtype.kind == "M":
-                        dtype = f"datetime64[{np.datetime_data(actual.t)[0]}]"
+                        dtype = actual.t.dtype
                         expected_decoded_t = expected_decoded_t.astype(dtype)
                         expected_decoded_t0 = expected_decoded_t0.astype(dtype)
                     abs_diff = abs(actual.t.values - expected_decoded_t)
