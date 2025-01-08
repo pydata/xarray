@@ -4410,6 +4410,41 @@ def test_open_mfdataset_manyfiles(
             assert_identical(original, actual)
 
 
+class TestParallel:
+    def test_validate_parallel_kwarg(self) -> None:
+        original = Dataset({"foo": ("x", np.random.randn(10))})
+        datasets = [original.isel(x=slice(5)), original.isel(x=slice(5, 10))]
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                save_mfdataset(datasets, [tmp1, tmp2])
+
+                with pytest.raises(ValueError, match="garbage is an invalid option"):
+                    open_mfdataset(
+                        [tmp1, tmp2],
+                        concat_dim="x",
+                        combine="nested",
+                        parallel="garbage",
+                    )
+
+    def test_deprecation_warning(self) -> None:
+        original = Dataset({"foo": ("x", np.random.randn(10))})
+        datasets = [original.isel(x=slice(5)), original.isel(x=slice(5, 10))]
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                save_mfdataset(datasets, [tmp1, tmp2])
+
+                with pytest.warns(
+                    PendingDeprecationWarning,
+                    match="please pass ``parallel='dask'`` explicitly",
+                ):
+                    open_mfdataset(
+                        [tmp1, tmp2],
+                        concat_dim="x",
+                        combine="nested",
+                        parallel=True,
+                    )
+
+
 @requires_netCDF4
 @requires_dask
 def test_open_mfdataset_can_open_path_objects() -> None:

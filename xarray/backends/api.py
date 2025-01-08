@@ -1365,6 +1365,9 @@ def open_groups(
     return groups
 
 
+import warnings
+
+
 def open_mfdataset(
     paths: str
     | os.PathLike
@@ -1596,7 +1599,15 @@ def open_mfdataset(
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)
 
-    if parallel:
+    if parallel is True:
+        warnings.warn(
+            "Passing ``parallel=True`` is deprecated, instead please pass ``parallel='dask'`` explicitly",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
+        parallel = "dask"
+
+    if parallel == "dask":
         import dask
 
         # wrap the open_dataset, getattr, and preprocess with delayed
@@ -1604,9 +1615,13 @@ def open_mfdataset(
         getattr_ = dask.delayed(getattr)
         if preprocess is not None:
             preprocess = dask.delayed(preprocess)
-    else:
+    elif parallel is False:
         open_ = open_dataset
         getattr_ = getattr
+    else:
+        raise ValueError(
+            f"{parallel} is an invalid option for the keyword argument ``parallel``"
+        )
 
     datasets = [open_(p, **open_kwargs) for p in paths1d]
     closers = [getattr_(ds, "_close") for ds in datasets]
