@@ -4444,6 +4444,21 @@ class TestParallel:
                         parallel=True,
                     )
 
+    #@requires_lithops
+    def test_lithops_parallel(self) -> None:
+        original = Dataset({"foo": ("x", np.random.randn(10))})
+        datasets = [original.isel(x=slice(5)), original.isel(x=slice(5, 10))]
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                save_mfdataset(datasets, [tmp1, tmp2])
+                with open_mfdataset(
+                    [tmp1, tmp2],
+                    concat_dim="x",
+                    combine="nested",
+                    parallel="lithops",
+                ) as actual:
+                    assert_identical(actual, original)
+
 
 @requires_netCDF4
 @requires_dask
