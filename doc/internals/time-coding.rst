@@ -26,7 +26,7 @@ to_datetime
 
 The function :py:func:`pandas.to_datetime` is used within xarray for inferring units and for testing purposes.
 
-In normal operation :py:func:`pandas.to_datetime` returns a :py:class:`pandas.Timestamp` (for scalar input) or :py:class:`pandas.DatetimeIndex` (for array-like input) which are related to ``np.datetime64`` values with a resolution inherited from the input. If no resolution can be inherited ``'ns'`` is assumed. That has the implication that the maximum usable time range for those cases is approximately +/- 292 years centered around the Unix epoch (1970-01-01). To accommodate that, we carefully check the units/resolution in the encoding and decoding step.
+In normal operation :py:func:`pandas.to_datetime` returns a :py:class:`pandas.Timestamp` (for scalar input) or :py:class:`pandas.DatetimeIndex` (for array-like input) which are related to ``np.datetime64`` values with a resolution inherited from the input (can be one of ``'s'``, ``'ms'``, ``'us'``, ``'ns'``). If no resolution can be inherited ``'ns'`` is assumed. That has the implication that the maximum usable time range for those cases is approximately +/- 292 years centered around the Unix epoch (1970-01-01). To accommodate that, we carefully check the units/resolution in the encoding and decoding step.
 
 When the arguments are numeric (not strings or ``np.datetime64`` values) ``"unit"`` can be anything from ``'Y'``, ``'W'``, ``'D'``, ``'h'``, ``'m'``, ``'s'``, ``'ms'``, ``'us'`` or ``'ns'``, though the returned resolution will be ``"ns"``.
 
@@ -52,18 +52,19 @@ For input values which can't be represented in nanosecond resolution an :py:clas
 ``np.datetime64`` values can be extracted with :py:meth:`pandas.Timestamp.to_numpy` and :py:meth:`pandas.DatetimeIndex.to_numpy`. The returned resolution depends on the internal representation. This representation can be changed using :py:meth:`pandas.Timestamp.as_unit`
 and :py:meth:`pandas.DatetimeIndex.as_unit` respectively.
 
+
 ``as_unit`` takes one of ``'s'``, ``'ms'``, ``'us'``, ``'ns'`` as an argument. That means we are able to represent datetimes with second, millisecond, microsecond or nanosecond resolution.
 
 .. ipython:: python
 
     time = pd.to_datetime(np.datetime64(0, "D"))
     print("Datetime:", time, np.asarray([time.to_numpy()]).dtype)
-    print("Datetime as_unit('s'):", time.as_unit("s"))
-    print("Datetime to_numpy():", time.as_unit("s").to_numpy())
+    print("Datetime as_unit('ms'):", time.as_unit("ms"))
+    print("Datetime to_numpy():", time.as_unit("ms").to_numpy())
     time = pd.to_datetime(np.array([-1000, 1, 2], dtype="datetime64[Y]"))
     print("DatetimeIndex:", time)
-    print("DatetimeIndex as_unit('s'):", time.as_unit("s"))
-    print("DatetimeIndex to_numpy():", time.as_unit("s").to_numpy())
+    print("DatetimeIndex as_unit('us'):", time.as_unit("us"))
+    print("DatetimeIndex to_numpy():", time.as_unit("us").to_numpy())
 
 .. warning::
     Input data with resolution higher than ``'ns'`` (eg. ``'ps'``, ``'fs'``, ``'as'``) is truncated (not rounded) at the ``'ns'``-level. This is currently broken for the ``'ps'`` input, where it is interpreted as ``'ns'``.
