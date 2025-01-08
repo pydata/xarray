@@ -18,7 +18,7 @@ What's New
 .. _whats-new.2025.01.1:
 
 v2025.01.1 (Jan 9, 2025)
------------------------
+------------------------
 
 This is a quick release to bring compatibility with the Zarr V3 release. It also includes an update to the time decoding
 infrastructure as a step toward `enabling non-nanosecond datetime support <https://github.com/pydata/xarray/pull/9618>`_!
