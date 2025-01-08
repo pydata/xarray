@@ -264,9 +264,6 @@ DatetimeIndex
 :py:class:`pandas.DatetimeIndex` is used to wrap ``np.datetime64`` values or other datetime-likes when encoding. The resolution of the DatetimeIndex depends on the input, but can be only one of ``'s'``, ``'ms'``, ``'us'``, ``'ns'``. Lower resolution input is automatically converted to ``'s'``, higher resolution input is cut to ``'ns'``.
 :py:class:`pandas.DatetimeIndex` will raise :py:class:`pandas.OutOfBoundsDatetime` if the input can't be represented in the given resolution.
 
-.. note::
-    For xarray we assume that all :py:class:`numpy.datetime64` provided to :py:class:`pandas.DatetimeIndex` are up to the specs. This is especially true, when those values have been decoded upfront. If the data is provided by users, they should handle any issues before.
-
 .. ipython:: python
 
     try:
