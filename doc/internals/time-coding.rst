@@ -326,7 +326,7 @@ CF time decoding
 
 Decoding of ``values`` with a time unit specification like ``"seconds since 1992-10-8 15:15:42.5 -6:00"`` into datetimes using the CF conventions is a multistage process.
 
-1. If we have a non-standard calendar (e.g. ``"noleap"``) decoding is done with the ``cftime`` package, which is not covered in this section. For the``"standard"``/``"gregorian"`` calendar as well as the ``"proleptic_gregorian"`` calendar the above outlined pandas functionality is used.
+1. If we have a non-standard calendar (e.g. ``"noleap"``) decoding is done with the ``cftime`` package, which is not covered in this section. For the ``"standard"``/``"gregorian"`` calendar as well as the ``"proleptic_gregorian"`` calendar the above outlined pandas functionality is used.
 
 2. The ``"standard"``/``"gregorian"`` calendar and the ``"proleptic_gregorian"`` are equivalent for any dates and reference times >= ``"1582-10-15"``. First the reference time is checked and any timezone information stripped off. In a second step, the minimum and maximum ``values`` are checked if they can be represented in the current reference time resolution. At the same time integer overflow would be caught. For the ``"standard"``/``"gregorian"`` calendar the dates are checked to be >= ``"1582-10-15"``. If anything fails, the decoding is attempted with ``cftime``.
 
