@@ -42,8 +42,7 @@ using :py:func:`pandas.to_datetime` and :py:func:`pandas.date_range`:
     For :py:func:`pandas.date_range` the ``unit``-kwarg has to be specified
     and for :py:func:`pandas.to_datetime` the selection of the resolution
     isn't possible at all. For that :py:class:`pd.DatetimeIndex` can be used
-    directly. There is more in-depth information in section
-    :ref:`<internals.time-coding>`.
+    directly.
 
 Alternatively, you can supply arrays of Python ``datetime`` objects. These get
 converted automatically when used as arguments in xarray objects (with us-resolution):
