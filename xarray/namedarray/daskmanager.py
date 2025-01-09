@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
-from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -26,13 +25,6 @@ if TYPE_CHECKING:
 
 
 dask_available = module_available("dask")
-
-if dask_available:
-    from dask.array.core import normalize_chunks
-
-    normalize_chunks = lru_cache(normalize_chunks)
-else:
-    normalize_chunks = None
 
 
 class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
@@ -61,6 +53,12 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         previous_chunks: _NormalizedChunks | None = None,
     ) -> Any:
         """Called by open_dataset"""
+        # FIXME: switch to explicit dask version
+        try:
+            from dask.array.api import normalize_chunks_cached as normalize_chunks
+        except ImportError:
+            from dask.array.core import normalize_chunks
+
         return normalize_chunks(
             chunks,
             shape=shape,
