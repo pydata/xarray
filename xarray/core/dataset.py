@@ -316,6 +316,17 @@ def _get_breaks_cached(
         return None
 
 
+_STR_CACHE = dict()
+
+
+def cached_str(chunks: tuple[int, ...]) -> str:
+    if id(chunks) not in _STR_CACHE:
+        value = str(chunks)
+        _STR_CACHE[id(chunks)] = value
+
+    return _STR_CACHE[id(chunks)]
+
+
 def _maybe_chunk(
     name: Hashable,
     var: Variable,
@@ -344,7 +355,13 @@ def _maybe_chunk(
             # by providing chunks as an input to tokenize.
             # subtle bugs result otherwise. see GH3350
             # we use str() for speed, and use the name for the final array name on the next line
-            token2 = tokenize(token if token else var._data, str(chunks))
+            token2 = tokenize(
+                token if token else var._data,
+                [
+                    cached_str(_)
+                    for _ in itertools.chain(chunks.keys(), chunks.values())
+                ],
+            )
             name2 = f"{name_prefix}{name}-{token2}"
 
             from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
