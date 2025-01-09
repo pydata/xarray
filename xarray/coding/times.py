@@ -720,7 +720,9 @@ def cftime_to_nptime(
         try:
             # We expect either "us" resolution or "s" resolution depending on
             # whether 'microseconds' are defined for the input or not.
-            dt = np.datetime64(t.isoformat()).astype(f"=M8[{time_unit}]")
+            dt = (
+                pd.Timestamp(np.datetime64(t.isoformat())).as_unit(time_unit).to_numpy()
+            )
         except ValueError as e:
             if raise_on_invalid:
                 raise ValueError(
