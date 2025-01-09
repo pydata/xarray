@@ -548,7 +548,7 @@ def to_timedelta_unboxed(value, **kwargs):
     unique_timedeltas = np.unique(result[pd.notnull(result)])
     unit = _netcdf_to_numpy_timeunit(_infer_time_units_from_diff(unique_timedeltas))
     if unit not in {"s", "ms", "us", "ns"}:
-        # default to ns, when not specified
+        # default to "ns", when not specified
         unit = "ns"
     result = result.astype(f"timedelta64[{unit}]")
     assert np.issubdtype(result.dtype, "timedelta64")
@@ -616,7 +616,7 @@ def decode_cf_timedelta(num_timedeltas, units: str) -> np.ndarray:
 
     as_unit = unit
     if unit not in {"s", "ms", "us", "ns"}:
-        # default to ns, when not specified
+        # default to "ns", when not specified
         as_unit = "ns"
     result = pd.to_timedelta(ravel(timedeltas)).as_unit(as_unit).to_numpy()
     return reshape(result, timedeltas.shape)
