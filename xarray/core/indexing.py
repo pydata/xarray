@@ -1753,11 +1753,10 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             # pd.Timestamp rather np.than datetime64 but this is easier
             # (for now)
             item = np.datetime64("NaT", "ns")
+        elif isinstance(item, pd.Timedelta):
+            item = item.to_numpy()
         elif isinstance(item, timedelta):
-            # from xarray 2025.01.1 xarray allows non-nanosecond resolution
-            # so we just convert to_numpy if possible
-            if hasattr(item, "to_numpy"):
-                item = item.to_numpy()
+            item = np.timedelta64(item)
         elif isinstance(item, pd.Timestamp):
             # Work around for GH: pydata/xarray#1932 and numpy/numpy#10668
             # numpy fails to convert pd.Timestamp to np.datetime64[ns]
