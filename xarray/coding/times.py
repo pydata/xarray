@@ -872,6 +872,22 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
         # numpy's broken datetime conversion only works for us precision
         dates = dates.astype("M8[us]").astype(datetime)
 
+    def wrap_dt(dt):
+        # convert to cftime proleptic gregorian in case of datetime.datetime
+        # needed because of https://github.com/Unidata/cftime/issues/354
+        if isinstance(dt, datetime) and not isinstance(dt, cftime.datetime):
+            dt = cftime.datetime(
+                dt.year,
+                dt.month,
+                dt.day,
+                dt.hour,
+                dt.minute,
+                dt.second,
+                dt.microsecond,
+                calendar="proleptic_gregorian",
+            )
+        return dt
+
     def encode_datetime(d):
         # Since netCDF files do not support storing float128 values, we ensure
         # that float64 values are used by setting longdouble=False in num2date.
@@ -881,10 +897,10 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
             return (
                 np.nan
                 if d is None
-                else cftime.date2num(d, units, calendar, longdouble=False)
+                else cftime.date2num(wrap_dt(d), units, calendar, longdouble=False)
             )
         except TypeError:
-            return np.nan if d is None else cftime.date2num(d, units, calendar)
+            return np.nan if d is None else cftime.date2num(wrap_dt(d), units, calendar)
 
     return reshape(np.array([encode_datetime(d) for d in ravel(dates)]), dates.shape)
 
@@ -987,6 +1003,19 @@ def _eagerly_encode_cf_datetime(
             # parse with cftime instead
             raise OutOfBoundsDatetime
         assert np.issubdtype(dates.dtype, "datetime64")
+        if calendar in ["standard", "gregorian"] and np.nanmin(dates).astype(
+            "=M8[us]"
+        ).astype(datetime) < datetime(1582, 10, 15):
+            # if we use standard calendar and for dates before the reform
+            # we need to use cftime instead
+            emit_user_level_warning(
+                f"Unable to encode numpy.datetime64 objects with {calendar} calendar."
+                "Using cftime.datetime objects instead, reason: dates prior "
+                "reform date (1582-10-15). To silence this warning transform "
+                "numpy.datetime64 to corresponding cftime.datetime beforehand.",
+                SerializationWarning,
+            )
+            raise OutOfBoundsDatetime
 
         time_unit, ref_date = _unpack_time_unit_and_ref_date(units)
         # calendar equivalence only for days after the reform

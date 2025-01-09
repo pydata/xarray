@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from datetime import timedelta
+from datetime import datetime, timedelta
 from itertools import product
 from typing import Literal
 
@@ -1154,6 +1154,30 @@ def test__encode_datetime_with_cftime() -> None:
         expected = cftime.date2num(times, encoding_units, calendar)
     result = _encode_datetime_with_cftime(times, encoding_units, calendar)
     np.testing.assert_equal(result, expected)
+
+
+@requires_cftime
+def test_encode_decode_cf_datetime_outofbounds_warnings(
+    time_unit: PDDatetimeUnitOptions,
+) -> None:
+    import cftime
+
+    if time_unit == "ns":
+        pytest.skip("does not work work out of bounds datetimes")
+    dates = np.array(["0001-01-01", "2001-01-01"], dtype=f"datetime64[{time_unit}]")
+    cfdates = np.array(
+        [
+            cftime.datetime(t0.year, t0.month, t0.day, calendar="gregorian")
+            for t0 in dates.astype(datetime)
+        ]
+    )
+    with pytest.warns(
+        SerializationWarning, match="Unable to encode numpy.datetime64 objects"
+    ):
+        encoded = encode_cf_datetime(dates, "seconds since 2000-01-01", "standard")
+    with pytest.warns(SerializationWarning, match="Unable to decode time axis"):
+        decoded = decode_cf_datetime(*encoded)
+    np.testing.assert_equal(decoded, cfdates)
 
 
 @pytest.mark.parametrize("calendar", ["gregorian", "Gregorian", "GREGORIAN"])
