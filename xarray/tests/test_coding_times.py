@@ -138,7 +138,7 @@ def test_cf_datetime(
         actual = decode_cf_datetime(num_dates, units, calendar, time_unit=time_unit)
 
     if actual.dtype.kind != "O":
-        expected = cftime_to_nptime(expected)
+        expected = cftime_to_nptime(expected, time_unit=time_unit)
 
     abs_diff = np.asarray(abs(actual - expected)).ravel()
     abs_diff = pd.to_timedelta(abs_diff.tolist()).to_numpy()
@@ -281,7 +281,7 @@ def test_decode_dates_outside_timestamp_range(
         time, units, calendar=calendar, only_use_cftime_datetimes=True
     )
     if calendar == "proleptic_gregorian" and time_unit != "ns":
-        expected = cftime_to_nptime(expected)
+        expected = cftime_to_nptime(expected, time_unit=time_unit)
     expected_date_type = type(expected[0])
 
     with warnings.catch_warnings():
@@ -441,8 +441,8 @@ def test_decode_multidim_time_outside_timestamp_range(
     expected2 = cftime.num2date(time2, units, calendar, only_use_cftime_datetimes=True)
 
     if calendar == "proleptic_gregorian" and time_unit != "ns":
-        expected1 = cftime_to_nptime(expected1)
-        expected2 = cftime_to_nptime(expected2)
+        expected1 = cftime_to_nptime(expected1, time_unit=time_unit)
+        expected2 = cftime_to_nptime(expected2, time_unit=time_unit)
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "Unable to decode time axis")
