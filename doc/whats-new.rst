@@ -17,8 +17,11 @@ What's New
 
 .. _whats-new.2025.01.1:
 
-v2025.01.1 (unreleased)
------------------------
+v2025.01.1 (Jan 9, 2025)
+------------------------
+
+This is a quick release to bring compatibility with the Zarr V3 release. It also includes an update to the time decoding
+infrastructure as a step toward `enabling non-nanosecond datetime support <https://github.com/pydata/xarray/pull/9618>`_!
 
 New Features
 ~~~~~~~~~~~~
@@ -26,28 +29,11 @@ New Features
   consume :py:class:`coders.CFDatetimeCoder` (:pull:`9901`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-
 Deprecations
 ~~~~~~~~~~~~
 - Time decoding related kwarg ``use_cftime`` is deprecated. Use keyword argument
   ``decode_times=CFDatetimeCoder(use_cftime=True)`` in :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_dataarray`, :py:func:`~xarray.open_datatree`, :py:func:`~xarray.open_groups`, :py:func:`~xarray.open_zarr` and :py:func:`~xarray.decode_cf` instead (:pull:`9901`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-
-Bug fixes
-~~~~~~~~~
-
-
-Documentation
-~~~~~~~~~~~~~
-
-
-Internal Changes
-~~~~~~~~~~~~~~~~
-
-
 
 .. _whats-new.2025.01.0:
 
