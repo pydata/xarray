@@ -46,7 +46,7 @@ class VariableCoder:
         raise NotImplementedError()
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        """Convert an decoded variable to a encoded variable"""
+        """Convert a decoded variable to an encoded variable"""
         raise NotImplementedError()
 
 

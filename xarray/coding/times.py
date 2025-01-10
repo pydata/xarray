@@ -1241,6 +1241,25 @@ def _lazily_encode_cf_timedelta(
 
 
 class CFDatetimeCoder(VariableCoder):
+    """Coder for CF Datetime coding.
+
+    Parameters
+    ----------
+    use_cftime : bool, optional
+        Only relevant if encoded dates come from a standard calendar
+        (e.g. "gregorian", "proleptic_gregorian", "standard", or not
+        specified).  If None (default), attempt to decode times to
+        ``np.datetime64`` objects; if this is not possible, decode times to
+        ``cftime.datetime`` objects. If True, always decode times to
+        ``cftime.datetime`` objects, regardless of whether or not they can be
+        represented using ``np.datetime64`` objects.  If False, always
+        decode times to ``np.datetime64`` objects; if this is not possible
+        raise an error.
+        May not be supported by all the backends.
+    time_unit : PDDatetimeUnitOptions
+          Target resolution when decoding dates. Defaults to "ns".
+    """
+
     def __init__(
         self,
         use_cftime: bool | None = None,
