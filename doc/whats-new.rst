@@ -14,6 +14,33 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2025.01.2:
+
+v2025.01.2 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
 
 .. _whats-new.2025.01.1:
 
