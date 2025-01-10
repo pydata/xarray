@@ -733,7 +733,6 @@ For writing, you must explicitly set up a ``MutableMapping``
 instance and pass this, as follows:
 
 .. code:: python
-    :okwarning:
 
     import gcsfs
 
