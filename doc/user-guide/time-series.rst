@@ -37,6 +37,14 @@ using :py:func:`pandas.to_datetime` and :py:func:`pandas.date_range`:
     pd.date_range("2000-01-01", periods=365)
     pd.date_range("2000-01-01", periods=365, unit="s")
 
+It is also possible to use corresponding :py:func:`xarray.date_range`:
+
+.. ipython:: python
+
+    xr.date_range("2000-01-01", periods=365)
+    xr.date_range("2000-01-01", periods=365, unit="s")
+
+
 .. note::
     Care has to be taken to create the output with the wanted resolution.
     For :py:func:`pandas.date_range` the ``unit``-kwarg has to be specified
