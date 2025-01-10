@@ -14,24 +14,75 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2024.12.0:
+.. _whats-new.2025.01.2:
 
-v.2024.12.0 (unreleased)
-------------------------
+v2025.01.2 (unreleased)
+-----------------------
 
 New Features
 ~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+.. _whats-new.2025.01.1:
+
+v2025.01.1 (Jan 9, 2025)
+------------------------
+
+This is a quick release to bring compatibility with the Zarr V3 release. It also includes an update to the time decoding
+infrastructure as a step toward `enabling non-nanosecond datetime support <https://github.com/pydata/xarray/pull/9618>`_!
+
+New Features
+~~~~~~~~~~~~
+- Split out :py:class:`coders.CFDatetimeCoder` as public API in ``xr.coders``, make ``decode_times`` keyword argument
+  consume :py:class:`coders.CFDatetimeCoder` (:pull:`9901`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+Deprecations
+~~~~~~~~~~~~
+- Time decoding related kwarg ``use_cftime`` is deprecated. Use keyword argument
+  ``decode_times=CFDatetimeCoder(use_cftime=True)`` in :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_dataarray`, :py:func:`~xarray.open_datatree`, :py:func:`~xarray.open_groups`, :py:func:`~xarray.open_zarr` and :py:func:`~xarray.decode_cf` instead (:pull:`9901`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+.. _whats-new.2025.01.0:
+
+v.2025.01.0 (Jan 3, 2025)
+-------------------------
+
+This release brings much improved read performance with Zarr arrays (without consolidated metadata), better support for additional array types, as well as
+bugfixes and performance improvements.
+Thanks to the 20 contributors to this release:
+Bruce Merry, Davis Bennett, Deepak Cherian, Dimitri Papadopoulos Orfanos, Florian Jetter, Illviljan, Janukan Sivajeyan, Justus Magin, Kai Germaschewski, Kai Mühlbauer, Max Jones, Maximilian Roos, Michael Niklas, Patrick Peglar, Sam Levang, Scott Huberty, Spencer Clark, Stephan Hoyer, Tom Nicholas and Vecko
+
+New Features
+~~~~~~~~~~~~
+- Improve the error message raised when using chunked-array methods if no chunk manager is available or if the requested chunk manager is missing (:pull:`9676`)
+  By `Justus Magin <https://github.com/keewis>`_. (:pull:`9676`)
 - Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
   duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
   By `Sam Levang <https://github.com/slevang>`_.
-
 - Better performance for reading Zarr arrays in the ``ZarrStore`` class by caching the state of Zarr
-  storage and avoiding redundant IO operations. Usage of the cache can be controlled via the
-  ``cache_members`` parameter to ``ZarrStore``. When ``cache_members`` is ``True`` (the default), the
-  ``ZarrStore`` stores a snapshot of names and metadata of the in-scope Zarr arrays; this cache
+  storage and avoiding redundant IO operations. By default, ``ZarrStore`` stores a snapshot of names and metadata of the in-scope Zarr arrays; this cache
   is then used when iterating over those Zarr arrays, which avoids IO operations and thereby reduces
   latency. (:issue:`9853`, :pull:`9861`). By `Davis Bennett <https://github.com/d-v-b>`_.
-
 - Add ``unit`` - keyword argument to :py:func:`date_range` and ``microsecond`` parsing to
   iso8601-parser (:pull:`9885`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
@@ -55,6 +106,13 @@ Deprecations
   :py:func:`date_range` (:pull:`9882`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
+Performance
+~~~~~~~~~~~
+- Better preservation of chunksizes in :py:meth:`Dataset.idxmin` and :py:meth:`Dataset.idxmax` (:issue:`9425`, :pull:`9800`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Much better implementation of vectorized interpolation for dask arrays (:pull:`9881`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 Bug fixes
 ~~~~~~~~~
 - Fix type annotations for ``get_axis_num``. (:issue:`9822`, :pull:`9827`).
@@ -64,11 +122,6 @@ Bug fixes
 - Fix interpolation when non-numeric coordinate variables are present (:issue:`8099`, :issue:`9839`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
-
-Documentation
-~~~~~~~~~~~~~
-
-
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Move non-CF related ``ensure_dtype_not_object`` from conventions to backends (:pull:`9828`).
@@ -77,6 +130,11 @@ Internal Changes
   within ``as_compatible_data``. This is consistent with how lists of these objects
   will be converted (:pull:`9900`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Move ISO-8601 parser from coding.cftimeindex to coding.times to make it available there (prevents circular import), add capability to parse negative and/or five-digit years (:pull:`9899`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Refactor of time coding to prepare for relaxing nanosecond restriction (:pull:`9906`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 .. _whats-new.2024.11.0:
 

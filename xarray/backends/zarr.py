@@ -447,10 +447,11 @@ def extract_zarr_variable_encoding(
 
     safe_to_drop = {"source", "original_shape", "preferred_chunks"}
     valid_encodings = {
-        "codecs",
         "chunks",
-        "compressor",
+        "compressor",  # TODO: delete when min zarr >=3
+        "compressors",
         "filters",
+        "serializer",
         "cache_metadata",
         "write_empty_chunks",
     }
@@ -480,6 +481,8 @@ def extract_zarr_variable_encoding(
         mode=mode,
         shape=shape,
     )
+    if _zarr_v3() and chunks is None:
+        chunks = "auto"
     encoding["chunks"] = chunks
     return encoding
 
@@ -816,24 +819,20 @@ class ZarrStore(AbstractWritableDataStore):
         )
         attributes = dict(attributes)
 
-        # TODO: this should not be needed once
-        # https://github.com/zarr-developers/zarr-python/issues/1269 is resolved.
-        attributes.pop("filters", None)
-
         encoding = {
             "chunks": zarr_array.chunks,
             "preferred_chunks": dict(zip(dimensions, zarr_array.chunks, strict=True)),
         }
 
-        if _zarr_v3() and zarr_array.metadata.zarr_format == 3:
-            encoding["codecs"] = [x.to_dict() for x in zarr_array.metadata.codecs]
-        elif _zarr_v3():
+        if _zarr_v3():
             encoding.update(
                 {
-                    "compressor": zarr_array.metadata.compressor,
-                    "filters": zarr_array.metadata.filters,
+                    "compressors": zarr_array.compressors,
+                    "filters": zarr_array.filters,
                 }
             )
+            if self.zarr_group.metadata.zarr_format == 3:
+                encoding.update({"serializer": zarr_array.serializer})
         else:
             encoding.update(
                 {
@@ -1471,7 +1470,7 @@ def open_zarr(
             )  # attempt to import that parallel backend
 
             chunks = {}
-        except ValueError:
+        except (ValueError, ImportError):
             chunks = None
 
     if kwargs:
