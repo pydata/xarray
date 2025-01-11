@@ -1010,13 +1010,24 @@ def test_least_squares(use_dask, skipna):
 @requires_bottleneck
 @pytest.mark.parametrize("method", ["sequential", "blelloch"])
 @pytest.mark.parametrize(
-    "arr", [
+    "arr",
+    [
         [np.nan, 1, 2, 3, np.nan, np.nan, np.nan, np.nan, 4, 5, np.nan, 6],
         [
-            np.nan, np.nan, np.nan, 2, np.nan, np.nan, np.nan, 9, np.nan,
-            np.nan, np.nan, np.nan
-        ]
-    ]
+            np.nan,
+            np.nan,
+            np.nan,
+            2,
+            np.nan,
+            np.nan,
+            np.nan,
+            9,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+        ],
+    ],
 )
 def test_push_dask(method, arr):
     import bottleneck
@@ -1029,9 +1040,7 @@ def test_push_dask(method, arr):
         expected = bottleneck.push(arr, axis=0, n=n)
         for c in chunks:
             with raise_if_dask_computes():
-                actual = push(
-                    da.from_array(arr, chunks=c), axis=0, n=n, method=method
-                )
+                actual = push(da.from_array(arr, chunks=c), axis=0, n=n, method=method)
             np.testing.assert_equal(actual, expected)
 
 
