@@ -1611,6 +1611,11 @@ class Dataset(
                 return self._construct_dataarray(key)
             except KeyError as e:
                 message = f"No variable named {key!r}. Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
+
+                best_guess = utils.did_you_mean(key, self.variables.keys())
+                if best_guess:
+                    message += f" {best_guess}"
+
                 # If someone attempts `ds['foo' , 'bar']` instead of `ds[['foo', 'bar']]`
                 if isinstance(key, tuple):
                     message += f"\nHint: use a list to select multiple variables, for example `ds[{list(key)}]`"
