@@ -114,6 +114,31 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
     return wrapper
 
 
+def did_you_mean(word: Hashable, possibilities: Iterable[Hashable]) -> str:
+    """
+    Get a suggested word.
+
+    Examples
+    --------
+    >>> did_you_mean("bluch", ("blech", "gray_r", 1, None, (2, 56)))
+    "Did you mean one of ('blech',)?"
+    >>> did_you_mean(1, ("blech", "gray_r", 1, None, (2, 56)))
+    'Did you mean one of (1,)?'
+    """
+    import difflib
+
+    possibilites_str: dict[str, Hashable] = {str(k): k for k in possibilities}
+
+    msg = ""
+    if len(
+        best_str := difflib.get_close_matches(str(word), list(possibilites_str.keys()))
+    ):
+        best = tuple(possibilites_str[k] for k in best_str)
+        msg = f"Did you mean one of {best}?"
+
+    return msg
+
+
 def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
     """Return a numpy compatible dtype from either
     a numpy array or a pandas.Index.
