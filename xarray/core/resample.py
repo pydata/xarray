@@ -109,7 +109,6 @@ class Resample(GroupBy[T_Xarray]):
         from xarray.core.dataset import Dataset
 
         result = super()._first_or_last(op=op, skipna=skipna, keep_attrs=keep_attrs)
-        result = result.rename({RESAMPLE_DIM: self._group_dim})
         if isinstance(result, Dataset):
             # Can't do this in the base class because group_dim is RESAMPLE_DIM
             # which is not present in the original object

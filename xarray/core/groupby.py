@@ -20,7 +20,6 @@ from xarray.core._aggregations import (
 from xarray.core.alignment import align, broadcast
 from xarray.core.arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
-from xarray.core.computation import apply_ufunc
 from xarray.core.concat import concat
 from xarray.core.coordinates import Coordinates, _coordinates_from_variable
 from xarray.core.duck_array_ops import where
@@ -1359,8 +1358,6 @@ class GroupBy(Generic[T_Xarray]):
         return ops.where_method(self, cond, other)
 
     def _first_or_last(self, op: str, skipna: bool | None, keep_attrs: bool | None):
-        from xarray.core.dataarray import DataArray
-
         if all(
             isinstance(maybe_slice, slice)
             and (maybe_slice.stop == maybe_slice.start + 1)
@@ -1371,86 +1368,22 @@ class GroupBy(Generic[T_Xarray]):
             return self._obj
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
-
-        def _groupby_first_last_wrapper(
-            values,
-            by,
-            *,
-            op: Literal["first", "last"],
-            skipna: bool | None,
-            group_indices,
+        if (
+            skipna
+            and module_available("flox", minversion="0.9.16")
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
         ):
-            no_nans = dtypes.isdtype(
-                values.dtype, "signed integer"
-            ) or dtypes.is_string(values.dtype)
-            if (skipna or skipna is None) and not no_nans:
-                skipna = True
-            else:
-                skipna = False
-
-            if TYPE_CHECKING:
-                assert isinstance(skipna, bool)
-
-            if skipna is False or (skipna and no_nans):
-                # this is an optimization: when skipna=False, we can simply index
-                # the whole object after picking the first/last member of each group
-                # in self.encoded.group_indices
-                if op == "first":
-                    indices = [
-                        (idx.start if isinstance(idx, slice) else idx[0])
-                        for idx in group_indices
-                        if idx
-                    ]
-                else:
-                    indices = [
-                        (idx.stop - 1 if isinstance(idx, slice) else idx[-1])
-                        for idx in self.encoded.group_indices
-                        if idx
-                    ]
-                return self._obj.isel({self._group_dim: indices})
-
-            elif (
-                skipna
-                and module_available("flox", minversion="0.9.14")
-                and OPTIONS["use_flox"]
-                and contains_only_chunked_or_numpy(self._obj)
-            ):
-                import flox
-
-                result, *_ = flox.groupby_reduce(
-                    values, self.group1d.data, axis=-1, func=f"nan{op}"
-                )
-                return result
-
-            else:
-                return self.reduce(
-                    getattr(duck_array_ops, op),
-                    dim=[self._group_dim],
-                    skipna=skipna,
-                    keep_attrs=keep_attrs,
-                )
-
-        result = apply_ufunc(
-            _groupby_first_last_wrapper,
-            self._obj,
-            self.group1d,
-            input_core_dims=[[self._group_dim], [self._group_dim]],
-            output_core_dims=[[self.group1d.name]],
-            dask="allowed",
-            output_sizes={self.group1d.name: len(self)},
-            exclude_dims={self._group_dim},
-            keep_attrs=keep_attrs,
-            kwargs={
-                "op": op,
-                "skipna": skipna,
-                "group_indices": self.encoded.group_indices,
-            },
-        )
-        result = result.assign_coords(self.encoded.coords)
-        result = self._maybe_unstack(result)
-        result = self._maybe_restore_empty_groups(result)
-        if isinstance(result, DataArray):
-            result = self._restore_dim_order(result)
+            result, *_ = self._flox_reduce(
+                dim=None, func=f"nan{op}" if skipna else op, keep_attrs=keep_attrs
+            )
+        else:
+            result = self.reduce(
+                getattr(duck_array_ops, op),
+                dim=[self._group_dim],
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+            )
         return result
 
     def first(self, skipna: bool | None = None, keep_attrs: bool | None = None):
