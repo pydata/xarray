@@ -369,7 +369,12 @@ def _check_date_for_units_since_refdate(
 def _check_timedelta_range(value, data_unit, time_unit):
     if value > np.iinfo("int64").max or value < np.iinfo("int64").min:
         OutOfBoundsTimedelta(f"Value {value} can't be represented as Timedelta.")
-    delta = value * np.timedelta64(1, data_unit)
+    # on windows multiplying nan leads to RuntimeWarning
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", "invalid value encountered in multiply", RuntimeWarning
+        )
+        delta = value * np.timedelta64(1, data_unit)
     if not np.isnan(delta):
         # this will raise on dtype overflow for integer dtypes
         if value.dtype.kind in "u" and not np.int64(delta) == value:
@@ -618,8 +623,10 @@ def decode_cf_timedelta(
     num_timedeltas = np.asarray(num_timedeltas)
     unit = _netcdf_to_numpy_timeunit(units)
 
-    _check_timedelta_range(num_timedeltas.min(), unit, time_unit)
-    _check_timedelta_range(num_timedeltas.max(), unit, time_unit)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "All-NaN slice encountered", RuntimeWarning)
+        _check_timedelta_range(np.nanmin(num_timedeltas), unit, time_unit)
+        _check_timedelta_range(np.nanmax(num_timedeltas), unit, time_unit)
 
     timedeltas = _numbers_to_timedelta(num_timedeltas, unit, "s", "timedelta")
     pd_timedeltas = pd.to_timedelta(ravel(timedeltas))
