@@ -636,7 +636,6 @@ def test_groupby_repr_datetime(obj) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:No index created for dimension id:UserWarning")
-@pytest.mark.filterwarnings("ignore:Converting non-default")
 @pytest.mark.filterwarnings("ignore:invalid value encountered in divide:RuntimeWarning")
 @pytest.mark.parametrize("shuffle", [True, False])
 @pytest.mark.parametrize(
