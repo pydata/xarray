@@ -1616,7 +1616,7 @@ class Dataset(
                 if best_guess:
                     message += f" {best_guess}"
                 else:
-                    message += f"  Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
+                    message += f" Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
 
                 # If someone attempts `ds['foo' , 'bar']` instead of `ds[['foo', 'bar']]`
                 if isinstance(key, tuple):
