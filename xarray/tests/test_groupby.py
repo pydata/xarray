@@ -324,8 +324,8 @@ def test_dask_da_groupby_median() -> None:
     assert_identical(expected, actual)
 
 
-@pytest.mark.parametrize("use_flox", [True, False])
-def test_da_groupby_quantile(use_flox) -> None:
+@pytest.mark.parametrize("use_flox", [pytest.param(True, marks=requires_flox), False])
+def test_da_groupby_quantile(use_flox: bool) -> None:
     array = xr.DataArray(
         data=[1, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
     )
