@@ -141,6 +141,7 @@ def did_you_mean(
     --------
     https://en.wikipedia.org/wiki/String_metric
     """
+    # Convert all values to string, get_close_matches doesn't handle all hashables:
     possibilites_str: dict[str, Hashable] = {str(k): k for k in possibilities}
 
     msg = ""
