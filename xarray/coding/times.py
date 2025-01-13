@@ -38,6 +38,7 @@ except ImportError:
 
 from xarray.core.types import (
     CFCalendar,
+    CFTimeDatetime,
     NPDatetimeUnitOptions,
     PDDatetimeUnitOptions,
     T_DuckArray,
@@ -342,7 +343,7 @@ def _decode_datetime_with_cftime(
 
 
 def _check_date_for_units_since_refdate(
-    date, unit: str, ref_date: pd.Timestamp
+    date, unit: NPDatetimeUnitOptions, ref_date: pd.Timestamp
 ) -> pd.Timestamp:
     # check for out-of-bounds floats and raise
     if date > np.iinfo("int64").max or date < np.iinfo("int64").min:
@@ -391,7 +392,9 @@ def _align_reference_date_and_unit(
     return ref_date
 
 
-def _check_date_is_after_shift(date: pd.Timestamp, calendar: str) -> None:
+def _check_date_is_after_shift(
+    date: pd.Timestamp | datetime | CFTimeDatetime, calendar: str
+) -> None:
     # if we have gregorian/standard we need to raise
     # if we are outside the well-defined date range
     # proleptic_gregorian and standard/gregorian are only equivalent
@@ -607,7 +610,7 @@ def _numbers_to_timedelta(
 
 
 def decode_cf_timedelta(
-    num_timedeltas, units: str, time_unit: str = "ns"
+    num_timedeltas, units: str, time_unit: PDDatetimeUnitOptions = "ns"
 ) -> np.ndarray:
     """Given an array of numeric timedeltas in netCDF format, convert it into a
     numpy timedelta64 ["s", "ms", "us", "ns"] array.
@@ -619,12 +622,12 @@ def decode_cf_timedelta(
     _check_timedelta_range(num_timedeltas.max(), unit, time_unit)
 
     timedeltas = _numbers_to_timedelta(num_timedeltas, unit, "s", "timedelta")
-    timedeltas = pd.to_timedelta(ravel(timedeltas))
+    pd_timedeltas = pd.to_timedelta(ravel(timedeltas))
 
     if np.isnat(timedeltas).all():
         empirical_unit = time_unit
     else:
-        empirical_unit = timedeltas.unit
+        empirical_unit = pd_timedeltas.unit
 
     if np.timedelta64(1, time_unit) > np.timedelta64(1, empirical_unit):
         time_unit = empirical_unit
@@ -634,7 +637,7 @@ def decode_cf_timedelta(
             f"time_unit must be one of 's', 'ms', 'us', or 'ns'. Got: {time_unit}"
         )
 
-    result = timedeltas.as_unit(time_unit).to_numpy()
+    result = pd_timedeltas.as_unit(time_unit).to_numpy()
     return reshape(result, num_timedeltas.shape)
 
 
