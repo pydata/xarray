@@ -284,7 +284,6 @@ def test_da_groupby_empty() -> None:
 
 @requires_dask
 def test_dask_da_groupby_quantile() -> None:
-    # Only works when the grouped reduction can run blockwise
     # Scalar quantile
     expected = xr.DataArray(
         data=[2, 5], coords={"x": [1, 2], "quantile": 0.5}, dims="x"
@@ -292,8 +291,6 @@ def test_dask_da_groupby_quantile() -> None:
     array = xr.DataArray(
         data=[1, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
     )
-    with pytest.raises(ValueError):
-        array.chunk(x=1).groupby("x").quantile(0.5)
 
     # will work blockwise with flox
     actual = array.chunk(x=3).groupby("x").quantile(0.5)
@@ -327,7 +324,8 @@ def test_dask_da_groupby_median() -> None:
     assert_identical(expected, actual)
 
 
-def test_da_groupby_quantile() -> None:
+@pytest.mark.parametrize("use_flox", [True, False])
+def test_da_groupby_quantile(use_flox) -> None:
     array = xr.DataArray(
         data=[1, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
     )
@@ -336,8 +334,10 @@ def test_da_groupby_quantile() -> None:
     expected = xr.DataArray(
         data=[2, 5], coords={"x": [1, 2], "quantile": 0.5}, dims="x"
     )
-    actual = array.groupby("x").quantile(0.5)
-    assert_identical(expected, actual)
+
+    with xr.set_options(use_flox=use_flox):
+        actual = array.groupby("x").quantile(0.5)
+        assert_identical(expected, actual)
 
     # Vector quantile
     expected = xr.DataArray(
@@ -345,7 +345,8 @@ def test_da_groupby_quantile() -> None:
         coords={"x": [1, 2], "quantile": [0, 1]},
         dims=("x", "quantile"),
     )
-    actual = array.groupby("x").quantile([0, 1])
+    with xr.set_options(use_flox=use_flox):
+        actual = array.groupby("x").quantile([0, 1])
     assert_identical(expected, actual)
 
     array = xr.DataArray(
@@ -356,7 +357,8 @@ def test_da_groupby_quantile() -> None:
         e = [np.nan, 5] if skipna is False else [2.5, 5]
 
         expected = xr.DataArray(data=e, coords={"x": [1, 2], "quantile": 0.5}, dims="x")
-        actual = array.groupby("x").quantile(0.5, skipna=skipna)
+        with xr.set_options(use_flox=use_flox):
+            actual = array.groupby("x").quantile(0.5, skipna=skipna)
         assert_identical(expected, actual)
 
     # Multiple dimensions
