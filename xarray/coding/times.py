@@ -365,6 +365,21 @@ def _check_date_for_units_since_refdate(
         return pd.Timestamp("NaT")
 
 
+def _check_timedelta_range(value, data_unit, time_unit):
+    if value > np.iinfo("int64").max or value < np.iinfo("int64").min:
+        OutOfBoundsTimedelta(f"Value {value} can't be represented as Timedelta.")
+    delta = value * np.timedelta64(1, data_unit)
+    if not np.isnan(delta):
+        # this will raise on dtype overflow for integer dtypes
+        if value.dtype.kind in "u" and not np.int64(delta) == value:
+            raise OutOfBoundsTimedelta(
+                "DType overflow in Datetime/Timedelta calculation."
+            )
+        # this will raise on overflow if delta cannot be represented with the
+        # resolutions supported by pandas.
+        pd.to_timedelta(delta)
+
+
 def _align_reference_date_and_unit(
     ref_date: pd.Timestamp, unit: NPDatetimeUnitOptions
 ) -> pd.Timestamp:
@@ -542,19 +557,6 @@ def decode_cf_datetime(
     return reshape(dates, num_dates.shape)
 
 
-def to_timedelta_unboxed(value, **kwargs):
-    # todo: check, if the procedure here is correct
-    result = pd.to_timedelta(value, **kwargs).to_numpy()
-    unique_timedeltas = np.unique(result[pd.notnull(result)])
-    unit = _netcdf_to_numpy_timeunit(_infer_time_units_from_diff(unique_timedeltas))
-    if unit not in {"s", "ms", "us", "ns"}:
-        # default to "ns", when not specified
-        unit = "ns"
-    result = result.astype(f"timedelta64[{unit}]")
-    assert np.issubdtype(result.dtype, "timedelta64")
-    return result
-
-
 def to_datetime_unboxed(value, **kwargs):
     result = pd.to_datetime(value, **kwargs).to_numpy()
     assert np.issubdtype(result.dtype, "datetime64")
@@ -604,22 +606,36 @@ def _numbers_to_timedelta(
     return flat_num.astype(f"timedelta64[{time_unit}]")
 
 
-def decode_cf_timedelta(num_timedeltas, units: str) -> np.ndarray:
-    # todo: check, if this works as intended
+def decode_cf_timedelta(
+    num_timedeltas, units: str, time_unit: str = "ns"
+) -> np.ndarray:
     """Given an array of numeric timedeltas in netCDF format, convert it into a
     numpy timedelta64 ["s", "ms", "us", "ns"] array.
     """
     num_timedeltas = np.asarray(num_timedeltas)
     unit = _netcdf_to_numpy_timeunit(units)
 
-    timedeltas = _numbers_to_timedelta(num_timedeltas, unit, "s", "timedelta")
+    _check_timedelta_range(num_timedeltas.min(), unit, time_unit)
+    _check_timedelta_range(num_timedeltas.max(), unit, time_unit)
 
-    as_unit = unit
-    if unit not in {"s", "ms", "us", "ns"}:
-        # default to "ns", when not specified
-        as_unit = "ns"
-    result = pd.to_timedelta(ravel(timedeltas)).as_unit(as_unit).to_numpy()
-    return reshape(result, timedeltas.shape)
+    timedeltas = _numbers_to_timedelta(num_timedeltas, unit, "s", "timedelta")
+    timedeltas = pd.to_timedelta(ravel(timedeltas))
+
+    if np.isnat(timedeltas).all():
+        empirical_unit = time_unit
+    else:
+        empirical_unit = timedeltas.unit
+
+    if np.timedelta64(1, time_unit) > np.timedelta64(1, empirical_unit):
+        time_unit = empirical_unit
+
+    if time_unit not in {"s", "ms", "us", "ns"}:
+        raise ValueError(
+            f"time_unit must be one of 's', 'ms', 'us', or 'ns'. Got: {time_unit}"
+        )
+
+    result = timedeltas.as_unit(time_unit).to_numpy()
+    return reshape(result, num_timedeltas.shape)
 
 
 def _unit_timedelta_cftime(units: str) -> timedelta:
@@ -700,7 +716,7 @@ def infer_timedelta_units(deltas) -> str:
     {'days', 'hours', 'minutes' 'seconds'} (the first one that can evenly
     divide all unique time deltas in `deltas`)
     """
-    deltas = to_timedelta_unboxed(ravel(np.asarray(deltas)))
+    deltas = ravel(deltas)
     unique_timedeltas = np.unique(deltas[pd.notnull(deltas)])
     return _infer_time_units_from_diff(unique_timedeltas)
 
