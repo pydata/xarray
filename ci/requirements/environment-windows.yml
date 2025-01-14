@@ -18,6 +18,7 @@ dependencies:
   - hypothesis
   - iris
   - lxml # Optional dep of pydap
+  - lithops
   - matplotlib-base
   - nc-time-axis
   - netcdf4

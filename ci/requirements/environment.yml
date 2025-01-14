@@ -19,6 +19,7 @@ dependencies:
   - hdf5
   - hypothesis
   - iris
+  - lithops
   - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
