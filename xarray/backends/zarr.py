@@ -448,6 +448,7 @@ def extract_zarr_variable_encoding(
     safe_to_drop = {"source", "original_shape", "preferred_chunks"}
     valid_encodings = {
         "chunks",
+        "shards",
         "compressor",  # TODO: delete when min zarr >=3
         "compressors",
         "filters",
