@@ -681,7 +681,7 @@ def test_decode_cf_timedelta_time_unit(time_unit, encoding_unit) -> None:
     assert result.dtype == expected.dtype
 
 
-def test_decode_cf_timedelta_time_unit_out_of_bounds(time_unit):
+def test_decode_cf_timedelta_time_unit_out_of_bounds(time_unit) -> None:
     # Define a scale factor that will guarantee overflow with the given
     # time_unit.
     scale_factor = np.timedelta64(1, time_unit) // np.timedelta64(1, "ns")
@@ -690,7 +690,7 @@ def test_decode_cf_timedelta_time_unit_out_of_bounds(time_unit):
         decode_cf_timedelta(encoded, "days", time_unit)
 
 
-def test_cf_timedelta_roundtrip_large_value(time_unit):
+def test_cf_timedelta_roundtrip_large_value(time_unit) -> None:
     value = np.timedelta64(np.iinfo(np.int64).max, time_unit)
     encoded, units = encode_cf_timedelta(value)
     decoded = decode_cf_timedelta(encoded, units, time_unit=time_unit)

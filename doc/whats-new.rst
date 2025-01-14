@@ -51,7 +51,7 @@ eventually be deprecated.
 New Features
 ~~~~~~~~~~~~
 - Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
