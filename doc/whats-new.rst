@@ -34,6 +34,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` when the limit is bigger than the chunksize (:issue:`9939`).
+  By `Joseph Nowak <https://github.com/josephnowak>`_.
 
 Documentation
 ~~~~~~~~~~~~~
