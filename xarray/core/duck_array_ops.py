@@ -536,14 +536,14 @@ cumsum_1d = _create_nan_agg_method("cumsum", invariant_0d=True)
 cumsum_1d.numeric_only = True
 
 
-def array_all(array, axis=None, keepdims=False):
+def array_all(array, axis=None, keepdims=False, **kwargs):
     xp = get_array_namespace(array)
-    return xp.all(array, axis=axis, keepdims=keepdims)
+    return xp.all(array, axis=axis, keepdims=keepdims, **kwargs)
 
 
-def array_any(array, axis=None, keepdims=False):
+def array_any(array, axis=None, keepdims=False, **kwargs):
     xp = get_array_namespace(array)
-    return xp.any(array, axis=axis, keepdims=keepdims)
+    return xp.any(array, axis=axis, keepdims=keepdims, **kwargs)
 
 
 _mean = _create_nan_agg_method("mean", invariant_0d=True)
