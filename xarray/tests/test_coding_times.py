@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from datetime import timedelta
+from datetime import datetime, timedelta
 from itertools import product
 from typing import Literal
 
@@ -34,7 +34,6 @@ from xarray.coding.times import (
     format_cftime_datetime,
     infer_datetime_units,
     infer_timedelta_units,
-    to_timedelta_unboxed,
 )
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import _update_bounds_attributes, cf_encoder
@@ -138,7 +137,7 @@ def test_cf_datetime(
         actual = decode_cf_datetime(num_dates, units, calendar, time_unit=time_unit)
 
     if actual.dtype.kind != "O":
-        expected = cftime_to_nptime(expected)
+        expected = cftime_to_nptime(expected, time_unit=time_unit)
 
     abs_diff = np.asarray(abs(actual - expected)).ravel()
     abs_diff = pd.to_timedelta(abs_diff.tolist()).to_numpy()
@@ -281,7 +280,7 @@ def test_decode_dates_outside_timestamp_range(
         time, units, calendar=calendar, only_use_cftime_datetimes=True
     )
     if calendar == "proleptic_gregorian" and time_unit != "ns":
-        expected = cftime_to_nptime(expected)
+        expected = cftime_to_nptime(expected, time_unit=time_unit)
     expected_date_type = type(expected[0])
 
     with warnings.catch_warnings():
@@ -441,8 +440,8 @@ def test_decode_multidim_time_outside_timestamp_range(
     expected2 = cftime.num2date(time2, units, calendar, only_use_cftime_datetimes=True)
 
     if calendar == "proleptic_gregorian" and time_unit != "ns":
-        expected1 = cftime_to_nptime(expected1)
-        expected2 = cftime_to_nptime(expected2)
+        expected1 = cftime_to_nptime(expected1, time_unit=time_unit)
+        expected2 = cftime_to_nptime(expected2, time_unit=time_unit)
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "Unable to decode time axis")
@@ -635,7 +634,7 @@ def test_cf_timedelta(timedeltas, units, numbers) -> None:
     if timedeltas == "NaT":
         timedeltas = np.timedelta64("NaT", "ns")
     else:
-        timedeltas = to_timedelta_unboxed(timedeltas)
+        timedeltas = pd.to_timedelta(timedeltas).to_numpy()
     numbers = np.array(numbers)
 
     expected = numbers
@@ -659,12 +658,44 @@ def test_cf_timedelta_2d() -> None:
     units = "days"
     numbers = np.atleast_2d([1, 2, 3])
 
-    timedeltas = np.atleast_2d(to_timedelta_unboxed(["1D", "2D", "3D"]))
+    timedeltas = np.atleast_2d(pd.to_timedelta(["1D", "2D", "3D"]).to_numpy())
     expected = timedeltas
 
     actual = decode_cf_timedelta(numbers, units)
     assert_array_equal(expected, actual)
     assert expected.dtype == actual.dtype
+
+
+@pytest.mark.parametrize("encoding_unit", FREQUENCIES_TO_ENCODING_UNITS.values())
+def test_decode_cf_timedelta_time_unit(time_unit, encoding_unit) -> None:
+    encoded = 1
+    encoding_unit_as_numpy = _netcdf_to_numpy_timeunit(encoding_unit)
+    if np.timedelta64(1, time_unit) > np.timedelta64(1, encoding_unit_as_numpy):
+        expected = np.timedelta64(encoded, encoding_unit_as_numpy)
+    else:
+        expected = np.timedelta64(encoded, encoding_unit_as_numpy).astype(
+            f"timedelta64[{time_unit}]"
+        )
+    result = decode_cf_timedelta(encoded, encoding_unit, time_unit)
+    assert result == expected
+    assert result.dtype == expected.dtype
+
+
+def test_decode_cf_timedelta_time_unit_out_of_bounds(time_unit) -> None:
+    # Define a scale factor that will guarantee overflow with the given
+    # time_unit.
+    scale_factor = np.timedelta64(1, time_unit) // np.timedelta64(1, "ns")
+    encoded = scale_factor * 300 * 365
+    with pytest.raises(OutOfBoundsTimedelta):
+        decode_cf_timedelta(encoded, "days", time_unit)
+
+
+def test_cf_timedelta_roundtrip_large_value(time_unit) -> None:
+    value = np.timedelta64(np.iinfo(np.int64).max, time_unit)
+    encoded, units = encode_cf_timedelta(value)
+    decoded = decode_cf_timedelta(encoded, units, time_unit=time_unit)
+    assert value == decoded
+    assert value.dtype == decoded.dtype
 
 
 @pytest.mark.parametrize(
@@ -1154,6 +1185,30 @@ def test__encode_datetime_with_cftime() -> None:
         expected = cftime.date2num(times, encoding_units, calendar)
     result = _encode_datetime_with_cftime(times, encoding_units, calendar)
     np.testing.assert_equal(result, expected)
+
+
+@requires_cftime
+def test_encode_decode_cf_datetime_outofbounds_warnings(
+    time_unit: PDDatetimeUnitOptions,
+) -> None:
+    import cftime
+
+    if time_unit == "ns":
+        pytest.skip("does not work work out of bounds datetimes")
+    dates = np.array(["0001-01-01", "2001-01-01"], dtype=f"datetime64[{time_unit}]")
+    cfdates = np.array(
+        [
+            cftime.datetime(t0.year, t0.month, t0.day, calendar="gregorian")
+            for t0 in dates.astype(datetime)
+        ]
+    )
+    with pytest.warns(
+        SerializationWarning, match="Unable to encode numpy.datetime64 objects"
+    ):
+        encoded = encode_cf_datetime(dates, "seconds since 2000-01-01", "standard")
+    with pytest.warns(SerializationWarning, match="Unable to decode time axis"):
+        decoded = decode_cf_datetime(*encoded)
+    np.testing.assert_equal(decoded, cfdates)
 
 
 @pytest.mark.parametrize("calendar", ["gregorian", "Gregorian", "GREGORIAN"])

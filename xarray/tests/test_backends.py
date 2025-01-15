@@ -616,7 +616,7 @@ class DatasetIOBase:
                     # proleptic gregorian will be decoded into numpy datetime64
                     # fixing to expectations
                     if actual.t.dtype.kind == "M":
-                        dtype = f"datetime64[{np.datetime_data(actual.t)[0]}]"
+                        dtype = actual.t.dtype
                         expected_decoded_t = expected_decoded_t.astype(dtype)
                         expected_decoded_t0 = expected_decoded_t0.astype(dtype)
                     abs_diff = abs(actual.t.values - expected_decoded_t)
@@ -5707,7 +5707,8 @@ def test_use_cftime_false_standard_calendar_in_range(calendar) -> None:
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
         with warnings.catch_warnings(record=True) as record:
-            with open_dataset(tmp_file, use_cftime=False) as ds:
+            coder = xr.coders.CFDatetimeCoder(use_cftime=False)
+            with open_dataset(tmp_file, decode_times=coder) as ds:
                 assert_identical(expected_x, ds.x)
                 assert_identical(expected_time, ds.time)
             _assert_no_dates_out_of_range_warning(record)

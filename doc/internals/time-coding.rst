@@ -11,7 +11,7 @@
     int64_min = np.iinfo("int64").min + 1
     uint64_max = np.iinfo("uint64").max
 
-.. internals.timecoding:
+.. _internals.timecoding:
 
 Time Coding
 ===========
@@ -26,13 +26,14 @@ to_datetime
 
 The function :py:func:`pandas.to_datetime` is used within xarray for inferring units and for testing purposes.
 
-In normal operation :py:func:`pandas.to_datetime` returns a :py:class:`pandas.Timestamp` (for scalar input) or :py:class:`pandas.DatetimeIndex` (for array-like input) which are related to ``np.datetime64`` values with a resolution inherited from the input. If no resolution can be inherited ``'ns'`` is assumed. That has the implication that the maximum usable time range for those cases is approximately +/- 292 years centered around the Unix epoch (1970-01-01). To accommodate that, we carefully check the units/resolution in the encoding and decoding step.
+In normal operation :py:func:`pandas.to_datetime` returns a :py:class:`pandas.Timestamp` (for scalar input) or :py:class:`pandas.DatetimeIndex` (for array-like input) which are related to ``np.datetime64`` values with a resolution inherited from the input (can be one of ``'s'``, ``'ms'``, ``'us'``, ``'ns'``). If no resolution can be inherited ``'ns'`` is assumed. That has the implication that the maximum usable time range for those cases is approximately +/- 292 years centered around the Unix epoch (1970-01-01). To accommodate that, we carefully check the units/resolution in the encoding and decoding step.
 
 When the arguments are numeric (not strings or ``np.datetime64`` values) ``"unit"`` can be anything from ``'Y'``, ``'W'``, ``'D'``, ``'h'``, ``'m'``, ``'s'``, ``'ms'``, ``'us'`` or ``'ns'``, though the returned resolution will be ``"ns"``.
 
 .. ipython:: python
 
-    f"Maximum datetime range: ({pd.to_datetime(int64_min, unit="ns")}, {pd.to_datetime(int64_max, unit="ns")})"
+    f"Minimum datetime: {pd.to_datetime(int64_min, unit="ns")}"
+    f"Maximum datetime: {pd.to_datetime(int64_max, unit="ns")}"
 
 For input values which can't be represented in nanosecond resolution an :py:class:`pandas.OutOfBoundsDatetime` exception is raised:
 
@@ -52,37 +53,31 @@ For input values which can't be represented in nanosecond resolution an :py:clas
 ``np.datetime64`` values can be extracted with :py:meth:`pandas.Timestamp.to_numpy` and :py:meth:`pandas.DatetimeIndex.to_numpy`. The returned resolution depends on the internal representation. This representation can be changed using :py:meth:`pandas.Timestamp.as_unit`
 and :py:meth:`pandas.DatetimeIndex.as_unit` respectively.
 
+
 ``as_unit`` takes one of ``'s'``, ``'ms'``, ``'us'``, ``'ns'`` as an argument. That means we are able to represent datetimes with second, millisecond, microsecond or nanosecond resolution.
 
 .. ipython:: python
 
     time = pd.to_datetime(np.datetime64(0, "D"))
     print("Datetime:", time, np.asarray([time.to_numpy()]).dtype)
-    print("Datetime as_unit('s'):", time.as_unit("s"))
-    print("Datetime to_numpy():", time.as_unit("s").to_numpy())
+    print("Datetime as_unit('ms'):", time.as_unit("ms"))
+    print("Datetime to_numpy():", time.as_unit("ms").to_numpy())
     time = pd.to_datetime(np.array([-1000, 1, 2], dtype="datetime64[Y]"))
     print("DatetimeIndex:", time)
-    print("DatetimeIndex as_unit('s'):", time.as_unit("s"))
-    print("DatetimeIndex to_numpy():", time.as_unit("s").to_numpy())
+    print("DatetimeIndex as_unit('us'):", time.as_unit("us"))
+    print("DatetimeIndex to_numpy():", time.as_unit("us").to_numpy())
 
 .. warning::
-    Input data with resolution higher than ``'ns'`` (eg. ``'ps'``, ``'fs'``, ``'as'``) is truncated (not rounded) at the ``'ns'``-level. This is currently broken for the ``'ps'`` input, where it is interpreted as ``'ns'``.
+    Input data with resolution higher than ``'ns'`` (eg. ``'ps'``, ``'fs'``, ``'as'``) is truncated (not rounded) at the ``'ns'``-level. This is `currently broken <https://github.com/pandas-dev/pandas/issues/60341>`_ for the ``'ps'`` input, where it is interpreted as ``'ns'``.
 
     .. ipython:: python
 
-        try:
-            print("Good:", pd.to_datetime([np.datetime64(1901901901901, "as")]))
-            print("Good:", pd.to_datetime([np.datetime64(1901901901901, "fs")]))
-            print(" Bad:", pd.to_datetime([np.datetime64(1901901901901, "ps")]))
-            print("Good:", pd.to_datetime([np.datetime64(1901901901901, "ns")]))
-            print("Good:", pd.to_datetime([np.datetime64(1901901901901, "us")]))
-            print("Good:", pd.to_datetime([np.datetime64(1901901901901, "ms")]))
-            print(
-                "Good:", pd.to_datetime(np.array([np.datetime64(1901901901901, "s")]))
-            )
-            print("Bad:", pd.to_datetime([np.datetime64(1901901901901, "s")]))
-        except Exception as err:
-            print("Raise:", err)
+        print("Good:", pd.to_datetime([np.datetime64(1901901901901, "as")]))
+        print("Good:", pd.to_datetime([np.datetime64(1901901901901, "fs")]))
+        print(" Bad:", pd.to_datetime([np.datetime64(1901901901901, "ps")]))
+        print("Good:", pd.to_datetime([np.datetime64(1901901901901, "ns")]))
+        print("Good:", pd.to_datetime([np.datetime64(1901901901901, "us")]))
+        print("Good:", pd.to_datetime([np.datetime64(1901901901901, "ms")]))
 
 .. warning::
     Care has to be taken, as some configurations of input data will raise. The following shows, that we are safe to use :py:func:`pandas.to_datetime` when providing :py:class:`numpy.datetime64` as scalar or numpy array as input.
@@ -150,17 +145,14 @@ and :py:meth:`pandas.TimedeltaIndex.as_unit` respectively.
 
 .. ipython:: python
 
-    delta = pd.to_timedelta(1, unit="D")
-    print("Timedelta:", delta)
-    print("Timedelta as_unit('s'):", delta.as_unit("s"))
-    print("Timedelta to_numpy():", delta.as_unit("s").to_numpy())
+    delta = pd.to_timedelta(np.timedelta64(1, "D"))
+    print("Timedelta:", delta, np.asarray([delta.to_numpy()]).dtype)
+    print("Timedelta as_unit('ms'):", delta.as_unit("ms"))
+    print("Timedelta to_numpy():", delta.as_unit("ms").to_numpy())
     delta = pd.to_timedelta([0, 1, 2], unit="D")
     print("TimedeltaIndex:", delta)
-    print("TimedeltaIndex as_unit('s'):", delta.as_unit("s"))
-    print("TimedeltaIndex to_numpy():", delta.as_unit("s").to_numpy())
-
-.. note::
-    For the functionality in xarray the output resolution is converted from ``'ns'`` to the lowest needed resolution.
+    print("TimedeltaIndex as_unit('ms'):", delta.as_unit("ms"))
+    print("TimedeltaIndex to_numpy():", delta.as_unit("ms").to_numpy())
 
 .. warning::
     Care has to be taken, as some configurations of input data will raise. The following shows, that we are safe to use :py:func:`pandas.to_timedelta` when providing :py:class:`numpy.timedelta64` as scalar or numpy array as input.
@@ -203,7 +195,7 @@ When arguments are numeric (not strings) "unit" can be anything from ``'Y'``, ``
 
 In normal operation :py:class:`pandas.Timestamp` holds the timestamp in the provided resolution, but only one of ``'s'``, ``'ms'``, ``'us'``, ``'ns'``. Lower resolution input is automatically converted to ``'s'``, higher resolution input is cutted to ``'ns'``.
 
-The same conversion rules apply here as for :py:func:`pandas.to_timedelta` (see above).
+The same conversion rules apply here as for :py:func:`pandas.to_timedelta` (see `to_timedelta`_).
 Depending on the internal resolution Timestamps can be represented in the range:
 
 .. ipython:: python
@@ -228,7 +220,7 @@ Since relaxing the resolution, this enhances the range to several hundreds of th
             print("Errors:", err)
 
 .. note::
-    :py:class:`pandas.Timestamp` is the only current possibility to correctly import time reference strings. It handles non-ISO formatted strings, keeps the resolution of the strings (``'s'``, ``''ms''`` etc.) and imports time zones. When initialized with :py:class:`numpy.datetime64` instead of a string it even overcomes the above limitation of the possible time range.
+    :py:class:`pandas.Timestamp` is the only current possibility to correctly import time reference strings. It handles non-ISO formatted strings, keeps the resolution of the strings (``'s'``, ``'ms'`` etc.) and imports time zones. When initialized with :py:class:`numpy.datetime64` instead of a string it even overcomes the above limitation of the possible time range.
 
     .. ipython:: python
 
@@ -262,9 +254,6 @@ DatetimeIndex
 
 :py:class:`pandas.DatetimeIndex` is used to wrap ``np.datetime64`` values or other datetime-likes when encoding. The resolution of the DatetimeIndex depends on the input, but can be only one of ``'s'``, ``'ms'``, ``'us'``, ``'ns'``. Lower resolution input is automatically converted to ``'s'``, higher resolution input is cut to ``'ns'``.
 :py:class:`pandas.DatetimeIndex` will raise :py:class:`pandas.OutOfBoundsDatetime` if the input can't be represented in the given resolution.
-
-.. note::
-    For xarray we assume that all :py:class:`numpy.datetime64` provided to :py:class:`pandas.DatetimeIndex` are up to the specs. This is especially true, when those values have been decoded upfront. If the data is provided by users, they should handle any issues before.
 
 .. ipython:: python
 
@@ -328,7 +317,7 @@ CF time decoding
 
 Decoding of ``values`` with a time unit specification like ``"seconds since 1992-10-8 15:15:42.5 -6:00"`` into datetimes using the CF conventions is a multistage process.
 
-1. If we have a non-standard calendar (e.g. ``"noleap"``) decoding is done with the ``cftime`` package, which is not covered in this section. For the``"standard"``/``"gregorian"`` calendar as well as the ``"proleptic_gregorian"`` calendar the above outlined pandas functionality is used.
+1. If we have a non-standard calendar (e.g. ``"noleap"``) decoding is done with the ``cftime`` package, which is not covered in this section. For the ``"standard"``/``"gregorian"`` calendar as well as the ``"proleptic_gregorian"`` calendar the above outlined pandas functionality is used.
 
 2. The ``"standard"``/``"gregorian"`` calendar and the ``"proleptic_gregorian"`` are equivalent for any dates and reference times >= ``"1582-10-15"``. First the reference time is checked and any timezone information stripped off. In a second step, the minimum and maximum ``values`` are checked if they can be represented in the current reference time resolution. At the same time integer overflow would be caught. For the ``"standard"``/``"gregorian"`` calendar the dates are checked to be >= ``"1582-10-15"``. If anything fails, the decoding is attempted with ``cftime``.
 
@@ -344,37 +333,47 @@ Decoding of ``values`` with a time unit specification like ``"seconds since 1992
     values = np.array([-1000 * 365, 0, 1000 * 365], dtype="int64")
     units = "days since 2000-01-01 00:00:00.000001"
     dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
-    print(dt)
     assert dt.dtype == "datetime64[us]"
+    dt
+
+.. ipython:: python
 
     units = "microseconds since 2000-01-01 00:00:00"
     dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
-    print(dt)
     assert dt.dtype == "datetime64[us]"
+    dt
+
+.. ipython:: python
 
     values = np.array([0, 0.25, 0.5, 0.75, 1.0], dtype="float64")
     units = "days since 2000-01-01 00:00:00.001"
     dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
-    print(dt)
     assert dt.dtype == "datetime64[ms]"
+    dt
+
+.. ipython:: python
 
     values = np.array([0, 0.25, 0.5, 0.75, 1.0], dtype="float64")
     units = "hours since 2000-01-01"
     dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
-    print(dt)
     assert dt.dtype == "datetime64[s]"
+    dt
+
+.. ipython:: python
 
     values = np.array([0, 0.25, 0.5, 0.75, 1.0], dtype="float64")
     units = "hours since 2000-01-01 00:00:00 03:30"
     dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
-    print(dt)
     assert dt.dtype == "datetime64[s]"
+    dt
+
+.. ipython:: python
 
     values = np.array([-2002 * 365 - 121, -366, 365, 2000 * 365 + 119], dtype="int64")
     units = "days since 0001-01-01 00:00:00"
     dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
-    print(dt)
     assert dt.dtype == "datetime64[s]"
+    dt
 
 CF time encoding
 ~~~~~~~~~~~~~~~~
@@ -435,8 +434,42 @@ For encoding the process is more or less a reversal of the above, but we have to
     )
     print(values, units)
 
+.. _internals.default_timeunit:
 
 Default Time Unit
 ~~~~~~~~~~~~~~~~~
 
 The current default time unit of xarray is ``'ns'``. When setting keyword argument ``time_unit`` unit to ``'s'`` (the lowest resolution pandas allows) datetimes will be converted to at least ``'s'``-resolution, if possible. The same holds true for ``'ms'`` and ``'us'``.
+
+.. ipython:: python
+
+    attrs = {"units": "hours since 2000-01-01"}
+    ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
+    ds.to_netcdf("test-datetimes1.nc")
+
+.. ipython:: python
+
+    xr.open_dataset("test-datetimes1.nc")
+
+.. ipython:: python
+
+    coder = xr.coders.CFDatetimeCoder(time_unit="s")
+    xr.open_dataset("test-datetimes1.nc", decode_times=coder)
+
+If a coarser unit is requested the datetimes are decoded into their native
+on-disk resolution, if possible.
+
+.. ipython:: python
+
+    attrs = {"units": "milliseconds since 2000-01-01"}
+    ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
+    ds.to_netcdf("test-datetimes2.nc")
+
+.. ipython:: python
+
+    xr.open_dataset("test-datetimes2.nc")
+
+.. ipython:: python
+
+    coder = xr.coders.CFDatetimeCoder(time_unit="s")
+    xr.open_dataset("test-datetimes2.nc", decode_times=coder)

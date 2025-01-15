@@ -14,19 +14,44 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2025.01.2:
 
-.. _whats-new.2025.01.1:
-
-v2025.01.1 (unreleased)
+v2025.01.2 (unreleased)
 -----------------------
+
+This release brings non-nanosecond datetime resolution to xarray. In the
+last couple of releases xarray has been prepared for that change. The code had
+to be changed and adapted in numerous places, affecting especially the test suite.
+The documentation has been updated accordingly and a new internal chapter
+on :ref:`internals.timecoding` has been added.
+
+To make the transition as smooth as possible this is designed to be fully backwards
+compatible, keeping the current default of ``'ns'`` resolution on decoding.
+To opt-in decoding into other resolutions (``'us'``, ``'ms'`` or ``'s'``) the
+new :py:class:`coders.CFDatetimeCoder` is used as parameter to ``decode_times``
+kwarg (see also :ref:`internals.default_timeunit`):
+
+.. code-block:: python
+
+    coder = xr.coders.CFDatetimeCoder(time_unit="s")
+    ds = xr.open_dataset(filename, decode_times=coder)
+
+There might slight changes when encoding/decoding times as some warning and
+error messages have been removed or rewritten. Xarray will now also allow
+non-nanosecond datetimes (with ``'us'``, ``'ms'`` or ``'s'`` resolution) when
+creating DataArray's from scratch, picking the lowest possible resolution:
+
+.. ipython:: python
+
+    xr.DataArray(data=[np.datetime64("2000-01-01", "D")], dims=("time",))
+
+In a future release the current default of ``'ns'`` resolution on decoding will
+eventually be deprecated.
 
 New Features
 ~~~~~~~~~~~~
-- Split out :py:class:`coders.CFDatetimeCoder` as public API in ``xr.coders``, make ``decode_times`` keyword argument
-  consume :py:class:`coders.CFDatetimeCoder` (:pull:`9901`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -34,9 +59,7 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-- Time decoding related kwarg ``use_cftime`` is deprecated. Use keyword argument
-  ``decode_times=CFDatetimeCoder(use_cftime=True)`` in :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_dataarray`, :py:func:`~xarray.open_datatree`, :py:func:`~xarray.open_groups`, :py:func:`~xarray.open_zarr` and :py:func:`~xarray.decode_cf` instead (:pull:`9901`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 Bug fixes
 ~~~~~~~~~
@@ -44,12 +67,31 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- A chapter on :ref:`internals.timecoding` is added to the internal section (:pull:`9618`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+.. _whats-new.2025.01.1:
 
+v2025.01.1 (Jan 9, 2025)
+------------------------
+
+This is a quick release to bring compatibility with the Zarr V3 release. It also includes an update to the time decoding
+infrastructure as a step toward `enabling non-nanosecond datetime support <https://github.com/pydata/xarray/pull/9618>`_!
+
+New Features
+~~~~~~~~~~~~
+- Split out :py:class:`coders.CFDatetimeCoder` as public API in ``xr.coders``, make ``decode_times`` keyword argument
+  consume :py:class:`coders.CFDatetimeCoder` (:pull:`9901`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+Deprecations
+~~~~~~~~~~~~
+- Time decoding related kwarg ``use_cftime`` is deprecated. Use keyword argument
+  ``decode_times=CFDatetimeCoder(use_cftime=True)`` in :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_dataarray`, :py:func:`~xarray.open_datatree`, :py:func:`~xarray.open_groups`, :py:func:`~xarray.open_zarr` and :py:func:`~xarray.decode_cf` instead (:pull:`9901`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 .. _whats-new.2025.01.0:
 

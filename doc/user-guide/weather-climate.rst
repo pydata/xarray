@@ -57,14 +57,14 @@ CF-compliant coordinate variables
 
 .. _CFTimeIndex:
 
-Non-standard calendars and dates outside the nanosecond-precision range
------------------------------------------------------------------------
+Non-standard calendars and dates outside the precision range
+------------------------------------------------------------
 
 Through the standalone ``cftime`` library and a custom subclass of
 :py:class:`pandas.Index`, xarray supports a subset of the indexing
 functionality enabled through the standard :py:class:`pandas.DatetimeIndex` for
 dates from non-standard calendars commonly used in climate science or dates
-using a standard calendar, but outside the `precision range`_ and dates [prior to 1582-10-15](https://en.wikipedia.org/wiki/Gregorian_calendar).
+using a standard calendar, but outside the `precision range`_ and dates prior to `1582-10-15`_.
 
 .. note::
 
@@ -74,14 +74,14 @@ using a standard calendar, but outside the `precision range`_ and dates [prior t
    any of the following are true:
 
    - The dates are from a non-standard calendar
-   - Any dates are outside the nanosecond-precision range (prior xarray version 2025.01.1)
-   - Any dates are outside the time span limited by the resolution (from xarray version v2025.01.1)
+   - Any dates are outside the nanosecond-precision range (prior xarray version 2025.01.2)
+   - Any dates are outside the time span limited by the resolution (from xarray version 2025.01.2)
 
    Otherwise pandas-compatible dates from a standard calendar will be
-   represented with the ``np.datetime64[unit]`` data type (where unit can be one of ["s", "ms", "us", "ns"]), enabling the use of a :py:class:`pandas.DatetimeIndex` or arrays with dtype ``np.datetime64[unit]`` and their full set of associated features.
+   represented with the ``np.datetime64[unit]`` data type (where unit can be one of ``"s"``, ``"ms"``, ``"us"``, ``"ns"``), enabling the use of a :py:class:`pandas.DatetimeIndex` or arrays with dtype ``np.datetime64[unit]`` and their full set of associated features.
 
    As of pandas version 2.0.0, pandas supports non-nanosecond precision datetime
-   values. From xarray version 2025.01.1 on, non-nanosecond precision datetime values are also supported in xarray (this can be parameterized via :py:class:`coders.CFDatetimeCoder` and ``decode_times` kwarg).
+   values. From xarray version 2025.01.2 on, non-nanosecond precision datetime values are also supported in xarray (this can be parameterized via :py:class:`~xarray.coders.CFDatetimeCoder` and ``decode_times`` kwarg). See also :ref:`internals.timecoding`.
 
 For example, you can create a DataArray indexed by a time
 coordinate with dates from a no-leap calendar and a
@@ -132,7 +132,9 @@ Conversion between non-standard calendar and to/from pandas DatetimeIndexes is
 facilitated with the :py:meth:`xarray.Dataset.convert_calendar` method (also available as
 :py:meth:`xarray.DataArray.convert_calendar`). Here, like elsewhere in xarray, the ``use_cftime``
 argument controls which datetime backend is used in the output. The default (``None``) is to
-use ``pandas`` when possible, i.e. when the calendar is ``standard``/``gregorian`` and dates [starting with 1582-10-15]((https://en.wikipedia.org/wiki/Gregorian_calendar)). There is no such restriction when converting to a ``proleptic_gregorian`` calendar.
+use ``pandas`` when possible, i.e. when the calendar is ``standard``/``gregorian`` and dates starting with `1582-10-15`_. There is no such restriction when converting to a ``proleptic_gregorian`` calendar.
+
+.. _1582-10-15: https://en.wikipedia.org/wiki/Gregorian_calendar
 
 .. ipython:: python
 

@@ -38,6 +38,7 @@ except ImportError:
 
 from xarray.core.types import (
     CFCalendar,
+    CFTimeDatetime,
     NPDatetimeUnitOptions,
     PDDatetimeUnitOptions,
     T_DuckArray,
@@ -342,7 +343,7 @@ def _decode_datetime_with_cftime(
 
 
 def _check_date_for_units_since_refdate(
-    date, unit: str, ref_date: pd.Timestamp
+    date, unit: NPDatetimeUnitOptions, ref_date: pd.Timestamp
 ) -> pd.Timestamp:
     # check for out-of-bounds floats and raise
     if date > np.iinfo("int64").max or date < np.iinfo("int64").min:
@@ -365,6 +366,26 @@ def _check_date_for_units_since_refdate(
         return pd.Timestamp("NaT")
 
 
+def _check_timedelta_range(value, data_unit, time_unit):
+    if value > np.iinfo("int64").max or value < np.iinfo("int64").min:
+        OutOfBoundsTimedelta(f"Value {value} can't be represented as Timedelta.")
+    # on windows multiplying nan leads to RuntimeWarning
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", "invalid value encountered in multiply", RuntimeWarning
+        )
+        delta = value * np.timedelta64(1, data_unit)
+    if not np.isnan(delta):
+        # this will raise on dtype overflow for integer dtypes
+        if value.dtype.kind in "u" and not np.int64(delta) == value:
+            raise OutOfBoundsTimedelta(
+                "DType overflow in Datetime/Timedelta calculation."
+            )
+        # this will raise on overflow if delta cannot be represented with the
+        # resolutions supported by pandas.
+        pd.to_timedelta(delta)
+
+
 def _align_reference_date_and_unit(
     ref_date: pd.Timestamp, unit: NPDatetimeUnitOptions
 ) -> pd.Timestamp:
@@ -376,7 +397,9 @@ def _align_reference_date_and_unit(
     return ref_date
 
 
-def _check_date_is_after_shift(date: pd.Timestamp, calendar: str) -> None:
+def _check_date_is_after_shift(
+    date: pd.Timestamp | datetime | CFTimeDatetime, calendar: str
+) -> None:
     # if we have gregorian/standard we need to raise
     # if we are outside the well-defined date range
     # proleptic_gregorian and standard/gregorian are only equivalent
@@ -395,7 +418,7 @@ def _check_higher_resolution(
 ) -> tuple[np.ndarray, PDDatetimeUnitOptions]:
     """Iterate until fitting resolution found."""
     res: list[PDDatetimeUnitOptions] = ["s", "ms", "us", "ns"]
-    new_units = res[res.index(cast(PDDatetimeUnitOptions, time_unit)) :]
+    new_units = res[res.index(time_unit) :]
     for new_time_unit in new_units:
         if not ((np.unique(flat_num_dates % 1) > 0).any() and new_time_unit != "ns"):
             break
@@ -458,41 +481,12 @@ def _decode_datetime_with_pandas(
     elif flat_num_dates.dtype.kind in "f":
         flat_num_dates = flat_num_dates.astype(np.float64)
 
-    # keep NaT/nan mask
-    nan = np.isnan(flat_num_dates) | (flat_num_dates == np.iinfo(np.int64).min)
+    timedeltas = _numbers_to_timedelta(
+        flat_num_dates, time_unit, ref_date.unit, "datetime"
+    )
 
-    # in case we need to change the unit, we fix the numbers here
-    # this should be safe, as errors would have been raised above
-    ns_time_unit = _NS_PER_TIME_DELTA[time_unit]
-    ns_ref_date_unit = _NS_PER_TIME_DELTA[ref_date.unit]
-    if ns_time_unit > ns_ref_date_unit:
-        flat_num_dates *= np.int64(ns_time_unit / ns_ref_date_unit)
-        time_unit = ref_date.unit
-
-    # estimate fitting resolution for floating point values
-    # this iterates until all floats are fractionless or time_unit == "ns"
-    if flat_num_dates.dtype.kind == "f" and time_unit != "ns":
-        flat_num_dates, new_time_unit = _check_higher_resolution(
-            flat_num_dates, time_unit
-        )
-        if time_unit != new_time_unit:
-            msg = (
-                f"Can't decode floating point datetime to {time_unit!r} without "
-                f"precision loss, decoding to {new_time_unit!r} instead. "
-                f"To silence this warning use time_unit={new_time_unit!r} in call to "
-                f"decoding function."
-            )
-            emit_user_level_warning(msg, SerializationWarning)
-            time_unit = new_time_unit
-
-    # Cast input ordinals to integers and properly handle NaN/NaT
-    # to prevent casting NaN to int
-    flat_num_dates_int = np.zeros_like(flat_num_dates, dtype=np.int64)
-    flat_num_dates_int[nan] = np.iinfo(np.int64).min
-    flat_num_dates_int[~nan] = flat_num_dates[~nan].astype(np.int64)
-
-    # cast to timedelta64[time_unit] and add to ref_date
-    return ref_date + flat_num_dates_int.astype(f"timedelta64[{time_unit}]")
+    # add timedeltas to ref_date
+    return ref_date + timedeltas
 
 
 def decode_cf_datetime(
@@ -571,39 +565,86 @@ def decode_cf_datetime(
     return reshape(dates, num_dates.shape)
 
 
-def to_timedelta_unboxed(value, **kwargs):
-    # todo: check, if the procedure here is correct
-    result = pd.to_timedelta(value, **kwargs).to_numpy()
-    unique_timedeltas = np.unique(result[pd.notnull(result)])
-    unit = _netcdf_to_numpy_timeunit(_infer_time_units_from_diff(unique_timedeltas))
-    if unit not in {"s", "ms", "us", "ns"}:
-        # default to ns, when not specified
-        unit = "ns"
-    result = result.astype(f"timedelta64[{unit}]")
-    assert np.issubdtype(result.dtype, "timedelta64")
-    return result
-
-
 def to_datetime_unboxed(value, **kwargs):
     result = pd.to_datetime(value, **kwargs).to_numpy()
     assert np.issubdtype(result.dtype, "datetime64")
     return result
 
 
-def decode_cf_timedelta(num_timedeltas, units: str) -> np.ndarray:
-    # todo: check, if this works as intended
+def _numbers_to_timedelta(
+    flat_num: np.ndarray,
+    time_unit: NPDatetimeUnitOptions,
+    ref_unit: PDDatetimeUnitOptions,
+    datatype: str,
+) -> np.ndarray:
+    """Transform numbers to np.timedelta64."""
+    # keep NaT/nan mask
+    nan = np.isnan(flat_num) | (flat_num == np.iinfo(np.int64).min)
+
+    # in case we need to change the unit, we fix the numbers here
+    # this should be safe, as errors would have been raised above
+    ns_time_unit = _NS_PER_TIME_DELTA[time_unit]
+    ns_ref_date_unit = _NS_PER_TIME_DELTA[ref_unit]
+    if ns_time_unit > ns_ref_date_unit:
+        flat_num *= np.int64(ns_time_unit / ns_ref_date_unit)
+        time_unit = ref_unit
+
+    # estimate fitting resolution for floating point values
+    # this iterates until all floats are fractionless or time_unit == "ns"
+    if flat_num.dtype.kind == "f" and time_unit != "ns":
+        flat_num_dates, new_time_unit = _check_higher_resolution(flat_num, time_unit)  # type: ignore[arg-type]
+        if time_unit != new_time_unit:
+            msg = (
+                f"Can't decode floating point {datatype} to {time_unit!r} without "
+                f"precision loss, decoding to {new_time_unit!r} instead. "
+                f"To silence this warning use time_unit={new_time_unit!r} in call to "
+                f"decoding function."
+            )
+            emit_user_level_warning(msg, SerializationWarning)
+            time_unit = new_time_unit
+
+    # Cast input ordinals to integers and properly handle NaN/NaT
+    # to prevent casting NaN to int
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        flat_num = flat_num.astype(np.int64)
+    flat_num[nan] = np.iinfo(np.int64).min
+
+    # cast to wanted type
+    return flat_num.astype(f"timedelta64[{time_unit}]")
+
+
+def decode_cf_timedelta(
+    num_timedeltas, units: str, time_unit: PDDatetimeUnitOptions = "ns"
+) -> np.ndarray:
     """Given an array of numeric timedeltas in netCDF format, convert it into a
     numpy timedelta64 ["s", "ms", "us", "ns"] array.
     """
     num_timedeltas = np.asarray(num_timedeltas)
     unit = _netcdf_to_numpy_timeunit(units)
-    as_unit = unit
-    if unit not in {"s", "ms", "us", "ns"}:
-        # default to ns, when not specified
-        as_unit = "ns"
-    result = (
-        pd.to_timedelta(ravel(num_timedeltas), unit=unit).as_unit(as_unit).to_numpy()
-    )
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "All-NaN slice encountered", RuntimeWarning)
+        _check_timedelta_range(np.nanmin(num_timedeltas), unit, time_unit)
+        _check_timedelta_range(np.nanmax(num_timedeltas), unit, time_unit)
+
+    timedeltas = _numbers_to_timedelta(num_timedeltas, unit, "s", "timedelta")
+    pd_timedeltas = pd.to_timedelta(ravel(timedeltas))
+
+    if np.isnat(timedeltas).all():
+        empirical_unit = time_unit
+    else:
+        empirical_unit = pd_timedeltas.unit
+
+    if np.timedelta64(1, time_unit) > np.timedelta64(1, empirical_unit):
+        time_unit = empirical_unit
+
+    if time_unit not in {"s", "ms", "us", "ns"}:
+        raise ValueError(
+            f"time_unit must be one of 's', 'ms', 'us', or 'ns'. Got: {time_unit}"
+        )
+
+    result = pd_timedeltas.as_unit(time_unit).to_numpy()
     return reshape(result, num_timedeltas.shape)
 
 
@@ -685,7 +726,7 @@ def infer_timedelta_units(deltas) -> str:
     {'days', 'hours', 'minutes' 'seconds'} (the first one that can evenly
     divide all unique time deltas in `deltas`)
     """
-    deltas = to_timedelta_unboxed(ravel(np.asarray(deltas)))
+    deltas = ravel(deltas)
     unique_timedeltas = np.unique(deltas[pd.notnull(deltas)])
     return _infer_time_units_from_diff(unique_timedeltas)
 
@@ -705,7 +746,9 @@ def cftime_to_nptime(
         try:
             # We expect either "us" resolution or "s" resolution depending on
             # whether 'microseconds' are defined for the input or not.
-            dt = np.datetime64(t.isoformat()).astype(f"=M8[{time_unit}]")
+            dt = (
+                pd.Timestamp(np.datetime64(t.isoformat())).as_unit(time_unit).to_numpy()
+            )
         except ValueError as e:
             if raise_on_invalid:
                 raise ValueError(
@@ -855,6 +898,22 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
         # numpy's broken datetime conversion only works for us precision
         dates = dates.astype("M8[us]").astype(datetime)
 
+    def wrap_dt(dt):
+        # convert to cftime proleptic gregorian in case of datetime.datetime
+        # needed because of https://github.com/Unidata/cftime/issues/354
+        if isinstance(dt, datetime) and not isinstance(dt, cftime.datetime):
+            dt = cftime.datetime(
+                dt.year,
+                dt.month,
+                dt.day,
+                dt.hour,
+                dt.minute,
+                dt.second,
+                dt.microsecond,
+                calendar="proleptic_gregorian",
+            )
+        return dt
+
     def encode_datetime(d):
         # Since netCDF files do not support storing float128 values, we ensure
         # that float64 values are used by setting longdouble=False in num2date.
@@ -864,10 +923,10 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
             return (
                 np.nan
                 if d is None
-                else cftime.date2num(d, units, calendar, longdouble=False)
+                else cftime.date2num(wrap_dt(d), units, calendar, longdouble=False)
             )
         except TypeError:
-            return np.nan if d is None else cftime.date2num(d, units, calendar)
+            return np.nan if d is None else cftime.date2num(wrap_dt(d), units, calendar)
 
     return reshape(np.array([encode_datetime(d) for d in ravel(dates)]), dates.shape)
 
@@ -970,6 +1029,19 @@ def _eagerly_encode_cf_datetime(
             # parse with cftime instead
             raise OutOfBoundsDatetime
         assert np.issubdtype(dates.dtype, "datetime64")
+        if calendar in ["standard", "gregorian"] and np.nanmin(dates).astype(
+            "=M8[us]"
+        ).astype(datetime) < datetime(1582, 10, 15):
+            # if we use standard calendar and for dates before the reform
+            # we need to use cftime instead
+            emit_user_level_warning(
+                f"Unable to encode numpy.datetime64 objects with {calendar} calendar."
+                "Using cftime.datetime objects instead, reason: dates prior "
+                "reform date (1582-10-15). To silence this warning transform "
+                "numpy.datetime64 to corresponding cftime.datetime beforehand.",
+                SerializationWarning,
+            )
+            raise OutOfBoundsDatetime
 
         time_unit, ref_date = _unpack_time_unit_and_ref_date(units)
         # calendar equivalence only for days after the reform
@@ -1195,6 +1267,25 @@ def _lazily_encode_cf_timedelta(
 
 
 class CFDatetimeCoder(VariableCoder):
+    """Coder for CF Datetime coding.
+
+    Parameters
+    ----------
+    use_cftime : bool, optional
+        Only relevant if encoded dates come from a standard calendar
+        (e.g. "gregorian", "proleptic_gregorian", "standard", or not
+        specified).  If None (default), attempt to decode times to
+        ``np.datetime64`` objects; if this is not possible, decode times to
+        ``cftime.datetime`` objects. If True, always decode times to
+        ``cftime.datetime`` objects, regardless of whether or not they can be
+        represented using ``np.datetime64`` objects.  If False, always
+        decode times to ``np.datetime64`` objects; if this is not possible
+        raise an error.
+        May not be supported by all the backends.
+    time_unit : PDDatetimeUnitOptions
+          Target resolution when decoding dates. Defaults to "ns".
+    """
+
     def __init__(
         self,
         use_cftime: bool | None = None,
