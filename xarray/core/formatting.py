@@ -18,7 +18,7 @@ import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
 from xarray.core.datatree_render import RenderDataTree
-from xarray.core.duck_array_ops import array_equiv, astype
+from xarray.core.duck_array_ops import array_all, array_equiv, astype
 from xarray.core.indexing import MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.treenode import group_subtrees
@@ -204,9 +204,9 @@ def format_items(x):
         day_part = x[~pd.isnull(x)].astype("timedelta64[D]").astype("timedelta64[ns]")
         time_needed = x[~pd.isnull(x)] != day_part
         day_needed = day_part != np.timedelta64(0, "ns")
-        if np.logical_not(day_needed).all():
+        if array_all(np.logical_not(day_needed)):
             timedelta_format = "time"
-        elif np.logical_not(time_needed).all():
+        elif array_all(np.logical_not(time_needed)):
             timedelta_format = "date"
 
     formatted = [format_item(xi, timedelta_format) for xi in x]
