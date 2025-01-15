@@ -1271,7 +1271,9 @@ def _decompose_outer_indexer(
                 np_indexer.append(np_slice)
             elif isinstance(k, integer_types):
                 backend_indexer.append(k)
-            elif isinstance(k, np.ndarray) and duck_array_ops.array_all(np.diff(k) >= 0):
+            elif isinstance(k, np.ndarray) and duck_array_ops.array_all(
+                np.diff(k) >= 0
+            ):
                 backend_indexer.append(k)
                 np_indexer.append(slice(None))
             else:
