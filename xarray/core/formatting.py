@@ -18,7 +18,7 @@ import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
 from xarray.core.datatree_render import RenderDataTree
-from xarray.core.duck_array_ops import array_all, array_equiv, astype
+from xarray.core.duck_array_ops import array_all, array_any, array_equiv, astype
 from xarray.core.indexing import MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.treenode import group_subtrees
@@ -232,7 +232,7 @@ def format_array_flat(array, max_width: int):
 
     cum_len = np.cumsum([len(s) + 1 for s in relevant_items]) - 1
     if (array.size > 2) and (
-        (max_possibly_relevant < array.size) or (cum_len > max_width).any()
+        (max_possibly_relevant < array.size) or array_any(cum_len > max_width)
     ):
         padding = " ... "
         max_len = max(int(np.argmax(cum_len + len(padding) - 1 > max_width)), 2)

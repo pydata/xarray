@@ -22,7 +22,7 @@ from xarray.coding.variables import (
 )
 from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
-from xarray.core.duck_array_ops import array_all, asarray, ravel, reshape
+from xarray.core.duck_array_ops import array_all, array_any, asarray, ravel, reshape
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
 from xarray.core.pdcompat import nanosecond_precision_timestamp, timestamp_as_unit
 from xarray.core.utils import attempt_import, emit_user_level_warning
@@ -824,7 +824,7 @@ def _cast_to_dtype_if_safe(num: np.ndarray, dtype: np.dtype) -> np.ndarray:
                     "a larger integer dtype."
                 )
     else:
-        if np.isinf(cast_num).any():
+        if array_any(np.isinf(cast_num)):
             raise OverflowError(
                 f"Not possible to cast encoded times from {num.dtype!r} to "
                 f"{dtype!r} without overflow.  Consider removing the dtype "
