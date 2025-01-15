@@ -581,13 +581,14 @@ class CFTimeIndex(pd.Index):
         CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
                     dtype='object', length=2, calendar='standard', freq=None)
         >>> times.to_datetimeindex()
-        DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
+        DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[us]', freq=None)
         """
 
         if not self._data.size:
             return pd.DatetimeIndex([])
 
-        nptimes = cftime_to_nptime(self)
+        # transform to us-resolution is needed for DatetimeIndex
+        nptimes = cftime_to_nptime(self, time_unit="us")
         calendar = infer_calendar_name(self)
         if calendar not in _STANDARD_CALENDARS and not unsafe:
             warnings.warn(
