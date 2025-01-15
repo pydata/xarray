@@ -540,8 +540,8 @@ The ``units`` and ``calendar`` attributes control how xarray serializes ``dateti
 ``timedelta64`` arrays to datasets on disk as numeric values. The ``units`` encoding
 should be a string like ``'days since 1900-01-01'`` for ``datetime64`` data or a string
 like ``'days'`` for ``timedelta64`` data. ``calendar`` should be one of the calendar types
-supported by netCDF4-python: 'standard', 'gregorian', 'proleptic_gregorian' 'noleap',
-'365_day', '360_day', 'julian', 'all_leap', '366_day'.
+supported by netCDF4-python: ``'standard'``, ``'gregorian'``, ``'proleptic_gregorian'``, ``'noleap'``,
+``'365_day'``, ``'360_day'``, ``'julian'``, ``'all_leap'``, ``'366_day'``.
 
 By default, xarray uses the ``'proleptic_gregorian'`` calendar and units of the smallest time
 difference between values, with a reference time of the first time value.
