@@ -52,6 +52,8 @@ New Features
 ~~~~~~~~~~~~
 - Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
+- Add new ``errors`` arg to :py:meth:`open_mfdataset` to better handle invalid files.
+  (:issue:`6736`). By `Pratiman Patel <https://github.com/pratiman-91>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
