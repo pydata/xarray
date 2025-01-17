@@ -1394,7 +1394,7 @@ def open_mfdataset(
     join: JoinOptions = "outer",
     attrs_file: str | os.PathLike | None = None,
     combine_attrs: CombineAttrsOptions = "override",
-    errors: str = "raise",
+    errors: ErrorOptionsWithWarn = "raise",
     **kwargs,
 ) -> Dataset:
     """Open multiple files as a single dataset.
