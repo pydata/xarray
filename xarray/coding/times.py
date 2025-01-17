@@ -579,20 +579,23 @@ def _numbers_to_timedelta(
 ) -> np.ndarray:
     """Transform numbers to np.timedelta64."""
     # keep NaT/nan mask
-    nan = np.isnan(flat_num) | (flat_num == np.iinfo(np.int64).min)
+    if flat_num.dtype.kind == "f":
+        nan = np.asarray(np.isnan(flat_num))
+    elif flat_num.dtype.kind == "i":
+        nan = np.asarray(flat_num == np.iinfo(np.int64).min)
 
     # in case we need to change the unit, we fix the numbers here
     # this should be safe, as errors would have been raised above
     ns_time_unit = _NS_PER_TIME_DELTA[time_unit]
     ns_ref_date_unit = _NS_PER_TIME_DELTA[ref_unit]
     if ns_time_unit > ns_ref_date_unit:
-        flat_num *= np.int64(ns_time_unit / ns_ref_date_unit)
+        flat_num = np.asarray(flat_num * np.int64(ns_time_unit / ns_ref_date_unit))
         time_unit = ref_unit
 
     # estimate fitting resolution for floating point values
     # this iterates until all floats are fractionless or time_unit == "ns"
     if flat_num.dtype.kind == "f" and time_unit != "ns":
-        flat_num_dates, new_time_unit = _check_higher_resolution(flat_num, time_unit)  # type: ignore[arg-type]
+        flat_num, new_time_unit = _check_higher_resolution(flat_num, time_unit)
         if time_unit != new_time_unit:
             msg = (
                 f"Can't decode floating point {datatype} to {time_unit!r} without "
@@ -608,7 +611,8 @@ def _numbers_to_timedelta(
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
         flat_num = flat_num.astype(np.int64)
-    flat_num[nan] = np.iinfo(np.int64).min
+    if nan.any():
+        flat_num[nan] = np.iinfo(np.int64).min
 
     # cast to wanted type
     return flat_num.astype(f"timedelta64[{time_unit}]")
