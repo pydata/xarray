@@ -2504,7 +2504,7 @@ class ZarrBase(CFEncodedBase):
 
             # expect an error with shards not divisible by chunks
             data["var2"].encoding.update({"chunks": (2, 2)})
-            with pytest.raises(TypeError):
+            with pytest.raises(ValueError):
                 with self.roundtrip(data) as actual:
                     pass
 

@@ -830,6 +830,7 @@ class ZarrStore(AbstractWritableDataStore):
                 {
                     "compressors": zarr_array.compressors,
                     "filters": zarr_array.filters,
+                    "shards": zarr_array.shards,
                 }
             )
             if self.zarr_group.metadata.zarr_format == 3:
