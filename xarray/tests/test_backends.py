@@ -613,6 +613,12 @@ class DatasetIOBase:
                     warnings.filterwarnings("ignore", "Unable to decode time axis")
 
                 with self.roundtrip(expected, save_kwargs=kwargs) as actual:
+                    # proleptic gregorian will be decoded into numpy datetime64
+                    # fixing to expectations
+                    if actual.t.dtype.kind == "M":
+                        dtype = actual.t.dtype
+                        expected_decoded_t = expected_decoded_t.astype(dtype)
+                        expected_decoded_t0 = expected_decoded_t0.astype(dtype)
                     abs_diff = abs(actual.t.values - expected_decoded_t)
                     assert (abs_diff <= np.timedelta64(1, "s")).all()
                     assert (
@@ -627,7 +633,11 @@ class DatasetIOBase:
                     assert actual.t.encoding["calendar"] == expected_calendar
 
     def test_roundtrip_timedelta_data(self) -> None:
-        time_deltas = pd.to_timedelta(["1h", "2h", "NaT"])  # type: ignore[arg-type, unused-ignore]
+        # todo: suggestion from review:
+        #  roundtrip large microsecond or coarser resolution timedeltas,
+        #  though we cannot test that until we fix the timedelta decoding
+        #  to support large ranges
+        time_deltas = pd.to_timedelta(["1h", "2h", "NaT"]).as_unit("s")  # type: ignore[arg-type, unused-ignore]
         expected = Dataset({"td": ("td", time_deltas), "td0": time_deltas[0]})
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
@@ -1623,8 +1633,7 @@ class NetCDF4Base(NetCDFBase):
                 ds.variables["time"][:] = np.arange(10) + 4
 
             expected = Dataset()
-
-            time = pd.date_range("1999-01-05", periods=10)
+            time = pd.date_range("1999-01-05", periods=10, unit="ns")
             encoding = {"units": units, "dtype": np.dtype("int32")}
             expected["time"] = ("time", time, {}, encoding)
 
@@ -5631,16 +5640,14 @@ def test_use_cftime_standard_calendar_default_in_range(calendar) -> None:
 
 @requires_cftime
 @requires_scipy_or_netCDF4
-@pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
-@pytest.mark.parametrize("units_year", [1500, 2500])
-def test_use_cftime_standard_calendar_default_out_of_range(
-    calendar, units_year
-) -> None:
+@pytest.mark.parametrize("calendar", ["standard", "gregorian"])
+def test_use_cftime_standard_calendar_default_out_of_range(calendar) -> None:
+    # todo: check, if we still need to test for two dates
     import cftime
 
     x = [0, 1]
     time = [0, 720]
-    units = f"days since {units_year}-01-01"
+    units = "days since 1582-01-01"
     original = DataArray(x, [("time", time)], name="x").to_dataset()
     for v in ["x", "time"]:
         original[v].attrs["units"] = units
@@ -5718,19 +5725,19 @@ def test_use_cftime_false_standard_calendar_in_range(calendar) -> None:
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
         with warnings.catch_warnings(record=True) as record:
-            with open_dataset(tmp_file, use_cftime=False) as ds:
+            coder = xr.coders.CFDatetimeCoder(use_cftime=False)
+            with open_dataset(tmp_file, decode_times=coder) as ds:
                 assert_identical(expected_x, ds.x)
                 assert_identical(expected_time, ds.time)
             _assert_no_dates_out_of_range_warning(record)
 
 
 @requires_scipy_or_netCDF4
-@pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
-@pytest.mark.parametrize("units_year", [1500, 2500])
-def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year) -> None:
+@pytest.mark.parametrize("calendar", ["standard", "gregorian"])
+def test_use_cftime_false_standard_calendar_out_of_range(calendar) -> None:
     x = [0, 1]
     time = [0, 720]
-    units = f"days since {units_year}-01-01"
+    units = "days since 1582-01-01"
     original = DataArray(x, [("time", time)], name="x").to_dataset()
     for v in ["x", "time"]:
         original[v].attrs["units"] = units
@@ -5832,7 +5839,9 @@ def test_open_fsspec() -> None:
     mm = m.get_mapper("out1.zarr")
     ds.to_zarr(mm)  # old interface
     ds0 = ds.copy()
-    ds0["time"] = ds.time + pd.to_timedelta("1 day")
+    # pd.to_timedelta returns ns-precision, but the example data is in second precision
+    # so we need to fix this
+    ds0["time"] = ds.time + np.timedelta64(1, "D")
     mm = m.get_mapper("out2.zarr")
     ds0.to_zarr(mm)  # old interface
 
