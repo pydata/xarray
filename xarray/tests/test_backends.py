@@ -2507,7 +2507,7 @@ class ZarrBase(CFEncodedBase):
         with pytest.raises(TypeError):
             with self.roundtrip(data) as actual:
                 pass
-    
+
     @requires_dask
     @pytest.mark.skipif(
         ON_WINDOWS,
