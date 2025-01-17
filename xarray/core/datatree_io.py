@@ -84,7 +84,7 @@ def _datatree_to_zarr(
     consolidated: bool = True,
     group: str | None = None,
     write_inherited_coords: bool = False,
-    compute: Literal[True] = True,
+    compute: bool = True,
     **kwargs,
 ):
     """This function creates an appropriate datastore for writing a datatree
@@ -99,9 +99,6 @@ def _datatree_to_zarr(
         raise NotImplementedError(
             "specifying a root group for the tree has not been implemented"
         )
-
-    if not compute:
-        raise NotImplementedError("compute=False has not been implemented yet")
 
     if encoding is None:
         encoding = {}
@@ -124,6 +121,7 @@ def _datatree_to_zarr(
             mode=mode,
             encoding=encoding.get(node.path),
             consolidated=False,
+            compute=compute,
             **kwargs,
         )
         if "w" in mode:
