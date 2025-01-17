@@ -21,7 +21,8 @@ v2025.01.2 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Improve the error message raised when no key is matching the available variables in a dataset.  (:pull:`9943`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
