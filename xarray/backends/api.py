@@ -1617,35 +1617,26 @@ def open_mfdataset(
         open_ = open_dataset
         getattr_ = getattr
 
-    try:
-        if errors == "raise":
-            datasets = [open_(p, **open_kwargs) for p in paths1d]
-        elif errors == "ignore":
-            datasets = []
-            for p in paths1d:
-                try:
-                    ds = open_(p, **open_kwargs)
-                    datasets.append(ds)
-                except Exception:
-                    continue
-        elif errors == "warn":
-            datasets = []
-            for p in paths1d:
-                try:
-                    ds = open_(p, **open_kwargs)
-                    datasets.append(ds)
-                except Exception:
+    if errors in ("raise", "warn", "ignore"):
+        datasets = []
+        for p in paths1d:
+            try:
+                ds = open_(p, **open_kwargs)
+                datasets.append(ds)
+            except Exception:
+                if errors == "raise":
+                    raise
+                elif errors == "ignore":
                     warnings.warn(
                         f"Could not open {p}. Ignoring.", UserWarning, stacklevel=2
                     )
                     continue
-        else:
-            raise ValueError(
-                f"{errors} is an invalid option for the keyword argument ``errors``"
-            )
-    except ValueError:
-        for ds in datasets:
-            ds.close()
+                else:
+                    continue
+    else:
+        raise ValueError(
+            f"{errors} is an invalid option for the keyword argument ``errors``"
+        )
 
     closers = [getattr_(ds, "_close") for ds in datasets]
     if preprocess is not None:
