@@ -426,7 +426,10 @@ class CFMaskCoder(VariableCoder):
         if fill_value is not None and has_unsigned:
             pop_to(encoding, attrs, "_Unsigned")
             # XXX: Is this actually needed? Doesn't the backend handle this?
-            data = duck_array_ops.astype(duck_array_ops.around(data), dtype)
+            signed_dtype = np.dtype(f"i{dtype.itemsize}")
+            data = duck_array_ops.view(
+                duck_array_ops.astype(duck_array_ops.around(data), signed_dtype), dtype
+            )
             attrs["_FillValue"] = fill_value
 
         return Variable(dims, data, attrs, encoding, fastpath=True)
