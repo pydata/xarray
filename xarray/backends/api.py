@@ -1521,10 +1521,11 @@ def open_mfdataset(
 
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
-    errors : {'ignore', 'raise', 'warn'}, default 'raise'
+    errors : {'raise', 'warn', 'ignore'}, default 'raise'
         - If 'raise', then invalid dataset will raise an exception.
-        - If 'ignore', then invalid dataset will be ignored.
         - If 'warn', then a warning will be issued for each invalid dataset.
+        - If 'ignore', then invalid dataset will be ignored.
+        
    **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`. For an
         overview of some of the possible options, see the documentation of
@@ -1617,26 +1618,27 @@ def open_mfdataset(
         open_ = open_dataset
         getattr_ = getattr
 
-    if errors in ("raise", "warn", "ignore"):
-        datasets = []
-        for p in paths1d:
-            try:
-                ds = open_(p, **open_kwargs)
-                datasets.append(ds)
-            except Exception:
-                if errors == "raise":
-                    raise
-                elif errors == "ignore":
-                    warnings.warn(
-                        f"Could not open {p}. Ignoring.", UserWarning, stacklevel=2
-                    )
-                    continue
-                else:
-                    continue
-    else:
-        raise ValueError(
-            f"{errors} is an invalid option for the keyword argument ``errors``"
-        )
+    if errors not in ("raise", "warn", "ignore"):
+        raise ValueError(f"'errors' must be 'raise', 'warn' or 'ignore', got '{errors}'")
+
+    datasets = []
+    invalid_ids = set() # to remove invalid ids for 'combine'
+    for i, p in enumerate(paths1d):
+        try:
+            ds = open_(p, **open_kwargs)
+            datasets.append(ds)
+        except Exception:
+            if errors == "raise":
+                raise
+            elif errors == "warn":
+                warnings.warn(
+                    f"Could not open {p}. Ignoring.", UserWarning, stacklevel=2
+                )
+                invalid_ids.add(i)
+                continue
+            else:
+                invalid_ids.add(i)
+                continue
 
     closers = [getattr_(ds, "_close") for ds in datasets]
     if preprocess is not None:
@@ -1652,6 +1654,7 @@ def open_mfdataset(
         if combine == "nested":
             # Combined nested list by successive concat and merge operations
             # along each dimension, using structure given by "ids"
+            ids = [id_ for i, id_ in enumerate(ids) if i not in invalid_ids]
             combined = _nested_combine(
                 datasets,
                 concat_dims=concat_dim,
