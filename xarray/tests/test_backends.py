@@ -4892,7 +4892,7 @@ class TestDask(DatasetIOBase):
                     errors="warn",
                 ) as actual:
                     assert_identical(original, actual)
-                    
+
     def test_attrs_mfdataset(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
         with create_tmp_file() as tmp1:

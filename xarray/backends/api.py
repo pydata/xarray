@@ -61,6 +61,7 @@ if TYPE_CHECKING:
     from xarray.core.types import (
         CombineAttrsOptions,
         CompatOptions,
+        ErrorOptionsWithWarn,
         JoinOptions,
         NestedSequence,
         ReadBuffer,
@@ -104,8 +105,7 @@ def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:
             engine = "pydap"
         except ImportError as err:
             raise ValueError(
-                "netCDF4 or pydap is required for accessing "
-                "remote datasets via OPeNDAP"
+                "netCDF4 or pydap is required for accessing remote datasets via OPeNDAP"
             ) from err
     return engine
 
@@ -1525,7 +1525,7 @@ def open_mfdataset(
         - If 'raise', then invalid dataset will raise an exception.
         - If 'warn', then a warning will be issued for each invalid dataset.
         - If 'ignore', then invalid dataset will be ignored.
-        
+
    **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`. For an
         overview of some of the possible options, see the documentation of
@@ -1619,7 +1619,9 @@ def open_mfdataset(
         getattr_ = getattr
 
     if errors not in ("raise", "warn", "ignore"):
-        raise ValueError(f"'errors' must be 'raise', 'warn' or 'ignore', got '{errors}'")
+        raise ValueError(
+            f"'errors' must be 'raise', 'warn' or 'ignore', got '{errors}'"
+        )
 
     datasets = []
     for i, p in enumerate(paths1d):
@@ -1678,8 +1680,7 @@ def open_mfdataset(
             )
         else:
             raise ValueError(
-                f"{combine} is an invalid option for the keyword argument"
-                " ``combine``"
+                f"{combine} is an invalid option for the keyword argument ``combine``"
             )
     except ValueError:
         for ds in datasets:
