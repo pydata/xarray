@@ -4862,6 +4862,37 @@ class TestDask(DatasetIOBase):
                 ) as actual:
                     assert_identical(original, actual)
 
+    def test_open_mfdataset_2d_with_ignore(self) -> None:
+        original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
+        with create_tmp_files(4) as (tmp1, tmp2, tmp3, tmp4):
+            original.isel(x=slice(5), y=slice(4)).to_netcdf(tmp1)
+            original.isel(x=slice(5, 10), y=slice(4)).to_netcdf(tmp2)
+            original.isel(x=slice(5), y=slice(4, 8)).to_netcdf(tmp3)
+            original.isel(x=slice(5, 10), y=slice(4, 8)).to_netcdf(tmp4)
+            with open_mfdataset(
+                [[tmp1, tmp2], [tmp3, tmp4, "non-existent-file.nc"]],
+                combine="nested",
+                concat_dim=["y", "x"],
+                errors="ignore",
+            ) as actual:
+                assert_identical(original, actual)
+
+    def test_open_mfdataset_2d_with_warn(self) -> None:
+        original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
+        with pytest.warns(UserWarning, match="Ignoring."):
+            with create_tmp_files(4) as (tmp1, tmp2, tmp3, tmp4):
+                original.isel(x=slice(5), y=slice(4)).to_netcdf(tmp1)
+                original.isel(x=slice(5, 10), y=slice(4)).to_netcdf(tmp2)
+                original.isel(x=slice(5), y=slice(4, 8)).to_netcdf(tmp3)
+                original.isel(x=slice(5, 10), y=slice(4, 8)).to_netcdf(tmp4)
+                with open_mfdataset(
+                    [[tmp1, tmp2], [tmp3, tmp4, "non-existent-file.nc"]],
+                    combine="nested",
+                    concat_dim=["y", "x"],
+                    errors="warn",
+                ) as actual:
+                    assert_identical(original, actual)
+                    
     def test_attrs_mfdataset(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
         with create_tmp_file() as tmp1:

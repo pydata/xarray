@@ -1622,22 +1622,23 @@ def open_mfdataset(
         raise ValueError(f"'errors' must be 'raise', 'warn' or 'ignore', got '{errors}'")
 
     datasets = []
-    invalid_ids = set() # to remove invalid ids for 'combine'
     for i, p in enumerate(paths1d):
         try:
             ds = open_(p, **open_kwargs)
             datasets.append(ds)
         except Exception:
+            # remove invalid ids and paths
+            if combine == "nested":
+                ids.pop(i)
+                paths1d.pop(i)
             if errors == "raise":
                 raise
             elif errors == "warn":
                 warnings.warn(
                     f"Could not open {p}. Ignoring.", UserWarning, stacklevel=2
                 )
-                invalid_ids.add(i)
                 continue
             else:
-                invalid_ids.add(i)
                 continue
 
     closers = [getattr_(ds, "_close") for ds in datasets]
@@ -1654,7 +1655,6 @@ def open_mfdataset(
         if combine == "nested":
             # Combined nested list by successive concat and merge operations
             # along each dimension, using structure given by "ids"
-            ids = [id_ for i, id_ in enumerate(ids) if i not in invalid_ids]
             combined = _nested_combine(
                 datasets,
                 concat_dims=concat_dim,
