@@ -19,7 +19,7 @@ from xarray import (
     date_range,
     decode_cf,
 )
-from xarray.coders import CFDatetimeCoder
+from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding.times import _STANDARD_CALENDARS as _STANDARD_CALENDARS_UNSORTED
 from xarray.coding.times import (
     _encode_datetime_with_cftime,
@@ -1829,3 +1829,82 @@ def test_encode_cf_timedelta_casting_overflow_error(use_dask, dtype) -> None:
     with pytest.raises(OverflowError, match="Not possible"):
         encoded = conventions.encode_cf_variable(variable)
         encoded.compute()
+
+
+_DECODE_TIMEDELTA_TESTS = {
+    "default": (True, None, np.dtype("timedelta64[ns]")),
+    "decode_timdelta=False": (True, False, np.dtype("int64")),
+    "inherit-time_unit-from-decode_times": (
+        CFDatetimeCoder(time_unit="s"),
+        None,
+        np.dtype("timedelta64[s]"),
+    ),
+    "set-time_unit-via-CFTimedeltaCoder-decode_times=True": (
+        True,
+        CFTimedeltaCoder(time_unit="s"),
+        np.dtype("timedelta64[s]"),
+    ),
+    "set-time_unit-via-CFTimedeltaCoder-decode_times=False": (
+        False,
+        CFTimedeltaCoder(time_unit="s"),
+        np.dtype("timedelta64[s]"),
+    ),
+    "override-time_unit-from-decode_times": (
+        CFDatetimeCoder(time_unit="ns"),
+        CFTimedeltaCoder(time_unit="s"),
+        np.dtype("timedelta64[s]"),
+    ),
+}
+
+
+@pytest.mark.parametrize(
+    ("decode_times", "decode_timedelta", "expected_dtype"),
+    list(_DECODE_TIMEDELTA_TESTS.values()),
+    ids=list(_DECODE_TIMEDELTA_TESTS.keys()),
+)
+def test_decode_timedelta(decode_times, decode_timedelta, expected_dtype) -> None:
+    timedeltas = pd.timedelta_range(0, freq="d", periods=3)
+    var = Variable(["time"], timedeltas)
+    encoded = conventions.encode_cf_variable(var)
+    decoded = conventions.decode_cf_variable(
+        "foo", encoded, decode_times=decode_times, decode_timedelta=decode_timedelta
+    )
+    if decode_timedelta is False:
+        assert_equal(encoded, decoded)
+    else:
+        assert_equal(var, decoded)
+    assert decoded.dtype == expected_dtype
+
+
+def test_decode_timedelta_error() -> None:
+    attrs = {"units": "seconds"}
+    encoded = Variable(["time"], [np.iinfo(np.int64).max, 1], attrs=attrs)
+    with pytest.raises(ValueError, match="unable"):
+        conventions.decode_cf_variable(
+            "foo", encoded, decode_timedelta=CFTimedeltaCoder(time_unit="ms")
+        )
+
+
+def test_lazy_decode_timedelta_unexpected_dtype() -> None:
+    attrs = {"units": "seconds"}
+    encoded = Variable(["time"], [0, 0.5, 1], attrs=attrs)
+    decoded = conventions.decode_cf_variable(
+        "foo", encoded, decode_timedelta=CFTimedeltaCoder(time_unit="s")
+    )
+
+    expected_dtype_upon_lazy_decoding = np.dtype("timedelta64[s]")
+    assert decoded.dtype == expected_dtype_upon_lazy_decoding
+
+    expected_dtype_upon_loading = np.dtype("timedelta64[ms]")
+    with pytest.warns(SerializationWarning, match="Can't decode floating"):
+        assert decoded.load().dtype == expected_dtype_upon_loading
+
+
+def test_lazy_decode_timedelta_error() -> None:
+    attrs = {"units": "seconds"}
+    encoded = Variable(["time"], [0, np.iinfo(np.int64).max, 1], attrs=attrs)
+    decoded = conventions.decode_cf_variable(
+        "foo", encoded, decode_timedelta=CFTimedeltaCoder(time_unit="ms")
+    )
+    with pytest.raises(OutOfBoundsTimedelta, match="overflow"):
+        decoded.load()

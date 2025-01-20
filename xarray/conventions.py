@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
 
 import numpy as np
 
-from xarray.coders import CFDatetimeCoder
+from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding import strings, times, variables
 from xarray.coding.variables import SerializationWarning, pop_to
 from xarray.core import indexing
@@ -114,7 +114,7 @@ def decode_cf_variable(
     decode_endianness: bool = True,
     stack_char_dim: bool = True,
     use_cftime: bool | None = None,
-    decode_timedelta: bool | None = None,
+    decode_timedelta: bool | CFTimedeltaCoder | None = None,
 ) -> Variable:
     """
     Decodes a variable which may hold CF encoded information.
@@ -158,6 +158,8 @@ def decode_cf_variable(
 
         .. deprecated:: 2025.01.1
            Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
+    decode_timedelta : None, bool, or CFTimedeltaCoder
+        Decode cf timedeltas ("hours") to np.timedelta64.
 
     Returns
     -------
@@ -171,7 +173,10 @@ def decode_cf_variable(
     original_dtype = var.dtype
 
     if decode_timedelta is None:
-        decode_timedelta = True if decode_times else False
+        if isinstance(decode_times, CFDatetimeCoder):
+            decode_timedelta = CFTimedeltaCoder(time_unit=decode_times.time_unit)
+        else:
+            decode_timedelta = True if decode_times else False
 
     if concat_characters:
         if stack_char_dim:
@@ -193,7 +198,9 @@ def decode_cf_variable(
             var = coder.decode(var, name=name)
 
     if decode_timedelta:
-        var = times.CFTimedeltaCoder().decode(var, name=name)
+        if not isinstance(decode_timedelta, CFTimedeltaCoder):
+            decode_timedelta = CFTimedeltaCoder()
+        var = decode_timedelta.decode(var, name=name)
     if decode_times:
         # remove checks after end of deprecation cycle
         if not isinstance(decode_times, CFDatetimeCoder):
@@ -335,7 +342,10 @@ def decode_cf_variables(
     decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
-    decode_timedelta: bool | Mapping[str, bool] | None = None,
+    decode_timedelta: bool
+    | CFTimedeltaCoder
+    | Mapping[str, bool | CFTimedeltaCoder]
+    | None = None,
 ) -> tuple[T_Variables, T_Attrs, set[Hashable]]:
     """
     Decode several CF encoded variables.

@@ -19,22 +19,35 @@ What's New
 v2025.01.2 (unreleased)
 -----------------------
 
-This release brings non-nanosecond datetime resolution to xarray. In the
-last couple of releases xarray has been prepared for that change. The code had
-to be changed and adapted in numerous places, affecting especially the test suite.
-The documentation has been updated accordingly and a new internal chapter
-on :ref:`internals.timecoding` has been added.
+This release brings non-nanosecond datetime and timedelta resolution to xarray.
+In the last couple of releases xarray has been prepared for that change. The
+code had to be changed and adapted in numerous places, affecting especially the
+test suite. The documentation has been updated accordingly and a new internal
+chapter on :ref:`internals.timecoding` has been added.
 
-To make the transition as smooth as possible this is designed to be fully backwards
-compatible, keeping the current default of ``'ns'`` resolution on decoding.
-To opt-in decoding into other resolutions (``'us'``, ``'ms'`` or ``'s'``) the
-new :py:class:`coders.CFDatetimeCoder` is used as parameter to ``decode_times``
-kwarg (see also :ref:`internals.default_timeunit`):
+To make the transition as smooth as possible this is designed to be fully
+backwards compatible, keeping the current default of ``'ns'`` resolution on
+decoding. To opt-into decoding to other resolutions (``'us'``, ``'ms'`` or
+``'s'``) an instance of the newly public :py:class:`coders.CFDatetimeCoder`
+class can be passed through the ``decode_times`` keyword argument (see also
+:ref:`internals.default_timeunit`):
 
 .. code-block:: python
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
     ds = xr.open_dataset(filename, decode_times=coder)
+
+Similar control of the resoution of decoded timedeltas can be achieved through
+passing a :py:class:`coders.CFTimedeltaCoder` instance to the
+``decode_timedelta`` keyword argument:
+
+.. code-block:: python
+
+    coder = xr.coders.CFTimedeltaCoder(time_unit="s")
+    ds = xr.open_dataset(filename, decode_timedelta=coder)
+
+though by default timedeltas will be decoded to the same ``time_unit`` as
+datetimes.
 
 There might slight changes when encoding/decoding times as some warning and
 error messages have been removed or rewritten. Xarray will now also allow
@@ -50,7 +63,7 @@ eventually be deprecated.
 
 New Features
 ~~~~~~~~~~~~
-- Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`).
+- Relax nanosecond datetime / timedelta restriction in CF time decoding (:issue:`7493`, :pull:`9618`, :pull:`9965`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
 - Improve the error message raised when no key is matching the available variables in a dataset.  (:pull:`9943`)
   By `Jimmy Westling <https://github.com/illviljan>`_.

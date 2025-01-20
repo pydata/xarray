@@ -473,3 +473,51 @@ on-disk resolution, if possible.
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
     xr.open_dataset("test-datetimes2.nc", decode_times=coder)
+
+Similar logic applies for decoding timedelta values. The default resolution is
+``"ns"``:
+
+.. ipython:: python
+
+    attrs = {"units": "hours"}
+    ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
+    ds.to_netcdf("test-timedeltas1.nc")
+
+.. ipython:: python
+
+    xr.open_dataset("test-timedeltas1.nc")
+
+By default, timedeltas will be decoded to the same resolution as datetimes:
+
+.. ipython:: python
+
+    coder = xr.coders.CFDatetimeCoder(time_unit="s")
+    xr.open_dataset("test-timedeltas1.nc", decode_times=coder)
+
+but if one would like to decode timedeltas to a different resolution, one can
+provide a coder specifically for timedeltas to ``decode_timedelta``:
+
+.. ipython:: python
+
+    timedelta_coder = xr.coders.CFTimedeltaCoder(time_unit="ms")
+    xr.open_dataset(
+        "test-timedeltas1.nc", decode_times=coder, decode_timedelta=timedelta_coder
+    )
+
+As with datetimes, if a coarser unit is requested the timedeltas are decoded
+into their native on-disk resolution, if possible:
+
+.. ipython:: python
+
+    attrs = {"units": "milliseconds"}
+    ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
+    ds.to_netcdf("test-timedeltas2.nc")
+
+.. ipython:: python
+
+    xr.open_dataset("test-timedeltas2.nc")
+
+.. ipython:: python
+
+    coder = xr.coders.CFDatetimeCoder(time_unit="s")
+    xr.open_dataset("test-timedeltas2.nc", decode_times=coder)
