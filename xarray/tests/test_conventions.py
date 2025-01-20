@@ -538,7 +538,7 @@ class TestDecodeCF:
         dsc = conventions.decode_cf(
             ds, decode_times=CFDatetimeCoder(time_unit=time_unit)
         )
-        assert dsc.timedelta.dtype == np.dtype("m8[ns]")
+        assert dsc.timedelta.dtype == np.dtype(f"m8[{time_unit}]")
         assert dsc.time.dtype == np.dtype(f"M8[{time_unit}]")
         dsc = conventions.decode_cf(ds, decode_times=False)
         assert dsc.timedelta.dtype == np.dtype("int64")

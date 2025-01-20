@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
 import numpy as np
 
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
-from xarray.coding import strings, times, variables
+from xarray.coding import strings, variables
 from xarray.coding.variables import SerializationWarning, pop_to
 from xarray.core import indexing
 from xarray.core.common import (
@@ -90,7 +90,7 @@ def encode_cf_variable(
 
     for coder in [
         CFDatetimeCoder(),
-        times.CFTimedeltaCoder(),
+        CFTimedeltaCoder(),
         variables.CFScaleOffsetCoder(),
         variables.CFMaskCoder(),
         variables.NativeEnumCoder(),

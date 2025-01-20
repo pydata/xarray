@@ -327,33 +327,6 @@ def _decode_cf_datetime_dtype(
     return dtype
 
 
-def _decode_cf_timedelta_dtype(
-    data,
-    units: str,
-    time_unit: PDDatetimeUnitOptions = "ns",
-) -> np.dtype:
-    # Verify that at least the first and last date can be decoded
-    # successfully. Otherwise, tracebacks end up swallowed by
-    # Dataset.__repr__ when users try to view their lazily decoded array.
-    values = indexing.ImplicitToExplicitIndexingAdapter(indexing.as_indexable(data))
-    example_value = np.concatenate(
-        [first_n_items(values, 1) or [0], last_item(values) or [0]]
-    )
-
-    try:
-        result = decode_cf_timedelta(example_value, units, time_unit)
-    except Exception as err:
-        message = (
-            f"unable to decode timedelta units {units!r}. Try opening your "
-            f"dataset with decode_timedelta=False."
-        )
-        raise ValueError(message) from err
-    else:
-        dtype = result.dtype
-
-    return dtype
-
-
 def _decode_datetime_with_cftime(
     num_dates: np.ndarray, units: str, calendar: str
 ) -> np.ndarray:
@@ -1403,7 +1376,7 @@ class CFTimedeltaCoder(VariableCoder):
             dims, data, attrs, encoding = unpack_for_decoding(variable)
 
             units = pop_to(attrs, encoding, "units")
-            dtype = _decode_cf_timedelta_dtype(data, units, self.time_unit)
+            dtype = np.dtype(f"timedelta64[{self.time_unit}]")
             transform = partial(
                 decode_cf_timedelta, units=units, time_unit=self.time_unit
             )

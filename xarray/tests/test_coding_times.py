@@ -1876,15 +1876,6 @@ def test_decode_timedelta(decode_times, decode_timedelta, expected_dtype) -> Non
     assert decoded.dtype == expected_dtype
 
 
-def test_decode_timedelta_error() -> None:
-    attrs = {"units": "seconds"}
-    encoded = Variable(["time"], [np.iinfo(np.int64).max, 1], attrs=attrs)
-    with pytest.raises(ValueError, match="unable"):
-        conventions.decode_cf_variable(
-            "foo", encoded, decode_timedelta=CFTimedeltaCoder(time_unit="ms")
-        )
-
-
 def test_lazy_decode_timedelta_unexpected_dtype() -> None:
     attrs = {"units": "seconds"}
     encoded = Variable(["time"], [0, 0.5, 1], attrs=attrs)
