@@ -80,6 +80,7 @@ from xarray.tests import (
     requires_h5netcdf_1_4_0_or_above,
     requires_h5netcdf_ros3,
     requires_iris,
+    requires_lithops,
     requires_netcdf,
     requires_netCDF4,
     requires_netCDF4_1_6_2_or_above,
@@ -4417,6 +4418,59 @@ def test_open_mfdataset_manyfiles(
             assert isinstance(actual["foo"].data, dask_array_type)
 
             assert_identical(original, actual)
+
+
+@requires_netCDF4
+class TestParallel:
+    def test_validate_parallel_kwarg(self) -> None:
+        original = Dataset({"foo": ("x", np.random.randn(10))})
+        datasets = [original.isel(x=slice(5)), original.isel(x=slice(5, 10))]
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                save_mfdataset(datasets, [tmp1, tmp2])
+
+                with pytest.raises(ValueError, match="garbage is an invalid option"):
+                    open_mfdataset(
+                        [tmp1, tmp2],
+                        concat_dim="x",
+                        combine="nested",
+                        parallel="garbage",
+                    )
+
+    def test_deprecation_warning(self) -> None:
+        original = Dataset({"foo": ("x", np.random.randn(10))})
+        datasets = [original.isel(x=slice(5)), original.isel(x=slice(5, 10))]
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                save_mfdataset(datasets, [tmp1, tmp2])
+
+                with pytest.warns(
+                    PendingDeprecationWarning,
+                    match="please pass ``parallel='dask'`` explicitly",
+                ):
+                    open_mfdataset(
+                        [tmp1, tmp2],
+                        concat_dim="x",
+                        combine="nested",
+                        parallel=True,
+                    )
+
+    @requires_lithops
+    def test_lithops_parallel(self) -> None:
+        # default configuration of lithops will use local executor
+
+        original = Dataset({"foo": ("x", np.random.randn(10))})
+        datasets = [original.isel(x=slice(5)), original.isel(x=slice(5, 10))]
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                save_mfdataset(datasets, [tmp1, tmp2])
+                with open_mfdataset(
+                    [tmp1, tmp2],
+                    concat_dim="x",
+                    combine="nested",
+                    parallel="lithops",
+                ) as actual:
+                    assert_identical(actual, original)
 
 
 @requires_netCDF4

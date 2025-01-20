@@ -30,6 +30,7 @@ dependencies:
   - hypothesis
   - iris=3.7
   - lxml=4.9 # Optional dep of pydap
+  - lithops=3.5.1
   - matplotlib-base=3.8
   - nc-time-axis=1.4
   # netcdf follows a 1.major.minor[.patch] convention
