@@ -595,7 +595,9 @@ def _numbers_to_timedelta(
     # estimate fitting resolution for floating point values
     # this iterates until all floats are fractionless or time_unit == "ns"
     if flat_num.dtype.kind == "f" and time_unit != "ns":
-        flat_num, new_time_unit = _check_higher_resolution(flat_num, time_unit)
+        flat_num, new_time_unit = _check_higher_resolution(
+            flat_num, cast(PDDatetimeUnitOptions, time_unit)
+        )
         if time_unit != new_time_unit:
             msg = (
                 f"Can't decode floating point {datatype} to {time_unit!r} without "
