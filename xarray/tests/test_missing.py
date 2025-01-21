@@ -109,7 +109,6 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345, non_uniform=False
 @pytest.mark.parametrize("frac_nan", [0, 0.5, 1])
 @requires_scipy
 def test_interpolate_pd_compat(method, fill_value, dim, shape, frac_nan) -> None:
-
     da, df = make_interpolate_example_data(shape, frac_nan)
 
     actual = da.interpolate_na(method=method, dim=dim, fill_value=fill_value)

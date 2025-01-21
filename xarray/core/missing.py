@@ -6,7 +6,7 @@ from collections import ChainMap
 from collections.abc import Callable, Generator, Hashable, Sequence
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, TypeVar, Generic, get_args
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, get_args
 
 import numpy as np
 import pandas as pd
@@ -25,7 +25,7 @@ from xarray.core.duck_array_ops import (
 from xarray.core.options import _get_keep_attrs
 from xarray.core.types import (
     Interp1dOptions,
-    InterpnOptions, 
+    InterpnOptions,
     InterpOptions,
     LimitAreaOptions,
     LimitDirectionOptions,
