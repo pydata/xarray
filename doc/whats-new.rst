@@ -19,9 +19,41 @@ What's New
 v2025.01.2 (unreleased)
 -----------------------
 
+This release brings non-nanosecond datetime resolution to xarray. In the
+last couple of releases xarray has been prepared for that change. The code had
+to be changed and adapted in numerous places, affecting especially the test suite.
+The documentation has been updated accordingly and a new internal chapter
+on :ref:`internals.timecoding` has been added.
+
+To make the transition as smooth as possible this is designed to be fully backwards
+compatible, keeping the current default of ``'ns'`` resolution on decoding.
+To opt-in decoding into other resolutions (``'us'``, ``'ms'`` or ``'s'``) the
+new :py:class:`coders.CFDatetimeCoder` is used as parameter to ``decode_times``
+kwarg (see also :ref:`internals.default_timeunit`):
+
+.. code-block:: python
+
+    coder = xr.coders.CFDatetimeCoder(time_unit="s")
+    ds = xr.open_dataset(filename, decode_times=coder)
+
+There might slight changes when encoding/decoding times as some warning and
+error messages have been removed or rewritten. Xarray will now also allow
+non-nanosecond datetimes (with ``'us'``, ``'ms'`` or ``'s'`` resolution) when
+creating DataArray's from scratch, picking the lowest possible resolution:
+
+.. ipython:: python
+
+    xr.DataArray(data=[np.datetime64("2000-01-01", "D")], dims=("time",))
+
+In a future release the current default of ``'ns'`` resolution on decoding will
+eventually be deprecated.
+
 New Features
 ~~~~~~~~~~~~
-
+- Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
+- Improve the error message raised when no key is matching the available variables in a dataset.  (:pull:`9943`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -33,11 +65,14 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Fix issues related to Pandas v3 ("us" vs. "ns" for python datetime, copy on write) and handling of 0d-numpy arrays in datetime/timedelta decoding (:pull:`9953`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Documentation
 ~~~~~~~~~~~~~
-
+- A chapter on :ref:`internals.timecoding` is added to the internal section (:pull:`9618`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
