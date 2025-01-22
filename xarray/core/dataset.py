@@ -6746,7 +6746,7 @@ class Dataset(
             coordinate variable to use as the index.
         limit : int, default: None
             Maximum number of consecutive NaNs to fill. Must be greater than 0
-            or None for no limit. This filling is done regardless of the size of
+            or None for no limit. This filling is done in the forward direction, regardless of the size of
             the gap in the data. To only interpolate over gaps less than a given length,
             see ``max_gap``.
         max_gap : int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta \
@@ -6792,6 +6792,7 @@ class Dataset(
 
         See Also
         --------
+        Dataset.fill_gaps
         numpy.interp
         scipy.interpolate
 

@@ -352,7 +352,7 @@ def test_interpolate_limits():
     da = xr.DataArray([n, n, 3, n, n, 6, n, 8, n], dims=["y"], coords=coords)
 
     actual = da.interpolate_na(dim="y", limit=None, fill_value="extrapolate")
-    # With no limit, everything should be interpolated. Introduced in xarray due to a bug (GH7665), but kept for backward compatibility
+    # With no limit, all gaps should be interpolated (forward+backward, including boundaries). Introduced in xarray due to a bug (GH7665), but kept for backward compatibility. With limit, do only forward interpolation.
     expected = da.copy(data=[1, 2, 3, 4, 5, 6, 7, 8, 9])
     assert_equal(actual, expected)
 
