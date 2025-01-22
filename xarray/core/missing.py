@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar, get_args
 import numpy as np
 import pandas as pd
 
+from xarray.core import utils
 from xarray.core.common import _contains_datetime_like_objects
 from xarray.core.computation import apply_ufunc
 from xarray.core.duck_array_ops import (
