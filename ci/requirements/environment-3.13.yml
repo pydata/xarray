@@ -10,7 +10,6 @@ dependencies:
   - cartopy
   - cftime
   - dask-core
-  - dask-expr
   - distributed
   - flox
   - fsspec
