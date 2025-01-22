@@ -416,7 +416,7 @@ would certainly appreciate it. We recommend two citations.
                  url    = {https://doi.org/10.5281/zenodo.59499}
                 }
 
-.. _api stability:
+.. _api-stability:
 
 How stable is Xarray's API?
 ---------------------------
@@ -428,7 +428,7 @@ we `signpost changes <https://docs.xarray.dev/en/stable/contributing.html#backwa
 Our `test-driven development practices <https://docs.xarray.dev/en/stable/contributing.html#test-driven-development-code-writing>`_ help to ensure any accidental regressions are caught.
 This philosophy applies to everything in the `public API <https://docs.xarray.dev/en/stable/getting-started-guide/faq.html#what-parts-of-xarray-are-considered-public-api>`_.
 
-.. _public api:
+.. _public-api:
 
 What parts of xarray are considered public API?
 -----------------------------------------------
