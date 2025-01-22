@@ -10,7 +10,6 @@ dependencies:
   - cfgrib
   - kerchunk
   - dask-core>=2022.1
-  - dask-expr
   - hypothesis>=6.75.8
   - h5netcdf>=0.13
   - ipykernel
