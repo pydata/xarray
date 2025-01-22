@@ -203,6 +203,21 @@ Xarray also provides the ``max_gap`` keyword argument to limit the interpolation
 data gaps of length ``max_gap`` or smaller. See :py:meth:`~xarray.DataArray.interpolate_na`
 for more.
 
+All of the above methods by default fill gaps of any size in the data. If you want fine control over the size of the gaps that are filled, you can use  :py:meth:`~xarray.DataArray.fill_gaps`. For example, consider a series of air temperature measurements with gaps:
+
+.. ipython:: python
+
+    n = np.nan
+    temperature = xr.DataArray(
+        [n, 1.1, n, n, n, 2, n, n, n, n, 2.3],
+        coords={"time": xr.Variable("time", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])},
+    )
+    temperature.fill_gaps(
+        "time", limit=1, limit_direction="both", max_gap=4
+    ).interpolate_na("time")
+
+In this example, we interpolate valid measurements up to one hour forward and backward in time. However, if a gap is longer than four hours, nothing is interpolated. :py:metho:`~xarray.DataArray.fill_gaps` works with all filling methods (:py:meth:`~xarray.DataArray.ffill`, :py:meth:`~xarray.DataArray.bfill`, :py:meth:`~xarray.DataArray.fillna`, :py:meth:`~xarray.DataArray.interpolate_na`). See :py:meth:`~xarray.DataArray.fill_gaps` for more information on the available options.
+
 .. _agg:
 
 Aggregation
