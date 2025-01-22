@@ -7048,7 +7048,7 @@ class Dataset(
             For ``limit_direction=forward``, distances are ``[nan, nan, nan, 0, 1, 2, 0, 1, 2]``.
             To only fill gaps less than a given length,
             see ``max_gap``.
-        limit_direction: {"forward", "backward", "both"}, default: "forward"
+        limit_direction: {"forward", "backward", "both"}, default: "both"
             Consecutive NaNs will be filled in this direction.
         limit_area: {"inside", "outside"} or None: default: None
             Consecutive NaNs will be filled with this restriction.
