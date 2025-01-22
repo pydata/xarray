@@ -1865,7 +1865,7 @@ class TestDataArrayResample:
             "2000-01-01", freq="6h", periods=10, use_cftime=use_cftime
         )
 
-        def resample_as_pandas(array, *args, **kwargs):
+        def resample_as_pandas(array, *args, **kwargs) -> None:
             array_ = array.copy(deep=True)
             if use_cftime:
                 array_["time"] = times.to_datetimeindex(time_unit="ns")
