@@ -704,7 +704,7 @@ def interp_na(
     max_gap: T_GapLength | None = None,
     keep_attrs: bool | None = None,
     **kwargs,
-) -> T_Xarray:
+):
     """Interpolate values according to different methods."""
     # This was the original behaviour of interp_na and is kept for backward compatibility
     # Limit=None: Fill everything, including both boundaries
