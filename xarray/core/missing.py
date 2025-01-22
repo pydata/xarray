@@ -550,20 +550,41 @@ def _interp_na_all(
 
 
 class GapMask(Generic[T_Xarray]):
-    content: T_Xarray
-    mask: T_Xarray | None
-    dim: Hashable
+    """An object that allows for flexible masking of gaps. You should use DataArray.fill_gaps() or Dataset.fill_gaps() to construct this object instead of constructing it directly."""
 
-    """An object that allows for flexible masking of gaps."""
+    # Attributes
+    # ----------
+    # mask : DataArray or Dataset or None
+    _content: T_Xarray
+    _dim: Hashable
+    mask: T_Xarray | None
+    """Boolean gap mask, created based on the parameters passed to DataArray.fill_gaps() or Dataset.fill_gaps(). True values indicate remaining gaps after applying a filling method."""
 
     def __init__(self, content: T_Xarray, mask: T_Xarray | None, dim: Hashable) -> None:
-        self.content = content
+        """An object that allows for flexible masking of gaps. You should use DataArray.fill_gaps() or Dataset.fill_gaps() to construct this object instead of calling this constructor directly.
+
+        Parameters
+        ----------
+        content : DataArray or Dataset
+            The object to be masked.
+        mask : DataArray or Dataset or None
+            Boolean gap mask to be applied to the content. If None, the content is not masked.
+        dim : Hashable
+            The dimension along which the mask was created. When filling gaps and no dimension is specified for the filling method, this dimension is used.
+
+        See Also
+        --------
+        xarray.DataArray.fill_gaps
+        xarray.Dataset.fill_gaps
+
+        """
+        self._content = content
         self.mask = mask
-        self.dim = dim
+        self._dim = dim
 
     def _apply_mask(self, filled: T_Xarray) -> T_Xarray:
         if self.mask is not None:
-            filled = filled.where(~self.mask, other=self.content)
+            filled = filled.where(~self.mask, other=self._content)
         return filled
 
     def ffill(self, dim: Hashable | None = None) -> T_Xarray:
@@ -585,8 +606,8 @@ class GapMask(Generic[T_Xarray]):
         Dataset.ffill
         """
         if dim is None:
-            dim = self.dim
-        return self._apply_mask(self.content.ffill(dim))
+            dim = self._dim
+        return self._apply_mask(self._content.ffill(dim))
 
     def bfill(self, dim: Hashable | None = None) -> T_Xarray:
         """Partly fill missing values in this object's data by applying bfill to all unmasked values.
@@ -607,8 +628,8 @@ class GapMask(Generic[T_Xarray]):
         Dataset.bfill
         """
         if dim is None:
-            dim = self.dim
-        return self._apply_mask(self.content.bfill(dim))
+            dim = self._dim
+        return self._apply_mask(self._content.bfill(dim))
 
     def fillna(self, value) -> T_Xarray:
         """Partly fill missing values in this object's data by applying fillna to all unmasked values.
@@ -631,7 +652,7 @@ class GapMask(Generic[T_Xarray]):
         DataArray.fillna
         Dataset.fillna
         """
-        return self._apply_mask(self.content.fillna(value))
+        return self._apply_mask(self._content.fillna(value))
 
     def interpolate_na(
         self,
@@ -659,9 +680,9 @@ class GapMask(Generic[T_Xarray]):
         Dataset.interpolate_na
         """
         if dim is None:
-            dim = self.dim
+            dim = self._dim
         return self._apply_mask(
-            self.content.interpolate_na(
+            self._content.interpolate_na(
                 dim=dim,
                 method=method,
                 use_coordinate=use_coordinate,
