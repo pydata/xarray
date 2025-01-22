@@ -3517,6 +3517,11 @@ class DataArray(
         -------
         filled : DataArray
 
+        See Also
+        --------
+        :ref:`missing_values`
+        DataArray.fill_gaps
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3698,6 +3703,11 @@ class DataArray(
         -------
         filled : DataArray
 
+        See Also
+        --------
+        :ref:`missing_values`
+        DataArray.fill_gaps
+
         Examples
         --------
         >>> temperature = np.array(
@@ -3781,6 +3791,11 @@ class DataArray(
         Returns
         -------
         filled : DataArray
+
+        See Also
+        --------
+        :ref:`missing_values`
+        DataArray.fill_gaps
 
         Examples
         --------
