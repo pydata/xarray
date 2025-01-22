@@ -67,7 +67,8 @@ Bug fixes
 ~~~~~~~~~
 - Fix issues related to Pandas v3 ("us" vs. "ns" for python datetime, copy on write) and handling of 0d-numpy arrays in datetime/timedelta decoding (:pull:`9953`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-
+- Use zarr-fixture to prevent thread leakage errors (:pull:`9967`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
