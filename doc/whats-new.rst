@@ -77,6 +77,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Updated time coding tests to assert exact equality rather than equality with
+  a tolerance, since xarray's minimum supported version of cftime is greater
+  than 1.2.1 (:pull:`9961`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.2025.01.1:
 
