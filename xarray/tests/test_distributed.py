@@ -48,7 +48,7 @@ from xarray.tests.test_backends import (
 from xarray.tests.test_dataset import create_test_data
 
 loop = loop  # loop is an imported fixture, which flake8 has issues ack-ing
-client = client  # loop is an imported fixture, which flake8 has issues ack-ing
+client = client  # client is an imported fixture, which flake8 has issues ack-ing
 
 
 @pytest.fixture
@@ -218,6 +218,7 @@ def test_dask_distributed_read_netcdf_integration_test(
 
 
 # fixture vendored from dask
+# heads-up, this is using quite private zarr API
 # https://github.com/dask/dask/blob/e04734b4d8959ba259801f2e2a490cb4ee8d891f/dask/tests/test_distributed.py#L338-L358
 @pytest.fixture(scope="function")
 def zarr(client):
