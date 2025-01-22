@@ -6650,6 +6650,11 @@ class Dataset(
         -------
         Dataset
 
+        See Also
+        --------
+        :ref:`missing_values`
+        Dataset.fill_gaps
+
         Examples
         --------
         >>> ds = xr.Dataset(
@@ -6876,6 +6881,16 @@ class Dataset(
             than 0 or None for no limit. Must be None or greater than or equal
             to axis length if filling along chunked axes (dimensions).
 
+        Returns
+        -------
+        Dataset
+
+        See Also
+        --------
+        :ref:`missing_values`
+        Dataset.fill_gaps
+        Dataset.bfill
+
         Examples
         --------
         >>> time = pd.date_range("2023-01-01", periods=10, freq="D")
@@ -6910,14 +6925,6 @@ class Dataset(
           * time     (time) datetime64[ns] 80B 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 80B 1.0 1.0 1.0 nan 5.0 5.0 5.0 8.0 8.0 10.0
-
-        Returns
-        -------
-        Dataset
-
-        See Also
-        --------
-        Dataset.bfill
         """
         from xarray.core.missing import _apply_over_vars_with_dim, ffill
 
@@ -6940,6 +6947,16 @@ class Dataset(
             consecutive NaNs, it will only be partially filled. Must be greater
             than 0 or None for no limit. Must be None or greater than or equal
             to axis length if filling along chunked axes (dimensions).
+
+        Returns
+        -------
+        Dataset
+
+        See Also
+        --------
+        :ref:`missing_values`
+        Dataset.fill_gaps
+        Dataset.ffill
 
         Examples
         --------
@@ -6975,14 +6992,6 @@ class Dataset(
           * time     (time) datetime64[ns] 80B 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 80B 1.0 nan 5.0 5.0 5.0 8.0 8.0 8.0 10.0 10.0
-
-        Returns
-        -------
-        Dataset
-
-        See Also
-        --------
-        Dataset.ffill
         """
         from xarray.core.missing import _apply_over_vars_with_dim, bfill
 
@@ -7073,11 +7082,12 @@ class Dataset(
 
         Returns
         -------
-        Gap Mask: GapMask
+        Gap Mask: core.missing.GapMask
             An object where all remaining gaps are masked. Unmasked values can be filled by calling any of the provided methods.
 
         See Also
         --------
+        :ref:`missing_values`
         Dataset.fillna
         Dataset.ffill
         Dataset.bfill
