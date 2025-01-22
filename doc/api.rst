@@ -1494,6 +1494,20 @@ DataArray
    DataArrayResample.dims
    DataArrayResample.groups
 
+GapMask object
+===============
+
+.. currentmodule:: xarray.core.missing
+
+.. autosummary::
+   :toctree: generated/
+
+   GapMask
+   GapMask.fillna
+   GapMask.ffill
+   GapMask.bfill
+   GapMask.interpolate_na
+
 Accessors
 =========
 

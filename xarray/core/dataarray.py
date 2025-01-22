@@ -3892,11 +3892,13 @@ class DataArray(
 
         Returns
         -------
-        Gap Mask: GapMask
+        Gap Mask: core.missing.GapMask
+
             An object where all remaining gaps are masked. Unmasked values can be filled by calling any of the provided methods.
 
         See Also
         --------
+        :ref:`missing_values`
         DataArray.fillna
         DataArray.ffill
         DataArray.bfill
