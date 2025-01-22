@@ -559,7 +559,6 @@ class GapMask(Generic[T_Xarray]):
         self.content = content
         self.mask = mask
         self.dim = dim
-        self.dim = dim
 
     def _apply_mask(self, filled: T_Xarray) -> T_Xarray:
         if self.mask is not None:
