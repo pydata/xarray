@@ -53,9 +53,10 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from xarray.coding.cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
+from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.times import (
     _is_standard_calendar,
+    _parse_iso8601,
     _should_cftime_be_used,
     convert_time_or_go_back,
     format_cftime_datetime,
@@ -63,24 +64,21 @@ from xarray.coding.times import (
 from xarray.core.common import _contains_datetime_like_objects, is_np_datetime_like
 from xarray.core.pdcompat import (
     count_not_none,
-    nanosecond_precision_timestamp,
+    default_precision_timestamp,
 )
 from xarray.core.utils import attempt_import, emit_user_level_warning
 
 if TYPE_CHECKING:
-    from xarray.core.types import InclusiveOptions, Self, TypeAlias
+    from xarray.core.types import (
+        InclusiveOptions,
+        PDDatetimeUnitOptions,
+        Self,
+        TypeAlias,
+    )
 
 
 DayOption: TypeAlias = Literal["start", "end"]
 T_FreqStr = TypeVar("T_FreqStr", str, None)
-
-
-def _nanosecond_precision_timestamp(*args, **kwargs):
-    # As of pandas version 3.0, pd.to_datetime(Timestamp(...)) will try to
-    # infer the appropriate datetime precision. Until xarray supports
-    # non-nanosecond precision times, we will use this constructor wrapper to
-    # explicitly create nanosecond-precision Timestamp objects.
-    return pd.Timestamp(*args, **kwargs).as_unit("ns")
 
 
 def get_date_type(calendar, use_cftime=True):
@@ -91,7 +89,7 @@ def get_date_type(calendar, use_cftime=True):
         cftime = attempt_import("cftime")
 
     if _is_standard_calendar(calendar) and not use_cftime:
-        return _nanosecond_precision_timestamp
+        return default_precision_timestamp
 
     calendars = {
         "noleap": cftime.DatetimeNoLeap,
@@ -838,7 +836,7 @@ def to_cftime_datetime(date_str_or_date, calendar=None):
                 "If converting a string to a cftime.datetime object, "
                 "a calendar type must be provided"
             )
-        date, _ = _parse_iso8601_with_reso(get_date_type(calendar), date_str_or_date)
+        date, _ = _parse_iso8601(get_date_type(calendar), date_str_or_date)
         return date
     elif isinstance(date_str_or_date, cftime.datetime):
         return date_str_or_date
@@ -971,7 +969,6 @@ def cftime_range(
         Include boundaries; whether to set each bound as closed or open.
 
         .. versionadded:: 2023.02.0
-
     calendar : str, default: "standard"
         Calendar type for the datetimes.
 
@@ -1180,6 +1177,7 @@ def date_range(
     normalize=False,
     name=None,
     inclusive: InclusiveOptions = "both",
+    unit: PDDatetimeUnitOptions = "ns",
     calendar="standard",
     use_cftime=None,
 ):
@@ -1210,6 +1208,10 @@ def date_range(
         Include boundaries; whether to set each bound as closed or open.
 
         .. versionadded:: 2023.02.0
+    unit : {"s", "ms", "us", "ns"}, default "ns"
+        Specify the desired resolution of the result.
+
+        .. versionadded:: 2024.12.0
     calendar : str, default: "standard"
         Calendar type for the datetimes.
     use_cftime : boolean, optional
@@ -1245,6 +1247,7 @@ def date_range(
                 normalize=normalize,
                 name=name,
                 inclusive=inclusive,
+                unit=unit,
             )
         except pd.errors.OutOfBoundsDatetime as err:
             if use_cftime is False:
@@ -1416,10 +1419,8 @@ def date_range_like(source, calendar, use_cftime=None):
     if is_np_datetime_like(source.dtype):
         # We want to use datetime fields (datetime64 object don't have them)
         source_calendar = "standard"
-        # TODO: the strict enforcement of nanosecond precision Timestamps can be
-        # relaxed when addressing GitHub issue #7493.
-        source_start = nanosecond_precision_timestamp(source_start)
-        source_end = nanosecond_precision_timestamp(source_end)
+        source_start = default_precision_timestamp(source_start)
+        source_end = default_precision_timestamp(source_end)
     else:
         if isinstance(source, CFTimeIndex):
             source_calendar = source.calendar

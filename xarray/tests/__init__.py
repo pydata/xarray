@@ -111,13 +111,18 @@ has_dask_ge_2024_08_1, requires_dask_ge_2024_08_1 = _importorskip(
     "dask", minversion="2024.08.1"
 )
 has_dask_ge_2024_11_0, requires_dask_ge_2024_11_0 = _importorskip("dask", "2024.11.0")
-with warnings.catch_warnings():
-    warnings.filterwarnings(
-        "ignore",
-        message="The current Dask DataFrame implementation is deprecated.",
-        category=DeprecationWarning,
-    )
-    has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
+has_dask_ge_2025_1_0, requires_dask_ge_2025_1_0 = _importorskip("dask", "2025.1.0")
+if has_dask_ge_2025_1_0:
+    has_dask_expr = True
+    requires_dask_expr = pytest.mark.skipif(not has_dask_expr, reason="should not skip")
+else:
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="The current Dask DataFrame implementation is deprecated.",
+            category=DeprecationWarning,
+        )
+        has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
@@ -318,7 +323,14 @@ def create_test_data(
             f'Not enough letters for filling this dimension size ({_dims["dim3"]})'
         )
     obj["dim3"] = ("dim3", list(string.ascii_lowercase[0 : _dims["dim3"]]))
-    obj["time"] = ("time", pd.date_range("2000-01-01", periods=20))
+    obj["time"] = (
+        "time",
+        pd.date_range(
+            "2000-01-01",
+            periods=20,
+            unit="ns",
+        ),
+    )
     for v, dims in sorted(_vars.items()):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
         obj[v] = (dims, data)

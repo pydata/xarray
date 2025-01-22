@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import enum
 import functools
+import math
 import operator
 from collections import Counter, defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
@@ -472,12 +473,6 @@ class VectorizedIndexer(ExplicitIndexer):
         for k in key:
             if isinstance(k, slice):
                 k = as_integer_slice(k)
-            elif is_duck_dask_array(k):
-                raise ValueError(
-                    "Vectorized indexing with Dask arrays is not supported. "
-                    "Please pass a numpy array by calling ``.compute``. "
-                    "See https://github.com/dask/dask/issues/8958."
-                )
             elif is_duck_array(k):
                 if not np.issubdtype(k.dtype, np.integer):
                     raise TypeError(
@@ -1508,6 +1503,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return self.array[key]
 
     def _vindex_get(self, indexer: VectorizedIndexer):
+        _assert_not_chunked_indexer(indexer.tuple)
         array = NumpyVIndexAdapter(self.array)
         return array[indexer.tuple]
 
@@ -1607,6 +1603,28 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return xp.permute_dims(self.array, order)
 
 
+def _apply_vectorized_indexer_dask_wrapper(indices, coord):
+    from xarray.core.indexing import (
+        VectorizedIndexer,
+        apply_indexer,
+        as_indexable,
+    )
+
+    return apply_indexer(
+        as_indexable(coord), VectorizedIndexer((indices.squeeze(axis=-1),))
+    )
+
+
+def _assert_not_chunked_indexer(idxr: tuple[Any, ...]) -> None:
+    if any(is_chunked_array(i) for i in idxr):
+        raise ValueError(
+            "Cannot index with a chunked array indexer. "
+            "Please chunk the array you are indexing first, "
+            "and drop any indexed dimension coordinate variables. "
+            "Alternatively, call `.compute()` on any chunked arrays in the indexer."
+        )
+
+
 class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a dask array to support explicit indexing."""
 
@@ -1630,7 +1648,35 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             return value
 
     def _vindex_get(self, indexer: VectorizedIndexer):
-        return self.array.vindex[indexer.tuple]
+        try:
+            return self.array.vindex[indexer.tuple]
+        except IndexError as e:
+            # TODO: upstream to dask
+            has_dask = any(is_duck_dask_array(i) for i in indexer.tuple)
+            # this only works for "small" 1d coordinate arrays with one chunk
+            # it is intended for idxmin, idxmax, and allows indexing with
+            # the nD array output of argmin, argmax
+            if (
+                not has_dask
+                or len(indexer.tuple) > 1
+                or math.prod(self.array.numblocks) > 1
+                or self.array.ndim > 1
+            ):
+                raise e
+            (idxr,) = indexer.tuple
+            if idxr.ndim == 0:
+                return self.array[idxr.data]
+            else:
+                import dask.array
+
+                return dask.array.map_blocks(
+                    _apply_vectorized_indexer_dask_wrapper,
+                    idxr[..., np.newaxis],
+                    self.array,
+                    chunks=idxr.chunks,
+                    drop_axis=-1,
+                    dtype=self.array.dtype,
+                )
 
     def __getitem__(self, indexer: ExplicitIndexer):
         self._check_and_raise_if_non_basic_indexer(indexer)
@@ -1707,8 +1753,10 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             # pd.Timestamp rather np.than datetime64 but this is easier
             # (for now)
             item = np.datetime64("NaT", "ns")
+        elif isinstance(item, pd.Timedelta):
+            item = item.to_numpy()
         elif isinstance(item, timedelta):
-            item = np.timedelta64(getattr(item, "value", item), "ns")
+            item = np.timedelta64(item)
         elif isinstance(item, pd.Timestamp):
             # Work around for GH: pydata/xarray#1932 and numpy/numpy#10668
             # numpy fails to convert pd.Timestamp to np.datetime64[ns]
@@ -1770,6 +1818,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         | np.datetime64
         | np.timedelta64
     ):
+        _assert_not_chunked_indexer(indexer.tuple)
         key = self._prepare_key(indexer.tuple)
 
         if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
