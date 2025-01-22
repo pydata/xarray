@@ -65,36 +65,36 @@ _STANDARD_CALENDARS = sorted(_STANDARD_CALENDARS_UNSORTED)
 _ALL_CALENDARS = sorted(_NON_STANDARD_CALENDARS_SET.union(_STANDARD_CALENDARS))
 _NON_STANDARD_CALENDARS = sorted(_NON_STANDARD_CALENDARS_SET)
 _CF_DATETIME_NUM_DATES_UNITS = [
-    (np.arange(10), "days since 2000-01-01"),
-    (np.arange(10).astype("float64"), "days since 2000-01-01"),
-    (np.arange(10).astype("float32"), "days since 2000-01-01"),
-    (np.arange(10).reshape(2, 5), "days since 2000-01-01"),
-    (12300 + np.arange(5), "hours since 1680-01-01 00:00:00"),
+    (np.arange(10), "days since 2000-01-01", "s"),
+    (np.arange(10).astype("float64"), "days since 2000-01-01", "s"),
+    (np.arange(10).astype("float32"), "days since 2000-01-01", "s"),
+    (np.arange(10).reshape(2, 5), "days since 2000-01-01", "s"),
+    (12300 + np.arange(5), "hours since 1680-01-01 00:00:00", "s"),
     # here we add a couple minor formatting errors to test
     # the robustness of the parsing algorithm.
-    (12300 + np.arange(5), "hour since 1680-01-01  00:00:00"),
-    (12300 + np.arange(5), "Hour  since 1680-01-01 00:00:00"),
-    (12300 + np.arange(5), " Hour  since  1680-01-01 00:00:00 "),
-    (10, "days since 2000-01-01"),
-    ([10], "daYs  since 2000-01-01"),
-    ([[10]], "days since 2000-01-01"),
-    ([10, 10], "days since 2000-01-01"),
-    (np.array(10), "days since 2000-01-01"),
-    (0, "days since 1000-01-01"),
-    ([0], "days since 1000-01-01"),
-    ([[0]], "days since 1000-01-01"),
-    (np.arange(2), "days since 1000-01-01"),
-    (np.arange(0, 100000, 20000), "days since 1900-01-01"),
-    (np.arange(0, 100000, 20000), "days since 1-01-01"),
-    (17093352.0, "hours since 1-1-1 00:00:0.0"),
-    ([0.5, 1.5], "hours since 1900-01-01T00:00:00"),
-    (0, "milliseconds since 2000-01-01T00:00:00"),
-    (0, "microseconds since 2000-01-01T00:00:00"),
-    (np.int32(788961600), "seconds since 1981-01-01"),  # GH2002
-    (12300 + np.arange(5), "hour since 1680-01-01 00:00:00.500000"),
-    (164375, "days since 1850-01-01 00:00:00"),
-    (164374.5, "days since 1850-01-01 00:00:00"),
-    ([164374.5, 168360.5], "days since 1850-01-01 00:00:00"),
+    (12300 + np.arange(5), "hour since 1680-01-01  00:00:00", "s"),
+    (12300 + np.arange(5), "Hour  since 1680-01-01 00:00:00", "s"),
+    (12300 + np.arange(5), " Hour  since  1680-01-01 00:00:00 ", "s"),
+    (10, "days since 2000-01-01", "s"),
+    ([10], "daYs  since 2000-01-01", "s"),
+    ([[10]], "days since 2000-01-01", "s"),
+    ([10, 10], "days since 2000-01-01", "s"),
+    (np.array(10), "days since 2000-01-01", "s"),
+    (0, "days since 1000-01-01", "s"),
+    ([0], "days since 1000-01-01", "s"),
+    ([[0]], "days since 1000-01-01", "s"),
+    (np.arange(2), "days since 1000-01-01", "s"),
+    (np.arange(0, 100000, 20000), "days since 1900-01-01", "s"),
+    (np.arange(0, 100000, 20000), "days since 1-01-01", "s"),
+    (17093352.0, "hours since 1-1-1 00:00:0.0", "s"),
+    ([0.5, 1.5], "hours since 1900-01-01T00:00:00", "s"),
+    (0, "milliseconds since 2000-01-01T00:00:00", "s"),
+    (0, "microseconds since 2000-01-01T00:00:00", "s"),
+    (np.int32(788961600), "seconds since 1981-01-01", "s"),  # GH2002
+    (12300 + np.arange(5), "hour since 1680-01-01 00:00:00.500000", "us"),
+    (164375, "days since 1850-01-01 00:00:00", "s"),
+    (164374.5, "days since 1850-01-01 00:00:00", "s"),
+    ([164374.5, 168360.5], "days since 1850-01-01 00:00:00", "s"),
 ]
 _CF_DATETIME_TESTS = [
     num_dates_units + (calendar,)
@@ -122,9 +122,15 @@ def _all_cftime_date_types():
 @requires_cftime
 @pytest.mark.filterwarnings("ignore:Ambiguous reference date string")
 @pytest.mark.filterwarnings("ignore:Times can't be serialized faithfully")
-@pytest.mark.parametrize(["num_dates", "units", "calendar"], _CF_DATETIME_TESTS)
+@pytest.mark.parametrize(
+    ["num_dates", "units", "minimum_resolution", "calendar"], _CF_DATETIME_TESTS
+)
 def test_cf_datetime(
-    num_dates, units, calendar, time_unit: PDDatetimeUnitOptions
+    num_dates,
+    units: str,
+    minimum_resolution: PDDatetimeUnitOptions,
+    calendar: str,
+    time_unit: PDDatetimeUnitOptions,
 ) -> None:
     import cftime
 
@@ -137,25 +143,23 @@ def test_cf_datetime(
         actual = decode_cf_datetime(num_dates, units, calendar, time_unit=time_unit)
 
     if actual.dtype.kind != "O":
-        expected = cftime_to_nptime(expected, time_unit=time_unit)
+        if np.timedelta64(1, time_unit) > np.timedelta64(1, minimum_resolution):
+            expected_unit = minimum_resolution
+        else:
+            expected_unit = time_unit
+        expected = cftime_to_nptime(expected, time_unit=expected_unit)
 
-    abs_diff = np.asarray(abs(actual - expected)).ravel()
-    abs_diff = pd.to_timedelta(abs_diff.tolist()).to_numpy()
-
-    # once we no longer support versions of netCDF4 older than 1.1.5,
-    # we could do this check with near microsecond accuracy:
-    # https://github.com/Unidata/netcdf4-python/issues/355
-    assert (abs_diff <= np.timedelta64(1, "s")).all()
+    assert_array_equal(actual, expected)
     encoded1, _, _ = encode_cf_datetime(actual, units, calendar)
 
-    assert_duckarray_allclose(num_dates, encoded1)
+    assert_array_equal(num_dates, encoded1)
 
     if hasattr(num_dates, "ndim") and num_dates.ndim == 1 and "1000" not in units:
         # verify that wrapping with a pandas.Index works
         # note that it *does not* currently work to put
         # non-datetime64 compatible dates into a pandas.Index
         encoded2, _, _ = encode_cf_datetime(pd.Index(actual), units, calendar)
-        assert_duckarray_allclose(num_dates, encoded2)
+        assert_array_equal(num_dates, encoded2)
 
 
 @requires_cftime
@@ -206,11 +210,7 @@ def test_decode_cf_datetime_non_iso_strings() -> None:
     ]
     for num_dates, units in cases:
         actual = decode_cf_datetime(num_dates, units)
-        abs_diff = abs(actual - expected.values)
-        # once we no longer support versions of netCDF4 older than 1.1.5,
-        # we could do this check with near microsecond accuracy:
-        # https://github.com/Unidata/netcdf4-python/issues/355
-        assert (abs_diff <= np.timedelta64(1, "s")).all()
+        assert_array_equal(actual, expected)
 
 
 @requires_cftime
@@ -220,7 +220,7 @@ def test_decode_standard_calendar_inside_timestamp_range(
 ) -> None:
     import cftime
 
-    units = "days since 0001-01-01"
+    units = "hours since 0001-01-01"
     times = pd.date_range(
         "2001-04-01-00", end="2001-04-30-23", unit=time_unit, freq="h"
     )
@@ -233,11 +233,7 @@ def test_decode_standard_calendar_inside_timestamp_range(
     # representable with nanosecond resolution.
     actual = decode_cf_datetime(time, units, calendar=calendar, time_unit=time_unit)
     assert actual.dtype == np.dtype(f"=M8[{time_unit}]")
-    abs_diff = abs(actual - expected)
-    # once we no longer support versions of netCDF4 older than 1.1.5,
-    # we could do this check with near microsecond accuracy:
-    # https://github.com/Unidata/netcdf4-python/issues/355
-    assert (abs_diff <= np.timedelta64(1, "s")).all()
+    assert_array_equal(actual, expected)
 
 
 @requires_cftime
@@ -256,11 +252,7 @@ def test_decode_non_standard_calendar_inside_timestamp_range(calendar) -> None:
 
     actual = decode_cf_datetime(non_standard_time, units, calendar=calendar)
     assert actual.dtype == expected_dtype
-    abs_diff = abs(actual - expected)
-    # once we no longer support versions of netCDF4 older than 1.1.5,
-    # we could do this check with near microsecond accuracy:
-    # https://github.com/Unidata/netcdf4-python/issues/355
-    assert (abs_diff <= np.timedelta64(1, "s")).all()
+    assert_array_equal(actual, expected)
 
 
 @requires_cftime
@@ -287,11 +279,7 @@ def test_decode_dates_outside_timestamp_range(
         warnings.filterwarnings("ignore", "Unable to decode time axis")
         actual = decode_cf_datetime(time, units, calendar=calendar, time_unit=time_unit)
     assert all(isinstance(value, expected_date_type) for value in actual)
-    abs_diff = abs(actual - expected)
-    # once we no longer support versions of netCDF4 older than 1.1.5,
-    # we could do this check with near microsecond accuracy:
-    # https://github.com/Unidata/netcdf4-python/issues/355
-    assert (abs_diff <= np.timedelta64(1, "us")).all()
+    assert_array_equal(actual, expected)
 
 
 @requires_cftime
@@ -367,14 +355,8 @@ def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
         mdim_time, units, calendar=calendar, time_unit=time_unit
     )
     assert actual.dtype == np.dtype(f"=M8[{time_unit}]")
-
-    abs_diff1 = abs(actual[:, 0] - expected1)
-    abs_diff2 = abs(actual[:, 1] - expected2)
-    # once we no longer support versions of netCDF4 older than 1.1.5,
-    # we could do this check with near microsecond accuracy:
-    # https://github.com/Unidata/netcdf4-python/issues/355
-    assert (abs_diff1 <= np.timedelta64(1, "s")).all()
-    assert (abs_diff2 <= np.timedelta64(1, "s")).all()
+    assert_array_equal(actual[:, 0], expected1)
+    assert_array_equal(actual[:, 1], expected2)
 
 
 @requires_cftime
@@ -409,13 +391,8 @@ def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(
     actual = decode_cf_datetime(mdim_time, units, calendar=calendar)
 
     assert actual.dtype == expected_dtype
-    abs_diff1 = abs(actual[:, 0] - expected1)
-    abs_diff2 = abs(actual[:, 1] - expected2)
-    # once we no longer support versions of netCDF4 older than 1.1.5,
-    # we could do this check with near microsecond accuracy:
-    # https://github.com/Unidata/netcdf4-python/issues/355
-    assert (abs_diff1 <= np.timedelta64(1, "s")).all()
-    assert (abs_diff2 <= np.timedelta64(1, "s")).all()
+    assert_array_equal(actual[:, 0], expected1)
+    assert_array_equal(actual[:, 1], expected2)
 
 
 @requires_cftime
@@ -455,14 +432,8 @@ def test_decode_multidim_time_outside_timestamp_range(
         dtype = np.dtype(f"=M8[{time_unit}]")
 
     assert actual.dtype == dtype
-
-    abs_diff1 = abs(actual[:, 0] - expected1)
-    abs_diff2 = abs(actual[:, 1] - expected2)
-    # once we no longer support versions of netCDF4 older than 1.1.5,
-    # we could do this check with near microsecond accuracy:
-    # https://github.com/Unidata/netcdf4-python/issues/355
-    assert (abs_diff1 <= np.timedelta64(1, "s")).all()
-    assert (abs_diff2 <= np.timedelta64(1, "s")).all()
+    assert_array_equal(actual[:, 0], expected1)
+    assert_array_equal(actual[:, 1], expected2)
 
 
 @requires_cftime
