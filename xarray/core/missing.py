@@ -219,15 +219,16 @@ def _get_gap_mask(
     # Calculate individual masks
     masks = []
     if need_limit_mask:
+        # due to the dynamic typing of limit, mypy cannot infer the correct type
         masks.append(
-            _get_limit_fill_mask(obj, dim, index_limit, limit, limit_direction)
+            _get_limit_fill_mask(obj, dim, index_limit, limit, limit_direction)  # type: ignore[arg-type]
         )
 
     if need_area_mask:
         masks.append(_get_limit_area_mask(obj, dim, index_limit, limit_area))
 
     if need_max_gap_mask:
-        masks.append(_get_max_gap_mask(obj, dim, index_max_gap, max_gap))
+        masks.append(_get_max_gap_mask(obj, dim, index_max_gap, max_gap))  # type: ignore[arg-type]
     # Combine masks
     mask = masks[0]
     for m in masks[1:]:
