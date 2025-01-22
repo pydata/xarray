@@ -29,6 +29,7 @@ dependencies:
   # - pint>=0.22
   - pip
   - pre-commit
+  - pyarrow # importing dask.dataframe raises an ImportError without this
   - pydap
   - pytest
   - pytest-cov
