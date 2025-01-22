@@ -216,7 +216,7 @@ All of the above methods by default fill gaps of any size in the data. If you wa
         "time", limit=1, limit_direction="both", max_gap=4
     ).interpolate_na("time")
 
-In this example, we interpolate valid measurements up to one hour forward and backward in time. However, if a gap is longer than four hours, nothing is interpolated. :py:metho:`~xarray.DataArray.fill_gaps` works with all filling methods (:py:meth:`~xarray.DataArray.ffill`, :py:meth:`~xarray.DataArray.bfill`, :py:meth:`~xarray.DataArray.fillna`, :py:meth:`~xarray.DataArray.interpolate_na`). See :py:meth:`~xarray.DataArray.fill_gaps` for more information on the available options.
+In this example, we interpolate valid measurements up to one hour forward and backward in time. However, if a gap is longer than four hours, nothing is interpolated. :py:meth:`~xarray.DataArray.fill_gaps` works with all filling methods (:py:meth:`~xarray.DataArray.ffill`, :py:meth:`~xarray.DataArray.bfill`, :py:meth:`~xarray.DataArray.fillna`, :py:meth:`~xarray.DataArray.interpolate_na`). See :py:meth:`~xarray.DataArray.fill_gaps` for more information on the available options.
 
 .. _agg:
 
