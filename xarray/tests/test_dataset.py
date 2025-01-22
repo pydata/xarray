@@ -395,7 +395,7 @@ class TestDataset:
             <xarray.Dataset> Size: 12B
             Dimensions:  (foø: 1)
             Coordinates:
-              * foø      (foø) {byteorder}U3 12B {'ba®'!r}
+              * foø      (foø) {byteorder}U3 12B {"ba®"!r}
             Data variables:
                 *empty*
             Attributes:
@@ -6689,9 +6689,9 @@ class TestDataset:
         ds = ds.broadcast_like(ds)  # test more than 2 dimensions (issue #9972)
         ds_copy = ds.copy(deep=True)
 
-        result_weighted = ds.polyfit("dim2", 2, w=np.ones(ds.sizes["dim2"]))
-        result_unweighted = ds.polyfit("dim2", 2)
-        xr.testing.assert_identical(result_weighted, result_unweighted)
+        expected = ds.polyfit("dim2", 2)
+        actual = ds.polyfit("dim2", 2, w=np.ones(ds.sizes["dim2"]))
+        xr.testing.assert_identical(expected, actual)
 
         # Make sure weighted polyfit does not change the original object (issue #5644)
         xr.testing.assert_identical(ds, ds_copy)
