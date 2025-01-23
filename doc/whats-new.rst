@@ -50,7 +50,7 @@ eventually be deprecated.
 
 New Features
 ~~~~~~~~~~~~
-- Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`).
+- Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`, :pull:`9977`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
 - Improve the error message raised when no key is matching the available variables in a dataset.  (:pull:`9943`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
