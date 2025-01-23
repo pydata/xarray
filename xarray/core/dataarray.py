@@ -3922,7 +3922,7 @@ class DataArray(
 
         Notes
         -----
-        ``Limit`` and ``max_gap`` have different effects on gaps: If ``limit`` is set, *some* values in a gap will be filled (up to the given distance from the boundaries). ``max_gap`` will prevent *any* filling for gaps larger than the given distance.
+        ``limit`` and ``max_gap`` have different effects on gaps: If ``limit`` is set, *some* values in a gap will be filled (up to the given distance from the boundaries). ``max_gap`` will prevent *any* filling for gaps larger than the given distance.
 
         Examples
         --------
