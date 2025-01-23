@@ -9206,7 +9206,7 @@ class Dataset(
 
             present_dims.update(other_dims)
             if w is not None:
-                rhs = rhs * w[:, np.newaxis]
+                rhs = rhs * w.reshape(-1, *((1,) * len(other_dims)))
 
             with warnings.catch_warnings():
                 if full:  # Copy np.polyfit behavior
