@@ -1220,7 +1220,7 @@ class TestVariable(VariableSubclassobjects):
         )
         assert_identical(expected_extra, as_variable(xarray_tuple))
 
-        with pytest.raises(ValueError, match=r"tuple of form"):
+        with pytest.raises(TypeError, match=r"tuple of form"):
             as_variable(tuple(data))
         with pytest.raises(ValueError, match=r"tuple of form"):  # GH1016
             as_variable(("five", "six", "seven"))

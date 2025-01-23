@@ -130,10 +130,8 @@ def as_variable(
     if isinstance(obj, Variable):
         obj = obj.copy(deep=False)
     elif isinstance(obj, tuple):
-        if len(obj) < 2:
-            obj += (np.nan,)
         try:
-            dims_, data_, *attrs_ = obj
+            dims_, data_, *attrs_ = obj if len(obj) >= 2 else obj + (np.nan,)
         except ValueError as err:
             raise ValueError(
                 f"Tuple {obj} is not in the form (dims, [data[, attrs[, encoding]]])"
