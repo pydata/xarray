@@ -877,8 +877,8 @@ def test_datetime_to_numeric_datetime64(dask, time_unit: PDDatetimeUnitOptions):
         result = duck_array_ops.datetime_to_numeric(
             times, datetime_unit="h", dtype=dtype
         )
-    expected = 24 * np.arange(0, 35, 7).astype(dtype)
-    np.testing.assert_array_equal(result, expected)
+    expected2 = 24 * np.arange(0, 35, 7).astype(dtype)
+    np.testing.assert_array_equal(result, expected2)
 
 
 @requires_cftime
