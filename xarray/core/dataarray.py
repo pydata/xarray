@@ -3833,8 +3833,11 @@ class DataArray(
         limit_area: LimitAreaOptions | None = None,
         max_gap: T_GapLength | None = None,
     ) -> GapMask[DataArray]:
-        """Fill in gaps (consecutive missing values) in the data using one of several filling methods.
-        Allows for fine control on how far to extend the valid data into the gaps and the maximum size of the gaps to fill.
+        """Fill in gaps (consecutive missing values) in the data.
+
+        - Firstly, ``fill_gaps`` determines **which** values to fill, with options for fine control how far to extend the valid data into the gaps and the maximum size of the gaps to fill.
+        - Secondly, calling one of several filling methods determines **how** to fill the selected values.
+
 
         *Requires numbagg or bottleneck.*
 
@@ -3851,7 +3854,7 @@ class DataArray(
 
         limit : int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta, default: None
             Maximum number or distance of consecutive NaNs to fill.
-            Use None for no limit. When interpolating along a datetime64 dimension
+            Use None for no limit. When filling along a datetime64 dimension
             and ``use_coordinate=True``, ``limit`` can be one of the following:
 
             - a string that is valid input for pandas.to_timedelta
@@ -3922,7 +3925,7 @@ class DataArray(
 
         Notes
         -----
-        ``limit`` and ``max_gap`` have different effects on gaps: If ``limit`` is set, *some* values in a gap will be filled (up to the given distance from the boundaries). ``max_gap`` will prevent *any* filling for gaps larger than the given distance.
+        ``Limit`` and ``max_gap`` have different effects on gaps: If ``limit`` is set, *some* values in a gap will be filled (up to the given distance from the boundaries). ``max_gap`` will prevent *any* filling for gaps larger than the given distance.
 
         Examples
         --------
