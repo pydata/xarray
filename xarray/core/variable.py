@@ -145,7 +145,7 @@ def as_variable(
                 " ambiguous, please extract the data using the .data property."
             )
 
-        if utils.is_scalar(data_, include_0d=True):
+        if utils.is_scalar(data_, include_0d=False) and sizes is not None:
             try:
                 shape_ = tuple(sizes[i] for i in dims_)
             except TypeError as err:
