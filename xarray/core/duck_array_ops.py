@@ -666,12 +666,10 @@ def np_timedelta64_to_float(array, datetime_unit):
 
     Notes
     -----
-    The array is first converted to microseconds, which is less likely to
-    cause overflow errors.
+    The array is first converted to datetimeunit.
     """
-    array = array.astype("timedelta64[ns]").astype(np.float64)
-    conversion_factor = np.timedelta64(1, "ns") / np.timedelta64(1, datetime_unit)
-    return conversion_factor * array
+    # todo: should we check for overflow here?
+    return array.astype(f"timedelta64[{datetime_unit}]").astype(np.float64)
 
 
 def pd_timedelta_to_float(value, datetime_unit):
@@ -715,8 +713,11 @@ def mean(array, axis=None, skipna=None, **kwargs):
     if dtypes.is_datetime_like(array.dtype):
         offset = _datetime_nanmin(array)
 
-        # xarray always uses np.datetime64[ns] for np.datetime64 data
-        dtype = "timedelta64[ns]"
+        # from version 2025.01.2 xarray uses np.datetime64[unit] where unit
+        # is one of "s", "ms", "us", "ns"
+        # the respective unit is used for the timedelta representation
+        unit, _ = np.datetime_data(offset.dtype)
+        dtype = f"timedelta64[{unit}]"
         return (
             _mean(
                 datetime_to_numeric(array, offset), axis=axis, skipna=skipna, **kwargs
