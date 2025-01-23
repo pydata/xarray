@@ -78,6 +78,8 @@ Bug fixes
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Use zarr-fixture to prevent thread leakage errors (:pull:`9967`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix weighted ``polyfit`` for arrays with more than two dimensions (:issue:`9972`, :pull:`9974`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 
 Documentation
 ~~~~~~~~~~~~~
