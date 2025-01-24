@@ -644,9 +644,9 @@ class GapMask(Generic[T_Xarray]):
         DataArray.ffill
         Dataset.ffill
         """
-        if self._limit_direction is None:
+        if self._limit_direction is None or self._limit_direction == "forward":
             limit_direction = "forward"
-        elif self._limit_direction != "forward":
+        else:
             raise ValueError(
                 f"limit_direction='{self._limit_direction}' is not allowed with ffill, must be 'forward'."
             )
@@ -666,9 +666,9 @@ class GapMask(Generic[T_Xarray]):
         DataArray.bfill
         Dataset.bfill
         """
-        if self._limit_direction is None:
+        if self._limit_direction is None or self._limit_direction == "backward":
             limit_direction = "backward"
-        elif self._limit_direction != "backward":
+        else:
             raise ValueError(
                 f"limit_direction='{self._limit_direction}' is not allowed with bfill, must be 'backward'."
             )
