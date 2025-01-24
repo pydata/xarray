@@ -4024,6 +4024,12 @@ class TestH5NetCDFData(NetCDF4Base):
                 {"compression": "gzip", "compression_opts": 9},
                 {"zlib": True, "complevel": 9},
             ),
+            # For compatibility with libnetcdf4 we allow users to specify
+            # zlib for gzip
+            (
+                {"compression": "zlib", "compression_opts": 9},
+                {"zlib": True, "complevel": 9},
+            ),
             # What can't be expressed in NetCDF4-Python style is
             # round-tripped unaltered
             (

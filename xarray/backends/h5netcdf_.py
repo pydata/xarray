@@ -324,6 +324,13 @@ class H5NetCDFStore(WritableCFDataStore):
                 raise ValueError("'zlib' and 'compression' encodings mismatch")
             encoding.setdefault("compression", "gzip")
 
+        # "zlib" is allowed as an alias for "gzip" since in
+        # libnetcdf4 allows "zlib" to be set "gzip" compression
+        # making it difficult to write code that enables common
+        # compression options for both
+        if encoding.get("compression") == "zlib":
+            encoding["compression"] = "gzip"
+
         if (
             check_encoding
             and "complevel" in encoding
