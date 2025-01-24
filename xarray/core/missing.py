@@ -554,11 +554,13 @@ class GapMask(Generic[T_Xarray]):
 
     # Attributes
     # ----------
-    # mask : DataArray or Dataset or None
     _content: T_Xarray
     _dim: Hashable
-    mask: T_Xarray | None
-    """Boolean gap mask, created based on the parameters passed to DataArray.fill_gaps() or Dataset.fill_gaps(). True values indicate remaining gaps after applying a filling method."""
+    _use_coordinate: bool | Hashable
+    _limit: T_GapLength | None
+    _limit_direction: LimitDirectionOptions | None
+    _limit_area: LimitAreaOptions | None
+    _max_gap: T_GapLength | None
 
     def __init__(
         self,
@@ -577,7 +579,8 @@ class GapMask(Generic[T_Xarray]):
         content : DataArray or Dataset
             The object to be masked.
 
-        See xarray.DataArray.fill_gaps or xarray.Dataset.fill_gaps for an explanation of the remaining parameters.
+        Other:
+            See xarray.DataArray.fill_gaps or xarray.Dataset.fill_gaps for an explanation of the remaining parameters.
 
         See Also
         --------
@@ -617,7 +620,7 @@ class GapMask(Generic[T_Xarray]):
         Returns
         -------
         mask : DataArray or Dataset
-            Boolean gap mask, created based on the parameters passed to DataArray.fill_gaps() or Dataset.fill_gaps(). True values indicate remaining gaps after applying a filling method.
+            Boolean gap mask, created based on the parameters passed to DataArray.fill_gaps() or Dataset.fill_gaps(). True values indicate remaining gaps.
         """
         limit_direction = self._limit_direction
         if limit_direction is None:

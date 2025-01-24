@@ -1507,6 +1507,7 @@ GapMask object
    GapMask.ffill
    GapMask.bfill
    GapMask.interpolate_na
+   GapMask.get_mask
 
 Accessors
 =========
