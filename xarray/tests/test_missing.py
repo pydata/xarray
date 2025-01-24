@@ -197,13 +197,14 @@ def test_interpolate_pd_compat_polynomial():
 @requires_scipy
 def test_interpolate_pd_compat_limits():
     shapes = [(7, 7)]
+    method = "slinear"  # need slinear, since pandas does constant extrapolation for methods 'time', 'index', 'values'
     frac_nan = 0.5
     limits = [
         None,
         1,
         3,
     ]  # pandas 2.1.4 is currently unable to handle coordinate based limits!
-    limit_directions = ["forward", "backward", None]
+    limit_directions = ["forward", "backward"]
     limit_areas = [None, "outside", "inside"]
 
     for shape, limit, limit_direction, limit_area in itertools.product(
@@ -217,37 +218,69 @@ def test_interpolate_pd_compat_limits():
                 limit_direction=limit_direction,
                 limit_area=limit_area,
                 use_coordinate=False,
+            ).interpolate_na(
+                dim=dim,
+                method=method,
+                use_coordinate=True,
+                fill_value="extrapolate",
             )
-            if (
-                limit_direction is None
-            ):  # xarray: 'None'='both', while pandas: None='forward'. But for ffill/bfill, they both should default to forward/backward
-                filled = actual.ffill()
-                expected = df.ffill(
+            expected = df.interpolate(
+                method=method,
+                axis=da.get_axis_num(dim),
+                limit=limit,
+                limit_direction=limit_direction,
+                limit_area=limit_area,
+                fill_value="extrapolate",
+            )
+            np.testing.assert_allclose(actual.values, expected.values)
+
+
+def test_fill_pd_compat_limits():
+    shapes = [(7, 7)]
+    frac_nan = 0.5
+    limits = [
+        None,
+        1,
+        3,
+    ]  # pandas 2.1.4 is currently unable to handle coordinate based limits!
+    limit_areas = [None, "outside", "inside"]
+
+    for shape, limit, limit_area in itertools.product(shapes, limits, limit_areas):
+        da, df = make_interpolate_example_data(shape, frac_nan, non_uniform=True)
+        for dim in ["time", "x"]:
+            masked = da.fill_gaps(
+                dim=dim,
+                limit=limit,
+                limit_area=limit_area,
+                use_coordinate=False,
+            )
+            filled_forward = masked.ffill()
+            filled_backward = masked.bfill()
+            if pd.__version__ >= "2.2.0":
+                expected_forward = df.ffill(
                     axis=da.get_axis_num(dim), limit=limit, limit_area=limit_area
                 )
-                np.testing.assert_allclose(filled.values, expected.values)
-                filled = actual.bfill()
-                expected = df.bfill(
+                expected_backward = df.bfill(
                     axis=da.get_axis_num(dim), limit=limit, limit_area=limit_area
                 )
-                np.testing.assert_allclose(filled.values, expected.values)
             else:
-                method = "slinear"  # need slinear, since pandas does constant extrapolation for methods 'time', 'index', 'values'
-                actual = actual.interpolate_na(
-                    dim=dim,
-                    method=method,
-                    use_coordinate=True,
-                    fill_value="extrapolate",
-                )
-                expected = df.interpolate(
-                    method=method,
+                expected_forward = df.interpolate(
+                    method="ffill",
                     axis=da.get_axis_num(dim),
                     limit=limit,
-                    limit_direction=limit_direction,
                     limit_area=limit_area,
                     fill_value="extrapolate",
                 )
-                np.testing.assert_allclose(actual.values, expected.values)
+                expected_backward = df.interpolate(
+                    method="bfill",
+                    axis=da.get_axis_num(dim),
+                    limit=limit,
+                    limit_area=limit_area,
+                    fill_value="extrapolate",
+                )
+
+            np.testing.assert_allclose(filled_forward.values, expected_forward.values)
+            np.testing.assert_allclose(filled_backward.values, expected_backward.values)
 
 
 @requires_scipy
