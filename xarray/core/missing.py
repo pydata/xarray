@@ -609,12 +609,12 @@ class GapMask(Generic[T_Xarray]):
         )
         return mask
 
-    def _apply_mask(self, filled: T_Xarray, mask: T_Xarray) -> T_Xarray:
+    def _apply_mask(self, filled: T_Xarray, mask: T_Xarray | None) -> T_Xarray:
         if mask is not None:
             filled = filled.where(~mask, other=self._content)
         return filled
 
-    def get_mask(self) -> T_Xarray:
+    def get_mask(self) -> T_Xarray | None:
         """Return the gap mask.
 
         Returns
