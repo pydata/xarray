@@ -1186,6 +1186,22 @@ def test_fill_gaps_limit():
     ):
         mask.bfill()
 
+    actual = da.fill_gaps(dim="y").ffill()
+    expected = da.copy(data=[n, n, 2, 2, 2, 5, 5, 5])
+    assert_equal(actual, expected)
+
+    actual = da.fill_gaps(dim="y", limit_direction="forward").ffill()
+    expected = da.copy(data=[n, n, 2, 2, 2, 5, 5, 5])
+    assert_equal(actual, expected)
+
+    actual = da.fill_gaps(dim="y", limit=1).bfill()
+    expected = da.copy(data=[n, 2, 2, n, 5, 5, n, n])
+    assert_equal(actual, expected)
+
+    actual = da.fill_gaps(dim="y", limit=1, limit_direction="backward").bfill()
+    expected = da.copy(data=[n, 2, 2, n, 5, 5, n, n])
+    assert_equal(actual, expected)
+
     actual = da.fill_gaps(dim="y", limit=None).interpolate_na(
         dim="y", fill_value="extrapolate"
     )
