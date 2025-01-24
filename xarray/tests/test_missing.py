@@ -235,6 +235,7 @@ def test_interpolate_pd_compat_limits():
             np.testing.assert_allclose(actual.values, expected.values)
 
 
+@requires_bottleneck
 def test_fill_pd_compat_limits():
     shapes = [(7, 7)]
     frac_nan = 0.5
