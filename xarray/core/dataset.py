@@ -7004,7 +7004,7 @@ class Dataset(
         *,
         use_coordinate: bool | Hashable = True,
         limit: T_GapLength | None = None,
-        limit_direction: LimitDirectionOptions = "both",
+        limit_direction: LimitDirectionOptions | None = None,
         limit_area: LimitAreaOptions | None = None,
         max_gap: T_GapLength | None = None,
     ) -> GapMask[Dataset]:
@@ -7051,8 +7051,15 @@ class Dataset(
             For ``limit_direction=forward``, distances are ``[nan, nan, nan, 0, 1, 2, 0, 1, 2]``.
             To only fill gaps less than a given length,
             see ``max_gap``.
-        limit_direction: {"forward", "backward", "both"}, default: "both"
+        limit_direction: {"forward", "backward", "both"}, default: None
             Consecutive NaNs will be filled in this direction.
+            If not specified, the default is
+
+            - "forward" if ``ffill`` is used
+            - "backward" if ``bfill`` is used
+            - "both" otherwise
+
+            raises ValueError if not "forward" and ``ffill`` is used or not "backward" and ``bfill`` is used.
         limit_area: {"inside", "outside"} or None: default: None
             Consecutive NaNs will be filled with this restriction.
 
@@ -7149,9 +7156,9 @@ class Dataset(
             A        (x) float64 56B nan 2.0 9.0 9.0 5.0 9.0 0.0
             B        (x) float64 56B nan 2.0 9.0 9.0 5.0 6.0 nan
         """
-        from xarray.core.missing import mask_gaps
+        from xarray.core.missing import GapMask
 
-        return mask_gaps(
+        return GapMask(
             self,
             dim,
             use_coordinate=use_coordinate,

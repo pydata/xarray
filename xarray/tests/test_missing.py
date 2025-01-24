@@ -198,16 +198,12 @@ def test_interpolate_pd_compat_polynomial():
 def test_interpolate_pd_compat_limits():
     shapes = [(7, 7)]
     frac_nan = 0.5
-    method = "slinear"  # need slinear, since pandas does constant extrapolation for methods 'time', 'index', 'values'
     limits = [
         None,
         1,
         3,
     ]  # pandas 2.1.4 is currently unable to handle coordinate based limits!
-    limit_directions = [
-        "forward",
-        "backward",
-    ]  # xarray does not support 'None' (pandas: None='forward', unless method='bfill')
+    limit_directions = ["forward", "backward", None]
     limit_areas = [None, "outside", "inside"]
 
     for shape, limit, limit_direction, limit_area in itertools.product(
@@ -221,21 +217,37 @@ def test_interpolate_pd_compat_limits():
                 limit_direction=limit_direction,
                 limit_area=limit_area,
                 use_coordinate=False,
-            ).interpolate_na(
-                dim=dim,
-                method=method,
-                use_coordinate=True,
-                fill_value="extrapolate",
             )
-            expected = df.interpolate(
-                method=method,
-                axis=da.get_axis_num(dim),
-                limit=limit,
-                limit_direction=limit_direction,
-                limit_area=limit_area,
-                fill_value="extrapolate",
-            )
-            np.testing.assert_allclose(actual.values, expected.values)
+            if (
+                limit_direction is None
+            ):  # xarray: 'None'='both', while pandas: None='forward'. But for ffill/bfill, they both should default to forward/backward
+                filled = actual.ffill()
+                expected = df.ffill(
+                    axis=da.get_axis_num(dim), limit=limit, limit_area=limit_area
+                )
+                np.testing.assert_allclose(filled.values, expected.values)
+                filled = actual.bfill()
+                expected = df.bfill(
+                    axis=da.get_axis_num(dim), limit=limit, limit_area=limit_area
+                )
+                np.testing.assert_allclose(filled.values, expected.values)
+            else:
+                method = "slinear"  # need slinear, since pandas does constant extrapolation for methods 'time', 'index', 'values'
+                actual = actual.interpolate_na(
+                    dim=dim,
+                    method=method,
+                    use_coordinate=True,
+                    fill_value="extrapolate",
+                )
+                expected = df.interpolate(
+                    method=method,
+                    axis=da.get_axis_num(dim),
+                    limit=limit,
+                    limit_direction=limit_direction,
+                    limit_area=limit_area,
+                    fill_value="extrapolate",
+                )
+                np.testing.assert_allclose(actual.values, expected.values)
 
 
 @requires_scipy
@@ -1131,6 +1143,25 @@ def test_fill_gaps_limit():
     coords = {"yt": ("y", times)}
     da = xr.DataArray([n, n, 2, n, n, 5, n, n], dims=["y"], coords=coords)
 
+    mask = da.fill_gaps(dim="y", limit_direction="backward")
+    with pytest.raises(
+        ValueError,
+        match=r"limit_direction='backward' is not allowed with ffill, must be 'forward'",
+    ):
+        mask.ffill()
+    mask = da.fill_gaps(dim="y", limit_direction="both")
+    with pytest.raises(
+        ValueError,
+        match=r"limit_direction='both' is not allowed with ffill, must be 'forward'",
+    ):
+        mask.ffill()
+    mask = da.fill_gaps(dim="y", limit_direction="forward")
+    with pytest.raises(
+        ValueError,
+        match=r"limit_direction='forward' is not allowed with bfill, must be 'backward'",
+    ):
+        mask.bfill()
+
     actual = da.fill_gaps(dim="y", limit=None).interpolate_na(
         dim="y", fill_value="extrapolate"
     )
@@ -1188,12 +1219,21 @@ def test_mask_gap_limit_2d():
         ]
     )
     assert_equal(actual, expected)
-    actual = mask.ffill(dim="time")
+    actual = mask.ffill()
     expected = da.copy(
         data=[
-            [1, 2, 3, 4, 4, 6, 6, n, 6, 10, 11, 11],
-            [n, n, 3, 3, 3, 6, 6, n, 6, 10, 10, n],
-            [n, 2, 3, 4, 4, 6, 6, n, 6, 10, 11, 11],
+            [1, 2, 3, 4, 4, 6, 6, n, n, 10, 11, 11],
+            [n, n, 3, 3, n, 6, 6, n, n, 10, 10, n],
+            [n, 2, 3, 4, 4, 6, 6, n, n, 10, 11, 11],
+        ]
+    )
+    assert_equal(actual, expected)
+    actual = mask.bfill()
+    expected = da.copy(
+        data=[
+            [1, 2, 3, 4, 6, 6, n, n, 10, 10, 11, n],
+            [n, 3, 3, n, 6, 6, n, n, 10, 10, n, n],
+            [2, 2, 3, 4, 6, 6, n, n, 10, 10, 11, n],
         ]
     )
     assert_equal(actual, expected)
