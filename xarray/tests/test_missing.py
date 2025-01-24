@@ -270,14 +270,12 @@ def test_fill_pd_compat_limits():
                     axis=da.get_axis_num(dim),
                     limit=limit,
                     limit_area=limit_area,
-                    fill_value="extrapolate",
                 )
                 expected_backward = df.interpolate(
                     method="bfill",
                     axis=da.get_axis_num(dim),
                     limit=limit,
                     limit_area=limit_area,
-                    fill_value="extrapolate",
                 )
 
             np.testing.assert_allclose(filled_forward.values, expected_forward.values)
