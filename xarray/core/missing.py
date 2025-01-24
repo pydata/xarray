@@ -596,7 +596,7 @@ class GapMask(Generic[T_Xarray]):
         self._limit_area = limit_area
         self._max_gap = max_gap
 
-    def _get_mask(self, limit_direction) -> T_Xarray:
+    def _get_mask(self, limit_direction) -> T_Xarray | None:
         mask = _get_gap_mask(
             obj=self._content,
             dim=self._dim,
