@@ -560,17 +560,24 @@ class GapMask(Generic[T_Xarray]):
     mask: T_Xarray | None
     """Boolean gap mask, created based on the parameters passed to DataArray.fill_gaps() or Dataset.fill_gaps(). True values indicate remaining gaps after applying a filling method."""
 
-    def __init__(self, content: T_Xarray, mask: T_Xarray | None, dim: Hashable) -> None:
+    def __init__(
+        self,
+        content: T_Xarray,
+        dim: Hashable,
+        use_coordinate: bool | Hashable = True,
+        limit: T_GapLength | None = None,
+        limit_direction: LimitDirectionOptions | None = None,
+        limit_area: LimitAreaOptions | None = None,
+        max_gap: T_GapLength | None = None,
+    ) -> None:
         """An object that allows for flexible masking of gaps. You should use DataArray.fill_gaps() or Dataset.fill_gaps() to construct this object instead of calling this constructor directly.
 
         Parameters
         ----------
         content : DataArray or Dataset
             The object to be masked.
-        mask : DataArray or Dataset or None
-            Boolean gap mask to be applied to the content. If None, the content is not masked.
-        dim : Hashable
-            The dimension along which the mask was created. When filling gaps and no dimension is specified for the filling method, this dimension is used.
+
+        See xarray.DataArray.fill_gaps or xarray.Dataset.fill_gaps for an explanation of the remaining parameters.
 
         See Also
         --------
@@ -579,21 +586,50 @@ class GapMask(Generic[T_Xarray]):
 
         """
         self._content = content
-        self.mask = mask
         self._dim = dim
+        self._use_coordinate = use_coordinate
+        self._limit = limit
+        self._limit_direction = limit_direction
+        self._limit_area = limit_area
+        self._max_gap = max_gap
 
-    def _apply_mask(self, filled: T_Xarray) -> T_Xarray:
-        if self.mask is not None:
-            filled = filled.where(~self.mask, other=self._content)
+    def _get_mask(self, limit_direction) -> T_Xarray:
+        mask = _get_gap_mask(
+            obj=self._content,
+            dim=self._dim,
+            limit=self._limit,
+            limit_direction=limit_direction,
+            limit_area=self._limit_area,
+            limit_use_coordinate=self._use_coordinate,
+            max_gap=self._max_gap,
+            max_gap_use_coordinate=self._use_coordinate,
+        )
+        return mask
+
+    def _apply_mask(self, filled: T_Xarray, mask: T_Xarray) -> T_Xarray:
+        if mask is not None:
+            filled = filled.where(~mask, other=self._content)
         return filled
 
-    def ffill(self, dim: Hashable | None = None) -> T_Xarray:
+    def get_mask(self) -> T_Xarray:
+        """Return the gap mask.
+
+        Returns
+        -------
+        mask : DataArray or Dataset
+            Boolean gap mask, created based on the parameters passed to DataArray.fill_gaps() or Dataset.fill_gaps(). True values indicate remaining gaps after applying a filling method.
+        """
+        limit_direction = self._limit_direction
+        if limit_direction is None:
+            limit_direction = "both"
+        mask = self._get_mask(limit_direction)
+        return mask
+
+    def ffill(self) -> T_Xarray:
         """Partly fill missing values in this object's data by applying ffill to all unmasked values.
 
         Parameters
         ----------
-        dim : Hashable or None, default None
-            Dimension along which to fill missing values. If None, the dimension used to create the mask is used.
 
         Returns
         -------
@@ -605,17 +641,17 @@ class GapMask(Generic[T_Xarray]):
         DataArray.ffill
         Dataset.ffill
         """
-        if dim is None:
-            dim = self._dim
-        return self._apply_mask(self._content.ffill(dim))
+        if self._limit_direction is None:
+            limit_direction = "forward"
+        elif self._limit_direction != "forward":
+            raise ValueError(
+                f"limit_direction='{self._limit_direction}' is not allowed with ffill, must be 'forward'."
+            )
+        mask = self._get_mask(limit_direction)
+        return self._apply_mask(self._content.ffill(self._dim), mask)
 
-    def bfill(self, dim: Hashable | None = None) -> T_Xarray:
+    def bfill(self) -> T_Xarray:
         """Partly fill missing values in this object's data by applying bfill to all unmasked values.
-
-        Parameters
-        ----------
-        dim : Hashable or None, default None
-            Dimension along which to fill missing values. If None, the dimension used to create the mask is used.
 
         Returns
         -------
@@ -627,9 +663,14 @@ class GapMask(Generic[T_Xarray]):
         DataArray.bfill
         Dataset.bfill
         """
-        if dim is None:
-            dim = self._dim
-        return self._apply_mask(self._content.bfill(dim))
+        if self._limit_direction is None:
+            limit_direction = "backward"
+        elif self._limit_direction != "backward":
+            raise ValueError(
+                f"limit_direction='{self._limit_direction}' is not allowed with bfill, must be 'backward'."
+            )
+        mask = self._get_mask(limit_direction)
+        return self._apply_mask(self._content.bfill(self._dim), mask)
 
     def fillna(self, value) -> T_Xarray:
         """Partly fill missing values in this object's data by applying fillna to all unmasked values.
@@ -652,7 +693,8 @@ class GapMask(Generic[T_Xarray]):
         DataArray.fillna
         Dataset.fillna
         """
-        return self._apply_mask(self._content.fillna(value))
+        mask = self.get_mask()
+        return self._apply_mask(self._content.fillna(value), mask)
 
     def interpolate_na(
         self,
@@ -681,6 +723,7 @@ class GapMask(Generic[T_Xarray]):
         """
         if dim is None:
             dim = self._dim
+        mask = self.get_mask()
         return self._apply_mask(
             self._content.interpolate_na(
                 dim=dim,
@@ -690,32 +733,9 @@ class GapMask(Generic[T_Xarray]):
                 max_gap=None,
                 keep_attrs=keep_attrs,
                 **kwargs,
-            )
+            ),
+            mask,
         )
-
-
-def mask_gaps(
-    obj: T_Xarray,
-    dim: Hashable,
-    use_coordinate: bool | Hashable = True,
-    limit: T_GapLength | None = None,
-    limit_direction: LimitDirectionOptions = "both",
-    limit_area: LimitAreaOptions | None = None,
-    max_gap: T_GapLength | None = None,
-) -> GapMask[T_Xarray]:
-    """Mask continuous gaps in the data, providing functionality to control gap length and offsets"""
-
-    mask = _get_gap_mask(
-        obj,
-        dim,
-        limit,
-        limit_direction,
-        limit_area,
-        use_coordinate,
-        max_gap,
-        use_coordinate,
-    )
-    return GapMask(obj, mask, dim)
 
 
 def interp_na(
