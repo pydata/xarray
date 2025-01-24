@@ -3956,7 +3956,7 @@ class DataArray(
         Coordinates:
           * x        (x) int64 56B 0 1 2 3 4 5 6
 
-        >>> da.fill_gaps(dim="x", max_gap=2, limit_direction="forward").ffill(dim="x")
+        >>> da.fill_gaps(dim="x", max_gap=2).ffill()
         <xarray.DataArray (x: 7)> Size: 56B
         array([nan,  2., nan, nan,  5.,  5.,  0.])
         Coordinates:

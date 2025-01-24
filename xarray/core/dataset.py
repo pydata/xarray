@@ -7138,7 +7138,7 @@ class Dataset(
             A        (x) float64 56B nan 2.0 3.0 nan 5.0 2.5 0.0
             B        (x) float64 56B nan 2.0 3.0 nan 5.0 6.0 nan
 
-        >>> ds.fill_gaps(dim="x", max_gap=2, limit_direction="forward").ffill(dim="x")
+        >>> ds.fill_gaps(dim="x", max_gap=2).ffill()
         <xarray.Dataset> Size: 168B
         Dimensions:  (x: 7)
         Coordinates:
