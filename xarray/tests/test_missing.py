@@ -257,29 +257,21 @@ def test_fill_pd_compat_limits():
             )
             filled_forward = masked.ffill()
             filled_backward = masked.bfill()
-            if pd.__version__ >= "2.2.0":
+            if (
+                pd.__version__ >= "2.2.0"
+            ):  # limit_area was introduced in pandas ffill in v2.2.0
                 expected_forward = df.ffill(
                     axis=da.get_axis_num(dim), limit=limit, limit_area=limit_area
                 )
                 expected_backward = df.bfill(
                     axis=da.get_axis_num(dim), limit=limit, limit_area=limit_area
                 )
-            else:
-                expected_forward = df.interpolate(
-                    method="ffill",
-                    axis=da.get_axis_num(dim),
-                    limit=limit,
-                    limit_area=limit_area,
+                np.testing.assert_allclose(
+                    filled_forward.values, expected_forward.values
                 )
-                expected_backward = df.interpolate(
-                    method="bfill",
-                    axis=da.get_axis_num(dim),
-                    limit=limit,
-                    limit_area=limit_area,
+                np.testing.assert_allclose(
+                    filled_backward.values, expected_backward.values
                 )
-
-            np.testing.assert_allclose(filled_forward.values, expected_forward.values)
-            np.testing.assert_allclose(filled_backward.values, expected_backward.values)
 
 
 @requires_scipy
