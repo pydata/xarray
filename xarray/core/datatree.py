@@ -455,7 +455,7 @@ class DataTree(
     _attrs: dict[Hashable, Any] | None
     _encoding: dict[Hashable, Any] | None
     _close: Callable[[], None] | None
-    _accessors: str[str] = set()
+    _accessors: set[str] = set()
 
     __slots__ = (
         "_attrs",
