@@ -709,6 +709,7 @@ class Dataset(
     _close: Callable[[], None] | None
     _indexes: dict[Hashable, Index]
     _variables: dict[Hashable, Variable]
+    _accessors: set[str] = set()
 
     __slots__ = (
         "__weakref__",

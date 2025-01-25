@@ -421,6 +421,7 @@ class DataArray(
     _indexes: dict[Hashable, Index]
     _name: Hashable | None
     _variable: Variable
+    _accessors: set[str] = set()
 
     __slots__ = (
         "__weakref__",

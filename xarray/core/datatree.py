@@ -224,6 +224,7 @@ class DatasetView(Dataset):
         "_indexes",
         "_variables",
     )
+    _accessors: str[str] = set()
 
     def __init__(
         self,
