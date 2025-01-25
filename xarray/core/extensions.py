@@ -57,6 +57,7 @@ def _register_accessor(name, cls):
                 stacklevel=2,
             )
         setattr(cls, name, _CachedAccessor(name, accessor))
+        cls._accessors.add(name)
         return accessor
 
     return decorator
