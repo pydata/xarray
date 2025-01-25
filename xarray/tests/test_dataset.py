@@ -105,24 +105,24 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
     lon = [0, 1, 2]
     nt1 = 3
     nt2 = 2
-    time1 = pd.date_range("2000-01-01", periods=nt1)
-    time2 = pd.date_range("2000-02-01", periods=nt2)
+    time1 = pd.date_range("2000-01-01", periods=nt1).as_unit("ns")
+    time2 = pd.date_range("2000-02-01", periods=nt2).as_unit("ns")
     string_var = np.array(["a", "bc", "def"], dtype=object)
     string_var_to_append = np.array(["asdf", "asdfg"], dtype=object)
     string_var_fixed_length = np.array(["aa", "bb", "cc"], dtype="|S2")
     string_var_fixed_length_to_append = np.array(["dd", "ee"], dtype="|S2")
     unicode_var = np.array(["áó", "áó", "áó"])
     datetime_var = np.array(
-        ["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[s]"
+        ["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[ns]"
     )
     datetime_var_to_append = np.array(
-        ["2019-01-04", "2019-01-05"], dtype="datetime64[s]"
+        ["2019-01-04", "2019-01-05"], dtype="datetime64[ns]"
     )
     bool_var = np.array([True, False, True], dtype=bool)
     bool_var_to_append = np.array([False, True], dtype=bool)
 
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "Converting non-nanosecond")
+        warnings.filterwarnings("ignore", "Converting non-default")
         ds = xr.Dataset(
             data_vars={
                 "da": xr.DataArray(
@@ -289,7 +289,7 @@ class TestDataset:
             Coordinates:
               * dim2     (dim2) float64 72B 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
               * dim3     (dim3) {} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
-              * time     (time) datetime64[ns] 160B 2000-01-01 2000-01-02 ... 2000-01-20
+              * time     (time) datetime64[{}] 160B 2000-01-01 2000-01-02 ... 2000-01-20
                 numbers  (dim3) int64 80B 0 1 2 0 0 1 1 2 2 3
             Dimensions without coordinates: dim1
             Data variables:
@@ -297,7 +297,10 @@ class TestDataset:
                 var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
                 var3     (dim3, dim1) float64 640B 0.4107 0.9941 0.1665 ... 0.716 1.555
             Attributes:
-                foo:      bar""".format(data["dim3"].dtype)
+                foo:      bar""".format(
+                data["dim3"].dtype,
+                "ns",
+            )
         )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
 
@@ -496,7 +499,6 @@ class TestDataset:
         actual = Dataset({"x": [5, 6, 7, 8, 9]})
         assert_identical(expected, actual)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_constructor_0d(self) -> None:
         expected = Dataset({"x": ([], 1)})
         for arg in [1, np.array(1), expected["x"]]:
@@ -3546,9 +3548,9 @@ class TestDataset:
 
     def test_expand_dims_non_nanosecond_conversion(self) -> None:
         # Regression test for https://github.com/pydata/xarray/issues/7493#issuecomment-1953091000
-        with pytest.warns(UserWarning, match="non-nanosecond precision"):
-            ds = Dataset().expand_dims({"time": [np.datetime64("2018-01-01", "s")]})
-        assert ds.time.dtype == np.dtype("datetime64[ns]")
+        # todo: test still needed?
+        ds = Dataset().expand_dims({"time": [np.datetime64("2018-01-01", "m")]})
+        assert ds.time.dtype == np.dtype("datetime64[s]")
 
     def test_set_index(self) -> None:
         expected = create_test_multiindex()
@@ -6067,7 +6069,6 @@ class TestDataset:
         expected = ds + other.reindex_like(ds)
         assert_identical(expected, actual)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_dataset_math_errors(self) -> None:
         ds = self.make_example_math_dataset()
 
@@ -6684,11 +6685,15 @@ class TestDataset:
         assert len(out.data_vars) == 0
 
     def test_polyfit_weighted(self) -> None:
-        # Make sure weighted polyfit does not change the original object (issue #5644)
         ds = create_test_data(seed=1)
+        ds = ds.broadcast_like(ds)  # test more than 2 dimensions (issue #9972)
         ds_copy = ds.copy(deep=True)
 
-        ds.polyfit("dim2", 2, w=np.arange(ds.sizes["dim2"]))
+        expected = ds.polyfit("dim2", 2)
+        actual = ds.polyfit("dim2", 2, w=np.ones(ds.sizes["dim2"]))
+        xr.testing.assert_identical(expected, actual)
+
+        # Make sure weighted polyfit does not change the original object (issue #5644)
         xr.testing.assert_identical(ds, ds_copy)
 
     def test_polyfit_coord(self) -> None:
@@ -7207,7 +7212,6 @@ def test_differentiate(dask, edge_order) -> None:
         da.differentiate("x2d")
 
 
-@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.parametrize("dask", [True, False])
 def test_differentiate_datetime(dask) -> None:
     rs = np.random.default_rng(42)
@@ -7402,7 +7406,6 @@ def test_cumulative_integrate(dask) -> None:
         da.cumulative_integrate("x2d")
 
 
-@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize("which_datetime", ["np", "cftime"])
 def test_trapezoid_datetime(dask, which_datetime) -> None:

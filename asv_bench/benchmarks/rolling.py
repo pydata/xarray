@@ -3,7 +3,7 @@ import pandas as pd
 
 import xarray as xr
 
-from . import parameterized, randn, requires_dask
+from . import _skip_slow, parameterized, randn, requires_dask
 
 nx = 3000
 long_nx = 30000
@@ -80,6 +80,9 @@ class Rolling:
 class RollingDask(Rolling):
     def setup(self, *args, **kwargs):
         requires_dask()
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
         super().setup(**kwargs)
         self.ds = self.ds.chunk({"x": 100, "y": 50, "t": 50})
         self.da_long = self.da_long.chunk({"x": 10000})

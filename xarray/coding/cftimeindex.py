@@ -42,7 +42,6 @@
 from __future__ import annotations
 
 import math
-import re
 import warnings
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
@@ -53,6 +52,7 @@ from packaging.version import Version
 
 from xarray.coding.times import (
     _STANDARD_CALENDARS,
+    _parse_iso8601,
     cftime_to_nptime,
     infer_calendar_name,
 )
@@ -76,69 +76,6 @@ try:
     OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (pd.errors.OutOfBoundsTimedelta, OverflowError)
 except AttributeError:
     OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (OverflowError,)
-
-
-def named(name, pattern):
-    return "(?P<" + name + ">" + pattern + ")"
-
-
-def optional(x):
-    return "(?:" + x + ")?"
-
-
-def trailing_optional(xs):
-    if not xs:
-        return ""
-    return xs[0] + optional(trailing_optional(xs[1:]))
-
-
-def build_pattern(date_sep=r"\-", datetime_sep=r"T", time_sep=r"\:"):
-    pieces = [
-        (None, "year", r"\d{4}"),
-        (date_sep, "month", r"\d{2}"),
-        (date_sep, "day", r"\d{2}"),
-        (datetime_sep, "hour", r"\d{2}"),
-        (time_sep, "minute", r"\d{2}"),
-        (time_sep, "second", r"\d{2}"),
-    ]
-    pattern_list = []
-    for sep, name, sub_pattern in pieces:
-        pattern_list.append((sep if sep else "") + named(name, sub_pattern))
-        # TODO: allow timezone offsets?
-    return "^" + trailing_optional(pattern_list) + "$"
-
-
-_BASIC_PATTERN = build_pattern(date_sep="", time_sep="")
-_EXTENDED_PATTERN = build_pattern()
-_CFTIME_PATTERN = build_pattern(datetime_sep=" ")
-_PATTERNS = [_BASIC_PATTERN, _EXTENDED_PATTERN, _CFTIME_PATTERN]
-
-
-def parse_iso8601_like(datetime_string):
-    for pattern in _PATTERNS:
-        match = re.match(pattern, datetime_string)
-        if match:
-            return match.groupdict()
-    raise ValueError(
-        f"no ISO-8601 or cftime-string-like match for string: {datetime_string}"
-    )
-
-
-def _parse_iso8601_with_reso(date_type, timestr):
-    _ = attempt_import("cftime")
-
-    default = date_type(1, 1, 1)
-    result = parse_iso8601_like(timestr)
-    replace = {}
-
-    for attr in ["year", "month", "day", "hour", "minute", "second"]:
-        value = result.get(attr, None)
-        if value is not None:
-            # Note ISO8601 conventions allow for fractional seconds.
-            # TODO: Consider adding support for sub-second resolution?
-            replace[attr] = int(value)
-            resolution = attr
-    return default.replace(**replace), resolution
 
 
 def _parsed_string_to_bounds(date_type, resolution, parsed):
@@ -434,7 +371,7 @@ class CFTimeIndex(pd.Index):
 
     def _get_string_slice(self, key):
         """Adapted from pandas.tseries.index.DatetimeIndex._get_string_slice"""
-        parsed, resolution = _parse_iso8601_with_reso(self.date_type, key)
+        parsed, resolution = _parse_iso8601(self.date_type, key)
         try:
             loc = self._partial_date_slice(resolution, parsed)
         except KeyError as err:
@@ -481,7 +418,7 @@ class CFTimeIndex(pd.Index):
         if not isinstance(label, str):
             return label
 
-        parsed, resolution = _parse_iso8601_with_reso(self.date_type, label)
+        parsed, resolution = _parse_iso8601(self.date_type, label)
         start, end = _parsed_string_to_bounds(self.date_type, resolution, parsed)
         if self.is_monotonic_decreasing and len(self) > 1:
             return end if side == "left" else start
@@ -644,13 +581,14 @@ class CFTimeIndex(pd.Index):
         CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
                     dtype='object', length=2, calendar='standard', freq=None)
         >>> times.to_datetimeindex()
-        DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
+        DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[us]', freq=None)
         """
 
         if not self._data.size:
             return pd.DatetimeIndex([])
 
-        nptimes = cftime_to_nptime(self)
+        # transform to us-resolution is needed for DatetimeIndex
+        nptimes = cftime_to_nptime(self, time_unit="us")
         calendar = infer_calendar_name(self)
         if calendar not in _STANDARD_CALENDARS and not unsafe:
             warnings.warn(
@@ -809,11 +747,6 @@ class CFTimeIndex(pd.Index):
         return func(self.year, calendar=self.calendar)
 
 
-def _parse_iso8601_without_reso(date_type, datetime_str):
-    date, _ = _parse_iso8601_with_reso(date_type, datetime_str)
-    return date
-
-
 def _parse_array_of_cftime_strings(strings, date_type):
     """Create a numpy array from an array of strings.
 
@@ -831,9 +764,9 @@ def _parse_array_of_cftime_strings(strings, date_type):
     -------
     np.array
     """
-    return np.array(
-        [_parse_iso8601_without_reso(date_type, s) for s in strings.ravel()]
-    ).reshape(strings.shape)
+    return np.array([_parse_iso8601(date_type, s)[0] for s in strings.ravel()]).reshape(
+        strings.shape
+    )
 
 
 def _contains_datetime_timedeltas(array):

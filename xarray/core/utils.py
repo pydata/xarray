@@ -37,6 +37,7 @@
 from __future__ import annotations
 
 import contextlib
+import difflib
 import functools
 import importlib
 import inspect
@@ -112,6 +113,47 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
 
     wrapper.__doc__ = alias_message(old_name, obj.__name__)
     return wrapper
+
+
+def did_you_mean(
+    word: Hashable, possibilities: Iterable[Hashable], *, n: int = 10
+) -> str:
+    """
+    Suggest a few correct words based on a list of possibilites
+
+    Parameters
+    ----------
+    word : Hashable
+        Word to compare to a list of possibilites.
+    possibilities : Iterable of Hashable
+        The iterable of Hashable that contains the correct values.
+    n : int, default: 10
+        Maximum number of suggestions to show.
+
+    Examples
+    --------
+    >>> did_you_mean("bluch", ("blech", "gray_r", 1, None, (2, 56)))
+    "Did you mean one of ('blech',)?"
+    >>> did_you_mean("none", ("blech", "gray_r", 1, None, (2, 56)))
+    'Did you mean one of (None,)?'
+
+    See also
+    --------
+    https://en.wikipedia.org/wiki/String_metric
+    """
+    # Convert all values to string, get_close_matches doesn't handle all hashables:
+    possibilites_str: dict[str, Hashable] = {str(k): k for k in possibilities}
+
+    msg = ""
+    if len(
+        best_str := difflib.get_close_matches(
+            str(word), list(possibilites_str.keys()), n=n
+        )
+    ):
+        best = tuple(possibilites_str[k] for k in best_str)
+        msg = f"Did you mean one of {best}?"
+
+    return msg
 
 
 def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
@@ -645,7 +687,7 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
         try:
             with open(path, "rb") as f:
                 return read_magic_number_from_file(f, count)
-        except (FileNotFoundError, TypeError):
+        except (FileNotFoundError, IsADirectoryError, TypeError):
             pass
     return None
 
