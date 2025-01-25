@@ -351,7 +351,7 @@ class AttrAccessMixin:
             for item in source
             if isinstance(item, str)
         }
-        return sorted(set(dir(type(self))) | extra_attrs)
+        return sorted(set(dir(type(self))) | self._accessors | extra_attrs)
 
     def _ipython_key_completions_(self) -> list[str]:
         """Provide method for the key-autocompletions in IPython.
