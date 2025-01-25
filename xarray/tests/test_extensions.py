@@ -34,6 +34,10 @@ class TestAccessor:
             def foo(self):
                 return "bar"
 
+        assert "demo" in dir(xr.DataTree)
+        assert "demo" in dir(xr.Dataset)
+        assert "demo" in dir(xr.DataArray)
+
         dt: xr.DataTree = xr.DataTree()
         assert dt.demo.foo == "bar"
 
