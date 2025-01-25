@@ -30,10 +30,10 @@ from pandas.api.types import is_extension_array_dtype
 from xarray.core import dask_array_compat, dask_array_ops, dtypes, nputils
 from xarray.core.array_api_compat import get_array_namespace
 from xarray.core.options import OPTIONS
+from xarray.core.types import T_DuckArray
 from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import array_type, is_chunked_array
-from xarray.core.types import T_DuckArray
 
 # remove once numpy 2.0 is the oldest supported version
 if module_available("numpy", minversion="2.0.0.dev0"):
