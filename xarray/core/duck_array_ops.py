@@ -662,12 +662,7 @@ def _to_pytimedelta(array, unit="us"):
 
 
 def np_timedelta64_to_float(array, datetime_unit):
-    """Convert numpy.timedelta64 to float.
-
-    Notes
-    -----
-    The array is first converted to datetimeunit.
-    """
+    """Convert numpy.timedelta64 to float, possibly at a loss of resolution."""
     unit, _ = np.datetime_data(array.dtype)
     conversion_factor = np.timedelta64(1, unit) / np.timedelta64(1, datetime_unit)
     return conversion_factor * array.astype(np.float64)
@@ -714,15 +709,16 @@ def mean(array, axis=None, skipna=None, **kwargs):
     if dtypes.is_datetime_like(array.dtype):
         offset = _datetime_nanmin(array)
 
-        # from version 2025.01.2 xarray uses np.datetime64[unit] where unit
-        # is one of "s", "ms", "us", "ns"
-        # the respective unit is used for the timedelta representation
-        unit, _ = np.datetime_data(offset.dtype)
-        dtype = f"timedelta64[{unit}]"
+        # From version 2025.01.2 xarray uses np.datetime64[unit], where unit
+        # is one of "s", "ms", "us", "ns".
+        # To not have to worry about the resolution, we just convert the output
+        # to "int64" and let the dtype of offset take precedence.
+        # This is fully backwards compatible with datetime64[ns]. For other
+        # this might lead to imprecise output, where fractional parts are truncated.
         return (
             _mean(
                 datetime_to_numeric(array, offset), axis=axis, skipna=skipna, **kwargs
-            ).astype(dtype)
+            ).astype("int64")
             + offset
         )
     elif _contains_cftime_datetimes(array):
