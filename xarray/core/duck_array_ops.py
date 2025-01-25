@@ -668,8 +668,9 @@ def np_timedelta64_to_float(array, datetime_unit):
     -----
     The array is first converted to datetimeunit.
     """
-    # todo: should we check for overflow here?
-    return array.astype(f"timedelta64[{datetime_unit}]").astype(np.float64)
+    unit, _ = np.datetime_data(array.dtype)
+    conversion_factor = np.timedelta64(1, unit) / np.timedelta64(1, datetime_unit)
+    return conversion_factor * array.astype(np.float64)
 
 
 def pd_timedelta_to_float(value, datetime_unit):
