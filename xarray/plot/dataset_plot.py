@@ -3,8 +3,8 @@ from __future__ import annotations
 import functools
 import inspect
 import warnings
-from collections.abc import Hashable, Iterable
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
+from collections.abc import Callable, Hashable, Iterable
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 from xarray.core.alignment import broadcast
 from xarray.plot import dataarray_plot
@@ -354,8 +354,7 @@ def quiver(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     extend: ExtendOptions = None,
     cmap: str | Colormap | None = None,
     **kwargs: Any,
-) -> Quiver:
-    ...
+) -> Quiver: ...
 
 
 @overload
@@ -392,8 +391,7 @@ def quiver(
     extend: ExtendOptions = None,
     cmap: str | Colormap | None = None,
     **kwargs: Any,
-) -> FacetGrid[Dataset]:
-    ...
+) -> FacetGrid[Dataset]: ...
 
 
 @overload
@@ -430,8 +428,7 @@ def quiver(
     extend: ExtendOptions = None,
     cmap: str | Colormap | None = None,
     **kwargs: Any,
-) -> FacetGrid[Dataset]:
-    ...
+) -> FacetGrid[Dataset]: ...
 
 
 @_dsplot
@@ -508,8 +505,7 @@ def streamplot(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     extend: ExtendOptions = None,
     cmap: str | Colormap | None = None,
     **kwargs: Any,
-) -> LineCollection:
-    ...
+) -> LineCollection: ...
 
 
 @overload
@@ -546,8 +542,7 @@ def streamplot(
     extend: ExtendOptions = None,
     cmap: str | Colormap | None = None,
     **kwargs: Any,
-) -> FacetGrid[Dataset]:
-    ...
+) -> FacetGrid[Dataset]: ...
 
 
 @overload
@@ -584,8 +579,7 @@ def streamplot(
     extend: ExtendOptions = None,
     cmap: str | Colormap | None = None,
     **kwargs: Any,
-) -> FacetGrid[Dataset]:
-    ...
+) -> FacetGrid[Dataset]: ...
 
 
 @_dsplot
@@ -658,7 +652,7 @@ F = TypeVar("F", bound=Callable)
 
 def _update_doc_to_dataset(dataarray_plotfunc: Callable) -> Callable[[F], F]:
     """
-    Add a common docstring by re-using the DataArray one.
+    Add a common docstring by reusing the DataArray one.
 
     TODO: Reduce code duplication.
 
@@ -703,7 +697,7 @@ def _update_doc_to_dataset(dataarray_plotfunc: Callable) -> Callable[[F], F]:
         dataset_plotfunc.__doc__ = ds_doc
         return dataset_plotfunc
 
-    return wrapper
+    return wrapper  # type: ignore[return-value]
 
 
 def _normalize_args(
@@ -727,8 +721,8 @@ def _temp_dataarray(ds: Dataset, y: Hashable, locals_: dict[str, Any]) -> DataAr
     """Create a temporary datarray with extra coords."""
     from xarray.core.dataarray import DataArray
 
-    # Base coords:
-    coords = dict(ds.coords)
+    coords = dict(ds[y].coords)
+    dims = set(ds[y].dims)
 
     # Add extra coords to the DataArray from valid kwargs, if using all
     # kwargs there is a risk that we add unnecessary dataarrays as
@@ -738,12 +732,17 @@ def _temp_dataarray(ds: Dataset, y: Hashable, locals_: dict[str, Any]) -> DataAr
     coord_kwargs = locals_.keys() & valid_coord_kwargs
     for k in coord_kwargs:
         key = locals_[k]
-        if ds.data_vars.get(key) is not None:
-            coords[key] = ds[key]
+        darray = ds.get(key)
+        if darray is not None:
+            coords[key] = darray
+            dims.update(darray.dims)
+
+    # Trim dataset from unnecessary dims:
+    ds_trimmed = ds.drop_dims(ds.sizes.keys() - dims)  # TODO: Use ds.dims in the future
 
     # The dataarray has to include all the dims. Broadcast to that shape
     # and add the additional coords:
-    _y = ds[y].broadcast_like(ds)
+    _y = ds[y].broadcast_like(ds_trimmed)
 
     return DataArray(_y, coords=coords)
 
@@ -786,8 +785,7 @@ def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs: Any,
-) -> PathCollection:
-    ...
+) -> PathCollection: ...
 
 
 @overload
@@ -828,8 +826,7 @@ def scatter(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
-    ...
+) -> FacetGrid[DataArray]: ...
 
 
 @overload
@@ -870,8 +867,7 @@ def scatter(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
-    ...
+) -> FacetGrid[DataArray]: ...
 
 
 @_update_doc_to_dataset(dataarray_plot.scatter)

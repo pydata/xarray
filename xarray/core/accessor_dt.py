@@ -6,16 +6,18 @@ from typing import TYPE_CHECKING, Generic
 import numpy as np
 import pandas as pd
 
+from xarray.coding.calendar_ops import _decimal_year
 from xarray.coding.times import infer_calendar_name
 from xarray.core import duck_array_ops
 from xarray.core.common import (
     _contains_datetime_like_objects,
+    full_like,
     is_np_datetime_like,
     is_np_timedelta_like,
 )
-from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.types import T_DataArray
-from xarray.core.variable import IndexVariable
+from xarray.core.variable import IndexVariable, Variable
+from xarray.namedarray.utils import is_duck_dask_array
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
@@ -59,7 +61,8 @@ def _access_through_cftimeindex(values, name):
         field_values = _season_from_months(months)
     elif name == "date":
         raise AttributeError(
-            "'CFTimeIndex' object has no attribute `date`. Consider using the floor method instead, for instance: `.time.dt.floor('D')`."
+            "'CFTimeIndex' object has no attribute `date`. Consider using the floor method "
+            "instead, for instance: `.time.dt.floor('D')`."
         )
     else:
         field_values = getattr(values_as_cftimeindex, name)
@@ -243,12 +246,22 @@ class TimeAccessor(Generic[T_DataArray]):
         if dtype is None:
             dtype = self._obj.dtype
         result = _get_date_field(_index_or_data(self._obj), name, dtype)
-        newvar = self._obj.variable.copy(data=result, deep=False)
+        newvar = Variable(
+            dims=self._obj.dims,
+            attrs=self._obj.attrs,
+            encoding=self._obj.encoding,
+            data=result,
+        )
         return self._obj._replace(newvar, name=name)
 
     def _tslib_round_accessor(self, name: str, freq: str) -> T_DataArray:
         result = _round_field(_index_or_data(self._obj), name, freq)
-        newvar = self._obj.variable.copy(data=result, deep=False)
+        newvar = Variable(
+            dims=self._obj.dims,
+            attrs=self._obj.attrs,
+            encoding=self._obj.encoding,
+            data=result,
+        )
         return self._obj._replace(newvar, name=name)
 
     def floor(self, freq: str) -> T_DataArray:
@@ -312,7 +325,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     >>> dates = pd.date_range(start="2000/01/01", freq="D", periods=10)
     >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts
-    <xarray.DataArray (time: 10)>
+    <xarray.DataArray (time: 10)> Size: 80B
     array(['2000-01-01T00:00:00.000000000', '2000-01-02T00:00:00.000000000',
            '2000-01-03T00:00:00.000000000', '2000-01-04T00:00:00.000000000',
            '2000-01-05T00:00:00.000000000', '2000-01-06T00:00:00.000000000',
@@ -320,19 +333,19 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
            '2000-01-09T00:00:00.000000000', '2000-01-10T00:00:00.000000000'],
           dtype='datetime64[ns]')
     Coordinates:
-      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-10
+      * time     (time) datetime64[ns] 80B 2000-01-01 2000-01-02 ... 2000-01-10
     >>> ts.dt  # doctest: +ELLIPSIS
     <xarray.core.accessor_dt.DatetimeAccessor object at 0x...>
     >>> ts.dt.dayofyear
-    <xarray.DataArray 'dayofyear' (time: 10)>
+    <xarray.DataArray 'dayofyear' (time: 10)> Size: 80B
     array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10])
     Coordinates:
-      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-10
+      * time     (time) datetime64[ns] 80B 2000-01-01 2000-01-02 ... 2000-01-10
     >>> ts.dt.quarter
-    <xarray.DataArray 'quarter' (time: 10)>
+    <xarray.DataArray 'quarter' (time: 10)> Size: 80B
     array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
     Coordinates:
-      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-10
+      * time     (time) datetime64[ns] 80B 2000-01-01 2000-01-02 ... 2000-01-10
 
     """
 
@@ -358,7 +371,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         >>> import datetime
         >>> rng = xr.Dataset({"time": datetime.datetime(2000, 1, 1)})
         >>> rng["time"].dt.strftime("%B %d, %Y, %r")
-        <xarray.DataArray 'strftime' ()>
+        <xarray.DataArray 'strftime' ()> Size: 8B
         array('January 01, 2000, 12:00:00 AM', dtype=object)
         """
         obj_type = type(self._obj)
@@ -441,6 +454,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
             "dt.weekofyear and dt.week have been deprecated. Please use "
             "dt.isocalendar().week instead.",
             FutureWarning,
+            stacklevel=2,
         )
 
         weekofyear = self.isocalendar().week
@@ -455,11 +469,6 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         return self._date_field("dayofweek", np.int64)
 
     weekday = dayofweek
-
-    @property
-    def weekday_name(self) -> T_DataArray:
-        """The name of day in a week"""
-        return self._date_field("weekday_name", object)
 
     @property
     def dayofyear(self) -> T_DataArray:
@@ -537,6 +546,33 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         """
         return infer_calendar_name(self._obj.data)
 
+    @property
+    def days_in_year(self) -> T_DataArray:
+        """Each datetime as the year plus the fraction of the year elapsed."""
+        if self.calendar == "360_day":
+            result = full_like(self.year, 360)
+        else:
+            result = self.is_leap_year.astype(int) + 365
+        newvar = Variable(
+            dims=self._obj.dims,
+            attrs=self._obj.attrs,
+            encoding=self._obj.encoding,
+            data=result,
+        )
+        return self._obj._replace(newvar, name="days_in_year")
+
+    @property
+    def decimal_year(self) -> T_DataArray:
+        """Convert the dates as a fractional year."""
+        result = _decimal_year(self._obj)
+        newvar = Variable(
+            dims=self._obj.dims,
+            attrs=self._obj.attrs,
+            encoding=self._obj.encoding,
+            data=result,
+        )
+        return self._obj._replace(newvar, name="decimal_year")
+
 
 class TimedeltaAccessor(TimeAccessor[T_DataArray]):
     """Access Timedelta fields for DataArrays with Timedelta-like dtypes.
@@ -545,10 +581,10 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
 
     Examples
     --------
-    >>> dates = pd.timedelta_range(start="1 day", freq="6H", periods=20)
+    >>> dates = pd.timedelta_range(start="1 day", freq="6h", periods=20)
     >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts
-    <xarray.DataArray (time: 20)>
+    <xarray.DataArray (time: 20)> Size: 160B
     array([ 86400000000000, 108000000000000, 129600000000000, 151200000000000,
            172800000000000, 194400000000000, 216000000000000, 237600000000000,
            259200000000000, 280800000000000, 302400000000000, 324000000000000,
@@ -556,33 +592,33 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
            432000000000000, 453600000000000, 475200000000000, 496800000000000],
           dtype='timedelta64[ns]')
     Coordinates:
-      * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
+      * time     (time) timedelta64[ns] 160B 1 days 00:00:00 ... 5 days 18:00:00
     >>> ts.dt  # doctest: +ELLIPSIS
     <xarray.core.accessor_dt.TimedeltaAccessor object at 0x...>
     >>> ts.dt.days
-    <xarray.DataArray 'days' (time: 20)>
+    <xarray.DataArray 'days' (time: 20)> Size: 160B
     array([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5])
     Coordinates:
-      * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
+      * time     (time) timedelta64[ns] 160B 1 days 00:00:00 ... 5 days 18:00:00
     >>> ts.dt.microseconds
-    <xarray.DataArray 'microseconds' (time: 20)>
+    <xarray.DataArray 'microseconds' (time: 20)> Size: 160B
     array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     Coordinates:
-      * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
+      * time     (time) timedelta64[ns] 160B 1 days 00:00:00 ... 5 days 18:00:00
     >>> ts.dt.seconds
-    <xarray.DataArray 'seconds' (time: 20)>
+    <xarray.DataArray 'seconds' (time: 20)> Size: 160B
     array([    0, 21600, 43200, 64800,     0, 21600, 43200, 64800,     0,
            21600, 43200, 64800,     0, 21600, 43200, 64800,     0, 21600,
            43200, 64800])
     Coordinates:
-      * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
+      * time     (time) timedelta64[ns] 160B 1 days 00:00:00 ... 5 days 18:00:00
     >>> ts.dt.total_seconds()
-    <xarray.DataArray 'total_seconds' (time: 20)>
+    <xarray.DataArray 'total_seconds' (time: 20)> Size: 160B
     array([ 86400., 108000., 129600., 151200., 172800., 194400., 216000.,
            237600., 259200., 280800., 302400., 324000., 345600., 367200.,
            388800., 410400., 432000., 453600., 475200., 496800.])
     Coordinates:
-      * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
+      * time     (time) timedelta64[ns] 160B 1 days 00:00:00 ... 5 days 18:00:00
     """
 
     @property
@@ -620,7 +656,11 @@ class CombinedDatetimelikeAccessor(
         # appropriate. Since we're checking the dtypes anyway, we'll just
         # do all the validation here.
         if not _contains_datetime_like_objects(obj.variable):
-            raise TypeError(
+            # We use an AttributeError here so that `obj.dt` raises an error that
+            # `getattr` expects; https://github.com/pydata/xarray/issues/8718. It's a
+            # bit unusual in a `__new__`, but that's the only case where we use this
+            # class.
+            raise AttributeError(
                 "'.dt' accessor only available for "
                 "DataArray with datetime64 timedelta64 dtype or "
                 "for arrays containing cftime datetime "

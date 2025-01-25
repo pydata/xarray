@@ -1,4 +1,5 @@
 """Coders for strings."""
+
 from __future__ import annotations
 
 from functools import partial
@@ -14,8 +15,12 @@ from xarray.coding.variables import (
     unpack_for_encoding,
 )
 from xarray.core import indexing
-from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
+from xarray.core.utils import module_available
 from xarray.core.variable import Variable
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import is_chunked_array
+
+HAS_NUMPY_2_0 = module_available("numpy", minversion="2.0.0.dev0")
 
 
 def create_vlen_dtype(element_type):
@@ -34,11 +39,11 @@ def check_vlen_dtype(dtype):
 
 
 def is_unicode_dtype(dtype):
-    return dtype.kind == "U" or check_vlen_dtype(dtype) == str
+    return dtype.kind == "U" or check_vlen_dtype(dtype) is str
 
 
 def is_bytes_dtype(dtype):
-    return dtype.kind == "S" or check_vlen_dtype(dtype) == bytes
+    return dtype.kind == "S" or check_vlen_dtype(dtype) is bytes
 
 
 class EncodedStringCoder(VariableCoder):
@@ -47,12 +52,11 @@ class EncodedStringCoder(VariableCoder):
     def __init__(self, allows_unicode=True):
         self.allows_unicode = allows_unicode
 
-    def encode(self, variable, name=None):
+    def encode(self, variable: Variable, name=None) -> Variable:
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
         contains_unicode = is_unicode_dtype(data.dtype)
         encode_as_char = encoding.get("dtype") == "S1"
-
         if encode_as_char:
             del encoding["dtype"]  # no longer relevant
 
@@ -69,9 +73,12 @@ class EncodedStringCoder(VariableCoder):
             # TODO: figure out how to handle this in a lazy way with dask
             data = encode_string_array(data, string_encoding)
 
-        return Variable(dims, data, attrs, encoding)
+            return Variable(dims, data, attrs, encoding)
+        else:
+            variable.encoding = encoding
+            return variable
 
-    def decode(self, variable, name=None):
+    def decode(self, variable: Variable, name=None) -> Variable:
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
         if "_Encoding" in attrs:
@@ -95,13 +102,15 @@ def encode_string_array(string_array, encoding="utf-8"):
     return np.array(encoded, dtype=bytes).reshape(string_array.shape)
 
 
-def ensure_fixed_length_bytes(var):
+def ensure_fixed_length_bytes(var: Variable) -> Variable:
     """Ensure that a variable with vlen bytes is converted to fixed width."""
-    dims, data, attrs, encoding = unpack_for_encoding(var)
-    if check_vlen_dtype(data.dtype) == bytes:
+    if check_vlen_dtype(var.dtype) is bytes:
+        dims, data, attrs, encoding = unpack_for_encoding(var)
         # TODO: figure out how to handle this with dask
         data = np.asarray(data, dtype=np.bytes_)
-    return Variable(dims, data, attrs, encoding)
+        return Variable(dims, data, attrs, encoding)
+    else:
+        return var
 
 
 class CharacterArrayCoder(VariableCoder):
@@ -150,8 +159,12 @@ def bytes_to_char(arr):
 
 def _numpy_bytes_to_char(arr):
     """Like netCDF4.stringtochar, but faster and more flexible."""
+    # adapt handling of copy-kwarg to numpy 2.0
+    # see https://github.com/numpy/numpy/issues/25916
+    # and https://github.com/numpy/numpy/pull/25922
+    copy = None if HAS_NUMPY_2_0 else False
     # ensure the array is contiguous
-    arr = np.array(arr, copy=False, order="C", dtype=np.bytes_)
+    arr = np.array(arr, copy=copy, order="C", dtype=np.bytes_)
     return arr.reshape(arr.shape + (1,)).view("S1")
 
 
@@ -193,8 +206,12 @@ def char_to_bytes(arr):
 
 def _numpy_char_to_bytes(arr):
     """Like netCDF4.chartostring, but faster and more flexible."""
-    # based on: http://stackoverflow.com/a/10984878/809705
-    arr = np.array(arr, copy=False, order="C")
+    # adapt handling of copy-kwarg to numpy 2.0
+    # see https://github.com/numpy/numpy/issues/25916
+    # and https://github.com/numpy/numpy/pull/25922
+    copy = None if HAS_NUMPY_2_0 else False
+    # based on: https://stackoverflow.com/a/10984878/809705
+    arr = np.array(arr, copy=copy, order="C")
     dtype = "S" + str(arr.shape[-1])
     return arr.view(dtype).reshape(arr.shape[:-1])
 
@@ -231,6 +248,12 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
     def __repr__(self):
         return f"{type(self).__name__}({self.array!r})"
+
+    def _vindex_get(self, key):
+        return _numpy_char_to_bytes(self.array.vindex[key])
+
+    def _oindex_get(self, key):
+        return _numpy_char_to_bytes(self.array.oindex[key])
 
     def __getitem__(self, key):
         # require slicing the last dimension completely

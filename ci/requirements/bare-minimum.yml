@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.9
+  - python=3.10
   - coveralls
   - pip
   - pytest
@@ -11,6 +11,6 @@ dependencies:
   - pytest-env
   - pytest-xdist
   - pytest-timeout
-  - numpy=1.22
-  - packaging=21.3
-  - pandas=1.4
+  - numpy=1.24
+  - packaging=23.1
+  - pandas=2.1

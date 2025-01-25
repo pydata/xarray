@@ -42,11 +42,11 @@ from __future__ import annotations
 import codecs
 import re
 import textwrap
-from collections.abc import Hashable, Mapping
+from collections.abc import Callable, Hashable, Mapping
 from functools import reduce
 from operator import or_ as set_union
 from re import Pattern
-from typing import TYPE_CHECKING, Any, Callable, Generic
+from typing import TYPE_CHECKING, Any, Generic
 from unicodedata import normalize
 
 import numpy as np
@@ -90,7 +90,7 @@ def _contains_obj_type(*, pat: Any, checker: Any) -> bool:
 
 def _contains_str_like(pat: Any) -> bool:
     """Determine if the object is a str-like or array of str-like."""
-    if isinstance(pat, (str, bytes)):
+    if isinstance(pat, str | bytes):
         return True
 
     if not hasattr(pat, "dtype"):
@@ -148,7 +148,7 @@ class StringAccessor(Generic[T_DataArray]):
 
         >>> da = xr.DataArray(["some", "text", "in", "an", "array"])
         >>> da.str.len()
-        <xarray.DataArray (dim_0: 5)>
+        <xarray.DataArray (dim_0: 5)> Size: 40B
         array([4, 4, 2, 2, 5])
         Dimensions without coordinates: dim_0
 
@@ -159,7 +159,7 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da1 = xr.DataArray(["first", "second", "third"], dims=["X"])
         >>> da2 = xr.DataArray([1, 2, 3], dims=["Y"])
         >>> da1.str + da2
-        <xarray.DataArray (X: 3, Y: 3)>
+        <xarray.DataArray (X: 3, Y: 3)> Size: 252B
         array([['first1', 'first2', 'first3'],
                ['second1', 'second2', 'second3'],
                ['third1', 'third2', 'third3']], dtype='<U7')
@@ -168,7 +168,7 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da1 = xr.DataArray(["a", "b", "c", "d"], dims=["X"])
         >>> reps = xr.DataArray([3, 4], dims=["Y"])
         >>> da1.str * reps
-        <xarray.DataArray (X: 4, Y: 2)>
+        <xarray.DataArray (X: 4, Y: 2)> Size: 128B
         array([['aaa', 'aaaa'],
                ['bbb', 'bbbb'],
                ['ccc', 'cccc'],
@@ -179,7 +179,7 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da2 = xr.DataArray([1, 2], dims=["Y"])
         >>> da3 = xr.DataArray([0.1, 0.2], dims=["Z"])
         >>> da1.str % (da2, da3)
-        <xarray.DataArray (X: 3, Y: 2, Z: 2)>
+        <xarray.DataArray (X: 3, Y: 2, Z: 2)> Size: 240B
         array([[['1_0.1', '1_0.2'],
                 ['2_0.1', '2_0.2']],
         <BLANKLINE>
@@ -197,8 +197,8 @@ class StringAccessor(Generic[T_DataArray]):
             >>> da1 = xr.DataArray(["%(a)s"], dims=["X"])
             >>> da2 = xr.DataArray([1, 2, 3], dims=["Y"])
             >>> da1 % {"a": da2}
-            <xarray.DataArray (X: 1)>
-            array(['<xarray.DataArray (Y: 3)>\narray([1, 2, 3])\nDimensions without coordinates: Y'],
+            <xarray.DataArray (X: 1)> Size: 8B
+            array(['<xarray.DataArray (Y: 3)> Size: 24B\narray([1, 2, 3])\nDimensions without coordinates: Y'],
                   dtype=object)
             Dimensions without coordinates: X
     """
@@ -483,7 +483,7 @@ class StringAccessor(Generic[T_DataArray]):
         Concatenate the arrays using the separator
 
         >>> myarray.str.cat(values_1, values_2, values_3, values_4, sep=seps)
-        <xarray.DataArray (X: 2, Y: 3, ZZ: 2)>
+        <xarray.DataArray (X: 2, Y: 3, ZZ: 2)> Size: 1kB
         array([[['11111 a 3.4  test', '11111, a, 3.4, , test'],
                 ['11111 bb 3.4  test', '11111, bb, 3.4, , test'],
                 ['11111 cccc 3.4  test', '11111, cccc, 3.4, , test']],
@@ -556,7 +556,7 @@ class StringAccessor(Generic[T_DataArray]):
         Join the strings along a given dimension
 
         >>> values.str.join(dim="Y", sep=seps)
-        <xarray.DataArray (X: 2, ZZ: 2)>
+        <xarray.DataArray (X: 2, ZZ: 2)> Size: 192B
         array([['a-bab-abc', 'a_bab_abc'],
                ['abcd--abcdef', 'abcd__abcdef']], dtype='<U12')
         Dimensions without coordinates: X, ZZ
@@ -645,7 +645,7 @@ class StringAccessor(Generic[T_DataArray]):
         Insert the values into the array
 
         >>> values.str.format(noun0, noun1, adj0=adj0, adj1=adj1)
-        <xarray.DataArray (X: 2, Y: 2, ZZ: 2)>
+        <xarray.DataArray (X: 2, Y: 2, ZZ: 2)> Size: 1kB
         array([[['spam is unexpected', 'spam is unexpected'],
                 ['egg is unexpected', 'egg is unexpected']],
         <BLANKLINE>
@@ -680,13 +680,13 @@ class StringAccessor(Generic[T_DataArray]):
         ...     ["temperature", "PRESSURE", "PreCipiTation", "daily rainfall"], dims="x"
         ... )
         >>> da
-        <xarray.DataArray (x: 4)>
+        <xarray.DataArray (x: 4)> Size: 224B
         array(['temperature', 'PRESSURE', 'PreCipiTation', 'daily rainfall'],
               dtype='<U14')
         Dimensions without coordinates: x
         >>> capitalized = da.str.capitalize()
         >>> capitalized
-        <xarray.DataArray (x: 4)>
+        <xarray.DataArray (x: 4)> Size: 224B
         array(['Temperature', 'Pressure', 'Precipitation', 'Daily rainfall'],
               dtype='<U14')
         Dimensions without coordinates: x
@@ -705,12 +705,12 @@ class StringAccessor(Generic[T_DataArray]):
         --------
         >>> da = xr.DataArray(["Temperature", "PRESSURE"], dims="x")
         >>> da
-        <xarray.DataArray (x: 2)>
+        <xarray.DataArray (x: 2)> Size: 88B
         array(['Temperature', 'PRESSURE'], dtype='<U11')
         Dimensions without coordinates: x
         >>> lowered = da.str.lower()
         >>> lowered
-        <xarray.DataArray (x: 2)>
+        <xarray.DataArray (x: 2)> Size: 88B
         array(['temperature', 'pressure'], dtype='<U11')
         Dimensions without coordinates: x
         """
@@ -729,12 +729,12 @@ class StringAccessor(Generic[T_DataArray]):
         >>> import xarray as xr
         >>> da = xr.DataArray(["temperature", "PRESSURE", "HuMiDiTy"], dims="x")
         >>> da
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 132B
         array(['temperature', 'PRESSURE', 'HuMiDiTy'], dtype='<U11')
         Dimensions without coordinates: x
         >>> swapcased = da.str.swapcase()
         >>> swapcased
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 132B
         array(['TEMPERATURE', 'pressure', 'hUmIdItY'], dtype='<U11')
         Dimensions without coordinates: x
         """
@@ -752,12 +752,12 @@ class StringAccessor(Generic[T_DataArray]):
         --------
         >>> da = xr.DataArray(["temperature", "PRESSURE", "HuMiDiTy"], dims="x")
         >>> da
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 132B
         array(['temperature', 'PRESSURE', 'HuMiDiTy'], dtype='<U11')
         Dimensions without coordinates: x
         >>> titled = da.str.title()
         >>> titled
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 132B
         array(['Temperature', 'Pressure', 'Humidity'], dtype='<U11')
         Dimensions without coordinates: x
         """
@@ -775,12 +775,12 @@ class StringAccessor(Generic[T_DataArray]):
         --------
         >>> da = xr.DataArray(["temperature", "HuMiDiTy"], dims="x")
         >>> da
-        <xarray.DataArray (x: 2)>
+        <xarray.DataArray (x: 2)> Size: 88B
         array(['temperature', 'HuMiDiTy'], dtype='<U11')
         Dimensions without coordinates: x
         >>> uppered = da.str.upper()
         >>> uppered
-        <xarray.DataArray (x: 2)>
+        <xarray.DataArray (x: 2)> Size: 88B
         array(['TEMPERATURE', 'HUMIDITY'], dtype='<U11')
         Dimensions without coordinates: x
         """
@@ -805,23 +805,23 @@ class StringAccessor(Generic[T_DataArray]):
         --------
         >>> da = xr.DataArray(["TEMPERATURE", "HuMiDiTy"], dims="x")
         >>> da
-        <xarray.DataArray (x: 2)>
+        <xarray.DataArray (x: 2)> Size: 88B
         array(['TEMPERATURE', 'HuMiDiTy'], dtype='<U11')
         Dimensions without coordinates: x
         >>> casefolded = da.str.casefold()
         >>> casefolded
-        <xarray.DataArray (x: 2)>
+        <xarray.DataArray (x: 2)> Size: 88B
         array(['temperature', 'humidity'], dtype='<U11')
         Dimensions without coordinates: x
 
         >>> da = xr.DataArray(["ß", "İ"], dims="x")
         >>> da
-        <xarray.DataArray (x: 2)>
+        <xarray.DataArray (x: 2)> Size: 8B
         array(['ß', 'İ'], dtype='<U1')
         Dimensions without coordinates: x
         >>> casefolded = da.str.casefold()
         >>> casefolded
-        <xarray.DataArray (x: 2)>
+        <xarray.DataArray (x: 2)> Size: 16B
         array(['ss', 'i̇'], dtype='<U2')
         Dimensions without coordinates: x
         """
@@ -847,7 +847,7 @@ class StringAccessor(Generic[T_DataArray]):
         normalized : same type as values
 
         """
-        return self._apply(func=lambda x: normalize(form, x))
+        return self._apply(func=lambda x: normalize(form, x))  # type: ignore[arg-type]
 
     def isalnum(self) -> T_DataArray:
         """
@@ -862,12 +862,12 @@ class StringAccessor(Generic[T_DataArray]):
         --------
         >>> da = xr.DataArray(["H2O", "NaCl-"], dims="x")
         >>> da
-        <xarray.DataArray (x: 2)>
+        <xarray.DataArray (x: 2)> Size: 40B
         array(['H2O', 'NaCl-'], dtype='<U5')
         Dimensions without coordinates: x
         >>> isalnum = da.str.isalnum()
         >>> isalnum
-        <xarray.DataArray (x: 2)>
+        <xarray.DataArray (x: 2)> Size: 2B
         array([ True, False])
         Dimensions without coordinates: x
         """
@@ -886,12 +886,12 @@ class StringAccessor(Generic[T_DataArray]):
         --------
         >>> da = xr.DataArray(["Mn", "H2O", "NaCl-"], dims="x")
         >>> da
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 60B
         array(['Mn', 'H2O', 'NaCl-'], dtype='<U5')
         Dimensions without coordinates: x
         >>> isalpha = da.str.isalpha()
         >>> isalpha
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 3B
         array([ True, False, False])
         Dimensions without coordinates: x
         """
@@ -910,12 +910,12 @@ class StringAccessor(Generic[T_DataArray]):
         --------
         >>> da = xr.DataArray(["2.3", "123", "0"], dims="x")
         >>> da
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 36B
         array(['2.3', '123', '0'], dtype='<U3')
         Dimensions without coordinates: x
         >>> isdecimal = da.str.isdecimal()
         >>> isdecimal
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 3B
         array([False,  True,  True])
         Dimensions without coordinates: x
         """
@@ -934,12 +934,12 @@ class StringAccessor(Generic[T_DataArray]):
         --------
         >>> da = xr.DataArray(["123", "1.2", "0", "CO2", "NaCl"], dims="x")
         >>> da
-        <xarray.DataArray (x: 5)>
+        <xarray.DataArray (x: 5)> Size: 80B
         array(['123', '1.2', '0', 'CO2', 'NaCl'], dtype='<U4')
         Dimensions without coordinates: x
         >>> isdigit = da.str.isdigit()
         >>> isdigit
-        <xarray.DataArray (x: 5)>
+        <xarray.DataArray (x: 5)> Size: 5B
         array([ True, False,  True, False, False])
         Dimensions without coordinates: x
         """
@@ -959,12 +959,12 @@ class StringAccessor(Generic[T_DataArray]):
         --------
         >>> da = xr.DataArray(["temperature", "HUMIDITY", "pREciPiTaTioN"], dims="x")
         >>> da
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 156B
         array(['temperature', 'HUMIDITY', 'pREciPiTaTioN'], dtype='<U13')
         Dimensions without coordinates: x
         >>> islower = da.str.islower()
         >>> islower
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 3B
         array([ True, False, False])
         Dimensions without coordinates: x
         """
@@ -983,12 +983,12 @@ class StringAccessor(Generic[T_DataArray]):
         --------
         >>> da = xr.DataArray(["123", "2.3", "H2O", "NaCl-", "Mn"], dims="x")
         >>> da
-        <xarray.DataArray (x: 5)>
+        <xarray.DataArray (x: 5)> Size: 100B
         array(['123', '2.3', 'H2O', 'NaCl-', 'Mn'], dtype='<U5')
         Dimensions without coordinates: x
         >>> isnumeric = da.str.isnumeric()
         >>> isnumeric
-        <xarray.DataArray (x: 5)>
+        <xarray.DataArray (x: 5)> Size: 5B
         array([ True, False, False, False, False])
         Dimensions without coordinates: x
         """
@@ -1007,12 +1007,12 @@ class StringAccessor(Generic[T_DataArray]):
         --------
         >>> da = xr.DataArray(["", " ", "\\t", "\\n"], dims="x")
         >>> da
-        <xarray.DataArray (x: 4)>
+        <xarray.DataArray (x: 4)> Size: 16B
         array(['', ' ', '\\t', '\\n'], dtype='<U1')
         Dimensions without coordinates: x
         >>> isspace = da.str.isspace()
         >>> isspace
-        <xarray.DataArray (x: 4)>
+        <xarray.DataArray (x: 4)> Size: 4B
         array([False,  True,  True,  True])
         Dimensions without coordinates: x
         """
@@ -1038,13 +1038,13 @@ class StringAccessor(Generic[T_DataArray]):
         ...     dims="title",
         ... )
         >>> da
-        <xarray.DataArray (title: 3)>
+        <xarray.DataArray (title: 3)> Size: 360B
         array(['The Evolution Of Species', 'The Theory of relativity',
                'the quantum mechanics of atoms'], dtype='<U30')
         Dimensions without coordinates: title
         >>> istitle = da.str.istitle()
         >>> istitle
-        <xarray.DataArray (title: 3)>
+        <xarray.DataArray (title: 3)> Size: 3B
         array([ True, False, False])
         Dimensions without coordinates: title
         """
@@ -1063,12 +1063,12 @@ class StringAccessor(Generic[T_DataArray]):
         --------
         >>> da = xr.DataArray(["TEMPERATURE", "humidity", "PreCIpiTAtioN"], dims="x")
         >>> da
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 156B
         array(['TEMPERATURE', 'humidity', 'PreCIpiTAtioN'], dtype='<U13')
         Dimensions without coordinates: x
         >>> isupper = da.str.isupper()
         >>> isupper
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 3B
         array([ True, False, False])
         Dimensions without coordinates: x
         """
@@ -1111,20 +1111,20 @@ class StringAccessor(Generic[T_DataArray]):
         --------
         >>> da = xr.DataArray(["jjklmn", "opjjqrs", "t-JJ99vwx"], dims="x")
         >>> da
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 108B
         array(['jjklmn', 'opjjqrs', 't-JJ99vwx'], dtype='<U9')
         Dimensions without coordinates: x
 
         Using a string:
         >>> da.str.count("jj")
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 24B
         array([1, 1, 0])
         Dimensions without coordinates: x
 
         Enable case-insensitive matching by setting case to false:
         >>> counts = da.str.count("jj", case=False)
         >>> counts
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 24B
         array([1, 1, 1])
         Dimensions without coordinates: x
 
@@ -1132,7 +1132,7 @@ class StringAccessor(Generic[T_DataArray]):
         >>> pat = "JJ[0-9]{2}[a-z]{3}"
         >>> counts = da.str.count(pat)
         >>> counts
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 24B
         array([0, 0, 1])
         Dimensions without coordinates: x
 
@@ -1141,7 +1141,7 @@ class StringAccessor(Generic[T_DataArray]):
         >>> pat = xr.DataArray(["jj", "JJ"], dims="y")
         >>> counts = da.str.count(pat)
         >>> counts
-        <xarray.DataArray (x: 3, y: 2)>
+        <xarray.DataArray (x: 3, y: 2)> Size: 48B
         array([[1, 0],
                [1, 0],
                [0, 1]])
@@ -1175,12 +1175,12 @@ class StringAccessor(Generic[T_DataArray]):
         --------
         >>> da = xr.DataArray(["$100", "£23", "100"], dims="x")
         >>> da
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 48B
         array(['$100', '£23', '100'], dtype='<U4')
         Dimensions without coordinates: x
         >>> startswith = da.str.startswith("$")
         >>> startswith
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 3B
         array([ True, False, False])
         Dimensions without coordinates: x
         """
@@ -1211,12 +1211,12 @@ class StringAccessor(Generic[T_DataArray]):
         --------
         >>> da = xr.DataArray(["10C", "10c", "100F"], dims="x")
         >>> da
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 48B
         array(['10C', '10c', '100F'], dtype='<U4')
         Dimensions without coordinates: x
         >>> endswith = da.str.endswith("C")
         >>> endswith
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 3B
         array([ True, False, False])
         Dimensions without coordinates: x
         """
@@ -1261,7 +1261,7 @@ class StringAccessor(Generic[T_DataArray]):
 
         >>> da = xr.DataArray(["PAR184", "TKO65", "NBO9139", "NZ39"], dims="x")
         >>> da
-        <xarray.DataArray (x: 4)>
+        <xarray.DataArray (x: 4)> Size: 112B
         array(['PAR184', 'TKO65', 'NBO9139', 'NZ39'], dtype='<U7')
         Dimensions without coordinates: x
 
@@ -1269,7 +1269,7 @@ class StringAccessor(Generic[T_DataArray]):
 
         >>> filled = da.str.pad(8, side="left", fillchar="0")
         >>> filled
-        <xarray.DataArray (x: 4)>
+        <xarray.DataArray (x: 4)> Size: 128B
         array(['00PAR184', '000TKO65', '0NBO9139', '0000NZ39'], dtype='<U8')
         Dimensions without coordinates: x
 
@@ -1277,7 +1277,7 @@ class StringAccessor(Generic[T_DataArray]):
 
         >>> filled = da.str.pad(8, side="right", fillchar="0")
         >>> filled
-        <xarray.DataArray (x: 4)>
+        <xarray.DataArray (x: 4)> Size: 128B
         array(['PAR18400', 'TKO65000', 'NBO91390', 'NZ390000'], dtype='<U8')
         Dimensions without coordinates: x
 
@@ -1285,7 +1285,7 @@ class StringAccessor(Generic[T_DataArray]):
 
         >>> filled = da.str.pad(8, side="both", fillchar="0")
         >>> filled
-        <xarray.DataArray (x: 4)>
+        <xarray.DataArray (x: 4)> Size: 128B
         array(['0PAR1840', '0TKO6500', 'NBO91390', '00NZ3900'], dtype='<U8')
         Dimensions without coordinates: x
 
@@ -1294,7 +1294,7 @@ class StringAccessor(Generic[T_DataArray]):
         >>> width = xr.DataArray([8, 10], dims="y")
         >>> filled = da.str.pad(width, side="left", fillchar="0")
         >>> filled
-        <xarray.DataArray (x: 4, y: 2)>
+        <xarray.DataArray (x: 4, y: 2)> Size: 320B
         array([['00PAR184', '0000PAR184'],
                ['000TKO65', '00000TKO65'],
                ['0NBO9139', '000NBO9139'],
@@ -1306,7 +1306,7 @@ class StringAccessor(Generic[T_DataArray]):
         >>> fillchar = xr.DataArray(["0", "-"], dims="y")
         >>> filled = da.str.pad(8, side="left", fillchar=fillchar)
         >>> filled
-        <xarray.DataArray (x: 4, y: 2)>
+        <xarray.DataArray (x: 4, y: 2)> Size: 256B
         array([['00PAR184', '--PAR184'],
                ['000TKO65', '---TKO65'],
                ['0NBO9139', '-NBO9139'],
@@ -2024,7 +2024,7 @@ class StringAccessor(Generic[T_DataArray]):
         Extract matches
 
         >>> value.str.extract(r"(\w+)_Xy_(\d*)", dim="match")
-        <xarray.DataArray (X: 2, Y: 3, match: 2)>
+        <xarray.DataArray (X: 2, Y: 3, match: 2)> Size: 288B
         array([[['a', '0'],
                 ['bab', '110'],
                 ['abc', '01']],
@@ -2178,7 +2178,7 @@ class StringAccessor(Generic[T_DataArray]):
         >>> value.str.extractall(
         ...     r"(\w+)_Xy_(\d*)", group_dim="group", match_dim="match"
         ... )
-        <xarray.DataArray (X: 2, Y: 3, group: 3, match: 2)>
+        <xarray.DataArray (X: 2, Y: 3, group: 3, match: 2)> Size: 1kB
         array([[[['a', '0'],
                  ['', ''],
                  ['', '']],
@@ -2342,7 +2342,7 @@ class StringAccessor(Generic[T_DataArray]):
         Extract matches
 
         >>> value.str.findall(r"(\w+)_Xy_(\d*)")
-        <xarray.DataArray (X: 2, Y: 3)>
+        <xarray.DataArray (X: 2, Y: 3)> Size: 48B
         array([[list([('a', '0')]), list([('bab', '110'), ('baab', '1100')]),
                 list([('abc', '01'), ('cbc', '2210')])],
                [list([('abcd', ''), ('dcd', '33210'), ('dccd', '332210')]),
@@ -2577,7 +2577,7 @@ class StringAccessor(Generic[T_DataArray]):
         Split once and put the results in a new dimension
 
         >>> values.str.split(dim="splitted", maxsplit=1)
-        <xarray.DataArray (X: 2, Y: 3, splitted: 2)>
+        <xarray.DataArray (X: 2, Y: 3, splitted: 2)> Size: 864B
         array([[['abc', 'def'],
                 ['spam', 'eggs\tswallow'],
                 ['red_blue', '']],
@@ -2590,7 +2590,7 @@ class StringAccessor(Generic[T_DataArray]):
         Split as many times as needed and put the results in a new dimension
 
         >>> values.str.split(dim="splitted")
-        <xarray.DataArray (X: 2, Y: 3, splitted: 4)>
+        <xarray.DataArray (X: 2, Y: 3, splitted: 4)> Size: 768B
         array([[['abc', 'def', '', ''],
                 ['spam', 'eggs', 'swallow', ''],
                 ['red_blue', '', '', '']],
@@ -2603,7 +2603,7 @@ class StringAccessor(Generic[T_DataArray]):
         Split once and put the results in lists
 
         >>> values.str.split(dim=None, maxsplit=1)
-        <xarray.DataArray (X: 2, Y: 3)>
+        <xarray.DataArray (X: 2, Y: 3)> Size: 48B
         array([[list(['abc', 'def']), list(['spam', 'eggs\tswallow']),
                 list(['red_blue'])],
                [list(['test0', 'test1\ntest2\n\ntest3']), list([]),
@@ -2613,7 +2613,7 @@ class StringAccessor(Generic[T_DataArray]):
         Split as many times as needed and put the results in a list
 
         >>> values.str.split(dim=None)
-        <xarray.DataArray (X: 2, Y: 3)>
+        <xarray.DataArray (X: 2, Y: 3)> Size: 48B
         array([[list(['abc', 'def']), list(['spam', 'eggs', 'swallow']),
                 list(['red_blue'])],
                [list(['test0', 'test1', 'test2', 'test3']), list([]),
@@ -2623,7 +2623,7 @@ class StringAccessor(Generic[T_DataArray]):
         Split only on spaces
 
         >>> values.str.split(dim="splitted", sep=" ")
-        <xarray.DataArray (X: 2, Y: 3, splitted: 3)>
+        <xarray.DataArray (X: 2, Y: 3, splitted: 3)> Size: 2kB
         array([[['abc', 'def', ''],
                 ['spam\t\teggs\tswallow', '', ''],
                 ['red_blue', '', '']],
@@ -2695,7 +2695,7 @@ class StringAccessor(Generic[T_DataArray]):
         Split once and put the results in a new dimension
 
         >>> values.str.rsplit(dim="splitted", maxsplit=1)
-        <xarray.DataArray (X: 2, Y: 3, splitted: 2)>
+        <xarray.DataArray (X: 2, Y: 3, splitted: 2)> Size: 816B
         array([[['abc', 'def'],
                 ['spam\t\teggs', 'swallow'],
                 ['', 'red_blue']],
@@ -2708,7 +2708,7 @@ class StringAccessor(Generic[T_DataArray]):
         Split as many times as needed and put the results in a new dimension
 
         >>> values.str.rsplit(dim="splitted")
-        <xarray.DataArray (X: 2, Y: 3, splitted: 4)>
+        <xarray.DataArray (X: 2, Y: 3, splitted: 4)> Size: 768B
         array([[['', '', 'abc', 'def'],
                 ['', 'spam', 'eggs', 'swallow'],
                 ['', '', '', 'red_blue']],
@@ -2721,7 +2721,7 @@ class StringAccessor(Generic[T_DataArray]):
         Split once and put the results in lists
 
         >>> values.str.rsplit(dim=None, maxsplit=1)
-        <xarray.DataArray (X: 2, Y: 3)>
+        <xarray.DataArray (X: 2, Y: 3)> Size: 48B
         array([[list(['abc', 'def']), list(['spam\t\teggs', 'swallow']),
                 list(['red_blue'])],
                [list(['test0\ntest1\ntest2', 'test3']), list([]),
@@ -2731,7 +2731,7 @@ class StringAccessor(Generic[T_DataArray]):
         Split as many times as needed and put the results in a list
 
         >>> values.str.rsplit(dim=None)
-        <xarray.DataArray (X: 2, Y: 3)>
+        <xarray.DataArray (X: 2, Y: 3)> Size: 48B
         array([[list(['abc', 'def']), list(['spam', 'eggs', 'swallow']),
                 list(['red_blue'])],
                [list(['test0', 'test1', 'test2', 'test3']), list([]),
@@ -2741,7 +2741,7 @@ class StringAccessor(Generic[T_DataArray]):
         Split only on spaces
 
         >>> values.str.rsplit(dim="splitted", sep=" ")
-        <xarray.DataArray (X: 2, Y: 3, splitted: 3)>
+        <xarray.DataArray (X: 2, Y: 3, splitted: 3)> Size: 2kB
         array([[['', 'abc', 'def'],
                 ['', '', 'spam\t\teggs\tswallow'],
                 ['', '', 'red_blue']],
@@ -2808,7 +2808,7 @@ class StringAccessor(Generic[T_DataArray]):
         Extract dummy values
 
         >>> values.str.get_dummies(dim="dummies")
-        <xarray.DataArray (X: 2, Y: 3, dummies: 5)>
+        <xarray.DataArray (X: 2, Y: 3, dummies: 5)> Size: 30B
         array([[[ True, False,  True, False,  True],
                 [False,  True, False, False, False],
                 [ True, False,  True,  True, False]],
@@ -2817,7 +2817,7 @@ class StringAccessor(Generic[T_DataArray]):
                 [False, False,  True, False,  True],
                 [ True, False, False, False, False]]])
         Coordinates:
-          * dummies  (dummies) <U6 'a' 'ab' 'abc' 'abcd' 'ab~abc'
+          * dummies  (dummies) <U6 120B 'a' 'ab' 'abc' 'abcd' 'ab~abc'
         Dimensions without coordinates: X, Y
 
         See Also

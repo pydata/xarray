@@ -35,24 +35,24 @@ The implementation of these functions is specific to the type of arrays passed t
 whereas :py:class:`cubed.Array` objects must be processed by :py:func:`cubed.map_blocks`.
 
 In order to use the correct implementation of a core operation for the array type encountered, xarray dispatches to the
-corresponding subclass of :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint`,
+corresponding subclass of :py:class:`~xarray.namedarray.parallelcompat.ChunkManagerEntrypoint`,
 also known as a "Chunk Manager". Therefore **a full list of the operations that need to be defined is set by the
-API of the** :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint` **abstract base class**. Note that chunked array
+API of the** :py:class:`~xarray.namedarray.parallelcompat.ChunkManagerEntrypoint` **abstract base class**. Note that chunked array
 methods are also currently dispatched using this class.
 
 Chunked array creation is also handled by this class. As chunked array objects have a one-to-one correspondence with
 in-memory numpy arrays, it should be possible to create a chunked array from a numpy array by passing the desired
-chunking pattern to an implementation of :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint.from_array``.
+chunking pattern to an implementation of :py:class:`~xarray.namedarray.parallelcompat.ChunkManagerEntrypoint.from_array``.
 
 .. note::
 
-    The :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint` abstract base class is mostly just acting as a
+    The :py:class:`~xarray.namedarray.parallelcompat.ChunkManagerEntrypoint` abstract base class is mostly just acting as a
     namespace for containing the chunked-aware function primitives. Ideally in the future we would have an API standard
     for chunked array types which codified this structure, making the entrypoint system unnecessary.
 
-.. currentmodule:: xarray.core.parallelcompat
+.. currentmodule:: xarray.namedarray.parallelcompat
 
-.. autoclass:: xarray.core.parallelcompat.ChunkManagerEntrypoint
+.. autoclass:: xarray.namedarray.parallelcompat.ChunkManagerEntrypoint
    :members:
 
 Registering a new ChunkManagerEntrypoint subclass
@@ -60,19 +60,19 @@ Registering a new ChunkManagerEntrypoint subclass
 
 Rather than hard-coding various chunk managers to deal with specific chunked array implementations, xarray uses an
 entrypoint system to allow developers of new chunked array implementations to register their corresponding subclass of
-:py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint`.
+:py:class:`~xarray.namedarray.parallelcompat.ChunkManagerEntrypoint`.
 
 
 To register a new entrypoint you need to add an entry to the ``setup.cfg`` like this::
 
     [options.entry_points]
     xarray.chunkmanagers =
-        dask = xarray.core.daskmanager:DaskManager
+        dask = xarray.namedarray.daskmanager:DaskManager
 
 See also `cubed-xarray <https://github.com/xarray-contrib/cubed-xarray>`_ for another example.
 
 To check that the entrypoint has worked correctly, you may find it useful to display the available chunkmanagers using
-the internal function :py:func:`~xarray.core.parallelcompat.list_chunkmanagers`.
+the internal function :py:func:`~xarray.namedarray.parallelcompat.list_chunkmanagers`.
 
 .. autofunction:: list_chunkmanagers
 
@@ -91,7 +91,8 @@ Once the chunkmanager subclass has been registered, xarray objects wrapping the 
 The latter two methods ultimately call the chunkmanager's implementation of ``.from_array``, to which they pass the ``from_array_kwargs`` dict.
 The ``chunked_array_type`` kwarg selects which registered chunkmanager subclass to dispatch to. It defaults to ``'dask'``
 if Dask is installed, otherwise it defaults to whichever chunkmanager is registered if only one is registered.
-If multiple chunkmanagers are registered it will raise an error by default.
+If multiple chunkmanagers are registered, the ``chunk_manager`` configuration option (which can be set using :py:func:`set_options`)
+will be used to determine which chunkmanager to use, defaulting to ``'dask'``.
 
 Parallel processing without chunks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

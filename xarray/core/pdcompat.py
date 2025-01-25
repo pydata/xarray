@@ -39,9 +39,8 @@ from enum import Enum
 from typing import Literal
 
 import pandas as pd
-from packaging.version import Version
 
-from xarray.coding import cftime_offsets
+from xarray.core.types import PDDatetimeUnitOptions
 
 
 def count_not_none(*args) -> int:
@@ -75,32 +74,26 @@ no_default = (
 NoDefault = Literal[_NoDefault.no_default]  # For typing following pandas
 
 
-def _convert_base_to_offset(base, freq, index):
-    """Required until we officially deprecate the base argument to resample.  This
-    translates a provided `base` argument to an `offset` argument, following logic
-    from pandas.
+def timestamp_as_unit(date: pd.Timestamp, unit: PDDatetimeUnitOptions) -> pd.Timestamp:
+    """Convert the underlying int64 representation to the given unit.
+
+    Compatibility function for pandas issue where "as_unit" is not defined
+    for pandas.Timestamp in pandas versions < 2.2. Can be removed minimum
+    pandas version is >= 2.2.
     """
-    from xarray.coding.cftimeindex import CFTimeIndex
-
-    if isinstance(index, pd.DatetimeIndex):
-        freq = pd.tseries.frequencies.to_offset(freq)
-        if isinstance(freq, pd.offsets.Tick):
-            return pd.Timedelta(base * freq.nanos // freq.n)
-    elif isinstance(index, CFTimeIndex):
-        freq = cftime_offsets.to_offset(freq)
-        if isinstance(freq, cftime_offsets.Tick):
-            return base * freq.as_timedelta() // freq.n
-    else:
-        raise ValueError("Can only resample using a DatetimeIndex or CFTimeIndex.")
+    if hasattr(date, "as_unit"):
+        date = date.as_unit(unit)
+    elif hasattr(date, "_as_unit"):
+        date = date._as_unit(unit)
+    return date
 
 
-def nanosecond_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
-    """Return a nanosecond-precision Timestamp object.
+def default_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
+    """Return a Timestamp object with the default precision.
 
-    Note this function should no longer be needed after addressing GitHub issue
-    #7493.
+    Xarray default is "ns".
     """
-    if Version(pd.__version__) >= Version("2.0.0"):
-        return pd.Timestamp(*args, **kwargs).as_unit("ns")
-    else:
-        return pd.Timestamp(*args, **kwargs)
+    dt = pd.Timestamp(*args, **kwargs)
+    if dt.unit != "ns":
+        dt = timestamp_as_unit(dt, "ns")
+    return dt

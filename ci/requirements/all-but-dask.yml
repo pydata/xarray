@@ -3,8 +3,8 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - black
   - aiobotocore
+  - array-api-strict
   - boto3
   - bottleneck
   - cartopy
@@ -15,7 +15,7 @@ dependencies:
   - h5py
   - hdf5
   - hypothesis
-  - lxml  # Optional dep of pydap
+  - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4

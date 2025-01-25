@@ -4,7 +4,7 @@ How to add a new backend
 ------------------------
 
 Adding a new backend for read support to Xarray does not require
-to integrate any code in Xarray; all you need to do is:
+one to integrate any code in Xarray; all you need to do is:
 
 - Create a class that inherits from Xarray :py:class:`~xarray.backends.BackendEntrypoint`
   and implements the method ``open_dataset`` see :ref:`RST backend_entrypoint`
@@ -114,7 +114,7 @@ The input of ``open_dataset`` method are one argument
 
 - ``filename_or_obj``: can be any object but usually it is a string containing a path or an instance of
   :py:class:`pathlib.Path`.
-- ``drop_variables``: can be `None` or an iterable containing the variable
+- ``drop_variables``: can be ``None`` or an iterable containing the variable
   names to be dropped when reading the data.
 
 If it makes sense for your backend, your ``open_dataset``  method
@@ -281,7 +281,7 @@ You can declare the entrypoint in your project configuration like so:
 
    .. code:: toml
 
-      [project.entry-points."xarray-backends"]
+      [project.entry-points."xarray.backends"]
       my_engine = "my_package.my_module:MyBackendEntrypoint"
 
 .. tab:: pyproject.toml [Poetry]
@@ -362,7 +362,7 @@ grouped in three types of indexes
 This implies that the implementation of the method ``__getitem__`` can be tricky.
 In order to simplify this task, Xarray provides a helper function,
 :py:func:`~xarray.core.indexing.explicit_indexing_adapter`, that transforms
-all the input  ``indexer`` types (`basic`, `outer`, `vectorized`) in a tuple
+all the input indexer types (basic, outer, vectorized) in a tuple
 which is interpreted correctly by your backend.
 
 This is an example ``BackendArray`` subclass implementation:
@@ -469,8 +469,8 @@ combining multiple input list with ``itertools.product()``:
 The ``OUTER_1VECTOR`` indexing shall supports number, slices and at most one
 list. The behaviour with the list shall be the same of ``OUTER`` indexing.
 
-If you support more complex indexing as `explicit indexing` or
-`numpy indexing`, you can have a look to the implementation of Zarr backend and Scipy backend,
+If you support more complex indexing as explicit indexing or
+numpy indexing, you can have a look to the implementation of Zarr backend and Scipy backend,
 currently available in :py:mod:`~xarray.backends` module.
 
 .. _RST preferred_chunks:

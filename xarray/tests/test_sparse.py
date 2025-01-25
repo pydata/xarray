@@ -9,8 +9,9 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+import xarray.ufuncs as xu
 from xarray import DataArray, Variable
-from xarray.core.pycompat import array_type
+from xarray.namedarray.pycompat import array_type
 from xarray.tests import assert_equal, assert_identical, requires_dask
 
 filterwarnings = pytest.mark.filterwarnings
@@ -109,11 +110,11 @@ def test_variable_property(prop):
         (do("notnull"), True),
         (do("roll"), True),
         (do("round"), True),
-        (do("set_dims", dims=("x", "y", "z")), True),
-        (do("stack", dimensions={"flat": ("x", "y")}), True),
+        (do("set_dims", dim=("x", "y", "z")), True),
+        (do("stack", dim={"flat": ("x", "y")}), True),
         (do("to_base_variable"), True),
         (do("transpose"), True),
-        (do("unstack", dimensions={"x": {"x1": 5, "x2": 2}}), True),
+        (do("unstack", dim={"x": {"x1": 5, "x2": 2}}), True),
         (do("broadcast_equals", make_xrvar({"x": 10, "y": 5})), False),
         (do("equals", make_xrvar({"x": 10, "y": 5})), False),
         (do("identical", make_xrvar({"x": 10, "y": 5})), False),
@@ -294,10 +295,17 @@ class TestSparseVariable:
         assert_sparse_equal(np.maximum(self.data, 0), np.maximum(self.var, 0).data)
         assert_sparse_equal(np.maximum(self.data, 0), np.maximum(0, self.var).data)
 
+    def test_univariate_xufunc(self):
+        assert_sparse_equal(xu.sin(self.var).data, np.sin(self.data))
+
+    def test_bivariate_xufunc(self):
+        assert_sparse_equal(xu.multiply(self.var, 0).data, np.multiply(self.data, 0))
+        assert_sparse_equal(xu.multiply(0, self.var).data, np.multiply(0, self.data))
+
     def test_repr(self):
         expected = dedent(
             """\
-            <xarray.Variable (x: 4, y: 6)>
+            <xarray.Variable (x: 4, y: 6)> Size: 288B
             <COO: shape=(4, 6), dtype=float64, nnz=12, fill_value=0.0>"""
         )
         assert expected == repr(self.var)
@@ -681,10 +689,10 @@ class TestSparseDataArrayAndDataset:
         )
         expected = dedent(
             """\
-            <xarray.DataArray (x: 4)>
+            <xarray.DataArray (x: 4)> Size: 64B
             <COO: shape=(4,), dtype=float64, nnz=4, fill_value=0.0>
             Coordinates:
-                y        (x) int64 <COO: nnz=3, fill_value=0>
+                y        (x) int64 48B <COO: nnz=3, fill_value=0>
             Dimensions without coordinates: x"""
         )
         assert expected == repr(a)
@@ -696,13 +704,13 @@ class TestSparseDataArrayAndDataset:
         )
         expected = dedent(
             """\
-            <xarray.Dataset>
+            <xarray.Dataset> Size: 112B
             Dimensions:  (x: 4)
             Coordinates:
-                y        (x) int64 <COO: nnz=3, fill_value=0>
+                y        (x) int64 48B <COO: nnz=3, fill_value=0>
             Dimensions without coordinates: x
             Data variables:
-                a        (x) float64 <COO: nnz=4, fill_value=0.0>"""
+                a        (x) float64 64B <COO: nnz=4, fill_value=0.0>"""
         )
         assert expected == repr(ds)
 
@@ -713,11 +721,11 @@ class TestSparseDataArrayAndDataset:
         ).chunk()
         expected = dedent(
             """\
-            <xarray.Dataset>
+            <xarray.Dataset> Size: 32B
             Dimensions:  (x: 4)
             Dimensions without coordinates: x
             Data variables:
-                a        (x) float64 dask.array<chunksize=(4,), meta=sparse.COO>"""
+                a        (x) float64 32B dask.array<chunksize=(4,), meta=sparse.COO>"""
         )
         assert expected == repr(ds)
 
@@ -878,10 +886,6 @@ def test_dask_token():
     import dask
 
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
-
-    # https://github.com/pydata/sparse/issues/300
-    s.__dask_tokenize__ = lambda: dask.base.normalize_token(s.__dict__)
-
     a = DataArray(s)
     t1 = dask.base.tokenize(a)
     t2 = dask.base.tokenize(a)

@@ -4,11 +4,11 @@ import copy
 import math
 import sys
 import warnings
-from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
+from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     Literal,
     TypeVar,
@@ -20,8 +20,14 @@ import numpy as np
 
 # TODO: get rid of this after migrating this class to array API
 from xarray.core import dtypes, formatting, formatting_html
+from xarray.core.indexing import (
+    ExplicitlyIndexed,
+    ImplicitToExplicitIndexingAdapter,
+    OuterIndexer,
+)
 from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray._typing import (
+    ErrorOptionsWithWarn,
     _arrayapi,
     _arrayfunction_or_api,
     _chunkedarray,
@@ -34,12 +40,20 @@ from xarray.namedarray._typing import (
     _SupportsImag,
     _SupportsReal,
 )
-from xarray.namedarray.utils import is_duck_dask_array, to_0d_object_array
+from xarray.namedarray.parallelcompat import guess_chunkmanager
+from xarray.namedarray.pycompat import to_numpy
+from xarray.namedarray.utils import (
+    either_dict_or_kwargs,
+    infix_dims,
+    is_dict_like,
+    is_duck_dask_array,
+    to_0d_object_array,
+)
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
-    from xarray.core.types import Dims
+    from xarray.core.types import Dims, T_Chunks
     from xarray.namedarray._typing import (
         Default,
         _AttrsLike,
@@ -54,6 +68,7 @@ if TYPE_CHECKING:
         _ShapeType,
         duckarray,
     )
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
     try:
         from dask.typing import (
@@ -87,8 +102,7 @@ def _new(
     dims: _DimsLike | Default = ...,
     data: duckarray[_ShapeType, _DType] = ...,
     attrs: _AttrsLike | Default = ...,
-) -> NamedArray[_ShapeType, _DType]:
-    ...
+) -> NamedArray[_ShapeType, _DType]: ...
 
 
 @overload
@@ -97,8 +111,7 @@ def _new(
     dims: _DimsLike | Default = ...,
     data: Default = ...,
     attrs: _AttrsLike | Default = ...,
-) -> NamedArray[_ShapeType_co, _DType_co]:
-    ...
+) -> NamedArray[_ShapeType_co, _DType_co]: ...
 
 
 def _new(
@@ -146,8 +159,7 @@ def from_array(
     dims: _DimsLike,
     data: duckarray[_ShapeType, _DType],
     attrs: _AttrsLike = ...,
-) -> NamedArray[_ShapeType, _DType]:
-    ...
+) -> NamedArray[_ShapeType, _DType]: ...
 
 
 @overload
@@ -155,8 +167,7 @@ def from_array(
     dims: _DimsLike,
     data: ArrayLike,
     attrs: _AttrsLike = ...,
-) -> NamedArray[Any, Any]:
-    ...
+) -> NamedArray[Any, Any]: ...
 
 
 def from_array(
@@ -237,7 +248,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     >>> narr = NamedArray(("x",), data, {"units": "m"})  # TODO: Better name than narr?
     """
 
-    __slots__ = ("_data", "_dims", "_attrs")
+    __slots__ = ("_attrs", "_data", "_dims")
 
     _data: duckarray[Any, _DType_co]
     _dims: _Dims
@@ -268,8 +279,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         dims: _DimsLike | Default = ...,
         data: duckarray[_ShapeType, _DType] = ...,
         attrs: _AttrsLike | Default = ...,
-    ) -> NamedArray[_ShapeType, _DType]:
-        ...
+    ) -> NamedArray[_ShapeType, _DType]: ...
 
     @overload
     def _new(
@@ -277,8 +287,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         dims: _DimsLike | Default = ...,
         data: Default = ...,
         attrs: _AttrsLike | Default = ...,
-    ) -> NamedArray[_ShapeType_co, _DType_co]:
-        ...
+    ) -> NamedArray[_ShapeType_co, _DType_co]: ...
 
     def _new(
         self,
@@ -461,10 +470,28 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         If the underlying data array does not include ``nbytes``, estimates
         the bytes consumed based on the ``size`` and ``dtype``.
         """
+        from xarray.namedarray._array_api import _get_data_namespace
+
         if hasattr(self._data, "nbytes"):
             return self._data.nbytes  # type: ignore[no-any-return]
+
+        if hasattr(self.dtype, "itemsize"):
+            itemsize = self.dtype.itemsize
+        elif isinstance(self._data, _arrayapi):
+            xp = _get_data_namespace(self)
+
+            if xp.isdtype(self.dtype, "bool"):
+                itemsize = 1
+            elif xp.isdtype(self.dtype, "integral"):
+                itemsize = xp.iinfo(self.dtype).bits // 8
+            else:
+                itemsize = xp.finfo(self.dtype).bits // 8
         else:
-            return self.size * self.dtype.itemsize
+            raise TypeError(
+                "cannot compute the number of bytes (no array API nor nbytes / itemsize)"
+            )
+
+        return self.size * itemsize
 
     @property
     def dims(self) -> _Dims:
@@ -483,13 +510,14 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 f"number of data dimensions, ndim={self.ndim}"
             )
         if len(set(dims)) < len(dims):
-            repeated_dims = set([d for d in dims if dims.count(d) > 1])
+            repeated_dims = {d for d in dims if dims.count(d) > 1}
             warnings.warn(
                 f"Duplicate dimension names present: dimensions {repeated_dims} appear more than once in dims={dims}. "
                 "We do not yet support duplicate dimension names, but we do allow initial construction of the object. "
                 "We recommend you rename the dims immediately to become distinct, as most xarray functionality is likely to fail silently if you do not. "
                 "To rename the dimensions you will need to set the ``.dims`` attribute of each variable, ``e.g. var.dims=('x0', 'x1')``.",
                 UserWarning,
+                stacklevel=2,
             )
         return dims
 
@@ -502,7 +530,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     @attrs.setter
     def attrs(self, value: Mapping[Any, Any]) -> None:
-        self._attrs = dict(value)
+        self._attrs = dict(value) if value else None
 
     def _check_shape(self, new_data: duckarray[Any, _DType_co]) -> None:
         if new_data.shape != self.shape:
@@ -561,13 +589,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             return real(self)
         return self._new(data=self._data.real)
 
-    def __dask_tokenize__(self) -> Hashable:
+    def __dask_tokenize__(self) -> object:
         # Use v.data, instead of v._data, in order to cope with the wrappers
         # around NetCDF and the like
         from dask.base import normalize_token
 
-        s, d, a, attrs = type(self), self._dims, self.data, self.attrs
-        return normalize_token((s, d, a, attrs))  # type: ignore[no-any-return]
+        return normalize_token((type(self), self._dims, self.data, self._attrs or None))
 
     def __dask_graph__(self) -> Graph | None:
         if is_duck_dask_array(self._data):
@@ -642,6 +669,15 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         data = array_func(results, *args, **kwargs)
         return type(self)(self._dims, data, attrs=self._attrs)
 
+    @overload
+    def get_axis_num(self, dim: str) -> int: ...  # type: ignore [overload-overlap]
+
+    @overload
+    def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]: ...
+
+    @overload
+    def get_axis_num(self, dim: Hashable) -> int: ...
+
     def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
@@ -664,8 +700,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         _raise_if_any_duplicate_dimensions(self.dims)
         try:
             return self.dims.index(dim)  # type: ignore[no-any-return]
-        except ValueError:
-            raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
+        except ValueError as err:
+            raise ValueError(
+                f"{dim!r} not found in array dimensions {self.dims!r}"
+            ) from err
 
     @property
     def chunks(self) -> _Chunks | None:
@@ -690,8 +728,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self,
     ) -> Mapping[_Dim, _Shape]:
         """
-        Mapping from dimension names to block lengths for this namedArray's data, or None if
-        the underlying data is not a dask array.
+        Mapping from dimension names to block lengths for this NamedArray's data.
+
+        If this NamedArray does not contain chunked arrays, the mapping will be empty.
+
         Cannot be modified directly, but can be modified by calling .chunk().
 
         Differs from NamedArray.chunks because it returns a mapping of dimensions to chunk shapes
@@ -705,14 +745,123 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """
         data = self._data
         if isinstance(data, _chunkedarray):
-            return dict(zip(self.dims, data.chunks))
+            return dict(zip(self.dims, data.chunks, strict=True))
         else:
             return {}
 
     @property
     def sizes(self) -> dict[_Dim, _IntOrUnknown]:
         """Ordered mapping from dimension names to lengths."""
-        return dict(zip(self.dims, self.shape))
+        return dict(zip(self.dims, self.shape, strict=True))
+
+    def chunk(
+        self,
+        chunks: T_Chunks = {},  # noqa: B006  # even though it's unsafe, it is being used intentionally here (#4667)
+        chunked_array_type: str | ChunkManagerEntrypoint[Any] | None = None,
+        from_array_kwargs: Any = None,
+        **chunks_kwargs: Any,
+    ) -> Self:
+        """Coerce this array's data into a dask array with the given chunks.
+
+        If this variable is a non-dask array, it will be converted to dask
+        array. If it's a dask array, it will be rechunked to the given chunk
+        sizes.
+
+        If neither chunks is not provided for one or more dimensions, chunk
+        sizes along that dimension will not be updated; non-dask arrays will be
+        converted into dask arrays with a single block.
+
+        Parameters
+        ----------
+        chunks : int, tuple or dict, optional
+            Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
+            ``{'x': 5, 'y': 5}``.
+        chunked_array_type: str, optional
+            Which chunked array type to coerce this datasets' arrays to.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntrypoint` system.
+            Experimental API that should not be relied upon.
+        from_array_kwargs: dict, optional
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+            For example, with dask as the default chunked array type, this method would pass additional kwargs
+            to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+        **chunks_kwargs : {dim: chunks, ...}, optional
+            The keyword arguments form of ``chunks``.
+            One of chunks or chunks_kwargs must be provided.
+
+        Returns
+        -------
+        chunked : xarray.Variable
+
+        See Also
+        --------
+        Variable.chunks
+        Variable.chunksizes
+        xarray.unify_chunks
+        dask.array.from_array
+        """
+
+        if from_array_kwargs is None:
+            from_array_kwargs = {}
+
+        if chunks is None:
+            warnings.warn(
+                "None value for 'chunks' is deprecated. "
+                "It will raise an error in the future. Use instead '{}'",
+                category=FutureWarning,
+                stacklevel=2,
+            )
+            chunks = {}
+
+        if isinstance(chunks, float | str | int | tuple | list):
+            # TODO we shouldn't assume here that other chunkmanagers can handle these types
+            # TODO should we call normalize_chunks here?
+            pass  # dask.array.from_array can handle these directly
+        else:
+            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+
+        if is_dict_like(chunks):
+            # This method of iteration allows for duplicated dimension names, GH8579
+            chunks = {
+                dim_number: chunks[dim]
+                for dim_number, dim in enumerate(self.dims)
+                if dim in chunks
+            }
+
+        chunkmanager = guess_chunkmanager(chunked_array_type)
+
+        data_old = self._data
+        if chunkmanager.is_chunked_array(data_old):
+            data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
+        else:
+            if not isinstance(data_old, ExplicitlyIndexed):
+                ndata = data_old
+            else:
+                # Unambiguously handle array storage backends (like NetCDF4 and h5py)
+                # that can't handle general array indexing. For example, in netCDF4 you
+                # can do "outer" indexing along two dimensions independent, which works
+                # differently from how NumPy handles it.
+                # da.from_array works by using lazy indexing with a tuple of slices.
+                # Using OuterIndexer is a pragmatic choice: dask does not yet handle
+                # different indexing types in an explicit way:
+                # https://github.com/dask/dask/issues/2883
+                ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore[assignment]
+
+            if is_dict_like(chunks):
+                chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
+
+            data_chunked = chunkmanager.from_array(ndata, chunks, **from_array_kwargs)  # type: ignore[arg-type]
+
+        return self._replace(data=data_chunked)
+
+    def to_numpy(self) -> np.ndarray[Any, Any]:
+        """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+        # TODO an entrypoint so array libraries can choose coercion method?
+        return to_numpy(self._data)
+
+    def as_numpy(self) -> Self:
+        """Coerces wrapped data into a numpy array, returning a Variable."""
+        return self._replace(data=self.to_numpy())
 
     def reduce(
         self,
@@ -808,7 +957,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         _attrs = self.attrs
         return tuple(
             cast("T_NamedArrayInteger", self._new((dim,), nz, _attrs))
-            for nz, dim in zip(nonzeros, self.dims)
+            for nz, dim in zip(nonzeros, self.dims, strict=True)
         )
 
     def __repr__(self) -> str:
@@ -855,6 +1004,162 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         else:
             raise TypeError("self.data is not a sparse array")
 
+    def permute_dims(
+        self,
+        *dim: Iterable[_Dim] | EllipsisType,
+        missing_dims: ErrorOptionsWithWarn = "raise",
+    ) -> NamedArray[Any, _DType_co]:
+        """Return a new object with transposed dimensions.
+
+        Parameters
+        ----------
+        *dim : Hashable, optional
+            By default, reverse the order of the dimensions. Otherwise, reorder the
+            dimensions to this order.
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            NamedArray:
+            - "raise": raise an exception
+            - "warn": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
+
+        Returns
+        -------
+        NamedArray
+            The returned NamedArray has permuted dimensions and data with the
+            same attributes as the original.
+
+
+        See Also
+        --------
+        numpy.transpose
+        """
+
+        from xarray.namedarray._array_api import permute_dims
+
+        if not dim:
+            dims = self.dims[::-1]
+        else:
+            dims = tuple(infix_dims(dim, self.dims, missing_dims))  # type: ignore[arg-type]
+
+        if len(dims) < 2 or dims == self.dims:
+            # no need to transpose if only one dimension
+            # or dims are in same order
+            return self.copy(deep=False)
+
+        axes = self.get_axis_num(dims)
+        assert isinstance(axes, tuple)
+
+        return permute_dims(self, axes)
+
+    @property
+    def T(self) -> NamedArray[Any, _DType_co]:
+        """Return a new object with transposed dimensions."""
+        if self.ndim != 2:
+            raise ValueError(
+                f"x.T requires x to have 2 dimensions, got {self.ndim}. Use x.permute_dims() to permute dimensions."
+            )
+
+        return self.permute_dims()
+
+    def broadcast_to(
+        self, dim: Mapping[_Dim, int] | None = None, **dim_kwargs: Any
+    ) -> NamedArray[Any, _DType_co]:
+        """
+        Broadcast the NamedArray to a new shape. New dimensions are not allowed.
+
+        This method allows for the expansion of the array's dimensions to a specified shape.
+        It handles both positional and keyword arguments for specifying the dimensions to broadcast.
+        An error is raised if new dimensions are attempted to be added.
+
+        Parameters
+        ----------
+        dim : dict, str, sequence of str, optional
+            Dimensions to broadcast the array to. If a dict, keys are dimension names and values are the new sizes.
+            If a string or sequence of strings, existing dimensions are matched with a size of 1.
+
+        **dim_kwargs : Any
+            Additional dimensions specified as keyword arguments. Each keyword argument specifies the name of an existing dimension and its size.
+
+        Returns
+        -------
+        NamedArray
+            A new NamedArray with the broadcasted dimensions.
+
+        Examples
+        --------
+        >>> data = np.asarray([[1.0, 2.0], [3.0, 4.0]])
+        >>> array = xr.NamedArray(("x", "y"), data)
+        >>> array.sizes
+        {'x': 2, 'y': 2}
+
+        >>> broadcasted = array.broadcast_to(x=2, y=2)
+        >>> broadcasted.sizes
+        {'x': 2, 'y': 2}
+        """
+
+        from xarray.core import duck_array_ops
+
+        combined_dims = either_dict_or_kwargs(dim, dim_kwargs, "broadcast_to")
+
+        # Check that no new dimensions are added
+        if new_dims := set(combined_dims) - set(self.dims):
+            raise ValueError(
+                f"Cannot add new dimensions: {new_dims}. Only existing dimensions are allowed. "
+                "Use `expand_dims` method to add new dimensions."
+            )
+
+        # Create a dictionary of the current dimensions and their sizes
+        current_shape = self.sizes
+
+        # Update the current shape with the new dimensions, keeping the order of the original dimensions
+        broadcast_shape = {d: current_shape.get(d, 1) for d in self.dims}
+        broadcast_shape |= combined_dims
+
+        # Ensure the dimensions are in the correct order
+        ordered_dims = list(broadcast_shape.keys())
+        ordered_shape = tuple(broadcast_shape[d] for d in ordered_dims)
+        data = duck_array_ops.broadcast_to(self._data, ordered_shape)  # type: ignore[no-untyped-call]  # TODO: use array-api-compat function
+        return self._new(data=data, dims=ordered_dims)
+
+    def expand_dims(
+        self,
+        dim: _Dim | Default = _default,
+    ) -> NamedArray[Any, _DType_co]:
+        """
+        Expand the dimensions of the NamedArray.
+
+        This method adds new dimensions to the object. The new dimensions are added at the beginning of the array.
+
+        Parameters
+        ----------
+        dim : Hashable, optional
+            Dimension name to expand the array to. This dimension will be added at the beginning of the array.
+
+        Returns
+        -------
+        NamedArray
+            A new NamedArray with expanded dimensions.
+
+
+        Examples
+        --------
+
+        >>> data = np.asarray([[1.0, 2.0], [3.0, 4.0]])
+        >>> array = xr.NamedArray(("x", "y"), data)
+
+
+        # expand dimensions by specifying a new dimension name
+        >>> expanded = array.expand_dims(dim="z")
+        >>> expanded.dims
+        ('z', 'x', 'y')
+
+        """
+
+        from xarray.namedarray._array_api import expand_dims
+
+        return expand_dims(self, dim=dim)
+
 
 _NamedArray = NamedArray[Any, np.dtype[_ScalarType_co]]
 
@@ -863,7 +1168,7 @@ def _raise_if_any_duplicate_dimensions(
     dims: _Dims, err_context: str = "This function"
 ) -> None:
     if len(set(dims)) < len(dims):
-        repeated_dims = set([d for d in dims if dims.count(d) > 1])
+        repeated_dims = {d for d in dims if dims.count(d) > 1}
         raise ValueError(
             f"{err_context} cannot handle duplicate dimensions, but dimensions {repeated_dims} appear more than once on this object's dims: {dims}"
         )

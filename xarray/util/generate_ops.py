@@ -1,18 +1,22 @@
 """Generate module and stub file for arithmetic operators of various xarray classes.
 
-For internal xarray development use only.
+For internal xarray development use only. Requires that jinja2 is installed.
 
 Usage:
+    python -m pip install jinja2
     python xarray/util/generate_ops.py > xarray/core/_typed_ops.py
 
 """
+
 # Note: the comments in https://github.com/pydata/xarray/pull/4904 provide some
 # background to some of the design choices made here.
 
 from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
-from typing import Optional
+from typing import Any
+
+import jinja2
 
 BINOPS_EQNE = (("__eq__", "nputils.array_eq"), ("__ne__", "nputils.array_ne"))
 BINOPS_CMP = (
@@ -79,43 +83,42 @@ OTHER_UNARY_METHODS = (
 
 required_method_binary = """
     def _binary_op(
-        self, other: {other_type}, f: Callable, reflexive: bool = False
-    ) -> {return_type}:
+        self, other: {{ other_type }}, f: Callable, reflexive: bool = False
+    ) -> {{ return_type }}:
         raise NotImplementedError"""
 template_binop = """
-    def {method}(self, other: {other_type}) -> {return_type}:{type_ignore}
-        return self._binary_op(other, {func})"""
+    def {{ method }}(self, other: {{ other_type }}) -> {{ return_type }}:{{ type_ignore }}
+        return self._binary_op(other, {{ func }})"""
 template_binop_overload = """
-    @overload{overload_type_ignore}
-    def {method}(self, other: {overload_type}) -> {overload_type}:
-        ...
-
+{%- for overload_type in overload_types %}
+    @overload{{ overload_type_ignore if overload_type == overload_types[0] else "" }}
+    def {{ method }}(self, other: {{ overload_type }}) -> {{ overload_type }}: ...
+{% endfor %}
     @overload
-    def {method}(self, other: {other_type}) -> {return_type}:
-        ...
+    def {{method}}(self, other: {{ other_type }}) -> {{ return_type }}: ...
 
-    def {method}(self, other: {other_type}) -> {return_type} | {overload_type}:{type_ignore}
-        return self._binary_op(other, {func})"""
+    def {{ method }}(self, other: {{ other_type }}) -> {{ return_type }} | {{ ' | '.join(overload_types) }}:{{ type_ignore }}
+        return self._binary_op(other, {{ func }})"""
 template_reflexive = """
-    def {method}(self, other: {other_type}) -> {return_type}:
-        return self._binary_op(other, {func}, reflexive=True)"""
+    def {{ method }}(self, other: {{ other_type }}) -> {{ return_type }}:
+        return self._binary_op(other, {{ func }}, reflexive=True)"""
 
 required_method_inplace = """
-    def _inplace_binary_op(self, other: {other_type}, f: Callable) -> Self:
+    def _inplace_binary_op(self, other: {{ other_type }}, f: Callable) -> Self:
         raise NotImplementedError"""
 template_inplace = """
-    def {method}(self, other: {other_type}) -> Self:{type_ignore}
-        return self._inplace_binary_op(other, {func})"""
+    def {{ method }}(self, other: {{ other_type }}) -> Self:{{type_ignore}}
+        return self._inplace_binary_op(other, {{ func }})"""
 
 required_method_unary = """
     def _unary_op(self, f: Callable, *args: Any, **kwargs: Any) -> Self:
         raise NotImplementedError"""
 template_unary = """
-    def {method}(self) -> Self:
-        return self._unary_op({func})"""
+    def {{ method }}(self) -> Self:
+        return self._unary_op({{ func }})"""
 template_other_unary = """
-    def {method}(self, *args: Any, **kwargs: Any) -> Self:
-        return self._unary_op({func}, *args, **kwargs)"""
+    def {{ method }}(self, *args: Any, **kwargs: Any) -> Self:
+        return self._unary_op({{ func }}, *args, **kwargs)"""
 unhashable = """
     # When __eq__ is defined but __hash__ is not, then an object is unhashable,
     # and it should be declared as follows:
@@ -128,7 +131,7 @@ unhashable = """
 # The type ignores might not be necessary anymore at some point.
 #
 # We require a "hack" to tell type checkers that e.g. Variable + DataArray = DataArray
-# In reality this returns NotImplementes, but this is not a valid type in python 3.9.
+# In reality this returns NotImplemented, but this is not a valid type in python 3.9.
 # Therefore, we return DataArray. In reality this would call DataArray.__add__(Variable)
 # TODO: change once python 3.10 is the minimum.
 #
@@ -140,8 +143,8 @@ def _type_ignore(ignore: str) -> str:
     return f"  # type:ignore[{ignore}]" if ignore else ""
 
 
-FuncType = Sequence[tuple[Optional[str], Optional[str]]]
-OpsType = tuple[FuncType, str, dict[str, str]]
+FuncType = Sequence[tuple[str | None, str | None]]
+OpsType = tuple[FuncType, str, dict[str, Any]]
 
 
 def binops(
@@ -163,7 +166,7 @@ def binops(
 
 def binops_overload(
     other_type: str,
-    overload_type: str,
+    overload_types: list[str],
     return_type: str = "Self",
     type_ignore_eq: str = "override",
 ) -> list[OpsType]:
@@ -175,7 +178,7 @@ def binops_overload(
             template_binop_overload,
             extras
             | {
-                "overload_type": overload_type,
+                "overload_types": overload_types,
                 "type_ignore": "",
                 "overload_type_ignore": "",
             },
@@ -185,7 +188,7 @@ def binops_overload(
             template_binop_overload,
             extras
             | {
-                "overload_type": overload_type,
+                "overload_types": overload_types,
                 "type_ignore": "",
                 "overload_type_ignore": _type_ignore(type_ignore_eq),
             },
@@ -215,20 +218,32 @@ def unops() -> list[OpsType]:
     ]
 
 
+# We use short names T_DA and T_DS to keep below 88 lines so
+# ruff does not reformat everything. When reformatting, the
+# type-ignores end up in the wrong line :/
+
 ops_info = {}
+# TODO add inplace ops for DataTree?
+ops_info["DataTreeOpsMixin"] = binops(other_type="DtCompatible") + unops()
 ops_info["DatasetOpsMixin"] = (
-    binops(other_type="DsCompatible") + inplace(other_type="DsCompatible") + unops()
+    binops_overload(other_type="DsCompatible", overload_types=["DataTree"])
+    + inplace(other_type="DsCompatible", type_ignore="misc")
+    + unops()
 )
 ops_info["DataArrayOpsMixin"] = (
-    binops(other_type="DaCompatible") + inplace(other_type="DaCompatible") + unops()
+    binops_overload(other_type="DaCompatible", overload_types=["Dataset", "DataTree"])
+    + inplace(other_type="DaCompatible", type_ignore="misc")
+    + unops()
 )
 ops_info["VariableOpsMixin"] = (
-    binops_overload(other_type="VarCompatible", overload_type="T_DataArray")
+    binops_overload(
+        other_type="VarCompatible", overload_types=["T_DA", "Dataset", "DataTree"]
+    )
     + inplace(other_type="VarCompatible", type_ignore="misc")
     + unops()
 )
 ops_info["DatasetGroupByOpsMixin"] = binops(
-    other_type="GroupByCompatible", return_type="Dataset"
+    other_type="Dataset | DataArray", return_type="Dataset"
 )
 ops_info["DataArrayGroupByOpsMixin"] = binops(
     other_type="T_Xarray", return_type="T_Xarray"
@@ -236,26 +251,30 @@ ops_info["DataArrayGroupByOpsMixin"] = binops(
 
 MODULE_PREAMBLE = '''\
 """Mixin classes with arithmetic operators."""
+
 # This file was generated using xarray.util.generate_ops. Do not edit manually.
 
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, overload
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, overload
 
 from xarray.core import nputils, ops
 from xarray.core.types import (
     DaCompatible,
     DsCompatible,
-    GroupByCompatible,
+    DtCompatible,
     Self,
-    T_DataArray,
     T_Xarray,
     VarCompatible,
 )
 
 if TYPE_CHECKING:
-    from xarray.core.dataset import Dataset'''
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
+    from xarray.core.types import T_DataArray as T_DA'''
 
 
 CLASS_PREAMBLE = """{newline}
@@ -276,10 +295,14 @@ def render(ops_info: dict[str, list[OpsType]]) -> Iterator[str]:
 
 
 def _render_classbody(method_blocks: list[OpsType]) -> Iterator[str]:
+    environment = jinja2.Environment()
+
     for method_func_pairs, template, extra in method_blocks:
         if template:
             for method, func in method_func_pairs:
-                yield template.format(method=method, func=func, **extra)
+                yield environment.from_string(template).render(
+                    method=method, func=func, **extra
+                )
 
     yield ""
     for method_func_pairs, *_ in method_blocks:

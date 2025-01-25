@@ -500,7 +500,7 @@ def test_apply_output_core_dimension() -> None:
             return np.stack([x, -x], axis=-1)
 
         result = apply_ufunc(func, obj, output_core_dims=[["sign"]])
-        if isinstance(result, (xr.Dataset, xr.DataArray)):
+        if isinstance(result, xr.Dataset | xr.DataArray):
             result.coords["sign"] = [1, -1]
         return result
 
@@ -527,7 +527,7 @@ def test_apply_output_core_dimension() -> None:
             return (x, np.stack([x, -x], axis=-1))
 
         result = apply_ufunc(func, obj, output_core_dims=[[], ["sign"]])
-        if isinstance(result[1], (xr.Dataset, xr.DataArray)):
+        if isinstance(result[1], xr.Dataset | xr.DataArray):
             result[1].coords["sign"] = [1, -1]
         return result
 
@@ -568,7 +568,7 @@ def test_apply_exclude() -> None:
             output_core_dims=[[dim]],
             exclude_dims={dim},
         )
-        if isinstance(result, (xr.Dataset, xr.DataArray)):
+        if isinstance(result, xr.Dataset | xr.DataArray):
             # note: this will fail if dim is not a coordinate on any input
             new_coord = np.concatenate([obj.coords[dim] for obj in objects])
             result.coords[dim] = new_coord
@@ -578,7 +578,7 @@ def test_apply_exclude() -> None:
     variables = [xr.Variable("x", a) for a in arrays]
     data_arrays = [
         xr.DataArray(v, {"x": c, "y": ("x", range(len(c)))})
-        for v, c in zip(variables, [["a"], ["b", "c"]])
+        for v, c in zip(variables, [["a"], ["b", "c"]], strict=True)
     ]
     datasets = [xr.Dataset({"data": data_array}) for data_array in data_arrays]
 
@@ -1190,7 +1190,7 @@ def test_apply_dask() -> None:
 
     # unknown setting for dask array handling
     with pytest.raises(ValueError):
-        apply_ufunc(identity, array, dask="unknown")  # type: ignore
+        apply_ufunc(identity, array, dask="unknown")  # type: ignore[arg-type]
 
     def dask_safe_identity(x):
         return apply_ufunc(identity, x, dask="allowed")
@@ -1293,9 +1293,9 @@ def test_apply_dask_multiple_inputs() -> None:
             (x - x.mean(axis=-1, keepdims=True)) * (y - y.mean(axis=-1, keepdims=True))
         ).mean(axis=-1)
 
-    rs = np.random.RandomState(42)
-    array1 = da.from_array(rs.randn(4, 4), chunks=(2, 4))
-    array2 = da.from_array(rs.randn(4, 4), chunks=(2, 4))
+    rs = np.random.default_rng(42)
+    array1 = da.from_array(rs.random((4, 4)), chunks=(2, 4))
+    array2 = da.from_array(rs.random((4, 4)), chunks=(2, 4))
     data_array_1 = xr.DataArray(array1, dims=("x", "z"))
     data_array_2 = xr.DataArray(array2, dims=("y", "z"))
 
@@ -1561,7 +1561,7 @@ def arrays():
     )
 
     return [
-        da.isel(time=range(0, 18)),
+        da.isel(time=range(18)),
         da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(),
         xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"]),
         xr.DataArray([[1, 2], [np.nan, np.nan]], dims=["x", "time"]),
@@ -2344,6 +2344,20 @@ def test_where_attrs() -> None:
             id="datetime",
         ),
         pytest.param(
+            # Force a non-ns unit for the coordinate, make sure we convert to `ns`
+            # for backwards compatibility at the moment. This can be relaxed in the future.
+            xr.DataArray(
+                pd.date_range("1970-01-01", freq="s", periods=3, unit="s"), dims="x"
+            ),
+            xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]}),
+            xr.DataArray(
+                [0, 1e9, 2e9],
+                dims="x",
+                coords={"x": pd.date_range("1970-01-01", freq="s", periods=3)},
+            ),
+            id="datetime-non-ns",
+        ),
+        pytest.param(
             xr.DataArray(
                 np.array([1000, 2000, 3000], dtype="timedelta64[ns]"), dims="x"
             ),
@@ -2457,6 +2471,14 @@ def test_polyval_degree_dim_checks() -> None:
             xr.DataArray(pd.date_range("1970-01-01", freq="ns", periods=3), dims="x"),
             id="datetime",
         ),
+        # Force a non-ns unit for the coordinate, make sure we convert to `ns` in both polyfit & polval
+        # for backwards compatibility at the moment. This can be relaxed in the future.
+        pytest.param(
+            xr.DataArray(
+                pd.date_range("1970-01-01", freq="s", unit="s", periods=3), dims="x"
+            ),
+            id="datetime-non-ns",
+        ),
         pytest.param(
             xr.DataArray(np.array([0, 1, 2], dtype="timedelta64[ns]"), dims="x"),
             id="timedelta",
@@ -2494,32 +2516,32 @@ def test_polyfit_polyval_integration(
         [
             xr.DataArray([1, 2, 3]),
             xr.DataArray([4, 5, 6]),
-            [1, 2, 3],
-            [4, 5, 6],
+            np.array([1, 2, 3]),
+            np.array([4, 5, 6]),
             "dim_0",
             -1,
         ],
         [
             xr.DataArray([1, 2]),
             xr.DataArray([4, 5, 6]),
-            [1, 2],
-            [4, 5, 6],
+            np.array([1, 2, 0]),
+            np.array([4, 5, 6]),
             "dim_0",
             -1,
         ],
         [
             xr.Variable(dims=["dim_0"], data=[1, 2, 3]),
             xr.Variable(dims=["dim_0"], data=[4, 5, 6]),
-            [1, 2, 3],
-            [4, 5, 6],
+            np.array([1, 2, 3]),
+            np.array([4, 5, 6]),
             "dim_0",
             -1,
         ],
         [
             xr.Variable(dims=["dim_0"], data=[1, 2]),
             xr.Variable(dims=["dim_0"], data=[4, 5, 6]),
-            [1, 2],
-            [4, 5, 6],
+            np.array([1, 2, 0]),
+            np.array([4, 5, 6]),
             "dim_0",
             -1,
         ],
@@ -2547,7 +2569,8 @@ def test_polyfit_polyval_integration(
             "cartesian",
             1,
         ],
-        [  # Test 1 sized arrays with coords:
+        # Test 1 sized arrays with coords:
+        pytest.param(
             xr.DataArray(
                 np.array([1]),
                 dims=["cartesian"],
@@ -2558,12 +2581,14 @@ def test_polyfit_polyval_integration(
                 dims=["cartesian"],
                 coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
             ),
-            [0, 0, 1],
-            [4, 5, 6],
+            np.array([0, 0, 1]),
+            np.array([4, 5, 6]),
             "cartesian",
             -1,
-        ],
-        [  # Test filling in between with coords:
+            marks=(pytest.mark.xfail(),),
+        ),
+        # Test filling in between with coords:
+        pytest.param(
             xr.DataArray(
                 [1, 2],
                 dims=["cartesian"],
@@ -2574,11 +2599,12 @@ def test_polyfit_polyval_integration(
                 dims=["cartesian"],
                 coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
             ),
-            [1, 0, 2],
-            [4, 5, 6],
+            np.array([1, 0, 2]),
+            np.array([4, 5, 6]),
             "cartesian",
             -1,
-        ],
+            marks=(pytest.mark.xfail(),),
+        ),
     ],
 )
 def test_cross(a, b, ae, be, dim: str, axis: int, use_dask: bool) -> None:
@@ -2592,3 +2618,11 @@ def test_cross(a, b, ae, be, dim: str, axis: int, use_dask: bool) -> None:
 
     actual = xr.cross(a, b, dim=dim)
     xr.testing.assert_duckarray_allclose(expected, actual)
+
+
+@pytest.mark.parametrize("compute_backend", ["numbagg"], indirect=True)
+def test_complex_number_reduce(compute_backend):
+    da = xr.DataArray(np.ones((2,), dtype=np.complex64), dims=["x"])
+    # Check that xarray doesn't call into numbagg, which doesn't compile for complex
+    # numbers at the moment (but will when numba supports dynamic compilation)
+    da.min()

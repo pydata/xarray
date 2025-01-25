@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, Sequence, Set
-from typing import TYPE_CHECKING, Any, NamedTuple, Optional, Union
+from typing import TYPE_CHECKING, Any, NamedTuple, Union
 
 import pandas as pd
 
@@ -66,7 +66,7 @@ def broadcast_dimension_size(variables: list[Variable]) -> dict[Hashable, int]:
     """
     dims: dict[Hashable, int] = {}
     for var in variables:
-        for dim, size in zip(var.dims, var.shape):
+        for dim, size in zip(var.dims, var.shape, strict=True):
             if dim in dims and size != dims[dim]:
                 raise ValueError(f"index {dim!r} not aligned")
             dims[dim] = size
@@ -158,7 +158,7 @@ def _assert_compat_valid(compat):
         raise ValueError(f"compat={compat!r} invalid: must be {set(_VALID_COMPAT)}")
 
 
-MergeElement = tuple[Variable, Optional[Index]]
+MergeElement = tuple[Variable, Index | None]
 
 
 def _assert_prioritized_valid(
@@ -267,7 +267,7 @@ def merge_collected(
                         index, other_index, variable, other_var, index_cmp_cache
                     ):
                         raise MergeError(
-                            f"conflicting values/indexes on objects to be combined fo coordinate {name!r}\n"
+                            f"conflicting values/indexes on objects to be combined for coordinate {name!r}\n"
                             f"first index: {index!r}\nsecond index: {other_index!r}\n"
                             f"first variable: {variable!r}\nsecond variable: {other_var!r}\n"
                         )
@@ -342,7 +342,7 @@ def collect_variables_and_indexes(
             append(name, variable, indexes.get(name))
 
     for mapping in list_of_mappings:
-        if isinstance(mapping, (Coordinates, Dataset)):
+        if isinstance(mapping, Coordinates | Dataset):
             append_all(mapping.variables, mapping.xindexes)
             continue
 
@@ -355,7 +355,7 @@ def collect_variables_and_indexes(
                 indexes_.pop(name, None)
                 append_all(coords_, indexes_)
 
-            variable = as_variable(variable, name=name)
+            variable = as_variable(variable, name=name, auto_convert=False)
             if name in indexes:
                 append(name, variable, indexes[name])
             elif variable.dims == (name,):
@@ -477,7 +477,7 @@ def coerce_pandas_values(objects: Iterable[CoercibleMapping]) -> list[DatasetLik
     out: list[DatasetLike] = []
     for obj in objects:
         variables: DatasetLike
-        if isinstance(obj, (Dataset, Coordinates)):
+        if isinstance(obj, Dataset | Coordinates):
             variables = obj
         else:
             variables = {}
@@ -562,25 +562,6 @@ def merge_coords(
     return variables, out_indexes
 
 
-def assert_valid_explicit_coords(
-    variables: Mapping[Any, Any],
-    dims: Mapping[Any, int],
-    explicit_coords: Iterable[Hashable],
-) -> None:
-    """Validate explicit coordinate names/dims.
-
-    Raise a MergeError if an explicit coord shares a name with a dimension
-    but is comprised of arbitrary dimensions.
-    """
-    for coord_name in explicit_coords:
-        if coord_name in dims and variables[coord_name].dims != (coord_name,):
-            raise MergeError(
-                f"coordinate {coord_name} shares a name with a dataset dimension, but is "
-                "not a 1D variable along that dimension. This is disallowed "
-                "by the xarray data model."
-            )
-
-
 def merge_attrs(variable_attrs, combine_attrs, context=None):
     """Combine attributes from different variables according to combine_attrs"""
     if not variable_attrs:
@@ -601,7 +582,7 @@ def merge_attrs(variable_attrs, combine_attrs, context=None):
             except ValueError as e:
                 raise MergeError(
                     "combine_attrs='no_conflicts', but some values are not "
-                    f"the same. Merging {str(result)} with {str(attrs)}"
+                    f"the same. Merging {result} with {attrs}"
                 ) from e
         return result
     elif combine_attrs == "drop_conflicts":
@@ -627,8 +608,8 @@ def merge_attrs(variable_attrs, combine_attrs, context=None):
         for attrs in variable_attrs[1:]:
             if not dict_equiv(result, attrs):
                 raise MergeError(
-                    f"combine_attrs='identical', but attrs differ. First is {str(result)} "
-                    f", other is {str(attrs)}."
+                    f"combine_attrs='identical', but attrs differ. First is {result} "
+                    f", other is {attrs}."
                 )
         return result
     else:
@@ -728,9 +709,8 @@ def merge_core(
         # coordinates may be dropped in merged results
         coord_names.intersection_update(variables)
     if explicit_coords is not None:
-        assert_valid_explicit_coords(variables, dims, explicit_coords)
         coord_names.update(explicit_coords)
-    for dim, size in dims.items():
+    for dim in dims.keys():
         if dim in variables:
             coord_names.add(dim)
     ambiguous_coords = coord_names.intersection(noncoord_names)
@@ -741,7 +721,7 @@ def merge_core(
         )
 
     attrs = merge_attrs(
-        [var.attrs for var in coerced if isinstance(var, (Dataset, DataArray))],
+        [var.attrs for var in coerced if isinstance(var, Dataset | DataArray)],
         combine_attrs,
     )
 
@@ -839,124 +819,124 @@ def merge(
     ... )
 
     >>> x
-    <xarray.DataArray 'var1' (lat: 2, lon: 2)>
+    <xarray.DataArray 'var1' (lat: 2, lon: 2)> Size: 32B
     array([[1., 2.],
            [3., 5.]])
     Coordinates:
-      * lat      (lat) float64 35.0 40.0
-      * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 16B 35.0 40.0
+      * lon      (lon) float64 16B 100.0 120.0
 
     >>> y
-    <xarray.DataArray 'var2' (lat: 2, lon: 2)>
+    <xarray.DataArray 'var2' (lat: 2, lon: 2)> Size: 32B
     array([[5., 6.],
            [7., 8.]])
     Coordinates:
-      * lat      (lat) float64 35.0 42.0
-      * lon      (lon) float64 100.0 150.0
+      * lat      (lat) float64 16B 35.0 42.0
+      * lon      (lon) float64 16B 100.0 150.0
 
     >>> z
-    <xarray.DataArray 'var3' (time: 2, lon: 2)>
+    <xarray.DataArray 'var3' (time: 2, lon: 2)> Size: 32B
     array([[0., 3.],
            [4., 9.]])
     Coordinates:
-      * time     (time) float64 30.0 60.0
-      * lon      (lon) float64 100.0 150.0
+      * time     (time) float64 16B 30.0 60.0
+      * lon      (lon) float64 16B 100.0 150.0
 
     >>> xr.merge([x, y, z])
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 256B
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
-      * lat      (lat) float64 35.0 40.0 42.0
-      * lon      (lon) float64 100.0 120.0 150.0
-      * time     (time) float64 30.0 60.0
+      * lat      (lat) float64 24B 35.0 40.0 42.0
+      * lon      (lon) float64 24B 100.0 120.0 150.0
+      * time     (time) float64 16B 30.0 60.0
     Data variables:
-        var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
-        var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
-        var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
+        var1     (lat, lon) float64 72B 1.0 2.0 nan 3.0 5.0 nan nan nan nan
+        var2     (lat, lon) float64 72B 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
+        var3     (time, lon) float64 48B 0.0 nan 3.0 4.0 nan 9.0
 
     >>> xr.merge([x, y, z], compat="identical")
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 256B
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
-      * lat      (lat) float64 35.0 40.0 42.0
-      * lon      (lon) float64 100.0 120.0 150.0
-      * time     (time) float64 30.0 60.0
+      * lat      (lat) float64 24B 35.0 40.0 42.0
+      * lon      (lon) float64 24B 100.0 120.0 150.0
+      * time     (time) float64 16B 30.0 60.0
     Data variables:
-        var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
-        var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
-        var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
+        var1     (lat, lon) float64 72B 1.0 2.0 nan 3.0 5.0 nan nan nan nan
+        var2     (lat, lon) float64 72B 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
+        var3     (time, lon) float64 48B 0.0 nan 3.0 4.0 nan 9.0
 
     >>> xr.merge([x, y, z], compat="equals")
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 256B
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
-      * lat      (lat) float64 35.0 40.0 42.0
-      * lon      (lon) float64 100.0 120.0 150.0
-      * time     (time) float64 30.0 60.0
+      * lat      (lat) float64 24B 35.0 40.0 42.0
+      * lon      (lon) float64 24B 100.0 120.0 150.0
+      * time     (time) float64 16B 30.0 60.0
     Data variables:
-        var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
-        var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
-        var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
+        var1     (lat, lon) float64 72B 1.0 2.0 nan 3.0 5.0 nan nan nan nan
+        var2     (lat, lon) float64 72B 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
+        var3     (time, lon) float64 48B 0.0 nan 3.0 4.0 nan 9.0
 
     >>> xr.merge([x, y, z], compat="equals", fill_value=-999.0)
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 256B
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
-      * lat      (lat) float64 35.0 40.0 42.0
-      * lon      (lon) float64 100.0 120.0 150.0
-      * time     (time) float64 30.0 60.0
+      * lat      (lat) float64 24B 35.0 40.0 42.0
+      * lon      (lon) float64 24B 100.0 120.0 150.0
+      * time     (time) float64 16B 30.0 60.0
     Data variables:
-        var1     (lat, lon) float64 1.0 2.0 -999.0 3.0 ... -999.0 -999.0 -999.0
-        var2     (lat, lon) float64 5.0 -999.0 6.0 -999.0 ... -999.0 7.0 -999.0 8.0
-        var3     (time, lon) float64 0.0 -999.0 3.0 4.0 -999.0 9.0
+        var1     (lat, lon) float64 72B 1.0 2.0 -999.0 3.0 ... -999.0 -999.0 -999.0
+        var2     (lat, lon) float64 72B 5.0 -999.0 6.0 -999.0 ... 7.0 -999.0 8.0
+        var3     (time, lon) float64 48B 0.0 -999.0 3.0 4.0 -999.0 9.0
 
     >>> xr.merge([x, y, z], join="override")
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 144B
     Dimensions:  (lat: 2, lon: 2, time: 2)
     Coordinates:
-      * lat      (lat) float64 35.0 40.0
-      * lon      (lon) float64 100.0 120.0
-      * time     (time) float64 30.0 60.0
+      * lat      (lat) float64 16B 35.0 40.0
+      * lon      (lon) float64 16B 100.0 120.0
+      * time     (time) float64 16B 30.0 60.0
     Data variables:
-        var1     (lat, lon) float64 1.0 2.0 3.0 5.0
-        var2     (lat, lon) float64 5.0 6.0 7.0 8.0
-        var3     (time, lon) float64 0.0 3.0 4.0 9.0
+        var1     (lat, lon) float64 32B 1.0 2.0 3.0 5.0
+        var2     (lat, lon) float64 32B 5.0 6.0 7.0 8.0
+        var3     (time, lon) float64 32B 0.0 3.0 4.0 9.0
 
     >>> xr.merge([x, y, z], join="inner")
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 64B
     Dimensions:  (lat: 1, lon: 1, time: 2)
     Coordinates:
-      * lat      (lat) float64 35.0
-      * lon      (lon) float64 100.0
-      * time     (time) float64 30.0 60.0
+      * lat      (lat) float64 8B 35.0
+      * lon      (lon) float64 8B 100.0
+      * time     (time) float64 16B 30.0 60.0
     Data variables:
-        var1     (lat, lon) float64 1.0
-        var2     (lat, lon) float64 5.0
-        var3     (time, lon) float64 0.0 4.0
+        var1     (lat, lon) float64 8B 1.0
+        var2     (lat, lon) float64 8B 5.0
+        var3     (time, lon) float64 16B 0.0 4.0
 
     >>> xr.merge([x, y, z], compat="identical", join="inner")
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 64B
     Dimensions:  (lat: 1, lon: 1, time: 2)
     Coordinates:
-      * lat      (lat) float64 35.0
-      * lon      (lon) float64 100.0
-      * time     (time) float64 30.0 60.0
+      * lat      (lat) float64 8B 35.0
+      * lon      (lon) float64 8B 100.0
+      * time     (time) float64 16B 30.0 60.0
     Data variables:
-        var1     (lat, lon) float64 1.0
-        var2     (lat, lon) float64 5.0
-        var3     (time, lon) float64 0.0 4.0
+        var1     (lat, lon) float64 8B 1.0
+        var2     (lat, lon) float64 8B 5.0
+        var3     (time, lon) float64 16B 0.0 4.0
 
     >>> xr.merge([x, y, z], compat="broadcast_equals", join="outer")
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 256B
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
-      * lat      (lat) float64 35.0 40.0 42.0
-      * lon      (lon) float64 100.0 120.0 150.0
-      * time     (time) float64 30.0 60.0
+      * lat      (lat) float64 24B 35.0 40.0 42.0
+      * lon      (lon) float64 24B 100.0 120.0 150.0
+      * time     (time) float64 16B 30.0 60.0
     Data variables:
-        var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
-        var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
-        var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
+        var1     (lat, lon) float64 72B 1.0 2.0 nan 3.0 5.0 nan nan nan nan
+        var2     (lat, lon) float64 72B 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
+        var3     (time, lon) float64 48B 0.0 nan 3.0 4.0 nan 9.0
 
     >>> xr.merge([x, y, z], join="exact")
     Traceback (most recent call last):
@@ -981,7 +961,7 @@ def merge(
 
     dict_like_objects = []
     for obj in objects:
-        if not isinstance(obj, (DataArray, Dataset, Coordinates, dict)):
+        if not isinstance(obj, DataArray | Dataset | Coordinates | dict):
             raise TypeError(
                 "objects must be an iterable containing only "
                 "Dataset(s), DataArray(s), and dictionaries."

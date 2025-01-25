@@ -40,6 +40,7 @@ pip-log.txt
 .tox
 nosetests.xml
 .cache
+.prettier_cache
 .dmypy.json
 .mypy_cache
 .ropeproject/
@@ -50,7 +51,8 @@ nosetests.xml
 dask-worker-space/
 
 # asv environments
-.asv
+asv_bench/.asv
+asv_bench/pkgs
 
 # Translations
 *.mo
@@ -68,7 +70,7 @@ dask-worker-space/
 
 # xarray specific
 doc/_build
-generated/
+doc/generated/
 xarray/tests/data/*.grib.*.idx
 
 # Sync tools

@@ -7,7 +7,7 @@ Contributing to xarray
 .. note::
 
   Large parts of this document came from the `Pandas Contributing
-  Guide <http://pandas.pydata.org/pandas-docs/stable/contributing.html>`_.
+  Guide <https://pandas.pydata.org/pandas-docs/stable/development/contributing.html>`_.
 
 Overview
 ========
@@ -68,7 +68,7 @@ If you are reporting a bug, please use the provided template which includes the 
 
 #. Include a short, self-contained Python snippet reproducing the problem.
    You can format the code nicely by using `GitHub Flavored Markdown
-   <http://github.github.com/github-flavored-markdown/>`_::
+   <https://github.github.com/github-flavored-markdown/>`_::
 
       ```python
       import xarray as xr
@@ -106,7 +106,7 @@ Version control, Git, and GitHub
 
 The code is hosted on `GitHub <https://www.github.com/pydata/xarray>`_. To
 contribute you will need to sign up for a `free GitHub account
-<https://github.com/signup/free>`_. We use `Git <http://git-scm.com/>`_ for
+<https://github.com/signup/free>`_. We use `Git <https://git-scm.com/>`_ for
 version control to allow many people to work together on the project.
 
 Some great resources for learning Git:
@@ -146,14 +146,14 @@ maintainers to see what you've done, and why you did it, we recommend you to fol
     cd xarray
     git remote add upstream https://github.com/pydata/xarray.git
 
-   This creates the directory `xarray` and connects your repository to
+   This creates the directory ``xarray`` and connects your repository to
    the upstream (main project) *xarray* repository.
 
 Creating a development environment
 ----------------------------------
 
 To test out code changes locally, you'll need to build *xarray* from source, which requires you to
-`create a local development environment <https://docs.xarray.dev/en/stable/contributing.html#creating-a-development-environment>`_.
+`create a local development environment <https://docs.xarray.dev/en/stable/contributing.html#contributing-dev-env>`_.
 
 Update the ``main`` branch
 --------------------------
@@ -327,7 +327,7 @@ To return to your root environment::
 
       conda deactivate
 
-See the full `conda docs here <http://conda.pydata.org/docs>`__.
+See the full `conda docs here <https://conda.pydata.org/docs>`__.
 
 Install pre-commit hooks
 ------------------------
@@ -365,9 +365,9 @@ About the *xarray* documentation
 --------------------------------
 
 The documentation is written in **reStructuredText**, which is almost like writing
-in plain English, and built using `Sphinx <http://sphinx-doc.org/>`__. The
+in plain English, and built using `Sphinx <https://www.sphinx-doc.org/>`__. The
 Sphinx Documentation has an excellent `introduction to reST
-<http://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`__. Review the Sphinx docs to perform more
+<https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`__. Review the Sphinx docs to perform more
 complex changes to the documentation as well.
 
 Some other important things to know about the docs:
@@ -388,7 +388,7 @@ Some other important things to know about the docs:
   extend it in a similar manner.
 
 - The tutorials make heavy use of the `ipython directive
-  <http://matplotlib.org/sampledoc/ipython_directive.html>`_ sphinx extension.
+  <https://matplotlib.org/sampledoc/ipython_directive.html>`_ sphinx extension.
   This directive lets you put code in the documentation which will be run
   during the doc build. For example:
 
@@ -549,13 +549,9 @@ Code Formatting
 
 xarray uses several tools to ensure a consistent code format throughout the project:
 
-- `Black <https://black.readthedocs.io/en/stable/>`_ for standardized
-  code formatting,
-- `blackdoc <https://blackdoc.readthedocs.io/en/stable/>`_ for
-  standardized code formatting in documentation,
-- `ruff <https://github.com/charliermarsh/ruff/>`_ for code quality checks and standardized order in imports
+- `ruff <https://github.com/astral-sh/ruff>`_ for formatting, code quality checks and standardized order in imports
 - `absolufy-imports <https://github.com/MarcoGorelli/absolufy-imports>`_ for absolute instead of relative imports from different files,
-- `mypy <http://mypy-lang.org/>`_ for static type checking on `type hints
+- `mypy <https://mypy-lang.org/>`_ for static type checking on `type hints
   <https://docs.python.org/3/library/typing.html>`_.
 
 We highly recommend that you setup `pre-commit hooks <https://pre-commit.com/>`_
@@ -628,7 +624,7 @@ Test-driven development/code writing
 ------------------------------------
 
 *xarray* is serious about testing and strongly encourages contributors to embrace
-`test-driven development (TDD) <http://en.wikipedia.org/wiki/Test-driven_development>`_.
+`test-driven development (TDD) <https://en.wikipedia.org/wiki/Test-driven_development>`_.
 This development process "relies on the repetition of a very short development cycle:
 first the developer writes an (initially failing) automated test case that defines a desired
 improvement or new function, then produces the minimum amount of code to pass that test."
@@ -640,7 +636,7 @@ Adding tests is one of the most common requests after code is pushed to *xarray*
 it is worth getting in the habit of writing tests ahead of time so that this is never an issue.
 
 Like many packages, *xarray* uses `pytest
-<http://doc.pytest.org/en/latest/>`_ and the convenient
+<https://doc.pytest.org/en/latest/>`_ and the convenient
 extensions in `numpy.testing
 <https://numpy.org/doc/stable/reference/routines.testing.html>`_.
 
@@ -670,18 +666,16 @@ typically find tests wrapped in a class.
 
 .. code-block:: python
 
-    class TestReallyCoolFeature:
-        ...
+    class TestReallyCoolFeature: ...
 
 Going forward, we are moving to a more *functional* style using the
-`pytest <http://doc.pytest.org/en/latest/>`__ framework, which offers a richer
+`pytest <https://doc.pytest.org/en/latest/>`__ framework, which offers a richer
 testing framework that will facilitate testing and developing. Thus, instead of
 writing test classes, we will write test functions like this:
 
 .. code-block:: python
 
-    def test_really_cool_feature():
-        ...
+    def test_really_cool_feature(): ...
 
 Using ``pytest``
 ~~~~~~~~~~~~~~~~
@@ -822,7 +816,7 @@ speed up local testing on multicore machines, by running pytest with the optiona
 This can significantly reduce the time it takes to locally run tests before
 submitting a pull request.
 
-For more, see the `pytest <http://doc.pytest.org/en/latest/>`_ documentation.
+For more, see the `pytest <https://doc.pytest.org/en/latest/>`_ documentation.
 
 Running the performance test suite
 ----------------------------------
@@ -897,7 +891,7 @@ Learn `how to write a benchmark and how to use asv from the documentation <https
          see https://github.com/pydata/xarray/pull/5066
 
    The *xarray* benchmarking suite is run remotely and the results are
-   available `here <http://pandas.pydata.org/speed/xarray/>`_.
+   available `here <https://pandas.pydata.org/speed/xarray/>`_.
 
 Documenting your code
 ---------------------
@@ -940,7 +934,7 @@ Doing 'git status' again should give something like::
 
 The following defines how a commit message should ideally be structured:
 
-* A subject line with `< 72` chars.
+* A subject line with ``< 72`` chars.
 * One blank line.
 * Optionally, a commit message body.
 
@@ -1068,10 +1062,10 @@ PR checklist
 - **Test your code**.
 
   - Write new tests if needed. See `"Test-driven development/code writing" <https://docs.xarray.dev/en/stable/contributing.html#test-driven-development-code-writing>`_.
-  - Test the code using `Pytest <http://doc.pytest.org/en/latest/>`_. Running all tests (type ``pytest`` in the root directory) takes a while, so feel free to only run the tests you think are needed based on your PR (example: ``pytest xarray/tests/test_dataarray.py``). CI will catch any failing tests.
+  - Test the code using `Pytest <https://doc.pytest.org/en/latest/>`_. Running all tests (type ``pytest`` in the root directory) takes a while, so feel free to only run the tests you think are needed based on your PR (example: ``pytest xarray/tests/test_dataarray.py``). CI will catch any failing tests.
   - By default, the upstream dev CI is disabled on pull request and push events. You can override this behavior per commit by adding a ``[test-upstream]`` tag to the first line of the commit message. For documentation-only commits, you can skip the CI per commit by adding a ``[skip-ci]`` tag to the first line of the commit message.
 
-- **Properly format your code** and verify that it passes the formatting guidelines set by `Black <https://black.readthedocs.io/en/stable/>`_ and `Flake8 <http://flake8.pycqa.org/en/latest/>`_. See `"Code formatting" <https://docs.xarray.dev/en/stablcontributing.html#code-formatting>`_. You can use `pre-commit <https://pre-commit.com/>`_ to run these automatically on each commit.
+- **Properly format your code** and verify that it passes the formatting guidelines set by `ruff <https://github.com/astral-sh/ruff>`_. See `"Code formatting" <https://docs.xarray.dev/en/stablcontributing.html#code-formatting>`_. You can use `pre-commit <https://pre-commit.com/>`_ to run these automatically on each commit.
 
   - Run ``pre-commit run --all-files`` in the root directory. This may modify some files. Confirm and commit any formatting changes.
 

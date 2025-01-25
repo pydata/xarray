@@ -27,7 +27,8 @@ from xarray.core.duck_array_ops import (
     timedelta_to_numeric,
     where,
 )
-from xarray.core.pycompat import array_type
+from xarray.core.extension_array import PandasExtensionArray
+from xarray.namedarray.pycompat import array_type
 from xarray.testing import assert_allclose, assert_equal, assert_identical
 from xarray.tests import (
     arm_xfail,
@@ -38,9 +39,53 @@ from xarray.tests import (
     requires_bottleneck,
     requires_cftime,
     requires_dask,
+    requires_pyarrow,
 )
 
 dask_array_type = array_type("dask")
+
+
+@pytest.fixture
+def categorical1():
+    return pd.Categorical(["cat1", "cat2", "cat2", "cat1", "cat2"])
+
+
+@pytest.fixture
+def categorical2():
+    return pd.Categorical(["cat2", "cat1", "cat2", "cat3", "cat1"])
+
+
+try:
+    import pyarrow as pa
+
+    @pytest.fixture
+    def arrow1():
+        return pd.arrays.ArrowExtensionArray(
+            pa.array([{"x": 1, "y": True}, {"x": 2, "y": False}])
+        )
+
+    @pytest.fixture
+    def arrow2():
+        return pd.arrays.ArrowExtensionArray(
+            pa.array([{"x": 3, "y": False}, {"x": 4, "y": True}])
+        )
+
+except ImportError:
+    pass
+
+
+@pytest.fixture
+def int1():
+    return pd.arrays.IntegerArray(
+        np.array([1, 2, 3, 4, 5]), np.array([True, False, False, True, True])
+    )
+
+
+@pytest.fixture
+def int2():
+    return pd.arrays.IntegerArray(
+        np.array([6, 7, 8, 9, 10]), np.array([True, True, False, True, False])
+    )
 
 
 class TestOps:
@@ -67,7 +112,9 @@ class TestOps:
             array([[8, 5, 2, nan], [nan, 13, 14, 15]]),
             array([[2, 5, 8], [13, 17, 21]]),
         ]
-        for axis, expected in zip([0, 1, 2, -3, -2, -1], 2 * expected_results):
+        for axis, expected in zip(
+            [0, 1, 2, -3, -2, -1], 2 * expected_results, strict=True
+        ):
             actual = first(self.x, axis)
             assert_array_equal(expected, actual)
 
@@ -88,7 +135,9 @@ class TestOps:
             array([[8, 9, 10, nan], [nan, 21, 18, 15]]),
             array([[2, 6, 10], [15, 18, 21]]),
         ]
-        for axis, expected in zip([0, 1, 2, -3, -2, -1], 2 * expected_results):
+        for axis, expected in zip(
+            [0, 1, 2, -3, -2, -1], 2 * expected_results, strict=True
+        ):
             actual = last(self.x, axis)
             assert_array_equal(expected, actual)
 
@@ -112,19 +161,64 @@ class TestOps:
         assert 1 == count(np.datetime64("2000-01-01"))
 
     def test_where_type_promotion(self):
-        result = where([True, False], [1, 2], ["a", "b"])
+        result = where(np.array([True, False]), np.array([1, 2]), np.array(["a", "b"]))
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
         result = where([True, False], np.array([1, 2], np.float32), np.nan)
         assert result.dtype == np.float32
         assert_array_equal(result, np.array([1, np.nan], dtype=np.float32))
 
+    def test_where_extension_duck_array(self, categorical1, categorical2):
+        where_res = where(
+            np.array([True, False, True, False, False]),
+            PandasExtensionArray(categorical1),
+            PandasExtensionArray(categorical2),
+        )
+        assert isinstance(where_res, PandasExtensionArray)
+        assert (
+            where_res == pd.Categorical(["cat1", "cat1", "cat2", "cat3", "cat1"])
+        ).all()
+
+    def test_concatenate_extension_duck_array(self, categorical1, categorical2):
+        concate_res = concatenate(
+            [PandasExtensionArray(categorical1), PandasExtensionArray(categorical2)]
+        )
+        assert isinstance(concate_res, PandasExtensionArray)
+        assert (
+            concate_res
+            == type(categorical1)._concat_same_type((categorical1, categorical2))
+        ).all()
+
+    @requires_pyarrow
+    def test_extension_array_pyarrow_concatenate(self, arrow1, arrow2):
+        concatenated = concatenate(
+            (PandasExtensionArray(arrow1), PandasExtensionArray(arrow2))
+        )
+        assert concatenated[2]["x"] == 3
+        assert concatenated[3]["y"]
+
+    def test___getitem__extension_duck_array(self, categorical1):
+        extension_duck_array = PandasExtensionArray(categorical1)
+        assert (extension_duck_array[0:2] == categorical1[0:2]).all()
+        assert isinstance(extension_duck_array[0:2], PandasExtensionArray)
+        assert extension_duck_array[0] == categorical1[0]
+        assert isinstance(extension_duck_array[0], PandasExtensionArray)
+        mask = [True, False, True, False, True]
+        assert (extension_duck_array[mask] == categorical1[mask]).all()
+
+    def test__setitem__extension_duck_array(self, categorical1):
+        extension_duck_array = PandasExtensionArray(categorical1)
+        extension_duck_array[2] = "cat1"  # already existing category
+        assert extension_duck_array[2] == "cat1"
+        with pytest.raises(TypeError, match="Cannot setitem on a Categorical"):
+            extension_duck_array[2] = "cat4"  # new category
+
     def test_stack_type_promotion(self):
         result = stack([1, "b"])
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
     def test_concatenate_type_promotion(self):
-        result = concatenate([[1], ["b"]])
+        result = concatenate([np.array([1]), np.array(["b"])])
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
     @pytest.mark.filterwarnings("error")
@@ -247,17 +341,17 @@ class TestArrayNotNullEquiv:
 
 def construct_dataarray(dim_num, dtype, contains_nan, dask):
     # dimnum <= 3
-    rng = np.random.RandomState(0)
+    rng = np.random.default_rng(0)
     shapes = [16, 8, 4][:dim_num]
     dims = ("x", "y", "z")[:dim_num]
 
     if np.issubdtype(dtype, np.floating):
-        array = rng.randn(*shapes).astype(dtype)
+        array = rng.random(shapes).astype(dtype)
     elif np.issubdtype(dtype, np.integer):
-        array = rng.randint(0, 10, size=shapes).astype(dtype)
+        array = rng.integers(0, 10, size=shapes).astype(dtype)
     elif np.issubdtype(dtype, np.bool_):
-        array = rng.randint(0, 1, size=shapes).astype(dtype)
-    elif dtype == str:
+        array = rng.integers(0, 1, size=shapes).astype(dtype)
+    elif dtype is str:
         array = rng.choice(["a", "b", "c", "d"], size=shapes)
     else:
         raise ValueError
@@ -296,12 +390,13 @@ def series_reduce(da, func, dim, **kwargs):
         se = da.to_series()
         return from_series_or_scalar(getattr(se, func)(**kwargs))
     else:
-        da1 = []
         dims = list(da.dims)
         dims.remove(dim)
         d = dims[0]
-        for i in range(len(da[d])):
-            da1.append(series_reduce(da.isel(**{d: i}), func, dim, **kwargs))
+        da1 = [
+            series_reduce(da.isel(**{d: i}), func, dim, **kwargs)
+            for i in range(len(da[d]))
+        ]
 
         if d in da.coords:
             return concat(da1, dim=da[d])
@@ -577,17 +672,39 @@ def test_argmin_max_error():
 
 
 @pytest.mark.parametrize(
-    "array",
+    ["array", "expected"],
     [
-        np.array([np.datetime64("2000-01-01"), np.datetime64("NaT")]),
-        np.array([np.timedelta64(1, "h"), np.timedelta64("NaT")]),
-        np.array([0.0, np.nan]),
-        np.array([1j, np.nan]),
-        np.array(["foo", np.nan], dtype=object),
+        (
+            np.array([np.datetime64("2000-01-01"), np.datetime64("NaT")]),
+            np.array([False, True]),
+        ),
+        (
+            np.array([np.timedelta64(1, "h"), np.timedelta64("NaT")]),
+            np.array([False, True]),
+        ),
+        (
+            np.array([0.0, np.nan]),
+            np.array([False, True]),
+        ),
+        (
+            np.array([1j, np.nan]),
+            np.array([False, True]),
+        ),
+        (
+            np.array(["foo", np.nan], dtype=object),
+            np.array([False, True]),
+        ),
+        (
+            np.array([1, 2], dtype=int),
+            np.array([False, False]),
+        ),
+        (
+            np.array([True, False], dtype=bool),
+            np.array([False, False]),
+        ),
     ],
 )
-def test_isnull(array):
-    expected = np.array([False, True])
+def test_isnull(array, expected):
     actual = duck_array_ops.isnull(array)
     np.testing.assert_equal(expected, actual)
 
@@ -891,7 +1008,8 @@ def test_least_squares(use_dask, skipna):
 
 @requires_dask
 @requires_bottleneck
-def test_push_dask():
+@pytest.mark.parametrize("method", ["sequential", "blelloch"])
+def test_push_dask(method):
     import bottleneck
     import dask.array
 
@@ -901,12 +1019,40 @@ def test_push_dask():
         expected = bottleneck.push(array, axis=0, n=n)
         for c in range(1, 11):
             with raise_if_dask_computes():
-                actual = push(dask.array.from_array(array, chunks=c), axis=0, n=n)
+                actual = push(
+                    dask.array.from_array(array, chunks=c), axis=0, n=n, method=method
+                )
             np.testing.assert_equal(actual, expected)
 
         # some chunks of size-1 with NaN
         with raise_if_dask_computes():
             actual = push(
-                dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)), axis=0, n=n
+                dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)),
+                axis=0,
+                n=n,
+                method=method,
             )
         np.testing.assert_equal(actual, expected)
+
+
+def test_extension_array_equality(categorical1, int1):
+    int_duck_array = PandasExtensionArray(int1)
+    categorical_duck_array = PandasExtensionArray(categorical1)
+    assert (int_duck_array != categorical_duck_array).all()
+    assert (categorical_duck_array == categorical1).all()
+    assert (int_duck_array[0:2] == int1[0:2]).all()
+
+
+def test_extension_array_singleton_equality(categorical1):
+    categorical_duck_array = PandasExtensionArray(categorical1)
+    assert (categorical_duck_array != "cat3").all()
+
+
+def test_extension_array_repr(int1):
+    int_duck_array = PandasExtensionArray(int1)
+    assert repr(int1) in repr(int_duck_array)
+
+
+def test_extension_array_attr(int1):
+    int_duck_array = PandasExtensionArray(int1)
+    assert (~int_duck_array.fillna(10)).all()

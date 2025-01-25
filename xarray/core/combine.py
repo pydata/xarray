@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import itertools
 from collections import Counter
-from collections.abc import Iterable, Sequence
-from typing import TYPE_CHECKING, Literal, Union
+from collections.abc import Iterable, Iterator, Sequence
+from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast
 
 import pandas as pd
 
@@ -15,14 +15,26 @@ from xarray.core.merge import merge
 from xarray.core.utils import iterate_nested
 
 if TYPE_CHECKING:
-    from xarray.core.types import CombineAttrsOptions, CompatOptions, JoinOptions
+    from xarray.core.types import (
+        CombineAttrsOptions,
+        CompatOptions,
+        JoinOptions,
+        NestedSequence,
+    )
 
 
-def _infer_concat_order_from_positions(datasets):
+T = TypeVar("T")
+
+
+def _infer_concat_order_from_positions(
+    datasets: NestedSequence[T],
+) -> dict[tuple[int, ...], T]:
     return dict(_infer_tile_ids_from_nested_list(datasets, ()))
 
 
-def _infer_tile_ids_from_nested_list(entry, current_pos):
+def _infer_tile_ids_from_nested_list(
+    entry: NestedSequence[T], current_pos: tuple[int, ...]
+) -> Iterator[tuple[tuple[int, ...], T]]:
     """
     Given a list of lists (of lists...) of objects, returns a iterator
     which returns a tuple containing the index of each object in the nested
@@ -44,11 +56,11 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
     combined_tile_ids : dict[tuple(int, ...), obj]
     """
 
-    if isinstance(entry, list):
+    if not isinstance(entry, str) and isinstance(entry, Sequence):
         for i, item in enumerate(entry):
             yield from _infer_tile_ids_from_nested_list(item, current_pos + (i,))
     else:
-        yield current_pos, entry
+        yield current_pos, cast(T, entry)
 
 
 def _ensure_same_types(series, dim):
@@ -89,10 +101,12 @@ def _infer_concat_order_from_coords(datasets):
             # Need to read coordinate values to do ordering
             indexes = [ds._indexes.get(dim) for ds in datasets]
             if any(index is None for index in indexes):
-                raise ValueError(
-                    "Every dimension needs a coordinate for "
-                    "inferring concatenation order"
+                error_msg = (
+                    f"Every dimension requires a corresponding 1D coordinate "
+                    f"and index for inferring concatenation order but the "
+                    f"coordinate '{dim}' has no corresponding index"
                 )
+                raise ValueError(error_msg)
 
             # TODO (benbovy, flexible indexes): support flexible indexes?
             indexes = [index.to_pandas_index() for index in indexes]
@@ -137,7 +151,8 @@ def _infer_concat_order_from_coords(datasets):
                 # Append positions along extra dimension to structure which
                 # encodes the multi-dimensional concatenation order
                 tile_ids = [
-                    tile_id + (position,) for tile_id, position in zip(tile_ids, order)
+                    tile_id + (position,)
+                    for tile_id, position in zip(tile_ids, order, strict=True)
                 ]
 
     if len(datasets) > 1 and not concat_dims:
@@ -146,7 +161,7 @@ def _infer_concat_order_from_coords(datasets):
             "order the datasets for concatenation"
         )
 
-    combined_ids = dict(zip(tile_ids, datasets))
+    combined_ids = dict(zip(tile_ids, datasets, strict=True))
 
     return combined_ids, concat_dims
 
@@ -179,7 +194,7 @@ def _check_shape_tile_ids(combined_tile_ids):
             raise ValueError(
                 "The supplied objects do not form a hypercube "
                 "because sub-lists do not have consistent "
-                "lengths along dimension" + str(dim)
+                f"lengths along dimension {dim}"
             )
 
 
@@ -305,7 +320,7 @@ def _combine_1d(
                     "xarray.combine_by_coords, or do it manually "
                     "with xarray.concat, xarray.merge and "
                     "xarray.align"
-                )
+                ) from err
             else:
                 raise
     else:
@@ -347,7 +362,7 @@ def _nested_combine(
         combined_ids = _infer_concat_order_from_positions(datasets)
     else:
         # Already sorted so just use the ids already passed
-        combined_ids = dict(zip(ids, datasets))
+        combined_ids = dict(zip(ids, datasets, strict=True))
 
     # Check that the inferred shape is combinable
     _check_shape_tile_ids(combined_ids)
@@ -372,7 +387,7 @@ DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]
 
 def combine_nested(
     datasets: DATASET_HYPERCUBE,
-    concat_dim: (str | DataArray | None | Sequence[str | DataArray | pd.Index | None]),
+    concat_dim: str | DataArray | None | Sequence[str | DataArray | pd.Index | None],
     compat: str = "no_conflicts",
     data_vars: str = "all",
     coords: str = "different",
@@ -484,12 +499,12 @@ def combine_nested(
     ...     }
     ... )
     >>> x1y1
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 64B
     Dimensions:        (x: 2, y: 2)
     Dimensions without coordinates: x, y
     Data variables:
-        temperature    (x, y) float64 1.764 0.4002 0.9787 2.241
-        precipitation  (x, y) float64 1.868 -0.9773 0.9501 -0.1514
+        temperature    (x, y) float64 32B 1.764 0.4002 0.9787 2.241
+        precipitation  (x, y) float64 32B 1.868 -0.9773 0.9501 -0.1514
     >>> x1y2 = xr.Dataset(
     ...     {
     ...         "temperature": (("x", "y"), np.random.randn(2, 2)),
@@ -513,12 +528,12 @@ def combine_nested(
     >>> ds_grid = [[x1y1, x1y2], [x2y1, x2y2]]
     >>> combined = xr.combine_nested(ds_grid, concat_dim=["x", "y"])
     >>> combined
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 256B
     Dimensions:        (x: 4, y: 4)
     Dimensions without coordinates: x, y
     Data variables:
-        temperature    (x, y) float64 1.764 0.4002 -0.1032 ... 0.04576 -0.1872
-        precipitation  (x, y) float64 1.868 -0.9773 0.761 ... -0.7422 0.1549 0.3782
+        temperature    (x, y) float64 128B 1.764 0.4002 -0.1032 ... 0.04576 -0.1872
+        precipitation  (x, y) float64 128B 1.868 -0.9773 0.761 ... 0.1549 0.3782
 
     ``combine_nested`` can also be used to explicitly merge datasets with
     different variables. For example if we have 4 datasets, which are divided
@@ -528,19 +543,19 @@ def combine_nested(
 
     >>> t1temp = xr.Dataset({"temperature": ("t", np.random.randn(5))})
     >>> t1temp
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 40B
     Dimensions:      (t: 5)
     Dimensions without coordinates: t
     Data variables:
-        temperature  (t) float64 -0.8878 -1.981 -0.3479 0.1563 1.23
+        temperature  (t) float64 40B -0.8878 -1.981 -0.3479 0.1563 1.23
 
     >>> t1precip = xr.Dataset({"precipitation": ("t", np.random.randn(5))})
     >>> t1precip
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 40B
     Dimensions:        (t: 5)
     Dimensions without coordinates: t
     Data variables:
-        precipitation  (t) float64 1.202 -0.3873 -0.3023 -1.049 -1.42
+        precipitation  (t) float64 40B 1.202 -0.3873 -0.3023 -1.049 -1.42
 
     >>> t2temp = xr.Dataset({"temperature": ("t", np.random.randn(5))})
     >>> t2precip = xr.Dataset({"precipitation": ("t", np.random.randn(5))})
@@ -549,12 +564,12 @@ def combine_nested(
     >>> ds_grid = [[t1temp, t1precip], [t2temp, t2precip]]
     >>> combined = xr.combine_nested(ds_grid, concat_dim=["t", None])
     >>> combined
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 160B
     Dimensions:        (t: 10)
     Dimensions without coordinates: t
     Data variables:
-        temperature    (t) float64 -0.8878 -1.981 -0.3479 ... -0.5097 -0.4381 -1.253
-        precipitation  (t) float64 1.202 -0.3873 -0.3023 ... -0.2127 -0.8955 0.3869
+        temperature    (t) float64 80B -0.8878 -1.981 -0.3479 ... -0.4381 -1.253
+        precipitation  (t) float64 80B 1.202 -0.3873 -0.3023 ... -0.8955 0.3869
 
     See also
     --------
@@ -570,7 +585,7 @@ def combine_nested(
     if mixed_datasets_and_arrays:
         raise ValueError("Can't combine datasets with unnamed arrays.")
 
-    if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
+    if isinstance(concat_dim, str | DataArray) or concat_dim is None:
         concat_dim = [concat_dim]
 
     # The IDs argument tells _nested_combine that datasets aren't yet sorted
@@ -797,74 +812,74 @@ def combine_by_coords(
     ... )
 
     >>> x1
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 136B
     Dimensions:        (y: 2, x: 3)
     Coordinates:
-      * y              (y) int64 0 1
-      * x              (x) int64 10 20 30
+      * y              (y) int64 16B 0 1
+      * x              (x) int64 24B 10 20 30
     Data variables:
-        temperature    (y, x) float64 10.98 14.3 12.06 10.9 8.473 12.92
-        precipitation  (y, x) float64 0.4376 0.8918 0.9637 0.3834 0.7917 0.5289
+        temperature    (y, x) float64 48B 10.98 14.3 12.06 10.9 8.473 12.92
+        precipitation  (y, x) float64 48B 0.4376 0.8918 0.9637 0.3834 0.7917 0.5289
 
     >>> x2
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 136B
     Dimensions:        (y: 2, x: 3)
     Coordinates:
-      * y              (y) int64 2 3
-      * x              (x) int64 10 20 30
+      * y              (y) int64 16B 2 3
+      * x              (x) int64 24B 10 20 30
     Data variables:
-        temperature    (y, x) float64 11.36 18.51 1.421 1.743 0.4044 16.65
-        precipitation  (y, x) float64 0.7782 0.87 0.9786 0.7992 0.4615 0.7805
+        temperature    (y, x) float64 48B 11.36 18.51 1.421 1.743 0.4044 16.65
+        precipitation  (y, x) float64 48B 0.7782 0.87 0.9786 0.7992 0.4615 0.7805
 
     >>> x3
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 136B
     Dimensions:        (y: 2, x: 3)
     Coordinates:
-      * y              (y) int64 2 3
-      * x              (x) int64 40 50 60
+      * y              (y) int64 16B 2 3
+      * x              (x) int64 24B 40 50 60
     Data variables:
-        temperature    (y, x) float64 2.365 12.8 2.867 18.89 10.44 8.293
-        precipitation  (y, x) float64 0.2646 0.7742 0.4562 0.5684 0.01879 0.6176
+        temperature    (y, x) float64 48B 2.365 12.8 2.867 18.89 10.44 8.293
+        precipitation  (y, x) float64 48B 0.2646 0.7742 0.4562 0.5684 0.01879 0.6176
 
     >>> xr.combine_by_coords([x2, x1])
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 248B
     Dimensions:        (y: 4, x: 3)
     Coordinates:
-      * y              (y) int64 0 1 2 3
-      * x              (x) int64 10 20 30
+      * y              (y) int64 32B 0 1 2 3
+      * x              (x) int64 24B 10 20 30
     Data variables:
-        temperature    (y, x) float64 10.98 14.3 12.06 10.9 ... 1.743 0.4044 16.65
-        precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.7992 0.4615 0.7805
+        temperature    (y, x) float64 96B 10.98 14.3 12.06 ... 1.743 0.4044 16.65
+        precipitation  (y, x) float64 96B 0.4376 0.8918 0.9637 ... 0.4615 0.7805
 
     >>> xr.combine_by_coords([x3, x1])
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 464B
     Dimensions:        (y: 4, x: 6)
     Coordinates:
-      * y              (y) int64 0 1 2 3
-      * x              (x) int64 10 20 30 40 50 60
+      * y              (y) int64 32B 0 1 2 3
+      * x              (x) int64 48B 10 20 30 40 50 60
     Data variables:
-        temperature    (y, x) float64 10.98 14.3 12.06 nan ... nan 18.89 10.44 8.293
-        precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
+        temperature    (y, x) float64 192B 10.98 14.3 12.06 ... 18.89 10.44 8.293
+        precipitation  (y, x) float64 192B 0.4376 0.8918 0.9637 ... 0.01879 0.6176
 
     >>> xr.combine_by_coords([x3, x1], join="override")
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 256B
     Dimensions:        (y: 2, x: 6)
     Coordinates:
-      * y              (y) int64 0 1
-      * x              (x) int64 10 20 30 40 50 60
+      * y              (y) int64 16B 0 1
+      * x              (x) int64 48B 10 20 30 40 50 60
     Data variables:
-        temperature    (y, x) float64 10.98 14.3 12.06 2.365 ... 18.89 10.44 8.293
-        precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
+        temperature    (y, x) float64 96B 10.98 14.3 12.06 ... 18.89 10.44 8.293
+        precipitation  (y, x) float64 96B 0.4376 0.8918 0.9637 ... 0.01879 0.6176
 
     >>> xr.combine_by_coords([x1, x2, x3])
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 464B
     Dimensions:        (y: 4, x: 6)
     Coordinates:
-      * y              (y) int64 0 1 2 3
-      * x              (x) int64 10 20 30 40 50 60
+      * y              (y) int64 32B 0 1 2 3
+      * x              (x) int64 48B 10 20 30 40 50 60
     Data variables:
-        temperature    (y, x) float64 10.98 14.3 12.06 nan ... 18.89 10.44 8.293
-        precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
+        temperature    (y, x) float64 192B 10.98 14.3 12.06 ... 18.89 10.44 8.293
+        precipitation  (y, x) float64 192B 0.4376 0.8918 0.9637 ... 0.01879 0.6176
 
     You can also combine DataArray objects, but the behaviour will differ depending on
     whether or not the DataArrays are named. If all DataArrays are named then they will
@@ -875,37 +890,37 @@ def combine_by_coords(
     ...     name="a", data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x"
     ... )
     >>> named_da1
-    <xarray.DataArray 'a' (x: 2)>
+    <xarray.DataArray 'a' (x: 2)> Size: 16B
     array([1., 2.])
     Coordinates:
-      * x        (x) int64 0 1
+      * x        (x) int64 16B 0 1
 
     >>> named_da2 = xr.DataArray(
     ...     name="a", data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x"
     ... )
     >>> named_da2
-    <xarray.DataArray 'a' (x: 2)>
+    <xarray.DataArray 'a' (x: 2)> Size: 16B
     array([3., 4.])
     Coordinates:
-      * x        (x) int64 2 3
+      * x        (x) int64 16B 2 3
 
     >>> xr.combine_by_coords([named_da1, named_da2])
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 64B
     Dimensions:  (x: 4)
     Coordinates:
-      * x        (x) int64 0 1 2 3
+      * x        (x) int64 32B 0 1 2 3
     Data variables:
-        a        (x) float64 1.0 2.0 3.0 4.0
+        a        (x) float64 32B 1.0 2.0 3.0 4.0
 
     If all the DataArrays are unnamed, a single DataArray will be returned, e.g.
 
     >>> unnamed_da1 = xr.DataArray(data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
     >>> unnamed_da2 = xr.DataArray(data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x")
     >>> xr.combine_by_coords([unnamed_da1, unnamed_da2])
-    <xarray.DataArray (x: 4)>
+    <xarray.DataArray (x: 4)> Size: 32B
     array([1., 2., 3., 4.])
     Coordinates:
-      * x        (x) int64 0 1 2 3
+      * x        (x) int64 32B 0 1 2 3
 
     Finally, if you attempt to combine a mix of unnamed DataArrays with either named
     DataArrays or Datasets, a ValueError will be raised (as this is an ambiguous operation).

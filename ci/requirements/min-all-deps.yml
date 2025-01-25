@@ -7,47 +7,51 @@ dependencies:
   # Run ci/min_deps_check.py to verify that this file respects the policy.
   # When upgrading python, numpy, or pandas, must also change
   # doc/user-guide/installing.rst, doc/user-guide/plotting.rst and setup.py.
-  - python=3.9
-  - boto3=1.24
+  - python=3.10
+  - array-api-strict=1.0 # dependency for testing the array api compat
+  - boto3=1.29
   - bottleneck=1.3
-  - cartopy=0.20
+  - cartopy=0.22
   - cftime=1.6
   - coveralls
-  - dask-core=2022.7
-  - distributed=2022.7
-  - flox=0.5
-  - h5netcdf=1.1
+  - dask-core=2023.11
+  - distributed=2023.11
+  # Flox > 0.8 has a bug with numbagg versions
+  # It will require numbagg > 0.6
+  # so we should just skip that series eventually
+  # or keep flox pinned for longer than necessary
+  - flox=0.7
+  - h5netcdf=1.3
   # h5py and hdf5 tend to cause conflicts
   # for e.g. hdf5 1.12 conflicts with h5py=3.1
   # prioritize bumping other packages instead
-  - h5py=3.7
+  - h5py=3.8
   - hdf5=1.12
   - hypothesis
-  - iris=3.2
-  - lxml=4.9  # Optional dep of pydap
-  - matplotlib-base=3.5
+  - iris=3.7
+  - lxml=4.9 # Optional dep of pydap
+  - matplotlib-base=3.8
   - nc-time-axis=1.4
   # netcdf follows a 1.major.minor[.patch] convention
   # (see https://github.com/Unidata/netcdf4-python/issues/1090)
   - netcdf4=1.6.0
-  - numba=0.55
-  - numpy=1.22
-  - packaging=21.3
-  - pandas=1.4
+  - numba=0.57
+  - numbagg=0.6
+  - numpy=1.24
+  - packaging=23.2
+  - pandas=2.1
   - pint=0.22
   - pip
-  - pydap=3.3
+  - pydap=3.4
   - pytest
   - pytest-cov
   - pytest-env
   - pytest-xdist
   - pytest-timeout
   - rasterio=1.3
-  - scipy=1.8
-  - seaborn=0.11
-  - sparse=0.13
+  - scipy=1.11
+  - seaborn=0.13
+  - sparse=0.14
   - toolz=0.12
-  - typing_extensions=4.3
-  - zarr=2.12
-  - pip:
-    - numbagg==0.2.1
+  - typing_extensions=4.8
+  - zarr=2.16

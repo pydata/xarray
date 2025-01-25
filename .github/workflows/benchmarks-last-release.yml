@@ -22,8 +22,9 @@ jobs:
           fetch-depth: 0
 
       - name: Set up conda environment
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
+          micromamba-version: "1.5.10-0"
           environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
           cache-environment: true
@@ -31,7 +32,7 @@ jobs:
           create-args: >-
             asv
 
-      - name: 'Get Previous tag'
+      - name: "Get Previous tag"
         id: previoustag
         uses: "WyriHaximus/github-action-get-previous-tag@v1"
         # with:
@@ -72,7 +73,7 @@ jobs:
           cp benchmarks/README_CI.md benchmarks.log .asv/results/
         working-directory: ${{ env.ASV_DIR }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: asv-benchmark-results-${{ runner.os }}

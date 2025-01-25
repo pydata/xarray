@@ -3,8 +3,8 @@ from __future__ import annotations
 import functools
 import itertools
 import warnings
-from collections.abc import Hashable, Iterable, MutableMapping
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, cast
+from collections.abc import Callable, Hashable, Iterable, MutableMapping
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast
 
 import numpy as np
 
@@ -119,6 +119,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
     col_labels: list[Annotation | None]
     _x_var: None
     _y_var: None
+    _hue_var: DataArray | None
     _cmap_extend: Any | None
     _mappables: list[ScalarMappable]
     _finalized: bool
@@ -184,7 +185,9 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             ncol = len(data[col])
             nfacet = nrow * ncol
             if col_wrap is not None:
-                warnings.warn("Ignoring col_wrap since both col and row were passed")
+                warnings.warn(
+                    "Ignoring col_wrap since both col and row were passed", stacklevel=2
+                )
         elif row and not col:
             single_group = row
         elif not row and col:
@@ -269,6 +272,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         self.col_labels = [None] * ncol
         self._x_var = None
         self._y_var = None
+        self._hue_var = None
         self._cmap_extend = None
         self._mappables = []
         self._finalized = False
@@ -333,7 +337,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
 
         """
 
-        if kwargs.get("cbar_ax", None) is not None:
+        if kwargs.get("cbar_ax") is not None:
             raise ValueError("cbar_ax not supported by FacetGrid.")
 
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
@@ -359,10 +363,10 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             x=x,
             y=y,
             imshow=func.__name__ == "imshow",
-            rgb=kwargs.get("rgb", None),
+            rgb=kwargs.get("rgb"),
         )
 
-        for d, ax in zip(self.name_dicts.flat, self.axs.flat):
+        for d, ax in zip(self.name_dicts.flat, self.axs.flat, strict=True):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
@@ -417,7 +421,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         # not sure how much that is used outside these tests.
         self.data = self.data.copy()
 
-        if kwargs.get("cbar_ax", None) is not None:
+        if kwargs.get("cbar_ax") is not None:
             raise ValueError("cbar_ax not supported by FacetGrid.")
 
         if func.__name__ == "scatter":
@@ -491,21 +495,24 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         if self._single_group:
             full = tuple(
                 {self._single_group: x}
-                for x in range(0, self.data[self._single_group].size)
+                for x in range(self.data[self._single_group].size)
             )
             empty = tuple(None for x in range(self._nrow * self._ncol - len(full)))
             name_d = full + empty
         else:
             rowcols = itertools.product(
-                range(0, self.data[self._row_var].size),
-                range(0, self.data[self._col_var].size),
+                range(self.data[self._row_var].size),
+                range(self.data[self._col_var].size),
             )
             name_d = tuple({self._row_var: r, self._col_var: c} for r, c in rowcols)
         name_dicts = np.array(name_d).reshape(self._nrow, self._ncol)
 
         # Plot the data for each subplot:
         for add_lbls, d, ax in zip(
-            add_labels_.reshape((self.axs.size, -1)), name_dicts.flat, self.axs.flat
+            add_labels_.reshape((self.axs.size, -1)),
+            name_dicts.flat,
+            self.axs.flat,
+            strict=True,
         ):
             func_kwargs["add_labels"] = add_lbls
             # None is the sentinel value
@@ -530,8 +537,8 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         add_colorbar, add_legend = _determine_guide(
             hueplt_norm,
             sizeplt_norm,
-            kwargs.get("add_colorbar", None),
-            kwargs.get("add_legend", None),
+            kwargs.get("add_colorbar"),
+            kwargs.get("add_legend"),
             # kwargs.get("add_guide", None),
             # kwargs.get("hue_style", None),
         )
@@ -571,7 +578,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
     ) -> T_FacetGrid:
         from xarray.plot.dataarray_plot import _infer_line_data
 
-        for d, ax in zip(self.name_dicts.flat, self.axs.flat):
+        for d, ax in zip(self.name_dicts.flat, self.axs.flat, strict=True):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
@@ -615,7 +622,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
 
         kwargs["add_guide"] = False
 
-        if kwargs.get("markersize", None):
+        if kwargs.get("markersize"):
             kwargs["size_mapping"] = _parse_size(
                 self.data[kwargs["markersize"]], kwargs.pop("size_norm", None)
             )
@@ -638,7 +645,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             raise ValueError("Please provide scale.")
             # TODO: come up with an algorithm for reasonable scale choice
 
-        for d, ax in zip(self.name_dicts.flat, self.axs.flat):
+        for d, ax in zip(self.name_dicts.flat, self.axs.flat, strict=True):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
@@ -672,7 +679,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             self.set_titles()
             self.fig.tight_layout()
 
-            for ax, namedict in zip(self.axs.flat, self.name_dicts.flat):
+            for ax, namedict in zip(self.axs.flat, self.name_dicts.flat, strict=True):
                 if namedict is None:
                     ax.set_visible(False)
 
@@ -715,6 +722,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         if use_legend_elements:
             self.figlegend = _add_legend(**kwargs)
         else:
+            assert self._hue_var is not None
             self.figlegend = self.fig.legend(
                 handles=self._mappables[-1],
                 labels=list(self._hue_var.to_numpy()),
@@ -774,7 +782,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
         >>> fg = ds.plot.scatter(x="A", y="B", hue="y", row="x", col="w")
         >>> round(fg._get_largest_lims()["x"][0], 3)
-        -0.334
+        np.float64(-0.334)
         """
         lims_largest: dict[str, tuple[float, float]] = dict(
             x=(np.inf, -np.inf), y=(np.inf, -np.inf), z=(np.inf, -np.inf)
@@ -817,14 +825,14 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         >>> fg = ds.plot.scatter(x="A", y="B", hue="y", row="x", col="w")
         >>> fg._set_lims(x=(-0.3, 0.3), y=(0, 2), z=(0, 4))
         >>> fg.axs[0, 0].get_xlim(), fg.axs[0, 0].get_ylim()
-        ((-0.3, 0.3), (0.0, 2.0))
+        ((np.float64(-0.3), np.float64(0.3)), (np.float64(0.0), np.float64(2.0)))
         """
         lims_largest = self._get_largest_lims()
 
         # Set limits:
         for ax in self.axs.flat:
             for (axis, data_limit), parameter_limit in zip(
-                lims_largest.items(), (x, y, z)
+                lims_largest.items(), (x, y, z), strict=True
             ):
                 set_lim = getattr(ax, f"set_{axis}lim", None)
                 if set_lim:
@@ -834,7 +842,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         """Set axis labels on the left column and bottom row of the grid."""
         from xarray.core.dataarray import DataArray
 
-        for var, axis in zip(axlabels, ["x", "y", "z"]):
+        for var, axis in zip(axlabels, ["x", "y", "z"], strict=False):
             if var is not None:
                 if isinstance(var, DataArray):
                     getattr(self, f"set_{axis}labels")(label_from_attrs(var))
@@ -893,7 +901,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         nicetitle = functools.partial(_nicetitle, maxchar=maxchar, template=template)
 
         if self._single_group:
-            for d, ax in zip(self.name_dicts.flat, self.axs.flat):
+            for d, ax in zip(self.name_dicts.flat, self.axs.flat, strict=True):
                 # Only label the ones with data
                 if d is not None:
                     coord, value = list(d.items()).pop()
@@ -902,7 +910,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         else:
             # The row titles on the right edge of the grid
             for index, (ax, row_name, handle) in enumerate(
-                zip(self.axs[:, -1], self.row_names, self.row_labels)
+                zip(self.axs[:, -1], self.row_names, self.row_labels, strict=True)
             ):
                 title = nicetitle(coord=self._row_var, value=row_name, maxchar=maxchar)
                 if not handle:
@@ -921,7 +929,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
 
             # The column titles on the top row
             for index, (ax, col_name, handle) in enumerate(
-                zip(self.axs[0, :], self.col_names, self.col_labels)
+                zip(self.axs[0, :], self.col_names, self.col_labels, strict=True)
             ):
                 title = nicetitle(coord=self._col_var, value=col_name, maxchar=maxchar)
                 if not handle:
@@ -992,7 +1000,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         """
         import matplotlib.pyplot as plt
 
-        for ax, namedict in zip(self.axs.flat, self.name_dicts.flat):
+        for ax, namedict in zip(self.axs.flat, self.name_dicts.flat, strict=True):
             if namedict is not None:
                 data = self.data.loc[namedict]
                 plt.sca(ax)

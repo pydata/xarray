@@ -1,8 +1,8 @@
-> **_Note:_**  This Core Team Member Guide was adapted from the [napari project's Core Developer Guide](https://napari.org/stable/developers/core_dev_guide.html) and the [Pandas maintainers guide](https://pandas.pydata.org/docs/development/maintaining.html).
+> **_Note:_** This Core Team Member Guide was adapted from the [napari project's Core Developer Guide](https://napari.org/stable/developers/core_dev_guide.html) and the [Pandas maintainers guide](https://pandas.pydata.org/docs/development/maintaining.html).
 
 # Core Team Member Guide
 
-Welcome, new core team member!  We appreciate the quality of your work, and enjoy working with you!
+Welcome, new core team member! We appreciate the quality of your work, and enjoy working with you!
 Thank you for your numerous contributions to the project so far.
 
 By accepting the invitation to become a core team member you are **not required to commit to doing any more work** -
@@ -107,8 +107,7 @@ Here’s a typical workflow for triaging a newly opened issue or discussion:
 
 6. **Is this a usage question?**
 
-   We prefer that usage questions are asked on StackOverflow with the [`python-xarray` tag](https://stackoverflow.com/questions/tagged/python-xarray
-) or as a [GitHub discussion topic](https://github.com/pydata/xarray/discussions).
+   We prefer that usage questions are asked on StackOverflow with the [`python-xarray` tag](https://stackoverflow.com/questions/tagged/python-xarray) or as a [GitHub discussion topic](https://github.com/pydata/xarray/discussions).
 
    If it’s easy to answer, feel free to link to the relevant documentation section, let them know that in the future this kind of question should be on StackOverflow, and close the issue.
 
@@ -136,7 +135,7 @@ guidelines for how to do that.
 ### All contributors are treated the same
 
 You should now have gained the ability to merge or approve
-other contributors' pull requests.  Merging contributions is a shared power:
+other contributors' pull requests. Merging contributions is a shared power:
 only merge contributions you yourself have carefully reviewed, and that are
 clear improvements for the project. When in doubt, and especially for more
 complex changes, wait until at least one other core team member has approved.
@@ -167,13 +166,13 @@ require the approval of another core team member before they can be merged.
 
 ### How to conduct a good review
 
-*Always* be kind to contributors. Contributors are often doing
+_Always_ be kind to contributors. Contributors are often doing
 volunteer work, for which we are tremendously grateful. Provide
 constructive criticism on ideas and implementations, and remind
 yourself of how it felt when your own work was being evaluated as a
 novice.
 
-``xarray`` strongly values mentorship in code review.  New users
+`xarray` strongly values mentorship in code review. New users
 often need more handholding, having little to no git
 experience. Repeat yourself liberally, and, if you don’t recognize a
 contributor, point them to our development guide, or other GitHub
@@ -186,44 +185,44 @@ an abandoned pull request.
 When reviewing, focus on the following:
 
 1. **Usability and generality:** `xarray` is a user-facing package that strives to be accessible
-to both novice and advanced users, and new features should ultimately be
-accessible to everyone using the package. `xarray` targets the scientific user
-community broadly, and core features should be domain-agnostic and general purpose.
-Custom functionality is meant to be provided through our various types of interoperability.
+   to both novice and advanced users, and new features should ultimately be
+   accessible to everyone using the package. `xarray` targets the scientific user
+   community broadly, and core features should be domain-agnostic and general purpose.
+   Custom functionality is meant to be provided through our various types of interoperability.
 
 2. **Performance and benchmarks:** As `xarray` targets scientific applications that often involve
-large multidimensional datasets, high performance is a key value of `xarray`. While
-every new feature won't scale equally to all sizes of data, keeping in mind performance
-and our [benchmarks](https://github.com/pydata/xarray/tree/main/asv_bench) during a review may be important, and you may
-need to ask for benchmarks to be run and reported or new benchmarks to be added.
-You can run the CI benchmarking suite on any PR by tagging it with the ``run-benchmark`` label.
+   large multidimensional datasets, high performance is a key value of `xarray`. While
+   every new feature won't scale equally to all sizes of data, keeping in mind performance
+   and our [benchmarks](https://github.com/pydata/xarray/tree/main/asv_bench) during a review may be important, and you may
+   need to ask for benchmarks to be run and reported or new benchmarks to be added.
+   You can run the CI benchmarking suite on any PR by tagging it with the `run-benchmark` label.
 
 3. **APIs and stability:** Coding users and developers will make
-extensive use of our APIs. The foundation of a healthy ecosystem will be
-a fully capable and stable set of APIs, so as `xarray` matures it will
-very important to ensure our APIs are stable. Spending the extra time to consider names of public facing
-variables and methods, alongside function signatures, could save us considerable
-trouble in the future. We do our best to provide [deprecation cycles](https://docs.xarray.dev/en/stable/contributing.html#backwards-compatibility)
-when making backwards-incompatible changes.
+   extensive use of our APIs. The foundation of a healthy ecosystem will be
+   a fully capable and stable set of APIs, so as `xarray` matures it will
+   very important to ensure our APIs are stable. Spending the extra time to consider names of public facing
+   variables and methods, alongside function signatures, could save us considerable
+   trouble in the future. We do our best to provide [deprecation cycles](https://docs.xarray.dev/en/stable/contributing.html#backwards-compatibility)
+   when making backwards-incompatible changes.
 
 4. **Documentation and tutorials:** All new methods should have appropriate doc
-strings following [PEP257](https://peps.python.org/pep-0257/) and the
-[NumPy documentation guide](https://numpy.org/devdocs/dev/howto-docs.html#documentation-style).
-For any major new features, accompanying changes should be made to our
-[tutorials](https://tutorial.xarray.dev). These should not only
-illustrates the new feature, but explains it.
+   strings following [PEP257](https://peps.python.org/pep-0257/) and the
+   [NumPy documentation guide](https://numpy.org/devdocs/dev/howto-docs.html#documentation-style).
+   For any major new features, accompanying changes should be made to our
+   [tutorials](https://tutorial.xarray.dev). These should not only
+   illustrates the new feature, but explains it.
 
 5. **Implementations and algorithms:** You should understand the code being modified
-or added before approving it.  (See [Merge Only Changes You Understand](#merge-only-changes-you-understand)
-below.) Implementations should do what they claim and be simple, readable, and efficient
-in that order.
+   or added before approving it. (See [Merge Only Changes You Understand](#merge-only-changes-you-understand)
+   below.) Implementations should do what they claim and be simple, readable, and efficient
+   in that order.
 
-6. **Tests:** All contributions *must* be tested, and each added line of code
-should be covered by at least one test. Good tests not only execute the code,
-but explore corner cases.  It can be tempting not to review tests, but please
-do so.
+6. **Tests:** All contributions _must_ be tested, and each added line of code
+   should be covered by at least one test. Good tests not only execute the code,
+   but explore corner cases. It can be tempting not to review tests, but please
+   do so.
 
-Other changes may be *nitpicky*: spelling mistakes, formatting,
+Other changes may be _nitpicky_: spelling mistakes, formatting,
 etc. Do not insist contributors make these changes, but instead you should offer
 to make these changes by [pushing to their branch](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/committing-changes-to-a-pull-request-branch-created-from-a-fork),
 or using GitHub’s [suggestion](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/commenting-on-a-pull-request)
@@ -233,7 +232,7 @@ it gives the contributor a choice in whether to accept the changes.
 
 Unless you know that a contributor is experienced with git, don’t
 ask for a rebase when merge conflicts arise. Instead, rebase the
-branch yourself, force-push to their branch, and advise the contributor to force-pull.  If the contributor is
+branch yourself, force-push to their branch, and advise the contributor to force-pull. If the contributor is
 no longer active, you may take over their branch by submitting a new pull
 request and closing the original, including a reference to the original pull
 request. In doing so, ensure you communicate that you are not throwing the
@@ -243,17 +242,17 @@ to the pull request using the `Co-authored-by`
 
 ### Merge only changes you understand
 
-*Long-term maintainability* is an important concern.  Code doesn't
-merely have to *work*, but should be *understood* by multiple core
-developers.  Changes will have to be made in the future, and the
+_Long-term maintainability_ is an important concern. Code doesn't
+merely have to _work_, but should be _understood_ by multiple core
+developers. Changes will have to be made in the future, and the
 original contributor may have moved on.
 
-Therefore, *do not merge a code change unless you understand it*. Ask
+Therefore, _do not merge a code change unless you understand it_. Ask
 for help freely: we can consult community members, or even external developers,
 for added insight where needed, and see this as a great learning opportunity.
 
 While we collectively "own" any patches (and bugs!) that become part
-of the code base, you are vouching for changes you merge.  Please take
+of the code base, you are vouching for changes you merge. Please take
 that responsibility seriously.
 
 Feel free to ping other active maintainers with any questions you may have.
@@ -268,11 +267,10 @@ resources such as:
 - Our [philosophy and development roadmap](https://docs.xarray.dev/en/stable/roadmap.html).
 - [PEP8](https://peps.python.org/pep-0008/) for Python style.
 - [PEP257](https://peps.python.org/pep-0257/) and the
-   [NumPy documentation guide](https://numpy.org/devdocs/dev/howto-docs.html#documentation-style)
-   for docstring conventions.
+  [NumPy documentation guide](https://numpy.org/devdocs/dev/howto-docs.html#documentation-style)
+  for docstring conventions.
 - [`pre-commit`](https://pre-commit.com) hooks for autoformatting.
-- [`black`](https://github.com/psf/black) autoformatting.
-- [`flake8`](https://github.com/PyCQA/flake8) linting.
+- [`ruff`](https://github.com/astral-sh/ruff) autoformatting and linting.
 - [python-xarray](https://stackoverflow.com/questions/tagged/python-xarray) on Stack Overflow.
 - [@xarray_dev](https://twitter.com/xarray_dev) on Twitter.
 - [xarray-dev](https://discord.gg/bsSGdwBn) discord community (normally only used for remote synchronous chat during sprints).
@@ -309,7 +307,7 @@ their approval and voting rights until they become active again.
 
 ## Contribute to this guide (!)
 
-This guide reflects the experience of the current core team members.  We
+This guide reflects the experience of the current core team members. We
 may well have missed things that, by now, have become second
 nature—things that you, as a new team member, will spot more easily.
 Please ask the other core team members if you have any questions, and
@@ -317,6 +315,6 @@ submit a pull request with insights gained.
 
 ## Conclusion
 
-We are excited to have you on board!  We look forward to your
-contributions to the code base and the community.  Thank you in
+We are excited to have you on board! We look forward to your
+contributions to the code base and the community. Thank you in
 advance!

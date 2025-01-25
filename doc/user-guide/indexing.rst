@@ -92,8 +92,8 @@ fast. To do label based indexing, use the :py:attr:`~xarray.DataArray.loc` attri
     da.loc["2000-01-01":"2000-01-02", "IA"]
 
 In this example, the selected is a subpart of the array
-in the range '2000-01-01':'2000-01-02' along the first coordinate `time`
-and with 'IA' value from the second coordinate `space`.
+in the range '2000-01-01':'2000-01-02' along the first coordinate ``time``
+and with 'IA' value from the second coordinate ``space``.
 
 You can perform any of the `label indexing operations supported by pandas`__,
 including indexing with individual, slices and lists/arrays of labels, as well as
@@ -323,7 +323,7 @@ Vectorized Indexing
 -------------------
 
 Like numpy and pandas, xarray supports indexing many array elements at once in a
-`vectorized` manner.
+vectorized manner.
 
 If you only provide integers, slices, or unlabeled arrays (array without
 dimension names, such as ``np.ndarray``, ``list``, but not
@@ -549,6 +549,7 @@ __ https://numpy.org/doc/stable/user/basics.indexing.html#assigning-values-to-in
 You can also assign values to all variables of a :py:class:`Dataset` at once:
 
 .. ipython:: python
+    :okwarning:
 
     ds_org = xr.tutorial.open_dataset("eraint_uvz").isel(
         latitude=slice(56, 59), longitude=slice(255, 258), level=0
@@ -629,7 +630,7 @@ Xarray's ``reindex``, ``reindex_like`` and ``align`` impose a ``DataArray`` or
 ``Dataset`` onto a new set of coordinates corresponding to dimensions. The
 original values are subset to the index labels still found in the new labels,
 and values corresponding to new labels not found in the original object are
-in-filled with `NaN`.
+in-filled with ``NaN``.
 
 Xarray operations that combine multiple objects generally automatically align
 their arguments to share the same indexes. However, manual alignment can be
@@ -658,7 +659,7 @@ dimension:
     foo.reindex_like(baz)
 
 The opposite operation asks us to reindex to a larger shape, so we fill in
-the missing values with `NaN`:
+the missing values with ``NaN``:
 
 .. ipython:: python
 
@@ -747,7 +748,7 @@ Whether array indexing returns a view or a copy of the underlying
 data depends on the nature of the labels.
 
 For positional (integer)
-indexing, xarray follows the same rules as NumPy:
+indexing, xarray follows the same `rules`_ as NumPy:
 
 * Positional indexing with only integers and slices returns a view.
 * Positional indexing with arrays or lists returns a copy.
@@ -764,8 +765,10 @@ Whether data is a copy or a view is more predictable in xarray than in pandas, s
 unlike pandas, xarray does not produce `SettingWithCopy warnings`_. However, you
 should still avoid assignment with chained indexing.
 
-.. _SettingWithCopy warnings: https://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
+Note that other operations (such as :py:meth:`~xarray.DataArray.values`) may also return views rather than copies.
 
+.. _SettingWithCopy warnings: https://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
+.. _rules: https://numpy.org/doc/stable/user/basics.copies.html
 
 .. _multi-level indexing:
 

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from types import ModuleType
 from typing import Any
 
@@ -9,6 +8,7 @@ import numpy as np
 from xarray.namedarray._typing import (
     Default,
     _arrayapi,
+    _Axes,
     _Axis,
     _default,
     _Dim,
@@ -19,14 +19,6 @@ from xarray.namedarray._typing import (
     _SupportsReal,
 )
 from xarray.namedarray.core import NamedArray
-
-with warnings.catch_warnings():
-    warnings.filterwarnings(
-        "ignore",
-        r"The numpy.array_api submodule is still experimental",
-        category=UserWarning,
-    )
-    import numpy.array_api as nxp  # noqa: F401
 
 
 def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
@@ -67,13 +59,13 @@ def astype(
 
     Examples
     --------
-    >>> narr = NamedArray(("x",), nxp.asarray([1.5, 2.5]))
+    >>> narr = NamedArray(("x",), np.asarray([1.5, 2.5]))
     >>> narr
-    <xarray.NamedArray (x: 2)>
-    Array([1.5, 2.5], dtype=float64)
+    <xarray.NamedArray (x: 2)> Size: 16B
+    array([1.5, 2.5])
     >>> astype(narr, np.dtype(np.int32))
-    <xarray.NamedArray (x: 2)>
-    Array([1, 2], dtype=int32)
+    <xarray.NamedArray (x: 2)> Size: 8B
+    array([1, 2], dtype=int32)
     """
     if isinstance(x._data, _arrayapi):
         xp = x._data.__array_namespace__()
@@ -87,7 +79,8 @@ def astype(
 
 
 def imag(
-    x: NamedArray[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]], /  # type: ignore[type-var]
+    x: NamedArray[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]],  # type: ignore[type-var]
+    /,
 ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
     """
     Returns the imaginary component of a complex number for each element x_i of the
@@ -108,9 +101,9 @@ def imag(
 
     Examples
     --------
-    >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))  # TODO: Use nxp
+    >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))
     >>> imag(narr)
-    <xarray.NamedArray (x: 2)>
+    <xarray.NamedArray (x: 2)> Size: 16B
     array([2., 4.])
     """
     xp = _get_data_namespace(x)
@@ -119,7 +112,8 @@ def imag(
 
 
 def real(
-    x: NamedArray[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]], /  # type: ignore[type-var]
+    x: NamedArray[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]],  # type: ignore[type-var]
+    /,
 ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
     """
     Returns the real component of a complex number for each element x_i of the
@@ -140,9 +134,9 @@ def real(
 
     Examples
     --------
-    >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))  # TODO: Use nxp
+    >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))
     >>> real(narr)
-    <xarray.NamedArray (x: 2)>
+    <xarray.NamedArray (x: 2)> Size: 16B
     array([1., 2.])
     """
     xp = _get_data_namespace(x)
@@ -178,15 +172,15 @@ def expand_dims(
 
     Examples
     --------
-    >>> x = NamedArray(("x", "y"), nxp.asarray([[1.0, 2.0], [3.0, 4.0]]))
+    >>> x = NamedArray(("x", "y"), np.asarray([[1.0, 2.0], [3.0, 4.0]]))
     >>> expand_dims(x)
-    <xarray.NamedArray (dim_2: 1, x: 2, y: 2)>
-    Array([[[1., 2.],
-            [3., 4.]]], dtype=float64)
+    <xarray.NamedArray (dim_2: 1, x: 2, y: 2)> Size: 32B
+    array([[[1., 2.],
+            [3., 4.]]])
     >>> expand_dims(x, dim="z")
-    <xarray.NamedArray (z: 1, x: 2, y: 2)>
-    Array([[[1., 2.],
-            [3., 4.]]], dtype=float64)
+    <xarray.NamedArray (z: 1, x: 2, y: 2)> Size: 32B
+    array([[[1., 2.],
+            [3., 4.]]])
     """
     xp = _get_data_namespace(x)
     dims = x.dims
@@ -195,4 +189,33 @@ def expand_dims(
     d = list(dims)
     d.insert(axis, dim)
     out = x._new(dims=tuple(d), data=xp.expand_dims(x._data, axis=axis))
+    return out
+
+
+def permute_dims(x: NamedArray[Any, _DType], axes: _Axes) -> NamedArray[Any, _DType]:
+    """
+    Permutes the dimensions of an array.
+
+    Parameters
+    ----------
+    x :
+        Array to permute.
+    axes :
+        Permutation of the dimensions of x.
+
+    Returns
+    -------
+    out :
+        An array with permuted dimensions. The returned array must have the same
+        data type as x.
+
+    """
+
+    dims = x.dims
+    new_dims = tuple(dims[i] for i in axes)
+    if isinstance(x._data, _arrayapi):
+        xp = _get_data_namespace(x)
+        out = x._new(dims=new_dims, data=xp.permute_dims(x._data, axes))
+    else:
+        out = x._new(dims=new_dims, data=x._data.transpose(axes))  # type: ignore[attr-defined]
     return out

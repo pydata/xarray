@@ -4,9 +4,7 @@ from collections.abc import Mapping
 from typing import Any, Generic
 
 import numpy as np
-from packaging.version import Version
 
-from xarray.core import pycompat
 from xarray.core.computation import apply_ufunc
 from xarray.core.options import _get_keep_attrs
 from xarray.core.pdcompat import count_not_none
@@ -81,14 +79,6 @@ class RollingExp(Generic[T_DataWithCoords]):
             raise ImportError(
                 "numbagg >= 0.2.1 is required for rolling_exp but currently numbagg is not installed"
             )
-        elif pycompat.mod_version("numbagg") < Version("0.2.1"):
-            raise ImportError(
-                f"numbagg >= 0.2.1 is required for rolling_exp but currently version {pycompat.mod_version('numbagg')} is installed"
-            )
-        elif pycompat.mod_version("numbagg") < Version("0.3.1") and min_weight > 0:
-            raise ImportError(
-                f"numbagg >= 0.3.1 is required for `min_weight > 0` within `.rolling_exp` but currently version {pycompat.mod_version('numbagg')} is installed"
-            )
 
         self.obj: T_DataWithCoords = obj
         dim, window = next(iter(windows.items()))
@@ -116,7 +106,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         --------
         >>> da = xr.DataArray([1, 1, 2, 2, 2], dims="x")
         >>> da.rolling_exp(x=2, window_type="span").mean()
-        <xarray.DataArray (x: 5)>
+        <xarray.DataArray (x: 5)> Size: 40B
         array([1.        , 1.        , 1.69230769, 1.9       , 1.96694215])
         Dimensions without coordinates: x
         """
@@ -154,7 +144,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         --------
         >>> da = xr.DataArray([1, 1, 2, 2, 2], dims="x")
         >>> da.rolling_exp(x=2, window_type="span").sum()
-        <xarray.DataArray (x: 5)>
+        <xarray.DataArray (x: 5)> Size: 40B
         array([1.        , 1.33333333, 2.44444444, 2.81481481, 2.9382716 ])
         Dimensions without coordinates: x
         """
@@ -187,15 +177,11 @@ class RollingExp(Generic[T_DataWithCoords]):
         --------
         >>> da = xr.DataArray([1, 1, 2, 2, 2], dims="x")
         >>> da.rolling_exp(x=2, window_type="span").std()
-        <xarray.DataArray (x: 5)>
+        <xarray.DataArray (x: 5)> Size: 40B
         array([       nan, 0.        , 0.67936622, 0.42966892, 0.25389527])
         Dimensions without coordinates: x
         """
 
-        if pycompat.mod_version("numbagg") < Version("0.4.0"):
-            raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().std(), currently {pycompat.mod_version('numbagg')} is installed"
-            )
         import numbagg
 
         dim_order = self.obj.dims
@@ -221,14 +207,10 @@ class RollingExp(Generic[T_DataWithCoords]):
         --------
         >>> da = xr.DataArray([1, 1, 2, 2, 2], dims="x")
         >>> da.rolling_exp(x=2, window_type="span").var()
-        <xarray.DataArray (x: 5)>
+        <xarray.DataArray (x: 5)> Size: 40B
         array([       nan, 0.        , 0.46153846, 0.18461538, 0.06446281])
         Dimensions without coordinates: x
         """
-        if pycompat.mod_version("numbagg") < Version("0.4.0"):
-            raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().var(), currently {pycompat.mod_version('numbagg')} is installed"
-            )
         dim_order = self.obj.dims
         import numbagg
 
@@ -253,15 +235,11 @@ class RollingExp(Generic[T_DataWithCoords]):
         --------
         >>> da = xr.DataArray([1, 1, 2, 2, 2], dims="x")
         >>> da.rolling_exp(x=2, window_type="span").cov(da**2)
-        <xarray.DataArray (x: 5)>
+        <xarray.DataArray (x: 5)> Size: 40B
         array([       nan, 0.        , 1.38461538, 0.55384615, 0.19338843])
         Dimensions without coordinates: x
         """
 
-        if pycompat.mod_version("numbagg") < Version("0.4.0"):
-            raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {pycompat.mod_version('numbagg')} is installed"
-            )
         dim_order = self.obj.dims
         import numbagg
 
@@ -287,15 +265,11 @@ class RollingExp(Generic[T_DataWithCoords]):
         --------
         >>> da = xr.DataArray([1, 1, 2, 2, 2], dims="x")
         >>> da.rolling_exp(x=2, window_type="span").corr(da.shift(x=1))
-        <xarray.DataArray (x: 5)>
+        <xarray.DataArray (x: 5)> Size: 40B
         array([       nan,        nan,        nan, 0.4330127 , 0.48038446])
         Dimensions without coordinates: x
         """
 
-        if pycompat.mod_version("numbagg") < Version("0.4.0"):
-            raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().corr(), currently {pycompat.mod_version('numbagg')} is installed"
-            )
         dim_order = self.obj.dims
         import numbagg
 

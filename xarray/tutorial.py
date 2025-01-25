@@ -5,10 +5,12 @@ Useful for:
 * building tutorials in the documentation.
 
 """
+
 from __future__ import annotations
 
 import os
 import pathlib
+import sys
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -37,7 +39,7 @@ def _construct_cache_dir(path):
     return path
 
 
-external_urls = {}  # type: dict
+external_urls: dict = {}
 file_formats = {
     "air_temperature": 3,
     "air_temperature_gradient": 4,
@@ -55,26 +57,26 @@ def _check_netcdf_engine_installed(name):
     version = file_formats.get(name)
     if version == 3:
         try:
-            import scipy  # noqa
+            import scipy  # noqa: F401
         except ImportError:
             try:
-                import netCDF4  # noqa
-            except ImportError:
+                import netCDF4
+            except ImportError as err:
                 raise ImportError(
                     f"opening tutorial dataset {name} requires either scipy or "
                     "netCDF4 to be installed."
-                )
+                ) from err
     if version == 4:
         try:
-            import h5netcdf  # noqa
+            import h5netcdf  # noqa: F401
         except ImportError:
             try:
-                import netCDF4  # noqa
-            except ImportError:
+                import netCDF4  # noqa: F401
+            except ImportError as err:
                 raise ImportError(
                     f"opening tutorial dataset {name} requires either h5netcdf "
                     "or netCDF4 to be installed."
-                )
+                ) from err
 
 
 # idea borrowed from Seaborn
@@ -148,7 +150,7 @@ def open_dataset(
             if engine is None:
                 engine = "cfgrib"
                 try:
-                    import cfgrib  # noqa
+                    import cfgrib  # noqa: F401
                 except ImportError as e:
                     raise ImportError(
                         "Reading this tutorial dataset requires the cfgrib package."
@@ -156,8 +158,13 @@ def open_dataset(
 
         url = f"{base_url}/raw/{version}/{path.name}"
 
+    headers = {"User-Agent": f"xarray {sys.modules['xarray'].__version__}"}
+    downloader = pooch.HTTPDownloader(headers=headers)
+
     # retrieve the file
-    filepath = pooch.retrieve(url=url, known_hash=None, path=cache_dir)
+    filepath = pooch.retrieve(
+        url=url, known_hash=None, path=cache_dir, downloader=downloader
+    )
     ds = _open_dataset(filepath, engine=engine, **kws)
     if not cache:
         ds = ds.load()
