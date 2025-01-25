@@ -73,6 +73,8 @@ Bug fixes
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Fix weighted ``polyfit`` for arrays with more than two dimensions (:issue:`9972`, :pull:`9974`).
   By `Mattia Almansi <https://github.com/malmans2>`_.
+- Include accessors in ``__dir__`` (:pull:`9985`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
