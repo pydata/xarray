@@ -224,7 +224,6 @@ class DatasetView(Dataset):
         "_indexes",
         "_variables",
     )
-    _accessors: str[str] = set()
 
     def __init__(
         self,
@@ -456,6 +455,7 @@ class DataTree(
     _attrs: dict[Hashable, Any] | None
     _encoding: dict[Hashable, Any] | None
     _close: Callable[[], None] | None
+    _accessors: str[str] = set()
 
     __slots__ = (
         "_attrs",
