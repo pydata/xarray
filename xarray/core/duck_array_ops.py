@@ -712,13 +712,13 @@ def mean(array, axis=None, skipna=None, **kwargs):
         # From version 2025.01.2 xarray uses np.datetime64[unit], where unit
         # is one of "s", "ms", "us", "ns".
         # To not have to worry about the resolution, we just convert the output
-        # to "int64" and let the dtype of offset take precedence.
+        # to "timedelta64" (without unit) and let the dtype of offset take precedence.
         # This is fully backwards compatible with datetime64[ns]. For other
         # this might lead to imprecise output, where fractional parts are truncated.
         return (
             _mean(
                 datetime_to_numeric(array, offset), axis=axis, skipna=skipna, **kwargs
-            ).astype("int64")
+            ).astype("timedelta64")
             + offset
         )
     elif _contains_cftime_datetimes(array):
