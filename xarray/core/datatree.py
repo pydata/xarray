@@ -12,7 +12,7 @@ from collections.abc import (
     Mapping,
 )
 from html import escape
-from typing import TYPE_CHECKING, Any, Literal, NoReturn, Union, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, NoReturn, Union, overload
 
 from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
@@ -455,7 +455,7 @@ class DataTree(
     _attrs: dict[Hashable, Any] | None
     _encoding: dict[Hashable, Any] | None
     _close: Callable[[], None] | None
-    _accessors: set[str] = set()
+    _accessors: ClassVar[set[str]] = set()
 
     __slots__ = (
         "_attrs",

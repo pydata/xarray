@@ -16,6 +16,7 @@ from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Any,
+    ClassVar,
     Generic,
     Literal,
     NoReturn,
@@ -421,7 +422,7 @@ class DataArray(
     _indexes: dict[Hashable, Index]
     _name: Hashable | None
     _variable: Variable
-    _accessors: set[str] = set()
+    _accessors: ClassVar[set[str]] = set()
 
     __slots__ = (
         "__weakref__",

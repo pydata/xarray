@@ -24,7 +24,7 @@ from numbers import Number
 from operator import methodcaller
 from os import PathLike
 from types import EllipsisType
-from typing import IO, TYPE_CHECKING, Any, Generic, Literal, cast, overload
+from typing import IO, TYPE_CHECKING, Any, ClassVar, Generic, Literal, cast, overload
 
 import numpy as np
 from pandas.api.types import is_extension_array_dtype
@@ -709,7 +709,7 @@ class Dataset(
     _close: Callable[[], None] | None
     _indexes: dict[Hashable, Index]
     _variables: dict[Hashable, Variable]
-    _accessors: set[str] = set()
+    _accessors: ClassVar[set[str]] = set()
 
     __slots__ = (
         "__weakref__",
