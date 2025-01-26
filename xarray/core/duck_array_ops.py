@@ -713,8 +713,7 @@ def mean(array, axis=None, skipna=None, **kwargs):
         # is one of "s", "ms", "us", "ns".
         # To not have to worry about the resolution, we just convert the output
         # to "timedelta64" (without unit) and let the dtype of offset take precedence.
-        # This is fully backwards compatible with datetime64[ns]. For other
-        # this might lead to imprecise output, where fractional parts are truncated.
+        # This is fully backwards compatible with datetime64[ns].
         return (
             _mean(
                 datetime_to_numeric(array, offset), axis=axis, skipna=skipna, **kwargs

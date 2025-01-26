@@ -970,8 +970,6 @@ def test_np_timedelta64_to_float(
     # tests any combination of source np.timedelta64 (NPDatetimeUnitOptions) with
     # np_timedelta_to_float with dedicated target unit (PDDatetimeUnitOptions)
     td = np.timedelta64(1, np_dt_unit)
-    if _NS_PER_TIME_DELTA[np_dt_unit] < _NS_PER_TIME_DELTA[time_unit]:
-        pytest.skip("combination cannot be calculated without precision loss")
     expected = _NS_PER_TIME_DELTA[np_dt_unit] / _NS_PER_TIME_DELTA[time_unit]
 
     out = np_timedelta64_to_float(td, datetime_unit=time_unit)
@@ -989,8 +987,6 @@ def test_pd_timedelta_to_float(
     # tests any combination of source pd.Timedelta (NPDatetimeUnitOptions) with
     # np_timedelta_to_float with dedicated target unit (PDDatetimeUnitOptions)
     td = pd.Timedelta(1, np_dt_unit)
-    if _NS_PER_TIME_DELTA[np_dt_unit] < _NS_PER_TIME_DELTA[time_unit]:
-        pytest.skip("combination cannot be calculated without precision loss")
     expected = _NS_PER_TIME_DELTA[np_dt_unit] / _NS_PER_TIME_DELTA[time_unit]
 
     out = pd_timedelta_to_float(td, datetime_unit=time_unit)
