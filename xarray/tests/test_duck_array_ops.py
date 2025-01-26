@@ -341,16 +341,16 @@ class TestArrayNotNullEquiv:
 
 def construct_dataarray(dim_num, dtype, contains_nan, dask):
     # dimnum <= 3
-    rng = np.random.RandomState(0)
+    rng = np.random.default_rng(0)
     shapes = [16, 8, 4][:dim_num]
     dims = ("x", "y", "z")[:dim_num]
 
     if np.issubdtype(dtype, np.floating):
-        array = rng.randn(*shapes).astype(dtype)
+        array = rng.random(shapes).astype(dtype)
     elif np.issubdtype(dtype, np.integer):
-        array = rng.randint(0, 10, size=shapes).astype(dtype)
+        array = rng.integers(0, 10, size=shapes).astype(dtype)
     elif np.issubdtype(dtype, np.bool_):
-        array = rng.randint(0, 1, size=shapes).astype(dtype)
+        array = rng.integers(0, 1, size=shapes).astype(dtype)
     elif dtype is str:
         array = rng.choice(["a", "b", "c", "d"], size=shapes)
     else:
@@ -1008,7 +1008,8 @@ def test_least_squares(use_dask, skipna):
 
 @requires_dask
 @requires_bottleneck
-def test_push_dask():
+@pytest.mark.parametrize("method", ["sequential", "blelloch"])
+def test_push_dask(method):
     import bottleneck
     import dask.array
 
@@ -1018,13 +1019,18 @@ def test_push_dask():
         expected = bottleneck.push(array, axis=0, n=n)
         for c in range(1, 11):
             with raise_if_dask_computes():
-                actual = push(dask.array.from_array(array, chunks=c), axis=0, n=n)
+                actual = push(
+                    dask.array.from_array(array, chunks=c), axis=0, n=n, method=method
+                )
             np.testing.assert_equal(actual, expected)
 
         # some chunks of size-1 with NaN
         with raise_if_dask_computes():
             actual = push(
-                dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)), axis=0, n=n
+                dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)),
+                axis=0,
+                n=n,
+                method=method,
             )
         np.testing.assert_equal(actual, expected)
 

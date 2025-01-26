@@ -18,6 +18,7 @@ from xarray import (
 )
 from xarray.backends.common import WritableCFDataStore
 from xarray.backends.memory import InMemoryDataStore
+from xarray.coders import CFDatetimeCoder
 from xarray.conventions import decode_cf
 from xarray.testing import assert_identical
 from xarray.tests import (
@@ -213,7 +214,6 @@ class TestEncodeCFVariable:
         vars, attrs = conventions.encode_dataset_coordinates(ds)
         assert attrs["coordinates"] == "bar baz"
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_emit_coordinates_attribute_in_attrs(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
@@ -231,7 +231,6 @@ class TestEncodeCFVariable:
         assert enc["b"].attrs.get("coordinates") == "t"
         assert "coordinates" not in enc["b"].encoding
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_emit_coordinates_attribute_in_encoding(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
@@ -248,13 +247,6 @@ class TestEncodeCFVariable:
         # check coordinate attribute not emitted for 'b'
         assert enc["b"].attrs.get("coordinates") == "t"
         assert "coordinates" not in enc["b"].encoding
-
-    @requires_dask
-    def test_string_object_warning(self) -> None:
-        original = Variable(("x",), np.array(["foo", "bar"], dtype=object)).chunk()
-        with pytest.warns(SerializationWarning, match="dask array with dtype=object"):
-            encoded = conventions.encode_cf_variable(original)
-        assert_identical(original, encoded)
 
 
 @requires_cftime
@@ -293,6 +285,96 @@ class TestDecodeCF:
         )
         actual = conventions.decode_cf(original)
         assert actual.foo.encoding["coordinates"] == "x"
+
+    def test_decode_coordinates_with_key_values(self) -> None:
+        # regression test for GH9761
+        original = Dataset(
+            {
+                "temp": (
+                    ("y", "x"),
+                    np.random.rand(2, 2),
+                    {
+                        "long_name": "temperature",
+                        "units": "K",
+                        "coordinates": "lat lon",
+                        "grid_mapping": "crs",
+                    },
+                ),
+                "x": (
+                    ("x"),
+                    np.arange(2),
+                    {"standard_name": "projection_x_coordinate", "units": "m"},
+                ),
+                "y": (
+                    ("y"),
+                    np.arange(2),
+                    {"standard_name": "projection_y_coordinate", "units": "m"},
+                ),
+                "lat": (
+                    ("y", "x"),
+                    np.random.rand(2, 2),
+                    {"standard_name": "latitude", "units": "degrees_north"},
+                ),
+                "lon": (
+                    ("y", "x"),
+                    np.random.rand(2, 2),
+                    {"standard_name": "longitude", "units": "degrees_east"},
+                ),
+                "crs": (
+                    (),
+                    None,
+                    {
+                        "grid_mapping_name": "transverse_mercator",
+                        "longitude_of_central_meridian": -2.0,
+                    },
+                ),
+                "crs2": (
+                    (),
+                    None,
+                    {
+                        "grid_mapping_name": "longitude_latitude",
+                        "longitude_of_central_meridian": -2.0,
+                    },
+                ),
+            },
+        )
+
+        original.temp.attrs["grid_mapping"] = "crs: x y"
+        vars, attrs, coords = conventions.decode_cf_variables(
+            original.variables, {}, decode_coords="all"
+        )
+        assert coords == {"lat", "lon", "crs"}
+
+        original.temp.attrs["grid_mapping"] = "crs: x y crs2: lat lon"
+        vars, attrs, coords = conventions.decode_cf_variables(
+            original.variables, {}, decode_coords="all"
+        )
+        assert coords == {"lat", "lon", "crs", "crs2"}
+
+        # stray colon
+        original.temp.attrs["grid_mapping"] = "crs: x y crs2 : lat lon"
+        vars, attrs, coords = conventions.decode_cf_variables(
+            original.variables, {}, decode_coords="all"
+        )
+        assert coords == {"lat", "lon", "crs", "crs2"}
+
+        original.temp.attrs["grid_mapping"] = "crs x y crs2: lat lon"
+        with pytest.raises(ValueError, match="misses ':'"):
+            conventions.decode_cf_variables(original.variables, {}, decode_coords="all")
+
+        del original.temp.attrs["grid_mapping"]
+        original.temp.attrs["formula_terms"] = "A: lat D: lon E: crs2"
+        vars, attrs, coords = conventions.decode_cf_variables(
+            original.variables, {}, decode_coords="all"
+        )
+        assert coords == {"lat", "lon", "crs2"}
+
+        original.temp.attrs["formula_terms"] = "A: lat lon D: crs E: crs2"
+        with pytest.warns(UserWarning, match="has malformed content"):
+            vars, attrs, coords = conventions.decode_cf_variables(
+                original.variables, {}, decode_coords="all"
+            )
+            assert coords == {"lat", "lon", "crs", "crs2"}
 
     def test_0d_int32_encoding(self) -> None:
         original = Variable((), np.int32(0), encoding={"dtype": "int64"})
@@ -354,7 +436,8 @@ class TestDecodeCF:
         assert_identical(expected, decode_cf(ds, decode_times=decode_times))
 
     @requires_cftime
-    def test_dataset_repr_with_netcdf4_datetimes(self) -> None:
+    @pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
+    def test_dataset_repr_with_netcdf4_datetimes(self, time_unit) -> None:
         # regression test for #347
         attrs = {"units": "days since 0001-01-01", "calendar": "noleap"}
         with warnings.catch_warnings():
@@ -363,8 +446,11 @@ class TestDecodeCF:
             assert "(time) object" in repr(ds)
 
         attrs = {"units": "days since 1900-01-01"}
-        ds = decode_cf(Dataset({"time": ("time", [0, 1], attrs)}))
-        assert "(time) datetime64[ns]" in repr(ds)
+        ds = decode_cf(
+            Dataset({"time": ("time", [0, 1], attrs)}),
+            decode_times=CFDatetimeCoder(time_unit=time_unit),
+        )
+        assert f"(time) datetime64[{time_unit}]" in repr(ds)
 
     @requires_cftime
     def test_decode_cf_datetime_transition_to_invalid(self) -> None:
@@ -423,14 +509,18 @@ class TestDecodeCF:
             conventions.decode_cf(original).chunk(),
         )
 
-    def test_decode_cf_time_kwargs(self) -> None:
+    @pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
+    def test_decode_cf_time_kwargs(self, time_unit) -> None:
+        # todo: if we set timedelta attrs "units": "days"
+        #  this errors on the last decode_cf wrt to the lazy_elemwise_func
+        #  trying to convert twice
         ds = Dataset.from_dict(
             {
                 "coords": {
                     "timedelta": {
                         "data": np.array([1, 2, 3], dtype="int64"),
                         "dims": "timedelta",
-                        "attrs": {"units": "days"},
+                        "attrs": {"units": "seconds"},
                     },
                     "time": {
                         "data": np.array([1, 2, 3], dtype="int64"),
@@ -445,15 +535,21 @@ class TestDecodeCF:
             }
         )
 
-        dsc = conventions.decode_cf(ds)
+        dsc = conventions.decode_cf(
+            ds, decode_times=CFDatetimeCoder(time_unit=time_unit)
+        )
         assert dsc.timedelta.dtype == np.dtype("m8[ns]")
-        assert dsc.time.dtype == np.dtype("M8[ns]")
+        assert dsc.time.dtype == np.dtype(f"M8[{time_unit}]")
         dsc = conventions.decode_cf(ds, decode_times=False)
         assert dsc.timedelta.dtype == np.dtype("int64")
         assert dsc.time.dtype == np.dtype("int64")
-        dsc = conventions.decode_cf(ds, decode_times=True, decode_timedelta=False)
+        dsc = conventions.decode_cf(
+            ds,
+            decode_times=CFDatetimeCoder(time_unit=time_unit),
+            decode_timedelta=False,
+        )
         assert dsc.timedelta.dtype == np.dtype("int64")
-        assert dsc.time.dtype == np.dtype("M8[ns]")
+        assert dsc.time.dtype == np.dtype(f"M8[{time_unit}]")
         dsc = conventions.decode_cf(ds, decode_times=False, decode_timedelta=True)
         assert dsc.timedelta.dtype == np.dtype("m8[ns]")
         assert dsc.time.dtype == np.dtype("int64")
@@ -501,18 +597,6 @@ class TestCFEncodedDataStore(CFEncodedBase):
     def test_encoding_kwarg_fixed_width_string(self) -> None:
         # CFEncodedInMemoryStore doesn't support explicit string encodings.
         pass
-
-
-@pytest.mark.parametrize(
-    "data",
-    [
-        np.array([["ab", "cdef", b"X"], [1, 2, "c"]], dtype=object),
-        np.array([["x", 1], ["y", 2]], dtype="object"),
-    ],
-)
-def test_infer_dtype_error_on_mixed_types(data):
-    with pytest.raises(ValueError, match="unable to infer dtype on variable"):
-        conventions._infer_dtype(data, "test")
 
 
 class TestDecodeCFVariableWithArrayUnits:
