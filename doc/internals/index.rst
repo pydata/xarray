@@ -26,3 +26,4 @@ The pages in this section are intended for:
    how-to-add-new-backend
    how-to-create-custom-index
    zarr-encoding-spec
+   time-coding

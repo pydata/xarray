@@ -19,9 +19,43 @@ What's New
 v2025.01.2 (unreleased)
 -----------------------
 
+This release brings non-nanosecond datetime resolution to xarray. In the
+last couple of releases xarray has been prepared for that change. The code had
+to be changed and adapted in numerous places, affecting especially the test suite.
+The documentation has been updated accordingly and a new internal chapter
+on :ref:`internals.timecoding` has been added.
+
+To make the transition as smooth as possible this is designed to be fully backwards
+compatible, keeping the current default of ``'ns'`` resolution on decoding.
+To opt-in decoding into other resolutions (``'us'``, ``'ms'`` or ``'s'``) the
+new :py:class:`coders.CFDatetimeCoder` is used as parameter to ``decode_times``
+kwarg (see also :ref:`internals.default_timeunit`):
+
+.. code-block:: python
+
+    coder = xr.coders.CFDatetimeCoder(time_unit="s")
+    ds = xr.open_dataset(filename, decode_times=coder)
+
+There might slight changes when encoding/decoding times as some warning and
+error messages have been removed or rewritten. Xarray will now also allow
+non-nanosecond datetimes (with ``'us'``, ``'ms'`` or ``'s'`` resolution) when
+creating DataArray's from scratch, picking the lowest possible resolution:
+
+.. ipython:: python
+
+    xr.DataArray(data=[np.datetime64("2000-01-01", "D")], dims=("time",))
+
+In a future release the current default of ``'ns'`` resolution on decoding will
+eventually be deprecated.
+
 New Features
 ~~~~~~~~~~~~
-
+- Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
+- Improve the error message raised when no key is matching the available variables in a dataset.  (:pull:`9943`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- :py:meth:`DatasetGroupBy.first` and :py:meth:`DatasetGroupBy.last` can now use ``flox`` if available. (:issue:`9647`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -36,13 +70,25 @@ Bug fixes
 
 - Fix :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` when the limit is bigger than the chunksize (:issue:`9939`).
   By `Joseph Nowak <https://github.com/josephnowak>`_.
+- Fix issues related to Pandas v3 ("us" vs. "ns" for python datetime, copy on write) and handling of 0d-numpy arrays in datetime/timedelta decoding (:pull:`9953`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Remove dask-expr from CI runs, add "pyarrow" dask dependency to windows CI runs, fix related tests (:issue:`9962`, :pull:`9971`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Use zarr-fixture to prevent thread leakage errors (:pull:`9967`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix weighted ``polyfit`` for arrays with more than two dimensions (:issue:`9972`, :pull:`9974`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 
 Documentation
 ~~~~~~~~~~~~~
-
+- A chapter on :ref:`internals.timecoding` is added to the internal section (:pull:`9618`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Updated time coding tests to assert exact equality rather than equality with
+  a tolerance, since xarray's minimum supported version of cftime is greater
+  than 1.2.1 (:pull:`9961`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.2025.01.1:
 

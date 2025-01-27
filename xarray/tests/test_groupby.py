@@ -638,7 +638,6 @@ def test_groupby_repr_datetime(obj) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:No index created for dimension id:UserWarning")
-@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.filterwarnings("ignore:invalid value encountered in divide:RuntimeWarning")
 @pytest.mark.parametrize("shuffle", [True, False])
 @pytest.mark.parametrize(
@@ -1619,6 +1618,8 @@ class TestDataArrayGroupBy:
         expected = array  # should be a no-op
         assert_identical(expected, actual)
 
+        # TODO: groupby_bins too
+
     def make_groupby_multidim_example_array(self) -> DataArray:
         return DataArray(
             [[[0, 1], [2, 3]], [[5, 10], [15, 20]]],
@@ -2200,9 +2201,8 @@ class TestDataArrayResample:
             assert_allclose(expected, actual, rtol=1e-16)
 
     @requires_scipy
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_upsample_interpolate_bug_2197(self) -> None:
-        dates = pd.date_range("2007-02-01", "2007-03-01", freq="D")
+        dates = pd.date_range("2007-02-01", "2007-03-01", freq="D", unit="s")
         da = xr.DataArray(np.arange(len(dates)), [("time", dates)])
         result = da.resample(time="ME").interpolate("linear")
         expected_times = np.array(

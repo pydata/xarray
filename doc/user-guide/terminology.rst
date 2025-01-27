@@ -60,7 +60,7 @@ complete examples, please consult the relevant documentation.*
         coordinate`. A coordinate named ``x`` can be retrieved from
         ``arr.coords[x]``. A ``DataArray`` can have more coordinates than
         dimensions because a single dimension can be labeled by multiple
-        coordinate arrays. However, only one coordinate array can be a assigned
+        coordinate arrays. However, only one coordinate array can be assigned
         as a particular dimension's dimension coordinate array.
 
     Dimension coordinate

@@ -64,6 +64,7 @@ if TYPE_CHECKING:
         NestedSequence,
         ReadBuffer,
         T_Chunks,
+        ZarrStoreLike,
     )
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
@@ -775,7 +776,8 @@ def open_dataarray(
         be replaced by NA. This keyword may not be supported by all the backends.
     decode_times : bool, CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them encoded as numbers.
+        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or
+        leave them encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -984,7 +986,8 @@ def open_datatree(
         This keyword may not be supported by all the backends.
     decode_times : bool, CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them encoded as numbers.
+        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or
+        leave them encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -1210,7 +1213,8 @@ def open_groups(
         This keyword may not be supported by all the backends.
     decode_times : bool, CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them encoded as numbers.
+        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or
+        leave them encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -2097,7 +2101,7 @@ def save_mfdataset(
 @overload
 def to_zarr(
     dataset: Dataset,
-    store: MutableMapping | str | os.PathLike[str] | None = None,
+    store: ZarrStoreLike | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
     synchronizer=None,
@@ -2120,7 +2124,7 @@ def to_zarr(
 @overload
 def to_zarr(
     dataset: Dataset,
-    store: MutableMapping | str | os.PathLike[str] | None = None,
+    store: ZarrStoreLike | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
     synchronizer=None,
@@ -2141,7 +2145,7 @@ def to_zarr(
 
 def to_zarr(
     dataset: Dataset,
-    store: MutableMapping | str | os.PathLike[str] | None = None,
+    store: ZarrStoreLike | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
     synchronizer=None,

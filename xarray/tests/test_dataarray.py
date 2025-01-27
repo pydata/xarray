@@ -48,6 +48,7 @@ from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     has_dask,
+    has_dask_ge_2025_1_0,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -3437,7 +3438,7 @@ class TestDataArray:
 
     @requires_dask_expr
     @requires_dask
-    @pytest.mark.xfail(reason="dask-expr is broken")
+    @pytest.mark.xfail(not has_dask_ge_2025_1_0, reason="dask-expr is broken")
     def test_to_dask_dataframe(self) -> None:
         arr_np = np.arange(3 * 4).reshape(3, 4)
         arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
@@ -3661,7 +3662,6 @@ class TestDataArray:
         actual_no_data = da.to_dict(data=False, encoding=encoding)
         assert expected_no_data == actual_no_data
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_to_and_from_dict_with_time_dim(self) -> None:
         x = np.random.randn(10, 3)
         t = pd.date_range("20130101", periods=10)
@@ -3670,7 +3670,6 @@ class TestDataArray:
         roundtripped = DataArray.from_dict(da.to_dict())
         assert_identical(da, roundtripped)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_to_and_from_dict_with_nan_nat(self) -> None:
         y = np.random.randn(10, 3)
         y[2] = np.nan
