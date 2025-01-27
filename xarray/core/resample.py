@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from xarray.core._aggregations import (
     DataArrayResampleAggregations,
@@ -104,7 +104,7 @@ class Resample(GroupBy[T_Xarray]):
         return self._shuffle_obj(chunks).drop_vars(RESAMPLE_DIM)
 
     def _first_or_last(
-        self, op: str, skipna: bool | None, keep_attrs: bool | None
+        self, op: Literal["first", "last"], skipna: bool | None, keep_attrs: bool | None
     ) -> T_Xarray:
         from xarray.core.dataset import Dataset
 
