@@ -71,7 +71,7 @@ if TYPE_CHECKING:
     try:
         from zarr import Array as ZarrArray
     except ImportError:
-        ZarrArray = np.ndarray
+        ZarrArray = np.ndarray  # type: ignore[misc, assignment, unused-ignore]
 
     # Anything that can be coerced to a shape tuple
     _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]

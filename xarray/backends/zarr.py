@@ -768,7 +768,7 @@ class ZarrStore(AbstractWritableDataStore):
             self._members = self._fetch_members()
 
     @property
-    def members(self) -> dict[str, ZarrArray]:
+    def members(self) -> dict[str, ZarrArray | ZarrGroup]:
         """
         Model the arrays and groups contained in self.zarr_group as a dict. If `self._cache_members`
         is true, the dict is cached. Otherwise, it is retrieved from storage.
@@ -778,7 +778,7 @@ class ZarrStore(AbstractWritableDataStore):
         else:
             return self._members
 
-    def _fetch_members(self) -> dict[str, ZarrArray]:
+    def _fetch_members(self) -> dict[str, ZarrArray | ZarrGroup]:
         """
         Get the arrays and groups defined in the zarr group modelled by this Store
         """
@@ -1066,6 +1066,8 @@ class ZarrStore(AbstractWritableDataStore):
         else:
             zarr_array = self.zarr_group[name]
 
+        if TYPE_CHECKING:
+            assert isinstance(zarr_array, ZarrArray)
         return zarr_array
 
     def _create_new_array(
