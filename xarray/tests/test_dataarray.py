@@ -48,6 +48,7 @@ from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     has_dask,
+    has_dask_ge_2025_1_0,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -3437,7 +3438,7 @@ class TestDataArray:
 
     @requires_dask_expr
     @requires_dask
-    @pytest.mark.xfail(reason="dask-expr is broken")
+    @pytest.mark.xfail(not has_dask_ge_2025_1_0, reason="dask-expr is broken")
     def test_to_dask_dataframe(self) -> None:
         arr_np = np.arange(3 * 4).reshape(3, 4)
         arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")

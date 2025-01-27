@@ -414,7 +414,7 @@ class TestZarrDatatreeIO:
         store = ZipStore(filepath)
         original_dt.to_zarr(store)
 
-        with open_datatree(store, engine="zarr") as roundtrip_dt:
+        with open_datatree(store, engine="zarr") as roundtrip_dt:  # type: ignore[arg-type, unused-ignore]
             assert_equal(original_dt, roundtrip_dt)
 
     def test_to_zarr_not_consolidated(self, tmpdir, simple_datatree):
