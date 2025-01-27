@@ -2496,6 +2496,24 @@ class ZarrBase(CFEncodedBase):
             with self.roundtrip(data) as actual:
                 pass
 
+    def test_shard_encoding(self) -> None:
+        # These datasets have no dask chunks. All chunking/sharding specified in
+        # encoding
+        if has_zarr_v3 and zarr.config.config["default_zarr_format"] == 3:
+            data = create_test_data()
+            chunks = (1, 1)
+            shards = (5, 5)
+            data["var2"].encoding.update({"chunks": chunks})
+            data["var2"].encoding.update({"shards": shards})
+            with self.roundtrip(data) as actual:
+                assert shards == actual["var2"].encoding["shards"]
+
+            # expect an error with shards not divisible by chunks
+            data["var2"].encoding.update({"chunks": (2, 2)})
+            with pytest.raises(ValueError):
+                with self.roundtrip(data) as actual:
+                    pass
+
     @requires_dask
     @pytest.mark.skipif(
         ON_WINDOWS,
