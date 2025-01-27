@@ -61,6 +61,8 @@ New Features
   :py:class:`pandas.DatetimeIndex` (:pull:`9965`). By `Spencer Clark
   <https://github.com/spencerkclark>`_ and `Kai Mühlbauer
   <https://github.com/kmuehlbauer>`_.
+- :py:meth:`DatasetGroupBy.first` and :py:meth:`DatasetGroupBy.last` can now use ``flox`` if available. (:issue:`9647`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
