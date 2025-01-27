@@ -52,6 +52,8 @@ New Features
 ~~~~~~~~~~~~
 - Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
+- Improve the error message raised when no key is matching the available variables in a dataset.  (:pull:`9943`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -63,7 +65,14 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix issues related to Pandas v3 ("us" vs. "ns" for python datetime, copy on write) and handling of 0d-numpy arrays in datetime/timedelta decoding (:pull:`9953`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Remove dask-expr from CI runs, add "pyarrow" dask dependency to windows CI runs, fix related tests (:issue:`9962`, :pull:`9971`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Use zarr-fixture to prevent thread leakage errors (:pull:`9967`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix weighted ``polyfit`` for arrays with more than two dimensions (:issue:`9972`, :pull:`9974`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -72,6 +81,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Updated time coding tests to assert exact equality rather than equality with
+  a tolerance, since xarray's minimum supported version of cftime is greater
+  than 1.2.1 (:pull:`9961`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.2025.01.1:
 
