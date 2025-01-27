@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from os import PathLike
-from typing import Any, Literal, get_args
+from typing import TYPE_CHECKING, Any, Literal, get_args
 
 from xarray.core.datatree import DataTree
-from xarray.core.types import NetcdfWriteModes, ZarrStoreLike, ZarrWriteModes
+from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 
 T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf"]
 T_DataTreeNetcdfTypes = Literal["NETCDF4"]
+
+if TYPE_CHECKING:
+    from xarray.core.types import ZarrStoreLike
 
 
 def _datatree_to_netcdf(
