@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import itertools
 from collections import Counter, defaultdict
 from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
 from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast
@@ -607,7 +606,8 @@ K = TypeVar("K", bound=Hashable)
 
 
 def groupby_defaultdict(
-    iter: list[T], key: Callable[[T], K],
+    iter: list[T],
+    key: Callable[[T], K],
 ) -> Iterator[tuple[K, Iterator[T]]]:
     """replacement for itertools.groupby"""
     idx = defaultdict(list)
