@@ -269,10 +269,7 @@ def _combine_all_along_first_dim(
     combine_attrs: CombineAttrsOptions = "drop",
 ):
     # Group into lines of datasets which must be combined along dim
-    # need to sort by _new_tile_id first for groupby to work
-    # TODO: is the sorted need?
-    combined_ids = dict(sorted(combined_ids.items(), key=_new_tile_id))
-    grouped = itertools.groupby(combined_ids.items(), key=_new_tile_id)
+    grouped = groupby_defaultdict(combined_ids.items(), key=_new_tile_id)
 
     # Combine all of these datasets along dim
     new_combined_ids = {}
@@ -606,12 +603,11 @@ def vars_as_keys(ds):
     return tuple(sorted(ds))
 
 
-T = TypeVar("T")
 K = TypeVar("K", bound=Hashable)
 
 
 def groupby_defaultdict(
-    iter: list[T], key: Callable[[T], K] = lambda x: x
+    iter: list[T], key: Callable[[T], K],
 ) -> Iterator[tuple[K, Iterator[T]]]:
     """replacement for itertools.groupby"""
     idx = defaultdict(list)
