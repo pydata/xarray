@@ -70,10 +70,8 @@ if TYPE_CHECKING:
 
     try:
         from zarr import Array as ZarrArray
-        from zarr.storage import StoreLike as ZarrStoreLike
     except ImportError:
         ZarrArray = np.ndarray  # type: ignore[misc, assignment, unused-ignore]
-        ZarrStoreLike = Any  # type: ignore[misc, assignment, unused-ignore]
 
     # Anything that can be coerced to a shape tuple
     _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
@@ -115,6 +113,13 @@ except ImportError:
 DatetimeLike: TypeAlias = (
     pd.Timestamp | datetime.datetime | np.datetime64 | CFTimeDatetime
 )
+
+
+try:
+    # this is V3 only
+    from zarr.storage import StoreLike as ZarrStoreLike
+except ImportError:
+    ZarrStoreLike = Any  # type: ignore[misc, assignment, unused-ignore]
 
 
 class Alignable(Protocol):
