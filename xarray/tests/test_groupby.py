@@ -1618,6 +1618,8 @@ class TestDataArrayGroupBy:
         expected = array  # should be a no-op
         assert_identical(expected, actual)
 
+        # TODO: groupby_bins too
+
     def make_groupby_multidim_example_array(self) -> DataArray:
         return DataArray(
             [[[0, 1], [2, 3]], [[5, 10], [15, 20]]],

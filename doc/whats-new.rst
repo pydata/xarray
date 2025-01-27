@@ -54,6 +54,8 @@ New Features
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
 - Improve the error message raised when no key is matching the available variables in a dataset.  (:pull:`9943`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- :py:meth:`DatasetGroupBy.first` and :py:meth:`DatasetGroupBy.last` can now use ``flox`` if available. (:issue:`9647`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
