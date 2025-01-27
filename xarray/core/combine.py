@@ -268,7 +268,7 @@ def _combine_all_along_first_dim(
     combine_attrs: CombineAttrsOptions = "drop",
 ):
     # Group into lines of datasets which must be combined along dim
-    grouped = groupby_defaultdict(combined_ids.items(), key=_new_tile_id)
+    grouped = groupby_defaultdict(combined_ids, key=_new_tile_id)
 
     # Combine all of these datasets along dim
     new_combined_ids = {}
