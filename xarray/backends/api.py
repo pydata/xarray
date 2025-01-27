@@ -45,7 +45,7 @@ from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees
-from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
+from xarray.core.types import NetcdfWriteModes, ZarrStoreLike, ZarrWriteModes
 from xarray.core.utils import is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
@@ -2100,7 +2100,7 @@ def save_mfdataset(
 @overload
 def to_zarr(
     dataset: Dataset,
-    store: MutableMapping | str | os.PathLike[str] | None = None,
+    store: ZarrStoreLike | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
     synchronizer=None,
@@ -2123,7 +2123,7 @@ def to_zarr(
 @overload
 def to_zarr(
     dataset: Dataset,
-    store: MutableMapping | str | os.PathLike[str] | None = None,
+    store: ZarrStoreLike | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
     synchronizer=None,
@@ -2144,7 +2144,7 @@ def to_zarr(
 
 def to_zarr(
     dataset: Dataset,
-    store: MutableMapping | str | os.PathLike[str] | None = None,
+    store: ZarrStoreLike | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
     synchronizer=None,

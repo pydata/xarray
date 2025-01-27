@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Mapping
 from os import PathLike
 from typing import Any, Literal, get_args
 
 from xarray.core.datatree import DataTree
-from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
+from xarray.core.types import NetcdfWriteModes, ZarrStoreLike, ZarrWriteModes
 
 T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf"]
 T_DataTreeNetcdfTypes = Literal["NETCDF4"]
@@ -78,7 +78,7 @@ def _datatree_to_netcdf(
 
 def _datatree_to_zarr(
     dt: DataTree,
-    store: MutableMapping | str | PathLike[str],
+    store: ZarrStoreLike,
     mode: ZarrWriteModes = "w-",
     encoding: Mapping[str, Any] | None = None,
     consolidated: bool = True,
