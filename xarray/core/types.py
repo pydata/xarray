@@ -73,7 +73,7 @@ if TYPE_CHECKING:
         from zarr.storage import StoreLike as ZarrStoreLike
     except ImportError:
         ZarrArray = np.ndarray  # type: ignore[misc, assignment, unused-ignore]
-        ZarrStoreLike = Any  # type: ignore[misc]
+        ZarrStoreLike = Any  # type: ignore[misc, assignment, unused-ignore]
 
     # Anything that can be coerced to a shape tuple
     _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]

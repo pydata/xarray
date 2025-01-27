@@ -5,7 +5,7 @@ import json
 import os
 import struct
 from collections.abc import Hashable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -1066,9 +1066,7 @@ class ZarrStore(AbstractWritableDataStore):
         else:
             zarr_array = self.zarr_group[name]
 
-        if TYPE_CHECKING:
-            assert isinstance(zarr_array, ZarrArray)
-        return zarr_array
+        return cast(ZarrArray, zarr_array)
 
     def _create_new_array(
         self, *, name, shape, dtype, fill_value, encoding, attrs
