@@ -64,6 +64,7 @@ if TYPE_CHECKING:
         NestedSequence,
         ReadBuffer,
         T_Chunks,
+        ZarrStoreLike,
     )
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
@@ -2100,7 +2101,7 @@ def save_mfdataset(
 @overload
 def to_zarr(
     dataset: Dataset,
-    store: MutableMapping | str | os.PathLike[str] | None = None,
+    store: ZarrStoreLike | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
     synchronizer=None,
@@ -2123,7 +2124,7 @@ def to_zarr(
 @overload
 def to_zarr(
     dataset: Dataset,
-    store: MutableMapping | str | os.PathLike[str] | None = None,
+    store: ZarrStoreLike | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
     synchronizer=None,
@@ -2144,7 +2145,7 @@ def to_zarr(
 
 def to_zarr(
     dataset: Dataset,
-    store: MutableMapping | str | os.PathLike[str] | None = None,
+    store: ZarrStoreLike | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
     synchronizer=None,
