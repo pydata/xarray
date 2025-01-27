@@ -105,8 +105,7 @@ def _choose_default_mode(
 
 
 def _zarr_v3() -> bool:
-    # TODO: switch to "3" once Zarr V3 is released
-    return module_available("zarr", minversion="2.99")
+    return module_available("zarr", minversion="3")
 
 
 # need some special secret attributes to tell us the dimensions
