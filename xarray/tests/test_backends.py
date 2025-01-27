@@ -6124,8 +6124,11 @@ class TestZarrRegionAuto:
             {"test": xr.DataArray(data, dims=("x", "y"), coords={"x": x, "y": y})}
         )
         with self.create_zarr_target() as target:
-            ds.to_zarr(target)
+            self.save(target, ds)
             yield target, ds
+
+    def save(self, target, ds, **kwargs):
+        ds.to_zarr(target, **kwargs)
 
     @pytest.mark.parametrize(
         "region",
@@ -6137,7 +6140,7 @@ class TestZarrRegionAuto:
     def test_zarr_region_auto(self, region):
         with self.create() as (target, ds):
             ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
-            ds_region.to_zarr(target, region=region)
+            self.save(target, ds_region, region=region)
             ds_updated = xr.open_zarr(target)
 
             expected = ds.copy()
@@ -6147,12 +6150,12 @@ class TestZarrRegionAuto:
     def test_zarr_region_auto_noncontiguous(self):
         with self.create() as (target, ds):
             with pytest.raises(ValueError):
-                ds.isel(x=[0, 2, 3], y=[5, 6]).to_zarr(target, region="auto")
+                self.save(target, ds.isel(x=[0, 2, 3], y=[5, 6]), region="auto")
 
             dsnew = ds.copy()
             dsnew["x"] = dsnew.x + 5
             with pytest.raises(KeyError):
-                dsnew.to_zarr(target, region="auto")
+                self.save(target, dsnew, region="auto")
 
     def test_zarr_region_index_write(self, tmp_path):
         region: Mapping[str, slice] | Literal["auto"]
@@ -6167,7 +6170,7 @@ class TestZarrRegionAuto:
                     side_effect=ZarrStore.set_variables,
                     autospec=True,
                 ) as mock:
-                    ds_region.to_zarr(target, region=region, mode="r+")
+                    self.save(target, ds_region, region=region, mode="r+")
 
                     # should write the data vars but never the index vars with auto mode
                     for call in mock.call_args_list:
@@ -6194,16 +6197,16 @@ class TestZarrRegionAuto:
             # but it is still unsafe to modify dimensions or metadata using the region
             # parameter.
             with pytest.raises(KeyError):
-                ds_new.to_zarr(target, mode="a", append_dim="x", region="auto")
+                self.save(target, ds_new, mode="a", append_dim="x", region="auto")
 
     def test_zarr_region(self):
         with self.create() as (target, ds):
             ds_transposed = ds.transpose("y", "x")
             ds_region = 1 + ds_transposed.isel(x=[0], y=[0])
-            ds_region.to_zarr(target, region={"x": slice(0, 1), "y": slice(0, 1)})
+            self.save(target, ds_region, region={"x": slice(0, 1), "y": slice(0, 1)})
 
             # Write without region
-            ds_transposed.to_zarr(target, mode="r+")
+            self.save(target, ds_transposed, mode="r+")
 
     @requires_dask
     def test_zarr_region_chunk_partial(self):
@@ -6217,11 +6220,11 @@ class TestZarrRegionAuto:
         )
 
         with self.create_zarr_target() as target:
-            ds.chunk(5).to_zarr(target, compute=False, mode="w")
+            self.save(target, ds.chunk(5), compute=False, mode="w")
             with pytest.raises(ValueError):
                 for r in range(ds.sizes["a"]):
-                    ds.chunk(3).isel(a=[r]).to_zarr(
-                        target, region=dict(a=slice(r, r + 1))
+                    self.save(
+                        target, ds.chunk(3).isel(a=[r]), region=dict(a=slice(r, r + 1))
                     )
 
     @requires_dask
@@ -6244,11 +6247,12 @@ class TestZarrRegionAuto:
         )
 
         with self.create_zarr_target() as target:
-            da.to_zarr(target, mode="w", encoding={"foo": {"chunks": (5, 5, 1)}})
+            self.save(target, da, mode="w", encoding={"foo": {"chunks": (5, 5, 1)}})
 
             with pytest.raises(ValueError, match="encoding was provided"):
-                da2.to_zarr(
+                self.save(
                     target,
+                    da2,
                     append_dim="time",
                     mode="a",
                     encoding={"foo": {"chunks": (1, 1, 1)}},
@@ -6256,8 +6260,11 @@ class TestZarrRegionAuto:
 
             # chunking with dask sidesteps the encoding check, so we need a different check
             with pytest.raises(ValueError, match="Specified zarr chunks"):
-                da2.chunk({"x": 1, "y": 1, "time": 1}).to_zarr(
-                    target, append_dim="time", mode="a"
+                self.save(
+                    target,
+                    da2.chunk({"x": 1, "y": 1, "time": 1}),
+                    append_dim="time",
+                    mode="a",
                 )
 
     @requires_dask
@@ -6268,16 +6275,21 @@ class TestZarrRegionAuto:
             da = xr.DataArray(
                 data, dims=["x"], coords={"x": range(30)}, name="foo"
             ).chunk(x=10)
-            da.to_zarr(store, compute=False)
+            self.save(store, da, compute=False)
 
-            da.isel(x=slice(10)).chunk(x=(10,)).to_zarr(store, region="auto")
+            self.save(store, da.isel(x=slice(10)).chunk(x=(10,)), region="auto")
 
-            da.isel(x=slice(5, 25)).chunk(x=(10, 10)).to_zarr(
-                store, safe_chunks=False, region="auto"
+            self.save(
+                store,
+                da.isel(x=slice(5, 25)).chunk(x=(10, 10)),
+                safe_chunks=False,
+                region="auto",
             )
 
             with pytest.raises(ValueError):
-                da.isel(x=slice(5, 25)).chunk(x=(10, 10)).to_zarr(store, region="auto")
+                self.save(
+                    store, da.isel(x=slice(5, 25)).chunk(x=(10, 10)), region="auto"
+                )
 
     @requires_dask
     def test_zarr_safe_chunk_append_dim(self):
@@ -6287,47 +6299,64 @@ class TestZarrRegionAuto:
                 data, dims=["x"], coords={"x": range(20)}, name="foo"
             ).chunk(x=5)
 
-            da.isel(x=slice(0, 7)).to_zarr(store, safe_chunks=True, mode="w")
+            self.save(store, da.isel(x=slice(0, 7)), safe_chunks=True, mode="w")
             with pytest.raises(ValueError):
                 # If the first chunk is smaller than the border size then raise an error
-                da.isel(x=slice(7, 11)).chunk(x=(2, 2)).to_zarr(
-                    store, append_dim="x", safe_chunks=True
+                self.save(
+                    da.isel(x=slice(7, 11)).chunk(x=(2, 2)),
+                    append_dim="x",
+                    safe_chunks=True,
                 )
 
-            da.isel(x=slice(0, 7)).to_zarr(store, safe_chunks=True, mode="w")
+            self.save(store, da.isel(x=slice(0, 7)), safe_chunks=True, mode="w")
             # If the first chunk is of the size of the border size then it is valid
-            da.isel(x=slice(7, 11)).chunk(x=(3, 1)).to_zarr(
-                store, safe_chunks=True, append_dim="x"
+            self.save(
+                store,
+                da.isel(x=slice(7, 11)).chunk(x=(3, 1)),
+                safe_chunks=True,
+                append_dim="x",
             )
             assert xr.open_zarr(store)["foo"].equals(da.isel(x=slice(0, 11)))
 
-            da.isel(x=slice(0, 7)).to_zarr(store, safe_chunks=True, mode="w")
+            self.save(store, da.isel(x=slice(0, 7)), safe_chunks=True, mode="w")
             # If the first chunk is of the size of the border size + N * zchunk then it is valid
-            da.isel(x=slice(7, 17)).chunk(x=(8, 2)).to_zarr(
-                store, safe_chunks=True, append_dim="x"
+            self.save(
+                store,
+                da.isel(x=slice(7, 17)).chunk(x=(8, 2)),
+                safe_chunks=True,
+                append_dim="x",
             )
             assert xr.open_zarr(store)["foo"].equals(da.isel(x=slice(0, 17)))
 
-            da.isel(x=slice(0, 7)).to_zarr(store, safe_chunks=True, mode="w")
+            self.save(store, da.isel(x=slice(0, 7)), safe_chunks=True, mode="w")
             with pytest.raises(ValueError):
                 # If the first chunk is valid but the other are not then raise an error
-                da.isel(x=slice(7, 14)).chunk(x=(3, 3, 1)).to_zarr(
-                    store, append_dim="x", safe_chunks=True
+                self.save(
+                    store,
+                    da.isel(x=slice(7, 14)).chunk(x=(3, 3, 1)),
+                    append_dim="x",
+                    safe_chunks=True,
                 )
 
-            da.isel(x=slice(0, 7)).to_zarr(store, safe_chunks=True, mode="w")
+            self.save(store, da.isel(x=slice(0, 7)), safe_chunks=True, mode="w")
             with pytest.raises(ValueError):
                 # If the first chunk have a size bigger than the border size but not enough
                 # to complete the size of the next chunk then an error must be raised
-                da.isel(x=slice(7, 14)).chunk(x=(4, 3)).to_zarr(
-                    store, append_dim="x", safe_chunks=True
+                self.save(
+                    store,
+                    da.isel(x=slice(7, 14)).chunk(x=(4, 3)),
+                    append_dim="x",
+                    safe_chunks=True,
                 )
 
-            da.isel(x=slice(0, 7)).to_zarr(store, safe_chunks=True, mode="w")
+            self.save(store, da.isel(x=slice(0, 7)), safe_chunks=True, mode="w")
             # Append with a single chunk it's totally valid,
             # and it does not matter the size of the chunk
-            da.isel(x=slice(7, 19)).chunk(x=-1).to_zarr(
-                store, append_dim="x", safe_chunks=True
+            self.save(
+                store,
+                da.isel(x=slice(7, 19)).chunk(x=-1),
+                append_dim="x",
+                safe_chunks=True,
             )
             assert xr.open_zarr(store)["foo"].equals(da.isel(x=slice(0, 19)))
 
@@ -6338,137 +6367,164 @@ class TestZarrRegionAuto:
             arr = xr.DataArray(
                 list(range(11)), dims=["a"], coords={"a": list(range(11))}, name="foo"
             ).chunk(a=3)
-            arr.to_zarr(store, mode="w")
+            self.save(store, arr, mode="w")
 
             with pytest.raises(ValueError):
                 # There are two Dask chunks on the same Zarr chunk,
                 # which means that it is unsafe in any mode
-                arr.isel(a=slice(0, 3)).chunk(a=(2, 1)).to_zarr(
-                    store, region="auto", mode=mode
+                self.save(
+                    store,
+                    arr.isel(a=slice(0, 3)).chunk(a=(2, 1)),
+                    region="auto",
+                    mode=mode,
                 )
 
             with pytest.raises(ValueError):
                 # the first chunk is covering the border size, but it is not
                 # completely covering the second chunk, which means that it is
                 # unsafe in any mode
-                arr.isel(a=slice(1, 5)).chunk(a=(3, 1)).to_zarr(
-                    store, region="auto", mode=mode
+                self.save(
+                    store,
+                    arr.isel(a=slice(1, 5)).chunk(a=(3, 1)),
+                    region="auto",
+                    mode=mode,
                 )
 
             with pytest.raises(ValueError):
                 # The first chunk is safe but the other two chunks are overlapping with
                 # the same Zarr chunk
-                arr.isel(a=slice(0, 5)).chunk(a=(3, 1, 1)).to_zarr(
-                    store, region="auto", mode=mode
+                self.save(
+                    store,
+                    arr.isel(a=slice(0, 5)).chunk(a=(3, 1, 1)),
+                    region="auto",
+                    mode=mode,
                 )
 
             # Fully update two contiguous chunks is safe in any mode
-            arr.isel(a=slice(3, 9)).to_zarr(store, region="auto", mode=mode)
+            self.save(store, arr.isel(a=slice(3, 9)), region="auto", mode=mode)
 
             # The last chunk is considered full based on their current size (2)
-            arr.isel(a=slice(9, 11)).to_zarr(store, region="auto", mode=mode)
-            arr.isel(a=slice(6, None)).chunk(a=-1).to_zarr(
-                store, region="auto", mode=mode
+            self.save(store, arr.isel(a=slice(9, 11)), region="auto", mode=mode)
+            self.save(
+                store, arr.isel(a=slice(6, None)).chunk(a=-1), region="auto", mode=mode
             )
 
             # Write the last chunk of a region partially is safe in "a" mode
-            arr.isel(a=slice(3, 8)).to_zarr(store, region="auto", mode="a")
+            self.save(store, arr.isel(a=slice(3, 8)), region="auto", mode="a")
             with pytest.raises(ValueError):
                 # with "r+" mode it is invalid to write partial chunk
-                arr.isel(a=slice(3, 8)).to_zarr(store, region="auto", mode="r+")
+                self.save(arr.isel(a=slice(3, 8)), region="auto", mode="r+")
 
             # This is safe with mode "a", the border size is covered by the first chunk of Dask
-            arr.isel(a=slice(1, 4)).chunk(a=(2, 1)).to_zarr(
-                store, region="auto", mode="a"
+            self.save(
+                store, arr.isel(a=slice(1, 4)).chunk(a=(2, 1)), region="auto", mode="a"
             )
             with pytest.raises(ValueError):
                 # This is considered unsafe in mode "r+" because it is writing in a partial chunk
-                arr.isel(a=slice(1, 4)).chunk(a=(2, 1)).to_zarr(
-                    store, region="auto", mode="r+"
+                self.save(
+                    store,
+                    arr.isel(a=slice(1, 4)).chunk(a=(2, 1)),
+                    region="auto",
+                    mode="r+",
                 )
 
             # This is safe on mode "a" because there is a single dask chunk
-            arr.isel(a=slice(1, 5)).chunk(a=(4,)).to_zarr(
-                store, region="auto", mode="a"
+            self.save(
+                store, arr.isel(a=slice(1, 5)).chunk(a=(4,)), region="auto", mode="a"
             )
             with pytest.raises(ValueError):
                 # This is unsafe on mode "r+", because the Dask chunk is partially writing
                 # in the first chunk of Zarr
-                arr.isel(a=slice(1, 5)).chunk(a=(4,)).to_zarr(
-                    store, region="auto", mode="r+"
+                self.save(
+                    store,
+                    arr.isel(a=slice(1, 5)).chunk(a=(4,)),
+                    region="auto",
+                    mode="r+",
                 )
 
             # The first chunk is completely covering the first Zarr chunk
             # and the last chunk is a partial one
-            arr.isel(a=slice(0, 5)).chunk(a=(3, 2)).to_zarr(
-                store, region="auto", mode="a"
+            self.save(
+                store, arr.isel(a=slice(0, 5)).chunk(a=(3, 2)), region="auto", mode="a"
             )
 
             with pytest.raises(ValueError):
                 # The last chunk is partial, so it is considered unsafe on mode "r+"
-                arr.isel(a=slice(0, 5)).chunk(a=(3, 2)).to_zarr(
-                    store, region="auto", mode="r+"
+                self.save(
+                    store,
+                    arr.isel(a=slice(0, 5)).chunk(a=(3, 2)),
+                    region="auto",
+                    mode="r+",
                 )
 
             # The first chunk is covering the border size (2 elements)
             # and also the second chunk (3 elements), so it is valid
-            arr.isel(a=slice(1, 8)).chunk(a=(5, 2)).to_zarr(
-                store, region="auto", mode="a"
+            self.save(
+                store, arr.isel(a=slice(1, 8)).chunk(a=(5, 2)), region="auto", mode="a"
             )
 
             with pytest.raises(ValueError):
                 # The first chunk is not fully covering the first zarr chunk
-                arr.isel(a=slice(1, 8)).chunk(a=(5, 2)).to_zarr(
-                    store, region="auto", mode="r+"
+                self.save(
+                    store,
+                    arr.isel(a=slice(1, 8)).chunk(a=(5, 2)),
+                    region="auto",
+                    mode="r+",
                 )
 
             with pytest.raises(ValueError):
                 # Validate that the border condition is not affecting the "r+" mode
-                arr.isel(a=slice(1, 9)).to_zarr(store, region="auto", mode="r+")
+                self.save(store, arr.isel(a=slice(1, 9)), region="auto", mode="r+")
 
-            arr.isel(a=slice(10, 11)).to_zarr(store, region="auto", mode="a")
+            self.save(store, arr.isel(a=slice(10, 11)), region="auto", mode="a")
             with pytest.raises(ValueError):
                 # Validate that even if we write with a single Dask chunk on the last Zarr
                 # chunk it is still unsafe if it is not fully covering it
                 # (the last Zarr chunk has size 2)
-                arr.isel(a=slice(10, 11)).to_zarr(store, region="auto", mode="r+")
+                self.save(store, arr.isel(a=slice(10, 11)), region="auto", mode="r+")
 
             # Validate the same as the above test but in the beginning of the last chunk
-            arr.isel(a=slice(9, 10)).to_zarr(store, region="auto", mode="a")
+            self.save(store, arr.isel(a=slice(9, 10)), region="auto", mode="a")
             with pytest.raises(ValueError):
-                arr.isel(a=slice(9, 10)).to_zarr(store, region="auto", mode="r+")
+                self.save(store, arr.isel(a=slice(9, 10)), region="auto", mode="r+")
 
-            arr.isel(a=slice(7, None)).chunk(a=-1).to_zarr(
-                store, region="auto", mode="a"
+            self.save(
+                store, arr.isel(a=slice(7, None)).chunk(a=-1), region="auto", mode="a"
             )
             with pytest.raises(ValueError):
                 # Test that even a Dask chunk that covers the last Zarr chunk can be unsafe
                 # if it is partial covering other Zarr chunks
-                arr.isel(a=slice(7, None)).chunk(a=-1).to_zarr(
-                    store, region="auto", mode="r+"
+                self.save(
+                    store,
+                    arr.isel(a=slice(7, None)).chunk(a=-1),
+                    region="auto",
+                    mode="r+",
                 )
 
             with pytest.raises(ValueError):
                 # If the chunk is of size equal to the one in the Zarr encoding, but
                 # it is partially writing in the first chunk then raise an error
-                arr.isel(a=slice(8, None)).chunk(a=3).to_zarr(
-                    store, region="auto", mode="r+"
+                self.save(
+                    store,
+                    arr.isel(a=slice(8, None)).chunk(a=3),
+                    region="auto",
+                    mode="r+",
                 )
 
             with pytest.raises(ValueError):
-                arr.isel(a=slice(5, -1)).chunk(a=5).to_zarr(
-                    store, region="auto", mode="r+"
+                self.save(
+                    store, arr.isel(a=slice(5, -1)).chunk(a=5), region="auto", mode="r+"
                 )
 
             # Test if the code is detecting the last chunk correctly
             data = np.random.default_rng(0).random((2920, 25, 53))
             ds = xr.Dataset({"temperature": (("time", "lat", "lon"), data)})
             chunks = {"time": 1000, "lat": 25, "lon": 53}
-            ds.chunk(chunks).to_zarr(store, compute=False, mode="w")
+            self.save(store, ds.chunk(chunks), compute=False, mode="w")
             region = {"time": slice(1000, 2000, 1)}
             chunk = ds.isel(region)
             chunk = chunk.chunk()
-            chunk.chunk().to_zarr(store, region=region)
+            self.save(store, chunk.chunk(), region=region)
 
 
 @requires_h5netcdf
