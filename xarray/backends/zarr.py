@@ -38,13 +38,10 @@ from xarray.namedarray.pycompat import integer_types
 from xarray.namedarray.utils import module_available
 
 if TYPE_CHECKING:
-    from zarr import Array as ZarrArray
-    from zarr import Group as ZarrGroup
-
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
-    from xarray.core.types import ReadBuffer
+    from xarray.core.types import ReadBuffer, ZarrArray, ZarrGroup
 
 
 def _get_mappers(*, storage_options, store, chunk_store):
@@ -1035,6 +1032,7 @@ class ZarrStore(AbstractWritableDataStore):
 
     def _open_existing_array(self, *, name) -> ZarrArray:
         import zarr
+        from zarr import Array as ZarrArray
 
         # TODO: if mode="a", consider overriding the existing variable
         # metadata. This would need some case work properly with region
