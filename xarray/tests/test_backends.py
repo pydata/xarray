@@ -6303,6 +6303,7 @@ class TestZarrRegionAuto:
             with pytest.raises(ValueError):
                 # If the first chunk is smaller than the border size then raise an error
                 self.save(
+                    store,
                     da.isel(x=slice(7, 11)).chunk(x=(2, 2)),
                     append_dim="x",
                     safe_chunks=True,
@@ -6413,7 +6414,7 @@ class TestZarrRegionAuto:
             self.save(store, arr.isel(a=slice(3, 8)), region="auto", mode="a")
             with pytest.raises(ValueError):
                 # with "r+" mode it is invalid to write partial chunk
-                self.save(arr.isel(a=slice(3, 8)), region="auto", mode="r+")
+                self.save(store, arr.isel(a=slice(3, 8)), region="auto", mode="r+")
 
             # This is safe with mode "a", the border size is covered by the first chunk of Dask
             self.save(
