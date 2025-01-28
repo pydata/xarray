@@ -78,7 +78,7 @@ To create a ``Dataset`` from a ``DataFrame``, use the
 
     xr.Dataset.from_dataframe(df)
 
-Notice that that dimensions of variables in the ``Dataset`` have now
+Notice that the dimensions of variables in the ``Dataset`` have now
 expanded after the round-trip conversion to a ``DataFrame``. This is because
 every object in a ``DataFrame`` must have the same indices, so we need to
 broadcast the data of each array to the full size of the new ``MultiIndex``.
