@@ -444,6 +444,7 @@ def extract_zarr_variable_encoding(
     safe_to_drop = {"source", "original_shape", "preferred_chunks"}
     valid_encodings = {
         "chunks",
+        "shards",
         "compressor",  # TODO: delete when min zarr >=3
         "compressors",
         "filters",
@@ -825,6 +826,7 @@ class ZarrStore(AbstractWritableDataStore):
                 {
                     "compressors": zarr_array.compressors,
                     "filters": zarr_array.filters,
+                    "shards": zarr_array.shards,
                 }
             )
             if self.zarr_group.metadata.zarr_format == 3:
