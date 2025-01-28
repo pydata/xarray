@@ -39,7 +39,12 @@ from xarray.core.alignment import (
     align,
 )
 from xarray.core.arithmetic import DataArrayArithmetic
-from xarray.core.common import AbstractArray, DataWithCoords, get_chunksizes
+from xarray.core.common import (
+    AbstractArray,
+    AccessorMixin,
+    DataWithCoords,
+    get_chunksizes,
+)
 from xarray.core.computation import unify_chunks
 from xarray.core.coordinates import (
     Coordinates,
@@ -282,6 +287,7 @@ class DataArray(
     DataWithCoords,
     DataArrayArithmetic,
     DataArrayAggregations,
+    AccessorMixin,
 ):
     """N-dimensional array with labeled coordinates and dimensions.
 

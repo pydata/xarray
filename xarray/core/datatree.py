@@ -18,7 +18,7 @@ from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
 from xarray.core._typed_ops import DataTreeOpsMixin
 from xarray.core.alignment import align
-from xarray.core.common import TreeAttrAccessMixin, get_chunksizes
+from xarray.core.common import AccessorMixin, TreeAttrAccessMixin, get_chunksizes
 from xarray.core.coordinates import Coordinates, DataTreeCoordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, DataVariables
@@ -419,6 +419,7 @@ class DataTree(
     NamedNode["DataTree"],
     DataTreeAggregations,
     DataTreeOpsMixin,
+    AccessorMixin,
     TreeAttrAccessMixin,
     Mapping[str, "DataArray | DataTree"],
 ):

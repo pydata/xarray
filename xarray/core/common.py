@@ -6,7 +6,7 @@ from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, Union, overload
 
 import numpy as np
 import pandas as pd
@@ -262,6 +262,16 @@ class AbstractArray:
         return Frozen(dict(zip(self.dims, self.shape, strict=True)))
 
 
+class AccessorMixin:
+    """Mixin class that exposes accessors through __dir__"""
+
+    __slots__ = ()
+    _accessors: ClassVar[set[str]]
+
+    def __dir__(self):
+        return sorted(set(super().__dir__()) | type(self)._accessors)
+
+
 class AttrAccessMixin:
     """Mixin class that allows getting keys with attribute access"""
 
@@ -351,7 +361,7 @@ class AttrAccessMixin:
             for item in source
             if isinstance(item, str)
         }
-        return sorted(set(dir(type(self))) | type(self)._accessors | extra_attrs)
+        return sorted(set(super().__dir__()) | extra_attrs)
 
     def _ipython_key_completions_(self) -> list[str]:
         """Provide method for the key-autocompletions in IPython.

@@ -57,6 +57,7 @@ from xarray.core.alignment import (
 from xarray.core.arithmetic import DatasetArithmetic
 from xarray.core.array_api_compat import to_like_array
 from xarray.core.common import (
+    AccessorMixin,
     DataWithCoords,
     _contains_datetime_like_objects,
     get_chunksizes,
@@ -550,6 +551,7 @@ class Dataset(
     DataWithCoords,
     DatasetAggregations,
     DatasetArithmetic,
+    AccessorMixin,
     Mapping[Hashable, "DataArray"],
 ):
     """A multi-dimensional, in memory, array database.
