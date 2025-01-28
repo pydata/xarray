@@ -600,7 +600,7 @@ class CFTimeIndex(pd.Index):
                 "In a future version of xarray to_datetimeindex will default "
                 "to returning a 'us'-resolution DatetimeIndex instead of a "
                 "'ns'-resolution DatetimeIndex. This warning can be silenced "
-                "by explicitly setting the time_unit of the index returned.",
+                "by explicitly passing the `time_unit` keyword argument.",
                 FutureWarning,
             )
             time_unit = "ns"
