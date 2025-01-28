@@ -440,6 +440,25 @@ class TestZarrDatatreeIO:
         with pytest.raises(zarr.errors.ContainsGroupError):
             simple_datatree.to_zarr(tmpdir)
 
+    @requires_dask
+    def test_to_zarr_compute_false(self, tmpdir, simple_datatree):
+        import dask.array as da
+
+        filepath = tmpdir / "test.zarr"
+        original_dt = simple_datatree.chunk()
+        original_dt.to_zarr(filepath, compute=False)
+
+        for node in original_dt.subtree:
+            for name, variable in node.dataset.variables.items():
+                var_dir = filepath / node.path / name
+                var_files = var_dir.listdir()
+                assert var_dir / ".zarray" in var_files
+                assert var_dir / ".zattrs" in var_files
+                if isinstance(variable.data, da.Array):
+                    assert var_dir / "0" not in var_files
+                else:
+                    assert var_dir / "0" in var_files
+
     def test_to_zarr_inherited_coords(self, tmpdir):
         original_dt = DataTree.from_dict(
             {
