@@ -56,6 +56,13 @@ New Features
   By `Sam Levang <https://github.com/slevang>`_.
 - Improve the error message raised when no key is matching the available variables in a dataset.  (:pull:`9943`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Added a ``time_unit`` argument to :py:meth:`CFTimeIndex.to_datetimeindex`.
+  Note that in a future version of xarray,
+  :py:meth:`CFTimeIndex.to_datetimeindex` will return a microsecond-resolution
+  :py:class:`pandas.DatetimeIndex` instead of a nanosecond-resolution
+  :py:class:`pandas.DatetimeIndex` (:pull:`9965`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_ and `Kai Mühlbauer
+  <https://github.com/kmuehlbauer>`_.
 - :py:meth:`DatasetGroupBy.first` and :py:meth:`DatasetGroupBy.last` can now use ``flox`` if available. (:issue:`9647`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
