@@ -65,6 +65,9 @@ New Features
   <https://github.com/kmuehlbauer>`_.
 - :py:meth:`DatasetGroupBy.first` and :py:meth:`DatasetGroupBy.last` can now use ``flox`` if available. (:issue:`9647`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Added :py:meth:`Coordinates.from_xindex` as convenience for creating a new :py:class:`Coordinates` object
+  directly from an existing Xarray index object if the latter supports it (:pull:`10000`)
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
