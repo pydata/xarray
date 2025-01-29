@@ -519,7 +519,9 @@ def test_cftime_strftime_access(data) -> None:
     date_format = "%Y%m%d%H"
     result = data.time.dt.strftime(date_format)
     datetime_array = xr.DataArray(
-        xr.coding.cftimeindex.CFTimeIndex(data.time.values).to_datetimeindex(),
+        xr.coding.cftimeindex.CFTimeIndex(data.time.values).to_datetimeindex(
+            time_unit="ns"
+        ),
         name="stftime",
         coords=data.time.coords,
         dims=data.time.dims,
