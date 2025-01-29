@@ -31,6 +31,8 @@ from xarray.tests.test_coding_times import (
     _all_cftime_date_types,
 )
 
+from xarray.core.types import PDDatetimeUnitOptions
+
 # cftime 1.5.2 renames "gregorian" to "standard"
 standard_or_gregorian = ""
 if has_cftime:
@@ -1393,7 +1395,7 @@ def test_asi8_empty_cftimeindex():
 
 
 @requires_cftime
-def test_infer_freq_valid_types(time_unit):
+def test_infer_freq_valid_types(time_unit: PDDatetimeUnitOptions) -> None:
     cf_indx = xr.cftime_range("2000-01-01", periods=3, freq="D")
     assert xr.infer_freq(cf_indx) == "D"
     assert xr.infer_freq(xr.DataArray(cf_indx)) == "D"
