@@ -20,6 +20,7 @@ from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
+        T_Chunks,
         _Chunks,
         _DType,
         _DType_co,
@@ -44,6 +45,12 @@ class ChunkedArrayMixinProtocol(Protocol):
 
 
 T_ChunkedArray = TypeVar("T_ChunkedArray", bound=ChunkedArrayMixinProtocol)
+
+KNOWN_CHUNKMANAGERS = {
+    "dask": "dask",
+    "cubed": "cubed-xarray",
+    "arkouda": "arkouda-xarray",
+}
 
 
 @functools.lru_cache(maxsize=1)
@@ -75,7 +82,6 @@ def load_chunkmanagers(
             emit_user_level_warning(
                 f"Failed to load chunk manager entrypoint {entrypoint.name} due to {e}. Skipping.",
             )
-            pass
 
     available_chunkmanagers = {
         name: chunkmanager()
@@ -95,29 +101,42 @@ def guess_chunkmanager(
     Else use whatever is installed, defaulting to dask if there are multiple options.
     """
 
-    chunkmanagers = list_chunkmanagers()
+    available_chunkmanagers = list_chunkmanagers()
 
     if manager is None:
-        if len(chunkmanagers) == 1:
+        if len(available_chunkmanagers) == 1:
             # use the only option available
-            manager = next(iter(chunkmanagers.keys()))
+            manager = next(iter(available_chunkmanagers.keys()))
         else:
             # use the one in options (default dask)
             manager = OPTIONS["chunk_manager"]
 
     if isinstance(manager, str):
-        if manager not in chunkmanagers:
+        if manager not in available_chunkmanagers and manager in KNOWN_CHUNKMANAGERS:
+            raise ImportError(
+                f"chunk manager {manager!r} is not available."
+                f" Please make sure {KNOWN_CHUNKMANAGERS[manager]!r} is installed"
+                " and importable."
+            )
+        elif len(available_chunkmanagers) == 0:
+            raise ImportError(
+                "no chunk managers available. Try installing `dask` or another package"
+                " that provides a chunk manager."
+            )
+        elif manager not in available_chunkmanagers:
             raise ValueError(
-                f"unrecognized chunk manager {manager} - must be one of: {list(chunkmanagers)}"
+                f"unrecognized chunk manager {manager!r} - must be one of the installed"
+                f" chunk managers: {list(available_chunkmanagers)}"
             )
 
-        return chunkmanagers[manager]
+        return available_chunkmanagers[manager]
     elif isinstance(manager, ChunkManagerEntrypoint):
         # already a valid ChunkManager so just pass through
         return manager
     else:
         raise TypeError(
-            f"manager must be a string or instance of ChunkManagerEntrypoint, but received type {type(manager)}"
+            "manager must be a string or instance of ChunkManagerEntrypoint,"
+            f" but received type {type(manager)}"
         )
 
 
@@ -354,6 +373,34 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         --------
         dask.compute
         cubed.compute
+        """
+        raise NotImplementedError()
+
+    def shuffle(
+        self, x: T_ChunkedArray, indexer: list[list[int]], axis: int, chunks: T_Chunks
+    ) -> T_ChunkedArray:
+        raise NotImplementedError()
+
+    def persist(
+        self, *data: T_ChunkedArray | Any, **kwargs: Any
+    ) -> tuple[T_ChunkedArray | Any, ...]:
+        """
+        Persist one or more chunked arrays in memory.
+
+        Parameters
+        ----------
+        *data : object
+            Any number of objects. If an object is an instance of the chunked array type, it is persisted
+            as a chunked array in memory. All other types should be passed through unchanged.
+
+        Returns
+        -------
+        objs
+            The input, but with all chunked arrays now persisted in memory.
+
+        See Also
+        --------
+        dask.persist
         """
         raise NotImplementedError()
 

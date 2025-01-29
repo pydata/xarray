@@ -12,6 +12,8 @@ from typing import (
     SupportsIndex,
     TypeVar,
     Union,
+    overload,
+    runtime_checkable,
 )
 
 import numpy as np
@@ -41,6 +43,7 @@ if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
     from xarray.core.indexes import Index, Indexes
     from xarray.core.utils import Frozen
     from xarray.core.variable import IndexVariable, Variable
@@ -66,9 +69,16 @@ if TYPE_CHECKING:
         CubedArray = np.ndarray
 
     try:
-        from zarr.core import Array as ZarrArray
+        from zarr import Array as ZarrArray
+        from zarr import Group as ZarrGroup
     except ImportError:
-        ZarrArray = np.ndarray
+        ZarrArray = np.ndarray  # type: ignore[misc, assignment, unused-ignore]
+        ZarrGroup = Any  # type: ignore[misc, assignment, unused-ignore]
+    try:
+        # this is V3 only
+        from zarr.storage import StoreLike as ZarrStoreLike
+    except ImportError:
+        ZarrStoreLike = Any  # type: ignore[misc, assignment, unused-ignore]
 
     # Anything that can be coerced to a shape tuple
     _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
@@ -194,6 +204,7 @@ ScalarOrArray = Union["ArrayLike", np.generic]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 DaCompatible = Union["DataArray", "VarCompatible"]
 DsCompatible = Union["Dataset", "DaCompatible"]
+DtCompatible = Union["DataTree", "DsCompatible"]
 GroupByCompatible = Union["Dataset", "DataArray"]
 
 # Don't change to Hashable | Collection[Hashable]
@@ -226,15 +237,26 @@ CombineAttrsOptions = Union[
 JoinOptions = Literal["outer", "inner", "left", "right", "exact", "override"]
 
 Interp1dOptions = Literal[
-    "linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial"
+    "linear",
+    "nearest",
+    "zero",
+    "slinear",
+    "quadratic",
+    "cubic",
+    "quintic",
+    "polynomial",
 ]
-InterpolantOptions = Literal["barycentric", "krogh", "pchip", "spline", "akima"]
-InterpOptions = Union[Interp1dOptions, InterpolantOptions]
+InterpolantOptions = Literal[
+    "barycentric", "krogh", "pchip", "spline", "akima", "makima"
+]
+InterpnOptions = Literal["linear", "nearest", "slinear", "cubic", "quintic", "pchip"]
+InterpOptions = Union[Interp1dOptions, InterpolantOptions, InterpnOptions]
 
 DatetimeUnitOptions = Literal[
     "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
 ]
 NPDatetimeUnitOptions = Literal["D", "h", "m", "s", "ms", "us", "ns"]
+PDDatetimeUnitOptions = Literal["s", "ms", "us", "ns"]
 
 QueryEngineOptions = Literal["python", "numexpr", None]
 QueryParserOptions = Literal["pandas", "python"]
@@ -281,15 +303,50 @@ HueStyleOptions = Literal["continuous", "discrete", None]
 AspectOptions = Union[Literal["auto", "equal"], float, None]
 ExtendOptions = Literal["neither", "both", "min", "max", None]
 
-# TODO: Wait until mypy supports recursive objects in combination with typevars
-_T = TypeVar("_T")
-NestedSequence = Union[
-    _T,
-    Sequence[_T],
-    Sequence[Sequence[_T]],
-    Sequence[Sequence[Sequence[_T]]],
-    Sequence[Sequence[Sequence[Sequence[_T]]]],
-]
+
+_T_co = TypeVar("_T_co", covariant=True)
+
+
+class NestedSequence(Protocol[_T_co]):
+    def __len__(self, /) -> int: ...
+    @overload
+    def __getitem__(self, index: int, /) -> _T_co | NestedSequence[_T_co]: ...
+    @overload
+    def __getitem__(self, index: slice, /) -> NestedSequence[_T_co]: ...
+    def __iter__(self, /) -> Iterator[_T_co | NestedSequence[_T_co]]: ...
+    def __reversed__(self, /) -> Iterator[_T_co | NestedSequence[_T_co]]: ...
+
+
+AnyStr_co = TypeVar("AnyStr_co", str, bytes, covariant=True)
+
+
+# this is shamelessly stolen from pandas._typing
+@runtime_checkable
+class BaseBuffer(Protocol):
+    @property
+    def mode(self) -> str:
+        # for _get_filepath_or_buffer
+        ...
+
+    def seek(self, __offset: int, __whence: int = ...) -> int:
+        # with one argument: gzip.GzipFile, bz2.BZ2File
+        # with two arguments: zip.ZipFile, read_sas
+        ...
+
+    def seekable(self) -> bool:
+        # for bz2.BZ2File
+        ...
+
+    def tell(self) -> int:
+        # for zip.ZipFile, read_stata, to_stata
+        ...
+
+
+@runtime_checkable
+class ReadBuffer(BaseBuffer, Protocol[AnyStr_co]):
+    def read(self, __n: int = ...) -> AnyStr_co:
+        # for BytesIOWrapper, gzip.GzipFile, bz2.BZ2File
+        ...
 
 
 QuantileMethods = Literal[
@@ -313,7 +370,7 @@ NetcdfWriteModes = Literal["w", "a"]
 ZarrWriteModes = Literal["w", "w-", "a", "a-", "r+", "r"]
 
 GroupKey = Any
-GroupIndex = Union[int, slice, list[int]]
+GroupIndex = Union[slice, list[int]]
 GroupIndices = tuple[GroupIndex, ...]
 Bins = Union[
     int, Sequence[int], Sequence[float], Sequence[pd.Timestamp], np.ndarray, pd.Index

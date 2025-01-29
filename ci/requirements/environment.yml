@@ -10,7 +10,6 @@ dependencies:
   - cartopy
   - cftime
   - dask-core
-  - dask-expr # dask raises a deprecation warning without this, breaking doctests
   - distributed
   - flox
   - fsspec
@@ -36,6 +35,7 @@ dependencies:
   - pre-commit
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - pydap
+  - pydap-server
   - pytest
   - pytest-cov
   - pytest-env
@@ -48,3 +48,5 @@ dependencies:
   - toolz
   - typing_extensions
   - zarr
+  - pip:
+      - jax # no way to get cpu-only jaxlib from conda if gpu is present

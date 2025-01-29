@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import enum
 import functools
+import math
 import operator
 from collections import Counter, defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
@@ -13,6 +14,7 @@ from typing import TYPE_CHECKING, Any, overload
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 from xarray.core import duck_array_ops
 from xarray.core.coordinate_transform import CoordinateTransform
@@ -472,12 +474,6 @@ class VectorizedIndexer(ExplicitIndexer):
         for k in key:
             if isinstance(k, slice):
                 k = as_integer_slice(k)
-            elif is_duck_dask_array(k):
-                raise ValueError(
-                    "Vectorized indexing with Dask arrays is not supported. "
-                    "Please pass a numpy array by calling ``.compute``. "
-                    "See https://github.com/dask/dask/issues/8958."
-                )
             elif is_duck_array(k):
                 if not np.issubdtype(k.dtype, np.integer):
                     raise TypeError(
@@ -506,9 +502,14 @@ class ExplicitlyIndexed:
 
     __slots__ = ()
 
-    def __array__(self, dtype: np.typing.DTypeLike = None) -> np.ndarray:
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray:
         # Leave casting to an array up to the underlying array type.
-        return np.asarray(self.get_duck_array(), dtype=dtype)
+        if Version(np.__version__) >= Version("2.0.0"):
+            return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
+        else:
+            return np.asarray(self.get_duck_array(), dtype=dtype)
 
     def get_duck_array(self):
         return self.array
@@ -520,11 +521,6 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
     def get_duck_array(self):
         key = BasicIndexer((slice(None),) * self.ndim)
         return self[key]
-
-    def __array__(self, dtype: np.typing.DTypeLike = None) -> np.ndarray:
-        # This is necessary because we apply the indexing key in self.get_duck_array()
-        # Note this is the base class for all lazy indexing classes
-        return np.asarray(self.get_duck_array(), dtype=dtype)
 
     def _oindex_get(self, indexer: OuterIndexer):
         raise NotImplementedError(
@@ -571,8 +567,13 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
         self.array = as_indexable(array)
         self.indexer_cls = indexer_cls
 
-    def __array__(self, dtype: np.typing.DTypeLike = None) -> np.ndarray:
-        return np.asarray(self.get_duck_array(), dtype=dtype)
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray:
+        if Version(np.__version__) >= Version("2.0.0"):
+            return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
+        else:
+            return np.asarray(self.get_duck_array(), dtype=dtype)
 
     def get_duck_array(self):
         return self.array.get_duck_array()
@@ -594,7 +595,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
 class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and outer indexing lazy."""
 
-    __slots__ = ("array", "key", "_shape")
+    __slots__ = ("_shape", "array", "key")
 
     def __init__(self, array: Any, key: ExplicitIndexer | None = None):
         """
@@ -774,7 +775,7 @@ def _wrap_numpy_scalars(array):
 
 
 class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
-    __slots__ = ("array", "_copied")
+    __slots__ = ("_copied", "array")
 
     def __init__(self, array: duckarray[Any, Any]):
         self.array = as_indexable(array)
@@ -831,9 +832,6 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
     def _ensure_cached(self):
         self.array = as_indexable(self.array.get_duck_array())
 
-    def __array__(self, dtype: np.typing.DTypeLike = None) -> np.ndarray:
-        return np.asarray(self.get_duck_array(), dtype=dtype)
-
     def get_duck_array(self):
         self._ensure_cached()
         return self.array.get_duck_array()
@@ -876,10 +874,10 @@ def as_indexable(array):
         return PandasIndexingAdapter(array)
     if is_duck_dask_array(array):
         return DaskIndexingAdapter(array)
-    if hasattr(array, "__array_function__"):
-        return NdArrayLikeIndexingAdapter(array)
     if hasattr(array, "__array_namespace__"):
         return ArrayApiIndexingAdapter(array)
+    if hasattr(array, "__array_function__"):
+        return NdArrayLikeIndexingAdapter(array)
 
     raise TypeError(f"Invalid array type: {type(array)}")
 
@@ -1542,6 +1540,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return self.array[key]
 
     def _vindex_get(self, indexer: VectorizedIndexer):
+        _assert_not_chunked_indexer(indexer.tuple)
         array = NumpyVIndexAdapter(self.array)
         return array[indexer.tuple]
 
@@ -1641,6 +1640,28 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return xp.permute_dims(self.array, order)
 
 
+def _apply_vectorized_indexer_dask_wrapper(indices, coord):
+    from xarray.core.indexing import (
+        VectorizedIndexer,
+        apply_indexer,
+        as_indexable,
+    )
+
+    return apply_indexer(
+        as_indexable(coord), VectorizedIndexer((indices.squeeze(axis=-1),))
+    )
+
+
+def _assert_not_chunked_indexer(idxr: tuple[Any, ...]) -> None:
+    if any(is_chunked_array(i) for i in idxr):
+        raise ValueError(
+            "Cannot index with a chunked array indexer. "
+            "Please chunk the array you are indexing first, "
+            "and drop any indexed dimension coordinate variables. "
+            "Alternatively, call `.compute()` on any chunked arrays in the indexer."
+        )
+
+
 class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a dask array to support explicit indexing."""
 
@@ -1664,7 +1685,35 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             return value
 
     def _vindex_get(self, indexer: VectorizedIndexer):
-        return self.array.vindex[indexer.tuple]
+        try:
+            return self.array.vindex[indexer.tuple]
+        except IndexError as e:
+            # TODO: upstream to dask
+            has_dask = any(is_duck_dask_array(i) for i in indexer.tuple)
+            # this only works for "small" 1d coordinate arrays with one chunk
+            # it is intended for idxmin, idxmax, and allows indexing with
+            # the nD array output of argmin, argmax
+            if (
+                not has_dask
+                or len(indexer.tuple) > 1
+                or math.prod(self.array.numblocks) > 1
+                or self.array.ndim > 1
+            ):
+                raise e
+            (idxr,) = indexer.tuple
+            if idxr.ndim == 0:
+                return self.array[idxr.data]
+            else:
+                import dask.array
+
+                return dask.array.map_blocks(
+                    _apply_vectorized_indexer_dask_wrapper,
+                    idxr[..., np.newaxis],
+                    self.array,
+                    chunks=idxr.chunks,
+                    drop_axis=-1,
+                    dtype=self.array.dtype,
+                )
 
     def __getitem__(self, indexer: ExplicitIndexer):
         self._check_and_raise_if_non_basic_indexer(indexer)
@@ -1674,7 +1723,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         num_non_slices = sum(0 if isinstance(k, slice) else 1 for k in indexer.tuple)
         if num_non_slices > 1:
             raise NotImplementedError(
-                "xarray can't set arrays with multiple " "array indices to dask yet."
+                "xarray can't set arrays with multiple array indices to dask yet."
             )
         self.array[indexer.tuple] = value
 
@@ -1692,7 +1741,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
 
-    __slots__ = ("array", "_dtype")
+    __slots__ = ("_dtype", "array")
 
     array: pd.Index
     _dtype: np.dtype
@@ -1711,7 +1760,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def dtype(self) -> np.dtype:
         return self._dtype
 
-    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray:
         if dtype is None:
             dtype = self.dtype
         array = self.array
@@ -1719,7 +1770,11 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             with suppress(AttributeError):
                 # this might not be public API
                 array = array.astype("object")
-        return np.asarray(array.values, dtype=dtype)
+
+        if Version(np.__version__) >= Version("2.0.0"):
+            return np.asarray(array.values, dtype=dtype, copy=copy)
+        else:
+            return np.asarray(array.values, dtype=dtype)
 
     def get_duck_array(self) -> np.ndarray:
         return np.asarray(self)
@@ -1735,8 +1790,10 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             # pd.Timestamp rather np.than datetime64 but this is easier
             # (for now)
             item = np.datetime64("NaT", "ns")
+        elif isinstance(item, pd.Timedelta):
+            item = item.to_numpy()
         elif isinstance(item, timedelta):
-            item = np.timedelta64(getattr(item, "value", item), "ns")
+            item = np.timedelta64(item)
         elif isinstance(item, pd.Timestamp):
             # Work around for GH: pydata/xarray#1932 and numpy/numpy#10668
             # numpy fails to convert pd.Timestamp to np.datetime64[ns]
@@ -1798,6 +1855,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         | np.datetime64
         | np.timedelta64
     ):
+        _assert_not_chunked_indexer(indexer.tuple)
         key = self._prepare_key(indexer.tuple)
 
         if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
@@ -1853,7 +1911,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
     the same multi-index).
     """
 
-    __slots__ = ("array", "_dtype", "level", "adapter")
+    __slots__ = ("_dtype", "adapter", "array", "level")
 
     array: pd.MultiIndex
     _dtype: np.dtype
@@ -1868,7 +1926,9 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         super().__init__(array, dtype)
         self.level = level
 
-    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray:
         if dtype is None:
             dtype = self.dtype
         if self.level is not None:
@@ -1876,7 +1936,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
                 self.array.get_level_values(self.level).values, dtype=dtype
             )
         else:
-            return super().__array__(dtype)
+            return super().__array__(dtype, copy=copy)
 
     def _convert_scalar(self, item):
         if isinstance(item, tuple) and self.level is not None:

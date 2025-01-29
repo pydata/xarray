@@ -1,6 +1,6 @@
 from importlib.metadata import version as _version
 
-from xarray import groupers, testing, tutorial
+from xarray import coders, groupers, testing, tutorial, ufuncs
 from xarray.backends.api import (
     load_dataarray,
     load_dataset,
@@ -35,7 +35,7 @@ from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
-from xarray.core.datatree_mapping import TreeIsomorphismError, map_over_subtree
+from xarray.core.datatree_mapping import map_over_datasets
 from xarray.core.extensions import (
     register_dataarray_accessor,
     register_dataset_accessor,
@@ -46,7 +46,12 @@ from xarray.core.indexing import IndexSelResult
 from xarray.core.merge import Context, MergeError, merge
 from xarray.core.options import get_options, set_options
 from xarray.core.parallel import map_blocks
-from xarray.core.treenode import InvalidTreeError, NotFoundInTreeError
+from xarray.core.treenode import (
+    InvalidTreeError,
+    NotFoundInTreeError,
+    TreeIsomorphismError,
+    group_subtrees,
+)
 from xarray.core.variable import IndexVariable, Variable, as_variable
 from xarray.namedarray.core import NamedArray
 from xarray.util.print_versions import show_versions
@@ -60,11 +65,13 @@ except Exception:
 
 # A hardcoded __all__ variable is necessary to appease
 # `mypy --strict` running in projects that import xarray.
-__all__ = (
+__all__ = (  # noqa: RUF022
     # Sub-packages
+    "coders",
     "groupers",
     "testing",
     "tutorial",
+    "ufuncs",
     # Top-level functions
     "align",
     "apply_ufunc",
@@ -74,20 +81,21 @@ __all__ = (
     "combine_by_coords",
     "combine_nested",
     "concat",
+    "corr",
+    "cov",
+    "cross",
     "date_range",
     "date_range_like",
     "decode_cf",
     "dot",
-    "cov",
-    "corr",
-    "cross",
     "full_like",
     "get_options",
+    "group_subtrees",
     "infer_freq",
     "load_dataarray",
     "load_dataset",
     "map_blocks",
-    "map_over_subtree",
+    "map_over_datasets",
     "merge",
     "ones_like",
     "open_dataarray",
@@ -112,13 +120,13 @@ __all__ = (
     "Coordinates",
     "CoordinateTransform",
     "DataArray",
-    "Dataset",
     "DataTree",
+    "Dataset",
     "Index",
     "IndexSelResult",
     "IndexVariable",
-    "Variable",
     "NamedArray",
+    "Variable",
     # Exceptions
     "InvalidTreeError",
     "MergeError",
@@ -126,6 +134,6 @@ __all__ = (
     "SerializationWarning",
     "TreeIsomorphismError",
     # Constants
-    "__version__",
     "ALL_DIMS",
+    "__version__",
 )

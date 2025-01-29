@@ -3,7 +3,6 @@
 import functools
 import warnings
 from collections.abc import Hashable
-from typing import overload
 
 import numpy as np
 import pandas as pd
@@ -52,17 +51,15 @@ def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08, decode_bytes=Tru
 
 
 @ensure_warnings
-def assert_isomorphic(a: DataTree, b: DataTree, from_root: bool = False):
+def assert_isomorphic(a: DataTree, b: DataTree):
     """
-    Two DataTrees are considered isomorphic if every node has the same number of children.
+    Two DataTrees are considered isomorphic if the set of paths to their
+    descendent nodes are the same.
 
     Nothing about the data or attrs in each node is checked.
 
     Isomorphism is a necessary condition for two trees to be used in a nodewise binary operation,
     such as tree1 + tree2.
-
-    By default this function does not check any part of the tree above the given node.
-    Therefore this function can be used as default to check that two subtrees are isomorphic.
 
     Parameters
     ----------
@@ -70,9 +67,6 @@ def assert_isomorphic(a: DataTree, b: DataTree, from_root: bool = False):
         The first object to compare.
     b : DataTree
         The second object to compare.
-    from_root : bool, optional, default is False
-        Whether or not to first traverse to the root of the trees before checking for isomorphism.
-        If a & b have no parents then this has no effect.
 
     See Also
     --------
@@ -84,13 +78,7 @@ def assert_isomorphic(a: DataTree, b: DataTree, from_root: bool = False):
     assert isinstance(a, type(b))
 
     if isinstance(a, DataTree):
-        if from_root:
-            a = a.root
-            b = b.root
-
-        assert a.isomorphic(b, from_root=from_root), diff_datatree_repr(
-            a, b, "isomorphic"
-        )
+        assert a.isomorphic(b), diff_datatree_repr(a, b, "isomorphic")
     else:
         raise TypeError(f"{type(a)} not of type DataTree")
 
@@ -107,16 +95,8 @@ def maybe_transpose_dims(a, b, check_dim_order: bool):
     return b
 
 
-@overload
-def assert_equal(a, b): ...
-
-
-@overload
-def assert_equal(a: DataTree, b: DataTree, from_root: bool = True): ...
-
-
 @ensure_warnings
-def assert_equal(a, b, from_root=True, check_dim_order: bool = True):
+def assert_equal(a, b, check_dim_order: bool = True):
     """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
     objects.
 
@@ -135,10 +115,6 @@ def assert_equal(a, b, from_root=True, check_dim_order: bool = True):
         or xarray.core.datatree.DataTree. The first object to compare.
     b : xarray.Dataset, xarray.DataArray, xarray.Variable, xarray.Coordinates
         or xarray.core.datatree.DataTree. The second object to compare.
-    from_root : bool, optional, default is True
-        Only used when comparing DataTree objects. Indicates whether or not to
-        first traverse to the root of the trees before checking for isomorphism.
-        If a & b have no parents then this has no effect.
     check_dim_order : bool, optional, default is True
         Whether dimensions must be in the same order.
 
@@ -148,8 +124,8 @@ def assert_equal(a, b, from_root=True, check_dim_order: bool = True):
     numpy.testing.assert_array_equal
     """
     __tracebackhide__ = True
-    assert (
-        type(a) is type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
+    assert type(a) is type(b) or (
+        isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
     b = maybe_transpose_dims(a, b, check_dim_order)
     if isinstance(a, Variable | DataArray):
@@ -159,25 +135,13 @@ def assert_equal(a, b, from_root=True, check_dim_order: bool = True):
     elif isinstance(a, Coordinates):
         assert a.equals(b), formatting.diff_coords_repr(a, b, "equals")
     elif isinstance(a, DataTree):
-        if from_root:
-            a = a.root
-            b = b.root
-
-        assert a.equals(b, from_root=from_root), diff_datatree_repr(a, b, "equals")
+        assert a.equals(b), diff_datatree_repr(a, b, "equals")
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
 
-@overload
-def assert_identical(a, b): ...
-
-
-@overload
-def assert_identical(a: DataTree, b: DataTree, from_root: bool = True): ...
-
-
 @ensure_warnings
-def assert_identical(a, b, from_root=True):
+def assert_identical(a, b):
     """Like :py:func:`xarray.testing.assert_equal`, but also matches the
     objects' names and attributes.
 
@@ -193,20 +157,14 @@ def assert_identical(a, b, from_root=True):
         The first object to compare.
     b : xarray.Dataset, xarray.DataArray, xarray.Variable or xarray.Coordinates
         The second object to compare.
-    from_root : bool, optional, default is True
-        Only used when comparing DataTree objects. Indicates whether or not to
-        first traverse to the root of the trees before checking for isomorphism.
-        If a & b have no parents then this has no effect.
-    check_dim_order : bool, optional, default is True
-        Whether dimensions must be in the same order.
 
     See Also
     --------
     assert_equal, assert_allclose, Dataset.equals, DataArray.equals
     """
     __tracebackhide__ = True
-    assert (
-        type(a) is type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
+    assert type(a) is type(b) or (
+        isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
     if isinstance(a, Variable):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
@@ -220,13 +178,7 @@ def assert_identical(a, b, from_root=True):
     elif isinstance(a, Coordinates):
         assert a.identical(b), formatting.diff_coords_repr(a, b, "identical")
     elif isinstance(a, DataTree):
-        if from_root:
-            a = a.root
-            b = b.root
-
-        assert a.identical(b, from_root=from_root), diff_datatree_repr(
-            a, b, "identical"
-        )
+        assert a.identical(b), diff_datatree_repr(a, b, "identical")
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
@@ -471,7 +423,7 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
         set(ds._variables),
     )
 
-    assert type(ds._dims) is dict, ds._dims  # noqa: E721
+    assert type(ds._dims) is dict, ds._dims
     assert all(isinstance(v, int) for v in ds._dims.values()), ds._dims
     var_dims: set[Hashable] = set()
     for v in ds._variables.values():
