@@ -1,6 +1,8 @@
 .. ipython:: python
     :suppress:
 
+    import warnings
+
     import numpy as np
     import pandas as pd
     import xarray as xr
@@ -11,6 +13,7 @@
     int64_min = np.iinfo("int64").min + 1
     uint64_max = np.iinfo("uint64").max
 
+    warnings.filterwarnings("ignore", FutureWarning, "decode_timedelta")
 .. _internals.timecoding:
 
 Time Coding
@@ -526,4 +529,8 @@ To opt-out of timedelta decoding (see issue `Undesired decoding to timedelta64 <
 
 .. ipython:: python
 
-    xr.open_dataset("test-timedeltas2.nc", decode_times=False)
+    xr.open_dataset("test-timedeltas2.nc", decode_timedelta=False)
+
+.. note::
+    Note that in the future the default value of ``decode_timedelta`` will be
+    ``False`` rather than ``None``.
