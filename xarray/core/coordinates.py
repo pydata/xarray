@@ -201,8 +201,9 @@ class Coordinates(AbstractCoordinates):
     - returned via the :py:attr:`Dataset.coords`, :py:attr:`DataArray.coords`,
       and :py:attr:`DataTree.coords` properties,
     - built from Pandas or other index objects
-      (e.g., :py:meth:`Coordinates.from_pandas_multiindex`),
-    - built directly from coordinate data and Xarray ``Index`` objects (beware that
+      (e.g., :py:meth:`Coordinates.from_xindex` or
+      :py:meth:`Coordinates.from_pandas_multiindex`),
+    - built manually from coordinate data and Xarray ``Index`` objects (beware that
       no consistency check is done on those inputs),
 
     Parameters
