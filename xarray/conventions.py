@@ -357,7 +357,7 @@ def decode_cf_variables(
 
     See: decode_cf_variable
     """
-    # Only emit once instance of the decode_timedelta default change
+    # Only emit one instance of the decode_timedelta default change
     # FutureWarning. This can be removed once this change is made.
     warnings.filterwarnings("once", "decode_timedelta", FutureWarning)
 
