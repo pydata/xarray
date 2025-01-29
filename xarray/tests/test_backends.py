@@ -49,7 +49,7 @@ from xarray.backends.netCDF4_ import (
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
 from xarray.backends.zarr import ZarrStore
-from xarray.coders import CFDatetimeCoder
+from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding.cftime_offsets import cftime_range
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
@@ -636,7 +636,9 @@ class DatasetIOBase:
         #  to support large ranges
         time_deltas = pd.to_timedelta(["1h", "2h", "NaT"]).as_unit("s")  # type: ignore[arg-type, unused-ignore]
         expected = Dataset({"td": ("td", time_deltas), "td0": time_deltas[0]})
-        with self.roundtrip(expected) as actual:
+        with self.roundtrip(
+            expected, open_kwargs={"decode_timedelta": CFTimedeltaCoder(time_unit="ns")}
+        ) as actual:
             assert_identical(expected, actual)
 
     def test_roundtrip_float64_data(self) -> None:
@@ -3282,7 +3284,13 @@ class ZarrBase(CFEncodedBase):
     def test_chunked_datetime64_or_timedelta64(self, dtype) -> None:
         # Generalized from @malmans2's test in PR #8253
         original = create_test_data().astype(dtype).chunk(1)
-        with self.roundtrip(original, open_kwargs={"chunks": {}}) as actual:
+        with self.roundtrip(
+            original,
+            open_kwargs={
+                "chunks": {},
+                "decode_timedelta": CFTimedeltaCoder(time_unit="ns"),
+            },
+        ) as actual:
             for name, actual_var in actual.variables.items():
                 assert original[name].chunks == actual_var.chunks
             assert original.chunks == actual.chunks
