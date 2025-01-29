@@ -95,6 +95,9 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+
+- Fix :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` when the limit is bigger than the chunksize (:issue:`9939`).
+  By `Joseph Nowak <https://github.com/josephnowak>`_.
 - Fix issues related to Pandas v3 ("us" vs. "ns" for python datetime, copy on write) and handling of 0d-numpy arrays in datetime/timedelta decoding (:pull:`9953`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Remove dask-expr from CI runs, add "pyarrow" dask dependency to windows CI runs, fix related tests (:issue:`9962`, :pull:`9971`).
