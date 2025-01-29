@@ -521,3 +521,9 @@ into their native on-disk resolution, if possible:
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
     xr.open_dataset("test-timedeltas2.nc", decode_times=coder)
+    
+To opt-out of timedelta decoding (see issue `Undesired decoding to timedelta64 <https://github.com/pydata/xarray/issues/1621>`_) pass ``False`` to ``decode_timedelta``:
+
+.. ipython:: python
+    xr.open_dataset("test-timedeltas2.nc", decode_times=False)
+
