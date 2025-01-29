@@ -1,8 +1,6 @@
 .. ipython:: python
     :suppress:
 
-    import warnings
-
     import numpy as np
     import pandas as pd
     import xarray as xr
@@ -13,7 +11,6 @@
     int64_min = np.iinfo("int64").min + 1
     uint64_max = np.iinfo("uint64").max
 
-    warnings.filterwarnings("ignore", FutureWarning, "decode_timedelta")
 .. _internals.timecoding:
 
 Time Coding
@@ -487,12 +484,14 @@ Similar logic applies for decoding timedelta values. The default resolution is
     ds.to_netcdf("test-timedeltas1.nc")
 
 .. ipython:: python
+    :okwarning:
 
     xr.open_dataset("test-timedeltas1.nc")
 
 By default, timedeltas will be decoded to the same resolution as datetimes:
 
 .. ipython:: python
+    :okwarning:
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
     xr.open_dataset("test-timedeltas1.nc", decode_times=coder)
@@ -517,6 +516,7 @@ into their native on-disk resolution, if possible:
     ds.to_netcdf("test-timedeltas2.nc")
 
 .. ipython:: python
+    :okwarning:
 
     xr.open_dataset("test-timedeltas2.nc")
 
