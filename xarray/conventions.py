@@ -491,7 +491,10 @@ def decode_cf(
     decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | None = None,
-    decode_timedelta: bool | None = None,
+    decode_timedelta: bool
+    | CFTimedeltaCoder
+    | Mapping[str, bool | CFTimedeltaCoder]
+    | None = None,
 ) -> Dataset:
     """Decode the given Dataset or Datastore according to CF conventions into
     a new Dataset.
@@ -535,11 +538,14 @@ def decode_cf(
         .. deprecated:: 2025.01.1
            Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
 
-    decode_timedelta : bool, optional
-        If True, decode variables and coordinates with time units in
+    decode_timedelta : bool | CFTimedeltaCoder | Mapping[str, bool | CFTimedeltaCoder], optional
+        If True or :py:class:`CFTimedeltaCoder`, decode variables and
+        coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of decode_time.
+        If None (default), assume the same behavior as decode_times. The
+        resolution of the decoded timedeltas can be configured with the
+        ``time_unit`` argument in the :py:class:`CFTimedeltaCoder` passed.
 
     Returns
     -------
