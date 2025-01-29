@@ -1343,6 +1343,21 @@ class CFDatetimeCoder(VariableCoder):
 
 
 class CFTimedeltaCoder(VariableCoder):
+    """Coder for CF Timedelta coding.
+
+    Parameters
+    ----------
+    time_unit : PDDatetimeUnitOptions
+          Target resolution when decoding timedeltas. Defaults to "ns".
+    """
+
+    def __init__(
+        self,
+        time_unit: PDDatetimeUnitOptions = "ns",
+    ) -> None:
+        self.time_unit = time_unit
+        self._emit_decode_timedelta_future_warning = False
+
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.data.dtype, np.timedelta64):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
@@ -1359,12 +1374,21 @@ class CFTimedeltaCoder(VariableCoder):
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         units = variable.attrs.get("units", None)
         if isinstance(units, str) and units in TIME_UNITS:
+            if self._emit_decode_timedelta_future_warning:
+                emit_user_level_warning(
+                    "In a future version of xarray decode_timedelta will "
+                    "default to False rather than None. To silence this "
+                    "warning, set decode_timedelta to True, False, or a "
+                    "'CFTimedeltaCoder' instance.",
+                    FutureWarning,
+                )
             dims, data, attrs, encoding = unpack_for_decoding(variable)
 
             units = pop_to(attrs, encoding, "units")
-            transform = partial(decode_cf_timedelta, units=units)
-            # todo: check, if we can relax this one here, too
-            dtype = np.dtype("timedelta64[ns]")
+            dtype = np.dtype(f"timedelta64[{self.time_unit}]")
+            transform = partial(
+                decode_cf_timedelta, units=units, time_unit=self.time_unit
+            )
             data = lazy_elemwise_func(data, transform, dtype=dtype)
 
             return Variable(dims, data, attrs, encoding, fastpath=True)
