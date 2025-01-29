@@ -353,6 +353,35 @@ class Coordinates(AbstractCoordinates):
         return obj
 
     @classmethod
+    def from_xindex(cls, index: Index) -> Self:
+        """Create Xarray coordinates from an existing Xarray index.
+
+        Parameters
+        ----------
+        index : Index
+            Xarray index object. The index must support generating new
+            coordinate variables from itself.
+
+        Returns
+        -------
+        coords : Coordinates
+            A collection of Xarray indexed coordinates created from the index.
+
+        """
+        variables = index.create_variables()
+
+        if not variables:
+            raise ValueError(
+                "`Coordinates.from_xindex()` only supports index objects that can generate "
+                "new coordinate variables from scratch. The given index (shown below) did not "
+                f"create any coordinate.\n{index!r}"
+            )
+
+        indexes = {name: index for name in variables}
+
+        return cls(coords=variables, indexes=indexes)
+
+    @classmethod
     def from_pandas_multiindex(cls, midx: pd.MultiIndex, dim: Hashable) -> Self:
         """Wrap a pandas multi-index as Xarray coordinates (dimension + levels).
 
