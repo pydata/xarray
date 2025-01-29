@@ -19,6 +19,7 @@ from xarray.coding.times import (
     _parse_iso8601,
     parse_iso8601_like,
 )
+from xarray.core.types import PDDatetimeUnitOptions
 from xarray.tests import (
     assert_array_equal,
     assert_identical,
@@ -30,8 +31,6 @@ from xarray.tests.test_coding_times import (
     _NON_STANDARD_CALENDARS,
     _all_cftime_date_types,
 )
-
-from xarray.core.types import PDDatetimeUnitOptions
 
 # cftime 1.5.2 renames "gregorian" to "standard"
 standard_or_gregorian = ""
