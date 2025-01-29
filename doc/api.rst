@@ -919,6 +919,7 @@ Attributes
    :toctree: generated/
 
    Coordinates.dims
+   Coordinates.sizes
    Coordinates.dtypes
    Coordinates.variables
    Coordinates.indexes

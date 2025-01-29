@@ -14,6 +14,7 @@
    core.coordinates.DatasetCoordinates.keys
    core.coordinates.DatasetCoordinates.values
    core.coordinates.DatasetCoordinates.dims
+   core.coordinates.DatasetCoordinates.sizes
    core.coordinates.DatasetCoordinates.dtypes
    core.coordinates.DatasetCoordinates.variables
    core.coordinates.DatasetCoordinates.xindexes
@@ -55,6 +56,7 @@
    core.coordinates.DataArrayCoordinates.keys
    core.coordinates.DataArrayCoordinates.values
    core.coordinates.DataArrayCoordinates.dims
+   core.coordinates.DataArrayCoordinates.sizes
    core.coordinates.DataArrayCoordinates.dtypes
    core.coordinates.DataArrayCoordinates.variables
    core.coordinates.DataArrayCoordinates.xindexes
@@ -90,6 +92,7 @@
    core.coordinates.DataTreeCoordinates.keys
    core.coordinates.DataTreeCoordinates.values
    core.coordinates.DataTreeCoordinates.dims
+   core.coordinates.DataTreeCoordinates.sizes
    core.coordinates.DataTreeCoordinates.dtypes
    core.coordinates.DataTreeCoordinates.variables
    core.coordinates.DataTreeCoordinates.xindexes
