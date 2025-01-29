@@ -92,6 +92,8 @@ Documentation
 ~~~~~~~~~~~~~
 - A chapter on :ref:`internals.timecoding` is added to the internal section (:pull:`9618`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Better expose the :py:class:`Coordinates` class in API reference (:pull:`10000`)
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
