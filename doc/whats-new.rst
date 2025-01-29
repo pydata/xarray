@@ -52,6 +52,8 @@ New Features
 ~~~~~~~~~~~~
 - Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
+- Enable the ``compute=False`` option in :py:meth:`DataTree.to_zarr`. (:pull:`9958`).
+  By `Sam Levang <https://github.com/slevang>`_.
 - Improve the error message raised when no key is matching the available variables in a dataset.  (:pull:`9943`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Added a ``time_unit`` argument to :py:meth:`CFTimeIndex.to_datetimeindex`.
