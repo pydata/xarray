@@ -13,7 +13,7 @@
     int64_min = np.iinfo("int64").min + 1
     uint64_max = np.iinfo("uint64").max
 
-    warnings.filterwarnings("ignore", FutureWarning, "decode_timedelta")
+    warnings.filterwarnings("ignore", "decode_timedelta", FutureWarning)
 .. _internals.timecoding:
 
 Time Coding
