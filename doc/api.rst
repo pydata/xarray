@@ -910,7 +910,7 @@ Creating coordinates
 
    Coordinates
    Coordinates.from_xindex
-   Coordinates.from_pandas_index
+   Coordinates.from_pandas_multiindex
 
 Attributes
 ----------
