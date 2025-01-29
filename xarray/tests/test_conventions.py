@@ -18,7 +18,7 @@ from xarray import (
 )
 from xarray.backends.common import WritableCFDataStore
 from xarray.backends.memory import InMemoryDataStore
-from xarray.coders import CFDatetimeCoder
+from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.conventions import decode_cf
 from xarray.testing import assert_identical
 from xarray.tests import (
@@ -536,7 +536,9 @@ class TestDecodeCF:
         )
 
         dsc = conventions.decode_cf(
-            ds, decode_times=CFDatetimeCoder(time_unit=time_unit)
+            ds,
+            decode_times=CFDatetimeCoder(time_unit=time_unit),
+            decode_timedelta=CFTimedeltaCoder(time_unit=time_unit),
         )
         assert dsc.timedelta.dtype == np.dtype(f"m8[{time_unit}]")
         assert dsc.time.dtype == np.dtype(f"M8[{time_unit}]")
@@ -655,3 +657,15 @@ def test_encode_cf_variable_with_vlen_dtype() -> None:
     encoded_v = conventions.encode_cf_variable(v)
     assert encoded_v.data.dtype.kind == "O"
     assert coding.strings.check_vlen_dtype(encoded_v.data.dtype) is str
+
+
+def test_decode_cf_variables_decode_timedelta_warning() -> None:
+    v = Variable(["time"], [1, 2], attrs={"units": "seconds"})
+    variables = {"a": v}
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", "decode_timedelta", FutureWarning)
+        conventions.decode_cf_variables(variables, {}, decode_timedelta=True)
+
+    with pytest.warns(FutureWarning, match="decode_timedelta"):
+        conventions.decode_cf_variables(variables, {})

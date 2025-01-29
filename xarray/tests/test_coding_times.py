@@ -1542,7 +1542,10 @@ def test_roundtrip_timedelta64_nanosecond_precision(
 
     encoded_var = conventions.encode_cf_variable(var)
     decoded_var = conventions.decode_cf_variable(
-        "foo", encoded_var, decode_times=CFDatetimeCoder(time_unit=time_unit)
+        "foo",
+        encoded_var,
+        decode_times=CFDatetimeCoder(time_unit=time_unit),
+        decode_timedelta=CFTimedeltaCoder(time_unit=time_unit),
     )
 
     assert_identical(var, decoded_var)
@@ -1569,7 +1572,9 @@ def test_roundtrip_timedelta64_nanosecond_precision_warning() -> None:
     assert encoded_var.dtype == np.int64
     assert encoded_var.attrs["units"] == needed_units
     assert encoded_var.attrs["_FillValue"] == 20
-    decoded_var = conventions.decode_cf_variable("foo", encoded_var)
+    decoded_var = conventions.decode_cf_variable(
+        "foo", encoded_var, decode_timedelta=CFTimedeltaCoder(time_unit="ns")
+    )
     assert_identical(var, decoded_var)
     assert decoded_var.encoding["dtype"] == np.int64
 
@@ -1617,7 +1622,9 @@ def test_roundtrip_float_times(fill_value, times, units, encoded_values) -> None
     assert encoded_var.attrs["units"] == units
     assert encoded_var.attrs["_FillValue"] == fill_value
 
-    decoded_var = conventions.decode_cf_variable("foo", encoded_var)
+    decoded_var = conventions.decode_cf_variable(
+        "foo", encoded_var, decode_timedelta=CFTimedeltaCoder(time_unit="ns")
+    )
     assert_identical(var, decoded_var)
     assert decoded_var.encoding["units"] == units
     assert decoded_var.encoding["_FillValue"] == fill_value
@@ -1808,7 +1815,9 @@ def test_encode_cf_timedelta_casting_value_error(use_dask) -> None:
         with pytest.warns(UserWarning, match="Timedeltas can't be serialized"):
             encoded = conventions.encode_cf_variable(variable)
         assert encoded.attrs["units"] == "hours"
-        decoded = conventions.decode_cf_variable("name", encoded)
+        decoded = conventions.decode_cf_variable(
+            "name", encoded, decode_timedelta=CFTimedeltaCoder(time_unit="ns")
+        )
         assert_equal(variable, decoded)
     else:
         with pytest.raises(ValueError, match="Not possible"):
@@ -1832,43 +1841,58 @@ def test_encode_cf_timedelta_casting_overflow_error(use_dask, dtype) -> None:
 
 
 _DECODE_TIMEDELTA_TESTS = {
-    "default": (True, None, np.dtype("timedelta64[ns]")),
-    "decode_timdelta=False": (True, False, np.dtype("int64")),
+    "default": (True, None, np.dtype("timedelta64[ns]"), True),
+    "decode_timdelta=False": (True, False, np.dtype("int64"), False),
     "inherit-time_unit-from-decode_times": (
         CFDatetimeCoder(time_unit="s"),
         None,
         np.dtype("timedelta64[s]"),
+        True,
     ),
     "set-time_unit-via-CFTimedeltaCoder-decode_times=True": (
         True,
         CFTimedeltaCoder(time_unit="s"),
         np.dtype("timedelta64[s]"),
+        False,
     ),
     "set-time_unit-via-CFTimedeltaCoder-decode_times=False": (
         False,
         CFTimedeltaCoder(time_unit="s"),
         np.dtype("timedelta64[s]"),
+        False,
     ),
     "override-time_unit-from-decode_times": (
         CFDatetimeCoder(time_unit="ns"),
         CFTimedeltaCoder(time_unit="s"),
         np.dtype("timedelta64[s]"),
+        False,
     ),
 }
 
 
 @pytest.mark.parametrize(
-    ("decode_times", "decode_timedelta", "expected_dtype"),
+    ("decode_times", "decode_timedelta", "expected_dtype", "warns"),
     list(_DECODE_TIMEDELTA_TESTS.values()),
     ids=list(_DECODE_TIMEDELTA_TESTS.keys()),
 )
-def test_decode_timedelta(decode_times, decode_timedelta, expected_dtype) -> None:
+def test_decode_timedelta(
+    decode_times, decode_timedelta, expected_dtype, warns
+) -> None:
     timedeltas = pd.timedelta_range(0, freq="d", periods=3)
     var = Variable(["time"], timedeltas)
     encoded = conventions.encode_cf_variable(var)
-    decoded = conventions.decode_cf_variable(
-        "foo", encoded, decode_times=decode_times, decode_timedelta=decode_timedelta
-    )
+    if warns:
+        with pytest.warns(FutureWarning, match="decode_timedelta"):
+            decoded = conventions.decode_cf_variable(
+                "foo",
+                encoded,
+                decode_times=decode_times,
+                decode_timedelta=decode_timedelta,
+            )
+    else:
+        decoded = conventions.decode_cf_variable(
+            "foo", encoded, decode_times=decode_times, decode_timedelta=decode_timedelta
+        )
     if decode_timedelta is False:
         assert_equal(encoded, decoded)
     else:

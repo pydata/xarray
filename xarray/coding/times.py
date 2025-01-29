@@ -1356,6 +1356,7 @@ class CFTimedeltaCoder(VariableCoder):
         time_unit: PDDatetimeUnitOptions = "ns",
     ) -> None:
         self.time_unit = time_unit
+        self._emit_decode_timedelta_future_warning = False
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.data.dtype, np.timedelta64):
@@ -1373,6 +1374,14 @@ class CFTimedeltaCoder(VariableCoder):
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         units = variable.attrs.get("units", None)
         if isinstance(units, str) and units in TIME_UNITS:
+            if self._emit_decode_timedelta_future_warning:
+                emit_user_level_warning(
+                    "In a future version of xarray decode_timedelta will "
+                    "default to False rather than None. To silence this "
+                    "warning, set decode_timedelta to True, False, or a "
+                    "'CFTimedeltaCoder' instance.",
+                    FutureWarning,
+                )
             dims, data, attrs, encoding = unpack_for_decoding(variable)
 
             units = pop_to(attrs, encoding, "units")

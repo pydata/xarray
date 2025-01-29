@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import warnings
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
@@ -172,6 +173,7 @@ def decode_cf_variable(
 
     original_dtype = var.dtype
 
+    decode_timedelta_was_none = decode_timedelta is None
     if decode_timedelta is None:
         if isinstance(decode_times, CFDatetimeCoder):
             decode_timedelta = CFTimedeltaCoder(time_unit=decode_times.time_unit)
@@ -200,6 +202,9 @@ def decode_cf_variable(
     if decode_timedelta:
         if not isinstance(decode_timedelta, CFTimedeltaCoder):
             decode_timedelta = CFTimedeltaCoder()
+        decode_timedelta._emit_decode_timedelta_future_warning = (
+            decode_timedelta_was_none
+        )
         var = decode_timedelta.decode(var, name=name)
     if decode_times:
         # remove checks after end of deprecation cycle
@@ -352,6 +357,10 @@ def decode_cf_variables(
 
     See: decode_cf_variable
     """
+    # Only emit once instance of the decode_timedelta default change
+    # FutureWarning. This can be removed once this change is made.
+    warnings.filterwarnings("once", "decode_timedelta", FutureWarning)
+
     dimensions_used_by = defaultdict(list)
     for v in variables.values():
         for d in v.dims:
