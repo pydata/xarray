@@ -521,6 +521,7 @@ into their native on-disk resolution, if possible:
     xr.open_dataset("test-timedeltas2.nc")
 
 .. ipython:: python
+    :okwarning:
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
     xr.open_dataset("test-timedeltas2.nc", decode_times=coder)
