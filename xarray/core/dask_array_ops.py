@@ -75,6 +75,22 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
     return coeffs, residuals
 
 
+def _fill_with_last_one(a, b):
+    import numpy as np
+
+    # cumreduction apply the push func over all the blocks first so,
+    # the only missing part is filling the missing values using the
+    # last data of the previous chunk
+    return np.where(np.isnan(b), a, b)
+
+
+def _dtype_push(a, axis, dtype=None):
+    from xarray.core.duck_array_ops import _push
+
+    # Not sure why the blelloch algorithm force to receive a dtype
+    return _push(a, axis=axis)
+
+
 def push(array, n, axis, method="blelloch"):
     """
     Dask-aware bottleneck.push
@@ -91,16 +107,6 @@ def push(array, n, axis, method="blelloch"):
     # TODO: Replace all this function
     #  once https://github.com/pydata/xarray/issues/9229 being implemented
 
-    def _fill_with_last_one(a, b):
-        # cumreduction apply the push func over all the blocks first so,
-        # the only missing part is filling the missing values using the
-        # last data of the previous chunk
-        return np.where(np.isnan(b), a, b)
-
-    def _dtype_push(a, axis, dtype=None):
-        # Not sure why the blelloch algorithm force to receive a dtype
-        return _push(a, axis=axis)
-
     pushed_array = da.reductions.cumreduction(
         func=_dtype_push,
         binop=_fill_with_last_one,
@@ -113,33 +119,18 @@ def push(array, n, axis, method="blelloch"):
     )
 
     if n is not None and 0 < n < array.shape[axis] - 1:
-
-        def _reset_cumsum(a, axis, dtype=None):
-            cumsum = np.cumsum(a, axis=axis)
-            reset_points = np.maximum.accumulate(np.where(a == 0, cumsum, 0), axis=axis)
-            return cumsum - reset_points
-
-        def _last_reset_cumsum(a, axis, keepdims=None):
-            # Take the last cumulative sum taking into account the reset
-            # This is useful for blelloch method
-            return np.take(_reset_cumsum(a, axis=axis), axis=axis, indices=[-1])
-
-        def _combine_reset_cumsum(a, b):
-            # It is going to sum the previous result until the first
-            # non nan value
-            bitmask = np.cumprod(b != 0, axis=axis)
-            return np.where(bitmask, b + a, b)
-
-        valid_positions = da.reductions.cumreduction(
-            func=_reset_cumsum,
-            binop=_combine_reset_cumsum,
-            ident=0,
-            x=da.isnan(array, dtype=int),
-            axis=axis,
-            dtype=int,
-            method=method,
-            preop=_last_reset_cumsum,
-        )
-        pushed_array = da.where(valid_positions <= n, pushed_array, np.nan)
+        # The idea is to calculate a cumulative sum of a bitmask
+        # created from the isnan method, but every time a False is found the sum
+        # must be restarted, and the final result indicates the amount of contiguous
+        # nan values found in the original array on every position
+        nan_bitmask = da.isnan(array, dtype=int)
+        cumsum_nan = nan_bitmask.cumsum(axis=axis, method=method)
+        valid_positions = da.where(nan_bitmask == 0, cumsum_nan, np.nan)
+        valid_positions = push(valid_positions, None, axis, method=method)
+        # All the NaNs at the beginning are converted to 0
+        valid_positions = da.nan_to_num(valid_positions)
+        valid_positions = cumsum_nan - valid_positions
+        valid_positions = valid_positions <= n
+        pushed_array = da.where(valid_positions, pushed_array, np.nan)
 
     return pushed_array

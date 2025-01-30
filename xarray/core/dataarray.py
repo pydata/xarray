@@ -1026,7 +1026,6 @@ class DataArray(
         drop: Literal[True],
     ) -> Self: ...
 
-    @_deprecate_positional_args("v2023.10.0")
     def reset_coords(
         self,
         names: Dims = None,
@@ -1364,7 +1363,6 @@ class DataArray(
         all_variables = [self.variable] + [c.variable for c in self.coords.values()]
         return get_chunksizes(all_variables)
 
-    @_deprecate_positional_args("v2023.10.0")
     def chunk(
         self,
         chunks: T_ChunksFreq = {},  # noqa: B006  # {} even though it's technically unsafe, is being used intentionally here (#4667)
@@ -1835,7 +1833,6 @@ class DataArray(
         ds = self._to_temp_dataset().thin(indexers, **indexers_kwargs)
         return self._from_temp_dataset(ds)
 
-    @_deprecate_positional_args("v2023.10.0")
     def broadcast_like(
         self,
         other: T_DataArrayOrSet,
@@ -1948,7 +1945,6 @@ class DataArray(
 
         return da
 
-    @_deprecate_positional_args("v2023.10.0")
     def reindex_like(
         self,
         other: T_DataArrayOrSet,
@@ -2135,7 +2131,6 @@ class DataArray(
             fill_value=fill_value,
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def reindex(
         self,
         indexers: Mapping[Any, Any] | None = None,
@@ -2960,7 +2955,6 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
-    @_deprecate_positional_args("v2023.10.0")
     def unstack(
         self,
         dim: Dims = None,
@@ -3385,7 +3379,6 @@ class DataArray(
         dataset = dataset.drop_isel(indexers=indexers, **indexers_kwargs)
         return self._from_temp_dataset(dataset)
 
-    @_deprecate_positional_args("v2023.10.0")
     def dropna(
         self,
         dim: Hashable,
@@ -4889,7 +4882,6 @@ class DataArray(
 
         return title
 
-    @_deprecate_positional_args("v2023.10.0")
     def diff(
         self,
         dim: Hashable,
@@ -5198,7 +5190,6 @@ class DataArray(
         ds = self._to_temp_dataset().sortby(variables, ascending=ascending)
         return self._from_temp_dataset(ds)
 
-    @_deprecate_positional_args("v2023.10.0")
     def quantile(
         self,
         q: ArrayLike,
@@ -5318,7 +5309,6 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
-    @_deprecate_positional_args("v2023.10.0")
     def rank(
         self,
         dim: Hashable,
@@ -5897,7 +5887,6 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
-    @_deprecate_positional_args("v2023.10.0")
     def idxmin(
         self,
         dim: Hashable | None = None,
@@ -5995,7 +5984,6 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def idxmax(
         self,
         dim: Hashable = None,
@@ -6093,7 +6081,6 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def argmin(
         self,
         dim: Dims = None,
@@ -6195,7 +6182,6 @@ class DataArray(
         else:
             return self._replace_maybe_drop_dims(result)
 
-    @_deprecate_positional_args("v2023.10.0")
     def argmax(
         self,
         dim: Dims = None,
@@ -6544,7 +6530,6 @@ class DataArray(
             kwargs=kwargs,
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def drop_duplicates(
         self,
         dim: Hashable | Iterable[Hashable],

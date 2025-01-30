@@ -25,7 +25,7 @@ repos:
       - id: text-unicode-replacement-char
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.8.1
+    rev: v0.8.6
     hooks:
       - id: ruff-format
       - id: ruff
@@ -37,12 +37,12 @@ repos:
         exclude: "generate_aggregations.py"
         additional_dependencies: ["black==24.8.0"]
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: v3.4.1
+    rev: v3.4.2
     hooks:
       - id: prettier
         args: [--cache-location=.prettier_cache/cache]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
+    rev: v1.14.1
     hooks:
       - id: mypy
         # Copied from setup.cfg
@@ -63,3 +63,13 @@ repos:
     rev: ebf0b5e44d67f8beaa1cd13a0d0393ea04c6058d
     hooks:
       - id: validate-cff
+  - repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: v0.9.3
+    hooks:
+      - id: taplo-format
+        args: ["--option", "array_auto_collapse=false"]
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: v0.23
+    hooks:
+      - id: validate-pyproject
+        additional_dependencies: ["validate-pyproject-schema-store[all]"]
