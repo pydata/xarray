@@ -9,6 +9,7 @@ import pytest
 from numpy import array, nan
 
 from xarray import DataArray, Dataset, cftime_range, concat
+from xarray.coding.times import _NS_PER_TIME_DELTA
 from xarray.core import dtypes, duck_array_ops
 from xarray.core.duck_array_ops import (
     array_notnull_equiv,
@@ -28,6 +29,7 @@ from xarray.core.duck_array_ops import (
     where,
 )
 from xarray.core.extension_array import PandasExtensionArray
+from xarray.core.types import NPDatetimeUnitOptions, PDDatetimeUnitOptions
 from xarray.namedarray.pycompat import array_type
 from xarray.testing import assert_allclose, assert_equal, assert_identical
 from xarray.tests import (
@@ -341,16 +343,16 @@ class TestArrayNotNullEquiv:
 
 def construct_dataarray(dim_num, dtype, contains_nan, dask):
     # dimnum <= 3
-    rng = np.random.RandomState(0)
+    rng = np.random.default_rng(0)
     shapes = [16, 8, 4][:dim_num]
     dims = ("x", "y", "z")[:dim_num]
 
     if np.issubdtype(dtype, np.floating):
-        array = rng.randn(*shapes).astype(dtype)
+        array = rng.random(shapes).astype(dtype)
     elif np.issubdtype(dtype, np.integer):
-        array = rng.randint(0, 10, size=shapes).astype(dtype)
+        array = rng.integers(0, 10, size=shapes).astype(dtype)
     elif np.issubdtype(dtype, np.bool_):
-        array = rng.randint(0, 1, size=shapes).astype(dtype)
+        array = rng.integers(0, 1, size=shapes).astype(dtype)
     elif dtype is str:
         array = rng.choice(["a", "b", "c", "d"], size=shapes)
     else:
@@ -411,10 +413,11 @@ def assert_dask_array(da, dask):
 @arm_xfail
 @pytest.mark.filterwarnings("ignore:All-NaN .* encountered:RuntimeWarning")
 @pytest.mark.parametrize("dask", [False, True] if has_dask else [False])
-def test_datetime_mean(dask: bool) -> None:
+def test_datetime_mean(dask: bool, time_unit: PDDatetimeUnitOptions) -> None:
     # Note: only testing numpy, as dask is broken upstream
+    dtype = f"M8[{time_unit}]"
     da = DataArray(
-        np.array(["2010-01-01", "NaT", "2010-01-03", "NaT", "NaT"], dtype="M8[ns]"),
+        np.array(["2010-01-01", "NaT", "2010-01-03", "NaT", "NaT"], dtype=dtype),
         dims=["time"],
     )
     if dask:
@@ -846,11 +849,11 @@ def test_multiple_dims(dtype, dask, skipna, func):
 
 
 @pytest.mark.parametrize("dask", [True, False])
-def test_datetime_to_numeric_datetime64(dask):
+def test_datetime_to_numeric_datetime64(dask, time_unit: PDDatetimeUnitOptions):
     if dask and not has_dask:
         pytest.skip("requires dask")
 
-    times = pd.date_range("2000", periods=5, freq="7D").values
+    times = pd.date_range("2000", periods=5, freq="7D").as_unit(time_unit).values
     if dask:
         import dask.array
 
@@ -874,8 +877,8 @@ def test_datetime_to_numeric_datetime64(dask):
         result = duck_array_ops.datetime_to_numeric(
             times, datetime_unit="h", dtype=dtype
         )
-    expected = 24 * np.arange(0, 35, 7).astype(dtype)
-    np.testing.assert_array_equal(result, expected)
+    expected2 = 24 * np.arange(0, 35, 7).astype(dtype)
+    np.testing.assert_array_equal(result, expected2)
 
 
 @requires_cftime
@@ -923,15 +926,18 @@ def test_datetime_to_numeric_cftime(dask):
 
 
 @requires_cftime
-def test_datetime_to_numeric_potential_overflow():
+def test_datetime_to_numeric_potential_overflow(time_unit: PDDatetimeUnitOptions):
     import cftime
 
-    times = pd.date_range("2000", periods=5, freq="7D").values.astype("datetime64[us]")
+    if time_unit == "ns":
+        pytest.skip("out-of-bounds datetime64 overflow")
+    dtype = f"M8[{time_unit}]"
+    times = pd.date_range("2000", periods=5, freq="7D").values.astype(dtype)
     cftimes = cftime_range(
         "2000", periods=5, freq="7D", calendar="proleptic_gregorian"
     ).values
 
-    offset = np.datetime64("0001-01-01")
+    offset = np.datetime64("0001-01-01", time_unit)
     cfoffset = cftime.DatetimeProlepticGregorian(1, 1, 1)
 
     result = duck_array_ops.datetime_to_numeric(
@@ -957,24 +963,33 @@ def test_py_timedelta_to_float():
     assert py_timedelta_to_float(dt.timedelta(days=1e6), "D") == 1e6
 
 
-@pytest.mark.parametrize(
-    "td, expected",
-    ([np.timedelta64(1, "D"), 86400 * 1e9], [np.timedelta64(1, "ns"), 1.0]),
-)
-def test_np_timedelta64_to_float(td, expected):
-    out = np_timedelta64_to_float(td, datetime_unit="ns")
+@pytest.mark.parametrize("np_dt_unit", ["D", "h", "m", "s", "ms", "us", "ns"])
+def test_np_timedelta64_to_float(
+    np_dt_unit: NPDatetimeUnitOptions, time_unit: PDDatetimeUnitOptions
+):
+    # tests any combination of source np.timedelta64 (NPDatetimeUnitOptions) with
+    # np_timedelta_to_float with dedicated target unit (PDDatetimeUnitOptions)
+    td = np.timedelta64(1, np_dt_unit)
+    expected = _NS_PER_TIME_DELTA[np_dt_unit] / _NS_PER_TIME_DELTA[time_unit]
+
+    out = np_timedelta64_to_float(td, datetime_unit=time_unit)
     np.testing.assert_allclose(out, expected)
     assert isinstance(out, float)
 
-    out = np_timedelta64_to_float(np.atleast_1d(td), datetime_unit="ns")
+    out = np_timedelta64_to_float(np.atleast_1d(td), datetime_unit=time_unit)
     np.testing.assert_allclose(out, expected)
 
 
-@pytest.mark.parametrize(
-    "td, expected", ([pd.Timedelta(1, "D"), 86400 * 1e9], [pd.Timedelta(1, "ns"), 1.0])
-)
-def test_pd_timedelta_to_float(td, expected):
-    out = pd_timedelta_to_float(td, datetime_unit="ns")
+@pytest.mark.parametrize("np_dt_unit", ["D", "h", "m", "s", "ms", "us", "ns"])
+def test_pd_timedelta_to_float(
+    np_dt_unit: NPDatetimeUnitOptions, time_unit: PDDatetimeUnitOptions
+):
+    # tests any combination of source pd.Timedelta (NPDatetimeUnitOptions) with
+    # np_timedelta_to_float with dedicated target unit (PDDatetimeUnitOptions)
+    td = pd.Timedelta(1, np_dt_unit)
+    expected = _NS_PER_TIME_DELTA[np_dt_unit] / _NS_PER_TIME_DELTA[time_unit]
+
+    out = pd_timedelta_to_float(td, datetime_unit=time_unit)
     np.testing.assert_allclose(out, expected)
     assert isinstance(out, float)
 
@@ -982,10 +997,11 @@ def test_pd_timedelta_to_float(td, expected):
 @pytest.mark.parametrize(
     "td", [dt.timedelta(days=1), np.timedelta64(1, "D"), pd.Timedelta(1, "D"), "1 day"]
 )
-def test_timedelta_to_numeric(td):
+def test_timedelta_to_numeric(td, time_unit: PDDatetimeUnitOptions):
     # Scalar input
-    out = timedelta_to_numeric(td, "ns")
-    np.testing.assert_allclose(out, 86400 * 1e9)
+    out = timedelta_to_numeric(td, time_unit)
+    expected = _NS_PER_TIME_DELTA["D"] / _NS_PER_TIME_DELTA[time_unit]
+    np.testing.assert_allclose(out, expected)
     assert isinstance(out, float)
 
 

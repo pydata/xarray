@@ -107,14 +107,22 @@ with warnings.catch_warnings():
     has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
+has_dask_ge_2024_08_1, requires_dask_ge_2024_08_1 = _importorskip(
+    "dask", minversion="2024.08.1"
+)
 has_dask_ge_2024_11_0, requires_dask_ge_2024_11_0 = _importorskip("dask", "2024.11.0")
-with warnings.catch_warnings():
-    warnings.filterwarnings(
-        "ignore",
-        message="The current Dask DataFrame implementation is deprecated.",
-        category=DeprecationWarning,
-    )
-    has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
+has_dask_ge_2025_1_0, requires_dask_ge_2025_1_0 = _importorskip("dask", "2025.1.0")
+if has_dask_ge_2025_1_0:
+    has_dask_expr = True
+    requires_dask_expr = pytest.mark.skipif(not has_dask_expr, reason="should not skip")
+else:
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="The current Dask DataFrame implementation is deprecated.",
+            category=DeprecationWarning,
+        )
+        has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
@@ -138,6 +146,7 @@ has_cartopy, requires_cartopy = _importorskip("cartopy")
 has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
+has_netcdf, requires_netcdf = _importorskip("netcdf")
 has_pandas_ge_2_2, requires_pandas_ge_2_2 = _importorskip("pandas", "2.2")
 has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0.dev0")
 
@@ -152,7 +161,7 @@ requires_numbagg_or_bottleneck = pytest.mark.skipif(
     not has_numbagg_or_bottleneck, reason="requires numbagg or bottleneck"
 )
 has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
-_, requires_flox_0_9_12 = _importorskip("flox", "0.9.12")
+has_flox_0_9_12, requires_flox_0_9_12 = _importorskip("flox", "0.9.12")
 
 has_array_api_strict, requires_array_api_strict = _importorskip("array_api_strict")
 
@@ -206,8 +215,7 @@ class CountingScheduler:
         self.total_computes += 1
         if self.total_computes > self.max_computes:
             raise RuntimeError(
-                "Too many computes. Total: %d > max: %d."
-                % (self.total_computes, self.max_computes)
+                f"Too many computes. Total: {self.total_computes} > max: {self.max_computes}."
             )
         return dask.get(dsk, keys, **kwargs)
 
@@ -285,12 +293,12 @@ _DEFAULT_TEST_DIM_SIZES = (8, 9, 10)
 
 
 def create_test_data(
-    seed: int | None = None,
+    seed: int = 12345,
     add_attrs: bool = True,
     dim_sizes: tuple[int, int, int] = _DEFAULT_TEST_DIM_SIZES,
     use_extension_array: bool = False,
 ) -> Dataset:
-    rs = np.random.RandomState(seed)
+    rs = np.random.default_rng(seed)
     _vars = {
         "var1": ["dim1", "dim2"],
         "var2": ["dim1", "dim2"],
@@ -305,7 +313,14 @@ def create_test_data(
             f'Not enough letters for filling this dimension size ({_dims["dim3"]})'
         )
     obj["dim3"] = ("dim3", list(string.ascii_lowercase[0 : _dims["dim3"]]))
-    obj["time"] = ("time", pd.date_range("2000-01-01", periods=20))
+    obj["time"] = (
+        "time",
+        pd.date_range(
+            "2000-01-01",
+            periods=20,
+            unit="ns",
+        ),
+    )
     for v, dims in sorted(_vars.items()):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
         obj[v] = (dims, data)
@@ -316,7 +331,7 @@ def create_test_data(
             "dim1",
             pd.Categorical(
                 rs.choice(
-                    list(string.ascii_lowercase[: rs.randint(1, 5)]),
+                    list(string.ascii_lowercase[: rs.integers(1, 5)]),
                     size=dim_sizes[0],
                 )
             ),
@@ -324,7 +339,7 @@ def create_test_data(
     if dim_sizes == _DEFAULT_TEST_DIM_SIZES:
         numbers_values = np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64")
     else:
-        numbers_values = rs.randint(0, 3, _dims["dim3"], dtype="int64")
+        numbers_values = rs.integers(0, 3, _dims["dim3"], dtype="int64")
     obj.coords["numbers"] = ("dim3", numbers_values)
     obj.encoding = {"foo": "bar"}
     assert_writeable(obj)

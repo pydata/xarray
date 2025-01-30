@@ -37,7 +37,9 @@
 from __future__ import annotations
 
 import contextlib
+import difflib
 import functools
+import importlib
 import inspect
 import io
 import itertools
@@ -64,7 +66,7 @@ from collections.abc import (
 )
 from enum import Enum
 from pathlib import Path
-from types import EllipsisType
+from types import EllipsisType, ModuleType
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeGuard, TypeVar, overload
 
 import numpy as np
@@ -111,6 +113,47 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
 
     wrapper.__doc__ = alias_message(old_name, obj.__name__)
     return wrapper
+
+
+def did_you_mean(
+    word: Hashable, possibilities: Iterable[Hashable], *, n: int = 10
+) -> str:
+    """
+    Suggest a few correct words based on a list of possibilites
+
+    Parameters
+    ----------
+    word : Hashable
+        Word to compare to a list of possibilites.
+    possibilities : Iterable of Hashable
+        The iterable of Hashable that contains the correct values.
+    n : int, default: 10
+        Maximum number of suggestions to show.
+
+    Examples
+    --------
+    >>> did_you_mean("bluch", ("blech", "gray_r", 1, None, (2, 56)))
+    "Did you mean one of ('blech',)?"
+    >>> did_you_mean("none", ("blech", "gray_r", 1, None, (2, 56)))
+    'Did you mean one of (None,)?'
+
+    See also
+    --------
+    https://en.wikipedia.org/wiki/String_metric
+    """
+    # Convert all values to string, get_close_matches doesn't handle all hashables:
+    possibilites_str: dict[str, Hashable] = {str(k): k for k in possibilities}
+
+    msg = ""
+    if len(
+        best_str := difflib.get_close_matches(
+            str(word), list(possibilites_str.keys()), n=n
+        )
+    ):
+        best = tuple(possibilites_str[k] for k in best_str)
+        msg = f"Did you mean one of {best}?"
+
+    return msg
 
 
 def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
@@ -644,7 +687,7 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
         try:
             with open(path, "rb") as f:
                 return read_magic_number_from_file(f, count)
-        except (FileNotFoundError, TypeError):
+        except (FileNotFoundError, IsADirectoryError, TypeError):
             pass
     return None
 
@@ -1192,6 +1235,60 @@ def _resolve_doubly_passed_kwarg(
         )
 
     return kwargs_dict
+
+
+def attempt_import(module: str) -> ModuleType:
+    """Import an optional dependency, and raise an informative error on failure.
+
+    Parameters
+    ----------
+    module : str
+        Module to import. For example, ``'zarr'`` or ``'matplotlib.pyplot'``.
+
+    Returns
+    -------
+    module : ModuleType
+        The Imported module.
+
+    Raises
+    ------
+    ImportError
+        If the module could not be imported.
+
+    Notes
+    -----
+    Static type checkers will not be able to infer the type of the returned module,
+    so it is recommended to precede this function with a direct import of the module,
+    guarded by an ``if TYPE_CHECKING`` block, to preserve type checker functionality.
+    See the examples section below for a demonstration.
+
+    Examples
+    --------
+    >>> from xarray.core.utils import attempt_import
+    >>> if TYPE_CHECKING:
+    ...     import zarr
+    ... else:
+    ...     zarr = attempt_import("zarr")
+    ...
+    """
+    install_mapping = dict(nc_time_axis="nc-time-axis")
+    package_purpose = dict(
+        zarr="for working with Zarr stores",
+        cftime="for working with non-standard calendars",
+        matplotlib="for plotting",
+        hypothesis="for the `xarray.testing.strategies` submodule",
+    )
+    package_name = module.split(".")[0]  # e.g. "zarr" from "zarr.storage"
+    install_name = install_mapping.get(package_name, package_name)
+    reason = package_purpose.get(package_name, "")
+    try:
+        return importlib.import_module(module)
+    except (ImportError, ModuleNotFoundError) as e:
+        raise ImportError(
+            f"The {install_name} package is required {reason}"
+            " but could not be imported."
+            " Please install it with your package manager (e.g. conda or pip)."
+        ) from e
 
 
 _DEFAULT_NAME = ReprObject("<default-name>")

@@ -70,8 +70,15 @@ if TYPE_CHECKING:
 
     try:
         from zarr import Array as ZarrArray
+        from zarr import Group as ZarrGroup
     except ImportError:
-        ZarrArray = np.ndarray
+        ZarrArray = np.ndarray  # type: ignore[misc, assignment, unused-ignore]
+        ZarrGroup = Any  # type: ignore[misc, assignment, unused-ignore]
+    try:
+        # this is V3 only
+        from zarr.storage import StoreLike as ZarrStoreLike
+    except ImportError:
+        ZarrStoreLike = Any  # type: ignore[misc, assignment, unused-ignore]
 
     # Anything that can be coerced to a shape tuple
     _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
@@ -249,6 +256,7 @@ DatetimeUnitOptions = Literal[
     "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
 ]
 NPDatetimeUnitOptions = Literal["D", "h", "m", "s", "ms", "us", "ns"]
+PDDatetimeUnitOptions = Literal["s", "ms", "us", "ns"]
 
 QueryEngineOptions = Literal["python", "numexpr", None]
 QueryParserOptions = Literal["pandas", "python"]
@@ -362,7 +370,7 @@ NetcdfWriteModes = Literal["w", "a"]
 ZarrWriteModes = Literal["w", "w-", "a", "a-", "r+", "r"]
 
 GroupKey = Any
-GroupIndex = Union[int, slice, list[int]]
+GroupIndex = Union[slice, list[int]]
 GroupIndices = tuple[GroupIndex, ...]
 Bins = Union[
     int, Sequence[int], Sequence[float], Sequence[pd.Timestamp], np.ndarray, pd.Index

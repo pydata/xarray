@@ -18,7 +18,7 @@ from collections.abc import (
     MutableMapping,
     Sequence,
 )
-from functools import partial
+from functools import lru_cache, partial
 from html import escape
 from numbers import Number
 from operator import methodcaller
@@ -55,6 +55,7 @@ from xarray.core.alignment import (
     align,
 )
 from xarray.core.arithmetic import DatasetArithmetic
+from xarray.core.array_api_compat import to_like_array
 from xarray.core.common import (
     DataWithCoords,
     _contains_datetime_like_objects,
@@ -127,7 +128,7 @@ from xarray.core.variable import (
     calculate_dimensions,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
-from xarray.namedarray.pycompat import array_type, is_chunked_array
+from xarray.namedarray.pycompat import array_type, is_chunked_array, to_numpy
 from xarray.plot.accessor import DatasetPlotAccessor
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
@@ -155,6 +156,7 @@ if TYPE_CHECKING:
         DsCompatible,
         ErrorOptions,
         ErrorOptionsWithWarn,
+        GroupIndices,
         GroupInput,
         InterpOptions,
         JoinOptions,
@@ -166,6 +168,7 @@ if TYPE_CHECKING:
         ResampleCompatible,
         SideOptions,
         T_ChunkDimFreq,
+        T_Chunks,
         T_DatasetPadConstantValues,
         T_Xarray,
     )
@@ -234,7 +237,6 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
     """
     Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
     """
-
     if isinstance(var, IndexVariable):
         return {}
     dims = var.dims
@@ -264,29 +266,54 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
                 preferred_chunk_sizes = preferred_chunks[dim]
             except KeyError:
                 continue
-            # Determine the stop indices of the preferred chunks, but omit the last stop
-            # (equal to the dim size).  In particular, assume that when a sequence
-            # expresses the preferred chunks, the sequence sums to the size.
-            preferred_stops = (
-                range(preferred_chunk_sizes, size, preferred_chunk_sizes)
-                if isinstance(preferred_chunk_sizes, int)
-                else itertools.accumulate(preferred_chunk_sizes[:-1])
+            disagreement = _get_breaks_cached(
+                size=size,
+                chunk_sizes=chunk_sizes,
+                preferred_chunk_sizes=preferred_chunk_sizes,
             )
-            # Gather any stop indices of the specified chunks that are not a stop index
-            # of a preferred chunk.  Again, omit the last stop, assuming that it equals
-            # the dim size.
-            breaks = set(itertools.accumulate(chunk_sizes[:-1])).difference(
-                preferred_stops
-            )
-            if breaks:
-                warnings.warn(
+            if disagreement:
+                emit_user_level_warning(
                     "The specified chunks separate the stored chunks along "
-                    f'dimension "{dim}" starting at index {min(breaks)}. This could '
+                    f'dimension "{dim}" starting at index {disagreement}. This could '
                     "degrade performance. Instead, consider rechunking after loading.",
-                    stacklevel=2,
                 )
 
     return dict(zip(dims, chunk_shape, strict=True))
+
+
+@lru_cache(maxsize=512)
+def _get_breaks_cached(
+    *,
+    size: int,
+    chunk_sizes: tuple[int, ...],
+    preferred_chunk_sizes: int | tuple[int, ...],
+) -> int | None:
+    if isinstance(preferred_chunk_sizes, int) and preferred_chunk_sizes == 1:
+        # short-circuit for the trivial case
+        return None
+    # Determine the stop indices of the preferred chunks, but omit the last stop
+    # (equal to the dim size).  In particular, assume that when a sequence
+    # expresses the preferred chunks, the sequence sums to the size.
+    preferred_stops = (
+        range(preferred_chunk_sizes, size, preferred_chunk_sizes)
+        if isinstance(preferred_chunk_sizes, int)
+        else set(itertools.accumulate(preferred_chunk_sizes[:-1]))
+    )
+
+    # Gather any stop indices of the specified chunks that are not a stop index
+    # of a preferred chunk. Again, omit the last stop, assuming that it equals
+    # the dim size.
+    actual_stops = itertools.accumulate(chunk_sizes[:-1])
+    # This copy is required for parallel iteration
+    actual_stops_2 = itertools.accumulate(chunk_sizes[:-1])
+
+    disagrees = itertools.compress(
+        actual_stops_2, (a not in preferred_stops for a in actual_stops)
+    )
+    try:
+        return next(disagrees)
+    except StopIteration:
+        return None
 
 
 def _maybe_chunk(
@@ -1583,7 +1610,14 @@ class Dataset(
             try:
                 return self._construct_dataarray(key)
             except KeyError as e:
-                message = f"No variable named {key!r}. Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
+                message = f"No variable named {key!r}."
+
+                best_guess = utils.did_you_mean(key, self.variables.keys())
+                if best_guess:
+                    message += f" {best_guess}"
+                else:
+                    message += f" Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
+
                 # If someone attempts `ds['foo' , 'bar']` instead of `ds[['foo', 'bar']]`
                 if isinstance(key, tuple):
                     message += f"\nHint: use a list to select multiple variables, for example `ds[{list(key)}]`"
@@ -2894,19 +2928,11 @@ class Dataset(
         """Variant of _validate_indexers to be used for interpolation"""
         for k, v in self._validate_indexers(indexers):
             if isinstance(v, Variable):
-                if v.ndim == 1:
-                    yield k, v.to_index_variable()
-                else:
-                    yield k, v
-            elif isinstance(v, int):
+                yield k, v
+            elif is_scalar(v):
                 yield k, Variable((), v, attrs=self.coords[k].attrs)
             elif isinstance(v, np.ndarray):
-                if v.ndim == 0:
-                    yield k, Variable((), v, attrs=self.coords[k].attrs)
-                elif v.ndim == 1:
-                    yield k, IndexVariable((k,), v, attrs=self.coords[k].attrs)
-                else:
-                    raise AssertionError()  # Already tested by _validate_indexers
+                yield k, Variable(dims=(k,), data=v, attrs=self.coords[k].attrs)
             else:
                 raise TypeError(type(v))
 
@@ -3055,8 +3081,8 @@ class Dataset(
 
         See Also
         --------
-        Dataset.sel
-        DataArray.isel
+        :func:`Dataset.sel <Dataset.sel>`
+        :func:`DataArray.isel <DataArray.isel>`
 
         :doc:`xarray-tutorial:intermediate/indexing/indexing`
             Tutorial material on indexing with Xarray objects
@@ -3209,8 +3235,8 @@ class Dataset(
 
         See Also
         --------
-        Dataset.isel
-        DataArray.sel
+        :func:`Dataset.isel <Dataset.isel>`
+        :func:`DataArray.sel <DataArray.sel>`
 
         :doc:`xarray-tutorial:intermediate/indexing/indexing`
             Tutorial material on indexing with Xarray objects
@@ -3236,6 +3262,40 @@ class Dataset(
 
         result = self.isel(indexers=query_results.dim_indexers, drop=drop)
         return result._overwrite_indexes(*query_results.as_tuple()[1:])
+
+    def _shuffle(self, dim, *, indices: GroupIndices, chunks: T_Chunks) -> Self:
+        # Shuffling is only different from `isel` for chunked arrays.
+        # Extract them out, and treat them specially. The rest, we route through isel.
+        # This makes it easy to ensure correct handling of indexes.
+        is_chunked = {
+            name: var
+            for name, var in self._variables.items()
+            if is_chunked_array(var._data)
+        }
+        subset = self[[name for name in self._variables if name not in is_chunked]]
+
+        no_slices: list[list[int]] = [
+            (
+                list(range(*idx.indices(self.sizes[dim])))
+                if isinstance(idx, slice)
+                else idx
+            )
+            for idx in indices
+        ]
+        no_slices = [idx for idx in no_slices if idx]
+
+        shuffled = (
+            subset
+            if dim not in subset.dims
+            else subset.isel({dim: np.concatenate(no_slices)})
+        )
+        for name, var in is_chunked.items():
+            shuffled[name] = var._shuffle(
+                indices=no_slices,
+                dim=dim,
+                chunks=chunks,
+            )
+        return shuffled
 
     def head(
         self,
@@ -4066,18 +4126,6 @@ class Dataset(
 
         coords = either_dict_or_kwargs(coords, coords_kwargs, "interp")
         indexers = dict(self._validate_interp_indexers(coords))
-
-        if coords:
-            # This avoids broadcasting over coordinates that are both in
-            # the original array AND in the indexing array. It essentially
-            # forces interpolation along the shared coordinates.
-            sdims = (
-                set(self.dims)
-                .intersection(*[set(nx.dims) for nx in indexers.values()])
-                .difference(coords.keys())
-            )
-            indexers.update({d: self.variables[d] for d in sdims})
-
         obj = self if assume_sorted else self.sortby(list(coords))
 
         def maybe_variable(obj, k):
@@ -4108,31 +4156,32 @@ class Dataset(
             for k, v in indexers.items()
         }
 
-        # optimization: subset to coordinate range of the target index
-        if method in ["linear", "nearest"]:
-            for k, v in validated_indexers.items():
-                obj, newidx = missing._localize(obj, {k: v})
-                validated_indexers[k] = newidx[k]
-
-        # optimization: create dask coordinate arrays once per Dataset
-        # rather than once per Variable when dask.array.unify_chunks is called later
-        # GH4739
-        if obj.__dask_graph__():
+        has_chunked_array = bool(
+            any(is_chunked_array(v._data) for v in obj._variables.values())
+        )
+        if has_chunked_array:
+            # optimization: subset to coordinate range of the target index
+            if method in ["linear", "nearest"]:
+                for k, v in validated_indexers.items():
+                    obj, newidx = missing._localize(obj, {k: v})
+                    validated_indexers[k] = newidx[k]
+            # optimization: create dask coordinate arrays once per Dataset
+            # rather than once per Variable when dask.array.unify_chunks is called later
+            # GH4739
             dask_indexers = {
                 k: (index.to_base_variable().chunk(), dest.to_base_variable().chunk())
                 for k, (index, dest) in validated_indexers.items()
             }
 
         variables: dict[Hashable, Variable] = {}
-        reindex: bool = False
+        reindex_vars: list[Hashable] = []
         for name, var in obj._variables.items():
             if name in indexers:
                 continue
 
-            if is_duck_dask_array(var.data):
-                use_indexers = dask_indexers
-            else:
-                use_indexers = validated_indexers
+            use_indexers = (
+                dask_indexers if is_duck_dask_array(var.data) else validated_indexers
+            )
 
             dtype_kind = var.dtype.kind
             if dtype_kind in "uifc":
@@ -4146,19 +4195,20 @@ class Dataset(
                 # booleans and objects and retains the dtype but inside
                 # this loop there might be some duplicate code that slows it
                 # down, therefore collect these signals and run it later:
-                reindex = True
+                reindex_vars.append(name)
             elif all(d not in indexers for d in var.dims):
                 # For anything else we can only keep variables if they
                 # are not dependent on any coords that are being
                 # interpolated along:
                 variables[name] = var
 
-        if reindex:
-            reindex_indexers = {
+        if reindex_vars and (
+            reindex_indexers := {
                 k: v for k, (_, v) in validated_indexers.items() if v.dims == (k,)
             }
+        ):
             reindexed = alignment.reindex(
-                obj,
+                obj[reindex_vars],
                 indexers=reindex_indexers,
                 method=method_non_numeric,
                 exclude_vars=variables.keys(),
@@ -5043,7 +5093,6 @@ class Dataset(
             variables, coord_names=coord_names, indexes=indexes_
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def reset_index(
         self,
         dims_or_levels: Hashable | Sequence[Hashable],
@@ -5343,11 +5392,9 @@ class Dataset(
                 and var.dims[0] == dim
                 and (
                     # stack: must be a single coordinate index
-                    not multi
-                    and not self.xindexes.is_multi(name)
+                    (not multi and not self.xindexes.is_multi(name))
                     # unstack: must be an index that implements .unstack
-                    or multi
-                    and type(index).unstack is not Index.unstack
+                    or (multi and type(index).unstack is not Index.unstack)
                 )
             ):
                 if stack_index is not None and index is not stack_index:
@@ -5683,7 +5730,6 @@ class Dataset(
             variables, coord_names=coord_names, indexes=indexes
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def unstack(
         self,
         dim: Dims = None,
@@ -6445,7 +6491,6 @@ class Dataset(
             ds._variables[name] = var.transpose(*var_dims)
         return ds
 
-    @_deprecate_positional_args("v2023.10.0")
     def dropna(
         self,
         dim: Hashable,
@@ -6564,7 +6609,7 @@ class Dataset(
             array = self._variables[k]
             if dim in array.dims:
                 dims = [d for d in array.dims if d != dim]
-                count += np.asarray(array.count(dims))
+                count += to_numpy(array.count(dims).data)
                 size += math.prod([self.sizes[d] for d in dims])
 
         if thresh is not None:
@@ -7559,7 +7604,7 @@ class Dataset(
 
         if isinstance(idx, pd.MultiIndex):
             dims = tuple(
-                name if name is not None else "level_%i" % n  # type: ignore[redundant-expr]
+                name if name is not None else f"level_{n}"  # type: ignore[redundant-expr]
                 for n, name in enumerate(idx.names)
             )
             for dim, lev in zip(dims, idx.levels, strict=True):
@@ -7919,7 +7964,6 @@ class Dataset(
             if v in self.variables:
                 self.variables[v].attrs = other.variables[v].attrs
 
-    @_deprecate_positional_args("v2023.10.0")
     def diff(
         self,
         dim: Hashable,
@@ -8267,7 +8311,6 @@ class Dataset(
             indices[key] = order if ascending else order[::-1]
         return aligned_self.isel(indices)
 
-    @_deprecate_positional_args("v2023.10.0")
     def quantile(
         self,
         q: ArrayLike,
@@ -8448,7 +8491,6 @@ class Dataset(
         )
         return new.assign_coords(quantile=q)
 
-    @_deprecate_positional_args("v2023.10.0")
     def rank(
         self,
         dim: Hashable,
@@ -8678,16 +8720,17 @@ class Dataset(
                     coord_names.add(k)
             else:
                 if k in self.data_vars and dim in v.dims:
+                    coord_data = to_like_array(coord_var.data, like=v.data)
                     if _contains_datetime_like_objects(v):
                         v = datetime_to_numeric(v, datetime_unit=datetime_unit)
                     if cumulative:
                         integ = duck_array_ops.cumulative_trapezoid(
-                            v.data, coord_var.data, axis=v.get_axis_num(dim)
+                            v.data, coord_data, axis=v.get_axis_num(dim)
                         )
                         v_dims = v.dims
                     else:
                         integ = duck_array_ops.trapz(
-                            v.data, coord_var.data, axis=v.get_axis_num(dim)
+                            v.data, coord_data, axis=v.get_axis_num(dim)
                         )
                         v_dims = list(v.dims)
                         v_dims.remove(dim)
@@ -8962,8 +9005,9 @@ class Dataset(
 
         See Also
         --------
-        dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
-        xarray.DataArray.map_blocks
+        :func:`dask.array.map_blocks <dask.array.map_blocks>`
+        :func:`xarray.apply_ufunc <apply_ufunc>`
+        :func:`xarray.DataArray.map_blocks <xarray.DataArray.map_blocks>`
 
         :doc:`xarray-tutorial:advanced/map_blocks/map_blocks`
             Advanced Tutorial on map_blocks with dask
@@ -9162,7 +9206,7 @@ class Dataset(
 
             present_dims.update(other_dims)
             if w is not None:
-                rhs = rhs * w[:, np.newaxis]
+                rhs = rhs * w.reshape(-1, *((1,) * len(other_dims)))
 
             with warnings.catch_warnings():
                 if full:  # Copy np.polyfit behavior
@@ -9417,7 +9461,6 @@ class Dataset(
         attrs = self._attrs if keep_attrs else None
         return self._replace_with_new_dims(variables, indexes=indexes, attrs=attrs)
 
-    @_deprecate_positional_args("v2023.10.0")
     def idxmin(
         self,
         dim: Hashable | None = None,
@@ -9516,7 +9559,6 @@ class Dataset(
             )
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def idxmax(
         self,
         dim: Hashable | None = None,
@@ -10199,7 +10241,6 @@ class Dataset(
 
         return result
 
-    @_deprecate_positional_args("v2023.10.0")
     def drop_duplicates(
         self,
         dim: Hashable | Iterable[Hashable],
@@ -10493,13 +10534,13 @@ class Dataset(
         :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
             Tutorial on :py:func:`~xarray.Dataset.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.Dataset.resample`.
 
-        Dataset.groupby_bins
-        DataArray.groupby
-        core.groupby.DatasetGroupBy
-        pandas.DataFrame.groupby
-        Dataset.coarsen
-        Dataset.resample
-        DataArray.resample
+        :external:py:meth:`pandas.DataFrame.groupby <pandas.DataFrame.groupby>`
+        :func:`Dataset.groupby_bins <Dataset.groupby_bins>`
+        :func:`DataArray.groupby <DataArray.groupby>`
+        :class:`core.groupby.DatasetGroupBy`
+        :func:`Dataset.coarsen <Dataset.coarsen>`
+        :func:`Dataset.resample <Dataset.resample>`
+        :func:`DataArray.resample <DataArray.resample>`
         """
         from xarray.core.groupby import (
             DatasetGroupBy,
@@ -10637,7 +10678,7 @@ class Dataset(
 
         See Also
         --------
-        DataArray.weighted
+        :func:`DataArray.weighted <DataArray.weighted>`
 
         :ref:`comput.weighted`
             User guide on weighted array reduction using :py:func:`~xarray.Dataset.weighted`
@@ -10670,7 +10711,8 @@ class Dataset(
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
         center : bool or Mapping to int, default: False
-            Set the labels at the center of the window.
+            Set the labels at the center of the window. The default, False,
+            sets the labels at the right edge of the window.
         **window_kwargs : optional
             The keyword arguments form of ``dim``.
             One of dim or window_kwargs must be provided.
@@ -10765,8 +10807,8 @@ class Dataset(
 
         See Also
         --------
-        core.rolling.DatasetCoarsen
-        DataArray.coarsen
+        :class:`core.rolling.DatasetCoarsen`
+        :func:`DataArray.coarsen <DataArray.coarsen>`
 
         :ref:`reshape.coarsen`
             User guide describing :py:func:`~xarray.Dataset.coarsen`

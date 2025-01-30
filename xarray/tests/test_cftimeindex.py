@@ -12,9 +12,11 @@ import xarray as xr
 from xarray.coding.cftimeindex import (
     CFTimeIndex,
     _parse_array_of_cftime_strings,
-    _parse_iso8601_with_reso,
     _parsed_string_to_bounds,
     assert_all_valid_date_type,
+)
+from xarray.coding.times import (
+    _parse_iso8601,
     parse_iso8601_like,
 )
 from xarray.tests import (
@@ -35,9 +37,23 @@ if has_cftime:
     standard_or_gregorian = "standard"
 
 
-def date_dict(year=None, month=None, day=None, hour=None, minute=None, second=None):
+def date_dict(
+    year=None,
+    month=None,
+    day=None,
+    hour=None,
+    minute=None,
+    second=None,
+    microsecond=None,
+):
     return dict(
-        year=year, month=month, day=day, hour=hour, minute=minute, second=second
+        year=year,
+        month=month,
+        day=day,
+        hour=hour,
+        minute=minute,
+        second=second,
+        microsecond=microsecond,
     )
 
 
@@ -86,6 +102,30 @@ ISO8601_LIKE_STRING_TESTS = {
             year="1999", month="01", day="01", hour="12", minute="34", second="56"
         ),
     ),
+    "microsecond-1": (
+        "19990101T123456.123456",
+        date_dict(
+            year="1999",
+            month="01",
+            day="01",
+            hour="12",
+            minute="34",
+            second="56",
+            microsecond="123456",
+        ),
+    ),
+    "microsecond-2": (
+        "19990101T123456.1",
+        date_dict(
+            year="1999",
+            month="01",
+            day="01",
+            hour="12",
+            minute="34",
+            second="56",
+            microsecond="1",
+        ),
+    ),
 }
 
 
@@ -94,13 +134,34 @@ ISO8601_LIKE_STRING_TESTS = {
     list(ISO8601_LIKE_STRING_TESTS.values()),
     ids=list(ISO8601_LIKE_STRING_TESTS.keys()),
 )
-def test_parse_iso8601_like(string, expected):
-    result = parse_iso8601_like(string)
+@pytest.mark.parametrize(
+    "five_digit_year", [False, True], ids=["four-digit-year", "five-digit-year"]
+)
+@pytest.mark.parametrize("sign", ["", "+", "-"], ids=["None", "plus", "minus"])
+def test_parse_iso8601_like(
+    five_digit_year: bool, sign: str, string: str, expected: dict
+) -> None:
+    pre = "1" if five_digit_year else ""
+    datestring = sign + pre + string
+    result = parse_iso8601_like(datestring)
+    expected = expected.copy()
+    expected.update(year=sign + pre + expected["year"])
     assert result == expected
 
-    with pytest.raises(ValueError):
-        parse_iso8601_like(string + "3")
-        parse_iso8601_like(string + ".3")
+    # check malformed single digit addendum
+    # this check is only performed when we have at least "hour" given
+    # like "1999010101", where a single added digit should raise
+    # for "1999" (year), "199901" (month) and "19990101" (day)
+    # and a single added digit the string would just be interpreted
+    # as having a 5-digit year.
+    if result["microsecond"] is None and result["hour"] is not None:
+        with pytest.raises(ValueError):
+            parse_iso8601_like(datestring + "3")
+
+    # check malformed floating point addendum
+    if result["second"] is None or result["microsecond"] is not None:
+        with pytest.raises(ValueError):
+            parse_iso8601_like(datestring + ".3")
 
 
 _CFTIME_CALENDARS = [
@@ -301,12 +362,13 @@ def test_cftimeindex_days_in_month_accessor(index):
         ("19990202T01", (1999, 2, 2, 1), "hour"),
         ("19990202T0101", (1999, 2, 2, 1, 1), "minute"),
         ("19990202T010156", (1999, 2, 2, 1, 1, 56), "second"),
+        ("19990202T010156.123456", (1999, 2, 2, 1, 1, 56, 123456), "microsecond"),
     ],
 )
 def test_parse_iso8601_with_reso(date_type, string, date_args, reso):
     expected_date = date_type(*date_args)
     expected_reso = reso
-    result_date, result_reso = _parse_iso8601_with_reso(date_type, string)
+    result_date, result_reso = _parse_iso8601(date_type, string)
     assert result_date == expected_date
     assert result_reso == expected_reso
 
@@ -1157,15 +1219,15 @@ def test_strftime_of_cftime_array(calendar):
 @requires_cftime
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
 @pytest.mark.parametrize("unsafe", [False, True])
-def test_to_datetimeindex(calendar, unsafe):
+def test_to_datetimeindex(calendar, unsafe) -> None:
     index = xr.cftime_range("2000", periods=5, calendar=calendar)
-    expected = pd.date_range("2000", periods=5)
+    expected = pd.date_range("2000", periods=5, unit="ns")
 
     if calendar in _NON_STANDARD_CALENDARS and not unsafe:
         with pytest.warns(RuntimeWarning, match="non-standard"):
-            result = index.to_datetimeindex()
+            result = index.to_datetimeindex(time_unit="ns")
     else:
-        result = index.to_datetimeindex(unsafe=unsafe)
+        result = index.to_datetimeindex(unsafe=unsafe, time_unit="ns")
 
     assert result.equals(expected)
     np.testing.assert_array_equal(result, expected)
@@ -1173,21 +1235,46 @@ def test_to_datetimeindex(calendar, unsafe):
 
 
 @requires_cftime
+def test_to_datetimeindex_future_warning() -> None:
+    index = xr.cftime_range("2000", periods=5)
+    expected = pd.date_range("2000", periods=5, unit="ns")
+    with pytest.warns(FutureWarning, match="In a future version"):
+        result = index.to_datetimeindex()
+    assert result.equals(expected)
+    assert result.dtype == expected.dtype
+
+
+@requires_cftime
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
-def test_to_datetimeindex_out_of_range(calendar):
+def test_to_datetimeindex_out_of_range(calendar) -> None:
     index = xr.cftime_range("0001", periods=5, calendar=calendar)
     with pytest.raises(ValueError, match="0001"):
-        index.to_datetimeindex()
+        index.to_datetimeindex(time_unit="ns")
+
+
+@requires_cftime
+@pytest.mark.parametrize("unsafe", [False, True])
+def test_to_datetimeindex_gregorian_pre_reform(unsafe) -> None:
+    index = xr.cftime_range("1582", periods=5, calendar="gregorian")
+    if unsafe:
+        result = index.to_datetimeindex(time_unit="us", unsafe=unsafe)
+    else:
+        with pytest.warns(RuntimeWarning, match="reform"):
+            result = index.to_datetimeindex(time_unit="us", unsafe=unsafe)
+    expected = pd.date_range("1582", periods=5, unit="us")
+    assert result.equals(expected)
+    assert result.dtype == expected.dtype
 
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", ["all_leap", "360_day"])
-def test_to_datetimeindex_feb_29(calendar):
+def test_to_datetimeindex_feb_29(calendar) -> None:
     index = xr.cftime_range("2001-02-28", periods=2, calendar=calendar)
     with pytest.raises(ValueError, match="29"):
-        index.to_datetimeindex()
+        index.to_datetimeindex(time_unit="ns")
 
 
+@pytest.mark.xfail(reason="fails on pandas main branch")
 @requires_cftime
 def test_multiindex():
     index = xr.cftime_range("2001-01-01", periods=100, calendar="360_day")
@@ -1198,11 +1285,12 @@ def test_multiindex():
 @requires_cftime
 @pytest.mark.parametrize("freq", ["3663s", "33min", "2h"])
 @pytest.mark.parametrize("method", ["floor", "ceil", "round"])
-def test_rounding_methods_against_datetimeindex(freq, method):
-    expected = pd.date_range("2000-01-02T01:03:51", periods=10, freq="1777s")
+def test_rounding_methods_against_datetimeindex(freq, method) -> None:
+    # for now unit="us" seems good enough
+    expected = pd.date_range("2000-01-02T01:03:51", periods=10, freq="1777s", unit="ns")
     expected = getattr(expected, method)(freq)
     result = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777s")
-    result = getattr(result, method)(freq).to_datetimeindex()
+    result = getattr(result, method)(freq).to_datetimeindex(time_unit="ns")
     assert result.equals(expected)
 
 

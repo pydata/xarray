@@ -99,34 +99,34 @@ pytestmark = [
 
 
 def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
-    rs = np.random.RandomState(seed)
+    rs = np.random.default_rng(seed)
 
     lat = [2, 1, 0]
     lon = [0, 1, 2]
     nt1 = 3
     nt2 = 2
-    time1 = pd.date_range("2000-01-01", periods=nt1)
-    time2 = pd.date_range("2000-02-01", periods=nt2)
+    time1 = pd.date_range("2000-01-01", periods=nt1).as_unit("ns")
+    time2 = pd.date_range("2000-02-01", periods=nt2).as_unit("ns")
     string_var = np.array(["a", "bc", "def"], dtype=object)
     string_var_to_append = np.array(["asdf", "asdfg"], dtype=object)
     string_var_fixed_length = np.array(["aa", "bb", "cc"], dtype="|S2")
     string_var_fixed_length_to_append = np.array(["dd", "ee"], dtype="|S2")
     unicode_var = np.array(["áó", "áó", "áó"])
     datetime_var = np.array(
-        ["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[s]"
+        ["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[ns]"
     )
     datetime_var_to_append = np.array(
-        ["2019-01-04", "2019-01-05"], dtype="datetime64[s]"
+        ["2019-01-04", "2019-01-05"], dtype="datetime64[ns]"
     )
     bool_var = np.array([True, False, True], dtype=bool)
     bool_var_to_append = np.array([False, True], dtype=bool)
 
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "Converting non-nanosecond")
+        warnings.filterwarnings("ignore", "Converting non-default")
         ds = xr.Dataset(
             data_vars={
                 "da": xr.DataArray(
-                    rs.rand(3, 3, nt1),
+                    rs.random((3, 3, nt1)),
                     coords=[lat, lon, time1],
                     dims=["lat", "lon", "time"],
                 ),
@@ -141,7 +141,7 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
         ds_to_append = xr.Dataset(
             data_vars={
                 "da": xr.DataArray(
-                    rs.rand(3, 3, nt2),
+                    rs.random((3, 3, nt2)),
                     coords=[lat, lon, time2],
                     dims=["lat", "lon", "time"],
                 ),
@@ -156,7 +156,7 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
         ds_with_new_var = xr.Dataset(
             data_vars={
                 "new_var": xr.DataArray(
-                    rs.rand(3, 3, nt1 + nt2),
+                    rs.random((3, 3, nt1 + nt2)),
                     coords=[lat, lon, time1.append(time2)],
                     dims=["lat", "lon", "time"],
                 )
@@ -289,18 +289,21 @@ class TestDataset:
             Coordinates:
               * dim2     (dim2) float64 72B 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
               * dim3     (dim3) {} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
-              * time     (time) datetime64[ns] 160B 2000-01-01 2000-01-02 ... 2000-01-20
+              * time     (time) datetime64[{}] 160B 2000-01-01 2000-01-02 ... 2000-01-20
                 numbers  (dim3) int64 80B 0 1 2 0 0 1 1 2 2 3
             Dimensions without coordinates: dim1
             Data variables:
-                var1     (dim1, dim2) float64 576B -1.086 0.9973 0.283 ... 0.4684 -0.8312
-                var2     (dim1, dim2) float64 576B 1.162 -1.097 -2.123 ... 1.267 0.3328
-                var3     (dim3, dim1) float64 640B 0.5565 -0.2121 0.4563 ... -0.2452 -0.3616
+                var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
+                var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
+                var3     (dim3, dim1) float64 640B 0.4107 0.9941 0.1665 ... 0.716 1.555
             Attributes:
-                foo:      bar""".format(data["dim3"].dtype)
+                foo:      bar""".format(
+                data["dim3"].dtype,
+                "ns",
+            )
         )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
-        print(actual)
+
         assert expected == actual
 
         with set_options(display_width=100):
@@ -388,16 +391,15 @@ class TestDataset:
 
         byteorder = "<" if sys.byteorder == "little" else ">"
         expected = dedent(
-            """\
+            f"""\
             <xarray.Dataset> Size: 12B
             Dimensions:  (foø: 1)
             Coordinates:
-              * foø      (foø) %cU3 12B %r
+              * foø      (foø) {byteorder}U3 12B {'ba®'!r}
             Data variables:
                 *empty*
             Attributes:
                 å:        ∑"""
-            % (byteorder, "ba®")
         )
         actual = str(data)
         assert expected == actual
@@ -497,7 +499,6 @@ class TestDataset:
         actual = Dataset({"x": [5, 6, 7, 8, 9]})
         assert_identical(expected, actual)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_constructor_0d(self) -> None:
         expected = Dataset({"x": ([], 1)})
         for arg in [1, np.array(1), expected["x"]]:
@@ -3547,9 +3548,9 @@ class TestDataset:
 
     def test_expand_dims_non_nanosecond_conversion(self) -> None:
         # Regression test for https://github.com/pydata/xarray/issues/7493#issuecomment-1953091000
-        with pytest.warns(UserWarning, match="non-nanosecond precision"):
-            ds = Dataset().expand_dims({"time": [np.datetime64("2018-01-01", "s")]})
-        assert ds.time.dtype == np.dtype("datetime64[ns]")
+        # todo: test still needed?
+        ds = Dataset().expand_dims({"time": [np.datetime64("2018-01-01", "m")]})
+        assert ds.time.dtype == np.dtype("datetime64[s]")
 
     def test_set_index(self) -> None:
         expected = create_test_multiindex()
@@ -6067,7 +6068,6 @@ class TestDataset:
         expected = ds + other.reindex_like(ds)
         assert_identical(expected, actual)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_dataset_math_errors(self) -> None:
         ds = self.make_example_math_dataset()
 
@@ -6684,11 +6684,15 @@ class TestDataset:
         assert len(out.data_vars) == 0
 
     def test_polyfit_weighted(self) -> None:
-        # Make sure weighted polyfit does not change the original object (issue #5644)
         ds = create_test_data(seed=1)
+        ds = ds.broadcast_like(ds)  # test more than 2 dimensions (issue #9972)
         ds_copy = ds.copy(deep=True)
 
-        ds.polyfit("dim2", 2, w=np.arange(ds.sizes["dim2"]))
+        expected = ds.polyfit("dim2", 2)
+        actual = ds.polyfit("dim2", 2, w=np.ones(ds.sizes["dim2"]))
+        xr.testing.assert_identical(expected, actual)
+
+        # Make sure weighted polyfit does not change the original object (issue #5644)
         xr.testing.assert_identical(ds, ds_copy)
 
     def test_polyfit_coord(self) -> None:
@@ -7161,13 +7165,13 @@ def test_raise_no_warning_assert_close(ds) -> None:
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize("edge_order", [1, 2])
 def test_differentiate(dask, edge_order) -> None:
-    rs = np.random.RandomState(42)
+    rs = np.random.default_rng(42)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
     da = xr.DataArray(
-        rs.randn(8, 6),
+        rs.random((8, 6)),
         dims=["x", "y"],
-        coords={"x": coord, "z": 3, "x2d": (("x", "y"), rs.randn(8, 6))},
+        coords={"x": coord, "z": 3, "x2d": (("x", "y"), rs.random((8, 6)))},
     )
     if dask and has_dask:
         da = da.chunk({"x": 4})
@@ -7207,10 +7211,9 @@ def test_differentiate(dask, edge_order) -> None:
         da.differentiate("x2d")
 
 
-@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.parametrize("dask", [True, False])
 def test_differentiate_datetime(dask) -> None:
-    rs = np.random.RandomState(42)
+    rs = np.random.default_rng(42)
     coord = np.array(
         [
             "2004-07-13",
@@ -7226,9 +7229,9 @@ def test_differentiate_datetime(dask) -> None:
     )
 
     da = xr.DataArray(
-        rs.randn(8, 6),
+        rs.random((8, 6)),
         dims=["x", "y"],
-        coords={"x": coord, "z": 3, "x2d": (("x", "y"), rs.randn(8, 6))},
+        coords={"x": coord, "z": 3, "x2d": (("x", "y"), rs.random((8, 6)))},
     )
     if dask and has_dask:
         da = da.chunk({"x": 4})
@@ -7260,12 +7263,12 @@ def test_differentiate_datetime(dask) -> None:
 @requires_cftime
 @pytest.mark.parametrize("dask", [True, False])
 def test_differentiate_cftime(dask) -> None:
-    rs = np.random.RandomState(42)
+    rs = np.random.default_rng(42)
     coord = xr.cftime_range("2000", periods=8, freq="2ME")
 
     da = xr.DataArray(
-        rs.randn(8, 6),
-        coords={"time": coord, "z": 3, "t2d": (("time", "y"), rs.randn(8, 6))},
+        rs.random((8, 6)),
+        coords={"time": coord, "z": 3, "t2d": (("time", "y"), rs.random((8, 6)))},
         dims=["time", "y"],
     )
 
@@ -7289,17 +7292,17 @@ def test_differentiate_cftime(dask) -> None:
 
 @pytest.mark.parametrize("dask", [True, False])
 def test_integrate(dask) -> None:
-    rs = np.random.RandomState(42)
+    rs = np.random.default_rng(42)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
     da = xr.DataArray(
-        rs.randn(8, 6),
+        rs.random((8, 6)),
         dims=["x", "y"],
         coords={
             "x": coord,
-            "x2": (("x",), rs.randn(8)),
+            "x2": (("x",), rs.random(8)),
             "z": 3,
-            "x2d": (("x", "y"), rs.randn(8, 6)),
+            "x2d": (("x", "y"), rs.random((8, 6))),
         },
     )
     if dask and has_dask:
@@ -7343,17 +7346,17 @@ def test_integrate(dask) -> None:
 @requires_scipy
 @pytest.mark.parametrize("dask", [True, False])
 def test_cumulative_integrate(dask) -> None:
-    rs = np.random.RandomState(43)
+    rs = np.random.default_rng(43)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
     da = xr.DataArray(
-        rs.randn(8, 6),
+        rs.random((8, 6)),
         dims=["x", "y"],
         coords={
             "x": coord,
-            "x2": (("x",), rs.randn(8)),
+            "x2": (("x",), rs.random(8)),
             "z": 3,
-            "x2d": (("x", "y"), rs.randn(8, 6)),
+            "x2d": (("x", "y"), rs.random((8, 6))),
         },
     )
     if dask and has_dask:
@@ -7402,11 +7405,10 @@ def test_cumulative_integrate(dask) -> None:
         da.cumulative_integrate("x2d")
 
 
-@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize("which_datetime", ["np", "cftime"])
 def test_trapezoid_datetime(dask, which_datetime) -> None:
-    rs = np.random.RandomState(42)
+    rs = np.random.default_rng(42)
     coord: ArrayLike
     if which_datetime == "np":
         coord = np.array(
@@ -7428,8 +7430,8 @@ def test_trapezoid_datetime(dask, which_datetime) -> None:
         coord = xr.cftime_range("2000", periods=8, freq="2D")
 
     da = xr.DataArray(
-        rs.randn(8, 6),
-        coords={"time": coord, "z": 3, "t2d": (("time", "y"), rs.randn(8, 6))},
+        rs.random((8, 6)),
+        coords={"time": coord, "z": 3, "t2d": (("time", "y"), rs.random((8, 6)))},
         dims=["time", "y"],
     )
 

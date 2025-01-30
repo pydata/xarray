@@ -13,6 +13,7 @@ from xarray.backends.common import (
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
+    _open_remote_file,
     datatree_from_dict_with_io_cleanup,
     find_root_and_group,
 )
@@ -166,8 +167,15 @@ class H5NetCDFStore(WritableCFDataStore):
         decode_vlen_strings=True,
         driver=None,
         driver_kwds=None,
+        storage_options: dict[str, Any] | None = None,
     ):
         import h5netcdf
+
+        if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
+            mode_ = "rb" if mode == "r" else mode
+            filename = _open_remote_file(
+                filename, mode=mode_, storage_options=storage_options
+            )
 
         if isinstance(filename, bytes):
             raise ValueError(
@@ -178,7 +186,7 @@ class H5NetCDFStore(WritableCFDataStore):
             magic_number = read_magic_number_from_file(filename)
             if not magic_number.startswith(b"\211HDF\r\n\032\n"):
                 raise ValueError(
-                    f"{magic_number} is not the signature of a valid netCDF4 file"
+                    f"{magic_number!r} is not the signature of a valid netCDF4 file"
                 )
 
         if format not in [None, "NETCDF4"]:
@@ -442,6 +450,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         decode_vlen_strings=True,
         driver=None,
         driver_kwds=None,
+        storage_options: dict[str, Any] | None = None,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
@@ -454,6 +463,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             decode_vlen_strings=decode_vlen_strings,
             driver=driver,
             driver_kwds=driver_kwds,
+            storage_options=storage_options,
         )
 
         store_entrypoint = StoreBackendEntrypoint()

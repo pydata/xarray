@@ -30,7 +30,7 @@ from xarray import (
     broadcast,
     set_options,
 )
-from xarray.coding.times import CFDatetimeCoder
+from xarray.coders import CFDatetimeCoder
 from xarray.core import dtypes
 from xarray.core.common import full_like
 from xarray.core.coordinates import Coordinates
@@ -48,6 +48,7 @@ from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     has_dask,
+    has_dask_ge_2025_1_0,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -2284,7 +2285,7 @@ class TestDataArray:
         assert isinstance(converted_subok.data, NdArraySubclass)
 
     def test_is_null(self) -> None:
-        x = np.random.RandomState(42).randn(5, 6)
+        x = np.random.default_rng(42).random((5, 6))
         x[x < 0] = np.nan
         original = DataArray(x, [-np.arange(5), np.arange(6)], ["x", "y"])
         expected = DataArray(pd.isnull(x), [-np.arange(5), np.arange(6)], ["x", "y"])
@@ -3437,7 +3438,7 @@ class TestDataArray:
 
     @requires_dask_expr
     @requires_dask
-    @pytest.mark.xfail(reason="dask-expr is broken")
+    @pytest.mark.xfail(not has_dask_ge_2025_1_0, reason="dask-expr is broken")
     def test_to_dask_dataframe(self) -> None:
         arr_np = np.arange(3 * 4).reshape(3, 4)
         arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
@@ -3528,7 +3529,7 @@ class TestDataArray:
 
         idx = pd.MultiIndex.from_product([np.arange(3), np.arange(5)], names=["a", "b"])
         series: pd.Series = pd.Series(
-            np.random.RandomState(0).random(len(idx)), index=idx
+            np.random.default_rng(0).random(len(idx)), index=idx
         ).sample(n=5, random_state=3)
 
         dense = DataArray.from_series(series, sparse=False)
@@ -3661,7 +3662,6 @@ class TestDataArray:
         actual_no_data = da.to_dict(data=False, encoding=encoding)
         assert expected_no_data == actual_no_data
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_to_and_from_dict_with_time_dim(self) -> None:
         x = np.random.randn(10, 3)
         t = pd.date_range("20130101", periods=10)
@@ -3670,7 +3670,6 @@ class TestDataArray:
         roundtripped = DataArray.from_dict(da.to_dict())
         assert_identical(da, roundtripped)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_to_and_from_dict_with_nan_nat(self) -> None:
         y = np.random.randn(10, 3)
         y[2] = np.nan
@@ -3703,8 +3702,8 @@ class TestDataArray:
         assert expected_attrs == actual["attrs"]
 
     def test_to_masked_array(self) -> None:
-        rs = np.random.RandomState(44)
-        x = rs.random_sample(size=(10, 20))
+        rs = np.random.default_rng(44)
+        x = rs.random(size=(10, 20))
         x_masked = np.ma.masked_where(x < 0.5, x)
         da = DataArray(x_masked)
 
@@ -4949,7 +4948,15 @@ class TestReduce1D(TestReduce):
 
         assert_identical(result2, expected2)
 
-    @pytest.mark.parametrize("use_dask", [True, False])
+    @pytest.mark.parametrize(
+        "use_dask",
+        [
+            pytest.param(
+                True, marks=pytest.mark.skipif(not has_dask, reason="no dask")
+            ),
+            False,
+        ],
+    )
     def test_idxmin(
         self,
         x: np.ndarray,
@@ -4958,16 +4965,11 @@ class TestReduce1D(TestReduce):
         nanindex: int | None,
         use_dask: bool,
     ) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
-        if use_dask and x.dtype.kind == "M":
-            pytest.xfail("dask operation 'argmin' breaks when dtype is datetime64 (M)")
         ar0_raw = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
         )
-
         if use_dask:
-            ar0 = ar0_raw.chunk({})
+            ar0 = ar0_raw.chunk()
         else:
             ar0 = ar0_raw
 
