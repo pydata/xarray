@@ -1812,18 +1812,18 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             return self.array.vindex[indexer]
         except IndexError as e:
             # TODO: upstream to dask
-            has_dask = any(is_duck_dask_array(i) for i in indexer.tuple)
+            has_dask = any(is_duck_dask_array(i) for i in indexer)
             # this only works for "small" 1d coordinate arrays with one chunk
             # it is intended for idxmin, idxmax, and allows indexing with
             # the nD array output of argmin, argmax
             if (
                 not has_dask
-                or len(indexer.tuple) > 1
+                or len(indexer) > 1
                 or math.prod(self.array.numblocks) > 1
                 or self.array.ndim > 1
             ):
                 raise e
-            (idxr,) = indexer.tuple
+            (idxr,) = indexer
             if idxr.ndim == 0:
                 return self.array[idxr.data]
             else:
