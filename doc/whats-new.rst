@@ -19,22 +19,35 @@ What's New
 v2025.01.2 (unreleased)
 -----------------------
 
-This release brings non-nanosecond datetime resolution to xarray. In the
-last couple of releases xarray has been prepared for that change. The code had
-to be changed and adapted in numerous places, affecting especially the test suite.
-The documentation has been updated accordingly and a new internal chapter
-on :ref:`internals.timecoding` has been added.
+This release brings non-nanosecond datetime and timedelta resolution to xarray.
+In the last couple of releases xarray has been prepared for that change. The
+code had to be changed and adapted in numerous places, affecting especially the
+test suite. The documentation has been updated accordingly and a new internal
+chapter on :ref:`internals.timecoding` has been added.
 
-To make the transition as smooth as possible this is designed to be fully backwards
-compatible, keeping the current default of ``'ns'`` resolution on decoding.
-To opt-in decoding into other resolutions (``'us'``, ``'ms'`` or ``'s'``) the
-new :py:class:`coders.CFDatetimeCoder` is used as parameter to ``decode_times``
-kwarg (see also :ref:`internals.default_timeunit`):
+To make the transition as smooth as possible this is designed to be fully
+backwards compatible, keeping the current default of ``'ns'`` resolution on
+decoding. To opt-into decoding to other resolutions (``'us'``, ``'ms'`` or
+``'s'``) an instance of the newly public :py:class:`coders.CFDatetimeCoder`
+class can be passed through the ``decode_times`` keyword argument (see also
+:ref:`internals.default_timeunit`):
 
 .. code-block:: python
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
     ds = xr.open_dataset(filename, decode_times=coder)
+
+Similar control of the resoution of decoded timedeltas can be achieved through
+passing a :py:class:`coders.CFTimedeltaCoder` instance to the
+``decode_timedelta`` keyword argument:
+
+.. code-block:: python
+
+    coder = xr.coders.CFTimedeltaCoder(time_unit="s")
+    ds = xr.open_dataset(filename, decode_timedelta=coder)
+
+though by default timedeltas will be decoded to the same ``time_unit`` as
+datetimes.
 
 There might slight changes when encoding/decoding times as some warning and
 error messages have been removed or rewritten. Xarray will now also allow
@@ -50,10 +63,19 @@ eventually be deprecated.
 
 New Features
 ~~~~~~~~~~~~
-- Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`).
+- Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`, :pull:`9977`, :pull:`9966`, :pull:`9999`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
+- Enable the ``compute=False`` option in :py:meth:`DataTree.to_zarr`. (:pull:`9958`).
+  By `Sam Levang <https://github.com/slevang>`_.
 - Improve the error message raised when no key is matching the available variables in a dataset.  (:pull:`9943`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Added a ``time_unit`` argument to :py:meth:`CFTimeIndex.to_datetimeindex`.
+  Note that in a future version of xarray,
+  :py:meth:`CFTimeIndex.to_datetimeindex` will return a microsecond-resolution
+  :py:class:`pandas.DatetimeIndex` instead of a nanosecond-resolution
+  :py:class:`pandas.DatetimeIndex` (:pull:`9965`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_ and `Kai Mühlbauer
+  <https://github.com/kmuehlbauer>`_.
 - :py:meth:`DatasetGroupBy.first` and :py:meth:`DatasetGroupBy.last` can now use ``flox`` if available. (:issue:`9647`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
@@ -63,10 +85,19 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- In a future version of xarray decoding of variables into
+  :py:class:`numpy.timedelta64` values will be disabled by default. To silence
+  warnings associated with this, set ``decode_timedelta`` to ``True``,
+  ``False``, or a :py:class:`coders.CFTimedeltaCoder` instance when opening
+  data (:issue:`1621`, :pull:`9966`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 
 Bug fixes
 ~~~~~~~~~
+
+- Fix :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` when the limit is bigger than the chunksize (:issue:`9939`).
+  By `Joseph Nowak <https://github.com/josephnowak>`_.
 - Fix issues related to Pandas v3 ("us" vs. "ns" for python datetime, copy on write) and handling of 0d-numpy arrays in datetime/timedelta decoding (:pull:`9953`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Remove dask-expr from CI runs, add "pyarrow" dask dependency to windows CI runs, fix related tests (:issue:`9962`, :pull:`9971`).
