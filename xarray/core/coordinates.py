@@ -200,11 +200,17 @@ class Coordinates(AbstractCoordinates):
 
     - returned via the :py:attr:`Dataset.coords`, :py:attr:`DataArray.coords`,
       and :py:attr:`DataTree.coords` properties,
-    - built from Pandas or other index objects
+    - built from Xarray or Pandas index objects
       (e.g., :py:meth:`Coordinates.from_xindex` or
       :py:meth:`Coordinates.from_pandas_multiindex`),
-    - built manually from coordinate data and Xarray ``Index`` objects (beware that
-      no consistency check is done on those inputs),
+    - built manually from input coordinate data and Xarray ``Index`` objects via
+      :py:meth:`Coordinates.__init__` (beware that no consistency check is done
+      on those inputs).
+
+    To create new coordinates from an existing Xarray ``Index`` object, use
+    :py:meth:`Coordinates.from_xindex` instead of
+    :py:meth:`Coordinates.__init__`. The latter is useful, e.g., for creating
+    coordinates with no default index.
 
     Parameters
     ----------
