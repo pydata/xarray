@@ -592,6 +592,7 @@ class TestNamedArray(NamedArraySubclassobjects):
             NamedArray(("x", "x"), np.arange(4).reshape(2, 2))
 
     def test_aggregation(self) -> None:
+        x: NamedArray[Any, np.dtype[np.int64]]
         x = NamedArray(("x", "y"), np.arange(4).reshape(2, 2))
 
         result = x.sum()
