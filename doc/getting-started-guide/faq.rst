@@ -416,7 +416,19 @@ would certainly appreciate it. We recommend two citations.
                  url    = {https://doi.org/10.5281/zenodo.59499}
                 }
 
-.. _public api:
+.. _api-stability:
+
+How stable is Xarray's API?
+---------------------------
+
+Xarray tries very hard to maintain backwards compatibility in our :ref:`api` between released versions.
+Whilst we do occasionally make breaking changes in order to improve the library,
+we `signpost changes <https://docs.xarray.dev/en/stable/contributing.html#backwards-compatibility>`_ with ``DeprecationWarnings`` for many releases in advance.
+(An exception is bugs - whose behaviour we try to fix as soon as we notice them.)
+Our `test-driven development practices <https://docs.xarray.dev/en/stable/contributing.html#test-driven-development-code-writing>`_ helps to ensure any accidental regressions are caught.
+This philosophy applies to everything in the `public API <https://docs.xarray.dev/en/stable/getting-started-guide/faq.html#what-parts-of-xarray-are-considered-public-api>`_.
+
+.. _public-api:
 
 What parts of xarray are considered public API?
 -----------------------------------------------

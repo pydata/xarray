@@ -115,6 +115,8 @@ Documentation
 ~~~~~~~~~~~~~
 - A chapter on :ref:`internals.timecoding` is added to the internal section (:pull:`9618`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Clarified xarray's policy on API stability in the FAQ. (:issue:`9854`, :pull:`9855`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
