@@ -63,6 +63,10 @@ eventually be deprecated.
 
 New Features
 ~~~~~~~~~~~~
+- support python 3.13 (no free-threading) (:issue:`9664`, :pull:`9681`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
+  duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
 - Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`, :pull:`9977`, :pull:`9966`, :pull:`9999`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
 - Enable the ``compute=False`` option in :py:meth:`DataTree.to_zarr`. (:pull:`9958`).
