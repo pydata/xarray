@@ -425,7 +425,7 @@ Xarray tries very hard to maintain backwards compatibility in our :ref:`api` bet
 Whilst we do occasionally make breaking changes in order to improve the library,
 we `signpost changes <https://docs.xarray.dev/en/stable/contributing.html#backwards-compatibility>`_ with ``DeprecationWarnings`` for many releases in advance.
 (An exception is bugs - whose behaviour we try to fix as soon as we notice them.)
-Our `test-driven development practices <https://docs.xarray.dev/en/stable/contributing.html#test-driven-development-code-writing>`_ help to ensure any accidental regressions are caught.
+Our `test-driven development practices <https://docs.xarray.dev/en/stable/contributing.html#test-driven-development-code-writing>`_ helps to ensure any accidental regressions are caught.
 This philosophy applies to everything in the `public API <https://docs.xarray.dev/en/stable/getting-started-guide/faq.html#what-parts-of-xarray-are-considered-public-api>`_.
 
 .. _public-api:
