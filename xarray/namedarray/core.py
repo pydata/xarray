@@ -205,7 +205,7 @@ def from_array(
 
         return NamedArray(dims, data, attrs)
 
-    if isinstance(data, _arrayfunction_or_api):
+    if isinstance(data, _arrayfunction_or_api) and not isinstance(data, np.generic):
         return NamedArray(dims, data, attrs)
 
     if isinstance(data, tuple):
