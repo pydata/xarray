@@ -1849,7 +1849,7 @@ _DECODE_TIMEDELTA_TESTS = {
 def test_decode_timedelta(
     decode_times, decode_timedelta, expected_dtype, warns
 ) -> None:
-    timedeltas = pd.timedelta_range(0, freq="d", periods=3)
+    timedeltas = pd.timedelta_range(0, freq="D", periods=3)
     var = Variable(["time"], timedeltas)
     encoded = conventions.encode_cf_variable(var)
     if warns:
