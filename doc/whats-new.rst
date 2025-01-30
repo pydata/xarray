@@ -23,8 +23,8 @@ This release brings non-nanosecond datetime and timedelta resolution to xarray,
 sharded reading in zarr, suggestion of correct names when trying to access
 non-existent data variables and bug fixes!
 
-Thanks to the 14 contributors to this release:
-Deepak Cherian, Elliott Sales de Andrade, Jacob Prince-Bieker, Jimmy Westling, Joe Hamman, Joseph Nowak, Kai Mühlbauer, Mattia Almansi, Michael Niklas, Roelof Rietbroek, Salaheddine EL FARISSI, Sam Levang, Spencer Clark and Stephan Hoyer
+Thanks to the 16 contributors to this release:
+Deepak Cherian, Elliott Sales de Andrade, Jacob Prince-Bieker, Jimmy Westling, Joe Hamman, Joseph Nowak, Justus Magin, Kai Mühlbauer, Mattia Almansi, Michael Niklas, Roelof Rietbroek, Salaheddine EL FARISSI, Sam Levang, Spencer Clark, Stephan Hoyer and Tom Nicholas
 
 In the last couple of releases xarray has been prepared for allowing
 non-nanosecond datetime and timedelta resolution. The code had to be changed
