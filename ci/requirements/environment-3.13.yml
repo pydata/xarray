@@ -33,7 +33,8 @@ dependencies:
   - pip
   - pooch
   - pre-commit
-  # - pydap
+  - pyarrow # pandas raises a deprecation warning without this, breaking doctests
+  - pydap
   - pytest
   - pytest-cov
   - pytest-env
