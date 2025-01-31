@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Callable, Mapping
-from functools import partial
 from typing import TYPE_CHECKING, Any, cast, overload
 
 from xarray.core.dataset import Dataset
@@ -20,7 +19,7 @@ def map_over_datasets(
         Dataset | None,
     ],
     *args: Any,
-    kwargs: Mapping | None = None,
+    kwargs: Mapping[str, Any] | None = None,
 ) -> DataTree: ...
 
 
@@ -28,7 +27,7 @@ def map_over_datasets(
 def map_over_datasets(
     func: Callable[..., tuple[Dataset | None, Dataset | None]],
     *args: Any,
-    kwargs: Mapping | None = None,
+    kwargs: Mapping[str, Any] | None = None,
 ) -> tuple[DataTree, DataTree]: ...
 
 
@@ -38,14 +37,14 @@ def map_over_datasets(
 def map_over_datasets(
     func: Callable[..., tuple[Dataset | None, ...]],
     *args: Any,
-    kwargs: Mapping | None = None,
+    kwargs: Mapping[str, Any] | None = None,
 ) -> tuple[DataTree, ...]: ...
 
 
 def map_over_datasets(
     func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
     *args: Any,
-    kwargs: Mapping | None = None,
+    kwargs: Mapping[str, Any] | None = None,
 ) -> DataTree | tuple[DataTree, ...]:
     """
     Applies a function to every dataset in one or more DataTree objects with
@@ -104,9 +103,6 @@ def map_over_datasets(
     if kwargs is None:
         kwargs = {}
 
-    if kwargs:
-        func = partial(func, **kwargs)
-
     # Walk all trees simultaneously, applying func to all nodes that lie in same position in different trees
     # We don't know which arguments are DataTrees so we zip all arguments together as iterables
     # Store tuples of results in a dict because we don't yet know how many trees we need to rebuild to return
@@ -122,7 +118,7 @@ def map_over_datasets(
                 node_dataset_args.insert(i, arg)
 
         func_with_error_context = _handle_errors_with_path_context(path)(func)
-        results = func_with_error_context(*node_dataset_args)
+        results = func_with_error_context(*node_dataset_args, **kwargs)
         out_data_objects[path] = results
 
     num_return_values = _check_all_return_values(out_data_objects)
