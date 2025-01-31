@@ -9,30 +9,12 @@
 .. autosummary::
    :toctree: generated/
 
-   Coordinates.from_pandas_multiindex
-   Coordinates.get
-   Coordinates.items
-   Coordinates.keys
-   Coordinates.values
-   Coordinates.dims
-   Coordinates.dtypes
-   Coordinates.variables
-   Coordinates.xindexes
-   Coordinates.indexes
-   Coordinates.to_dataset
-   Coordinates.to_index
-   Coordinates.update
-   Coordinates.assign
-   Coordinates.merge
-   Coordinates.copy
-   Coordinates.equals
-   Coordinates.identical
-
    core.coordinates.DatasetCoordinates.get
    core.coordinates.DatasetCoordinates.items
    core.coordinates.DatasetCoordinates.keys
    core.coordinates.DatasetCoordinates.values
    core.coordinates.DatasetCoordinates.dims
+   core.coordinates.DatasetCoordinates.sizes
    core.coordinates.DatasetCoordinates.dtypes
    core.coordinates.DatasetCoordinates.variables
    core.coordinates.DatasetCoordinates.xindexes
@@ -74,6 +56,7 @@
    core.coordinates.DataArrayCoordinates.keys
    core.coordinates.DataArrayCoordinates.values
    core.coordinates.DataArrayCoordinates.dims
+   core.coordinates.DataArrayCoordinates.sizes
    core.coordinates.DataArrayCoordinates.dtypes
    core.coordinates.DataArrayCoordinates.variables
    core.coordinates.DataArrayCoordinates.xindexes
@@ -103,6 +86,25 @@
 
    core.weighted.DataArrayWeighted.obj
    core.weighted.DataArrayWeighted.weights
+
+   core.coordinates.DataTreeCoordinates.get
+   core.coordinates.DataTreeCoordinates.items
+   core.coordinates.DataTreeCoordinates.keys
+   core.coordinates.DataTreeCoordinates.values
+   core.coordinates.DataTreeCoordinates.dims
+   core.coordinates.DataTreeCoordinates.sizes
+   core.coordinates.DataTreeCoordinates.dtypes
+   core.coordinates.DataTreeCoordinates.variables
+   core.coordinates.DataTreeCoordinates.xindexes
+   core.coordinates.DataTreeCoordinates.indexes
+   core.coordinates.DataTreeCoordinates.to_dataset
+   core.coordinates.DataTreeCoordinates.to_index
+   core.coordinates.DataTreeCoordinates.update
+   core.coordinates.DataTreeCoordinates.assign
+   core.coordinates.DataTreeCoordinates.merge
+   core.coordinates.DataTreeCoordinates.copy
+   core.coordinates.DataTreeCoordinates.equals
+   core.coordinates.DataTreeCoordinates.identical
 
    core.accessor_dt.DatetimeAccessor.ceil
    core.accessor_dt.DatetimeAccessor.floor
