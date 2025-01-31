@@ -161,7 +161,7 @@ def _check_single_set_return_values(path_to_node: str, obj: Any) -> int | None:
     ):
         raise TypeError(
             f"the result of calling func on the node at position '{path_to_node}' is"
-            f" not a Dataset or None or a tuple of such types: {obj!r}"
+            f" not a Dataset or None or a tuple of such types:\n{obj!r}"
         )
 
     return len(obj)
