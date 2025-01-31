@@ -18,7 +18,7 @@ import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
 from xarray.core.datatree_render import RenderDataTree
-from xarray.core.duck_array_ops import array_equiv, astype
+from xarray.core.duck_array_ops import array_all, array_any, array_equiv, astype
 from xarray.core.indexing import MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.treenode import group_subtrees
@@ -204,9 +204,9 @@ def format_items(x):
         day_part = x[~pd.isnull(x)].astype("timedelta64[D]").astype("timedelta64[ns]")
         time_needed = x[~pd.isnull(x)] != day_part
         day_needed = day_part != np.timedelta64(0, "ns")
-        if np.logical_not(day_needed).all():
+        if array_all(np.logical_not(day_needed)):
             timedelta_format = "time"
-        elif np.logical_not(time_needed).all():
+        elif array_all(np.logical_not(time_needed)):
             timedelta_format = "date"
 
     formatted = [format_item(xi, timedelta_format) for xi in x]
@@ -232,7 +232,7 @@ def format_array_flat(array, max_width: int):
 
     cum_len = np.cumsum([len(s) + 1 for s in relevant_items]) - 1
     if (array.size > 2) and (
-        (max_possibly_relevant < array.size) or (cum_len > max_width).any()
+        (max_possibly_relevant < array.size) or array_any(cum_len > max_width)
     ):
         padding = " ... "
         max_len = max(int(np.argmax(cum_len + len(padding) - 1 > max_width)), 2)
