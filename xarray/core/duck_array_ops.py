@@ -236,6 +236,16 @@ def astype(data, dtype, **kwargs):
     return data.astype(dtype, **kwargs)
 
 
+def view(data, *args, **kwargs):
+    if hasattr(data, "__array_namespace__"):
+        xp = get_array_namespace(data)
+        if xp == np:
+            # numpy currently doesn't have a view:
+            return data.view(*args, **kwargs)
+        return xp.view(data, *args, **kwargs)
+    return data.view(*args, **kwargs)
+
+
 def asarray(data, xp=np, dtype=None):
     converted = data if is_duck_array(data) else xp.asarray(data)
 
