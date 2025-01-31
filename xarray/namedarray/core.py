@@ -5,6 +5,7 @@ import math
 import sys
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
+from importlib.util import find_spec
 from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
@@ -834,34 +835,33 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if chunkmanager.is_chunked_array(data_old):
             data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
         else:
-            try:
-                import pandas as pd
-
-                if pd.api.types.is_extension_array_dtype(data_old.dtype):
-                    # One of PandasExtensionArray or PandasIndexingAdapter?
-                    ndata = np.asarray(data_old)
-            except ImportError:
-                pass
+            if find_spec("pandas"):
+                from pandas.api.types import is_extension_array_dtype
             else:
-                if not isinstance(data_old, ExplicitlyIndexed):
-                    ndata = data_old
-                else:
-                    # Unambiguously handle array storage backends (like NetCDF4 and h5py)
-                    # that can't handle general array indexing. For example, in netCDF4 you
-                    # can do "outer" indexing along two dimensions independent, which works
-                    # differently from how NumPy handles it.
-                    # da.from_array works by using lazy indexing with a tuple of slices.
-                    # Using OuterIndexer is a pragmatic choice: dask does not yet handle
-                    # different indexing types in an explicit way:
-                    # https://github.com/dask/dask/issues/2883
-                    ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)
 
-                if is_dict_like(chunks):
-                    chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
+                def is_extension_array_dtype(dtype: Any) -> False:
+                    return False
 
-                data_chunked = chunkmanager.from_array(
-                    ndata, chunks, **from_array_kwargs
-                )  # type: ignore[arg-type]
+            if is_extension_array_dtype(data_old.dtype):
+                # One of PandasExtensionArray or PandasIndexingAdapter?
+                ndata = np.asarray(data_old)
+            elif not isinstance(data_old, ExplicitlyIndexed):
+                ndata = data_old
+            else:
+                # Unambiguously handle array storage backends (like NetCDF4 and h5py)
+                # that can't handle general array indexing. For example, in netCDF4 you
+                # can do "outer" indexing along two dimensions independent, which works
+                # differently from how NumPy handles it.
+                # da.from_array works by using lazy indexing with a tuple of slices.
+                # Using OuterIndexer is a pragmatic choice: dask does not yet handle
+                # different indexing types in an explicit way:
+                # https://github.com/dask/dask/issues/2883
+                ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)
+
+            if is_dict_like(chunks):
+                chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
+
+            data_chunked = chunkmanager.from_array(ndata, chunks, **from_array_kwargs)  # type: ignore[arg-type]
 
         return self._replace(data=data_chunked)
 
