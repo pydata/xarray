@@ -41,6 +41,7 @@ dev = [
   "mypy",
   "pre-commit",
   "pytest",
+  "pytest-beartype",
   "pytest-cov",
   "pytest-env",
   "pytest-xdist",
@@ -289,6 +290,9 @@ ban-relative-imports = "all"
 
 [tool.pytest.ini_options]
 addopts = ["--strict-config", "--strict-markers"]
+
+[lint.pyupgrade]
+keep-runtime-typing = true
 
 # We want to forbid warnings from within xarray in our tests — instead we should
 # fix our own code, or mark the test itself as expecting a warning. So this:
