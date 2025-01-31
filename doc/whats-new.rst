@@ -16,14 +16,21 @@ What's New
 
 .. _whats-new.2025.01.2:
 
-v2025.01.2 (unreleased)
------------------------
+v2025.01.2 (Jan 31, 2025)
+-------------------------
 
-This release brings non-nanosecond datetime and timedelta resolution to xarray.
-In the last couple of releases xarray has been prepared for that change. The
-code had to be changed and adapted in numerous places, affecting especially the
-test suite. The documentation has been updated accordingly and a new internal
-chapter on :ref:`internals.timecoding` has been added.
+This release brings non-nanosecond datetime and timedelta resolution to xarray,
+sharded reading in zarr, suggestion of correct names when trying to access
+non-existent data variables and bug fixes!
+
+Thanks to the 16 contributors to this release:
+Deepak Cherian, Elliott Sales de Andrade, Jacob Prince-Bieker, Jimmy Westling, Joe Hamman, Joseph Nowak, Justus Magin, Kai Mühlbauer, Mattia Almansi, Michael Niklas, Roelof Rietbroek, Salaheddine EL FARISSI, Sam Levang, Spencer Clark, Stephan Hoyer and Tom Nicholas
+
+In the last couple of releases xarray has been prepared for allowing
+non-nanosecond datetime and timedelta resolution. The code had to be changed
+and adapted in numerous places, affecting especially the test suite. The
+documentation has been updated accordingly and a new internal chapter
+on :ref:`internals.timecoding` has been added.
 
 To make the transition as smooth as possible this is designed to be fully
 backwards compatible, keeping the current default of ``'ns'`` resolution on
@@ -63,8 +70,12 @@ eventually be deprecated.
 
 New Features
 ~~~~~~~~~~~~
-- Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`, :pull:`9977`, :pull:`9966`, :pull:`9999`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
+- Relax nanosecond resolution restriction in CF time coding and permit
+  :py:class:`numpy.datetime64` or :py:class:`numpy.timedelta64` dtype arrays
+  with ``"s"``, ``"ms"``, ``"us"``, or ``"ns"`` resolution throughout xarray
+  (:issue:`7493`, :pull:`9618`, :pull:`9977`, :pull:`9966`, :pull:`9999`). By
+  `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 - Enable the ``compute=False`` option in :py:meth:`DataTree.to_zarr`. (:pull:`9958`).
   By `Sam Levang <https://github.com/slevang>`_.
 - Improve the error message raised when no key is matching the available variables in a dataset.  (:pull:`9943`)
@@ -76,12 +87,9 @@ New Features
   :py:class:`pandas.DatetimeIndex` (:pull:`9965`). By `Spencer Clark
   <https://github.com/spencerkclark>`_ and `Kai Mühlbauer
   <https://github.com/kmuehlbauer>`_.
-- :py:meth:`DatasetGroupBy.first` and :py:meth:`DatasetGroupBy.last` can now use ``flox`` if available. (:issue:`9647`)
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
+- Adds shards to the list of valid_encodings in the zarr backend, so that
+  sharded Zarr V3s can be written (:issue:`9947`, :pull:`9948`).
+  By `Jacob Prince_Bieker <https://github.com/jacobbieker>`_
 
 Deprecations
 ~~~~~~~~~~~~
@@ -92,10 +100,8 @@ Deprecations
   data (:issue:`1621`, :pull:`9966`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
 
-
 Bug fixes
 ~~~~~~~~~
-
 - Fix :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` when the limit is bigger than the chunksize (:issue:`9939`).
   By `Joseph Nowak <https://github.com/josephnowak>`_.
 - Fix issues related to Pandas v3 ("us" vs. "ns" for python datetime, copy on write) and handling of 0d-numpy arrays in datetime/timedelta decoding (:pull:`9953`).
