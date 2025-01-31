@@ -151,6 +151,16 @@ class TestMapOverSubTree:
         result_tree = dt.map_over_datasets(multiply, 10.0)
         assert_equal(result_tree, expected)
 
+    def test_tree_method_with_kwarg(self, create_test_datatree):
+        dt = create_test_datatree()
+
+        def multiply(ds, **kwargs):
+            return kwargs.pop("times") * ds
+
+        expected = create_test_datatree(modify=lambda ds: 10.0 * ds)
+        result_tree = dt.map_over_datasets(multiply, kwargs=dict(times=10.0))
+        assert_equal(result_tree, expected)
+
     def test_discard_ancestry(self, create_test_datatree):
         # Check for datatree GH issue https://github.com/xarray-contrib/datatree/issues/48
         dt = create_test_datatree()

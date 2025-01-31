@@ -1429,6 +1429,7 @@ class DataTree(
         self,
         func: Callable,
         *args: Any,
+        kwargs: Mapping[str, Any] | None = None,
     ) -> DataTree | tuple[DataTree, ...]:
         """
         Apply a function to every dataset in this subtree, returning a new tree which stores the results.
@@ -1447,6 +1448,8 @@ class DataTree(
             Function will not be applied to any nodes without datasets.
         *args : tuple, optional
             Positional arguments passed on to `func`.
+        kwargs : dict, optional
+            Optional keyword arguments passed directly on to call ``func``.
 
         Returns
         -------
@@ -1459,7 +1462,7 @@ class DataTree(
         """
         # TODO this signature means that func has no way to know which node it is being called upon - change?
         # TODO fix this typing error
-        return map_over_datasets(func, self, *args)
+        return map_over_datasets(func, self, *args, kwargs=kwargs)
 
     def pipe(
         self, func: Callable | tuple[Callable, str], *args: Any, **kwargs: Any
