@@ -21,7 +21,9 @@ v2025.02.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Added :py:meth:`Coordinates.from_xindex` as convenience for creating a new :py:class:`Coordinates` object
+  directly from an existing Xarray index object if the latter supports it (:pull:`10000`)
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -37,7 +39,8 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- Better expose the :py:class:`Coordinates` class in API reference (:pull:`10000`)
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -118,9 +121,6 @@ New Features
   <https://github.com/kmuehlbauer>`_.
 - :py:meth:`DatasetGroupBy.first` and :py:meth:`DatasetGroupBy.last` can now use ``flox`` if available. (:issue:`9647`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Added :py:meth:`Coordinates.from_xindex` as convenience for creating a new :py:class:`Coordinates` object
-  directly from an existing Xarray index object if the latter supports it (:pull:`10000`)
-  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -158,8 +158,6 @@ Documentation
 ~~~~~~~~~~~~~
 - A chapter on :ref:`internals.timecoding` is added to the internal section (:pull:`9618`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- Better expose the :py:class:`Coordinates` class in API reference (:pull:`10000`)
-  By `Benoit Bovy <https://github.com/benbovy>`_.
 - Clarified xarray's policy on API stability in the FAQ. (:issue:`9854`, :pull:`9855`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
