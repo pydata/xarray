@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Callable, Mapping
+from functools import partial
 from typing import TYPE_CHECKING, Any, cast, overload
 
 from xarray.core.dataset import Dataset
@@ -31,7 +32,9 @@ def map_over_datasets(
 
 
 def map_over_datasets(
-    func: Callable[..., Dataset | None | tuple[Dataset | None, ...]], *args: Any
+    func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
+    *args: Any,
+    kwargs: Mapping | None = None,
 ) -> DataTree | tuple[DataTree, ...]:
     """
     Applies a function to every dataset in one or more DataTree objects with
@@ -68,6 +71,8 @@ def map_over_datasets(
     *args : tuple, optional
         Positional arguments passed on to `func`. Any DataTree arguments will be
         converted to Dataset objects via `.dataset`.
+    kwargs : dict, optional
+        Optional keyword arguments passed directly on to call ``func``.
 
     Returns
     -------
@@ -84,6 +89,12 @@ def map_over_datasets(
     # TODO inspect function to work out immediately if the wrong number of arguments were passed for it?
 
     from xarray.core.datatree import DataTree
+
+    if kwargs is None:
+        kwargs = {}
+
+    if kwargs:
+        func = partial(func, **kwargs)
 
     # Walk all trees simultaneously, applying func to all nodes that lie in same position in different trees
     # We don't know which arguments are DataTrees so we zip all arguments together as iterables

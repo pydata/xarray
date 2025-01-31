@@ -51,6 +51,19 @@ class TestMapOverSubTree:
         result_tree = map_over_datasets(lambda x, y: x * y, 10.0, dt)
         assert_equal(result_tree, expected)
 
+    def test_single_tree_arg_plus_kwarg(self, create_test_datatree):
+        dt = create_test_datatree()
+        expected = create_test_datatree(modify=lambda ds: (10.0 * ds))
+
+        def multiply_by_kwarg(ds, **kwargs):
+            ds = ds * kwargs.pop("multiplier")
+            return ds
+
+        result_tree = map_over_datasets(
+            multiply_by_kwarg, dt, kwargs=dict(multiplier=10.0)
+        )
+        assert_equal(result_tree, expected)
+
     def test_multiple_tree_args(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
