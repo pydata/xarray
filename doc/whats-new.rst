@@ -70,8 +70,12 @@ eventually be deprecated.
 
 New Features
 ~~~~~~~~~~~~
-- Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`, :pull:`9977`, :pull:`9966`, :pull:`9999`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
+- Relax nanosecond resolution restriction in CF time coding and permit
+  :py:class:`numpy.datetime64` or :py:class:`numpy.timedelta64` dtype arrays
+  with ``"s"``, ``"ms"``, ``"us"``, or ``"ns"`` resolution throughout xarray
+  (:issue:`7493`, :pull:`9618`, :pull:`9977`, :pull:`9966`, :pull:`9999`). By
+  `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 - Enable the ``compute=False`` option in :py:meth:`DataTree.to_zarr`. (:pull:`9958`).
   By `Sam Levang <https://github.com/slevang>`_.
 - Improve the error message raised when no key is matching the available variables in a dataset.  (:pull:`9943`)
