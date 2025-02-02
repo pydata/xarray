@@ -655,10 +655,16 @@ class ZarrStore(AbstractWritableDataStore):
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
         )
-        group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
+        group_paths: list[str] = list(_iter_zarr_groups(zarr_group, parent=group))
+        group_members = {path: zarr_group.get(path.lstrip("/")) for path in group_paths}
+        if "/" in group_paths:
+            group_members["/"] = zarr_group
+        else:
+            group_members.pop("/", None)
+
         return {
             group: cls(
-                zarr_group.get(group),
+                store_member,
                 mode,
                 consolidate_on_close,
                 append_dim,
@@ -669,7 +675,7 @@ class ZarrStore(AbstractWritableDataStore):
                 use_zarr_fill_value_as_mask,
                 cache_members=cache_members,
             )
-            for group in group_paths
+            for group, store_member in group_members.items()
         }
 
     @classmethod
