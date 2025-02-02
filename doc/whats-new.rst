@@ -33,6 +33,12 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Default to resolution-dependent optimal integer encoding units when saving
+  chunked non-nanosecond :py:class:`numpy.datetime64` or
+  :py:class:`numpy.timedelta64` arrays to disk. Previously units of
+  "nanoseconds" were chosen by default, which are optimal for
+  nanosecond-resolution times, but not for times with coarser resolution. By
+  `Spencer Clark <https://github.com/spencerkclark>`_ (:pull:`10017`).
 
 
 Documentation
