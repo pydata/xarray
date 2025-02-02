@@ -155,6 +155,7 @@ def _numpy_to_netcdf_timeunit(units: NPDatetimeUnitOptions) -> str:
 
 def _numpy_dtype_to_netcdf_timeunit(dtype: np.dtype) -> str:
     unit, _ = np.datetime_data(dtype)
+    unit = cast(NPDatetimeUnitOptions, unit)
     return _numpy_to_netcdf_timeunit(unit)
 
 
