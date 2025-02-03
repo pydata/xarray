@@ -1702,6 +1702,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
 def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> tuple[str, Any]:
     from zarr.core.group import Group
+
     parent_nodepath = NodePath(parent)
     yield str(parent_nodepath), root
     # for path, group in root.groups():
