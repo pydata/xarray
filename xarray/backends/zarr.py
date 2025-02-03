@@ -656,7 +656,10 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_format=zarr_format,
         )
 
-        group_members = {path: store_group for path, store_group in list(_iter_zarr_groups(zarr_group, parent=group))}
+        group_members = {
+            path: store_group
+            for path, store_group in list(_iter_zarr_groups(zarr_group, parent=group))
+        }
 
         return {
             group: cls(
@@ -1702,6 +1705,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
 def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
     from zarr.core.group import Group
+
     parent_nodepath = NodePath(parent)
     yield str(parent_nodepath), root
     # for path, group in root.groups():
