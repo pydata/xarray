@@ -374,7 +374,7 @@ class TestH5NetCDFDatatreeIO(DatatreeIOBase):
     engine: T_DataTreeNetcdfEngine | None = "h5netcdf"
 
 
-# @requires_zarr_v3
+@requires_zarr_v3
 class TestZarrDatatreeIO:
     engine = "zarr"
 
