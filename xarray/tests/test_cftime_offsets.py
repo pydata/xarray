@@ -1062,15 +1062,6 @@ _CFTIME_RANGE_TESTS = [
         "0001-01-04",
         None,
         "D",
-        None,
-        False,
-        [(1, 1, 1), (1, 1, 2), (1, 1, 3), (1, 1, 4)],
-    ),
-    (
-        "0001-01-01",
-        "0001-01-04",
-        None,
-        "D",
         "both",
         False,
         [(1, 1, 1), (1, 1, 2), (1, 1, 3), (1, 1, 4)],
@@ -1294,13 +1285,6 @@ def test_invalid_cftime_range_inputs(
         cftime_range(start, end, periods, freq, inclusive=inclusive)  # type: ignore[arg-type]
 
 
-def test_invalid_cftime_arg() -> None:
-    with pytest.warns(
-        FutureWarning, match="Following pandas, the `closed` parameter is deprecated"
-    ):
-        cftime_range("2000", "2001", None, "YE", closed="left")
-
-
 _CALENDAR_SPECIFIC_MONTH_END_TESTS = [
     ("noleap", [(2, 28), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
     ("all_leap", [(2, 29), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
@@ -1496,7 +1480,7 @@ def test_date_range_like_same_calendar():
     assert src is out
 
 
-@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
+@pytest.mark.filterwarnings("ignore:Converting non-default")
 def test_date_range_like_errors():
     src = date_range("1899-02-03", periods=20, freq="D", use_cftime=False)
     src = src[np.arange(20) != 10]  # Remove 1 day so the frequency is not inferable.
@@ -1535,44 +1519,12 @@ def as_timedelta_not_implemented_error():
 
 
 @pytest.mark.parametrize("function", [cftime_range, date_range])
-def test_cftime_or_date_range_closed_and_inclusive_error(function: Callable) -> None:
-    if function == cftime_range and not has_cftime:
-        pytest.skip("requires cftime")
-
-    with pytest.raises(ValueError, match="Following pandas, deprecated"):
-        function("2000", periods=3, closed=None, inclusive="right")
-
-
-@pytest.mark.parametrize("function", [cftime_range, date_range])
 def test_cftime_or_date_range_invalid_inclusive_value(function: Callable) -> None:
     if function == cftime_range and not has_cftime:
         pytest.skip("requires cftime")
 
     with pytest.raises(ValueError, match="nclusive"):
         function("2000", periods=3, inclusive="foo")
-
-
-@pytest.mark.parametrize(
-    "function",
-    [
-        pytest.param(cftime_range, id="cftime", marks=requires_cftime),
-        pytest.param(date_range, id="date"),
-    ],
-)
-@pytest.mark.parametrize(
-    ("closed", "inclusive"), [(None, "both"), ("left", "left"), ("right", "right")]
-)
-def test_cftime_or_date_range_closed(
-    function: Callable,
-    closed: Literal["left", "right", None],
-    inclusive: Literal["left", "right", "both"],
-) -> None:
-    with pytest.warns(FutureWarning, match="Following pandas"):
-        result_closed = function("2000-01-01", "2000-01-04", freq="D", closed=closed)
-        result_inclusive = function(
-            "2000-01-01", "2000-01-04", freq="D", inclusive=inclusive
-        )
-        np.testing.assert_equal(result_closed.values, result_inclusive.values)
 
 
 @pytest.mark.parametrize("function", [cftime_range, date_range])
@@ -1718,9 +1670,9 @@ def test_new_to_legacy_freq_pd_freq_passthrough(freq, expected):
         pytest.param("-1YE", marks=requires_pandas_3),
     ),
 )
-def test_cftime_range_same_as_pandas(start, end, freq):
+def test_cftime_range_same_as_pandas(start, end, freq) -> None:
     result = date_range(start, end, freq=freq, calendar="standard", use_cftime=True)
-    result = result.to_datetimeindex()
+    result = result.to_datetimeindex(time_unit="ns")
     expected = date_range(start, end, freq=freq, use_cftime=False)
 
     np.testing.assert_array_equal(result, expected)
@@ -1742,8 +1694,8 @@ def test_cftime_range_no_freq(start, end, periods):
     when freq is not provided, but start, end and periods are.
     """
     # Generate date ranges using cftime_range
-    result = cftime_range(start=start, end=end, periods=periods)
-    result = result.to_datetimeindex()
+    cftimeindex = cftime_range(start=start, end=end, periods=periods)
+    result = cftimeindex.to_datetimeindex(time_unit="ns")
     expected = pd.date_range(start=start, end=end, periods=periods)
 
     np.testing.assert_array_equal(result, expected)

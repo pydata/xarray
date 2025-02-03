@@ -13,6 +13,8 @@ format (recommended).
 
     import os
 
+    import iris
+    import ncdata.iris_xarray
     import numpy as np
     import pandas as pd
     import xarray as xr
@@ -538,8 +540,8 @@ The ``units`` and ``calendar`` attributes control how xarray serializes ``dateti
 ``timedelta64`` arrays to datasets on disk as numeric values. The ``units`` encoding
 should be a string like ``'days since 1900-01-01'`` for ``datetime64`` data or a string
 like ``'days'`` for ``timedelta64`` data. ``calendar`` should be one of the calendar types
-supported by netCDF4-python: 'standard', 'gregorian', 'proleptic_gregorian' 'noleap',
-'365_day', '360_day', 'julian', 'all_leap', '366_day'.
+supported by netCDF4-python: ``'standard'``, ``'gregorian'``, ``'proleptic_gregorian'``, ``'noleap'``,
+``'365_day'``, ``'360_day'``, ``'julian'``, ``'all_leap'``, ``'366_day'``.
 
 By default, xarray uses the ``'proleptic_gregorian'`` calendar and units of the smallest time
 difference between values, with a reference time of the first time value.
@@ -659,6 +661,7 @@ To write to a local directory, we pass a path to a directory:
     ! rm -rf path/to/directory.zarr
 
 .. ipython:: python
+    :okwarning:
 
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 5))},
@@ -695,6 +698,7 @@ To read back a zarr dataset that has been created this way, we use the
 :py:func:`open_zarr` method:
 
 .. ipython:: python
+    :okwarning:
 
     ds_zarr = xr.open_zarr("path/to/directory.zarr")
     ds_zarr
@@ -769,6 +773,7 @@ to Zarr:
     ! rm -rf path/to/directory.zarr
 
 .. ipython:: python
+    :okwarning:
 
     import dask.array
 
@@ -821,6 +826,7 @@ For example:
     ! rm -rf foo.zarr
 
 .. ipython:: python
+    :okwarning:
 
     import zarr
     from numcodecs.blosc import Blosc
@@ -871,6 +877,7 @@ order, e.g., for time-stepping a simulation:
     ! rm -rf path/to/directory.zarr
 
 .. ipython:: python
+    :okwarning:
 
     ds1 = xr.Dataset(
         {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
@@ -938,6 +945,7 @@ space on disk or in memory, yet when writing to disk the default zarr behavior i
 split them into chunks:
 
 .. ipython:: python
+    :okwarning:
 
     ds.to_zarr("path/to/directory.zarr", mode="w")
     ! ls -R path/to/directory.zarr
@@ -948,6 +956,7 @@ storage provider. To disable this chunking, we can specify a chunk size equal to
 length of each dimension by using the shorthand chunk size ``-1``:
 
 .. ipython:: python
+    :okwarning:
 
     ds.to_zarr(
         "path/to/directory.zarr",
@@ -1072,8 +1081,11 @@ Iris
 
 The Iris_ tool allows easy reading of common meteorological and climate model formats
 (including GRIB and UK MetOffice PP files) into ``Cube`` objects which are in many ways very
-similar to ``DataArray`` objects, while enforcing a CF-compliant data model. If iris is
-installed, xarray can convert a ``DataArray`` into a ``Cube`` using
+similar to ``DataArray`` objects, while enforcing a CF-compliant data model.
+
+DataArray ``to_iris`` and ``from_iris``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If iris is installed, xarray can convert a ``DataArray`` into a ``Cube`` using
 :py:meth:`DataArray.to_iris`:
 
 .. ipython:: python
@@ -1095,9 +1107,36 @@ Conversely, we can create a new ``DataArray`` object from a ``Cube`` using
     da_cube = xr.DataArray.from_iris(cube)
     da_cube
 
+Ncdata
+~~~~~~
+Ncdata_ provides more sophisticated means of transferring data, including entire
+datasets.  It uses the file saving and loading functions in both projects to provide a
+more "correct" translation between them, but still with very low overhead and not
+using actual disk files.
+
+For example:
+
+.. ipython:: python
+    :okwarning:
+
+    ds = xr.tutorial.open_dataset("air_temperature_gradient")
+    cubes = ncdata.iris_xarray.cubes_from_xarray(ds)
+    print(cubes)
+    print(cubes[1])
+
+.. ipython:: python
+    :okwarning:
+
+    ds = ncdata.iris_xarray.cubes_to_xarray(cubes)
+    print(ds)
+
+Ncdata can also adjust file data within load and save operations, to fix data loading
+problems or provide exact save formatting without needing to modify files on disk.
+See for example : `ncdata usage examples`_
 
 .. _Iris: https://scitools.org.uk/iris
-
+.. _Ncdata: https://ncdata.readthedocs.io/en/latest/index.html
+.. _ncdata usage examples: https://github.com/pp-mo/ncdata/tree/v0.1.2?tab=readme-ov-file#correct-a-miscoded-attribute-in-iris-input
 
 OPeNDAP
 -------

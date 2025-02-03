@@ -111,13 +111,18 @@ has_dask_ge_2024_08_1, requires_dask_ge_2024_08_1 = _importorskip(
     "dask", minversion="2024.08.1"
 )
 has_dask_ge_2024_11_0, requires_dask_ge_2024_11_0 = _importorskip("dask", "2024.11.0")
-with warnings.catch_warnings():
-    warnings.filterwarnings(
-        "ignore",
-        message="The current Dask DataFrame implementation is deprecated.",
-        category=DeprecationWarning,
-    )
-    has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
+has_dask_ge_2025_1_0, requires_dask_ge_2025_1_0 = _importorskip("dask", "2025.1.0")
+if has_dask_ge_2025_1_0:
+    has_dask_expr = True
+    requires_dask_expr = pytest.mark.skipif(not has_dask_expr, reason="should not skip")
+else:
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="The current Dask DataFrame implementation is deprecated.",
+            category=DeprecationWarning,
+        )
+        has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
@@ -298,12 +303,12 @@ _DEFAULT_TEST_DIM_SIZES = (8, 9, 10)
 
 
 def create_test_data(
-    seed: int | None = None,
+    seed: int = 12345,
     add_attrs: bool = True,
     dim_sizes: tuple[int, int, int] = _DEFAULT_TEST_DIM_SIZES,
     use_extension_array: bool = False,
 ) -> Dataset:
-    rs = np.random.RandomState(seed)
+    rs = np.random.default_rng(seed)
     _vars = {
         "var1": ["dim1", "dim2"],
         "var2": ["dim1", "dim2"],
@@ -318,7 +323,14 @@ def create_test_data(
             f'Not enough letters for filling this dimension size ({_dims["dim3"]})'
         )
     obj["dim3"] = ("dim3", list(string.ascii_lowercase[0 : _dims["dim3"]]))
-    obj["time"] = ("time", pd.date_range("2000-01-01", periods=20))
+    obj["time"] = (
+        "time",
+        pd.date_range(
+            "2000-01-01",
+            periods=20,
+            unit="ns",
+        ),
+    )
     for v, dims in sorted(_vars.items()):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
         obj[v] = (dims, data)
@@ -329,7 +341,7 @@ def create_test_data(
             "dim1",
             pd.Categorical(
                 rs.choice(
-                    list(string.ascii_lowercase[: rs.randint(1, 5)]),
+                    list(string.ascii_lowercase[: rs.integers(1, 5)]),
                     size=dim_sizes[0],
                 )
             ),
@@ -337,7 +349,7 @@ def create_test_data(
     if dim_sizes == _DEFAULT_TEST_DIM_SIZES:
         numbers_values = np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64")
     else:
-        numbers_values = rs.randint(0, 3, _dims["dim3"], dtype="int64")
+        numbers_values = rs.integers(0, 3, _dims["dim3"], dtype="int64")
     obj.coords["numbers"] = ("dim3", numbers_values)
     obj.encoding = {"foo": "bar"}
     assert_writeable(obj)

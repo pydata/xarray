@@ -78,7 +78,7 @@ To create a ``Dataset`` from a ``DataFrame``, use the
 
     xr.Dataset.from_dataframe(df)
 
-Notice that that dimensions of variables in the ``Dataset`` have now
+Notice that the dimensions of variables in the ``Dataset`` have now
 expanded after the round-trip conversion to a ``DataFrame``. This is because
 every object in a ``DataFrame`` must have the same indices, so we need to
 broadcast the data of each array to the full size of the new ``MultiIndex``.
@@ -202,7 +202,7 @@ Let's take a look:
 
 .. ipython:: python
 
-    data = np.random.RandomState(0).rand(2, 3, 4)
+    data = np.random.default_rng(0).rand(2, 3, 4)
     items = list("ab")
     major_axis = list("mno")
     minor_axis = pd.date_range(start="2000", periods=4, name="date")

@@ -205,7 +205,7 @@ def from_array(
 
         return NamedArray(dims, data, attrs)
 
-    if isinstance(data, _arrayfunction_or_api):
+    if isinstance(data, _arrayfunction_or_api) and not isinstance(data, np.generic):
         return NamedArray(dims, data, attrs)
 
     if isinstance(data, tuple):
@@ -668,6 +668,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     ) -> Self:
         data = array_func(results, *args, **kwargs)
         return type(self)(self._dims, data, attrs=self._attrs)
+
+    @overload
+    def get_axis_num(self, dim: str) -> int: ...  # type: ignore [overload-overlap]
 
     @overload
     def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]: ...
