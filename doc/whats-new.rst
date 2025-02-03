@@ -21,7 +21,8 @@ v2025.02.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Allow kwargs in :py:meth:`DataTree.map_over_datasets` and :py:func:`map_over_datasets` (:issue:`10009`, :pull:`10012`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
