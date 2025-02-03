@@ -1792,12 +1792,12 @@ class TestDataArray:
         x = xr.DataArray([], dims=("x",), coords={"x": []}).astype("float32")
         y = x.reindex(x=[1.0, 2.0])
 
-        assert (
-            x.dtype == y.dtype
-        ), "Dtype of reindexed DataArray should match dtype of the original DataArray"
-        assert (
-            y.dtype == np.float32
-        ), "Dtype of reindexed DataArray should remain float32"
+        assert x.dtype == y.dtype, (
+            "Dtype of reindexed DataArray should match dtype of the original DataArray"
+        )
+        assert y.dtype == np.float32, (
+            "Dtype of reindexed DataArray should remain float32"
+        )
 
     def test_rename(self) -> None:
         da = xr.DataArray(

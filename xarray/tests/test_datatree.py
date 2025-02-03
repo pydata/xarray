@@ -2338,15 +2338,15 @@ class TestDask:
         assert_identical(actual, expected)
 
         assert actual.chunksizes == original_chunksizes, "chunksizes were modified"
-        assert (
-            tree.chunksizes == original_chunksizes
-        ), "original chunksizes were modified"
-        assert all(
-            d == 1 for d in actual_hlg_depths.values()
-        ), "unexpected dask graph depth"
-        assert all(
-            d == 2 for d in original_hlg_depths.values()
-        ), "original dask graph was modified"
+        assert tree.chunksizes == original_chunksizes, (
+            "original chunksizes were modified"
+        )
+        assert all(d == 1 for d in actual_hlg_depths.values()), (
+            "unexpected dask graph depth"
+        )
+        assert all(d == 2 for d in original_hlg_depths.values()), (
+            "original dask graph was modified"
+        )
 
     def test_chunk(self):
         ds1 = xr.Dataset({"a": ("x", np.arange(10))})

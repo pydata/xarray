@@ -31,9 +31,9 @@ class AbstractStyle:
         self.vertical = vertical
         self.cont = cont
         self.end = end
-        assert (
-            len(cont) == len(vertical) == len(end)
-        ), f"'{vertical}', '{cont}' and '{end}' need to have equal length"
+        assert len(cont) == len(vertical) == len(end), (
+            f"'{vertical}', '{cont}' and '{end}' need to have equal length"
+        )
 
     @property
     def empty(self) -> str:

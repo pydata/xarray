@@ -3512,8 +3512,7 @@ class DataArray(
         """
         if utils.is_dict_like(value):
             raise TypeError(
-                "cannot provide fill value as a dictionary with "
-                "fillna on a DataArray"
+                "cannot provide fill value as a dictionary with fillna on a DataArray"
             )
         out = ops.fillna(self, value)
         return out
@@ -4537,8 +4536,7 @@ class DataArray(
                 }
             except KeyError as e:
                 raise ValueError(
-                    "cannot convert dict when coords are missing the key "
-                    f"'{e.args[0]}'"
+                    f"cannot convert dict when coords are missing the key '{e.args[0]}'"
                 ) from e
         try:
             data = d["data"]
