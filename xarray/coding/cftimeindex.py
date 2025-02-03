@@ -294,7 +294,7 @@ class CFTimeIndex(pd.Index):
                 offset=offset,
                 first_row_offset=offset,
             )
-            datastr = "\n".join([front_str, f"{' '*offset}...", end_str])
+            datastr = "\n".join([front_str, f"{' ' * offset}...", end_str])
 
         attrs_str = format_attrs(self)
         # oneliner only if smaller than display_width
@@ -302,8 +302,10 @@ class CFTimeIndex(pd.Index):
         if len(full_repr_str) > display_width:
             # if attrs_str too long, one per line
             if len(attrs_str) >= display_width - offset:
-                attrs_str = attrs_str.replace(",", f",\n{' '*(offset-2)}")
-            full_repr_str = f"{klass_name}([{datastr}],\n{' '*(offset-1)}{attrs_str})"
+                attrs_str = attrs_str.replace(",", f",\n{' ' * (offset - 2)}")
+            full_repr_str = (
+                f"{klass_name}([{datastr}],\n{' ' * (offset - 1)}{attrs_str})"
+            )
 
         return full_repr_str
 

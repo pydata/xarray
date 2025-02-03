@@ -651,8 +651,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                         )
                     if k.ndim > 1:
                         raise IndexError(
-                            f"{k.ndim}-dimensional boolean indexing is "
-                            "not supported. "
+                            f"{k.ndim}-dimensional boolean indexing is not supported. "
                         )
                     if is_duck_dask_array(k.data):
                         raise KeyError(

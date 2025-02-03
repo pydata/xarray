@@ -169,9 +169,9 @@ def assert_identical(a, b):
     if isinstance(a, Variable):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, DataArray):
-        assert (
-            a.name == b.name
-        ), f"DataArray names are different. L: {a.name}, R: {b.name}"
+        assert a.name == b.name, (
+            f"DataArray names are different. L: {a.name}, R: {b.name}"
+        )
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, Dataset | Variable):
         assert a.identical(b), formatting.diff_dataset_repr(a, b, "identical")

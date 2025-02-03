@@ -412,8 +412,7 @@ def get_squeeze_dims(
 
     if any(xarray_obj.sizes[k] > 1 for k in dim):
         raise ValueError(
-            "cannot select a dimension to squeeze out "
-            "which has length greater than one"
+            "cannot select a dimension to squeeze out which has length greater than one"
         )
     return dim
 

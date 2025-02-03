@@ -301,9 +301,9 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         dict_of_datasets = open_groups(filepath, engine="netcdf4", chunks=chunks)
 
         for path, ds in dict_of_datasets.items():
-            assert {
-                k: max(vs) for k, vs in ds.chunksizes.items()
-            } == chunks, f"unexpected chunking for {path}"
+            assert {k: max(vs) for k, vs in ds.chunksizes.items()} == chunks, (
+                f"unexpected chunking for {path}"
+            )
 
         for ds in dict_of_datasets.values():
             ds.close()
@@ -587,9 +587,9 @@ class TestZarrDatatreeIO:
         dict_of_datasets = open_groups(filepath, engine="zarr", chunks=chunks)
 
         for path, ds in dict_of_datasets.items():
-            assert {
-                k: max(vs) for k, vs in ds.chunksizes.items()
-            } == chunks, f"unexpected chunking for {path}"
+            assert {k: max(vs) for k, vs in ds.chunksizes.items()} == chunks, (
+                f"unexpected chunking for {path}"
+            )
 
         for ds in dict_of_datasets.values():
             ds.close()
