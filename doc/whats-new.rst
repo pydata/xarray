@@ -33,7 +33,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix incompatibilities between ``open_datatree`` and Zarr-Python V3, along with refactoring ``TestZarrDatatreeIO`` (:issue:`9960`, :pull:`10020`).
+  By `Alfonso Ladino-Rincon <https://github.com/aladinor>`_.
 
 Documentation
 ~~~~~~~~~~~~~
