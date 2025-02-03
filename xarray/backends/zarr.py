@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
-import zarr.core.group
 
 from xarray import coding, conventions
 from xarray.backends.common import (
@@ -656,16 +655,18 @@ class ZarrStore(AbstractWritableDataStore):
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
         )
+        from zarr.core.group import Group
+
         group_members: dict = dict(zarr_group.members(max_depth=1000))
         group_members = {
             (f"{group}/{path}" if group != "/" else path): group_store
             for path, group_store in group_members.items()
-            if isinstance(group_store, zarr.core.group.Group)
+            if isinstance(group_store, Group)
         }
         group_members[group] = zarr_group
         return {
             group: cls(
-                store_group,
+                group_store,
                 mode,
                 consolidate_on_close,
                 append_dim,
@@ -676,7 +677,7 @@ class ZarrStore(AbstractWritableDataStore):
                 use_zarr_fill_value_as_mask,
                 cache_members=cache_members,
             )
-            for group, store_group in group_members.items()
+            for group, group_store in group_members.items()
         }
 
     @classmethod
