@@ -15,7 +15,7 @@ from xarray.tests import (
     requires_dask,
     requires_h5netcdf,
     requires_netCDF4,
-    requires_zarr, requires_zarr_v3,
+    requires_zarr_v3,
 )
 
 if TYPE_CHECKING:
@@ -142,6 +142,7 @@ def unaligned_datatree_zarr(tmp_path_factory):
                 b        (x) float64 16B ...
     """
     from zarr import consolidate_metadata
+
     filepath = tmp_path_factory.mktemp("data") / "unaligned_simple_datatree.zarr"
     root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
     set1_data = xr.Dataset({"a": 0, "b": 1})
@@ -399,11 +400,21 @@ class TestZarrDatatreeIO:
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
             print(roundtrip_dt["/set2/a"].encoding)
-            retrieved_compressor = roundtrip_dt["/set2/a"].encoding["compressors"][0]  # Get the BloscCodec object
-            assert retrieved_compressor.cname.name == comp["compressor"]["configuration"]["cname"]
-            assert retrieved_compressor.clevel == comp["compressor"]["configuration"]["clevel"]
-            assert retrieved_compressor.shuffle.name == comp["compressor"]["configuration"]["shuffle"]
-
+            retrieved_compressor = roundtrip_dt["/set2/a"].encoding["compressors"][
+                0
+            ]  # Get the BloscCodec object
+            assert (
+                retrieved_compressor.cname.name
+                == comp["compressor"]["configuration"]["cname"]
+            )
+            assert (
+                retrieved_compressor.clevel
+                == comp["compressor"]["configuration"]["clevel"]
+            )
+            assert (
+                retrieved_compressor.shuffle.name
+                == comp["compressor"]["configuration"]["shuffle"]
+            )
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
             with pytest.raises(ValueError, match="unexpected encoding group.*"):
@@ -435,7 +446,6 @@ class TestZarrDatatreeIO:
                 assert_equal(original_dt, roundtrip_dt)
 
     def test_to_zarr_default_write_mode(self, tmpdir, simple_datatree):
-
         simple_datatree.to_zarr(str(tmpdir))
 
         # with default settings, to_zarr should not overwrite an existing dir
