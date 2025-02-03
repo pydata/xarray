@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
+import zarr.core.group
 
 from xarray import coding, conventions
 from xarray.backends.common import (
@@ -655,9 +656,13 @@ class ZarrStore(AbstractWritableDataStore):
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
         )
-
-        group_members: dict = dict(_iter_zarr_groups(zarr_group, parent=group))
-
+        group_members: dict = dict(zarr_group.members(max_depth=1000))
+        group_members = {
+            (f"{group}/{path}" if group != "/" else path): group_store
+            for path, group_store in group_members.items()
+            if isinstance(group_store, zarr.core.group.Group)
+        }
+        group_members[group] = zarr_group
         return {
             group: cls(
                 store_group,
@@ -1653,8 +1658,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         zarr_version=None,
         zarr_format=None,
     ) -> dict[str, Dataset]:
-        from xarray.core.treenode import NodePath
-
         filename_or_obj = _normalize_path(filename_or_obj)
 
         # Check for a group and make it a parent if it exists
@@ -1698,18 +1701,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
         return groups_dict
-
-
-def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> tuple[str, Any]:
-    from zarr.core.group import Group
-
-    parent_nodepath = NodePath(parent)
-    yield str(parent_nodepath), root
-    # for path, group in root.groups():
-    for path, group in root.members():
-        gpath = parent_nodepath / path
-        if isinstance(group, Group):
-            yield from _iter_zarr_groups(group, parent=str(gpath))
 
 
 def _get_open_params(
