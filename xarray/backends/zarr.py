@@ -656,10 +656,7 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_format=zarr_format,
         )
 
-        group_members = {
-            path: store_group
-            for path, store_group in list(_iter_zarr_groups(zarr_group, parent=group))
-        }
+        group_members = dict(list(_iter_zarr_groups(zarr_group, parent=group)))
 
         return {
             group: cls(
