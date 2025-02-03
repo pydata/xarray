@@ -538,8 +538,8 @@ class TestZarrDatatreeIO:
         unaligned_dict_of_datasets = open_groups(unaligned_datatree_zarr, engine="zarr")
 
         assert "/" in unaligned_dict_of_datasets.keys()
-        assert "/Group1" in unaligned_dict_of_datasets.keys()
-        assert "/Group2" in unaligned_dict_of_datasets.keys()
+        assert "Group1" in unaligned_dict_of_datasets.keys()
+        assert "Group2" in unaligned_dict_of_datasets.keys()
         # Check that group name returns the correct datasets
         with xr.open_dataset(
             unaligned_datatree_zarr, group="/", engine="zarr"
@@ -548,15 +548,17 @@ class TestZarrDatatreeIO:
         with xr.open_dataset(
             unaligned_datatree_zarr, group="Group1", engine="zarr"
         ) as expected:
-            assert_identical(unaligned_dict_of_datasets["/Group1"], expected)
+            assert_identical(unaligned_dict_of_datasets["Group1"], expected)
         with xr.open_dataset(
-            unaligned_datatree_zarr, group="/Group2", engine="zarr"
+            unaligned_datatree_zarr, group="Group2", engine="zarr"
         ) as expected:
-            assert_identical(unaligned_dict_of_datasets["/Group2"], expected)
-
+            assert_identical(unaligned_dict_of_datasets["Group2"], expected)
         for ds in unaligned_dict_of_datasets.values():
             ds.close()
 
+    @pytest.mark.filterwarnings(
+        "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
+    )
     def test_open_datatree_specific_group(self, tmpdir, simple_datatree) -> None:
         """Test opening a specific group within a Zarr store using `open_datatree`."""
         filepath = str(tmpdir / "test.zarr")
@@ -615,6 +617,9 @@ class TestZarrDatatreeIO:
             assert_equal(original_dt, roundtrip_dt)
             assert_identical(expected_dt, roundtrip_dt)
 
+    @pytest.mark.filterwarnings(
+        "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
+    )
     def test_write_inherited_coords_false(self, tmpdir):
         original_dt = DataTree.from_dict(
             {
@@ -634,6 +639,9 @@ class TestZarrDatatreeIO:
         with open_datatree(filepath, group="child", engine="zarr") as roundtrip_child:
             assert_identical(expected_child, roundtrip_child)
 
+    @pytest.mark.filterwarnings(
+        "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
+    )
     def test_write_inherited_coords_true(self, tmpdir):
         original_dt = DataTree.from_dict(
             {
