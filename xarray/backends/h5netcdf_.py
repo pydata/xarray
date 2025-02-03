@@ -119,8 +119,7 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 if type(manager) is not h5netcdf.File:
                     raise ValueError(
-                        "must supply a h5netcdf.File if the group "
-                        "argument is provided"
+                        "must supply a h5netcdf.File if the group argument is provided"
                     )
                 root = manager
             manager = DummyFileManager(root)

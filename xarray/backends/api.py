@@ -104,8 +104,7 @@ def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:
             engine = "pydap"
         except ImportError as err:
             raise ValueError(
-                "netCDF4 or pydap is required for accessing "
-                "remote datasets via OPeNDAP"
+                "netCDF4 or pydap is required for accessing remote datasets via OPeNDAP"
             ) from err
     return engine
 
@@ -1669,8 +1668,7 @@ def open_mfdataset(
             )
         else:
             raise ValueError(
-                f"{combine} is an invalid option for the keyword argument"
-                " ``combine``"
+                f"{combine} is an invalid option for the keyword argument ``combine``"
             )
     except ValueError:
         for ds in datasets:

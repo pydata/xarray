@@ -72,10 +72,7 @@ def summarize_attrs(attrs) -> str:
 def _icon(icon_name) -> str:
     # icon_name should be defined in xarray/static/html/icon-svg-inline.html
     return (
-        f"<svg class='icon xr-{icon_name}'>"
-        f"<use xlink:href='#{icon_name}'>"
-        "</use>"
-        "</svg>"
+        f"<svg class='icon xr-{icon_name}'><use xlink:href='#{icon_name}'></use></svg>"
     )
 
 
