@@ -655,16 +655,12 @@ class ZarrStore(AbstractWritableDataStore):
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
         )
-        group_paths: list[str] = list(_iter_zarr_groups(zarr_group, parent=group))
-        group_members = {path: zarr_group.get(path.lstrip("/")) for path in group_paths}
-        if "/" in group_paths:
-            group_members["/"] = zarr_group
-        else:
-            group_members.pop("/", None)
+
+        group_members = {path: store_group for path, store_group in list(_iter_zarr_groups(zarr_group, parent=group))}
 
         return {
             group: cls(
-                store_member,
+                store_group,
                 mode,
                 consolidate_on_close,
                 append_dim,
@@ -675,7 +671,7 @@ class ZarrStore(AbstractWritableDataStore):
                 use_zarr_fill_value_as_mask,
                 cache_members=cache_members,
             )
-            for group, store_member in group_members.items()
+            for group, store_group in group_members.items()
         }
 
     @classmethod
@@ -1705,11 +1701,14 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
 
 def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
+    from zarr.core.group import Group
     parent_nodepath = NodePath(parent)
-    yield str(parent_nodepath)
-    for path, group in root.groups():
+    yield str(parent_nodepath), root
+    # for path, group in root.groups():
+    for path, group in root.members():
         gpath = parent_nodepath / path
-        yield from _iter_zarr_groups(group, parent=str(gpath))
+        if isinstance(group, Group):
+            yield from _iter_zarr_groups(group, parent=str(gpath))
 
 
 def _get_open_params(
@@ -1757,7 +1756,7 @@ def _get_open_params(
             consolidated = False
 
     if _zarr_v3():
-        missing_exc = ValueError
+        missing_exc = AssertionError
     else:
         missing_exc = zarr.errors.GroupNotFoundError
 
