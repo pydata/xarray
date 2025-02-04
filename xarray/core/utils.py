@@ -119,12 +119,12 @@ def did_you_mean(
     word: Hashable, possibilities: Iterable[Hashable], *, n: int = 10
 ) -> str:
     """
-    Suggest a few correct words based on a list of possibilites
+    Suggest a few correct words based on a list of possibilities
 
     Parameters
     ----------
     word : Hashable
-        Word to compare to a list of possibilites.
+        Word to compare to a list of possibilities.
     possibilities : Iterable of Hashable
         The iterable of Hashable that contains the correct values.
     n : int, default: 10
@@ -142,15 +142,15 @@ def did_you_mean(
     https://en.wikipedia.org/wiki/String_metric
     """
     # Convert all values to string, get_close_matches doesn't handle all hashables:
-    possibilites_str: dict[str, Hashable] = {str(k): k for k in possibilities}
+    possibilities_str: dict[str, Hashable] = {str(k): k for k in possibilities}
 
     msg = ""
     if len(
         best_str := difflib.get_close_matches(
-            str(word), list(possibilites_str.keys()), n=n
+            str(word), list(possibilities_str.keys()), n=n
         )
     ):
-        best = tuple(possibilites_str[k] for k in best_str)
+        best = tuple(possibilities_str[k] for k in best_str)
         msg = f"Did you mean one of {best}?"
 
     return msg
