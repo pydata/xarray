@@ -861,8 +861,9 @@ def _get_normalized_cfdate(date, calendar, normalize):
         return date
 
     cf_date = to_cftime_datetime(date, calendar)
-    
+
     return normalize_date(cf_date) if normalize else cf_date
+
 
 def _generate_date_range():
     pass
@@ -908,7 +909,7 @@ def _generate_date_range_with_freq(start, end, periods, freq):
     A generator object of cftime.datetime objects
     """
     offset = to_offset(freq)
-    
+
     if start:
         # From pandas GH 56147 / 56832 to account for negative direction and
         # range bounds
@@ -1127,6 +1128,12 @@ def cftime_range(
     --------
     pandas.date_range
     """
+    warnings.warn(
+        "cftime_range() is deprecated, please use date_range(use_cftime=True) instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     return date_range(
         start=start,
         end=end,
@@ -1136,7 +1143,8 @@ def cftime_range(
         name=name,
         inclusive=inclusive,
         calendar=calendar,
-        use_cftime=True)
+        use_cftime=True,
+    )
 
 
 def _cftime_range(
@@ -1194,7 +1202,9 @@ def _cftime_range(
     if freq is None:
         dates = _generate_date_range(start, end, periods)
     else:
-        dates = np.array(list(_generate_date_range_with_freq(start, end, periods, freq)))
+        dates = np.array(
+            list(_generate_date_range_with_freq(start, end, periods, freq))
+        )
 
     if inclusive not in InclusiveOptions:
         raise ValueError(
@@ -1202,10 +1212,10 @@ def _cftime_range(
             f"'left', or 'right'.  Got {inclusive}."
         )
 
-    if len(dates) and inclusive != 'both':
-        if inclusive != 'left' and dates[0] == start:
+    if len(dates) and inclusive != "both":
+        if inclusive != "left" and dates[0] == start:
             dates = dates[1:]
-        if inclusive != 'right' and dates[-1] == end:
+        if inclusive != "right" and dates[-1] == end:
             dates = dates[:-1]
 
     return CFTimeIndex(dates, name=name)
