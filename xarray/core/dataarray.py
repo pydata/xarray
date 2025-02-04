@@ -721,7 +721,10 @@ class DataArray(
         return self._variable
 
     @property
-    def dtype(self) -> np.dtype:
+    # variable.dtype goes through `NamedArray` which lacks
+    # typing support for pandas extension arrays
+    # (even if all tests functionally pass) so we can at least be explicit about the type here.
+    def dtype(self) -> np.dtype | pd.api.extensions.ExtensionDtype:
         """
         Data-type of the array’s elements.
 
