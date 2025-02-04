@@ -655,7 +655,7 @@ class ZarrStore(AbstractWritableDataStore):
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
         )
-        from zarr.core.group import Group
+        from zarr import Group
 
         group_members: dict = dict(zarr_group.members(max_depth=1000))
         group_members = {
