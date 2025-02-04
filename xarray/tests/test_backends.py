@@ -2275,6 +2275,36 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
     @pytest.mark.flaky
     def test_roundtrip_coordinates(self) -> None:
         super().test_roundtrip_coordinates()
+            
+    @requires_cftime
+    def test_roundtrip_cftime_bnds(self):
+        # Regression test for issue #7794
+        import cftime
+
+        original = xr.Dataset(
+            {
+                "foo": ("time", [0.0]),
+                "time_bnds": (
+                    ("time", "bnds"),
+                    [
+                        [
+                            cftime.Datetime360Day(2005, 12, 1, 0, 0, 0, 0),
+                            cftime.Datetime360Day(2005, 12, 2, 0, 0, 0, 0),
+                        ]
+                    ],
+                ),
+            },
+            {"time": [cftime.Datetime360Day(2005, 12, 1, 12, 0, 0, 0)]},
+        )
+
+        with create_tmp_file() as tmp_file:
+            original.to_netcdf(tmp_file)
+            with open_dataset(tmp_file) as actual:
+                # Operation to load actual time_bnds into memory
+                assert_array_equal(actual.time_bnds.values, original.time_bnds.values)
+                chunked = actual.chunk(time=1)
+                with create_tmp_file() as tmp_file_chunked:
+                    chunked.to_netcdf(tmp_file_chunked)
 
 
 @requires_zarr
