@@ -1447,9 +1447,10 @@ class DataTree(
 
             Function will not be applied to any nodes without datasets.
         *args : tuple, optional
-            Positional arguments passed on to `func`.
+            Positional arguments passed on to `func`. Any DataTree arguments will be
+            converted to Dataset objects via `.dataset`.
         kwargs : dict, optional
-            Optional keyword arguments passed directly on to call ``func``.
+            Optional keyword arguments passed directly to ``func``.
 
         Returns
         -------

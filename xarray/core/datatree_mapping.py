@@ -75,7 +75,7 @@ def map_over_datasets(
     func : callable
         Function to apply to datasets with signature:
 
-        `func(*args: Dataset) -> Union[Dataset, tuple[Dataset, ...]]`.
+        `func(*args: Dataset, **kwargs) -> Union[Dataset, tuple[Dataset, ...]]`.
 
         (i.e. func must accept at least one Dataset and return at least one Dataset.)
     *args : tuple, optional
