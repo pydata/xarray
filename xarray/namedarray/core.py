@@ -839,7 +839,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 from pandas.api.types import is_extension_array_dtype
             else:
 
-                def is_extension_array_dtype(dtype: Any) -> Literal[False]:
+                def is_extension_array_dtype(dtype: Any) -> Literal[False]:  # type: ignore[misc]
                     return False
 
             ndata: duckarray[Any, Any]
