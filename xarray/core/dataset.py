@@ -6478,7 +6478,7 @@ class Dataset(
         if (len(dim) > 0) and (isinstance(dim[0], list)):
             list_fix = [f"{x!r}" if isinstance(x, str) else f"{x}" for x in dim[0]]
             raise TypeError(
-                f'transpose requires dim to be passed as multiple arguments. Expected `{", ".join(list_fix)}`. Received `{dim[0]}` instead'
+                f"transpose requires dim to be passed as multiple arguments. Expected `{', '.join(list_fix)}`. Received `{dim[0]}` instead"
             )
 
         # Use infix_dims to check once for missing dimensions

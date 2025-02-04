@@ -395,7 +395,7 @@ class TestDataset:
             <xarray.Dataset> Size: 12B
             Dimensions:  (foø: 1)
             Coordinates:
-              * foø      (foø) {byteorder}U3 12B {'ba®'!r}
+              * foø      (foø) {byteorder}U3 12B {"ba®"!r}
             Data variables:
                 *empty*
             Attributes:
