@@ -82,7 +82,7 @@ def map_over_datasets(
         Positional arguments passed on to `func`. Any DataTree arguments will be
         converted to Dataset objects via `.dataset`.
     kwargs : dict, optional
-        Optional keyword arguments passed directly on to call ``func``.
+        Optional keyword arguments passed directly to ``func``.
 
     Returns
     -------
