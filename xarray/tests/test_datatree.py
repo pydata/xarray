@@ -1240,8 +1240,12 @@ class TestRepr:
     )
     def test_doc_example(self) -> None:
         # regression test for https://github.com/pydata/xarray/issues/9499
-        time = xr.DataArray(data=["2022-01", "2023-01"], dims="time")
-        stations = xr.DataArray(data=list("abcdef"), dims="station")
+        time = xr.DataArray(
+            data=np.array(["2022-01", "2023-01"], dtype="<U7"), dims="time"
+        )
+        stations = xr.DataArray(
+            data=np.array(list("abcdef"), dtype="<U1"), dims="station"
+        )
         lon = [-100, -80, -60]
         lat = [10, 20, 30]
         # Set up fake data
@@ -2334,15 +2338,15 @@ class TestDask:
         assert_identical(actual, expected)
 
         assert actual.chunksizes == original_chunksizes, "chunksizes were modified"
-        assert (
-            tree.chunksizes == original_chunksizes
-        ), "original chunksizes were modified"
-        assert all(
-            d == 1 for d in actual_hlg_depths.values()
-        ), "unexpected dask graph depth"
-        assert all(
-            d == 2 for d in original_hlg_depths.values()
-        ), "original dask graph was modified"
+        assert tree.chunksizes == original_chunksizes, (
+            "original chunksizes were modified"
+        )
+        assert all(d == 1 for d in actual_hlg_depths.values()), (
+            "unexpected dask graph depth"
+        )
+        assert all(d == 2 for d in original_hlg_depths.values()), (
+            "original dask graph was modified"
+        )
 
     def test_chunk(self):
         ds1 = xr.Dataset({"a": ("x", np.arange(10))})

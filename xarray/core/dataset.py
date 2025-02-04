@@ -6478,7 +6478,7 @@ class Dataset(
         if (len(dim) > 0) and (isinstance(dim[0], list)):
             list_fix = [f"{x!r}" if isinstance(x, str) else f"{x}" for x in dim[0]]
             raise TypeError(
-                f'transpose requires dim to be passed as multiple arguments. Expected `{", ".join(list_fix)}`. Received `{dim[0]}` instead'
+                f"transpose requires dim to be passed as multiple arguments. Expected `{', '.join(list_fix)}`. Received `{dim[0]}` instead"
             )
 
         # Use infix_dims to check once for missing dimensions
@@ -9141,7 +9141,7 @@ class Dataset(
         lhs = np.vander(x, order)
 
         if rcond is None:
-            rcond = x.shape[0] * np.finfo(x.dtype).eps  # type: ignore[assignment]
+            rcond = x.shape[0] * np.finfo(x.dtype).eps
 
         # Weights:
         if w is not None:
@@ -9206,7 +9206,7 @@ class Dataset(
 
             present_dims.update(other_dims)
             if w is not None:
-                rhs = rhs * w[:, np.newaxis]
+                rhs = rhs * w.reshape(-1, *((1,) * len(other_dims)))
 
             with warnings.catch_warnings():
                 if full:  # Copy np.polyfit behavior

@@ -276,8 +276,7 @@ class DatasetView(Dataset):
 
     def close(self) -> None:
         raise AttributeError(
-            "cannot close a DatasetView(). Close the associated DataTree node "
-            "instead"
+            "cannot close a DatasetView(). Close the associated DataTree node instead"
         )
 
     # FIXME https://github.com/python/mypy/issues/7328

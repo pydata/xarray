@@ -253,9 +253,9 @@ def test_lazy_import() -> None:
                 if pkg.startswith(mod):
                     is_imported.add(mod)
                     break
-        assert (
-            len(is_imported) == 0
-        ), f"{is_imported} have been imported but should be lazy"
+        assert len(is_imported) == 0, (
+            f"{is_imported} have been imported but should be lazy"
+        )
 
     finally:
         # restore original
