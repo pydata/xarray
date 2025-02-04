@@ -839,9 +839,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 from pandas.api.types import is_extension_array_dtype
             else:
 
-                def is_extension_array_dtype(dtype: Any) -> False:
+                def is_extension_array_dtype(dtype: Any) -> Literal[False]:
                     return False
 
+            ndata: duckarray[Any, Any]
             if is_extension_array_dtype(data_old.dtype):
                 # One of PandasExtensionArray or PandasIndexingAdapter?
                 ndata = np.asarray(data_old)
@@ -856,7 +857,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 # Using OuterIndexer is a pragmatic choice: dask does not yet handle
                 # different indexing types in an explicit way:
                 # https://github.com/dask/dask/issues/2883
-                ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)
+                ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore[assignment]
 
             if is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
