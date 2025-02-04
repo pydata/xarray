@@ -1917,8 +1917,6 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
     ) -> np.ndarray:
         if dtype is None:
             dtype = self.dtype
-        if pd.api.types.is_extension_array_dtype(dtype):
-            dtype = get_valid_numpy_dtype(self.array)
         dtype = cast(np.dtype, dtype)
         if self.level is not None:
             return np.asarray(
