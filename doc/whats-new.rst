@@ -29,10 +29,11 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+xarray.cftime_range deprecated in favor of xarray.data_range(use_cftime=true)
 
 Bug fixes
 ~~~~~~~~~
+#9886 Deprecate xr.cftime_range in favor of xr.date_range
 
 
 Documentation
