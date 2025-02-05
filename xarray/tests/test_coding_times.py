@@ -1620,10 +1620,10 @@ _ENCODE_DATETIME64_VIA_DASK_TESTS = {
     _ENCODE_DATETIME64_VIA_DASK_TESTS.values(),
     ids=_ENCODE_DATETIME64_VIA_DASK_TESTS.keys(),
 )
-def test_encode_cf_datetime_datetime64_via_dask(freq, units, dtype) -> None:
+def test_encode_cf_datetime_datetime64_via_dask(freq, units, dtype, time_unit) -> None:
     import dask.array
 
-    times_pd = pd.date_range(start="1700", freq=freq, periods=3)
+    times_pd = pd.date_range(start="1700", freq=freq, periods=3, unit=time_unit)
     times = dask.array.from_array(times_pd, chunks=1)
     encoded_times, encoding_units, encoding_calendar = encode_cf_datetime(
         times, units, None, dtype
@@ -1636,13 +1636,17 @@ def test_encode_cf_datetime_datetime64_via_dask(freq, units, dtype) -> None:
         assert encoding_units == units
         assert encoded_times.dtype == dtype
     else:
-        assert encoding_units == "nanoseconds since 1970-01-01"
+        expected_netcdf_time_unit = _numpy_to_netcdf_timeunit(time_unit)
+        assert encoding_units == f"{expected_netcdf_time_unit} since 1970-01-01"
         assert encoded_times.dtype == np.dtype("int64")
 
     assert encoding_calendar == "proleptic_gregorian"
 
-    decoded_times = decode_cf_datetime(encoded_times, encoding_units, encoding_calendar)
+    decoded_times = decode_cf_datetime(
+        encoded_times, encoding_units, encoding_calendar, time_unit=time_unit
+    )
     np.testing.assert_equal(decoded_times, times)
+    assert decoded_times.dtype == times.dtype
 
 
 @requires_dask
@@ -1749,11 +1753,11 @@ def test_encode_cf_datetime_casting_overflow_error(use_cftime, use_dask, dtype) 
     ("units", "dtype"), [("days", np.dtype("int32")), (None, None)]
 )
 def test_encode_cf_timedelta_via_dask(
-    units: str | None, dtype: np.dtype | None
+    units: str | None, dtype: np.dtype | None, time_unit: PDDatetimeUnitOptions
 ) -> None:
     import dask.array
 
-    times_pd = pd.timedelta_range(start="0D", freq="D", periods=3)
+    times_pd = pd.timedelta_range(start="0D", freq="D", periods=3, unit=time_unit)  # type: ignore[call-arg]
     times = dask.array.from_array(times_pd, chunks=1)
     encoded_times, encoding_units = encode_cf_timedelta(times, units, dtype)
 
@@ -1764,11 +1768,14 @@ def test_encode_cf_timedelta_via_dask(
         assert encoding_units == units
         assert encoded_times.dtype == dtype
     else:
-        assert encoding_units == "nanoseconds"
+        assert encoding_units == _numpy_to_netcdf_timeunit(time_unit)
         assert encoded_times.dtype == np.dtype("int64")
 
-    decoded_times = decode_cf_timedelta(encoded_times, encoding_units)
+    decoded_times = decode_cf_timedelta(
+        encoded_times, encoding_units, time_unit=time_unit
+    )
     np.testing.assert_equal(decoded_times, times)
+    assert decoded_times.dtype == times.dtype
 
 
 @pytest.mark.parametrize("use_dask", [False, pytest.param(True, marks=requires_dask)])
