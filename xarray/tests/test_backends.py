@@ -6134,7 +6134,6 @@ def test_zarr_closing_internal_zip_store():
 @requires_zarr
 @pytest.mark.usefixtures("default_zarr_format")
 def test_raises_key_error_on_invalid_zarr_store(tmp_path):
-    # store = zarr.storage.MemoryStore()
     root = zarr.create_group(tmp_path / "tmp.zarr")
     if Version(zarr.__version__) < Version("3.0.0"):
         root.create_dataset("bar", shape=(3, 5), dtype=np.float32)
