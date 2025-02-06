@@ -2991,8 +2991,11 @@ class TestDataArray:
 
     def test_drop_attrs(self) -> None:
         # Mostly tested in test_dataset.py, but adding a very small test here
-        da = DataArray([], attrs=dict(a=1, b=2))
+        coord_ = xr.DataArray([], attrs=dict(d=3, e=4))
+        da = DataArray([], attrs=dict(a=1, b=2)).assign_coords(dict(coord_=coord_))
         assert da.drop_attrs().attrs == {}
+        assert da.drop_attrs().coord_.attrs == {}
+        assert da.drop_attrs(deep=False).coord_.attrs == dict(d=3, e=4)
 
     @pytest.mark.parametrize(
         "func", [lambda x: x.clip(0, 1), lambda x: np.float64(1.0) * x, np.abs, abs]
