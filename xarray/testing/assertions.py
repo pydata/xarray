@@ -169,9 +169,9 @@ def assert_identical(a, b):
     if isinstance(a, Variable):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, DataArray):
-        assert (
-            a.name == b.name
-        ), f"DataArray names are different. L: {a.name}, R: {b.name}"
+        assert a.name == b.name, (
+            f"DataArray names are different. L: {a.name}, R: {b.name}"
+        )
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, Dataset | Variable):
         assert a.identical(b), formatting.diff_dataset_repr(a, b, "identical")
@@ -296,7 +296,7 @@ def assert_duckarray_equal(x, y, err_msg="", verbose=True):
     if (utils.is_duck_array(x) and utils.is_scalar(y)) or (
         utils.is_scalar(x) and utils.is_duck_array(y)
     ):
-        equiv = (x == y).all()
+        equiv = duck_array_ops.array_all(x == y)
     else:
         equiv = duck_array_ops.array_equiv(x, y)
     assert equiv, _format_message(x, y, err_msg=err_msg, verbose=verbose)

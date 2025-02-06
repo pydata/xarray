@@ -301,9 +301,9 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         dict_of_datasets = open_groups(filepath, engine="netcdf4", chunks=chunks)
 
         for path, ds in dict_of_datasets.items():
-            assert {
-                k: max(vs) for k, vs in ds.chunksizes.items()
-            } == chunks, f"unexpected chunking for {path}"
+            assert {k: max(vs) for k, vs in ds.chunksizes.items()} == chunks, (
+                f"unexpected chunking for {path}"
+            )
 
         for ds in dict_of_datasets.values():
             ds.close()
@@ -414,7 +414,7 @@ class TestZarrDatatreeIO:
         store = ZipStore(filepath)
         original_dt.to_zarr(store)
 
-        with open_datatree(store, engine="zarr") as roundtrip_dt:
+        with open_datatree(store, engine="zarr") as roundtrip_dt:  # type: ignore[arg-type, unused-ignore]
             assert_equal(original_dt, roundtrip_dt)
 
     def test_to_zarr_not_consolidated(self, tmpdir, simple_datatree):
@@ -439,6 +439,25 @@ class TestZarrDatatreeIO:
         # with default settings, to_zarr should not overwrite an existing dir
         with pytest.raises(zarr.errors.ContainsGroupError):
             simple_datatree.to_zarr(tmpdir)
+
+    @requires_dask
+    def test_to_zarr_compute_false(self, tmpdir, simple_datatree):
+        import dask.array as da
+
+        filepath = tmpdir / "test.zarr"
+        original_dt = simple_datatree.chunk()
+        original_dt.to_zarr(filepath, compute=False)
+
+        for node in original_dt.subtree:
+            for name, variable in node.dataset.variables.items():
+                var_dir = filepath / node.path / name
+                var_files = var_dir.listdir()
+                assert var_dir / ".zarray" in var_files
+                assert var_dir / ".zattrs" in var_files
+                if isinstance(variable.data, da.Array):
+                    assert var_dir / "0" not in var_files
+                else:
+                    assert var_dir / "0" in var_files
 
     def test_to_zarr_inherited_coords(self, tmpdir):
         original_dt = DataTree.from_dict(
@@ -568,9 +587,9 @@ class TestZarrDatatreeIO:
         dict_of_datasets = open_groups(filepath, engine="zarr", chunks=chunks)
 
         for path, ds in dict_of_datasets.items():
-            assert {
-                k: max(vs) for k, vs in ds.chunksizes.items()
-            } == chunks, f"unexpected chunking for {path}"
+            assert {k: max(vs) for k, vs in ds.chunksizes.items()} == chunks, (
+                f"unexpected chunking for {path}"
+            )
 
         for ds in dict_of_datasets.values():
             ds.close()

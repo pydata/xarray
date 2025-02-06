@@ -72,7 +72,7 @@ class TestMapOverSubTree:
         with pytest.raises(
             TypeError,
             match=re.escape(
-                "the result of calling func on the node at position is not a "
+                "the result of calling func on the node at position '.' is not a "
                 "Dataset or None or a tuple of such types"
             ),
         ):
@@ -84,7 +84,7 @@ class TestMapOverSubTree:
         with pytest.raises(
             TypeError,
             match=re.escape(
-                "the result of calling func on the node at position is not a "
+                "the result of calling func on the node at position '.' is not a "
                 "Dataset or None or a tuple of such types"
             ),
         ):
