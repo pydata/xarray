@@ -446,9 +446,10 @@ def _replace_ellipsis(key: _IndexKeys, ndim: int) -> _IndexKeysNoEllipsis:
     """
     Replace ... with slices, :, : ,:
 
+    Examples
+    --------
     >>> _replace_ellipsis((3, Ellipsis, 2), 4)
     (3, slice(None, None, None), slice(None, None, None), 2)
-
     >>> _replace_ellipsis((Ellipsis, None), 2)
     (slice(None, None, None), slice(None, None, None), None)
     >>> _replace_ellipsis((Ellipsis, None, Ellipsis), 2)
