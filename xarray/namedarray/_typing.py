@@ -18,6 +18,7 @@ from typing import (
 )
 
 import numpy as np
+from numpy.typing import ArrayLike as _ArrayLike
 
 try:
     if sys.version_info >= (3, 11):
@@ -144,8 +145,6 @@ _IndexKeys = tuple[_IndexKey, ...]  #  tuple[Union[_IndexKey, None], ...]
 _IndexKeyLike = Union[_IndexKey, _IndexKeys]
 
 _AttrsLike = Union[Mapping[Any, Any], None]
-
-_ArrayLike = np.typing.ArrayLike
 
 _Device = Any
 
