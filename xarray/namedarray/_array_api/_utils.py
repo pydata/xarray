@@ -640,8 +640,27 @@ def _raise_if_any_duplicate_dimensions(
 
 
 def _isnone(shape: _Shape) -> tuple[bool, ...]:
+    """
+    Check if each element has None.
+
+    Examples
+    --------
+    >>> _isnone((1, 2, 3))
+    (False, False, False)
+    >>> _isnone((1, 2, None))
+    (False, False, True)
+
+    Dask uses np.nan and should be handled the same way:
+
+    >>> import numpy as np
+    >>> _isnone((1, 2, np.nan))
+    (False, False, True)
+
+    >>> _isnone((1, 2, math.nan))
+    (False, False, True)
+    """
     # TODO: math.isnan should not be needed for array api, but dask still uses np.nan:
-    return tuple(v is None and math.isnan(v) for v in shape)
+    return tuple(v is None or math.isnan(v) for v in shape)
 
 
 def _broadcast_dims(*arrays: NamedArray[Any, Any]) -> tuple[_Dims, _Shape]:
