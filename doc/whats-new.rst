@@ -21,6 +21,9 @@ v2025.02.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Add convenience methods ``as_array_type`` and ``is_array_type`` for converting wrapped
+  data to other duck array types. (:issue:`7848`, :pull:`9823`).
+  By `Sam Levang <https://github.com/slevang>`_.
 
 
 Breaking changes
