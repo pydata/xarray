@@ -657,13 +657,19 @@ class ZarrStore(AbstractWritableDataStore):
         )
         from zarr import Group
 
-        group_members: dict = dict(zarr_group.members(max_depth=1000))
-        group_members = {
-            (f"{group}/{path}" if group != "/" else path): group_store
-            for path, group_store in group_members.items()
-            if isinstance(group_store, Group)
-        }
-        group_members[group] = zarr_group
+        if _zarr_v3():
+            group_members: dict = {
+                (f"{group}/{path}" if group != "/" else path): group_store
+                for path, group_store in dict(
+                    zarr_group.members(max_depth=1000)
+                ).items()
+                if isinstance(group_store, Group)
+            }
+            group_members[group] = zarr_group
+        else:
+            group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
+            group_members: dict = {path: zarr_group.get(path) for path in group_paths}
+
         return {
             group: cls(
                 group_store,
@@ -1702,6 +1708,14 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
         return groups_dict
+
+
+def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
+    parent_nodepath = NodePath(parent)
+    yield str(parent_nodepath)
+    for path, group in root.groups():
+        gpath = parent_nodepath / path
+        yield from _iter_zarr_groups(group, parent=str(gpath))
 
 
 def _get_open_params(
