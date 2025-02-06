@@ -125,7 +125,7 @@ jobs:
       - name: Upload mypy coverage to Codecov
         uses: codecov/codecov-action@v5.3.1
         with:
-          file: mypy_report/cobertura.xml
+          files: mypy_report/cobertura.xml
           flags: mypy
           env_vars: PYTHON_VERSION
           name: codecov-umbrella
@@ -176,7 +176,7 @@ jobs:
       - name: Upload mypy coverage to Codecov
         uses: codecov/codecov-action@v5.3.1
         with:
-          file: mypy_report/cobertura.xml
+          files: mypy_report/cobertura.xml
           flags: mypy-min
           env_vars: PYTHON_VERSION
           name: codecov-umbrella
