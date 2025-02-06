@@ -417,8 +417,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     # < Array api >
 
     def _maybe_asarray(
-        self, x: bool | int | float | complex | NamedArray
-    ) -> NamedArray:
+        self, x: bool | int | float | complex | NamedArray[Any, Any]
+    ) -> NamedArray[Any, Any]:
         """
         If x is a scalar, use asarray with the same dtype as self.
         If it is namedarray already, respect the dtype and return it.
@@ -442,17 +442,23 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         return abs(self)
 
-    def __add__(self, other: int | float | NamedArray, /) -> NamedArray:
+    def __add__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import add
 
         return add(self, self._maybe_asarray(other))
 
-    def __and__(self, other: int | bool | NamedArray, /) -> NamedArray:
+    def __and__(
+        self, other: int | bool | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import bitwise_and
 
         return bitwise_and(self, self._maybe_asarray(other))
 
-    def __array_namespace__(self, /, *, api_version: str | None = None):
+    def __array_namespace__(
+        self, /, *, api_version: str | None = None
+    ) -> NamedArray[Any, Any]:
         if api_version is not None and api_version not in (
             "2021.12",
             "2022.12",
@@ -485,7 +491,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __dlpack_device__(self, /) -> tuple[IntEnum, int]:
         return self._data.__dlpack_device__()
 
-    def __eq__(self, other: int | float | bool | NamedArray, /) -> NamedArray:
+    def __eq__(self, other: int | float | bool | NamedArray[Any, Any], /) -> bool:
         from xarray.namedarray._array_api import equal
 
         return equal(self, self._maybe_asarray(other))
@@ -493,17 +499,23 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __float__(self, /) -> float:
         return self._data.__float__()
 
-    def __floordiv__(self, other: int | float | NamedArray, /):
+    def __floordiv__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import floor_divide
 
         return floor_divide(self, self._maybe_asarray(other))
 
-    def __ge__(self, other: int | float | NamedArray, /):
+    def __ge__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import greater_equal
 
         return greater_equal(self, self._maybe_asarray(other))
 
-    def __getitem__(self, key: _IndexKeyLike | NamedArray) -> NamedArray:
+    def __getitem__(
+        self, key: _IndexKeyLike | NamedArray[Any, Any]
+    ) -> NamedArray[Any, Any]:
         """
         Returns self[key].
 
@@ -590,7 +602,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         else:
             raise NotImplementedError(f"{key=} is not supported")
 
-    def __gt__(self, other: int | float | NamedArray, /):
+    def __gt__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import greater
 
         return greater(self, self._maybe_asarray(other))
@@ -601,73 +615,87 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __int__(self, /) -> int:
         return self._data.__int__()
 
-    def __invert__(self, /):
+    def __invert__(self, /) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import bitwise_invert
 
         return bitwise_invert(self)
 
-    def __iter__(self: NamedArray, /):
+    def __iter__(self: NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import asarray
 
         # TODO: smarter way to retain dims, xarray?
         return (asarray(i) for i in self._data)
 
-    def __le__(self, other: int | float | NamedArray, /):
+    def __le__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import less_equal
 
         return less_equal(self, self._maybe_asarray(other))
 
-    def __lshift__(self, other: int | NamedArray, /):
+    def __lshift__(self, other: int | NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import bitwise_left_shift
 
         return bitwise_left_shift(self, self._maybe_asarray(other))
 
-    def __lt__(self, other: int | float | NamedArray, /):
+    def __lt__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import less
 
         return less(self, self._maybe_asarray(other))
 
-    def __matmul__(self, other: NamedArray, /):
+    def __matmul__(self, other: NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import matmul
 
         return matmul(self, self._maybe_asarray(other))
 
-    def __mod__(self, other: int | float | NamedArray, /):
+    def __mod__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import remainder
 
         return remainder(self, self._maybe_asarray(other))
 
-    def __mul__(self, other: int | float | NamedArray, /):
+    def __mul__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import multiply
 
         return multiply(self, self._maybe_asarray(other))
 
-    def __ne__(self, other: int | float | bool | NamedArray, /):
+    def __ne__(
+        self, other: int | float | bool | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import not_equal
 
         return not_equal(self, self._maybe_asarray(other))
 
-    def __neg__(self, /):
+    def __neg__(self, /) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import negative
 
         return negative(self)
 
-    def __or__(self, other: int | bool | NamedArray, /):
+    def __or__(
+        self, other: int | bool | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import bitwise_or
 
         return bitwise_or(self, self._maybe_asarray(other))
 
-    def __pos__(self, /):
+    def __pos__(self, /) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import positive
 
         return positive(self)
 
-    def __pow__(self, other: int | float | NamedArray, /):
+    def __pow__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import pow
 
         return pow(self, self._maybe_asarray(other))
 
-    def __rshift__(self, other: int | NamedArray, /):
+    def __rshift__(self, other: int | NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import bitwise_right_shift
 
         return bitwise_right_shift(self, self._maybe_asarray(other))
@@ -675,142 +703,188 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __setitem__(
         self,
         key: _IndexKeyLike,
-        value: int | float | bool | NamedArray,
+        value: int | float | bool | NamedArray[Any, Any],
         /,
     ) -> None:
         if isinstance(key, NamedArray):
             key = key._data
         self._data.__setitem__(key, self._maybe_asarray(value)._data)
 
-    def __sub__(self, other: int | float | NamedArray, /):
+    def __sub__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import subtract
 
         return subtract(self, self._maybe_asarray(other))
 
-    def __truediv__(self, other: float | NamedArray, /):
+    def __truediv__(
+        self, other: float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import divide
 
         return divide(self, self._maybe_asarray(other))
 
-    def __xor__(self, other: int | bool | NamedArray, /):
+    def __xor__(
+        self, other: int | bool | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import bitwise_xor
 
         return bitwise_xor(self, self._maybe_asarray(other))
 
-    def __iadd__(self, other: int | float | NamedArray, /):
+    def __iadd__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         self._data += self._maybe_asarray(other)._data
         return self
 
-    def __radd__(self, other: int | float | NamedArray, /):
+    def __radd__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import add
 
         return add(self._maybe_asarray(other), self)
 
-    def __iand__(self, other: int | bool | NamedArray, /):
+    def __iand__(
+        self, other: int | bool | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         self._data &= self._maybe_asarray(other)._data
         return self
 
-    def __rand__(self, other: int | bool | NamedArray, /):
+    def __rand__(
+        self, other: int | bool | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import bitwise_and
 
         return bitwise_and(self._maybe_asarray(other), self)
 
-    def __ifloordiv__(self, other: int | float | NamedArray, /):
+    def __ifloordiv__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         self._data //= self._maybe_asarray(other)._data
         return self
 
-    def __rfloordiv__(self, other: int | float | NamedArray, /):
+    def __rfloordiv__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import floor_divide
 
         return floor_divide(self._maybe_asarray(other), self)
 
-    def __ilshift__(self, other: int | NamedArray, /):
+    def __ilshift__(self, other: int | NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
         self._data <<= self._maybe_asarray(other)._data
         return self
 
-    def __rlshift__(self, other: int | NamedArray, /):
+    def __rlshift__(self, other: int | NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import bitwise_left_shift
 
         return bitwise_left_shift(self._maybe_asarray(other), self)
 
-    def __imatmul__(self, other: NamedArray, /):
+    def __imatmul__(self, other: NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
         self._data @= other._data
         return self
 
-    def __rmatmul__(self, other: NamedArray, /):
+    def __rmatmul__(self, other: NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import matmul
 
         return matmul(self._maybe_asarray(other), self)
 
-    def __imod__(self, other: int | float | NamedArray, /):
+    def __imod__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         self._data %= self._maybe_asarray(other)._data
         return self
 
-    def __rmod__(self, other: int | float | NamedArray, /):
+    def __rmod__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import remainder
 
         return remainder(self._maybe_asarray(other), self)
 
-    def __imul__(self, other: int | float | NamedArray, /):
+    def __imul__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         self._data *= self._maybe_asarray(other)._data
         return self
 
-    def __rmul__(self, other: int | float | NamedArray, /):
+    def __rmul__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import multiply
 
         return multiply(self._maybe_asarray(other), self)
 
-    def __ior__(self, other: int | bool | NamedArray, /):
+    def __ior__(
+        self, other: int | bool | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         self._data |= self._maybe_asarray(other)._data
 
         return self
 
-    def __ror__(self, other: int | bool | NamedArray, /):
+    def __ror__(
+        self, other: int | bool | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import bitwise_or
 
         return bitwise_or(self._maybe_asarray(other), self)
 
-    def __ipow__(self, other: int | float | NamedArray, /):
+    def __ipow__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         self._data **= self._maybe_asarray(other)._data
         return self
 
-    def __rpow__(self, other: int | float | NamedArray, /):
+    def __rpow__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import pow
 
         return pow(self._maybe_asarray(other), self)
 
-    def __irshift__(self, other: int | NamedArray, /):
+    def __irshift__(self, other: int | NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
         self._data >>= self._maybe_asarray(other)._data
         return self
 
-    def __rrshift__(self, other: int | NamedArray, /):
+    def __rrshift__(self, other: int | NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import bitwise_right_shift
 
         return bitwise_right_shift(self._maybe_asarray(other), self)
 
-    def __isub__(self, other: int | float | NamedArray, /):
+    def __isub__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         self._data -= self._maybe_asarray(other)._data
         return self
 
-    def __rsub__(self, other: int | float | NamedArray, /):
+    def __rsub__(
+        self, other: int | float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import subtract
 
         return subtract(self._maybe_asarray(other), self)
 
-    def __itruediv__(self, other: float | NamedArray, /):
+    def __itruediv__(
+        self, other: float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         self._data /= self._maybe_asarray(other)._data
         return self
 
-    def __rtruediv__(self, other: float | NamedArray, /):
+    def __rtruediv__(
+        self, other: float | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import divide
 
         return divide(self._maybe_asarray(other), self)
 
-    def __ixor__(self, other: int | bool | NamedArray, /):
+    def __ixor__(
+        self, other: int | bool | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         self._data ^= self._maybe_asarray(other)._data
         return self
 
-    def __rxor__(self, other, /):
+    def __rxor__(
+        self, other: int | bool | NamedArray[Any, Any], /
+    ) -> NamedArray[Any, Any]:
         from xarray.namedarray._array_api import bitwise_xor
 
         return bitwise_xor(self._maybe_asarray(other), self)
@@ -903,7 +977,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """Return a new object with transposed dimensions."""
         if self.ndim != 2:
             raise ValueError(
-                f"x.T requires x to have 2 dimensions, got {self.ndim}. Use x.permute_dims() to permute dimensions."
+                f"x.T requires x to have 2 dimensions, x has {self.dims}. "
+                "Use x.permute_dims() to permute multiple dimensions."
             )
 
         return self.permute_dims()
