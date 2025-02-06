@@ -32,9 +32,11 @@ def matmul(
 
     For 2-D mixed with 1-D, the result is the usual.
 
-    >>> a = NamedArray(("y", "x"), np.array([[1, 0], [0, 1]]))
-    >>> b = NamedArray(("x",), np.array([1, 2]))
-    >>> matmul(a, b)
+    >>> x1 = NamedArray(("n", "k"), np.array([[1, 0, 0], [0, 1, 0]]))
+    >>> x2 = NamedArray(("k",), np.array([1, 2, 3]))
+    >>> matmul(x1, x2)
+    <xarray.NamedArray (n: 2)> Size: 16B
+    array([1, 2])
 
     Broadcasting is conventional for stacks of arrays
 
@@ -50,8 +52,7 @@ def matmul(
     """
     xp = _get_data_namespace(x1)
     _data = xp.matmul(x1._data, x2._data)
-    # TODO: Figure out a better way:
-    _dims = x1.dims  # _infer_dims(_data.shape)
+    _dims = x1.dims[:1] + x2.dims[1:]  # (n, k),(k, m) -> (n, m)
     return NamedArray(_dims, _data)
 
 
