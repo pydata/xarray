@@ -1204,7 +1204,7 @@ def _cftime_range(
             list(_generate_date_range_with_freq(start, end, periods, freq))
         )
 
-    if inclusive not in get_args(InclusiveOptions):
+    if not TYPE_CHECKING and inclusive not in get_args(InclusiveOptions):
         raise ValueError(
             f"Argument `inclusive` must be either 'both', 'neither', "
             f"'left', or 'right'.  Got {inclusive}."
