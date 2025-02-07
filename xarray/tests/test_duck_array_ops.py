@@ -481,6 +481,19 @@ def test_cftime_datetime_mean(dask):
     assert_equal(result, expected)
 
 
+@pytest.mark.parametrize("dask", [False, True])
+def test_mean_over_long_spanning_datetime64(dask) -> None:
+    if dask and not has_dask:
+        pytest.skip("requires dask")
+    array = np.array(["1678-01-01", "NaT", "2260-01-01"], dtype="datetime64[ns]")
+    da = DataArray(array, dims=["time"])
+    if dask:
+        da = da.chunk({"time": 2})
+    expected = DataArray(np.array("1969-01-01", dtype="datetime64[ns]"))
+    result = da.mean()
+    assert_equal(result, expected)
+
+
 @requires_cftime
 @requires_dask
 def test_mean_over_non_time_dim_of_dataset_with_dask_backed_cftime_data():
