@@ -47,7 +47,7 @@ import warnings
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, ClassVar, Literal, TypeVar
+from typing import TYPE_CHECKING, ClassVar, Literal, TypeVar, get_args
 
 import numpy as np
 import pandas as pd
@@ -1211,7 +1211,7 @@ def _cftime_range(
             list(_generate_date_range_with_freq(start, end, periods, freq))
         )
 
-    if inclusive not in InclusiveOptions:
+    if inclusive not in get_args(InclusiveOptions):
         raise ValueError(
             f"Argument `inclusive` must be either 'both', 'neither', "
             f"'left', or 'right'.  Got {inclusive}."
