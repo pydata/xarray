@@ -550,7 +550,11 @@ _mean = _create_nan_agg_method("mean", invariant_0d=True)
 
 
 def _datetime_nanmin(array):
-    """nanmin() function for datetime64.
+    return _datetime_nanreduce(array, min)
+
+
+def _datetime_nanreduce(array, func):
+    """nanreduce() function for datetime64.
 
     Caveats that this function deals with:
 
@@ -562,7 +566,7 @@ def _datetime_nanmin(array):
     assert dtypes.is_datetime_like(dtype)
     # (NaT).astype(float) does not produce NaN...
     array = where(pandas_isnull(array), np.nan, array.astype(float))
-    array = min(array, skipna=True)
+    array = func(array, skipna=True)
     if isinstance(array, float):
         array = np.array(array)
     # ...but (NaN).astype("M8") does produce NaT
@@ -597,7 +601,7 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     # Set offset to minimum if not given
     if offset is None:
         if dtypes.is_datetime_like(array.dtype):
-            offset = _datetime_nanmin(array)
+            offset = _datetime_nanreduce(array, min)
         else:
             offset = min(array)
 
@@ -717,8 +721,11 @@ def mean(array, axis=None, skipna=None, **kwargs):
 
     array = asarray(array)
     if dtypes.is_datetime_like(array.dtype):
-        offset = _datetime_nanmin(array)
-
+        dmin = _datetime_nanreduce(array, min).astype("datetime64[Y]").astype(int)
+        dmax = _datetime_nanreduce(array, max).astype("datetime64[Y]").astype(int)
+        offset = (
+            np.array((dmin + dmax) // 2).astype("datetime64[Y]").astype(array.dtype)
+        )
         # From version 2025.01.2 xarray uses np.datetime64[unit], where unit
         # is one of "s", "ms", "us", "ns".
         # To not have to worry about the resolution, we just convert the output
