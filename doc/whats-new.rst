@@ -33,7 +33,18 @@ xarray.cftime_range deprecated in favor of xarray.data_range(use_cftime=true)
 
 Bug fixes
 ~~~~~~~~~
-#9886 Deprecate xr.cftime_range in favor of xr.date_range
+- Default to resolution-dependent optimal integer encoding units when saving
+  chunked non-nanosecond :py:class:`numpy.datetime64` or
+  :py:class:`numpy.timedelta64` arrays to disk. Previously units of
+  "nanoseconds" were chosen by default, which are optimal for
+  nanosecond-resolution times, but not for times with coarser resolution. By
+  `Spencer Clark <https://github.com/spencerkclark>`_ (:pull:`10017`).
+- Use mean of min/max years as offset in calculation of datetime64 mean
+  (:issue:`10019`, :pull:`10035`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Deprecate xr.cftime_range() in favor of xr.date_range(use_cftime=True)
+  (:issue:`9886`, :pull:`10024`).
+  By `Josh Kihm <https://github.com/maddogghoek>`_.
 
 
 Documentation
