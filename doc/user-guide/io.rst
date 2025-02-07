@@ -13,25 +13,22 @@ format (recommended).
 
     import os
 
+    import iris
+    import ncdata.iris_xarray
     import numpy as np
     import pandas as pd
     import xarray as xr
 
     np.random.seed(123456)
 
-You can `read different types of files <https://docs.xarray.dev/en/stable/user-guide/io.html>`_
-in `xr.open_dataset` by specifying the engine to be used:
+You can read different types of files in ``xr.open_dataset`` by specifying the engine to be used:
 
-.. ipython:: python
-    :okexcept:
-    :suppress:
+.. code:: python
 
-    import xarray as xr
-
-    xr.open_dataset("my_file.grib", engine="cfgrib")
+    xr.open_dataset("example.nc", engine="netcdf4")
 
 The "engine" provides a set of instructions that tells xarray how
-to read the data and pack them into a `dataset` (or `dataarray`).
+to read the data and pack them into a ``Dataset`` (or ``Dataarray``).
 These instructions are stored in an underlying "backend".
 
 Xarray comes with several backends that cover many common data formats.
@@ -184,6 +181,12 @@ string, e.g., to access subgroup 'bar' within group 'foo' pass
 pass ``mode='a'`` to ``to_netcdf`` to ensure that each call does not delete the
 file.
 
+.. tip::
+
+    It is recommended to use :py:class:`~xarray.DataTree` to represent
+    hierarchical data, and to use the :py:meth:`xarray.DataTree.to_netcdf` method
+    when writing hierarchical data to a netCDF file.
+
 Data is *always* loaded lazily from netCDF files. You can manipulate, slice and subset
 Dataset and DataArray objects, and no array values are loaded into memory until
 you try to perform some sort of actual computation. For an example of how these
@@ -228,83 +231,37 @@ to the original netCDF file, regardless if they exist in the original dataset.
 Groups
 ~~~~~~
 
-NetCDF groups are not supported as part of the :py:class:`Dataset` data model.
-Instead, groups can be loaded individually as Dataset objects.
-To do so, pass a ``group`` keyword argument to the
-:py:func:`open_dataset` function. The group can be specified as a path-like
-string, e.g., to access subgroup ``'bar'`` within group ``'foo'`` pass
-``'/foo/bar'`` as the ``group`` argument.
+Whilst netCDF groups can only be loaded individually as ``Dataset`` objects, a
+whole file of many nested groups can be loaded as a single
+:py:class:`xarray.DataTree` object. To open a whole netCDF file as a tree of groups
+use the :py:func:`xarray.open_datatree` function. To save a DataTree object as a
+netCDF file containing many groups, use the :py:meth:`xarray.DataTree.to_netcdf` method.
 
-In a similar way, the ``group`` keyword argument can be given to the
-:py:meth:`Dataset.to_netcdf` method to write to a group
-in a netCDF file.
-When writing multiple groups in one file, pass ``mode='a'`` to
-:py:meth:`Dataset.to_netcdf` to ensure that each call does not delete the file.
-For example:
 
-.. ipython::
-    :verbatim:
-
-    In [1]: ds1 = xr.Dataset({"a": 0})
-
-    In [2]: ds2 = xr.Dataset({"b": 1})
-
-    In [3]: ds1.to_netcdf("file.nc", group="A")
-
-    In [4]: ds2.to_netcdf("file.nc", group="B", mode="a")
-
-We can verify that two groups have been saved using the ncdump command-line utility.
-
-.. code:: bash
-
-    $ ncdump file.nc
-    netcdf file {
-
-    group: A {
-      variables:
-        int64 a ;
-      data:
-
-       a = 0 ;
-      } // group A
-
-    group: B {
-      variables:
-        int64 b ;
-      data:
-
-       b = 1 ;
-      } // group B
-    }
-
-Either of these groups can be loaded from the file as an independent :py:class:`Dataset` object:
-
-.. ipython::
-    :verbatim:
-
-    In [1]: group1 = xr.open_dataset("file.nc", group="A")
-
-    In [2]: group1
-    Out[2]:
-    <xarray.Dataset>
-    Dimensions:  ()
-    Data variables:
-        a        int64 ...
-
-    In [3]: group2 = xr.open_dataset("file.nc", group="B")
-
-    In [4]: group2
-    Out[4]:
-    <xarray.Dataset>
-    Dimensions:  ()
-    Data variables:
-        b        int64 ...
+.. _netcdf.root_group.note:
 
 .. note::
+    Due to file format specifications the on-disk root group name is always ``"/"``,
+    overriding any given ``DataTree`` root node name.
 
-    For native handling of multiple groups with xarray, including I/O, you might be interested in the experimental
-    `xarray-datatree <https://github.com/xarray-contrib/datatree>`_ package.
+.. _netcdf.group.warning:
 
+.. warning::
+    ``DataTree`` objects do not follow the exact same data model as netCDF
+    files, which means that perfect round-tripping is not always possible.
+
+    In particular in the netCDF data model dimensions are entities that can
+    exist regardless of whether any variable possesses them. This is in contrast
+    to `xarray's data model <https://docs.xarray.dev/en/stable/user-guide/data-structures.html>`_
+    (and hence :ref:`DataTree's data model <data structures>`) in which the
+    dimensions of a (Dataset/Tree) object are simply the set of dimensions
+    present across all variables in that dataset.
+
+    This means that if a netCDF file contains dimensions but no variables which
+    possess those dimensions, these dimensions will not be present when that
+    file is opened as a DataTree object.
+    Saving this DataTree object to file will therefore not preserve these
+    "unused" dimensions.
 
 .. _io.encoding:
 
@@ -320,7 +277,7 @@ to automatically decode the values in the netCDF objects according to
 has an invalid "units" or "calendar" attribute. For these cases, you can
 turn this decoding off manually.
 
-.. _CF conventions: http://cfconventions.org/
+.. _CF conventions: https://cfconventions.org/
 
 You can view this encoding information (among others) in the
 :py:attr:`DataArray.encoding` and
@@ -388,8 +345,8 @@ See its docstring for more details.
     (``compat='override'``).
 
 
-.. _dask: http://dask.org
-.. _blog post: http://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
+.. _dask: https://www.dask.org
+.. _blog post: https://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
 
 Sometimes multi-file datasets are not conveniently organized for easy use of :py:func:`open_mfdataset`.
 One can use the ``preprocess`` argument to provide a function that takes a dataset
@@ -541,7 +498,7 @@ If character arrays are used:
   Technically, you can use
   `any string encoding recognized by Python <https://docs.python.org/3/library/codecs.html#standard-encodings>`_ if you feel the need to deviate from UTF-8,
   by setting the ``_Encoding`` field in ``encoding``. But
-  `we don't recommend it <http://utf8everywhere.org/>`_.
+  `we don't recommend it <https://utf8everywhere.org/>`_.
 - The character dimension name can be specified by the ``char_dim_name`` field of a variable's
   ``encoding``. If the name of the character dimension is not specified, the default is
   ``f'string{data.shape[-1]}'``. When decoding character arrays from existing files, the
@@ -583,8 +540,8 @@ The ``units`` and ``calendar`` attributes control how xarray serializes ``dateti
 ``timedelta64`` arrays to datasets on disk as numeric values. The ``units`` encoding
 should be a string like ``'days since 1900-01-01'`` for ``datetime64`` data or a string
 like ``'days'`` for ``timedelta64`` data. ``calendar`` should be one of the calendar types
-supported by netCDF4-python: 'standard', 'gregorian', 'proleptic_gregorian' 'noleap',
-'365_day', '360_day', 'julian', 'all_leap', '366_day'.
+supported by netCDF4-python: ``'standard'``, ``'gregorian'``, ``'proleptic_gregorian'``, ``'noleap'``,
+``'365_day'``, ``'360_day'``, ``'julian'``, ``'all_leap'``, ``'366_day'``.
 
 By default, xarray uses the ``'proleptic_gregorian'`` calendar and units of the smallest time
 difference between values, with a reference time of the first time value.
@@ -606,29 +563,12 @@ This is not CF-compliant but again facilitates roundtripping of xarray datasets.
 Invalid netCDF files
 ~~~~~~~~~~~~~~~~~~~~
 
-The library ``h5netcdf`` allows writing some dtypes (booleans, complex, ...) that aren't
+The library ``h5netcdf`` allows writing some dtypes that aren't
 allowed in netCDF4 (see
-`h5netcdf documentation <https://github.com/shoyer/h5netcdf#invalid-netcdf-files>`_).
+`h5netcdf documentation <https://github.com/h5netcdf/h5netcdf#invalid-netcdf-files>`_).
 This feature is available through :py:meth:`DataArray.to_netcdf` and
 :py:meth:`Dataset.to_netcdf` when used with ``engine="h5netcdf"``
-and currently raises a warning unless ``invalid_netcdf=True`` is set:
-
-.. ipython:: python
-    :okwarning:
-
-    # Writing complex valued data
-    da = xr.DataArray([1.0 + 1.0j, 2.0 + 2.0j, 3.0 + 3.0j])
-    da.to_netcdf("complex.nc", engine="h5netcdf", invalid_netcdf=True)
-
-    # Reading it back
-    reopened = xr.open_dataarray("complex.nc", engine="h5netcdf")
-    reopened
-
-.. ipython:: python
-    :suppress:
-
-    reopened.close()
-    os.remove("complex.nc")
+and currently raises a warning unless ``invalid_netcdf=True`` is set.
 
 .. warning::
 
@@ -685,13 +625,6 @@ Natively the xarray data structures can only handle one level of nesting, organi
 DataArrays inside of Datasets. If your HDF5 file has additional levels of hierarchy you
 can only access one group and a time and will need to specify group names.
 
-.. note::
-
-    For native handling of multiple HDF5 groups with xarray, including I/O, you might be
-    interested in the experimental
-    `xarray-datatree <https://github.com/xarray-contrib/datatree>`_ package.
-
-
 .. _HDF5: https://hdfgroup.github.io/hdf5/index.html
 .. _h5py: https://www.h5py.org/
 
@@ -728,6 +661,7 @@ To write to a local directory, we pass a path to a directory:
     ! rm -rf path/to/directory.zarr
 
 .. ipython:: python
+    :okwarning:
 
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 5))},
@@ -746,7 +680,7 @@ from being overwritten. To override this behavior and overwrite an existing
 store, add ``mode='w'`` when invoking :py:meth:`~Dataset.to_zarr`.
 
 DataArrays can also be saved to disk using the :py:meth:`DataArray.to_zarr` method,
-and loaded from disk using the :py:func:`open_dataarray` function with `engine='zarr'`.
+and loaded from disk using the :py:func:`open_dataarray` function with ``engine='zarr'``.
 Similar to :py:meth:`DataArray.to_netcdf`, :py:meth:`DataArray.to_zarr` will
 convert the ``DataArray`` to a ``Dataset`` before saving, and then convert back
 when loading, ensuring that the ``DataArray`` that is loaded is always exactly
@@ -764,6 +698,7 @@ To read back a zarr dataset that has been created this way, we use the
 :py:func:`open_zarr` method:
 
 .. ipython:: python
+    :okwarning:
 
     ds_zarr = xr.open_zarr("path/to/directory.zarr")
     ds_zarr
@@ -838,6 +773,7 @@ to Zarr:
     ! rm -rf path/to/directory.zarr
 
 .. ipython:: python
+    :okwarning:
 
     import dask.array
 
@@ -890,10 +826,12 @@ For example:
     ! rm -rf foo.zarr
 
 .. ipython:: python
+    :okwarning:
 
     import zarr
+    from numcodecs.blosc import Blosc
 
-    compressor = zarr.Blosc(cname="zstd", clevel=3, shuffle=2)
+    compressor = Blosc(cname="zstd", clevel=3, shuffle=2)
     ds.to_zarr("foo.zarr", encoding={"foo": {"compressor": compressor}})
 
 .. note::
@@ -939,6 +877,7 @@ order, e.g., for time-stepping a simulation:
     ! rm -rf path/to/directory.zarr
 
 .. ipython:: python
+    :okwarning:
 
     ds1 = xr.Dataset(
         {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
@@ -978,7 +917,7 @@ supersede the default chunking heuristics in zarr.
 Importantly, this logic applies to every array in the zarr store individually,
 including coordinate arrays. Therefore, if a dataset contains one or more dask
 arrays, it may still be desirable to specify a chunk size for the coordinate arrays
-(for example, with a chunk size of `-1` to include the full coordinate).
+(for example, with a chunk size of ``-1`` to include the full coordinate).
 
 To specify chunks manually using the ``encoding`` argument, provide a nested
 dictionary with the structure ``{'variable_or_coord_name': {'chunks': chunks_tuple}}``.
@@ -1006,6 +945,7 @@ space on disk or in memory, yet when writing to disk the default zarr behavior i
 split them into chunks:
 
 .. ipython:: python
+    :okwarning:
 
     ds.to_zarr("path/to/directory.zarr", mode="w")
     ! ls -R path/to/directory.zarr
@@ -1016,6 +956,7 @@ storage provider. To disable this chunking, we can specify a chunk size equal to
 length of each dimension by using the shorthand chunk size ``-1``:
 
 .. ipython:: python
+    :okwarning:
 
     ds.to_zarr(
         "path/to/directory.zarr",
@@ -1028,10 +969,30 @@ length of each dimension by using the shorthand chunk size ``-1``:
 The number of chunks on Tair matches our dask chunks, while there is now only a single
 chunk in the directory stores of each coordinate.
 
+Groups
+~~~~~~
+
+Nested groups in zarr stores can be represented by loading the store as a
+:py:class:`xarray.DataTree` object, similarly to netCDF. To open a whole zarr store as
+a tree of groups use the :py:func:`open_datatree` function. To save a
+``DataTree`` object as a zarr store containing many groups, use the
+:py:meth:`xarray.DataTree.to_zarr()` method.
+
+.. note::
+    Note that perfect round-tripping should always be possible with a zarr
+    store (:ref:`unlike for netCDF files <netcdf.group.warning>`), as zarr does
+    not support "unused" dimensions.
+
+    For the root group the same restrictions (:ref:`as for netCDF files <netcdf.root_group.note>`) apply.
+    Due to file format specifications the on-disk root group name is always ``"/"``
+    overriding any given ``DataTree`` root node name.
+
+
 .. _io.zarr.consolidated_metadata:
 
 Consolidated Metadata
 ~~~~~~~~~~~~~~~~~~~~~
+
 
 Xarray needs to read all of the zarr metadata when it opens a dataset.
 In some storage mediums, such as with cloud object storage (e.g. `Amazon S3`_),
@@ -1074,7 +1035,7 @@ Instead of creating a new copy of the dataset in the Zarr spec/format or
 downloading the files locally, Kerchunk reads through the data archive and extracts the
 byte range and compression information of each chunk and saves as a ``reference``.
 These references are then saved as ``json`` files or ``parquet`` (more efficient)
-for later use. You can view some of these stored in the `references`
+for later use. You can view some of these stored in the ``references``
 directory `here <https://github.com/pydata/xarray-data>`_.
 
 
@@ -1087,7 +1048,7 @@ directory `here <https://github.com/pydata/xarray-data>`_.
 Reading these data archives becomes really easy with ``kerchunk`` in combination
 with ``xarray``, especially when these archives are large in size. A single combined
 reference can refer to thousands of the original data files present in these archives.
-You can view the whole dataset with from this `combined reference` using the above packages.
+You can view the whole dataset with from this combined reference using the above packages.
 
 The following example shows opening a combined references generated from a ``.hdf`` file stored locally.
 
@@ -1120,8 +1081,11 @@ Iris
 
 The Iris_ tool allows easy reading of common meteorological and climate model formats
 (including GRIB and UK MetOffice PP files) into ``Cube`` objects which are in many ways very
-similar to ``DataArray`` objects, while enforcing a CF-compliant data model. If iris is
-installed, xarray can convert a ``DataArray`` into a ``Cube`` using
+similar to ``DataArray`` objects, while enforcing a CF-compliant data model.
+
+DataArray ``to_iris`` and ``from_iris``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If iris is installed, xarray can convert a ``DataArray`` into a ``Cube`` using
 :py:meth:`DataArray.to_iris`:
 
 .. ipython:: python
@@ -1143,9 +1107,36 @@ Conversely, we can create a new ``DataArray`` object from a ``Cube`` using
     da_cube = xr.DataArray.from_iris(cube)
     da_cube
 
+Ncdata
+~~~~~~
+Ncdata_ provides more sophisticated means of transferring data, including entire
+datasets.  It uses the file saving and loading functions in both projects to provide a
+more "correct" translation between them, but still with very low overhead and not
+using actual disk files.
+
+For example:
+
+.. ipython:: python
+    :okwarning:
+
+    ds = xr.tutorial.open_dataset("air_temperature_gradient")
+    cubes = ncdata.iris_xarray.cubes_from_xarray(ds)
+    print(cubes)
+    print(cubes[1])
+
+.. ipython:: python
+    :okwarning:
+
+    ds = ncdata.iris_xarray.cubes_to_xarray(cubes)
+    print(ds)
+
+Ncdata can also adjust file data within load and save operations, to fix data loading
+problems or provide exact save formatting without needing to modify files on disk.
+See for example : `ncdata usage examples`_
 
 .. _Iris: https://scitools.org.uk/iris
-
+.. _Ncdata: https://ncdata.readthedocs.io/en/latest/index.html
+.. _ncdata usage examples: https://github.com/pp-mo/ncdata/tree/v0.1.2?tab=readme-ov-file#correct-a-miscoded-attribute-in-iris-input
 
 OPeNDAP
 -------
@@ -1443,7 +1434,7 @@ For CSV files, one might also consider `xarray_extras`_.
 
 .. _xarray_extras: https://xarray-extras.readthedocs.io/en/latest/api/csv.html
 
-.. _IO tools: http://pandas.pydata.org/pandas-docs/stable/io.html
+.. _IO tools: https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html
 
 
 Third party libraries

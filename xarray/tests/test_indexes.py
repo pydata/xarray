@@ -667,20 +667,22 @@ class TestIndexes:
     def test_to_pandas_indexes(self, indexes) -> None:
         pd_indexes = indexes.to_pandas_indexes()
         assert isinstance(pd_indexes, Indexes)
-        assert all([isinstance(idx, pd.Index) for idx in pd_indexes.values()])
+        assert all(isinstance(idx, pd.Index) for idx in pd_indexes.values())
         assert indexes.variables == pd_indexes.variables
 
     def test_copy_indexes(self, indexes) -> None:
         copied, index_vars = indexes.copy_indexes()
 
         assert copied.keys() == indexes.keys()
-        for new, original in zip(copied.values(), indexes.values()):
+        for new, original in zip(copied.values(), indexes.values(), strict=True):
             assert new.equals(original)
         # check unique index objects preserved
         assert copied["z"] is copied["one"] is copied["two"]
 
         assert index_vars.keys() == indexes.variables.keys()
-        for new, original in zip(index_vars.values(), indexes.variables.values()):
+        for new, original in zip(
+            index_vars.values(), indexes.variables.values(), strict=True
+        ):
             assert_identical(new, original)
 
 

@@ -21,22 +21,22 @@ importlib_metadata_mock = "importlib.metadata"
 
 
 class DummyBackendEntrypointArgs(common.BackendEntrypoint):
-    def open_dataset(filename_or_obj, *args):
+    def open_dataset(filename_or_obj, *args):  # type: ignore[override]
         pass
 
 
 class DummyBackendEntrypointKwargs(common.BackendEntrypoint):
-    def open_dataset(filename_or_obj, **kwargs):
+    def open_dataset(filename_or_obj, **kwargs):  # type: ignore[override]
         pass
 
 
 class DummyBackendEntrypoint1(common.BackendEntrypoint):
-    def open_dataset(self, filename_or_obj, *, decoder):
+    def open_dataset(self, filename_or_obj, *, decoder):  # type: ignore[override]
         pass
 
 
 class DummyBackendEntrypoint2(common.BackendEntrypoint):
-    def open_dataset(self, filename_or_obj, *, decoder):
+    def open_dataset(self, filename_or_obj, *, decoder):  # type: ignore[override]
         pass
 
 
@@ -253,9 +253,9 @@ def test_lazy_import() -> None:
                 if pkg.startswith(mod):
                     is_imported.add(mod)
                     break
-        assert (
-            len(is_imported) == 0
-        ), f"{is_imported} have been imported but should be lazy"
+        assert len(is_imported) == 0, (
+            f"{is_imported} have been imported but should be lazy"
+        )
 
     finally:
         # restore original

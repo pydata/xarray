@@ -29,7 +29,7 @@ from xarray.tests.test_dataset import create_test_data
 
 def assert_combined_tile_ids_equal(dict1, dict2):
     assert len(dict1) == len(dict2)
-    for k, v in dict1.items():
+    for k in dict1.keys():
         assert k in dict2.keys()
         assert_equal(dict1[k], dict2[k])
 
@@ -249,7 +249,10 @@ def create_combined_ids():
 def _create_combined_ids(shape):
     tile_ids = _create_tile_ids(shape)
     nums = range(len(tile_ids))
-    return {tile_id: create_test_data(num) for tile_id, num in zip(tile_ids, nums)}
+    return {
+        tile_id: create_test_data(num)
+        for tile_id, num in zip(tile_ids, nums, strict=True)
+    }
 
 
 def _create_tile_ids(shape):
@@ -728,7 +731,10 @@ class TestCombineDatasetsbyCoords:
             combine_by_coords(objs)
 
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [0]})]
-        with pytest.raises(ValueError, match=r"Every dimension needs a coordinate"):
+        with pytest.raises(
+            ValueError,
+            match=r"Every dimension requires a corresponding 1D coordinate and index",
+        ):
             combine_by_coords(objs)
 
     def test_empty_input(self):
@@ -1036,6 +1042,20 @@ class TestCombineDatasetsbyCoords:
         # test that this fails if fill_value is None
         with pytest.raises(ValueError):
             combine_by_coords([x1, x2, x3], fill_value=None)
+
+    def test_combine_by_coords_override_order(self) -> None:
+        # regression test for https://github.com/pydata/xarray/issues/8828
+        x1 = Dataset({"a": (("y", "x"), [[1]])}, coords={"y": [0], "x": [0]})
+        x2 = Dataset(
+            {"a": (("y", "x"), [[2]]), "b": (("y", "x"), [[1]])},
+            coords={"y": [0], "x": [0]},
+        )
+        actual = combine_by_coords([x1, x2], compat="override")
+        assert_equal(actual["a"], actual["b"])
+        assert_equal(actual["a"], x1["a"])
+
+        actual = combine_by_coords([x2, x1], compat="override")
+        assert_equal(actual["a"], x2["a"])
 
 
 class TestCombineMixedObjectsbyCoords:

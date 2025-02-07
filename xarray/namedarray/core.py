@@ -5,6 +5,7 @@ import math
 import sys
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
+from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -204,7 +205,7 @@ def from_array(
 
         return NamedArray(dims, data, attrs)
 
-    if isinstance(data, _arrayfunction_or_api):
+    if isinstance(data, _arrayfunction_or_api) and not isinstance(data, np.generic):
         return NamedArray(dims, data, attrs)
 
     if isinstance(data, tuple):
@@ -247,7 +248,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     >>> narr = NamedArray(("x",), data, {"units": "m"})  # TODO: Better name than narr?
     """
 
-    __slots__ = ("_data", "_dims", "_attrs")
+    __slots__ = ("_attrs", "_data", "_dims")
 
     _data: duckarray[Any, _DType_co]
     _dims: _Dims
@@ -516,6 +517,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 "We recommend you rename the dims immediately to become distinct, as most xarray functionality is likely to fail silently if you do not. "
                 "To rename the dimensions you will need to set the ``.dims`` attribute of each variable, ``e.g. var.dims=('x0', 'x1')``.",
                 UserWarning,
+                stacklevel=2,
             )
         return dims
 
@@ -663,6 +665,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return type(self)(self._dims, data, attrs=self._attrs)
 
     @overload
+    def get_axis_num(self, dim: str) -> int: ...  # type: ignore [overload-overlap]
+
+    @overload
     def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]: ...
 
     @overload
@@ -690,8 +695,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         _raise_if_any_duplicate_dimensions(self.dims)
         try:
             return self.dims.index(dim)  # type: ignore[no-any-return]
-        except ValueError:
-            raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
+        except ValueError as err:
+            raise ValueError(
+                f"{dim!r} not found in array dimensions {self.dims!r}"
+            ) from err
 
     @property
     def chunks(self) -> _Chunks | None:
@@ -716,8 +723,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self,
     ) -> Mapping[_Dim, _Shape]:
         """
-        Mapping from dimension names to block lengths for this namedArray's data, or None if
-        the underlying data is not a dask array.
+        Mapping from dimension names to block lengths for this NamedArray's data.
+
+        If this NamedArray does not contain chunked arrays, the mapping will be empty.
+
         Cannot be modified directly, but can be modified by calling .chunk().
 
         Differs from NamedArray.chunks because it returns a mapping of dimensions to chunk shapes
@@ -731,18 +740,18 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """
         data = self._data
         if isinstance(data, _chunkedarray):
-            return dict(zip(self.dims, data.chunks))
+            return dict(zip(self.dims, data.chunks, strict=True))
         else:
             return {}
 
     @property
     def sizes(self) -> dict[_Dim, _IntOrUnknown]:
         """Ordered mapping from dimension names to lengths."""
-        return dict(zip(self.dims, self.shape))
+        return dict(zip(self.dims, self.shape, strict=True))
 
     def chunk(
         self,
-        chunks: T_Chunks = {},
+        chunks: T_Chunks = {},  # noqa: B006  # even though it's unsafe, it is being used intentionally here (#4667)
         chunked_array_type: str | ChunkManagerEntrypoint[Any] | None = None,
         from_array_kwargs: Any = None,
         **chunks_kwargs: Any,
@@ -795,6 +804,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
                 category=FutureWarning,
+                stacklevel=2,
             )
             chunks = {}
 
@@ -942,7 +952,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         _attrs = self.attrs
         return tuple(
             cast("T_NamedArrayInteger", self._new((dim,), nz, _attrs))
-            for nz, dim in zip(nonzeros, self.dims)
+            for nz, dim in zip(nonzeros, self.dims, strict=True)
         )
 
     def __repr__(self) -> str:
@@ -991,7 +1001,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def permute_dims(
         self,
-        *dim: Iterable[_Dim] | ellipsis,
+        *dim: Iterable[_Dim] | EllipsisType,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> NamedArray[Any, _DType_co]:
         """Return a new object with transposed dimensions.
@@ -1032,8 +1042,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             # or dims are in same order
             return self.copy(deep=False)
 
-        axes_result = self.get_axis_num(dims)
-        axes = (axes_result,) if isinstance(axes_result, int) else axes_result
+        axes = self.get_axis_num(dims)
+        assert isinstance(axes, tuple)
 
         return permute_dims(self, axes)
 

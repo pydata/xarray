@@ -11,7 +11,6 @@ from xarray.core.alignment import align, broadcast
 from xarray.core.computation import apply_ufunc, dot
 from xarray.core.types import Dims, T_DataArray, T_Xarray
 from xarray.namedarray.utils import is_duck_dask_array
-from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 # Weighted quantile methods are a subset of the numpy supported quantile methods.
 QUANTILE_METHODS = Literal[
@@ -172,7 +171,7 @@ class Weighted(Generic[T_Xarray]):
 
         def _weight_check(w):
             # Ref https://github.com/pydata/xarray/pull/4559/files#r515968670
-            if duck_array_ops.isnull(w).any():
+            if duck_array_ops.array_any(duck_array_ops.isnull(w)):
                 raise ValueError(
                     "`weights` cannot contain missing values. "
                     "Missing values can be replaced by `weights.fillna(0)`."
@@ -182,7 +181,7 @@ class Weighted(Generic[T_Xarray]):
         if is_duck_dask_array(weights.data):
             # assign to copy - else the check is not triggered
             weights = weights.copy(
-                data=weights.data.map_blocks(_weight_check, dtype=weights.dtype),
+                data=weights.data.map_blocks(_weight_check, dtype=weights.dtype),  # type: ignore[call-arg, arg-type]
                 deep=False,
             )
 
@@ -264,7 +263,9 @@ class Weighted(Generic[T_Xarray]):
 
         demeaned = da - da.weighted(self.weights).mean(dim=dim)
 
-        return self._reduce((demeaned**2), self.weights, dim=dim, skipna=skipna)
+        # TODO: unsure why mypy complains about these being DataArray return types
+        # rather than T_DataArray?
+        return self._reduce((demeaned**2), self.weights, dim=dim, skipna=skipna)  # type: ignore[return-value]
 
     def _weighted_sum(
         self,
@@ -274,7 +275,7 @@ class Weighted(Generic[T_Xarray]):
     ) -> T_DataArray:
         """Reduce a DataArray by a weighted ``sum`` along some dimension(s)."""
 
-        return self._reduce(da, self.weights, dim=dim, skipna=skipna)
+        return self._reduce(da, self.weights, dim=dim, skipna=skipna)  # type: ignore[return-value]
 
     def _weighted_mean(
         self,
@@ -452,7 +453,6 @@ class Weighted(Generic[T_Xarray]):
     def _implementation(self, func, dim, **kwargs):
         raise NotImplementedError("Use `Dataset.weighted` or `DataArray.weighted`")
 
-    @_deprecate_positional_args("v2023.10.0")
     def sum_of_weights(
         self,
         dim: Dims = None,
@@ -463,7 +463,6 @@ class Weighted(Generic[T_Xarray]):
             self._sum_of_weights, dim=dim, keep_attrs=keep_attrs
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def sum_of_squares(
         self,
         dim: Dims = None,
@@ -475,7 +474,6 @@ class Weighted(Generic[T_Xarray]):
             self._sum_of_squares, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def sum(
         self,
         dim: Dims = None,
@@ -487,7 +485,6 @@ class Weighted(Generic[T_Xarray]):
             self._weighted_sum, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def mean(
         self,
         dim: Dims = None,
@@ -499,7 +496,6 @@ class Weighted(Generic[T_Xarray]):
             self._weighted_mean, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def var(
         self,
         dim: Dims = None,
@@ -511,7 +507,6 @@ class Weighted(Generic[T_Xarray]):
             self._weighted_var, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def std(
         self,
         dim: Dims = None,

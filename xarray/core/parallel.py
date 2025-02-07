@@ -25,11 +25,10 @@ class ExpectedDict(TypedDict):
     shapes: dict[Hashable, int]
     coords: set[Hashable]
     data_vars: set[Hashable]
-    indexes: dict[Hashable, Index]
 
 
 def unzip(iterable):
-    return zip(*iterable)
+    return zip(*iterable, strict=True)
 
 
 def assert_chunks_compatible(a: Dataset, b: Dataset):
@@ -337,6 +336,7 @@ def map_blocks(
         kwargs: dict,
         arg_is_array: Iterable[bool],
         expected: ExpectedDict,
+        expected_indexes: dict[Hashable, Index],
     ):
         """
         Wrapper function that receives datasets in args; converts to dataarrays when necessary;
@@ -345,7 +345,7 @@ def map_blocks(
 
         converted_args = [
             dataset_to_dataarray(arg) if is_array else arg
-            for is_array, arg in zip(arg_is_array, args)
+            for is_array, arg in zip(arg_is_array, args, strict=True)
         ]
 
         result = func(*converted_args, **kwargs)
@@ -372,7 +372,8 @@ def map_blocks(
 
             # ChainMap wants MutableMapping, but xindexes is Mapping
             merged_indexes = collections.ChainMap(
-                expected["indexes"], merged_coordinates.xindexes  # type: ignore[arg-type]
+                expected_indexes,
+                merged_coordinates.xindexes,  # type: ignore[arg-type]
             )
             expected_index = merged_indexes.get(name, None)
             if expected_index is not None and not index.equals(expected_index):
@@ -411,6 +412,7 @@ def map_blocks(
     try:
         import dask
         import dask.array
+        from dask.base import tokenize
         from dask.highlevelgraph import HighLevelGraph
 
     except ImportError:
@@ -440,7 +442,10 @@ def map_blocks(
     merged_coordinates = merge([arg.coords for arg in aligned]).coords
 
     _, npargs = unzip(
-        sorted(list(zip(xarray_indices, xarray_objs)) + others, key=lambda x: x[0])
+        sorted(
+            list(zip(xarray_indices, xarray_objs, strict=True)) + others,
+            key=lambda x: x[0],
+        )
     )
 
     # check that chunk sizes are compatible
@@ -534,7 +539,7 @@ def map_blocks(
     # iterate over all possible chunk combinations
     for chunk_tuple in itertools.product(*ichunk.values()):
         # mapping from dimension name to chunk index
-        chunk_index = dict(zip(ichunk.keys(), chunk_tuple))
+        chunk_index = dict(zip(ichunk.keys(), chunk_tuple, strict=True))
 
         blocked_args = [
             (
@@ -544,8 +549,22 @@ def map_blocks(
                 if isxr
                 else arg
             )
-            for isxr, arg in zip(is_xarray, npargs)
+            for isxr, arg in zip(is_xarray, npargs, strict=True)
         ]
+
+        # only include new or modified indexes to minimize duplication of data
+        indexes = {
+            dim: coordinates.xindexes[dim][
+                _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
+            ]
+            for dim in (new_indexes | modified_indexes)
+        }
+
+        tokenized_indexes: dict[Hashable, str] = {}
+        for k, v in indexes.items():
+            tokenized_v = tokenize(v)
+            graph[f"{k}-coordinate-{tokenized_v}"] = v
+            tokenized_indexes[k] = f"{k}-coordinate-{tokenized_v}"
 
         # raise nice error messages in _wrapper
         expected: ExpectedDict = {
@@ -558,17 +577,18 @@ def map_blocks(
             },
             "data_vars": set(template.data_vars.keys()),
             "coords": set(template.coords.keys()),
-            # only include new or modified indexes to minimize duplication of data, and graph size.
-            "indexes": {
-                dim: coordinates.xindexes[dim][
-                    _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
-                ]
-                for dim in (new_indexes | modified_indexes)
-            },
         }
 
         from_wrapper = (gname,) + chunk_tuple
-        graph[from_wrapper] = (_wrapper, func, blocked_args, kwargs, is_array, expected)
+        graph[from_wrapper] = (
+            _wrapper,
+            func,
+            blocked_args,
+            kwargs,
+            is_array,
+            expected,
+            (dict, [[k, v] for k, v in tokenized_indexes.items()]),
+        )
 
         # mapping from variable name to dask graph key
         var_key_map: dict[Hashable, str] = {}
@@ -580,7 +600,7 @@ def map_blocks(
             # unchunked dimensions in the input have one chunk in the result
             # output can have new dimensions with exactly one chunk
             key: tuple[Any, ...] = (gname_l,) + tuple(
-                chunk_index[dim] if dim in chunk_index else 0 for dim in variable.dims
+                chunk_index.get(dim, 0) for dim in variable.dims
             )
 
             # We're adding multiple new layers to the graph:

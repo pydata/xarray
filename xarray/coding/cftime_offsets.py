@@ -47,69 +47,62 @@ import warnings
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, ClassVar, Literal, TypeVar
 
 import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from xarray.coding.cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
+from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.times import (
     _is_standard_calendar,
+    _parse_iso8601,
     _should_cftime_be_used,
     convert_time_or_go_back,
     format_cftime_datetime,
 )
 from xarray.core.common import _contains_datetime_like_objects, is_np_datetime_like
 from xarray.core.pdcompat import (
-    NoDefault,
     count_not_none,
-    nanosecond_precision_timestamp,
-    no_default,
+    default_precision_timestamp,
 )
-from xarray.core.utils import emit_user_level_warning
-
-try:
-    import cftime
-except ImportError:
-    cftime = None
-
+from xarray.core.utils import attempt_import, emit_user_level_warning
 
 if TYPE_CHECKING:
-    from xarray.core.types import InclusiveOptions, Self, SideOptions, TypeAlias
+    from xarray.core.types import (
+        InclusiveOptions,
+        PDDatetimeUnitOptions,
+        Self,
+        TypeAlias,
+    )
 
 
 DayOption: TypeAlias = Literal["start", "end"]
-
-
-def _nanosecond_precision_timestamp(*args, **kwargs):
-    # As of pandas version 3.0, pd.to_datetime(Timestamp(...)) will try to
-    # infer the appropriate datetime precision. Until xarray supports
-    # non-nanosecond precision times, we will use this constructor wrapper to
-    # explicitly create nanosecond-precision Timestamp objects.
-    return pd.Timestamp(*args, **kwargs).as_unit("ns")
+T_FreqStr = TypeVar("T_FreqStr", str, None)
 
 
 def get_date_type(calendar, use_cftime=True):
     """Return the cftime date type for a given calendar name."""
-    if cftime is None:
-        raise ImportError("cftime is required for dates with non-standard calendars")
+    if TYPE_CHECKING:
+        import cftime
     else:
-        if _is_standard_calendar(calendar) and not use_cftime:
-            return _nanosecond_precision_timestamp
+        cftime = attempt_import("cftime")
 
-        calendars = {
-            "noleap": cftime.DatetimeNoLeap,
-            "360_day": cftime.Datetime360Day,
-            "365_day": cftime.DatetimeNoLeap,
-            "366_day": cftime.DatetimeAllLeap,
-            "gregorian": cftime.DatetimeGregorian,
-            "proleptic_gregorian": cftime.DatetimeProlepticGregorian,
-            "julian": cftime.DatetimeJulian,
-            "all_leap": cftime.DatetimeAllLeap,
-            "standard": cftime.DatetimeGregorian,
-        }
-        return calendars[calendar]
+    if _is_standard_calendar(calendar) and not use_cftime:
+        return default_precision_timestamp
+
+    calendars = {
+        "noleap": cftime.DatetimeNoLeap,
+        "360_day": cftime.Datetime360Day,
+        "365_day": cftime.DatetimeNoLeap,
+        "366_day": cftime.DatetimeAllLeap,
+        "gregorian": cftime.DatetimeGregorian,
+        "proleptic_gregorian": cftime.DatetimeProlepticGregorian,
+        "julian": cftime.DatetimeJulian,
+        "all_leap": cftime.DatetimeAllLeap,
+        "standard": cftime.DatetimeGregorian,
+    }
+    return calendars[calendar]
 
 
 class BaseCFTimeOffset:
@@ -140,12 +133,14 @@ class BaseCFTimeOffset:
         return self.__apply__(other)
 
     def __sub__(self, other):
-        if cftime is None:
-            raise ModuleNotFoundError("No module named 'cftime'")
+        if TYPE_CHECKING:
+            import cftime
+        else:
+            cftime = attempt_import("cftime")
 
         if isinstance(other, cftime.datetime):
             raise TypeError("Cannot subtract a cftime.datetime from a time offset.")
-        elif type(other) == type(self):
+        elif type(other) is type(self):
             return type(self)(self.n - other.n)
         else:
             return NotImplemented
@@ -165,7 +160,7 @@ class BaseCFTimeOffset:
         return self.__add__(other)
 
     def __rsub__(self, other):
-        if isinstance(other, BaseCFTimeOffset) and type(self) != type(other):
+        if isinstance(other, BaseCFTimeOffset) and type(self) is not type(other):
             raise TypeError("Cannot subtract cftime offsets of differing types")
         return -self + other
 
@@ -292,8 +287,7 @@ def _adjust_n_years(other, n, month, reference_day):
 
 def _shift_month(date, months, day_option: DayOption = "start"):
     """Shift the date to a month start or end a given number of months away."""
-    if cftime is None:
-        raise ModuleNotFoundError("No module named 'cftime'")
+    _ = attempt_import("cftime")
 
     has_year_zero = date.has_year_zero
     delta_year = (date.month + months) // 12
@@ -457,12 +451,14 @@ class QuarterOffset(BaseCFTimeOffset):
         return mod_month == 0 and date.day == self._get_offset_day(date)
 
     def __sub__(self, other: Self) -> Self:
-        if cftime is None:
-            raise ModuleNotFoundError("No module named 'cftime'")
+        if TYPE_CHECKING:
+            import cftime
+        else:
+            cftime = attempt_import("cftime")
 
         if isinstance(other, cftime.datetime):
             raise TypeError("Cannot subtract cftime.datetime from offset.")
-        if type(other) == type(self) and other.month == self.month:
+        if type(other) is type(self) and other.month == self.month:
             return type(self)(self.n - other.n, month=self.month)
         return NotImplemented
 
@@ -543,12 +539,14 @@ class YearOffset(BaseCFTimeOffset):
         return _shift_month(other, months, self._day_option)
 
     def __sub__(self, other):
-        if cftime is None:
-            raise ModuleNotFoundError("No module named 'cftime'")
+        if TYPE_CHECKING:
+            import cftime
+        else:
+            cftime = attempt_import("cftime")
 
         if isinstance(other, cftime.datetime):
             raise TypeError("Cannot subtract cftime.datetime from offset.")
-        elif type(other) == type(self) and other.month == self.month:
+        elif type(other) is type(self) and other.month == self.month:
             return type(self)(self.n - other.n, month=self.month)
         else:
             return NotImplemented
@@ -739,7 +737,7 @@ def _generate_anchored_deprecated_frequencies(
     return pairs
 
 
-_DEPRECATED_FREQUENICES: dict[str, str] = {
+_DEPRECATED_FREQUENCIES: dict[str, str] = {
     "A": "YE",
     "Y": "YE",
     "AS": "YS",
@@ -765,18 +763,25 @@ _DEPRECATION_MESSAGE = (
 
 
 def _emit_freq_deprecation_warning(deprecated_freq):
-    recommended_freq = _DEPRECATED_FREQUENICES[deprecated_freq]
+    recommended_freq = _DEPRECATED_FREQUENCIES[deprecated_freq]
     message = _DEPRECATION_MESSAGE.format(
         deprecated_freq=deprecated_freq, recommended_freq=recommended_freq
     )
     emit_user_level_warning(message, FutureWarning)
 
 
-def to_offset(freq: BaseCFTimeOffset | str, warn: bool = True) -> BaseCFTimeOffset:
+def to_offset(
+    freq: BaseCFTimeOffset | str | timedelta | pd.Timedelta | pd.DateOffset,
+    warn: bool = True,
+) -> BaseCFTimeOffset:
     """Convert a frequency string to the appropriate subclass of
     BaseCFTimeOffset."""
     if isinstance(freq, BaseCFTimeOffset):
         return freq
+    if isinstance(freq, timedelta | pd.Timedelta):
+        return delta_to_tick(freq)
+    if isinstance(freq, pd.DateOffset):
+        freq = _legacy_to_new_freq(freq.freqstr)
 
     match = re.match(_PATTERN, freq)
     if match is None:
@@ -784,16 +789,46 @@ def to_offset(freq: BaseCFTimeOffset | str, warn: bool = True) -> BaseCFTimeOffs
     freq_data = match.groupdict()
 
     freq = freq_data["freq"]
-    if warn and freq in _DEPRECATED_FREQUENICES:
+    if warn and freq in _DEPRECATED_FREQUENCIES:
         _emit_freq_deprecation_warning(freq)
     multiples = freq_data["multiple"]
     multiples = 1 if multiples is None else int(multiples)
     return _FREQUENCIES[freq](n=multiples)
 
 
+def delta_to_tick(delta: timedelta | pd.Timedelta) -> Tick:
+    """Adapted from pandas.tslib.delta_to_tick"""
+    if isinstance(delta, pd.Timedelta) and delta.nanoseconds != 0:
+        # pandas.Timedelta has nanoseconds, but these are not supported
+        raise ValueError(
+            "Unable to convert 'pandas.Timedelta' object with non-zero "
+            "nanoseconds to 'CFTimeOffset' object"
+        )
+    if delta.microseconds == 0:
+        if delta.seconds == 0:
+            return Day(n=delta.days)
+        else:
+            seconds = delta.days * 86400 + delta.seconds
+            if seconds % 3600 == 0:
+                return Hour(n=seconds // 3600)
+            elif seconds % 60 == 0:
+                return Minute(n=seconds // 60)
+            else:
+                return Second(n=seconds)
+    else:
+        # Regardless of the days and seconds this will always be a Millisecond
+        # or Microsecond object
+        if delta.microseconds % 1_000 == 0:
+            return Millisecond(n=delta.microseconds // 1_000)
+        else:
+            return Microsecond(n=delta.microseconds)
+
+
 def to_cftime_datetime(date_str_or_date, calendar=None):
-    if cftime is None:
-        raise ModuleNotFoundError("No module named 'cftime'")
+    if TYPE_CHECKING:
+        import cftime
+    else:
+        cftime = attempt_import("cftime")
 
     if isinstance(date_str_or_date, str):
         if calendar is None:
@@ -801,7 +836,7 @@ def to_cftime_datetime(date_str_or_date, calendar=None):
                 "If converting a string to a cftime.datetime object, "
                 "a calendar type must be provided"
             )
-        date, _ = _parse_iso8601_with_reso(get_date_type(calendar), date_str_or_date)
+        date, _ = _parse_iso8601(get_date_type(calendar), date_str_or_date)
         return date
     elif isinstance(date_str_or_date, cftime.datetime):
         return date_str_or_date
@@ -831,8 +866,10 @@ def _maybe_normalize_date(date, normalize):
 def _generate_linear_range(start, end, periods):
     """Generate an equally-spaced sequence of cftime.datetime objects between
     and including two dates (whose length equals the number of periods)."""
-    if cftime is None:
-        raise ModuleNotFoundError("No module named 'cftime'")
+    if TYPE_CHECKING:
+        import cftime
+    else:
+        cftime = attempt_import("cftime")
 
     total_seconds = (end - start).total_seconds()
     values = np.linspace(0.0, total_seconds, periods, endpoint=True)
@@ -902,42 +939,6 @@ def _generate_range(start, end, periods, offset):
             current = next_date
 
 
-def _translate_closed_to_inclusive(closed):
-    """Follows code added in pandas #43504."""
-    emit_user_level_warning(
-        "Following pandas, the `closed` parameter is deprecated in "
-        "favor of the `inclusive` parameter, and will be removed in "
-        "a future version of xarray.",
-        FutureWarning,
-    )
-    if closed is None:
-        inclusive = "both"
-    elif closed in ("left", "right"):
-        inclusive = closed
-    else:
-        raise ValueError(
-            f"Argument `closed` must be either 'left', 'right', or None. "
-            f"Got {closed!r}."
-        )
-    return inclusive
-
-
-def _infer_inclusive(
-    closed: NoDefault | SideOptions, inclusive: InclusiveOptions | None
-) -> InclusiveOptions:
-    """Follows code added in pandas #43504."""
-    if closed is not no_default and inclusive is not None:
-        raise ValueError(
-            "Following pandas, deprecated argument `closed` cannot be "
-            "passed if argument `inclusive` is not None."
-        )
-    if closed is not no_default:
-        return _translate_closed_to_inclusive(closed)
-    if inclusive is None:
-        return "both"
-    return inclusive
-
-
 def cftime_range(
     start=None,
     end=None,
@@ -945,8 +946,7 @@ def cftime_range(
     freq=None,
     normalize=False,
     name=None,
-    closed: NoDefault | SideOptions = no_default,
-    inclusive: None | InclusiveOptions = None,
+    inclusive: InclusiveOptions = "both",
     calendar="standard",
 ) -> CFTimeIndex:
     """Return a fixed frequency CFTimeIndex.
@@ -965,20 +965,10 @@ def cftime_range(
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
         Name of the resulting index
-    closed : {None, "left", "right"}, default: "NO_DEFAULT"
-        Make the interval closed with respect to the given frequency to the
-        "left", "right", or both sides (None).
-
-        .. deprecated:: 2023.02.0
-            Following pandas, the ``closed`` parameter is deprecated in favor
-            of the ``inclusive`` parameter, and will be removed in a future
-            version of xarray.
-
-    inclusive : {None, "both", "neither", "left", "right"}, default None
+    inclusive : {"both", "neither", "left", "right"}, default "both"
         Include boundaries; whether to set each bound as closed or open.
 
         .. versionadded:: 2023.02.0
-
     calendar : str, default: "standard"
         Calendar type for the datetimes.
 
@@ -1152,8 +1142,6 @@ def cftime_range(
         offset = to_offset(freq)
         dates = np.array(list(_generate_range(start, end, periods, offset)))
 
-    inclusive = _infer_inclusive(closed, inclusive)
-
     if inclusive == "neither":
         left_closed = False
         right_closed = False
@@ -1188,8 +1176,8 @@ def date_range(
     tz=None,
     normalize=False,
     name=None,
-    closed: NoDefault | SideOptions = no_default,
-    inclusive: None | InclusiveOptions = None,
+    inclusive: InclusiveOptions = "both",
+    unit: PDDatetimeUnitOptions = "ns",
     calendar="standard",
     use_cftime=None,
 ):
@@ -1216,20 +1204,14 @@ def date_range(
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
         Name of the resulting index
-    closed : {None, "left", "right"}, default: "NO_DEFAULT"
-        Make the interval closed with respect to the given frequency to the
-        "left", "right", or both sides (None).
-
-        .. deprecated:: 2023.02.0
-            Following pandas, the `closed` parameter is deprecated in favor
-            of the `inclusive` parameter, and will be removed in a future
-            version of xarray.
-
-    inclusive : {None, "both", "neither", "left", "right"}, default: None
+    inclusive : {"both", "neither", "left", "right"}, default: "both"
         Include boundaries; whether to set each bound as closed or open.
 
         .. versionadded:: 2023.02.0
+    unit : {"s", "ms", "us", "ns"}, default "ns"
+        Specify the desired resolution of the result.
 
+        .. versionadded:: 2024.12.0
     calendar : str, default: "standard"
         Calendar type for the datetimes.
     use_cftime : boolean, optional
@@ -1253,8 +1235,6 @@ def date_range(
     if tz is not None:
         use_cftime = False
 
-    inclusive = _infer_inclusive(closed, inclusive)
-
     if _is_standard_calendar(calendar) and use_cftime is not True:
         try:
             return pd.date_range(
@@ -1267,6 +1247,7 @@ def date_range(
                 normalize=normalize,
                 name=name,
                 inclusive=inclusive,
+                unit=unit,
             )
         except pd.errors.OutOfBoundsDatetime as err:
             if use_cftime is False:
@@ -1332,7 +1313,7 @@ def _new_to_legacy_freq(freq):
     return freq
 
 
-def _legacy_to_new_freq(freq):
+def _legacy_to_new_freq(freq: T_FreqStr) -> T_FreqStr:
     # to avoid internal deprecation warnings when freq is determined using pandas < 2.2
 
     # TODO: remove once requiring pandas >= 2.2
@@ -1410,8 +1391,7 @@ def date_range_like(source, calendar, use_cftime=None):
     from xarray.core.dataarray import DataArray
 
     if not isinstance(source, pd.DatetimeIndex | CFTimeIndex) and (
-        isinstance(source, DataArray)
-        and (source.ndim != 1)
+        (isinstance(source, DataArray) and (source.ndim != 1))
         or not _contains_datetime_like_objects(source.variable)
     ):
         raise ValueError(
@@ -1439,10 +1419,8 @@ def date_range_like(source, calendar, use_cftime=None):
     if is_np_datetime_like(source.dtype):
         # We want to use datetime fields (datetime64 object don't have them)
         source_calendar = "standard"
-        # TODO: the strict enforcement of nanosecond precision Timestamps can be
-        # relaxed when addressing GitHub issue #7493.
-        source_start = nanosecond_precision_timestamp(source_start)
-        source_end = nanosecond_precision_timestamp(source_end)
+        source_start = default_precision_timestamp(source_start)
+        source_end = default_precision_timestamp(source_end)
     else:
         if isinstance(source, CFTimeIndex):
             source_calendar = source.calendar
