@@ -549,6 +549,10 @@ def array_any(array, axis=None, keepdims=False, **kwargs):
 _mean = _create_nan_agg_method("mean", invariant_0d=True)
 
 
+def _datetime_nanmin(array):
+    return _datetime_nanreduce(array, min)
+
+
 def _datetime_nanreduce(array, func):
     """nanreduce() function for datetime64.
 
