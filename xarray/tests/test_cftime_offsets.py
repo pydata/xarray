@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from itertools import product
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
@@ -1530,7 +1530,8 @@ def test_cftime_or_date_range_invalid_inclusive_value(use_cftime: bool) -> None:
     if use_cftime and not has_cftime:
         pytest.skip("requires cftime")
 
-    with pytest.raises(ValueError, match="nclusive"):
+    error_type = TypeError if TYPE_CHECKING else ValueError
+    with pytest.raises(error_type, match="nclusive"):
         date_range("2000", periods=3, inclusive="foo", use_cftime=use_cftime)
 
 
