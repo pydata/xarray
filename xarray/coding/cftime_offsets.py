@@ -1198,7 +1198,7 @@ def _cftime_range(
         )
 
     start = _get_normalized_cfdate(start, calendar, normalize)
-    end = _get_normalized_cfdate(start, calendar, normalize)
+    end = _get_normalized_cfdate(end, calendar, normalize)
 
     if freq is None:
         dates = _generate_date_range(start, end, periods)
