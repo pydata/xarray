@@ -865,10 +865,6 @@ def _get_normalized_cfdate(date, calendar, normalize):
     return normalize_date(cf_date) if normalize else cf_date
 
 
-def _generate_date_range():
-    pass
-
-
 def _generate_date_range(start, end, periods):
     """Generate an equally-spaced sequence of cftime.datetime objects between
     and including two dates (whose length equals the number of periods)."""
