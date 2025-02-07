@@ -66,11 +66,11 @@ from xarray.core.pdcompat import (
     count_not_none,
     default_precision_timestamp,
 )
+from xarray.core.types import InclusiveOptions
 from xarray.core.utils import attempt_import, emit_user_level_warning
 
 if TYPE_CHECKING:
     from xarray.core.types import (
-        InclusiveOptions,
         PDDatetimeUnitOptions,
         Self,
         TypeAlias,
@@ -1112,7 +1112,9 @@ def cftime_range(
     This function returns a ``CFTimeIndex``, populated with ``cftime.datetime``
     objects associated with the specified calendar type, e.g.
 
-    >>> xr.cftime_range(start="2000", periods=6, freq="2MS", calendar="noleap")
+    >>> xr.cftime_range(
+    ...     start="2000", periods=6, freq="2MS", calendar="noleap"
+    ... )  # +doctest: ELLIPSIS
     Traceback (most recent call last):
         ...
     DeprecationWarning: cftime_range() is deprecated, please use date_range(use_cftime=True) instead.
