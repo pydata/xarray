@@ -39,6 +39,9 @@ Bug fixes
   "nanoseconds" were chosen by default, which are optimal for
   nanosecond-resolution times, but not for times with coarser resolution. By
   `Spencer Clark <https://github.com/spencerkclark>`_ (:pull:`10017`).
+- Use mean of min/max years as offset in calculation of datetime64 mean
+(:issue:`10019`, :pull:`10035`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Documentation
