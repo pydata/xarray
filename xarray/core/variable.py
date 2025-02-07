@@ -190,7 +190,7 @@ def _maybe_wrap_data(data):
     if isinstance(data, pd.Index):
         return PandasIndexingAdapter(data)
     if isinstance(data, pd.api.extensions.ExtensionArray):
-        return PandasExtensionArray[type(data)](data)
+        return PandasExtensionArray(data)
     return data
 
 
