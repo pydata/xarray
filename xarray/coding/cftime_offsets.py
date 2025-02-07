@@ -1112,7 +1112,7 @@ def cftime_range(
     ...     start="2000", periods=6, freq="2MS", calendar="noleap"
     ... )  # +doctest: ELLIPSIS
     Traceback (most recent call last):
-        ...
+      ...
     DeprecationWarning: cftime_range() is deprecated, please use date_range(use_cftime=True) instead.
     CFTimeIndex([2000-01-01 00:00:00, 2000-03-01 00:00:00, 2000-05-01 00:00:00,
                  2000-07-01 00:00:00, 2000-09-01 00:00:00, 2000-11-01 00:00:00],
