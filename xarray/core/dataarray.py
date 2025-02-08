@@ -886,7 +886,7 @@ class DataArray(
         return dict(zip(self.dims, key, strict=True))
 
     def _getitem_coord(self, key: Any) -> Self:
-        from xarray.core.dataset import _get_virtual_variable
+        from xarray.core.dataset_utils import _get_virtual_variable
 
         try:
             var = self._coords[key]
