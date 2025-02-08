@@ -7584,6 +7584,6 @@ class DataArray(
         else:
             return (
                 self._to_temp_dataset()
-                    .drop_attrs(deep=deep)
-                    .pipe(self._from_temp_dataset)
+                .drop_attrs(deep=deep)
+                .pipe(self._from_temp_dataset)
             )
