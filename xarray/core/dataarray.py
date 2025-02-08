@@ -7575,6 +7575,14 @@ class DataArray(
         -------
         DataArray
         """
-        return (
-            self._to_temp_dataset().drop_attrs(deep=deep).pipe(self._from_temp_dataset)
-        )
+        if not deep:
+            self_copy = self.copy()
+            for k in list(self.attrs):
+                del self_copy.attrs[k]
+            return self_copy
+        else:
+            return (
+                self._to_temp_dataset()
+                    .drop_attrs(deep=deep)
+                    .pipe(self._from_temp_dataset)
+            )
