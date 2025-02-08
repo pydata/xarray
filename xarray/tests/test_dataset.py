@@ -3222,7 +3222,9 @@ class TestDataset:
     def test_rename_does_not_change_CFTimeIndex_type(self) -> None:
         # make sure CFTimeIndex is not converted to DatetimeIndex #3522
 
-        time = xr.cftime_range(start="2000", periods=6, freq="2MS", calendar="noleap")
+        time = xr.date_range(
+            start="2000", periods=6, freq="2MS", calendar="noleap", use_cftime=True
+        )
         orig = Dataset(coords={"time": time})
 
         renamed = orig.rename(time="time_new")
@@ -7265,7 +7267,7 @@ def test_differentiate_datetime(dask) -> None:
 @pytest.mark.parametrize("dask", [True, False])
 def test_differentiate_cftime(dask) -> None:
     rs = np.random.default_rng(42)
-    coord = xr.cftime_range("2000", periods=8, freq="2ME")
+    coord = xr.date_range("2000", periods=8, freq="2ME", use_cftime=True)
 
     da = xr.DataArray(
         rs.random((8, 6)),
@@ -7428,7 +7430,7 @@ def test_trapezoid_datetime(dask, which_datetime) -> None:
     else:
         if not has_cftime:
             pytest.skip("Test requires cftime.")
-        coord = xr.cftime_range("2000", periods=8, freq="2D")
+        coord = xr.date_range("2000", periods=8, freq="2D", use_cftime=True)
 
     da = xr.DataArray(
         rs.random((8, 6)),

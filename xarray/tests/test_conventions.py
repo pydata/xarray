@@ -11,9 +11,9 @@ from xarray import (
     Dataset,
     SerializationWarning,
     Variable,
-    cftime_range,
     coding,
     conventions,
+    date_range,
     open_dataset,
 )
 from xarray.backends.common import WritableCFDataStore
@@ -624,7 +624,7 @@ def test_decode_cf_variable_datetime64():
 
 @requires_cftime
 def test_decode_cf_variable_cftime():
-    variable = Variable(["time"], cftime_range("2000", periods=2))
+    variable = Variable(["time"], date_range("2000", periods=2, use_cftime=True))
     decoded = conventions.decode_cf_variable("time", variable)
     assert decoded.encoding == {}
     assert_identical(decoded, variable)

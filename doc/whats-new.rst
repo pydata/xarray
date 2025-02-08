@@ -29,7 +29,7 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+xarray.cftime_range deprecated in favor of xarray.data_range(use_cftime=true)
 
 Bug fixes
 ~~~~~~~~~
@@ -42,6 +42,9 @@ Bug fixes
 - Use mean of min/max years as offset in calculation of datetime64 mean
   (:issue:`10019`, :pull:`10035`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Deprecate xr.cftime_range() in favor of xr.date_range(use_cftime=True)
+  (:issue:`9886`, :pull:`10024`).
+  By `Josh Kihm <https://github.com/maddogghoek>`_.
 
 
 Documentation
