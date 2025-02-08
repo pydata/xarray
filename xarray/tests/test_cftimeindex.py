@@ -1023,14 +1023,14 @@ def test_cftimeindex_shift(index, freq) -> None:
 def test_cftimeindex_shift_invalid_periods() -> None:
     index = xr.date_range("2000", periods=3, use_cftime=True)
     with pytest.raises(TypeError):
-        index.shift("a", "D")  # type: ignore[arg-type]
+        index.shift("a", "D")
 
 
 @requires_cftime
 def test_cftimeindex_shift_invalid_freq() -> None:
     index = xr.date_range("2000", periods=3, use_cftime=True)
     with pytest.raises(TypeError):
-        index.shift(1, 1)  # type: ignore[arg-type]
+        index.shift(1, 1)
 
 
 @requires_cftime
