@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import datetime
 import warnings
 from collections.abc import (
@@ -522,6 +523,7 @@ class DataArray(
         variable: Variable | None = None,
         coords=None,
         name: Hashable | None | Default = _default,
+        attrs: dict[Hashable, Any] | None | Default = _default,
         indexes=None,
     ) -> Self:
         if variable is None:
@@ -532,7 +534,9 @@ class DataArray(
             indexes = self._indexes
         if name is _default:
             name = self.name
-        return type(self)(variable, coords, name=name, indexes=indexes, fastpath=True)
+        if attrs is _default:
+            attrs = copy.copy(self.attrs)
+        return type(self)(variable, coords, name=name, attrs=attrs, indexes=indexes, fastpath=True)
 
     def _replace_maybe_drop_dims(
         self,
@@ -7576,10 +7580,7 @@ class DataArray(
         DataArray
         """
         if not deep:
-            self_copy = self.copy()
-            for k in list(self.attrs):
-                del self_copy.attrs[k]
-            return self_copy
+            return self._replace(attrs={})
         else:
             return (
                 self._to_temp_dataset()
