@@ -1,19 +1,22 @@
+import typing
 from collections.abc import Hashable, Iterator, Mapping
 from typing import Any
 
 import numpy as np
 
 from xarray.core import formatting
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset
 from xarray.core.utils import Frozen
 from xarray.core.variable import Variable
+
+if typing.TYPE_CHECKING:
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
 
 class DataVariables(Mapping[Any, "DataArray"]):
     __slots__ = ("_dataset",)
 
-    def __init__(self, dataset: Dataset):
+    def __init__(self, dataset: "Dataset"):
         self._dataset = dataset
 
     def __iter__(self) -> Iterator[Hashable]:
@@ -31,7 +34,7 @@ class DataVariables(Mapping[Any, "DataArray"]):
     def __contains__(self, key: Hashable) -> bool:
         return key in self._dataset._variables and key not in self._dataset._coord_names
 
-    def __getitem__(self, key: Hashable) -> DataArray:
+    def __getitem__(self, key: Hashable) -> "DataArray":
         if key not in self._dataset._coord_names:
             return self._dataset[key]
         raise KeyError(key)

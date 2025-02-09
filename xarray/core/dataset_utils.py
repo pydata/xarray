@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import typing
 from collections.abc import Hashable, Mapping
 from typing import Any, Generic
 
@@ -5,10 +8,12 @@ import pandas as pd
 
 from xarray.core import utils
 from xarray.core.common import _contains_datetime_like_objects
-from xarray.core.dataset import Dataset
 from xarray.core.indexing import map_index_queries
 from xarray.core.types import T_Dataset
 from xarray.core.variable import IndexVariable, Variable
+
+if typing.TYPE_CHECKING:
+    from xarray.core.dataset import Dataset
 
 
 class _LocIndexer(Generic[T_Dataset]):
@@ -40,6 +45,8 @@ def as_dataset(obj: Any) -> Dataset:
     Handles Datasets, DataArrays and dictionaries of variables. A new Dataset
     object is only created if the provided object is not already one.
     """
+    from xarray.core.dataset import Dataset
+
     if hasattr(obj, "to_dataset"):
         obj = obj.to_dataset()
     if not isinstance(obj, Dataset):
