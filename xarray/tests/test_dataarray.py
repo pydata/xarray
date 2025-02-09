@@ -2991,7 +2991,7 @@ class TestDataArray:
 
     def test_drop_attrs(self) -> None:
         # Mostly tested in test_dataset.py, but adding a very small test here
-        coord_ = xr.DataArray([], attrs=dict(d=3, e=4))
+        coord_ = DataArray([], attrs=dict(d=3, e=4))
         da = DataArray([], attrs=dict(a=1, b=2)).assign_coords(dict(coord_=coord_))
         assert da.drop_attrs().attrs == {}
         assert da.drop_attrs().coord_.attrs == {}
@@ -7238,3 +7238,9 @@ def test_unstack_index_var() -> None:
         name="x",
     )
     assert_identical(actual, expected)
+
+
+if __name__ == "__main__":
+    test = TestDataArray()
+    test.test_drop_attrs()
+    
