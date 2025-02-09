@@ -480,7 +480,7 @@ class VectorizedIndexer(ExplicitIndexer):
                     )
                 if ndim is None:
                     ndim = k.ndim  # type: ignore[union-attr]
-                elif ndim != k.ndim:
+                elif ndim != k.ndim:  # type: ignore[union-attr]
                     ndims = [k.ndim for k in key if isinstance(k, np.ndarray)]
                     raise ValueError(
                         "invalid indexer key: ndarray arguments "
