@@ -7243,4 +7243,3 @@ def test_unstack_index_var() -> None:
 if __name__ == "__main__":
     test = TestDataArray()
     test.test_drop_attrs()
-    

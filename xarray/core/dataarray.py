@@ -538,7 +538,7 @@ class DataArray(
             attrs = copy.copy(self.attrs)
         else:
             variable = self.variable.copy()
-            setattr(variable, "attrs", attrs)
+            variable.attrs = attrs
         return type(self)(variable, coords, name=name, indexes=indexes, fastpath=True)
 
     def _replace_maybe_drop_dims(
