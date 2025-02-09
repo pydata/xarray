@@ -523,7 +523,7 @@ class DataArray(
         variable: Variable | None = None,
         coords=None,
         name: Hashable | None | Default = _default,
-        attrs: dict[Any, Any] | None | Default = _default,
+        attrs=_default,
         indexes=None,
     ) -> Self:
         if variable is None:
