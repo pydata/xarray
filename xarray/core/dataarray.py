@@ -537,7 +537,7 @@ class DataArray(
         if attrs is _default:
             attrs = copy.copy(self.attrs)
         else:
-            variable = self.variable.copy()
+            variable = variable.copy()
             variable.attrs = attrs
         return type(self)(variable, coords, name=name, indexes=indexes, fastpath=True)
 
