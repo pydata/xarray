@@ -1908,6 +1908,21 @@ class TestDataArray:
             warnings.simplefilter("error")
             da.rename(x="x")
 
+    def test_replace(self) -> None:
+        # Tests the `attrs` replacement and whether it interferes with a
+        # `variable` replacement
+        da = self.mda
+        attrs1 = {"a1": "val1", "a2": 161}
+        x = np.ones((10, 20))
+        v = Variable(["x", "y"], x)
+        assert da._replace(variable=v, attrs=attrs1).attrs == attrs1
+        attrs2 = {"b1": "val2", "b2": 1312}
+        va = Variable(["x", "y"], x, attrs2)
+        # assuming passed `attrs` should prevail
+        assert da._replace(variable=va, attrs=attrs1).attrs == attrs1
+        # assuming `va.attrs` should be adopted
+        assert da._replace(variable=va).attrs == attrs2
+
     def test_init_value(self) -> None:
         expected = DataArray(
             np.full((3, 4), 3), dims=["x", "y"], coords=[range(3), range(4)]
