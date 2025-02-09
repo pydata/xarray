@@ -42,6 +42,9 @@ Bug fixes
 - Use mean of min/max years as offset in calculation of datetime64 mean
   (:issue:`10019`, :pull:`10035`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix DataArray().drop_attrs(deep=False) and add support for attrs to
+  DataArray()._replace(). (:issue:`10027`, :pull:`10030`). By `Jan
+  Haacker <https://github.com/j-haacker>`_.
 
 
 Documentation
