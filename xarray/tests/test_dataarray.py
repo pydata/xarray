@@ -4272,11 +4272,13 @@ class TestDataArray:
     def test_polyfit(self, use_dask, use_datetime) -> None:
         if use_dask and not has_dask:
             pytest.skip("requires dask")
-        xcoord = xr.DataArray(
+        da_times = xr.DataArray(
             pd.date_range("1970-01-01", freq="D", periods=10), dims=("x",), name="x"
         )
-        x = xr.core.missing.get_clean_interp_index(xcoord, "x")
-        if not use_datetime:
+        x = xr.core.missing.get_clean_interp_index(da_times, "x").values
+        if use_datetime:
+            xcoord = da_times.values
+        else:
             xcoord = x
 
         da_raw = DataArray(
