@@ -598,7 +598,10 @@ class PandasIndex(Index):
         self.index = index
         self.dim = dim
 
-        if coord_dtype is None:
+        if pd.api.types.is_extension_array_dtype(index.dtype):
+            cast(pd.api.extensions.ExtensionDtype, index.dtype)
+            coord_dtype = index.dtype
+        elif coord_dtype is None:
             coord_dtype = get_valid_numpy_dtype(index)
         self.coord_dtype = coord_dtype
 
@@ -695,6 +698,8 @@ class PandasIndex(Index):
 
         if not indexes:
             coord_dtype = None
+        elif len(set(idx.coord_dtype for idx in indexes)) == 1:
+            coord_dtype = indexes[0].coord_dtype
         else:
             coord_dtype = np.result_type(*[idx.coord_dtype for idx in indexes])
 
