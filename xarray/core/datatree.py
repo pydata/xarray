@@ -21,7 +21,8 @@ from xarray.core.alignment import align
 from xarray.core.common import TreeAttrAccessMixin, get_chunksizes
 from xarray.core.coordinates import Coordinates, DataTreeCoordinates
 from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset, DataVariables
+from xarray.core.dataset import Dataset
+from xarray.core.dataset_variables import DataVariables
 from xarray.core.datatree_mapping import (
     map_over_datasets,
 )
