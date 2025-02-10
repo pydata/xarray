@@ -107,21 +107,35 @@ def map_over_datasets(
     # We don't know which arguments are DataTrees so we zip all arguments together as iterables
     # Store tuples of results in a dict because we don't yet know how many trees we need to rebuild to return
     out_data_objects: dict[str, Dataset | None | tuple[Dataset | None, ...]] = {}
+    func_called: dict[str, bool] = {}
 
     tree_args = [arg for arg in args if isinstance(arg, DataTree)]
     name = result_name(tree_args)
 
     for path, node_tree_args in group_subtrees(*tree_args):
-        node_dataset_args = [arg.dataset for arg in node_tree_args]
-        for i, arg in enumerate(args):
-            if not isinstance(arg, DataTree):
-                node_dataset_args.insert(i, arg)
+        if node_tree_args[0].has_data:
+            node_dataset_args = [arg.dataset for arg in node_tree_args]
+            for i, arg in enumerate(args):
+                if not isinstance(arg, DataTree):
+                    node_dataset_args.insert(i, arg)
 
-        func_with_error_context = _handle_errors_with_path_context(path)(func)
-        results = func_with_error_context(*node_dataset_args, **kwargs)
+            func_with_error_context = _handle_errors_with_path_context(path)(func)
+            results = func_with_error_context(*node_dataset_args, **kwargs)
+            func_called[path] = True
+
+        elif node_tree_args[0].has_attrs:
+            # propagate attrs
+            results = node_tree_args[0].dataset
+            func_called[path] = False
+
+        else:
+            # use Dataset instead of None so it has copy method
+            results = Dataset()
+            func_called[path] = False
+
         out_data_objects[path] = results
 
-    num_return_values = _check_all_return_values(out_data_objects)
+    num_return_values = _check_all_return_values(out_data_objects, func_called)
 
     if num_return_values is None:
         # one return value
@@ -134,6 +148,10 @@ def map_over_datasets(
         {} for _ in range(num_return_values)
     ]
     for path, outputs in out_data_tuples.items():
+        # duplicate outputs when func was not called (empty nodes)
+        if not func_called[path]:
+            outputs = tuple(outputs.copy() for _ in range(num_return_values))
+
         for output_dict, output in zip(output_dicts, outputs, strict=False):
             output_dict[path] = output
 
@@ -185,16 +203,29 @@ def _check_single_set_return_values(path_to_node: str, obj: Any) -> int | None:
     return len(obj)
 
 
-def _check_all_return_values(returned_objects) -> int | None:
+def _check_all_return_values(returned_objects, func_called) -> int | None:
     """Walk through all values returned by mapping func over subtrees, raising on any invalid or inconsistent types."""
 
     result_data_objects = list(returned_objects.items())
 
-    first_path, result = result_data_objects[0]
-    return_values = _check_single_set_return_values(first_path, result)
+    func_called_before = False
 
-    for path_to_node, obj in result_data_objects[1:]:
+    # initialize to None if all nodes are empty
+    return_values = None
+
+    for path_to_node, obj in result_data_objects:
         cur_return_values = _check_single_set_return_values(path_to_node, obj)
+
+        cur_func_called = func_called[path_to_node]
+
+        # the first node where func was actually called
+        if cur_func_called and not func_called_before:
+            return_values = cur_return_values
+            func_called_before = True
+            first_path = path_to_node
+
+        if not cur_func_called:
+            continue
 
         if return_values != cur_return_values:
             if return_values is None:
