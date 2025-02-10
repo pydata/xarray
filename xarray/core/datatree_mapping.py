@@ -150,7 +150,8 @@ def map_over_datasets(
     for path, outputs in out_data_tuples.items():
         # duplicate outputs when func was not called (empty nodes)
         if not func_called[path]:
-            outputs = tuple(outputs.copy() for _ in range(num_return_values))
+            out = cast(Dataset, outputs)
+            outputs = tuple(out.copy() for _ in range(num_return_values))
 
         for output_dict, output in zip(output_dicts, outputs, strict=False):
             output_dict[path] = output
