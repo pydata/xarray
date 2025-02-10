@@ -1606,8 +1606,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         return self.map(reduce_array, shortcut=shortcut)
 
 
-# https://github.com/python/mypy/issues/9031
-class DataArrayGroupBy(  # type: ignore[misc]
+class DataArrayGroupBy(
     DataArrayGroupByBase,
     DataArrayGroupByAggregations,
     ImplementsArrayReduce,
@@ -1774,8 +1773,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         return self.map(lambda ds: ds.assign(**kwargs))
 
 
-# https://github.com/python/mypy/issues/9031
-class DatasetGroupBy(  # type: ignore[misc]
+class DatasetGroupBy(
     DatasetGroupByBase,
     DatasetGroupByAggregations,
     ImplementsDatasetReduce,
