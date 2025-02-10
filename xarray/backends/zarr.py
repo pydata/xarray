@@ -14,8 +14,8 @@ from xarray import coding, conventions
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractWritableDataStore,
-    BackendArray,
     BackendEntrypoint,
+    NewBackendArray,
     _encode_variable_name,
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
@@ -42,6 +42,11 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
     from xarray.core.types import ReadBuffer, ZarrArray, ZarrGroup
+    from xarray.namedarray._typing import (
+        _BasicIndexerKey,
+        _OuterIndexerKey,
+        _VectorizedIndexerKey,
+    )
 
 
 def _get_mappers(*, storage_options, store, chunk_store):
@@ -179,8 +184,8 @@ def encode_zarr_attr_value(value):
     return encoded
 
 
-class ZarrArrayWrapper(BackendArray):
-    __slots__ = ("_array", "dtype", "shape")
+class ZarrArrayWrapper(NewBackendArray):
+    indexing_support = indexing.IndexingSupport.VECTORIZED
 
     def __init__(self, zarr_array):
         # some callers attempt to evaluate an array if an `array` property exists on the object.
@@ -203,25 +208,28 @@ class ZarrArrayWrapper(BackendArray):
     def get_array(self):
         return self._array
 
-    def _oindex(self, key):
-        return self._array.oindex[key]
+    def _oindex_get(self, key: _OuterIndexerKey) -> Any:
+        def raw_indexing_method(key):
+            return self._array.oindex[key]
 
-    def _vindex(self, key):
-        return self._array.vindex[key]
+        return indexing.outer_indexing_adapter(
+            key, self._array.shape, self.indexing_support, raw_indexing_method
+        )
 
-    def _getitem(self, key):
-        return self._array[key]
+    def _vindex_get(self, key: _VectorizedIndexerKey) -> Any:
+        def raw_indexing_method(key):
+            return self._array.vindex[key]
 
-    def __getitem__(self, key):
-        array = self._array
-        if isinstance(key, indexing.BasicIndexer):
-            method = self._getitem
-        elif isinstance(key, indexing.VectorizedIndexer):
-            method = self._vindex
-        elif isinstance(key, indexing.OuterIndexer):
-            method = self._oindex
-        return indexing.explicit_indexing_adapter(
-            key, array.shape, indexing.IndexingSupport.VECTORIZED, method
+        return indexing.vectorized_indexing_adapter(
+            key, self._array.shape, self.indexing_support, raw_indexing_method
+        )
+
+    def __getitem__(self, key: _BasicIndexerKey) -> Any:
+        def raw_indexing_method(key):
+            return self._array[key]
+
+        return indexing.basic_indexing_adapter(
+            key, self._array.shape, self.indexing_support, raw_indexing_method
         )
 
         # if self.ndim == 0:
