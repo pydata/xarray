@@ -718,7 +718,7 @@ class PandasIndex(Index):
             encoding = None
 
         data = PandasIndexingAdapter(self.index, dtype=self.coord_dtype)
-        var = IndexVariable(self.dim, data, attrs=attrs, encoding=encoding)
+        var = IndexVariable(self.dim, data, attrs=attrs, encoding=encoding, name=name)
         return {name: var}
 
     def to_pandas_index(self) -> pd.Index:
@@ -1189,6 +1189,7 @@ class PandasMultiIndex(PandasIndex):
                 attrs=attrs,
                 encoding=encoding,
                 fastpath=True,
+                name=name,
             )
 
         return index_vars
