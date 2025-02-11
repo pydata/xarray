@@ -21,7 +21,8 @@ v2025.02.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Allow kwargs in :py:meth:`DataTree.map_over_datasets` and :py:func:`map_over_datasets` (:issue:`10009`, :pull:`10012`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -45,6 +46,9 @@ Bug fixes
 - Deprecate xr.cftime_range() in favor of xr.date_range(use_cftime=True)
   (:issue:`9886`, :pull:`10024`).
   By `Josh Kihm <https://github.com/maddogghoek>`_.
+- Fix DataArray().drop_attrs(deep=False) and add support for attrs to
+  DataArray()._replace(). (:issue:`10027`, :pull:`10030`). By `Jan
+  Haacker <https://github.com/j-haacker>`_.
 
 
 Documentation
