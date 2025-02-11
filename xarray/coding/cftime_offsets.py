@@ -1190,7 +1190,7 @@ def _cftime_range(
     # Adapted from pandas.core.indexes.datetimes._generate_range.
     if count_not_none(start, end, periods, freq) != 3:
         raise ValueError(
-            "Illegal combination of the arguments 'start', 'end', 'periods', "
+            "Invalid combination of the arguments 'start', 'end', 'periods', "
             "and 'freq' specified."
         )
 
