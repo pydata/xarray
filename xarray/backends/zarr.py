@@ -637,6 +637,8 @@ class ZarrStore(AbstractWritableDataStore):
         write_empty: bool | None = None,
         cache_members: bool = True,
     ):
+        root_group = "/" if _zarr_v3() else group
+
         (
             zarr_group,
             consolidate_on_close,
@@ -646,7 +648,7 @@ class ZarrStore(AbstractWritableDataStore):
             store=store,
             mode=mode,
             synchronizer=synchronizer,
-            group=group,
+            group=root_group,
             consolidated=consolidated,
             consolidate_on_close=consolidate_on_close,
             chunk_store=chunk_store,
@@ -657,16 +659,15 @@ class ZarrStore(AbstractWritableDataStore):
         )
         from zarr import Group
 
-        group_members: dict
+        group_members: dict[str, Group]
         if _zarr_v3():
             group_members = {
-                (f"{group}/{path}" if group != "/" else path): group_store
-                for path, group_store in dict(
-                    zarr_group.members(max_depth=1000)
-                ).items()
-                if isinstance(group_store, Group)
+                f"/{path}": store
+                for path, store in dict(zarr_group.members(max_depth=1000)).items()
+                if isinstance(store, Group) and path.startswith(group.lstrip("/"))
             }
-            group_members[group] = zarr_group
+            if group == "/":
+                group_members[group] = zarr_group
         else:
             group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
             group_members = {path: zarr_group.get(path) for path in group_paths}
