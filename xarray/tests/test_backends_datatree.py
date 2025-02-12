@@ -150,6 +150,7 @@ def unaligned_datatree_zarr(tmp_path_factory):
     root_data.to_zarr(filepath)
     set1_data.to_zarr(filepath, group="/Group1", mode="a")
     set2_data.to_zarr(filepath, group="/Group2", mode="a")
+    set1_data.to_zarr(filepath, group="/Group1/subgroup1", mode="a")
     consolidate_metadata(filepath)
     yield filepath
 
@@ -538,21 +539,21 @@ class TestZarrDatatreeIO:
         unaligned_dict_of_datasets = open_groups(unaligned_datatree_zarr, engine="zarr")
 
         assert "/" in unaligned_dict_of_datasets.keys()
-        assert "Group1" in unaligned_dict_of_datasets.keys()
-        assert "Group2" in unaligned_dict_of_datasets.keys()
+        assert "/Group1" in unaligned_dict_of_datasets.keys()
+        assert "/Group2" in unaligned_dict_of_datasets.keys()
         # Check that group name returns the correct datasets
         with xr.open_dataset(
             unaligned_datatree_zarr, group="/", engine="zarr"
         ) as expected:
             assert_identical(unaligned_dict_of_datasets["/"], expected)
         with xr.open_dataset(
-            unaligned_datatree_zarr, group="Group1", engine="zarr"
+            unaligned_datatree_zarr, group="/Group1", engine="zarr"
         ) as expected:
-            assert_identical(unaligned_dict_of_datasets["Group1"], expected)
+            assert_identical(unaligned_dict_of_datasets["/Group1"], expected)
         with xr.open_dataset(
-            unaligned_datatree_zarr, group="Group2", engine="zarr"
+            unaligned_datatree_zarr, group="/Group2", engine="zarr"
         ) as expected:
-            assert_identical(unaligned_dict_of_datasets["Group2"], expected)
+            assert_identical(unaligned_dict_of_datasets["/Group2"], expected)
         for ds in unaligned_dict_of_datasets.values():
             ds.close()
 
