@@ -400,7 +400,6 @@ class TestZarrDatatreeIO:
         original_dt.to_zarr(filepath, encoding=enc)
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
-            print(roundtrip_dt["/set2/a"].encoding)
             retrieved_compressor = roundtrip_dt["/set2/a"].encoding["compressors"][
                 0
             ]  # Get the BloscCodec object
