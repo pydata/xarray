@@ -481,6 +481,19 @@ def test_cftime_datetime_mean(dask):
     assert_equal(result, expected)
 
 
+@pytest.mark.parametrize("dask", [False, True])
+def test_mean_over_long_spanning_datetime64(dask) -> None:
+    if dask and not has_dask:
+        pytest.skip("requires dask")
+    array = np.array(["1678-01-01", "NaT", "2260-01-01"], dtype="datetime64[ns]")
+    da = DataArray(array, dims=["time"])
+    if dask:
+        da = da.chunk({"time": 2})
+    expected = DataArray(np.array("1969-01-01", dtype="datetime64[ns]"))
+    result = da.mean()
+    assert_equal(result, expected)
+
+
 @requires_cftime
 @requires_dask
 def test_mean_over_non_time_dim_of_dataset_with_dask_backed_cftime_data():
@@ -1025,30 +1038,39 @@ def test_least_squares(use_dask, skipna):
 @requires_dask
 @requires_bottleneck
 @pytest.mark.parametrize("method", ["sequential", "blelloch"])
-def test_push_dask(method):
+@pytest.mark.parametrize(
+    "arr",
+    [
+        [np.nan, 1, 2, 3, np.nan, np.nan, np.nan, np.nan, 4, 5, np.nan, 6],
+        [
+            np.nan,
+            np.nan,
+            np.nan,
+            2,
+            np.nan,
+            np.nan,
+            np.nan,
+            9,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+        ],
+    ],
+)
+def test_push_dask(method, arr):
     import bottleneck
-    import dask.array
+    import dask.array as da
 
-    array = np.array([np.nan, 1, 2, 3, np.nan, np.nan, np.nan, np.nan, 4, 5, np.nan, 6])
+    arr = np.array(arr)
+    chunks = list(range(1, 11)) + [(1, 2, 3, 2, 2, 1, 1)]
 
     for n in [None, 1, 2, 3, 4, 5, 11]:
-        expected = bottleneck.push(array, axis=0, n=n)
-        for c in range(1, 11):
+        expected = bottleneck.push(arr, axis=0, n=n)
+        for c in chunks:
             with raise_if_dask_computes():
-                actual = push(
-                    dask.array.from_array(array, chunks=c), axis=0, n=n, method=method
-                )
+                actual = push(da.from_array(arr, chunks=c), axis=0, n=n, method=method)
             np.testing.assert_equal(actual, expected)
-
-        # some chunks of size-1 with NaN
-        with raise_if_dask_computes():
-            actual = push(
-                dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)),
-                axis=0,
-                n=n,
-                method=method,
-            )
-        np.testing.assert_equal(actual, expected)
 
 
 def test_extension_array_equality(categorical1, int1):

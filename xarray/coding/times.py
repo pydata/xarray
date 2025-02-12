@@ -22,7 +22,7 @@ from xarray.coding.variables import (
 )
 from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
-from xarray.core.duck_array_ops import asarray, ravel, reshape
+from xarray.core.duck_array_ops import array_all, array_any, asarray, ravel, reshape
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
 from xarray.core.pdcompat import default_precision_timestamp, timestamp_as_unit
 from xarray.core.utils import attempt_import, emit_user_level_warning
@@ -151,6 +151,12 @@ def _numpy_to_netcdf_timeunit(units: NPDatetimeUnitOptions) -> str:
         "h": "hours",
         "D": "days",
     }[units]
+
+
+def _numpy_dtype_to_netcdf_timeunit(dtype: np.dtype) -> str:
+    unit, _ = np.datetime_data(dtype)
+    unit = cast(NPDatetimeUnitOptions, unit)
+    return _numpy_to_netcdf_timeunit(unit)
 
 
 def _ensure_padded_year(ref_date: str) -> str:
@@ -676,7 +682,7 @@ def _infer_time_units_from_diff(unique_timedeltas) -> str:
         unit_timedelta = _unit_timedelta_numpy
         zero_timedelta = np.timedelta64(0, "ns")
     for time_unit in time_units:
-        if np.all(unique_timedeltas % unit_timedelta(time_unit) == zero_timedelta):
+        if array_all(unique_timedeltas % unit_timedelta(time_unit) == zero_timedelta):
             return time_unit
     return "seconds"
 
@@ -939,7 +945,7 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
 
 def cast_to_int_if_safe(num) -> np.ndarray:
     int_num = np.asarray(num, dtype=np.int64)
-    if (num == int_num).all():
+    if array_all(num == int_num):
         num = int_num
     return num
 
@@ -961,7 +967,7 @@ def _cast_to_dtype_if_safe(num: np.ndarray, dtype: np.dtype) -> np.ndarray:
         cast_num = np.asarray(num, dtype=dtype)
 
     if np.issubdtype(dtype, np.integer):
-        if not (num == cast_num).all():
+        if not array_all(num == cast_num):
             if np.issubdtype(num.dtype, np.floating):
                 raise ValueError(
                     f"Not possible to cast all encoded times from "
@@ -979,7 +985,7 @@ def _cast_to_dtype_if_safe(num: np.ndarray, dtype: np.dtype) -> np.ndarray:
                     "a larger integer dtype."
                 )
     else:
-        if np.isinf(cast_num).any():
+        if array_any(np.isinf(cast_num)):
             raise OverflowError(
                 f"Not possible to cast encoded times from {num.dtype!r} to "
                 f"{dtype!r} without overflow.  Consider removing the dtype "
@@ -1143,7 +1149,8 @@ def _lazily_encode_cf_datetime(
             units = "microseconds since 1970-01-01"
             dtype = np.dtype("int64")
         else:
-            units = "nanoseconds since 1970-01-01"
+            netcdf_unit = _numpy_dtype_to_netcdf_timeunit(dates.dtype)
+            units = f"{netcdf_unit} since 1970-01-01"
             dtype = np.dtype("int64")
 
     if units is None or dtype is None:
@@ -1249,7 +1256,7 @@ def _lazily_encode_cf_timedelta(
     timedeltas: T_ChunkedArray, units: str | None = None, dtype: np.dtype | None = None
 ) -> tuple[T_ChunkedArray, str]:
     if units is None and dtype is None:
-        units = "nanoseconds"
+        units = _numpy_dtype_to_netcdf_timeunit(timedeltas.dtype)
         dtype = np.dtype("int64")
 
     if units is None or dtype is None:
@@ -1343,6 +1350,21 @@ class CFDatetimeCoder(VariableCoder):
 
 
 class CFTimedeltaCoder(VariableCoder):
+    """Coder for CF Timedelta coding.
+
+    Parameters
+    ----------
+    time_unit : PDDatetimeUnitOptions
+          Target resolution when decoding timedeltas. Defaults to "ns".
+    """
+
+    def __init__(
+        self,
+        time_unit: PDDatetimeUnitOptions = "ns",
+    ) -> None:
+        self.time_unit = time_unit
+        self._emit_decode_timedelta_future_warning = False
+
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.data.dtype, np.timedelta64):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
@@ -1359,12 +1381,21 @@ class CFTimedeltaCoder(VariableCoder):
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         units = variable.attrs.get("units", None)
         if isinstance(units, str) and units in TIME_UNITS:
+            if self._emit_decode_timedelta_future_warning:
+                emit_user_level_warning(
+                    "In a future version of xarray decode_timedelta will "
+                    "default to False rather than None. To silence this "
+                    "warning, set decode_timedelta to True, False, or a "
+                    "'CFTimedeltaCoder' instance.",
+                    FutureWarning,
+                )
             dims, data, attrs, encoding = unpack_for_decoding(variable)
 
             units = pop_to(attrs, encoding, "units")
-            transform = partial(decode_cf_timedelta, units=units)
-            # todo: check, if we can relax this one here, too
-            dtype = np.dtype("timedelta64[ns]")
+            dtype = np.dtype(f"timedelta64[{self.time_unit}]")
+            transform = partial(
+                decode_cf_timedelta, units=units, time_unit=self.time_unit
+            )
             data = lazy_elemwise_func(data, transform, dtype=dtype)
 
             return Variable(dims, data, attrs, encoding, fastpath=True)

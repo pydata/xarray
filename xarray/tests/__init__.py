@@ -269,9 +269,9 @@ def format_record(record) -> str:
 def assert_no_warnings():
     with warnings.catch_warnings(record=True) as record:
         yield record
-        assert (
-            len(record) == 0
-        ), f"Got {len(record)} unexpected warning(s): {[format_record(r) for r in record]}"
+        assert len(record) == 0, (
+            f"Got {len(record)} unexpected warning(s): {[format_record(r) for r in record]}"
+        )
 
 
 # Internal versions of xarray's test functions that validate additional
@@ -320,7 +320,7 @@ def create_test_data(
     obj["dim2"] = ("dim2", 0.5 * np.arange(_dims["dim2"]))
     if _dims["dim3"] > 26:
         raise RuntimeError(
-            f'Not enough letters for filling this dimension size ({_dims["dim3"]})'
+            f"Not enough letters for filling this dimension size ({_dims['dim3']})"
         )
     obj["dim3"] = ("dim3", list(string.ascii_lowercase[0 : _dims["dim3"]]))
     obj["time"] = (

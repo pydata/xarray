@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 from xarray.core._aggregations import (
     DataArrayResampleAggregations,
@@ -102,21 +102,6 @@ class Resample(GroupBy[T_Xarray]):
         """
         (grouper,) = self.groupers
         return self._shuffle_obj(chunks).drop_vars(RESAMPLE_DIM)
-
-    def _first_or_last(
-        self, op: Literal["first", "last"], skipna: bool | None, keep_attrs: bool | None
-    ) -> T_Xarray:
-        from xarray.core.dataset import Dataset
-
-        result = super()._first_or_last(op=op, skipna=skipna, keep_attrs=keep_attrs)
-        if isinstance(result, Dataset):
-            # Can't do this in the base class because group_dim is RESAMPLE_DIM
-            # which is not present in the original object
-            for var in result.data_vars:
-                result._variables[var] = result._variables[var].transpose(
-                    *self._obj._variables[var].dims
-                )
-        return result
 
     def _drop_coords(self) -> T_Xarray:
         """Drop non-dimension coordinates along the resampled dimension."""
@@ -247,8 +232,7 @@ class Resample(GroupBy[T_Xarray]):
         )
 
 
-# https://github.com/python/mypy/issues/9031
-class DataArrayResample(  # type: ignore[misc]
+class DataArrayResample(
     Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations
 ):
     """DataArrayGroupBy object specialized to time resampling operations over a
@@ -390,8 +374,7 @@ class DataArrayResample(  # type: ignore[misc]
         return self.mean(None if self._dim is None else [self._dim])
 
 
-# https://github.com/python/mypy/issues/9031
-class DatasetResample(  # type: ignore[misc]
+class DatasetResample(
     Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations
 ):
     """DatasetGroupBy object specialized to resampling a specified dimension"""
