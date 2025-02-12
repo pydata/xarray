@@ -24,6 +24,10 @@ New Features
 - Added :py:meth:`Coordinates.from_xindex` as convenience for creating a new :py:class:`Coordinates` object
   directly from an existing Xarray index object if the latter supports it (:pull:`10000`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Allow kwargs in :py:meth:`DataTree.map_over_datasets` and :py:func:`map_over_datasets` (:issue:`10009`, :pull:`10012`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- support python 3.13 (no free-threading) (:issue:`9664`, :pull:`9681`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -35,6 +39,18 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Default to resolution-dependent optimal integer encoding units when saving
+  chunked non-nanosecond :py:class:`numpy.datetime64` or
+  :py:class:`numpy.timedelta64` arrays to disk. Previously units of
+  "nanoseconds" were chosen by default, which are optimal for
+  nanosecond-resolution times, but not for times with coarser resolution. By
+  `Spencer Clark <https://github.com/spencerkclark>`_ (:pull:`10017`).
+- Use mean of min/max years as offset in calculation of datetime64 mean
+  (:issue:`10019`, :pull:`10035`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix DataArray().drop_attrs(deep=False) and add support for attrs to
+  DataArray()._replace(). (:issue:`10027`, :pull:`10030`). By `Jan
+  Haacker <https://github.com/j-haacker>`_.
 
 
 Documentation

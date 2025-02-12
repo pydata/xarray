@@ -1792,12 +1792,12 @@ class TestDataArray:
         x = xr.DataArray([], dims=("x",), coords={"x": []}).astype("float32")
         y = x.reindex(x=[1.0, 2.0])
 
-        assert (
-            x.dtype == y.dtype
-        ), "Dtype of reindexed DataArray should match dtype of the original DataArray"
-        assert (
-            y.dtype == np.float32
-        ), "Dtype of reindexed DataArray should remain float32"
+        assert x.dtype == y.dtype, (
+            "Dtype of reindexed DataArray should match dtype of the original DataArray"
+        )
+        assert y.dtype == np.float32, (
+            "Dtype of reindexed DataArray should remain float32"
+        )
 
     def test_rename(self) -> None:
         da = xr.DataArray(
@@ -1907,6 +1907,21 @@ class TestDataArray:
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             da.rename(x="x")
+
+    def test_replace(self) -> None:
+        # Tests the `attrs` replacement and whether it interferes with a
+        # `variable` replacement
+        da = self.mda
+        attrs1 = {"a1": "val1", "a2": 161}
+        x = np.ones((10, 20))
+        v = Variable(["x", "y"], x)
+        assert da._replace(variable=v, attrs=attrs1).attrs == attrs1
+        attrs2 = {"b1": "val2", "b2": 1312}
+        va = Variable(["x", "y"], x, attrs2)
+        # assuming passed `attrs` should prevail
+        assert da._replace(variable=va, attrs=attrs1).attrs == attrs1
+        # assuming `va.attrs` should be adopted
+        assert da._replace(variable=va).attrs == attrs2
 
     def test_init_value(self) -> None:
         expected = DataArray(
@@ -2991,8 +3006,11 @@ class TestDataArray:
 
     def test_drop_attrs(self) -> None:
         # Mostly tested in test_dataset.py, but adding a very small test here
-        da = DataArray([], attrs=dict(a=1, b=2))
+        coord_ = DataArray([], attrs=dict(d=3, e=4))
+        da = DataArray([], attrs=dict(a=1, b=2)).assign_coords(dict(coord_=coord_))
         assert da.drop_attrs().attrs == {}
+        assert da.drop_attrs().coord_.attrs == {}
+        assert da.drop_attrs(deep=False).coord_.attrs == dict(d=3, e=4)
 
     @pytest.mark.parametrize(
         "func", [lambda x: x.clip(0, 1), lambda x: np.float64(1.0) * x, np.abs, abs]

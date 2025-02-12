@@ -24,10 +24,13 @@ from numbers import Number
 from operator import methodcaller
 from os import PathLike
 from types import EllipsisType
-from typing import IO, TYPE_CHECKING, Any, Generic, Literal, cast, overload
+from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
 from pandas.api.types import is_extension_array_dtype
+
+from xarray.core.dataset_utils import _get_virtual_variable, _LocIndexer
+from xarray.core.dataset_variables import DataVariables
 
 # remove once numpy 2.0 is the oldest supported version
 try:
@@ -98,7 +101,6 @@ from xarray.core.types import (
     T_ChunksFreq,
     T_DataArray,
     T_DataArrayOrSet,
-    T_Dataset,
     ZarrWriteModes,
 )
 from xarray.core.utils import (
@@ -194,43 +196,6 @@ _DATETIMEINDEX_COMPONENTS = [
     "dayofweek",
     "quarter",
 ]
-
-
-def _get_virtual_variable(
-    variables, key: Hashable, dim_sizes: Mapping | None = None
-) -> tuple[Hashable, Hashable, Variable]:
-    """Get a virtual variable (e.g., 'time.year') from a dict of xarray.Variable
-    objects (if possible)
-
-    """
-    from xarray.core.dataarray import DataArray
-
-    if dim_sizes is None:
-        dim_sizes = {}
-
-    if key in dim_sizes:
-        data = pd.Index(range(dim_sizes[key]), name=key)
-        variable = IndexVariable((key,), data)
-        return key, key, variable
-
-    if not isinstance(key, str):
-        raise KeyError(key)
-
-    split_key = key.split(".", 1)
-    if len(split_key) != 2:
-        raise KeyError(key)
-
-    ref_name, var_name = split_key
-    ref_var = variables[ref_name]
-
-    if _contains_datetime_like_objects(ref_var):
-        ref_var = DataArray(ref_var)
-        data = getattr(ref_var.dt, var_name).data
-    else:
-        data = getattr(ref_var, var_name).data
-    virtual_var = Variable(ref_var.dims, data)
-
-    return ref_name, var_name, virtual_var
 
 
 def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
@@ -367,19 +332,6 @@ def _maybe_chunk(
         return var
 
 
-def as_dataset(obj: Any) -> Dataset:
-    """Cast the given object to a Dataset.
-
-    Handles Datasets, DataArrays and dictionaries of variables. A new Dataset
-    object is only created if the provided object is not already one.
-    """
-    if hasattr(obj, "to_dataset"):
-        obj = obj.to_dataset()
-    if not isinstance(obj, Dataset):
-        obj = Dataset(obj)
-    return obj
-
-
 def _get_func_args(func, param_names):
     """Use `inspect.signature` to try accessing `func` args. Otherwise, ensure
     they are provided by user.
@@ -466,84 +418,6 @@ def merge_data_and_coords(data_vars: DataVars, coords) -> _MergeResult:
         priority_arg=1,
         skip_align_args=[1],
     )
-
-
-class DataVariables(Mapping[Any, "DataArray"]):
-    __slots__ = ("_dataset",)
-
-    def __init__(self, dataset: Dataset):
-        self._dataset = dataset
-
-    def __iter__(self) -> Iterator[Hashable]:
-        return (
-            key
-            for key in self._dataset._variables
-            if key not in self._dataset._coord_names
-        )
-
-    def __len__(self) -> int:
-        length = len(self._dataset._variables) - len(self._dataset._coord_names)
-        assert length >= 0, "something is wrong with Dataset._coord_names"
-        return length
-
-    def __contains__(self, key: Hashable) -> bool:
-        return key in self._dataset._variables and key not in self._dataset._coord_names
-
-    def __getitem__(self, key: Hashable) -> DataArray:
-        if key not in self._dataset._coord_names:
-            return self._dataset[key]
-        raise KeyError(key)
-
-    def __repr__(self) -> str:
-        return formatting.data_vars_repr(self)
-
-    @property
-    def variables(self) -> Mapping[Hashable, Variable]:
-        all_variables = self._dataset.variables
-        return Frozen({k: all_variables[k] for k in self})
-
-    @property
-    def dtypes(self) -> Frozen[Hashable, np.dtype]:
-        """Mapping from data variable names to dtypes.
-
-        Cannot be modified directly, but is updated when adding new variables.
-
-        See Also
-        --------
-        Dataset.dtype
-        """
-        return self._dataset.dtypes
-
-    def _ipython_key_completions_(self):
-        """Provide method for the key-autocompletions in IPython."""
-        return [
-            key
-            for key in self._dataset._ipython_key_completions_()
-            if key not in self._dataset._coord_names
-        ]
-
-
-class _LocIndexer(Generic[T_Dataset]):
-    __slots__ = ("dataset",)
-
-    def __init__(self, dataset: T_Dataset):
-        self.dataset = dataset
-
-    def __getitem__(self, key: Mapping[Any, Any]) -> T_Dataset:
-        if not utils.is_dict_like(key):
-            raise TypeError("can only lookup dictionaries from Dataset.loc")
-        return self.dataset.sel(key)
-
-    def __setitem__(self, key, value) -> None:
-        if not utils.is_dict_like(key):
-            raise TypeError(
-                "can only set locations defined by dictionaries from Dataset.loc."
-                f" Got: {key}"
-            )
-
-        # set new values
-        dim_indexers = map_index_queries(self.dataset, key).dim_indexers
-        self.dataset[dim_indexers] = value
 
 
 class Dataset(
@@ -6478,7 +6352,7 @@ class Dataset(
         if (len(dim) > 0) and (isinstance(dim[0], list)):
             list_fix = [f"{x!r}" if isinstance(x, str) else f"{x}" for x in dim[0]]
             raise TypeError(
-                f'transpose requires dim to be passed as multiple arguments. Expected `{", ".join(list_fix)}`. Received `{dim[0]}` instead'
+                f"transpose requires dim to be passed as multiple arguments. Expected `{', '.join(list_fix)}`. Received `{dim[0]}` instead"
             )
 
         # Use infix_dims to check once for missing dimensions

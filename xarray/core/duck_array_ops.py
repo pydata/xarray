@@ -16,8 +16,6 @@ from importlib import import_module
 
 import numpy as np
 import pandas as pd
-from numpy import all as array_all  # noqa: F401
-from numpy import any as array_any  # noqa: F401
 from numpy import (  # noqa: F401
     isclose,
     isnat,
@@ -319,7 +317,9 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
     if lazy_equiv is None:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", r"All-NaN (slice|axis) encountered")
-            return bool(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all())
+            return bool(
+                array_all(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True))
+            )
     else:
         return lazy_equiv
 
@@ -333,7 +333,7 @@ def array_equiv(arr1, arr2):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "In the future, 'NAT == x'")
             flag_array = (arr1 == arr2) | (isnull(arr1) & isnull(arr2))
-            return bool(flag_array.all())
+            return bool(array_all(flag_array))
     else:
         return lazy_equiv
 
@@ -349,7 +349,7 @@ def array_notnull_equiv(arr1, arr2):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "In the future, 'NAT == x'")
             flag_array = (arr1 == arr2) | isnull(arr1) | isnull(arr2)
-            return bool(flag_array.all())
+            return bool(array_all(flag_array))
     else:
         return lazy_equiv
 
@@ -536,11 +536,25 @@ cumsum_1d = _create_nan_agg_method("cumsum", invariant_0d=True)
 cumsum_1d.numeric_only = True
 
 
+def array_all(array, axis=None, keepdims=False, **kwargs):
+    xp = get_array_namespace(array)
+    return xp.all(array, axis=axis, keepdims=keepdims, **kwargs)
+
+
+def array_any(array, axis=None, keepdims=False, **kwargs):
+    xp = get_array_namespace(array)
+    return xp.any(array, axis=axis, keepdims=keepdims, **kwargs)
+
+
 _mean = _create_nan_agg_method("mean", invariant_0d=True)
 
 
 def _datetime_nanmin(array):
-    """nanmin() function for datetime64.
+    return _datetime_nanreduce(array, min)
+
+
+def _datetime_nanreduce(array, func):
+    """nanreduce() function for datetime64.
 
     Caveats that this function deals with:
 
@@ -552,7 +566,7 @@ def _datetime_nanmin(array):
     assert dtypes.is_datetime_like(dtype)
     # (NaT).astype(float) does not produce NaN...
     array = where(pandas_isnull(array), np.nan, array.astype(float))
-    array = min(array, skipna=True)
+    array = func(array, skipna=True)
     if isinstance(array, float):
         array = np.array(array)
     # ...but (NaN).astype("M8") does produce NaT
@@ -587,7 +601,7 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     # Set offset to minimum if not given
     if offset is None:
         if dtypes.is_datetime_like(array.dtype):
-            offset = _datetime_nanmin(array)
+            offset = _datetime_nanreduce(array, min)
         else:
             offset = min(array)
 
@@ -707,8 +721,11 @@ def mean(array, axis=None, skipna=None, **kwargs):
 
     array = asarray(array)
     if dtypes.is_datetime_like(array.dtype):
-        offset = _datetime_nanmin(array)
-
+        dmin = _datetime_nanreduce(array, min).astype("datetime64[Y]").astype(int)
+        dmax = _datetime_nanreduce(array, max).astype("datetime64[Y]").astype(int)
+        offset = (
+            np.array((dmin + dmax) // 2).astype("datetime64[Y]").astype(array.dtype)
+        )
         # From version 2025.01.2 xarray uses np.datetime64[unit], where unit
         # is one of "s", "ms", "us", "ns".
         # To not have to worry about the resolution, we just convert the output
