@@ -47,7 +47,7 @@ import warnings
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, ClassVar, Literal, TypeVar
+from typing import TYPE_CHECKING, ClassVar, Literal, TypeVar, get_args
 
 import numpy as np
 import pandas as pd
@@ -66,11 +66,11 @@ from xarray.core.pdcompat import (
     count_not_none,
     default_precision_timestamp,
 )
+from xarray.core.types import InclusiveOptions
 from xarray.core.utils import attempt_import, emit_user_level_warning
 
 if TYPE_CHECKING:
     from xarray.core.types import (
-        InclusiveOptions,
         PDDatetimeUnitOptions,
         Self,
         TypeAlias,
@@ -855,15 +855,17 @@ def normalize_date(date):
     return date.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
-def _maybe_normalize_date(date, normalize):
-    """Round datetime down to midnight if normalize is True."""
-    if normalize:
-        return normalize_date(date)
-    else:
+def _get_normalized_cfdate(date, calendar, normalize):
+    """convert to cf datetime and round down to midnight if normalize."""
+    if date is None:
         return date
 
+    cf_date = to_cftime_datetime(date, calendar)
 
-def _generate_linear_range(start, end, periods):
+    return normalize_date(cf_date) if normalize else cf_date
+
+
+def _generate_date_range(start, end, periods):
     """Generate an equally-spaced sequence of cftime.datetime objects between
     and including two dates (whose length equals the number of periods)."""
     if TYPE_CHECKING:
@@ -880,9 +882,9 @@ def _generate_linear_range(start, end, periods):
     )
 
 
-def _generate_range(start, end, periods, offset):
+def _generate_date_range_with_freq(start, end, periods, freq):
     """Generate a regular range of cftime.datetime objects with a
-    given time offset.
+    given frequency.
 
     Adapted from pandas.tseries.offsets.generate_range (now at
     pandas.core.arrays.datetimes._generate_range).
@@ -895,13 +897,15 @@ def _generate_range(start, end, periods, offset):
         End of range
     periods : int, or None
         Number of elements in the sequence
-    offset : BaseCFTimeOffset
-        An offset class designed for working with cftime.datetime objects
+    freq: str
+        Step size bewtween cftime.datetime objects. Not None.
 
     Returns
     -------
-    A generator object
+    A generator object of cftime.datetime objects
     """
+    offset = to_offset(freq)
+
     if start:
         # From pandas GH 56147 / 56832 to account for negative direction and
         # range bounds
@@ -949,7 +953,9 @@ def cftime_range(
     inclusive: InclusiveOptions = "both",
     calendar="standard",
 ) -> CFTimeIndex:
-    """Return a fixed frequency CFTimeIndex.
+    """DEPRECATED: use date_range(use_cftime=True) instead.
+
+    Return a fixed frequency CFTimeIndex.
 
     Parameters
     ----------
@@ -1102,7 +1108,9 @@ def cftime_range(
     This function returns a ``CFTimeIndex``, populated with ``cftime.datetime``
     objects associated with the specified calendar type, e.g.
 
-    >>> xr.cftime_range(start="2000", periods=6, freq="2MS", calendar="noleap")
+    >>> xr.date_range(
+    ...     start="2000", periods=6, freq="2MS", calendar="noleap", use_cftime=True
+    ... )
     CFTimeIndex([2000-01-01 00:00:00, 2000-03-01 00:00:00, 2000-05-01 00:00:00,
                  2000-07-01 00:00:00, 2000-09-01 00:00:00, 2000-11-01 00:00:00],
                 dtype='object', length=6, calendar='noleap', freq='2MS')
@@ -1118,52 +1126,95 @@ def cftime_range(
     --------
     pandas.date_range
     """
+    warnings.warn(
+        "cftime_range() is deprecated, please use date_range(use_cftime=True) instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
+    return date_range(
+        start=start,
+        end=end,
+        periods=periods,
+        freq=freq,
+        normalize=normalize,
+        name=name,
+        inclusive=inclusive,
+        calendar=calendar,
+        use_cftime=True,
+    )
+
+
+def _cftime_range(
+    start=None,
+    end=None,
+    periods=None,
+    freq=None,
+    normalize=False,
+    name=None,
+    inclusive: InclusiveOptions = "both",
+    calendar="standard",
+) -> CFTimeIndex:
+    """Return a fixed frequency CFTimeIndex.
+
+    Parameters
+    ----------
+    start : str or cftime.datetime, optional
+        Left bound for generating dates.
+    end : str or cftime.datetime, optional
+        Right bound for generating dates.
+    periods : int, optional
+        Number of periods to generate.
+    freq : str or None, default: "D"
+        Frequency strings can have multiples, e.g. "5h" and negative values, e.g. "-1D".
+    normalize : bool, default: False
+        Normalize start/end dates to midnight before generating date range.
+    name : str, default: None
+        Name of the resulting index
+    inclusive : {"both", "neither", "left", "right"}, default "both"
+        Include boundaries; whether to set each bound as closed or open.
+    calendar : str, default: "standard"
+        Calendar type for the datetimes.
+
+    Returns
+    -------
+    CFTimeIndex
+
+    Notes
+    -----
+    see cftime_range
+    """
     if freq is None and any(arg is None for arg in [periods, start, end]):
         freq = "D"
 
     # Adapted from pandas.core.indexes.datetimes._generate_range.
     if count_not_none(start, end, periods, freq) != 3:
         raise ValueError(
-            "Of the arguments 'start', 'end', 'periods', and 'freq', three "
-            "must be specified at a time."
+            "Invalid combination of the arguments 'start', 'end', 'periods', "
+            "and 'freq' specified."
         )
 
-    if start is not None:
-        start = to_cftime_datetime(start, calendar)
-        start = _maybe_normalize_date(start, normalize)
-    if end is not None:
-        end = to_cftime_datetime(end, calendar)
-        end = _maybe_normalize_date(end, normalize)
+    start = _get_normalized_cfdate(start, calendar, normalize)
+    end = _get_normalized_cfdate(end, calendar, normalize)
 
     if freq is None:
-        dates = _generate_linear_range(start, end, periods)
+        dates = _generate_date_range(start, end, periods)
     else:
-        offset = to_offset(freq)
-        dates = np.array(list(_generate_range(start, end, periods, offset)))
-
-    if inclusive == "neither":
-        left_closed = False
-        right_closed = False
-    elif inclusive == "left":
-        left_closed = True
-        right_closed = False
-    elif inclusive == "right":
-        left_closed = False
-        right_closed = True
-    elif inclusive == "both":
-        left_closed = True
-        right_closed = True
-    else:
-        raise ValueError(
-            f"Argument `inclusive` must be either 'both', 'neither', "
-            f"'left', 'right', or None.  Got {inclusive}."
+        dates = np.array(
+            list(_generate_date_range_with_freq(start, end, periods, freq))
         )
 
-    if not left_closed and len(dates) and start is not None and dates[0] == start:
-        dates = dates[1:]
-    if not right_closed and len(dates) and end is not None and dates[-1] == end:
-        dates = dates[:-1]
+    if not TYPE_CHECKING and inclusive not in get_args(InclusiveOptions):
+        raise ValueError(
+            f"Argument `inclusive` must be either 'both', 'neither', "
+            f"'left', or 'right'.  Got {inclusive}."
+        )
+
+    if len(dates) and inclusive != "both":
+        if inclusive != "left" and dates[0] == start:
+            dates = dates[1:]
+        if inclusive != "right" and dates[-1] == end:
+            dates = dates[:-1]
 
     return CFTimeIndex(dates, name=name)
 
@@ -1259,7 +1310,7 @@ def date_range(
             f"Invalid calendar {calendar} for pandas DatetimeIndex, try using `use_cftime=True`."
         )
 
-    return cftime_range(
+    return _cftime_range(
         start=start,
         end=end,
         periods=periods,
