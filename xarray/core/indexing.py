@@ -2058,9 +2058,7 @@ class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         array_indexer = _arrayize_outer_indexer(expanded_indexer_, self.shape)
 
         positions = np.meshgrid(*array_indexer.tuple, indexing="ij")
-        dim_positions = {
-            dim: pos for dim, pos in zip(self._dims, positions, strict=False)
-        }
+        dim_positions = dict(zip(self._dims, positions, strict=False))
 
         result = self._transform.forward(dim_positions)
         return np.asarray(result[self._coord_name]).squeeze()

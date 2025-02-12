@@ -1472,7 +1472,7 @@ class CoordinateTransformIndex(Index):
                 "with either xarray.DataArray or xarray.Variable objects."
             )
         dim_size = [getattr(label, "sizes", None) for label in labels.values()]
-        if any([ds != dim_size0 for ds in dim_size]):
+        if any(ds != dim_size0 for ds in dim_size):
             raise ValueError(
                 "CoordinateTransformIndex only supports advanced (point-wise) indexing "
                 "with xarray.DataArray or xarray.Variable objects of macthing dimensions."
