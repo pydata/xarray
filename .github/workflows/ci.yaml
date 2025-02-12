@@ -59,14 +59,13 @@ jobs:
             os: ubuntu-latest
           # Latest python version:
           - env: "all-but-numba"
-            python-version: "3.12"
+            python-version: "3.13"
             os: ubuntu-latest
           - env: "all-but-dask"
-            # Not 3.12 because of pint
-            python-version: "3.11"
+            python-version: "3.12"
             os: ubuntu-latest
           - env: "flaky"
-            python-version: "3.12"
+            python-version: "3.13"
             os: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -78,10 +77,10 @@ jobs:
 
           if [[ ${{ matrix.os }} == windows* ]] ;
           then
-            if [[ ${{ matrix.python-version }} != "3.13" ]]; then
+            if [[ ${{ matrix.python-version }} != "3.14" ]]; then
               echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
             else
-              echo "CONDA_ENV_FILE=ci/requirements/environment-windows-3.13.yml" >> $GITHUB_ENV
+              echo "CONDA_ENV_FILE=ci/requirements/environment-windows-3.14.yml" >> $GITHUB_ENV
             fi
           elif [[ "${{ matrix.env }}" != "" ]] ;
           then
@@ -98,10 +97,10 @@ jobs:
               echo "PYTEST_ADDOPTS=-W default" >> $GITHUB_ENV
             fi
           else
-            if [[ ${{ matrix.python-version }} != "3.13" ]]; then
+            if [[ ${{ matrix.python-version }} != "3.14" ]]; then
               echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
             else
-              echo "CONDA_ENV_FILE=ci/requirements/environment-3.13.yml" >> $GITHUB_ENV
+              echo "CONDA_ENV_FILE=ci/requirements/environment-3.14.yml" >> $GITHUB_ENV
             fi
           fi
 
