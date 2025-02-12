@@ -23,6 +23,8 @@ New Features
 ~~~~~~~~~~~~
 - Allow kwargs in :py:meth:`DataTree.map_over_datasets` and :py:func:`map_over_datasets` (:issue:`10009`, :pull:`10012`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- support python 3.13 (no free-threading) (:issue:`9664`, :pull:`9681`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
