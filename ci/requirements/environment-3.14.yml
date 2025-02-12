@@ -43,7 +43,7 @@ dependencies:
   - rasterio
   - scipy
   - seaborn
-  - sparse
+  # - sparse
   - toolz
   - typing_extensions
   - zarr
