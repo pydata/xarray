@@ -168,6 +168,7 @@ Missing value handling
    Dataset.fillna
    Dataset.ffill
    Dataset.bfill
+   Dataset.fill_gaps
    Dataset.interpolate_na
    Dataset.where
    Dataset.isin
@@ -359,6 +360,7 @@ Missing value handling
   DataArray.fillna
   DataArray.ffill
   DataArray.bfill
+  DataArray.fill_gaps
   DataArray.interpolate_na
   DataArray.where
   DataArray.isin
@@ -1550,6 +1552,21 @@ DataArray
    DataArrayResample.where
    DataArrayResample.dims
    DataArrayResample.groups
+
+GapMask object
+===============
+
+.. currentmodule:: xarray.core.missing
+
+.. autosummary::
+   :toctree: generated/
+
+   GapMask
+   GapMask.fillna
+   GapMask.ffill
+   GapMask.bfill
+   GapMask.interpolate_na
+   GapMask.get_mask
 
 Accessors
 =========
