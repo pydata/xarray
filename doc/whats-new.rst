@@ -29,6 +29,13 @@ New Features
 - support python 3.13 (no free-threading) (:issue:`9664`, :pull:`9681`)
   By `Justus Magin <https://github.com/keewis>`_.
 
+Performance
+~~~~~~~~~~~
+
+- Small optimizations to help reduce indexing speed of datasets (:pull:`9003`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
+
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
