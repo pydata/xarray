@@ -151,9 +151,9 @@ class TreeNode(Generic[Tree]):
 
             self._pre_attach(parent, child_name)
             parentchildren = parent._children
-            assert not any(
-                child is self for child in parentchildren
-            ), "Tree is corrupt."
+            assert not any(child is self for child in parentchildren), (
+                "Tree is corrupt."
+            )
             parentchildren[child_name] = self
             self._parent = parent
             self._post_attach(parent, child_name)
