@@ -1447,7 +1447,7 @@ class CoordinateTransformIndex(Index):
             raise ValueError(f"missing labels for coordinate(s): {missing_labels_str}.")
 
         label0_obj = next(iter(labels.values()))
-        dim_size0 = getattr(label0_obj, "sizes", None)
+        dim_size0 = getattr(label0_obj, "sizes", {})
 
         is_xr_obj = [
             isinstance(label, DataArray | Variable) for label in labels.values()
@@ -1457,7 +1457,7 @@ class CoordinateTransformIndex(Index):
                 "CoordinateTransformIndex only supports advanced (point-wise) indexing "
                 "with either xarray.DataArray or xarray.Variable objects."
             )
-        dim_size = [getattr(label, "sizes", None) for label in labels.values()]
+        dim_size = [getattr(label, "sizes", {}) for label in labels.values()]
         if any(ds != dim_size0 for ds in dim_size):
             raise ValueError(
                 "CoordinateTransformIndex only supports advanced (point-wise) indexing "
@@ -1469,7 +1469,7 @@ class CoordinateTransformIndex(Index):
         }
         dim_positions = self.transform.reverse(coord_labels)
 
-        results = {}
+        results: dict[str, Variable | DataArray] = {}
         dims0 = tuple(dim_size0)
         for dim, pos in dim_positions.items():
             # TODO: rounding the decimal positions is not always the behavior we expect
@@ -1477,11 +1477,10 @@ class CoordinateTransformIndex(Index):
             # we should probably make this customizable.
             pos = np.round(pos).astype("int")
             if isinstance(label0_obj, Variable):
-                xr_pos = Variable(dims0, pos)
+                results[dim] = Variable(dims0, pos)
             else:
                 # dataarray
-                xr_pos = DataArray(pos, dims=dims0)
-            results[dim] = xr_pos
+                results[dim] = DataArray(pos, dims=dims0)
 
         return IndexSelResult(results)
 

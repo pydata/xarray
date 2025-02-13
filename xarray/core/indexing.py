@@ -1302,7 +1302,7 @@ def _decompose_outer_indexer(
     return (BasicIndexer(tuple(backend_indexer)), OuterIndexer(tuple(np_indexer)))
 
 
-def _posify_indices(indices: np.typing.ArrayLike, size: int) -> np.ndarray:
+def _posify_indices(indices: Any, size: int) -> np.ndarray:
     """Convert negative indices by their equivalent positive indices.
 
     Note: the resulting indices may still be out of bounds (< 0 or >= size).
@@ -1311,7 +1311,7 @@ def _posify_indices(indices: np.typing.ArrayLike, size: int) -> np.ndarray:
     return np.where(indices < 0, size + indices, indices)
 
 
-def _check_bounds(indices, size):
+def _check_bounds(indices: Any, size: int):
     """Check if the given indices are all within the array boundaries."""
     if np.any((indices < 0) | (indices >= size)):
         raise IndexError("out of bounds index")
@@ -2046,7 +2046,7 @@ class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return self._transform.dtype
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         return tuple(self._transform.dim_size.values())
 
     def get_duck_array(self) -> np.ndarray:

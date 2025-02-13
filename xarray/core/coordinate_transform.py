@@ -64,7 +64,9 @@ class CoordinateTransform:
         """Check equality with another CoordinateTransform of the same kind."""
         raise NotImplementedError
 
-    def generate_coords(self, dims: tuple[str] | None = None) -> dict[Hashable, Any]:
+    def generate_coords(
+        self, dims: tuple[str, ...] | None = None
+    ) -> dict[Hashable, Any]:
         """Compute all coordinate labels at once."""
         if dims is None:
             dims = self.dims
