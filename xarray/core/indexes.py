@@ -1382,6 +1382,8 @@ class PandasMultiIndex(PandasIndex):
 class CoordinateTransformIndex(Index):
     """Helper class for creating Xarray indexes based on coordinate transforms.
 
+    EXPERIMENTAL (not ready for public use yet).
+
     - wraps a :py:class:`CoordinateTransform` instance
     - takes care of creating the index (lazy) coordinates
     - supports point-wise label-based selection

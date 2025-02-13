@@ -5,7 +5,11 @@ import numpy as np
 
 
 class CoordinateTransform:
-    """Abstract coordinate transform with dimension & coordinate names."""
+    """Abstract coordinate transform with dimension & coordinate names.
+
+    EXPERIMENTAL (not ready for public use yet).
+
+    """
 
     coord_names: tuple[Hashable, ...]
     dims: tuple[str, ...]
