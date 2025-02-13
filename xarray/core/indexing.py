@@ -2035,7 +2035,7 @@ class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         self,
         transform: CoordinateTransform,
         coord_name: Hashable,
-        dims: tuple[str] | None = None,
+        dims: tuple[str, ...] | None = None,
     ):
         self._transform = transform
         self._coord_name = coord_name
@@ -2102,7 +2102,7 @@ class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             "setting values is not supported on coordinate transform arrays."
         )
 
-    def transpose(self, order):
+    def transpose(self, order: Iterable[int]) -> Self:
         new_dims = tuple([self._dims[i] for i in order])
         return type(self)(self._transform, self._coord_name, new_dims)
 
