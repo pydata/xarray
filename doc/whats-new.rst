@@ -28,6 +28,8 @@ New Features
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - support python 3.13 (no free-threading) (:issue:`9664`, :pull:`9681`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Added experimental support for coordinate transforms (not ready for public use yet!) (:pull:`9543`)
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

@@ -392,7 +392,7 @@ class Coordinates(AbstractCoordinates):
     def from_pandas_multiindex(cls, midx: pd.MultiIndex, dim: Hashable) -> Self:
         """Wrap a pandas multi-index as Xarray coordinates (dimension + levels).
 
-        The returned coordinates can be directly assigned to a
+        The returned coordinate variables can be directly assigned to a
         :py:class:`~xarray.Dataset` or :py:class:`~xarray.DataArray` via the
         ``coords`` argument of their constructor.
 
