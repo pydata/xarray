@@ -77,7 +77,7 @@ types = [
   "types-pycurl",
   "types-python-dateutil",
   "types-pytz",
-  "types-setuptools"
+  "types-setuptools",
 ]
 
 [project.urls]
