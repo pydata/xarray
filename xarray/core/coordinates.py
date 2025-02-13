@@ -14,9 +14,7 @@ import pandas as pd
 
 from xarray.core import formatting
 from xarray.core.alignment import Aligner
-from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.indexes import (
-    CoordinateTransformIndex,
     Index,
     Indexes,
     PandasIndex,
@@ -417,28 +415,6 @@ class Coordinates(AbstractCoordinates):
         indexes = {k: xr_idx for k in variables}
 
         return cls(coords=variables, indexes=indexes)
-
-    @classmethod
-    def from_transform(cls, transform: CoordinateTransform) -> Self:
-        """Wrap a coordinate transform as Xarray (lazy) coordinates.
-
-        The returned coordinate variables can be directly assigned to a
-        :py:class:`~xarray.Dataset` or :py:class:`~xarray.DataArray` via the
-        ``coords`` argument of their constructor.
-
-        Parameters
-        ----------
-        transform : :py:class:`CoordinateTransform`
-            Xarray coordinate transform object.
-
-        Returns
-        -------
-        coords : Coordinates
-            A collection of Xarray indexed coordinates created from the transform.
-
-        """
-        index = CoordinateTransformIndex(transform)
-        return index.create_coords()
 
     @property
     def _names(self) -> set[Hashable]:

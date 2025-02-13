@@ -26,7 +26,6 @@ from xarray.core.utils import (
 )
 
 if TYPE_CHECKING:
-    from xarray.core.coordinate import Coordinates
     from xarray.core.types import ErrorOptions, JoinOptions, Self
     from xarray.core.variable import Variable
 
@@ -1420,19 +1419,6 @@ class CoordinateTransformIndex(Index):
             new_variables[name] = Variable(self.transform.dims, data, attrs=attrs)
 
         return new_variables
-
-    def create_coordinates(self) -> Coordinates:
-        # TODO: remove this alias before merging https://github.com/pydata/xarray/pull/9543!
-        # (we keep it there so it doesn't break the code of those who are experimenting with this)
-        return self.create_coords()
-
-    def create_coords(self) -> Coordinates:
-        # TODO: move this in xarray.Index base class?
-        from xarray.core.coordinates import Coordinates
-
-        variables = self.create_variables()
-        indexes = {name: self for name in variables}
-        return Coordinates(coords=variables, indexes=indexes)
 
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
