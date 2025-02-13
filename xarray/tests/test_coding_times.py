@@ -1429,9 +1429,9 @@ def test_roundtrip_datetime64_nanosecond_precision_warning(
 ) -> None:
     # test warning if times can't be serialized faithfully
     times = [
-        np.datetime64("1970-01-01T00:01:00", "ns"),
-        np.datetime64("NaT"),
-        np.datetime64("1970-01-02T00:01:00", "ns"),
+        np.datetime64("1970-01-01T00:01:00", time_unit),
+        np.datetime64("NaT", time_unit),
+        np.datetime64("1970-01-02T00:01:00", time_unit),
     ]
     units = "days since 1970-01-10T01:01:00"
     needed_units = "hours"
@@ -1901,3 +1901,15 @@ def test_lazy_decode_timedelta_error() -> None:
     )
     with pytest.raises(OutOfBoundsTimedelta, match="overflow"):
         decoded.load()
+
+
+@pytest.mark.parametrize("decode_timedelta", [True, False])
+@pytest.mark.parametrize("mask_and_scale", [True, False])
+def test_decode_timedelta_mask_and_scale(decode_timedelta, mask_and_scale) -> None:
+    attrs = {"units": "days", "_FillValue": np.int16(-1), "add_offset": 100.0}
+    encoded = Variable(["time"], np.array([0, -1, 1], "int16"), attrs=attrs)
+    decoded = conventions.decode_cf_variable(
+        "foo", encoded, mask_and_scale=mask_and_scale, decode_timedelta=decode_timedelta
+    )
+    result = conventions.encode_cf_variable(decoded, name="foo")
+    assert_equal(encoded, result)

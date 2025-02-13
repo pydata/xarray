@@ -234,6 +234,8 @@ def _apply_mask(
 
 def _is_time_like(units):
     # test for time-like
+    # return "datetime" for datetetime-like
+    # return "timedelta" for timedelta-like
     if units is None:
         return False
     time_strings = [
@@ -255,9 +257,9 @@ def _is_time_like(units):
             _unpack_netcdf_time_units(units)
         except ValueError:
             return False
-        return True
+        return "datetime"
     else:
-        return any(tstr == units for tstr in time_strings)
+        return "timedelta" if any(tstr == units for tstr in time_strings) else False
 
 
 def _check_fill_values(attrs, name, dtype):
@@ -367,6 +369,14 @@ def _encode_unsigned_fill_value(
 class CFMaskCoder(VariableCoder):
     """Mask or unmask fill values according to CF conventions."""
 
+    def __init__(
+        self,
+        decode_times: bool = False,
+        decode_timedelta: bool = False,
+    ) -> None:
+        self.decode_times = decode_times
+        self.decode_timedelta = decode_timedelta
+
     def encode(self, variable: Variable, name: T_Name = None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
@@ -393,10 +403,13 @@ class CFMaskCoder(VariableCoder):
 
         if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
+            # but not for packed data
             encoding["_FillValue"] = (
                 _encode_unsigned_fill_value(name, fv, dtype)
                 if has_unsigned
                 else dtype.type(fv)
+                if "add_offset" not in encoding and "scale_factor" not in encoding
+                else fv
             )
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
 
@@ -409,6 +422,8 @@ class CFMaskCoder(VariableCoder):
                     _encode_unsigned_fill_value(name, mv, dtype)
                     if has_unsigned
                     else dtype.type(mv)
+                    if "add_offset" not in encoding and "scale_factor" not in encoding
+                    else mv
                 ),
             )
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
@@ -416,10 +431,17 @@ class CFMaskCoder(VariableCoder):
         # apply fillna
         if fill_value is not None and not pd.isnull(fill_value):
             # special case DateTime to properly handle NaT
-            if _is_time_like(attrs.get("units")) and data.dtype.kind in "iu":
-                data = duck_array_ops.where(
-                    data != np.iinfo(np.int64).min, data, fill_value
-                )
+            if _is_time_like(attrs.get("units")):
+                if data.dtype.kind in "iu":
+                    data = duck_array_ops.where(
+                        data != np.iinfo(np.int64).min, data, fill_value
+                    )
+                else:
+                    data = duck_array_ops.fillna(data, fill_value)
+                    if np.array(fill_value).dtype.kind in "iu":
+                        data = duck_array_ops.astype(
+                            duck_array_ops.around(data), type(fill_value)
+                        )
             else:
                 data = duck_array_ops.fillna(data, fill_value)
 
@@ -458,9 +480,15 @@ class CFMaskCoder(VariableCoder):
 
         if encoded_fill_values:
             # special case DateTime to properly handle NaT
+            # we need to check if time-like will be decoded or not
+            # in further processing
             dtype: np.typing.DTypeLike
             decoded_fill_value: Any
-            if _is_time_like(attrs.get("units")) and data.dtype.kind in "iu":
+            is_time_like = _is_time_like(attrs.get("units"))
+            if (
+                (is_time_like == "datetime" and self.decode_times)
+                or (is_time_like == "timedelta" and self.decode_timedelta)
+            ) and data.dtype.kind in "iu":
                 dtype, decoded_fill_value = np.int64, np.iinfo(np.int64).min
             else:
                 if "scale_factor" not in attrs and "add_offset" not in attrs:
@@ -549,6 +577,14 @@ class CFScaleOffsetCoder(VariableCoder):
         decode_values = encoded_values * scale_factor + add_offset
     """
 
+    def __init__(
+        self,
+        decode_times: bool = False,
+        decode_timedelta: bool = False,
+    ) -> None:
+        self.decode_times = decode_times
+        self.decode_timedelta = decode_timedelta
+
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
@@ -580,8 +616,13 @@ class CFScaleOffsetCoder(VariableCoder):
                 add_offset = np.asarray(add_offset).item()
             # if we have a _FillValue/masked_value we already have the wanted
             # floating point dtype here (via CFMaskCoder), so no check is necessary
-            # only check in other cases
+            # only check in other cases and for time-like
             dtype = data.dtype
+            is_time_like = _is_time_like(attrs.get("units"))
+            if (is_time_like == "datetime" and self.decode_times) or (
+                is_time_like == "timedelta" and self.decode_timedelta
+            ):
+                dtype = _choose_float_dtype(dtype, encoding)
             if "_FillValue" not in encoding and "missing_value" not in encoding:
                 dtype = _choose_float_dtype(dtype, encoding)
 

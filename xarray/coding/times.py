@@ -1315,9 +1315,11 @@ class CFDatetimeCoder(VariableCoder):
 
             units = encoding.pop("units", None)
             calendar = encoding.pop("calendar", None)
-            dtype = encoding.get("dtype", None)
+            dtype = encoding.pop("dtype", None)
             (data, units, calendar) = encode_cf_datetime(data, units, calendar, dtype)
-
+            # if no dtype is provided, preserve data.dtype in encoding
+            if dtype is None:
+                safe_setitem(encoding, "dtype", data.dtype, name=name)
             safe_setitem(attrs, "units", units, name=name)
             safe_setitem(attrs, "calendar", calendar, name=name)
 
@@ -1369,8 +1371,16 @@ class CFTimedeltaCoder(VariableCoder):
         if np.issubdtype(variable.data.dtype, np.timedelta64):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
 
+            # in the case of packed data we need to encode into
+            # float first, the correct dtype will be established
+            # via CFScaleOffsetCoder/CFMaskCoder
+            dtype = None
+            if "add_offset" in encoding or "scale_factor" in encoding:
+                encoding.pop("dtype")
+                dtype = data.dtype if data.dtype.kind == "f" else "float64"
+
             data, units = encode_cf_timedelta(
-                data, encoding.pop("units", None), encoding.get("dtype", None)
+                data, encoding.pop("units", None), encoding.get("dtype", dtype)
             )
             safe_setitem(attrs, "units", units, name=name)
 
