@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import warnings
 from collections.abc import (
     Callable,
     Hashable,
@@ -208,7 +209,16 @@ def _get_default_open_mfdataset_kwargs(
             for concat_dim in concat_dims:
                 # Using a DataArray as concat_dim will always result in a different behavior
                 if isinstance(concat_dim, DataArray):
-                    raise ValueError("Warn about new default for data_vars")
+                    warnings.warn(
+                        "In a future version of xarray default value for data_vars  will change from "
+                        "data_vars='all' to data_vars='minimal'. This is likely to lead to "
+                        "different results when using a `DataArray` as the concat_dim. "
+                        "To opt in to new defaults and get rid of these warnings now "
+                        "use `set_option(use_new_open_mfdataset_kwargs=True) or set data_vars explicitly.",
+                        category=FutureWarning,
+                        stacklevel=2,
+                    )
+                    break
                 # dimensions without coordinate arrays are fine
                 if concat_dim is None or concat_dim not in ds:
                     continue
@@ -226,12 +236,26 @@ def _get_default_open_mfdataset_kwargs(
                 len(overlaps_at_index) == len(concat_dims)
                 and len(set(overlaps_at_index)) == 1
             ):
-                raise ValueError("Warn about new default for data_vars")
+                warnings.warn(
+                    "In a future version of xarray default value for data_vars  will change from "
+                    "data_vars='all' to data_vars='minimal'. This is likely to lead to "
+                    "different results when multiple datasets have overlapping concat_dim values. "
+                    "To opt in to new defaults and get rid of these warnings now "
+                    "use `set_option(use_new_open_mfdataset_kwargs=True) or set data_vars explicitly.",
+                    category=FutureWarning,
+                    stacklevel=2,
+                )
+                break
 
     if "compat" not in input_kwargs and input_kwargs.get("data_vars") == "different":
         # make sure people set compat explicitly for this case
-        raise ValueError(
-            "Warn about new default for compat - given specified data_vars value"
+        warnings.warn(
+            "In a future version of xarray default value for compat  will change from "
+            "compat='no_conflicts' to compat='override'. This is likely to lead to "
+            "failures when used with data_vars='different'. The recommendation is to "
+            "set compat='no_conflicts' explicitly for this case.",
+            category=FutureWarning,
+            stacklevel=2,
         )
 
     if "join" not in input_kwargs:
@@ -1781,10 +1805,12 @@ def open_mfdataset(
             (join, "join='exact'", "join='outer'"),
         ):
             if kwarg is None and new in str(e):
-                raise ValueError(
-                    f"Failure might be related to using new default ({new}) "
-                    f"in `open_mfdataset`. Previously the default was {old}"
-                ) from e
+                warnings.warn(
+                    f"Failure might be related to new default ({new}) "
+                    f"in `open_mfdataset`. Previously the default was {old}",
+                    category=UserWarning,
+                    stacklevel=2,
+                )
         raise e
 
     combined.set_close(partial(_multi_file_closer, closers))
