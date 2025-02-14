@@ -143,12 +143,25 @@ jobs:
           enableCrossOsArchive: true
           save-always: true
 
+      # Run all tests in *.py files, which excludes tests in *.yml files that test type
+      # annotations via the pytest-mypy-plugins plugin, because the type annotations
+      # tests fail when using multiple processes (the -n option to pytest).
       - name: Run tests
         run: python -m pytest -n 4
           --timeout 180
           --cov=xarray
           --cov-report=xml
           --junitxml=pytest.xml
+          xarray/tests/test_*.py
+
+      # As noted in the comment on the previous step, we must run type annotation tests
+      # separately, and we will run them even if the preceding tests failed.  Further,
+      # we must restrict these tests to run only when matrix.env is empty, as this is
+      # the only case when all of the necessary dependencies are included such that
+      # spurious mypy errors due to missing packages are eliminated.
+      - name: Run mypy tests
+        if: ${{ always() && matrix.env == '' }}
+        run: python -m pytest xarray/tests/test_*.yml
 
       - name: Upload test results
         if: always()
