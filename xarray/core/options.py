@@ -29,6 +29,7 @@ if TYPE_CHECKING:
         "keep_attrs",
         "warn_for_unclosed_files",
         "use_bottleneck",
+        "use_new_open_mfdataset_kwargs",
         "use_numbagg",
         "use_opt_einsum",
         "use_flox",
@@ -57,6 +58,7 @@ if TYPE_CHECKING:
         warn_for_unclosed_files: bool
         use_bottleneck: bool
         use_flox: bool
+        use_new_open_mfdataset_kwargs: bool
         use_numbagg: bool
         use_opt_einsum: bool
 
@@ -84,6 +86,7 @@ OPTIONS: T_Options = {
     "warn_for_unclosed_files": False,
     "use_bottleneck": True,
     "use_flox": True,
+    "use_new_open_mfdataset_kwargs": False,
     "use_numbagg": True,
     "use_opt_einsum": True,
 }
@@ -113,6 +116,7 @@ _VALIDATORS = {
     "file_cache_maxsize": _positive_integer,
     "keep_attrs": lambda choice: choice in [True, False, "default"],
     "use_bottleneck": lambda value: isinstance(value, bool),
+    "use_new_open_mfdataset_kwargs": lambda value: isinstance(value, bool),
     "use_numbagg": lambda value: isinstance(value, bool),
     "use_opt_einsum": lambda value: isinstance(value, bool),
     "use_flox": lambda value: isinstance(value, bool),
@@ -250,6 +254,8 @@ class set_options:
     use_flox : bool, default: True
         Whether to use ``numpy_groupies`` and `flox`` to
         accelerate groupby and resampling reductions.
+    use_new_open_mfdataset_kwargs : bool, default False
+        Whether to use new default kwarg values for open_mfdataset.
     use_numbagg : bool, default: True
         Whether to use ``numbagg`` to accelerate reductions.
         Takes precedence over ``use_bottleneck`` when both are True.

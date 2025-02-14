@@ -44,6 +44,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
+from xarray.core.options import OPTIONS
 from xarray.core.treenode import group_subtrees
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 from xarray.core.utils import is_remote_uri
@@ -145,6 +146,100 @@ def _get_default_engine(path: str, allow_remote: bool = False) -> T_NetcdfEngine
         return _get_default_engine_gz()
     else:
         return _get_default_engine_netcdf()
+
+
+def _get_default_open_mfdataset_kwargs(
+    datasets: list[Dataset],
+    *,
+    concat_dim: str | None = None,
+    **kwargs,
+):
+    """This is a short-term helper used for changing the defaults.
+
+     with
+    a deprecation cycle and warnings if behavior changes
+    """
+    input_kwargs = {k: v for k, v in kwargs.items() if v is not None}
+
+    old_defaults = dict(
+        data_vars="all", coords="different", compat="no_conflicts", join="outer"
+    )
+    new_defaults = dict(
+        data_vars="minimal", coords="minimal", compat="override", join="exact"
+    )
+
+    # if user has opted in to new defaults, do not try to provide proactive warnings
+    if OPTIONS["use_new_open_mfdataset_kwargs"]:
+        return {**new_defaults, **input_kwargs}
+
+    if "data_vars" not in input_kwargs:
+        # To figure out if any concat_dims overlap we follow these steps:
+        #
+        # 1) determine the concat_dims if undefined
+        # 2) see if any of the datasets overlap with each other along all
+        #    concat_dims.
+        if isinstance(concat_dim, str | DataArray) or concat_dim is None:
+            concat_dims = [concat_dim]
+        else:
+            concat_dims = concat_dim
+
+        if len(concat_dims) == 1 and concat_dims[0] is None:
+            concat_dims = []
+            # All datasets have same variables because they've been grouped as such
+            ds0 = datasets[0]
+            for dim in ds0.dims:
+                # Check if dim is a coordinate dimension
+                if dim in ds0:
+                    # Need to read coordinate values to do ordering
+                    indexes = [
+                        ds._indexes[dim] for ds in datasets if dim in ds._indexes
+                    ]
+                    # TODO (benbovy, flexible indexes): support flexible indexes?
+                    indexes = [index.to_pandas_index() for index in indexes]
+
+                    # If dimension coordinate values are same on every dataset then
+                    # should be leaving this dimension alone (it's just a "bystander")
+                    if not all(index.equals(indexes[0]) for index in indexes[1:]):
+                        concat_dims.append(dim)
+
+        concat_dim_ranges = {}
+        for ds in datasets:
+            overlaps_at_index = []
+            for concat_dim in concat_dims:
+                # Using a DataArray as concat_dim will always result in a different behavior
+                if isinstance(concat_dim, DataArray):
+                    raise ValueError("Warn about new default for data_vars")
+                # dimensions without coordinate arrays are fine
+                if concat_dim is None or concat_dim not in ds:
+                    continue
+                concat_dim_min = ds[concat_dim].min()
+                concat_dim_max = ds[concat_dim].max()
+                for i, (min, max) in enumerate(concat_dim_ranges.get(concat_dim, [])):
+                    if concat_dim_min <= max and concat_dim_max >= min:
+                        overlaps_at_index.append(i)
+                concat_dim_ranges[concat_dim] = [
+                    *concat_dim_ranges.get(concat_dim, []),
+                    (concat_dim_min, concat_dim_max),
+                ]
+            # check if this dataset overlaps with one other dataset on all concat_dims
+            if (
+                len(overlaps_at_index) == len(concat_dims)
+                and len(set(overlaps_at_index)) == 1
+            ):
+                raise ValueError("Warn about new default for data_vars")
+
+    if "compat" not in input_kwargs and input_kwargs.get("data_vars") == "different":
+        # make sure people set compat explicitly for this case
+        raise ValueError(
+            "Warn about new default for compat - given specified data_vars value"
+        )
+
+    if "join" not in input_kwargs:
+        # TODO: Figure out how conditions that xarray/tests/test_backends.py::TestDask::test_encoding_mfdataset
+        # is failing on OR if it should be failing at all
+        pass
+
+    return {**old_defaults, **input_kwargs}
 
 
 def _validate_dataset_names(dataset: Dataset) -> None:
@@ -1402,14 +1497,14 @@ def open_mfdataset(
         | Sequence[Index]
         | None
     ) = None,
-    compat: CompatOptions = "no_conflicts",
+    compat: CompatOptions | None = None,
     preprocess: Callable[[Dataset], Dataset] | None = None,
     engine: T_Engine | None = None,
-    data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
-    coords="different",
+    data_vars: Literal["all", "minimal", "different"] | list[str] | None = None,
+    coords: Literal["all", "minimal", "different"] | None = None,
     combine: Literal["by_coords", "nested"] = "by_coords",
     parallel: bool = False,
-    join: JoinOptions = "outer",
+    join: JoinOptions | None = None,
     attrs_file: str | os.PathLike | None = None,
     combine_attrs: CombineAttrsOptions = "override",
     **kwargs,
@@ -1642,17 +1737,24 @@ def open_mfdataset(
 
     # Combine all datasets, closing them in case of a ValueError
     try:
+        # for any data_vars, coords, compat, or join that is  None, set to
+        # default - with warning if appropriate
+        kwargs_with_defaults = _get_default_open_mfdataset_kwargs(
+            datasets,
+            concat_dim=concat_dim,
+            data_vars=data_vars,
+            coords=coords,
+            compat=compat,
+            join=join,
+        )
         if combine == "nested":
             # Combined nested list by successive concat and merge operations
             # along each dimension, using structure given by "ids"
             combined = _nested_combine(
                 datasets,
                 concat_dims=concat_dim,
-                compat=compat,
-                data_vars=data_vars,
-                coords=coords,
+                **kwargs_with_defaults,
                 ids=ids,
-                join=join,
                 combine_attrs=combine_attrs,
             )
         elif combine == "by_coords":
@@ -1660,20 +1762,30 @@ def open_mfdataset(
             # previously
             combined = combine_by_coords(
                 datasets,
-                compat=compat,
-                data_vars=data_vars,
-                coords=coords,
-                join=join,
+                **kwargs_with_defaults,
                 combine_attrs=combine_attrs,
             )
         else:
             raise ValueError(
                 f"{combine} is an invalid option for the keyword argument ``combine``"
             )
-    except ValueError:
+    except ValueError as e:
         for ds in datasets:
             ds.close()
-        raise
+        # When using new defaults, add a warning if the failure appears to be related
+        # to the new kwarg values.
+        for kwarg, new, old in (
+            (data_vars, "data_vars='minimal'", "date_vars='all'"),
+            (coords, "coords='minimal'", "coords='different'"),
+            (compat, "compat='override'", "compat='no_conflicts'"),
+            (join, "join='exact'", "join='outer'"),
+        ):
+            if kwarg is None and new in str(e):
+                raise ValueError(
+                    f"Failure might be related to using new default ({new}) "
+                    f"in `open_mfdataset`. Previously the default was {old}"
+                ) from e
+        raise e
 
     combined.set_close(partial(_multi_file_closer, closers))
 
