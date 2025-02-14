@@ -416,6 +416,7 @@ class CFMaskCoder(VariableCoder):
         if mv_exists:
             # try to use _FillValue, if it exists to align both values
             # or use missing_value and ensure it's cast to same dtype as data's
+            # but not for packed data
             encoding["missing_value"] = attrs.get(
                 "_FillValue",
                 (
@@ -437,7 +438,11 @@ class CFMaskCoder(VariableCoder):
                         data != np.iinfo(np.int64).min, data, fill_value
                     )
                 else:
+                    # if we have float data (data was packed prior masking)
+                    # we just fillna
                     data = duck_array_ops.fillna(data, fill_value)
+                    # but if the fill_value is of integer type
+                    # we need to round and cast
                     if np.array(fill_value).dtype.kind in "iu":
                         data = duck_array_ops.astype(
                             duck_array_ops.around(data), type(fill_value)
