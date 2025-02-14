@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, Union
 import numpy as np
 import pandas as pd
 
-from xarray.coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -372,8 +371,8 @@ class CFMaskCoder(VariableCoder):
 
     def __init__(
         self,
-        decode_times: bool | CFDatetimeCoder = False,
-        decode_timedelta: bool | CFTimedeltaCoder = False,
+        decode_times: bool = False,
+        decode_timedelta: bool = False,
     ) -> None:
         self.decode_times = decode_times
         self.decode_timedelta = decode_timedelta
@@ -585,8 +584,8 @@ class CFScaleOffsetCoder(VariableCoder):
 
     def __init__(
         self,
-        decode_times: bool | CFDatetimeCoder = False,
-        decode_timedelta: bool | CFTimedeltaCoder = False,
+        decode_times: bool = False,
+        decode_timedelta: bool = False,
     ) -> None:
         self.decode_times = decode_times
         self.decode_timedelta = decode_timedelta

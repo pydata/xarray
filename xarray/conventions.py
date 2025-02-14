@@ -193,12 +193,14 @@ def decode_cf_variable(
         var = variables.Numpy2StringDTypeCoder().decode(var)
 
     if mask_and_scale:
+        dec_times = True if decode_times else False
+        dec_timedelta = True if decode_timedelta else False
         for coder in [
             variables.CFMaskCoder(
-                decode_times=decode_times, decode_timedelta=decode_timedelta
+                decode_times=dec_times, decode_timedelta=dec_timedelta
             ),
             variables.CFScaleOffsetCoder(
-                decode_times=decode_times, decode_timedelta=decode_timedelta
+                decode_times=dec_times, decode_timedelta=dec_timedelta
             ),
         ]:
             var = coder.decode(var, name=name)
