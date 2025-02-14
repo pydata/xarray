@@ -483,10 +483,10 @@ def _dataset_concat(
     coords: str | list[str],
     compat: CompatOptions,
     positions: Iterable[Iterable[int]] | None,
-    fill_value: Any = dtypes.NA,
-    join: JoinOptions = "outer",
-    combine_attrs: CombineAttrsOptions = "override",
-    create_index_for_new_dim: bool = True,
+    fill_value: Any,
+    join: JoinOptions,
+    combine_attrs: CombineAttrsOptions,
+    create_index_for_new_dim: bool,
 ) -> T_Dataset:
     """
     Concatenate a sequence of datasets along a new or existing dimension
@@ -722,10 +722,10 @@ def _dataarray_concat(
     coords: str | list[str],
     compat: CompatOptions,
     positions: Iterable[Iterable[int]] | None,
-    fill_value: object = dtypes.NA,
-    join: JoinOptions = "outer",
-    combine_attrs: CombineAttrsOptions = "override",
-    create_index_for_new_dim: bool = True,
+    fill_value: object,
+    join: JoinOptions,
+    combine_attrs: CombineAttrsOptions,
+    create_index_for_new_dim: bool,
 ) -> T_DataArray:
     from xarray.core.dataarray import DataArray
 
@@ -754,11 +754,11 @@ def _dataarray_concat(
 
     ds = _dataset_concat(
         datasets,
-        dim,
-        data_vars,
-        coords,
-        compat,
-        positions,
+        dim=dim,
+        data_vars=data_vars,
+        coords=coords,
+        compat=compat,
+        positions=positions,
         fill_value=fill_value,
         join=join,
         combine_attrs=combine_attrs,

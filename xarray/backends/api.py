@@ -34,7 +34,7 @@ from xarray.backends.common import (
 )
 from xarray.backends.locks import _get_scheduler
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
-from xarray.core import indexing
+from xarray.core import dtypes, indexing
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
@@ -1654,6 +1654,7 @@ def open_mfdataset(
                 ids=ids,
                 join=join,
                 combine_attrs=combine_attrs,
+                fill_value=dtypes.NA,
             )
         elif combine == "by_coords":
             # Redo ordering from coordinates, ignoring how they were ordered

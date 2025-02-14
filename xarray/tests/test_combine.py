@@ -290,6 +290,9 @@ class TestCombineND:
             data_vars="all",
             coords="different",
             compat="no_conflicts",
+            fill_value=dtypes.NA,
+            join="outer",
+            combine_attrs="drop",
         )
 
         expected_ds = concat([ds(0), ds(1)], dim=concat_dim)
@@ -304,6 +307,9 @@ class TestCombineND:
             data_vars="all",
             coords="different",
             compat="no_conflicts",
+            fill_value=dtypes.NA,
+            join="outer",
+            combine_attrs="drop",
         )
 
         ds = create_test_data
@@ -319,7 +325,16 @@ class TestCombineND:
     def test_concat_twice(self, create_combined_ids, concat_dim):
         shape = (2, 3)
         combined_ids = create_combined_ids(shape)
-        result = _combine_nd(combined_ids, concat_dims=["dim1", concat_dim])
+        result = _combine_nd(
+            combined_ids,
+            concat_dims=["dim1", concat_dim],
+            data_vars="all",
+            coords="different",
+            compat="no_conflicts",
+            fill_value=dtypes.NA,
+            join="outer",
+            combine_attrs="drop",
+        )
 
         ds = create_test_data
         partway1 = concat([ds(0), ds(3)], dim="dim1")

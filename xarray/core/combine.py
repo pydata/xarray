@@ -200,12 +200,12 @@ def _check_shape_tile_ids(combined_tile_ids):
 def _combine_nd(
     combined_ids,
     concat_dims,
-    data_vars="all",
-    coords="different",
-    compat: CompatOptions = "no_conflicts",
-    fill_value=dtypes.NA,
-    join: JoinOptions = "outer",
-    combine_attrs: CombineAttrsOptions = "drop",
+    data_vars,
+    coords,
+    compat: CompatOptions,
+    fill_value,
+    join: JoinOptions,
+    combine_attrs: CombineAttrsOptions,
 ):
     """
     Combines an N-dimensional structure of datasets into one by applying a
@@ -263,9 +263,9 @@ def _combine_all_along_first_dim(
     data_vars,
     coords,
     compat: CompatOptions,
-    fill_value=dtypes.NA,
-    join: JoinOptions = "outer",
-    combine_attrs: CombineAttrsOptions = "drop",
+    fill_value,
+    join: JoinOptions,
+    combine_attrs: CombineAttrsOptions,
 ):
     # Group into lines of datasets which must be combined along dim
     grouped = groupby_defaultdict(list(combined_ids.items()), key=_new_tile_id)
@@ -276,7 +276,14 @@ def _combine_all_along_first_dim(
         combined_ids = dict(sorted(group))
         datasets = combined_ids.values()
         new_combined_ids[new_id] = _combine_1d(
-            datasets, dim, compat, data_vars, coords, fill_value, join, combine_attrs
+            datasets,
+            concat_dim=dim,
+            compat=compat,
+            data_vars=data_vars,
+            coords=coords,
+            fill_value=fill_value,
+            join=join,
+            combine_attrs=combine_attrs,
         )
     return new_combined_ids
 
@@ -284,12 +291,12 @@ def _combine_all_along_first_dim(
 def _combine_1d(
     datasets,
     concat_dim,
-    compat: CompatOptions = "no_conflicts",
-    data_vars="all",
-    coords="different",
-    fill_value=dtypes.NA,
-    join: JoinOptions = "outer",
-    combine_attrs: CombineAttrsOptions = "drop",
+    compat: CompatOptions,
+    data_vars,
+    coords,
+    fill_value,
+    join: JoinOptions,
+    combine_attrs: CombineAttrsOptions,
 ):
     """
     Applies either concat or merge to 1D list of datasets depending on value
@@ -343,9 +350,9 @@ def _nested_combine(
     data_vars,
     coords,
     ids,
-    fill_value=dtypes.NA,
-    join: JoinOptions = "outer",
-    combine_attrs: CombineAttrsOptions = "drop",
+    fill_value,
+    join: JoinOptions,
+    combine_attrs: CombineAttrsOptions,
 ):
     if len(datasets) == 0:
         return Dataset()
@@ -619,12 +626,12 @@ def groupby_defaultdict(
 
 def _combine_single_variable_hypercube(
     datasets,
-    fill_value=dtypes.NA,
-    data_vars="all",
-    coords="different",
-    compat: CompatOptions = "no_conflicts",
-    join: JoinOptions = "outer",
-    combine_attrs: CombineAttrsOptions = "no_conflicts",
+    fill_value,
+    data_vars,
+    coords,
+    compat: CompatOptions,
+    join: JoinOptions,
+    combine_attrs: CombineAttrsOptions,
 ):
     """
     Attempt to combine a list of Datasets into a hypercube using their
