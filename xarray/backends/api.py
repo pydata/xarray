@@ -157,8 +157,9 @@ def _get_default_open_mfdataset_kwargs(
 ):
     """This is a short-term helper used for changing the defaults.
 
-     with
-    a deprecation cycle and warnings if behavior changes
+    This function supports a deprecation cycle that tries to throw
+    warnings if the outcome of `open_mfdataset` would be different with
+    the new default kwargs compared to the old ones.
     """
     input_kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
