@@ -30,7 +30,7 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-xarray.cftime_range deprecated in favor of xarray.data_range(use_cftime=true)
+xarray.cftime_range deprecated in favor of xarray.data_range(use_cftime=True)
 
 Bug fixes
 ~~~~~~~~~
