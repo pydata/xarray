@@ -2047,7 +2047,7 @@ class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     @property
     def shape(self) -> tuple[int, ...]:
-        return tuple(self._transform.dim_size.values())
+        return tuple(self._transform.dim_size[dim] for dim in self._transform.dims)
 
     def get_duck_array(self) -> np.ndarray:
         all_coords = self._transform.generate_coords(dims=self._dims)
