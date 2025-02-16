@@ -170,6 +170,7 @@ def map_index_queries(
     indexers: Mapping[Any, Any],
     method=None,
     tolerance: int | float | Iterable[int | float] | None = None,
+    options: dict[Any, Any] | None = None,
     **indexers_kwargs: Any,
 ) -> IndexSelResult:
     """Execute index queries from a DataArray / Dataset and label-based indexers
@@ -179,9 +180,7 @@ def map_index_queries(
     from xarray.core.dataarray import DataArray
 
     # TODO benbovy - flexible indexes: remove when custom index options are available
-    if method is None and tolerance is None:
-        options = {}
-    else:
+    if options is None:
         options = {"method": method, "tolerance": tolerance}
 
     indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "map_index_queries")
