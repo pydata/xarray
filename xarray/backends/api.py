@@ -1369,6 +1369,38 @@ def open_groups(
     return groups
 
 
+def remove_path(paths, path_to_remove):
+    """
+    Recursively removes specific path from a nested or non-nested list.
+
+    Parameters
+    ----------
+    paths: list
+        The path list (nested or not) from which to remove paths.
+    path_to_remove: str or list
+        The path to be removed.
+
+    Returns
+    -------
+    list
+        A new list with specified paths removed.
+    """
+    # Initialize an empty list to store the result
+    result = []
+
+    for item in paths:
+        if isinstance(item, list):
+            # If the current item is a list, recursively call remove_elements on it
+            nested_result = remove_path(item, path_to_remove)
+            if nested_result:  # Only add non-empty lists to avoid adding empty lists
+                result.append(nested_result)
+        elif item not in path_to_remove:
+            # Add the item to the result if it is not in the set of elements to remove
+            result.append(item)
+
+    return result
+
+
 def open_mfdataset(
     paths: str
     | os.PathLike
@@ -1624,15 +1656,16 @@ def open_mfdataset(
         )
 
     datasets = []
-    for i, p in enumerate(paths1d):
+    remove_paths = False
+    for p in paths1d:
         try:
             ds = open_(p, **open_kwargs)
             datasets.append(ds)
         except Exception:
-            # remove invalid ids and paths
+            # remove invalid paths
             if combine == "nested":
-                ids.pop(i)
-                paths1d.pop(i)
+                paths = remove_path(paths, p)
+                remove_paths = True
             if errors == "raise":
                 raise
             elif errors == "warn":
@@ -1655,6 +1688,11 @@ def open_mfdataset(
     # Combine all datasets, closing them in case of a ValueError
     try:
         if combine == "nested":
+            # Create new ids and paths based on removed items
+            if remove_paths:
+                combined_ids_paths = _infer_concat_order_from_positions(paths)
+                ids = list(combined_ids_paths.keys())
+
             # Combined nested list by successive concat and merge operations
             # along each dimension, using structure given by "ids"
             combined = _nested_combine(

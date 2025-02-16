@@ -4839,7 +4839,7 @@ class TestDask(DatasetIOBase):
             ds1.to_netcdf(tmp1)
             ds2.to_netcdf(tmp2)
             with open_mfdataset(
-                [tmp1, tmp2, "non-existent-file.nc"],
+                [tmp1, "non-existent-file.nc", tmp2],
                 concat_dim="x",
                 combine="nested",
                 errors="ignore",
@@ -4855,7 +4855,7 @@ class TestDask(DatasetIOBase):
                 ds1.to_netcdf(tmp1)
                 ds2.to_netcdf(tmp2)
                 with open_mfdataset(
-                    [tmp1, tmp2, "non-existent-file.nc"],
+                    [tmp1, "non-existent-file.nc", tmp2],
                     concat_dim="x",
                     combine="nested",
                     errors="warn",
@@ -4870,7 +4870,7 @@ class TestDask(DatasetIOBase):
             original.isel(x=slice(5), y=slice(4, 8)).to_netcdf(tmp3)
             original.isel(x=slice(5, 10), y=slice(4, 8)).to_netcdf(tmp4)
             with open_mfdataset(
-                [[tmp1, tmp2], [tmp3, tmp4, "non-existent-file.nc"]],
+                [[tmp1, tmp2], ["non-existent-file.nc", tmp3, tmp4]],
                 combine="nested",
                 concat_dim=["y", "x"],
                 errors="ignore",
@@ -4886,7 +4886,7 @@ class TestDask(DatasetIOBase):
                 original.isel(x=slice(5), y=slice(4, 8)).to_netcdf(tmp3)
                 original.isel(x=slice(5, 10), y=slice(4, 8)).to_netcdf(tmp4)
                 with open_mfdataset(
-                    [[tmp1, tmp2], [tmp3, tmp4, "non-existent-file.nc"]],
+                    [[tmp1, tmp2, "non-existent-file.nc"], [tmp3, tmp4]],
                     combine="nested",
                     concat_dim=["y", "x"],
                     errors="warn",
