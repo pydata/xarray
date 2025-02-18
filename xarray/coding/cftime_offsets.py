@@ -953,9 +953,10 @@ def cftime_range(
     inclusive: InclusiveOptions = "both",
     calendar="standard",
 ) -> CFTimeIndex:
-    """DEPRECATED: use date_range(use_cftime=True) instead.
+    """Return a fixed frequency CFTimeIndex.
 
-    Return a fixed frequency CFTimeIndex.
+    .. deprecated:: 2025.02.0
+        Use :py:func:`~xarray.date_range` with ``use_cftime=True`` instead.
 
     Parameters
     ----------
