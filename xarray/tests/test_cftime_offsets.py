@@ -1255,13 +1255,12 @@ def test_cftime_range(
         assert np.max(np.abs(deltas)) < 0.001
 
 
-def test_cftime_range_name():
-    with pytest.warns(DeprecationWarning):
-        result = cftime_range(start="2000", periods=4, name="foo")
-        assert result.name == "foo"
+def test_date_range_name():
+    result = date_range(start="2000", periods=4, name="foo")
+    assert result.name == "foo"
 
-        result = cftime_range(start="2000", periods=4)
-        assert result.name is None
+    result = date_range(start="2000", periods=4)
+    assert result.name is None
 
 
 @pytest.mark.parametrize(
@@ -1275,15 +1274,14 @@ def test_cftime_range_name():
         ("2000", "2001", 5, "YE", None),
     ],
 )
-def test_invalid_cftime_range_inputs(
+def test_invalid_date_range_cftime_inputs(
     start: str | None,
     end: str | None,
     periods: int | None,
     freq: str | None,
     inclusive: Literal["up", None],
 ) -> None:
-    with pytest.raises(ValueError), pytest.warns(DeprecationWarning):
-        cftime_range(start, end, periods, freq, inclusive=inclusive)  # type: ignore[arg-type]
+    date_range(start, end, periods, freq, inclusive=inclusive, use_cftime=True)  # type: ignore[arg-type]
 
 
 _CALENDAR_SPECIFIC_MONTH_END_TESTS = [
@@ -1307,11 +1305,14 @@ def test_calendar_specific_month_end(
     year = 2000  # Use a leap-year to highlight calendar differences
     date_type = get_date_type(calendar)
     expected = [date_type(year, *args) for args in expected_month_day]
-    with pytest.warns(DeprecationWarning):
-        result = cftime_range(
-            start="2000-02", end="2001", freq="2ME", calendar=calendar
-        ).values
-        np.testing.assert_equal(result, expected)
+    result = date_range(
+        start="2000-02",
+        end="2001",
+        freq="2ME",
+        calendar=calendar,
+        use_cftime=True,
+    ).values
+    np.testing.assert_equal(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -1325,14 +1326,10 @@ def test_calendar_specific_month_end_negative_freq(
     year = 2000  # Use a leap-year to highlight calendar differences
     date_type = get_date_type(calendar)
     expected = [date_type(year, *args) for args in expected_month_day[::-1]]
-    with pytest.warns(DeprecationWarning):
-        result = cftime_range(
-            start="2001",
-            end="2000",
-            freq="-2ME",
-            calendar=calendar,
-        ).values
-        np.testing.assert_equal(result, expected)
+    result = date_range(
+        start="2001", end="2000", freq="-2ME", calendar=calendar, use_cftime=True
+    ).values
+    np.testing.assert_equal(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -1355,37 +1352,35 @@ def test_calendar_specific_month_end_negative_freq(
 def test_calendar_year_length(
     calendar: str, start: str, end: str, expected_number_of_days: int
 ) -> None:
-    with pytest.warns(DeprecationWarning):
-        result = cftime_range(start, end, freq="D", inclusive="left", calendar=calendar)
-        assert len(result) == expected_number_of_days
+    result = date_range(
+        start, end, freq="D", inclusive="left", calendar=calendar, use_cftime=True
+    )
+    assert len(result) == expected_number_of_days
 
 
 @pytest.mark.parametrize("freq", ["YE", "ME", "D"])
-def test_dayofweek_after_cftime_range(freq: str) -> None:
-    with pytest.warns(DeprecationWarning):
-        result = cftime_range("2000-02-01", periods=3, freq=freq).dayofweek
-        # TODO: remove once requiring pandas 2.2+
-        freq = _new_to_legacy_freq(freq)
-        expected = pd.date_range("2000-02-01", periods=3, freq=freq).dayofweek
-        np.testing.assert_array_equal(result, expected)
+def test_dayofweek_after_cftime(freq: str) -> None:
+    result = date_range("2000-02-01", periods=3, freq=freq, use_cftime=True).dayofweek
+    # TODO: remove once requiring pandas 2.2+
+    freq = _new_to_legacy_freq(freq)
+    expected = pd.date_range("2000-02-01", periods=3, freq=freq).dayofweek
+    np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.parametrize("freq", ["YE", "ME", "D"])
-def test_dayofyear_after_cftime_range(freq: str) -> None:
-    with pytest.warns(DeprecationWarning):
-        result = cftime_range("2000-02-01", periods=3, freq=freq).dayofyear
-        # TODO: remove once requiring pandas 2.2+
-        freq = _new_to_legacy_freq(freq)
-        expected = pd.date_range("2000-02-01", periods=3, freq=freq).dayofyear
-        np.testing.assert_array_equal(result, expected)
+def test_dayofyear_after_cftime(freq: str) -> None:
+    result = date_range("2000-02-01", periods=3, freq=freq, use_cftime=True).dayofyear
+    # TODO: remove once requiring pandas 2.2+
+    freq = _new_to_legacy_freq(freq)
+    expected = pd.date_range("2000-02-01", periods=3, freq=freq).dayofyear
+    np.testing.assert_array_equal(result, expected)
 
 
 def test_cftime_range_standard_calendar_refers_to_gregorian() -> None:
     from cftime import DatetimeGregorian
 
-    with pytest.warns(DeprecationWarning):
-        (result,) = cftime_range("2000", periods=1)
-        assert isinstance(result, DatetimeGregorian)
+    (result,) = date_range("2000", periods=1, use_cftime=True)
+    assert isinstance(result, DatetimeGregorian)
 
 
 @pytest.mark.parametrize(
@@ -1702,16 +1697,15 @@ def test_cftime_range_same_as_pandas(start, end, freq) -> None:
 )
 def test_cftime_range_no_freq(start, end, periods):
     """
-    Test whether cftime_range produces the same result as Pandas
+    Test whether date_range produces the same result as Pandas
     when freq is not provided, but start, end and periods are.
     """
     # Generate date ranges using cftime_range
-    with pytest.warns(DeprecationWarning):
-        cftimeindex = cftime_range(start=start, end=end, periods=periods)
-        result = cftimeindex.to_datetimeindex(time_unit="ns")
-        expected = pd.date_range(start=start, end=end, periods=periods)
+    cftimeindex = date_range(start=start, end=end, periods=periods, use_cftime=True)
+    result = cftimeindex.to_datetimeindex(time_unit="ns")
+    expected = pd.date_range(start=start, end=end, periods=periods)
 
-        np.testing.assert_array_equal(result, expected)
+    np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.parametrize(
