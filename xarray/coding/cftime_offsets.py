@@ -865,7 +865,7 @@ def _get_normalized_cfdate(date, calendar, normalize):
     return normalize_date(cf_date) if normalize else cf_date
 
 
-def _generate_date_range(start, end, periods):
+def _generate_linear_date_range(start, end, periods):
     """Generate an equally-spaced sequence of cftime.datetime objects between
     and including two dates (whose length equals the number of periods)."""
     if TYPE_CHECKING:
@@ -882,7 +882,7 @@ def _generate_date_range(start, end, periods):
     )
 
 
-def _generate_date_range_with_freq(start, end, periods, freq):
+def _generate_linear_date_range_with_freq(start, end, periods, freq):
     """Generate a regular range of cftime.datetime objects with a
     given frequency.
 
@@ -1198,10 +1198,10 @@ def _cftime_range(
     end = _get_normalized_cfdate(end, calendar, normalize)
 
     if freq is None:
-        dates = _generate_date_range(start, end, periods)
+        dates = _generate_linear_date_range(start, end, periods)
     else:
         dates = np.array(
-            list(_generate_date_range_with_freq(start, end, periods, freq))
+            list(_generate_linear_date_range_with_freq(start, end, periods, freq))
         )
 
     if not TYPE_CHECKING and inclusive not in get_args(InclusiveOptions):
