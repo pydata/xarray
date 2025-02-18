@@ -6139,7 +6139,7 @@ def test_raises_key_error_on_invalid_zarr_store(tmp_path):
         root.create_dataset("bar", shape=(3, 5), dtype=np.float32)
     else:
         root.create_array("bar", shape=(3, 5), dtype=np.float32)
-    with pytest.raises(KeyError):
+    with pytest.raises(KeyError, match=r"xarray to determine variable dimensions"):
         xr.open_zarr(tmp_path / "tmp.zarr", consolidated=False)
 
 
