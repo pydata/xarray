@@ -49,7 +49,6 @@ jobs:
         # Bookend python versions
         python-version: ["3.10", "3.13"]
         env: [""]
-        numprocesses: [4]
         include:
           # Minimum python version:
           - env: "bare-minimum"
@@ -159,7 +158,7 @@ jobs:
           save-always: true
 
       - name: Run tests
-        run: python -m pytest -n ${{ matrix.numprocesses }}
+        run: python -m pytest -n ${{ matrix.numprocesses || 4 }}
           --timeout 180
           --cov=xarray
           --cov-report=xml
