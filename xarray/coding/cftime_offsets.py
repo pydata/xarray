@@ -1126,8 +1126,8 @@ def cftime_range(
     --------
     pandas.date_range
     """
-    warnings.warn(
-        "cftime_range() is deprecated, please use date_range(use_cftime=True) instead.",
+    emit_user_level_warning(
+        "cftime_range() is deprecated, please use xarray.date_range(use_cftime=True) instead.",
         DeprecationWarning,
         stacklevel=2,
     )
