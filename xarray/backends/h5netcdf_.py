@@ -530,6 +530,17 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         from xarray.core.treenode import NodePath
         from xarray.core.utils import close_on_error
 
+        # Keep this message for some versions
+        # remove and set phony_dims="access" above
+        if phony_dims is None:
+            emit_user_level_warning(
+                "The 'phony_dims' kwarg now defaults to 'access'. "
+                "Previously 'phony_dims=None' would raise an error. "
+                "For full netcdf equivalence please use phony_dims='sort'.",
+                UserWarning,
+            )
+            phony_dims = "access"
+
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
