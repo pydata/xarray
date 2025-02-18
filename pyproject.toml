@@ -367,6 +367,7 @@ filterwarnings = [
 log_cli_level = "INFO"
 markers = [
   "flaky: flaky tests",
+  "mypy: type annotation tests",
   "network: tests requiring a network connection",
   "slow: slow tests",
   "slow_hypothesis: slow hypothesis tests",

@@ -1,4 +1,4 @@
-- case: test_pipe_lambda_noarg_return_type
+- case: test_mypy_pipe_lambda_noarg_return_type
   main: |
     from xarray import Dataset
 
@@ -6,7 +6,7 @@
 
     reveal_type(ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
 
-- case: test_pipe_lambda_posarg_return_type
+- case: test_mypy_pipe_lambda_posarg_return_type
   main: |
     from xarray import Dataset
 
@@ -14,7 +14,7 @@
 
     reveal_type(ds)  # N: Revealed type is "builtins.str"
 
-- case: test_pipe_lambda_chaining_return_type
+- case: test_mypy_pipe_lambda_chaining_return_type
   main: |
     from xarray import Dataset
 
@@ -22,7 +22,7 @@
 
     reveal_type(answer)  # N: Revealed type is "builtins.int"
 
-- case: test_pipe_lambda_missing_arg
+- case: test_mypy_pipe_lambda_missing_arg
   main: |
     from xarray import Dataset
 
@@ -34,7 +34,7 @@
     main:4: note:     def [P`2, T] pipe(self, func: Callable[[Dataset, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:4: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
-- case: test_pipe_lambda_extra_arg
+- case: test_mypy_pipe_lambda_extra_arg
   main: |
     from xarray import Dataset
 
@@ -46,7 +46,7 @@
     main:4: note:     def [P`2, T] pipe(self, func: Callable[[Dataset, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:4: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
-- case: test_pipe_function_missing_posarg
+- case: test_mypy_pipe_function_missing_posarg
   main: |
     from xarray import Dataset
 
@@ -61,7 +61,7 @@
     main:7: note:     def [P`2, T] pipe(self, func: Callable[[Dataset, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
-- case: test_pipe_function_extra_posarg
+- case: test_mypy_pipe_function_extra_posarg
   main: |
     from xarray import Dataset
 
@@ -76,7 +76,7 @@
     main:7: note:     def [P`2, T] pipe(self, func: Callable[[Dataset, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
-- case: test_pipe_function_missing_kwarg
+- case: test_mypy_pipe_function_missing_kwarg
   main: |
     from xarray import Dataset
 
@@ -91,7 +91,7 @@
     main:7: note:     def [P`2, T] pipe(self, func: Callable[[Dataset, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
-- case: test_pipe_function_missing_keyword
+- case: test_mypy_pipe_function_missing_keyword
   main: |
     from xarray import Dataset
 
@@ -106,7 +106,7 @@
     main:7: note:     def [P`2, T] pipe(self, func: Callable[[Dataset, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
-- case: test_pipe_function_unexpected_keyword
+- case: test_mypy_pipe_function_unexpected_keyword
   main: |
     from xarray import Dataset
 
@@ -118,7 +118,7 @@
   out: |
     main:7: error: Unexpected keyword argument "kw" for "pipe" of "DataWithCoords"  [call-arg]
 
-- case: test_pipe_tuple_return_type_dataset
+- case: test_mypy_pipe_tuple_return_type_dataset
   main: |
     from xarray import Dataset
 
@@ -128,7 +128,7 @@
     ds = Dataset().pipe((f, "ds"), 42)
     reveal_type(ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
 
-- case: test_pipe_tuple_return_type_other
+- case: test_mypy_pipe_tuple_return_type_other
   main: |
     from xarray import Dataset
 
@@ -139,7 +139,7 @@
 
     reveal_type(answer)  # N: Revealed type is "builtins.int"
 
-- case: test_pipe_tuple_missing_arg
+- case: test_mypy_pipe_tuple_missing_arg
   main: |
     from xarray import Dataset
 
@@ -164,7 +164,7 @@
     main:17: note:     def [P`9, T] pipe(self, func: Callable[[Dataset, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:17: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
-- case: test_pipe_tuple_extra_arg
+- case: test_mypy_pipe_tuple_extra_arg
   main: |
     from xarray import Dataset
 

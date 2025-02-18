@@ -49,6 +49,7 @@ jobs:
         # Bookend python versions
         python-version: ["3.10", "3.13"]
         env: [""]
+        numprocesses: [4]
         include:
           # Minimum python version:
           - env: "bare-minimum"
@@ -66,6 +67,16 @@ jobs:
             os: ubuntu-latest
           - env: "flaky"
             python-version: "3.13"
+            os: ubuntu-latest
+          # The mypy tests must be executed using only 1 process in order to guarantee
+          # predictable mypy output messages for comparison to expectations.
+          - env: "mypy"
+            python-version: "3.10"
+            numprocesses: 1
+            os: ubuntu-latest
+          - env: "mypy"
+            python-version: "3.13"
+            numprocesses: 1
             os: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -88,6 +99,10 @@ jobs:
             then
               echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
               echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests -W default" >> $GITHUB_ENV
+            elif [[ "${{ matrix.env }}" == "mypy" ]] ;
+            then
+              echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+              echo "PYTEST_ADDOPTS=-n 1 -m 'mypy' --run-mypy -W default" >> $GITHUB_ENV
             else
               echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
             fi
@@ -143,25 +158,12 @@ jobs:
           enableCrossOsArchive: true
           save-always: true
 
-      # Run all tests in *.py files, which excludes tests in *.yml files that test type
-      # annotations via the pytest-mypy-plugins plugin, because the type annotations
-      # tests fail when using multiple processes (the -n option to pytest).
       - name: Run tests
-        run: python -m pytest -n 4
+        run: python -m pytest -n ${{ matrix.numprocesses }}
           --timeout 180
           --cov=xarray
           --cov-report=xml
           --junitxml=pytest.xml
-          xarray/tests/test_*.py
-
-      # As noted in the comment on the previous step, we must run type annotation tests
-      # separately, and we will run them even if the preceding tests failed.  Further,
-      # we must restrict these tests to run only when matrix.env is empty, as this is
-      # the only case when all of the necessary dependencies are included such that
-      # spurious mypy errors due to missing packages are eliminated.
-      - name: Run mypy tests
-        if: ${{ always() && matrix.env == '' }}
-        run: python -m pytest xarray/tests/test_*.yml
 
       - name: Upload test results
         if: always()
