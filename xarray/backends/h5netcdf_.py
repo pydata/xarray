@@ -533,9 +533,11 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         # Keep this message for some versions
         # remove and set phony_dims="access" above
         emit_phony_dims_warning = False
+        print(phony_dims, phony_dims is None)
         if phony_dims is None:
             emit_phony_dims_warning = True
             phony_dims = "access"
+        print(phony_dims)
 
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
@@ -582,7 +584,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         # only warn if phony_dims exist in file
         # remove together with the above check
         # after some versions
-        if store.ds.get("_phony_dim_count", 0) and emit_phony_dims_warning:
+        if store.ds._phony_dim_count > 0 and emit_phony_dims_warning:
             emit_user_level_warning(
                 "The 'phony_dims' kwarg now defaults to 'access'. "
                 "Previously 'phony_dims=None' would raise an error. "
