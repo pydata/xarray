@@ -33,11 +33,13 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- Warn instead of raise when phony_dims are detected when using :py:func:`open_datatree` for h5netcdf-backend(:issue:`10049`, :pull:`10058`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Deprecations
 ~~~~~~~~~~~~
-
+- Move from phony_dims=None to phony_dims="access" inside :py:func:`open_datatree` for h5netcdf-backend(:issue:`10049`, :pull:`10058`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Bug fixes
 ~~~~~~~~~
