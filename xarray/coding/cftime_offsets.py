@@ -1128,7 +1128,7 @@ def cftime_range(
     pandas.date_range
     """
     emit_user_level_warning(
-        "cftime_range() is deprecated, please use xarray.date_range(use_cftime=True) instead.",
+        "cftime_range() is deprecated, please use xarray.date_range(..., use_cftime=True) instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -1270,11 +1270,153 @@ def date_range(
         If True, always return a CFTimeIndex.
         If False, return a pd.DatetimeIndex if possible or raise a ValueError.
         If None (default), return a pd.DatetimeIndex if possible,
-        otherwise return a CFTimeIndex. Defaults to False if `tz` is not None.
+        otherwise return a CFTimeIndex. Overridden to False if `tz` is not None.
 
     Returns
     -------
     CFTimeIndex or pd.DatetimeIndex
+
+    Notes
+    -----
+    When use_cftime=True, this function is an analog of ``pandas.date_range``
+    for use in generating sequences of ``cftime.datetime`` objects.  It supports most of the
+    features of ``pandas.date_range`` (e.g. specifying how the index is
+    ``closed`` on either side, or whether or not to ``normalize`` the start and
+    end bounds); however, there are some notable exceptions:
+
+    - You cannot specify a ``tz`` (time zone) argument.
+    - Start or end dates specified as partial-datetime strings must use the
+      `ISO-8601 format <https://en.wikipedia.org/wiki/ISO_8601>`_.
+    - It supports many, but not all, frequencies supported by
+      ``pandas.date_range``.  For example it does not currently support any of
+      the business-related or semi-monthly frequencies.
+    - Compound sub-monthly frequencies are not supported, e.g. '1H1min', as
+      these can easily be written in terms of the finest common resolution,
+      e.g. '61min'.
+
+    Valid simple frequency strings for use with ``cftime``-calendars include
+    any multiples of the following.
+
+    +--------+--------------------------+
+    | Alias  | Description              |
+    +========+==========================+
+    | YE     | Year-end frequency       |
+    +--------+--------------------------+
+    | YS     | Year-start frequency     |
+    +--------+--------------------------+
+    | QE     | Quarter-end frequency    |
+    +--------+--------------------------+
+    | QS     | Quarter-start frequency  |
+    +--------+--------------------------+
+    | ME     | Month-end frequency      |
+    +--------+--------------------------+
+    | MS     | Month-start frequency    |
+    +--------+--------------------------+
+    | D      | Day frequency            |
+    +--------+--------------------------+
+    | h      | Hour frequency           |
+    +--------+--------------------------+
+    | min    | Minute frequency         |
+    +--------+--------------------------+
+    | s      | Second frequency         |
+    +--------+--------------------------+
+    | ms     | Millisecond frequency    |
+    +--------+--------------------------+
+    | us     | Microsecond frequency    |
+    +--------+--------------------------+
+
+    Any multiples of the following anchored offsets are also supported.
+
+    +------------+--------------------------------------------------------------------+
+    | Alias      | Description                                                        |
+    +============+====================================================================+
+    | Y(E,S)-JAN | Annual frequency, anchored at the (end, beginning) of January      |
+    +------------+--------------------------------------------------------------------+
+    | Y(E,S)-FEB | Annual frequency, anchored at the (end, beginning) of February     |
+    +------------+--------------------------------------------------------------------+
+    | Y(E,S)-MAR | Annual frequency, anchored at the (end, beginning) of March        |
+    +------------+--------------------------------------------------------------------+
+    | Y(E,S)-APR | Annual frequency, anchored at the (end, beginning) of April        |
+    +------------+--------------------------------------------------------------------+
+    | Y(E,S)-MAY | Annual frequency, anchored at the (end, beginning) of May          |
+    +------------+--------------------------------------------------------------------+
+    | Y(E,S)-JUN | Annual frequency, anchored at the (end, beginning) of June         |
+    +------------+--------------------------------------------------------------------+
+    | Y(E,S)-JUL | Annual frequency, anchored at the (end, beginning) of July         |
+    +------------+--------------------------------------------------------------------+
+    | Y(E,S)-AUG | Annual frequency, anchored at the (end, beginning) of August       |
+    +------------+--------------------------------------------------------------------+
+    | Y(E,S)-SEP | Annual frequency, anchored at the (end, beginning) of September    |
+    +------------+--------------------------------------------------------------------+
+    | Y(E,S)-OCT | Annual frequency, anchored at the (end, beginning) of October      |
+    +------------+--------------------------------------------------------------------+
+    | Y(E,S)-NOV | Annual frequency, anchored at the (end, beginning) of November     |
+    +------------+--------------------------------------------------------------------+
+    | Y(E,S)-DEC | Annual frequency, anchored at the (end, beginning) of December     |
+    +------------+--------------------------------------------------------------------+
+    | Q(E,S)-JAN | Quarter frequency, anchored at the (end, beginning) of January     |
+    +------------+--------------------------------------------------------------------+
+    | Q(E,S)-FEB | Quarter frequency, anchored at the (end, beginning) of February    |
+    +------------+--------------------------------------------------------------------+
+    | Q(E,S)-MAR | Quarter frequency, anchored at the (end, beginning) of March       |
+    +------------+--------------------------------------------------------------------+
+    | Q(E,S)-APR | Quarter frequency, anchored at the (end, beginning) of April       |
+    +------------+--------------------------------------------------------------------+
+    | Q(E,S)-MAY | Quarter frequency, anchored at the (end, beginning) of May         |
+    +------------+--------------------------------------------------------------------+
+    | Q(E,S)-JUN | Quarter frequency, anchored at the (end, beginning) of June        |
+    +------------+--------------------------------------------------------------------+
+    | Q(E,S)-JUL | Quarter frequency, anchored at the (end, beginning) of July        |
+    +------------+--------------------------------------------------------------------+
+    | Q(E,S)-AUG | Quarter frequency, anchored at the (end, beginning) of August      |
+    +------------+--------------------------------------------------------------------+
+    | Q(E,S)-SEP | Quarter frequency, anchored at the (end, beginning) of September   |
+    +------------+--------------------------------------------------------------------+
+    | Q(E,S)-OCT | Quarter frequency, anchored at the (end, beginning) of October     |
+    +------------+--------------------------------------------------------------------+
+    | Q(E,S)-NOV | Quarter frequency, anchored at the (end, beginning) of November    |
+    +------------+--------------------------------------------------------------------+
+    | Q(E,S)-DEC | Quarter frequency, anchored at the (end, beginning) of December    |
+    +------------+--------------------------------------------------------------------+
+
+    Finally, the following calendar aliases are supported.
+
+    +--------------------------------+---------------------------------------+----------------------------+
+    | Alias                          | Date type                             | Available use_cftime=False |
+    +================================+=======================================+============================+
+    | standard, gregorian            | ``cftime.DatetimeGregorian``          | True                       |
+    +--------------------------------+---------------------------------------+----------------------------+
+    | proleptic_gregorian            | ``cftime.DatetimeProlepticGregorian`` | True                       |
+    +--------------------------------+---------------------------------------+----------------------------+
+    | noleap, 365_day                | ``cftime.DatetimeNoLeap``             | False                      |
+    +--------------------------------+---------------------------------------+----------------------------+
+    | all_leap, 366_day              | ``cftime.DatetimeAllLeap``            | False                      |
+    +--------------------------------+---------------------------------------+----------------------------+
+    | 360_day                        | ``cftime.Datetime360Day``             | False                      |
+    +--------------------------------+---------------------------------------+----------------------------+
+    | julian                         | ``cftime.DatetimeJulian``             | False                      |
+    +--------------------------------+---------------------------------------+----------------------------+
+
+    As in the standard pandas function, three of the ``start``, ``end``,
+    ``periods``, or ``freq`` arguments must be specified at a given time, with
+    the other set to ``None`` if use_cftime=False. If use_cftime=True, exactly
+    3 of the 4 can be set or 2 out of ``start``, ``end``, and``periods`` can be
+    set and ``freq`` will default to 'D'.  See the `pandas documentation
+    <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.date_range.html>`_
+    for more examples of the behavior of ``date_range`` with each of the
+    parameters.
+
+    Examples
+    --------
+    This function returns a ``CFTimeIndex``, populated with ``cftime.datetime``
+    objects associated with the specified calendar type, e.g.
+
+    >>> xr.date_range(
+    ...     start="2000", periods=6, freq="2MS", calendar="noleap", use_cftime=True
+    ... )
+    CFTimeIndex([2000-01-01 00:00:00, 2000-03-01 00:00:00, 2000-05-01 00:00:00,
+                 2000-07-01 00:00:00, 2000-09-01 00:00:00, 2000-11-01 00:00:00],
+                dtype='object', length=6, calendar='noleap', freq='2MS')
 
     See also
     --------
