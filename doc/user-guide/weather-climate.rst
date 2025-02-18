@@ -100,7 +100,10 @@ coordinate with dates from a no-leap calendar and a
 
 Xarray also includes a :py:func:`~xarray.date_range` function, which enables
 creating a :py:class:`~xarray.CFTimeIndex` with regularly-spaced dates.  For
-instance, we can create the same dates and DataArray we created above using:
+instance, we can create the same dates and DataArray we created above using
+(note that ``use_cftime=True`` is not mandatory to return a 
+:py:class:`~xarray.CFTimeIndex` for non-standard calendars, but can be nice
+to use to be explicit):
 
 .. ipython:: python
 
