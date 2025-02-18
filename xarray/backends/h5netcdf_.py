@@ -483,17 +483,6 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         driver_kwds=None,
         **kwargs,
     ) -> DataTree:
-        # Keep this message for some versions
-        # remove and set phony_dims="access" above
-        if phony_dims is None:
-            emit_user_level_warning(
-                "The 'phony_dims' kwarg now defaults to 'access'. "
-                "Previously 'phony_dims=None' would raise an error. "
-                "For full netcdf equivalence please use phony_dims='sort'.",
-                UserWarning,
-            )
-            phony_dims = "access"
-
         groups_dict = self.open_groups_as_dict(
             filename_or_obj,
             mask_and_scale=mask_and_scale,
@@ -543,13 +532,9 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         # Keep this message for some versions
         # remove and set phony_dims="access" above
+        emit_phony_dims_warning = False
         if phony_dims is None:
-            emit_user_level_warning(
-                "The 'phony_dims' kwarg now defaults to 'access'. "
-                "Previously 'phony_dims=None' would raise an error. "
-                "For full netcdf equivalence please use phony_dims='sort'.",
-                UserWarning,
-            )
+            emit_phony_dims_warning = True
             phony_dims = "access"
 
         filename_or_obj = _normalize_path(filename_or_obj)
@@ -564,6 +549,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             driver=driver,
             driver_kwds=driver_kwds,
         )
+
         # Check for a group and make it a parent if it exists
         if group:
             parent = NodePath("/") / NodePath(group)
@@ -592,6 +578,17 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             else:
                 group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
+
+        # only warn if phony_dims exist in file
+        # remove together with the above check
+        # after some versions
+        if store.ds.get("_phony_dim_count", 0) and emit_phony_dims_warning:
+            emit_user_level_warning(
+                "The 'phony_dims' kwarg now defaults to 'access'. "
+                "Previously 'phony_dims=None' would raise an error. "
+                "For full netcdf equivalence please use phony_dims='sort'.",
+                UserWarning,
+            )
 
         return groups_dict
 
