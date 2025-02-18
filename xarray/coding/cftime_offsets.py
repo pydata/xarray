@@ -1130,7 +1130,6 @@ def cftime_range(
     emit_user_level_warning(
         "cftime_range() is deprecated, please use xarray.date_range(..., use_cftime=True) instead.",
         DeprecationWarning,
-        stacklevel=2,
     )
 
     return date_range(
