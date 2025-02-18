@@ -898,7 +898,7 @@ def _generate_date_range_with_freq(start, end, periods, freq):
     periods : int, or None
         Number of elements in the sequence
     freq: str
-        Step size bewtween cftime.datetime objects. Not None.
+        Step size between cftime.datetime objects. Not None.
 
     Returns
     -------
