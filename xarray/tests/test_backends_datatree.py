@@ -368,6 +368,7 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
             assert_equal(subgroup_tree, expected_subtree)
 
 
+@pytest.mark.filterwarnings("ignore:.*phony_dims.*")
 @requires_h5netcdf
 class TestH5NetCDFDatatreeIO(DatatreeIOBase):
     engine: T_DataTreeNetcdfEngine | None = "h5netcdf"
