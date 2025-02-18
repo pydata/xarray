@@ -12,6 +12,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering",
 ]
 description = "N-D labeled arrays and datasets in Python"
@@ -48,7 +49,7 @@ dev = [
   "ruff>=0.8.0",
   "sphinx",
   "sphinx_autosummary_accessors",
-  "xarray[complete]",
+  "xarray[complete,types]",
 ]
 io = [
   "netCDF4",
@@ -63,6 +64,21 @@ io = [
 etc = ["sparse"]
 parallel = ["dask[complete]"]
 viz = ["cartopy", "matplotlib", "nc-time-axis", "seaborn"]
+types = [
+  "pandas-stubs",
+  "types-PyYAML",
+  "types-Pygments",
+  "types-colorama",
+  "types-defusedxml",
+  "types-docutils",
+  "types-networkx",
+  "types-pexpect",
+  "types-psutil",
+  "types-pycurl",
+  "types-python-dateutil",
+  "types-pytz",
+  "types-setuptools",
+]
 
 [project.urls]
 Documentation = "https://docs.xarray.dev"
