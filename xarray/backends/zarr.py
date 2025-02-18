@@ -398,7 +398,12 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
 
         # NCZarr defines dimensions through metadata in .zarray
         zarray_path = os.path.join(zarr_obj.path, ".zarray")
-        zarray = json.loads(zarr_obj.store.get(zarray_path))
+        if _zarr_v3():
+            import asyncio
+            zarray_str = asyncio.run(zarr_obj.store.get(zarray_path)).to_bytes()
+        else:
+            zarray_str = zarr_obj.store.get(zarray_path)
+        zarray = json.loads(zarray_str)
         try:
             # NCZarr uses Fully Qualified Names
             dimensions = [
