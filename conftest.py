@@ -3,7 +3,7 @@
 import pytest
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: pytest.Parser):
     """Add command-line flags for pytest."""
     parser.addoption("--run-flaky", action="store_true", help="runs flaky tests")
     parser.addoption(
@@ -11,6 +11,7 @@ def pytest_addoption(parser):
         action="store_true",
         help="runs tests requiring a network connection",
     )
+    parser.addoption("--run-mypy", action="store_true", help="runs mypy tests")
 
 
 def pytest_runtest_setup(item):
@@ -21,6 +22,21 @@ def pytest_runtest_setup(item):
         pytest.skip(
             "set --run-network-tests to run test requiring an internet connection"
         )
+    if "mypy" in item.keywords and not item.config.getoption("--run-mypy"):
+        pytest.skip("set --run-mypy option to run mypy tests")
+
+
+# See https://docs.pytest.org/en/stable/example/markers.html#automatically-adding-markers-based-on-test-names
+def pytest_collection_modifyitems(items):
+    for item in items:
+        if "mypy" in item.nodeid:
+            # IMPORTANT: mypy type annotation tests leverage the pytest-mypy-plugins
+            # plugin, and are thus written in test_*.yml files.  As such, there are
+            # no explicit test functions on which we can apply a pytest.mark.mypy
+            # decorator.  Therefore, we mark them via this name-based, automatic
+            # marking approach, meaning that each test case must contain "mypy" in the
+            # name.
+            item.add_marker(pytest.mark.mypy)
 
 
 @pytest.fixture(autouse=True)
