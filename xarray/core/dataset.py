@@ -413,6 +413,7 @@ def merge_data_and_coords(data_vars: DataVars, coords) -> _MergeResult:
         [data_vars, coords],
         compat="broadcast_equals",
         join="outer",
+        combine_attrs="override",
         explicit_coords=tuple(coords),
         indexes=coords.xindexes,
         priority_arg=1,
@@ -5506,7 +5507,14 @@ class Dataset(
 
         # concatenate the arrays
         stackable_vars = [stack_dataarray(da) for da in self.data_vars.values()]
-        data_array = concat(stackable_vars, dim=new_dim)
+        data_array = concat(
+            stackable_vars,
+            dim=new_dim,
+            data_vars="all",
+            coords="different",
+            compat="equals",
+            join="outer",
+        )
 
         if name is not None:
             data_array.name = name
@@ -5750,8 +5758,8 @@ class Dataset(
         self,
         other: CoercibleMapping | DataArray,
         overwrite_vars: Hashable | Iterable[Hashable] = frozenset(),
-        compat: CompatOptions = "no_conflicts",
-        join: JoinOptions = "outer",
+        compat: CompatOptions | None = None,
+        join: JoinOptions | None = None,
         fill_value: Any = xrdtypes.NA,
         combine_attrs: CombineAttrsOptions = "override",
     ) -> Self:
@@ -5834,6 +5842,7 @@ class Dataset(
         from xarray.core.dataarray import DataArray
 
         other = other.to_dataset() if isinstance(other, DataArray) else other
+
         merge_result = dataset_merge_method(
             self,
             other,

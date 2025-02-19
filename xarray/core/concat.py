@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import dtypes, utils
-from xarray.core.alignment import align, reindex_variables
+from xarray.core.alignment import Aligner, reindex_variables
 from xarray.core.coordinates import Coordinates
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import Index, PandasIndex
@@ -16,6 +16,10 @@ from xarray.core.merge import (
     collect_variables_and_indexes,
     merge_attrs,
     merge_collected,
+)
+from xarray.core.options import (
+    _get_default_combine_kwargs,
+    _new_default_combine_kwargs_warning,
 )
 from xarray.core.types import T_DataArray, T_Dataset, T_Variable
 from xarray.core.variable import Variable
@@ -37,12 +41,12 @@ if TYPE_CHECKING:
 def concat(
     objs: Iterable[T_Dataset],
     dim: Hashable | T_Variable | T_DataArray | pd.Index | Any,
-    data_vars: T_DataVars = "all",
-    coords: ConcatOptions | list[Hashable] = "different",
-    compat: CompatOptions = "equals",
+    data_vars: T_DataVars | None = None,
+    coords: ConcatOptions | list[Hashable] | None = None,
+    compat: CompatOptions | None = None,
     positions: Iterable[Iterable[int]] | None = None,
     fill_value: object = dtypes.NA,
-    join: JoinOptions = "outer",
+    join: JoinOptions | None = None,
     combine_attrs: CombineAttrsOptions = "override",
     create_index_for_new_dim: bool = True,
 ) -> T_Dataset: ...
@@ -52,12 +56,12 @@ def concat(
 def concat(
     objs: Iterable[T_DataArray],
     dim: Hashable | T_Variable | T_DataArray | pd.Index | Any,
-    data_vars: T_DataVars = "all",
-    coords: ConcatOptions | list[Hashable] = "different",
-    compat: CompatOptions = "equals",
+    data_vars: T_DataVars | None = None,
+    coords: ConcatOptions | list[Hashable] | None = None,
+    compat: CompatOptions | None = None,
     positions: Iterable[Iterable[int]] | None = None,
     fill_value: object = dtypes.NA,
-    join: JoinOptions = "outer",
+    join: JoinOptions | None = None,
     combine_attrs: CombineAttrsOptions = "override",
     create_index_for_new_dim: bool = True,
 ) -> T_DataArray: ...
@@ -66,14 +70,15 @@ def concat(
 def concat(
     objs,
     dim,
-    data_vars: T_DataVars = "all",
-    coords="different",
-    compat: CompatOptions = "equals",
-    positions=None,
-    fill_value=dtypes.NA,
-    join: JoinOptions = "outer",
+    data_vars: T_DataVars | None = None,
+    coords: ConcatOptions | list[Hashable] | None = None,
+    compat: CompatOptions | None = None,
+    positions: Iterable[Iterable[int]] | None = None,
+    fill_value: object = dtypes.NA,
+    join: JoinOptions | None = None,
     combine_attrs: CombineAttrsOptions = "override",
     create_index_for_new_dim: bool = True,
+    _from_concat: bool = True,
 ):
     """Concatenate xarray objects along a new or existing dimension.
 
@@ -255,11 +260,6 @@ def concat(
     except StopIteration as err:
         raise ValueError("must supply at least one object to concatenate") from err
 
-    if compat not in set(_VALID_COMPAT) - {"minimal"}:
-        raise ValueError(
-            f"compat={compat!r} invalid: must be 'broadcast_equals', 'equals', 'identical', 'no_conflicts' or 'override'"
-        )
-
     if isinstance(first_obj, DataArray):
         return _dataarray_concat(
             objs,
@@ -272,6 +272,7 @@ def concat(
             join=join,
             combine_attrs=combine_attrs,
             create_index_for_new_dim=create_index_for_new_dim,
+            from_concat=_from_concat,
         )
     elif isinstance(first_obj, Dataset):
         return _dataset_concat(
@@ -285,6 +286,8 @@ def concat(
             join=join,
             combine_attrs=combine_attrs,
             create_index_for_new_dim=create_index_for_new_dim,
+            from_datasets=True,
+            from_concat=_from_concat,
         )
     else:
         raise TypeError(
@@ -320,7 +323,15 @@ def _calc_concat_dim_index(
     return dim, index
 
 
-def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, compat):
+def _calc_concat_over(
+    datasets,
+    dim,
+    dim_names,
+    data_vars: T_DataVars,
+    coords,
+    compat,
+    uses_default: list[str],
+):
     """
     Determine which dataset variables need to be concatenated in the result,
     """
@@ -344,11 +355,30 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
         concat_dim_lengths.append(ds.sizes.get(dim, 1))
 
     def process_subset_opt(opt, subset):
+        original = set(concat_over)
         if isinstance(opt, str):
             if opt == "different":
+                if "compat" in uses_default and compat != "override":
+                    if subset == "data_vars" or subset not in uses_default:
+                        _new_default_combine_kwargs_warning(
+                            "compat",
+                            compat,
+                            "This change will result in the following ValueError:"
+                            "Cannot specify both {subset}='different' and compat='override'.",
+                            recommend_set_options=False,
+                        )
+
                 if compat == "override":
+                    new_default_warning = (
+                        "Failure might be related to new default (compat='override'). "
+                        "Previously the default was compat='equals' or compat='no_conflicts'. "
+                        "The recommendation is to set compat explicitly for this case."
+                    )
                     raise ValueError(
-                        f"Cannot specify both {subset}='different' and compat='override'."
+                        f"Cannot specify both {subset}='different' and compat='override'. "
+                        + new_default_warning
+                        if "compat" in uses_default
+                        else ""
                     )
                 # all nonindexes that are not the same in each dataset
                 for k in getattr(datasets[0], subset):
@@ -418,6 +448,14 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
                 pass
             else:
                 raise ValueError(f"unexpected value for {subset}: {opt}")
+
+            if subset in uses_default and original != concat_over:
+                _new_default_combine_kwargs_warning(
+                    subset,
+                    opt,
+                    "This is likely to lead to different results when multiple datasets"
+                    "have matching variables with overlapping values.",
+                )
         else:
             valid_vars = tuple(getattr(datasets[0], subset))
             invalid_vars = [k for k in opt if k not in valid_vars]
@@ -487,6 +525,8 @@ def _dataset_concat(
     join: JoinOptions,
     combine_attrs: CombineAttrsOptions,
     create_index_for_new_dim: bool,
+    from_concat: bool = True,
+    from_datasets: bool = True,
 ) -> T_Dataset:
     """
     Concatenate a sequence of datasets along a new or existing dimension
@@ -501,6 +541,44 @@ def _dataset_concat(
             "The elements in the input list need to be either all 'Dataset's or all 'DataArray's"
         )
 
+    if compat is not None and compat not in set(_VALID_COMPAT) - {"minimal"}:
+        raise ValueError(
+            f"compat={compat!r} invalid: must be 'broadcast_equals', 'equals', 'identical', 'no_conflicts' or 'override'"
+        )
+
+    default_kwargs = _get_default_combine_kwargs(from_concat=from_concat)
+
+    uses_default = []
+    if data_vars is None:
+        data_vars = default_kwargs["data_vars"]
+        uses_default.append("data_vars")
+
+    if coords is None:
+        coords = default_kwargs["coords"]
+        uses_default.append("coords")
+
+    if compat is None:
+        compat = default_kwargs["compat"]
+        uses_default.append("compat")
+
+    if join is None:
+        join = default_kwargs["join"]
+        uses_default.append("join")
+
+    if from_datasets and "data_vars" in uses_default and data_vars == "all":
+        if not isinstance(dim, str):
+            _new_default_combine_kwargs_warning(
+                "data_vars",
+                data_vars,
+                "This is likely to lead to different results when using an object as the concat_dim.",
+            )
+        elif dim is not None and all(dim not in ds for ds in datasets):
+            _new_default_combine_kwargs_warning(
+                "data_vars",
+                data_vars,
+                "This is likely to lead to different results when constructing a new dimension.",
+            )
+
     if isinstance(dim, DataArray):
         dim_var = dim.variable
     elif isinstance(dim, Variable):
@@ -512,11 +590,14 @@ def _dataset_concat(
 
     # Make sure we're working on a copy (we'll be loading variables)
     datasets = [ds.copy() for ds in datasets]
-    datasets = list(
-        align(
-            *datasets, join=join, copy=False, exclude=[dim_name], fill_value=fill_value
-        )
+
+    # Align indexes while retaining context of the original "join" input value
+    aligner = Aligner(
+        datasets, join=join, copy=False, exclude_dims=[dim_name], fill_value=fill_value
     )
+    aligner.join_is_default = "join" in uses_default
+    aligner.align()
+    datasets = list(aligner.results)
 
     dim_coords, dims_sizes, coord_names, data_names, vars_order = _parse_datasets(
         datasets
@@ -543,7 +624,7 @@ def _dataset_concat(
 
     # determine which variables to concatenate
     concat_over, equals, concat_dim_lengths = _calc_concat_over(
-        datasets, dim_name, dim_names, data_vars, coords, compat
+        datasets, dim_name, dim_names, data_vars, coords, compat, uses_default
     )
 
     # determine which variables to merge, and then merge them according to compat
@@ -718,14 +799,15 @@ def _dataset_concat(
 def _dataarray_concat(
     arrays: Iterable[T_DataArray],
     dim: str | T_Variable | T_DataArray | pd.Index,
-    data_vars: T_DataVars,
-    coords: str | list[str],
-    compat: CompatOptions,
+    data_vars: T_DataVars | None,
+    coords: str | list[str] | None,
+    compat: CompatOptions | None,
     positions: Iterable[Iterable[int]] | None,
     fill_value: object,
-    join: JoinOptions,
+    join: JoinOptions | None,
     combine_attrs: CombineAttrsOptions,
     create_index_for_new_dim: bool,
+    from_concat: bool,
 ) -> T_DataArray:
     from xarray.core.dataarray import DataArray
 
@@ -736,7 +818,7 @@ def _dataarray_concat(
             "The elements in the input list need to be either all 'Dataset's or all 'DataArray's"
         )
 
-    if data_vars != "all":
+    if data_vars not in [None, "all", "minimal"]:
         raise ValueError(
             "data_vars is not a valid argument when concatenating DataArray objects"
         )
@@ -763,6 +845,8 @@ def _dataarray_concat(
         join=join,
         combine_attrs=combine_attrs,
         create_index_for_new_dim=create_index_for_new_dim,
+        from_datasets=False,
+        from_concat=from_concat,
     )
 
     merged_attrs = merge_attrs([da.attrs for da in arrays], combine_attrs)

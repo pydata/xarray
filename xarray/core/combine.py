@@ -202,9 +202,9 @@ def _combine_nd(
     concat_dims,
     data_vars,
     coords,
-    compat: CompatOptions,
+    compat: CompatOptions | None,
     fill_value,
-    join: JoinOptions,
+    join: JoinOptions | None,
     combine_attrs: CombineAttrsOptions,
 ):
     """
@@ -314,6 +314,7 @@ def _combine_1d(
                 fill_value=fill_value,
                 join=join,
                 combine_attrs=combine_attrs,
+                _from_concat=False,
             )
         except ValueError as err:
             if "encountered unexpected variable" in str(err):
@@ -345,17 +346,20 @@ def _new_tile_id(single_id_ds_pair):
 
 def _nested_combine(
     datasets,
-    concat_dims,
+    concat_dim,
     compat,
     data_vars,
     coords,
     ids,
     fill_value,
-    join: JoinOptions,
+    join,
     combine_attrs: CombineAttrsOptions,
 ):
     if len(datasets) == 0:
         return Dataset()
+
+    if isinstance(concat_dim, str | DataArray) or concat_dim is None:
+        concat_dim = [concat_dim]  # type: ignore[assignment]
 
     # Arrange datasets for concatenation
     # Use information from the shape of the user input
@@ -373,10 +377,10 @@ def _nested_combine(
     # Apply series of concatenate or merge operations along each dimension
     combined = _combine_nd(
         combined_ids,
-        concat_dims,
-        compat=compat,
+        concat_dims=concat_dim,
         data_vars=data_vars,
         coords=coords,
+        compat=compat,
         fill_value=fill_value,
         join=join,
         combine_attrs=combine_attrs,
@@ -391,11 +395,11 @@ DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]
 def combine_nested(
     datasets: DATASET_HYPERCUBE,
     concat_dim: str | DataArray | None | Sequence[str | DataArray | pd.Index | None],
-    compat: str = "no_conflicts",
-    data_vars: str = "all",
-    coords: str = "different",
+    compat: str | None = None,
+    data_vars: str | None = None,
+    coords: str | None = None,
     fill_value: object = dtypes.NA,
-    join: JoinOptions = "outer",
+    join: JoinOptions | None = None,
     combine_attrs: CombineAttrsOptions = "drop",
 ) -> Dataset:
     """
@@ -588,13 +592,10 @@ def combine_nested(
     if mixed_datasets_and_arrays:
         raise ValueError("Can't combine datasets with unnamed arrays.")
 
-    if isinstance(concat_dim, str | DataArray) or concat_dim is None:
-        concat_dim = [concat_dim]
-
     # The IDs argument tells _nested_combine that datasets aren't yet sorted
     return _nested_combine(
         datasets,
-        concat_dims=concat_dim,
+        concat_dim=concat_dim,
         compat=compat,
         data_vars=data_vars,
         coords=coords,
@@ -629,8 +630,8 @@ def _combine_single_variable_hypercube(
     fill_value,
     data_vars,
     coords,
-    compat: CompatOptions,
-    join: JoinOptions,
+    compat: CompatOptions | None,
+    join: JoinOptions | None,
     combine_attrs: CombineAttrsOptions,
 ):
     """
@@ -685,11 +686,11 @@ def _combine_single_variable_hypercube(
 
 def combine_by_coords(
     data_objects: Iterable[Dataset | DataArray] = [],
-    compat: CompatOptions = "no_conflicts",
-    data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
-    coords: str = "different",
+    compat: CompatOptions | None = None,
+    data_vars: Literal["all", "minimal", "different"] | list[str] | None = None,
+    coords: str | None = None,
     fill_value: object = dtypes.NA,
-    join: JoinOptions = "outer",
+    join: JoinOptions | None = None,
     combine_attrs: CombineAttrsOptions = "no_conflicts",
 ) -> Dataset | DataArray:
     """
