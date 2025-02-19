@@ -1281,7 +1281,8 @@ def test_invalid_date_range_cftime_inputs(
     freq: str | None,
     inclusive: Literal["up", None],
 ) -> None:
-    date_range(start, end, periods, freq, inclusive=inclusive, use_cftime=True)  # type: ignore[arg-type]
+    with pytest.raises(ValueError):
+        date_range(start, end, periods, freq, inclusive=inclusive, use_cftime=True)  # type: ignore[arg-type]
 
 
 _CALENDAR_SPECIFIC_MONTH_END_TESTS = [
