@@ -372,6 +372,23 @@ class H5NetCDFStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
+def _check_phony_dims(phony_dims):
+    emit_phony_dims_warning = False
+    if phony_dims is None:
+        emit_phony_dims_warning = True
+        phony_dims = "access"
+    return emit_phony_dims_warning, phony_dims
+
+
+def _emit_phony_dims_warning():
+    emit_user_level_warning(
+        "The 'phony_dims' kwarg now defaults to 'access'. "
+        "Previously 'phony_dims=None' would raise an error. "
+        "For full netcdf equivalence please use phony_dims='sort'.",
+        UserWarning,
+    )
+
+
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the h5netcdf package.
@@ -434,6 +451,10 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         driver_kwds=None,
         storage_options: dict[str, Any] | None = None,
     ) -> Dataset:
+        # Keep this message for some versions
+        # remove and set phony_dims="access" above
+        emit_phony_dims_warning, phony_dims = _check_phony_dims(phony_dims)
+
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
@@ -460,6 +481,13 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             use_cftime=use_cftime,
             decode_timedelta=decode_timedelta,
         )
+
+        # only warn if phony_dims exist in file
+        # remove together with the above check
+        # after some versions
+        if store.ds._root._phony_dim_count > 0 and emit_phony_dims_warning:
+            _emit_phony_dims_warning()
+
         return ds
 
     def open_datatree(
@@ -532,12 +560,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         # Keep this message for some versions
         # remove and set phony_dims="access" above
-        emit_phony_dims_warning = False
-        print(phony_dims, phony_dims is None)
-        if phony_dims is None:
-            emit_phony_dims_warning = True
-            phony_dims = "access"
-        print(phony_dims)
+        emit_phony_dims_warning, phony_dims = _check_phony_dims(phony_dims)
 
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
@@ -585,12 +608,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         # remove together with the above check
         # after some versions
         if store.ds._phony_dim_count > 0 and emit_phony_dims_warning:
-            emit_user_level_warning(
-                "The 'phony_dims' kwarg now defaults to 'access'. "
-                "Previously 'phony_dims=None' would raise an error. "
-                "For full netcdf equivalence please use phony_dims='sort'.",
-                UserWarning,
-            )
+            _emit_phony_dims_warning()
 
         return groups_dict
 
