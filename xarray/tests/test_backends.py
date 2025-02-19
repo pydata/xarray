@@ -4170,7 +4170,7 @@ class TestH5NetCDFData(NetCDF4Base):
         with self.roundtrip(expected) as actual:
             assert_equal(expected, actual)
 
-    def test_phony_dims_warning(self, tmpdir) -> None:
+    def test_phony_dims_warning(self) -> None:
         import h5py
 
         foo_data = np.arange(125).reshape(5, 5, 5)
