@@ -304,7 +304,7 @@ class Index:
         """
         raise NotImplementedError(f"{self!r} doesn't support re-indexing labels")
 
-    def equals(self, other: Self) -> bool:
+    def equals(self, other: Index) -> bool:
         """Compare this index with another index of the same type.
 
         Implementation is optional but required in order to support alignment.
@@ -1486,7 +1486,9 @@ class CoordinateTransformIndex(Index):
 
         return IndexSelResult(results)
 
-    def equals(self, other: Self) -> bool:
+    def equals(self, other: Index) -> bool:
+        if not isinstance(other, CoordinateTransformIndex):
+            return False
         return self.transform.equals(other.transform)
 
     def rename(
