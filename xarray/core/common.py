@@ -6,7 +6,7 @@ from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar, Union, overload
 
 import numpy as np
 import pandas as pd
@@ -60,6 +60,7 @@ if TYPE_CHECKING:
 T_Resample = TypeVar("T_Resample", bound="Resample")
 C = TypeVar("C")
 T = TypeVar("T")
+P = ParamSpec("P")
 
 
 class ImplementsArrayReduce:
@@ -718,11 +719,27 @@ class DataWithCoords(AttrAccessMixin):
         out.attrs.update(*args, **kwargs)
         return out
 
+    @overload
     def pipe(
         self,
-        func: Callable[..., T] | tuple[Callable[..., T], str],
+        func: Callable[Concatenate[Self, P], T],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T: ...
+
+    @overload
+    def pipe(
+        self,
+        func: tuple[Callable[..., T], str],
         *args: Any,
         **kwargs: Any,
+    ) -> T: ...
+
+    def pipe(
+        self,
+        func: Callable[Concatenate[Self, P], T] | tuple[Callable[P, T], str],
+        *args: P.args,
+        **kwargs: P.kwargs,
     ) -> T:
         """
         Apply ``func(self, *args, **kwargs)``
@@ -840,15 +857,19 @@ class DataWithCoords(AttrAccessMixin):
         pandas.DataFrame.pipe
         """
         if isinstance(func, tuple):
-            func, target = func
+            # Use different var when unpacking function from tuple because the type
+            # signature of the unpacked function differs from the expected type
+            # signature in the case where only a function is given, rather than a tuple.
+            # This makes type checkers happy at both call sites below.
+            f, target = func
             if target in kwargs:
                 raise ValueError(
                     f"{target} is both the pipe target and a keyword argument"
                 )
             kwargs[target] = self
-            return func(*args, **kwargs)
-        else:
-            return func(self, *args, **kwargs)
+            return f(*args, **kwargs)
+
+        return func(self, *args, **kwargs)
 
     def rolling_exp(
         self: T_DataWithCoords,
