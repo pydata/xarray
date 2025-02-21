@@ -1190,8 +1190,10 @@ def _cftime_range(
     # Adapted from pandas.core.indexes.datetimes._generate_range.
     if count_not_none(start, end, periods, freq) != 3:
         raise ValueError(
-            "Invalid combination of the arguments 'start', 'end', 'periods', "
-            "and 'freq' specified."
+            "Exactly three of 'start', 'end', 'periods', or 'freq' must be "
+            "specified to generate a date range. Note that 'freq' defaults to "
+            "'D' in the event that any of 'start', 'end', or 'periods' are "
+            "None."
         )
 
     start = _get_normalized_cfdate(start, calendar, normalize)
