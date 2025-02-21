@@ -37,7 +37,9 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-xarray.cftime_range deprecated in favor of xarray.data_range(use_cftime=True)
+- Deprecate :py:func:`~xarray.cftime_range` in favor of :py:func:`~xarray.date_range` with ``use_cftime=True``
+  (:issue:`9886`, :pull:`10024`).
+  By `Josh Kihm <https://github.com/maddogghoek>`_.
 
 Bug fixes
 ~~~~~~~~~
