@@ -209,7 +209,7 @@ class Index:
 
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
-    ) -> Self | None:
+    ) -> Index | None:
         """Maybe returns a new index from the current index itself indexed by
         positional indexers.
 
@@ -1424,7 +1424,7 @@ class CoordinateTransformIndex(Index):
 
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
-    ) -> Self | None:
+    ) -> Index | None:
         # TODO: support returning a new index (e.g., possible to re-calculate the
         # the transform or calculate another transform on a reduced dimension space)
         return None
