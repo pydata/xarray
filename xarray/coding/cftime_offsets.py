@@ -1399,12 +1399,10 @@ def date_range(
     | julian                         | ``cftime.DatetimeJulian``             | False                      |
     +--------------------------------+---------------------------------------+----------------------------+
 
-    As in the standard pandas function, three of the ``start``, ``end``,
-    ``periods``, or ``freq`` arguments must be specified at a given time, with
-    the other set to ``None`` if use_cftime=False. If use_cftime=True, exactly
-    3 of the 4 can be set or 2 out of ``start``, ``end``, and``periods`` can be
-    set and ``freq`` will default to 'D'.  See the `pandas documentation
-    <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.date_range.html>`_
+    As in the standard pandas function, exactly three of ``start``, ``end``,
+    ``periods``, or ``freq`` are required to generate a date range. Note that 
+    ``freq`` defaults to ``"D"`` in the event that any of ``start``, ``end``, 
+    or ``periods`` are set to ``None``. See the `pandas documentation <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.date_range.html>`_
     for more examples of the behavior of ``date_range`` with each of the
     parameters.
 
