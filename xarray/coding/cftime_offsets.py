@@ -1279,7 +1279,8 @@ def date_range(
 
     Notes
     -----
-    When use_cftime=True, this function is an analog of ``pandas.date_range``
+    When ``use_cftime=True``, or a calendar other than "standard", "gregorian",
+    or "proleptic_gregorian" is provided, this function is an analog of ``pandas.date_range``
     for use in generating sequences of ``cftime.datetime`` objects.  It supports most of the
     features of ``pandas.date_range`` (e.g. specifying how the index is
     ``closed`` on either side, or whether or not to ``normalize`` the start and
