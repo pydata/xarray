@@ -1400,8 +1400,8 @@ def date_range(
     +--------------------------------+---------------------------------------+----------------------------+
 
     As in the standard pandas function, exactly three of ``start``, ``end``,
-    ``periods``, or ``freq`` are required to generate a date range. Note that 
-    ``freq`` defaults to ``"D"`` in the event that any of ``start``, ``end``, 
+    ``periods``, or ``freq`` are required to generate a date range. Note that
+    ``freq`` defaults to ``"D"`` in the event that any of ``start``, ``end``,
     or ``periods`` are set to ``None``. See the `pandas documentation <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.date_range.html>`_
     for more examples of the behavior of ``date_range`` with each of the
     parameters.
