@@ -701,10 +701,6 @@ def _infer_time_units_from_diff(unique_timedeltas) -> str:
     return "seconds"
 
 
-def _time_units_to_timedelta64(units: str) -> np.timedelta64:
-    return np.timedelta64(1, _netcdf_to_numpy_timeunit(units)).astype("timedelta64[ns]")
-
-
 def _time_units_to_timedelta(units: str) -> timedelta:
     return timedelta(microseconds=_US_PER_TIME_DELTA[units])
 
