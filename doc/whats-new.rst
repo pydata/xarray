@@ -30,6 +30,10 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Added experimental support for coordinate transforms (not ready for public use yet!) (:pull:`9543`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Similar to our :py:class:`numpy.datetime64` encoding path, automatically
+  modify the units when an integer dtype is specified during eager cftime
+  encoding, but the specified units would not allow for an exact round trip
+  (:pull:`9498`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -53,6 +57,13 @@ Bug fixes
 - Fix DataArray().drop_attrs(deep=False) and add support for attrs to
   DataArray()._replace(). (:issue:`10027`, :pull:`10030`). By `Jan
   Haacker <https://github.com/j-haacker>`_.
+- Fix bug preventing encoding times with missing values with small integer
+  dtype (:issue:`9134`, :pull:`9498`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- More robustly raise an error when lazily encoding times and an
+  integer dtype is specified with units that do not allow for an exact round
+  trip (:pull:`9498`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 
 Documentation
