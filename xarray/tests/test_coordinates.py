@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -8,7 +10,7 @@ from xarray.core.alignment import align
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
-from xarray.core.indexes import PandasIndex, PandasMultiIndex
+from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex
 from xarray.core.variable import IndexVariable, Variable
 from xarray.tests import assert_identical, source_ndarray
 
@@ -64,11 +66,35 @@ class TestCoordinates:
             Coordinates(indexes={"x": idx})
 
         with pytest.raises(TypeError, match=".* is not an `xarray.indexes.Index`"):
-            Coordinates(coords={"x": ("x", [1, 2, 3])}, indexes={"x": "not_an_xarray_index"})  # type: ignore[dict-item]
+            Coordinates(
+                coords={"x": ("x", [1, 2, 3])},
+                indexes={"x": "not_an_xarray_index"},  # type: ignore[dict-item]
+            )
 
     def test_init_dim_sizes_conflict(self) -> None:
         with pytest.raises(ValueError):
             Coordinates(coords={"foo": ("x", [1, 2]), "bar": ("x", [1, 2, 3, 4])})
+
+    def test_from_xindex(self) -> None:
+        idx = PandasIndex([1, 2, 3], "x")
+        coords = Coordinates.from_xindex(idx)
+
+        assert isinstance(coords.xindexes["x"], PandasIndex)
+        assert coords.xindexes["x"].equals(idx)
+
+        expected = PandasIndex(idx, "x").create_variables()
+        assert list(coords.variables) == list(expected)
+        assert_identical(expected["x"], coords.variables["x"])
+
+    def test_from_xindex_error(self) -> None:
+        class CustomIndexNoCoordsGenerated(Index):
+            def create_variables(self, variables: Mapping | None = None):
+                return {}
+
+        idx = CustomIndexNoCoordsGenerated()
+
+        with pytest.raises(ValueError, match=".*index.*did not create any coordinate"):
+            Coordinates.from_xindex(idx)
 
     def test_from_pandas_multiindex(self) -> None:
         midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections
 import sys
 from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
@@ -10,6 +11,7 @@ from typing import (
     TypeVar,
 )
 
+from xarray.core.types import Self
 from xarray.core.utils import Frozen, is_dict_like
 
 if TYPE_CHECKING:
@@ -149,9 +151,9 @@ class TreeNode(Generic[Tree]):
 
             self._pre_attach(parent, child_name)
             parentchildren = parent._children
-            assert not any(
-                child is self for child in parentchildren
-            ), "Tree is corrupt."
+            assert not any(child is self for child in parentchildren), (
+                "Tree is corrupt."
+            )
             parentchildren[child_name] = self
             self._parent = parent
             self._post_attach(parent, child_name)
@@ -238,10 +240,7 @@ class TreeNode(Generic[Tree]):
         """Method call after attaching `children`."""
         pass
 
-    def copy(
-        self: Tree,
-        deep: bool = False,
-    ) -> Tree:
+    def copy(self, *, inherit: bool = True, deep: bool = False) -> Self:
         """
         Returns a copy of this subtree.
 
@@ -254,7 +253,12 @@ class TreeNode(Generic[Tree]):
 
         Parameters
         ----------
-        deep : bool, default: False
+        inherit : bool
+            Whether inherited coordinates defined on parents of this node should
+            also be copied onto the new tree. Only relevant if the `parent` of
+            this node is not yet, and "Inherited coordinates" appear in its
+            repr.
+        deep : bool
             Whether each component variable is loaded into memory and copied onto
             the new object. Default is False.
 
@@ -269,35 +273,32 @@ class TreeNode(Generic[Tree]):
         xarray.Dataset.copy
         pandas.DataFrame.copy
         """
-        return self._copy_subtree(deep=deep)
+        return self._copy_subtree(inherit=inherit, deep=deep)
 
     def _copy_subtree(
-        self: Tree,
-        deep: bool = False,
-        memo: dict[int, Any] | None = None,
-    ) -> Tree:
+        self, inherit: bool, deep: bool = False, memo: dict[int, Any] | None = None
+    ) -> Self:
         """Copy entire subtree recursively."""
-
-        new_tree = self._copy_node(deep=deep)
+        new_tree = self._copy_node(inherit=inherit, deep=deep, memo=memo)
         for name, child in self.children.items():
             # TODO use `.children[name] = ...` once #9477 is implemented
-            new_tree._set(name, child._copy_subtree(deep=deep))
-
+            new_tree._set(
+                name, child._copy_subtree(inherit=False, deep=deep, memo=memo)
+            )
         return new_tree
 
     def _copy_node(
-        self: Tree,
-        deep: bool = False,
-    ) -> Tree:
+        self, inherit: bool, deep: bool = False, memo: dict[int, Any] | None = None
+    ) -> Self:
         """Copy just one node of a tree"""
         new_empty_node = type(self)()
         return new_empty_node
 
-    def __copy__(self: Tree) -> Tree:
-        return self._copy_subtree(deep=False)
+    def __copy__(self) -> Self:
+        return self._copy_subtree(inherit=True, deep=False)
 
-    def __deepcopy__(self: Tree, memo: dict[int, Any] | None = None) -> Tree:
-        return self._copy_subtree(deep=True, memo=memo)
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
+        return self._copy_subtree(inherit=True, deep=True, memo=memo)
 
     def _iter_parents(self: Tree) -> Iterator[Tree]:
         """Iterate up the tree, starting from the current node's parent."""
@@ -316,7 +317,7 @@ class TreeNode(Generic[Tree]):
             DeprecationWarning,
             stacklevel=2,
         )
-        return tuple((self, *self.parents))
+        return (self, *self.parents)
 
     @property
     def lineage(self: Tree) -> tuple[Tree, ...]:
@@ -348,7 +349,7 @@ class TreeNode(Generic[Tree]):
             DeprecationWarning,
             stacklevel=2,
         )
-        return tuple((*reversed(self.parents), self))
+        return (*reversed(self.parents), self)
 
     @property
     def root(self: Tree) -> Tree:
@@ -379,7 +380,7 @@ class TreeNode(Generic[Tree]):
 
         Leaf nodes are defined as nodes which have no children.
         """
-        return tuple([node for node in self.subtree if node.is_leaf])
+        return tuple(node for node in self.subtree if node.is_leaf)
 
     @property
     def siblings(self: Tree) -> dict[str, Tree]:
@@ -398,17 +399,41 @@ class TreeNode(Generic[Tree]):
     @property
     def subtree(self: Tree) -> Iterator[Tree]:
         """
-        An iterator over all nodes in this tree, including both self and all descendants.
+        Iterate over all nodes in this tree, including both self and all descendants.
 
-        Iterates depth-first.
+        Iterates breadth-first.
 
         See Also
         --------
+        DataTree.subtree_with_keys
         DataTree.descendants
+        group_subtrees
         """
-        from xarray.core.iterators import LevelOrderIter
+        # https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
+        queue = collections.deque([self])
+        while queue:
+            node = queue.popleft()
+            yield node
+            queue.extend(node.children.values())
 
-        return LevelOrderIter(self)
+    @property
+    def subtree_with_keys(self: Tree) -> Iterator[tuple[str, Tree]]:
+        """
+        Iterate over relative paths and node pairs for all nodes in this tree.
+
+        Iterates breadth-first.
+
+        See Also
+        --------
+        DataTree.subtree
+        DataTree.descendants
+        group_subtrees
+        """
+        queue = collections.deque([(NodePath(), self)])
+        while queue:
+            path, node = queue.popleft()
+            yield str(path), node
+            queue.extend((path / name, child) for name, child in node.children.items())
 
     @property
     def descendants(self: Tree) -> tuple[Tree, ...]:
@@ -693,17 +718,16 @@ class NamedNode(TreeNode, Generic[Tree]):
         name_repr = repr(self.name) if self.name is not None else ""
         return f"NamedNode({name_repr})"
 
-    def _post_attach(self: AnyNamedNode, parent: AnyNamedNode, name: str) -> None:
+    def _post_attach(self, parent: Self, name: str) -> None:
         """Ensures child has name attribute corresponding to key under which it has been stored."""
         _validate_name(name)  # is this check redundant?
         self._name = name
 
     def _copy_node(
-        self: AnyNamedNode,
-        deep: bool = False,
-    ) -> AnyNamedNode:
+        self, inherit: bool, deep: bool = False, memo: dict[int, Any] | None = None
+    ) -> Self:
         """Copy just one node of a tree"""
-        new_node = super()._copy_node()
+        new_node = super()._copy_node(inherit=inherit, deep=deep, memo=memo)
         new_node._name = self.name
         return new_node
 
@@ -773,3 +797,81 @@ class NamedNode(TreeNode, Generic[Tree]):
         generation_gap = list(parents_paths).index(ancestor.path)
         path_upwards = "../" * generation_gap if generation_gap > 0 else "."
         return NodePath(path_upwards)
+
+
+class TreeIsomorphismError(ValueError):
+    """Error raised if two tree objects do not share the same node structure."""
+
+
+def group_subtrees(
+    *trees: AnyNamedNode,
+) -> Iterator[tuple[str, tuple[AnyNamedNode, ...]]]:
+    """Iterate over subtrees grouped by relative paths in breadth-first order.
+
+    `group_subtrees` allows for applying operations over all nodes of a
+    collection of DataTree objects with nodes matched by their relative paths.
+
+    Example usage::
+
+        outputs = {}
+        for path, (node_a, node_b) in group_subtrees(tree_a, tree_b):
+            outputs[path] = f(node_a, node_b)
+        tree_out = DataTree.from_dict(outputs)
+
+    Parameters
+    ----------
+    *trees : Tree
+        Trees to iterate over.
+
+    Yields
+    ------
+    A tuple of the relative path and corresponding nodes for each subtree in the
+    inputs.
+
+    Raises
+    ------
+    TreeIsomorphismError
+        If trees are not isomorphic, i.e., they have different structures.
+
+    See also
+    --------
+    DataTree.subtree
+    DataTree.subtree_with_keys
+    """
+    if not trees:
+        raise TypeError("must pass at least one tree object")
+
+    # https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
+    queue = collections.deque([(NodePath(), trees)])
+
+    while queue:
+        path, active_nodes = queue.popleft()
+
+        # yield before raising an error, in case the caller chooses to exit
+        # iteration early
+        yield str(path), active_nodes
+
+        first_node = active_nodes[0]
+        if any(
+            sibling.children.keys() != first_node.children.keys()
+            for sibling in active_nodes[1:]
+        ):
+            path_str = "root node" if not path.parts else f"node {str(path)!r}"
+            child_summary = " vs ".join(
+                str(list(node.children)) for node in active_nodes
+            )
+            raise TreeIsomorphismError(
+                f"children at {path_str} do not match: {child_summary}"
+            )
+
+        for name in first_node.children:
+            child_nodes = tuple(node.children[name] for node in active_nodes)
+            queue.append((path / name, child_nodes))
+
+
+def zip_subtrees(
+    *trees: AnyNamedNode,
+) -> Iterator[tuple[AnyNamedNode, ...]]:
+    """Zip together subtrees aligned by relative path."""
+    for _, nodes in group_subtrees(*trees):
+        yield nodes

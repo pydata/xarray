@@ -30,7 +30,8 @@ numpy) over all array values:
 .. ipython:: python
 
     arr = xr.DataArray(
-        np.random.RandomState(0).randn(2, 3), [("x", ["a", "b"]), ("y", [10, 20, 30])]
+        np.random.default_rng(0).random((2, 3)),
+        [("x", ["a", "b"]), ("y", [10, 20, 30])],
     )
     arr - 3
     abs(arr)
@@ -50,7 +51,7 @@ Use :py:func:`~xarray.where` to conditionally switch between values:
 
     xr.where(arr > 0, "positive", "negative")
 
-Use `@` to compute the :py:func:`~xarray.dot` product:
+Use ``@`` to compute the :py:func:`~xarray.dot` product:
 
 .. ipython:: python
 
@@ -207,8 +208,8 @@ for more.
 Aggregation
 ===========
 
-Aggregation methods have been updated to take a `dim` argument instead of
-`axis`. This allows for very intuitive syntax for aggregation methods that are
+Aggregation methods have been updated to take a ``dim`` argument instead of
+``axis``. This allows for very intuitive syntax for aggregation methods that are
 applied along particular dimension(s):
 
 .. ipython:: python
@@ -552,7 +553,7 @@ best fitting coefficients along a given dimension and for a given order,
     out = a.polyfit(dim="x", deg=1, full=True)
     out
 
-The method outputs a dataset containing the coefficients (and more if `full=True`).
+The method outputs a dataset containing the coefficients (and more if ``full=True``).
 The inverse operation is done with :py:meth:`~xarray.polyval`,
 
 .. ipython:: python

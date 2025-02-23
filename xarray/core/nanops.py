@@ -45,7 +45,7 @@ def _nan_argminmax_object(func, fill_value, value, axis=None, **kwargs):
     data = getattr(np, func)(value, axis=axis, **kwargs)
 
     # TODO This will evaluate dask arrays and might be costly.
-    if (valid_count == 0).any():
+    if duck_array_ops.array_any(valid_count == 0):
         raise ValueError("All-NaN slice encountered")
 
     return data
@@ -128,7 +128,7 @@ def nanmean(a, axis=None, dtype=None, out=None):
             "ignore", r"Mean of empty slice", category=RuntimeWarning
         )
 
-        return np.nanmean(a, axis=axis, dtype=dtype)
+        return nputils.nanmean(a, axis=axis, dtype=dtype)
 
 
 def nanmedian(a, axis=None, out=None):
@@ -162,7 +162,7 @@ def nanstd(a, axis=None, dtype=None, out=None, ddof=0):
 
 def nanprod(a, axis=None, dtype=None, out=None, min_count=None):
     mask = isnull(a)
-    result = nputils.nanprod(a, axis=axis, dtype=dtype, out=out)
+    result = nputils.nanprod(a, axis=axis, dtype=dtype)
     if min_count is not None:
         return _maybe_null_out(result, axis, mask, min_count)
     else:

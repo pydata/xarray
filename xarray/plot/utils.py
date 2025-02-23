@@ -20,7 +20,11 @@ import pandas as pd
 
 from xarray.core.indexes import PandasMultiIndex
 from xarray.core.options import OPTIONS
-from xarray.core.utils import is_scalar, module_available
+from xarray.core.utils import (
+    attempt_import,
+    is_scalar,
+    module_available,
+)
 from xarray.namedarray.pycompat import DuckArrayModule
 
 nc_time_axis_available = module_available("nc_time_axis")
@@ -127,8 +131,9 @@ def _color_palette(cmap, n_colors):
 
     colors_i = np.linspace(0, 1.0, n_colors)
     if isinstance(cmap, list | tuple):
-        # we have a list of colors
-        cmap = ListedColormap(cmap, N=n_colors)
+        # expand or truncate the list of colors to n_colors
+        cmap = list(itertools.islice(itertools.cycle(cmap), n_colors))
+        cmap = ListedColormap(cmap)
         pal = cmap(colors_i)
     elif isinstance(cmap, str):
         # we have some sort of named palette
@@ -144,7 +149,7 @@ def _color_palette(cmap, n_colors):
                 pal = color_palette(cmap, n_colors=n_colors)
             except (ValueError, ImportError):
                 # or maybe we just got a single color as a string
-                cmap = ListedColormap([cmap], N=n_colors)
+                cmap = ListedColormap([cmap] * n_colors)
                 pal = cmap(colors_i)
     else:
         # cmap better be a LinearSegmentedColormap (e.g. viridis)
@@ -184,7 +189,10 @@ def _determine_cmap_params(
     cmap_params : dict
         Use depends on the type of the plotting function
     """
-    import matplotlib as mpl
+    if TYPE_CHECKING:
+        import matplotlib as mpl
+    else:
+        mpl = attempt_import("matplotlib")
 
     if isinstance(levels, Iterable):
         levels = sorted(levels)
@@ -438,7 +446,7 @@ def _assert_valid_xy(
     valid_xy = (set(darray.dims) | set(darray.coords)) - multiindex_dims
 
     if (xy is not None) and (xy not in valid_xy):
-        valid_xy_str = "', '".join(sorted(tuple(str(v) for v in valid_xy)))
+        valid_xy_str = "', '".join(sorted(str(v) for v in valid_xy))
         raise ValueError(
             f"{name} must be one of None, '{valid_xy_str}'. Received '{xy}' instead."
         )
@@ -451,11 +459,14 @@ def get_axis(
     ax: Axes | None = None,
     **subplot_kws: Any,
 ) -> Axes:
-    try:
+    from xarray.core.utils import attempt_import
+
+    if TYPE_CHECKING:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
-    except ImportError as err:
-        raise ImportError("matplotlib is required for plot.utils.get_axis") from err
+    else:
+        mpl = attempt_import("matplotlib")
+        plt = attempt_import("matplotlib.pyplot")
 
     if figsize is not None:
         if ax is not None:
@@ -858,11 +869,11 @@ def _infer_interval_breaks(coord, axis=0, scale=None, check_monotonic=False):
     if check_monotonic and not _is_monotonic(coord, axis=axis):
         raise ValueError(
             "The input coordinate is not sorted in increasing "
-            "order along axis %d. This can lead to unexpected "
+            f"order along axis {axis}. This can lead to unexpected "
             "results. Consider calling the `sortby` method on "
             "the input DataArray. To plot data with categorical "
             "axes, consider using the `heatmap` function from "
-            "the `seaborn` statistical plotting library." % axis
+            "the `seaborn` statistical plotting library."
         )
 
     # If logscale, compute the intervals in the logarithmic space
@@ -870,7 +881,7 @@ def _infer_interval_breaks(coord, axis=0, scale=None, check_monotonic=False):
         if (coord <= 0).any():
             raise ValueError(
                 "Found negative or zero value in coordinates. "
-                + "Coordinates must be positive on logscale plots."
+                "Coordinates must be positive on logscale plots."
             )
         coord = np.log10(coord)
 
@@ -917,7 +928,7 @@ def _process_cmap_cbar_kwargs(
         # Leave user to specify cmap settings for surface plots
         kwargs["cmap"] = cmap
         return {
-            k: kwargs.get(k, None)
+            k: kwargs.get(k)
             for k in ["vmin", "vmax", "cmap", "extend", "levels", "norm"]
         }, {}
 
@@ -986,7 +997,7 @@ def legend_elements(
     This is useful for obtaining a legend for a `~.Axes.scatter` plot;
     e.g.::
 
-        scatter = plt.scatter([1, 2, 3],  [4, 5, 6],  c=[7, 2, 3])
+        scatter = plt.scatter([1, 2, 3], [4, 5, 6], c=[7, 2, 3])
         plt.legend(*scatter.legend_elements())
 
     creates three legend elements, one for each color with the numerical
@@ -1219,7 +1230,7 @@ def _adjust_legend_subtitles(legend):
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     dvars = set(ds.variables.keys())
-    error_msg = f" must be one of ({', '.join(sorted(tuple(str(v) for v in dvars)))})"
+    error_msg = f" must be one of ({', '.join(sorted(str(v) for v in dvars))})"
 
     if x not in dvars:
         raise ValueError(f"Expected 'x' {error_msg}. Received {x} instead.")
@@ -1383,10 +1394,10 @@ class _Normalize(Sequence):
 
     __slots__ = (
         "_data",
+        "_data_is_numeric",
         "_data_unique",
         "_data_unique_index",
         "_data_unique_inverse",
-        "_data_is_numeric",
         "_width",
     )
 
@@ -1697,8 +1708,7 @@ def _determine_guide(
         if (
             not add_colorbar
             and (hueplt_norm.data is not None and hueplt_norm.data_is_numeric is False)
-            or sizeplt_norm.data is not None
-        ):
+        ) or sizeplt_norm.data is not None:
             add_legend = True
         else:
             add_legend = False
@@ -1828,7 +1838,7 @@ def _guess_coords_to_plot(
         default_guess, available_coords, ignore_guess_kwargs, strict=False
     ):
         if coords_to_plot.get(k, None) is None and all(
-            kwargs.get(ign_kw, None) is None for ign_kw in ign_kws
+            kwargs.get(ign_kw) is None for ign_kw in ign_kws
         ):
             coords_to_plot[k] = dim
 

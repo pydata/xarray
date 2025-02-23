@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import itertools
-from collections import Counter
-from collections.abc import Iterable, Sequence
-from typing import TYPE_CHECKING, Literal, Union
+from collections import Counter, defaultdict
+from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
+from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast
 
 import pandas as pd
 
@@ -15,14 +14,26 @@ from xarray.core.merge import merge
 from xarray.core.utils import iterate_nested
 
 if TYPE_CHECKING:
-    from xarray.core.types import CombineAttrsOptions, CompatOptions, JoinOptions
+    from xarray.core.types import (
+        CombineAttrsOptions,
+        CompatOptions,
+        JoinOptions,
+        NestedSequence,
+    )
 
 
-def _infer_concat_order_from_positions(datasets):
+T = TypeVar("T")
+
+
+def _infer_concat_order_from_positions(
+    datasets: NestedSequence[T],
+) -> dict[tuple[int, ...], T]:
     return dict(_infer_tile_ids_from_nested_list(datasets, ()))
 
 
-def _infer_tile_ids_from_nested_list(entry, current_pos):
+def _infer_tile_ids_from_nested_list(
+    entry: NestedSequence[T], current_pos: tuple[int, ...]
+) -> Iterator[tuple[tuple[int, ...], T]]:
     """
     Given a list of lists (of lists...) of objects, returns a iterator
     which returns a tuple containing the index of each object in the nested
@@ -44,11 +55,11 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
     combined_tile_ids : dict[tuple(int, ...), obj]
     """
 
-    if isinstance(entry, list):
+    if not isinstance(entry, str) and isinstance(entry, Sequence):
         for i, item in enumerate(entry):
             yield from _infer_tile_ids_from_nested_list(item, current_pos + (i,))
     else:
-        yield current_pos, entry
+        yield current_pos, cast(T, entry)
 
 
 def _ensure_same_types(series, dim):
@@ -257,10 +268,7 @@ def _combine_all_along_first_dim(
     combine_attrs: CombineAttrsOptions = "drop",
 ):
     # Group into lines of datasets which must be combined along dim
-    # need to sort by _new_tile_id first for groupby to work
-    # TODO: is the sorted need?
-    combined_ids = dict(sorted(combined_ids.items(), key=_new_tile_id))
-    grouped = itertools.groupby(combined_ids.items(), key=_new_tile_id)
+    grouped = groupby_defaultdict(list(combined_ids.items()), key=_new_tile_id)
 
     # Combine all of these datasets along dim
     new_combined_ids = {}
@@ -592,6 +600,21 @@ def combine_nested(
 
 def vars_as_keys(ds):
     return tuple(sorted(ds))
+
+
+K = TypeVar("K", bound=Hashable)
+
+
+def groupby_defaultdict(
+    iter: list[T],
+    key: Callable[[T], K],
+) -> Iterator[tuple[K, Iterator[T]]]:
+    """replacement for itertools.groupby"""
+    idx = defaultdict(list)
+    for i, obj in enumerate(iter):
+        idx[key(obj)].append(i)
+    for k, ix in idx.items():
+        yield k, (iter[i] for i in ix)
 
 
 def _combine_single_variable_hypercube(
@@ -953,8 +976,7 @@ def combine_by_coords(
         ]
 
         # Group by data vars
-        sorted_datasets = sorted(data_objects, key=vars_as_keys)
-        grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
+        grouped_by_vars = groupby_defaultdict(data_objects, key=vars_as_keys)
 
         # Perform the multidimensional combine on each group of data variables
         # before merging back together

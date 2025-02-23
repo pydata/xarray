@@ -46,7 +46,7 @@ class VariableCoder:
         raise NotImplementedError()
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        """Convert an decoded variable to a encoded variable"""
+        """Convert a decoded variable to an encoded variable"""
         raise NotImplementedError()
 
 
@@ -537,6 +537,7 @@ def _choose_float_dtype(
     if dtype.itemsize <= 2 and np.issubdtype(dtype, np.integer):
         return np.float32
     # For all other types and circumstances, we just use float64.
+    # Todo: with nc-complex from netcdf4-python >= 1.7.0 this is available
     # (safe because eg. complex numbers are not supported in NetCDF)
     return np.float64
 
@@ -703,6 +704,19 @@ class ObjectVLenStringCoder(VariableCoder):
         if variable.dtype.kind == "O" and variable.encoding.get("dtype", False) is str:
             variable = variable.astype(variable.encoding["dtype"])
             return variable
+        else:
+            return variable
+
+
+class Numpy2StringDTypeCoder(VariableCoder):
+    # Convert Numpy 2 StringDType arrays to object arrays for backwards compatibility
+    # TODO: remove this if / when we decide to allow StringDType arrays in Xarray
+    def encode(self):
+        raise NotImplementedError
+
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
+        if variable.dtype.kind == "T":
+            return variable.astype(object)
         else:
             return variable
 

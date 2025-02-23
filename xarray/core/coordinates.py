@@ -200,10 +200,17 @@ class Coordinates(AbstractCoordinates):
 
     - returned via the :py:attr:`Dataset.coords`, :py:attr:`DataArray.coords`,
       and :py:attr:`DataTree.coords` properties,
-    - built from Pandas or other index objects
-      (e.g., :py:meth:`Coordinates.from_pandas_multiindex`),
-    - built directly from coordinate data and Xarray ``Index`` objects (beware that
-      no consistency check is done on those inputs),
+    - built from Xarray or Pandas index objects
+      (e.g., :py:meth:`Coordinates.from_xindex` or
+      :py:meth:`Coordinates.from_pandas_multiindex`),
+    - built manually from input coordinate data and Xarray ``Index`` objects via
+      :py:meth:`Coordinates.__init__` (beware that no consistency check is done
+      on those inputs).
+
+    To create new coordinates from an existing Xarray ``Index`` object, use
+    :py:meth:`Coordinates.from_xindex` instead of
+    :py:meth:`Coordinates.__init__`. The latter is useful, e.g., for creating
+    coordinates with no default index.
 
     Parameters
     ----------
@@ -353,10 +360,39 @@ class Coordinates(AbstractCoordinates):
         return obj
 
     @classmethod
+    def from_xindex(cls, index: Index) -> Self:
+        """Create Xarray coordinates from an existing Xarray index.
+
+        Parameters
+        ----------
+        index : Index
+            Xarray index object. The index must support generating new
+            coordinate variables from itself.
+
+        Returns
+        -------
+        coords : Coordinates
+            A collection of Xarray indexed coordinates created from the index.
+
+        """
+        variables = index.create_variables()
+
+        if not variables:
+            raise ValueError(
+                "`Coordinates.from_xindex()` only supports index objects that can generate "
+                "new coordinate variables from scratch. The given index (shown below) did not "
+                f"create any coordinate.\n{index!r}"
+            )
+
+        indexes = {name: index for name in variables}
+
+        return cls(coords=variables, indexes=indexes)
+
+    @classmethod
     def from_pandas_multiindex(cls, midx: pd.MultiIndex, dim: Hashable) -> Self:
         """Wrap a pandas multi-index as Xarray coordinates (dimension + levels).
 
-        The returned coordinates can be directly assigned to a
+        The returned coordinate variables can be directly assigned to a
         :py:class:`~xarray.Dataset` or :py:class:`~xarray.DataArray` via the
         ``coords`` argument of their constructor.
 
@@ -752,7 +788,7 @@ class DatasetCoordinates(Coordinates):
         # check for inconsistent state *before* modifying anything in-place
         dims = calculate_dimensions(variables)
         new_coord_names = set(coords)
-        for dim, _size in dims.items():
+        for dim in dims.keys():
             if dim in variables:
                 new_coord_names.add(dim)
 
@@ -849,14 +885,14 @@ class DataTreeCoordinates(Coordinates):
         from xarray.core.datatree import check_alignment
 
         # create updated node (`.to_dataset` makes a copy so this doesn't modify in-place)
-        node_ds = self._data.to_dataset(inherited=False)
+        node_ds = self._data.to_dataset(inherit=False)
         node_ds.coords._update_coords(coords, indexes)
 
         # check consistency *before* modifying anything in-place
         # TODO can we clean up the signature of check_alignment to make this less awkward?
         if self._data.parent is not None:
             parent_ds = self._data.parent._to_dataset_view(
-                inherited=True, rebuild_dims=False
+                inherit=True, rebuild_dims=False
             )
         else:
             parent_ds = None
@@ -1108,7 +1144,7 @@ def create_coords_with_default_indexes(
 
     # extract and merge coordinates and indexes from input DataArrays
     if dataarray_coords:
-        prioritized = {k: (v, indexes.get(k, None)) for k, v in variables.items()}
+        prioritized = {k: (v, indexes.get(k)) for k, v in variables.items()}
         variables, indexes = merge_coordinates_without_align(
             dataarray_coords + [new_coords],
             prioritized=prioritized,
@@ -1116,3 +1152,14 @@ def create_coords_with_default_indexes(
         new_coords = Coordinates._construct_direct(coords=variables, indexes=indexes)
 
     return new_coords
+
+
+def _coordinates_from_variable(variable: Variable) -> Coordinates:
+    from xarray.core.indexes import create_default_index_implicit
+
+    (name,) = variable.dims
+    new_index, index_vars = create_default_index_implicit(variable)
+    indexes = {k: new_index for k in index_vars}
+    new_vars = new_index.create_variables()
+    new_vars[name].attrs = variable.attrs
+    return Coordinates(new_vars, indexes)

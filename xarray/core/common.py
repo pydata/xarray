@@ -6,7 +6,7 @@ from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar, Union, overload
 
 import numpy as np
 import pandas as pd
@@ -60,6 +60,7 @@ if TYPE_CHECKING:
 T_Resample = TypeVar("T_Resample", bound="Resample")
 C = TypeVar("C")
 T = TypeVar("T")
+P = ParamSpec("P")
 
 
 class ImplementsArrayReduce:
@@ -163,7 +164,7 @@ class AbstractArray:
         return complex(self.values)
 
     def __array__(
-        self: Any, dtype: DTypeLike | None = None, copy: bool | None = None
+        self: Any, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if not copy:
             if np.lib.NumpyVersion(np.__version__) >= "2.0.0":
@@ -212,6 +213,9 @@ class AbstractArray:
         if self.ndim == 0:
             raise TypeError("iteration over a 0-d array")
         return self._iter()
+
+    @overload
+    def get_axis_num(self, dim: str) -> int: ...  # type: ignore [overload-overlap]
 
     @overload
     def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]: ...
@@ -352,7 +356,7 @@ class AttrAccessMixin:
 
     def _ipython_key_completions_(self) -> list[str]:
         """Provide method for the key-autocompletions in IPython.
-        See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
+        See https://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
         """
         items = {
@@ -409,8 +413,7 @@ def get_squeeze_dims(
 
     if any(xarray_obj.sizes[k] > 1 for k in dim):
         raise ValueError(
-            "cannot select a dimension to squeeze out "
-            "which has length greater than one"
+            "cannot select a dimension to squeeze out which has length greater than one"
         )
     return dim
 
@@ -496,7 +499,7 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
-            np.clip, self, min, max, keep_attrs=keep_attrs, dask="allowed"
+            duck_array_ops.clip, self, min, max, keep_attrs=keep_attrs, dask="allowed"
         )
 
     def get_index(self, key: Hashable) -> pd.Index:
@@ -716,11 +719,27 @@ class DataWithCoords(AttrAccessMixin):
         out.attrs.update(*args, **kwargs)
         return out
 
+    @overload
     def pipe(
         self,
-        func: Callable[..., T] | tuple[Callable[..., T], str],
+        func: Callable[Concatenate[Self, P], T],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T: ...
+
+    @overload
+    def pipe(
+        self,
+        func: tuple[Callable[..., T], str],
         *args: Any,
         **kwargs: Any,
+    ) -> T: ...
+
+    def pipe(
+        self,
+        func: Callable[Concatenate[Self, P], T] | tuple[Callable[P, T], str],
+        *args: P.args,
+        **kwargs: P.kwargs,
     ) -> T:
         """
         Apply ``func(self, *args, **kwargs)``
@@ -838,15 +857,19 @@ class DataWithCoords(AttrAccessMixin):
         pandas.DataFrame.pipe
         """
         if isinstance(func, tuple):
-            func, target = func
+            # Use different var when unpacking function from tuple because the type
+            # signature of the unpacked function differs from the expected type
+            # signature in the case where only a function is given, rather than a tuple.
+            # This makes type checkers happy at both call sites below.
+            f, target = func
             if target in kwargs:
                 raise ValueError(
                     f"{target} is both the pipe target and a keyword argument"
                 )
             kwargs[target] = self
-            return func(*args, **kwargs)
-        else:
-            return func(self, *args, **kwargs)
+            return f(*args, **kwargs)
+
+        return func(self, *args, **kwargs)
 
     def rolling_exp(
         self: T_DataWithCoords,
@@ -1094,7 +1117,7 @@ class DataWithCoords(AttrAccessMixin):
                 f"Received {type(freq)} instead."
             )
 
-        rgrouper = ResolvedGrouper(grouper, group, self)
+        rgrouper = ResolvedGrouper(grouper, group, self, eagerly_compute_group=False)
 
         return resample_cls(
             self,
@@ -1760,7 +1783,7 @@ def _full_like_variable(
             **from_array_kwargs,
         )
     else:
-        data = np.full_like(other.data, fill_value, dtype=dtype)
+        data = duck_array_ops.full_like(other.data, fill_value, dtype=dtype)
 
     return Variable(dims=other.dims, data=data, attrs=other.attrs)
 

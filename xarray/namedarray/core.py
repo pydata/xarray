@@ -205,7 +205,7 @@ def from_array(
 
         return NamedArray(dims, data, attrs)
 
-    if isinstance(data, _arrayfunction_or_api):
+    if isinstance(data, _arrayfunction_or_api) and not isinstance(data, np.generic):
         return NamedArray(dims, data, attrs)
 
     if isinstance(data, tuple):
@@ -248,7 +248,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     >>> narr = NamedArray(("x",), data, {"units": "m"})  # TODO: Better name than narr?
     """
 
-    __slots__ = ("_data", "_dims", "_attrs")
+    __slots__ = ("_attrs", "_data", "_dims")
 
     _data: duckarray[Any, _DType_co]
     _dims: _Dims
@@ -670,6 +670,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return type(self)(self._dims, data, attrs=self._attrs)
 
     @overload
+    def get_axis_num(self, dim: str) -> int: ...  # type: ignore [overload-overlap]
+
+    @overload
     def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]: ...
 
     @overload
@@ -725,8 +728,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self,
     ) -> Mapping[_Dim, _Shape]:
         """
-        Mapping from dimension names to block lengths for this namedArray's data, or None if
-        the underlying data is not a dask array.
+        Mapping from dimension names to block lengths for this NamedArray's data.
+
+        If this NamedArray does not contain chunked arrays, the mapping will be empty.
+
         Cannot be modified directly, but can be modified by calling .chunk().
 
         Differs from NamedArray.chunks because it returns a mapping of dimensions to chunk shapes

@@ -31,9 +31,9 @@ class AbstractStyle:
         self.vertical = vertical
         self.cont = cont
         self.end = end
-        assert (
-            len(cont) == len(vertical) == len(end)
-        ), f"'{vertical}', '{cont}' and '{end}' need to have equal length"
+        assert len(cont) == len(vertical) == len(end), (
+            f"'{vertical}', '{cont}' and '{end}' need to have equal length"
+        )
 
     @property
     def empty(self) -> str:
@@ -205,8 +205,8 @@ class RenderDataTree:
         classname = self.__class__.__name__
         args = [
             repr(self.node),
-            f"style={repr(self.style)}",
-            f"childiter={repr(self.childiter)}",
+            f"style={self.style!r}",
+            f"childiter={self.childiter!r}",
         ]
         return f"{classname}({', '.join(args)})"
 

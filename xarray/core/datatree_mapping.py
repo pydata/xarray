@@ -1,233 +1,145 @@
 from __future__ import annotations
 
-import functools
 import sys
-from collections.abc import Callable
-from itertools import repeat
-from typing import TYPE_CHECKING
+from collections.abc import Callable, Mapping
+from typing import TYPE_CHECKING, Any, cast, overload
 
-from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
-from xarray.core.formatting import diff_treestructure
-from xarray.core.treenode import NodePath, TreeNode
+from xarray.core.treenode import group_subtrees
+from xarray.core.utils import result_name
 
 if TYPE_CHECKING:
     from xarray.core.datatree import DataTree
 
 
-class TreeIsomorphismError(ValueError):
-    """Error raised if two tree objects do not share the same node structure."""
+@overload
+def map_over_datasets(
+    func: Callable[
+        ...,
+        Dataset | None,
+    ],
+    *args: Any,
+    kwargs: Mapping[str, Any] | None = None,
+) -> DataTree: ...
 
-    pass
+
+@overload
+def map_over_datasets(
+    func: Callable[..., tuple[Dataset | None, Dataset | None]],
+    *args: Any,
+    kwargs: Mapping[str, Any] | None = None,
+) -> tuple[DataTree, DataTree]: ...
 
 
-def check_isomorphic(
-    a: DataTree,
-    b: DataTree,
-    require_names_equal: bool = False,
-    check_from_root: bool = True,
-):
+# add an expect overload for the most common case of two return values
+# (python typing does not have a way to match tuple lengths in general)
+@overload
+def map_over_datasets(
+    func: Callable[..., tuple[Dataset | None, ...]],
+    *args: Any,
+    kwargs: Mapping[str, Any] | None = None,
+) -> tuple[DataTree, ...]: ...
+
+
+def map_over_datasets(
+    func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
+    *args: Any,
+    kwargs: Mapping[str, Any] | None = None,
+) -> DataTree | tuple[DataTree, ...]:
     """
-    Check that two trees have the same structure, raising an error if not.
+    Applies a function to every dataset in one or more DataTree objects with
+    the same structure (ie.., that are isomorphic), returning new trees which
+    store the results.
 
-    Does not compare the actual data in the nodes.
+    The function will be applied to any dataset stored in any of the nodes in
+    the trees. The returned trees will have the same structure as the supplied
+    trees.
 
-    By default this function only checks that subtrees are isomorphic, not the entire tree above (if it exists).
-    Can instead optionally check the entire trees starting from the root, which will ensure all
+    ``func`` needs to return a Dataset, tuple of Dataset objects or None in order
+    to be able to rebuild the subtrees after mapping, as each result will be
+    assigned to its respective node of a new tree via `DataTree.from_dict`. Any
+    returned value that is one of these types will be stacked into a separate
+    tree before returning all of them.
 
-    Can optionally check if corresponding nodes should have the same name.
+    ``map_over_datasets`` is essentially syntactic sugar for the combination of
+    ``group_subtrees`` and ``DataTree.from_dict``. For example, in the case of
+    a two argument function that return one result, it is equivalent to::
 
-    Parameters
-    ----------
-    a : DataTree
-    b : DataTree
-    require_names_equal : Bool
-        Whether or not to also check that each node has the same name as its counterpart.
-    check_from_root : Bool
-        Whether or not to first traverse to the root of the trees before checking for isomorphism.
-        If a & b have no parents then this has no effect.
-
-    Raises
-    ------
-    TypeError
-        If either a or b are not tree objects.
-    TreeIsomorphismError
-        If a and b are tree objects, but are not isomorphic to one another.
-        Also optionally raised if their structure is isomorphic, but the names of any two
-        respective nodes are not equal.
-    """
-
-    if not isinstance(a, TreeNode):
-        raise TypeError(f"Argument `a` is not a tree, it is of type {type(a)}")
-    if not isinstance(b, TreeNode):
-        raise TypeError(f"Argument `b` is not a tree, it is of type {type(b)}")
-
-    if check_from_root:
-        a = a.root
-        b = b.root
-
-    diff = diff_treestructure(a, b, require_names_equal=require_names_equal)
-
-    if diff:
-        raise TreeIsomorphismError("DataTree objects are not isomorphic:\n" + diff)
-
-
-def map_over_subtree(func: Callable) -> Callable:
-    """
-    Decorator which turns a function which acts on (and returns) Datasets into one which acts on and returns DataTrees.
-
-    Applies a function to every dataset in one or more subtrees, returning new trees which store the results.
-
-    The function will be applied to any data-containing dataset stored in any of the nodes in the trees. The returned
-    trees will have the same structure as the supplied trees.
-
-    `func` needs to return one Datasets, DataArrays, or None in order to be able to rebuild the subtrees after
-    mapping, as each result will be assigned to its respective node of a new tree via `DataTree.__setitem__`. Any
-    returned value that is one of these types will be stacked into a separate tree before returning all of them.
-
-    The trees passed to the resulting function must all be isomorphic to one another. Their nodes need not be named
-    similarly, but all the output trees will have nodes named in the same way as the first tree passed.
+        results = {}
+        for path, (left, right) in group_subtrees(left_tree, right_tree):
+            results[path] = func(left.dataset, right.dataset)
+        return DataTree.from_dict(results)
 
     Parameters
     ----------
     func : callable
         Function to apply to datasets with signature:
 
-        `func(*args, **kwargs) -> Union[DataTree, Iterable[DataTree]]`.
+        `func(*args: Dataset, **kwargs) -> Union[Dataset, tuple[Dataset, ...]]`.
 
         (i.e. func must accept at least one Dataset and return at least one Dataset.)
-        Function will not be applied to any nodes without datasets.
     *args : tuple, optional
-        Positional arguments passed on to `func`. If DataTrees any data-containing nodes will be converted to Datasets
-        via `.dataset`.
-    **kwargs : Any
-        Keyword arguments passed on to `func`. If DataTrees any data-containing nodes will be converted to Datasets
-        via `.dataset`.
+        Positional arguments passed on to `func`. Any DataTree arguments will be
+        converted to Dataset objects via `.dataset`.
+    kwargs : dict, optional
+        Optional keyword arguments passed directly to ``func``.
 
     Returns
     -------
-    mapped : callable
-        Wrapped function which returns one or more tree(s) created from results of applying ``func`` to the dataset at
-        each node.
+    Result of applying `func` to each node in the provided trees, packed back
+    into DataTree objects via `DataTree.from_dict`.
 
     See also
     --------
-    DataTree.map_over_subtree
-    DataTree.map_over_subtree_inplace
-    DataTree.subtree
+    DataTree.map_over_datasets
+    group_subtrees
+    DataTree.from_dict
     """
-
     # TODO examples in the docstring
-
     # TODO inspect function to work out immediately if the wrong number of arguments were passed for it?
 
-    @functools.wraps(func)
-    def _map_over_subtree(*args, **kwargs) -> DataTree | tuple[DataTree, ...]:
-        """Internal function which maps func over every node in tree, returning a tree of the results."""
-        from xarray.core.datatree import DataTree
+    from xarray.core.datatree import DataTree
 
-        all_tree_inputs = [a for a in args if isinstance(a, DataTree)] + [
-            a for a in kwargs.values() if isinstance(a, DataTree)
-        ]
+    if kwargs is None:
+        kwargs = {}
 
-        if len(all_tree_inputs) > 0:
-            first_tree, *other_trees = all_tree_inputs
-        else:
-            raise TypeError("Must pass at least one tree object")
+    # Walk all trees simultaneously, applying func to all nodes that lie in same position in different trees
+    # We don't know which arguments are DataTrees so we zip all arguments together as iterables
+    # Store tuples of results in a dict because we don't yet know how many trees we need to rebuild to return
+    out_data_objects: dict[str, Dataset | None | tuple[Dataset | None, ...]] = {}
 
-        for other_tree in other_trees:
-            # isomorphism is transitive so this is enough to guarantee all trees are mutually isomorphic
-            check_isomorphic(
-                first_tree, other_tree, require_names_equal=False, check_from_root=False
-            )
+    tree_args = [arg for arg in args if isinstance(arg, DataTree)]
+    name = result_name(tree_args)
 
-        # Walk all trees simultaneously, applying func to all nodes that lie in same position in different trees
-        # We don't know which arguments are DataTrees so we zip all arguments together as iterables
-        # Store tuples of results in a dict because we don't yet know how many trees we need to rebuild to return
-        out_data_objects = {}
-        args_as_tree_length_iterables = [
-            a.subtree if isinstance(a, DataTree) else repeat(a) for a in args
-        ]
-        n_args = len(args_as_tree_length_iterables)
-        kwargs_as_tree_length_iterables = {
-            k: v.subtree if isinstance(v, DataTree) else repeat(v)
-            for k, v in kwargs.items()
-        }
-        for node_of_first_tree, *all_node_args in zip(
-            first_tree.subtree,
-            *args_as_tree_length_iterables,
-            *list(kwargs_as_tree_length_iterables.values()),
-            strict=False,
-        ):
-            node_args_as_datasetviews = [
-                a.dataset if isinstance(a, DataTree) else a
-                for a in all_node_args[:n_args]
-            ]
-            node_kwargs_as_datasetviews = dict(
-                zip(
-                    [k for k in kwargs_as_tree_length_iterables.keys()],
-                    [
-                        v.dataset if isinstance(v, DataTree) else v
-                        for v in all_node_args[n_args:]
-                    ],
-                    strict=True,
-                )
-            )
-            func_with_error_context = _handle_errors_with_path_context(
-                node_of_first_tree.path
-            )(func)
+    for path, node_tree_args in group_subtrees(*tree_args):
+        node_dataset_args = [arg.dataset for arg in node_tree_args]
+        for i, arg in enumerate(args):
+            if not isinstance(arg, DataTree):
+                node_dataset_args.insert(i, arg)
 
-            if node_of_first_tree.has_data:
-                # call func on the data in this particular set of corresponding nodes
-                results = func_with_error_context(
-                    *node_args_as_datasetviews, **node_kwargs_as_datasetviews
-                )
-            elif node_of_first_tree.has_attrs:
-                # propagate attrs
-                results = node_of_first_tree.dataset
-            else:
-                # nothing to propagate so use fastpath to create empty node in new tree
-                results = None
+        func_with_error_context = _handle_errors_with_path_context(path)(func)
+        results = func_with_error_context(*node_dataset_args, **kwargs)
+        out_data_objects[path] = results
 
-            # TODO implement mapping over multiple trees in-place using if conditions from here on?
-            out_data_objects[node_of_first_tree.path] = results
+    num_return_values = _check_all_return_values(out_data_objects)
 
-        # Find out how many return values we received
-        num_return_values = _check_all_return_values(out_data_objects)
+    if num_return_values is None:
+        # one return value
+        out_data = cast(Mapping[str, Dataset | None], out_data_objects)
+        return DataTree.from_dict(out_data, name=name)
 
-        # Reconstruct 1+ subtrees from the dict of results, by filling in all nodes of all result trees
-        original_root_path = first_tree.path
-        result_trees = []
-        for i in range(num_return_values):
-            out_tree_contents = {}
-            for n in first_tree.subtree:
-                p = n.path
-                if p in out_data_objects.keys():
-                    if isinstance(out_data_objects[p], tuple):
-                        output_node_data = out_data_objects[p][i]
-                    else:
-                        output_node_data = out_data_objects[p]
-                else:
-                    output_node_data = None
+    # multiple return values
+    out_data_tuples = cast(Mapping[str, tuple[Dataset | None, ...]], out_data_objects)
+    output_dicts: list[dict[str, Dataset | None]] = [
+        {} for _ in range(num_return_values)
+    ]
+    for path, outputs in out_data_tuples.items():
+        for output_dict, output in zip(output_dicts, outputs, strict=False):
+            output_dict[path] = output
 
-                # Discard parentage so that new trees don't include parents of input nodes
-                relative_path = str(NodePath(p).relative_to(original_root_path))
-                relative_path = "/" if relative_path == "." else relative_path
-                out_tree_contents[relative_path] = output_node_data
-
-            new_tree = DataTree.from_dict(
-                out_tree_contents,
-                name=first_tree.name,
-            )
-            result_trees.append(new_tree)
-
-        # If only one result then don't wrap it in a tuple
-        if len(result_trees) == 1:
-            return result_trees[0]
-        else:
-            return tuple(result_trees)
-
-    return _map_over_subtree
+    return tuple(
+        DataTree.from_dict(output_dict, name=name) for output_dict in output_dicts
+    )
 
 
 def _handle_errors_with_path_context(path: str):
@@ -240,7 +152,7 @@ def _handle_errors_with_path_context(path: str):
             except Exception as e:
                 # Add the context information to the error message
                 add_note(
-                    e, f"Raised whilst mapping function over node with path {path}"
+                    e, f"Raised whilst mapping function over node with path {path!r}"
                 )
                 raise
 
@@ -257,62 +169,52 @@ def add_note(err: BaseException, msg: str) -> None:
         err.add_note(msg)
 
 
-def _check_single_set_return_values(
-    path_to_node: str, obj: Dataset | DataArray | tuple[Dataset | DataArray]
-):
+def _check_single_set_return_values(path_to_node: str, obj: Any) -> int | None:
     """Check types returned from single evaluation of func, and return number of return values received from func."""
-    if isinstance(obj, Dataset | DataArray):
-        return 1
-    elif isinstance(obj, tuple):
-        for r in obj:
-            if not isinstance(r, Dataset | DataArray):
-                raise TypeError(
-                    f"One of the results of calling func on datasets on the nodes at position {path_to_node} is "
-                    f"of type {type(r)}, not Dataset or DataArray."
-                )
-        return len(obj)
-    else:
+    if isinstance(obj, None | Dataset):
+        return None  # no need to pack results
+
+    if not isinstance(obj, tuple) or not all(
+        isinstance(r, Dataset | None) for r in obj
+    ):
         raise TypeError(
-            f"The result of calling func on the node at position {path_to_node} is of type {type(obj)}, not "
-            f"Dataset or DataArray, nor a tuple of such types."
+            f"the result of calling func on the node at position '{path_to_node}' is"
+            f" not a Dataset or None or a tuple of such types:\n{obj!r}"
         )
 
+    return len(obj)
 
-def _check_all_return_values(returned_objects):
+
+def _check_all_return_values(returned_objects) -> int | None:
     """Walk through all values returned by mapping func over subtrees, raising on any invalid or inconsistent types."""
 
-    if all(r is None for r in returned_objects.values()):
-        raise TypeError(
-            "Called supplied function on all nodes but found a return value of None for"
-            "all of them."
-        )
+    result_data_objects = list(returned_objects.items())
 
-    result_data_objects = [
-        (path_to_node, r)
-        for path_to_node, r in returned_objects.items()
-        if r is not None
-    ]
+    first_path, result = result_data_objects[0]
+    return_values = _check_single_set_return_values(first_path, result)
 
-    if len(result_data_objects) == 1:
-        # Only one node in the tree: no need to check consistency of results between nodes
-        path_to_node, result = result_data_objects[0]
-        num_return_values = _check_single_set_return_values(path_to_node, result)
-    else:
-        prev_path, _ = result_data_objects[0]
-        prev_num_return_values, num_return_values = None, None
-        for path_to_node, obj in result_data_objects[1:]:
-            num_return_values = _check_single_set_return_values(path_to_node, obj)
+    for path_to_node, obj in result_data_objects[1:]:
+        cur_return_values = _check_single_set_return_values(path_to_node, obj)
 
-            if (
-                num_return_values != prev_num_return_values
-                and prev_num_return_values is not None
-            ):
+        if return_values != cur_return_values:
+            if return_values is None:
                 raise TypeError(
-                    f"Calling func on the nodes at position {path_to_node} returns {num_return_values} separate return "
-                    f"values, whereas calling func on the nodes at position {prev_path} instead returns "
-                    f"{prev_num_return_values} separate return values."
+                    f"Calling func on the nodes at position {path_to_node} returns "
+                    f"a tuple of {cur_return_values} datasets, whereas calling func on the "
+                    f"nodes at position {first_path} instead returns a single dataset."
+                )
+            elif cur_return_values is None:
+                raise TypeError(
+                    f"Calling func on the nodes at position {path_to_node} returns "
+                    f"a single dataset, whereas calling func on the nodes at position "
+                    f"{first_path} instead returns a tuple of {return_values} datasets."
+                )
+            else:
+                raise TypeError(
+                    f"Calling func on the nodes at position {path_to_node} returns "
+                    f"a tuple of {cur_return_values} datasets, whereas calling func on "
+                    f"the nodes at position {first_path} instead returns a tuple of "
+                    f"{return_values} datasets."
                 )
 
-            prev_path, prev_num_return_values = path_to_node, num_return_values
-
-    return num_return_values
+    return return_values
