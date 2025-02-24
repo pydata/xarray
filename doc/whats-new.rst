@@ -43,6 +43,9 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+
+- Fix incompatibilities between ``open_datatree`` and Zarr-Python V3, along with refactoring ``TestZarrDatatreeIO`` (:issue:`9960`, :pull:`10020`).
+  By `Alfonso Ladino-Rincon <https://github.com/aladinor>`_.
 - Default to resolution-dependent optimal integer encoding units when saving
   chunked non-nanosecond :py:class:`numpy.datetime64` or
   :py:class:`numpy.timedelta64` arrays to disk. Previously units of
@@ -57,6 +60,7 @@ Bug fixes
   Haacker <https://github.com/j-haacker>`_.
 - Fix ``isel`` for multi-coordinate Xarray indexes (:issue:`10063`, :pull:`10066`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+
 
 
 Documentation
