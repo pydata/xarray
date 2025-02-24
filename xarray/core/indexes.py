@@ -1568,6 +1568,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
     _index_type: type[Index] | type[pd.Index]
     _indexes: dict[Any, T_PandasOrXarrayIndex]
+    _unique_index_coords: list[tuple[T_PandasOrXarrayIndex, dict[Hashable, Variable]]]
     _variables: dict[Any, Variable]
 
     __slots__ = (
@@ -1577,6 +1578,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         "_dims",
         "_index_type",
         "_indexes",
+        "_unique_index_coords",
         "_variables",
     )
 
@@ -1625,6 +1627,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         self.__coord_name_id: dict[Any, int] | None = None
         self.__id_index: dict[int, T_PandasOrXarrayIndex] | None = None
         self.__id_coord_names: dict[int, tuple[Hashable, ...]] | None = None
+        self._unique_index_coords = None
 
     @property
     def _coord_name_id(self) -> dict[Any, int]:
@@ -1743,12 +1746,14 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
     ) -> list[tuple[T_PandasOrXarrayIndex, dict[Hashable, Variable]]]:
         """Returns a list of unique indexes and their corresponding coordinates."""
 
-        index_coords = []
-        for i, index in self._id_index.items():
-            coords = {k: self._variables[k] for k in self._id_coord_names[i]}
-            index_coords.append((index, coords))
+        if self._unique_index_coords is None:
+            index_coords = []
+            for i, index in self._id_index.items():
+                coords = {k: self._variables[k] for k in self._id_coord_names[i]}
+                index_coords.append((index, coords))
 
-        return index_coords
+            self._unique_index_coords = index_coords
+        return self._unique_index_coords
 
     def to_pandas_indexes(self) -> Indexes[pd.Index]:
         """Returns an immutable proxy for Dataset or DataArray pandas indexes.
