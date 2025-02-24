@@ -421,6 +421,7 @@ class DataArray(
     _close: Callable[[], None] | None
     _indexes: dict[Hashable, Index]
     _name: Hashable | None
+    _xindexes: Indexes[Index] | None
     _variable: Variable
 
     __slots__ = (
@@ -431,6 +432,7 @@ class DataArray(
         "_indexes",
         "_name",
         "_variable",
+        "_xindexes",
     )
 
     dt = utils.UncachedAccessor(CombinedDatetimelikeAccessor["DataArray"])
@@ -496,6 +498,7 @@ class DataArray(
         self._coords = coords
         self._name = name
         self._indexes = dict(indexes)
+        self._xindexes = None
 
         self._close = None
 
@@ -515,6 +518,7 @@ class DataArray(
         obj._coords = coords
         obj._name = name
         obj._indexes = indexes
+        obj._xindexes = None
         obj._close = None
         return obj
 
@@ -1004,7 +1008,11 @@ class DataArray(
         """Mapping of :py:class:`~xarray.indexes.Index` objects
         used for label based indexing.
         """
-        return Indexes(self._indexes, {k: self._coords[k] for k in self._indexes})
+        if self._xindexes is None:
+            self._xindexes = Indexes(
+                self._indexes, {k: self._coords[k] for k in self._indexes}
+            )
+        return self._xindexes
 
     @property
     def coords(self) -> DataArrayCoordinates:

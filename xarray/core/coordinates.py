@@ -986,12 +986,17 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
         original_indexes = dict(self._data.xindexes)
         original_indexes.update(indexes)
         self._data._indexes = original_indexes
+        # invalidate xindexes cache
+        self._data._xindexes = None
 
     def _drop_coords(self, coord_names):
         # should drop indexed coordinates only
         for name in coord_names:
             del self._data._coords[name]
             del self._data._indexes[name]
+
+        # invalidate xindexes cache
+        self._data._xindexes = None
 
     @property
     def variables(self):
@@ -1014,6 +1019,8 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
         del self._data._coords[key]
         if key in self._data._indexes:
             del self._data._indexes[key]
+            # invalidate xindexes cache
+            self._data._xindexes = None
 
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython."""
