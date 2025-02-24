@@ -15,6 +15,10 @@ from xarray.core.indexes import (
     filter_indexes_from_coords,
     indexes_equal,
 )
+from xarray.core.options import (
+    _get_default_combine_kwargs,
+    _new_default_combine_kwargs_warning,
+)
 from xarray.core.utils import Frozen, compat_dict_union, dict_equiv, equivalent
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
 
@@ -199,6 +203,7 @@ def merge_collected(
     compat: CompatOptions = "minimal",
     combine_attrs: CombineAttrsOptions = "override",
     equals: dict[Any, bool] | None = None,
+    _compat_is_default: bool = False,
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
     """Merge dicts of variables, while resolving conflicts appropriately.
 
@@ -290,6 +295,19 @@ def merge_collected(
                     merged_vars[name] = unique_variable(
                         name, variables, compat, equals.get(name, None)
                     )
+                    # This is very likely to result in false positives, but there is no way
+                    # to tell if the output will change without computing.
+                    if (
+                        _compat_is_default
+                        and compat == "no_conflicts"
+                        and len(variables) > 1
+                    ):
+                        _new_default_combine_kwargs_warning(
+                            "compat",
+                            compat,
+                            "This is likely to lead to different results when"
+                            "combining overlapping variables with the same name.",
+                        )
                 except MergeError:
                     if compat != "minimal":
                         # we need more than "minimal" compatibility (for which
@@ -626,8 +644,8 @@ class _MergeResult(NamedTuple):
 
 def merge_core(
     objects: Iterable[CoercibleMapping],
-    compat: CompatOptions = "broadcast_equals",
-    join: JoinOptions = "outer",
+    compat: CompatOptions | None,
+    join: JoinOptions | None,
     combine_attrs: CombineAttrsOptions = "override",
     priority_arg: int | None = None,
     explicit_coords: Iterable[Hashable] | None = None,
@@ -642,7 +660,7 @@ def merge_core(
     Parameters
     ----------
     objects : list of mapping
-        All values must be convertible to labeled arrays.
+    All values must be convertible to labeled arrays.
     compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
         Compatibility checks to use when merging variables.
     join : {"outer", "inner", "left", "right"}, optional
@@ -680,6 +698,17 @@ def merge_core(
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
+    default_kwargs = _get_default_combine_kwargs(from_concat=False)
+
+    uses_default = []
+    if compat is None:
+        compat = default_kwargs["compat"]
+        uses_default.append("compat")
+
+    if join is None:
+        join = default_kwargs["join"]
+        uses_default.append("join")
+
     _assert_compat_valid(compat)
 
     objects = list(objects)
@@ -690,7 +719,12 @@ def merge_core(
 
     coerced = coerce_pandas_values(objects)
     aligned = deep_align(
-        coerced, join=join, copy=False, indexes=indexes, fill_value=fill_value
+        coerced,
+        join=join,
+        copy=False,
+        indexes=indexes,
+        fill_value=fill_value,
+        join_is_default="join" in uses_default,
     )
 
     for pos, obj in skip_align_objs:
@@ -699,7 +733,11 @@ def merge_core(
     collected = collect_variables_and_indexes(aligned, indexes=indexes)
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
     variables, out_indexes = merge_collected(
-        collected, prioritized, compat=compat, combine_attrs=combine_attrs
+        collected,
+        prioritized,
+        compat=compat,
+        combine_attrs=combine_attrs,
+        _compat_is_default="compat" in uses_default,
     )
 
     dims = calculate_dimensions(variables)
@@ -730,8 +768,8 @@ def merge_core(
 
 def merge(
     objects: Iterable[DataArray | CoercibleMapping],
-    compat: CompatOptions = "no_conflicts",
-    join: JoinOptions = "outer",
+    compat: CompatOptions | None = None,
+    join: JoinOptions | None = None,
     fill_value: object = dtypes.NA,
     combine_attrs: CombineAttrsOptions = "override",
 ) -> Dataset:
@@ -975,8 +1013,8 @@ def merge(
 
     merge_result = merge_core(
         dict_like_objects,
-        compat,
-        join,
+        compat=compat,
+        join=join,
         combine_attrs=combine_attrs,
         fill_value=fill_value,
     )
@@ -1021,8 +1059,8 @@ def dataset_merge_method(
 
     return merge_core(
         objs,
-        compat,
-        join,
+        compat=compat,
+        join=join,
         priority_arg=priority_arg,
         fill_value=fill_value,
         combine_attrs=combine_attrs,
@@ -1054,6 +1092,8 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
 
     return merge_core(
         [dataset, other],
+        compat="broadcast_equals",
+        join="outer",
         priority_arg=1,
         indexes=dataset.xindexes,
         combine_attrs="override",

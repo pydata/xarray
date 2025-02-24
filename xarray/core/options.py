@@ -29,6 +29,7 @@ if TYPE_CHECKING:
         "keep_attrs",
         "warn_for_unclosed_files",
         "use_bottleneck",
+        "use_new_combine_kwarg_defaults",
         "use_numbagg",
         "use_opt_einsum",
         "use_flox",
@@ -57,6 +58,7 @@ if TYPE_CHECKING:
         warn_for_unclosed_files: bool
         use_bottleneck: bool
         use_flox: bool
+        use_new_combine_kwarg_defaults: bool
         use_numbagg: bool
         use_opt_einsum: bool
 
@@ -84,6 +86,7 @@ OPTIONS: T_Options = {
     "warn_for_unclosed_files": False,
     "use_bottleneck": True,
     "use_flox": True,
+    "use_new_combine_kwarg_defaults": False,
     "use_numbagg": True,
     "use_opt_einsum": True,
 }
@@ -113,6 +116,7 @@ _VALIDATORS = {
     "file_cache_maxsize": _positive_integer,
     "keep_attrs": lambda choice: choice in [True, False, "default"],
     "use_bottleneck": lambda value: isinstance(value, bool),
+    "use_new_combine_kwarg_defaults": lambda value: isinstance(value, bool),
     "use_numbagg": lambda value: isinstance(value, bool),
     "use_opt_einsum": lambda value: isinstance(value, bool),
     "use_flox": lambda value: isinstance(value, bool),
@@ -156,6 +160,58 @@ def _get_boolean_with_default(option: Options, default: bool) -> bool:
 
 def _get_keep_attrs(default: bool) -> bool:
     return _get_boolean_with_default("keep_attrs", default)
+
+
+def _get_default_combine_kwargs(from_concat: bool):
+    """This is a short-term helper used for changing the defaults."""
+    old_defaults = dict(
+        data_vars="all",
+        coords="different",
+        compat="equals" if from_concat else "no_conflicts",
+        join="outer",
+    )
+    new_defaults = dict(
+        data_vars="minimal",
+        coords="minimal",
+        compat="override",
+        join="exact",
+    )
+
+    if OPTIONS["use_new_combine_kwarg_defaults"]:
+        return new_defaults
+    else:
+        return old_defaults
+
+
+def _new_default_combine_kwargs_warning(
+    name: str, value: str, message: str, recommend_set_options: bool = True
+):
+    if value in ["all", "different"]:
+        new = "minimal"
+    if value in ["no_conflicts", "equals"]:
+        new = "minimal"
+    if value == "outer":
+        new = "exact"
+
+    if recommend_set_options:
+        recommendation = (
+            " To opt in to new defaults and get rid of these warnings now "
+            "use `set_options(use_new_combine_kwarg_defaults=True) or "
+            f"set {name} explicitly."
+        )
+    else:
+        recommendation = (
+            f" The recommendation is to set {name} explicitly for this case."
+        )
+
+    warnings.warn(
+        f"In a future version of xarray the default value for {name} will "
+        + f"change from {name}={value!r} to j{name}={new!r}. "
+        + message
+        + recommendation,
+        category=FutureWarning,
+        stacklevel=2,
+    )
 
 
 class set_options:
@@ -250,6 +306,8 @@ class set_options:
     use_flox : bool, default: True
         Whether to use ``numpy_groupies`` and `flox`` to
         accelerate groupby and resampling reductions.
+    use_new_combine_kwarg_defaults : bool, default False
+        Whether to use new default kwarg values for open_mfdataset.
     use_numbagg : bool, default: True
         Whether to use ``numbagg`` to accelerate reductions.
         Takes precedence over ``use_bottleneck`` when both are True.

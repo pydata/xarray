@@ -34,7 +34,7 @@ from xarray.backends.common import (
 )
 from xarray.backends.locks import _get_scheduler
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
-from xarray.core import indexing
+from xarray.core import dtypes, indexing
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
@@ -1402,14 +1402,14 @@ def open_mfdataset(
         | Sequence[Index]
         | None
     ) = None,
-    compat: CompatOptions = "no_conflicts",
+    compat: CompatOptions | None = None,
     preprocess: Callable[[Dataset], Dataset] | None = None,
     engine: T_Engine | None = None,
-    data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
-    coords="different",
+    data_vars: Literal["all", "minimal", "different"] | list[str] | None = None,
+    coords=None,
     combine: Literal["by_coords", "nested"] = "by_coords",
     parallel: bool = False,
-    join: JoinOptions = "outer",
+    join: JoinOptions | None = None,
     attrs_file: str | os.PathLike | None = None,
     combine_attrs: CombineAttrsOptions = "override",
     **kwargs,
@@ -1596,9 +1596,6 @@ def open_mfdataset(
 
     paths1d: list[str | ReadBuffer]
     if combine == "nested":
-        if isinstance(concat_dim, str | DataArray) or concat_dim is None:
-            concat_dim = [concat_dim]  # type: ignore[assignment]
-
         # This creates a flat list which is easier to iterate over, whilst
         # encoding the originally-supplied structure as "ids".
         # The "ids" are not used at all if combine='by_coords`.
@@ -1647,13 +1644,14 @@ def open_mfdataset(
             # along each dimension, using structure given by "ids"
             combined = _nested_combine(
                 datasets,
-                concat_dims=concat_dim,
+                concat_dim=concat_dim,
                 compat=compat,
                 data_vars=data_vars,
                 coords=coords,
                 ids=ids,
                 join=join,
                 combine_attrs=combine_attrs,
+                fill_value=dtypes.NA,
             )
         elif combine == "by_coords":
             # Redo ordering from coordinates, ignoring how they were ordered

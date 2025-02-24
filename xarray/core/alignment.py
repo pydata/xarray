@@ -19,6 +19,7 @@ from xarray.core.indexes import (
     indexes_all_equal,
     safe_cast_to_index,
 )
+from xarray.core.options import _new_default_combine_kwargs_warning
 from xarray.core.types import T_Alignable
 from xarray.core.utils import is_dict_like, is_full_slice
 from xarray.core.variable import Variable, as_compatible_data, calculate_dimensions
@@ -113,6 +114,7 @@ class Aligner(Generic[T_Alignable]):
     results: tuple[T_Alignable, ...]
     objects_matching_indexes: tuple[dict[MatchingIndexKey, Index], ...]
     join: str
+    join_is_default: bool = False
     exclude_dims: frozenset[Hashable]
     exclude_vars: frozenset[Hashable]
     copy: bool
@@ -418,12 +420,31 @@ class Aligner(Generic[T_Alignable]):
                 else:
                     need_reindex = False
                 if need_reindex:
+                    if self.join_is_default and self.join != "exact":
+                        _new_default_combine_kwargs_warning(
+                            "join",
+                            self.join,
+                            "This change will result in the following ValueError:"
+                            "cannot be aligned with join='exact' because "
+                            "index/labels/sizes are not equal along "
+                            "these coordinates (dimensions): "
+                            + ", ".join(f"{name!r} {dims!r}" for name, dims in key[0]),
+                            recommend_set_options=False,
+                        )
                     if self.join == "exact":
+                        new_default_warning = (
+                            "Failure might be related to new default (join='exact'). "
+                            "Previously the default was join='outer'. "
+                            "The recommendation is to set join explicitly for this case."
+                        )
                         raise ValueError(
                             "cannot align objects with join='exact' where "
                             "index/labels/sizes are not equal along "
                             "these coordinates (dimensions): "
                             + ", ".join(f"{name!r} {dims!r}" for name, dims in key[0])
+                            + new_default_warning
+                            if self.join_is_default
+                            else ""
                         )
                     joiner = self._get_index_joiner(index_cls)
                     joined_index = joiner(matching_indexes)
@@ -892,6 +913,7 @@ def deep_align(
     exclude: str | Iterable[Hashable] = frozenset(),
     raise_on_invalid: bool = True,
     fill_value=dtypes.NA,
+    join_is_default: bool = False,
 ) -> list[Any]:
     """Align objects for merging, recursing into dictionary values.
 
@@ -944,14 +966,17 @@ def deep_align(
         else:
             out.append(variables)
 
-    aligned = align(
-        *targets,
+    aligner = Aligner(
+        targets,
         join=join,
         copy=copy,
         indexes=indexes,
-        exclude=exclude,
+        exclude_dims=exclude,
         fill_value=fill_value,
     )
+    aligner.join_is_default = join_is_default
+    aligner.align()
+    aligned = list(aligner.results)
 
     for position, key, aligned_obj in zip(positions, keys, aligned, strict=True):
         if key is no_key:
