@@ -209,7 +209,7 @@ class Index:
 
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
-    ) -> Self | None:
+    ) -> Index | None:
         """Maybe returns a new index from the current index itself indexed by
         positional indexers.
 
@@ -304,7 +304,7 @@ class Index:
         """
         raise NotImplementedError(f"{self!r} doesn't support re-indexing labels")
 
-    def equals(self, other: Self) -> bool:
+    def equals(self, other: Index) -> bool:
         """Compare this index with another index of the same type.
 
         Implementation is optional but required in order to support alignment.
@@ -1424,7 +1424,7 @@ class CoordinateTransformIndex(Index):
 
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
-    ) -> Self | None:
+    ) -> Index | None:
         # TODO: support returning a new index (e.g., possible to re-calculate the
         # the transform or calculate another transform on a reduced dimension space)
         return None
@@ -1486,7 +1486,9 @@ class CoordinateTransformIndex(Index):
 
         return IndexSelResult(results)
 
-    def equals(self, other: Self) -> bool:
+    def equals(self, other: Index) -> bool:
+        if not isinstance(other, CoordinateTransformIndex):
+            return False
         return self.transform.equals(other.transform)
 
     def rename(
