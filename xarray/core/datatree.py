@@ -239,6 +239,7 @@ class DatasetView(Dataset):
         "_encoding",
         "_indexes",
         "_variables",
+        "_xindexes",
     )
 
     def __init__(
@@ -268,6 +269,7 @@ class DatasetView(Dataset):
         obj._coord_names = coord_names
         obj._dims = dims
         obj._indexes = indexes
+        obj._xindexes = None
         obj._attrs = attrs
         obj._close = close
         obj._encoding = encoding
@@ -336,6 +338,7 @@ class DatasetView(Dataset):
         obj._coord_names = coord_names
         obj._dims = dims
         obj._indexes = indexes
+        obj._xindexes = None
         obj._attrs = attrs
         obj._close = close
         obj._encoding = encoding
