@@ -33,13 +33,16 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- Warn instead of raise if phony_dims are detected when using h5netcdf-backend and ``phony_dims=None`` (:issue:`10049`, :pull:`10058`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Deprecations
 ~~~~~~~~~~~~
 - Deprecate :py:func:`~xarray.cftime_range` in favor of :py:func:`~xarray.date_range` with ``use_cftime=True``
   (:issue:`9886`, :pull:`10024`).
   By `Josh Kihm <https://github.com/maddogghoek>`_.
+- Move from phony_dims=None to phony_dims="access" for h5netcdf-backend(:issue:`10049`, :pull:`10058`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -55,6 +58,8 @@ Bug fixes
 - Fix DataArray().drop_attrs(deep=False) and add support for attrs to
   DataArray()._replace(). (:issue:`10027`, :pull:`10030`). By `Jan
   Haacker <https://github.com/j-haacker>`_.
+- Fix ``isel`` for multi-coordinate Xarray indexes (:issue:`10063`, :pull:`10066`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 
 Documentation
