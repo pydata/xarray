@@ -5625,7 +5625,7 @@ class DataArray(
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
         ...
-        >>> time = xr.cftime_range("1990-01", "1992-01", freq="ME")
+        >>> time = xr.date_range("1990-01", "1992-01", freq="ME", use_cftime=True)
         >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)
         >>> array = xr.DataArray(

@@ -580,9 +580,9 @@ a user passes ``old_arg``, we would instead catch it:
 
     def func(new_arg, old_arg=None):
         if old_arg is not None:
-            from warnings import warn
+            from xarray.core.utils import emit_user_level_warning
 
-            warn(
+            emit_user_level_warning(
                 "`old_arg` has been deprecated, and in the future will raise an error."
                 "Please use `new_arg` from now on.",
                 DeprecationWarning,
