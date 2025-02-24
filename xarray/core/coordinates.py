@@ -801,6 +801,8 @@ class DatasetCoordinates(Coordinates):
         original_indexes = dict(self._data.xindexes)
         original_indexes.update(indexes)
         self._data._indexes = original_indexes
+        # invalidate xindexes cache
+        self._data._xindexes = None
 
     def _drop_coords(self, coord_names):
         # should drop indexed coordinates only
@@ -808,10 +810,14 @@ class DatasetCoordinates(Coordinates):
             del self._data._variables[name]
             del self._data._indexes[name]
         self._data._coord_names.difference_update(coord_names)
+        # invalidate xindexes cache
+        self._data._xindexes = None
 
     def __delitem__(self, key: Hashable) -> None:
         if key in self:
             del self._data[key]
+            # invalidate xindexes cache
+            self._data._xindexes = None
         else:
             raise KeyError(
                 f"{key!r} is not in coordinate variables {tuple(self.keys())}"
