@@ -372,6 +372,29 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
 class TestH5NetCDFDatatreeIO(DatatreeIOBase):
     engine: T_DataTreeNetcdfEngine | None = "h5netcdf"
 
+    def test_phony_dims_warning(self, tmpdir) -> None:
+        filepath = tmpdir + "/phony_dims.nc"
+        import h5py
+
+        foo_data = np.arange(125).reshape(5, 5, 5)
+        bar_data = np.arange(625).reshape(25, 5, 5)
+        var = {"foo1": foo_data, "foo2": bar_data, "foo3": foo_data, "foo4": bar_data}
+        with h5py.File(filepath, "w") as f:
+            grps = ["bar", "baz"]
+            for grp in grps:
+                fx = f.create_group(grp)
+                for k, v in var.items():
+                    fx.create_dataset(k, data=v)
+
+        with pytest.warns(UserWarning, match="The 'phony_dims' kwarg"):
+            with open_datatree(filepath, engine=self.engine) as tree:
+                assert tree.bar.dims == {
+                    "phony_dim_0": 5,
+                    "phony_dim_1": 5,
+                    "phony_dim_2": 5,
+                    "phony_dim_3": 25,
+                }
+
 
 @pytest.mark.skipif(
     have_zarr_v3, reason="datatree support for zarr 3 is not implemented yet"
