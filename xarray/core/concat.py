@@ -544,7 +544,6 @@ def _dataset_concat(
     join: JoinOptions | CombineKwargDefault,
     combine_attrs: CombineAttrsOptions,
     create_index_for_new_dim: bool,
-    warn_about_data_vars: bool = True,
 ) -> T_Dataset:
     """
     Concatenate a sequence of datasets along a new or existing dimension
@@ -565,28 +564,6 @@ def _dataset_concat(
         raise ValueError(
             f"compat={compat!r} invalid: must be 'broadcast_equals', 'equals', 'identical', 'no_conflicts' or 'override'"
         )
-
-    if (
-        warn_about_data_vars
-        and isinstance(data_vars, CombineKwargDefault)
-        and data_vars == "all"
-    ):
-        if not isinstance(dim, str):
-            warnings.warn(
-                data_vars.warning_message(
-                    "This is likely to lead to different results when using an object as the concat_dim.",
-                ),
-                category=FutureWarning,
-                stacklevel=2,
-            )
-        elif dim is not None and all(dim not in ds for ds in datasets):
-            warnings.warn(
-                data_vars.warning_message(
-                    "This is likely to lead to different results when constructing a new dimension.",
-                ),
-                category=FutureWarning,
-                stacklevel=2,
-            )
 
     if isinstance(dim, DataArray):
         dim_var = dim.variable
@@ -850,7 +827,6 @@ def _dataarray_concat(
         join=join,
         combine_attrs=combine_attrs,
         create_index_for_new_dim=create_index_for_new_dim,
-        warn_about_data_vars=False,
     )
 
     merged_attrs = merge_attrs([da.attrs for da in arrays], combine_attrs)
