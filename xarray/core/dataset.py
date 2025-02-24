@@ -3050,6 +3050,7 @@ class Dataset(
         method: str | None = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         drop: bool = False,
+        options: dict[Any, Any] | None = None,
         **indexers_kwargs: Any,
     ) -> Self:
         """Returns a new dataset with each array indexed by tick labels
@@ -3121,7 +3122,7 @@ class Dataset(
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "sel")
         query_results = map_index_queries(
-            self, indexers=indexers, method=method, tolerance=tolerance
+            self, indexers=indexers, method=method, tolerance=tolerance, options=options
         )
 
         if drop:
