@@ -1938,36 +1938,6 @@ def indexes_all_equal(
     return not not_equal
 
 
-def _apply_indexes_fast(indexes: Indexes[Index], args: Mapping[Any, Any], func: str):
-    # This function avoids the call to indexes.group_by_index
-    # which is really slow when repeatedly iterating through
-    # an array. However, it fails to return the correct ID for
-    # multi-index arrays
-    indexes_fast, coords = indexes._indexes, indexes._variables
-
-    new_indexes: dict[Hashable, Index] = dict(indexes_fast.items())
-    new_index_variables: dict[Hashable, Variable] = {}
-    for name, index in indexes_fast.items():
-        coord = coords[name]
-        if hasattr(coord, "_indexes"):
-            index_vars = {n: coords[n] for n in coord._indexes}
-        else:
-            index_vars = {name: coord}
-        index_dims = {d for var in index_vars.values() for d in var.dims}
-        index_args = {k: v for k, v in args.items() if k in index_dims}
-
-        if index_args:
-            new_index = getattr(index, func)(index_args)
-            if new_index is not None:
-                new_indexes.update({k: new_index for k in index_vars})
-                new_index_vars = new_index.create_variables(index_vars)
-                new_index_variables.update(new_index_vars)
-            else:
-                for k in index_vars:
-                    new_indexes.pop(k, None)
-    return new_indexes, new_index_variables
-
-
 def _apply_indexes(
     indexes: Indexes[Index],
     args: Mapping[Any, Any],
@@ -1996,13 +1966,7 @@ def isel_indexes(
     indexes: Indexes[Index],
     indexers: Mapping[Any, Any],
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
-    # TODO: remove if clause in the future. It should be unnecessary.
-    # See failure introduced when removed
-    # https://github.com/pydata/xarray/pull/9002#discussion_r1590443756
-    if any(isinstance(v, PandasMultiIndex) for v in indexes._indexes.values()):
-        return _apply_indexes(indexes, indexers, "isel")
-    else:
-        return _apply_indexes_fast(indexes, indexers, "isel")
+    return _apply_indexes(indexes, indexers, "isel")
 
 
 def roll_indexes(
