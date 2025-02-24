@@ -1568,7 +1568,9 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
     _index_type: type[Index] | type[pd.Index]
     _indexes: dict[Any, T_PandasOrXarrayIndex]
-    _unique_index_coords: list[tuple[T_PandasOrXarrayIndex, dict[Hashable, Variable]]]
+    _unique_index_coords: (
+        list[tuple[T_PandasOrXarrayIndex, dict[Hashable, Variable]]] | None
+    )
     _variables: dict[Any, Variable]
 
     __slots__ = (
