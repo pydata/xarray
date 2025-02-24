@@ -582,6 +582,7 @@ class Dataset(
     _encoding: dict[Hashable, Any] | None
     _close: Callable[[], None] | None
     _indexes: dict[Hashable, Index]
+    _xindexes: Indexes[Index] | None
     _variables: dict[Hashable, Variable]
 
     __slots__ = (
@@ -594,6 +595,7 @@ class Dataset(
         "_encoding",
         "_indexes",
         "_variables",
+        "_xindexes",
     )
 
     def __init__(
@@ -629,6 +631,7 @@ class Dataset(
         self._coord_names = coord_names
         self._dims = dims
         self._indexes = indexes
+        self._xindexes = None
 
     # TODO: dirty workaround for mypy 1.5 error with inherited DatasetOpsMixin vs. Mapping
     # related to https://github.com/python/mypy/issues/9319?
@@ -1013,6 +1016,7 @@ class Dataset(
         obj._coord_names = coord_names
         obj._dims = dims
         obj._indexes = indexes
+        obj._xindexes = None
         obj._attrs = attrs
         obj._close = close
         obj._encoding = encoding
@@ -1047,6 +1051,8 @@ class Dataset(
                 self._attrs = attrs
             if indexes is not None:
                 self._indexes = indexes
+                # invalidate xindexes cache
+                self._xindexes = None
             if encoding is not _default:
                 self._encoding = encoding
             obj = self
@@ -1909,7 +1915,11 @@ class Dataset(
         """Mapping of :py:class:`~xarray.indexes.Index` objects
         used for label based indexing.
         """
-        return Indexes(self._indexes, {k: self._variables[k] for k in self._indexes})
+        if self._xindexes is None:
+            self._xindexes = Indexes(
+                self._indexes, {k: self._variables[k] for k in self._indexes}
+            )
+        return self._xindexes
 
     @property
     def coords(self) -> DatasetCoordinates:
