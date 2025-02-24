@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Hashable, Iterable
 from typing import TYPE_CHECKING, Any, Union, overload
 
@@ -20,6 +21,13 @@ from xarray.core.merge import (
 from xarray.core.types import T_DataArray, T_Dataset, T_Variable
 from xarray.core.variable import Variable
 from xarray.core.variable import concat as concat_vars
+from xarray.util.deprecation_helpers import (
+    _COMPAT_CONCAT_DEFAULT,
+    _COORDS_DEFAULT,
+    _DATA_VARS_DEFAULT,
+    _JOIN_DEFAULT,
+    CombineKwargDefault,
+)
 
 if TYPE_CHECKING:
     from xarray.core.types import (
@@ -37,12 +45,12 @@ if TYPE_CHECKING:
 def concat(
     objs: Iterable[T_Dataset],
     dim: Hashable | T_Variable | T_DataArray | pd.Index | Any,
-    data_vars: T_DataVars = "all",
-    coords: ConcatOptions | list[Hashable] = "different",
-    compat: CompatOptions = "equals",
+    data_vars: T_DataVars | CombineKwargDefault = _DATA_VARS_DEFAULT,
+    coords: ConcatOptions | list[Hashable] | CombineKwargDefault = _COORDS_DEFAULT,
+    compat: CompatOptions | CombineKwargDefault = _COMPAT_CONCAT_DEFAULT,
     positions: Iterable[Iterable[int]] | None = None,
     fill_value: object = dtypes.NA,
-    join: JoinOptions = "outer",
+    join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     combine_attrs: CombineAttrsOptions = "override",
     create_index_for_new_dim: bool = True,
 ) -> T_Dataset: ...
@@ -52,12 +60,12 @@ def concat(
 def concat(
     objs: Iterable[T_DataArray],
     dim: Hashable | T_Variable | T_DataArray | pd.Index | Any,
-    data_vars: T_DataVars = "all",
-    coords: ConcatOptions | list[Hashable] = "different",
-    compat: CompatOptions = "equals",
+    data_vars: T_DataVars | CombineKwargDefault = _DATA_VARS_DEFAULT,
+    coords: ConcatOptions | list[Hashable] | CombineKwargDefault = _COORDS_DEFAULT,
+    compat: CompatOptions | CombineKwargDefault = _COMPAT_CONCAT_DEFAULT,
     positions: Iterable[Iterable[int]] | None = None,
     fill_value: object = dtypes.NA,
-    join: JoinOptions = "outer",
+    join: JoinOptions | None = None,
     combine_attrs: CombineAttrsOptions = "override",
     create_index_for_new_dim: bool = True,
 ) -> T_DataArray: ...
@@ -66,12 +74,12 @@ def concat(
 def concat(
     objs,
     dim,
-    data_vars: T_DataVars = "all",
-    coords="different",
-    compat: CompatOptions = "equals",
+    data_vars: T_DataVars | CombineKwargDefault = _DATA_VARS_DEFAULT,
+    coords: ConcatOptions | list[Hashable] | CombineKwargDefault = _COORDS_DEFAULT,
+    compat: CompatOptions | CombineKwargDefault = _COMPAT_CONCAT_DEFAULT,
     positions=None,
     fill_value=dtypes.NA,
-    join: JoinOptions = "outer",
+    join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     combine_attrs: CombineAttrsOptions = "override",
     create_index_for_new_dim: bool = True,
 ):
@@ -255,7 +263,9 @@ def concat(
     except StopIteration as err:
         raise ValueError("must supply at least one object to concatenate") from err
 
-    if compat not in set(_VALID_COMPAT) - {"minimal"}:
+    if not isinstance(compat, CombineKwargDefault) and compat not in set(
+        _VALID_COMPAT
+    ) - {"minimal"}:
         raise ValueError(
             f"compat={compat!r} invalid: must be 'broadcast_equals', 'equals', 'identical', 'no_conflicts' or 'override'"
         )
@@ -320,7 +330,14 @@ def _calc_concat_dim_index(
     return dim, index
 
 
-def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, compat):
+def _calc_concat_over(
+    datasets,
+    dim,
+    dim_names,
+    data_vars: T_DataVars,
+    coords,
+    compat,
+):
     """
     Determine which dataset variables need to be concatenated in the result,
     """
@@ -344,11 +361,37 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
         concat_dim_lengths.append(ds.sizes.get(dim, 1))
 
     def process_subset_opt(opt, subset):
-        if isinstance(opt, str):
+        original = set(concat_over)
+        compat_str = (
+            compat._value if isinstance(compat, CombineKwargDefault) else compat
+        )
+        if isinstance(opt, str | CombineKwargDefault):
             if opt == "different":
+                if isinstance(compat, CombineKwargDefault) and compat != "override":
+                    if subset == "data_vars" or not isinstance(
+                        opt, CombineKwargDefault
+                    ):
+                        warnings.warn(
+                            compat.warning_message(
+                                "This change will result in the following ValueError:"
+                                f"Cannot specify both {subset}='different' and compat='override'.",
+                                recommend_set_options=False,
+                            ),
+                            category=FutureWarning,
+                            stacklevel=2,
+                        )
+
                 if compat == "override":
+                    new_default_warning = (
+                        " Failure might be related to new default (compat='override'). "
+                        "Previously the default was compat='equals' or compat='no_conflicts'. "
+                        "The recommendation is to set compat explicitly for this case."
+                    )
                     raise ValueError(
                         f"Cannot specify both {subset}='different' and compat='override'."
+                        + new_default_warning
+                        if isinstance(compat, CombineKwargDefault)
+                        else ""
                     )
                 # all nonindexes that are not the same in each dataset
                 for k in getattr(datasets[0], subset):
@@ -372,7 +415,7 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
 
                         # first check without comparing values i.e. no computes
                         for var in variables[1:]:
-                            equals[k] = getattr(variables[0], compat)(
+                            equals[k] = getattr(variables[0], compat_str)(
                                 var, equiv=lazy_array_equiv
                             )
                             if equals[k] is not True:
@@ -395,7 +438,7 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
                             for ds_rhs in datasets[1:]:
                                 v_rhs = ds_rhs.variables[k].compute()
                                 computed.append(v_rhs)
-                                if not getattr(v_lhs, compat)(v_rhs):
+                                if not getattr(v_lhs, compat_str)(v_rhs):
                                     concat_over.add(k)
                                     equals[k] = False
                                     # computed variables are not to be re-computed
@@ -418,6 +461,20 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
                 pass
             else:
                 raise ValueError(f"unexpected value for {subset}: {opt}")
+
+            if (
+                isinstance(opt, CombineKwargDefault)
+                and opt != "minimal"
+                and original != concat_over
+            ):
+                warnings.warn(
+                    opt.warning_message(
+                        "This is likely to lead to different results when multiple datasets"
+                        "have matching variables with overlapping values.",
+                    ),
+                    category=FutureWarning,
+                    stacklevel=2,
+                )
         else:
             valid_vars = tuple(getattr(datasets[0], subset))
             invalid_vars = [k for k in opt if k not in valid_vars]
@@ -479,14 +536,15 @@ def _parse_datasets(
 def _dataset_concat(
     datasets: Iterable[T_Dataset],
     dim: str | T_Variable | T_DataArray | pd.Index,
-    data_vars: T_DataVars,
-    coords: str | list[str],
-    compat: CompatOptions,
+    data_vars: T_DataVars | CombineKwargDefault,
+    coords: str | list[str] | CombineKwargDefault,
+    compat: CompatOptions | CombineKwargDefault,
     positions: Iterable[Iterable[int]] | None,
     fill_value: Any,
-    join: JoinOptions,
+    join: JoinOptions | CombineKwargDefault,
     combine_attrs: CombineAttrsOptions,
     create_index_for_new_dim: bool,
+    warn_about_data_vars: bool = True,
 ) -> T_Dataset:
     """
     Concatenate a sequence of datasets along a new or existing dimension
@@ -500,6 +558,35 @@ def _dataset_concat(
         raise TypeError(
             "The elements in the input list need to be either all 'Dataset's or all 'DataArray's"
         )
+
+    if not isinstance(compat, CombineKwargDefault) and compat not in set(
+        _VALID_COMPAT
+    ) - {"minimal"}:
+        raise ValueError(
+            f"compat={compat!r} invalid: must be 'broadcast_equals', 'equals', 'identical', 'no_conflicts' or 'override'"
+        )
+
+    if (
+        warn_about_data_vars
+        and isinstance(data_vars, CombineKwargDefault)
+        and data_vars == "all"
+    ):
+        if not isinstance(dim, str):
+            warnings.warn(
+                data_vars.warning_message(
+                    "This is likely to lead to different results when using an object as the concat_dim.",
+                ),
+                category=FutureWarning,
+                stacklevel=2,
+            )
+        elif dim is not None and all(dim not in ds for ds in datasets):
+            warnings.warn(
+                data_vars.warning_message(
+                    "This is likely to lead to different results when constructing a new dimension.",
+                ),
+                category=FutureWarning,
+                stacklevel=2,
+            )
 
     if isinstance(dim, DataArray):
         dim_var = dim.variable
@@ -718,12 +805,12 @@ def _dataset_concat(
 def _dataarray_concat(
     arrays: Iterable[T_DataArray],
     dim: str | T_Variable | T_DataArray | pd.Index,
-    data_vars: T_DataVars,
-    coords: str | list[str],
-    compat: CompatOptions,
+    data_vars: T_DataVars | CombineKwargDefault,
+    coords: str | list[str] | CombineKwargDefault,
+    compat: CompatOptions | CombineKwargDefault,
     positions: Iterable[Iterable[int]] | None,
     fill_value: object,
-    join: JoinOptions,
+    join: JoinOptions | CombineKwargDefault,
     combine_attrs: CombineAttrsOptions,
     create_index_for_new_dim: bool,
 ) -> T_DataArray:
@@ -736,7 +823,7 @@ def _dataarray_concat(
             "The elements in the input list need to be either all 'Dataset's or all 'DataArray's"
         )
 
-    if data_vars != "all":
+    if not isinstance(data_vars, CombineKwargDefault) and data_vars != "all":
         raise ValueError(
             "data_vars is not a valid argument when concatenating DataArray objects"
         )
@@ -763,6 +850,7 @@ def _dataarray_concat(
         join=join,
         combine_attrs=combine_attrs,
         create_index_for_new_dim=create_index_for_new_dim,
+        warn_about_data_vars=False,
     )
 
     merged_attrs = merge_attrs([da.attrs for da in arrays], combine_attrs)

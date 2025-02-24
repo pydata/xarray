@@ -12,6 +12,13 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.merge import merge
 from xarray.core.utils import iterate_nested
+from xarray.util.deprecation_helpers import (
+    _COMPAT_DEFAULT,
+    _COORDS_DEFAULT,
+    _DATA_VARS_DEFAULT,
+    _JOIN_DEFAULT,
+    CombineKwargDefault,
+)
 
 if TYPE_CHECKING:
     from xarray.core.types import (
@@ -202,9 +209,9 @@ def _combine_nd(
     concat_dims,
     data_vars,
     coords,
-    compat: CompatOptions,
+    compat: CompatOptions | CombineKwargDefault,
     fill_value,
-    join: JoinOptions,
+    join: JoinOptions | CombineKwargDefault,
     combine_attrs: CombineAttrsOptions,
 ):
     """
@@ -264,7 +271,7 @@ def _combine_all_along_first_dim(
     coords,
     compat: CompatOptions,
     fill_value,
-    join: JoinOptions,
+    join: JoinOptions | CombineKwargDefault,
     combine_attrs: CombineAttrsOptions,
 ):
     # Group into lines of datasets which must be combined along dim
@@ -295,7 +302,7 @@ def _combine_1d(
     data_vars,
     coords,
     fill_value,
-    join: JoinOptions,
+    join: JoinOptions | CombineKwargDefault,
     combine_attrs: CombineAttrsOptions,
 ):
     """
@@ -345,17 +352,20 @@ def _new_tile_id(single_id_ds_pair):
 
 def _nested_combine(
     datasets,
-    concat_dims,
+    concat_dim,
     compat,
     data_vars,
     coords,
     ids,
     fill_value,
-    join: JoinOptions,
+    join: JoinOptions | CombineKwargDefault,
     combine_attrs: CombineAttrsOptions,
 ):
     if len(datasets) == 0:
         return Dataset()
+
+    if isinstance(concat_dim, str | DataArray) or concat_dim is None:
+        concat_dim = [concat_dim]  # type: ignore[assignment]
 
     # Arrange datasets for concatenation
     # Use information from the shape of the user input
@@ -373,7 +383,7 @@ def _nested_combine(
     # Apply series of concatenate or merge operations along each dimension
     combined = _combine_nd(
         combined_ids,
-        concat_dims,
+        concat_dims=concat_dim,
         compat=compat,
         data_vars=data_vars,
         coords=coords,
@@ -391,11 +401,11 @@ DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]
 def combine_nested(
     datasets: DATASET_HYPERCUBE,
     concat_dim: str | DataArray | None | Sequence[str | DataArray | pd.Index | None],
-    compat: str = "no_conflicts",
-    data_vars: str = "all",
-    coords: str = "different",
+    compat: str | CombineKwargDefault = _COMPAT_DEFAULT,
+    data_vars: str | CombineKwargDefault = _DATA_VARS_DEFAULT,
+    coords: str | CombineKwargDefault = _COORDS_DEFAULT,
     fill_value: object = dtypes.NA,
-    join: JoinOptions = "outer",
+    join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     combine_attrs: CombineAttrsOptions = "drop",
 ) -> Dataset:
     """
@@ -588,13 +598,10 @@ def combine_nested(
     if mixed_datasets_and_arrays:
         raise ValueError("Can't combine datasets with unnamed arrays.")
 
-    if isinstance(concat_dim, str | DataArray) or concat_dim is None:
-        concat_dim = [concat_dim]
-
     # The IDs argument tells _nested_combine that datasets aren't yet sorted
     return _nested_combine(
         datasets,
-        concat_dims=concat_dim,
+        concat_dim=concat_dim,
         compat=compat,
         data_vars=data_vars,
         coords=coords,
@@ -629,8 +636,8 @@ def _combine_single_variable_hypercube(
     fill_value,
     data_vars,
     coords,
-    compat: CompatOptions,
-    join: JoinOptions,
+    compat: CompatOptions | CombineKwargDefault,
+    join: JoinOptions | CombineKwargDefault,
     combine_attrs: CombineAttrsOptions,
 ):
     """
@@ -685,11 +692,13 @@ def _combine_single_variable_hypercube(
 
 def combine_by_coords(
     data_objects: Iterable[Dataset | DataArray] = [],
-    compat: CompatOptions = "no_conflicts",
-    data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
-    coords: str = "different",
+    compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
+    data_vars: Literal["all", "minimal", "different"]
+    | list[str]
+    | CombineKwargDefault = _DATA_VARS_DEFAULT,
+    coords: str | CombineKwargDefault = _COORDS_DEFAULT,
     fill_value: object = dtypes.NA,
-    join: JoinOptions = "outer",
+    join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     combine_attrs: CombineAttrsOptions = "no_conflicts",
 ) -> Dataset | DataArray:
     """

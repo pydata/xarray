@@ -49,6 +49,13 @@ from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 from xarray.core.utils import is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
+from xarray.util.deprecation_helpers import (
+    _COMPAT_DEFAULT,
+    _COORDS_DEFAULT,
+    _DATA_VARS_DEFAULT,
+    _JOIN_DEFAULT,
+    CombineKwargDefault,
+)
 
 if TYPE_CHECKING:
     try:
@@ -1402,14 +1409,16 @@ def open_mfdataset(
         | Sequence[Index]
         | None
     ) = None,
-    compat: CompatOptions = "no_conflicts",
+    compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
     preprocess: Callable[[Dataset], Dataset] | None = None,
     engine: T_Engine | None = None,
-    data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
-    coords="different",
+    data_vars: Literal["all", "minimal", "different"]
+    | list[str]
+    | CombineKwargDefault = _DATA_VARS_DEFAULT,
+    coords=_COORDS_DEFAULT,
     combine: Literal["by_coords", "nested"] = "by_coords",
     parallel: bool = False,
-    join: JoinOptions = "outer",
+    join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     attrs_file: str | os.PathLike | None = None,
     combine_attrs: CombineAttrsOptions = "override",
     **kwargs,
@@ -1596,9 +1605,6 @@ def open_mfdataset(
 
     paths1d: list[str | ReadBuffer]
     if combine == "nested":
-        if isinstance(concat_dim, str | DataArray) or concat_dim is None:
-            concat_dim = [concat_dim]  # type: ignore[assignment]
-
         # This creates a flat list which is easier to iterate over, whilst
         # encoding the originally-supplied structure as "ids".
         # The "ids" are not used at all if combine='by_coords`.
@@ -1647,7 +1653,7 @@ def open_mfdataset(
             # along each dimension, using structure given by "ids"
             combined = _nested_combine(
                 datasets,
-                concat_dims=concat_dim,
+                concat_dim=concat_dim,
                 compat=compat,
                 data_vars=data_vars,
                 coords=coords,

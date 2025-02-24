@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import operator
+import warnings
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
@@ -22,6 +23,7 @@ from xarray.core.indexes import (
 from xarray.core.types import T_Alignable
 from xarray.core.utils import is_dict_like, is_full_slice
 from xarray.core.variable import Variable, as_compatible_data, calculate_dimensions
+from xarray.util.deprecation_helpers import CombineKwargDefault
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -418,12 +420,38 @@ class Aligner(Generic[T_Alignable]):
                 else:
                     need_reindex = False
                 if need_reindex:
+                    if (
+                        isinstance(self.join, CombineKwargDefault)
+                        and self.join != "exact"
+                    ):
+                        warnings.warn(
+                            self.join.warning_message(
+                                "This change will result in the following ValueError:"
+                                "cannot be aligned with join='exact' because "
+                                "index/labels/sizes are not equal along "
+                                "these coordinates (dimensions): "
+                                + ", ".join(
+                                    f"{name!r} {dims!r}" for name, dims in key[0]
+                                ),
+                                recommend_set_options=False,
+                            ),
+                            category=FutureWarning,
+                            stacklevel=2,
+                        )
                     if self.join == "exact":
+                        new_default_warning = (
+                            " Failure might be related to new default (join='exact'). "
+                            "Previously the default was join='outer'. "
+                            "The recommendation is to set join explicitly for this case."
+                        )
                         raise ValueError(
                             "cannot align objects with join='exact' where "
                             "index/labels/sizes are not equal along "
                             "these coordinates (dimensions): "
                             + ", ".join(f"{name!r} {dims!r}" for name, dims in key[0])
+                            + new_default_warning
+                            if isinstance(self.join, CombineKwargDefault)
+                            else ""
                         )
                     joiner = self._get_index_joiner(index_cls)
                     joined_index = joiner(matching_indexes)
@@ -886,7 +914,7 @@ def align(
 
 def deep_align(
     objects: Iterable[Any],
-    join: JoinOptions = "inner",
+    join: JoinOptions | CombineKwargDefault = "inner",
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),

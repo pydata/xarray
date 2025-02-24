@@ -35,9 +35,10 @@ import inspect
 import warnings
 from collections.abc import Callable
 from functools import wraps
-from typing import TypeVar
+from typing import Any, TypeVar
 
-from xarray.core.utils import emit_user_level_warning
+from xarray.core.options import OPTIONS
+from xarray.core.utils import ReprObject, emit_user_level_warning
 
 T = TypeVar("T", bound=Callable)
 
@@ -145,3 +146,59 @@ def deprecate_dims(func: T, old_name="dims") -> T:
     # We're quite confident we're just returning `T` from this function, so it's fine to ignore typing
     # within the function.
     return wrapper  # type: ignore[return-value]
+
+
+class CombineKwargDefault(ReprObject):
+    """Object that handles deprecation cycle for kwarg default values."""
+
+    _old: str
+    _new: str
+    _name: str
+
+    def __init__(self, *, name: str, old: str, new: str):
+        self._name = name
+        self._old = old
+        self._new = new
+
+    def __eq__(self, other: ReprObject | Any) -> bool:
+        # TODO: What type can other be? ArrayLike?
+        return (
+            self._value == other._value
+            if isinstance(other, ReprObject)
+            else self._value == other
+        )
+
+    @property
+    def _value(self):
+        return self._new if OPTIONS["use_new_combine_kwarg_defaults"] else self._old
+
+    def __hash__(self) -> int:
+        return hash(self._value)
+
+    def warning_message(self, message: str, recommend_set_options: bool = True):
+        if recommend_set_options:
+            recommendation = (
+                " To opt in to new defaults and get rid of these warnings now "
+                "use `set_options(use_new_combine_kwarg_defaults=True) or "
+                f"set {self._name} explicitly."
+            )
+        else:
+            recommendation = (
+                f" The recommendation is to set {self._name} explicitly for this case."
+            )
+
+        return (
+            f"In a future version of xarray the default value for {self._name} will "
+            + f"change from {self._name}={self._old!r} to {self._name}={self._new!r}. "
+            + message
+            + recommendation
+        )
+
+
+_DATA_VARS_DEFAULT = CombineKwargDefault(name="data_vars", old="all", new="minimal")
+_COORDS_DEFAULT = CombineKwargDefault(name="coords", old="different", new="minimal")
+_COMPAT_CONCAT_DEFAULT = CombineKwargDefault(
+    name="compat", old="equals", new="override"
+)
+_COMPAT_DEFAULT = CombineKwargDefault(name="compat", old="no_conflicts", new="override")
+_JOIN_DEFAULT = CombineKwargDefault(name="join", old="outer", new="exact")
