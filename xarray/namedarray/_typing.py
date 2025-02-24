@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
-from enum import Enum
 from types import EllipsisType, ModuleType
 from typing import (
     TYPE_CHECKING,
@@ -11,6 +10,7 @@ from typing import (
     Literal,
     Protocol,
     SupportsIndex,
+    TypedDict,
     TypeVar,
     Union,
     overload,
@@ -18,37 +18,72 @@ from typing import (
 )
 
 import numpy as np
+from numpy.typing import ArrayLike as _ArrayLike
 
 try:
     if sys.version_info >= (3, 11):
-        from typing import TypeAlias
+        from typing import Never, TypeAlias
     else:
         from typing import TypeAlias
+
+        from typing_extensions import Never
 except ImportError:
     if TYPE_CHECKING:
         raise
     else:
+        Never: Any = None
         Self: Any = None
 
 
-# Singleton type, as per https://github.com/python/typing/pull/240
-class Default(Enum):
-    token: Final = 0
+class Default(list[Never]):
+    """
+    Non-Hashable default value.
+
+    A replacement value for Optional None since it is Hashable.
+    Same idea as https://github.com/python/typing/pull/240
+
+    Examples
+    --------
+
+    Runtime checks:
+
+    >>> _default = Default()
+    >>> isinstance(_default, Hashable)
+    False
+    >>> _default == _default
+    True
+    >>> _default is _default
+    True
+
+    Typing usage:
+
+    >>> x: Hashable | Default = _default
+    >>> if isinstance(x, Default):
+    ...     y: Default = x
+    ... else:
+    ...     h: Hashable = x
+    ...
+
+    TODO: if x is _default does not narrow typing, use isinstance check instead.
+    """
+
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}>"
 
 
-_default = Default.token
+_default: Final[Default] = Default()
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
+_ScalarType = TypeVar("_ScalarType", bound=np.generic)
+_ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
+
 _dtype = np.dtype
 _DType = TypeVar("_DType", bound=np.dtype[Any])
 _DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
 # A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
-
-_ScalarType = TypeVar("_ScalarType", bound=np.generic)
-_ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
 
 
 # A protocol for anything with the dtype attribute
@@ -56,6 +91,16 @@ _ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
 class _SupportsDType(Protocol[_DType_co]):
     @property
     def dtype(self) -> _DType_co: ...
+
+
+class _SupportsReal(Protocol[_T_co]):
+    @property
+    def real(self) -> _T_co: ...
+
+
+class _SupportsImag(Protocol[_T_co]):
+    @property
+    def imag(self) -> _T_co: ...
 
 
 _DTypeLike = Union[
@@ -70,6 +115,7 @@ _Shape = tuple[_IntOrUnknown, ...]
 _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
 _ShapeType = TypeVar("_ShapeType", bound=Any)
 _ShapeType_co = TypeVar("_ShapeType_co", bound=Any, covariant=True)
+_Shape1D = tuple[int]
 
 _Axis = int
 _Axes = tuple[_Axis, ...]
@@ -85,28 +131,69 @@ T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim]
 
 _Dim = Hashable
 _Dims = tuple[_Dim, ...]
-
+_DimsLike2 = Union[_Dim, _Dims]
 _DimsLike = Union[str, Iterable[_Dim]]
 
 # https://data-apis.org/array-api/latest/API_specification/indexing.html
 # TODO: np.array_api was bugged and didn't allow (None,), but should!
 # https://github.com/numpy/numpy/pull/25022
 # https://github.com/data-apis/array-api/pull/674
-_IndexKey = Union[int, slice, EllipsisType]
+_IndexKeyNoEllipsis = Union[int, slice, None]
+_IndexKey = Union[_IndexKeyNoEllipsis, EllipsisType]
+_IndexKeysNoEllipsis = tuple[_IndexKeyNoEllipsis, ...]
 _IndexKeys = tuple[_IndexKey, ...]  #  tuple[Union[_IndexKey, None], ...]
 _IndexKeyLike = Union[_IndexKey, _IndexKeys]
 
 _AttrsLike = Union[Mapping[Any, Any], None]
 
-
-class _SupportsReal(Protocol[_T_co]):
-    @property
-    def real(self) -> _T_co: ...
+_Device = Any
 
 
-class _SupportsImag(Protocol[_T_co]):
-    @property
-    def imag(self) -> _T_co: ...
+class _IInfo(Protocol):
+    bits: int
+    max: int
+    min: int
+    dtype: _dtype[Any]
+
+
+class _FInfo(Protocol):
+    bits: int
+    eps: float
+    max: float
+    min: float
+    smallest_normal: float
+    dtype: _dtype[Any]
+
+
+_Capabilities = TypedDict(
+    "_Capabilities", {"boolean indexing": bool, "data-dependent shapes": bool}
+)
+
+_DefaultDataTypes = TypedDict(
+    "_DefaultDataTypes",
+    {
+        "real floating": _dtype[Any],
+        "complex floating": _dtype[Any],
+        "integral": _dtype[Any],
+        "indexing": _dtype[Any],
+    },
+)
+
+
+class _DataTypes(TypedDict, total=False):
+    bool: _dtype[Any]
+    float32: _dtype[Any]
+    float64: _dtype[Any]
+    complex64: _dtype[Any]
+    complex128: _dtype[Any]
+    int8: _dtype[Any]
+    int16: _dtype[Any]
+    int32: _dtype[Any]
+    int64: _dtype[Any]
+    uint8: _dtype[Any]
+    uint16: _dtype[Any]
+    uint32: _dtype[Any]
+    uint64: _dtype[Any]
 
 
 @runtime_checkable
@@ -209,6 +296,16 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
     ) -> _arrayapi[Any, Any]: ...
 
     def __array_namespace__(self) -> ModuleType: ...
+
+    def to_device(
+        self, device: _Device, /, stream: None = None
+    ) -> _arrayapi[_ShapeType_co, _DType_co]: ...
+
+    @property
+    def device(self) -> _Device: ...
+
+    @property
+    def mT(self) -> _arrayapi[Any, _DType_co]: ...
 
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
