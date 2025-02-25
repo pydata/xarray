@@ -484,25 +484,30 @@ class CFMaskCoder(VariableCoder):
             )
 
         if encoded_fill_values:
-            # special case DateTime to properly handle NaT
-            # we need to check if time-like will be decoded or not
-            # in further processing
             dtype: np.typing.DTypeLike
             decoded_fill_value: Any
-            is_time_like = _is_time_like(attrs.get("units"))
-            if (
-                (is_time_like == "datetime" and self.decode_times)
-                or (is_time_like == "timedelta" and self.decode_timedelta)
-            ) and data.dtype.kind in "iu":
-                dtype, decoded_fill_value = np.int64, np.iinfo(np.int64).min
+            # in case of packed data we have to decode into float
+            # in any case
+            if "scale_factor" in attrs or "add_offset" in attrs:
+                dtype, decoded_fill_value = (
+                    _choose_float_dtype(data.dtype, attrs),
+                    np.nan,
+                )
             else:
-                if "scale_factor" not in attrs and "add_offset" not in attrs:
-                    dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
-                else:
+                # in case of no-packing special case DateTime/Timedelta to properly
+                # handle NaT, we need to check if time-like will be decoded
+                # or not in further processing
+                is_time_like = _is_time_like(attrs.get("units"))
+                if (
+                    (is_time_like == "datetime" and self.decode_times)
+                    or (is_time_like == "timedelta" and self.decode_timedelta)
+                ) and data.dtype.kind in "iu":
                     dtype, decoded_fill_value = (
-                        _choose_float_dtype(data.dtype, attrs),
-                        np.nan,
-                    )
+                        np.int64,
+                        np.iinfo(np.int64).min,
+                    )  # np.dtype(f"{is_time_like}64[s]")
+                else:
+                    dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
 
             transform = partial(
                 _apply_mask,

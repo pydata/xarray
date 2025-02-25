@@ -525,6 +525,24 @@ def test_decoded_cf_datetime_array_2d(time_unit: PDDatetimeUnitOptions) -> None:
     assert_array_equal(np.asarray(result), expected)
 
 
+@pytest.mark.parametrize("decode_times", [True, False])
+@pytest.mark.parametrize("mask_and_scale", [True, False])
+def test_decode_datetime_mask_and_scale(
+    decode_times: bool, mask_and_scale: bool
+) -> None:
+    attrs = {
+        "units": "nanoseconds since 1970-01-01",
+        "_FillValue": np.int16(-1),
+        "add_offset": 100000.0,
+    }
+    encoded = Variable(["time"], np.array([0, -1, 1], "int16"), attrs=attrs)
+    decoded = conventions.decode_cf_variable(
+        "foo", encoded, mask_and_scale=mask_and_scale, decode_times=decode_times
+    )
+    result = conventions.encode_cf_variable(decoded, name="foo")
+    assert_equal(encoded, result)
+
+
 FREQUENCIES_TO_ENCODING_UNITS = {
     "ns": "nanoseconds",
     "us": "microseconds",
@@ -1914,7 +1932,7 @@ def test_lazy_decode_timedelta_error() -> None:
 def test_decode_timedelta_mask_and_scale(
     decode_timedelta: bool, mask_and_scale: bool
 ) -> None:
-    attrs = {"units": "days", "_FillValue": np.int16(-1), "add_offset": 100.0}
+    attrs = {"units": "nanoseconds", "_FillValue": np.int16(-1), "add_offset": 100000.0}
     encoded = Variable(["time"], np.array([0, -1, 1], "int16"), attrs=attrs)
     decoded = conventions.decode_cf_variable(
         "foo", encoded, mask_and_scale=mask_and_scale, decode_timedelta=decode_timedelta
