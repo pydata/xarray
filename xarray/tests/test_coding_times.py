@@ -532,6 +532,7 @@ def test_decode_datetime_mask_and_scale(
 ) -> None:
     attrs = {
         "units": "nanoseconds since 1970-01-01",
+        "calendar": "proleptic_gregorian",
         "_FillValue": np.int16(-1),
         "add_offset": 100000.0,
     }
@@ -540,7 +541,8 @@ def test_decode_datetime_mask_and_scale(
         "foo", encoded, mask_and_scale=mask_and_scale, decode_times=decode_times
     )
     result = conventions.encode_cf_variable(decoded, name="foo")
-    assert_equal(encoded, result)
+    assert_identical(encoded, result)
+    assert encoded.dtype == result.dtype
 
 
 FREQUENCIES_TO_ENCODING_UNITS = {
@@ -1938,4 +1940,5 @@ def test_decode_timedelta_mask_and_scale(
         "foo", encoded, mask_and_scale=mask_and_scale, decode_timedelta=decode_timedelta
     )
     result = conventions.encode_cf_variable(decoded, name="foo")
-    assert_equal(encoded, result)
+    assert_identical(encoded, result)
+    assert encoded.dtype == result.dtype
