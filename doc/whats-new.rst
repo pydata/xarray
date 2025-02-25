@@ -33,11 +33,13 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- Warn instead of raise if phony_dims are detected when using h5netcdf-backend and ``phony_dims=None`` (:issue:`10049`, :pull:`10058`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Deprecations
 ~~~~~~~~~~~~
-
+- Move from phony_dims=None to phony_dims="access" for h5netcdf-backend(:issue:`10049`, :pull:`10058`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -58,6 +60,8 @@ Bug fixes
   silence this warning message in the case that it is rightfully emitted
   (:issue:`10071`, :pull:`10072`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- Fix ``isel`` for multi-coordinate Xarray indexes (:issue:`10063`, :pull:`10066`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 
 Documentation
