@@ -42,11 +42,13 @@ Breaking changes
   with xarray's handling of standard integers, and interfered with encoding
   times with small integer dtypes and missing values (:pull:`9498`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
-
+- Warn instead of raise if phony_dims are detected when using h5netcdf-backend and ``phony_dims=None`` (:issue:`10049`, :pull:`10058`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Deprecations
 ~~~~~~~~~~~~
-
+- Move from phony_dims=None to phony_dims="access" for h5netcdf-backend(:issue:`10049`, :pull:`10058`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -69,6 +71,8 @@ Bug fixes
   integer dtype is specified with units that do not allow for an exact round
   trip (:pull:`9498`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- Fix ``isel`` for multi-coordinate Xarray indexes (:issue:`10063`, :pull:`10066`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 
 Documentation
