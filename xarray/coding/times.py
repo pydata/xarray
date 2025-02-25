@@ -582,7 +582,7 @@ def _numbers_to_timedelta(
     time_unit: NPDatetimeUnitOptions,
     ref_unit: PDDatetimeUnitOptions,
     datatype: str,
-    target_unit: Optional[PDDatetimeUnitOptions] = None,
+    target_unit: PDDatetimeUnitOptions | None = None,
 ) -> np.ndarray:
     """Transform numbers to np.timedelta64."""
     # keep NaT/nan mask
