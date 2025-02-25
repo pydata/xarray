@@ -67,6 +67,16 @@ jobs:
           - env: "flaky"
             python-version: "3.13"
             os: ubuntu-latest
+          # The mypy tests must be executed using only 1 process in order to guarantee
+          # predictable mypy output messages for comparison to expectations.
+          - env: "mypy"
+            python-version: "3.10"
+            numprocesses: 1
+            os: ubuntu-latest
+          - env: "mypy"
+            python-version: "3.13"
+            numprocesses: 1
+            os: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -88,6 +98,10 @@ jobs:
             then
               echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
               echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests -W default" >> $GITHUB_ENV
+            elif [[ "${{ matrix.env }}" == "mypy" ]] ;
+            then
+              echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+              echo "PYTEST_ADDOPTS=-n 1 -m 'mypy' --run-mypy -W default" >> $GITHUB_ENV
             else
               echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
             fi
@@ -144,7 +158,7 @@ jobs:
           save-always: true
 
       - name: Run tests
-        run: python -m pytest -n 4
+        run: python -m pytest -n ${{ matrix.numprocesses || 4 }}
           --timeout 180
           --cov=xarray
           --cov-report=xml

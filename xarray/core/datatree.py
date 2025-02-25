@@ -12,7 +12,17 @@ from collections.abc import (
     Mapping,
 )
 from html import escape
-from typing import TYPE_CHECKING, Any, Literal, NoReturn, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Concatenate,
+    Literal,
+    NoReturn,
+    ParamSpec,
+    TypeVar,
+    Union,
+    overload,
+)
 
 from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
@@ -80,18 +90,23 @@ if TYPE_CHECKING:
 # """
 # DEVELOPERS' NOTE
 # ----------------
-# The idea of this module is to create a `DataTree` class which inherits the tree structure from TreeNode, and also copies
-# the entire API of `xarray.Dataset`, but with certain methods decorated to instead map the dataset function over every
-# node in the tree. As this API is copied without directly subclassing `xarray.Dataset` we instead create various Mixin
-# classes (in ops.py) which each define part of `xarray.Dataset`'s extensive API.
+# The idea of this module is to create a `DataTree` class which inherits the tree
+# structure from TreeNode, and also copies the entire API of `xarray.Dataset`, but with
+# certain methods decorated to instead map the dataset function over every node in the
+# tree. As this API is copied without directly subclassing `xarray.Dataset` we instead
+# create various Mixin classes (in ops.py) which each define part of `xarray.Dataset`'s
+# extensive API.
 #
-# Some of these methods must be wrapped to map over all nodes in the subtree. Others are fine to inherit unaltered
-# (normally because they (a) only call dataset properties and (b) don't return a dataset that should be nested into a new
-# tree) and some will get overridden by the class definition of DataTree.
+# Some of these methods must be wrapped to map over all nodes in the subtree. Others are
+# fine to inherit unaltered (normally because they (a) only call dataset properties and
+# (b) don't return a dataset that should be nested into a new tree) and some will get
+# overridden by the class definition of DataTree.
 # """
 
 
 T_Path = Union[str, NodePath]
+T = TypeVar("T")
+P = ParamSpec("P")
 
 
 def _collect_data_and_coord_variables(
@@ -1465,9 +1480,28 @@ class DataTree(
         # TODO fix this typing error
         return map_over_datasets(func, self, *args, kwargs=kwargs)
 
+    @overload
     def pipe(
-        self, func: Callable | tuple[Callable, str], *args: Any, **kwargs: Any
-    ) -> Any:
+        self,
+        func: Callable[Concatenate[Self, P], T],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T: ...
+
+    @overload
+    def pipe(
+        self,
+        func: tuple[Callable[..., T], str],
+        *args: Any,
+        **kwargs: Any,
+    ) -> T: ...
+
+    def pipe(
+        self,
+        func: Callable[Concatenate[Self, P], T] | tuple[Callable[..., T], str],
+        *args: Any,
+        **kwargs: Any,
+    ) -> T:
         """Apply ``func(self, *args, **kwargs)``
 
         This method replicates the pandas method of the same name.
@@ -1487,7 +1521,7 @@ class DataTree(
 
         Returns
         -------
-        object : Any
+        object : T
             the return type of ``func``.
 
         Notes
@@ -1515,15 +1549,19 @@ class DataTree(
 
         """
         if isinstance(func, tuple):
-            func, target = func
+            # Use different var when unpacking function from tuple because the type
+            # signature of the unpacked function differs from the expected type
+            # signature in the case where only a function is given, rather than a tuple.
+            # This makes type checkers happy at both call sites below.
+            f, target = func
             if target in kwargs:
                 raise ValueError(
                     f"{target} is both the pipe target and a keyword argument"
                 )
             kwargs[target] = self
-        else:
-            args = (self,) + args
-        return func(*args, **kwargs)
+            return f(*args, **kwargs)
+
+        return func(self, *args, **kwargs)
 
     # TODO some kind of .collapse() or .flatten() method to merge a subtree
 
