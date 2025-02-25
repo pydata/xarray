@@ -194,6 +194,13 @@ class CombineKwargDefault(ReprObject):
             + recommendation
         )
 
+    def error_message(self):
+        return (
+            f" Error might be related to new default ({self._name}={self._new!r}). "
+            f"Previously the default was {self._name}={self._old!r}. "
+            f"The recommendation is to set {self._name} explicitly for this case."
+        )
+
 
 _DATA_VARS_DEFAULT = CombineKwargDefault(name="data_vars", old="all", new="minimal")
 _COORDS_DEFAULT = CombineKwargDefault(name="coords", old="different", new="minimal")

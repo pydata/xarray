@@ -439,19 +439,16 @@ class Aligner(Generic[T_Alignable]):
                             stacklevel=2,
                         )
                     if self.join == "exact":
-                        new_default_warning = (
-                            " Failure might be related to new default (join='exact'). "
-                            "Previously the default was join='outer'. "
-                            "The recommendation is to set join explicitly for this case."
-                        )
                         raise ValueError(
                             "cannot align objects with join='exact' where "
                             "index/labels/sizes are not equal along "
                             "these coordinates (dimensions): "
                             + ", ".join(f"{name!r} {dims!r}" for name, dims in key[0])
-                            + new_default_warning
-                            if isinstance(self.join, CombineKwargDefault)
-                            else ""
+                            + (
+                                self.join.error_message()
+                                if isinstance(self.join, CombineKwargDefault)
+                                else ""
+                            )
                         )
                     joiner = self._get_index_joiner(index_cls)
                     joined_index = joiner(matching_indexes)

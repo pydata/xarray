@@ -368,12 +368,10 @@ def _calc_concat_over(
         if isinstance(opt, str | CombineKwargDefault):
             if opt == "different":
                 if isinstance(compat, CombineKwargDefault) and compat != "override":
-                    if subset == "data_vars" or not isinstance(
-                        opt, CombineKwargDefault
-                    ):
+                    if not isinstance(opt, CombineKwargDefault):
                         warnings.warn(
                             compat.warning_message(
-                                "This change will result in the following ValueError:"
+                                "This change will result in the following ValueError: "
                                 f"Cannot specify both {subset}='different' and compat='override'.",
                                 recommend_set_options=False,
                             ),
@@ -382,16 +380,13 @@ def _calc_concat_over(
                         )
 
                 if compat == "override":
-                    new_default_warning = (
-                        " Failure might be related to new default (compat='override'). "
-                        "Previously the default was compat='equals' or compat='no_conflicts'. "
-                        "The recommendation is to set compat explicitly for this case."
-                    )
                     raise ValueError(
                         f"Cannot specify both {subset}='different' and compat='override'."
-                        + new_default_warning
-                        if isinstance(compat, CombineKwargDefault)
-                        else ""
+                        + (
+                            compat.error_message()
+                            if isinstance(compat, CombineKwargDefault)
+                            else ""
+                        )
                     )
                 # all nonindexes that are not the same in each dataset
                 for k in getattr(datasets[0], subset):
@@ -469,7 +464,7 @@ def _calc_concat_over(
             ):
                 warnings.warn(
                     opt.warning_message(
-                        "This is likely to lead to different results when multiple datasets"
+                        "This is likely to lead to different results when multiple datasets "
                         "have matching variables with overlapping values.",
                     ),
                     category=FutureWarning,
@@ -800,7 +795,10 @@ def _dataarray_concat(
             "The elements in the input list need to be either all 'Dataset's or all 'DataArray's"
         )
 
-    if not isinstance(data_vars, CombineKwargDefault) and data_vars != "all":
+    if not isinstance(data_vars, CombineKwargDefault) and data_vars not in [
+        "all",
+        "minimal",
+    ]:
         raise ValueError(
             "data_vars is not a valid argument when concatenating DataArray objects"
         )
@@ -819,7 +817,7 @@ def _dataarray_concat(
     ds = _dataset_concat(
         datasets,
         dim=dim,
-        data_vars=data_vars,
+        data_vars="all",
         coords=coords,
         compat=compat,
         positions=positions,

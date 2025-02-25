@@ -351,7 +351,9 @@ def map_blocks(
         result = func(*converted_args, **kwargs)
 
         merged_coordinates = merge(
-            [arg.coords for arg in args if isinstance(arg, Dataset | DataArray)]
+            [arg.coords for arg in args if isinstance(arg, Dataset | DataArray)],
+            join="outer",
+            compat="no_conflicts",
         ).coords
 
         # check all dims are present
@@ -439,7 +441,9 @@ def map_blocks(
     # rechunk any numpy variables appropriately
     xarray_objs = tuple(arg.chunk(arg.chunksizes) for arg in xarray_objs)
 
-    merged_coordinates = merge([arg.coords for arg in aligned]).coords
+    merged_coordinates = merge(
+        [arg.coords for arg in aligned], join="outer", compat="no_conflicts"
+    ).coords
 
     _, npargs = unzip(
         sorted(
@@ -472,7 +476,9 @@ def map_blocks(
         )
 
         coordinates = merge(
-            (preserved_coords, template.coords.to_dataset()[new_coord_vars])
+            (preserved_coords, template.coords.to_dataset()[new_coord_vars]),
+            join="outer",
+            compat="no_conflicts",
         ).coords
         output_chunks: Mapping[Hashable, tuple[int, ...]] = {
             dim: input_chunks[dim] for dim in template.dims if dim in input_chunks

@@ -308,7 +308,7 @@ def merge_collected(
                     ):
                         warnings.warn(
                             compat.warning_message(
-                                "This is likely to lead to different results when"
+                                "This is likely to lead to different results when "
                                 "combining overlapping variables with the same name.",
                             ),
                             category=FutureWarning,
