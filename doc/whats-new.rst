@@ -55,7 +55,9 @@ Bug fixes
 - Fix DataArray().drop_attrs(deep=False) and add support for attrs to
   DataArray()._replace(). (:issue:`10027`, :pull:`10030`). By `Jan
   Haacker <https://github.com/j-haacker>`_.
-- Fix ``isel`` for multi-coordinate Xarray indexes (:issue:`10063`, :pull:`10066`).
+- Fix ``isel`` for multi-coordinate Xarray indexes and slightly improve
+  performance when repeatedly accessing :py:attr:`Dataset.xindexes` or
+  :py:attr:`DataArray.xindexes` (:issue:`10063`, :pull:`10066`, :pull:`10074`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
 
 
