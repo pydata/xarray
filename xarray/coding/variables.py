@@ -502,10 +502,8 @@ class CFMaskCoder(VariableCoder):
                     (is_time_like == "datetime" and self.decode_times)
                     or (is_time_like == "timedelta" and self.decode_timedelta)
                 ) and data.dtype.kind in "iu":
-                    dtype, decoded_fill_value = (
-                        np.int64,
-                        np.iinfo(np.int64).min,
-                    )  # np.dtype(f"{is_time_like}64[s]")
+                    dtype = np.int64
+                    decoded_fill_value = np.iinfo(np.int64).min
                 else:
                     dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
 
@@ -624,16 +622,16 @@ class CFScaleOffsetCoder(VariableCoder):
                 scale_factor = np.asarray(scale_factor).item()
             if np.ndim(add_offset) > 0:
                 add_offset = np.asarray(add_offset).item()
-            # if we have a _FillValue/masked_value we already have the wanted
+            # if we have a _FillValue/masked_value in encoding we already have the wanted
             # floating point dtype here (via CFMaskCoder), so no check is necessary
             # only check in other cases and for time-like
             dtype = data.dtype
             is_time_like = _is_time_like(attrs.get("units"))
-            if (is_time_like == "datetime" and self.decode_times) or (
-                is_time_like == "timedelta" and self.decode_timedelta
+            if (
+                ("_FillValue" not in encoding and "missing_value" not in encoding)
+                or (is_time_like == "datetime" and self.decode_times)
+                or (is_time_like == "timedelta" and self.decode_timedelta)
             ):
-                dtype = _choose_float_dtype(dtype, encoding)
-            if "_FillValue" not in encoding and "missing_value" not in encoding:
                 dtype = _choose_float_dtype(dtype, encoding)
 
             transform = partial(

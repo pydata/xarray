@@ -57,6 +57,8 @@ Bug fixes
   Haacker <https://github.com/j-haacker>`_.
 - Fix ``isel`` for multi-coordinate Xarray indexes (:issue:`10063`, :pull:`10066`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Improve handling of dtype and NaT when encoding/decoding masked and packaged datetimes and timedeltas (:issue:`8957`, :pull:`10050`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Documentation
