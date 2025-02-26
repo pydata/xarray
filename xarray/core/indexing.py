@@ -1014,7 +1014,7 @@ def explicit_indexing_adapter(
     result = raw_indexing_method(raw_key.tuple)
     if numpy_indices.tuple:
         # index the loaded np.ndarray
-        indexable = NumpyIndexingAdapter(result)
+        indexable = as_indexable(result)
         result = apply_indexer(indexable, numpy_indices)
     return result
 
