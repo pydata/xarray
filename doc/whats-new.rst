@@ -1896,7 +1896,6 @@ Abel Aoun, Alex Goodman, Deepak Cherian, Illviljan, Jody Klymak, Joe Hamman, Jus
 
 New Features
 ~~~~~~~~~~~~
-
 - Fix :py:meth:`xr.cov` and :py:meth:`xr.corr` now support complex valued arrays  (:issue:`7340`, :pull:`7392`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Allow indexing along unindexed dimensions with dask arrays

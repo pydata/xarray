@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, TypeVar, get_args
 import numpy as np
 import pandas as pd
 
+import xarray as xr
 from xarray.core import utils
 from xarray.core.common import _contains_datetime_like_objects, ones_like
 from xarray.core.computation import apply_ufunc
@@ -370,8 +371,13 @@ def interp_na(
                     f"Expected integer or floating point max_gap since use_coordinate=False. Received {max_type}."
                 )
 
-    # method
-    index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate)
+    if use_coordinate:
+        index = self[dim]
+    else:
+        if xr.core.utils.is_monotonic_decreasing(self[dim]):
+            index = xr.IndexVariable(dim, np.sort(self[dim])[::-1])
+        else:
+            index = xr.IndexVariable(dim, np.sort(self[dim]))
     interp_class, kwargs = _get_interpolator(method, **kwargs)
     interpolator = partial(func_interpolate_na, interp_class, **kwargs)
 
@@ -385,7 +391,7 @@ def interp_na(
             interpolator,
             self,
             index,
-            input_core_dims=[[dim], [dim]],
+            input_core_dims=[[dim], []] if use_coordinate else [[dim], [dim]],
             output_core_dims=[[dim]],
             output_dtypes=[self.dtype],
             dask="parallelized",

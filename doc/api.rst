@@ -514,7 +514,7 @@ Datetimelike properties
 **Datetime properties**:
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: generated/-
    :template: autosummary/accessor_attribute.rst
 
    DataArray.dt.year
