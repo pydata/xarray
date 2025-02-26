@@ -86,7 +86,7 @@ OPTIONS: T_Options = {
     "warn_for_unclosed_files": False,
     "use_bottleneck": True,
     "use_flox": True,
-    "use_new_combine_kwarg_defaults": True,
+    "use_new_combine_kwarg_defaults": False,
     "use_numbagg": True,
     "use_opt_einsum": True,
 }
