@@ -1056,6 +1056,7 @@ def test_advanced_indexing_dask_array() -> None:
 
 
 def test_backend_indexing_non_numpy() -> None:
+    """This model indexing of a Zarr store that reads to GPU memory."""
     array = DuckArrayWrapper(np.array([1, 2, 3]))
     indexed = indexing.explicit_indexing_adapter(
         indexing.BasicIndexer((slice(1),)),
