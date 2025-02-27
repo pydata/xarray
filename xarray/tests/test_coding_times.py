@@ -1904,7 +1904,15 @@ def test_lazy_decode_timedelta_error() -> None:
         decoded.load()
 
 
-@pytest.mark.parametrize("calendar", ["standard", "360_day"])
+@pytest.mark.parametrize(
+    "calendar",
+    [
+        "standard",
+        pytest.param(
+            "360_day", marks=pytest.mark.skipif(not has_cftime, reason="no cftime")
+        ),
+    ],
+)
 def test_duck_array_decode_times(calendar) -> None:
     from xarray.core.indexing import LazilyIndexedArray
 

@@ -310,7 +310,7 @@ def _decode_cf_datetime_dtype(
     # Dataset.__repr__ when users try to view their lazily decoded array.
     values = indexing.ImplicitToExplicitIndexingAdapter(indexing.as_indexable(data))
     example_value = np.concatenate(
-        [to_numpy(first_n_items(values, 1) or [0]), to_numpy(last_item(values) or [0])]
+        [to_numpy(first_n_items(values, 1)), to_numpy(last_item(values))]
     )
 
     try:

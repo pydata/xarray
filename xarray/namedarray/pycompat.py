@@ -103,8 +103,8 @@ def to_numpy(
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
     if hasattr(data, "to_numpy"):
-        # for tests only
-        return data.to_numpy()
+        # for tests only at the moment
+        return data.to_numpy()  # type: ignore[no-any-return]
 
     if isinstance(data, ExplicitlyIndexed):
         data = data.get_duck_array()  # type: ignore[no-untyped-call]
