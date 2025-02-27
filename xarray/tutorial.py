@@ -267,8 +267,8 @@ def open_datatree(
 
     Available datasets:
 
-    * ``imerghh_730.HDF5`` IMERGHH_07 product from 2021-08-29T07:30:00.000Z
-    * ``imerghh_830.HDF5`` IMERGHH_07 product from 2021-08-29T08:30:00.000Z
+    * ``"imerghh_730"``: GPM IMERG Final Precipitation L3 Half Hourly 0.1 degree x 0.1 degree V07 from 2021-08-29T07:30:00.000Z
+    * ``"imerghh_830"``: GPM IMERG Final Precipitation L3 Half Hourly 0.1 degree x 0.1 degree V07 from 2021-08-29T08:30:00.000Z
     * ``"air_temperature"``: NCEP reanalysis subset
     * ``"air_temperature_gradient"``: NCEP reanalysis subset with approximate x,y gradients
     * ``"basin_mask"``: Dataset with ocean basins marked using integers
@@ -355,8 +355,8 @@ def load_datatree(*args, **kwargs) -> DataTree:
 
     Available datasets:
 
-    * ``imerghh_730.HDF5``: GPM_3IMERGHH_07 product from 2021-08-29T07:30:00.000Z
-    * ``imerghh_830.HDF5``: GPM_3IMERGHH_07 product from 2021-08-29T08:30:00.000Z
+    * ``"imerghh_730"``: GPM IMERG Final Precipitation L3 Half Hourly 0.1 degree x 0.1 degree V07 from 2021-08-29T07:30:00.000Z
+    * ``"imerghh_830"``: GPM IMERG Final Precipitation L3 Half Hourly 0.1 degree x 0.1 degree V07 from 2021-08-29T08:30:00.000Z
     * ``"air_temperature"``: NCEP reanalysis subset
     * ``"air_temperature_gradient"``: NCEP reanalysis subset with approximate x,y gradients
     * ``"basin_mask"``: Dataset with ocean basins marked using integers
