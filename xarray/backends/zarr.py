@@ -180,13 +180,14 @@ def encode_zarr_attr_value(value):
 
 
 class ZarrArrayWrapper(BackendArray):
-    __slots__ = ("_array", "dtype", "shape")
+    __slots__ = ("_array", "dtype", "shape", "is_coordinate")
 
-    def __init__(self, zarr_array):
+    def __init__(self, zarr_array, is_coordinate: bool):
         # some callers attempt to evaluate an array if an `array` property exists on the object.
         # we prefix with _ to avoid this inference.
         self._array = zarr_array
         self.shape = self._array.shape
+        self.is_coordinate = is_coordinate
 
         # preserve vlen string object dtype (GH 7328)
         if (
@@ -210,7 +211,12 @@ class ZarrArrayWrapper(BackendArray):
         return self._array.vindex[key]
 
     def _getitem(self, key):
-        return self._array[key]
+        from zarr.core.buffer.cpu import buffer_prototype
+        if self.is_coordinate:
+            prototype = buffer_prototype
+        else:
+            prototype = None
+        return self._array.get_basic_selection(key, prototype=prototype)
 
     def __getitem__(self, key):
         array = self._array
@@ -809,7 +815,8 @@ class ZarrStore(AbstractWritableDataStore):
 
     def open_store_variable(self, name):
         zarr_array = self.members[name]
-        data = indexing.LazilyIndexedArray(ZarrArrayWrapper(zarr_array))
+        is_coordinate = name in zarr_array.metadata.dimension_names
+        data = indexing.LazilyIndexedArray(ZarrArrayWrapper(zarr_array, is_coordinate=is_coordinate))
         try_nczarr = self._mode == "r"
         dimensions, attributes = _get_zarr_dims_and_attrs(
             zarr_array, DIMENSION_KEY, try_nczarr
