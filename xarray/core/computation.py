@@ -306,7 +306,7 @@ def apply_dataarray_vfunc(
         first_obj = _first_of_type(args, DataArray)
         name = first_obj.name
     result_coords, result_indexes = build_output_coords_and_indexes(
-        args, signature, exclude_dims, combine_attrs="no_conflicts"
+        args, signature, exclude_dims, combine_attrs="drop_conflicts"
     )
 
     data_vars = [getattr(a, "variable", a) for a in args]
@@ -522,7 +522,7 @@ def apply_dataset_vfunc(
         )
 
     list_of_coords, list_of_indexes = build_output_coords_and_indexes(
-        args, signature, exclude_dims, combine_attrs="no_conflicts"
+        args, signature, exclude_dims, combine_attrs="drop_conflicts"
     )
     args = tuple(getattr(arg, "data_vars", arg) for arg in args)
 
