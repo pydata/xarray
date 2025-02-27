@@ -3,11 +3,12 @@ from __future__ import annotations
 import pytest
 
 from xarray import DataArray, DataTree, tutorial
-from xarray.tests import assert_identical, network
+from xarray.testing import assert_identical
+from xarray.tests import network
 
 
-@pytest.fixture(autouse=True)
-def setUp(name="testfile"):
+@pytest.fixture(autouse=True, name="testfile")
+def setUp():
     yield "tiny"
 
 
