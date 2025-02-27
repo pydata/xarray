@@ -21,14 +21,24 @@ from xarray.coding.variables import (
     unpack_for_encoding,
 )
 from xarray.core import indexing
+from xarray.core.array_api_compat import get_array_namespace
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
-from xarray.core.duck_array_ops import array_all, array_any, asarray, ravel, reshape
+from xarray.core.duck_array_ops import (
+    array_all,
+    array_any,
+    asarray,
+    astype,
+    concatenate,
+    isnull,
+    ravel,
+    reshape,
+)
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
 from xarray.core.pdcompat import default_precision_timestamp, timestamp_as_unit
 from xarray.core.utils import attempt_import, emit_user_level_warning
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import T_ChunkedArray, get_chunked_array_type
-from xarray.namedarray.pycompat import is_chunked_array, to_numpy
+from xarray.namedarray.pycompat import is_chunked_array, to_duck_array, to_numpy
 from xarray.namedarray.utils import is_duck_dask_array
 
 try:
@@ -100,7 +110,7 @@ def _is_numpy_compatible_time_range(times):
     if is_np_datetime_like(times.dtype):
         return True
     # times array contains cftime objects
-    times = np.asarray(times)
+    times = to_duck_array(times)
     tmin = times.min()
     tmax = times.max()
     try:
@@ -309,8 +319,9 @@ def _decode_cf_datetime_dtype(
     # successfully. Otherwise, tracebacks end up swallowed by
     # Dataset.__repr__ when users try to view their lazily decoded array.
     values = indexing.ImplicitToExplicitIndexingAdapter(indexing.as_indexable(data))
-    example_value = np.concatenate(
-        [to_numpy(first_n_items(values, 1) or [0]), to_numpy(last_item(values) or [0])]
+    zero = asarray([0], xp=get_array_namespace(values))
+    example_value = concatenate(
+        [first_n_items(values, 1) or zero, last_item(values) or zero]
     )
 
     try:
@@ -342,7 +353,13 @@ def _decode_datetime_with_cftime(
         cftime = attempt_import("cftime")
     if num_dates.size > 0:
         return np.asarray(
-            cftime.num2date(num_dates, units, calendar, only_use_cftime_datetimes=True)
+            cftime.num2date(
+                # cftime uses Cython so we must convert to numpy here.
+                to_numpy(num_dates),
+                units,
+                calendar,
+                only_use_cftime_datetimes=True,
+            )
         )
     else:
         return np.array([], dtype=object)
@@ -357,7 +374,7 @@ def _check_date_for_units_since_refdate(
             f"Value {date} can't be represented as Datetime/Timedelta."
         )
     delta = date * np.timedelta64(1, unit)
-    if not np.isnan(delta):
+    if not isnull(delta):
         # this will raise on dtype overflow for integer dtypes
         if date.dtype.kind in "u" and not np.int64(delta) == date:
             raise OutOfBoundsTimedelta(
@@ -381,7 +398,7 @@ def _check_timedelta_range(value, data_unit, time_unit):
             "ignore", "invalid value encountered in multiply", RuntimeWarning
         )
         delta = value * np.timedelta64(1, data_unit)
-    if not np.isnan(delta):
+    if not isnull(delta):
         # this will raise on dtype overflow for integer dtypes
         if value.dtype.kind in "u" and not np.int64(delta) == value:
             raise OutOfBoundsTimedelta(
@@ -449,9 +466,9 @@ def _decode_datetime_with_pandas(
     # respectively. See https://github.com/pandas-dev/pandas/issues/56996 for
     # more details.
     if flat_num_dates.dtype.kind == "i":
-        flat_num_dates = flat_num_dates.astype(np.int64)
+        flat_num_dates = astype(flat_num_dates, np.int64)
     elif flat_num_dates.dtype.kind == "u":
-        flat_num_dates = flat_num_dates.astype(np.uint64)
+        flat_num_dates = astype(flat_num_dates, np.uint64)
 
     try:
         time_unit, ref_date = _unpack_time_unit_and_ref_date(units)
@@ -483,9 +500,9 @@ def _decode_datetime_with_pandas(
     # overflow when converting to np.int64 would not be representable with a
     # timedelta64 value, and therefore would raise an error in the lines above.
     if flat_num_dates.dtype.kind in "iu":
-        flat_num_dates = flat_num_dates.astype(np.int64)
+        flat_num_dates = astype(flat_num_dates, np.int64)
     elif flat_num_dates.dtype.kind in "f":
-        flat_num_dates = flat_num_dates.astype(np.float64)
+        flat_num_dates = astype(flat_num_dates, np.float64)
 
     timedeltas = _numbers_to_timedelta(
         flat_num_dates, time_unit, ref_date.unit, "datetime"
@@ -528,8 +545,12 @@ def decode_cf_datetime(
             )
         except (KeyError, OutOfBoundsDatetime, OutOfBoundsTimedelta, OverflowError):
             dates = _decode_datetime_with_cftime(
-                flat_num_dates.astype(float), units, calendar
+                astype(flat_num_dates, float), units, calendar
             )
+            # This conversion to numpy is only needed for nanarg* below.
+            # TODO: explore removing it.
+            #       Note that `dates` is already a numpy object array of cftime objects.
+            num_dates = to_numpy(num_dates)
             # retrieve cftype
             dates_min = dates[np.nanargmin(num_dates)]
             dates_max = dates[np.nanargmax(num_dates)]
@@ -586,16 +607,16 @@ def _numbers_to_timedelta(
     """Transform numbers to np.timedelta64."""
     # keep NaT/nan mask
     if flat_num.dtype.kind == "f":
-        nan = np.asarray(np.isnan(flat_num))
+        nan = isnull(flat_num)
     elif flat_num.dtype.kind == "i":
-        nan = np.asarray(flat_num == np.iinfo(np.int64).min)
+        nan = flat_num == np.iinfo(np.int64).min
 
     # in case we need to change the unit, we fix the numbers here
     # this should be safe, as errors would have been raised above
     ns_time_unit = _NS_PER_TIME_DELTA[time_unit]
     ns_ref_date_unit = _NS_PER_TIME_DELTA[ref_unit]
     if ns_time_unit > ns_ref_date_unit:
-        flat_num = np.asarray(flat_num * np.int64(ns_time_unit / ns_ref_date_unit))
+        flat_num = flat_num * np.int64(ns_time_unit / ns_ref_date_unit)
         time_unit = ref_unit
 
     # estimate fitting resolution for floating point values
@@ -618,12 +639,12 @@ def _numbers_to_timedelta(
     # to prevent casting NaN to int
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
-        flat_num = flat_num.astype(np.int64)
-    if nan.any():
+        flat_num = astype(flat_num, np.int64)
+    if array_any(nan):
         flat_num[nan] = np.iinfo(np.int64).min
 
     # cast to wanted type
-    return flat_num.astype(f"timedelta64[{time_unit}]")
+    return astype(flat_num, f"timedelta64[{time_unit}]")
 
 
 def decode_cf_timedelta(
@@ -712,8 +733,8 @@ def infer_datetime_units(dates) -> str:
     'hours', 'minutes' or 'seconds' (the first one that can evenly divide all
     unique time deltas in `dates`)
     """
-    dates = ravel(np.asarray(dates))
-    if np.issubdtype(np.asarray(dates).dtype, "datetime64"):
+    dates = ravel(to_duck_array(dates))
+    if np.issubdtype(dates.dtype, "datetime64"):
         dates = to_datetime_unboxed(dates)
         dates = dates[pd.notnull(dates)]
         reference_date = dates[0] if len(dates) > 0 else "1970-01-01"
