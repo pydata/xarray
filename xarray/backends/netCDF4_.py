@@ -12,8 +12,8 @@ import numpy as np
 from xarray import coding
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
-    BackendArray,
     BackendEntrypoint,
+    NewBackendArray,
     WritableCFDataStore,
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
@@ -48,6 +48,11 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
     from xarray.core.types import ReadBuffer
+    from xarray.namedarray._typing import (
+        _BasicIndexerKey,
+        _OuterIndexerKey,
+        _VectorizedIndexerKey,
+    )
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -56,7 +61,7 @@ _endian_lookup = {"=": "native", ">": "big", "<": "little", "|": "native"}
 NETCDF4_PYTHON_LOCK = combine_locks([NETCDFC_LOCK, HDF5_LOCK])
 
 
-class BaseNetCDF4Array(BackendArray):
+class BaseNetCDF4Array(NewBackendArray):
     __slots__ = ("datastore", "dtype", "shape", "variable_name")
 
     def __init__(self, variable_name, datastore):
@@ -88,7 +93,7 @@ class BaseNetCDF4Array(BackendArray):
 
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
-    __slots__ = ()
+    indexing_support = indexing.IndexingSupport.OUTER
 
     def get_array(self, needs_lock=True):
         ds = self.datastore._acquire(needs_lock)
@@ -99,9 +104,19 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
             variable.set_auto_chartostring(False)
         return variable
 
-    def __getitem__(self, key):
-        return indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.OUTER, self._getitem
+    def _oindex_get(self, key: _OuterIndexerKey):
+        return indexing.outer_indexing_adapter(
+            key, self.shape, self.indexing_support, self._getitem
+        )
+
+    def _vindex_get(self, key: _VectorizedIndexerKey):
+        return indexing.vectorized_indexing_adapter(
+            key, self.shape, self.indexing_support, self._getitem
+        )
+
+    def __getitem__(self, key: _BasicIndexerKey):
+        return indexing.basic_indexing_adapter(
+            key, self.shape, self.indexing_support, self._getitem
         )
 
     def _getitem(self, key):

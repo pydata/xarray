@@ -8,8 +8,8 @@ import numpy as np
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
-    BackendArray,
     BackendEntrypoint,
+    NewBackendArray,
     robust_getitem,
 )
 from xarray.backends.store import StoreBackendEntrypoint
@@ -29,10 +29,17 @@ if TYPE_CHECKING:
 
     from xarray.core.dataset import Dataset
     from xarray.core.types import ReadBuffer
+    from xarray.namedarray._typing import (
+        _BasicIndexerKey,
+        _OuterIndexerKey,
+        _VectorizedIndexerKey,
+    )
 
 
-class PydapArrayWrapper(BackendArray):
-    def __init__(self, array):
+class PydapArrayWrapper(NewBackendArray):
+    indexing_support = indexing.IndexingSupport.BASIC
+
+    def __init__(self, array) -> None:
         self.array = array
 
     @property
@@ -43,9 +50,19 @@ class PydapArrayWrapper(BackendArray):
     def dtype(self):
         return self.array.dtype
 
-    def __getitem__(self, key):
-        return indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem
+    def _oindex_get(self, key: _OuterIndexerKey) -> Any:
+        return indexing.outer_indexing_adapter(
+            key, self.shape, self.indexing_support, self._getitem
+        )
+
+    def _vindex_get(self, key: _VectorizedIndexerKey) -> Any:
+        return indexing.vectorized_indexing_adapter(
+            key, self.shape, self.indexing_support, self._getitem
+        )
+
+    def __getitem__(self, key: _BasicIndexerKey) -> Any:
+        return indexing.basic_indexing_adapter(
+            key, self.shape, self.indexing_support, self._getitem
         )
 
     def _getitem(self, key):
