@@ -18,7 +18,7 @@ from xarray.core import indexing
 from xarray.core.utils import module_available
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import is_chunked_array, to_numpy
+from xarray.namedarray.pycompat import is_chunked_array
 
 HAS_NUMPY_2_0 = module_available("numpy", minversion="2.0.0.dev0")
 
@@ -135,8 +135,7 @@ class CharacterArrayCoder(VariableCoder):
         if data.dtype == "S1" and dims:
             encoding["char_dim_name"] = dims[-1]
             dims = dims[:-1]
-            # TODO (duck array encoding)
-            data = char_to_bytes(to_numpy(data))
+            data = char_to_bytes(data)
         return Variable(dims, data, attrs, encoding)
 
 

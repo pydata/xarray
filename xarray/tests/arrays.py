@@ -51,18 +51,6 @@ class DuckArrayWrapper(utils.NDArrayMixin):
     def __getitem__(self, key):
         return type(self)(self.array[key])
 
-    def min(self):
-        return self.array.min()
-
-    def max(self):
-        return self.array.max()
-
-    def __mul__(self, other):
-        return type(self)(self.array.__mul__(other))
-
-    def __radd__(self, other):
-        return type(self)(other + self.array)
-
     def to_numpy(self) -> np.ndarray:
         """Allow explicit conversions to numpy in `to_numpy`, but disallow np.asarray etc."""
         return self.array
