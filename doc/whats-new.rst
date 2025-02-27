@@ -57,7 +57,8 @@ Bug fixes
   Haacker <https://github.com/j-haacker>`_.
 - Fix ``isel`` for multi-coordinate Xarray indexes (:issue:`10063`, :pull:`10066`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
-
+- Always merge coordinates with "no_conflicts" to fix missing attributes after apply_ufunc
+  operations (:issue:`9317`). By `Jasper de Jong <https://github.com/JdeJong96>`_.
 
 Documentation
 ~~~~~~~~~~~~~
