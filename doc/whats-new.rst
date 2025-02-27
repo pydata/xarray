@@ -21,6 +21,8 @@ v2025.02.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Added :py:meth:`tutorial.open_datatree` and :py:meth:`tutorial.load_datatree`
+  By `Eni Awowale <https://github.com/eni-awowale>`_.
 - Added :py:meth:`Coordinates.from_xindex` as convenience for creating a new :py:class:`Coordinates` object
   directly from an existing Xarray index object if the latter supports it (:pull:`10000`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
