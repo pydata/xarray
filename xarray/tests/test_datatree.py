@@ -1587,6 +1587,41 @@ class TestRestructuring:
         result = dt.assign({"foo": xr.DataArray(0), "a": DataTree()})
         assert_equal(result, expected)
 
+    def test_move(self):
+        dt = DataTree.from_dict(
+            {"/to_move/A": None, "/to_move/B": None, "/destination/other": None}
+        )
+        result = dt.move("to_move", "destination")
+        expected = DataTree.from_dict(
+            {
+                "/destination/to_move/A": None,
+                "/destination/to_move/B": None,
+                "/destination/other": None,
+            }
+        )
+        assert_equal(result, expected)
+
+    def test_move_no_parents(self):
+        dt = DataTree.from_dict(
+            {"/to_move/A": None, "/to_move/B": None, "/destination/other": None}
+        )
+        with pytest.raises(KeyError, match="Could not reach node"):
+            dt.move("to_move", "destination/deep/down")
+
+    def test_move_parents(self):
+        dt = DataTree.from_dict(
+            {"/to_move/A": None, "/to_move/B": None, "/destination/other": None}
+        )
+        result = dt.move("to_move", "destination/deep/down", parents=True)
+        expected = DataTree.from_dict(
+            {
+                "/destination/deep/down/to_move/A": None,
+                "/destination/deep/down/to_move/B": None,
+                "/destination/other": None,
+            }
+        )
+        assert_equal(result, expected)
+
 
 class TestPipe:
     def test_noop(self, create_test_datatree: Callable[[], DataTree]) -> None:

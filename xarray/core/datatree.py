@@ -1140,6 +1140,50 @@ class DataTree(
         result._replace_node(children=children_to_keep)
         return result
 
+    def move(self, origin: str, destination: str, parents: bool = False) -> DataTree:
+        """
+        Move a node to a different location in the tree.
+
+        Parameters
+        ----------
+        origin: str
+            The node to move.
+        destination: str
+            The new node destination.
+        parents: bool, optional
+            If `parents` is `True`, create the additional paths needed to reach the
+            destination. Otherwise, raise an error. Set to `False` by default.
+
+        Returns
+        -------
+        DataTree
+
+        Examples
+        --------
+        >>> dt = DataTree.from_dict(
+        ...     {
+        ...         "/to_move/A": None,
+        ...         "/to_move/B": None,
+        ...         "/destination/other": None,
+        ...     }
+        ... )
+        >>> dt.move("to_move", "destination")
+        <xarray.DataTree>
+        Group: /
+        └── Group: /destination
+            ├── Group: /destination/other
+            └── Group: /destination/to_move
+                ├── Group: /destination/to_move/A
+                └── Group: /destination/to_move/B
+        """
+        result = self.copy()
+        to_move = result[origin]
+        to_move.orphan()
+        result._set_item(
+            f"{destination}/{to_move.name}", to_move, new_nodes_along_path=parents
+        )
+        return result
+
     @classmethod
     def from_dict(
         cls,
