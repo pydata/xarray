@@ -3794,7 +3794,7 @@ def test_coords_buffer_prototype() -> None:
     # type-ignore for zarr v2/v3 compat, even though this test is skipped for v2
     ds.to_zarr(store=store, zarr_format=3)  # type: ignore[call-overload]
 
-    xr.open_dataset(store, engine="zarr", coords_buffer_prototype=prototype)  # type: ignore[arg-type]
+    xr.open_dataset(store, engine="zarr", coords_buffer_prototype=prototype)
     assert counter > 0
 
 
