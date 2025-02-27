@@ -266,6 +266,7 @@ def open_datatree(
     If a local copy is found then always use that to avoid network traffic.
 
     Available datasets:
+
     * ``imerghh_730.HDF5`` IMERGHH_07 product from 2021-08-29T07:30:00.000Z
     * ``imerghh_830.HDF5`` IMERGHH_07 product from 2021-08-29T08:30:00.000Z
     * ``"air_temperature"``: NCEP reanalysis subset
@@ -353,8 +354,9 @@ def load_datatree(*args, **kwargs) -> DataTree:
     If a local copy is found then always use that to avoid network traffic.
 
     Available datasets:
-    * ``imerghh_730.HDF5`` IMERGHH_07 product from 2021-08-29T07:30:00.000Z
-    * ``imerghh_830.HDF5`` IMERGHH_07 product from 2021-08-29T08:30:00.000Z
+
+    * ``imerghh_730.HDF5``: GPM_3IMERGHH_07 product from 2021-08-29T07:30:00.000Z
+    * ``imerghh_830.HDF5``: GPM_3IMERGHH_07 product from 2021-08-29T08:30:00.000Z
     * ``"air_temperature"``: NCEP reanalysis subset
     * ``"air_temperature_gradient"``: NCEP reanalysis subset with approximate x,y gradients
     * ``"basin_mask"``: Dataset with ocean basins marked using integers
@@ -382,7 +384,6 @@ def load_datatree(*args, **kwargs) -> DataTree:
     --------
     tutorial.open_datatree
     open_datatree
-    load_datatree
     """
     with open_datatree(*args, **kwargs) as ds:
         return ds.load()
