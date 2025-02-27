@@ -2994,7 +2994,9 @@ class TestCFDatetimePlot(PlotTestCase):
         """
         # case for 1d array
         data = np.random.rand(4, 12)
-        time = xr.cftime_range(start="2017", periods=12, freq="1ME", calendar="noleap")
+        time = xr.date_range(
+            start="2017", periods=12, freq="1ME", calendar="noleap", use_cftime=True
+        )
         darray = DataArray(data, dims=["x", "time"])
         darray.coords["time"] = time
 
@@ -3022,8 +3024,8 @@ class TestNcAxisNotInstalled(PlotTestCase):
         month = np.arange(1, 13, 1)
         data = np.sin(2 * np.pi * month / 12.0)
         darray = DataArray(data, dims=["time"])
-        darray.coords["time"] = xr.cftime_range(
-            start="2017", periods=12, freq="1ME", calendar="noleap"
+        darray.coords["time"] = xr.date_range(
+            start="2017", periods=12, freq="1ME", calendar="noleap", use_cftime=True
         )
 
         self.darray = darray

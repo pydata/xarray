@@ -38,6 +38,9 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Deprecate :py:func:`~xarray.cftime_range` in favor of :py:func:`~xarray.date_range` with ``use_cftime=True``
+  (:issue:`9886`, :pull:`10024`).
+  By `Josh Kihm <https://github.com/maddogghoek>`_.
 - Move from phony_dims=None to phony_dims="access" for h5netcdf-backend(:issue:`10049`, :pull:`10058`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
