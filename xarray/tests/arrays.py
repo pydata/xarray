@@ -51,6 +51,10 @@ class DuckArrayWrapper(utils.NDArrayMixin):
     def __getitem__(self, key):
         return type(self)(self.array[key])
 
+    def to_numpy(self) -> np.ndarray:
+        """Allow explicit conversions to numpy in `to_numpy`, but disallow np.asarray etc."""
+        return self.array
+
     def __array__(
         self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
@@ -58,6 +62,9 @@ class DuckArrayWrapper(utils.NDArrayMixin):
 
     def __array_namespace__(self):
         """Present to satisfy is_duck_array test."""
+        from xarray.tests import namespace
+
+        return namespace
 
 
 CONCATENATABLEARRAY_HANDLED_ARRAY_FUNCTIONS: dict[str, Callable] = {}
