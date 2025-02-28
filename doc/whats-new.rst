@@ -30,6 +30,8 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Added experimental support for coordinate transforms (not ready for public use yet!) (:pull:`9543`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Support reading to `GPU memory with Zarr <https://zarr.readthedocs.io/en/stable/user-guide/gpu.html>`_ (:pull:`10078`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

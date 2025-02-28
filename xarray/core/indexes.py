@@ -442,6 +442,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     """
     from xarray.core.dataarray import DataArray
     from xarray.core.variable import Variable
+    from xarray.namedarray.pycompat import to_numpy
 
     if isinstance(array, pd.Index):
         index = array
@@ -468,7 +469,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
                 )
                 kwargs["dtype"] = "float64"
 
-        index = pd.Index(np.asarray(array), **kwargs)
+        index = pd.Index(to_numpy(array), **kwargs)
 
     return _maybe_cast_to_cftimeindex(index)
 
