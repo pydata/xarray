@@ -2585,7 +2585,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             stacked = self._topk_stack("topk", dim)
             dim = stacked.dims[-1]
 
-        result = stacked._topk_helper("topk", k=k, dim=dim, dtype=self.dtype, keep_attrs=keep_attrs, skipna=skipna)
+        result = stacked._topk_helper(
+            "topk", k=k, dim=dim, dtype=self.dtype, keep_attrs=keep_attrs, skipna=skipna
+        )
         return result
 
     def argtopk(
@@ -2608,7 +2610,14 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 dim = self.dims
 
         if isinstance(dim, str):
-            return self._topk_helper("argtopk", k=k, dim=dim, dtype=np.intp, keep_attrs=keep_attrs, skipna=skipna)
+            return self._topk_helper(
+                "argtopk",
+                k=k,
+                dim=dim,
+                dtype=np.intp,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+            )
 
         stacked = self._topk_stack("topk", dim)
         newdimname = stacked.dims[-1]
@@ -2619,7 +2628,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             dim=newdimname,
             dtype=np.intp,
             keep_attrs=keep_attrs,
-            skipna=skipna
+            skipna=skipna,
         )
 
         reduce_shape = tuple(self.sizes[d] for d in dim)

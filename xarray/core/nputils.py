@@ -321,7 +321,8 @@ def topk(values, k: int, axis: int):
         return b
     return b[
         tuple(
-            slice(None, None, -1) if i == axis else slice(None) for i in range(values.ndim)
+            slice(None, None, -1) if i == axis else slice(None)
+            for i in range(values.ndim)
         )
     ]
 
@@ -339,7 +340,9 @@ def argtopk(values, k: int, axis: int):
     else:
         idx = np.argpartition(values, -k, axis=axis)
         k_slice = slice(-k, None) if k > 0 else slice(-k)
-        idx = idx[tuple(k_slice if i == axis else slice(None) for i in range(values.ndim))]
+        idx = idx[
+            tuple(k_slice if i == axis else slice(None) for i in range(values.ndim))
+        ]
         a = np.take_along_axis(values, idx, axis)
         idx2 = np.argsort(a, axis=axis)
         idx3 = np.take_along_axis(idx, idx2, axis)

@@ -893,9 +893,7 @@ def argtopk(values, k, axis=None, skipna=None):
     if skipna or (
         skipna is None
         and (
-            dtypes.isdtype(
-                values.dtype, ("complex floating", "real floating"), xp=xp
-            )
+            dtypes.isdtype(values.dtype, ("complex floating", "real floating"), xp=xp)
             or dtypes.is_object(values.dtype)
         )
     ):
@@ -929,9 +927,7 @@ def topk(values, k, axis=None, skipna=None):
     if skipna or (
         skipna is None
         and (
-            dtypes.isdtype(
-                values.dtype, ("complex floating", "real floating"), xp=xp
-            )
+            dtypes.isdtype(values.dtype, ("complex floating", "real floating"), xp=xp)
             or dtypes.is_object(values.dtype)
         )
     ):
