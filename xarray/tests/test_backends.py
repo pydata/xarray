@@ -3792,9 +3792,10 @@ def test_coords_buffer_prototype() -> None:
     ds = create_test_data()
     store = KVStore()
     # type-ignore for zarr v2/v3 compat, even though this test is skipped for v2
-    ds.to_zarr(store=store, zarr_format=3)  # type: ignore[call-overload]
-
-    xr.open_dataset(store, engine="zarr", coords_buffer_prototype=prototype)
+    # Because we run mypy with both zarr 2 and 3, we can't easily specify
+    # the specific codes to ignore.
+    ds.to_zarr(store=store, zarr_format=3)  # type: ignore  # noqa: PGH003
+    xr.open_dataset(store, engine="zarr", coords_buffer_prototype=prototype)  # type: ignore  # noqa: PGH003
     assert counter > 0
 
 
