@@ -5283,6 +5283,67 @@ class TestReduce1D(TestReduce):
         for key in expected2:
             assert_identical(result2[key], expected2[key])
 
+    def test_topk(
+        self,
+        x: np.ndarray,
+        minindex: int | float,
+        maxindex: int | float,
+        nanindex: int | None,
+    ) -> None:
+        ar = xr.DataArray(
+            x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
+        )
+
+        # Test top 1 (should match max)
+        # Select using the indices
+        expected0 = ar.max().expand_dims("topk")
+        result0 = ar.topk(k=1)
+        assert_identical(result0, expected0)
+
+        # Test keep_attrs
+        result1 = ar.topk(k=1, keep_attrs=True)
+        expected1 = expected0.copy()
+        expected1.attrs = ar.attrs
+        assert_identical(result1, expected1)
+
+        # Test top -1 (should match min)
+        expected2 = ar.min().expand_dims("topk")
+        result2 = ar.topk(k=-1)
+        assert_identical(result2, expected2)
+
+        # Test skipna=False
+        result3 = ar.topk(k=1, skipna=False)
+        expected3 = ar.max(skipna=False).expand_dims("topk")
+        assert_identical(result3, expected3)
+
+        result4 = ar.topk(k=-1, skipna=False)
+        expected4 = ar.min(skipna=False).expand_dims("topk")
+        assert_identical(result4, expected4)
+
+        def create_expected(ar, k):
+            if k < 0:
+                _sorted = ar.sortby(ar)
+            else:
+                _sorted = ar.sortby(-ar)
+            selected = _sorted.isel(x=slice(0, k)).drop_vars("x").rename({"x": "topk"})
+            selected.attrs = {}
+            return selected
+
+        k = 2
+        result5 = ar.topk(k=k)
+        expected5 = create_expected(ar, k=k)
+        assert_identical(result5, expected5)
+
+        k = x.size
+        result6 = ar.topk(k=k)
+        expected6 = create_expected(ar, k=k)
+        assert_identical(result6, expected6)
+
+        k = x.size + 1
+        result7 = ar.topk(k=k)
+        expected7 = create_expected(ar, k=k)
+        assert_identical(result7, expected7)
+
 
 @pytest.mark.parametrize(
     ["x", "minindex", "maxindex", "nanindex"],
