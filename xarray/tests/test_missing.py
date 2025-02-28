@@ -11,6 +11,12 @@ from xarray.core.missing import (
     NumpyInterpolator,
     ScipyInterpolator,
     SplineInterpolator,
+    _get_gap_dist_to_left_edge,
+    _get_gap_dist_to_right_edge,
+    _get_gap_left_edge,
+    _get_gap_right_edge,
+    _get_limit_area_mask,
+    _get_limit_fill_mask,
     _get_nan_block_lengths,
     get_clean_interp_index,
 )
@@ -102,37 +108,32 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345, non_uniform=False
 @pytest.mark.parametrize(
     "method", ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
 )
+@pytest.mark.parametrize("dim", ["time", "x"])
+@pytest.mark.parametrize("shape", [(8, 8), (1, 20), (20, 1), (100, 100)])
+@pytest.mark.parametrize("frac_nan", [0, 0.5, 1])
 @requires_scipy
-def test_interpolate_pd_compat(method, fill_value) -> None:
-    shapes = [(8, 8), (1, 20), (20, 1), (100, 100)]
-    frac_nans = [0, 0.5, 1]
+def test_interpolate_pd_compat(method, fill_value, dim, shape, frac_nan) -> None:
+    da, df = make_interpolate_example_data(shape, frac_nan)
 
-    for shape, frac_nan in itertools.product(shapes, frac_nans):
-        da, df = make_interpolate_example_data(shape, frac_nan)
+    actual = da.interpolate_na(method=method, dim=dim, fill_value=fill_value)
+    expected = df.interpolate(
+        method=method,
+        axis=da.get_axis_num(dim),
+        fill_value=fill_value,
+        limit_direction="both",
+    )
 
-        for dim in ["time", "x"]:
-            actual = da.interpolate_na(method=method, dim=dim, fill_value=fill_value)
-            # need limit_direction="both" here, to let pandas fill
-            # in both directions instead of default forward direction only
-            expected = df.interpolate(
-                method=method,
-                axis=da.get_axis_num(dim),
-                limit_direction="both",
-                fill_value=fill_value,
-            )
-
-            if method == "linear":
-                # Note, Pandas does not take left/right fill_value into account
-                # for the numpy linear methods.
-                # see https://github.com/pandas-dev/pandas/issues/55144
-                # This aligns the pandas output with the xarray output
-                fixed = expected.values.copy()
-                fixed[pd.isnull(actual.values)] = np.nan
-                fixed[actual.values == fill_value] = fill_value
-            else:
-                fixed = expected.values
-
-            np.testing.assert_allclose(actual.values, fixed)
+    if method == "linear":
+        # Note, Pandas does not take left/right fill_value into account
+        # for the numpy linear methods.
+        # see https://github.com/pandas-dev/pandas/issues/55144
+        # This aligns the pandas output with the xarray output
+        fixed = expected.values.copy()
+        fixed[pd.isnull(actual.values)] = np.nan
+        fixed[actual.values == fill_value] = fill_value
+    else:
+        fixed = expected.values
+    np.testing.assert_allclose(actual.values, fixed)
 
 
 @requires_scipy
@@ -198,17 +199,91 @@ def test_interpolate_pd_compat_polynomial():
 
 
 @requires_scipy
+def test_interpolate_pd_compat_limits():
+    shapes = [(7, 7)]
+    method = "slinear"  # need slinear, since pandas does constant extrapolation for methods 'time', 'index', 'values'
+    frac_nan = 0.5
+    limits = [
+        None,
+        1,
+        3,
+    ]  # pandas 2.1.4 is currently unable to handle coordinate based limits!
+    limit_directions = ["forward", "backward"]
+    limit_areas = [None, "outside", "inside"]
+
+    for shape, limit, limit_direction, limit_area in itertools.product(
+        shapes, limits, limit_directions, limit_areas
+    ):
+        da, df = make_interpolate_example_data(shape, frac_nan, non_uniform=True)
+        for dim in ["time", "x"]:
+            actual = da.fill_gaps(
+                dim=dim,
+                limit=limit,
+                limit_direction=limit_direction,
+                limit_area=limit_area,
+                use_coordinate=False,
+            ).interpolate_na(
+                dim=dim,
+                method=method,
+                use_coordinate=True,
+                fill_value="extrapolate",
+            )
+            expected = df.interpolate(
+                method=method,
+                axis=da.get_axis_num(dim),
+                limit=limit,
+                limit_direction=limit_direction,
+                limit_area=limit_area,
+                fill_value="extrapolate",
+            )
+            np.testing.assert_allclose(actual.values, expected.values)
+
+
+@requires_bottleneck
+def test_fill_pd_compat_limits():
+    shapes = [(7, 7)]
+    frac_nan = 0.5
+    limits = [
+        None,
+        1,
+        3,
+    ]  # pandas 2.1.4 is currently unable to handle coordinate based limits!
+    limit_areas = [None, "outside", "inside"]
+
+    for shape, limit, limit_area in itertools.product(shapes, limits, limit_areas):
+        da, df = make_interpolate_example_data(shape, frac_nan, non_uniform=True)
+        for dim in ["time", "x"]:
+            masked = da.fill_gaps(
+                dim=dim,
+                limit=limit,
+                limit_area=limit_area,
+                use_coordinate=False,
+            )
+            filled_forward = masked.ffill()
+            filled_backward = masked.bfill()
+            if (
+                pd.__version__ >= "2.2.0"
+            ):  # limit_area was introduced in pandas ffill in v2.2.0
+                expected_forward = df.ffill(
+                    axis=da.get_axis_num(dim), limit=limit, limit_area=limit_area
+                )
+                expected_backward = df.bfill(
+                    axis=da.get_axis_num(dim), limit=limit, limit_area=limit_area
+                )
+                np.testing.assert_allclose(
+                    filled_forward.values, expected_forward.values
+                )
+                np.testing.assert_allclose(
+                    filled_backward.values, expected_backward.values
+                )
+
+
+@requires_scipy
 def test_interpolate_unsorted_index_raises():
     vals = np.array([1, 2, 3], dtype=np.float64)
     expected = xr.DataArray(vals, dims="x", coords={"x": [2, 1, 3]})
     with pytest.raises(ValueError, match=r"Index 'x' must be monotonically increasing"):
         expected.interpolate_na(dim="x", method="index")
-
-
-def test_interpolate_no_dim_raises():
-    da = xr.DataArray(np.array([1, 2, np.nan, 5], dtype=np.float64), dims="x")
-    with pytest.raises(NotImplementedError, match=r"dim is a required argument"):
-        da.interpolate_na(method="linear")
 
 
 def test_interpolate_invalid_interpolator_raises():
@@ -311,18 +386,53 @@ def test_interp1d_fastrack(method, vals):
 
 @requires_bottleneck
 def test_interpolate_limits():
+    n = np.nan
+    times = pd.date_range("2000-01-01", periods=9, freq="2h")
+    coords = {"yt": ("y", times)}
+    da = xr.DataArray([n, n, 3, n, n, 6, n, 8, n], dims=["y"], coords=coords)
+
+    actual = da.interpolate_na(dim="y", limit=None, fill_value="extrapolate")
+    # With no limit, all gaps should be interpolated (forward+backward, including boundaries). Introduced in xarray due to a bug (GH7665), but kept for backward compatibility. With limit, do only forward interpolation.
+    expected = da.copy(data=[1, 2, 3, 4, 5, 6, 7, 8, 9])
+    assert_equal(actual, expected)
+
+    actual = da.interpolate_na(dim="y", limit=None, max_gap=2, fill_value="extrapolate")
+    expected = da.copy(data=[1, 2, 3, n, n, 6, 7, 8, 9])
+    assert_equal(actual, expected)
+
+    actual = da.interpolate_na(dim="y", limit=1, fill_value="extrapolate")
+    expected = da.copy(data=[n, n, 3, 4, n, 6, 7, 8, 9])
+    assert_equal(actual, expected)
+
+    actual = da.interpolate_na(dim="y", limit=1, max_gap=2, fill_value="extrapolate")
+    expected = da.copy(data=[n, n, 3, n, n, 6, 7, 8, 9])
+    assert_equal(actual, expected)
+
+
+@requires_bottleneck
+def test_interpolate_double_coordinate():
+    # Check if max_gap is able to handle string coordinate names
+    # Limit is always refering to an index
+    n = np.nan
     da = xr.DataArray(
-        np.array([1, 2, np.nan, np.nan, np.nan, 6], dtype=np.float64), dims="x"
+        [[1, n, n, 4, n, 6, 7], [1, n, n, n, 5, n, n]],
+        dims=["x", "y"],
+        coords={"y1": ("y", np.arange(7)), "y2": ("y", np.arange(7) * 2)},
     )
-
-    actual = da.interpolate_na(dim="x", limit=None)
-    assert actual.isnull().sum() == 0
-
-    actual = da.interpolate_na(dim="x", limit=2)
-    expected = xr.DataArray(
-        np.array([1, 2, 3, 4, np.nan, 6], dtype=np.float64), dims="x"
+    actual = da.interpolate_na(
+        dim="y", limit=1, max_gap=4, use_coordinate="y1", fill_value="extrapolate"
     )
+    expected = da.copy(data=[[1, 2, n, 4, 5, 6, 7], [1, 2, n, n, 5, 6, n]])
+    assert_equal(actual, expected)
 
+    actual = da.interpolate_na(
+        "y",
+        limit=2,
+        max_gap=4,
+        use_coordinate="y2",
+        fill_value="extrapolate",
+    )
+    expected = da.copy(data=[[1, n, n, 4, 5, 6, 7], [1, n, n, n, 5, 6, 7]])
     assert_equal(actual, expected)
 
 
@@ -568,6 +678,118 @@ def test_bfill_dataset(ds):
 
 
 @requires_bottleneck
+def test_get_gap_left_edge():
+    n = np.nan
+    arr = [
+        [n, 1, n, n, n, n, n, n, 4],
+        [n, n, n, 1, n, n, 4, n, n],
+    ]
+
+    y = np.arange(9) * 3
+    da = xr.DataArray(arr, dims=["x", "y"], coords={"x": [0, 1], "y": y})
+    index = get_clean_interp_index(da, dim="y", use_coordinate=True)
+    actual = _get_gap_left_edge(da, dim="y", index=index)
+    expected = da.copy(
+        data=[[n, 3, 3, 3, 3, 3, 3, 3, 24], [n, n, n, 9, 9, 9, 18, 18, 18]]
+    )
+    assert_equal(actual, expected)
+
+    actual = _get_gap_left_edge(da, dim="y", index=index, outside=True)
+    expected = da.copy(
+        data=[[0, 3, 3, 3, 3, 3, 3, 3, 24], [0, 0, 0, 9, 9, 9, 18, 18, 18]]
+    )
+    assert_equal(actual, expected)
+
+    y = [0, 2, 5, 6, 7, 8, 10, 12, 14]
+    da = xr.DataArray(arr, dims=["x", "y"], coords={"x": [0, 1], "y": y})
+    index = get_clean_interp_index(da, dim="y", use_coordinate=True)
+    actual = _get_gap_left_edge(da, dim="y", index=index)
+    expected = da.copy(
+        data=[[n, 2, 2, 2, 2, 2, 2, 2, 14], [n, n, n, 6, 6, 6, 10, 10, 10]]
+    )
+
+
+@requires_bottleneck
+def test_get_gap_right_edge():
+    n = np.nan
+    arr = [
+        [n, 1, n, n, n, n, n, n, 4],
+        [n, n, n, 1, n, n, 4, n, n],
+    ]
+
+    y = np.arange(9) * 3
+    da = xr.DataArray(arr, dims=["x", "y"], coords={"x": [0, 1], "y": y})
+    index = get_clean_interp_index(da, dim="y", use_coordinate=True)
+    actual = _get_gap_right_edge(da, dim="y", index=index)
+    expected = da.copy(
+        data=[[3, 3, 24, 24, 24, 24, 24, 24, 24], [9, 9, 9, 9, 18, 18, 18, n, n]]
+    )
+    assert_equal(actual, expected)
+
+    actual = _get_gap_right_edge(da, dim="y", index=index, outside=True)
+    expected = da.copy(
+        data=[[3, 3, 24, 24, 24, 24, 24, 24, 24], [9, 9, 9, 9, 18, 18, 18, 24, 24]]
+    )
+    assert_equal(actual, expected)
+
+    y = [0, 2, 5, 6, 7, 8, 10, 12, 14]
+    da = xr.DataArray(arr, dims=["x", "y"], coords={"x": [0, 1], "y": y})
+    index = get_clean_interp_index(da, dim="y", use_coordinate=True)
+    actual = _get_gap_right_edge(da, dim="y", index=index)
+    expected = da.copy(
+        data=[[2, 2, 14, 14, 14, 14, 14, 14, 14], [6, 6, 6, 6, 10, 10, 10, n, n]]
+    )
+
+
+@requires_bottleneck
+def test_get_gap_dist_to_left_edge():
+    n = np.nan
+    arr = [
+        [n, 1, n, n, n, n, n, n, 4],
+        [n, n, n, 1, n, n, 4, n, n],
+    ]
+
+    y = np.arange(9) * 3
+    da = xr.DataArray(arr, dims=["x", "y"], coords={"x": [0, 1], "y": y})
+    index = get_clean_interp_index(da, dim="y", use_coordinate=True)
+    actual = _get_gap_dist_to_left_edge(da, dim="y", index=index)
+    expected = da.copy(
+        data=[[n, 0, 3, 6, 9, 12, 15, 18, 0], [n, n, n, 0, 3, 6, 0, 3, 6]]
+    )
+    assert_equal(actual, expected)
+
+    y = [0, 2, 5, 6, 7, 8, 10, 12, 14]
+    da = xr.DataArray(arr, dims=["x", "y"], coords={"x": [0, 1], "y": y})
+    index = get_clean_interp_index(da, dim="y", use_coordinate=True)
+    actual = _get_gap_dist_to_left_edge(da, dim="y", index=index)
+    expected = da.copy(data=[[n, 0, 3, 4, 5, 6, 8, 10, 0], [n, n, n, 0, 1, 2, 0, 2, 4]])
+
+
+@requires_bottleneck
+def test_get_gap_dist_to_right_edge():
+    n = np.nan
+    arr = [
+        [n, 1, n, n, n, n, n, n, 4],
+        [n, n, n, 1, n, n, 4, n, n],
+    ]
+
+    y = np.arange(9) * 3
+    da = xr.DataArray(arr, dims=["x", "y"], coords={"x": [0, 1], "y": y})
+    index = get_clean_interp_index(da, dim="y", use_coordinate=True)
+    actual = _get_gap_dist_to_right_edge(da, dim="y", index=index)
+    expected = da.copy(
+        data=[[3, 0, 18, 15, 12, 9, 6, 3, 0], [9, 6, 3, 0, 6, 3, 0, n, n]]
+    )
+    assert_equal(actual, expected)
+
+    y = [0, 2, 5, 6, 7, 8, 10, 12, 14]
+    da = xr.DataArray(arr, dims=["x", "y"], coords={"x": [0, 1], "y": y})
+    index = get_clean_interp_index(da, dim="y", use_coordinate=True)
+    actual = _get_gap_dist_to_right_edge(da, dim="y", index=index)
+    expected = da.copy(data=[[2, 0, 9, 8, 7, 6, 4, 2, 0], [5, 3, 0, 4, 3, 2, 0, n, n]])
+
+
+@requires_bottleneck
 @pytest.mark.parametrize(
     "y, lengths_expected",
     [
@@ -582,7 +804,7 @@ def test_bfill_dataset(ds):
         ],
     ],
 )
-def test_interpolate_na_nan_block_lengths(y, lengths_expected):
+def test_get_nan_block_lengths(y, lengths_expected):
     arr = [
         [np.nan, 1, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 4],
         [np.nan, np.nan, np.nan, 1, np.nan, np.nan, 4, np.nan, np.nan],
@@ -591,6 +813,121 @@ def test_interpolate_na_nan_block_lengths(y, lengths_expected):
     index = get_clean_interp_index(da, dim="y", use_coordinate=True)
     actual = _get_nan_block_lengths(da, dim="y", index=index)
     expected = da.copy(data=lengths_expected)
+    assert_equal(actual, expected)
+
+
+@requires_bottleneck
+def test_get_nan_block_lengths_2d():
+    n = np.nan
+    da = xr.DataArray(
+        [
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+        ],
+        dims=["x", "y"],
+        coords={"x": np.arange(4), "y": np.arange(12) ** 2},
+    )
+    index = get_clean_interp_index(da, dim="y", use_coordinate=False)
+    actual = _get_nan_block_lengths(da, dim="y", index=index)
+    expected_y = da.copy(
+        data=[
+            [0, 0, 0, 0, 2, 0, 4, 4, 4, 0, 0, 1],
+            [2, 2, 0, 3, 3, 0, 4, 4, 4, 0, 2, 2],
+            [2, 2, 0, 3, 3, 0, 4, 4, 4, 0, 2, 2],
+            [1, 0, 0, 0, 2, 0, 4, 4, 4, 0, 0, 1],
+        ]
+    )
+    assert_equal(actual, expected_y)
+    index = get_clean_interp_index(da, dim="y", use_coordinate=True)
+    actual = _get_nan_block_lengths(da, dim="y", index=index)
+    expected_y = da.copy(
+        data=[
+            [0, 0, 0, 0, 16, 0, 56, 56, 56, 0, 0, 21],
+            [4, 4, 0, 21, 21, 0, 56, 56, 56, 0, 40, 40],
+            [4, 4, 0, 21, 21, 0, 56, 56, 56, 0, 40, 40],
+            [1, 0, 0, 0, 16, 0, 56, 56, 56, 0, 0, 21],
+        ]
+    )
+    assert_equal(actual, expected_y)
+
+
+@requires_bottleneck
+def test_get_limit_fill_mask():
+    T = True
+    F = False
+    n = np.nan
+    arr = [
+        [n, 1, n, n, n, n, n, n, 4],
+        [n, n, n, 1, n, n, 4, n, n],
+    ]
+    y = [0, 2, 5, 6, 7, 8, 10, 12, 14]
+    da = xr.DataArray(arr, dims=["x", "y"], coords={"x": [0, 1], "y": y})
+    index = get_clean_interp_index(da, dim="y", use_coordinate=True)
+
+    with pytest.raises(ValueError, match=r"limit_direction must be one of"):
+        _get_limit_fill_mask(da, dim="y", index=index, limit=3, limit_direction="cat")
+
+    actual = _get_limit_fill_mask(
+        da, dim="y", index=index, limit=3, limit_direction="forward"
+    )
+    expected = da.copy(data=[[T, F, F, T, T, T, T, T, F], [T, T, T, F, F, F, F, F, T]])
+    assert_equal(actual, expected)
+
+    actual = _get_limit_fill_mask(
+        da, dim="y", index=index, limit=3, limit_direction="backward"
+    )
+    expected = da.copy(data=[[F, F, T, T, T, T, T, F, F], [T, T, F, F, F, F, F, T, T]])
+    assert_equal(actual, expected)
+
+    actual = _get_limit_fill_mask(
+        da, dim="y", index=index, limit=3, limit_direction="both"
+    )
+    expected = da.copy(data=[[F, F, F, T, T, T, T, F, F], [T, T, F, F, F, F, F, F, T]])
+    assert_equal(actual, expected)
+
+    actual = _get_limit_fill_mask(
+        da, dim="y", index=index, limit=1, limit_direction="forward"
+    )
+    expected = da.copy(data=[[T, F, T, T, T, T, T, T, F], [T, T, T, F, F, T, F, T, T]])
+    assert_equal(actual, expected)
+
+    actual = _get_limit_fill_mask(
+        da, dim="y", index=index, limit=1, limit_direction="backward"
+    )
+    expected = da.copy(data=[[T, F, T, T, T, T, T, T, F], [T, T, F, F, T, T, F, T, T]])
+    assert_equal(actual, expected)
+
+    actual = _get_limit_fill_mask(
+        da, dim="y", index=index, limit=1, limit_direction="both"
+    )
+    expected = da.copy(data=[[T, F, T, T, T, T, T, T, F], [T, T, F, F, F, T, F, T, T]])
+    assert_equal(actual, expected)
+
+
+@requires_bottleneck
+def test_get_area_mask():
+    T = True
+    F = False
+    n = np.nan
+    arr = [
+        [n, 1, n, n, 5, n, n, n, 4],
+        [n, n, n, 1, n, n, 4, n, n],
+    ]
+    y = [0, 2, 5, 6, 7, 8, 10, 12, 14]
+    da = xr.DataArray(arr, dims=["x", "y"], coords={"x": [0, 1], "y": y})
+    index = get_clean_interp_index(da, dim="y", use_coordinate=True)
+
+    with pytest.raises(ValueError, match=r"limit_area must be one of"):
+        _get_limit_area_mask(da, dim="y", index=index, limit_area="cow")
+
+    actual = _get_limit_area_mask(da, dim="y", index=index, limit_area="inside")
+    expected = da.copy(data=[[T, F, F, F, F, F, F, F, F], [T, T, T, F, F, F, F, T, T]])
+    assert_equal(actual, expected)
+
+    actual = _get_limit_area_mask(da, dim="y", index=index, limit_area="outside")
+    expected = da.copy(data=[[F, F, T, T, F, T, T, T, F], [F, F, F, F, T, T, F, F, F]])
     assert_equal(actual, expected)
 
 
@@ -648,6 +985,31 @@ def test_get_clean_interp_index_strict(index):
     assert clean.dtype == np.float64
 
 
+def test_get_clean_interp_index_double_coordinate():
+    da = xr.DataArray(
+        np.ones((2, 7)),
+        dims=["x", "y"],
+        coords={
+            "x": ("x", [10, 20]),
+            "y1": ("y", np.arange(7) * 2),
+            "y2": ("y", np.arange(7) * 3),
+        },
+    )
+    with pytest.raises(ValueError, match=r"not a valid dimension"):
+        get_clean_interp_index(da, "y1", use_coordinate=True)
+
+    actual = get_clean_interp_index(da, "y", use_coordinate=True)
+    expected = xr.Variable(["y"], np.arange(7))
+    assert_equal(actual, expected)
+
+    actual = get_clean_interp_index(da, "y", use_coordinate="y1")
+    expected = xr.Variable(["y"], np.arange(7) * 2)
+    assert_equal(actual, expected)
+
+    with pytest.raises(ValueError, match=r"must have dimension"):
+        get_clean_interp_index(da, "x", use_coordinate="y1")
+
+
 @pytest.fixture
 def da_time():
     return xr.DataArray(
@@ -657,11 +1019,6 @@ def da_time():
 
 
 def test_interpolate_na_max_gap_errors(da_time):
-    with pytest.raises(
-        NotImplementedError, match=r"max_gap not implemented for unlabeled coordinates"
-    ):
-        da_time.interpolate_na("t", max_gap=1)
-
     with pytest.raises(ValueError, match=r"max_gap must be a scalar."):
         da_time.interpolate_na("t", max_gap=(1,))
 
@@ -700,12 +1057,16 @@ def test_interpolate_na_max_gap_time_specifier(da_time, max_gap, transform, use_
 @pytest.mark.parametrize(
     "coords",
     [
-        pytest.param(None, marks=pytest.mark.xfail()),
+        None,
         {"x": np.arange(4), "y": np.arange(12)},
     ],
 )
-def test_interpolate_na_2d(coords):
+def test_interpolate_na_max_gap_2d(coords):
     n = np.nan
+    if coords is None:
+        use_coordinate = False
+    else:
+        use_coordinate = True
     da = xr.DataArray(
         [
             [1, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
@@ -717,18 +1078,22 @@ def test_interpolate_na_2d(coords):
         coords=coords,
     )
 
-    actual = da.interpolate_na("y", max_gap=2)
+    actual = da.interpolate_na(
+        "y", use_coordinate=use_coordinate, max_gap=2, fill_value="extrapolate"
+    )
     expected_y = da.copy(
         data=[
-            [1, 2, 3, 4, 5, 6, n, n, n, 10, 11, n],
-            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
-            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
-            [n, 2, 3, 4, 5, 6, n, n, n, 10, 11, n],
+            [1, 2, 3, 4, 5, 6, n, n, n, 10, 11, 12],
+            [1, 2, 3, n, n, 6, n, n, n, 10, 11, 12],
+            [1, 2, 3, n, n, 6, n, n, n, 10, 11, 12],
+            [1, 2, 3, 4, 5, 6, n, n, n, 10, 11, 12],
         ]
     )
     assert_equal(actual, expected_y)
 
-    actual = da.interpolate_na("y", max_gap=1, fill_value="extrapolate")
+    actual = da.interpolate_na(
+        "y", use_coordinate=use_coordinate, max_gap=1, fill_value="extrapolate"
+    )
     expected_y_extra = da.copy(
         data=[
             [1, 2, 3, 4, n, 6, n, n, n, 10, 11, 12],
@@ -739,7 +1104,9 @@ def test_interpolate_na_2d(coords):
     )
     assert_equal(actual, expected_y_extra)
 
-    actual = da.interpolate_na("x", max_gap=3)
+    actual = da.interpolate_na(
+        "x", use_coordinate=use_coordinate, max_gap=3, fill_value="extrapolate"
+    )
     expected_x = xr.DataArray(
         [
             [1, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
@@ -751,6 +1118,34 @@ def test_interpolate_na_2d(coords):
         coords=coords,
     )
     assert_equal(actual, expected_x)
+
+
+@requires_bottleneck
+def test_interpolate_na_limit_2d():
+    n = np.nan
+    times = pd.date_range("2000-01-01", periods=12, freq="3h")
+    coords = {
+        "x": np.arange(3) * 2,
+        "time": (times),
+    }
+    da = xr.DataArray(
+        [
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+        ],
+        coords=coords,
+    )
+
+    actual = da.interpolate_na("time", limit=1, fill_value="extrapolate")
+    expected = da.copy(
+        data=[
+            [1, 2, 3, 4, 5, 6, 7, n, n, 10, 11, 12],
+            [n, n, 3, 4, n, 6, 7, n, n, 10, 11, n],
+            [n, 2, 3, 4, 5, 6, 7, n, n, 10, 11, 12],
+        ]
+    )
+    assert_equal(actual, expected)
 
 
 @requires_scipy
@@ -772,3 +1167,322 @@ def test_interpolators_complex_out_of_bounds():
         f = interpolator(xi, yi, method=method)
         actual = f(x)
         assert_array_equal(actual, expected)
+
+
+####Masking Functionality
+@requires_bottleneck
+def test_fill_gaps_limit():
+    n = np.nan
+    times = pd.date_range("2000-01-01", periods=8, freq="2h")
+    coords = {"yt": ("y", times)}
+    da = xr.DataArray([n, n, 2, n, n, 5, n, n], dims=["y"], coords=coords)
+
+    mask = da.fill_gaps(dim="y", limit_direction="backward")
+    with pytest.raises(
+        ValueError,
+        match=r"limit_direction='backward' is not allowed with ffill, must be 'forward'",
+    ):
+        mask.ffill()
+    mask = da.fill_gaps(dim="y", limit_direction="both")
+    with pytest.raises(
+        ValueError,
+        match=r"limit_direction='both' is not allowed with ffill, must be 'forward'",
+    ):
+        mask.ffill()
+    mask = da.fill_gaps(dim="y", limit_direction="forward")
+    with pytest.raises(
+        ValueError,
+        match=r"limit_direction='forward' is not allowed with bfill, must be 'backward'",
+    ):
+        mask.bfill()
+
+    actual = da.fill_gaps(dim="y").ffill()
+    expected = da.copy(data=[n, n, 2, 2, 2, 5, 5, 5])
+    assert_equal(actual, expected)
+
+    actual = da.fill_gaps(dim="y", limit_direction="forward").ffill()
+    expected = da.copy(data=[n, n, 2, 2, 2, 5, 5, 5])
+    assert_equal(actual, expected)
+
+    actual = da.fill_gaps(dim="y", limit=1).bfill()
+    expected = da.copy(data=[n, 2, 2, n, 5, 5, n, n])
+    assert_equal(actual, expected)
+
+    actual = da.fill_gaps(dim="y", limit=1, limit_direction="backward").bfill()
+    expected = da.copy(data=[n, 2, 2, n, 5, 5, n, n])
+    assert_equal(actual, expected)
+
+    actual = da.fill_gaps(dim="y", limit=None).interpolate_na(
+        dim="y", fill_value="extrapolate"
+    )
+    expected = da.copy(data=[0, 1, 2, 3, 4, 5, 6, 7])
+    assert_equal(actual, expected)
+
+    actual = da.fill_gaps(dim="y", limit=1).interpolate_na(
+        dim="y", fill_value="extrapolate"
+    )
+    expected = da.copy(data=[n, 1, 2, 3, 4, 5, 6, n])
+    assert_equal(actual, expected)
+
+    actual = da.fill_gaps(
+        dim="y",
+        limit=pd.Timedelta("3h"),
+        use_coordinate="yt",
+    ).interpolate_na(dim="y", fill_value="extrapolate")
+    expected = da.copy(data=[n, 1, 2, 3, 4, 5, 6, n])
+    assert_equal(actual, expected)
+
+    actual = da.fill_gaps(
+        dim="y",
+        limit=pd.Timedelta("3h"),
+        limit_direction="backward",
+        use_coordinate="yt",
+    ).interpolate_na(dim="y", fill_value="extrapolate")
+    expected = da.copy(data=[n, 1, 2, n, 4, 5, n, n])
+    assert_equal(actual, expected)
+
+
+@requires_bottleneck
+def test_mask_gap_limit_2d():
+    n = np.nan
+    times = pd.date_range("2000-01-01", periods=12, freq="3h")
+    coords = {
+        "x": np.arange(3) * 2,
+        "time": (times),
+    }
+    da = xr.DataArray(
+        [
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+        ],
+        coords=coords,
+    )
+
+    mask = da.fill_gaps("time", limit=1, use_coordinate=False)
+    actual = mask.interpolate_na("time", fill_value="extrapolate")
+    expected = da.copy(
+        data=[
+            [1, 2, 3, 4, 5, 6, 7, n, 9, 10, 11, 12],
+            [n, 2, 3, 4, 5, 6, 7, n, 9, 10, 11, n],
+            [1, 2, 3, 4, 5, 6, 7, n, 9, 10, 11, 12],
+        ]
+    )
+    assert_equal(actual, expected)
+    actual = mask.ffill()
+    expected = da.copy(
+        data=[
+            [1, 2, 3, 4, 4, 6, 6, n, n, 10, 11, 11],
+            [n, n, 3, 3, n, 6, 6, n, n, 10, 10, n],
+            [n, 2, 3, 4, 4, 6, 6, n, n, 10, 11, 11],
+        ]
+    )
+    assert_equal(actual, expected)
+    actual = mask.bfill()
+    expected = da.copy(
+        data=[
+            [1, 2, 3, 4, 6, 6, n, n, 10, 10, 11, n],
+            [n, 3, 3, n, 6, 6, n, n, 10, 10, n, n],
+            [2, 2, 3, 4, 6, 6, n, n, 10, 10, 11, n],
+        ]
+    )
+    assert_equal(actual, expected)
+    actual = mask.fillna(0)
+    expected = da.copy(
+        data=[
+            [1, 2, 3, 4, 0, 6, 0, n, 0, 10, 11, 0],
+            [n, 0, 3, 0, 0, 6, 0, n, 0, 10, 0, n],
+            [0, 2, 3, 4, 0, 6, 0, n, 0, 10, 11, 0],
+        ]
+    )
+    assert_equal(actual, expected)
+
+    actual = da.fill_gaps(
+        "time", limit=2, use_coordinate=False, limit_direction="backward"
+    ).interpolate_na("time", fill_value="extrapolate")
+    expected = da.copy(
+        data=[
+            [1, 2, 3, 4, 5, 6, n, 8, 9, 10, 11, n],
+            [1, 2, 3, 4, 5, 6, n, 8, 9, 10, n, n],
+            [1, 2, 3, 4, 5, 6, n, 8, 9, 10, 11, n],
+        ]
+    )
+    assert_equal(actual, expected)
+
+    actual = da.fill_gaps(
+        "time",
+        limit=pd.Timedelta("3h"),
+        limit_direction="backward",
+        limit_area="inside",
+        use_coordinate=True,
+    ).interpolate_na(
+        "time",
+        fill_value="extrapolate",
+    )
+    expected = da.copy(
+        data=[
+            [1, 2, 3, 4, 5, 6, n, n, 9, 10, 11, n],
+            [n, n, 3, n, 5, 6, n, n, 9, 10, n, n],
+            [n, 2, 3, 4, 5, 6, n, n, 9, 10, 11, n],
+        ]
+    )
+
+    actual = da.fill_gaps(
+        "time",
+        limit=pd.Timedelta("3h"),
+        limit_direction="backward",
+        limit_area="outside",
+        use_coordinate=True,
+    ).interpolate_na(
+        "time",
+        fill_value="extrapolate",
+    )
+    expected = da.copy(
+        data=[
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [n, 2, 3, n, n, 6, n, n, n, 10, n, n],
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+        ]
+    )
+    assert_equal(actual, expected)
+
+    actual = da.fill_gaps(
+        "time",
+        limit=None,
+        limit_direction="backward",
+        limit_area="outside",
+        use_coordinate=True,
+    ).interpolate_na(
+        "time",
+        fill_value=8,
+    )
+    expected = da.copy(
+        data=[
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [8, 8, 3, n, n, 6, n, n, n, 10, n, n],
+            [8, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+        ]
+    )
+    assert_equal(actual, expected)
+
+    da = xr.DataArray(
+        [
+            [1, 1, n, n, 1, 1],
+            [n, 2, 2, n, 2, n],
+            [n, n, 3, 3, n, n],
+            [n, n, n, 4, 4, 4],
+        ],
+        dims=["x", "y"],
+        coords={"x": np.arange(4) * 2},
+    )
+    mask = da.fill_gaps(
+        dim="x",
+        limit=3,
+        limit_direction="forward",
+        limit_area=None,
+        use_coordinate=True,
+    )
+    actual = mask.interpolate_na(
+        "x",
+        fill_value="extrapolate",
+        method="linear",
+    )
+    expected = da.copy(
+        data=[
+            [1, 1, n, n, 1, 1],
+            [n, 2, 2, n, 2, 2],
+            [n, 3, 3, 3, 3, n],
+            [n, n, 4, 4, 4, 4],
+        ]
+    )
+    assert_equal(actual, expected)
+    # Test: Dim argument from mask should be used
+    actual = mask.interpolate_na(
+        fill_value="extrapolate",
+        method="linear",
+    )
+    expected = da.copy(
+        data=[
+            [1, 1, n, n, 1, 1],
+            [n, 2, 2, n, 2, 2],
+            [n, 3, 3, 3, 3, n],
+            [n, n, 4, 4, 4, 4],
+        ]
+    )
+    assert_equal(actual, expected)
+
+
+@requires_bottleneck
+def test_mask_gap_max_gap_2d():
+    n = np.nan
+    times = pd.date_range("2000-01-01", periods=12, freq="3h")
+    coords = {
+        "x": np.arange(3) * 2,
+        "time": (times),
+    }
+    da = xr.DataArray(
+        [
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+        ],
+        coords=coords,
+    )
+
+    mask = da.fill_gaps("time", max_gap=1, use_coordinate=False)
+    actual = mask.interpolate_na("time", fill_value="extrapolate")
+    expected = da.copy(
+        data=[
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, 12],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, 12],
+        ]
+    )
+    assert_equal(actual, expected)
+    mask = da.fill_gaps("time", max_gap=2, use_coordinate=False)
+    actual = mask.interpolate_na("time", fill_value="extrapolate")
+    expected = da.copy(
+        data=[
+            [1, 2, 3, 4, 5, 6, n, n, n, 10, 11, 12],
+            [1, 2, 3, n, n, 6, n, n, n, 10, 11, 12],
+            [1, 2, 3, 4, 5, 6, n, n, n, 10, 11, 12],
+        ]
+    )
+    assert_equal(actual, expected)
+
+    mask = da.fill_gaps("time", max_gap=pd.Timedelta("3h"), use_coordinate=True)
+    actual = mask.interpolate_na("time", fill_value="extrapolate")
+    expected = da.copy(
+        data=[
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, 12],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, 12],
+        ]
+    )
+    assert_equal(actual, expected)
+
+
+@requires_bottleneck
+def test_mask_double_coordinate():
+    # Check if limit and max_gap are able to handle string coordinate names
+    n = np.nan
+    da = xr.DataArray(
+        [[1, n, n, 4, n, 6, 7], [1, n, n, n, 5, n, n]],
+        dims=["x", "y"],
+        coords={"y1": ("y", np.arange(7)), "y2": ("y", np.arange(7) * 2)},
+    )
+    actual = da.fill_gaps(
+        "y",
+        limit=1,
+        max_gap=4,
+        use_coordinate="y1",
+    ).interpolate_na("y", fill_value="extrapolate")
+    expected = da.copy(data=[[1, 2, 3, 4, 5, 6, 7], [1, 2, n, 4, 5, 6, n]])
+    assert_equal(actual, expected)
+
+    actual = da.fill_gaps("y", limit=2, max_gap=4, use_coordinate="y2").interpolate_na(
+        "y",
+        fill_value="extrapolate",
+    )
+    expected = da.copy(data=[[1, n, n, 4, 5, 6, 7], [1, n, n, n, 5, 6, n]])
+    assert_equal(actual, expected)
