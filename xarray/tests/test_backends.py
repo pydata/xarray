@@ -50,7 +50,7 @@ from xarray.backends.pydap_ import PydapDataStore
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
 from xarray.backends.zarr import ZarrStore
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
-from xarray.coding.cftime_offsets import cftime_range
+from xarray.coding.cftime_offsets import date_range
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
@@ -3299,7 +3299,7 @@ class ZarrBase(CFEncodedBase):
     @requires_dask
     def test_chunked_cftime_datetime(self) -> None:
         # Based on @malmans2's test in PR #8253
-        times = cftime_range("2000", freq="D", periods=3)
+        times = date_range("2000", freq="D", periods=3, use_cftime=True)
         original = xr.Dataset(data_vars={"chunked_times": (["time"], times)})
         original = original.chunk({"time": 1})
         with self.roundtrip(original, open_kwargs={"chunks": {}}) as actual:
