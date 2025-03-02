@@ -373,7 +373,7 @@ def sum_where(data, axis=None, dtype=None, where=None):
 def where(condition, x, y):
     """Three argument where() with better dtype promotion rules."""
     xp = get_array_namespace(condition, x, y)
-    return xp.where(condition, *as_shared_dtype([x, y], xp=xp))
+    return xp.where(xp.astype(condition, xp.bool), *as_shared_dtype([x, y], xp=xp))
 
 
 def where_method(data, cond, other=dtypes.NA):
