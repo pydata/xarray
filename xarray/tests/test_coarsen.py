@@ -68,10 +68,10 @@ def test_coarsen_coords(ds, dask):
 
 @requires_cftime
 def test_coarsen_coords_cftime():
-    times = xr.cftime_range("2000", periods=6)
+    times = xr.date_range("2000", periods=6, use_cftime=True)
     da = xr.DataArray(range(6), [("time", times)])
     actual = da.coarsen(time=3).mean()
-    expected_times = xr.cftime_range("2000-01-02", freq="3D", periods=2)
+    expected_times = xr.date_range("2000-01-02", freq="3D", periods=2, use_cftime=True)
     np.testing.assert_array_equal(actual.time, expected_times)
 
 

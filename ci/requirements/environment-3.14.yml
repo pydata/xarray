@@ -1,7 +1,9 @@
 name: xarray-tests
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
+  - aiobotocore
   - array-api-strict
   - boto3
   - bottleneck
@@ -22,23 +24,40 @@ dependencies:
   - netcdf4
   # - numba
   # - numbagg
+  - numexpr
   - numpy
+  - opt_einsum
   - packaging
   - pandas
+  - pandas-stubs
   # - pint>=0.22
   - pip
+  - pooch
   - pre-commit
-  - pyarrow # importing dask.dataframe raises an ImportError without this
+  - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - pydap
   - pytest
   - pytest-cov
   - pytest-env
-  - pytest-xdist
+  - pytest-mypy-plugins
   - pytest-timeout
+  - pytest-xdist
   - rasterio
   - scipy
   - seaborn
   # - sparse
   - toolz
+  - types-colorama
+  - types-docutils
+  - types-psutil
+  - types-Pygments
+  - types-python-dateutil
+  - types-pytz
+  - types-PyYAML
+  - types-setuptools
   - typing_extensions
   - zarr
+  - pip:
+      - jax # no way to get cpu-only jaxlib from conda if gpu is present
+      - types-defusedxml
+      - types-pexpect
