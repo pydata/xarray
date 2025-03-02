@@ -427,3 +427,6 @@ splitted = "splitted"
 childs = "childs"
 cutted = "cutted"
 LOCA = "LOCA"
+
+[tool.typos.type.jupyter]
+extend-ignore-re = ["\"id\": \".*\""]
