@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import copy
 import datetime
-import inspect
-import itertools
 import math
 import sys
 import warnings
@@ -18,7 +16,7 @@ from collections.abc import (
     MutableMapping,
     Sequence,
 )
-from functools import lru_cache, partial
+from functools import partial
 from html import escape
 from numbers import Number
 from operator import methodcaller
@@ -70,7 +68,6 @@ from xarray.core.coordinates import (
     Coordinates,
     DatasetCoordinates,
     assert_coordinate_consistent,
-    create_coords_with_default_indexes,
 )
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import (
@@ -90,7 +87,6 @@ from xarray.core.merge import (
     dataset_merge_method,
     dataset_update_method,
     merge_coordinates_without_align,
-    merge_core,
     merge_data_and_coords,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
@@ -146,7 +142,7 @@ if TYPE_CHECKING:
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
-    from xarray.core.merge import CoercibleMapping, CoercibleValue, _MergeResult
+    from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.resample import DatasetResample
     from xarray.core.rolling import DatasetCoarsen, DatasetRolling
     from xarray.core.types import (
