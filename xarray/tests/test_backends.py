@@ -2275,7 +2275,7 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
     @pytest.mark.flaky
     def test_roundtrip_coordinates(self) -> None:
         super().test_roundtrip_coordinates()
-            
+
     @requires_cftime
     def test_roundtrip_cftime_bnds(self):
         # Regression test for issue #7794
