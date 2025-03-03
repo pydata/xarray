@@ -10,7 +10,9 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import formatting, nputils, utils
+from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.indexing import (
+    CoordinateTransformIndexingAdapter,
     IndexSelResult,
     PandasIndexingAdapter,
     PandasMultiIndexingAdapter,
@@ -207,7 +209,7 @@ class Index:
 
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
-    ) -> Self | None:
+    ) -> Index | None:
         """Maybe returns a new index from the current index itself indexed by
         positional indexers.
 
@@ -302,7 +304,7 @@ class Index:
         """
         raise NotImplementedError(f"{self!r} doesn't support re-indexing labels")
 
-    def equals(self, other: Self) -> bool:
+    def equals(self, other: Index) -> bool:
         """Compare this index with another index of the same type.
 
         Implementation is optional but required in order to support alignment.
@@ -440,6 +442,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     """
     from xarray.core.dataarray import DataArray
     from xarray.core.variable import Variable
+    from xarray.namedarray.pycompat import to_numpy
 
     if isinstance(array, pd.Index):
         index = array
@@ -466,7 +469,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
                 )
                 kwargs["dtype"] = "float64"
 
-        index = pd.Index(np.asarray(array), **kwargs)
+        index = pd.Index(to_numpy(array), **kwargs)
 
     return _maybe_cast_to_cftimeindex(index)
 
@@ -573,7 +576,7 @@ class PandasIndex(Index):
     dim: Hashable
     coord_dtype: Any
 
-    __slots__ = ("index", "dim", "coord_dtype")
+    __slots__ = ("coord_dtype", "dim", "index")
 
     def __init__(
         self,
@@ -872,7 +875,7 @@ class PandasIndex(Index):
         return self._replace(self.index[indexer])
 
     def __repr__(self):
-        return f"PandasIndex({repr(self.index)})"
+        return f"PandasIndex({self.index!r})"
 
 
 def _check_dim_compat(variables: Mapping[Any, Variable], all_dims: str = "equal"):
@@ -880,7 +883,7 @@ def _check_dim_compat(variables: Mapping[Any, Variable], all_dims: str = "equal"
     either share the same (single) dimension or each have a different dimension.
 
     """
-    if any([var.ndim != 1 for var in variables.values()]):
+    if any(var.ndim != 1 for var in variables.values()):
         raise ValueError("PandasMultiIndex only accepts 1-dimensional variables")
 
     dims = {var.dims for var in variables.values()}
@@ -939,7 +942,7 @@ class PandasMultiIndex(PandasIndex):
     coord_dtype: Any
     level_coords_dtype: dict[str, Any]
 
-    __slots__ = ("index", "dim", "coord_dtype", "level_coords_dtype")
+    __slots__ = ("coord_dtype", "dim", "index", "level_coords_dtype")
 
     def __init__(self, array: Any, dim: Hashable, level_coords_dtype: Any = None):
         super().__init__(array, dim)
@@ -1208,7 +1211,7 @@ class PandasMultiIndex(PandasIndex):
         indexer: int | slice | np.ndarray | Variable | DataArray
 
         # label(s) given for multi-index level(s)
-        if all([lbl in self.index.names for lbl in labels]):
+        if all(lbl in self.index.names for lbl in labels):
             label_values = {}
             for k, v in labels.items():
                 label_array = normalize_label(v, dtype=self.level_coords_dtype[k])
@@ -1221,7 +1224,7 @@ class PandasMultiIndex(PandasIndex):
                         f"available along coordinate {k!r} (multi-index level)"
                     ) from err
 
-            has_slice = any([isinstance(v, slice) for v in label_values.values()])
+            has_slice = any(isinstance(v, slice) for v in label_values.values())
 
             if len(label_values) == self.index.nlevels and not has_slice:
                 indexer = self.index.get_loc(
@@ -1268,9 +1271,7 @@ class PandasMultiIndex(PandasIndex):
                 else:
                     levels = [self.index.names[i] for i in range(len(label))]
                     indexer, new_index = self.index.get_loc_level(label, level=levels)
-                    scalar_coord_values.update(
-                        {k: v for k, v in zip(levels, label, strict=True)}
-                    )
+                    scalar_coord_values.update(dict(zip(levels, label, strict=True)))
 
             else:
                 label_array = normalize_label(label)
@@ -1371,13 +1372,133 @@ class PandasMultiIndex(PandasIndex):
         index = self.index.rename(new_names)
 
         new_dim = dims_dict.get(self.dim, self.dim)
-        new_level_coords_dtype = {
-            k: v
-            for k, v in zip(new_names, self.level_coords_dtype.values(), strict=True)
-        }
+        new_level_coords_dtype = dict(
+            zip(new_names, self.level_coords_dtype.values(), strict=True)
+        )
         return self._replace(
             index, dim=new_dim, level_coords_dtype=new_level_coords_dtype
         )
+
+
+class CoordinateTransformIndex(Index):
+    """Helper class for creating Xarray indexes based on coordinate transforms.
+
+    EXPERIMENTAL (not ready for public use yet).
+
+    - wraps a :py:class:`CoordinateTransform` instance
+    - takes care of creating the index (lazy) coordinates
+    - supports point-wise label-based selection
+    - supports exact alignment only, by comparing indexes based on their transform
+      (not on their explicit coordinate labels)
+
+    """
+
+    transform: CoordinateTransform
+
+    def __init__(
+        self,
+        transform: CoordinateTransform,
+    ):
+        self.transform = transform
+
+    def create_variables(
+        self, variables: Mapping[Any, Variable] | None = None
+    ) -> IndexVars:
+        from xarray.core.variable import Variable
+
+        new_variables = {}
+
+        for name in self.transform.coord_names:
+            # copy attributes, if any
+            attrs: Mapping[Hashable, Any] | None
+
+            if variables is not None and name in variables:
+                var = variables[name]
+                attrs = var.attrs
+            else:
+                attrs = None
+
+            data = CoordinateTransformIndexingAdapter(self.transform, name)
+            new_variables[name] = Variable(self.transform.dims, data, attrs=attrs)
+
+        return new_variables
+
+    def isel(
+        self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
+    ) -> Index | None:
+        # TODO: support returning a new index (e.g., possible to re-calculate the
+        # the transform or calculate another transform on a reduced dimension space)
+        return None
+
+    def sel(
+        self, labels: dict[Any, Any], method=None, tolerance=None
+    ) -> IndexSelResult:
+        from xarray.core.dataarray import DataArray
+        from xarray.core.variable import Variable
+
+        if method != "nearest":
+            raise ValueError(
+                "CoordinateTransformIndex only supports selection with method='nearest'"
+            )
+
+        labels_set = set(labels)
+        coord_names_set = set(self.transform.coord_names)
+
+        missing_labels = coord_names_set - labels_set
+        if missing_labels:
+            missing_labels_str = ",".join([f"{name}" for name in missing_labels])
+            raise ValueError(f"missing labels for coordinate(s): {missing_labels_str}.")
+
+        label0_obj = next(iter(labels.values()))
+        dim_size0 = getattr(label0_obj, "sizes", {})
+
+        is_xr_obj = [
+            isinstance(label, DataArray | Variable) for label in labels.values()
+        ]
+        if not all(is_xr_obj):
+            raise TypeError(
+                "CoordinateTransformIndex only supports advanced (point-wise) indexing "
+                "with either xarray.DataArray or xarray.Variable objects."
+            )
+        dim_size = [getattr(label, "sizes", {}) for label in labels.values()]
+        if any(ds != dim_size0 for ds in dim_size):
+            raise ValueError(
+                "CoordinateTransformIndex only supports advanced (point-wise) indexing "
+                "with xarray.DataArray or xarray.Variable objects of macthing dimensions."
+            )
+
+        coord_labels = {
+            name: labels[name].values for name in self.transform.coord_names
+        }
+        dim_positions = self.transform.reverse(coord_labels)
+
+        results: dict[str, Variable | DataArray] = {}
+        dims0 = tuple(dim_size0)
+        for dim, pos in dim_positions.items():
+            # TODO: rounding the decimal positions is not always the behavior we expect
+            # (there are different ways to represent implicit intervals)
+            # we should probably make this customizable.
+            pos = np.round(pos).astype("int")
+            if isinstance(label0_obj, Variable):
+                results[dim] = Variable(dims0, pos)
+            else:
+                # dataarray
+                results[dim] = DataArray(pos, dims=dims0)
+
+        return IndexSelResult(results)
+
+    def equals(self, other: Index) -> bool:
+        if not isinstance(other, CoordinateTransformIndex):
+            return False
+        return self.transform.equals(other.transform)
+
+    def rename(
+        self,
+        name_dict: Mapping[Any, Hashable],
+        dims_dict: Mapping[Any, Hashable],
+    ) -> Self:
+        # TODO: maybe update self.transform coord_names, dim_size and dims attributes
+        return self
 
 
 def create_default_index_implicit(
@@ -1451,13 +1572,13 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
     _variables: dict[Any, Variable]
 
     __slots__ = (
+        "__coord_name_id",
+        "__id_coord_names",
+        "__id_index",
+        "_dims",
         "_index_type",
         "_indexes",
         "_variables",
-        "_dims",
-        "__coord_name_id",
-        "__id_index",
-        "__id_coord_names",
     )
 
     def __init__(
@@ -1631,7 +1752,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         return index_coords
 
     def to_pandas_indexes(self) -> Indexes[pd.Index]:
-        """Returns an immutable proxy for Dataset or DataArrary pandas indexes.
+        """Returns an immutable proxy for Dataset or DataArray pandas indexes.
 
         Raises an error if this proxy contains indexes that cannot be coerced to
         pandas.Index objects.
@@ -1820,7 +1941,7 @@ def _apply_indexes_fast(indexes: Indexes[Index], args: Mapping[Any, Any], func: 
     # multi-index arrays
     indexes_fast, coords = indexes._indexes, indexes._variables
 
-    new_indexes: dict[Hashable, Index] = {k: v for k, v in indexes_fast.items()}
+    new_indexes: dict[Hashable, Index] = dict(indexes_fast.items())
     new_index_variables: dict[Hashable, Variable] = {}
     for name, index in indexes_fast.items():
         coord = coords[name]
@@ -1848,7 +1969,7 @@ def _apply_indexes(
     args: Mapping[Any, Any],
     func: str,
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
-    new_indexes: dict[Hashable, Index] = {k: v for k, v in indexes.items()}
+    new_indexes: dict[Hashable, Index] = dict(indexes.items())
     new_index_variables: dict[Hashable, Variable] = {}
 
     for index, index_vars in indexes.group_by_index():
@@ -1871,10 +1992,11 @@ def isel_indexes(
     indexes: Indexes[Index],
     indexers: Mapping[Any, Any],
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
-    # TODO: remove if clause in the future. It should be unnecessary.
-    # See failure introduced when removed
-    # https://github.com/pydata/xarray/pull/9002#discussion_r1590443756
-    if any(isinstance(v, PandasMultiIndex) for v in indexes._indexes.values()):
+    # Fast path function _apply_indexes_fast does not work with multi-coordinate
+    # Xarray indexes (see https://github.com/pydata/xarray/issues/10063).
+    # -> call it only in the most common case where all indexes are default
+    # PandasIndex each associated to a single 1-dimensional coordinate.
+    if any(type(idx) is not PandasIndex for idx in indexes._indexes.values()):
         return _apply_indexes(indexes, indexers, "isel")
     else:
         return _apply_indexes_fast(indexes, indexers, "isel")

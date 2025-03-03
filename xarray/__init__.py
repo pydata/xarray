@@ -1,6 +1,6 @@
 from importlib.metadata import version as _version
 
-from xarray import groupers, testing, tutorial
+from xarray import coders, groupers, testing, tutorial, ufuncs
 from xarray.backends.api import (
     load_dataarray,
     load_dataset,
@@ -64,11 +64,13 @@ except Exception:
 
 # A hardcoded __all__ variable is necessary to appease
 # `mypy --strict` running in projects that import xarray.
-__all__ = (
+__all__ = (  # noqa: RUF022
     # Sub-packages
+    "coders",
     "groupers",
     "testing",
     "tutorial",
+    "ufuncs",
     # Top-level functions
     "align",
     "apply_ufunc",
@@ -78,13 +80,13 @@ __all__ = (
     "combine_by_coords",
     "combine_nested",
     "concat",
+    "corr",
+    "cov",
+    "cross",
     "date_range",
     "date_range_like",
     "decode_cf",
     "dot",
-    "cov",
-    "corr",
-    "cross",
     "full_like",
     "get_options",
     "group_subtrees",
@@ -116,13 +118,13 @@ __all__ = (
     "Context",
     "Coordinates",
     "DataArray",
-    "Dataset",
     "DataTree",
+    "Dataset",
     "Index",
     "IndexSelResult",
     "IndexVariable",
-    "Variable",
     "NamedArray",
+    "Variable",
     # Exceptions
     "InvalidTreeError",
     "MergeError",
@@ -130,6 +132,6 @@ __all__ = (
     "SerializationWarning",
     "TreeIsomorphismError",
     # Constants
-    "__version__",
     "ALL_DIMS",
+    "__version__",
 )

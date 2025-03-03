@@ -62,7 +62,7 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     # N.B. these casting rules should match pandas
     dtype_: np.typing.DTypeLike
     fill_value: Any
-    if HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):  # type: ignore[attr-defined]
+    if HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):
         # for now, we always promote string dtypes to object for consistency with existing behavior
         # TODO: refactor this once we have a better way to handle numpy vlen-string dtypes
         dtype_ = object
@@ -208,7 +208,7 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
     if not isinstance(kind, str) and not (
         isinstance(kind, tuple) and all(isinstance(k, str) for k in kind)  # type: ignore[redundant-expr]
     ):
-        raise TypeError(f"kind must be a string or a tuple of strings: {repr(kind)}")
+        raise TypeError(f"kind must be a string or a tuple of strings: {kind!r}")
 
     if isinstance(dtype, np.dtype):
         return npcompat.isdtype(dtype, kind)

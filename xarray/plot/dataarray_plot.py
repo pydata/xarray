@@ -10,6 +10,7 @@ import pandas as pd
 
 from xarray.core.alignment import broadcast
 from xarray.core.concat import concat
+from xarray.core.utils import attempt_import
 from xarray.plot.facetgrid import _easy_facetgrid
 from xarray.plot.utils import (
     _LINEWIDTH_RANGE,
@@ -873,7 +874,10 @@ def _plot1d(plotfunc):
         # All 1d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
-        import matplotlib.pyplot as plt
+        if TYPE_CHECKING:
+            import matplotlib.pyplot as plt
+        else:
+            plt = attempt_import("matplotlib.pyplot")
 
         if subplot_kws is None:
             subplot_kws = dict()
@@ -942,7 +946,7 @@ def _plot1d(plotfunc):
             # Remove any nulls, .where(m, drop=True) doesn't work when m is
             # a dask array, so load the array to memory.
             # It will have to be loaded to memory at some point anyway:
-            darray = darray.load()
+            darray = darray.compute()
             darray = darray.where(darray.notnull(), drop=True)
         else:
             size_ = kwargs.pop("_size", linewidth)
@@ -1030,7 +1034,7 @@ def _plot1d(plotfunc):
                 cbar_kwargs["label"] = label_from_attrs(hueplt_norm.data)
 
             _add_colorbar(
-                primitive, ax, kwargs.get("cbar_ax", None), cbar_kwargs, cmap_params
+                primitive, ax, kwargs.get("cbar_ax"), cbar_kwargs, cmap_params
             )
 
         if add_legend_:
@@ -1480,7 +1484,7 @@ def _plot2d(plotfunc):
             if ax is None:
                 # TODO: Importing Axes3D is no longer necessary in matplotlib >= 3.2.
                 # Remove when minimum requirement of matplotlib is 3.2:
-                from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+                from mpl_toolkits.mplot3d import Axes3D
 
                 # delete so it does not end up in locals()
                 del Axes3D

@@ -72,10 +72,7 @@ def summarize_attrs(attrs) -> str:
 def _icon(icon_name) -> str:
     # icon_name should be defined in xarray/static/html/icon-svg-inline.html
     return (
-        f"<svg class='icon xr-{icon_name}'>"
-        f"<use xlink:href='#{icon_name}'>"
-        "</use>"
-        "</svg>"
+        f"<svg class='icon xr-{icon_name}'><use xlink:href='#{icon_name}'></use></svg>"
     )
 
 
@@ -155,7 +152,9 @@ def summarize_index(coord_names, index) -> str:
     return (
         f"<div class='xr-index-name'><div>{name}</div></div>"
         f"<div class='xr-index-preview'>{preview}</div>"
-        f"<div></div>"
+        # need empty input + label here to conform to the fixed CSS grid layout
+        f"<input type='checkbox' disabled/>"
+        f"<label></label>"
         f"<input id='{index_id}' class='xr-index-data-in' type='checkbox'/>"
         f"<label for='{index_id}' title='Show/Hide index repr'>{data_icon}</label>"
         f"<div class='xr-index-data'>{details}</div>"

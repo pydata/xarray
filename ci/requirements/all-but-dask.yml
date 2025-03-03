@@ -15,7 +15,7 @@ dependencies:
   - h5py
   - hdf5
   - hypothesis
-  - lxml  # Optional dep of pydap
+  - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
@@ -30,8 +30,9 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-env
-  - pytest-xdist
+  - pytest-mypy-plugins
   - pytest-timeout
+  - pytest-xdist
   - rasterio
   - scipy
   - seaborn

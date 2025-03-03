@@ -1,7 +1,7 @@
 import re
 import sys
 import typing
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from copy import copy, deepcopy
 from textwrap import dedent
 
@@ -119,7 +119,7 @@ class TestFamilyTree:
 class TestNames:
     def test_child_gets_named_on_attach(self) -> None:
         sue = DataTree()
-        mary = DataTree(children={"Sue": sue})  # noqa
+        mary = DataTree(children={"Sue": sue})
         assert mary.children["Sue"].name == "Sue"
 
     def test_dataset_containing_slashes(self) -> None:
@@ -515,7 +515,7 @@ class TestSetItem:
     def test_grafted_subtree_retains_name(self) -> None:
         subtree = DataTree(name="original_subtree_name")
         root = DataTree(name="root")
-        root["new_subtree_name"] = subtree  # noqa
+        root["new_subtree_name"] = subtree
         assert subtree.name == "original_subtree_name"
 
     def test_setitem_new_empty_node(self) -> None:
@@ -1240,8 +1240,12 @@ class TestRepr:
     )
     def test_doc_example(self) -> None:
         # regression test for https://github.com/pydata/xarray/issues/9499
-        time = xr.DataArray(data=["2022-01", "2023-01"], dims="time")
-        stations = xr.DataArray(data=list("abcdef"), dims="station")
+        time = xr.DataArray(
+            data=np.array(["2022-01", "2023-01"], dtype="<U7"), dims="time"
+        )
+        stations = xr.DataArray(
+            data=np.array(list("abcdef"), dtype="<U1"), dims="station"
+        )
         lon = [-100, -80, -60]
         lat = [10, 20, 30]
         # Set up fake data
@@ -1585,27 +1589,53 @@ class TestRestructuring:
 
 
 class TestPipe:
-    def test_noop(self, create_test_datatree) -> None:
+    def test_noop(self, create_test_datatree: Callable[[], DataTree]) -> None:
         dt = create_test_datatree()
 
         actual = dt.pipe(lambda tree: tree)
         assert actual.identical(dt)
 
-    def test_params(self, create_test_datatree) -> None:
+    def test_args(self, create_test_datatree: Callable[[], DataTree]) -> None:
         dt = create_test_datatree()
 
-        def f(tree, **attrs):
-            return tree.assign(arr_with_attrs=xr.Variable("dim0", [], attrs=attrs))
+        def f(tree: DataTree, x: int, y: int) -> DataTree:
+            return tree.assign(
+                arr_with_attrs=xr.Variable("dim0", [], attrs=dict(x=x, y=y))
+            )
+
+        actual = dt.pipe(f, 1, 2)
+        assert actual["arr_with_attrs"].attrs == dict(x=1, y=2)
+
+    def test_kwargs(self, create_test_datatree: Callable[[], DataTree]) -> None:
+        dt = create_test_datatree()
+
+        def f(tree: DataTree, *, x: int, y: int, z: int) -> DataTree:
+            return tree.assign(
+                arr_with_attrs=xr.Variable("dim0", [], attrs=dict(x=x, y=y, z=z))
+            )
 
         attrs = {"x": 1, "y": 2, "z": 3}
 
         actual = dt.pipe(f, **attrs)
         assert actual["arr_with_attrs"].attrs == attrs
 
-    def test_named_self(self, create_test_datatree) -> None:
+    def test_args_kwargs(self, create_test_datatree: Callable[[], DataTree]) -> None:
         dt = create_test_datatree()
 
-        def f(x, tree, y):
+        def f(tree: DataTree, x: int, *, y: int, z: int) -> DataTree:
+            return tree.assign(
+                arr_with_attrs=xr.Variable("dim0", [], attrs=dict(x=x, y=y, z=z))
+            )
+
+        attrs = {"x": 1, "y": 2, "z": 3}
+
+        actual = dt.pipe(f, attrs["x"], y=attrs["y"], z=attrs["z"])
+        assert actual["arr_with_attrs"].attrs == attrs
+
+    def test_named_self(self, create_test_datatree: Callable[[], DataTree]) -> None:
+        dt = create_test_datatree()
+
+        def f(x: int, tree: DataTree, y: int):
             tree.attrs.update({"x": x, "y": y})
             return tree
 
@@ -2334,15 +2364,15 @@ class TestDask:
         assert_identical(actual, expected)
 
         assert actual.chunksizes == original_chunksizes, "chunksizes were modified"
-        assert (
-            tree.chunksizes == original_chunksizes
-        ), "original chunksizes were modified"
-        assert all(
-            d == 1 for d in actual_hlg_depths.values()
-        ), "unexpected dask graph depth"
-        assert all(
-            d == 2 for d in original_hlg_depths.values()
-        ), "original dask graph was modified"
+        assert tree.chunksizes == original_chunksizes, (
+            "original chunksizes were modified"
+        )
+        assert all(d == 1 for d in actual_hlg_depths.values()), (
+            "unexpected dask graph depth"
+        )
+        assert all(d == 2 for d in original_hlg_depths.values()), (
+            "original dask graph was modified"
+        )
 
     def test_chunk(self):
         ds1 = xr.Dataset({"a": ("x", np.arange(10))})

@@ -12,7 +12,17 @@ from collections.abc import (
     Mapping,
 )
 from html import escape
-from typing import TYPE_CHECKING, Any, Literal, NoReturn, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Concatenate,
+    Literal,
+    NoReturn,
+    ParamSpec,
+    TypeVar,
+    Union,
+    overload,
+)
 
 from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
@@ -21,7 +31,8 @@ from xarray.core.alignment import align
 from xarray.core.common import TreeAttrAccessMixin, get_chunksizes
 from xarray.core.coordinates import Coordinates, DataTreeCoordinates
 from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset, DataVariables
+from xarray.core.dataset import Dataset
+from xarray.core.dataset_variables import DataVariables
 from xarray.core.datatree_mapping import (
     map_over_datasets,
 )
@@ -79,18 +90,23 @@ if TYPE_CHECKING:
 # """
 # DEVELOPERS' NOTE
 # ----------------
-# The idea of this module is to create a `DataTree` class which inherits the tree structure from TreeNode, and also copies
-# the entire API of `xarray.Dataset`, but with certain methods decorated to instead map the dataset function over every
-# node in the tree. As this API is copied without directly subclassing `xarray.Dataset` we instead create various Mixin
-# classes (in ops.py) which each define part of `xarray.Dataset`'s extensive API.
+# The idea of this module is to create a `DataTree` class which inherits the tree
+# structure from TreeNode, and also copies the entire API of `xarray.Dataset`, but with
+# certain methods decorated to instead map the dataset function over every node in the
+# tree. As this API is copied without directly subclassing `xarray.Dataset` we instead
+# create various Mixin classes (in ops.py) which each define part of `xarray.Dataset`'s
+# extensive API.
 #
-# Some of these methods must be wrapped to map over all nodes in the subtree. Others are fine to inherit unaltered
-# (normally because they (a) only call dataset properties and (b) don't return a dataset that should be nested into a new
-# tree) and some will get overridden by the class definition of DataTree.
+# Some of these methods must be wrapped to map over all nodes in the subtree. Others are
+# fine to inherit unaltered (normally because they (a) only call dataset properties and
+# (b) don't return a dataset that should be nested into a new tree) and some will get
+# overridden by the class definition of DataTree.
 # """
 
 
 T_Path = Union[str, NodePath]
+T = TypeVar("T")
+P = ParamSpec("P")
 
 
 def _collect_data_and_coord_variables(
@@ -217,10 +233,10 @@ class DatasetView(Dataset):
     __slots__ = (
         "_attrs",
         "_cache",  # used by _CachedAccessor
+        "_close",
         "_coord_names",
         "_dims",
         "_encoding",
-        "_close",
         "_indexes",
         "_variables",
     )
@@ -276,8 +292,7 @@ class DatasetView(Dataset):
 
     def close(self) -> None:
         raise AttributeError(
-            "cannot close a DatasetView(). Close the associated DataTree node "
-            "instead"
+            "cannot close a DatasetView(). Close the associated DataTree node instead"
         )
 
     # FIXME https://github.com/python/mypy/issues/7328
@@ -457,17 +472,17 @@ class DataTree(
     _close: Callable[[], None] | None
 
     __slots__ = (
-        "_name",
-        "_parent",
-        "_children",
+        "_attrs",
         "_cache",  # used by _CachedAccessor
+        "_children",
+        "_close",
         "_data_variables",
+        "_encoding",
+        "_name",
         "_node_coord_variables",
         "_node_dims",
         "_node_indexes",
-        "_attrs",
-        "_encoding",
-        "_close",
+        "_parent",
     )
 
     def __init__(
@@ -749,7 +764,7 @@ class DataTree(
 
     def _ipython_key_completions_(self) -> list[str]:
         """Provide method for the key-autocompletions in IPython.
-        See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
+        See https://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
         """
 
@@ -1429,6 +1444,7 @@ class DataTree(
         self,
         func: Callable,
         *args: Any,
+        kwargs: Mapping[str, Any] | None = None,
     ) -> DataTree | tuple[DataTree, ...]:
         """
         Apply a function to every dataset in this subtree, returning a new tree which stores the results.
@@ -1446,7 +1462,10 @@ class DataTree(
 
             Function will not be applied to any nodes without datasets.
         *args : tuple, optional
-            Positional arguments passed on to `func`.
+            Positional arguments passed on to `func`. Any DataTree arguments will be
+            converted to Dataset objects via `.dataset`.
+        kwargs : dict, optional
+            Optional keyword arguments passed directly to ``func``.
 
         Returns
         -------
@@ -1459,11 +1478,30 @@ class DataTree(
         """
         # TODO this signature means that func has no way to know which node it is being called upon - change?
         # TODO fix this typing error
-        return map_over_datasets(func, self, *args)
+        return map_over_datasets(func, self, *args, kwargs=kwargs)
+
+    @overload
+    def pipe(
+        self,
+        func: Callable[Concatenate[Self, P], T],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T: ...
+
+    @overload
+    def pipe(
+        self,
+        func: tuple[Callable[..., T], str],
+        *args: Any,
+        **kwargs: Any,
+    ) -> T: ...
 
     def pipe(
-        self, func: Callable | tuple[Callable, str], *args: Any, **kwargs: Any
-    ) -> Any:
+        self,
+        func: Callable[Concatenate[Self, P], T] | tuple[Callable[..., T], str],
+        *args: Any,
+        **kwargs: Any,
+    ) -> T:
         """Apply ``func(self, *args, **kwargs)``
 
         This method replicates the pandas method of the same name.
@@ -1483,7 +1521,7 @@ class DataTree(
 
         Returns
         -------
-        object : Any
+        object : T
             the return type of ``func``.
 
         Notes
@@ -1511,15 +1549,19 @@ class DataTree(
 
         """
         if isinstance(func, tuple):
-            func, target = func
+            # Use different var when unpacking function from tuple because the type
+            # signature of the unpacked function differs from the expected type
+            # signature in the case where only a function is given, rather than a tuple.
+            # This makes type checkers happy at both call sites below.
+            f, target = func
             if target in kwargs:
                 raise ValueError(
                     f"{target} is both the pipe target and a keyword argument"
                 )
             kwargs[target] = self
-        else:
-            args = (self,) + args
-        return func(*args, **kwargs)
+            return f(*args, **kwargs)
+
+        return func(self, *args, **kwargs)
 
     # TODO some kind of .collapse() or .flatten() method to merge a subtree
 
@@ -1573,6 +1615,7 @@ class DataTree(
         format: T_DataTreeNetcdfTypes | None = None,
         engine: T_DataTreeNetcdfEngine | None = None,
         group: str | None = None,
+        write_inherited_coords: bool = False,
         compute: bool = True,
         **kwargs,
     ):
@@ -1609,6 +1652,11 @@ class DataTree(
         group : str, optional
             Path to the netCDF4 group in the given file to open as the root group
             of the ``DataTree``. Currently, specifying a group is not supported.
+        write_inherited_coords : bool, default: False
+            If true, replicate inherited coordinates on all descendant nodes.
+            Otherwise, only write coordinates at the level at which they are
+            originally defined. This saves disk space, but requires opening the
+            full tree to load inherited coordinates.
         compute : bool, default: True
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later.
@@ -1632,6 +1680,7 @@ class DataTree(
             format=format,
             engine=engine,
             group=group,
+            write_inherited_coords=write_inherited_coords,
             compute=compute,
             **kwargs,
         )
@@ -1643,6 +1692,7 @@ class DataTree(
         encoding=None,
         consolidated: bool = True,
         group: str | None = None,
+        write_inherited_coords: bool = False,
         compute: Literal[True] = True,
         **kwargs,
     ):
@@ -1668,6 +1718,11 @@ class DataTree(
             after writing metadata for all groups.
         group : str, optional
             Group path. (a.k.a. `path` in zarr terminology.)
+        write_inherited_coords : bool, default: False
+            If true, replicate inherited coordinates on all descendant nodes.
+            Otherwise, only write coordinates at the level at which they are
+            originally defined. This saves disk space, but requires opening the
+            full tree to load inherited coordinates.
         compute : bool, default: True
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later. Metadata
@@ -1690,6 +1745,7 @@ class DataTree(
             encoding=encoding,
             consolidated=consolidated,
             group=group,
+            write_inherited_coords=write_inherited_coords,
             compute=compute,
             **kwargs,
         )

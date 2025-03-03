@@ -10,7 +10,6 @@ dependencies:
   - cartopy
   - cftime
   - dask-core
-  - dask-expr # dask raises a deprecation warning without this, breaking doctests
   - distributed
   - flox
   - fsspec
@@ -30,29 +29,36 @@ dependencies:
   - opt_einsum
   - packaging
   - pandas
+  - pandas-stubs
   # - pint>=0.22
   - pip
   - pooch
   - pre-commit
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - pydap
-  # start pydap server dependencies, can be removed if pydap-server is available
-  - gunicorn
-  - PasteDeploy
-  - docopt-ng
-  - Webob
-  - Jinja2
-  - beautifulsoup4
-  # end pydap server dependencies
+  - pydap-server
   - pytest
   - pytest-cov
   - pytest-env
-  - pytest-xdist
+  - pytest-mypy-plugins
   - pytest-timeout
+  - pytest-xdist
   - rasterio
   - scipy
   - seaborn
   - sparse
   - toolz
+  - types-colorama
+  - types-docutils
+  - types-psutil
+  - types-Pygments
+  - types-python-dateutil
+  - types-pytz
+  - types-PyYAML
+  - types-setuptools
   - typing_extensions
   - zarr
+  - pip:
+      - jax # no way to get cpu-only jaxlib from conda if gpu is present
+      - types-defusedxml
+      - types-pexpect

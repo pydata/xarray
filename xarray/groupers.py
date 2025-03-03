@@ -9,6 +9,7 @@ from __future__ import annotations
 import datetime
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from itertools import pairwise
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
@@ -16,11 +17,10 @@ import pandas as pd
 from numpy.typing import ArrayLike
 
 from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
-from xarray.core import duck_array_ops
 from xarray.core.computation import apply_ufunc
 from xarray.core.coordinates import Coordinates, _coordinates_from_variable
 from xarray.core.dataarray import DataArray
-from xarray.core.duck_array_ops import isnull
+from xarray.core.duck_array_ops import array_all, isnull
 from xarray.core.groupby import T_Group, _DummyGroup
 from xarray.core.indexes import safe_cast_to_index
 from xarray.core.resample_cftime import CFTimeGrouper
@@ -29,18 +29,19 @@ from xarray.core.types import (
     DatetimeLike,
     GroupIndices,
     ResampleCompatible,
+    Self,
     SideOptions,
 )
 from xarray.core.variable import Variable
 from xarray.namedarray.pycompat import is_chunked_array
 
 __all__ = [
+    "BinGrouper",
     "EncodedGroups",
     "Grouper",
     "Resampler",
-    "UniqueGrouper",
-    "BinGrouper",
     "TimeResampler",
+    "UniqueGrouper",
 ]
 
 RESAMPLE_DIM = "__resample_dim__"
@@ -138,6 +139,13 @@ class Grouper(ABC):
         """
         pass
 
+    @abstractmethod
+    def reset(self) -> Self:
+        """
+        Creates a new version of this Grouper clearing any caches.
+        """
+        pass
+
 
 class Resampler(Grouper):
     """
@@ -175,6 +183,9 @@ class UniqueGrouper(Grouper):
             else:
                 self._group_as_index = pd.Index(np.array(self.group).ravel())
         return self._group_as_index
+
+    def reset(self) -> Self:
+        return type(self)()
 
     def factorize(self, group: T_Group) -> EncodedGroups:
         self.group = group
@@ -223,7 +234,7 @@ class UniqueGrouper(Grouper):
         # look through group to find the unique values
         sort = not isinstance(self.group_as_index, pd.MultiIndex)
         unique_values, codes_ = unique_value_groups(self.group_as_index, sort=sort)
-        if (codes_ == -1).all():
+        if array_all(codes_ == -1):
             raise ValueError(
                 "Failed to group data. Are you grouping by a variable that is all NaN?"
             )
@@ -324,8 +335,18 @@ class BinGrouper(Grouper):
     include_lowest: bool = False
     duplicates: Literal["raise", "drop"] = "raise"
 
+    def reset(self) -> Self:
+        return type(self)(
+            bins=self.bins,
+            right=self.right,
+            labels=self.labels,
+            precision=self.precision,
+            include_lowest=self.include_lowest,
+            duplicates=self.duplicates,
+        )
+
     def __post_init__(self) -> None:
-        if duck_array_ops.isnull(self.bins).all():
+        if array_all(isnull(self.bins)):
             raise ValueError("All bin edges are NaN.")
 
     def _cut(self, data):
@@ -359,7 +380,7 @@ class BinGrouper(Grouper):
                 f"Bin edges must be provided when grouping by chunked arrays. Received {self.bins=!r} instead"
             )
         codes = self._factorize_lazy(group)
-        if not by_is_chunked and (codes == -1).all():
+        if not by_is_chunked and array_all(codes == -1):
             raise ValueError(
                 f"None of the data falls within bins with edges {self.bins!r}"
             )
@@ -425,6 +446,15 @@ class TimeResampler(Resampler):
 
     index_grouper: CFTimeGrouper | pd.Grouper = field(init=False, repr=False)
     group_as_index: pd.Index = field(init=False, repr=False)
+
+    def reset(self) -> Self:
+        return type(self)(
+            freq=self.freq,
+            closed=self.closed,
+            label=self.label,
+            origin=self.origin,
+            offset=self.offset,
+        )
 
     def _init_properties(self, group: T_Group) -> None:
         from xarray import CFTimeIndex
@@ -496,8 +526,7 @@ class TimeResampler(Resampler):
         full_index, first_items, codes_ = self._get_index_and_items()
         sbins = first_items.values.astype(np.int64)
         group_indices: GroupIndices = tuple(
-            [slice(i, j) for i, j in zip(sbins[:-1], sbins[1:], strict=True)]
-            + [slice(sbins[-1], None)]
+            [slice(i, j) for i, j in pairwise(sbins)] + [slice(sbins[-1], None)]
         )
 
         unique_coord = Variable(
@@ -517,7 +546,7 @@ class TimeResampler(Resampler):
 def _factorize_given_labels(data: np.ndarray, labels: np.ndarray) -> np.ndarray:
     # Copied from flox
     sorter = np.argsort(labels)
-    is_sorted = (sorter == np.arange(sorter.size)).all()
+    is_sorted = array_all(sorter == np.arange(sorter.size))
     codes = np.searchsorted(labels, data, sorter=sorter)
     mask = ~np.isin(data, labels) | isnull(data) | (codes == len(labels))
     # codes is the index in to the sorted array.

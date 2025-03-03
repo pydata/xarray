@@ -151,9 +151,9 @@ class TreeNode(Generic[Tree]):
 
             self._pre_attach(parent, child_name)
             parentchildren = parent._children
-            assert not any(
-                child is self for child in parentchildren
-            ), "Tree is corrupt."
+            assert not any(child is self for child in parentchildren), (
+                "Tree is corrupt."
+            )
             parentchildren[child_name] = self
             self._parent = parent
             self._post_attach(parent, child_name)
@@ -317,7 +317,7 @@ class TreeNode(Generic[Tree]):
             DeprecationWarning,
             stacklevel=2,
         )
-        return tuple((self, *self.parents))
+        return (self, *self.parents)
 
     @property
     def lineage(self: Tree) -> tuple[Tree, ...]:
@@ -349,7 +349,7 @@ class TreeNode(Generic[Tree]):
             DeprecationWarning,
             stacklevel=2,
         )
-        return tuple((*reversed(self.parents), self))
+        return (*reversed(self.parents), self)
 
     @property
     def root(self: Tree) -> Tree:
@@ -380,7 +380,7 @@ class TreeNode(Generic[Tree]):
 
         Leaf nodes are defined as nodes which have no children.
         """
-        return tuple([node for node in self.subtree if node.is_leaf])
+        return tuple(node for node in self.subtree if node.is_leaf)
 
     @property
     def siblings(self: Tree) -> dict[str, Tree]:

@@ -293,7 +293,7 @@ pressure that were made under various conditions:
 * they were made at two separate locations, which we will represent using
   their latitude and longitude; and
 * they were made using instruments by three different manufacturers, which we
-  will refer to as `'manufac1'`, `'manufac2'`, and `'manufac3'`.
+  will refer to as ``'manufac1'``, ``'manufac2'``, and ``'manufac3'``.
 
 .. ipython:: python
 
@@ -369,7 +369,7 @@ dictionary-like attributes:
     ds.coords
 
 Finally, like data arrays, datasets also store arbitrary metadata in the form
-of `attributes`:
+of ``attributes``:
 
 .. ipython:: python
 
@@ -539,7 +539,7 @@ parent is known as a "root" node (represented by the ``parent`` attribute
 pointing to ``None``). Nodes can have multiple children, but as each child node
 has at most one parent, there can only ever be one root node in a given tree.
 
-The overall structure is technically a `connected acyclic undirected rooted graph`,
+The overall structure is technically a connected acyclic undirected rooted graph,
 otherwise known as a `"Tree" <https://en.wikipedia.org/wiki/Tree_(graph_theory)>`_.
 
 :py:class:`~xarray.DataTree` objects can also optionally have a ``name`` as well as ``attrs``,
@@ -590,7 +590,7 @@ We can add a second node to this tree, assigning it to the parent node ``dt``:
 
 
 More idiomatically you can create a tree from a dictionary of ``Datasets`` and
-`DataTrees`. In this case we add a new node under ``dt["child-node"]`` by
+``DataTrees``. In this case we add a new node under ``dt["child-node"]`` by
 providing the explicit path under ``"child-node"`` as the dictionary key:
 
 .. ipython:: python
@@ -608,8 +608,8 @@ We have created a tree with three nodes in it:
 
 
 
-Consistency checks are enforced. For instance, if we try to create a `cycle`,
-where the root node is also a child of a decendent, the constructor will raise
+Consistency checks are enforced. For instance, if we try to create a cycle,
+where the root node is also a child of a descendant, the constructor will raise
 an (:py:class:`~xarray.InvalidTreeError`):
 
 .. ipython:: python
@@ -711,8 +711,8 @@ inherited dimensions, but DataTree's inheritance is slightly stricter yet
 easier to reason about.
 
 The constraint that this puts on a DataTree is that dimensions and indices that
-are inherited must be aligned with any direct decendent node's existing
-dimension or index.  This allows decendents to use dimensions defined in
+are inherited must be aligned with any direct descendant node's existing
+dimension or index.  This allows descendants to use dimensions defined in
 ancestor nodes, without duplicating that information. But as a consequence, if
 a dimension-name is defined in on a node and that same dimension-name
 exists in one of its ancestors, they must align (have the same index and

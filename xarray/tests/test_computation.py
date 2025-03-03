@@ -1293,9 +1293,9 @@ def test_apply_dask_multiple_inputs() -> None:
             (x - x.mean(axis=-1, keepdims=True)) * (y - y.mean(axis=-1, keepdims=True))
         ).mean(axis=-1)
 
-    rs = np.random.RandomState(42)
-    array1 = da.from_array(rs.randn(4, 4), chunks=(2, 4))
-    array2 = da.from_array(rs.randn(4, 4), chunks=(2, 4))
+    rs = np.random.default_rng(42)
+    array1 = da.from_array(rs.random((4, 4)), chunks=(2, 4))
+    array2 = da.from_array(rs.random((4, 4)), chunks=(2, 4))
     data_array_1 = xr.DataArray(array1, dims=("x", "z"))
     data_array_2 = xr.DataArray(array2, dims=("y", "z"))
 
@@ -1561,7 +1561,7 @@ def arrays():
     )
 
     return [
-        da.isel(time=range(0, 18)),
+        da.isel(time=range(18)),
         da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(),
         xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"]),
         xr.DataArray([[1, 2], [np.nan, np.nan]], dims=["x", "time"]),
@@ -2344,6 +2344,20 @@ def test_where_attrs() -> None:
             id="datetime",
         ),
         pytest.param(
+            # Force a non-ns unit for the coordinate, make sure we convert to `ns`
+            # for backwards compatibility at the moment. This can be relaxed in the future.
+            xr.DataArray(
+                pd.date_range("1970-01-01", freq="s", periods=3, unit="s"), dims="x"
+            ),
+            xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]}),
+            xr.DataArray(
+                [0, 1e9, 2e9],
+                dims="x",
+                coords={"x": pd.date_range("1970-01-01", freq="s", periods=3)},
+            ),
+            id="datetime-non-ns",
+        ),
+        pytest.param(
             xr.DataArray(
                 np.array([1000, 2000, 3000], dtype="timedelta64[ns]"), dims="x"
             ),
@@ -2456,6 +2470,14 @@ def test_polyval_degree_dim_checks() -> None:
         pytest.param(
             xr.DataArray(pd.date_range("1970-01-01", freq="ns", periods=3), dims="x"),
             id="datetime",
+        ),
+        # Force a non-ns unit for the coordinate, make sure we convert to `ns` in both polyfit & polval
+        # for backwards compatibility at the moment. This can be relaxed in the future.
+        pytest.param(
+            xr.DataArray(
+                pd.date_range("1970-01-01", freq="s", unit="s", periods=3), dims="x"
+            ),
+            id="datetime-non-ns",
         ),
         pytest.param(
             xr.DataArray(np.array([0, 1, 2], dtype="timedelta64[ns]"), dims="x"),

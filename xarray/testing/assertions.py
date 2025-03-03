@@ -124,8 +124,8 @@ def assert_equal(a, b, check_dim_order: bool = True):
     numpy.testing.assert_array_equal
     """
     __tracebackhide__ = True
-    assert (
-        type(a) is type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
+    assert type(a) is type(b) or (
+        isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
     b = maybe_transpose_dims(a, b, check_dim_order)
     if isinstance(a, Variable | DataArray):
@@ -163,15 +163,15 @@ def assert_identical(a, b):
     assert_equal, assert_allclose, Dataset.equals, DataArray.equals
     """
     __tracebackhide__ = True
-    assert (
-        type(a) is type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
+    assert type(a) is type(b) or (
+        isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
     if isinstance(a, Variable):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, DataArray):
-        assert (
-            a.name == b.name
-        ), f"DataArray names are different. L: {a.name}, R: {b.name}"
+        assert a.name == b.name, (
+            f"DataArray names are different. L: {a.name}, R: {b.name}"
+        )
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, Dataset | Variable):
         assert a.identical(b), formatting.diff_dataset_repr(a, b, "identical")
@@ -296,7 +296,7 @@ def assert_duckarray_equal(x, y, err_msg="", verbose=True):
     if (utils.is_duck_array(x) and utils.is_scalar(y)) or (
         utils.is_scalar(x) and utils.is_duck_array(y)
     ):
-        equiv = (x == y).all()
+        equiv = duck_array_ops.array_all(x == y)
     else:
         equiv = duck_array_ops.array_equiv(x, y)
     assert equiv, _format_message(x, y, err_msg=err_msg, verbose=verbose)
@@ -423,7 +423,7 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
         set(ds._variables),
     )
 
-    assert type(ds._dims) is dict, ds._dims  # noqa: E721
+    assert type(ds._dims) is dict, ds._dims
     assert all(isinstance(v, int) for v in ds._dims.values()), ds._dims
     var_dims: set[Hashable] = set()
     for v in ds._variables.values():

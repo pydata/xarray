@@ -13,12 +13,21 @@ if TYPE_CHECKING:
 
 
 @overload
-def map_over_datasets(func: Callable[..., Dataset | None], *args: Any) -> DataTree: ...
+def map_over_datasets(
+    func: Callable[
+        ...,
+        Dataset | None,
+    ],
+    *args: Any,
+    kwargs: Mapping[str, Any] | None = None,
+) -> DataTree: ...
 
 
 @overload
 def map_over_datasets(
-    func: Callable[..., tuple[Dataset | None, Dataset | None]], *args: Any
+    func: Callable[..., tuple[Dataset | None, Dataset | None]],
+    *args: Any,
+    kwargs: Mapping[str, Any] | None = None,
 ) -> tuple[DataTree, DataTree]: ...
 
 
@@ -26,12 +35,16 @@ def map_over_datasets(
 # (python typing does not have a way to match tuple lengths in general)
 @overload
 def map_over_datasets(
-    func: Callable[..., tuple[Dataset | None, ...]], *args: Any
+    func: Callable[..., tuple[Dataset | None, ...]],
+    *args: Any,
+    kwargs: Mapping[str, Any] | None = None,
 ) -> tuple[DataTree, ...]: ...
 
 
 def map_over_datasets(
-    func: Callable[..., Dataset | None | tuple[Dataset | None, ...]], *args: Any
+    func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
+    *args: Any,
+    kwargs: Mapping[str, Any] | None = None,
 ) -> DataTree | tuple[DataTree, ...]:
     """
     Applies a function to every dataset in one or more DataTree objects with
@@ -62,12 +75,14 @@ def map_over_datasets(
     func : callable
         Function to apply to datasets with signature:
 
-        `func(*args: Dataset) -> Union[Dataset, tuple[Dataset, ...]]`.
+        `func(*args: Dataset, **kwargs) -> Union[Dataset, tuple[Dataset, ...]]`.
 
         (i.e. func must accept at least one Dataset and return at least one Dataset.)
     *args : tuple, optional
         Positional arguments passed on to `func`. Any DataTree arguments will be
         converted to Dataset objects via `.dataset`.
+    kwargs : dict, optional
+        Optional keyword arguments passed directly to ``func``.
 
     Returns
     -------
@@ -85,6 +100,9 @@ def map_over_datasets(
 
     from xarray.core.datatree import DataTree
 
+    if kwargs is None:
+        kwargs = {}
+
     # Walk all trees simultaneously, applying func to all nodes that lie in same position in different trees
     # We don't know which arguments are DataTrees so we zip all arguments together as iterables
     # Store tuples of results in a dict because we don't yet know how many trees we need to rebuild to return
@@ -100,7 +118,7 @@ def map_over_datasets(
                 node_dataset_args.insert(i, arg)
 
         func_with_error_context = _handle_errors_with_path_context(path)(func)
-        results = func_with_error_context(*node_dataset_args)
+        results = func_with_error_context(*node_dataset_args, **kwargs)
         out_data_objects[path] = results
 
     num_return_values = _check_all_return_values(out_data_objects)
@@ -160,8 +178,8 @@ def _check_single_set_return_values(path_to_node: str, obj: Any) -> int | None:
         isinstance(r, Dataset | None) for r in obj
     ):
         raise TypeError(
-            f"the result of calling func on the node at position is not a Dataset or None "
-            f"or a tuple of such types: {obj!r}"
+            f"the result of calling func on the node at position '{path_to_node}' is"
+            f" not a Dataset or None or a tuple of such types:\n{obj!r}"
         )
 
     return len(obj)
@@ -170,9 +188,7 @@ def _check_single_set_return_values(path_to_node: str, obj: Any) -> int | None:
 def _check_all_return_values(returned_objects) -> int | None:
     """Walk through all values returned by mapping func over subtrees, raising on any invalid or inconsistent types."""
 
-    result_data_objects = [
-        (path_to_node, r) for path_to_node, r in returned_objects.items()
-    ]
+    result_data_objects = list(returned_objects.items())
 
     first_path, result = result_data_objects[0]
     return_values = _check_single_set_return_values(first_path, result)
