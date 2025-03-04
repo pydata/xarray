@@ -98,13 +98,18 @@ coordinate with dates from a no-leap calendar and a
     ]
     da = xr.DataArray(np.arange(24), coords=[dates], dims=["time"], name="foo")
 
-Xarray also includes a :py:func:`~xarray.cftime_range` function, which enables
+Xarray also includes a :py:func:`~xarray.date_range` function, which enables
 creating a :py:class:`~xarray.CFTimeIndex` with regularly-spaced dates.  For
-instance, we can create the same dates and DataArray we created above using:
+instance, we can create the same dates and DataArray we created above using
+(note that ``use_cftime=True`` is not mandatory to return a
+:py:class:`~xarray.CFTimeIndex` for non-standard calendars, but can be nice
+to use to be explicit):
 
 .. ipython:: python
 
-    dates = xr.cftime_range(start="0001", periods=24, freq="MS", calendar="noleap")
+    dates = xr.date_range(
+        start="0001", periods=24, freq="MS", calendar="noleap", use_cftime=True
+    )
     da = xr.DataArray(np.arange(24), coords=[dates], dims=["time"], name="foo")
 
 Mirroring pandas' method with the same name, :py:meth:`~xarray.infer_freq` allows one to
@@ -138,7 +143,9 @@ use ``pandas`` when possible, i.e. when the calendar is ``standard``/``gregorian
 
 .. ipython:: python
 
-    dates = xr.cftime_range(start="2001", periods=24, freq="MS", calendar="noleap")
+    dates = xr.date_range(
+        start="2001", periods=24, freq="MS", calendar="noleap", use_cftime=True
+    )
     da_nl = xr.DataArray(np.arange(24), coords=[dates], dims=["time"], name="foo")
     da_std = da.convert_calendar("standard", use_cftime=True)
 
