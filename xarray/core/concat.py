@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Hashable, Iterable
 from typing import TYPE_CHECKING, Any, Union, overload
 
@@ -19,6 +18,7 @@ from xarray.core.merge import (
     merge_collected,
 )
 from xarray.core.types import T_DataArray, T_Dataset, T_Variable
+from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
 from xarray.core.variable import concat as concat_vars
 from xarray.util.deprecation_helpers import (
@@ -369,14 +369,13 @@ def _calc_concat_over(
             if opt == "different":
                 if isinstance(compat, CombineKwargDefault) and compat != "override":
                     if not isinstance(opt, CombineKwargDefault):
-                        warnings.warn(
+                        emit_user_level_warning(
                             compat.warning_message(
                                 "This change will result in the following ValueError: "
                                 f"Cannot specify both {subset}='different' and compat='override'.",
                                 recommend_set_options=False,
                             ),
-                            category=FutureWarning,
-                            stacklevel=2,
+                            FutureWarning,
                         )
 
                 if compat == "override":
@@ -462,13 +461,12 @@ def _calc_concat_over(
                 and opt != "minimal"
                 and original != concat_over
             ):
-                warnings.warn(
+                emit_user_level_warning(
                     opt.warning_message(
                         "This is likely to lead to different results when multiple datasets "
                         "have matching variables with overlapping values.",
                     ),
-                    category=FutureWarning,
-                    stacklevel=2,
+                    FutureWarning,
                 )
         else:
             valid_vars = tuple(getattr(datasets[0], subset))

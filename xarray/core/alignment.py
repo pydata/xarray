@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import operator
-import warnings
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
@@ -21,7 +20,7 @@ from xarray.core.indexes import (
     safe_cast_to_index,
 )
 from xarray.core.types import T_Alignable
-from xarray.core.utils import is_dict_like, is_full_slice
+from xarray.core.utils import emit_user_level_warning, is_dict_like, is_full_slice
 from xarray.core.variable import Variable, as_compatible_data, calculate_dimensions
 from xarray.util.deprecation_helpers import CombineKwargDefault
 
@@ -424,7 +423,7 @@ class Aligner(Generic[T_Alignable]):
                         isinstance(self.join, CombineKwargDefault)
                         and self.join != "exact"
                     ):
-                        warnings.warn(
+                        emit_user_level_warning(
                             self.join.warning_message(
                                 "This change will result in the following ValueError:"
                                 "cannot be aligned with join='exact' because "
@@ -435,8 +434,7 @@ class Aligner(Generic[T_Alignable]):
                                 ),
                                 recommend_set_options=False,
                             ),
-                            category=FutureWarning,
-                            stacklevel=2,
+                            FutureWarning,
                         )
                     if self.join == "exact":
                         raise ValueError(

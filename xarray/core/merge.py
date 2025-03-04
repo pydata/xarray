@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, Sequence, Set
 from typing import TYPE_CHECKING, Any, NamedTuple, Union
@@ -16,7 +15,13 @@ from xarray.core.indexes import (
     filter_indexes_from_coords,
     indexes_equal,
 )
-from xarray.core.utils import Frozen, compat_dict_union, dict_equiv, equivalent
+from xarray.core.utils import (
+    Frozen,
+    compat_dict_union,
+    dict_equiv,
+    emit_user_level_warning,
+    equivalent,
+)
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
 from xarray.util.deprecation_helpers import (
     _COMPAT_DEFAULT,
@@ -306,13 +311,12 @@ def merge_collected(
                         and compat == "no_conflicts"
                         and len(variables) > 1
                     ):
-                        warnings.warn(
+                        emit_user_level_warning(
                             compat.warning_message(
                                 "This is likely to lead to different results when "
                                 "combining overlapping variables with the same name.",
                             ),
-                            category=FutureWarning,
-                            stacklevel=2,
+                            FutureWarning,
                         )
                 except MergeError:
                     if compat != "minimal":
