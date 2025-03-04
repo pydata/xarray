@@ -341,8 +341,8 @@ class TestMergeMethod:
 
         actual = ds2.merge(ds1)
         assert_identical(expected, actual)
-
-        actual = data.merge(data, compat="no_conflicts")
+        with pytest.warns(FutureWarning):  # this is a false alarm
+            actual = data.merge(data)
         assert_identical(data, actual)
         actual = data.reset_coords(drop=True).merge(data, compat="no_conflicts")
         assert_identical(data, actual)
@@ -356,13 +356,13 @@ class TestMergeMethod:
         with pytest.raises(ValueError, match=r"should be coordinates or not"):
             data.merge(data.reset_coords(), compat="no_conflicts")
 
-    def test_merge_broadcast_equals(self):
+    def test_merge_compat_broadcast_equals(self):
         ds1 = xr.Dataset({"x": 0})
         ds2 = xr.Dataset({"x": ("y", [0, 0])})
-        actual = ds1.merge(ds2, compat="no_conflicts")
+        actual = ds1.merge(ds2, compat="broadcast_equals")
         assert_identical(ds2, actual)
 
-        actual = ds2.merge(ds1, compat="override")
+        actual = ds2.merge(ds1, compat="broadcast_equals")
         assert_identical(ds2, actual)
 
         actual = ds1.copy()
@@ -371,7 +371,7 @@ class TestMergeMethod:
 
         ds1 = xr.Dataset({"x": np.nan})
         ds2 = xr.Dataset({"x": ("y", [np.nan, np.nan])})
-        actual = ds1.merge(ds2, compat="no_conflicts")
+        actual = ds1.merge(ds2, compat="broadcast_equals")
         assert_identical(ds2, actual)
 
     def test_merge_compat(self):
@@ -405,7 +405,7 @@ class TestMergeMethod:
         expected = xr.Dataset(coords={"foo": [1, 2, 3]})
         assert_identical(actual, expected)
 
-    def test_merge_auto_align(self):
+    def test_merge_join(self):
         ds1 = xr.Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
         ds2 = xr.Dataset({"b": ("x", [3, 4]), "x": [1, 2]})
         expected = xr.Dataset(
