@@ -378,9 +378,9 @@ def where(condition, x, y):
     xp = get_array_namespace(condition, x, y)
 
     if not is_duck_array(condition):
-        condition = asarray(condition, dtype=xp.bool, xp=xp)
+        condition = asarray(condition, dtype="bool", xp=xp)
     else:
-        condition = astype(condition, dtype=xp.bool, xp=xp)
+        condition = astype(condition, dtype="bool", xp=xp)
 
     return xp.where(condition, *as_shared_dtype([x, y], xp=xp))
 
