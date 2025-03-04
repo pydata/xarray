@@ -199,10 +199,9 @@ def _prepare_plot1d_data(
                     darray = concat(
                         [darray, darray_nan],
                         dim=dim,
-                        data_vars="all",
-                        coords="different",
-                        compat="equals",
-                        join="outer",
+                        coords="minimal",
+                        compat="override",
+                        join="exact",
                     )
                     dims_T.append(coords_to_plot[v])
 
