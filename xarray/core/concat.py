@@ -797,6 +797,10 @@ def _dataarray_concat(
             "The elements in the input list need to be either all 'Dataset's or all 'DataArray's"
         )
 
+    # Allow passing old or new default even though we always use `data_vars="all"`
+    # when passing off to `_dataset_concat`. This allows people to explicitly
+    # set the data_vars value to the new default without worrying about whether
+    # they have datasets or dataarrays.
     if not isinstance(data_vars, CombineKwargDefault) and data_vars not in [
         "all",
         "minimal",
