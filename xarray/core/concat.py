@@ -461,12 +461,11 @@ def _calc_concat_over(
                 and opt != "minimal"
                 and original != concat_over
             ):
-                emit_user_level_warning(
+                warnings.append(
                     opt.warning_message(
                         "This is likely to lead to different results when multiple datasets "
                         "have matching variables with overlapping values.",
-                    ),
-                    FutureWarning,
+                    )
                 )
         else:
             valid_vars = tuple(getattr(datasets[0], subset))
@@ -486,8 +485,13 @@ def _calc_concat_over(
                     )
             concat_over.update(opt)
 
+    warnings = []
     process_subset_opt(data_vars, "data_vars")
     process_subset_opt(coords, "coords")
+
+    for warning in warnings:
+        emit_user_level_warning(warning, FutureWarning)
+
     return concat_over, equals, concat_dim_lengths
 
 
