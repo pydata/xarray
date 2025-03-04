@@ -14,7 +14,7 @@ import tempfile
 import uuid
 import warnings
 from collections.abc import Generator, Iterator, Mapping
-from contextlib import ExitStack
+from contextlib import ExitStack, nullcontext
 from io import BytesIO
 from os import listdir
 from pathlib import Path
@@ -4511,13 +4511,14 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         # to test join='exact'
         ds1["x"] = ds1.x + fuzz
 
-        with create_tmp_file() as tmpfile1:
-            with create_tmp_file() as tmpfile2:
-                # save data to the temporary files
-                ds1.to_netcdf(tmpfile1)
-                ds2.to_netcdf(tmpfile2)
+        with set_options(use_new_combine_kwarg_defaults=True):
+            with create_tmp_file() as tmpfile1:
+                with create_tmp_file() as tmpfile2:
+                    # save data to the temporary files
+                    ds1.to_netcdf(tmpfile1)
+                    ds2.to_netcdf(tmpfile2)
 
-                yield [tmpfile1, tmpfile2], [ds1, ds2]
+                    yield [tmpfile1, tmpfile2], [ds1, ds2]
 
     def gen_datasets_with_common_coord_and_time(self):
         # create coordinate data
@@ -4554,11 +4555,19 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
             if combine == "by_coords":
                 files.reverse()
             with open_mfdataset(
-                files, data_vars=opt, combine=combine, concat_dim=concat_dim, join=join
+                files,
+                data_vars=opt,
+                combine=combine,
+                concat_dim=concat_dim,
+                join=join,
+                compat="no_conflicts",
             ) as ds:
-                ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim="t", join=join)
+                ds_expect = xr.concat(
+                    [ds1, ds2], data_vars=opt, dim="t", join=join, compat="equals"
+                )
                 assert_identical(ds, ds_expect)
 
+    @pytest.mark.parametrize("use_new_combine_kwarg_defaults", [True, False])
     @pytest.mark.parametrize(
         ["combine_attrs", "attrs", "expected", "expect_error"],
         (
@@ -4586,7 +4595,12 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         ),
     )
     def test_open_mfdataset_dataset_combine_attrs(
-        self, combine_attrs, attrs, expected, expect_error
+        self,
+        use_new_combine_kwarg_defaults,
+        combine_attrs,
+        attrs,
+        expected,
+        expect_error,
     ):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
             # Give the files an inconsistent attribute
@@ -4596,22 +4610,24 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds.close()
                 ds.to_netcdf(f)
 
-            if expect_error:
-                with pytest.raises(xr.MergeError):
-                    xr.open_mfdataset(
-                        files,
-                        combine="nested",
-                        concat_dim="t",
-                        combine_attrs=combine_attrs,
-                    )
-            else:
-                with xr.open_mfdataset(
-                    files,
-                    combine="nested",
-                    concat_dim="t",
-                    combine_attrs=combine_attrs,
-                ) as ds:
-                    assert ds.attrs == expected
+            with set_options(
+                use_new_combine_kwarg_defaults=use_new_combine_kwarg_defaults
+            ):
+                warning = (
+                    pytest.warns(FutureWarning)
+                    if not use_new_combine_kwarg_defaults
+                    else nullcontext()
+                )
+                error = pytest.raises(xr.MergeError) if expect_error else nullcontext()
+                with warning:
+                    with error:
+                        with xr.open_mfdataset(
+                            files,
+                            combine="nested",
+                            concat_dim="t",
+                            combine_attrs=combine_attrs,
+                        ) as ds:
+                            assert ds.attrs == expected
 
     def test_open_mfdataset_dataset_attr_by_coords(self) -> None:
         """
@@ -4640,29 +4656,64 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds.close()
                 ds.to_netcdf(f)
 
-            with xr.open_mfdataset(files, combine="nested", concat_dim="t") as ds:
+            with xr.open_mfdataset(
+                files, data_vars="minimal", combine="nested", concat_dim="t"
+            ) as ds:
                 assert ds["v1"].test_dataarray_attr == 0
 
     @pytest.mark.parametrize(
         "combine, concat_dim", [("nested", "t"), ("by_coords", None)]
     )
-    @pytest.mark.parametrize("opt", ["all", "minimal", "different"])
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"data_vars": "all"},
+            {"data_vars": "minimal"},
+            {
+                "data_vars": "all",
+                "coords": "different",
+                "compat": "no_conflicts",
+            },  # old defaults
+            {
+                "data_vars": "minimal",
+                "coords": "minimal",
+                "compat": "override",
+            },  # new defaults
+            {"data_vars": "different", "compat": "no_conflicts"},
+            {},
+        ],
+    )
     def test_open_mfdataset_exact_join_raises_error(
-        self, combine, concat_dim, opt
+        self, combine, concat_dim, kwargs
     ) -> None:
-        with self.setup_files_and_datasets(fuzz=0.1) as (files, [ds1, ds2]):
+        with self.setup_files_and_datasets(fuzz=0.1) as (files, _):
             if combine == "by_coords":
                 files.reverse()
             with pytest.raises(
-                ValueError, match=r"cannot align objects.*join.*exact.*"
+                ValueError, match="cannot align objects with join='exact'"
             ):
                 open_mfdataset(
                     files,
-                    data_vars=opt,
+                    **kwargs,
                     combine=combine,
                     concat_dim=concat_dim,
                     join="exact",
                 )
+
+    def test_open_mfdataset_defaults_with_exact_join_warns_as_well_as_raising(
+        self,
+    ) -> None:
+        with self.setup_files_and_datasets(fuzz=0.1) as (files, _):
+            with set_options(use_new_combine_kwarg_defaults=False):
+                files.reverse()
+                with pytest.warns(
+                    FutureWarning,
+                    match="will change from data_vars='all' to data_vars='minimal'",
+                ):
+                    with pytest.raises(
+                        ValueError, match="cannot align objects with join='exact'"
+                    ):
+                        open_mfdataset(files, combine="by_coords", join="exact")
 
     def test_common_coord_when_datavars_all(self) -> None:
         opt: Final = "all"
@@ -4710,6 +4761,50 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
             with pytest.raises(ValueError):
                 with open_mfdataset(files, coords="minimum", combine="by_coords"):
                     pass
+
+    @pytest.mark.parametrize(
+        "combine, concat_dim", [("nested", "t"), ("by_coords", None)]
+    )
+    @pytest.mark.parametrize(
+        "kwargs", [{"data_vars": "different"}, {"coords": "different"}]
+    )
+    def test_open_mfdataset_warns_when_kwargs_set_to_different(
+        self, combine, concat_dim, kwargs
+    ) -> None:
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+            if combine == "by_coords":
+                files.reverse()
+            with pytest.raises(
+                ValueError, match="Previously the default was compat='no_conflicts'"
+            ):
+                open_mfdataset(files, combine=combine, concat_dim=concat_dim, **kwargs)
+            with pytest.raises(
+                ValueError, match="Previously the default was compat='equals'"
+            ):
+                xr.concat([ds1, ds2], dim="t", **kwargs)
+
+            with set_options(use_new_combine_kwarg_defaults=False):
+                if "data_vars" not in kwargs:
+                    expectation = pytest.warns(
+                        FutureWarning,
+                        match="will change from data_vars='all'",
+                    )
+                else:
+                    expectation = nullcontext()
+                with pytest.warns(
+                    FutureWarning,
+                    match="will change from compat='equals'",
+                ):
+                    with expectation:
+                        ds_expect = xr.concat([ds1, ds2], dim="t", **kwargs)
+                with pytest.warns(
+                    FutureWarning, match="will change from compat='no_conflicts'"
+                ):
+                    with expectation:
+                        with open_mfdataset(
+                            files, combine=combine, concat_dim=concat_dim, **kwargs
+                        ) as ds:
+                            assert_identical(ds, ds_expect)
 
 
 @requires_dask
@@ -4966,10 +5061,57 @@ class TestDask(DatasetIOBase):
                 ds2.t.encoding["units"] = "days since 2000-01-01"
                 ds1.to_netcdf(tmp1)
                 ds2.to_netcdf(tmp2)
-                with open_mfdataset([tmp1, tmp2], combine="nested") as actual:
+                with open_mfdataset(
+                    [tmp1, tmp2], combine="nested", compat="no_conflicts", join="outer"
+                ) as actual:
                     assert actual.t.encoding["units"] == original.t.encoding["units"]
                     assert actual.t.encoding["units"] == ds1.t.encoding["units"]
                     assert actual.t.encoding["units"] != ds2.t.encoding["units"]
+
+    def test_encoding_mfdataset_new_defaults(self) -> None:
+        original = Dataset(
+            {
+                "foo": ("t", np.random.randn(10)),
+                "t": ("t", pd.date_range(start="2010-01-01", periods=10, freq="1D")),
+            }
+        )
+        original.t.encoding["units"] = "days since 2010-01-01"
+
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                ds1 = original.isel(t=slice(5))
+                ds2 = original.isel(t=slice(5, 10))
+                ds1.t.encoding["units"] = "days since 2010-01-01"
+                ds2.t.encoding["units"] = "days since 2000-01-01"
+                ds1.to_netcdf(tmp1)
+                ds2.to_netcdf(tmp2)
+
+                with set_options(use_new_combine_kwarg_defaults=False):
+                    with pytest.warns(
+                        FutureWarning,
+                        match="will change from join='outer' to join='exact'",
+                    ):
+                        with pytest.warns(
+                            FutureWarning,
+                            match="will change from compat='no_conflicts' to compat='override'",
+                        ):
+                            with open_mfdataset([tmp1, tmp2], combine="nested") as old:
+                                assert (
+                                    old.t.encoding["units"]
+                                    == original.t.encoding["units"]
+                                )
+                                assert (
+                                    old.t.encoding["units"] == ds1.t.encoding["units"]
+                                )
+                                assert (
+                                    old.t.encoding["units"] != ds2.t.encoding["units"]
+                                )
+
+                with set_options(use_new_combine_kwarg_defaults=True):
+                    with pytest.raises(
+                        ValueError, match="Error might be related to new default"
+                    ):
+                        open_mfdataset([tmp1, tmp2], combine="nested")
 
     def test_preprocess_mfdataset(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
@@ -5053,25 +5195,21 @@ class TestDask(DatasetIOBase):
                 actual = 1.0 * ds
                 assert_allclose(original, actual, decode_bytes=False)
 
-    def test_open_mfdataset_concat_dim_none(self) -> None:
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                data = Dataset({"x": 0})
-                data.to_netcdf(tmp1)
-                Dataset({"x": np.nan}).to_netcdf(tmp2)
-                with open_mfdataset(
-                    [tmp1, tmp2], concat_dim=None, combine="nested"
-                ) as actual:
-                    assert_identical(data, actual)
-
-    def test_open_mfdataset_concat_dim_default_none(self) -> None:
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                data = Dataset({"x": 0})
-                data.to_netcdf(tmp1)
-                Dataset({"x": np.nan}).to_netcdf(tmp2)
-                with open_mfdataset([tmp1, tmp2], combine="nested") as actual:
-                    assert_identical(data, actual)
+    @pytest.mark.parametrize(
+        "kwargs",
+        [pytest.param({"concat_dim": None}, id="none"), pytest.param({}, id="default")],
+    )
+    def test_open_mfdataset_concat_dim(self, kwargs) -> None:
+        with set_options(use_new_combine_kwarg_defaults=True):
+            with create_tmp_file() as tmp1:
+                with create_tmp_file() as tmp2:
+                    data = Dataset({"x": 0})
+                    data.to_netcdf(tmp1)
+                    Dataset({"x": np.nan}).to_netcdf(tmp2)
+                    with open_mfdataset(
+                        [tmp1, tmp2], **kwargs, combine="nested"
+                    ) as actual:
+                        assert_identical(data, actual)
 
     def test_open_dataset(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
@@ -5098,7 +5236,9 @@ class TestDask(DatasetIOBase):
         )
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
-            with open_mfdataset([tmp], concat_dim=dim, combine="nested") as actual:
+            with open_mfdataset(
+                [tmp], concat_dim=dim, data_vars="all", combine="nested"
+            ) as actual:
                 assert_identical(expected, actual)
 
     def test_open_multi_dataset(self) -> None:
@@ -5122,7 +5262,7 @@ class TestDask(DatasetIOBase):
             original.to_netcdf(tmp1)
             original.to_netcdf(tmp2)
             with open_mfdataset(
-                [tmp1, tmp2], concat_dim=dim, combine="nested"
+                [tmp1, tmp2], concat_dim=dim, data_vars="all", combine="nested"
             ) as actual:
                 assert_identical(expected, actual)
 
@@ -6579,19 +6719,20 @@ class TestZarrRegionAuto:
 @requires_h5netcdf
 @requires_fsspec
 def test_h5netcdf_storage_options() -> None:
-    with create_tmp_files(2, allow_cleanup_failure=ON_WINDOWS) as (f1, f2):
-        ds1 = create_test_data()
-        ds1.to_netcdf(f1, engine="h5netcdf")
+    with set_options(use_new_combine_kwarg_defaults=True):
+        with create_tmp_files(2, allow_cleanup_failure=ON_WINDOWS) as (f1, f2):
+            ds1 = create_test_data()
+            ds1.to_netcdf(f1, engine="h5netcdf")
 
-        ds2 = create_test_data()
-        ds2.to_netcdf(f2, engine="h5netcdf")
+            ds2 = create_test_data()
+            ds2.to_netcdf(f2, engine="h5netcdf")
 
-        files = [f"file://{f}" for f in [f1, f2]]
-        ds = xr.open_mfdataset(
-            files,
-            engine="h5netcdf",
-            concat_dim="time",
-            combine="nested",
-            storage_options={"skip_instance_cache": False},
-        )
-        assert_identical(xr.concat([ds1, ds2], dim="time"), ds)
+            files = [f"file://{f}" for f in [f1, f2]]
+            ds = xr.open_mfdataset(
+                files,
+                engine="h5netcdf",
+                concat_dim="time",
+                combine="nested",
+                storage_options={"skip_instance_cache": False},
+            )
+            assert_identical(xr.concat([ds1, ds2], dim="time"), ds)
