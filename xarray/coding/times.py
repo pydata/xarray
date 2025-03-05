@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime, OutOfBoundsTimedelta
 
-from xarray.coding.variables import (
+from xarray.coding.common import (
     SerializationWarning,
     VariableCoder,
     lazy_elemwise_func,
