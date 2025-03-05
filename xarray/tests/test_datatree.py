@@ -1587,6 +1587,33 @@ class TestRestructuring:
         result = dt.assign({"foo": xr.DataArray(0), "a": DataTree()})
         assert_equal(result, expected)
 
+    def test_prune(self) -> None:
+        flower_tree = DataTree.from_dict(
+            {"root": None, "trunk": None, "leaves": None, "flowers": None}
+        )
+        barren_tree = DataTree.from_dict({"root": None, "trunk": None})
+        fruit_tree = DataTree.from_dict(
+            {"root": None, "trunk": None, "leaves": None, "fruit": None}
+        )
+
+        # test prune tree
+        pruned_tree = flower_tree.prune(barren_tree)
+        assert pruned_tree.equals(barren_tree)
+        assert "flowers" not in pruned_tree.children
+
+        # test symetrical pruning results in isomorphic trees
+        assert flower_tree.prune(fruit_tree).isomorphic(fruit_tree.prune(flower_tree))
+
+        # test "deep" pruning
+
+        dt = DataTree.from_dict(
+            {"/a/A": None, "/a/B": None, "/b/A": None, "/b/B": None}
+        )
+        other = DataTree.from_dict({"/a/A": None, "/b/A": None})
+
+        pruned = dt.prune(other)
+        assert pruned.equals(other)
+
 
 class TestPipe:
     def test_noop(self, create_test_datatree: Callable[[], DataTree]) -> None:
