@@ -18,12 +18,12 @@ import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
 from xarray.core.datatree_render import RenderDataTree
-from xarray.core.duck_array_ops import array_all, array_any, array_equiv, astype
+from xarray.core.duck_array_ops import array_all, array_any, array_equiv, astype, ravel
 from xarray.core.indexing import MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.treenode import group_subtrees
 from xarray.core.utils import is_duck_array
-from xarray.namedarray.pycompat import array_type, to_duck_array, to_numpy
+from xarray.namedarray.pycompat import array_type, to_duck_array
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import AbstractCoordinates
@@ -94,7 +94,7 @@ def first_n_items(array, n_desired):
     # pass Variable._data
     if isinstance(array, Variable):
         array = array._data
-    return np.ravel(to_duck_array(array))[:n_desired]
+    return ravel(to_duck_array(array))[:n_desired]
 
 
 def last_n_items(array, n_desired):
@@ -118,18 +118,13 @@ def last_n_items(array, n_desired):
     # pass Variable._data
     if isinstance(array, Variable):
         array = array._data
-    return np.ravel(to_duck_array(array))[-n_desired:]
+    return ravel(to_duck_array(array))[-n_desired:]
 
 
 def last_item(array):
-    """Returns the last item of an array in a list or an empty list."""
-    if array.size == 0:
-        # work around for https://github.com/numpy/numpy/issues/5195
-        return []
-
+    """Returns the last item of an array."""
     indexer = (slice(-1, None),) * array.ndim
-    # to_numpy since dask doesn't support tolist
-    return np.ravel(to_numpy(array[indexer])).tolist()
+    return ravel(to_duck_array(array[indexer]))
 
 
 def calc_max_rows_first(max_rows: int) -> int:
