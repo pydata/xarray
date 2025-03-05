@@ -455,6 +455,7 @@ def _datatree_from_backend_datatree(
                     inline_array,
                     chunked_array_type,
                     from_array_kwargs,
+                    node=path,
                     **extra_tokens,
                 )
                 for path, [node] in group_subtrees(backend_tree)
