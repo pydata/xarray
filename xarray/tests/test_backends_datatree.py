@@ -15,6 +15,7 @@ from xarray.tests import (
     requires_dask,
     requires_h5netcdf,
     requires_netCDF4,
+    requires_zarr_v3,
 )
 
 if TYPE_CHECKING:
@@ -395,7 +396,7 @@ class TestH5NetCDFDatatreeIO(DatatreeIOBase):
                 }
 
 
-# @requires_zarr_v3
+@requires_zarr_v3
 class TestZarrDatatreeIO:
     engine = "zarr"
 
