@@ -1590,6 +1590,8 @@ Tutorial
 
    tutorial.open_dataset
    tutorial.load_dataset
+   tutorial.open_datatree
+   tutorial.load_datatree
 
 Testing
 =======
