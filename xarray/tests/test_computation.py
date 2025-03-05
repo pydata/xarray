@@ -691,6 +691,12 @@ def test_broadcast_compat_data_2d() -> None:
     )
 
 
+def test_keep_coordattrs() -> None:
+    a = xr.DataArray([0, 1], [("x", [0, 1], {"a": "b"})])
+    actual = apply_ufunc(operator.abs, a)
+    assert actual.x.attrs == a.x.attrs
+
+
 def test_keep_attrs() -> None:
     def add(a, b, keep_attrs):
         if keep_attrs:
