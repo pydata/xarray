@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import copy
 import datetime
-import inspect
-import itertools
 import math
 import sys
 import warnings
@@ -18,7 +16,7 @@ from collections.abc import (
     MutableMapping,
     Sequence,
 )
-from functools import lru_cache, partial
+from functools import partial
 from html import escape
 from numbers import Number
 from operator import methodcaller
@@ -29,6 +27,7 @@ from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload
 import numpy as np
 from pandas.api.types import is_extension_array_dtype
 
+from xarray.core.chunk import _maybe_chunk
 from xarray.core.dataset_utils import _get_virtual_variable, _LocIndexer
 from xarray.core.dataset_variables import DataVariables
 
@@ -69,7 +68,6 @@ from xarray.core.coordinates import (
     Coordinates,
     DatasetCoordinates,
     assert_coordinate_consistent,
-    create_coords_with_default_indexes,
 )
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import (
@@ -89,7 +87,7 @@ from xarray.core.merge import (
     dataset_merge_method,
     dataset_update_method,
     merge_coordinates_without_align,
-    merge_core,
+    merge_data_and_coords,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
@@ -110,6 +108,7 @@ from xarray.core.utils import (
     FrozenMappingWarningOnValuesAccess,
     OrderedSet,
     _default,
+    _get_func_args,
     decode_numpy_dict_values,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
@@ -143,7 +142,7 @@ if TYPE_CHECKING:
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
-    from xarray.core.merge import CoercibleMapping, CoercibleValue, _MergeResult
+    from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.resample import DatasetResample
     from xarray.core.rolling import DatasetCoarsen, DatasetRolling
     from xarray.core.types import (
@@ -198,165 +197,6 @@ _DATETIMEINDEX_COMPONENTS = [
 ]
 
 
-def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
-    """
-    Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
-    """
-    if isinstance(var, IndexVariable):
-        return {}
-    dims = var.dims
-    shape = var.shape
-
-    # Determine the explicit requested chunks.
-    preferred_chunks = var.encoding.get("preferred_chunks", {})
-    preferred_chunk_shape = tuple(
-        preferred_chunks.get(dim, size) for dim, size in zip(dims, shape, strict=True)
-    )
-    if isinstance(chunks, Number) or (chunks == "auto"):
-        chunks = dict.fromkeys(dims, chunks)
-    chunk_shape = tuple(
-        chunks.get(dim, None) or preferred_chunk_sizes
-        for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape, strict=True)
-    )
-
-    chunk_shape = chunkmanager.normalize_chunks(
-        chunk_shape, shape=shape, dtype=var.dtype, previous_chunks=preferred_chunk_shape
-    )
-
-    # Warn where requested chunks break preferred chunks, provided that the variable
-    # contains data.
-    if var.size:
-        for dim, size, chunk_sizes in zip(dims, shape, chunk_shape, strict=True):
-            try:
-                preferred_chunk_sizes = preferred_chunks[dim]
-            except KeyError:
-                continue
-            disagreement = _get_breaks_cached(
-                size=size,
-                chunk_sizes=chunk_sizes,
-                preferred_chunk_sizes=preferred_chunk_sizes,
-            )
-            if disagreement:
-                emit_user_level_warning(
-                    "The specified chunks separate the stored chunks along "
-                    f'dimension "{dim}" starting at index {disagreement}. This could '
-                    "degrade performance. Instead, consider rechunking after loading.",
-                )
-
-    return dict(zip(dims, chunk_shape, strict=True))
-
-
-@lru_cache(maxsize=512)
-def _get_breaks_cached(
-    *,
-    size: int,
-    chunk_sizes: tuple[int, ...],
-    preferred_chunk_sizes: int | tuple[int, ...],
-) -> int | None:
-    if isinstance(preferred_chunk_sizes, int) and preferred_chunk_sizes == 1:
-        # short-circuit for the trivial case
-        return None
-    # Determine the stop indices of the preferred chunks, but omit the last stop
-    # (equal to the dim size).  In particular, assume that when a sequence
-    # expresses the preferred chunks, the sequence sums to the size.
-    preferred_stops = (
-        range(preferred_chunk_sizes, size, preferred_chunk_sizes)
-        if isinstance(preferred_chunk_sizes, int)
-        else set(itertools.accumulate(preferred_chunk_sizes[:-1]))
-    )
-
-    # Gather any stop indices of the specified chunks that are not a stop index
-    # of a preferred chunk. Again, omit the last stop, assuming that it equals
-    # the dim size.
-    actual_stops = itertools.accumulate(chunk_sizes[:-1])
-    # This copy is required for parallel iteration
-    actual_stops_2 = itertools.accumulate(chunk_sizes[:-1])
-
-    disagrees = itertools.compress(
-        actual_stops_2, (a not in preferred_stops for a in actual_stops)
-    )
-    try:
-        return next(disagrees)
-    except StopIteration:
-        return None
-
-
-def _maybe_chunk(
-    name: Hashable,
-    var: Variable,
-    chunks: Mapping[Any, T_ChunkDim] | None,
-    token=None,
-    lock=None,
-    name_prefix: str = "xarray-",
-    overwrite_encoded_chunks: bool = False,
-    inline_array: bool = False,
-    chunked_array_type: str | ChunkManagerEntrypoint | None = None,
-    from_array_kwargs=None,
-) -> Variable:
-    from xarray.namedarray.daskmanager import DaskManager
-
-    if chunks is not None:
-        chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
-
-    if var.ndim:
-        chunked_array_type = guess_chunkmanager(
-            chunked_array_type
-        )  # coerce string to ChunkManagerEntrypoint type
-        if isinstance(chunked_array_type, DaskManager):
-            from dask.base import tokenize
-
-            # when rechunking by different amounts, make sure dask names change
-            # by providing chunks as an input to tokenize.
-            # subtle bugs result otherwise. see GH3350
-            # we use str() for speed, and use the name for the final array name on the next line
-            token2 = tokenize(token if token else var._data, str(chunks))
-            name2 = f"{name_prefix}{name}-{token2}"
-
-            from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
-                from_array_kwargs,
-                name=name2,
-                lock=lock,
-                inline_array=inline_array,
-            )
-
-        var = var.chunk(
-            chunks,
-            chunked_array_type=chunked_array_type,
-            from_array_kwargs=from_array_kwargs,
-        )
-
-        if overwrite_encoded_chunks and var.chunks is not None:
-            var.encoding["chunks"] = tuple(x[0] for x in var.chunks)
-        return var
-    else:
-        return var
-
-
-def _get_func_args(func, param_names):
-    """Use `inspect.signature` to try accessing `func` args. Otherwise, ensure
-    they are provided by user.
-    """
-    try:
-        func_args = inspect.signature(func).parameters
-    except ValueError as err:
-        func_args = {}
-        if not param_names:
-            raise ValueError(
-                "Unable to inspect `func` signature, and `param_names` was not provided."
-            ) from err
-    if param_names:
-        params = param_names
-    else:
-        params = list(func_args)[1:]
-        if any(
-            (p.kind in [p.VAR_POSITIONAL, p.VAR_KEYWORD]) for p in func_args.values()
-        ):
-            raise ValueError(
-                "`param_names` must be provided because `func` takes variable length arguments."
-            )
-    return params, func_args
-
-
 def _initialize_curvefit_params(params, p0, bounds, func_args):
     """Set initial guess and bounds for curvefit.
     Priority: 1) passed args 2) func signature 3) scipy defaults
@@ -398,26 +238,6 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
         if p in p0:
             param_defaults[p] = p0[p]
     return param_defaults, bounds_defaults
-
-
-def merge_data_and_coords(data_vars: DataVars, coords) -> _MergeResult:
-    """Used in Dataset.__init__."""
-    if isinstance(coords, Coordinates):
-        coords = coords.copy()
-    else:
-        coords = create_coords_with_default_indexes(coords, data_vars)
-
-    # exclude coords from alignment (all variables in a Coordinates object should
-    # already be aligned together) and use coordinates' indexes to align data_vars
-    return merge_core(
-        [data_vars, coords],
-        compat="broadcast_equals",
-        join="outer",
-        explicit_coords=tuple(coords),
-        indexes=coords.xindexes,
-        priority_arg=1,
-        skip_align_args=[1],
-    )
 
 
 class Dataset(
@@ -8898,7 +8718,7 @@ class Dataset(
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
         ...
-        >>> time = xr.cftime_range("1990-01", "1992-01", freq="ME")
+        >>> time = xr.date_range("1990-01", "1992-01", freq="ME", use_cftime=True)
         >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)
         >>> array = xr.DataArray(

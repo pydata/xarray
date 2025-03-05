@@ -30,6 +30,8 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Added experimental support for coordinate transforms (not ready for public use yet!) (:pull:`9543`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Support reading to `GPU memory with Zarr <https://zarr.readthedocs.io/en/stable/user-guide/gpu.html>`_ (:pull:`10078`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -38,6 +40,9 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Deprecate :py:func:`~xarray.cftime_range` in favor of :py:func:`~xarray.date_range` with ``use_cftime=True``
+  (:issue:`9886`, :pull:`10024`).
+  By `Josh Kihm <https://github.com/maddogghoek>`_.
 - Move from phony_dims=None to phony_dims="access" for h5netcdf-backend(:issue:`10049`, :pull:`10058`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
