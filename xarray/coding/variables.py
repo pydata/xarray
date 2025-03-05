@@ -234,7 +234,7 @@ def _apply_mask(
 
 def _is_time_like(units):
     # test for time-like
-    # return "datetime" for datetetime-like
+    # return "datetime" for datetime-like
     # return "timedelta" for timedelta-like
     if units is None:
         return False
