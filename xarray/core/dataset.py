@@ -3364,8 +3364,8 @@ class Dataset(
             names to pandas.Index objects, which provides coordinates upon
             which to index the variables in this dataset. The indexes on this
             other object need not be the same as the indexes on this
-            dataset. Any mis-matched index values will be filled in with
-            NaN, and any mis-matched dimension names will simply be ignored.
+            dataset. Any mismatched index values will be filled in with
+            NaN, and any mismatched dimension names will simply be ignored.
         method : {None, "nearest", "pad", "ffill", "backfill", "bfill", None}, optional
             Method to use for filling index values from other not found in this
             dataset:
@@ -3430,8 +3430,8 @@ class Dataset(
         ----------
         indexers : dict, optional
             Dictionary with keys given by dimension names and values given by
-            arrays of coordinates tick labels. Any mis-matched coordinate
-            values will be filled in with NaN, and any mis-matched dimension
+            arrays of coordinates tick labels. Any mismatched coordinate
+            values will be filled in with NaN, and any mismatched dimension
             names will simply be ignored.
             One of indexers or indexers_kwargs must be provided.
         method : {None, "nearest", "pad", "ffill", "backfill", "bfill", None}, optional

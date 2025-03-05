@@ -1464,7 +1464,7 @@ class CoordinateTransformIndex(Index):
         if any(ds != dim_size0 for ds in dim_size):
             raise ValueError(
                 "CoordinateTransformIndex only supports advanced (point-wise) indexing "
-                "with xarray.DataArray or xarray.Variable objects of macthing dimensions."
+                "with xarray.DataArray or xarray.Variable objects of matching dimensions."
             )
 
         coord_labels = {
