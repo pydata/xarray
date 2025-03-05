@@ -15,7 +15,6 @@ from xarray.tests import (
     requires_dask,
     requires_h5netcdf,
     requires_netCDF4,
-    requires_zarr_v3,
 )
 
 if TYPE_CHECKING:
@@ -141,8 +140,6 @@ def unaligned_datatree_zarr(tmp_path_factory):
                 a        (y) int64 16B ...
                 b        (x) float64 16B ...
     """
-    from zarr import consolidate_metadata
-
     filepath = tmp_path_factory.mktemp("data") / "unaligned_simple_datatree.zarr"
     root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
     set1_data = xr.Dataset({"a": 0, "b": 1})
@@ -151,7 +148,6 @@ def unaligned_datatree_zarr(tmp_path_factory):
     set1_data.to_zarr(filepath, group="/Group1", mode="a")
     set2_data.to_zarr(filepath, group="/Group2", mode="a")
     set1_data.to_zarr(filepath, group="/Group1/subgroup1", mode="a")
-    consolidate_metadata(filepath)
     yield filepath
 
 
@@ -399,7 +395,7 @@ class TestH5NetCDFDatatreeIO(DatatreeIOBase):
                 }
 
 
-@requires_zarr_v3
+# @requires_zarr_v3
 class TestZarrDatatreeIO:
     engine = "zarr"
 
