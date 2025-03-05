@@ -1304,3 +1304,28 @@ def result_name(objects: Iterable[Any]) -> Any:
     else:
         name = None
     return name
+
+
+def _get_func_args(func, param_names):
+    """Use `inspect.signature` to try accessing `func` args. Otherwise, ensure
+    they are provided by user.
+    """
+    try:
+        func_args = inspect.signature(func).parameters
+    except ValueError as err:
+        func_args = {}
+        if not param_names:
+            raise ValueError(
+                "Unable to inspect `func` signature, and `param_names` was not provided."
+            ) from err
+    if param_names:
+        params = param_names
+    else:
+        params = list(func_args)[1:]
+        if any(
+            (p.kind in [p.VAR_POSITIONAL, p.VAR_KEYWORD]) for p in func_args.values()
+        ):
+            raise ValueError(
+                "`param_names` must be provided because `func` takes variable length arguments."
+            )
+    return params, func_args
