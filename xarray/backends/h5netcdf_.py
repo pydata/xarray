@@ -218,7 +218,7 @@ class H5NetCDFStore(WritableCFDataStore):
             "fletcher32": var.fletcher32,
             "shuffle": var.shuffle,
         }
-        if var.chunks:
+        if var.chunks and var.dimensions:
             encoding["preferred_chunks"] = dict(
                 zip(var.dimensions, var.chunks, strict=True)
             )
