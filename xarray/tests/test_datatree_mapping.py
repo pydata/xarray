@@ -64,6 +64,13 @@ class TestMapOverSubTree:
         )
         assert_equal(result_tree, expected)
 
+    def test_single_tree_skip_empty_nodes(self, create_test_datatree):
+        dt = create_test_datatree()
+        expected = create_test_datatree(lambda ds: ds.rename(a="c"))
+        # this would fail on empty nodes
+        result_tree = map_over_datasets(lambda ds: ds.rename(a="c"), dt)
+        assert_equal(result_tree, expected)
+
     def test_multiple_tree_args(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
@@ -78,6 +85,17 @@ class TestMapOverSubTree:
         assert_equal(dt_min, expected_min)
         expected_max = create_test_datatree(modify=lambda ds: ds.max())
         assert_equal(dt_max, expected_max)
+
+    def test_return_multiple_trees_empty_first_node(self):
+        # check result tree is constructed correctly even if first nodes are empty
+        ds = xr.Dataset(data_vars={"a": ("x", [1, 2, 3])})
+        dt = xr.DataTree.from_dict({"set1": None, "set2": ds})
+        res_min, res_max = xr.map_over_datasets(lambda ds: (ds.min(), ds.max()), dt)
+        assert_equal(res_min, dt.min())
+        assert_equal(res_max, dt.max())
+
+        # ensure they are different objects
+        assert res_min["set1"].dataset is not res_max["set2"].dataset
 
     def test_return_wrong_type(self, simple_datatree):
         dt1 = simple_datatree
