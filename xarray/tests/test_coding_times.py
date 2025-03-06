@@ -1512,7 +1512,7 @@ def test_roundtrip_timedelta64_nanosecond_precision(
     timedelta_values[2] = nat
     timedelta_values[4] = nat
 
-    encoding = dict(dtype=dtype, _FillValue=fill_value)
+    encoding = dict(dtype=dtype, _FillValue=fill_value, units="nanoseconds")
     var = Variable(["time"], timedelta_values, encoding=encoding)
 
     encoded_var = conventions.encode_cf_variable(var)
@@ -1863,7 +1863,8 @@ def test_decode_timedelta(
     decode_times, decode_timedelta, expected_dtype, warns
 ) -> None:
     timedeltas = pd.timedelta_range(0, freq="D", periods=3)
-    var = Variable(["time"], timedeltas)
+    encoding = {"units": "days"}
+    var = Variable(["time"], timedeltas, encoding=encoding)
     encoded = conventions.encode_cf_variable(var)
     if warns:
         with pytest.warns(FutureWarning, match="decode_timedelta"):
@@ -1907,3 +1908,19 @@ def test_lazy_decode_timedelta_error() -> None:
     )
     with pytest.raises(OutOfBoundsTimedelta, match="overflow"):
         decoded.load()
+
+
+def test_literal_timedelta64_coding(time_unit: PDDatetimeUnitOptions):
+    timedeltas = pd.timedelta_range(0, freq="D", periods=3, unit=time_unit)
+    variable = Variable(["time"], timedeltas)
+    encoded = conventions.encode_cf_variable(variable)
+    decoded = conventions.decode_cf_variable("timedeltas", encoded)
+    assert_identical(decoded, variable)
+    assert decoded.dtype == variable.dtype
+
+
+def test_literal_timedelta_coding_resolution_error():
+    attrs = {"dtype": "timedelta64[D]"}
+    encoded = Variable(["time"], [0, 1, 2], attrs=attrs)
+    with pytest.raises(ValueError, match="xarray only supports"):
+        conventions.decode_cf_variable("timedeltas", encoded)

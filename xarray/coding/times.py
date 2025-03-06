@@ -1368,13 +1368,14 @@ class CFTimedeltaCoder(VariableCoder):
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.data.dtype, np.timedelta64):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
-
-            data, units = encode_cf_timedelta(
-                data, encoding.pop("units", None), encoding.get("dtype", None)
-            )
-            safe_setitem(attrs, "units", units, name=name)
-
-            return Variable(dims, data, attrs, encoding, fastpath=True)
+            if "units" in encoding:
+                data, units = encode_cf_timedelta(
+                    data, encoding.pop("units"), encoding.get("dtype", None)
+                )
+                safe_setitem(attrs, "units", units, name=name)
+                return Variable(dims, data, attrs, encoding, fastpath=True)
+            else:
+                return variable
         else:
             return variable
 

@@ -92,6 +92,7 @@ def encode_cf_variable(
     for coder in [
         CFDatetimeCoder(),
         CFTimedeltaCoder(),
+        variables.LiteralTimedelta64Coder(),
         variables.CFScaleOffsetCoder(),
         variables.CFMaskCoder(),
         variables.NativeEnumCoder(),
@@ -238,6 +239,7 @@ def decode_cf_variable(
         original_dtype = var.dtype
 
     var = variables.BooleanCoder().decode(var)
+    var = variables.LiteralTimedelta64Coder().decode(var)
 
     dimensions, data, attributes, encoding = variables.unpack_for_decoding(var)
 
