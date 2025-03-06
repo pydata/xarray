@@ -226,6 +226,7 @@ def _check_all_return_values(returned_objects, func_called) -> int | None:
             func_called_before = True
             first_path = path_to_node
 
+        # no need to check if the function was not called
         if not cur_func_called:
             continue
 
