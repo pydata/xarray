@@ -47,15 +47,15 @@ def map_over_datasets(
     kwargs: Mapping[str, Any] | None = None,
 ) -> DataTree | tuple[DataTree, ...]:
     """
-    Applies a function to every dataset in one or more DataTree objects with
-    the same structure (ie.., that are isomorphic), returning new trees which
+    Applies a function to every non-empty dataset in one or more DataTree objects
+    with the same structure (i.e., that are isomorphic), returning new trees which
     store the results.
 
-    The function will be applied to any dataset stored in any of the nodes in
-    the trees. The returned trees will have the same structure as the supplied
-    trees.
+    The function will be applied to every node containing data (i.e., which has
+    ``data_vars`` and/ or ``coordinates``) in the trees. The returned tree(s) will
+    have the same structure as the supplied trees.
 
-    ``func`` needs to return a Dataset, tuple of Dataset objects or None in order
+    ``func`` needs to return a Dataset, tuple of Dataset objects or None
     to be able to rebuild the subtrees after mapping, as each result will be
     assigned to its respective node of a new tree via `DataTree.from_dict`. Any
     returned value that is one of these types will be stacked into a separate
@@ -63,7 +63,7 @@ def map_over_datasets(
 
     ``map_over_datasets`` is essentially syntactic sugar for the combination of
     ``group_subtrees`` and ``DataTree.from_dict``. For example, in the case of
-    a two argument function that return one result, it is equivalent to::
+    a two argument function that returns one result, it is equivalent to::
 
         results = {}
         for path, (left, right) in group_subtrees(left_tree, right_tree):
@@ -107,7 +107,7 @@ def map_over_datasets(
     # We don't know which arguments are DataTrees so we zip all arguments together as iterables
     # Store tuples of results in a dict because we don't yet know how many trees we need to rebuild to return
     out_data_objects: dict[str, Dataset | None | tuple[Dataset | None, ...]] = {}
-    func_called: dict[str, bool] = {}
+    func_called: dict[str, bool] = {}  # empty nodes don't call `func`
 
     tree_args = [arg for arg in args if isinstance(arg, DataTree)]
     name = result_name(tree_args)
@@ -129,7 +129,7 @@ def map_over_datasets(
             func_called[path] = False
 
         else:
-            # use Dataset instead of None so it has copy method
+            # use Dataset instead of None to ensure it has copy method
             results = Dataset()
             func_called[path] = False
 
@@ -219,7 +219,8 @@ def _check_all_return_values(returned_objects, func_called) -> int | None:
 
         cur_func_called = func_called[path_to_node]
 
-        # the first node where func was actually called
+        # the first node where func was actually called - needed to find the number of
+        # return values
         if cur_func_called and not func_called_before:
             return_values = cur_return_values
             func_called_before = True
