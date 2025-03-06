@@ -697,6 +697,7 @@ For manipulating, traversing, navigating, or mapping over the tree structure.
    DataTree.pipe
    DataTree.match
    DataTree.filter
+   DataTree.filter_like
 
 Pathlib-like Interface
 ----------------------
