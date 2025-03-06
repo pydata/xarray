@@ -1365,64 +1365,6 @@ class DataTree(
             for node, other_node in zip_subtrees(self, other)
         )
 
-    def prune(self, other: DataTree) -> DataTree:
-        """
-        Prune the tree by removing nodes that are not present in another tree.
-
-        Returns a new tree containing only the nodes that are also present in another tree.
-
-        Parameters
-        ----------
-        other : DataTree
-            The tree to prune against.
-
-        Returns
-        -------
-        DataTree
-
-        See Also
-        --------
-        filter
-        isomorphic
-
-        Examples
-        --------
-
-        >>> dt = DataTree.from_dict(
-        ...     {
-        ...         "/a/A": None,
-        ...         "/a/B": None,
-        ...         "/b/A": None,
-        ...         "/b/B": None,
-        ...     }
-        ... )
-        >>> other = DataTree.from_dict(
-        ...     {
-        ...         "/a/A": None,
-        ...         "/b/A": None,
-        ...     }
-        ... )
-        >>> dt.prune(other)
-        <xarray.DataTree>
-        Group: /
-        ├── Group: /a
-        │   └── Group: /a/A
-        └── Group: /b
-            └── Group: /b/A
-        """
-        pruned_nodes = {
-            path: node.dataset
-            for path, node in self.subtree_with_keys
-            if path in [p for p, _ in other.subtree_with_keys]
-        }
-
-        # Alternative implementation using filterfunc not working
-        # def filterfunc(node: DataTree) -> bool:
-        #     return node.path in [p for p, _ in other.subtree_with_keys]
-        # return self.filter(filterfunc)
-
-        return DataTree.from_dict(pruned_nodes, name=self.name)
-
     def filter(self: DataTree, filterfunc: Callable[[DataTree], bool]) -> DataTree:
         """
         Filter nodes according to a specified condition.
@@ -1451,6 +1393,54 @@ class DataTree(
             if filterfunc(node)
         }
         return DataTree.from_dict(filtered_nodes, name=self.name)
+
+    def filter_like(self, other: DataTree) -> DataTree:
+        """
+        Filter a datatree like another datatree.
+
+        Returns a new tree containing only the nodes in the original tree which are also present in the other tree.
+
+        Parameters
+        ----------
+        other : DataTree
+            The tree to filter this tree by.
+
+        Returns
+        -------
+        DataTree
+
+        See Also
+        --------
+        filter
+        isomorphic
+
+        Examples
+        --------
+
+        >>> dt = DataTree.from_dict(
+        ...     {
+        ...         "/a/A": None,
+        ...         "/a/B": None,
+        ...         "/b/A": None,
+        ...         "/b/B": None,
+        ...     }
+        ... )
+        >>> other = DataTree.from_dict(
+        ...     {
+        ...         "/a/A": None,
+        ...         "/b/A": None,
+        ...     }
+        ... )
+        >>> dt.filter_like(other)
+        <xarray.DataTree>
+        Group: /
+        ├── Group: /a
+        │   └── Group: /a/A
+        └── Group: /b
+            └── Group: /b/A
+        """
+        other_keys = {key for key, _ in other.subtree_with_keys}
+        return self.filter(lambda node: node.relative_to(self) in other_keys)
 
     def match(self, pattern: str) -> DataTree:
         """
