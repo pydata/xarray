@@ -3998,7 +3998,7 @@ class TestH5NetCDFData(NetCDF4Base):
             store = backends.H5NetCDFStore(h5)
             with mock.patch("h5netcdf.Variable.chunks", new_callable=lambda: (1,)):
                 with mock.patch(
-                    "h5netcdf.Variable.dimensions", new_callable=lambda: tuple()
+                    "h5netcdf.Variable.dimensions", new_callable=lambda: ()
                 ):
                     with open_dataset(store) as ds:
                         assert tuple(ds["foo"].values) == (1, 19, 37)
