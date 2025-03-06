@@ -3986,6 +3986,22 @@ class TestH5NetCDFData(NetCDF4Base):
             with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
                 assert_equal(expected, actual)
 
+    def test_chunks_but_no_dims(self):
+        import h5netcdf, h5py
+
+        with create_tmp_file() as tmp_file:
+            with h5py.File(tmp_file, "w") as f:
+                ds = f.create_dataset("foo", data=[1, 19, 37])
+
+            h5 = h5netcdf.File(tmp_file, mode="r", phony_dims="sort")
+            store = backends.H5NetCDFStore(h5)
+            with mock.patch("h5netcdf.Variable.chunks", new_callable=lambda: (1,)):
+                with mock.patch(
+                    "h5netcdf.Variable.dimensions", new_callable=lambda: tuple()
+                ):
+                    with open_dataset(store) as ds:
+                        assert tuple(ds["foo"].values) == (1, 19, 37)
+
     @pytest.mark.skipif(
         has_h5netcdf_1_4_0_or_above, reason="only valid for h5netcdf < 1.4.0"
     )
