@@ -3987,7 +3987,8 @@ class TestH5NetCDFData(NetCDF4Base):
                 assert_equal(expected, actual)
 
     def test_chunks_but_no_dims(self):
-        import h5netcdf, h5py
+        import h5netcdf
+        import h5py
 
         with create_tmp_file() as tmp_file:
             with h5py.File(tmp_file, "w") as f:
