@@ -663,7 +663,7 @@ class ZarrStore(AbstractWritableDataStore):
         if _zarr_v3():
             group_members = {
                 f"/{path}": store
-                for path, store in dict(zarr_group.members(max_depth=1000)).items()
+                for path, store in dict(zarr_group.members(max_depth=None)).items()
                 if isinstance(store, Group) and path.startswith(group.lstrip("/"))
             }
             if group == "/":
