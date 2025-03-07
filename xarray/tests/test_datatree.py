@@ -1602,7 +1602,7 @@ class TestRestructuring:
         assert filtered_tree.equals(barren_tree)
         assert "flowers" not in filtered_tree.children
 
-        # test symetrical pruning results in isomorphic trees
+        # test symmetrical pruning results in isomorphic trees
         assert flower_tree.filter_like(fruit_tree).isomorphic(
             fruit_tree.filter_like(flower_tree)
         )

@@ -477,7 +477,7 @@ def unique_subset_of(
     )
 
 
-class CFTimeStategy(st.SearchStrategy):
+class CFTimeStrategy(st.SearchStrategy):
     def __init__(self, min_value, max_value):
         self.min_value = min_value
         self.max_value = max_value
@@ -506,5 +506,5 @@ class CFTimeStrategyISO8601(st.SearchStrategy):
             daysinmonth = date_type(99999, 12, 1).daysinmonth
             min_value = date_type(-99999, 1, 1)
             max_value = date_type(99999, 12, daysinmonth, 23, 59, 59, 999999)
-            strategy = CFTimeStategy(min_value, max_value)
+            strategy = CFTimeStrategy(min_value, max_value)
             return strategy.do_draw(data)

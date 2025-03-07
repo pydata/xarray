@@ -606,7 +606,7 @@ class TestDatasetRolling:
 
         # Construct dataset with chunk size of (400, 400, 1) or 1.22 MiB
         da = DataArray(
-            dims=["latitute", "longitude", "time"],
+            dims=["latitude", "longitude", "time"],
             data=dask.array.random.random((400, 400, 400), chunks=(-1, -1, 1)),
             name="foo",
         )

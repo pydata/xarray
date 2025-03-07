@@ -1826,7 +1826,7 @@ def test_encode_cf_timedelta_casting_overflow_error(use_dask, dtype) -> None:
 
 _DECODE_TIMEDELTA_TESTS = {
     "default": (True, None, np.dtype("timedelta64[ns]"), True),
-    "decode_timdelta=False": (True, False, np.dtype("int64"), False),
+    "decode_timedelta=False": (True, False, np.dtype("int64"), False),
     "inherit-time_unit-from-decode_times": (
         CFDatetimeCoder(time_unit="s"),
         None,
