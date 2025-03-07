@@ -868,7 +868,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
 
         v = Variable(["x", "y", "z"], np.arange(60).reshape(3, 4, 5))
         ind = Variable(["x"], [0, 1])
-        with pytest.raises(IndexError, match=r"Dimensions of indexers mis"):
+        with pytest.raises(IndexError, match=r"Dimensions of indexers mismatch"):
             v[:, ind]
 
     @pytest.mark.parametrize(
