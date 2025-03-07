@@ -23,6 +23,8 @@ New Features
 ~~~~~~~~~~~~
 - Added :py:meth:`tutorial.open_datatree` and :py:meth:`tutorial.load_datatree`
   By `Eni Awowale <https://github.com/eni-awowale>`_.
+- Added :py:meth:`DataTree.filter_like` to conveniently restructure a DataTree like another DataTree (:issue:`10096`, :pull:`10097`).
+  By `Kobe Vandelanotte <https://github.com/kobebryant432>`_.
 - Added :py:meth:`Coordinates.from_xindex` as convenience for creating a new :py:class:`Coordinates` object
   directly from an existing Xarray index object if the latter supports it (:pull:`10000`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
