@@ -2511,6 +2511,146 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
 
+    def _topk_stack(
+        self,
+        topk_funcname: str,
+        dim: Dims,
+    ) -> Variable:
+        # Get a name for the new dimension that does not conflict with any existing
+        # dimension
+        newdimname = f"_unravel_{topk_funcname}_dim_0"
+        count = 1
+        while newdimname in self.dims:
+            newdimname = f"_unravel_{topk_funcname}_dim_{count}"
+            count += 1
+        return self.stack({newdimname: dim})
+
+    def _topk_helper(
+        self,
+        topk_funcname: str,
+        k: int,
+        dim: str,
+        dtype: Any,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> Variable:
+        from xarray.core.computation import apply_ufunc
+
+        topk_func = getattr(duck_array_ops, topk_funcname)
+        # apply_ufunc moves the dimension to the back.
+        kwargs = {"k": k, "axis": -1, "skipna": skipna}
+
+        result = apply_ufunc(
+            topk_func,
+            self,
+            input_core_dims=[[dim]],
+            exclude_dims={dim},
+            output_core_dims=[[topk_funcname]],
+            output_dtypes=[dtype],
+            dask_gufunc_kwargs=dict(output_sizes={topk_funcname: k}),
+            dask="allowed",
+            kwargs=kwargs,
+        )
+
+        keep_attrs_ = (
+            _get_keep_attrs(default=False) if keep_attrs is None else keep_attrs
+        )
+
+        if keep_attrs_:
+            result.attrs = self._attrs
+        return result
+
+    def topk(
+        self,
+        k: int,
+        dim: Dims = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> Variable | dict[Hashable, Variable]:
+        """
+        TODO docstring
+        """
+        # topk accepts only an integer axis like argmin or argmax,
+        # not tuples, so we need to stack multiple dimensions.
+        if dim is ... or dim is None:
+            # Return dimension for 1D data.
+            if self.ndim == 1:
+                dim = self.dims[0]
+            else:
+                dim = self.dims
+
+        if isinstance(dim, str):
+            stacked = self
+        else:
+            stacked = self._topk_stack("topk", dim)
+            dim = stacked.dims[-1]
+
+        result = stacked._topk_helper(
+            "topk", k=k, dim=dim, dtype=self.dtype, keep_attrs=keep_attrs, skipna=skipna
+        )
+        return result
+
+    def argtopk(
+        self,
+        k: int,
+        dim: Dims = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> Variable | dict[Hashable, Variable]:
+        """
+        TODO docstring
+        """
+        # argtopk accepts only an integer axis like argmin or argmax,
+        # not tuples, so we need to stack multiple dimensions.
+        if dim is ... or dim is None:
+            # Return dimension for 1D data.
+            if self.ndim == 1:
+                dim = self.dims[0]
+            else:
+                dim = self.dims
+
+        if isinstance(dim, str):
+            return self._topk_helper(
+                "argtopk",
+                k=k,
+                dim=dim,
+                dtype=np.intp,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+            )
+
+        stacked = self._topk_stack("topk", dim)
+        newdimname = stacked.dims[-1]
+
+        result_flat_indices = stacked._topk_helper(
+            "argtopk",
+            k=k,
+            dim=newdimname,
+            dtype=np.intp,
+            keep_attrs=keep_attrs,
+            skipna=skipna,
+        )
+
+        reduce_shape = tuple(self.sizes[d] for d in dim)
+
+        result_unravelled_indices = duck_array_ops.unravel_index(
+            result_flat_indices.data, reduce_shape
+        )
+
+        result_dims = [d for d in stacked.dims if d != newdimname] + ["argtopk"]
+        result = {
+            d: Variable(dims=result_dims, data=i)
+            for d, i in zip(dim, result_unravelled_indices, strict=True)
+        }
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+        if keep_attrs:
+            for v in result.values():
+                v.attrs = self.attrs
+
+        return result
+
     def _as_sparse(self, sparse_format=_default, fill_value=_default) -> Variable:
         """
         Use sparse-array as backend.

@@ -134,3 +134,15 @@ def push(array, n, axis, method="blelloch"):
         pushed_array = da.where(valid_positions, pushed_array, np.nan)
 
     return pushed_array
+
+
+def topk(a, k, axis):
+    import dask.array as da
+
+    return da.topk(a, k=k, axis=axis)
+
+
+def argtopk(a, k, axis):
+    import dask.array as da
+
+    return da.argtopk(a, k=k, axis=axis)

@@ -6288,6 +6288,37 @@ class DataArray(
         else:
             return self._replace_maybe_drop_dims(result)
 
+    def argtopk(
+        self,
+        k: int,
+        dim: Dims = None,
+        *,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> Self | dict[Hashable, Self]:
+        """
+        TODO docstring
+        """
+        result = self.variable.argtopk(k, dim, keep_attrs, skipna)
+        if isinstance(result, dict):
+            return {k: self._replace_maybe_drop_dims(v) for k, v in result.items()}
+        else:
+            return self._replace_maybe_drop_dims(result)
+
+    def topk(
+        self,
+        k: int,
+        dim: Dims = None,
+        *,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> Self:
+        """
+        TODO docstring
+        """
+        result = self.variable.topk(k, dim, keep_attrs, skipna)
+        return self._replace_maybe_drop_dims(result)
+
     def query(
         self,
         queries: Mapping[Any, Any] | None = None,
