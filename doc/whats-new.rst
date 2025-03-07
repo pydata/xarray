@@ -74,6 +74,9 @@ Bug fixes
   By `Benoit Bovy <https://github.com/benbovy>`_.
 - Fix dask tokenization when opening each node in :py:func:`xarray.open_datatree`
   (:issue:`10098`, :pull:`10100`). By `Sam Levang <https://github.com/slevang>`_.
+- Improve handling of dtype and NaT when encoding/decoding masked and packaged
+  datetimes and timedeltas (:issue:`8957`, :pull:`10050`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Documentation
