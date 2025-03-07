@@ -115,7 +115,7 @@ class can be passed through the ``decode_times`` keyword argument (see also
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
     ds = xr.open_dataset(filename, decode_times=coder)
 
-Similar control of the resoution of decoded timedeltas can be achieved through
+Similar control of the resolution of decoded timedeltas can be achieved through
 passing a :py:class:`coders.CFTimedeltaCoder` instance to the
 ``decode_timedelta`` keyword argument:
 
