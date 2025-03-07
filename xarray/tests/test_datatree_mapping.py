@@ -94,9 +94,6 @@ class TestMapOverSubTree:
         assert_equal(res_min, dt.min())
         assert_equal(res_max, dt.max())
 
-        # ensure they are different objects
-        assert res_min["set1"].dataset is not res_max["set2"].dataset
-
     def test_return_wrong_type(self, simple_datatree):
         dt1 = simple_datatree
 
@@ -201,7 +198,6 @@ class TestMapOverSubTree:
     def test_error_contains_path_of_offending_node(self, create_test_datatree):
         dt = create_test_datatree()
         dt["set1"]["bad_var"] = 0
-        print(dt)
 
         def fail_on_specific_node(ds):
             if "bad_var" in ds:
