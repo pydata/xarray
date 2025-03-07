@@ -1949,7 +1949,7 @@ def test_decode_timedelta_mask_and_scale(
     assert_identical(encoded, result)
     assert encoded.dtype == result.dtype
 
-    
+
 def test_decode_floating_point_timedelta_no_serialization_warning() -> None:
     attrs = {"units": "seconds"}
     encoded = Variable(["time"], [0, 0.1, 0.2], attrs=attrs)
