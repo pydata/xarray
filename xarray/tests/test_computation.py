@@ -647,9 +647,9 @@ def test_unified_dim_sizes() -> None:
         exclude_dims={"z"},
     ) == {"x": 1, "y": 2}
 
-    # duplicate dimensions
-    with pytest.raises(ValueError):
-        unified_dim_sizes([xr.Variable(("x", "x"), [[1]])])
+    with pytest.raises(ValueError, match="broadcasting cannot handle"):
+        with pytest.warns(UserWarning, match="Duplicate dimension names"):
+            unified_dim_sizes([xr.Variable(("x", "x"), [[1]])])
 
     # mismatched lengths
     with pytest.raises(ValueError):
