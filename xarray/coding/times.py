@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime, OutOfBoundsTimedelta
 
-from xarray.coding.variables import (
+from xarray.coding.common import (
     SerializationWarning,
     VariableCoder,
     lazy_elemwise_func,
@@ -1328,9 +1328,20 @@ class CFDatetimeCoder(VariableCoder):
 
             units = encoding.pop("units", None)
             calendar = encoding.pop("calendar", None)
-            dtype = encoding.get("dtype", None)
+            dtype = encoding.pop("dtype", None)
+
+            # in the case of packed data we need to encode into
+            # float first, the correct dtype will be established
+            # via CFScaleOffsetCoder/CFMaskCoder
+            set_dtype_encoding = None
+            if "add_offset" in encoding or "scale_factor" in encoding:
+                set_dtype_encoding = dtype
+                dtype = data.dtype if data.dtype.kind == "f" else "float64"
             (data, units, calendar) = encode_cf_datetime(data, units, calendar, dtype)
 
+            # retain dtype for packed data
+            if set_dtype_encoding is not None:
+                safe_setitem(encoding, "dtype", set_dtype_encoding, name=name)
             safe_setitem(attrs, "units", units, name=name)
             safe_setitem(attrs, "calendar", calendar, name=name)
 
@@ -1382,9 +1393,22 @@ class CFTimedeltaCoder(VariableCoder):
         if np.issubdtype(variable.data.dtype, np.timedelta64):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
 
-            data, units = encode_cf_timedelta(
-                data, encoding.pop("units", None), encoding.get("dtype", None)
-            )
+            dtype = encoding.pop("dtype", None)
+
+            # in the case of packed data we need to encode into
+            # float first, the correct dtype will be established
+            # via CFScaleOffsetCoder/CFMaskCoder
+            set_dtype_encoding = None
+            if "add_offset" in encoding or "scale_factor" in encoding:
+                set_dtype_encoding = dtype
+                dtype = data.dtype if data.dtype.kind == "f" else "float64"
+
+            data, units = encode_cf_timedelta(data, encoding.pop("units", None), dtype)
+
+            # retain dtype for packed data
+            if set_dtype_encoding is not None:
+                safe_setitem(encoding, "dtype", set_dtype_encoding, name=name)
+
             safe_setitem(attrs, "units", units, name=name)
 
             return Variable(dims, data, attrs, encoding, fastpath=True)
