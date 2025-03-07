@@ -1337,7 +1337,7 @@ def test_coding_float_datetime_warning(
     values = np.array([num], dtype="float32")
     with pytest.warns(
         SerializationWarning,
-        match=f"Can't decode floating point datetime to {time_unit!r}",
+        match=f"Can't decode floating point datetimes to {time_unit!r}",
     ):
         decode_cf_datetime(values, units, calendar, time_unit=time_unit)
 
@@ -1906,4 +1906,12 @@ def test_lazy_decode_timedelta_error() -> None:
         "foo", encoded, decode_timedelta=CFTimedeltaCoder(time_unit="ms")
     )
     with pytest.raises(OutOfBoundsTimedelta, match="overflow"):
+        decoded.load()
+
+
+def test_decode_floating_point_timedelta_no_serialization_warning() -> None:
+    attrs = {"units": "seconds"}
+    encoded = Variable(["time"], [0, 0.1, 0.2], attrs=attrs)
+    decoded = conventions.decode_cf_variable("foo", encoded, decode_timedelta=True)
+    with assert_no_warnings():
         decoded.load()
