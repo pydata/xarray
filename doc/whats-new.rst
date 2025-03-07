@@ -35,8 +35,8 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-- Skip empty nodes in :py:func:`map_over_datasets`. This is a breaking change in xarray, but
-  restores the behavior of the xarray-datatree package (:issue:`9693`, :pull:`10042`).
+- Skip empty nodes in :py:func:`map_over_datasets`. Also affects binary operations.
+  This is a breaking change in xarray, but restores the behavior of the xarray-datatree package (:issue:`9693`, :pull:`10042`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Warn instead of raise if phony_dims are detected when using h5netcdf-backend and ``phony_dims=None`` (:issue:`10049`, :pull:`10058`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
