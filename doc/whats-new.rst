@@ -69,7 +69,8 @@ Bug fixes
   <https://github.com/spencerkclark>`_.
 - Fix ``isel`` for multi-coordinate Xarray indexes (:issue:`10063`, :pull:`10066`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
-
+- Fix dask tokenization when opening each node in :py:func:`xarray.open_datatree`
+  (:issue:`10098`, :pull:`10100`). By `Sam Levang <https://github.com/slevang>`_.
 
 Documentation
 ~~~~~~~~~~~~~
