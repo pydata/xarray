@@ -1002,7 +1002,7 @@ def reindex(
     """
 
     # TODO: (benbovy - explicit indexes): uncomment?
-    # --> from reindex docstrings: "any mis-matched dimension is simply ignored"
+    # --> from reindex docstrings: "any mismatched dimension is simply ignored"
     # bad_keys = [k for k in indexers if k not in obj._indexes and k not in obj.dims]
     # if bad_keys:
     #     raise ValueError(
