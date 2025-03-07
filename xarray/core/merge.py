@@ -22,7 +22,12 @@ if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.types import CombineAttrsOptions, CompatOptions, JoinOptions
+    from xarray.core.types import (
+        CombineAttrsOptions,
+        CompatOptions,
+        DataVars,
+        JoinOptions,
+    )
 
     DimsLike = Union[Hashable, Sequence[Hashable]]
     ArrayLike = Any
@@ -1057,4 +1062,26 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
         priority_arg=1,
         indexes=dataset.xindexes,
         combine_attrs="override",
+    )
+
+
+def merge_data_and_coords(data_vars: DataVars, coords) -> _MergeResult:
+    """Used in Dataset.__init__."""
+    from xarray.core.coordinates import Coordinates, create_coords_with_default_indexes
+
+    if isinstance(coords, Coordinates):
+        coords = coords.copy()
+    else:
+        coords = create_coords_with_default_indexes(coords, data_vars)
+
+    # exclude coords from alignment (all variables in a Coordinates object should
+    # already be aligned together) and use coordinates' indexes to align data_vars
+    return merge_core(
+        [data_vars, coords],
+        compat="broadcast_equals",
+        join="outer",
+        explicit_coords=tuple(coords),
+        indexes=coords.xindexes,
+        priority_arg=1,
+        skip_align_args=[1],
     )
