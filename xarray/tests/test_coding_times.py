@@ -14,7 +14,6 @@ from xarray import (
     DataArray,
     Dataset,
     Variable,
-    cftime_range,
     conventions,
     date_range,
     decode_cf,
@@ -1087,15 +1086,15 @@ def test_decode_ambiguous_time_warns(calendar) -> None:
 @pytest.mark.filterwarnings("ignore:Times can't be serialized faithfully")
 @pytest.mark.parametrize("encoding_units", FREQUENCIES_TO_ENCODING_UNITS.values())
 @pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
-@pytest.mark.parametrize("date_range", [pd.date_range, cftime_range])
+@pytest.mark.parametrize("use_cftime", [True, False])
 def test_encode_cf_datetime_defaults_to_correct_dtype(
-    encoding_units, freq, date_range
+    encoding_units, freq, use_cftime
 ) -> None:
-    if not has_cftime and date_range == cftime_range:
+    if not has_cftime and use_cftime:
         pytest.skip("Test requires cftime")
-    if (freq == "ns" or encoding_units == "nanoseconds") and date_range == cftime_range:
+    if (freq == "ns" or encoding_units == "nanoseconds") and use_cftime:
         pytest.skip("Nanosecond frequency is not valid for cftime dates.")
-    times = date_range("2000", periods=3, freq=freq)
+    times = date_range("2000", periods=3, freq=freq, use_cftime=use_cftime)
     units = f"{encoding_units} since 2000-01-01"
     encoded, _units, _ = encode_cf_datetime(times, units)
 
@@ -1126,9 +1125,10 @@ def test_encode_decode_roundtrip_datetime64(
 @requires_cftime
 @pytest.mark.parametrize("freq", ["us", "ms", "s", "min", "h", "D"])
 def test_encode_decode_roundtrip_cftime(freq) -> None:
-    initial_time = cftime_range("0001", periods=1)
+    initial_time = date_range("0001", periods=1, use_cftime=True)
     times = initial_time.append(
-        cftime_range("0001", periods=2, freq=freq) + timedelta(days=291000 * 365)
+        date_range("0001", periods=2, freq=freq, use_cftime=True)
+        + timedelta(days=291000 * 365)
     )
     variable = Variable(["time"], times)
     encoded = conventions.encode_cf_variable(variable)
@@ -1209,7 +1209,9 @@ def test_decode_encode_roundtrip_with_non_lowercase_letters(
 
 @requires_cftime
 def test_should_cftime_be_used_source_outside_range():
-    src = cftime_range("1000-01-01", periods=100, freq="MS", calendar="noleap")
+    src = date_range(
+        "1000-01-01", periods=100, freq="MS", calendar="noleap", use_cftime=True
+    )
     with pytest.raises(
         ValueError, match="Source time range is not valid for numpy datetimes."
     ):
@@ -1218,7 +1220,9 @@ def test_should_cftime_be_used_source_outside_range():
 
 @requires_cftime
 def test_should_cftime_be_used_target_not_npable():
-    src = cftime_range("2000-01-01", periods=100, freq="MS", calendar="noleap")
+    src = date_range(
+        "2000-01-01", periods=100, freq="MS", calendar="noleap", use_cftime=True
+    )
     with pytest.raises(
         ValueError, match="Calendar 'noleap' is only valid with cftime."
     ):
@@ -1679,7 +1683,9 @@ def test_encode_cf_datetime_cftime_datetime_via_dask(units, dtype) -> None:
     import dask.array
 
     calendar = "standard"
-    times_idx = cftime_range(start="1700", freq="D", periods=3, calendar=calendar)
+    times_idx = date_range(
+        start="1700", freq="D", periods=3, calendar=calendar, use_cftime=True
+    )
     times = dask.array.from_array(times_idx, chunks=1)
     encoded_times, encoding_units, encoding_calendar = encode_cf_datetime(
         times, units, None, dtype

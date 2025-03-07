@@ -35,13 +35,14 @@ from xarray.backends.common import (
 from xarray.backends.locks import _get_scheduler
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import indexing
+from xarray.core.chunk import _get_chunk, _maybe_chunk
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
     combine_by_coords,
 )
 from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
+from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees

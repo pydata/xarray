@@ -209,7 +209,7 @@ class Index:
 
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
-    ) -> Self | None:
+    ) -> Index | None:
         """Maybe returns a new index from the current index itself indexed by
         positional indexers.
 
@@ -304,7 +304,7 @@ class Index:
         """
         raise NotImplementedError(f"{self!r} doesn't support re-indexing labels")
 
-    def equals(self, other: Self) -> bool:
+    def equals(self, other: Index) -> bool:
         """Compare this index with another index of the same type.
 
         Implementation is optional but required in order to support alignment.
@@ -442,6 +442,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     """
     from xarray.core.dataarray import DataArray
     from xarray.core.variable import Variable
+    from xarray.namedarray.pycompat import to_numpy
 
     if isinstance(array, pd.Index):
         index = array
@@ -468,7 +469,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
                 )
                 kwargs["dtype"] = "float64"
 
-        index = pd.Index(np.asarray(array), **kwargs)
+        index = pd.Index(to_numpy(array), **kwargs)
 
     return _maybe_cast_to_cftimeindex(index)
 
@@ -1424,7 +1425,7 @@ class CoordinateTransformIndex(Index):
 
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
-    ) -> Self | None:
+    ) -> Index | None:
         # TODO: support returning a new index (e.g., possible to re-calculate the
         # the transform or calculate another transform on a reduced dimension space)
         return None
@@ -1486,7 +1487,9 @@ class CoordinateTransformIndex(Index):
 
         return IndexSelResult(results)
 
-    def equals(self, other: Self) -> bool:
+    def equals(self, other: Index) -> bool:
+        if not isinstance(other, CoordinateTransformIndex):
+            return False
         return self.transform.equals(other.transform)
 
     def rename(
@@ -1989,10 +1992,11 @@ def isel_indexes(
     indexes: Indexes[Index],
     indexers: Mapping[Any, Any],
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
-    # TODO: remove if clause in the future. It should be unnecessary.
-    # See failure introduced when removed
-    # https://github.com/pydata/xarray/pull/9002#discussion_r1590443756
-    if any(isinstance(v, PandasMultiIndex) for v in indexes._indexes.values()):
+    # Fast path function _apply_indexes_fast does not work with multi-coordinate
+    # Xarray indexes (see https://github.com/pydata/xarray/issues/10063).
+    # -> call it only in the most common case where all indexes are default
+    # PandasIndex each associated to a single 1-dimensional coordinate.
+    if any(type(idx) is not PandasIndex for idx in indexes._indexes.values()):
         return _apply_indexes(indexes, indexers, "isel")
     else:
         return _apply_indexes_fast(indexes, indexers, "isel")
