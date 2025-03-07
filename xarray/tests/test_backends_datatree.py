@@ -580,6 +580,36 @@ class TestZarrDatatreeIO:
             # from each node.
             xr.testing.assert_identical(tree.compute(), original_tree)
 
+    def test_open_datatree_path_chunks(self, tmpdir, simple_datatree) -> None:
+        filepath = tmpdir / "test.zarr"
+
+        root_chunks = {"x": 2, "y": 1}
+        set1_chunks = {"x": 1, "y": 2}
+        set2_chunks = {"x": 2, "y": 3}
+
+        root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
+        set1_data = xr.Dataset({"a": ("y", [-1, 0, 1]), "b": ("x", [-10, 6])})
+        set2_data = xr.Dataset({"a": ("y", [1, 2, 3]), "b": ("x", [0.1, 0.2])})
+        original_tree = DataTree.from_dict(
+            {
+                "/": root_data.chunk(root_chunks),
+                "/group1": set1_data.chunk(set1_chunks),
+                "/group2": set2_data.chunk(set2_chunks),
+            }
+        )
+        original_tree.to_zarr(filepath)
+
+        chunks = {
+            "/": root_chunks,
+            "/group1": set1_chunks,
+            "/group2": set2_chunks,
+        }
+
+        with open_datatree(filepath, engine="zarr", chunks=chunks) as tree:
+            xr.testing.assert_identical(tree, original_tree)
+            assert_chunks_equal(tree, original_tree, enforce_dask=True)
+            xr.testing.assert_identical(tree.compute(), original_tree)
+
     def test_open_groups(self, unaligned_datatree_zarr) -> None:
         """Test `open_groups` with a zarr store of an unaligned group hierarchy."""
 
