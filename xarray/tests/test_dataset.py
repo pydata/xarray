@@ -1243,7 +1243,7 @@ class TestDataset:
         assert rechunked.chunksizes["time"] == expected
         assert rechunked.chunksizes["x"] == (2,) * 5
 
-    def test_chunk_by_frequecy_errors(self):
+    def test_chunk_by_frequency_errors(self):
         ds = Dataset({"foo": ("x", [1, 2, 3])})
         with pytest.raises(ValueError, match="virtual variable"):
             ds.chunk(x=TimeResampler("YE"))
@@ -2204,7 +2204,7 @@ class TestDataset:
 
         # invalid dimension
         # TODO: (benbovy - explicit indexes): uncomment?
-        # --> from reindex docstrings: "any mis-matched dimension is simply ignored"
+        # --> from reindex docstrings: "any mismatched dimension is simply ignored"
         # with pytest.raises(ValueError, match=r"indexer keys.*not correspond.*"):
         #     data.reindex(invalid=0)
 
