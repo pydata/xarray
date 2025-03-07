@@ -476,7 +476,7 @@ class TestDataset:
 
         with pytest.raises(ValueError, match=r"conflicting sizes"):
             Dataset({"a": x1, "b": x2})
-        with pytest.raises(TypeError, match=r"tuple of form"):
+        with pytest.raises(ValueError, match=r"tuple of form"):
             Dataset({"x": (1, 2, 3, 4, 5, 6, 7)})
         with pytest.raises(ValueError, match=r"already exists as a scalar"):
             Dataset({"x": 0, "y": ("x", [1, 2, 3])})
@@ -526,6 +526,51 @@ class TestDataset:
             expected = Dataset({"x": ([], arg)})
             actual = Dataset({"x": arg})
             assert_identical(expected, actual)
+
+    def test_constructor_scalar(self) -> None:
+        fill_value = np.nan
+        x = np.arange(2)
+        a = {"foo": "bar"}
+
+        # a suitable `coords`` argument is required
+        with pytest.raises(ValueError):
+            Dataset({"f": (["x"], fill_value), "x": x})
+
+        # 1d coordinates
+        expected = Dataset(
+            {
+                "f": DataArray(fill_value, dims=["x"], coords={"x": x}),
+            },
+        )
+        for actual in (
+            Dataset({"f": (["x"], fill_value)}, coords=expected.coords),
+            Dataset({"f": (["x"], fill_value)}, coords={"x": x}),
+            Dataset({"f": (["x"],)}, coords=expected.coords),
+            Dataset({"f": (["x"],)}, coords={"x": x}),
+        ):
+            assert_identical(expected, actual)
+        expected["f"].attrs.update(a)
+        actual = Dataset({"f": (["x"], fill_value, a)}, coords={"x": x})
+        assert_identical(expected, actual)
+
+        # 2d coordinates
+        yx = np.arange(6).reshape(2, -1)
+        try:
+            # TODO(itcarroll): aux coords broken in DataArray from scalar
+            array = DataArray(
+                fill_value, dims=["y", "x"], coords={"lat": (["y", "x"], yx)}
+            )
+            expected = Dataset({"f": array})
+        except ValueError:
+            expected = Dataset(
+                data_vars={"f": (["y", "x"], np.full(yx.shape, fill_value))},
+                coords={"lat": (["y", "x"], yx)},
+            )
+        actual = Dataset(
+            {"f": (["y", "x"], fill_value)},
+            coords=expected.coords,
+        )
+        assert_identical(expected, actual)
 
     def test_constructor_auto_align(self) -> None:
         a = DataArray([1, 2], [("x", [0, 1])])

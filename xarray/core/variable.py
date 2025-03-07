@@ -86,7 +86,10 @@ class MissingDimensionsError(ValueError):
 
 
 def as_variable(
-    obj: T_DuckArray | Any, name=None, auto_convert: bool = True
+    obj: T_DuckArray | Any,
+    name=None,
+    auto_convert: bool = True,
+    sizes: Mapping | None = None,
 ) -> Variable | IndexVariable:
     """Convert an object into a Variable.
 
@@ -128,10 +131,10 @@ def as_variable(
         obj = obj.copy(deep=False)
     elif isinstance(obj, tuple):
         try:
-            dims_, data_, *attrs = obj
+            dims_, data_, *attrs_ = obj if len(obj) >= 2 else obj + (np.nan,)
         except ValueError as err:
             raise ValueError(
-                f"Tuple {obj} is not in the form (dims, data[, attrs])"
+                f"Tuple {obj} is not in the form (dims, [data[, attrs[, encoding]]])"
             ) from err
 
         if isinstance(data_, DataArray):
@@ -139,12 +142,30 @@ def as_variable(
                 f"Variable {name!r}: Using a DataArray object to construct a variable is"
                 " ambiguous, please extract the data using the .data property."
             )
+
+        if utils.is_scalar(data_, include_0d=False) and sizes is not None:
+            try:
+                shape_ = tuple(sizes[i] for i in dims_)
+            except TypeError as err:
+                message = (
+                    f"Variable {name!r}: Could not convert tuple of form "
+                    f"(dims, [data, [attrs, [encoding]]]): {obj} to Variable."
+                )
+                raise ValueError(message) from err
+            except KeyError as err:
+                message = (
+                    f"Variable {name!r}: Provide `coords` with dimension(s) {dims_} to "
+                    f"initialize with `np.full({dims_}, {data_!r})`."
+                )
+                raise ValueError(message) from err
+            data_ = np.full(shape_, data_)
+
         try:
-            obj = Variable(dims_, data_, *attrs)
+            obj = Variable(dims_, data_, *attrs_)
         except (TypeError, ValueError) as error:
             raise error.__class__(
                 f"Variable {name!r}: Could not convert tuple of form "
-                f"(dims, data[, attrs, encoding]): {obj} to Variable."
+                f"(dims, [data, [attrs, [encoding]]]): {obj} to Variable."
             ) from error
     elif utils.is_scalar(obj):
         obj = Variable([], obj)

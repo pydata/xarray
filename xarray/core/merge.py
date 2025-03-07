@@ -338,6 +338,12 @@ def collect_variables_and_indexes(
         indexes = {}
 
     grouped: dict[Hashable, list[MergeElement]] = defaultdict(list)
+    sizes: dict[Hashable, int] = {
+        k: v
+        for i in list_of_mappings
+        for j in i.values()
+        for k, v in getattr(j, "sizes", {}).items()
+    }
 
     def append(name, variable, index):
         grouped[name].append((variable, index))
@@ -360,7 +366,7 @@ def collect_variables_and_indexes(
                 indexes_.pop(name, None)
                 append_all(coords_, indexes_)
 
-            variable = as_variable(variable, name=name, auto_convert=False)
+            variable = as_variable(variable, name=name, auto_convert=False, sizes=sizes)
             if name in indexes:
                 append(name, variable, indexes[name])
             elif variable.dims == (name,):
