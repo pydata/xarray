@@ -1243,7 +1243,7 @@ class TestDataset:
         assert rechunked.chunksizes["time"] == expected
         assert rechunked.chunksizes["x"] == (2,) * 5
 
-    def test_chunk_by_frequecy_errors(self):
+    def test_chunk_by_frequency_errors(self):
         ds = Dataset({"foo": ("x", [1, 2, 3])})
         with pytest.raises(ValueError, match="virtual variable"):
             ds.chunk(x=TimeResampler("YE"))
@@ -2204,7 +2204,7 @@ class TestDataset:
 
         # invalid dimension
         # TODO: (benbovy - explicit indexes): uncomment?
-        # --> from reindex docstrings: "any mis-matched dimension is simply ignored"
+        # --> from reindex docstrings: "any mismatched dimension is simply ignored"
         # with pytest.raises(ValueError, match=r"indexer keys.*not correspond.*"):
         #     data.reindex(invalid=0)
 
@@ -3256,7 +3256,9 @@ class TestDataset:
     def test_rename_does_not_change_CFTimeIndex_type(self) -> None:
         # make sure CFTimeIndex is not converted to DatetimeIndex #3522
 
-        time = xr.cftime_range(start="2000", periods=6, freq="2MS", calendar="noleap")
+        time = xr.date_range(
+            start="2000", periods=6, freq="2MS", calendar="noleap", use_cftime=True
+        )
         orig = Dataset(coords={"time": time})
 
         renamed = orig.rename(time="time_new")
@@ -6005,6 +6007,8 @@ class TestDataset:
         actual += 0
         assert_identical(ds, actual)
 
+    # casting nan warns
+    @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
     def test_unary_ops(self) -> None:
         ds = self.make_example_math_dataset()
 
@@ -7299,7 +7303,7 @@ def test_differentiate_datetime(dask) -> None:
 @pytest.mark.parametrize("dask", [True, False])
 def test_differentiate_cftime(dask) -> None:
     rs = np.random.default_rng(42)
-    coord = xr.cftime_range("2000", periods=8, freq="2ME")
+    coord = xr.date_range("2000", periods=8, freq="2ME", use_cftime=True)
 
     da = xr.DataArray(
         rs.random((8, 6)),
@@ -7462,7 +7466,7 @@ def test_trapezoid_datetime(dask, which_datetime) -> None:
     else:
         if not has_cftime:
             pytest.skip("Test requires cftime.")
-        coord = xr.cftime_range("2000", periods=8, freq="2D")
+        coord = xr.date_range("2000", periods=8, freq="2D", use_cftime=True)
 
     da = xr.DataArray(
         rs.random((8, 6)),
