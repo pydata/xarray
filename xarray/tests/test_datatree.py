@@ -2087,8 +2087,6 @@ class TestOps:
     def test_binary_op_on_dataset_skip_empty_nodes(self) -> None:
         # https://github.com/pydata/xarray/issues/10013
 
-        dt = xr.DataTree()
-
         a = xr.Dataset(data_vars={"x": ("time", [10])}, coords={"time": [0]})
         b = xr.Dataset(data_vars={"x": ("time", [11, 22])}, coords={"time": [0, 1]})
 
