@@ -51,6 +51,8 @@ def test_aggregation_skipna(arrays) -> None:
     assert_equal(actual, expected)
 
 
+# casting nan warns
+@pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
 def test_astype(arrays) -> None:
     np_arr, xp_arr = arrays
     expected = np_arr.astype(np.int64)

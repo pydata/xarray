@@ -6007,6 +6007,8 @@ class TestDataset:
         actual += 0
         assert_identical(ds, actual)
 
+    # casting nan warns
+    @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
     def test_unary_ops(self) -> None:
         ds = self.make_example_math_dataset()
 
