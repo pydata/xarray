@@ -622,6 +622,10 @@ class DataTree(
         For a mutable Dataset containing the same data as in this node, use
         `.to_dataset()` instead.
 
+        Though the dataset is immutable, it is possible to assign a new dataset
+        to this node, which will replace the existing data. One can use
+        `.dataset = new_dataset` to do this.
+
         See Also
         --------
         DataTree.to_dataset

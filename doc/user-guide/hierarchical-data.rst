@@ -458,6 +458,24 @@ have children (i.e. Abe and Homer).
 
     simpsons.is_hollow
 
+Dataset
+~~~~~~~
+
+The data stored in each node of a tree is stored in a :py:class:`~xarray.Dataset` object.
+This is a dictionary-like object that stores data variables and coordinates.
+One can access the dataset stored in a node using the :py:class:`~xarray.DataTree.dataset` property:
+
+.. ipython:: python
+
+    simpsons["Homer"].dataset
+
+Similarly, one can overwrite the dataset stored in a node using the :py:class:`~xarray.DataTree.dataset` property:
+
+.. ipython:: python
+
+    simpsons["Homer"].dataset = xr.Dataset({"age": 40})
+
+
 .. _tree computation:
 
 Computation

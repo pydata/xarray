@@ -558,7 +558,8 @@ specifying the nodes' relationship to one another as you create each one.
 The :py:class:`~xarray.DataTree` constructor takes:
 
 - ``dataset``: The data that will be stored in this node, represented by a single
-  :py:class:`xarray.Dataset`, or a named :py:class:`xarray.DataArray`.
+  :py:class:`xarray.Dataset`, or a named :py:class:`xarray.DataArray`. The dataset
+  can be set by the user directly.
 - ``children``: The various child nodes (if there are any), given as a mapping
   from string keys to :py:class:`~xarray.DataTree` objects.
 - ``name``: A string to use as the name of this node.
@@ -570,6 +571,16 @@ Let's make a single datatree node with some example data in it:
     ds1 = xr.Dataset({"foo": "orange"})
     dt = xr.DataTree(name="root", dataset=ds1)
     dt
+
+We can set the dataset of the DataTree object.
+
+.. ipython:: python
+
+    ds2 = xr.Dataset({"foo": "apple"})
+    dt.dataset = ds2
+    dt
+    # reset the dataset
+    dt.dataset = ds1
 
 At this point we have created a single node datatree with no parent and no children.
 
@@ -626,7 +637,6 @@ For data files with groups that do not not align see
 :py:func:`xarray.open_groups` or target each group individually
 :py:func:`xarray.open_dataset(group='groupname') <xarray.open_dataset>`. For
 more information about coordinate alignment see :ref:`datatree-inheritance`
-
 
 
 DataTree Contents
