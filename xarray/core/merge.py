@@ -15,8 +15,19 @@ from xarray.core.indexes import (
     filter_indexes_from_coords,
     indexes_equal,
 )
-from xarray.core.utils import Frozen, compat_dict_union, dict_equiv, equivalent
+from xarray.core.utils import (
+    Frozen,
+    compat_dict_union,
+    dict_equiv,
+    emit_user_level_warning,
+    equivalent,
+)
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from xarray.util.deprecation_helpers import (
+    _COMPAT_DEFAULT,
+    _JOIN_DEFAULT,
+    CombineKwargDefault,
+)
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates
@@ -88,7 +99,7 @@ class MergeError(ValueError):
 def unique_variable(
     name: Hashable,
     variables: list[Variable],
-    compat: CompatOptions = "broadcast_equals",
+    compat: CompatOptions | CombineKwargDefault = "broadcast_equals",
     equals: bool | None = None,
 ) -> Variable:
     """Return the unique variable from a list of variables or raise MergeError.
@@ -131,9 +142,12 @@ def unique_variable(
         combine_method = "fillna"
 
     if equals is None:
+        compat_str = (
+            compat._value if isinstance(compat, CombineKwargDefault) else compat
+        )
         # first check without comparing values i.e. no computes
         for var in variables[1:]:
-            equals = getattr(out, compat)(var, equiv=lazy_array_equiv)
+            equals = getattr(out, compat_str)(var, equiv=lazy_array_equiv)
             if equals is not True:
                 break
 
@@ -141,7 +155,7 @@ def unique_variable(
             # now compare values with minimum number of computes
             out = out.compute()
             for var in variables[1:]:
-                equals = getattr(out, compat)(var)
+                equals = getattr(out, compat_str)(var)
                 if not equals:
                     break
 
@@ -159,7 +173,7 @@ def unique_variable(
 
 
 def _assert_compat_valid(compat):
-    if compat not in _VALID_COMPAT:
+    if not isinstance(compat, CombineKwargDefault) and compat not in _VALID_COMPAT:
         raise ValueError(f"compat={compat!r} invalid: must be {set(_VALID_COMPAT)}")
 
 
@@ -201,7 +215,7 @@ def _assert_prioritized_valid(
 def merge_collected(
     grouped: dict[Any, list[MergeElement]],
     prioritized: Mapping[Any, MergeElement] | None = None,
-    compat: CompatOptions = "minimal",
+    compat: CompatOptions | CombineKwargDefault = "minimal",
     combine_attrs: CombineAttrsOptions = "override",
     equals: dict[Any, bool] | None = None,
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
@@ -295,6 +309,20 @@ def merge_collected(
                     merged_vars[name] = unique_variable(
                         name, variables, compat, equals.get(name, None)
                     )
+                    # This is very likely to result in false positives, but there is no way
+                    # to tell if the output will change without computing.
+                    if (
+                        isinstance(compat, CombineKwargDefault)
+                        and compat == "no_conflicts"
+                        and len(variables) > 1
+                    ):
+                        emit_user_level_warning(
+                            compat.warning_message(
+                                "This is likely to lead to different results when "
+                                "combining overlapping variables with the same name.",
+                            ),
+                            FutureWarning,
+                        )
                 except MergeError:
                     if compat != "minimal":
                         # we need more than "minimal" compatibility (for which
@@ -631,8 +659,8 @@ class _MergeResult(NamedTuple):
 
 def merge_core(
     objects: Iterable[CoercibleMapping],
-    compat: CompatOptions = "broadcast_equals",
-    join: JoinOptions = "outer",
+    compat: CompatOptions | CombineKwargDefault,
+    join: JoinOptions | CombineKwargDefault,
     combine_attrs: CombineAttrsOptions = "override",
     priority_arg: int | None = None,
     explicit_coords: Iterable[Hashable] | None = None,
@@ -695,7 +723,11 @@ def merge_core(
 
     coerced = coerce_pandas_values(objects)
     aligned = deep_align(
-        coerced, join=join, copy=False, indexes=indexes, fill_value=fill_value
+        coerced,
+        join=join,
+        copy=False,
+        indexes=indexes,
+        fill_value=fill_value,
     )
 
     for pos, obj in skip_align_objs:
@@ -704,7 +736,10 @@ def merge_core(
     collected = collect_variables_and_indexes(aligned, indexes=indexes)
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
     variables, out_indexes = merge_collected(
-        collected, prioritized, compat=compat, combine_attrs=combine_attrs
+        collected,
+        prioritized,
+        compat=compat,
+        combine_attrs=combine_attrs,
     )
 
     dims = calculate_dimensions(variables)
@@ -735,8 +770,8 @@ def merge_core(
 
 def merge(
     objects: Iterable[DataArray | CoercibleMapping],
-    compat: CompatOptions = "no_conflicts",
-    join: JoinOptions = "outer",
+    compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
+    join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     fill_value: object = dtypes.NA,
     combine_attrs: CombineAttrsOptions = "override",
 ) -> Dataset:
@@ -980,8 +1015,8 @@ def merge(
 
     merge_result = merge_core(
         dict_like_objects,
-        compat,
-        join,
+        compat=compat,
+        join=join,
         combine_attrs=combine_attrs,
         fill_value=fill_value,
     )
@@ -992,8 +1027,8 @@ def dataset_merge_method(
     dataset: Dataset,
     other: CoercibleMapping,
     overwrite_vars: Hashable | Iterable[Hashable],
-    compat: CompatOptions,
-    join: JoinOptions,
+    compat: CompatOptions | CombineKwargDefault,
+    join: JoinOptions | CombineKwargDefault,
     fill_value: Any,
     combine_attrs: CombineAttrsOptions,
 ) -> _MergeResult:
@@ -1026,8 +1061,8 @@ def dataset_merge_method(
 
     return merge_core(
         objs,
-        compat,
-        join,
+        compat=compat,
+        join=join,
         priority_arg=priority_arg,
         fill_value=fill_value,
         combine_attrs=combine_attrs,
@@ -1059,6 +1094,8 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
 
     return merge_core(
         [dataset, other],
+        compat="broadcast_equals",
+        join="outer",
         priority_arg=1,
         indexes=dataset.xindexes,
         combine_attrs="override",
@@ -1080,6 +1117,7 @@ def merge_data_and_coords(data_vars: DataVars, coords) -> _MergeResult:
         [data_vars, coords],
         compat="broadcast_equals",
         join="outer",
+        combine_attrs="override",
         explicit_coords=tuple(coords),
         indexes=coords.xindexes,
         priority_arg=1,
