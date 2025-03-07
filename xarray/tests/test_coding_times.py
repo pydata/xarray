@@ -525,6 +525,26 @@ def test_decoded_cf_datetime_array_2d(time_unit: PDDatetimeUnitOptions) -> None:
     assert_array_equal(np.asarray(result), expected)
 
 
+@pytest.mark.parametrize("decode_times", [True, False])
+@pytest.mark.parametrize("mask_and_scale", [True, False])
+def test_decode_datetime_mask_and_scale(
+    decode_times: bool, mask_and_scale: bool
+) -> None:
+    attrs = {
+        "units": "nanoseconds since 1970-01-01",
+        "calendar": "proleptic_gregorian",
+        "_FillValue": np.int16(-1),
+        "add_offset": 100000.0,
+    }
+    encoded = Variable(["time"], np.array([0, -1, 1], "int16"), attrs=attrs)
+    decoded = conventions.decode_cf_variable(
+        "foo", encoded, mask_and_scale=mask_and_scale, decode_times=decode_times
+    )
+    result = conventions.encode_cf_variable(decoded, name="foo")
+    assert_identical(encoded, result)
+    assert encoded.dtype == result.dtype
+
+
 FREQUENCIES_TO_ENCODING_UNITS = {
     "ns": "nanoseconds",
     "us": "microseconds",
@@ -638,7 +658,9 @@ def test_cf_timedelta_2d() -> None:
 
 
 @pytest.mark.parametrize("encoding_unit", FREQUENCIES_TO_ENCODING_UNITS.values())
-def test_decode_cf_timedelta_time_unit(time_unit, encoding_unit) -> None:
+def test_decode_cf_timedelta_time_unit(
+    time_unit: PDDatetimeUnitOptions, encoding_unit
+) -> None:
     encoded = 1
     encoding_unit_as_numpy = _netcdf_to_numpy_timeunit(encoding_unit)
     if np.timedelta64(1, time_unit) > np.timedelta64(1, encoding_unit_as_numpy):
@@ -652,7 +674,9 @@ def test_decode_cf_timedelta_time_unit(time_unit, encoding_unit) -> None:
     assert result.dtype == expected.dtype
 
 
-def test_decode_cf_timedelta_time_unit_out_of_bounds(time_unit) -> None:
+def test_decode_cf_timedelta_time_unit_out_of_bounds(
+    time_unit: PDDatetimeUnitOptions,
+) -> None:
     # Define a scale factor that will guarantee overflow with the given
     # time_unit.
     scale_factor = np.timedelta64(1, time_unit) // np.timedelta64(1, "ns")
@@ -661,7 +685,7 @@ def test_decode_cf_timedelta_time_unit_out_of_bounds(time_unit) -> None:
         decode_cf_timedelta(encoded, "days", time_unit)
 
 
-def test_cf_timedelta_roundtrip_large_value(time_unit) -> None:
+def test_cf_timedelta_roundtrip_large_value(time_unit: PDDatetimeUnitOptions) -> None:
     value = np.timedelta64(np.iinfo(np.int64).max, time_unit)
     encoded, units = encode_cf_timedelta(value)
     decoded = decode_cf_timedelta(encoded, units, time_unit=time_unit)
@@ -983,7 +1007,7 @@ def test_use_cftime_default_standard_calendar_out_of_range(
 @pytest.mark.parametrize("calendar", _NON_STANDARD_CALENDARS)
 @pytest.mark.parametrize("units_year", [1500, 2000, 2500])
 def test_use_cftime_default_non_standard_calendar(
-    calendar, units_year, time_unit
+    calendar, units_year, time_unit: PDDatetimeUnitOptions
 ) -> None:
     from cftime import num2date
 
@@ -1338,7 +1362,7 @@ def test_coding_float_datetime_warning(
     values = np.array([num], dtype="float32")
     with pytest.warns(
         SerializationWarning,
-        match=f"Can't decode floating point datetime to {time_unit!r}",
+        match=f"Can't decode floating point datetimes to {time_unit!r}",
     ):
         decode_cf_datetime(values, units, calendar, time_unit=time_unit)
 
@@ -1434,9 +1458,9 @@ def test_roundtrip_datetime64_nanosecond_precision_warning(
 ) -> None:
     # test warning if times can't be serialized faithfully
     times = [
-        np.datetime64("1970-01-01T00:01:00", "ns"),
-        np.datetime64("NaT"),
-        np.datetime64("1970-01-02T00:01:00", "ns"),
+        np.datetime64("1970-01-01T00:01:00", time_unit),
+        np.datetime64("NaT", time_unit),
+        np.datetime64("1970-01-02T00:01:00", time_unit),
     ]
     units = "days since 1970-01-10T01:01:00"
     needed_units = "hours"
@@ -1625,7 +1649,9 @@ _ENCODE_DATETIME64_VIA_DASK_TESTS = {
     _ENCODE_DATETIME64_VIA_DASK_TESTS.values(),
     ids=_ENCODE_DATETIME64_VIA_DASK_TESTS.keys(),
 )
-def test_encode_cf_datetime_datetime64_via_dask(freq, units, dtype, time_unit) -> None:
+def test_encode_cf_datetime_datetime64_via_dask(
+    freq, units, dtype, time_unit: PDDatetimeUnitOptions
+) -> None:
     import dask.array
 
     times_pd = pd.date_range(start="1700", freq=freq, periods=3, unit=time_unit)
@@ -1827,7 +1853,7 @@ def test_encode_cf_timedelta_casting_overflow_error(use_dask, dtype) -> None:
 
 _DECODE_TIMEDELTA_TESTS = {
     "default": (True, None, np.dtype("timedelta64[ns]"), True),
-    "decode_timdelta=False": (True, False, np.dtype("int64"), False),
+    "decode_timedelta=False": (True, False, np.dtype("int64"), False),
     "inherit-time_unit-from-decode_times": (
         CFDatetimeCoder(time_unit="s"),
         None,
@@ -1933,3 +1959,26 @@ def test_duck_array_decode_times(calendar) -> None:
         assert decoded.dtype == np.dtype("O")
     else:
         assert decoded.dtype == np.dtype("=M8[ns]")
+
+
+@pytest.mark.parametrize("decode_timedelta", [True, False])
+@pytest.mark.parametrize("mask_and_scale", [True, False])
+def test_decode_timedelta_mask_and_scale(
+    decode_timedelta: bool, mask_and_scale: bool
+) -> None:
+    attrs = {"units": "nanoseconds", "_FillValue": np.int16(-1), "add_offset": 100000.0}
+    encoded = Variable(["time"], np.array([0, -1, 1], "int16"), attrs=attrs)
+    decoded = conventions.decode_cf_variable(
+        "foo", encoded, mask_and_scale=mask_and_scale, decode_timedelta=decode_timedelta
+    )
+    result = conventions.encode_cf_variable(decoded, name="foo")
+    assert_identical(encoded, result)
+    assert encoded.dtype == result.dtype
+
+
+def test_decode_floating_point_timedelta_no_serialization_warning() -> None:
+    attrs = {"units": "seconds"}
+    encoded = Variable(["time"], [0, 0.1, 0.2], attrs=attrs)
+    decoded = conventions.decode_cf_variable("foo", encoded, decode_timedelta=True)
+    with assert_no_warnings():
+        decoded.load()

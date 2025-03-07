@@ -2576,7 +2576,7 @@ class ZarrBase(CFEncodedBase):
             with self.roundtrip(original) as actual:
                 assert_identical(original, actual)
 
-        # but itermediate unaligned chunks are bad
+        # but intermediate unaligned chunks are bad
         badenc = ds.chunk({"x": (3, 5, 3, 1)})
         badenc.var1.encoding["chunks"] = (3,)
         with pytest.raises(ValueError, match=r"would overlap multiple dask chunks"):
@@ -4185,7 +4185,7 @@ class TestH5NetCDFData(NetCDF4Base):
                         fx.create_dataset(k, data=v)
             with pytest.warns(UserWarning, match="The 'phony_dims' kwarg"):
                 with xr.open_dataset(tmp_file, engine="h5netcdf", group="bar") as ds:
-                    assert ds.dims == {
+                    assert ds.sizes == {
                         "phony_dim_0": 5,
                         "phony_dim_1": 5,
                         "phony_dim_2": 5,
@@ -4300,7 +4300,8 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             # `raises_regex`?). Ref https://github.com/pydata/xarray/pull/5191
             with open(tmp_file, "rb") as f:
                 f.seek(8)
-                open_dataset(f)
+                with open_dataset(f):  # ensure file gets closed
+                    pass
 
 
 @requires_h5netcdf
@@ -6155,6 +6156,18 @@ def test_zarr_closing_internal_zip_store():
 
 @requires_zarr
 @pytest.mark.usefixtures("default_zarr_format")
+def test_raises_key_error_on_invalid_zarr_store(tmp_path):
+    root = zarr.open_group(tmp_path / "tmp.zarr")
+    if Version(zarr.__version__) < Version("3.0.0"):
+        root.create_dataset("bar", shape=(3, 5), dtype=np.float32)
+    else:
+        root.create_array("bar", shape=(3, 5), dtype=np.float32)
+    with pytest.raises(KeyError, match=r"xarray to determine variable dimensions"):
+        xr.open_zarr(tmp_path / "tmp.zarr", consolidated=False)
+
+
+@requires_zarr
+@pytest.mark.usefixtures("default_zarr_format")
 class TestZarrRegionAuto:
     """These are separated out since we should not need to test this logic with every store."""
 
@@ -6587,11 +6600,11 @@ def test_h5netcdf_storage_options() -> None:
         ds2.to_netcdf(f2, engine="h5netcdf")
 
         files = [f"file://{f}" for f in [f1, f2]]
-        ds = xr.open_mfdataset(
+        with xr.open_mfdataset(
             files,
             engine="h5netcdf",
             concat_dim="time",
             combine="nested",
             storage_options={"skip_instance_cache": False},
-        )
-        assert_identical(xr.concat([ds1, ds2], dim="time"), ds)
+        ) as ds:
+            assert_identical(xr.concat([ds1, ds2], dim="time"), ds)

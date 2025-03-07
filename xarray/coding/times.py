@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime, OutOfBoundsTimedelta
 
-from xarray.coding.variables import (
+from xarray.coding.common import (
     SerializationWarning,
     VariableCoder,
     lazy_elemwise_func,
@@ -488,7 +488,7 @@ def _decode_datetime_with_pandas(
         flat_num_dates = flat_num_dates.astype(np.float64)
 
     timedeltas = _numbers_to_timedelta(
-        flat_num_dates, time_unit, ref_date.unit, "datetime"
+        flat_num_dates, time_unit, ref_date.unit, "datetimes"
     )
 
     # add timedeltas to ref_date
@@ -582,6 +582,7 @@ def _numbers_to_timedelta(
     time_unit: NPDatetimeUnitOptions,
     ref_unit: PDDatetimeUnitOptions,
     datatype: str,
+    target_unit: PDDatetimeUnitOptions | None = None,
 ) -> np.ndarray:
     """Transform numbers to np.timedelta64."""
     # keep NaT/nan mask
@@ -605,13 +606,23 @@ def _numbers_to_timedelta(
             flat_num, cast(PDDatetimeUnitOptions, time_unit)
         )
         if time_unit != new_time_unit:
-            msg = (
-                f"Can't decode floating point {datatype} to {time_unit!r} without "
-                f"precision loss, decoding to {new_time_unit!r} instead. "
-                f"To silence this warning use time_unit={new_time_unit!r} in call to "
-                f"decoding function."
-            )
-            emit_user_level_warning(msg, SerializationWarning)
+            if target_unit is None or np.timedelta64(1, target_unit) > np.timedelta64(
+                1, new_time_unit
+            ):
+                if datatype == "datetimes":
+                    kwarg = "decode_times"
+                    coder = "CFDatetimeCoder"
+                else:
+                    kwarg = "decode_timedelta"
+                    coder = "CFTimedeltaCoder"
+                formatted_kwarg = f"{kwarg}={coder}(time_unit={new_time_unit!r})"
+                message = (
+                    f"Can't decode floating point {datatype} to {time_unit!r} "
+                    f"without precision loss; decoding to {new_time_unit!r} "
+                    f"instead. To silence this warning pass {formatted_kwarg} "
+                    f"to your opening function."
+                )
+                emit_user_level_warning(message, SerializationWarning)
             time_unit = new_time_unit
 
     # Cast input ordinals to integers and properly handle NaN/NaT
@@ -640,7 +651,9 @@ def decode_cf_timedelta(
         _check_timedelta_range(np.nanmin(num_timedeltas), unit, time_unit)
         _check_timedelta_range(np.nanmax(num_timedeltas), unit, time_unit)
 
-    timedeltas = _numbers_to_timedelta(num_timedeltas, unit, "s", "timedelta")
+    timedeltas = _numbers_to_timedelta(
+        num_timedeltas, unit, "s", "timedeltas", target_unit=time_unit
+    )
     pd_timedeltas = pd.to_timedelta(ravel(timedeltas))
 
     if np.isnat(timedeltas).all():
@@ -1315,9 +1328,20 @@ class CFDatetimeCoder(VariableCoder):
 
             units = encoding.pop("units", None)
             calendar = encoding.pop("calendar", None)
-            dtype = encoding.get("dtype", None)
+            dtype = encoding.pop("dtype", None)
+
+            # in the case of packed data we need to encode into
+            # float first, the correct dtype will be established
+            # via CFScaleOffsetCoder/CFMaskCoder
+            set_dtype_encoding = None
+            if "add_offset" in encoding or "scale_factor" in encoding:
+                set_dtype_encoding = dtype
+                dtype = data.dtype if data.dtype.kind == "f" else "float64"
             (data, units, calendar) = encode_cf_datetime(data, units, calendar, dtype)
 
+            # retain dtype for packed data
+            if set_dtype_encoding is not None:
+                safe_setitem(encoding, "dtype", set_dtype_encoding, name=name)
             safe_setitem(attrs, "units", units, name=name)
             safe_setitem(attrs, "calendar", calendar, name=name)
 
@@ -1369,9 +1393,22 @@ class CFTimedeltaCoder(VariableCoder):
         if np.issubdtype(variable.data.dtype, np.timedelta64):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
 
-            data, units = encode_cf_timedelta(
-                data, encoding.pop("units", None), encoding.get("dtype", None)
-            )
+            dtype = encoding.pop("dtype", None)
+
+            # in the case of packed data we need to encode into
+            # float first, the correct dtype will be established
+            # via CFScaleOffsetCoder/CFMaskCoder
+            set_dtype_encoding = None
+            if "add_offset" in encoding or "scale_factor" in encoding:
+                set_dtype_encoding = dtype
+                dtype = data.dtype if data.dtype.kind == "f" else "float64"
+
+            data, units = encode_cf_timedelta(data, encoding.pop("units", None), dtype)
+
+            # retain dtype for packed data
+            if set_dtype_encoding is not None:
+                safe_setitem(encoding, "dtype", set_dtype_encoding, name=name)
+
             safe_setitem(attrs, "units", units, name=name)
 
             return Variable(dims, data, attrs, encoding, fastpath=True)
