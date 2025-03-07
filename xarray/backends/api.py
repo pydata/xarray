@@ -35,7 +35,7 @@ from xarray.backends.common import (
 from xarray.backends.locks import _get_scheduler
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import indexing
-from xarray.core.chunk import _get_chunk, _maybe_chunk
+from xarray.core.chunk import _get_chunk, _maybe_chunk, _maybe_get_path_chunk
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
@@ -450,7 +450,7 @@ def _datatree_from_backend_datatree(
                     node.dataset,
                     filename_or_obj,
                     engine,
-                    chunks,
+                    _maybe_get_path_chunk(node.path, chunks),
                     overwrite_encoded_chunks,
                     inline_array,
                     chunked_array_type,

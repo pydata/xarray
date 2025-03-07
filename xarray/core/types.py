@@ -217,7 +217,9 @@ T_ChunkDim: TypeAlias = str | int | Literal["auto"] | None | tuple[int, ...]
 T_ChunkDimFreq: TypeAlias = Union["TimeResampler", T_ChunkDim]
 T_ChunksFreq: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDimFreq]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
-T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim]
+T_Chunks: TypeAlias = (
+    T_ChunkDim | Mapping[Any, T_ChunkDim] | Mapping[Any, Mapping[Any, T_ChunkDim]]
+)
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
 
 DataVars = Mapping[Any, Any]

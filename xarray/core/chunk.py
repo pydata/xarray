@@ -145,3 +145,15 @@ def _maybe_chunk(
         return var
     else:
         return var
+
+
+def _maybe_get_path_chunk(path: str, chunks: int | dict | Any) -> int | dict | Any:
+    """Returns path-specific chunks from a chunks dictionary, if path is a key of chunks.
+    Otherwise, returns chunks as is"""
+    if isinstance(chunks, dict):
+        try:
+            return chunks[path]
+        except KeyError:
+            pass
+
+    return chunks
