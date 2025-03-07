@@ -554,6 +554,11 @@ class TestZarrDatatreeIO:
         with open_datatree(filepath, engine="zarr", chunks=chunks) as tree:
             xr.testing.assert_identical(tree, original_tree)
             assert_chunks_equal(tree, original_tree, enforce_dask=True)
+            # https://github.com/pydata/xarray/issues/10098
+            # If the open tasks are not give unique tokens per node, and the
+            # dask graph is computed in one go, data won't be uniquely loaded
+            # from each node.
+            xr.testing.assert_identical(tree.compute(), original_tree)
 
     @pytest.mark.filterwarnings(
         "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
