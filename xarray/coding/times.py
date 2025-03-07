@@ -488,7 +488,7 @@ def _decode_datetime_with_pandas(
         flat_num_dates = flat_num_dates.astype(np.float64)
 
     timedeltas = _numbers_to_timedelta(
-        flat_num_dates, time_unit, ref_date.unit, "datetime"
+        flat_num_dates, time_unit, ref_date.unit, "datetimes"
     )
 
     # add timedeltas to ref_date
@@ -582,6 +582,7 @@ def _numbers_to_timedelta(
     time_unit: NPDatetimeUnitOptions,
     ref_unit: PDDatetimeUnitOptions,
     datatype: str,
+    target_unit: PDDatetimeUnitOptions | None = None,
 ) -> np.ndarray:
     """Transform numbers to np.timedelta64."""
     # keep NaT/nan mask
@@ -605,13 +606,23 @@ def _numbers_to_timedelta(
             flat_num, cast(PDDatetimeUnitOptions, time_unit)
         )
         if time_unit != new_time_unit:
-            msg = (
-                f"Can't decode floating point {datatype} to {time_unit!r} without "
-                f"precision loss, decoding to {new_time_unit!r} instead. "
-                f"To silence this warning use time_unit={new_time_unit!r} in call to "
-                f"decoding function."
-            )
-            emit_user_level_warning(msg, SerializationWarning)
+            if target_unit is None or np.timedelta64(1, target_unit) > np.timedelta64(
+                1, new_time_unit
+            ):
+                if datatype == "datetimes":
+                    kwarg = "decode_times"
+                    coder = "CFDatetimeCoder"
+                else:
+                    kwarg = "decode_timedelta"
+                    coder = "CFTimedeltaCoder"
+                formatted_kwarg = f"{kwarg}={coder}(time_unit={new_time_unit!r})"
+                message = (
+                    f"Can't decode floating point {datatype} to {time_unit!r} "
+                    f"without precision loss; decoding to {new_time_unit!r} "
+                    f"instead. To silence this warning pass {formatted_kwarg} "
+                    f"to your opening function."
+                )
+                emit_user_level_warning(message, SerializationWarning)
             time_unit = new_time_unit
 
     # Cast input ordinals to integers and properly handle NaN/NaT
@@ -640,7 +651,9 @@ def decode_cf_timedelta(
         _check_timedelta_range(np.nanmin(num_timedeltas), unit, time_unit)
         _check_timedelta_range(np.nanmax(num_timedeltas), unit, time_unit)
 
-    timedeltas = _numbers_to_timedelta(num_timedeltas, unit, "s", "timedelta")
+    timedeltas = _numbers_to_timedelta(
+        num_timedeltas, unit, "s", "timedeltas", target_unit=time_unit
+    )
     pd_timedeltas = pd.to_timedelta(ravel(timedeltas))
 
     if np.isnat(timedeltas).all():

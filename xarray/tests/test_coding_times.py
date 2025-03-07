@@ -1361,7 +1361,7 @@ def test_coding_float_datetime_warning(
     values = np.array([num], dtype="float32")
     with pytest.warns(
         SerializationWarning,
-        match=f"Can't decode floating point datetime to {time_unit!r}",
+        match=f"Can't decode floating point datetimes to {time_unit!r}",
     ):
         decode_cf_datetime(values, units, calendar, time_unit=time_unit)
 
@@ -1852,7 +1852,7 @@ def test_encode_cf_timedelta_casting_overflow_error(use_dask, dtype) -> None:
 
 _DECODE_TIMEDELTA_TESTS = {
     "default": (True, None, np.dtype("timedelta64[ns]"), True),
-    "decode_timdelta=False": (True, False, np.dtype("int64"), False),
+    "decode_timedelta=False": (True, False, np.dtype("int64"), False),
     "inherit-time_unit-from-decode_times": (
         CFDatetimeCoder(time_unit="s"),
         None,
@@ -1948,3 +1948,11 @@ def test_decode_timedelta_mask_and_scale(
     result = conventions.encode_cf_variable(decoded, name="foo")
     assert_identical(encoded, result)
     assert encoded.dtype == result.dtype
+
+    
+def test_decode_floating_point_timedelta_no_serialization_warning() -> None:
+    attrs = {"units": "seconds"}
+    encoded = Variable(["time"], [0, 0.1, 0.2], attrs=attrs)
+    decoded = conventions.decode_cf_variable("foo", encoded, decode_timedelta=True)
+    with assert_no_warnings():
+        decoded.load()
