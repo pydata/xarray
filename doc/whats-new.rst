@@ -71,19 +71,16 @@ Bug fixes
 - Fix DataArray().drop_attrs(deep=False) and add support for attrs to
   DataArray()._replace(). (:issue:`10027`, :pull:`10030`). By `Jan
   Haacker <https://github.com/j-haacker>`_.
-<<<<<<< encode_cf_datetime-refactor -- Incoming Change
 - Fix bug preventing encoding times with missing values with small integer
   dtype (:issue:`9134`, :pull:`9498`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
 - More robustly raise an error when lazily encoding times and an
   integer dtype is specified with units that do not allow for an exact round
   trip (:pull:`9498`). By `Spencer Clark
-=======
 - Prevent false resolution change warnings from being emitted when decoding
   timedeltas encoded with floating point values, and make it clearer how to
   silence this warning message in the case that it is rightfully emitted
   (:issue:`10071`, :pull:`10072`).  By `Spencer Clark
->>>>>>> main -- Current Change
   <https://github.com/spencerkclark>`_.
 - Fix ``isel`` for multi-coordinate Xarray indexes (:issue:`10063`, :pull:`10066`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
