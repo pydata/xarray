@@ -1466,11 +1466,11 @@ class Timedelta64TypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     dtype('int64')
 
     >>> Timedelta64TypeArray(x, np.dtype("timedelta64[ns]")).dtype
-    dtype('timedelta64[ns]')
+    dtype('<m8[ns]')
 
     >>> indexer = indexing.BasicIndexer((slice(None),))
     >>> Timedelta64TypeArray(x, np.dtype("timedelta64[ns]"))[indexer].dtype
-    dtype('timedelta64[ns]')
+    dtype('<m8[ns]')
     """
 
     __slots__ = ("_dtype", "array")
@@ -1498,7 +1498,6 @@ class LiteralTimedelta64Coder(VariableCoder):
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.data.dtype, np.timedelta64):
-
             dims, data, attrs, encoding = unpack_for_encoding(variable)
             resolution, _ = np.datetime_data(variable.dtype)
             dtype = f"timedelta64[{resolution}]"
