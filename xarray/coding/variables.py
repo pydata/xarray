@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import typing
 import warnings
 from collections.abc import Callable, Hashable, MutableMapping
 from functools import partial
@@ -12,7 +11,6 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import dtypes, duck_array_ops, indexing
-from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
@@ -152,45 +150,6 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     @property
     def dtype(self) -> np.dtype:
         return np.dtype("bool")
-
-    def _oindex_get(self, key):
-        return np.asarray(self.array.oindex[key], dtype=self.dtype)
-
-    def _vindex_get(self, key):
-        return np.asarray(self.array.vindex[key], dtype=self.dtype)
-
-    def __getitem__(self, key) -> np.ndarray:
-        return np.asarray(self.array[key], dtype=self.dtype)
-
-
-class Timedelta64TypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Decode arrays on the fly from integer to np.timedelta64 datatype
-
-    This is useful for decoding timedelta64 arrays from integer typed netCDF
-    variables.
-
-    >>> x = np.array([1, 0, 1, 1, 0], dtype="int64")
-
-    >>> x.dtype
-    dtype('int64')
-
-    >>> Timedelta64TypeArray(x, np.dtype("timedelta64[ns]")).dtype
-    dtype('timedelta64[ns]')
-
-    >>> indexer = indexing.BasicIndexer((slice(None),))
-    >>> Timedelta64TypeArray(x, np.dtype("timedelta64[ns]"))[indexer].dtype
-    dtype('timedelta64[ns]')
-    """
-
-    __slots__ = ("_dtype", "array")
-
-    def __init__(self, array, dtype: np.typing.DTypeLike) -> None:
-        self.array = indexing.as_indexable(array)
-        self._dtype = dtype
-
-    @property
-    def dtype(self):
-        return np.dtype(self._dtype)
 
     def _oindex_get(self, key):
         return np.asarray(self.array.oindex[key], dtype=self.dtype)
@@ -778,41 +737,3 @@ class NativeEnumCoder(VariableCoder):
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         raise NotImplementedError()
-
-
-class LiteralTimedelta64Coder(VariableCoder):
-    """Code np.timedelta64 values."""
-
-    def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if np.issubdtype(variable.data.dtype, np.timedelta64):
-            from xarray.coding.times import _numpy_to_netcdf_timeunit
-
-            dims, data, attrs, encoding = unpack_for_encoding(variable)
-            resolution, _ = np.datetime_data(variable.dtype)
-            dtype = f"timedelta64[{resolution}]"
-            units = _numpy_to_netcdf_timeunit(resolution)
-            safe_setitem(attrs, "dtype", dtype, name=name)
-            safe_setitem(attrs, "units", units, name=name)
-            data = duck_array_ops.astype(data, dtype=np.int64, copy=True)
-            return Variable(dims, data, attrs, encoding, fastpath=True)
-        else:
-            return variable
-
-    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if variable.attrs.get("dtype", "").startswith("timedelta64"):
-            dims, data, attrs, encoding = unpack_for_decoding(variable)
-            dtype = pop_to(attrs, encoding, "dtype", name=name)
-            pop_to(attrs, encoding, "units", name=name)
-            dtype = np.dtype(dtype)
-            resolution, _ = np.datetime_data(dtype)
-            if resolution not in typing.get_args(PDDatetimeUnitOptions):
-                raise ValueError(
-                    f"Following pandas, xarray only supports decoding to "
-                    f"timedelta64 values with a resolution of 's', 'ms', "
-                    f"'us', or 'ns'. Encoded values have a resolution of "
-                    f"{resolution!r}."
-                )
-            data = Timedelta64TypeArray(data, dtype)
-            return Variable(dims, data, attrs, encoding, fastpath=True)
-        else:
-            return variable
