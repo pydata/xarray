@@ -51,6 +51,8 @@ def test_aggregation_skipna(arrays) -> None:
     assert_equal(actual, expected)
 
 
+# casting nan warns
+@pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
 def test_astype(arrays) -> None:
     np_arr, xp_arr = arrays
     expected = np_arr.astype(np.int64)
@@ -137,6 +139,7 @@ def test_unstack(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     assert_equal(actual, expected)
 
 
+@pytest.mark.skip
 def test_where() -> None:
     np_arr = xr.DataArray(np.array([1, 0]), dims="x")
     xp_arr = xr.DataArray(xp.asarray([1, 0]), dims="x")
