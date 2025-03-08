@@ -1504,6 +1504,9 @@ class LiteralTimedelta64Coder(VariableCoder):
             units = _numpy_dtype_to_netcdf_timeunit(variable.dtype)
             safe_setitem(attrs, "dtype", dtype, name=name)
             safe_setitem(attrs, "units", units, name=name)
+            # Remove dtype encoding if it exists to prevent it from interfering
+            # downstream in NonStringCoder.
+            encoding.pop("dtype", None)
             data = duck_array_ops.astype(data, dtype=np.int64, copy=True)
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
