@@ -120,6 +120,7 @@ class TestEncodeCFVariable:
             Variable(
                 ["t"], pd.date_range("2000-01-01", periods=3), {"units": "foobar"}
             ),
+            Variable(["t"], pd.to_timedelta(["1 day"]), {"units": "foobar"}),  # type: ignore[arg-type, unused-ignore]
             Variable(["t"], [0, 1, 2], {"add_offset": 0}, {"add_offset": 2}),
             Variable(["t"], [0, 1, 2], {"_FillValue": 0}, {"_FillValue": 2}),
         ]

@@ -266,6 +266,7 @@ class CFMaskCoder(VariableCoder):
 
     def encode(self, variable: Variable, name: T_Name = None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
+
         dtype = np.dtype(encoding.get("dtype", data.dtype))
         # from netCDF best practices
         # https://docs.unidata.ucar.edu/nug/current/best_practices.html#bp_Unsigned-Data
