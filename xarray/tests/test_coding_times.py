@@ -1762,7 +1762,7 @@ def test_encode_cf_datetime_units_change(use_cftime, use_dask) -> None:
 
 
 @pytest.mark.parametrize("use_dask", [False, pytest.param(True, marks=requires_dask)])
-def test_encode_cf_datetime_precision_loss_regression_test(use_dask):
+def test_encode_cf_datetime_precision_loss_regression_test(use_dask) -> None:
     # Regression test for
     # https://github.com/pydata/xarray/issues/9134#issuecomment-2191446463
     times = date_range("2000", periods=5, freq="ns")
@@ -1833,7 +1833,7 @@ def test_encode_cf_timedelta_units_change(use_dask) -> None:
 
 
 @pytest.mark.parametrize("use_dask", [False, pytest.param(True, marks=requires_dask)])
-def test_encode_cf_timedelta_small_dtype_missing_value(use_dask):
+def test_encode_cf_timedelta_small_dtype_missing_value(use_dask) -> None:
     # Regression test for GitHub issue #9134
     timedeltas = np.array([1, 2, "NaT", 4], dtype="timedelta64[D]").astype(
         "timedelta64[ns]"
