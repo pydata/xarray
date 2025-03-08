@@ -1960,7 +1960,7 @@ def test_decode_floating_point_timedelta_no_serialization_warning() -> None:
 
 
 def test_literal_timedelta64_coding(time_unit: PDDatetimeUnitOptions):
-    timedeltas = pd.timedelta_range(0, freq="D", periods=3, unit=time_unit)
+    timedeltas = pd.timedelta_range(0, freq="D", periods=3, unit=time_unit)  # type: ignore[call-arg]
     variable = Variable(["time"], timedeltas)
     expected_dtype = f"timedelta64[{time_unit}]"
     expected_units = _numpy_to_netcdf_timeunit(time_unit)

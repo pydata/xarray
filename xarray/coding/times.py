@@ -1503,7 +1503,7 @@ class LiteralTimedelta64Coder(VariableCoder):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
             resolution, _ = np.datetime_data(variable.dtype)
             dtype = f"timedelta64[{resolution}]"
-            units = _numpy_to_netcdf_timeunit(resolution)
+            units = _numpy_dtype_to_netcdf_timeunit(variable.dtype)
             safe_setitem(attrs, "dtype", dtype, name=name)
             safe_setitem(attrs, "units", units, name=name)
             data = duck_array_ops.astype(data, dtype=np.int64, copy=True)
