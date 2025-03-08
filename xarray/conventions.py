@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
 import numpy as np
 
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
-from xarray.coding import strings, times, variables
+from xarray.coding import strings, variables
 from xarray.coding.variables import SerializationWarning, pop_to
 from xarray.core import indexing
 from xarray.core.common import (
@@ -92,7 +92,6 @@ def encode_cf_variable(
     for coder in [
         CFDatetimeCoder(),
         CFTimedeltaCoder(),
-        times.LiteralTimedelta64Coder(),
         variables.CFScaleOffsetCoder(),
         variables.CFMaskCoder(),
         variables.NativeEnumCoder(),
@@ -243,7 +242,6 @@ def decode_cf_variable(
         original_dtype = var.dtype
 
     var = variables.BooleanCoder().decode(var)
-    var = times.LiteralTimedelta64Coder().decode(var)
 
     dimensions, data, attributes, encoding = variables.unpack_for_decoding(var)
 

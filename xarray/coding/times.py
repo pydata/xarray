@@ -21,7 +21,7 @@ from xarray.coding.common import (
     unpack_for_decoding,
     unpack_for_encoding,
 )
-from xarray.core import duck_array_ops, indexing
+from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
 from xarray.core.duck_array_ops import array_all, array_any, asarray, ravel, reshape
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
@@ -1400,6 +1400,7 @@ class CFTimedeltaCoder(VariableCoder):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
             if "units" in encoding and not has_timedelta64_encoding_dtype(encoding):
                 dtype = encoding.pop("dtype", None)
+                units = encoding.pop("units", None)
 
                 # in the case of packed data we need to encode into
                 # float first, the correct dtype will be established
@@ -1409,124 +1410,54 @@ class CFTimedeltaCoder(VariableCoder):
                     set_dtype_encoding = dtype
                     dtype = data.dtype if data.dtype.kind == "f" else "float64"
 
-                data, units = encode_cf_timedelta(
-                    data, encoding.pop("units", None), dtype
-                )
-
                 # retain dtype for packed data
                 if set_dtype_encoding is not None:
                     safe_setitem(encoding, "dtype", set_dtype_encoding, name=name)
-
-                safe_setitem(attrs, "units", units, name=name)
-
-                return Variable(dims, data, attrs, encoding, fastpath=True)
             else:
-                return variable
+                resolution, _ = np.datetime_data(variable.dtype)
+                dtype = np.int64
+                attrs_dtype = f"timedelta64[{resolution}]"
+                units = _numpy_dtype_to_netcdf_timeunit(variable.dtype)
+                safe_setitem(attrs, "dtype", attrs_dtype, name=name)
+                # Remove dtype encoding if it exists to prevent it from
+                # interfering downstream in NonStringCoder.
+                encoding.pop("dtype", None)
+            data, units = encode_cf_timedelta(data, units, dtype)
+            safe_setitem(attrs, "units", units, name=name)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
             return variable
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         units = variable.attrs.get("units", None)
-        if (
-            isinstance(units, str)
-            and units in TIME_UNITS
-            and not has_timedelta64_encoding_dtype(variable.attrs)
-        ):
-            if self._emit_decode_timedelta_future_warning:
-                emit_user_level_warning(
-                    "In a future version of xarray decode_timedelta will "
-                    "default to False rather than None. To silence this "
-                    "warning, set decode_timedelta to True, False, or a "
-                    "'CFTimedeltaCoder' instance.",
-                    FutureWarning,
-                )
+        if isinstance(units, str) and units in TIME_UNITS:
             dims, data, attrs, encoding = unpack_for_decoding(variable)
-
             units = pop_to(attrs, encoding, "units")
-            dtype = np.dtype(f"timedelta64[{self.time_unit}]")
-            transform = partial(
-                decode_cf_timedelta, units=units, time_unit=self.time_unit
-            )
+            if has_timedelta64_encoding_dtype(variable.attrs):
+                dtype = pop_to(attrs, encoding, "dtype", name=name)
+                dtype = np.dtype(dtype)
+                resolution, _ = np.datetime_data(dtype)
+                if resolution not in typing.get_args(PDDatetimeUnitOptions):
+                    raise ValueError(
+                        f"Following pandas, xarray only supports decoding to "
+                        f"timedelta64 values with a resolution of 's', 'ms', "
+                        f"'us', or 'ns'. Encoded values have a resolution of "
+                        f"{resolution!r}."
+                    )
+                time_unit = resolution
+            else:
+                if self._emit_decode_timedelta_future_warning:
+                    emit_user_level_warning(
+                        "In a future version of xarray decode_timedelta will "
+                        "default to False rather than None. To silence this "
+                        "warning, set decode_timedelta to True, False, or a "
+                        "'CFTimedeltaCoder' instance.",
+                        FutureWarning,
+                    )
+                dtype = np.dtype(f"timedelta64[{self.time_unit}]")
+                time_unit = self.time_unit
+            transform = partial(decode_cf_timedelta, units=units, time_unit=time_unit)
             data = lazy_elemwise_func(data, transform, dtype=dtype)
-
-            return Variable(dims, data, attrs, encoding, fastpath=True)
-        else:
-            return variable
-
-
-class Timedelta64TypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Decode arrays on the fly from integer to np.timedelta64 datatype
-
-    This is useful for decoding timedelta64 arrays from integer typed netCDF
-    variables.
-
-    >>> x = np.array([1, 0, 1, 1, 0], dtype="int64")
-
-    >>> x.dtype
-    dtype('int64')
-
-    >>> Timedelta64TypeArray(x, np.dtype("timedelta64[ns]")).dtype
-    dtype('<m8[ns]')
-
-    >>> indexer = indexing.BasicIndexer((slice(None),))
-    >>> Timedelta64TypeArray(x, np.dtype("timedelta64[ns]"))[indexer].dtype
-    dtype('<m8[ns]')
-    """
-
-    __slots__ = ("_dtype", "array")
-
-    def __init__(self, array, dtype: np.typing.DTypeLike) -> None:
-        self.array = indexing.as_indexable(array)
-        self._dtype = dtype
-
-    @property
-    def dtype(self):
-        return np.dtype(self._dtype)
-
-    def _oindex_get(self, key):
-        return np.asarray(self.array.oindex[key], dtype=self.dtype)
-
-    def _vindex_get(self, key):
-        return np.asarray(self.array.vindex[key], dtype=self.dtype)
-
-    def __getitem__(self, key) -> np.ndarray:
-        return np.asarray(self.array[key], dtype=self.dtype)
-
-
-class LiteralTimedelta64Coder(VariableCoder):
-    """Code np.timedelta64 values."""
-
-    def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if np.issubdtype(variable.data.dtype, np.timedelta64):
-            dims, data, attrs, encoding = unpack_for_encoding(variable)
-            resolution, _ = np.datetime_data(variable.dtype)
-            dtype = f"timedelta64[{resolution}]"
-            units = _numpy_dtype_to_netcdf_timeunit(variable.dtype)
-            safe_setitem(attrs, "dtype", dtype, name=name)
-            safe_setitem(attrs, "units", units, name=name)
-            # Remove dtype encoding if it exists to prevent it from interfering
-            # downstream in NonStringCoder.
-            encoding.pop("dtype", None)
-            data = duck_array_ops.astype(data, dtype=np.int64, copy=True)
-            return Variable(dims, data, attrs, encoding, fastpath=True)
-        else:
-            return variable
-
-    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if has_timedelta64_encoding_dtype(variable.attrs):
-            dims, data, attrs, encoding = unpack_for_decoding(variable)
-            dtype = pop_to(attrs, encoding, "dtype", name=name)
-            pop_to(attrs, encoding, "units", name=name)
-            dtype = np.dtype(dtype)
-            resolution, _ = np.datetime_data(dtype)
-            if resolution not in typing.get_args(PDDatetimeUnitOptions):
-                raise ValueError(
-                    f"Following pandas, xarray only supports decoding to "
-                    f"timedelta64 values with a resolution of 's', 'ms', "
-                    f"'us', or 'ns'. Encoded values have a resolution of "
-                    f"{resolution!r}."
-                )
-            data = Timedelta64TypeArray(data, dtype)
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
             return variable
