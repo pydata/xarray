@@ -1959,7 +1959,7 @@ def test_decode_floating_point_timedelta_no_serialization_warning() -> None:
         decoded.load()
 
 
-def test_literal_timedelta64_coding(time_unit: PDDatetimeUnitOptions):
+def test_literal_timedelta64_coding(time_unit: PDDatetimeUnitOptions) -> None:
     timedeltas = pd.timedelta_range(0, freq="D", periods=3, unit=time_unit)  # type: ignore[call-arg]
     variable = Variable(["time"], timedeltas)
     expected_dtype = f"timedelta64[{time_unit}]"
@@ -1981,7 +1981,7 @@ def test_literal_timedelta64_coding(time_unit: PDDatetimeUnitOptions):
     assert reencoded.dtype == encoded.dtype
 
 
-def test_literal_timedelta_coding_resolution_error():
+def test_literal_timedelta_coding_resolution_error() -> None:
     attrs = {"dtype": "timedelta64[D]", "units": "days"}
     encoded = Variable(["time"], [0, 1, 2], attrs=attrs)
     with pytest.raises(ValueError, match="xarray only supports"):
@@ -1989,7 +1989,7 @@ def test_literal_timedelta_coding_resolution_error():
 
 
 @pytest.mark.parametrize("attribute", ["dtype", "units"])
-def test_literal_timedelta_decode_invalid_encoding(attribute):
+def test_literal_timedelta_decode_invalid_encoding(attribute) -> None:
     attrs = {"dtype": "timedelta64[s]", "units": "seconds"}
     encoding = {attribute: "foo"}
     encoded = Variable(["time"], [0, 1, 2], attrs=attrs, encoding=encoding)
@@ -1998,7 +1998,7 @@ def test_literal_timedelta_decode_invalid_encoding(attribute):
 
 
 @pytest.mark.parametrize("attribute", ["dtype", "units"])
-def test_literal_timedelta_encode_invalid_attribute(attribute):
+def test_literal_timedelta_encode_invalid_attribute(attribute) -> None:
     timedeltas = pd.timedelta_range(0, freq="D", periods=3)
     attrs = {attribute: "foo"}
     variable = Variable(["time"], timedeltas, attrs=attrs)
