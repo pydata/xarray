@@ -1349,6 +1349,11 @@ class CFDatetimeCoder(VariableCoder):
             return variable
 
 
+def has_timedelta64_encoding_dtype(attrs_or_encoding: dict) -> bool:
+    dtype = attrs_or_encoding.get("dtype", None)
+    return isinstance(dtype, str) and dtype.startswith("timedelta64")
+
+
 class CFTimedeltaCoder(VariableCoder):
     """Coder for CF Timedelta coding.
 
@@ -1368,7 +1373,7 @@ class CFTimedeltaCoder(VariableCoder):
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.data.dtype, np.timedelta64):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
-            if "units" in encoding:
+            if "units" in encoding and not has_timedelta64_encoding_dtype(encoding):
                 data, units = encode_cf_timedelta(
                     data, encoding.pop("units"), encoding.get("dtype", None)
                 )
@@ -1381,7 +1386,11 @@ class CFTimedeltaCoder(VariableCoder):
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         units = variable.attrs.get("units", None)
-        if isinstance(units, str) and units in TIME_UNITS:
+        if (
+            isinstance(units, str)
+            and units in TIME_UNITS
+            and not has_timedelta64_encoding_dtype(variable.attrs)
+        ):
             if self._emit_decode_timedelta_future_warning:
                 emit_user_level_warning(
                     "In a future version of xarray decode_timedelta will "

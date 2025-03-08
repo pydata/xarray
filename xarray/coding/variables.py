@@ -410,7 +410,6 @@ class CFMaskCoder(VariableCoder):
 
     def encode(self, variable: Variable, name: T_Name = None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
-
         dtype = np.dtype(encoding.get("dtype", data.dtype))
         # from netCDF best practices
         # https://docs.unidata.ucar.edu/nug/current/best_practices.html#bp_Unsigned-Data
@@ -786,9 +785,14 @@ class LiteralTimedelta64Coder(VariableCoder):
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.data.dtype, np.timedelta64):
+            from xarray.coding.times import _numpy_to_netcdf_timeunit
+
             dims, data, attrs, encoding = unpack_for_encoding(variable)
             resolution, _ = np.datetime_data(variable.dtype)
-            attrs["dtype"] = f"timedelta64[{resolution}]"
+            dtype = f"timedelta64[{resolution}]"
+            units = _numpy_to_netcdf_timeunit(resolution)
+            safe_setitem(attrs, "dtype", dtype, name=name)
+            safe_setitem(attrs, "units", units, name=name)
             data = duck_array_ops.astype(data, dtype=np.int64, copy=True)
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
@@ -797,10 +801,9 @@ class LiteralTimedelta64Coder(VariableCoder):
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         if variable.attrs.get("dtype", "").startswith("timedelta64"):
             dims, data, attrs, encoding = unpack_for_decoding(variable)
-            # overwrite (!) dtype in encoding, and remove from attrs
-            # needed for correct subsequent encoding
-            encoding["dtype"] = attrs.pop("dtype")
-            dtype = np.dtype(encoding["dtype"])
+            dtype = pop_to(attrs, encoding, "dtype", name=name)
+            pop_to(attrs, encoding, "units", name=name)
+            dtype = np.dtype(dtype)
             resolution, _ = np.datetime_data(dtype)
             if resolution not in typing.get_args(PDDatetimeUnitOptions):
                 raise ValueError(

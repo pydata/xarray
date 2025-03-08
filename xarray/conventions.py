@@ -92,13 +92,13 @@ def encode_cf_variable(
     for coder in [
         CFDatetimeCoder(),
         CFTimedeltaCoder(),
-        variables.LiteralTimedelta64Coder(),
         variables.CFScaleOffsetCoder(),
         variables.CFMaskCoder(),
         variables.NativeEnumCoder(),
         variables.NonStringCoder(),
         variables.DefaultFillvalueCoder(),
         variables.BooleanCoder(),
+        variables.LiteralTimedelta64Coder(),
     ]:
         var = coder.encode(var, name=name)
 
