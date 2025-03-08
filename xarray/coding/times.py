@@ -1498,7 +1498,6 @@ class LiteralTimedelta64Coder(VariableCoder):
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.data.dtype, np.timedelta64):
-            from xarray.coding.times import _numpy_to_netcdf_timeunit
 
             dims, data, attrs, encoding = unpack_for_encoding(variable)
             resolution, _ = np.datetime_data(variable.dtype)
