@@ -1444,7 +1444,7 @@ class CFTimedeltaCoder(VariableCoder):
                         f"'us', or 'ns'. Encoded values have a resolution of "
                         f"{resolution!r}."
                     )
-                time_unit = resolution
+                time_unit = cast(PDDatetimeUnitOptions, resolution)
             else:
                 if self._emit_decode_timedelta_future_warning:
                     emit_user_level_warning(
