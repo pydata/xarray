@@ -1401,18 +1401,6 @@ class CFTimedeltaCoder(VariableCoder):
             if "units" in encoding and not has_timedelta64_encoding_dtype(encoding):
                 dtype = encoding.pop("dtype", None)
                 units = encoding.pop("units", None)
-
-                # in the case of packed data we need to encode into
-                # float first, the correct dtype will be established
-                # via CFScaleOffsetCoder/CFMaskCoder
-                set_dtype_encoding = None
-                if "add_offset" in encoding or "scale_factor" in encoding:
-                    set_dtype_encoding = dtype
-                    dtype = data.dtype if data.dtype.kind == "f" else "float64"
-
-                # retain dtype for packed data
-                if set_dtype_encoding is not None:
-                    safe_setitem(encoding, "dtype", set_dtype_encoding, name=name)
             else:
                 resolution, _ = np.datetime_data(variable.dtype)
                 dtype = np.int64
@@ -1422,6 +1410,19 @@ class CFTimedeltaCoder(VariableCoder):
                 # Remove dtype encoding if it exists to prevent it from
                 # interfering downstream in NonStringCoder.
                 encoding.pop("dtype", None)
+
+            # in the case of packed data we need to encode into
+            # float first, the correct dtype will be established
+            # via CFScaleOffsetCoder/CFMaskCoder
+            set_dtype_encoding = None
+            if "add_offset" in encoding or "scale_factor" in encoding:
+                set_dtype_encoding = dtype
+                dtype = data.dtype if data.dtype.kind == "f" else "float64"
+
+            # retain dtype for packed data
+            if set_dtype_encoding is not None:
+                safe_setitem(encoding, "dtype", set_dtype_encoding, name=name)
+
             data, units = encode_cf_timedelta(data, units, dtype)
             safe_setitem(attrs, "units", units, name=name)
             return Variable(dims, data, attrs, encoding, fastpath=True)

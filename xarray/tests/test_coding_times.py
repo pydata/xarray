@@ -2004,3 +2004,17 @@ def test_literal_timedelta_encode_invalid_attribute(attribute) -> None:
     variable = Variable(["time"], timedeltas, attrs=attrs)
     with pytest.raises(ValueError, match="failed to prevent"):
         conventions.encode_cf_variable(variable)
+
+
+def test_literal_timedelta_coding_mask_and_scale() -> None:
+    attrs = {
+        "units": "nanoseconds",
+        "dtype": "timedelta64[ns]",
+        "_FillValue": np.int16(-1),
+        "add_offset": 100000.0,
+    }
+    encoded = Variable(["time"], np.array([0, -1, 1], "int16"), attrs=attrs)
+    decoded = conventions.decode_cf_variable("foo", encoded)
+    result = conventions.encode_cf_variable(decoded, name="foo")
+    assert_identical(encoded, result)
+    assert encoded.dtype == result.dtype
