@@ -65,7 +65,7 @@ def concat(
     compat: CompatOptions | CombineKwargDefault = _COMPAT_CONCAT_DEFAULT,
     positions: Iterable[Iterable[int]] | None = None,
     fill_value: object = dtypes.NA,
-    join: JoinOptions | None = None,
+    join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     combine_attrs: CombineAttrsOptions = "override",
     create_index_for_new_dim: bool = True,
 ) -> T_DataArray: ...
@@ -334,7 +334,7 @@ def _calc_concat_over(
     datasets,
     dim,
     dim_names,
-    data_vars: T_DataVars,
+    data_vars: T_DataVars | CombineKwargDefault,
     coords,
     compat,
 ):
@@ -485,7 +485,7 @@ def _calc_concat_over(
                     )
             concat_over.update(opt)
 
-    warnings = []
+    warnings: list[str] = []
     process_subset_opt(data_vars, "data_vars")
     process_subset_opt(coords, "coords")
 
@@ -534,7 +534,7 @@ def _dataset_concat(
     datasets: Iterable[T_Dataset],
     dim: str | T_Variable | T_DataArray | pd.Index,
     data_vars: T_DataVars | CombineKwargDefault,
-    coords: str | list[str] | CombineKwargDefault,
+    coords: str | list[Hashable] | CombineKwargDefault,
     compat: CompatOptions | CombineKwargDefault,
     positions: Iterable[Iterable[int]] | None,
     fill_value: Any,
@@ -780,7 +780,7 @@ def _dataarray_concat(
     arrays: Iterable[T_DataArray],
     dim: str | T_Variable | T_DataArray | pd.Index,
     data_vars: T_DataVars | CombineKwargDefault,
-    coords: str | list[str] | CombineKwargDefault,
+    coords: str | list[Hashable] | CombineKwargDefault,
     compat: CompatOptions | CombineKwargDefault,
     positions: Iterable[Iterable[int]] | None,
     fill_value: object,

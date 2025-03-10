@@ -14,7 +14,7 @@ import tempfile
 import uuid
 import warnings
 from collections.abc import Generator, Iterator, Mapping
-from contextlib import ExitStack, nullcontext
+from contextlib import ExitStack
 from io import BytesIO
 from os import listdir
 from pathlib import Path
@@ -4614,12 +4614,16 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
             with set_options(
                 use_new_combine_kwarg_defaults=use_new_combine_kwarg_defaults
             ):
-                warning = (
+                warning: contextlib.AbstractContextManager = (
                     pytest.warns(FutureWarning)
                     if not use_new_combine_kwarg_defaults
-                    else nullcontext()
+                    else contextlib.nullcontext()
                 )
-                error = pytest.raises(xr.MergeError) if expect_error else nullcontext()
+                error: contextlib.AbstractContextManager = (
+                    pytest.raises(xr.MergeError)
+                    if expect_error
+                    else contextlib.nullcontext()
+                )
                 with warning:
                     with error:
                         with xr.open_mfdataset(
@@ -4785,13 +4789,15 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 xr.concat([ds1, ds2], dim="t", **kwargs)
 
             with set_options(use_new_combine_kwarg_defaults=False):
-                if "data_vars" not in kwargs:
-                    expectation = pytest.warns(
+                expectation: contextlib.AbstractContextManager = (
+                    pytest.warns(
                         FutureWarning,
                         match="will change from data_vars='all'",
                     )
-                else:
-                    expectation = nullcontext()
+                    if "data_vars" not in kwargs
+                    else contextlib.nullcontext()
+                )
+
                 with pytest.warns(
                     FutureWarning,
                     match="will change from compat='equals'",

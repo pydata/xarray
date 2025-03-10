@@ -527,7 +527,7 @@ def coerce_pandas_values(objects: Iterable[CoercibleMapping]) -> list[DatasetLik
 def _get_priority_vars_and_indexes(
     objects: Sequence[DatasetLike],
     priority_arg: int | None,
-    compat: CompatOptions = "equals",
+    compat: CompatOptions | CombineKwargDefault = "equals",
 ) -> dict[Hashable, MergeElement]:
     """Extract the priority variable from a list of mappings.
 

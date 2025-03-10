@@ -113,7 +113,7 @@ class Aligner(Generic[T_Alignable]):
     objects: tuple[T_Alignable, ...]
     results: tuple[T_Alignable, ...]
     objects_matching_indexes: tuple[dict[MatchingIndexKey, Index], ...]
-    join: str
+    join: str | CombineKwargDefault
     exclude_dims: frozenset[Hashable]
     exclude_vars: frozenset[Hashable]
     copy: bool
@@ -133,7 +133,7 @@ class Aligner(Generic[T_Alignable]):
     def __init__(
         self,
         objects: Iterable[T_Alignable],
-        join: str = "inner",
+        join: str | CombineKwargDefault = "inner",
         indexes: Mapping[Any, Any] | None = None,
         exclude_dims: str | Iterable[Hashable] = frozenset(),
         exclude_vars: Iterable[Hashable] = frozenset(),
@@ -146,7 +146,14 @@ class Aligner(Generic[T_Alignable]):
         self.objects = tuple(objects)
         self.objects_matching_indexes = ()
 
-        if join not in ["inner", "outer", "override", "exact", "left", "right"]:
+        if not isinstance(join, CombineKwargDefault) and join not in [
+            "inner",
+            "outer",
+            "override",
+            "exact",
+            "left",
+            "right",
+        ]:
             raise ValueError(f"invalid value for join: {join}")
         self.join = join
 
@@ -618,7 +625,7 @@ def align(
     obj1: T_Obj1,
     /,
     *,
-    join: JoinOptions = "inner",
+    join: JoinOptions | CombineKwargDefault = "inner",
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
@@ -632,7 +639,7 @@ def align(
     obj2: T_Obj2,
     /,
     *,
-    join: JoinOptions = "inner",
+    join: JoinOptions | CombineKwargDefault = "inner",
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
@@ -647,7 +654,7 @@ def align(
     obj3: T_Obj3,
     /,
     *,
-    join: JoinOptions = "inner",
+    join: JoinOptions | CombineKwargDefault = "inner",
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
@@ -663,7 +670,7 @@ def align(
     obj4: T_Obj4,
     /,
     *,
-    join: JoinOptions = "inner",
+    join: JoinOptions | CombineKwargDefault = "inner",
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
@@ -680,7 +687,7 @@ def align(
     obj5: T_Obj5,
     /,
     *,
-    join: JoinOptions = "inner",
+    join: JoinOptions | CombineKwargDefault = "inner",
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
@@ -691,7 +698,7 @@ def align(
 @overload
 def align(
     *objects: T_Alignable,
-    join: JoinOptions = "inner",
+    join: JoinOptions | CombineKwargDefault = "inner",
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
@@ -701,7 +708,7 @@ def align(
 
 def align(
     *objects: T_Alignable,
-    join: JoinOptions = "inner",
+    join: JoinOptions | CombineKwargDefault = "inner",
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),

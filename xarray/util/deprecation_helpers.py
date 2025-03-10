@@ -148,8 +148,11 @@ def deprecate_dims(func: T, old_name="dims") -> T:
     return wrapper  # type: ignore[return-value]
 
 
-class CombineKwargDefault(ReprObject):
-    """Object that handles deprecation cycle for kwarg default values."""
+class CombineKwargDefault:
+    """Object that handles deprecation cycle for kwarg default values.
+
+    Similar to ReprObject
+    """
 
     _old: str
     _new: str
@@ -160,8 +163,10 @@ class CombineKwargDefault(ReprObject):
         self._old = old
         self._new = new
 
+    def __repr__(self) -> str:
+        return self._value
+
     def __eq__(self, other: ReprObject | Any) -> bool:
-        # TODO: What type can other be? ArrayLike?
         return (
             self._value == other._value
             if isinstance(other, ReprObject)
@@ -169,13 +174,18 @@ class CombineKwargDefault(ReprObject):
         )
 
     @property
-    def _value(self):
+    def _value(self) -> str:
         return self._new if OPTIONS["use_new_combine_kwarg_defaults"] else self._old
 
     def __hash__(self) -> int:
         return hash(self._value)
 
-    def warning_message(self, message: str, recommend_set_options: bool = True):
+    def __dask_tokenize__(self) -> object:
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._value))
+
+    def warning_message(self, message: str, recommend_set_options: bool = True) -> str:
         if recommend_set_options:
             recommendation = (
                 " To opt in to new defaults and get rid of these warnings now "
@@ -194,7 +204,7 @@ class CombineKwargDefault(ReprObject):
             + recommendation
         )
 
-    def error_message(self):
+    def error_message(self) -> str:
         return (
             f" Error might be related to new default ({self._name}={self._new!r}). "
             f"Previously the default was {self._name}={self._old!r}. "

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from contextlib import nullcontext
+from contextlib import AbstractContextManager, nullcontext
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -1476,13 +1476,14 @@ class TestNewDefaults:
                 FutureWarning,
                 match="will change from data_vars='all' to data_vars='minimal'",
             ):
-                if coords == "different":
-                    expectation = pytest.warns(
+                expectation: AbstractContextManager = (
+                    pytest.warns(
                         FutureWarning,
                         match="will change from compat='equals' to compat='override'",
                     )
-                else:
-                    expectation = nullcontext()
+                    if coords == "different"
+                    else nullcontext()
+                )
                 with expectation:
                     old = concat(datasets, data["dim1"], coords=coords)
 

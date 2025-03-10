@@ -269,7 +269,7 @@ def _combine_all_along_first_dim(
     dim,
     data_vars,
     coords,
-    compat: CompatOptions,
+    compat: CompatOptions | CombineKwargDefault,
     fill_value,
     join: JoinOptions | CombineKwargDefault,
     combine_attrs: CombineAttrsOptions,
@@ -298,7 +298,7 @@ def _combine_all_along_first_dim(
 def _combine_1d(
     datasets,
     concat_dim,
-    compat: CompatOptions,
+    compat: CompatOptions | CombineKwargDefault,
     data_vars,
     coords,
     fill_value,
@@ -365,7 +365,7 @@ def _nested_combine(
         return Dataset()
 
     if isinstance(concat_dim, str | DataArray) or concat_dim is None:
-        concat_dim = [concat_dim]  # type: ignore[assignment]
+        concat_dim = [concat_dim]
 
     # Arrange datasets for concatenation
     # Use information from the shape of the user input
