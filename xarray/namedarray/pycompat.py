@@ -102,9 +102,11 @@ def to_numpy(
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
-    if hasattr(data, "to_numpy"):
+    try:
         # for tests only at the moment
         return data.to_numpy()  # type: ignore[no-any-return]
+    except AttributeError:
+        pass
 
     if isinstance(data, ExplicitlyIndexed):
         data = data.get_duck_array()  # type: ignore[no-untyped-call]
