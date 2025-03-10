@@ -591,8 +591,10 @@ class TestConcatDataset:
             data.isel(x=slice(5)).assign_coords(c=0),
             data.isel(x=slice(5, None)).assign_coords(c=1),
         ]
-        extra_kwargs = dict(compat="equals") if coords == "different" else {}
-        actual = concat(objs, dim="x", coords=coords, **extra_kwargs)
+        if coords == "different":
+            actual = concat(objs, dim="x", coords=coords, compat="equals")
+        else:
+            actual = concat(objs, dim="x", coords=coords)
         assert_identical(expected, actual)
 
     @pytest.mark.parametrize("coords", ["minimal", []])
@@ -611,8 +613,10 @@ class TestConcatDataset:
         ds1 = Dataset({"foo": 1.5}, {"y": 1})
         ds2 = Dataset({"foo": 2.5}, {"y": 1})
         expected = Dataset({"foo": ("y", [1.5, 2.5]), "y": [1, 1]})
-        extra_kwargs = dict(compat="equals") if data_vars == "different" else {}
-        actual = concat([ds1, ds2], "y", data_vars=data_vars, **extra_kwargs)
+        if data_vars == "different":
+            actual = concat([ds1, ds2], "y", data_vars=data_vars, compat="equals")
+        else:
+            actual = concat([ds1, ds2], "y", data_vars=data_vars)
         assert_identical(expected, actual)
 
     def test_concat_constant_index_minimal_raises_merge_error(self) -> None:
@@ -677,13 +681,13 @@ class TestConcatDataset:
         assert_identical(data, concat([data0, data1], "dim1", compat="equals"))
 
         with pytest.raises(ValueError, match=r"compat.* invalid"):
-            concat(split_data, "dim1", compat="foobar")
+            concat(split_data, "dim1", compat="foobar")  # type: ignore[call-overload]
 
         with pytest.raises(ValueError, match=r"compat.* invalid"):
             concat(split_data, "dim1", compat="minimal")
 
         with pytest.raises(ValueError, match=r"unexpected value for"):
-            concat([data, data], "new_dim", coords="foobar")
+            concat([data, data], "new_dim", coords="foobar")  # type: ignore[call-overload]
 
         with pytest.raises(
             ValueError, match=r"coordinate in some datasets but not others"
