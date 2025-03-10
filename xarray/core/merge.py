@@ -882,7 +882,7 @@ def merge(
       * time     (time) float64 16B 30.0 60.0
       * lon      (lon) float64 16B 100.0 150.0
 
-    >>> xr.merge([x, y, z])
+    >>> xr.merge([x, y, z], join="outer")
     <xarray.Dataset> Size: 256B
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
@@ -894,7 +894,7 @@ def merge(
         var2     (lat, lon) float64 72B 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
         var3     (time, lon) float64 48B 0.0 nan 3.0 4.0 nan 9.0
 
-    >>> xr.merge([x, y, z], compat="identical")
+    >>> xr.merge([x, y, z], compat="identical", join="outer")
     <xarray.Dataset> Size: 256B
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
@@ -906,7 +906,7 @@ def merge(
         var2     (lat, lon) float64 72B 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
         var3     (time, lon) float64 48B 0.0 nan 3.0 4.0 nan 9.0
 
-    >>> xr.merge([x, y, z], compat="equals")
+    >>> xr.merge([x, y, z], compat="equals", join="outer")
     <xarray.Dataset> Size: 256B
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
@@ -918,7 +918,7 @@ def merge(
         var2     (lat, lon) float64 72B 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
         var3     (time, lon) float64 48B 0.0 nan 3.0 4.0 nan 9.0
 
-    >>> xr.merge([x, y, z], compat="equals", fill_value=-999.0)
+    >>> xr.merge([x, y, z], compat="equals", join="outer", fill_value=-999.0)
     <xarray.Dataset> Size: 256B
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:

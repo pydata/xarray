@@ -878,7 +878,7 @@ def combine_by_coords(
         temperature    (y, x) float64 96B 10.98 14.3 12.06 ... 1.743 0.4044 16.65
         precipitation  (y, x) float64 96B 0.4376 0.8918 0.9637 ... 0.4615 0.7805
 
-    >>> xr.combine_by_coords([x3, x1])
+    >>> xr.combine_by_coords([x3, x1], join="outer")
     <xarray.Dataset> Size: 464B
     Dimensions:        (y: 4, x: 6)
     Coordinates:
@@ -898,7 +898,7 @@ def combine_by_coords(
         temperature    (y, x) float64 96B 10.98 14.3 12.06 ... 18.89 10.44 8.293
         precipitation  (y, x) float64 96B 0.4376 0.8918 0.9637 ... 0.01879 0.6176
 
-    >>> xr.combine_by_coords([x1, x2, x3])
+    >>> xr.combine_by_coords([x1, x2, x3], join="outer")
     <xarray.Dataset> Size: 464B
     Dimensions:        (y: 4, x: 6)
     Coordinates:

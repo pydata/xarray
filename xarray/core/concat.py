@@ -207,7 +207,7 @@ def concat(
       * x        (x) <U1 8B 'a' 'b'
       * y        (y) int64 24B 10 20 30
 
-    >>> xr.concat([da.isel(x=0), da.isel(x=1)], "x")
+    >>> xr.concat([da.isel(x=0), da.isel(x=1)], "x", coords="minimal")
     <xarray.DataArray (x: 2, y: 3)> Size: 48B
     array([[0, 1, 2],
            [3, 4, 5]])
@@ -215,7 +215,7 @@ def concat(
       * x        (x) <U1 8B 'a' 'b'
       * y        (y) int64 24B 10 20 30
 
-    >>> xr.concat([da.isel(x=0), da.isel(x=1)], "new_dim")
+    >>> xr.concat([da.isel(x=0), da.isel(x=1)], "new_dim", coords="all")
     <xarray.DataArray (new_dim: 2, y: 3)> Size: 48B
     array([[0, 1, 2],
            [3, 4, 5]])
@@ -224,7 +224,11 @@ def concat(
       * y        (y) int64 24B 10 20 30
     Dimensions without coordinates: new_dim
 
-    >>> xr.concat([da.isel(x=0), da.isel(x=1)], pd.Index([-90, -100], name="new_dim"))
+    >>> xr.concat(
+    ...     [da.isel(x=0), da.isel(x=1)],
+    ...     pd.Index([-90, -100], name="new_dim"),
+    ...     coords="all",
+    ... )
     <xarray.DataArray (new_dim: 2, y: 3)> Size: 48B
     array([[0, 1, 2],
            [3, 4, 5]])
