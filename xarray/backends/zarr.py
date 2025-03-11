@@ -1776,6 +1776,7 @@ def _get_open_params(
             consolidated = False
 
     if _zarr_v3():
+        # TODO: replace AssertionError after https://github.com/zarr-developers/zarr-python/issues/2821 is resolved
         missing_exc = AssertionError
     else:
         missing_exc = zarr.errors.GroupNotFoundError
