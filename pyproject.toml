@@ -344,9 +344,6 @@ filterwarnings = [
   "default:the `pandas.MultiIndex` object:FutureWarning:xarray.tests.test_variable",
   "default:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
   "default:Duplicate dimension names present:UserWarning:xarray.namedarray.core",
-  # TODO: numpy.bool was deprecated in older versions of numpy, but is in the Array API
-  # TODO: remove once we can drop numpy<2
-  "ignore:In the future `np.bool` will be defined as the corresponding NumPy scalar:FutureWarning",
   # TODO: this is raised for vlen-utf8, consolidated metadata, U1 dtype
   "ignore:is currently not part .* the Zarr version 3 specification.",
   # TODO: remove once we know how to deal with a changed signature in protocols
