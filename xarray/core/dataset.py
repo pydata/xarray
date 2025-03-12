@@ -1210,10 +1210,20 @@ class Dataset(
         needed_dims = set(variable.dims)
 
         coords: dict[Hashable, Variable] = {}
+        indexes = self.xindexes
         # preserve ordering
         for k in self._variables:
-            if k in self._coord_names and set(self._variables[k].dims) <= needed_dims:
-                coords[k] = self._variables[k]
+            if k in self._coord_names:
+                if (
+                    k not in coords
+                    and k in indexes
+                    and set(indexes.get_all_dims(k)) & needed_dims
+                ):
+                    # add all coordinates of each index that shares at least one dimension
+                    # with the dimensions of the extracted variable
+                    coords.update(indexes.get_all_coords(k))
+                elif set(self._variables[k].dims) <= needed_dims:
+                    coords[k] = self._variables[k]
 
         indexes = filter_indexes_from_coords(self._indexes, set(coords))
 
