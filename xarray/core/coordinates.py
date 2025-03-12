@@ -486,7 +486,7 @@ class Coordinates(AbstractCoordinates):
         return self.to_dataset().identical(other.to_dataset())
 
     def _update_coords(
-        self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
+        self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
     ) -> None:
         # redirect to DatasetCoordinates._update_coords
         self._data.coords._update_coords(coords, indexes)
@@ -780,7 +780,7 @@ class DatasetCoordinates(Coordinates):
         return self._data._copy_listed(names)
 
     def _update_coords(
-        self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
+        self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
     ) -> None:
         variables = self._data._variables.copy()
         variables.update(coords)
@@ -880,7 +880,7 @@ class DataTreeCoordinates(Coordinates):
         return self._data.dataset._copy_listed(self._names)
 
     def _update_coords(
-        self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
+        self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
     ) -> None:
         from xarray.core.datatree import check_alignment
 
@@ -964,22 +964,32 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
         return self._data._getitem_coord(key)
 
     def _update_coords(
-        self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
+        self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
     ) -> None:
         coords_plus_data = coords.copy()
         coords_plus_data[_THIS_ARRAY] = self._data.variable
         dims = calculate_dimensions(coords_plus_data)
-        if not set(dims) <= set(self.dims):
-            raise ValueError(
-                "cannot add coordinates with new dimensions to a DataArray"
-            )
-        self._data._coords = coords
 
-        # TODO(shoyer): once ._indexes is always populated by a dict, modify
-        # it to update inplace instead.
-        original_indexes = dict(self._data.xindexes)
-        original_indexes.update(indexes)
-        self._data._indexes = original_indexes
+        if set(dims) > set(self.dims):
+            for k, v in coords.items():
+                if any(d not in self.dims for d in v.dims):
+                    # allow any coordinate associated with an index that shares at least
+                    # one of dataarray's dimensions
+                    temp_indexes = Indexes(
+                        indexes, {k: v for k, v in coords.items() if k in indexes}
+                    )
+                    if k in indexes:
+                        index_dims = temp_indexes.get_all_dims(k)
+                        if any(d in self.dims for d in index_dims):
+                            continue
+                    raise ValueError(
+                        f"coordinate {k} has dimensions {v.dims}, but these "
+                        "are not a subset of the DataArray "
+                        f"dimensions {self.dims}"
+                    )
+
+        self._data._coords = coords
+        self._data._indexes = indexes
 
     def _drop_coords(self, coord_names):
         # should drop indexed coordinates only
