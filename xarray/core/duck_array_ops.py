@@ -377,10 +377,11 @@ def where(condition, x, y):
     """Three argument where() with better dtype promotion rules."""
     xp = get_array_namespace(condition, x, y)
 
+    dtype = xp.bool if hasattr(xp, "bool") else xp.bool_
     if not is_duck_array(condition):
-        condition = asarray(condition, dtype=xp.bool, xp=xp)
+        condition = asarray(condition, dtype=dtype, xp=xp)
     else:
-        condition = astype(condition, dtype=xp.bool, xp=xp)
+        condition = astype(condition, dtype=dtype, xp=xp)
 
     return xp.where(condition, *as_shared_dtype([x, y], xp=xp))
 
