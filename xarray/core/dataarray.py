@@ -134,7 +134,7 @@ def _check_coords_dims(
     shape: tuple[int, ...], coords: Coordinates, dims: tuple[Hashable, ...]
 ):
     sizes = dict(zip(dims, shape, strict=True))
-    extra_index_dims = set()
+    extra_index_dims: set[str] = set()
 
     for k, v in coords.items():
         if any(d not in dims for d in v.dims):
