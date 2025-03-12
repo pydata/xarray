@@ -130,18 +130,30 @@ if TYPE_CHECKING:
     T_XarrayOther = TypeVar("T_XarrayOther", bound="DataArray" | Dataset)
 
 
-def _check_coords_dims(shape, coords, dim):
-    sizes = dict(zip(dim, shape, strict=True))
+def _check_coords_dims(
+    shape: tuple[int, ...], coords: Coordinates, dims: tuple[Hashable, ...]
+):
+    sizes = dict(zip(dims, shape, strict=True))
+    extra_index_dims = set()
+
     for k, v in coords.items():
-        if any(d not in dim for d in v.dims):
+        if any(d not in dims for d in v.dims):
+            # allow any coordinate associated with an index that shares at least
+            # one of dataarray's dimensions
+            indexes = coords.xindexes
+            if k in indexes:
+                index_dims = indexes.get_all_dims(k)
+                if any(d in dims for d in index_dims):
+                    extra_index_dims.update(d for d in v.dims if d not in dims)
+                    continue
             raise ValueError(
                 f"coordinate {k} has dimensions {v.dims}, but these "
                 "are not a subset of the DataArray "
-                f"dimensions {dim}"
+                f"dimensions {dims}"
             )
 
         for d, s in v.sizes.items():
-            if s != sizes[d]:
+            if d not in extra_index_dims and s != sizes[d]:
                 raise ValueError(
                     f"conflicting sizes for dimension {d!r}: "
                     f"length {sizes[d]} on the data but length {s} on "
@@ -211,8 +223,6 @@ def _infer_coords_and_dims(
                 var = as_variable(coord, name=dim, auto_convert=False)
                 var.dims = (dim,)
                 new_coords[dim] = var.to_index_variable()
-
-    _check_coords_dims(shape, new_coords, dims_tuple)
 
     return new_coords, dims_tuple
 
@@ -487,6 +497,7 @@ class DataArray(
 
             if not isinstance(coords, Coordinates):
                 coords = create_coords_with_default_indexes(coords)
+            _check_coords_dims(data.shape, coords, dims)
             indexes = dict(coords.xindexes)
             coords = {k: v.copy() for k, v in coords.variables.items()}
 
