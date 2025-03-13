@@ -647,9 +647,7 @@ class ZarrStore(AbstractWritableDataStore):
         use_zarr_fill_value_as_mask=None,
         write_empty: bool | None = None,
         cache_members: bool = True,
-    ):
-        root_group = "/" if _zarr_v3() else group
-
+    ) -> ZarrStore:
         (
             zarr_group,
             consolidate_on_close,
@@ -659,7 +657,7 @@ class ZarrStore(AbstractWritableDataStore):
             store=store,
             mode=mode,
             synchronizer=synchronizer,
-            group=root_group,
+            group=group,
             consolidated=consolidated,
             consolidate_on_close=consolidate_on_close,
             chunk_store=chunk_store,
@@ -668,6 +666,7 @@ class ZarrStore(AbstractWritableDataStore):
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
         )
+
         from zarr import Group
 
         group_members: dict[str, Group]
@@ -1782,12 +1781,14 @@ def _get_open_params(
         missing_exc = zarr.errors.GroupNotFoundError
 
     if consolidated is None:
+        # open the root of the store, in case there is metadata consolidated there
+        group = open_kwargs.pop("path")
         try:
-            zarr_group = zarr.open_consolidated(store, **open_kwargs)
+            zarr_root_group = zarr.open_consolidated(store, **open_kwargs)
         except (ValueError, KeyError):
             # ValueError in zarr-python 3.x, KeyError in 2.x.
             try:
-                zarr_group = zarr.open_group(store, **open_kwargs)
+                zarr_root_group = zarr.open_group(store, **open_kwargs)
                 emit_user_level_warning(
                     "Failed to open Zarr store with consolidated metadata, "
                     "but successfully read with non-consolidated metadata. "
@@ -1806,6 +1807,12 @@ def _get_open_params(
                 raise FileNotFoundError(
                     f"No such file or directory: '{store}'"
                 ) from err
+
+        # but the user should still recieve a tree whose root is the group they asked for
+        if group:
+            zarr_group = zarr_root_group[group.removeprefix("/")]
+        else:
+            zarr_group = zarr_root_group
     elif consolidated:
         # TODO: an option to pass the metadata_key keyword
         zarr_group = zarr.open_consolidated(store, **open_kwargs)
