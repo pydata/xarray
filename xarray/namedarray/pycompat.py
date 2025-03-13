@@ -104,7 +104,7 @@ def to_numpy(
 
     try:
         # for tests only at the moment
-        return data.to_numpy()  # type: ignore[no-any-return]
+        return data.to_numpy()  # type: ignore[no-any-return,union-attr]
     except AttributeError:
         pass
 
