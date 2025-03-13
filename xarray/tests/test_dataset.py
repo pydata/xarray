@@ -4206,6 +4206,31 @@ class TestDataset:
         dataset = Dataset({key: ("dim0", range(1)) for key in keys})
         assert_identical(dataset, dataset[keys])
 
+    def test_getitem_extra_dim_index_coord(self) -> None:
+        class AnyIndex(Index):
+            # This test only requires that the coordinates to assign have an
+            # index, whatever its type.
+            pass
+
+        idx = AnyIndex()
+        coords = Coordinates(
+            coords={
+                "x": ("x", [1, 2]),
+                "x_bounds": (("x", "x_bnds"), [(0.5, 1.5), (1.5, 2.5)]),
+            },
+            indexes={"x": idx, "x_bounds": idx},
+        )
+
+        ds = Dataset({"foo": (("x"), [1.0, 2.0])}, coords=coords)
+        actual = ds["foo"]
+
+        # cannot use `assert_identical()` test utility function here yet
+        # (indexes invariant check is still based on IndexVariable, which
+        # doesn't work with AnyIndex coordinate variables here)
+        assert actual.coords.to_dataset().equals(coords.to_dataset())
+        assert list(actual.coords.xindexes) == list(coords.xindexes)
+        assert "x_bnds" not in actual.dims
+
     def test_virtual_variables_default_coords(self) -> None:
         dataset = Dataset({"foo": ("x", range(10))})
         expected1 = DataArray(range(10), dims="x", name="x")
