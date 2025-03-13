@@ -25,7 +25,7 @@ dependencies:
   - numpy
   - packaging
   - pandas
-  - pandas-stubs
+  - pandas-stubs<=2.2.3.241126 # https://github.com/pydata/xarray/issues/10110
   # - pint>=0.22
   - pip
   - pre-commit
