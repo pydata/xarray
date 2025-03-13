@@ -28,7 +28,7 @@ from xarray.core.pdcompat import default_precision_timestamp, timestamp_as_unit
 from xarray.core.utils import attempt_import, emit_user_level_warning
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import T_ChunkedArray, get_chunked_array_type
-from xarray.namedarray.pycompat import is_chunked_array
+from xarray.namedarray.pycompat import is_chunked_array, to_numpy
 from xarray.namedarray.utils import is_duck_dask_array
 
 try:
@@ -310,7 +310,7 @@ def _decode_cf_datetime_dtype(
     # Dataset.__repr__ when users try to view their lazily decoded array.
     values = indexing.ImplicitToExplicitIndexingAdapter(indexing.as_indexable(data))
     example_value = np.concatenate(
-        [first_n_items(values, 1) or [0], last_item(values) or [0]]
+        [to_numpy(first_n_items(values, 1)), to_numpy(last_item(values))]
     )
 
     try:
@@ -516,7 +516,7 @@ def decode_cf_datetime(
     --------
     cftime.num2date
     """
-    num_dates = np.asarray(num_dates)
+    num_dates = to_numpy(num_dates)
     flat_num_dates = ravel(num_dates)
     if calendar is None:
         calendar = "standard"
@@ -643,7 +643,7 @@ def decode_cf_timedelta(
     """Given an array of numeric timedeltas in netCDF format, convert it into a
     numpy timedelta64 ["s", "ms", "us", "ns"] array.
     """
-    num_timedeltas = np.asarray(num_timedeltas)
+    num_timedeltas = to_numpy(num_timedeltas)
     unit = _netcdf_to_numpy_timeunit(units)
 
     with warnings.catch_warnings():
