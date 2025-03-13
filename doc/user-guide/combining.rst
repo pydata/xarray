@@ -79,8 +79,8 @@ expensive if you are manipulating your dataset lazily using :ref:`dask`.
 
 .. note::
 
-   The default values for many of these options will be changing in a future
-   version of xarray. You can opt into the new default values early using
+   In a future version of xarray the default values for many of these options
+   will change. You can opt into the new default values early using
    ``xr.set_options(use_new_combine_kwarg_defaults=True)``.
 
 .. _merge:
@@ -104,11 +104,11 @@ coordinates:
 
 .. note::
 
-   The default value for ``join`` and ``compat`` will be changing in a future
-   version of xarray. This change will mean that the resulting dataset will be
-   not be aligned. You can opt into the new default values early using
-   ``xr.set_options(use_new_combine_kwarg_defaults=True)``. Or explicitly set
-   ``join='outer'`` to preserve old behavior.
+   In a future version of xarray the default value for ``join`` and ``compat``
+   will change. This change will mean that xarray will no longer attempt
+   to align the indices of the merged dataset. You can opt into the new default
+   values early using ``xr.set_options(use_new_combine_kwarg_defaults=True)``.
+   Or explicitly set ``join='outer'`` to preserve old behavior.
 
 .. ipython:: python
 
@@ -132,9 +132,9 @@ if you attempt to merge two variables with the same name but different values:
 
 .. note::
 
-    In the future the default value for ``compat`` will change from
-    ``compat='no_conflicts'`` to ``compat='override'``. In this scenario the
-    values in the first object override all the values in other objects.
+    In a future version of xarray the default value for ``compat`` will change
+    from ``compat='no_conflicts'`` to ``compat='override'``. In this scenario
+    the values in the first object override all the values in other objects.
 
     .. ipython:: python
 
