@@ -139,7 +139,6 @@ def test_unstack(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     assert_equal(actual, expected)
 
 
-@pytest.mark.skip
 def test_where() -> None:
     np_arr = xr.DataArray(np.array([1, 0]), dims="x")
     xp_arr = xr.DataArray(xp.asarray([1, 0]), dims="x")
