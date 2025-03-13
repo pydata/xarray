@@ -596,12 +596,13 @@ class TestZarrDatatreeIO:
     @pytest.mark.filterwarnings(
         "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
     )
-    def test_open_datatree_specific_group(self, tmpdir, simple_datatree) -> None:
+    @pytest.mark.parametrize("write_consolidated_metadata", [True, False, None])
+    def test_open_datatree_specific_group(self, tmpdir, simple_datatree, write_consolidated_metadata) -> None:
         """Test opening a specific group within a Zarr store using `open_datatree`."""
         filepath = str(tmpdir / "test.zarr")
         group = "/set2"
         original_dt = simple_datatree
-        original_dt.to_zarr(filepath)
+        original_dt.to_zarr(filepath, consolidated=write_consolidated_metadata)
         expected_subtree = original_dt[group].copy()
         expected_subtree.orphan()
         with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
