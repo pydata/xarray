@@ -51,7 +51,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
-- Fix incompatibilities between ``open_datatree`` and Zarr-Python V3, along with refactoring ``TestZarrDatatreeIO`` (:issue:`9960`, :pull:`10020`).
+- Fix ``open_datatree`` incompatibilities with Zarr-Python V3 and refactor
+  ``TestZarrDatatreeIO`` accordingly (:issue:`9960`, :pull:`10020`).
   By `Alfonso Ladino-Rincon <https://github.com/aladinor>`_.
 - Default to resolution-dependent optimal integer encoding units when saving
   chunked non-nanosecond :py:class:`numpy.datetime64` or
