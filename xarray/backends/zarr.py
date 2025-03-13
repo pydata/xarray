@@ -675,20 +675,8 @@ class ZarrStore(AbstractWritableDataStore):
         print(group)
         print(list(zarr_group.keys()))
         print(dict(zarr_group.members(max_depth=None)))
+        # potentially use members here and explcitily add the group
         group_members = {}
-        # if _zarr_v3():
-        #     for path, store in dict(zarr_group.members(max_depth=None)).items():
-        #         if isinstance(store, Group):
-        #             print('Is a STORE')
-        #             print("store", store)
-        #             print("path", path)
-        #             print("group", group)
-        #             # if path.startswith(group.lstrip("/")):
-        #             group_members[f"/{path}"]= store
-        #     if group == "/":
-        #         group_members[group] = zarr_group
-        # else:
-        print("making the class")
         group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
         print(group_paths)
         print(list(zarr_group.keys()))
@@ -1773,8 +1761,6 @@ def _get_open_params(
     use_zarr_fill_value_as_mask,
     zarr_format,
 ):
-    print('get open')
-    print(group)
     if TYPE_CHECKING:
         import zarr
     else:
@@ -1812,37 +1798,44 @@ def _get_open_params(
     else:
         missing_exc = zarr.errors.GroupNotFoundError
 
-    print("store")
-    print(store)
-    print(open_kwargs)
-    if consolidated is None:
-        try:
-            zarr_group = zarr.open_consolidated(store, **open_kwargs)
-        except (ValueError, KeyError):
-            # ValueError in zarr-python 3.x, KeyError in 2.x.
+    if consolidated in [None, True]:
+        # open the root of the store, in case there is metadata consolidated there
+        group = open_kwargs.pop("path")
+
+        if consolidated:
+            # TODO: an option to pass the metadata_key keyword
+            zarr_root_group = zarr.open_consolidated(store, **open_kwargs)
+        elif consolidated is None:
+            # same but with more error handling if no consolidated metadata found
             try:
-                zarr_group = zarr.open_group(store, **open_kwargs)
-                emit_user_level_warning(
-                    "Failed to open Zarr store with consolidated metadata, "
-                    "but successfully read with non-consolidated metadata. "
-                    "This is typically much slower for opening a dataset. "
-                    "To silence this warning, consider:\n"
-                    "1. Consolidating metadata in this existing store with "
-                    "zarr.consolidate_metadata().\n"
-                    "2. Explicitly setting consolidated=False, to avoid trying "
-                    "to read consolidate metadata, or\n"
-                    "3. Explicitly setting consolidated=True, to raise an "
-                    "error in this case instead of falling back to try "
-                    "reading non-consolidated metadata.",
-                    RuntimeWarning,
-                )
-            except missing_exc as err:
-                raise FileNotFoundError(
-                    f"No such file or directory: '{store}'"
-                ) from err
-    elif consolidated:
-        # TODO: an option to pass the metadata_key keyword
-        zarr_group = zarr.open_consolidated(store, **open_kwargs)
+                zarr_root_group = zarr.open_consolidated(store, **open_kwargs)
+            except (ValueError, KeyError):
+                # ValueError in zarr-python 3.x, KeyError in 2.x.
+                try:
+                    zarr_root_group = zarr.open_group(store, **open_kwargs)
+                    emit_user_level_warning(
+                        "Failed to open Zarr store with consolidated metadata, "
+                        "but successfully read with non-consolidated metadata. "
+                        "This is typically much slower for opening a dataset. "
+                        "To silence this warning, consider:\n"
+                        "1. Consolidating metadata in this existing store with "
+                        "zarr.consolidate_metadata().\n"
+                        "2. Explicitly setting consolidated=False, to avoid trying "
+                        "to read consolidate metadata, or\n"
+                        "3. Explicitly setting consolidated=True, to raise an "
+                        "error in this case instead of falling back to try "
+                        "reading non-consolidated metadata.",
+                        RuntimeWarning,
+                    )
+                except missing_exc as err:
+                    raise FileNotFoundError(
+                        f"No such file or directory: '{store}'"
+                    ) from err
+        # but the user should still recieve a tree whose root is the group they asked for
+        if group:
+            zarr_group = zarr_root_group[group.removeprefix("/")]
+        else:
+            zarr_group = zarr_root_group
     else:
         if _zarr_v3():
             # we have determined that we don't want to use consolidated metadata
