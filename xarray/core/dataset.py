@@ -9547,6 +9547,26 @@ class Dataset(
                 "Dataset.argmin() with a sequence or ... for dim"
             )
 
+    def argtopk(self, k: int, dim: Hashable | None = None, **kwargs) -> Self:
+        """
+        TODO docstring
+        """
+        from xarray.core.missing import _apply_over_vars_with_dim
+
+        func = duck_array_ops.argtopk
+        new = _apply_over_vars_with_dim(func, self, dim=dim, k=k)
+        return new
+
+    def topk(self, k: int, dim: Hashable | None = None, **kwargs) -> Self:
+        """
+        TODO docstring
+        """
+        from xarray.core.missing import _apply_over_vars_with_dim
+
+        func = duck_array_ops.topk
+        new = _apply_over_vars_with_dim(func, self, dim=dim, k=k)
+        return new
+
     def eval(
         self,
         statement: str,

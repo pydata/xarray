@@ -302,6 +302,59 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
     return coeffs, residuals
 
 
+def topk(values, k: int, axis: int):
+    """Extract the k largest elements from a on the given axis.
+    If k is negative, extract the -k smallest elements instead.
+    The returned elements are sorted.
+    """
+    if axis < 0:
+        axis = values.ndim + axis
+
+    if abs(k) >= values.shape[axis]:
+        b = np.sort(values, axis=axis)
+    else:
+        a = np.partition(values, -k, axis=axis)
+        k_slice = slice(-k, None) if k > 0 else slice(-k)
+        b = a[tuple(k_slice if i == axis else slice(None) for i in range(values.ndim))]
+        b.sort(axis=axis)
+    if k < 0:
+        return b
+    return b[
+        tuple(
+            slice(None, None, -1) if i == axis else slice(None)
+            for i in range(values.ndim)
+        )
+    ]
+
+
+def argtopk(values, k: int, axis: int):
+    """Extract the indices of the k largest elements from a on the given axis.
+    If k is negative, extract the indices of the -k smallest elements instead.
+    The returned elements are argsorted.
+    """
+    if axis < 0:
+        axis = values.ndim + axis
+
+    if abs(k) >= values.shape[axis]:
+        idx3 = np.argsort(values, axis=axis)
+    else:
+        idx = np.argpartition(values, -k, axis=axis)
+        k_slice = slice(-k, None) if k > 0 else slice(-k)
+        idx = idx[
+            tuple(k_slice if i == axis else slice(None) for i in range(values.ndim))
+        ]
+        a = np.take_along_axis(values, idx, axis)
+        idx2 = np.argsort(a, axis=axis)
+        idx3 = np.take_along_axis(idx, idx2, axis)
+    if k < 0:
+        return idx3
+    return idx3[
+        tuple(
+            slice(None, None, -1) if i == axis else slice(None) for i in range(idx.ndim)
+        )
+    ]
+
+
 nanmin = _create_method("nanmin")
 nanmax = _create_method("nanmax")
 nanmean = _create_method("nanmean")

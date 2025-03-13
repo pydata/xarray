@@ -27,7 +27,12 @@ from pandas.api.types import is_extension_array_dtype
 from xarray.core import dask_array_compat, dask_array_ops, dtypes, nputils
 from xarray.core.array_api_compat import get_array_namespace
 from xarray.core.options import OPTIONS
-from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
+from xarray.core.utils import (
+    is_duck_array,
+    is_duck_dask_array,
+    module_available,
+    to_0d_object_array,
+)
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import array_type, is_chunked_array
 
@@ -885,3 +890,74 @@ def chunked_nanfirst(darray, axis):
 
 def chunked_nanlast(darray, axis):
     return _chunked_first_or_last(darray, axis, op=nputils.nanlast)
+
+
+def argtopk(values, k, axis=None, skipna=None):
+    if is_chunked_array(values):
+        func = dask_array_ops.argtopk
+    else:
+        func = nputils.argtopk
+
+    # Borrowed from nanops
+    xp = get_array_namespace(values)
+    if skipna or (
+        skipna is None
+        and (
+            dtypes.isdtype(values.dtype, ("complex floating", "real floating"), xp=xp)
+            or dtypes.is_object(values.dtype)
+        )
+    ):
+        valid_count = count(values, axis=axis)
+
+        if k < 0:
+            fill_value = dtypes.get_pos_infinity(values.dtype)
+        else:
+            fill_value = dtypes.get_neg_infinity(values.dtype)
+
+        filled_values = fillna(values, fill_value)
+    else:
+        return func(values, k=k, axis=axis)
+
+    data = func(filled_values, k=k, axis=axis)
+
+    # TODO This will evaluate dask arrays and might be costly.
+    if array_any(valid_count == 0):
+        raise ValueError("All-NaN slice encountered")
+    return data
+
+
+def topk(values, k, axis=None, skipna=None):
+    if is_chunked_array(values):
+        func = dask_array_ops.topk
+    else:
+        func = nputils.topk
+
+    # Borrowed from nanops
+    xp = get_array_namespace(values)
+    if skipna or (
+        skipna is None
+        and (
+            dtypes.isdtype(values.dtype, ("complex floating", "real floating"), xp=xp)
+            or dtypes.is_object(values.dtype)
+        )
+    ):
+        valid_count = count(values, axis=axis)
+
+        if k < 0:
+            fill_value = dtypes.get_pos_infinity(values.dtype)
+        else:
+            fill_value = dtypes.get_neg_infinity(values.dtype)
+
+        filled_values = fillna(values, fill_value)
+    else:
+        return func(values, k=k, axis=axis)
+
+    data = func(filled_values, k=k, axis=axis)
+
+    if not hasattr(data, "dtype"):  # scalar case
+        data = fill_value if valid_count == 0 else data
+        # we've computed a single min, max value of type object.
+        # don't let np.array turn a tuple back into an array
+        return to_0d_object_array(data)
+
+    return where_method(data, valid_count != 0)
