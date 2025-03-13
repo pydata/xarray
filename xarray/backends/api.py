@@ -1103,6 +1103,7 @@ def open_datatree(
     xarray.open_groups
     xarray.open_dataset
     """
+    print(kwargs)
     if cache is None:
         cache = chunks is None
 
