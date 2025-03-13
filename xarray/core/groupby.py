@@ -524,7 +524,7 @@ class ComposedGrouper:
         # Restore these after the raveling
         broadcasted_masks = broadcast(*masks)
         mask = functools.reduce(np.logical_or, broadcasted_masks)  # type: ignore[arg-type]
-        _flatcodes = where(mask, -1, _flatcodes)
+        _flatcodes = where(mask.data, -1, _flatcodes)
 
         full_index = pd.MultiIndex.from_product(
             (grouper.full_index.values for grouper in groupers),
