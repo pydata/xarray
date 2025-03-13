@@ -224,14 +224,17 @@ def empty_like(a, **kwargs):
     return xp.empty_like(a, **kwargs)
 
 
-def astype(data, dtype, **kwargs):
-    if hasattr(data, "__array_namespace__"):
+def astype(data, dtype, *, xp=None, **kwargs):
+    if not hasattr(data, "__array_namespace__") and xp is None:
+        return data.astype(dtype, **kwargs)
+
+    if xp is None:
         xp = get_array_namespace(data)
-        if xp == np:
-            # numpy currently doesn't have a astype:
-            return data.astype(dtype, **kwargs)
-        return xp.astype(data, dtype, **kwargs)
-    return data.astype(dtype, **kwargs)
+
+    if xp == np:
+        # numpy currently doesn't have a astype:
+        return data.astype(dtype, **kwargs)
+    return xp.astype(data, dtype, **kwargs)
 
 
 def asarray(data, xp=np, dtype=None):
@@ -373,6 +376,13 @@ def sum_where(data, axis=None, dtype=None, where=None):
 def where(condition, x, y):
     """Three argument where() with better dtype promotion rules."""
     xp = get_array_namespace(condition, x, y)
+
+    dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
+    if not is_duck_array(condition):
+        condition = asarray(condition, dtype=dtype, xp=xp)
+    else:
+        condition = astype(condition, dtype=dtype, xp=xp)
+
     return xp.where(condition, *as_shared_dtype([x, y], xp=xp))
 
 
