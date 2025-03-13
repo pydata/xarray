@@ -2628,12 +2628,10 @@ class ZarrBase(CFEncodedBase):
                 for var in expected.variables.keys():
                     assert self.DIMENSION_KEY not in expected[var].attrs
 
-            if has_zarr_v3:
-                # temporary workaround for https://github.com/zarr-developers/zarr-python/issues/2338
-                zarr_group.store._is_open = True
-
             # put it back and try removing from a variable
-            del zarr_group["var2"].attrs[self.DIMENSION_KEY]
+            attrs = dict(zarr_group["var2"].attrs)
+            del attrs[self.DIMENSION_KEY]
+            zarr_group["var2"].attrs.put(attrs)
 
             with pytest.raises(KeyError):
                 with xr.decode_cf(store):
