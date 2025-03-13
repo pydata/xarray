@@ -1012,8 +1012,8 @@ def explicit_indexing_adapter(
     raw_key, numpy_indices = decompose_indexer(key, shape, indexing_support)
     result = raw_indexing_method(raw_key.tuple)
     if numpy_indices.tuple:
-        # index the loaded np.ndarray
-        indexable = NumpyIndexingAdapter(result)
+        # index the loaded duck array
+        indexable = as_indexable(result)
         result = apply_indexer(indexable, numpy_indices)
     return result
 
