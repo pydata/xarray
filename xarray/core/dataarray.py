@@ -131,25 +131,25 @@ if TYPE_CHECKING:
 
 
 def _check_coords_dims(
-    shape: tuple[int, ...], coords: Coordinates, dims: tuple[Hashable, ...]
+    shape: tuple[int, ...], coords: Coordinates, dim: tuple[Hashable, ...]
 ):
-    sizes = dict(zip(dims, shape, strict=True))
+    sizes = dict(zip(dim, shape, strict=True))
     extra_index_dims: set[str] = set()
 
     for k, v in coords.items():
-        if any(d not in dims for d in v.dims):
+        if any(d not in dim for d in v.dims):
             # allow any coordinate associated with an index that shares at least
             # one of dataarray's dimensions
             indexes = coords.xindexes
             if k in indexes:
                 index_dims = indexes.get_all_dims(k)
-                if any(d in dims for d in index_dims):
-                    extra_index_dims.update(d for d in v.dims if d not in dims)
+                if any(d in dim for d in index_dims):
+                    extra_index_dims.update(d for d in v.dims if d not in dim)
                     continue
             raise ValueError(
                 f"coordinate {k} has dimensions {v.dims}, but these "
                 "are not a subset of the DataArray "
-                f"dimensions {dims}"
+                f"dimensions {dim}"
             )
 
         for d, s in v.sizes.items():
