@@ -5,7 +5,7 @@ import operator
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, cast, get_args, overload
 
 import numpy as np
 import pandas as pd
@@ -19,7 +19,7 @@ from xarray.core.indexes import (
     indexes_all_equal,
     safe_cast_to_index,
 )
-from xarray.core.types import T_Alignable
+from xarray.core.types import JoinOptions, T_Alignable
 from xarray.core.utils import emit_user_level_warning, is_dict_like, is_full_slice
 from xarray.core.variable import Variable, as_compatible_data, calculate_dimensions
 from xarray.util.deprecation_helpers import CombineKwargDefault
@@ -113,7 +113,7 @@ class Aligner(Generic[T_Alignable]):
     objects: tuple[T_Alignable, ...]
     results: tuple[T_Alignable, ...]
     objects_matching_indexes: tuple[dict[MatchingIndexKey, Index], ...]
-    join: str | CombineKwargDefault
+    join: JoinOptions | CombineKwargDefault
     exclude_dims: frozenset[Hashable]
     exclude_vars: frozenset[Hashable]
     copy: bool
@@ -133,7 +133,7 @@ class Aligner(Generic[T_Alignable]):
     def __init__(
         self,
         objects: Iterable[T_Alignable],
-        join: str | CombineKwargDefault = "inner",
+        join: JoinOptions | CombineKwargDefault = "inner",
         indexes: Mapping[Any, Any] | None = None,
         exclude_dims: str | Iterable[Hashable] = frozenset(),
         exclude_vars: Iterable[Hashable] = frozenset(),
@@ -146,14 +146,9 @@ class Aligner(Generic[T_Alignable]):
         self.objects = tuple(objects)
         self.objects_matching_indexes = ()
 
-        if not isinstance(join, CombineKwargDefault) and join not in [
-            "inner",
-            "outer",
-            "override",
-            "exact",
-            "left",
-            "right",
-        ]:
+        if not isinstance(join, CombineKwargDefault) and join not in get_args(
+            JoinOptions
+        ):
             raise ValueError(f"invalid value for join: {join}")
         self.join = join
 
