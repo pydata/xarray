@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Iterable
-from typing import Any, Literal, get_args, overload
+from typing import TYPE_CHECKING, Any, Union, overload
 
 import numpy as np
 import pandas as pd
@@ -12,18 +12,12 @@ from xarray.core.coordinates import Coordinates
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.merge import (
+    _VALID_COMPAT,
     collect_variables_and_indexes,
     merge_attrs,
     merge_collected,
 )
-from xarray.core.types import (
-    CombineAttrsOptions,
-    ConcatOptions,
-    JoinOptions,
-    T_DataArray,
-    T_Dataset,
-    T_Variable,
-)
+from xarray.core.types import T_DataArray, T_Dataset, T_Variable
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
 from xarray.core.variable import concat as concat_vars
@@ -35,10 +29,15 @@ from xarray.util.deprecation_helpers import (
     CombineKwargDefault,
 )
 
-T_DataVars = ConcatOptions | Iterable[Hashable]
-CompatOptions = Literal[
-    "identical", "equals", "broadcast_equals", "no_conflicts", "override"
-]
+if TYPE_CHECKING:
+    from xarray.core.types import (
+        CombineAttrsOptions,
+        CompatOptions,
+        ConcatOptions,
+        JoinOptions,
+    )
+
+    T_DataVars = Union[ConcatOptions, Iterable[Hashable]]
 
 
 # TODO: replace dim: Any by 1D array_likes
@@ -268,11 +267,11 @@ def concat(
     except StopIteration as err:
         raise ValueError("must supply at least one object to concatenate") from err
 
-    if not isinstance(compat, CombineKwargDefault) and compat not in get_args(
-        CompatOptions
-    ):
+    if not isinstance(compat, CombineKwargDefault) and compat not in set(
+        _VALID_COMPAT
+    ) - {"minimal"}:
         raise ValueError(
-            f"compat={compat!r} invalid: valid options: {get_args(CompatOptions)}"
+            f"compat={compat!r} invalid: must be 'broadcast_equals', 'equals', 'identical', 'no_conflicts' or 'override'"
         )
 
     if isinstance(first_obj, DataArray):
