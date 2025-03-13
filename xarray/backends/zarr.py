@@ -690,7 +690,7 @@ class ZarrStore(AbstractWritableDataStore):
                 rel_path = path.removeprefix(f"{group}/")
                 print("rel_path", rel_path)
                 print('changing')
-                group_members[path] = zarr_group[rel_path]
+                group_members[path] = zarr_group[rel_path.removeprefix('/')]
         print(group_members)
 
         for group, group_store in group_members.items():
@@ -1832,7 +1832,10 @@ def _get_open_params(
                         f"No such file or directory: '{store}'"
                     ) from err
         # but the user should still recieve a tree whose root is the group they asked for
-        if group:
+        if group and group != "/":
+            print(group)
+            print(zarr_root_group)
+            print(list(zarr_root_group.keys()))
             zarr_group = zarr_root_group[group.removeprefix("/")]
         else:
             zarr_group = zarr_root_group
