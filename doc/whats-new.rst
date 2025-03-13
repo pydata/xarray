@@ -34,6 +34,9 @@ New Features
   By `Benoit Bovy <https://github.com/benbovy>`_.
 - Support reading to `GPU memory with Zarr <https://zarr.readthedocs.io/en/stable/user-guide/gpu.html>`_ (:pull:`10078`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Allow assigning index coordinates with non-array dimension(s) in a :py:class:`DataArray`, enabling
+  support for CF boundaries coordinate (e.g., ``time(time)`` and ``time_bnds(time, nbnd)``) in a DataArray (:pull:`10116`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
