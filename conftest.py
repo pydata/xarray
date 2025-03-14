@@ -22,7 +22,9 @@ def pytest_runtest_setup(item):
         pytest.skip(
             "set --run-network-tests to run test requiring an internet connection"
         )
-    if "mypy" in item.keywords and not item.config.getoption("--run-mypy"):
+    if any("mypy" in m.name for m in item.own_markers) and not item.config.getoption(
+        "--run-mypy"
+    ):
         pytest.skip("set --run-mypy option to run mypy tests")
 
 
