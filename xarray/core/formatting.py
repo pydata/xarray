@@ -429,7 +429,7 @@ def coords_repr(coords: AbstractCoordinates, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(coords)
     return _mapping_repr(
-        coords,
+        coords.variables,
         title="Coordinates",
         summarizer=summarize_variable,
         expand_option_name="display_expand_coords",
@@ -743,7 +743,9 @@ def dataset_repr(ds):
     if unindexed_dims_str:
         summary.append(unindexed_dims_str)
 
-    summary.append(data_vars_repr(ds.data_vars, col_width=col_width, max_rows=max_rows))
+    summary.append(
+        data_vars_repr(ds.data_vars.variables, col_width=col_width, max_rows=max_rows)
+    )
 
     display_default_indexes = _get_boolean_with_default(
         "display_default_indexes", False

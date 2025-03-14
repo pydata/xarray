@@ -113,10 +113,11 @@ def summarize_variable(name, var, is_index=False, dtype=None) -> str:
     )
 
 
-def summarize_coords(variables) -> str:
+def summarize_coords(coords) -> str:
     li_items = []
-    for k, v in variables.items():
-        li_content = summarize_variable(k, v, is_index=k in variables.xindexes)
+    indexes = coords.xindexes
+    for k, v in coords.variables.items():
+        li_content = summarize_variable(k, v, is_index=k in indexes)
         li_items.append(f"<li class='xr-var-item'>{li_content}</li>")
 
     vars_li = "".join(li_items)
@@ -339,7 +340,7 @@ def dataset_repr(ds) -> str:
     sections = [
         dim_section(ds),
         coord_section(ds.coords),
-        datavar_section(ds.data_vars),
+        datavar_section(ds.data_vars.variables),
         index_section(_get_indexes_dict(ds.xindexes)),
         attr_section(ds.attrs),
     ]
@@ -415,7 +416,7 @@ def datatree_node_repr(group_title: str, node: DataTree, show_inherited=False) -
         sections.append(inherited_coord_section(inherited_coords))
 
     sections += [
-        datavar_section(ds.data_vars),
+        datavar_section(ds.data_vars.variables),
         attr_section(ds.attrs),
     ]
 
