@@ -76,7 +76,6 @@ dev = [
   "sphinx",
   "sphinx_autosummary_accessors",
   "xarray[complete,types]",
-
 ]
 
 [project.urls]
