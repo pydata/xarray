@@ -2923,10 +2923,7 @@ class TestDataset:
         assert_identical(actual, ds)
 
         # test index corrupted
-
-        # FYI this requires a `type: ignore[list-item]` in one environment, but not CI
-        # (remove this comment if it doesn't flare up again)
-        midx = pd.MultiIndex.from_tuples([[1, 2], [3, 4]], names=["a", "b"])
+        midx = pd.MultiIndex.from_tuples([(1, 2), (3, 4)], names=["a", "b"])
         midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         ds = Dataset(coords=midx_coords)
 
