@@ -5991,9 +5991,9 @@ class DataArray(
         """
         # Check if dim is multi-dimensional (either ellipsis or a sequence, not a string or tuple)
         # This is the same check pattern used in argmin to ensure consistent behavior
-        if (dim is ... or (isinstance(dim, Iterable) and not isinstance(dim, str))) and not isinstance(
-            dim, tuple
-        ):
+        if (
+            dim is ... or (isinstance(dim, Iterable) and not isinstance(dim, str))
+        ) and not isinstance(dim, tuple):
             # For multiple dimensions, process each dimension separately
             # This matches the behavior pattern of argmin when given multiple dimensions,
             # but returns coordinate labels instead of indices
@@ -6118,9 +6118,9 @@ class DataArray(
         """
         # Check if dim is multi-dimensional (either ellipsis or a sequence, not a string or tuple)
         # This is the same check pattern used in argmax to ensure consistent behavior
-        if (dim is ... or (isinstance(dim, Iterable) and not isinstance(dim, str))) and not isinstance(
-            dim, tuple
-        ):
+        if (
+            dim is ... or (isinstance(dim, Iterable) and not isinstance(dim, str))
+        ) and not isinstance(dim, tuple):
             # For multiple dimensions, process each dimension separately
             # This matches the behavior pattern of argmax when given multiple dimensions,
             # but returns coordinate labels instead of indices
