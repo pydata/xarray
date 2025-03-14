@@ -55,6 +55,7 @@ types = [
   "types-pexpect",
   "types-psutil",
   "types-pycurl",
+  "types-openpyxl",
   "types-python-dateutil",
   "types-pytz",
   "types-setuptools",
