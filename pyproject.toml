@@ -30,22 +30,6 @@ dependencies = ["numpy>=1.24", "packaging>=23.2", "pandas>=2.1"]
 [project.optional-dependencies]
 accel = ["scipy", "bottleneck", "numbagg", "numba>=0.54", "flox", "opt_einsum"]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
-dev = [
-  "hypothesis",
-  "jinja2",
-  "mypy",
-  "pre-commit",
-  "pytest",
-  "pytest-cov",
-  "pytest-env",
-  "pytest-mypy-plugins",
-  "pytest-timeout",
-  "pytest-xdist",
-  "ruff>=0.8.0",
-  "sphinx",
-  "sphinx_autosummary_accessors",
-  "xarray[complete,types]",
-]
 io = [
   "netCDF4",
   "h5netcdf",
@@ -74,6 +58,25 @@ types = [
   "types-python-dateutil",
   "types-pytz",
   "types-setuptools",
+]
+
+[dependency-groups]
+dev = [
+  "hypothesis",
+  "jinja2",
+  "mypy",
+  "pre-commit",
+  "pytest",
+  "pytest-cov",
+  "pytest-env",
+  "pytest-mypy-plugins",
+  "pytest-timeout",
+  "pytest-xdist",
+  "ruff>=0.8.0",
+  "sphinx",
+  "sphinx_autosummary_accessors",
+  "xarray[complete,types]",
+
 ]
 
 [project.urls]
