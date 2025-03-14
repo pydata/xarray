@@ -546,11 +546,7 @@ class TestDataArray:
 
         actual = DataArray([1.0, 2.0], coords=coords, dims="x")
 
-        # cannot use `assert_identical()` test utility function here yet
-        # (indexes invariant check is still based on IndexVariable, which
-        # doesn't work with AnyIndex coordinate variables here)
-        assert actual.coords.to_dataset().equals(coords.to_dataset())
-        assert list(actual.coords.xindexes) == list(coords.xindexes)
+        assert_identical(actual.coords, coords, check_default_indexes=False)
         assert "x_bnds" not in actual.dims
 
     def test_equals_and_identical(self) -> None:
@@ -1676,11 +1672,7 @@ class TestDataArray:
         da = DataArray([1.0, 2.0], dims="x")
         actual = da.assign_coords(coords)
 
-        # cannot use `assert_identical()` test utility function here yet
-        # (indexes invariant check is still based on IndexVariable, which
-        # doesn't work with AnyIndex coordinate variables here)
-        assert actual.coords.to_dataset().equals(coords.to_dataset())
-        assert list(actual.coords.xindexes) == list(coords.xindexes)
+        assert_identical(actual.coords, coords, check_default_indexes=False)
         assert "x_bnds" not in actual.dims
 
     def test_coords_alignment(self) -> None:
