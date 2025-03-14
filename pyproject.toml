@@ -76,7 +76,6 @@ dev = [
   "sphinx",
   "sphinx_autosummary_accessors",
   "xarray[complete,types]",
-
 ]
 
 [project.urls]
@@ -362,7 +361,7 @@ markers = [
   "slow_hypothesis: slow hypothesis tests",
 ]
 minversion = "7"
-python_files = "test_*.py"
+python_files = ["test_*.py"]
 testpaths = ["xarray/tests", "properties"]
 
 [tool.aliases]
