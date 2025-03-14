@@ -2923,7 +2923,7 @@ class TestDataset:
         assert_identical(actual, ds)
 
         # test index corrupted
-        midx = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
+        midx = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])  # type: ignore[list-item]
         midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         ds = Dataset(coords=midx_coords)
 
@@ -3219,7 +3219,7 @@ class TestDataset:
             ds.rename(x="x")
 
     def test_rename_multiindex(self) -> None:
-        midx = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
+        midx = pd.MultiIndex.from_tuples([(1, 2), (3, 4)], names=["a", "b"])
         midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         original = Dataset({}, midx_coords)
 
