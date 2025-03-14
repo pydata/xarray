@@ -5575,6 +5575,22 @@ class TestReduce2D(TestReduce):
             ar0 = ar0_raw.chunk({})
         else:
             ar0 = ar0_raw
+            
+        # Test multi-dimensional idxmin
+        if not np.isnan(minindex).any():
+            # Get the indices for the minimum values along both dimensions
+            idx_y = ar0.argmin(dim="x")
+            idx_x = ar0.argmin(dim="y")
+            
+            # Get the coordinate labels for these minimum values using idxmin
+            idxmin_result = ar0.idxmin(dim=["x", "y"])
+            
+            # Verify we have the expected keys in the result dictionary
+            assert set(idxmin_result.keys()) == {"x", "y"}
+            
+            # Verify the values match what we'd expect from individually applying idxmin
+            assert_identical(idxmin_result["x"], ar0.idxmin(dim="x"))
+            assert_identical(idxmin_result["y"], ar0.idxmin(dim="y"))
 
         assert_identical(ar0, ar0)
 
@@ -5716,6 +5732,22 @@ class TestReduce2D(TestReduce):
             ar0 = ar0_raw.chunk({})
         else:
             ar0 = ar0_raw
+            
+        # Test multi-dimensional idxmax
+        if not np.isnan(maxindex).any():
+            # Get the indices for the maximum values along both dimensions
+            idx_y = ar0.argmax(dim="x")
+            idx_x = ar0.argmax(dim="y")
+            
+            # Get the coordinate labels for these maximum values using idxmax
+            idxmax_result = ar0.idxmax(dim=["x", "y"])
+            
+            # Verify we have the expected keys in the result dictionary
+            assert set(idxmax_result.keys()) == {"x", "y"}
+            
+            # Verify the values match what we'd expect from individually applying idxmax
+            assert_identical(idxmax_result["x"], ar0.idxmax(dim="x"))
+            assert_identical(idxmax_result["y"], ar0.idxmax(dim="y"))
 
         # No dimension specified
         with pytest.raises(ValueError):

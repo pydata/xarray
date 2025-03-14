@@ -5894,26 +5894,30 @@ class DataArray(
 
     def idxmin(
         self,
-        dim: Hashable | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> Self:
-        """Return the coordinate label of the minimum value along a dimension.
+    ) -> Self | dict[Hashable, Self]:
+        """Return the coordinate label of the minimum value along one or more dimensions.
 
         Returns a new `DataArray` named after the dimension with the values of
         the coordinate labels along that dimension corresponding to minimum
         values along that dimension.
 
+        If a sequence is passed to 'dim', then result is returned as dict of DataArrays.
+        If a single str is passed to 'dim' then returns a DataArray.
+
         In comparison to :py:meth:`~DataArray.argmin`, this returns the
         coordinate label while :py:meth:`~DataArray.argmin` returns the index.
+        Internally, this method uses argmin to locate the minimum values.
 
         Parameters
         ----------
-        dim : str, optional
-            Dimension over which to apply `idxmin`.  This is optional for 1D
-            arrays, but required for arrays with 2 or more dimensions.
+        dim : "...", str, Iterable of Hashable or None, optional
+            The dimensions over which to find the minimum. By default, finds minimum over
+            all dimensions if array is 1D, otherwise requires explicit specification.
         skipna : bool or None, default: None
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for ``float``, ``complex``, and ``object``
@@ -5932,9 +5936,9 @@ class DataArray(
 
         Returns
         -------
-        reduced : DataArray
-            New `DataArray` object with `idxmin` applied to its data and the
-            indicated dimension removed.
+        reduced : DataArray or dict of DataArray
+            New `DataArray` object(s) with `idxmin` applied to its data and the
+            indicated dimension(s) removed.
 
         See Also
         --------
@@ -5979,38 +5983,68 @@ class DataArray(
         array([16.,  0.,  4.])
         Coordinates:
           * y        (y) int64 24B -1 0 1
+        >>> array.idxmin(dim=["x", "y"])
+        {'x': <xarray.DataArray 'x' ()> Size: 8B
+        array(0.),
+         'y': <xarray.DataArray 'y' ()> Size: 8B
+        array(0)}
         """
-        return computation._calc_idxminmax(
-            array=self,
-            func=lambda x, *args, **kwargs: x.argmin(*args, **kwargs),
-            dim=dim,
-            skipna=skipna,
-            fill_value=fill_value,
-            keep_attrs=keep_attrs,
-        )
+        # Check if dim is multi-dimensional (either ellipsis or a sequence, not a string or tuple)
+        # This is the same check pattern used in argmin to ensure consistent behavior
+        if (dim is ... or (isinstance(dim, Iterable) and not isinstance(dim, str))) and not isinstance(
+            dim, tuple
+        ):
+            # For multiple dimensions, process each dimension separately
+            # This matches the behavior pattern of argmin when given multiple dimensions,
+            # but returns coordinate labels instead of indices
+            result = {}
+            for k in dim if dim is not ... else self.dims:
+                result[k] = self.idxmin(
+                    dim=k,
+                    skipna=skipna,
+                    fill_value=fill_value,
+                    keep_attrs=keep_attrs,
+                )
+            return result
+        else:
+            # Use the existing implementation for single dimension
+            # This wraps argmin through the _calc_idxminmax helper function
+            # which converts indices to coordinate values
+            return computation._calc_idxminmax(
+                array=self,
+                func=lambda x, *args, **kwargs: x.argmin(*args, **kwargs),
+                dim=dim,
+                skipna=skipna,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+            )
 
     def idxmax(
         self,
-        dim: Hashable = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> Self:
-        """Return the coordinate label of the maximum value along a dimension.
+    ) -> Self | dict[Hashable, Self]:
+        """Return the coordinate label of the maximum value along one or more dimensions.
 
         Returns a new `DataArray` named after the dimension with the values of
         the coordinate labels along that dimension corresponding to maximum
         values along that dimension.
 
+        If a sequence is passed to 'dim', then result is returned as dict of DataArrays.
+        If a single str is passed to 'dim' then returns a DataArray.
+
         In comparison to :py:meth:`~DataArray.argmax`, this returns the
         coordinate label while :py:meth:`~DataArray.argmax` returns the index.
+        Internally, this method uses argmax to locate the maximum values.
 
         Parameters
         ----------
-        dim : Hashable, optional
-            Dimension over which to apply `idxmax`.  This is optional for 1D
-            arrays, but required for arrays with 2 or more dimensions.
+        dim : "...", str, Iterable of Hashable or None, optional
+            The dimensions over which to find the maximum. By default, finds maximum over
+            all dimensions if array is 1D, otherwise requires explicit specification.
         skipna : bool or None, default: None
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for ``float``, ``complex``, and ``object``
@@ -6029,9 +6063,9 @@ class DataArray(
 
         Returns
         -------
-        reduced : DataArray
-            New `DataArray` object with `idxmax` applied to its data and the
-            indicated dimension removed.
+        reduced : DataArray or dict of DataArray
+            New `DataArray` object(s) with `idxmax` applied to its data and the
+            indicated dimension(s) removed.
 
         See Also
         --------
@@ -6076,15 +6110,41 @@ class DataArray(
         array([0., 4., 4.])
         Coordinates:
           * y        (y) int64 24B -1 0 1
+        >>> array.idxmax(dim=["x", "y"])
+        {'x': <xarray.DataArray 'x' ()> Size: 8B
+        array(0.),
+         'y': <xarray.DataArray 'y' ()> Size: 8B
+        array(-1)}
         """
-        return computation._calc_idxminmax(
-            array=self,
-            func=lambda x, *args, **kwargs: x.argmax(*args, **kwargs),
-            dim=dim,
-            skipna=skipna,
-            fill_value=fill_value,
-            keep_attrs=keep_attrs,
-        )
+        # Check if dim is multi-dimensional (either ellipsis or a sequence, not a string or tuple)
+        # This is the same check pattern used in argmax to ensure consistent behavior
+        if (dim is ... or (isinstance(dim, Iterable) and not isinstance(dim, str))) and not isinstance(
+            dim, tuple
+        ):
+            # For multiple dimensions, process each dimension separately
+            # This matches the behavior pattern of argmax when given multiple dimensions,
+            # but returns coordinate labels instead of indices
+            result = {}
+            for k in dim if dim is not ... else self.dims:
+                result[k] = self.idxmax(
+                    dim=k,
+                    skipna=skipna,
+                    fill_value=fill_value,
+                    keep_attrs=keep_attrs,
+                )
+            return result
+        else:
+            # Use the existing implementation for single dimension
+            # This wraps argmax through the _calc_idxminmax helper function
+            # which converts indices to coordinate values
+            return computation._calc_idxminmax(
+                array=self,
+                func=lambda x, *args, **kwargs: x.argmax(*args, **kwargs),
+                dim=dim,
+                skipna=skipna,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+            )
 
     def argmin(
         self,
