@@ -177,13 +177,13 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
 
                 # compute the cartesian product
                 code_list += [
-                    np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i])
+                    np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i]).tolist()
                     for code in codes
                 ]
                 level_list += levels
                 names += index.names
 
-        return pd.MultiIndex(level_list, code_list, names=names)
+        return pd.MultiIndex(levels=level_list, codes=code_list, names=names)
 
 
 class Coordinates(AbstractCoordinates):
