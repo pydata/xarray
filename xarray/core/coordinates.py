@@ -966,27 +966,18 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
     def _update_coords(
         self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
     ) -> None:
+        from xarray.core.dataarray import check_dataarray_coords
+
         coords_plus_data = coords.copy()
         coords_plus_data[_THIS_ARRAY] = self._data.variable
-        dims = calculate_dimensions(coords_plus_data)
+        coords_dims = set(calculate_dimensions(coords_plus_data))
+        obj_dims = set(self.dims)
 
-        if set(dims) > set(self.dims):
-            for k, v in coords.items():
-                if any(d not in self.dims for d in v.dims):
-                    # allow any coordinate associated with an index that shares at least
-                    # one of dataarray's dimensions
-                    temp_indexes = Indexes(
-                        indexes, {k: v for k, v in coords.items() if k in indexes}
-                    )
-                    if k in indexes:
-                        index_dims = temp_indexes.get_all_dims(k)
-                        if any(d in self.dims for d in index_dims):
-                            continue
-                    raise ValueError(
-                        f"coordinate {k} has dimensions {v.dims}, but these "
-                        "are not a subset of the DataArray "
-                        f"dimensions {self.dims}"
-                    )
+        if coords_dims > obj_dims:
+            # need more checks
+            check_dataarray_coords(
+                self._data.shape, Coordinates(coords, indexes), self.dims
+            )
 
         self._data._coords = coords
         self._data._indexes = indexes

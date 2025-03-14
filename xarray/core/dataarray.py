@@ -130,34 +130,59 @@ if TYPE_CHECKING:
     T_XarrayOther = TypeVar("T_XarrayOther", bound="DataArray" | Dataset)
 
 
-def _check_coords_dims(
-    shape: tuple[int, ...], coords: Coordinates, dim: tuple[Hashable, ...]
+def check_dataarray_coords(
+    shape: tuple[int, ...], coords: Coordinates, dims: tuple[Hashable, ...]
 ):
-    sizes = dict(zip(dim, shape, strict=True))
-    extra_index_dims: set[str] = set()
+    """Check that ``coords`` dimension names and sizes do not conflict with
+    array ``shape`` and dimensions ``dims``.
 
-    for k, v in coords.items():
-        if any(d not in dim for d in v.dims):
-            # allow any coordinate associated with an index that shares at least
-            # one of dataarray's dimensions
-            indexes = coords.xindexes
-            if k in indexes:
-                index_dims = indexes.get_all_dims(k)
-                if any(d in dim for d in index_dims):
-                    extra_index_dims.update(d for d in v.dims if d not in dim)
-                    continue
+    If a coordinate is associated with an index, the coordinate may have any
+    arbitrary dimension(s) as long as the index's dimensions (i.e., the union of
+    the dimensions of all coordinates associated with this index) intersects the
+    array dimensions.
+
+    If a coordinate has no index, then its dimensions much match (or be a subset
+    of) the array dimensions. Scalar coordinates are also allowed.
+
+    """
+    indexes = coords.xindexes
+    skip_check_coord_name: set[Hashable] = set()
+    skip_check_dim_size: set[Hashable] = set()
+
+    # check dimension names
+    for name, var in coords.items():
+        if name in skip_check_coord_name:
+            continue
+        elif name in indexes:
+            index_dims = indexes.get_all_dims(name)
+            if any(d in dims for d in index_dims):
+                # can safely skip checking index's non-array dimensions
+                # and index's other coordinates since those must be all
+                # included in the dataarray so the index is not corrupted
+                skip_check_coord_name.update(indexes.get_all_coords(name))
+                skip_check_dim_size.update(d for d in index_dims if d not in dims)
+                raise_error = False
+            else:
+                raise_error = True
+        else:
+            raise_error = any(d not in dims for d in var.dims)
+        if raise_error:
             raise ValueError(
-                f"coordinate {k} has dimensions {v.dims}, but these "
+                f"coordinate {name} has dimensions {var.dims}, but these "
                 "are not a subset of the DataArray "
-                f"dimensions {dim}"
+                f"dimensions {dims}"
             )
 
-        for d, s in v.sizes.items():
-            if d not in extra_index_dims and s != sizes[d]:
+    # check dimension sizes
+    sizes = dict(zip(dims, shape, strict=True))
+
+    for name, var in coords.items():
+        for d, s in var.sizes.items():
+            if d not in skip_check_dim_size and s != sizes[d]:
                 raise ValueError(
                     f"conflicting sizes for dimension {d!r}: "
                     f"length {sizes[d]} on the data but length {s} on "
-                    f"coordinate {k!r}"
+                    f"coordinate {name!r}"
                 )
 
 
@@ -497,7 +522,7 @@ class DataArray(
 
             if not isinstance(coords, Coordinates):
                 coords = create_coords_with_default_indexes(coords)
-            _check_coords_dims(data.shape, coords, dims)
+            check_dataarray_coords(data.shape, coords, dims)
             indexes = dict(coords.xindexes)
             coords = {k: v.copy() for k, v in coords.variables.items()}
 
