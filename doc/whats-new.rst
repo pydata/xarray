@@ -34,6 +34,14 @@ New Features
   By `Benoit Bovy <https://github.com/benbovy>`_.
 - Support reading to `GPU memory with Zarr <https://zarr.readthedocs.io/en/stable/user-guide/gpu.html>`_ (:pull:`10078`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- If not set to be encoded via the existing
+  :py:class:`coders.CFTimedeltaCoder`, automatically encode
+  :py:class:`numpy.timedelta64` values by converting to :py:class:`numpy.int64`
+  values and storing ``"dtype"`` and ``"units"`` attributes. Unlike those coded
+  through the :py:class:`coders.CFTimedeltaCoder`, these values will
+  always be decoded without a warning moving forward (:issue:`1621`,
+  :issue:`10099`, :pull:`10101`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
