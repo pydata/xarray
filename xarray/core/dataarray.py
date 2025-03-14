@@ -5989,8 +5989,10 @@ class DataArray(
          'y': <xarray.DataArray 'y' ()> Size: 8B
         array(0)}
         """
-        # Check if dim is multi-dimensional (either ellipsis or a sequence, not a string or tuple)
-        # This is the same check pattern used in argmin to ensure consistent behavior
+        # Check if dim is multi-dimensional
+        # TODO: resolve how we're checking for singular dims; we seem to have a few
+        # different ways through the codebase. This is reflected in requiring some mypy
+        # ignores for some corner cases.
         if (
             dim is ... or (isinstance(dim, Iterable) and not isinstance(dim, str))
         ) and not isinstance(dim, tuple):
@@ -6000,12 +6002,12 @@ class DataArray(
             result = {}
             for k in dim if dim is not ... else self.dims:
                 result[k] = self.idxmin(
-                    dim=k,
+                    dim=k,  # type: ignore[arg-type] # k is Hashable from self.dims
                     skipna=skipna,
                     fill_value=fill_value,
                     keep_attrs=keep_attrs,
                 )
-            return result
+            return result  # type: ignore[return-value]
         else:
             # Use the existing implementation for single dimension
             # This wraps argmin through the _calc_idxminmax helper function
@@ -6116,27 +6118,20 @@ class DataArray(
          'y': <xarray.DataArray 'y' ()> Size: 8B
         array(-1)}
         """
-        # Check if dim is multi-dimensional (either ellipsis or a sequence, not a string or tuple)
-        # This is the same check pattern used in argmax to ensure consistent behavior
+        # Copy/paste from idxmin; comments are there
         if (
             dim is ... or (isinstance(dim, Iterable) and not isinstance(dim, str))
         ) and not isinstance(dim, tuple):
-            # For multiple dimensions, process each dimension separately
-            # This matches the behavior pattern of argmax when given multiple dimensions,
-            # but returns coordinate labels instead of indices
             result = {}
             for k in dim if dim is not ... else self.dims:
                 result[k] = self.idxmax(
-                    dim=k,
+                    dim=k,  # type: ignore[arg-type] # k is Hashable from self.dims
                     skipna=skipna,
                     fill_value=fill_value,
                     keep_attrs=keep_attrs,
                 )
-            return result
+            return result  # type: ignore[return-value]
         else:
-            # Use the existing implementation for single dimension
-            # This wraps argmax through the _calc_idxminmax helper function
-            # which converts indices to coordinate values
             return computation._calc_idxminmax(
                 array=self,
                 func=lambda x, *args, **kwargs: x.argmax(*args, **kwargs),
