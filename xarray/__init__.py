@@ -15,8 +15,10 @@ from xarray.backends.zarr import open_zarr
 from xarray.coding.cftime_offsets import cftime_range, date_range, date_range_like
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.frequencies import infer_freq
-from xarray.computation.computation import (
+from xarray.computation.apply_ufunc import (
     apply_ufunc,
+)
+from xarray.computation.computation import (
     corr,
     cov,
     cross,

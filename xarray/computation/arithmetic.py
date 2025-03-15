@@ -42,7 +42,7 @@ class SupportsArithmetic:
     )
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        from xarray.computation.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
 
         # See the docstring example for numpy.lib.mixins.NDArrayOperatorsMixin.
         out = kwargs.get("out", ())

@@ -144,7 +144,7 @@ def fillna(data, other, join="left", dataset_join="left"):
         - "left": take only variables from the first object
         - "right": take only variables from the last object
     """
-    from xarray.computation.computation import apply_ufunc
+    from xarray.computation.apply_ufunc import apply_ufunc
 
     return apply_ufunc(
         duck_array_ops.fillna,
@@ -174,7 +174,7 @@ def where_method(self, cond, other=dtypes.NA):  # type: ignore[has-type]
     -------
     Same type as caller.
     """
-    from xarray.computation.computation import apply_ufunc
+    from xarray.computation.apply_ufunc import apply_ufunc
 
     # alignment for three arguments is complicated, so don't support it yet
     join: Literal["inner", "exact"] = "inner" if other is dtypes.NA else "exact"

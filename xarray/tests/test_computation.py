@@ -10,7 +10,7 @@ import pytest
 from numpy.testing import assert_allclose, assert_array_equal
 
 import xarray as xr
-from xarray.computation.computation import (
+from xarray.computation.apply_ufunc import (
     _UFuncSignature,
     apply_ufunc,
     broadcast_compat_data,
@@ -18,10 +18,10 @@ from xarray.computation.computation import (
     join_dict_keys,
     ordered_set_intersection,
     ordered_set_union,
-    result_name,
     unified_dim_sizes,
 )
 from xarray.core.alignment import broadcast
+from xarray.core.utils import result_name
 from xarray.tests import (
     has_dask,
     raise_if_dask_computes,
