@@ -6,12 +6,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray.core.alignment import align
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex
 from xarray.core.variable import IndexVariable, Variable
+from xarray.structure.alignment import align
 from xarray.tests import assert_identical, source_ndarray
 
 

@@ -15,7 +15,7 @@ from xarray import (
     merge,
 )
 from xarray.core import dtypes
-from xarray.core.combine import (
+from xarray.structure.combine import (
     _check_shape_tile_ids,
     _combine_all_along_first_dim,
     _combine_nd,

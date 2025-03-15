@@ -38,7 +38,6 @@ from numpy.typing import ArrayLike
 
 if TYPE_CHECKING:
     from xarray.backends.common import BackendEntrypoint
-    from xarray.core.alignment import Aligner
     from xarray.core.common import AbstractArray, DataWithCoords
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
@@ -48,6 +47,7 @@ if TYPE_CHECKING:
     from xarray.core.utils import Frozen
     from xarray.core.variable import IndexVariable, Variable
     from xarray.groupers import Grouper, TimeResampler
+    from xarray.structure.alignment import Aligner
 
     GroupInput: TypeAlias = (
         str
@@ -141,7 +141,7 @@ class Alignable(Protocol):
 
     def _reindex_callback(
         self,
-        aligner: Aligner,
+        aligner: Any,
         dim_pos_indexers: dict[Hashable, Any],
         variables: dict[Hashable, Variable],
         indexes: dict[Hashable, Index],
@@ -167,6 +167,7 @@ class Alignable(Protocol):
 
 
 T_Alignable = TypeVar("T_Alignable", bound="Alignable")
+T_Aligner = TypeVar("T_Aligner", bound="Aligner")
 
 T_Backend = TypeVar("T_Backend", bound="BackendEntrypoint")
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")

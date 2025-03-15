@@ -9,9 +9,10 @@ import pandas as pd
 import pytest
 
 from xarray import DataArray, Dataset, Variable, concat
-from xarray.core import dtypes, merge
+from xarray.core import dtypes
 from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import PandasIndex
+from xarray.structure import merge
 from xarray.tests import (
     ConcatenatableArray,
     InaccessibleArray,

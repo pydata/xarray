@@ -8,14 +8,14 @@ from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 import numpy as np
 
-from xarray.core.alignment import align
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.indexes import Index
-from xarray.core.merge import merge
 from xarray.core.utils import is_dask_collection
 from xarray.core.variable import Variable
+from xarray.structure.alignment import align
+from xarray.structure.merge import merge
 
 if TYPE_CHECKING:
     from xarray.core.types import T_Xarray
