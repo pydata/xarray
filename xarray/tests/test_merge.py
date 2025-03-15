@@ -4,8 +4,9 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.core import dtypes, merge
-from xarray.core.merge import MergeError
+from xarray.combine import merge
+from xarray.combine.merge import MergeError
+from xarray.core import dtypes
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests.test_dataset import create_test_data
 

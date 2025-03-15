@@ -12,8 +12,9 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+from xarray.combine.alignment import Aligner
+from xarray.combine.merge import merge_coordinates_without_align, merge_coords
 from xarray.core import formatting
-from xarray.core.alignment import Aligner
 from xarray.core.indexes import (
     Index,
     Indexes,
@@ -22,7 +23,6 @@ from xarray.core.indexes import (
     assert_no_index_corrupted,
     create_default_index_implicit,
 )
-from xarray.core.merge import merge_coordinates_without_align, merge_coords
 from xarray.core.types import DataVars, Self, T_DataArray, T_Xarray
 from xarray.core.utils import (
     Frozen,

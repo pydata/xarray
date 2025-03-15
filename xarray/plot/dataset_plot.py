@@ -6,7 +6,7 @@ import warnings
 from collections.abc import Callable, Hashable, Iterable
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
-from xarray.core.alignment import broadcast
+from xarray.combine.alignment import broadcast
 from xarray.plot import dataarray_plot
 from xarray.plot.facetgrid import _easy_facetgrid
 from xarray.plot.utils import (

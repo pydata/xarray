@@ -12,6 +12,9 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
+from xarray.combine.alignment import align, broadcast
+from xarray.combine.concat import concat
+from xarray.combine.merge import merge_coords
 from xarray.computation import ops
 from xarray.computation.arithmetic import (
     DataArrayGroupbyArithmetic,
@@ -22,9 +25,7 @@ from xarray.core._aggregations import (
     DataArrayGroupByAggregations,
     DatasetGroupByAggregations,
 )
-from xarray.core.alignment import align, broadcast
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
-from xarray.core.concat import concat
 from xarray.core.coordinates import Coordinates, _coordinates_from_variable
 from xarray.core.duck_array_ops import where
 from xarray.core.formatting import format_array_flat
@@ -32,7 +33,6 @@ from xarray.core.indexes import (
     PandasMultiIndex,
     filter_indexes_from_coords,
 )
-from xarray.core.merge import merge_coords
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Dims,

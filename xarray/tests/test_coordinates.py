@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray.core.alignment import align
+from xarray.combine.alignment import align
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset

@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast
 
 import pandas as pd
 
+from xarray.combine.concat import concat
+from xarray.combine.merge import merge
 from xarray.core import dtypes
-from xarray.core.concat import concat
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
-from xarray.core.merge import merge
 from xarray.core.utils import iterate_nested
 
 if TYPE_CHECKING:

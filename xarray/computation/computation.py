@@ -25,14 +25,14 @@ from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, cast, overload
 
 import numpy as np
 
+from xarray.combine.alignment import align, deep_align
+from xarray.combine.merge import merge_attrs, merge_coordinates_without_align
 from xarray.compat.array_api_compat import to_like_array
 from xarray.core import dtypes, duck_array_ops, utils
-from xarray.core.alignment import align, deep_align
 from xarray.core.common import zeros_like
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.formatting import limit_lines
 from xarray.core.indexes import Index, filter_indexes_from_coords
-from xarray.core.merge import merge_attrs, merge_coordinates_without_align
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import Dims, T_DataArray
 from xarray.core.utils import (

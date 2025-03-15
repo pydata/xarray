@@ -29,18 +29,20 @@ import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex
-from xarray.computation import computation, ops
-from xarray.computation.arithmetic import DataArrayArithmetic
-from xarray.computation.computation import unify_chunks
-from xarray.core import alignment, dtypes, indexing, utils
-from xarray.core._aggregations import DataArrayAggregations
-from xarray.core.accessor_dt import CombinedDatetimelikeAccessor
-from xarray.core.accessor_str import StringAccessor
-from xarray.core.alignment import (
+from xarray.combine import alignment
+from xarray.combine.alignment import (
     _broadcast_helper,
     _get_broadcast_dims_map_common_coords,
     align,
 )
+from xarray.combine.merge import PANDAS_TYPES, MergeError
+from xarray.computation import computation, ops
+from xarray.computation.arithmetic import DataArrayArithmetic
+from xarray.computation.computation import unify_chunks
+from xarray.core import dtypes, indexing, utils
+from xarray.core._aggregations import DataArrayAggregations
+from xarray.core.accessor_dt import CombinedDatetimelikeAccessor
+from xarray.core.accessor_str import StringAccessor
 from xarray.core.common import AbstractArray, DataWithCoords, get_chunksizes
 from xarray.core.coordinates import (
     Coordinates,
@@ -59,7 +61,6 @@ from xarray.core.indexes import (
     isel_indexes,
 )
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
-from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Bins,

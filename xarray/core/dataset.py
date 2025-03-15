@@ -41,24 +41,30 @@ import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
+from xarray.combine import alignment
+from xarray.combine.alignment import (
+    _broadcast_helper,
+    _get_broadcast_dims_map_common_coords,
+    align,
+)
+from xarray.combine.merge import (
+    dataset_merge_method,
+    dataset_update_method,
+    merge_coordinates_without_align,
+    merge_data_and_coords,
+)
 from xarray.compat.array_api_compat import to_like_array
 from xarray.computation import ops
 from xarray.computation.arithmetic import DatasetArithmetic
 from xarray.computation.computation import _ensure_numeric, unify_chunks
+from xarray.core import dtypes as xrdtypes
 from xarray.core import (
-    alignment,
     duck_array_ops,
     formatting,
     formatting_html,
     utils,
 )
-from xarray.core import dtypes as xrdtypes
 from xarray.core._aggregations import DatasetAggregations
-from xarray.core.alignment import (
-    _broadcast_helper,
-    _get_broadcast_dims_map_common_coords,
-    align,
-)
 from xarray.core.common import (
     DataWithCoords,
     _contains_datetime_like_objects,
@@ -83,12 +89,6 @@ from xarray.core.indexes import (
     roll_indexes,
 )
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
-from xarray.core.merge import (
-    dataset_merge_method,
-    dataset_update_method,
-    merge_coordinates_without_align,
-    merge_data_and_coords,
-)
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Bins,
@@ -140,11 +140,11 @@ if TYPE_CHECKING:
 
     from xarray.backends import AbstractDataStore, ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
+    from xarray.combine.merge import CoercibleMapping, CoercibleValue
     from xarray.computation.rolling import DatasetCoarsen, DatasetRolling
     from xarray.computation.weighted import DatasetWeighted
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
-    from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.resample import DatasetResample
     from xarray.core.types import (
         CFCalendar,
@@ -1402,7 +1402,7 @@ class Dataset(
         When assigning values to a subset of a Dataset, do consistency check beforehand
         to avoid leaving the dataset in a partially updated state when an error occurs.
         """
-        from xarray.core.alignment import align
+        from xarray.combine.alignment import align
         from xarray.core.dataarray import DataArray
 
         if isinstance(value, Dataset):
@@ -5297,7 +5297,7 @@ class Dataset(
         Dimensions without coordinates: x
 
         """
-        from xarray.core.concat import concat
+        from xarray.combine.concat import concat
 
         stacking_dims = tuple(dim for dim in self.dims if dim not in sample_dims)
 
@@ -9783,8 +9783,8 @@ class Dataset(
         """
         from scipy.optimize import curve_fit
 
+        from xarray.combine.alignment import broadcast
         from xarray.computation.computation import apply_ufunc
-        from xarray.core.alignment import broadcast
         from xarray.core.dataarray import _THIS_ARRAY, DataArray
 
         if p0 is None:

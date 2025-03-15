@@ -1216,7 +1216,7 @@ class DataWithCoords(AttrAccessMixin):
         numpy.where : corresponding numpy function
         where : equivalent function
         """
-        from xarray.core.alignment import align
+        from xarray.combine.alignment import align
         from xarray.core.dataarray import DataArray
         from xarray.core.dataset import Dataset
 

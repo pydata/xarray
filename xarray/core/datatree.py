@@ -24,10 +24,11 @@ from typing import (
     overload,
 )
 
+from xarray.combine.alignment import align
+from xarray.combine.merge import dataset_update_method
 from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
 from xarray.core._typed_ops import DataTreeOpsMixin
-from xarray.core.alignment import align
 from xarray.core.common import TreeAttrAccessMixin, get_chunksizes
 from xarray.core.coordinates import Coordinates, DataTreeCoordinates
 from xarray.core.dataarray import DataArray
@@ -45,7 +46,6 @@ from xarray.core.formatting_html import (
     datatree_repr as datatree_repr_html,
 )
 from xarray.core.indexes import Index, Indexes
-from xarray.core.merge import dataset_update_method
 from xarray.core.options import OPTIONS as XR_OPTS
 from xarray.core.treenode import NamedNode, NodePath, zip_subtrees
 from xarray.core.types import Self
@@ -73,8 +73,8 @@ if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
 
+    from xarray.combine.merge import CoercibleMapping, CoercibleValue
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
-    from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.types import (
         Dims,
         DtCompatible,

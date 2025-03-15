@@ -15,6 +15,10 @@ from xarray.backends.zarr import open_zarr
 from xarray.coding.cftime_offsets import cftime_range, date_range, date_range_like
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.frequencies import infer_freq
+from xarray.combine.alignment import align, broadcast
+from xarray.combine.combine import combine_by_coords, combine_nested
+from xarray.combine.concat import concat
+from xarray.combine.merge import Context, MergeError, merge
 from xarray.computation.computation import (
     apply_ufunc,
     corr,
@@ -26,10 +30,7 @@ from xarray.computation.computation import (
     where,
 )
 from xarray.conventions import SerializationWarning, decode_cf
-from xarray.core.alignment import align, broadcast
-from xarray.core.combine import combine_by_coords, combine_nested
 from xarray.core.common import ALL_DIMS, full_like, ones_like, zeros_like
-from xarray.core.concat import concat
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
@@ -42,7 +43,6 @@ from xarray.core.extensions import (
 )
 from xarray.core.indexes import Index
 from xarray.core.indexing import IndexSelResult
-from xarray.core.merge import Context, MergeError, merge
 from xarray.core.options import get_options, set_options
 from xarray.core.parallel import map_blocks
 from xarray.core.treenode import (
