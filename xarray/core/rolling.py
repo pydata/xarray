@@ -9,7 +9,8 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 import numpy as np
 
-from xarray.core import dask_array_ops, dtypes, duck_array_ops, utils
+from xarray.compat import dask_array_ops
+from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.arithmetic import CoarsenArithmetic
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
