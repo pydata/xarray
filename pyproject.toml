@@ -169,7 +169,7 @@ check_untyped_defs = true
 module = [
   "xarray.core.accessor_dt",
   "xarray.core.accessor_str",
-  "xarray.core.alignment",
+  "xarray.structure.alignment",
   "xarray.computation.*",
   "xarray.indexes.*",
   "xarray.tests.*",

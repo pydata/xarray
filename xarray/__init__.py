@@ -34,10 +34,6 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
 from xarray.core.datatree_mapping import map_over_datasets
-from xarray.structure.alignment import align, broadcast
-from xarray.structure.combine import combine_by_coords, combine_nested
-from xarray.structure.concat import concat
-from xarray.structure.merge import Context, MergeError, merge
 from xarray.core.extensions import (
     register_dataarray_accessor,
     register_dataset_accessor,
@@ -45,7 +41,6 @@ from xarray.core.extensions import (
 )
 from xarray.core.indexes import Index
 from xarray.core.indexing import IndexSelResult
-from xarray.core.merge import Context, MergeError, merge
 from xarray.core.options import get_options, set_options
 from xarray.core.parallel import map_blocks
 from xarray.core.treenode import (
@@ -56,6 +51,10 @@ from xarray.core.treenode import (
 )
 from xarray.core.variable import IndexVariable, Variable, as_variable
 from xarray.namedarray.core import NamedArray
+from xarray.structure.alignment import align, broadcast
+from xarray.structure.combine import combine_by_coords, combine_nested
+from xarray.structure.concat import concat
+from xarray.structure.merge import Context, MergeError, merge
 from xarray.util.print_versions import show_versions
 
 try:

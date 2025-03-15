@@ -27,10 +27,8 @@ _U = TypeVar("_U", bound=Union["Dataset", "DataArray"])
 _V = TypeVar("_V", bound=Union["Dataset", "DataArray"])
 
 from xarray.core import duck_array_ops, utils
-from xarray.core.alignment import deep_align
 from xarray.core.formatting import limit_lines
 from xarray.core.indexes import Index, filter_indexes_from_coords
-from xarray.core.merge import merge_attrs, merge_coordinates_without_align
 from xarray.core.options import _get_keep_attrs
 from xarray.core.utils import (
     is_dict_like,
@@ -39,6 +37,8 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.structure.alignment import deep_align
+from xarray.structure.merge import merge_attrs, merge_coordinates_without_align
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates

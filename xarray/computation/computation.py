@@ -22,10 +22,6 @@ from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.common import zeros_like
 from xarray.core.duck_array_ops import datetime_to_numeric
-from xarray.core.formatting import limit_lines
-from xarray.core.indexes import Index, filter_indexes_from_coords
-from xarray.structure.alignment import align, deep_align
-from xarray.structure.merge import merge_attrs, merge_coordinates_without_align
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import Dims, T_DataArray
 from xarray.core.utils import (
@@ -35,6 +31,7 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.structure.alignment import align
 from xarray.util.deprecation_helpers import deprecate_dims
 
 if TYPE_CHECKING:

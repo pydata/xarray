@@ -20,8 +20,8 @@ from xarray.computation.apply_ufunc import (
     ordered_set_union,
     unified_dim_sizes,
 )
-from xarray.structure.alignment import broadcast
 from xarray.core.utils import result_name
+from xarray.structure.alignment import broadcast
 from xarray.tests import (
     has_dask,
     raise_if_dask_computes,
