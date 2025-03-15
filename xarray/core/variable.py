@@ -17,8 +17,9 @@ from pandas.api.types import is_extension_array_dtype
 
 import xarray as xr  # only for Dataset and DataArray
 from xarray.compat.array_api_compat import to_like_array
-from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
-from xarray.core.arithmetic import VariableArithmetic
+from xarray.computation import ops
+from xarray.computation.arithmetic import VariableArithmetic
+from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, utils
 from xarray.core.common import AbstractArray
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
@@ -483,7 +484,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dask.array.Array.astype
         sparse.COO.astype
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
 
         kwargs = dict(order=order, casting=casting, subok=subok, copy=copy)
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
@@ -1597,7 +1598,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         numpy.clip : equivalent function
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
 
         xp = duck_array_ops.get_array_namespace(self.data)
         return apply_ufunc(xp.clip, self, min, max, dask="allowed")
@@ -1876,7 +1877,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
            The American Statistician, 50(4), pp. 361-365, 1996
         """
 
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
 
         if interpolation is not None:
             warnings.warn(
@@ -2235,7 +2236,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         <xarray.Variable (x: 3)> Size: 3B
         array([False,  True, False])
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -2269,7 +2270,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         <xarray.Variable (x: 3)> Size: 3B
         array([ True, False,  True])
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
