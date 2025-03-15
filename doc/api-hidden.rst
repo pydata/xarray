@@ -28,19 +28,19 @@
    core.coordinates.DatasetCoordinates.equals
    core.coordinates.DatasetCoordinates.identical
 
-   core.rolling.DatasetCoarsen.boundary
-   core.rolling.DatasetCoarsen.coord_func
-   core.rolling.DatasetCoarsen.obj
-   core.rolling.DatasetCoarsen.side
-   core.rolling.DatasetCoarsen.trim_excess
-   core.rolling.DatasetCoarsen.windows
+   computation.rolling.DatasetCoarsen.boundary
+   computation.rolling.DatasetCoarsen.coord_func
+   computation.rolling.DatasetCoarsen.obj
+   computation.rolling.DatasetCoarsen.side
+   computation.rolling.DatasetCoarsen.trim_excess
+   computation.rolling.DatasetCoarsen.windows
 
-   core.rolling.DatasetRolling.center
-   core.rolling.DatasetRolling.dim
-   core.rolling.DatasetRolling.min_periods
-   core.rolling.DatasetRolling.obj
-   core.rolling.DatasetRolling.rollings
-   core.rolling.DatasetRolling.window
+   computation.rolling.DatasetRolling.center
+   computation.rolling.DatasetRolling.dim
+   computation.rolling.DatasetRolling.min_periods
+   computation.rolling.DatasetRolling.obj
+   computation.rolling.DatasetRolling.rollings
+   computation.rolling.DatasetRolling.window
 
    core.weighted.DatasetWeighted.obj
    core.weighted.DatasetWeighted.weights
@@ -70,19 +70,19 @@
    core.coordinates.DataArrayCoordinates.equals
    core.coordinates.DataArrayCoordinates.identical
 
-   core.rolling.DataArrayCoarsen.boundary
-   core.rolling.DataArrayCoarsen.coord_func
-   core.rolling.DataArrayCoarsen.obj
-   core.rolling.DataArrayCoarsen.side
-   core.rolling.DataArrayCoarsen.trim_excess
-   core.rolling.DataArrayCoarsen.windows
+   computation.rolling.DataArrayCoarsen.boundary
+   computation.rolling.DataArrayCoarsen.coord_func
+   computation.rolling.DataArrayCoarsen.obj
+   computation.rolling.DataArrayCoarsen.side
+   computation.rolling.DataArrayCoarsen.trim_excess
+   computation.rolling.DataArrayCoarsen.windows
 
-   core.rolling.DataArrayRolling.center
-   core.rolling.DataArrayRolling.dim
-   core.rolling.DataArrayRolling.min_periods
-   core.rolling.DataArrayRolling.obj
-   core.rolling.DataArrayRolling.window
-   core.rolling.DataArrayRolling.window_labels
+   computation.rolling.DataArrayRolling.center
+   computation.rolling.DataArrayRolling.dim
+   computation.rolling.DataArrayRolling.min_periods
+   computation.rolling.DataArrayRolling.obj
+   computation.rolling.DataArrayRolling.window
+   computation.rolling.DataArrayRolling.window_labels
 
    core.weighted.DataArrayWeighted.obj
    core.weighted.DataArrayWeighted.weights

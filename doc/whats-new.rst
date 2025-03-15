@@ -1473,7 +1473,7 @@ Bug fixes
   special case ``NaT`` handling in :py:meth:`~core.accessor_dt.DatetimeAccessor.isocalendar`
   (:issue:`7928`, :pull:`8084`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- Fix :py:meth:`~core.rolling.DatasetRolling.construct` with stride on Datasets without indexes.
+- Fix :py:meth:`~computation.rolling.DatasetRolling.construct` with stride on Datasets without indexes.
   (:issue:`7021`, :pull:`7578`).
   By `Amrest Chinkamol <https://github.com/p4perf4ce>`_ and `Michael Niklas <https://github.com/headtr1ck>`_.
 - Calling plot with kwargs ``col``, ``row`` or ``hue`` no longer squeezes dimensions passed via these arguments
@@ -3507,7 +3507,7 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Allow installing from git archives (:pull:`4897`).
   By `Justus Magin <https://github.com/keewis>`_.
-- :py:class:`~core.rolling.DataArrayCoarsen` and :py:class:`~core.rolling.DatasetCoarsen`
+- :py:class:`~computation.rolling.DataArrayCoarsen` and :py:class:`~computation.rolling.DatasetCoarsen`
   now implement a ``reduce`` method, enabling coarsening operations with custom
   reduction functions (:issue:`3741`, :pull:`4939`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
@@ -4352,8 +4352,8 @@ New Features
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
   now work with dask Variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Added the ``count`` reduction method to both :py:class:`~core.rolling.DatasetCoarsen`
-  and :py:class:`~core.rolling.DataArrayCoarsen` objects. (:pull:`3500`)
+- Added the ``count`` reduction method to both :py:class:`~computation.rolling.DatasetCoarsen`
+  and :py:class:`~computation.rolling.DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
 - Add ``meta`` kwarg to :py:func:`~xarray.apply_ufunc`;
   this is passed on to :py:func:`dask.array.blockwise`. (:pull:`3660`)
@@ -4705,7 +4705,7 @@ Bug fixes
 - Fix error in concatenating unlabeled dimensions (:pull:`3362`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Warn if the ``dim`` kwarg is passed to rolling operations. This is redundant since a dimension is
-  specified when the :py:class:`~core.rolling.DatasetRolling` or :py:class:`~core.rolling.DataArrayRolling` object is created.
+  specified when the :py:class:`~computation.rolling.DatasetRolling` or :py:class:`~computation.rolling.DataArrayRolling` object is created.
   (:pull:`3362`). By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
@@ -6791,7 +6791,7 @@ Enhancements
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
-- New aggregation on rolling objects :py:meth:`~core.rolling.DataArrayRolling.count`
+- New aggregation on rolling objects :py:meth:`~computation.rolling.DataArrayRolling.count`
   which providing a rolling count of valid values (:issue:`1138`).
 
 Bug fixes
