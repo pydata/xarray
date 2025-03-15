@@ -20,7 +20,6 @@ import numpy as np
 from xarray.compat.array_api_compat import to_like_array
 from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.core import dtypes, duck_array_ops, utils
-from xarray.core.alignment import align
 from xarray.core.common import zeros_like
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.options import OPTIONS, _get_keep_attrs
@@ -32,6 +31,7 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.structure.alignment import align
 from xarray.util.deprecation_helpers import deprecate_dims
 
 if TYPE_CHECKING:

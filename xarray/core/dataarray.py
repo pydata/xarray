@@ -32,15 +32,10 @@ from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.computation import computation, ops
 from xarray.computation.arithmetic import DataArrayArithmetic
 from xarray.computation.computation import unify_chunks
-from xarray.core import alignment, dtypes, indexing, utils
+from xarray.core import dtypes, indexing, utils
 from xarray.core._aggregations import DataArrayAggregations
 from xarray.core.accessor_dt import CombinedDatetimelikeAccessor
 from xarray.core.accessor_str import StringAccessor
-from xarray.core.alignment import (
-    _broadcast_helper,
-    _get_broadcast_dims_map_common_coords,
-    align,
-)
 from xarray.core.common import AbstractArray, DataWithCoords, get_chunksizes
 from xarray.core.coordinates import (
     Coordinates,
@@ -59,7 +54,6 @@ from xarray.core.indexes import (
     isel_indexes,
 )
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
-from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Bins,
@@ -88,6 +82,13 @@ from xarray.core.variable import (
 )
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
+from xarray.structure import alignment
+from xarray.structure.alignment import (
+    _broadcast_helper,
+    _get_broadcast_dims_map_common_coords,
+    align,
+)
+from xarray.structure.merge import PANDAS_TYPES, MergeError
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
