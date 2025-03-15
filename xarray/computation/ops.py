@@ -176,7 +176,8 @@ def where_method(self, cond, other=dtypes.NA):
     from xarray.computation.computation import apply_ufunc
 
     # alignment for three arguments is complicated, so don't support it yet
-    join: Literal["inner", "exact"] = "inner" if other is dtypes.NA else "exact"
+    # Unsure why we get a mypy error here
+    join: Literal["inner", "exact"] = "inner" if other is dtypes.NA else "exact"  # type: ignore[has-type]
     return apply_ufunc(
         duck_array_ops.where_method,
         self,
