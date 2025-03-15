@@ -42,8 +42,8 @@
    computation.rolling.DatasetRolling.rollings
    computation.rolling.DatasetRolling.window
 
-   core.weighted.DatasetWeighted.obj
-   core.weighted.DatasetWeighted.weights
+   computation.weighted.DatasetWeighted.obj
+   computation.weighted.DatasetWeighted.weights
 
    Dataset.load_store
    Dataset.dump_to_store
@@ -84,8 +84,8 @@
    computation.rolling.DataArrayRolling.window
    computation.rolling.DataArrayRolling.window_labels
 
-   core.weighted.DataArrayWeighted.obj
-   core.weighted.DataArrayWeighted.weights
+   computation.weighted.DataArrayWeighted.obj
+   computation.weighted.DataArrayWeighted.weights
 
    core.coordinates.DataTreeCoordinates.get
    core.coordinates.DataTreeCoordinates.items

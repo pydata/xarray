@@ -2488,8 +2488,8 @@ New Features
 
 - The ``zarr`` backend is now able to read NCZarr.
   By `Mattia Almansi <https://github.com/malmans2>`_.
-- Add a weighted ``quantile`` method to :py:class:`~core.weighted.DatasetWeighted` and
-  :py:class:`~core.weighted.DataArrayWeighted` (:pull:`6059`).
+- Add a weighted ``quantile`` method to :py:class:`.computation.weighted.DatasetWeighted` and
+  :py:class:`~computation.weighted.DataArrayWeighted` (:pull:`6059`).
   By `Christian Jauvin <https://github.com/cjauvin>`_ and `David Huard <https://github.com/huard>`_.
 - Add a ``create_index=True`` parameter to :py:meth:`Dataset.stack` and
   :py:meth:`DataArray.stack` so that the creation of multi-indexes is optional
@@ -2871,7 +2871,7 @@ Thomas Nicholas, Tomas Chor, Tom Augspurger, Victor Negîrneac, Zachary Blackwoo
 
 New Features
 ~~~~~~~~~~~~
-- Add ``std``, ``var``,  ``sum_of_squares`` to :py:class:`~core.weighted.DatasetWeighted` and :py:class:`~core.weighted.DataArrayWeighted`.
+- Add ``std``, ``var``,  ``sum_of_squares`` to :py:class:`~computation.weighted.DatasetWeighted` and :py:class:`~computation.weighted.DataArrayWeighted`.
   By `Christian Jauvin <https://github.com/cjauvin>`_.
 - Added a :py:func:`get_options` method to xarray's root namespace (:issue:`5698`, :pull:`5716`)
   By `Pushkar Kopparla <https://github.com/pkopparla>`_.
