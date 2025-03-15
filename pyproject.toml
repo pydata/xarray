@@ -30,22 +30,6 @@ dependencies = ["numpy>=1.24", "packaging>=23.2", "pandas>=2.1"]
 [project.optional-dependencies]
 accel = ["scipy", "bottleneck", "numbagg", "numba>=0.54", "flox", "opt_einsum"]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
-dev = [
-  "hypothesis",
-  "jinja2",
-  "mypy",
-  "pre-commit",
-  "pytest",
-  "pytest-cov",
-  "pytest-env",
-  "pytest-mypy-plugins",
-  "pytest-timeout",
-  "pytest-xdist",
-  "ruff>=0.8.0",
-  "sphinx",
-  "sphinx_autosummary_accessors",
-  "xarray[complete,types]",
-]
 io = [
   "netCDF4",
   "h5netcdf",
@@ -71,9 +55,28 @@ types = [
   "types-pexpect",
   "types-psutil",
   "types-pycurl",
+  "types-openpyxl",
   "types-python-dateutil",
   "types-pytz",
   "types-setuptools",
+]
+
+[dependency-groups]
+dev = [
+  "hypothesis",
+  "jinja2",
+  "mypy",
+  "pre-commit",
+  "pytest",
+  "pytest-cov",
+  "pytest-env",
+  "pytest-mypy-plugins",
+  "pytest-timeout",
+  "pytest-xdist",
+  "ruff>=0.8.0",
+  "sphinx",
+  "sphinx_autosummary_accessors",
+  "xarray[complete,types]",
 ]
 
 [project.urls]
@@ -99,10 +102,10 @@ fallback_version = "9999"
 [tool.coverage.run]
 omit = [
   "*/xarray/tests/*",
-  "*/xarray/core/dask_array_compat.py",
-  "*/xarray/core/npcompat.py",
-  "*/xarray/core/pdcompat.py",
-  "*/xarray/core/pycompat.py",
+  "*/xarray/compat/dask_array_compat.py",
+  "*/xarray/compat/npcompat.py",
+  "*/xarray/compat/pdcompat.py",
+  "*/xarray/namedarray/pycompat.py",
   "*/xarray/core/types.py",
 ]
 source = ["xarray"]
@@ -167,8 +170,7 @@ module = [
   "xarray.core.accessor_dt",
   "xarray.core.accessor_str",
   "xarray.core.alignment",
-  "xarray.core.computation",
-  "xarray.core.rolling_exp",
+  "xarray.computation.*",
   "xarray.indexes.*",
   "xarray.tests.*",
 ]
@@ -359,7 +361,7 @@ markers = [
   "slow_hypothesis: slow hypothesis tests",
 ]
 minversion = "7"
-python_files = "test_*.py"
+python_files = ["test_*.py"]
 testpaths = ["xarray/tests", "properties"]
 
 [tool.aliases]

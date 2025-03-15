@@ -41,6 +41,7 @@ from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.utils import is_duck_dask_array
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
+    DuckArrayWrapper,
     FirstElementAccessibleArray,
     arm_xfail,
     assert_array_equal,
@@ -1932,6 +1933,31 @@ def test_lazy_decode_timedelta_error() -> None:
     )
     with pytest.raises(OutOfBoundsTimedelta, match="overflow"):
         decoded.load()
+
+
+@pytest.mark.parametrize(
+    "calendar",
+    [
+        "standard",
+        pytest.param(
+            "360_day", marks=pytest.mark.skipif(not has_cftime, reason="no cftime")
+        ),
+    ],
+)
+def test_duck_array_decode_times(calendar) -> None:
+    from xarray.core.indexing import LazilyIndexedArray
+
+    days = LazilyIndexedArray(DuckArrayWrapper(np.array([1.0, 2.0, 3.0])))
+    var = Variable(
+        ["time"], days, {"units": "days since 2001-01-01", "calendar": calendar}
+    )
+    decoded = conventions.decode_cf_variable(
+        "foo", var, decode_times=CFDatetimeCoder(use_cftime=None)
+    )
+    if calendar not in _STANDARD_CALENDARS:
+        assert decoded.dtype == np.dtype("O")
+    else:
+        assert decoded.dtype == np.dtype("=M8[ns]")
 
 
 @pytest.mark.parametrize("decode_timedelta", [True, False])

@@ -41,12 +41,15 @@ import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
+from xarray.compat.array_api_compat import to_like_array
+from xarray.computation import ops
+from xarray.computation.arithmetic import DatasetArithmetic
+from xarray.computation.computation import _ensure_numeric, unify_chunks
 from xarray.core import (
     alignment,
     duck_array_ops,
     formatting,
     formatting_html,
-    ops,
     utils,
 )
 from xarray.core import dtypes as xrdtypes
@@ -56,14 +59,11 @@ from xarray.core.alignment import (
     _get_broadcast_dims_map_common_coords,
     align,
 )
-from xarray.core.arithmetic import DatasetArithmetic
-from xarray.core.array_api_compat import to_like_array
 from xarray.core.common import (
     DataWithCoords,
     _contains_datetime_like_objects,
     get_chunksizes,
 )
-from xarray.core.computation import _ensure_numeric, unify_chunks
 from xarray.core.coordinates import (
     Coordinates,
     DatasetCoordinates,
@@ -140,11 +140,12 @@ if TYPE_CHECKING:
 
     from xarray.backends import AbstractDataStore, ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
+    from xarray.computation.rolling import DatasetCoarsen, DatasetRolling
+    from xarray.computation.weighted import DatasetWeighted
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
     from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.resample import DatasetResample
-    from xarray.core.rolling import DatasetCoarsen, DatasetRolling
     from xarray.core.types import (
         CFCalendar,
         CoarsenBoundaryOptions,
@@ -173,7 +174,6 @@ if TYPE_CHECKING:
         T_DatasetPadConstantValues,
         T_Xarray,
     )
-    from xarray.core.weighted import DatasetWeighted
     from xarray.groupers import Grouper, Resampler
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
@@ -201,7 +201,7 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
     """Set initial guess and bounds for curvefit.
     Priority: 1) passed args 2) func signature 3) scipy defaults
     """
-    from xarray.core.computation import where
+    from xarray.computation.computation import where
 
     def _initialize_feasible(lb, ub):
         # Mimics functionality of scipy.optimize.minpack._initialize_feasible
@@ -9783,8 +9783,8 @@ class Dataset(
         """
         from scipy.optimize import curve_fit
 
+        from xarray.computation.computation import apply_ufunc
         from xarray.core.alignment import broadcast
-        from xarray.core.computation import apply_ufunc
         from xarray.core.dataarray import _THIS_ARRAY, DataArray
 
         if p0 is None:
@@ -10381,7 +10381,7 @@ class Dataset(
             Tutorial on Weighted Reduction using :py:func:`~xarray.Dataset.weighted`
 
         """
-        from xarray.core.weighted import DatasetWeighted
+        from xarray.computation.weighted import DatasetWeighted
 
         return DatasetWeighted(self, weights)
 
@@ -10421,7 +10421,7 @@ class Dataset(
         DataArray.rolling
         DataArray.rolling_exp
         """
-        from xarray.core.rolling import DatasetRolling
+        from xarray.computation.rolling import DatasetRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DatasetRolling(self, dim, min_periods=min_periods, center=center)
@@ -10453,7 +10453,7 @@ class Dataset(
         Dataset.rolling
         Dataset.rolling_exp
         """
-        from xarray.core.rolling import DatasetRolling
+        from xarray.computation.rolling import DatasetRolling
 
         if isinstance(dim, str):
             if dim not in self.dims:
@@ -10514,7 +10514,7 @@ class Dataset(
             Tutorial on windowed computation using :py:func:`~xarray.Dataset.coarsen`
 
         """
-        from xarray.core.rolling import DatasetCoarsen
+        from xarray.computation.rolling import DatasetCoarsen
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return DatasetCoarsen(

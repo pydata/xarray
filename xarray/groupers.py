@@ -17,7 +17,7 @@ import pandas as pd
 from numpy.typing import ArrayLike
 
 from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
-from xarray.core.computation import apply_ufunc
+from xarray.computation.computation import apply_ufunc
 from xarray.core.coordinates import Coordinates, _coordinates_from_variable
 from xarray.core.dataarray import DataArray
 from xarray.core.duck_array_ops import array_all, isnull

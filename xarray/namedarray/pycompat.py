@@ -102,6 +102,12 @@ def to_numpy(
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
+    try:
+        # for tests only at the moment
+        return data.to_numpy()  # type: ignore[no-any-return,union-attr]
+    except AttributeError:
+        pass
+
     if isinstance(data, ExplicitlyIndexed):
         data = data.get_duck_array()  # type: ignore[no-untyped-call]
 
@@ -122,7 +128,10 @@ def to_numpy(
 
 
 def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, _DType]:
-    from xarray.core.indexing import ExplicitlyIndexed
+    from xarray.core.indexing import (
+        ExplicitlyIndexed,
+        ImplicitToExplicitIndexingAdapter,
+    )
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
     if is_chunked_array(data):
@@ -130,7 +139,7 @@ def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, 
         loaded_data, *_ = chunkmanager.compute(data, **kwargs)  # type: ignore[var-annotated]
         return loaded_data
 
-    if isinstance(data, ExplicitlyIndexed):
+    if isinstance(data, ExplicitlyIndexed | ImplicitToExplicitIndexingAdapter):
         return data.get_duck_array()  # type: ignore[no-untyped-call, no-any-return]
     elif is_duck_array(data):
         return data
