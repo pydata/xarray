@@ -666,10 +666,23 @@ class ZarrStore(AbstractWritableDataStore):
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
         )
-        group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
+        from zarr import Group
+
+        group_members: dict[str, Group]
+        if _zarr_v3():
+            group_members = {
+                f"{group}/{path}" if group != "/" else f"/{path}": store
+                for path, store in dict(zarr_group.members(max_depth=None)).items()
+                if isinstance(store, Group)
+            }
+            group_members[group] = zarr_group
+        else:
+            group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
+            group_members = {path: zarr_group.get(path) for path in group_paths}
+
         return {
             group: cls(
-                zarr_group.get(group),
+                group_store,
                 mode,
                 consolidate_on_close,
                 append_dim,
@@ -680,7 +693,7 @@ class ZarrStore(AbstractWritableDataStore):
                 use_zarr_fill_value_as_mask,
                 cache_members=cache_members,
             )
-            for group in group_paths
+            for group, group_store in group_members.items()
         }
 
     @classmethod
@@ -1662,8 +1675,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         zarr_version=None,
         zarr_format=None,
     ) -> dict[str, Dataset]:
-        from xarray.core.treenode import NodePath
-
         filename_or_obj = _normalize_path(filename_or_obj)
 
         # Check for a group and make it a parent if it exists
@@ -1762,7 +1773,8 @@ def _get_open_params(
             consolidated = False
 
     if _zarr_v3():
-        missing_exc = ValueError
+        # TODO: replace AssertionError after https://github.com/zarr-developers/zarr-python/issues/2821 is resolved
+        missing_exc = AssertionError
     else:
         missing_exc = zarr.errors.GroupNotFoundError
 
