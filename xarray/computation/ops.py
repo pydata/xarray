@@ -158,7 +158,8 @@ def fillna(data, other, join="left", dataset_join="left"):
     )
 
 
-def where_method(self, cond, other=dtypes.NA):
+# Unsure why we get a mypy error here
+def where_method(self, cond, other=dtypes.NA):  # type: ignore[has-type]
     """Return elements from `self` or `other` depending on `cond`.
 
     Parameters
@@ -176,8 +177,7 @@ def where_method(self, cond, other=dtypes.NA):
     from xarray.computation.computation import apply_ufunc
 
     # alignment for three arguments is complicated, so don't support it yet
-    # Unsure why we get a mypy error here
-    join: Literal["inner", "exact"] = "inner" if other is dtypes.NA else "exact"  # type: ignore[has-type]
+    join: Literal["inner", "exact"] = "inner" if other is dtypes.NA else "exact"
     return apply_ufunc(
         duck_array_ops.where_method,
         self,
