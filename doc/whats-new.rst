@@ -5936,7 +5936,7 @@ Enhancements
   supplied list, returning a bool array. See :ref:`selecting values with isin`
   for full details. Similar to the ``np.isin`` function.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- Some speed improvement to construct :py:class:`~xarray.core.rolling.DataArrayRolling`
+- Some speed improvement to construct :py:class:`~xarray.computation.rolling.DataArrayRolling`
   object (:issue:`1993`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Handle variables with different values for ``missing_value`` and
@@ -6016,8 +6016,8 @@ Enhancements
   NumPy. By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Improve :py:func:`~xarray.DataArray.rolling` logic.
-  :py:func:`~xarray.core.rolling.DataArrayRolling` object now supports
-  :py:func:`~xarray.core.rolling.DataArrayRolling.construct` method that returns a view
+  :py:func:`~xarray.computation.rolling.DataArrayRolling` object now supports
+  :py:func:`~xarray.computation.rolling.DataArrayRolling.construct` method that returns a view
   of the DataArray / Dataset object with the rolling-window dimension added
   to the last axis. This enables more flexible operation, such as strided
   rolling, windowed rolling, ND-rolling, short-time FFT and convolution.
