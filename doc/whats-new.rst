@@ -7925,13 +7925,17 @@ Backwards incompatible changes
   Now, the default always concatenates data variables:
 
   .. ipython:: python
-      :suppress:
+    :verbatim:
 
-      ds = xray.Dataset({"x": 0})
+    In [1]: ds = xray.Dataset({"x": 0})
 
-  .. ipython:: python
-
-      xray.concat([ds, ds], dim="y")
+    In [2]: xray.concat([ds, ds], dim="y")
+    Out[2]:
+    <xarray.Dataset> Size: 16B
+    Dimensions:  (y: 2)
+    Dimensions without coordinates: y
+    Data variables:
+        x        (y) int64 16B 0 0
 
   To obtain the old behavior, supply the argument ``concat_over=[]``.
 

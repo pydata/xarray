@@ -446,7 +446,11 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         assert kernel_call_count == 0
         out = xr.concat(
-            [ds1, ds2, ds3], dim="n", data_vars="different", coords="different"
+            [ds1, ds2, ds3],
+            dim="n",
+            data_vars="different",
+            coords="different",
+            compat="equals",
         )
         # each kernel is computed exactly once
         assert kernel_call_count == 6
@@ -488,7 +492,11 @@ class TestDataArrayAndDataset(DaskTestCase):
         # stop computing variables as it would not have any benefit
         ds4 = Dataset(data_vars={"d": ("x", [2.0])}, coords={"c": ("x", [2.0])})
         out = xr.concat(
-            [ds1, ds2, ds4, ds3], dim="n", data_vars="different", coords="different"
+            [ds1, ds2, ds4, ds3],
+            dim="n",
+            data_vars="different",
+            coords="different",
+            compat="equals",
         )
         # the variables of ds1 and ds2 were computed, but those of ds3 didn't
         assert kernel_call_count == 22
@@ -509,7 +517,11 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         # now check that concat() is correctly using dask name equality to skip loads
         out = xr.concat(
-            [ds1, ds1, ds1], dim="n", data_vars="different", coords="different"
+            [ds1, ds1, ds1],
+            dim="n",
+            data_vars="different",
+            coords="different",
+            compat="equals",
         )
         assert kernel_call_count == 24
         # variables are not loaded in the output
@@ -1375,7 +1387,9 @@ def test_map_blocks_ds_transformations(func, map_ds):
 def test_map_blocks_da_ds_with_template(obj):
     func = lambda x: x.isel(x=[1])
     # a simple .isel(x=[1, 5, 9]) puts all those in a single chunk.
-    template = xr.concat([obj.isel(x=[i]) for i in [1, 5, 9]], dim="x")
+    template = xr.concat(
+        [obj.isel(x=[i]) for i in [1, 5, 9]], data_vars="minimal", dim="x"
+    )
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, obj, template=template)
     assert_identical(actual, template)
@@ -1448,7 +1462,9 @@ def test_map_blocks_errors_bad_template(obj):
         xr.map_blocks(
             lambda a: a.isel(x=[1]).assign_coords(x=[120]),  # assign bad index values
             obj,
-            template=xr.concat([obj.isel(x=[i]) for i in [1, 5, 9]], dim="x"),
+            template=xr.concat(
+                [obj.isel(x=[i]) for i in [1, 5, 9]], data_vars="minimal", dim="x"
+            ),
         ).compute()
 
 
