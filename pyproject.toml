@@ -102,10 +102,10 @@ fallback_version = "9999"
 [tool.coverage.run]
 omit = [
   "*/xarray/tests/*",
-  "*/xarray/core/dask_array_compat.py",
-  "*/xarray/core/npcompat.py",
-  "*/xarray/core/pdcompat.py",
-  "*/xarray/core/pycompat.py",
+  "*/xarray/compat/dask_array_compat.py",
+  "*/xarray/compat/npcompat.py",
+  "*/xarray/compat/pdcompat.py",
+  "*/xarray/namedarray/pycompat.py",
   "*/xarray/core/types.py",
 ]
 source = ["xarray"]
