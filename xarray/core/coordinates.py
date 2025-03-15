@@ -12,8 +12,6 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from xarray.combine.alignment import Aligner
-from xarray.combine.merge import merge_coordinates_without_align, merge_coords
 from xarray.core import formatting
 from xarray.core.indexes import (
     Index,
@@ -31,6 +29,8 @@ from xarray.core.utils import (
     emit_user_level_warning,
 )
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from xarray.structure.alignment import Aligner
+from xarray.structure.merge import merge_coordinates_without_align, merge_coords
 
 if TYPE_CHECKING:
     from xarray.core.common import DataWithCoords

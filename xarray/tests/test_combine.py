@@ -14,7 +14,8 @@ from xarray import (
     concat,
     merge,
 )
-from xarray.combine.combine import (
+from xarray.core import dtypes
+from xarray.structure.combine import (
     _check_shape_tile_ids,
     _combine_all_along_first_dim,
     _combine_nd,
@@ -22,7 +23,6 @@ from xarray.combine.combine import (
     _infer_concat_order_from_positions,
     _new_tile_id,
 )
-from xarray.core import dtypes
 from xarray.tests import assert_equal, assert_identical, requires_cftime
 from xarray.tests.test_dataset import create_test_data
 

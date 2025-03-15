@@ -38,7 +38,6 @@ from numpy.typing import ArrayLike
 
 if TYPE_CHECKING:
     from xarray.backends.common import BackendEntrypoint
-    from xarray.combine.alignment import Aligner
     from xarray.core.common import AbstractArray, DataWithCoords
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
@@ -48,6 +47,7 @@ if TYPE_CHECKING:
     from xarray.core.utils import Frozen
     from xarray.core.variable import IndexVariable, Variable
     from xarray.groupers import Grouper, TimeResampler
+    from xarray.structure.alignment import Aligner
 
     GroupInput: TypeAlias = (
         str

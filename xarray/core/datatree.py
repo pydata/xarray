@@ -24,8 +24,6 @@ from typing import (
     overload,
 )
 
-from xarray.combine.alignment import align
-from xarray.combine.merge import dataset_update_method
 from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
 from xarray.core._typed_ops import DataTreeOpsMixin
@@ -62,6 +60,8 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.structure.alignment import align
+from xarray.structure.merge import dataset_update_method
 
 try:
     from xarray.core.variable import calculate_dimensions
@@ -73,7 +73,6 @@ if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
 
-    from xarray.combine.merge import CoercibleMapping, CoercibleValue
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
     from xarray.core.types import (
         Dims,
@@ -86,6 +85,7 @@ if TYPE_CHECKING:
         ZarrWriteModes,
     )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
+    from xarray.structure.merge import CoercibleMapping, CoercibleValue
 
 # """
 # DEVELOPERS' NOTE

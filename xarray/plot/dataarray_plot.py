@@ -8,8 +8,6 @@ from typing import TYPE_CHECKING, Any, Literal, Union, cast, overload
 import numpy as np
 import pandas as pd
 
-from xarray.combine.alignment import broadcast
-from xarray.combine.concat import concat
 from xarray.core.utils import attempt_import
 from xarray.plot.facetgrid import _easy_facetgrid
 from xarray.plot.utils import (
@@ -33,6 +31,8 @@ from xarray.plot.utils import (
     get_axis,
     label_from_attrs,
 )
+from xarray.structure.alignment import broadcast
+from xarray.structure.concat import concat
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes

@@ -12,9 +12,6 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from xarray.combine.alignment import align, broadcast
-from xarray.combine.concat import concat
-from xarray.combine.merge import merge_coords
 from xarray.computation import ops
 from xarray.computation.arithmetic import (
     DataArrayGroupbyArithmetic,
@@ -54,6 +51,9 @@ from xarray.core.utils import (
 )
 from xarray.core.variable import IndexVariable, Variable
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.structure.alignment import align, broadcast
+from xarray.structure.concat import concat
+from xarray.structure.merge import merge_coords
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike

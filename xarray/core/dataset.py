@@ -41,18 +41,6 @@ import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
-from xarray.combine import alignment
-from xarray.combine.alignment import (
-    _broadcast_helper,
-    _get_broadcast_dims_map_common_coords,
-    align,
-)
-from xarray.combine.merge import (
-    dataset_merge_method,
-    dataset_update_method,
-    merge_coordinates_without_align,
-    merge_data_and_coords,
-)
 from xarray.compat.array_api_compat import to_like_array
 from xarray.computation import ops
 from xarray.computation.arithmetic import DatasetArithmetic
@@ -131,6 +119,18 @@ from xarray.core.variable import (
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.namedarray.pycompat import array_type, is_chunked_array, to_numpy
 from xarray.plot.accessor import DatasetPlotAccessor
+from xarray.structure import alignment
+from xarray.structure.alignment import (
+    _broadcast_helper,
+    _get_broadcast_dims_map_common_coords,
+    align,
+)
+from xarray.structure.merge import (
+    dataset_merge_method,
+    dataset_update_method,
+    merge_coordinates_without_align,
+    merge_data_and_coords,
+)
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
@@ -140,7 +140,6 @@ if TYPE_CHECKING:
 
     from xarray.backends import AbstractDataStore, ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
-    from xarray.combine.merge import CoercibleMapping, CoercibleValue
     from xarray.computation.rolling import DatasetCoarsen, DatasetRolling
     from xarray.computation.weighted import DatasetWeighted
     from xarray.core.dataarray import DataArray
@@ -176,6 +175,7 @@ if TYPE_CHECKING:
     )
     from xarray.groupers import Grouper, Resampler
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
+    from xarray.structure.merge import CoercibleMapping, CoercibleValue
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -1402,8 +1402,8 @@ class Dataset(
         When assigning values to a subset of a Dataset, do consistency check beforehand
         to avoid leaving the dataset in a partially updated state when an error occurs.
         """
-        from xarray.combine.alignment import align
         from xarray.core.dataarray import DataArray
+        from xarray.structure.alignment import align
 
         if isinstance(value, Dataset):
             missing_vars = [
@@ -5297,7 +5297,7 @@ class Dataset(
         Dimensions without coordinates: x
 
         """
-        from xarray.combine.concat import concat
+        from xarray.structure.concat import concat
 
         stacking_dims = tuple(dim for dim in self.dims if dim not in sample_dims)
 
@@ -9783,9 +9783,9 @@ class Dataset(
         """
         from scipy.optimize import curve_fit
 
-        from xarray.combine.alignment import broadcast
         from xarray.computation.computation import apply_ufunc
         from xarray.core.dataarray import _THIS_ARRAY, DataArray
+        from xarray.structure.alignment import broadcast
 
         if p0 is None:
             p0 = {}

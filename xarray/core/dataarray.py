@@ -29,13 +29,6 @@ import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex
-from xarray.combine import alignment
-from xarray.combine.alignment import (
-    _broadcast_helper,
-    _get_broadcast_dims_map_common_coords,
-    align,
-)
-from xarray.combine.merge import PANDAS_TYPES, MergeError
 from xarray.computation import computation, ops
 from xarray.computation.arithmetic import DataArrayArithmetic
 from xarray.computation.computation import unify_chunks
@@ -89,6 +82,13 @@ from xarray.core.variable import (
 )
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
+from xarray.structure import alignment
+from xarray.structure.alignment import (
+    _broadcast_helper,
+    _get_broadcast_dims_map_common_coords,
+    align,
+)
+from xarray.structure.merge import PANDAS_TYPES, MergeError
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:

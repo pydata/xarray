@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, NamedTuple, Union
 
 import pandas as pd
 
-from xarray.combine.alignment import deep_align
 from xarray.core import dtypes
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import (
@@ -17,6 +16,7 @@ from xarray.core.indexes import (
 )
 from xarray.core.utils import Frozen, compat_dict_union, dict_equiv, equivalent
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from xarray.structure.alignment import deep_align
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates
