@@ -24,8 +24,9 @@ from numpy import (  # noqa: F401
 )
 from pandas.api.types import is_extension_array_dtype
 
-from xarray.core import dask_array_compat, dask_array_ops, dtypes, nputils
-from xarray.core.array_api_compat import get_array_namespace
+from xarray.compat import dask_array_compat, dask_array_ops
+from xarray.compat.array_api_compat import get_array_namespace
+from xarray.core import dtypes, nputils
 from xarray.core.options import OPTIONS
 from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
 from xarray.namedarray.parallelcompat import get_chunked_array_type

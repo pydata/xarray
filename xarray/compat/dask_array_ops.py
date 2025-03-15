@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 
+from xarray.compat.dask_array_compat import reshape_blockwise
 from xarray.core import dtypes, nputils
 
 
@@ -20,8 +21,6 @@ def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
     import dask.array as da
-
-    from xarray.core.dask_array_compat import reshape_blockwise
 
     # The trick here is that the core dimension is axis 0.
     # All other dimensions need to be reshaped down to one axis for `lstsq`

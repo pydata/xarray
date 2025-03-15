@@ -6,8 +6,9 @@ from typing import Any
 import numpy as np
 from pandas.api.types import is_extension_array_dtype
 
-from xarray.core import array_api_compat, npcompat, utils
-from xarray.core.npcompat import HAS_STRING_DTYPE
+from xarray.compat import array_api_compat, npcompat
+from xarray.compat.npcompat import HAS_STRING_DTYPE
+from xarray.core import utils
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject("<NA>")

@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from xarray.core.array_api_compat import get_array_namespace
+from xarray.compat.array_api_compat import get_array_namespace
 from xarray.core.utils import is_duck_array, module_available
 from xarray.namedarray import pycompat
 

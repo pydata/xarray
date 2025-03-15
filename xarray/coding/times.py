@@ -20,11 +20,11 @@ from xarray.coding.common import (
     unpack_for_decoding,
     unpack_for_encoding,
 )
+from xarray.compat.pdcompat import default_precision_timestamp, timestamp_as_unit
 from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
 from xarray.core.duck_array_ops import array_all, array_any, asarray, ravel, reshape
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
-from xarray.core.pdcompat import default_precision_timestamp, timestamp_as_unit
 from xarray.core.utils import attempt_import, emit_user_level_warning
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import T_ChunkedArray, get_chunked_array_type
