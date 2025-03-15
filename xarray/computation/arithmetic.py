@@ -6,6 +6,8 @@ import numbers
 
 import numpy as np
 
+from xarray.computation.ops import IncludeNumpySameMethods, IncludeReduceMethods
+
 # _typed_ops.py is a generated file
 from xarray.core._typed_ops import (
     DataArrayGroupByOpsMixin,
@@ -15,7 +17,6 @@ from xarray.core._typed_ops import (
     VariableOpsMixin,
 )
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
-from xarray.core.ops import IncludeNumpySameMethods, IncludeReduceMethods
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.namedarray.utils import is_duck_array
 
@@ -29,7 +30,7 @@ class SupportsArithmetic:
     __slots__ = ()
 
     # TODO: implement special methods for arithmetic here rather than injecting
-    # them in xarray/core/ops.py. Ideally, do so by inheriting from
+    # them in xarray/computation/ops.py. Ideally, do so by inheriting from
     # numpy.lib.mixins.NDArrayOperatorsMixin.
 
     # TODO: allow extending this with some sort of registration system
@@ -41,7 +42,7 @@ class SupportsArithmetic:
     )
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
 
         # See the docstring example for numpy.lib.mixins.NDArrayOperatorsMixin.
         out = kwargs.get("out", ())

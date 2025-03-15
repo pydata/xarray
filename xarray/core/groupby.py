@@ -12,13 +12,17 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from xarray.core import dtypes, duck_array_ops, nputils, ops
+from xarray.computation import ops
+from xarray.computation.arithmetic import (
+    DataArrayGroupbyArithmetic,
+    DatasetGroupbyArithmetic,
+)
+from xarray.core import dtypes, duck_array_ops, nputils
 from xarray.core._aggregations import (
     DataArrayGroupByAggregations,
     DatasetGroupByAggregations,
 )
 from xarray.core.alignment import align, broadcast
-from xarray.core.arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
 from xarray.core.concat import concat
 from xarray.core.coordinates import Coordinates, _coordinates_from_variable

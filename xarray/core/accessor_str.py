@@ -51,8 +51,8 @@ from unicodedata import normalize
 
 import numpy as np
 
+from xarray.computation.computation import apply_ufunc
 from xarray.core import duck_array_ops
-from xarray.core.computation import apply_ufunc
 from xarray.core.types import T_DataArray
 
 if TYPE_CHECKING:

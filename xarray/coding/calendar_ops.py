@@ -9,12 +9,12 @@ from xarray.coding.times import (
     _should_cftime_be_used,
     convert_times,
 )
+from xarray.computation.computation import apply_ufunc
 from xarray.core.common import (
     _contains_datetime_like_objects,
     full_like,
     is_np_datetime_like,
 )
-from xarray.core.computation import apply_ufunc
 
 try:
     import cftime

@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar
 import numpy as np
 
 from xarray.compat import dask_array_ops
+from xarray.computation.arithmetic import CoarsenArithmetic
 from xarray.core import dtypes, duck_array_ops, utils
-from xarray.core.arithmetic import CoarsenArithmetic
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
 from xarray.core.utils import (
@@ -645,7 +645,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         # bottleneck doesn't allow min_count to be 0, although it should
         # work the same as if min_count = 1
         # Note bottleneck only works with 1d-rolling.
-        if self.min_periods is not None and self.min_periods == 0:
+        if self.min_periods == 0:
             min_count = 1
         else:
             min_count = self.min_periods

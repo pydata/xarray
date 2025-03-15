@@ -29,7 +29,10 @@ import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex
-from xarray.core import alignment, computation, dtypes, indexing, ops, utils
+from xarray.computation import computation, ops
+from xarray.computation.arithmetic import DataArrayArithmetic
+from xarray.computation.computation import unify_chunks
+from xarray.core import alignment, dtypes, indexing, utils
 from xarray.core._aggregations import DataArrayAggregations
 from xarray.core.accessor_dt import CombinedDatetimelikeAccessor
 from xarray.core.accessor_str import StringAccessor
@@ -38,9 +41,7 @@ from xarray.core.alignment import (
     _get_broadcast_dims_map_common_coords,
     align,
 )
-from xarray.core.arithmetic import DataArrayArithmetic
 from xarray.core.common import AbstractArray, DataWithCoords, get_chunksizes
-from xarray.core.computation import unify_chunks
 from xarray.core.coordinates import (
     Coordinates,
     DataArrayCoordinates,
@@ -97,9 +98,10 @@ if TYPE_CHECKING:
 
     from xarray.backends import ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
+    from xarray.computation.rolling import DataArrayCoarsen, DataArrayRolling
+    from xarray.computation.weighted import DataArrayWeighted
     from xarray.core.groupby import DataArrayGroupBy
     from xarray.core.resample import DataArrayResample
-    from xarray.core.rolling import DataArrayCoarsen, DataArrayRolling
     from xarray.core.types import (
         CoarsenBoundaryOptions,
         DatetimeLike,
@@ -123,7 +125,6 @@ if TYPE_CHECKING:
         T_ChunksFreq,
         T_Xarray,
     )
-    from xarray.core.weighted import DataArrayWeighted
     from xarray.groupers import Grouper, Resampler
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
@@ -7048,7 +7049,7 @@ class DataArray(
             Tutorial on Weighted Reduction using :py:func:`~xarray.DataArray.weighted`
 
         """
-        from xarray.core.weighted import DataArrayWeighted
+        from xarray.computation.weighted import DataArrayWeighted
 
         return DataArrayWeighted(self, weights)
 
@@ -7122,7 +7123,7 @@ class DataArray(
         Dataset.rolling
         core.rolling.DataArrayRolling
         """
-        from xarray.core.rolling import DataArrayRolling
+        from xarray.computation.rolling import DataArrayRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DataArrayRolling(self, dim, min_periods=min_periods, center=center)
@@ -7182,7 +7183,7 @@ class DataArray(
         Dataset.cumulative
         core.rolling.DataArrayRolling
         """
-        from xarray.core.rolling import DataArrayRolling
+        from xarray.computation.rolling import DataArrayRolling
 
         # Could we abstract this "normalize and check 'dim'" logic? It's currently shared
         # with the same method in Dataset.
@@ -7336,7 +7337,7 @@ class DataArray(
             Tutorial on windowed computation using :py:func:`~xarray.DataArray.coarsen`
 
         """
-        from xarray.core.rolling import DataArrayCoarsen
+        from xarray.computation.rolling import DataArrayCoarsen
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return DataArrayCoarsen(

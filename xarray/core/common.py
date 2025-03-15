@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar, Union, o
 import numpy as np
 import pandas as pd
 
-from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
+from xarray.core import dtypes, duck_array_ops, formatting, formatting_html
 from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import ResampleCompatible
@@ -36,11 +36,11 @@ ALL_DIMS = ...
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
+    from xarray.computation.rolling_exp import RollingExp
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.indexes import Index
     from xarray.core.resample import Resample
-    from xarray.core.rolling_exp import RollingExp
     from xarray.core.types import (
         DatetimeLike,
         DTypeLikeSave,
@@ -491,7 +491,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         numpy.clip : equivalent function
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
 
         if keep_attrs is None:
             # When this was a unary func, the default was True, so retaining the
@@ -900,7 +900,6 @@ class DataWithCoords(AttrAccessMixin):
         --------
         core.rolling_exp.RollingExp
         """
-        from xarray.core import rolling_exp
 
         if "keep_attrs" in window_kwargs:
             warnings.warn(
@@ -912,7 +911,9 @@ class DataWithCoords(AttrAccessMixin):
 
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
 
-        return rolling_exp.RollingExp(self, window, window_type)
+        from xarray.computation.rolling_exp import RollingExp
+
+        return RollingExp(self, window, window_type)
 
     def _resample(
         self,
@@ -1253,6 +1254,8 @@ class DataWithCoords(AttrAccessMixin):
             self = self.isel(**indexers)
             cond = cond.isel(**indexers)
 
+        from xarray.computation import ops
+
         return ops.where_method(self, cond, other)
 
     def set_close(self, close: Callable[[], None] | None) -> None:
@@ -1308,7 +1311,7 @@ class DataWithCoords(AttrAccessMixin):
         array([False,  True, False])
         Dimensions without coordinates: x
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -1351,7 +1354,7 @@ class DataWithCoords(AttrAccessMixin):
         array([ True, False,  True])
         Dimensions without coordinates: x
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -1390,7 +1393,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         numpy.isin
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
         from xarray.core.dataarray import DataArray
         from xarray.core.dataset import Dataset
         from xarray.core.variable import Variable
@@ -1473,7 +1476,7 @@ class DataWithCoords(AttrAccessMixin):
         dask.array.Array.astype
         sparse.COO.astype
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
 
         kwargs = dict(order=order, casting=casting, subok=subok, copy=copy)
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
