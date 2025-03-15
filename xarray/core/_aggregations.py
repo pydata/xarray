@@ -3280,7 +3280,7 @@ class DataArrayAggregations:
         dim: Dims = None,
         *,
         skipna: bool | None = None,
-        ddof: int = 0,
+        ddof: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
