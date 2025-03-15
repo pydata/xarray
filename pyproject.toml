@@ -170,8 +170,7 @@ module = [
   "xarray.core.accessor_dt",
   "xarray.core.accessor_str",
   "xarray.core.alignment",
-  "xarray.core.computation",
-  "xarray.core.rolling_exp",
+  "xarray.computation.*",
   "xarray.indexes.*",
   "xarray.tests.*",
 ]

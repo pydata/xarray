@@ -1,5 +1,8 @@
 """
 Functions for applying functions that act on arrays to xarray's labeled data.
+
+NOTE: This module is currently large and contains various computational functionality.
+The long-term plan is to break it down into more focused submodules.
 """
 
 from __future__ import annotations
