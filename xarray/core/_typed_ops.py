@@ -8,8 +8,8 @@ import operator
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, overload
 
-from xarray.core import nputils
 from xarray.computation import ops
+from xarray.core import nputils
 from xarray.core.types import (
     DaCompatible,
     DsCompatible,
