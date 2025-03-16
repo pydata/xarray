@@ -74,9 +74,9 @@ Bug fixes
 - Fix bug preventing encoding times with missing values with small integer
   dtype (:issue:`9134`, :pull:`9498`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
-- More robustly raise an error when lazily encoding times and an
-  integer dtype is specified with units that do not allow for an exact round
-  trip (:pull:`9498`). By `Spencer Clark
+- More robustly raise an error when lazily encoding times and an integer dtype
+  is specified with units that do not allow for an exact round trip
+  (:pull:`9498`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Prevent false resolution change warnings from being emitted when decoding
   timedeltas encoded with floating point values, and make it clearer how to
   silence this warning message in the case that it is rightfully emitted

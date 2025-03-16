@@ -1099,7 +1099,6 @@ def _eagerly_encode_cf_datetime(
                     f"Set encoding['dtype'] to floating point dtype to silence this warning."
                 )
             elif np.issubdtype(dtype, np.integer) and allow_units_modification:
-                floor_division = True
                 new_units = f"{needed_units} since {format_timestamp(ref_date)}"
                 emit_user_level_warning(
                     f"Times can't be serialized faithfully to int64 with requested units {units!r}. "
