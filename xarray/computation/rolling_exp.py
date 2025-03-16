@@ -6,7 +6,7 @@ from typing import Any, Generic
 import numpy as np
 
 from xarray.compat.pdcompat import count_not_none
-from xarray.computation.computation import apply_ufunc
+from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.core.options import _get_keep_attrs
 from xarray.core.types import T_DataWithCoords
 from xarray.core.utils import module_available

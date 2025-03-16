@@ -1710,7 +1710,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             Concatenated Variable formed by stacking all the supplied variables
             along the given dimension.
         """
-        from xarray.core.merge import merge_attrs
+        from xarray.structure.merge import merge_attrs
 
         if not isinstance(dim, str):
             (dim,) = dim.dims
@@ -2713,7 +2713,7 @@ class IndexVariable(Variable):
         This exists because we want to avoid converting Index objects to NumPy
         arrays, if possible.
         """
-        from xarray.core.merge import merge_attrs
+        from xarray.structure.merge import merge_attrs
 
         if not isinstance(dim, str):
             (dim,) = dim.dims

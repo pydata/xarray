@@ -45,20 +45,14 @@ from xarray.compat.array_api_compat import to_like_array
 from xarray.computation import ops
 from xarray.computation.arithmetic import DatasetArithmetic
 from xarray.computation.computation import _ensure_numeric, unify_chunks
+from xarray.core import dtypes as xrdtypes
 from xarray.core import (
-    alignment,
     duck_array_ops,
     formatting,
     formatting_html,
     utils,
 )
-from xarray.core import dtypes as xrdtypes
 from xarray.core._aggregations import DatasetAggregations
-from xarray.core.alignment import (
-    _broadcast_helper,
-    _get_broadcast_dims_map_common_coords,
-    align,
-)
 from xarray.core.common import (
     DataWithCoords,
     _contains_datetime_like_objects,
@@ -83,12 +77,6 @@ from xarray.core.indexes import (
     roll_indexes,
 )
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
-from xarray.core.merge import (
-    dataset_merge_method,
-    dataset_update_method,
-    merge_coordinates_without_align,
-    merge_data_and_coords,
-)
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Bins,
@@ -131,6 +119,18 @@ from xarray.core.variable import (
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.namedarray.pycompat import array_type, is_chunked_array, to_numpy
 from xarray.plot.accessor import DatasetPlotAccessor
+from xarray.structure import alignment
+from xarray.structure.alignment import (
+    _broadcast_helper,
+    _get_broadcast_dims_map_common_coords,
+    align,
+)
+from xarray.structure.merge import (
+    dataset_merge_method,
+    dataset_update_method,
+    merge_coordinates_without_align,
+    merge_data_and_coords,
+)
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
@@ -144,7 +144,6 @@ if TYPE_CHECKING:
     from xarray.computation.weighted import DatasetWeighted
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
-    from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.resample import DatasetResample
     from xarray.core.types import (
         CFCalendar,
@@ -176,6 +175,7 @@ if TYPE_CHECKING:
     )
     from xarray.groupers import Grouper, Resampler
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
+    from xarray.structure.merge import CoercibleMapping, CoercibleValue
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -1402,8 +1402,8 @@ class Dataset(
         When assigning values to a subset of a Dataset, do consistency check beforehand
         to avoid leaving the dataset in a partially updated state when an error occurs.
         """
-        from xarray.core.alignment import align
         from xarray.core.dataarray import DataArray
+        from xarray.structure.alignment import align
 
         if isinstance(value, Dataset):
             missing_vars = [
@@ -5297,7 +5297,7 @@ class Dataset(
         Dimensions without coordinates: x
 
         """
-        from xarray.core.concat import concat
+        from xarray.structure.concat import concat
 
         stacking_dims = tuple(dim for dim in self.dims if dim not in sample_dims)
 
@@ -9784,8 +9784,8 @@ class Dataset(
         from scipy.optimize import curve_fit
 
         from xarray.computation.computation import apply_ufunc
-        from xarray.core.alignment import broadcast
         from xarray.core.dataarray import _THIS_ARRAY, DataArray
+        from xarray.structure.alignment import broadcast
 
         if p0 is None:
             p0 = {}

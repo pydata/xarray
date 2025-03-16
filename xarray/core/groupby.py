@@ -22,9 +22,7 @@ from xarray.core._aggregations import (
     DataArrayGroupByAggregations,
     DatasetGroupByAggregations,
 )
-from xarray.core.alignment import align, broadcast
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
-from xarray.core.concat import concat
 from xarray.core.coordinates import Coordinates, _coordinates_from_variable
 from xarray.core.duck_array_ops import where
 from xarray.core.formatting import format_array_flat
@@ -32,7 +30,6 @@ from xarray.core.indexes import (
     PandasMultiIndex,
     filter_indexes_from_coords,
 )
-from xarray.core.merge import merge_coords
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Dims,
@@ -54,6 +51,9 @@ from xarray.core.utils import (
 )
 from xarray.core.variable import IndexVariable, Variable
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.structure.alignment import align, broadcast
+from xarray.structure.concat import concat
+from xarray.structure.merge import merge_coords
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
