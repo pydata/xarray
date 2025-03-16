@@ -1133,13 +1133,13 @@ def _eagerly_encode_cf_datetime(
         ):
             new_units = f"{needed_units} since {format_cftime_datetime(ref_date)}"
             if allow_units_modification:
-                units = new_units
                 emit_user_level_warning(
                     f"Times can't be serialized faithfully to int64 with requested units {units!r}. "
                     f"Serializing with units {new_units!r} instead. "
                     f"Set encoding['dtype'] to floating point dtype to serialize with units {units!r}. "
                     f"Set encoding['units'] to {new_units!r} to silence this warning ."
                 )
+                units = new_units
             else:
                 raise_incompatible_units_error = True
 
