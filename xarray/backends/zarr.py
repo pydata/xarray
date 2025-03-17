@@ -670,19 +670,31 @@ class ZarrStore(AbstractWritableDataStore):
         from zarr import Group
 
         group_members: dict[str, Group]
-        if _zarr_v3():
-            group_members = {
-                f"/{path}": store
-                for path, store in dict(zarr_group.members(max_depth=None)).items()
-                if isinstance(store, Group) and path.startswith(group.lstrip("/"))
-            }
-            if group == "/":
-                group_members[group] = zarr_group
-        else:
-            group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
-            group_members = {path: zarr_group.get(path) for path in group_paths}
+        print("this part")
+        print(group)
+        print(list(zarr_group.keys()))
+        print(dict(zarr_group.members(max_depth=None)))
+        # potentially use members here and explcitily add the group
+        group_members = {}
+        group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
+        print(group_paths)
+        print(list(zarr_group.keys()))
+        for path in group_paths:
+            if path == group:
+                group_members[path] = zarr_group
+            else:
+                print("this bit")
+                print("group", group)
+                print("path", path)
+                rel_path = path.removeprefix(f"{group}/")
+                print("rel_path", rel_path)
+                print('changing')
+                group_members[path] = zarr_group[rel_path.removeprefix('/')]
+        print(group_members)
 
-        return {
+        for group, group_store in group_members.items():
+            print(group, group_store)
+        out =  {
             group: cls(
                 group_store,
                 mode,
@@ -697,6 +709,7 @@ class ZarrStore(AbstractWritableDataStore):
             )
             for group, group_store in group_members.items()
         }
+        return out
 
     @classmethod
     def open_group(
@@ -1654,6 +1667,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             zarr_version=zarr_version,
             zarr_format=zarr_format,
         )
+        print('groups_dict', groups_dict)
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
 
@@ -1684,6 +1698,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             parent = str(NodePath("/") / NodePath(group))
         else:
             parent = str(NodePath("/"))
+        print("parent",parent)
 
         stores = ZarrStore.open_store(
             filename_or_obj,
@@ -1698,6 +1713,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             zarr_format=zarr_format,
         )
 
+        print("stores",stores)
         groups_dict = {}
 
         for path_group, store in stores.items():
@@ -1784,11 +1800,11 @@ def _get_open_params(
         # open the root of the store, in case there is metadata consolidated there
         group = open_kwargs.pop("path")
 
-        if consolidated == True:
+        if consolidated:
             # TODO: an option to pass the metadata_key keyword
-            zarr_group = zarr.open_consolidated(store, **open_kwargs)
+            zarr_root_group = zarr.open_consolidated(store, **open_kwargs)
         elif consolidated is None:
-            # same but with more error handling if no consolidated metadata found
+            # same but with more error handling in case no consolidated metadata found
             try:
                 zarr_root_group = zarr.open_consolidated(store, **open_kwargs)
             except (ValueError, KeyError):
@@ -1813,9 +1829,9 @@ def _get_open_params(
                     raise FileNotFoundError(
                         f"No such file or directory: '{store}'"
                     ) from err
-        
-        # but the user should still recieve a tree whose root is the group they asked for
-        if group:
+
+        # but the user should still recieve a DataTree whose root is the group they asked for
+        if group and group != "/":
             zarr_group = zarr_root_group[group.removeprefix("/")]
         else:
             zarr_group = zarr_root_group
@@ -1825,6 +1841,7 @@ def _get_open_params(
             # so we set that to False to avoid trying to read it
             open_kwargs["use_consolidated"] = False
         zarr_group = zarr.open_group(store, **open_kwargs)
+
     close_store_on_close = zarr_group.store is not store
 
     # we use this to determine how to handle fill_value
