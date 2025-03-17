@@ -670,30 +670,16 @@ class ZarrStore(AbstractWritableDataStore):
         from zarr import Group
 
         group_members: dict[str, Group]
-        print("this part")
-        print(group)
-        print(list(zarr_group.keys()))
-        print(dict(zarr_group.members(max_depth=None)))
         # potentially use members here and explcitily add the group
         group_members = {}
         group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
-        print(group_paths)
-        print(list(zarr_group.keys()))
         for path in group_paths:
             if path == group:
                 group_members[path] = zarr_group
             else:
-                print("this bit")
-                print("group", group)
-                print("path", path)
                 rel_path = path.removeprefix(f"{group}/")
-                print("rel_path", rel_path)
-                print('changing')
                 group_members[path] = zarr_group[rel_path.removeprefix('/')]
-        print(group_members)
 
-        for group, group_store in group_members.items():
-            print(group, group_store)
         out =  {
             group: cls(
                 group_store,
@@ -1667,7 +1653,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             zarr_version=zarr_version,
             zarr_format=zarr_format,
         )
-        print('groups_dict', groups_dict)
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
 
@@ -1698,7 +1683,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             parent = str(NodePath("/") / NodePath(group))
         else:
             parent = str(NodePath("/"))
-        print("parent",parent)
 
         stores = ZarrStore.open_store(
             filename_or_obj,
@@ -1713,9 +1697,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             zarr_format=zarr_format,
         )
 
-        print("stores",stores)
         groups_dict = {}
-
         for path_group, store in stores.items():
             store_entrypoint = StoreBackendEntrypoint()
 
