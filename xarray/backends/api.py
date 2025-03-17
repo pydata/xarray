@@ -1119,7 +1119,7 @@ def open_datatree(
 
     decoders = _resolve_decoders_kwargs(
         decode_cf,
-        open_backend_dataset_parameters=(),
+        open_backend_dataset_parameters=backend.open_dataset_parameters,
         mask_and_scale=mask_and_scale,
         decode_times=decode_times,
         decode_timedelta=decode_timedelta,
