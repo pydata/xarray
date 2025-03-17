@@ -14,7 +14,7 @@ from xarray.core.formatting import (
     inline_variable_array_repr,
     short_data_repr,
 )
-from xarray.core.options import _get_boolean_with_default
+from xarray.core.options import OPTIONS, _get_boolean_with_default
 
 STATIC_FILES = (
     ("xarray.static.html", "icons-svg-inline.html"),
@@ -192,16 +192,27 @@ def collapsible_section(
 
 
 def _mapping_section(
-    mapping, name, details_func, max_items_collapse, expand_option_name, enabled=True
+    mapping,
+    name,
+    details_func,
+    max_items_collapse,
+    expand_option_name,
+    enabled=True,
+    max_items_truncate: int | None = None,
 ) -> str:
     n_items = len(mapping)
     expanded = _get_boolean_with_default(
         expand_option_name, n_items < max_items_collapse
     )
     collapsed = not expanded
+    truncated = max_items_truncate is not None and n_items > max_items_truncate
+    inline_details = (
+        f"Only first {max_items_truncate} will show in dropdown" if truncated else ""
+    )
 
     return collapsible_section(
         name,
+        inline_details=inline_details,
         details=details_func(mapping),
         n_items=n_items,
         enabled=enabled,
@@ -349,19 +360,12 @@ def dataset_repr(ds) -> str:
 
 def summarize_datatree_children(children: Mapping[str, DataTree]) -> str:
     N_CHILDREN = len(children) - 1
-
-    # Get result from datatree_node_repr and wrap it
-    lines_callback = lambda n, c, end: _wrap_datatree_repr(
-        datatree_node_repr(n, c), end=end
-    )
+    MAX_CHILDREN = OPTIONS["display_max_rows"]
 
     children_html = "".join(
-        (
-            lines_callback(n, c, end=False)  # Long lines
-            if i < N_CHILDREN
-            else lines_callback(n, c, end=True)
-        )  # Short lines
+        _wrap_datatree_repr(datatree_node_repr(n, c), end=i == N_CHILDREN)
         for i, (n, c) in enumerate(children.items())
+        if i < MAX_CHILDREN
     )
 
     return "".join(
@@ -378,6 +382,7 @@ children_section = partial(
     name="Groups",
     details_func=summarize_datatree_children,
     max_items_collapse=1,
+    max_items_truncate=OPTIONS["display_max_rows"],
     expand_option_name="display_expand_groups",
 )
 
@@ -422,7 +427,7 @@ def datatree_node_repr(group_title: str, node: DataTree, show_inherited=False) -
     return _obj_repr(ds, header_components, sections)
 
 
-def _wrap_datatree_repr(r: str, end: bool = False) -> str:
+def _wrap_datatree_repr(r: str, end: bool = False, skipped_some: bool = False) -> str:
     """
     Wrap HTML representation with a tee to the left of it.
 
