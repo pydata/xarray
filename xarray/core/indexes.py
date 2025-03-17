@@ -208,17 +208,17 @@ class Index:
         Dataset) or updating an existing one.
 
         By default raises an error if the dimensions of the coordinate variable
-        do conflict with the array dimensions (strict DataArray model).
+        do conflict with the array dimensions (DataArray model).
 
         This method may be overridden in Index subclasses, e.g., to include index
-        coordinates that does not conform with the strict DataArray model. This
+        coordinates that does not strictly conform with the DataArray model. This
         is useful for example to include (n+1)-dimensional cell boundary
         coordinates attached to an index.
 
-        When a DataArray is constructed from a Dataset, instead of raising the
-        error Xarray will drop the index and propagate the index coordinates
-        according to the default rules for DataArray (i.e., depending on their
-        dimensions).
+        When a DataArray is constructed from a Dataset, if the validation fails
+        Xarray will fail back to propagating the coordinate according to the
+        default rules for DataArray (i.e., depending on its dimensions), which
+        may drop this index.
 
         Parameters
         ----------
