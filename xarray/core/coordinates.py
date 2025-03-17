@@ -974,12 +974,7 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
                 "cannot add coordinates with new dimensions to a DataArray"
             )
         self._data._coords = coords
-
-        # TODO(shoyer): once ._indexes is always populated by a dict, modify
-        # it to update inplace instead.
-        original_indexes = dict(self._data.xindexes)
-        original_indexes.update(indexes)
-        self._data._indexes = original_indexes
+        self._data._indexes = indexes
 
     def _drop_coords(self, coord_names):
         # should drop indexed coordinates only
