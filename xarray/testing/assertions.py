@@ -398,12 +398,12 @@ def _assert_dataarray_invariants(da: DataArray, check_default_indexes: bool):
 
     assert isinstance(da._coords, dict), da._coords
     assert all(isinstance(v, Variable) for v in da._coords.values()), da._coords
-    assert all(set(v.dims) <= set(da.dims) for v in da._coords.values()), (
-        da.dims,
-        {k: v.dims for k, v in da._coords.items()},
-    )
 
     if check_default_indexes:
+        assert all(set(v.dims) <= set(da.dims) for v in da._coords.values()), (
+            da.dims,
+            {k: v.dims for k, v in da._coords.items()},
+        )
         assert all(
             isinstance(v, IndexVariable)
             for (k, v) in da._coords.items()

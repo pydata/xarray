@@ -1671,8 +1671,9 @@ class TestDataArray:
 
         da = DataArray([1.0, 2.0], dims="x")
         actual = da.assign_coords(coords)
+        expected = DataArray([1.0, 2.0], coords=coords, dims="x")
 
-        assert_identical(actual.coords, coords, check_default_indexes=False)
+        assert_identical(actual, expected, check_default_indexes=False)
         assert "x_bnds" not in actual.dims
 
     def test_coords_alignment(self) -> None:
