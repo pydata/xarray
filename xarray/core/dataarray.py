@@ -132,7 +132,7 @@ if TYPE_CHECKING:
     T_XarrayOther = TypeVar("T_XarrayOther", bound="DataArray" | Dataset)
 
 
-def _check_coords_dims(
+def check_dataarray_coords(
     shape: tuple[int, ...],
     coords: Coordinates | Mapping[Hashable, Variable],
     dim: tuple[Hashable, ...],
@@ -229,7 +229,7 @@ def _infer_coords_and_dims(
                 var.dims = (dim,)
                 new_coords[dim] = var.to_index_variable()
 
-    _check_coords_dims(shape, new_coords, dims_tuple)
+    check_dataarray_coords(shape, new_coords, dims_tuple)
 
     return new_coords, dims_tuple
 

@@ -966,13 +966,12 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
     def _update_coords(
         self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
     ) -> None:
-        coords_plus_data = coords.copy()
-        coords_plus_data[_THIS_ARRAY] = self._data.variable
-        dims = calculate_dimensions(coords_plus_data)
-        if not set(dims) <= set(self.dims):
-            raise ValueError(
-                "cannot add coordinates with new dimensions to a DataArray"
-            )
+        from xarray.core.dataarray import check_dataarray_coords
+
+        check_dataarray_coords(
+            self._data.shape, Coordinates._construct_direct(coords, indexes), self.dims
+        )
+
         self._data._coords = coords
         self._data._indexes = indexes
 
