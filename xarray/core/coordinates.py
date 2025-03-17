@@ -486,7 +486,7 @@ class Coordinates(AbstractCoordinates):
         return self.to_dataset().identical(other.to_dataset())
 
     def _update_coords(
-        self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
+        self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
     ) -> None:
         # redirect to DatasetCoordinates._update_coords
         self._data.coords._update_coords(coords, indexes)
@@ -780,7 +780,7 @@ class DatasetCoordinates(Coordinates):
         return self._data._copy_listed(names)
 
     def _update_coords(
-        self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
+        self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
     ) -> None:
         variables = self._data._variables.copy()
         variables.update(coords)
@@ -880,7 +880,7 @@ class DataTreeCoordinates(Coordinates):
         return self._data.dataset._copy_listed(self._names)
 
     def _update_coords(
-        self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
+        self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
     ) -> None:
         from xarray.core.datatree import check_alignment
 
@@ -964,7 +964,7 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
         return self._data._getitem_coord(key)
 
     def _update_coords(
-        self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
+        self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
     ) -> None:
         coords_plus_data = coords.copy()
         coords_plus_data[_THIS_ARRAY] = self._data.variable

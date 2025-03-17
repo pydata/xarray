@@ -132,7 +132,11 @@ if TYPE_CHECKING:
     T_XarrayOther = TypeVar("T_XarrayOther", bound="DataArray" | Dataset)
 
 
-def _check_coords_dims(shape, coords, dim):
+def _check_coords_dims(
+    shape: tuple[int, ...],
+    coords: Coordinates | Mapping[Hashable, Variable],
+    dim: tuple[Hashable, ...],
+):
     sizes = dict(zip(dim, shape, strict=True))
     for k, v in coords.items():
         if any(d not in dim for d in v.dims):
