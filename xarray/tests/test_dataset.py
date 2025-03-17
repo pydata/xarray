@@ -4208,9 +4208,9 @@ class TestDataset:
 
     def test_getitem_extra_dim_index_coord(self) -> None:
         class AnyIndex(Index):
-            # This test only requires that the coordinates to assign have an
-            # index, whatever its type.
-            pass
+            def validate_dataarray_coord(self, name, var, dims):
+                # pass all index coordinates
+                pass
 
         idx = AnyIndex()
         coords = Coordinates(
