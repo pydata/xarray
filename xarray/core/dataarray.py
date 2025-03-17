@@ -138,8 +138,19 @@ def _check_coords_dims(
     dim: tuple[Hashable, ...],
 ):
     sizes = dict(zip(dim, shape, strict=True))
+
+    indexes: Mapping[Hashable, Index]
+    if isinstance(coords, Coordinates):
+        indexes = coords.xindexes
+    else:
+        indexes = {}
+
+    dim_set = set(dim)
+
     for k, v in coords.items():
-        if any(d not in dim for d in v.dims):
+        if k in indexes:
+            indexes[k].validate_dataarray_coord(k, v, dim_set)
+        elif any(d not in dim for d in v.dims):
             raise ValueError(
                 f"coordinate {k} has dimensions {v.dims}, but these "
                 "are not a subset of the DataArray "
@@ -147,7 +158,7 @@ def _check_coords_dims(
             )
 
         for d, s in v.sizes.items():
-            if s != sizes[d]:
+            if d in sizes and s != sizes[d]:
                 raise ValueError(
                     f"conflicting sizes for dimension {d!r}: "
                     f"length {sizes[d]} on the data but length {s} on "
