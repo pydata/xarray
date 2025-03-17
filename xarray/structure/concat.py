@@ -7,20 +7,20 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import dtypes, utils
-from xarray.core.alignment import align, reindex_variables
 from xarray.core.coordinates import Coordinates
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import Index, PandasIndex
-from xarray.core.merge import (
+from xarray.core.types import T_DataArray, T_Dataset, T_Variable
+from xarray.core.utils import emit_user_level_warning
+from xarray.core.variable import Variable
+from xarray.core.variable import concat as concat_vars
+from xarray.structure.alignment import align, reindex_variables
+from xarray.structure.merge import (
     _VALID_COMPAT,
     collect_variables_and_indexes,
     merge_attrs,
     merge_collected,
 )
-from xarray.core.types import T_DataArray, T_Dataset, T_Variable
-from xarray.core.utils import emit_user_level_warning
-from xarray.core.variable import Variable
-from xarray.core.variable import concat as concat_vars
 from xarray.util.deprecation_helpers import (
     _COMPAT_CONCAT_DEFAULT,
     _COORDS_DEFAULT,

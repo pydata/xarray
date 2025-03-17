@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast
 import pandas as pd
 
 from xarray.core import dtypes
-from xarray.core.concat import concat
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
-from xarray.core.merge import merge
 from xarray.core.utils import iterate_nested
+from xarray.structure.concat import concat
+from xarray.structure.merge import merge
 from xarray.util.deprecation_helpers import (
     _COMPAT_DEFAULT,
     _COORDS_DEFAULT,

@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, NamedTuple, Union
 import pandas as pd
 
 from xarray.core import dtypes
-from xarray.core.alignment import deep_align
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import (
     Index,
@@ -23,6 +22,7 @@ from xarray.core.utils import (
     equivalent,
 )
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from xarray.structure.alignment import deep_align
 from xarray.util.deprecation_helpers import (
     _COMPAT_DEFAULT,
     _JOIN_DEFAULT,
@@ -705,10 +705,6 @@ def merge_core(
         Dictionary mapping from dimension names to sizes.
     attrs : dict
         Dictionary of attributes
-
-    Raises
-    ------
-    MergeError if the merge cannot be done successfully.
     """
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
