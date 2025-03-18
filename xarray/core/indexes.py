@@ -205,29 +205,33 @@ class Index:
         var: Variable,
         dims: set[Hashable],
     ):
-        """Validate an index coordinate to be included in a DataArray.
+        """Validate an index coordinate variable to include in a DataArray.
 
         This method is called repeatedly for each coordinate associated with
         this index when creating a new DataArray (via its constructor or from a
         Dataset) or updating an existing one.
 
-        By default raises an error if the dimensions of the coordinate variable
-        do conflict with the array dimensions (DataArray model).
+        By default raises a :py:class:`CoordinateValidationError` if the
+        dimensions of the coordinate variable do conflict with the array
+        dimensions (DataArray model).
 
-        This method may be overridden in Index subclasses, e.g., to include index
-        coordinates that does not strictly conform with the DataArray model. This
-        is useful for example to include (n+1)-dimensional cell boundary
-        coordinates attached to an index.
+        This method may be overridden in Index subclasses, e.g., to validate
+        index coordinates even when they do not strictly conform with the
+        DataArray model. This is useful for example to include (n+1)-dimensional
+        cell boundary coordinates attached to an index.
 
-        When a DataArray is constructed from a Dataset, if the validation fails
-        Xarray will fail back to propagating the coordinate according to the
-        default rules for DataArray (i.e., depending on its dimensions), which
-        may drop this index.
+        If the validation passes (i.e., no error raised), the coordinate will be
+        included in the DataArray regardless of its dimensions.
+
+        When a DataArray is constructed from a Dataset (variable access), if the
+        validation fails Xarray will fail back to propagating the coordinate
+        according to the default rules for DataArray (i.e., depending on its
+        dimensions), which may drop this index.
 
         Parameters
         ----------
         name : Hashable
-            Name of a coordinate associated to this index.
+            Name of a coordinate variable associated to this index.
         var : Variable
             Coordinate variable object.
         dims: tuple
