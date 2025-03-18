@@ -78,6 +78,8 @@ def generate_method(method: Callable):
 
 
 def write():
+    from xarray.core.dataset import Dataset
+
     print(MODULE_PREAMBLE)
     print(WRAPPER)
     print(CLASS_PREAMBLE)
@@ -87,4 +89,9 @@ def write():
 
 
 if __name__ == "__main__":
+    # fix hen and egg problem (file needs to exist so we can import Dataset)
+    file = "xarray/core/_datatree_methods.py"
+    with open(file, "w") as f:
+        f.write("class TreeMethodsMixin: pass")
+
     write()
