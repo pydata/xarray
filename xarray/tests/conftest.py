@@ -191,7 +191,8 @@ def create_test_datatree():
     """
 
     def _create_test_datatree(modify=lambda ds: ds):
-        set1_data = modify(xr.Dataset({"a": 0, "b": 1}))
+        # note: No arrays are fully zeroes to avoid confusing behaviour with zarr-python's default fill_value
+        set1_data = modify(xr.Dataset({"a": -1, "b": 1}))
         set2_data = modify(xr.Dataset({"a": ("x", [2, 3]), "b": ("x", [0.1, 0.2])}))
         root_data = modify(xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])}))
 
