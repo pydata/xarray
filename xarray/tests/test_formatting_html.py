@@ -320,6 +320,44 @@ class Test_summarize_datatree_children:
         )
 
 
+class TestDataTreeTruncatesNodes:
+    def test_many_nodes(self):
+        # construct a datatree with 500 nodes
+        number_of_files = 20
+        number_of_groups = 25
+        tree_dict = {}
+        for f in range(number_of_files):
+            for g in range(number_of_groups):
+                tree_dict[f"file_{f}/group_{g}"] = xr.Dataset({"g": f * g})
+
+        tree = xr.DataTree.from_dict(tree_dict)
+        with xr.set_options(display_style="html"):
+            result = tree._repr_html_()
+
+        assert "Only first 12 will show in dropdown"
+        assert "file_0" in result
+        assert "file_11" in result
+        assert "file_12" not in result
+        assert "file_19" not in result
+        assert "group_0" in result
+        assert "group_11" in result
+        assert "group_12" not in result
+        assert "group_24" not in result
+
+        with xr.set_options(display_style="html", display_max_rows=4):
+            result = tree._repr_html_()
+
+        assert "Only first 4 will show in dropdown"
+        assert "file_0" in result
+        assert "file_3" in result
+        assert "file_4" not in result
+        assert "file_19" not in result
+        assert "group_0" in result
+        assert "group_3" in result
+        assert "group_4" not in result
+        assert "group_24" not in result
+
+
 class TestDataTreeInheritance:
     def test_inherited_section_present(self) -> None:
         dt = xr.DataTree.from_dict(

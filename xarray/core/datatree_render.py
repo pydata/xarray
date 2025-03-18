@@ -168,7 +168,7 @@ class RenderDataTree:
 
         # `maxchildren` roughly limits the total number of children
 
-        >>> print(RenderDataTree(root, maxchildren=3))
+        >>> print(RenderDataTree(root, maxchildren=3).by_attr())
         root
         ├── sub0
         │   ├── sub0B
