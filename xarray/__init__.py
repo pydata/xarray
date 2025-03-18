@@ -39,7 +39,7 @@ from xarray.core.extensions import (
     register_dataset_accessor,
     register_datatree_accessor,
 )
-from xarray.core.indexes import Index
+from xarray.core.indexes import CoordinateValidationError, Index
 from xarray.core.indexing import IndexSelResult
 from xarray.core.options import get_options, set_options
 from xarray.core.parallel import map_blocks
@@ -128,6 +128,7 @@ __all__ = (  # noqa: RUF022
     "NamedArray",
     "Variable",
     # Exceptions
+    "CoordinateValidationError",
     "InvalidTreeError",
     "MergeError",
     "NotFoundInTreeError",

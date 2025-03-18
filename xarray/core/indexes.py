@@ -33,6 +33,10 @@ if TYPE_CHECKING:
 IndexVars = dict[Any, "Variable"]
 
 
+class CoordinateValidationError(ValueError):
+    """Error class for Xarray coordinate validation failures."""
+
+
 class Index:
     """
     Base class inherited by all xarray-compatible indexes.
@@ -231,12 +235,12 @@ class Index:
 
         Raises
         ------
-        ValueError
+        CoordinateValidationError
             When validation fails.
 
         """
         if any(d not in dims for d in var.dims):
-            raise ValueError(
+            raise CoordinateValidationError(
                 f"coordinate {name} has dimensions {var.dims}, but these "
                 "are not a subset of the DataArray "
                 f"dimensions {dims}"

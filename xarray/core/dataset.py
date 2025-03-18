@@ -65,6 +65,7 @@ from xarray.core.coordinates import (
 )
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import (
+    CoordinateValidationError,
     Index,
     Indexes,
     PandasIndex,
@@ -1219,7 +1220,7 @@ class Dataset(
                         k, self._variables[k], needed_dims
                     )
                     coords[k] = self._variables[k]
-                except ValueError:
+                except CoordinateValidationError:
                     # failback to strict DataArray model check (index may be dropped later)
                     if var_dims <= needed_dims:
                         coords[k] = self._variables[k]

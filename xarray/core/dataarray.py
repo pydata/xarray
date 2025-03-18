@@ -47,6 +47,7 @@ from xarray.core.dataset import Dataset
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.formatting import format_item
 from xarray.core.indexes import (
+    CoordinateValidationError,
     Index,
     Indexes,
     PandasMultiIndex,
@@ -151,7 +152,7 @@ def check_dataarray_coords(
         if k in indexes:
             indexes[k].validate_dataarray_coord(k, v, dim_set)
         elif any(d not in dim for d in v.dims):
-            raise ValueError(
+            raise CoordinateValidationError(
                 f"coordinate {k} has dimensions {v.dims}, but these "
                 "are not a subset of the DataArray "
                 f"dimensions {dim}"
@@ -159,7 +160,7 @@ def check_dataarray_coords(
 
         for d, s in v.sizes.items():
             if d in sizes and s != sizes[d]:
-                raise ValueError(
+                raise CoordinateValidationError(
                     f"conflicting sizes for dimension {d!r}: "
                     f"length {sizes[d]} on the data but length {s} on "
                     f"coordinate {k!r}"
