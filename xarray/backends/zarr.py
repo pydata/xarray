@@ -678,9 +678,9 @@ class ZarrStore(AbstractWritableDataStore):
                 group_members[path] = zarr_group
             else:
                 rel_path = path.removeprefix(f"{group}/")
-                group_members[path] = zarr_group[rel_path.removeprefix('/')]
+                group_members[path] = zarr_group[rel_path.removeprefix("/")]
 
-        out =  {
+        out = {
             group: cls(
                 group_store,
                 mode,
@@ -1812,7 +1812,7 @@ def _get_open_params(
                         f"No such file or directory: '{store}'"
                     ) from err
 
-        # but the user should still recieve a DataTree whose root is the group they asked for
+        # but the user should still receive a DataTree whose root is the group they asked for
         if group and group != "/":
             zarr_group = zarr_root_group[group.removeprefix("/")]
         else:
