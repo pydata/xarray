@@ -1,0 +1,92 @@
+"""Generate module and stub file for arithmetic operators of various xarray classes.
+
+For internal xarray development use only.
+
+Usage:
+    ipython xarray/util/generate_datatree_methods.py > xarray/core/_datatree_methods.py
+    ruff check --fix xarray/core/_datatree_methods.py
+    ruff format xarray/core/_datatree_methods.py
+
+
+This requires ruff to be installed locally.
+"""
+
+import inspect
+import textwrap
+from collections.abc import Callable
+
+from xarray.core.dataset import Dataset
+
+MODULE_PREAMBLE = '''\
+"""Mixin classes with reduction operations."""
+
+# This file was generated using xarray.util.generate_aggregations. Do not edit manually.
+
+from __future__ import annotations
+
+from collections.abc import Hashable, Iterable
+from functools import wraps
+from typing import Literal, Self
+
+from xarray.core.dataset import Dataset
+from xarray.core.datatree_mapping import map_over_datasets
+from xarray.core.types import ErrorOptionsWithWarn
+'''
+
+
+CLASS_PREAMBLE = """\
+class TreeMethodsMixin:
+    __slots__ = ()
+
+"""
+
+WRAPPER = """\
+def _wrap_dataset_method(to_apply):
+    def wrap_method(func):
+
+        @wraps(func)
+        def inner(self, *args, **kwargs):
+            return map_over_datasets(to_apply, self, *args, kwargs=kwargs)
+
+        return inner
+
+    return wrap_method
+"""
+
+METHODS = (
+    "argmax",
+    "dropna",
+    "transpose",
+)
+
+
+METHOD_TEMPLATE = '''\n
+@_wrap_dataset_method(Dataset.{funcname})
+def {funcname}{signature}:
+    """{doc}"""
+    # NOTE: the method is executed in the wrapper
+    pass'''
+
+
+def generate_method(method: Callable):
+    kwargs = {
+        "funcname": method.__name__,
+        "doc": method.__doc__,
+        "signature": inspect.signature(method),
+    }
+
+    m = METHOD_TEMPLATE.format(**kwargs)
+    return textwrap.indent(m, "    ")
+
+
+def write():
+    print(MODULE_PREAMBLE)
+    print(WRAPPER)
+    print(CLASS_PREAMBLE)
+
+    for method in METHODS:
+        print(generate_method(getattr(Dataset, method)))
+
+
+if __name__ == "__main__":
+    write()
