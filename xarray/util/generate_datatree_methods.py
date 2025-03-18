@@ -15,12 +15,10 @@ import inspect
 import textwrap
 from collections.abc import Callable
 
-from xarray.core.dataset import Dataset
-
 MODULE_PREAMBLE = '''\
-"""Mixin classes with reduction operations."""
+"""Mixin class to add Dataset methods to DataTree"""
 
-# This file was generated using xarray.util.generate_aggregations. Do not edit manually.
+# This file was generated using xarray.util.generate_datatree_methods. Do not edit manually.
 
 from __future__ import annotations
 
