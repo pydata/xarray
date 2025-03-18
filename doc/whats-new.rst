@@ -16,8 +16,14 @@ What's New
 
 .. _whats-new.2025.02.0:
 
-v2025.02.0 (unreleased)
------------------------
+v2025.03.0 (Mar 18, 2025)
+-------------------------
+
+This release brings tested support for Python 3.13, significant improvements to datetime & timedelta encoding/decoding,
+and improvements to the :py:class:`~xarray.DataTree` API; in addition to the usual bug fixes and other improvements.
+Thanks to the 21 contributors to this release:
+Benoit Bovy, Chuck Daniels, Deepak Cherian, Florian Jetter, Jan, Josh Kihm, Julia Signell, Justus Magin, Kai Mühlbauer, Kobe Vandelanotte, Mathias Hauser,
+Max Jones, Maximilian Roos, Oliver Watt-Meyer, Sam Levang, Sander van Rijn, Spencer Clark, Stephan Hoyer, Tom White, Vecko and maddogghoek
 
 New Features
 ~~~~~~~~~~~~
@@ -95,9 +101,6 @@ Documentation
 - Better expose the :py:class:`Coordinates` class in API reference (:pull:`10000`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
 
-Internal Changes
-~~~~~~~~~~~~~~~~
-
 
 .. _whats-new.2025.01.2:
 
@@ -172,11 +175,6 @@ New Features
   :py:class:`pandas.DatetimeIndex` (:pull:`9965`). By `Spencer Clark
   <https://github.com/spencerkclark>`_ and `Kai Mühlbauer
   <https://github.com/kmuehlbauer>`_.
-- :py:meth:`DatasetGroupBy.first` and :py:meth:`DatasetGroupBy.last` can now use ``flox`` if available. (:issue:`9647`)
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-
-Breaking changes
-~~~~~~~~~~~~~~~~
 - Adds shards to the list of valid_encodings in the zarr backend, so that
   sharded Zarr V3s can be written (:issue:`9947`, :pull:`9948`).
   By `Jacob Prince_Bieker <https://github.com/jacobbieker>`_
