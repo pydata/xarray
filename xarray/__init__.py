@@ -29,7 +29,7 @@ from xarray.computation.computation import (
 )
 from xarray.conventions import SerializationWarning, decode_cf
 from xarray.core.common import ALL_DIMS, full_like, ones_like, zeros_like
-from xarray.core.coordinates import Coordinates
+from xarray.core.coordinates import Coordinates, CoordinateValidationError
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
@@ -39,7 +39,7 @@ from xarray.core.extensions import (
     register_dataset_accessor,
     register_datatree_accessor,
 )
-from xarray.core.indexes import CoordinateValidationError, Index
+from xarray.core.indexes import Index
 from xarray.core.indexing import IndexSelResult
 from xarray.core.options import get_options, set_options
 from xarray.core.parallel import map_blocks

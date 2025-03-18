@@ -966,9 +966,7 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
     def _update_coords(
         self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
     ) -> None:
-        from xarray.core.dataarray import check_dataarray_coords
-
-        check_dataarray_coords(
+        validate_dataarray_coords(
             self._data.shape, Coordinates._construct_direct(coords, indexes), self.dims
         )
 
@@ -1147,6 +1145,53 @@ def create_coords_with_default_indexes(
 
     return new_coords
 
+
+class CoordinateValidationError(ValueError):
+    """Error class for Xarray coordinate validation failures."""
+
+
+def validate_dataarray_coords(
+    shape: tuple[int, ...],
+    coords: Coordinates | Mapping[Hashable, Variable],
+    dim: tuple[Hashable, ...],
+):
+    """Validate coordinates ``coords`` to include in a DataArray defined by
+    ``shape`` and dimensions ``dim``.
+
+    If a coordinate is associated with an index, the validation is performed by
+    the index. By default the coordinate dimensions must match (a subset of) the
+    array dimensions (in any order) to conform to the DataArray model. The index
+    may override this behavior with other validation rules, though.
+
+    Non-index coordinates must all conform to the DataArray model. Scalar
+    coordinates are always valid.
+    """
+    sizes = dict(zip(dim, shape, strict=True))
+    dim_set = set(dim)
+
+    indexes: Mapping[Hashable, Index]
+    if isinstance(coords, Coordinates):
+        indexes = coords.xindexes
+    else:
+        indexes = {}
+
+    for k, v in coords.items():
+        if k in indexes:
+            indexes[k].validate_dataarray_coord(k, v, dim_set)
+        elif any(d not in dim for d in v.dims):
+            raise CoordinateValidationError(
+                f"coordinate {k} has dimensions {v.dims}, but these "
+                "are not a subset of the DataArray "
+                f"dimensions {dim}"
+            )
+
+        for d, s in v.sizes.items():
+            if d in sizes and s != sizes[d]:
+                raise CoordinateValidationError(
+                    f"conflicting sizes for dimension {d!r}: "
+                    f"length {sizes[d]} on the data but length {s} on "
+                    f"coordinate {k!r}"
+                )
 
 
 def coordinates_from_variable(variable: Variable) -> Coordinates:

@@ -60,12 +60,12 @@ from xarray.core.common import (
 )
 from xarray.core.coordinates import (
     Coordinates,
+    CoordinateValidationError,
     DatasetCoordinates,
     assert_coordinate_consistent,
 )
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import (
-    CoordinateValidationError,
     Index,
     Indexes,
     PandasIndex,

@@ -33,9 +33,8 @@ from xarray import (
 from xarray.coders import CFDatetimeCoder
 from xarray.core import dtypes
 from xarray.core.common import full_like
-from xarray.core.coordinates import Coordinates
+from xarray.core.coordinates import Coordinates, CoordinateValidationError
 from xarray.core.indexes import (
-    CoordinateValidationError,
     Index,
     PandasIndex,
     filter_indexes_from_coords,

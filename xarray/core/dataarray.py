@@ -42,12 +42,12 @@ from xarray.core.coordinates import (
     DataArrayCoordinates,
     assert_coordinate_consistent,
     create_coords_with_default_indexes,
+    validate_dataarray_coords,
 )
 from xarray.core.dataset import Dataset
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.formatting import format_item
 from xarray.core.indexes import (
-    CoordinateValidationError,
     Index,
     Indexes,
     PandasMultiIndex,
@@ -133,40 +133,6 @@ if TYPE_CHECKING:
     T_XarrayOther = TypeVar("T_XarrayOther", bound="DataArray" | Dataset)
 
 
-def check_dataarray_coords(
-    shape: tuple[int, ...],
-    coords: Coordinates | Mapping[Hashable, Variable],
-    dim: tuple[Hashable, ...],
-):
-    sizes = dict(zip(dim, shape, strict=True))
-
-    indexes: Mapping[Hashable, Index]
-    if isinstance(coords, Coordinates):
-        indexes = coords.xindexes
-    else:
-        indexes = {}
-
-    dim_set = set(dim)
-
-    for k, v in coords.items():
-        if k in indexes:
-            indexes[k].validate_dataarray_coord(k, v, dim_set)
-        elif any(d not in dim for d in v.dims):
-            raise CoordinateValidationError(
-                f"coordinate {k} has dimensions {v.dims}, but these "
-                "are not a subset of the DataArray "
-                f"dimensions {dim}"
-            )
-
-        for d, s in v.sizes.items():
-            if d in sizes and s != sizes[d]:
-                raise CoordinateValidationError(
-                    f"conflicting sizes for dimension {d!r}: "
-                    f"length {sizes[d]} on the data but length {s} on "
-                    f"coordinate {k!r}"
-                )
-
-
 def _infer_coords_and_dims(
     shape: tuple[int, ...],
     coords: (
@@ -230,7 +196,7 @@ def _infer_coords_and_dims(
                 var.dims = (dim,)
                 new_coords[dim] = var.to_index_variable()
 
-    check_dataarray_coords(shape, new_coords, dims_tuple)
+    validate_dataarray_coords(shape, new_coords, dims_tuple)
 
     return new_coords, dims_tuple
 
