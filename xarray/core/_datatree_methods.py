@@ -6,11 +6,11 @@ from __future__ import annotations
 
 from collections.abc import Hashable, Iterable
 from functools import wraps
-from typing import Literal, Self
+from typing import Literal
 
 from xarray.core.dataset import Dataset
 from xarray.core.datatree_mapping import map_over_datasets
-from xarray.core.types import ErrorOptionsWithWarn
+from xarray.core.types import ErrorOptionsWithWarn, Self
 
 
 def _wrap_dataset_method(to_apply):
@@ -95,7 +95,7 @@ class TreeMethodsMixin:
 
         """
         # NOTE: the method is executed in the wrapper
-        pass
+        return self
 
     @_wrap_dataset_method(Dataset.dropna)
     def dropna(
@@ -198,7 +198,7 @@ class TreeMethodsMixin:
         pandas.DataFrame.dropna
         """
         # NOTE: the method is executed in the wrapper
-        pass
+        return self
 
     @_wrap_dataset_method(Dataset.transpose)
     def transpose(
@@ -239,4 +239,4 @@ class TreeMethodsMixin:
         DataArray.transpose
         """
         # NOTE: the method is executed in the wrapper
-        pass
+        return self

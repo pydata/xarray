@@ -24,11 +24,11 @@ from __future__ import annotations
 
 from collections.abc import Hashable, Iterable
 from functools import wraps
-from typing import Literal, Self
+from typing import Literal
 
 from xarray.core.dataset import Dataset
 from xarray.core.datatree_mapping import map_over_datasets
-from xarray.core.types import ErrorOptionsWithWarn
+from xarray.core.types import ErrorOptionsWithWarn, Self
 '''
 
 
@@ -63,7 +63,7 @@ METHOD_TEMPLATE = '''\n
 def {funcname}{signature}:
     """{doc}"""
     # NOTE: the method is executed in the wrapper
-    pass'''
+    return self'''
 
 
 def generate_method(method: Callable):
