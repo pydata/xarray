@@ -477,49 +477,58 @@ class TestZarrDatatreeIO:
 
     @requires_dask
     @parametrize_zarr_format
-    def test_to_zarr_compute_false(self, tmp_path: Path, simple_datatree: DataTree, zarr_format: Literal["2", "3"]):
+    def test_to_zarr_compute_false(
+        self, tmp_path: Path, simple_datatree: DataTree, zarr_format: Literal["2", "3"]
+    ):
         import dask.array as da
 
         storepath = tmp_path / "test.zarr"
         original_dt = simple_datatree.chunk()
-        print(f"{zarr_format=}")
-        print(f"{original_dt=}")
         original_dt.to_zarr(str(storepath), compute=False, zarr_format=zarr_format)
 
-        def assert_expected_zarr_metadata_files_exist(
-            var: xr.Variable,
-            var_dir: Path,
+        def assert_expected_zarr_files_exist(
+            arr_dir: Path,
+            chunks_expected: bool,
             zarr_format: Literal["2", "3"],
         ) -> None:
-            var_files: list[Path] = list(var_dir.iterdir())
+            """For one zarr array, check that all expected metadata and chunk data files exist."""
 
             if zarr_format == 2:
-                assert var_dir / ".zarray" in var_files
-                assert var_dir / ".zattrs" in var_files
-                if isinstance(var.data, da.Array):
-                    assert var_dir / "0" not in var_files
+                zarray_file, zattrs_file = (arr_dir / ".zarray"), (arr_dir / ".zattrs")
+                assert zarray_file.exists() and zarray_file.is_file()
+                assert zattrs_file.exists() and zattrs_file.is_file()
+
+                chunk_file = arr_dir / "0"
+                if chunks_expected:
+                    # assumes empty chunks were written
+                    # (i.e. they did not contain only fill_value and write_empty_chunks was False)
+                    assert chunk_file.exists() and chunk_file.is_file()
                 else:
-                    print(type(var._data))
-                    assert var_dir / "0" in var_files
+                    assert not chunk_file.exists()
             elif zarr_format == 3:
-                assert var_dir / "zarr.json" in var_files
-                if isinstance(var.data, da.Array):
-                    assert var_dir / "c" not in var_files
+                metadata_file = arr_dir / "zarr.json"
+                assert metadata_file.exists() and metadata_file.is_file()
+
+                chunks_dir = arr_dir / "c"
+                assert chunks_dir.exists() and chunks_dir.is_dir()
+                chunk_file = chunks_dir / "0"
+                if chunks_expected:
+                    # assumes empty chunks were written
+                    # (i.e. they did not contain only fill_value and write_empty_chunks was False)
+                    assert chunk_file.exists() and chunk_file.is_file()
                 else:
-                    assert var_dir / "c" in var_files
+                    assert not chunk_file.exists()
 
         for node in original_dt.subtree:
             for name, var in node.variables.items():
-                print(f"{storepath=}")
-                print(f"{node.path=}")
-                print(f"{name=}")
+                var_dir = storepath / node.path.removeprefix("/") / name
 
-                var_dir = storepath / node.path.removeprefix('/') / name
-                print(f"{repr(var_dir)=}")
-                print(list(var_dir.iterdir()))
-
-                assert_expected_zarr_metadata_files_exist(
-                    var, var_dir, zarr_format
+                assert_expected_zarr_files_exist(
+                    arr_dir=var_dir,
+                    chunks_expected=(
+                        not isinstance(var.data, da.Array)
+                    ),  # don't expect dask.Arrays to be written to disk as compute=False
+                    zarr_format=zarr_format,
                 )
 
     def test_to_zarr_inherited_coords(self, tmpdir):
