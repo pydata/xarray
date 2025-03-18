@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import re
 from collections.abc import Hashable
-from typing import TYPE_CHECKING, cast
+from pathlib import Path
+from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 import pytest
@@ -12,10 +13,11 @@ from xarray.backends.api import open_datatree, open_groups
 from xarray.core.datatree import DataTree
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
+    parametrize_zarr_format,
     requires_dask,
     requires_h5netcdf,
     requires_netCDF4,
-    requires_zarr_v3,
+    requires_zarr,
 )
 
 if TYPE_CHECKING:
@@ -26,6 +28,7 @@ try:
 except ImportError:
     pass
 
+# TODO shouldn't this just be the has_zarr_v3 flag we already have?
 have_zarr_v3 = xr.backends.zarr._zarr_v3()
 
 
@@ -396,7 +399,7 @@ class TestH5NetCDFDatatreeIO(DatatreeIOBase):
                 }
 
 
-@requires_zarr_v3
+@requires_zarr
 class TestZarrDatatreeIO:
     engine = "zarr"
 
@@ -473,22 +476,51 @@ class TestZarrDatatreeIO:
             simple_datatree.to_zarr(str(tmpdir))
 
     @requires_dask
-    def test_to_zarr_compute_false(self, tmpdir, simple_datatree):
+    @parametrize_zarr_format
+    def test_to_zarr_compute_false(self, tmp_path: Path, simple_datatree: DataTree, zarr_format: Literal["2", "3"]):
         import dask.array as da
 
-        filepath = tmpdir / "test.zarr"
+        storepath = tmp_path / "test.zarr"
         original_dt = simple_datatree.chunk()
-        original_dt.to_zarr(str(filepath), compute=False)
+        print(f"{zarr_format=}")
+        print(f"{original_dt=}")
+        original_dt.to_zarr(str(storepath), compute=False, zarr_format=zarr_format)
 
-        for node in original_dt.subtree:
-            for name, variable in node.dataset.variables.items():
-                var_dir = filepath / node.path / name
-                var_files = var_dir.listdir()
+        def assert_expected_zarr_metadata_files_exist(
+            var: xr.Variable,
+            var_dir: Path,
+            zarr_format: Literal["2", "3"],
+        ) -> None:
+            var_files: list[Path] = list(var_dir.iterdir())
+
+            if zarr_format == 2:
+                assert var_dir / ".zarray" in var_files
+                assert var_dir / ".zattrs" in var_files
+                if isinstance(var.data, da.Array):
+                    assert var_dir / "0" not in var_files
+                else:
+                    print(type(var._data))
+                    assert var_dir / "0" in var_files
+            elif zarr_format == 3:
                 assert var_dir / "zarr.json" in var_files
-                if isinstance(variable.data, da.Array):
-                    assert var_dir / "zarr.json" in var_files
+                if isinstance(var.data, da.Array):
+                    assert var_dir / "c" not in var_files
                 else:
                     assert var_dir / "c" in var_files
+
+        for node in original_dt.subtree:
+            for name, var in node.variables.items():
+                print(f"{storepath=}")
+                print(f"{node.path=}")
+                print(f"{name=}")
+
+                var_dir = storepath / node.path.removeprefix('/') / name
+                print(f"{repr(var_dir)=}")
+                print(list(var_dir.iterdir()))
+
+                assert_expected_zarr_metadata_files_exist(
+                    var, var_dir, zarr_format
+                )
 
     def test_to_zarr_inherited_coords(self, tmpdir):
         original_dt = DataTree.from_dict(
@@ -597,7 +629,9 @@ class TestZarrDatatreeIO:
         "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
     )
     @pytest.mark.parametrize("write_consolidated_metadata", [True, False, None])
-    def test_open_datatree_specific_group(self, tmpdir, simple_datatree, write_consolidated_metadata) -> None:
+    def test_open_datatree_specific_group(
+        self, tmpdir, simple_datatree, write_consolidated_metadata
+    ) -> None:
         """Test opening a specific group within a Zarr store using `open_datatree`."""
         filepath = str(tmpdir / "test.zarr")
         group = "/set2"
