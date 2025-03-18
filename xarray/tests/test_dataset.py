@@ -395,7 +395,7 @@ class TestDataset:
             <xarray.Dataset> Size: 12B
             Dimensions:  (foø: 1)
             Coordinates:
-              * foø      (foø) {byteorder}U3 12B {'ba®'!r}
+              * foø      (foø) {byteorder}U3 12B {"ba®"!r}
             Data variables:
                 *empty*
             Attributes:
@@ -1243,7 +1243,7 @@ class TestDataset:
         assert rechunked.chunksizes["time"] == expected
         assert rechunked.chunksizes["x"] == (2,) * 5
 
-    def test_chunk_by_frequecy_errors(self):
+    def test_chunk_by_frequency_errors(self):
         ds = Dataset({"foo": ("x", [1, 2, 3])})
         with pytest.raises(ValueError, match="virtual variable"):
             ds.chunk(x=TimeResampler("YE"))
@@ -1592,6 +1592,40 @@ class TestDataset:
         actual = ds.isel(x=idxr)
         assert "x" not in actual.xindexes
         assert not isinstance(actual.x.variable, IndexVariable)
+
+    def test_isel_multicoord_index(self) -> None:
+        # regression test https://github.com/pydata/xarray/issues/10063
+        # isel on a multi-coordinate index should return a unique index associated
+        # to each coordinate
+        class MultiCoordIndex(xr.Index):
+            def __init__(self, idx1, idx2):
+                self.idx1 = idx1
+                self.idx2 = idx2
+
+            @classmethod
+            def from_variables(cls, variables, *, options=None):
+                idx1 = PandasIndex.from_variables(
+                    {"x": variables["x"]}, options=options
+                )
+                idx2 = PandasIndex.from_variables(
+                    {"y": variables["y"]}, options=options
+                )
+
+                return cls(idx1, idx2)
+
+            def create_variables(self, variables=None):
+                return {**self.idx1.create_variables(), **self.idx2.create_variables()}
+
+            def isel(self, indexers):
+                idx1 = self.idx1.isel({"x": indexers.get("x", slice(None))})
+                idx2 = self.idx2.isel({"y": indexers.get("y", slice(None))})
+                return MultiCoordIndex(idx1, idx2)
+
+        coords = xr.Coordinates(coords={"x": [0, 1], "y": [1, 2]}, indexes={})
+        ds = xr.Dataset(coords=coords).set_xindex(["x", "y"], MultiCoordIndex)
+
+        ds2 = ds.isel(x=slice(None), y=slice(None))
+        assert ds2.xindexes["x"] is ds2.xindexes["y"]
 
     def test_sel(self) -> None:
         data = create_test_data()
@@ -2170,7 +2204,7 @@ class TestDataset:
 
         # invalid dimension
         # TODO: (benbovy - explicit indexes): uncomment?
-        # --> from reindex docstrings: "any mis-matched dimension is simply ignored"
+        # --> from reindex docstrings: "any mismatched dimension is simply ignored"
         # with pytest.raises(ValueError, match=r"indexer keys.*not correspond.*"):
         #     data.reindex(invalid=0)
 
@@ -2889,7 +2923,7 @@ class TestDataset:
         assert_identical(actual, ds)
 
         # test index corrupted
-        midx = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
+        midx = pd.MultiIndex.from_tuples([(1, 2), (3, 4)], names=["a", "b"])
         midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         ds = Dataset(coords=midx_coords)
 
@@ -3185,7 +3219,7 @@ class TestDataset:
             ds.rename(x="x")
 
     def test_rename_multiindex(self) -> None:
-        midx = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
+        midx = pd.MultiIndex.from_tuples([(1, 2), (3, 4)], names=["a", "b"])
         midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         original = Dataset({}, midx_coords)
 
@@ -3222,7 +3256,9 @@ class TestDataset:
     def test_rename_does_not_change_CFTimeIndex_type(self) -> None:
         # make sure CFTimeIndex is not converted to DatetimeIndex #3522
 
-        time = xr.cftime_range(start="2000", periods=6, freq="2MS", calendar="noleap")
+        time = xr.date_range(
+            start="2000", periods=6, freq="2MS", calendar="noleap", use_cftime=True
+        )
         orig = Dataset(coords={"time": time})
 
         renamed = orig.rename(time="time_new")
@@ -5971,6 +6007,8 @@ class TestDataset:
         actual += 0
         assert_identical(ds, actual)
 
+    # casting nan warns
+    @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
     def test_unary_ops(self) -> None:
         ds = self.make_example_math_dataset()
 
@@ -7265,7 +7303,7 @@ def test_differentiate_datetime(dask) -> None:
 @pytest.mark.parametrize("dask", [True, False])
 def test_differentiate_cftime(dask) -> None:
     rs = np.random.default_rng(42)
-    coord = xr.cftime_range("2000", periods=8, freq="2ME")
+    coord = xr.date_range("2000", periods=8, freq="2ME", use_cftime=True)
 
     da = xr.DataArray(
         rs.random((8, 6)),
@@ -7428,7 +7466,7 @@ def test_trapezoid_datetime(dask, which_datetime) -> None:
     else:
         if not has_cftime:
             pytest.skip("Test requires cftime.")
-        coord = xr.cftime_range("2000", periods=8, freq="2D")
+        coord = xr.date_range("2000", periods=8, freq="2D", use_cftime=True)
 
     da = xr.DataArray(
         rs.random((8, 6)),

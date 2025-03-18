@@ -45,7 +45,7 @@ def _nan_argminmax_object(func, fill_value, value, axis=None, **kwargs):
     data = getattr(np, func)(value, axis=axis, **kwargs)
 
     # TODO This will evaluate dask arrays and might be costly.
-    if (valid_count == 0).any():
+    if duck_array_ops.array_any(valid_count == 0):
         raise ValueError("All-NaN slice encountered")
 
     return data

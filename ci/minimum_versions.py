@@ -26,8 +26,9 @@ ignored_packages = [
     "pytest",
     "pytest-cov",
     "pytest-env",
-    "pytest-xdist",
+    "pytest-mypy-plugins",
     "pytest-timeout",
+    "pytest-xdist",
     "hypothesis",
 ]
 

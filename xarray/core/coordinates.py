@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import formatting
-from xarray.core.alignment import Aligner
 from xarray.core.indexes import (
     Index,
     Indexes,
@@ -22,7 +21,6 @@ from xarray.core.indexes import (
     assert_no_index_corrupted,
     create_default_index_implicit,
 )
-from xarray.core.merge import merge_coordinates_without_align, merge_coords
 from xarray.core.types import DataVars, Self, T_DataArray, T_Xarray
 from xarray.core.utils import (
     Frozen,
@@ -31,6 +29,8 @@ from xarray.core.utils import (
     emit_user_level_warning,
 )
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from xarray.structure.alignment import Aligner
+from xarray.structure.merge import merge_coordinates_without_align, merge_coords
 
 if TYPE_CHECKING:
     from xarray.core.common import DataWithCoords
@@ -177,13 +177,13 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
 
                 # compute the cartesian product
                 code_list += [
-                    np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i])
+                    np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i]).tolist()
                     for code in codes
                 ]
                 level_list += levels
                 names += index.names
 
-        return pd.MultiIndex(level_list, code_list, names=names)
+        return pd.MultiIndex(levels=level_list, codes=code_list, names=names)
 
 
 class Coordinates(AbstractCoordinates):
@@ -200,10 +200,17 @@ class Coordinates(AbstractCoordinates):
 
     - returned via the :py:attr:`Dataset.coords`, :py:attr:`DataArray.coords`,
       and :py:attr:`DataTree.coords` properties,
-    - built from Pandas or other index objects
-      (e.g., :py:meth:`Coordinates.from_pandas_multiindex`),
-    - built directly from coordinate data and Xarray ``Index`` objects (beware that
-      no consistency check is done on those inputs),
+    - built from Xarray or Pandas index objects
+      (e.g., :py:meth:`Coordinates.from_xindex` or
+      :py:meth:`Coordinates.from_pandas_multiindex`),
+    - built manually from input coordinate data and Xarray ``Index`` objects via
+      :py:meth:`Coordinates.__init__` (beware that no consistency check is done
+      on those inputs).
+
+    To create new coordinates from an existing Xarray ``Index`` object, use
+    :py:meth:`Coordinates.from_xindex` instead of
+    :py:meth:`Coordinates.__init__`. The latter is useful, e.g., for creating
+    coordinates with no default index.
 
     Parameters
     ----------
@@ -353,10 +360,39 @@ class Coordinates(AbstractCoordinates):
         return obj
 
     @classmethod
+    def from_xindex(cls, index: Index) -> Self:
+        """Create Xarray coordinates from an existing Xarray index.
+
+        Parameters
+        ----------
+        index : Index
+            Xarray index object. The index must support generating new
+            coordinate variables from itself.
+
+        Returns
+        -------
+        coords : Coordinates
+            A collection of Xarray indexed coordinates created from the index.
+
+        """
+        variables = index.create_variables()
+
+        if not variables:
+            raise ValueError(
+                "`Coordinates.from_xindex()` only supports index objects that can generate "
+                "new coordinate variables from scratch. The given index (shown below) did not "
+                f"create any coordinate.\n{index!r}"
+            )
+
+        indexes = {name: index for name in variables}
+
+        return cls(coords=variables, indexes=indexes)
+
+    @classmethod
     def from_pandas_multiindex(cls, midx: pd.MultiIndex, dim: Hashable) -> Self:
         """Wrap a pandas multi-index as Xarray coordinates (dimension + levels).
 
-        The returned coordinates can be directly assigned to a
+        The returned coordinate variables can be directly assigned to a
         :py:class:`~xarray.Dataset` or :py:class:`~xarray.DataArray` via the
         ``coords`` argument of their constructor.
 

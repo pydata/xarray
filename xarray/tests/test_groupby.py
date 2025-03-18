@@ -14,7 +14,6 @@ from packaging.version import Version
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
-from xarray.core.alignment import broadcast
 from xarray.core.groupby import _consolidate_slices
 from xarray.core.types import InterpOptions, ResampleCompatible
 from xarray.groupers import (
@@ -25,6 +24,7 @@ from xarray.groupers import (
     UniqueGrouper,
 )
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.structure.alignment import broadcast
 from xarray.tests import (
     InaccessibleArray,
     assert_allclose,
@@ -1870,7 +1870,7 @@ class TestDataArrayResample:
         def resample_as_pandas(array, *args, **kwargs):
             array_ = array.copy(deep=True)
             if use_cftime:
-                array_["time"] = times.to_datetimeindex()
+                array_["time"] = times.to_datetimeindex(time_unit="ns")
             result = DataArray.from_series(
                 array_.to_series().resample(*args, **kwargs).mean()
             )
@@ -2323,7 +2323,7 @@ class TestDatasetResample:
         def resample_as_pandas(ds, *args, **kwargs):
             ds_ = ds.copy(deep=True)
             if use_cftime:
-                ds_["time"] = times.to_datetimeindex()
+                ds_["time"] = times.to_datetimeindex(time_unit="ns")
             result = Dataset.from_dataframe(
                 ds_.to_dataframe().resample(*args, **kwargs).mean()
             )

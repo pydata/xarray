@@ -17,11 +17,10 @@ import pandas as pd
 from numpy.typing import ArrayLike
 
 from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
-from xarray.core import duck_array_ops
-from xarray.core.computation import apply_ufunc
+from xarray.computation.computation import apply_ufunc
 from xarray.core.coordinates import Coordinates, _coordinates_from_variable
 from xarray.core.dataarray import DataArray
-from xarray.core.duck_array_ops import isnull
+from xarray.core.duck_array_ops import array_all, isnull
 from xarray.core.groupby import T_Group, _DummyGroup
 from xarray.core.indexes import safe_cast_to_index
 from xarray.core.resample_cftime import CFTimeGrouper
@@ -235,7 +234,7 @@ class UniqueGrouper(Grouper):
         # look through group to find the unique values
         sort = not isinstance(self.group_as_index, pd.MultiIndex)
         unique_values, codes_ = unique_value_groups(self.group_as_index, sort=sort)
-        if (codes_ == -1).all():
+        if array_all(codes_ == -1):
             raise ValueError(
                 "Failed to group data. Are you grouping by a variable that is all NaN?"
             )
@@ -347,7 +346,7 @@ class BinGrouper(Grouper):
         )
 
     def __post_init__(self) -> None:
-        if duck_array_ops.isnull(self.bins).all():
+        if array_all(isnull(self.bins)):
             raise ValueError("All bin edges are NaN.")
 
     def _cut(self, data):
@@ -381,7 +380,7 @@ class BinGrouper(Grouper):
                 f"Bin edges must be provided when grouping by chunked arrays. Received {self.bins=!r} instead"
             )
         codes = self._factorize_lazy(group)
-        if not by_is_chunked and (codes == -1).all():
+        if not by_is_chunked and array_all(codes == -1):
             raise ValueError(
                 f"None of the data falls within bins with edges {self.bins!r}"
             )
@@ -547,7 +546,7 @@ class TimeResampler(Resampler):
 def _factorize_given_labels(data: np.ndarray, labels: np.ndarray) -> np.ndarray:
     # Copied from flox
     sorter = np.argsort(labels)
-    is_sorted = (sorter == np.arange(sorter.size)).all()
+    is_sorted = array_all(sorter == np.arange(sorter.size))
     codes = np.searchsorted(labels, data, sorter=sorter)
     mask = ~np.isin(data, labels) | isnull(data) | (codes == len(labels))
     # codes is the index in to the sorted array.

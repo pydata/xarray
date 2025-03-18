@@ -1,7 +1,7 @@
 import re
 import sys
 import typing
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from copy import copy, deepcopy
 from textwrap import dedent
 
@@ -1587,29 +1587,84 @@ class TestRestructuring:
         result = dt.assign({"foo": xr.DataArray(0), "a": DataTree()})
         assert_equal(result, expected)
 
+    def test_filter_like(self) -> None:
+        flower_tree = DataTree.from_dict(
+            {"root": None, "trunk": None, "leaves": None, "flowers": None}
+        )
+        fruit_tree = DataTree.from_dict(
+            {"root": None, "trunk": None, "leaves": None, "fruit": None}
+        )
+        barren_tree = DataTree.from_dict({"root": None, "trunk": None})
+
+        # test filter_like tree
+        filtered_tree = flower_tree.filter_like(barren_tree)
+
+        assert filtered_tree.equals(barren_tree)
+        assert "flowers" not in filtered_tree.children
+
+        # test symmetrical pruning results in isomorphic trees
+        assert flower_tree.filter_like(fruit_tree).isomorphic(
+            fruit_tree.filter_like(flower_tree)
+        )
+
+        # test "deep" pruning
+        dt = DataTree.from_dict(
+            {"/a/A": None, "/a/B": None, "/b/A": None, "/b/B": None}
+        )
+        other = DataTree.from_dict({"/a/A": None, "/b/A": None})
+
+        filtered = dt.filter_like(other)
+        assert filtered.equals(other)
+
 
 class TestPipe:
-    def test_noop(self, create_test_datatree) -> None:
+    def test_noop(self, create_test_datatree: Callable[[], DataTree]) -> None:
         dt = create_test_datatree()
 
         actual = dt.pipe(lambda tree: tree)
         assert actual.identical(dt)
 
-    def test_params(self, create_test_datatree) -> None:
+    def test_args(self, create_test_datatree: Callable[[], DataTree]) -> None:
         dt = create_test_datatree()
 
-        def f(tree, **attrs):
-            return tree.assign(arr_with_attrs=xr.Variable("dim0", [], attrs=attrs))
+        def f(tree: DataTree, x: int, y: int) -> DataTree:
+            return tree.assign(
+                arr_with_attrs=xr.Variable("dim0", [], attrs=dict(x=x, y=y))
+            )
+
+        actual = dt.pipe(f, 1, 2)
+        assert actual["arr_with_attrs"].attrs == dict(x=1, y=2)
+
+    def test_kwargs(self, create_test_datatree: Callable[[], DataTree]) -> None:
+        dt = create_test_datatree()
+
+        def f(tree: DataTree, *, x: int, y: int, z: int) -> DataTree:
+            return tree.assign(
+                arr_with_attrs=xr.Variable("dim0", [], attrs=dict(x=x, y=y, z=z))
+            )
 
         attrs = {"x": 1, "y": 2, "z": 3}
 
         actual = dt.pipe(f, **attrs)
         assert actual["arr_with_attrs"].attrs == attrs
 
-    def test_named_self(self, create_test_datatree) -> None:
+    def test_args_kwargs(self, create_test_datatree: Callable[[], DataTree]) -> None:
         dt = create_test_datatree()
 
-        def f(x, tree, y):
+        def f(tree: DataTree, x: int, *, y: int, z: int) -> DataTree:
+            return tree.assign(
+                arr_with_attrs=xr.Variable("dim0", [], attrs=dict(x=x, y=y, z=z))
+            )
+
+        attrs = {"x": 1, "y": 2, "z": 3}
+
+        actual = dt.pipe(f, attrs["x"], y=attrs["y"], z=attrs["z"])
+        assert actual["arr_with_attrs"].attrs == attrs
+
+    def test_named_self(self, create_test_datatree: Callable[[], DataTree]) -> None:
+        dt = create_test_datatree()
+
+        def f(x: int, tree: DataTree, y: int):
             tree.attrs.update({"x": x, "y": y})
             return tree
 
@@ -2338,15 +2393,15 @@ class TestDask:
         assert_identical(actual, expected)
 
         assert actual.chunksizes == original_chunksizes, "chunksizes were modified"
-        assert (
-            tree.chunksizes == original_chunksizes
-        ), "original chunksizes were modified"
-        assert all(
-            d == 1 for d in actual_hlg_depths.values()
-        ), "unexpected dask graph depth"
-        assert all(
-            d == 2 for d in original_hlg_depths.values()
-        ), "original dask graph was modified"
+        assert tree.chunksizes == original_chunksizes, (
+            "original chunksizes were modified"
+        )
+        assert all(d == 1 for d in actual_hlg_depths.values()), (
+            "unexpected dask graph depth"
+        )
+        assert all(d == 2 for d in original_hlg_depths.values()), (
+            "original dask graph was modified"
+        )
 
     def test_chunk(self):
         ds1 = xr.Dataset({"a": ("x", np.arange(10))})

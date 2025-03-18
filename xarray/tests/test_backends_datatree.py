@@ -301,9 +301,9 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         dict_of_datasets = open_groups(filepath, engine="netcdf4", chunks=chunks)
 
         for path, ds in dict_of_datasets.items():
-            assert {
-                k: max(vs) for k, vs in ds.chunksizes.items()
-            } == chunks, f"unexpected chunking for {path}"
+            assert {k: max(vs) for k, vs in ds.chunksizes.items()} == chunks, (
+                f"unexpected chunking for {path}"
+            )
 
         for ds in dict_of_datasets.values():
             ds.close()
@@ -371,6 +371,29 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
 @requires_h5netcdf
 class TestH5NetCDFDatatreeIO(DatatreeIOBase):
     engine: T_DataTreeNetcdfEngine | None = "h5netcdf"
+
+    def test_phony_dims_warning(self, tmpdir) -> None:
+        filepath = tmpdir + "/phony_dims.nc"
+        import h5py
+
+        foo_data = np.arange(125).reshape(5, 5, 5)
+        bar_data = np.arange(625).reshape(25, 5, 5)
+        var = {"foo1": foo_data, "foo2": bar_data, "foo3": foo_data, "foo4": bar_data}
+        with h5py.File(filepath, "w") as f:
+            grps = ["bar", "baz"]
+            for grp in grps:
+                fx = f.create_group(grp)
+                for k, v in var.items():
+                    fx.create_dataset(k, data=v)
+
+        with pytest.warns(UserWarning, match="The 'phony_dims' kwarg"):
+            with open_datatree(filepath, engine=self.engine) as tree:
+                assert tree.bar.dims == {
+                    "phony_dim_0": 5,
+                    "phony_dim_1": 5,
+                    "phony_dim_2": 5,
+                    "phony_dim_3": 25,
+                }
 
 
 @pytest.mark.skipif(
@@ -440,6 +463,25 @@ class TestZarrDatatreeIO:
         with pytest.raises(zarr.errors.ContainsGroupError):
             simple_datatree.to_zarr(tmpdir)
 
+    @requires_dask
+    def test_to_zarr_compute_false(self, tmpdir, simple_datatree):
+        import dask.array as da
+
+        filepath = tmpdir / "test.zarr"
+        original_dt = simple_datatree.chunk()
+        original_dt.to_zarr(filepath, compute=False)
+
+        for node in original_dt.subtree:
+            for name, variable in node.dataset.variables.items():
+                var_dir = filepath / node.path / name
+                var_files = var_dir.listdir()
+                assert var_dir / ".zarray" in var_files
+                assert var_dir / ".zattrs" in var_files
+                if isinstance(variable.data, da.Array):
+                    assert var_dir / "0" not in var_files
+                else:
+                    assert var_dir / "0" in var_files
+
     def test_to_zarr_inherited_coords(self, tmpdir):
         original_dt = DataTree.from_dict(
             {
@@ -501,6 +543,11 @@ class TestZarrDatatreeIO:
         with open_datatree(filepath, engine="zarr", chunks=chunks) as tree:
             xr.testing.assert_identical(tree, original_tree)
             assert_chunks_equal(tree, original_tree, enforce_dask=True)
+            # https://github.com/pydata/xarray/issues/10098
+            # If the open tasks are not give unique tokens per node, and the
+            # dask graph is computed in one go, data won't be uniquely loaded
+            # from each node.
+            xr.testing.assert_identical(tree.compute(), original_tree)
 
     def test_open_groups(self, unaligned_datatree_zarr) -> None:
         """Test `open_groups` with a zarr store of an unaligned group hierarchy."""
@@ -568,9 +615,9 @@ class TestZarrDatatreeIO:
         dict_of_datasets = open_groups(filepath, engine="zarr", chunks=chunks)
 
         for path, ds in dict_of_datasets.items():
-            assert {
-                k: max(vs) for k, vs in ds.chunksizes.items()
-            } == chunks, f"unexpected chunking for {path}"
+            assert {k: max(vs) for k, vs in ds.chunksizes.items()} == chunks, (
+                f"unexpected chunking for {path}"
+            )
 
         for ds in dict_of_datasets.values():
             ds.close()

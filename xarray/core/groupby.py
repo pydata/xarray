@@ -12,15 +12,17 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from xarray.core import dtypes, duck_array_ops, nputils, ops
+from xarray.computation import ops
+from xarray.computation.arithmetic import (
+    DataArrayGroupbyArithmetic,
+    DatasetGroupbyArithmetic,
+)
+from xarray.core import dtypes, duck_array_ops, nputils
 from xarray.core._aggregations import (
     DataArrayGroupByAggregations,
     DatasetGroupByAggregations,
 )
-from xarray.core.alignment import align, broadcast
-from xarray.core.arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
-from xarray.core.concat import concat
 from xarray.core.coordinates import Coordinates, _coordinates_from_variable
 from xarray.core.duck_array_ops import where
 from xarray.core.formatting import format_array_flat
@@ -28,7 +30,6 @@ from xarray.core.indexes import (
     PandasMultiIndex,
     filter_indexes_from_coords,
 )
-from xarray.core.merge import merge_coords
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Dims,
@@ -50,6 +51,9 @@ from xarray.core.utils import (
 )
 from xarray.core.variable import IndexVariable, Variable
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.structure.alignment import align, broadcast
+from xarray.structure.concat import concat
+from xarray.structure.merge import merge_coords
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
@@ -524,10 +528,10 @@ class ComposedGrouper:
         # Restore these after the raveling
         broadcasted_masks = broadcast(*masks)
         mask = functools.reduce(np.logical_or, broadcasted_masks)  # type: ignore[arg-type]
-        _flatcodes = where(mask, -1, _flatcodes)
+        _flatcodes = where(mask.data, -1, _flatcodes)
 
         full_index = pd.MultiIndex.from_product(
-            (grouper.full_index.values for grouper in groupers),
+            list(grouper.full_index.values for grouper in groupers),
             names=tuple(grouper.name for grouper in groupers),
         )
         # This will be unused when grouping by dask arrays, so skip..
@@ -1624,8 +1628,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         return self.map(reduce_array, shortcut=shortcut)
 
 
-# https://github.com/python/mypy/issues/9031
-class DataArrayGroupBy(  # type: ignore[misc]
+class DataArrayGroupBy(
     DataArrayGroupByBase,
     DataArrayGroupByAggregations,
     ImplementsArrayReduce,
@@ -1792,8 +1795,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         return self.map(lambda ds: ds.assign(**kwargs))
 
 
-# https://github.com/python/mypy/issues/9031
-class DatasetGroupBy(  # type: ignore[misc]
+class DatasetGroupBy(
     DatasetGroupByBase,
     DatasetGroupByAggregations,
     ImplementsDatasetReduce,

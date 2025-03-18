@@ -33,15 +33,11 @@ from xarray.backends.common import (
     _normalize_path,
 )
 from xarray.backends.locks import _get_scheduler
-from xarray.coders import CFDatetimeCoder
+from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import indexing
-from xarray.core.combine import (
-    _infer_concat_order_from_positions,
-    _nested_combine,
-    combine_by_coords,
-)
+from xarray.core.chunk import _get_chunk, _maybe_chunk
 from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
+from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees
@@ -49,6 +45,11 @@ from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 from xarray.core.utils import is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
+from xarray.structure.combine import (
+    _infer_concat_order_from_positions,
+    _nested_combine,
+    combine_by_coords,
+)
 
 if TYPE_CHECKING:
     try:
@@ -104,8 +105,7 @@ def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:
             engine = "pydap"
         except ImportError as err:
             raise ValueError(
-                "netCDF4 or pydap is required for accessing "
-                "remote datasets via OPeNDAP"
+                "netCDF4 or pydap is required for accessing remote datasets via OPeNDAP"
             ) from err
     return engine
 
@@ -455,6 +455,7 @@ def _datatree_from_backend_datatree(
                     inline_array,
                     chunked_array_type,
                     from_array_kwargs,
+                    node=path,
                     **extra_tokens,
                 )
                 for path, [node] in group_subtrees(backend_tree)
@@ -487,7 +488,10 @@ def open_dataset(
     | CFDatetimeCoder
     | Mapping[str, bool | CFDatetimeCoder]
     | None = None,
-    decode_timedelta: bool | Mapping[str, bool] | None = None,
+    decode_timedelta: bool
+    | CFTimedeltaCoder
+    | Mapping[str, bool | CFTimedeltaCoder]
+    | None = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
@@ -555,11 +559,14 @@ def open_dataset(
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
-    decode_timedelta : bool or dict-like, optional
+    decode_timedelta : bool, CFTimedeltaCoder, or dict-like, optional
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of decode_time.
+        If None (default), assume the same value of ``decode_times``; if
+        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
+        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
+        matching ``time_unit``.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -712,7 +719,7 @@ def open_dataarray(
     | CFDatetimeCoder
     | Mapping[str, bool | CFDatetimeCoder]
     | None = None,
-    decode_timedelta: bool | None = None,
+    decode_timedelta: bool | CFTimedeltaCoder | None = None,
     use_cftime: bool | None = None,
     concat_characters: bool | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
@@ -785,7 +792,10 @@ def open_dataarray(
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of decode_time.
+        If None (default), assume the same value of ``decode_times``; if
+        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
+        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
+        matching ``time_unit``.
         This keyword may not be supported by all the backends.
     use_cftime: bool, optional
         Only relevant if encoded dates come from a standard calendar
@@ -927,7 +937,10 @@ def open_datatree(
     | CFDatetimeCoder
     | Mapping[str, bool | CFDatetimeCoder]
     | None = None,
-    decode_timedelta: bool | Mapping[str, bool] | None = None,
+    decode_timedelta: bool
+    | CFTimedeltaCoder
+    | Mapping[str, bool | CFTimedeltaCoder]
+    | None = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
@@ -995,7 +1008,10 @@ def open_datatree(
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of decode_time.
+        If None (default), assume the same value of ``decode_times``; if
+        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
+        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
+        matching ``time_unit``.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -1150,7 +1166,10 @@ def open_groups(
     | CFDatetimeCoder
     | Mapping[str, bool | CFDatetimeCoder]
     | None = None,
-    decode_timedelta: bool | Mapping[str, bool] | None = None,
+    decode_timedelta: bool
+    | CFTimedeltaCoder
+    | Mapping[str, bool | CFTimedeltaCoder]
+    | None = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
@@ -1222,9 +1241,10 @@ def open_groups(
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of decode_time.
-        Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
+        If None (default), assume the same value of ``decode_times``; if
+        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
+        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
+        matching ``time_unit``.
         This keyword may not be supported by all the backends.
     use_cftime: bool or dict-like, optional
         Only relevant if encoded dates come from a standard calendar
@@ -1650,8 +1670,7 @@ def open_mfdataset(
             )
         else:
             raise ValueError(
-                f"{combine} is an invalid option for the keyword argument"
-                " ``combine``"
+                f"{combine} is an invalid option for the keyword argument ``combine``"
             )
     except ValueError:
         for ds in datasets:
