@@ -61,11 +61,11 @@ from xarray.coding.times import (
     convert_time_or_go_back,
     format_cftime_datetime,
 )
-from xarray.core.common import _contains_datetime_like_objects, is_np_datetime_like
-from xarray.core.pdcompat import (
+from xarray.compat.pdcompat import (
     count_not_none,
     default_precision_timestamp,
 )
+from xarray.core.common import _contains_datetime_like_objects, is_np_datetime_like
 from xarray.core.types import InclusiveOptions
 from xarray.core.utils import attempt_import, emit_user_level_warning
 

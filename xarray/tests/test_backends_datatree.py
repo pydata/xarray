@@ -164,6 +164,24 @@ class DatatreeIOBase:
             assert roundtrip_dt._close is not None
             assert_equal(original_dt, roundtrip_dt)
 
+    def test_decode_cf(self, tmpdir):
+        filepath = tmpdir / "test-cf-convention.nc"
+        original_dt = xr.DataTree(
+            xr.Dataset(
+                {
+                    "test": xr.DataArray(
+                        data=np.array([0, 1, 2], dtype=np.uint16),
+                        attrs={"_FillValue": 99},
+                    ),
+                }
+            )
+        )
+        original_dt.to_netcdf(filepath, engine=self.engine)
+        with open_datatree(
+            filepath, engine=self.engine, decode_cf=False
+        ) as roundtrip_dt:
+            assert original_dt["test"].dtype == roundtrip_dt["test"].dtype
+
     def test_to_netcdf_inherited_coords(self, tmpdir):
         filepath = tmpdir / "test.nc"
         original_dt = DataTree.from_dict(
@@ -543,6 +561,11 @@ class TestZarrDatatreeIO:
         with open_datatree(filepath, engine="zarr", chunks=chunks) as tree:
             xr.testing.assert_identical(tree, original_tree)
             assert_chunks_equal(tree, original_tree, enforce_dask=True)
+            # https://github.com/pydata/xarray/issues/10098
+            # If the open tasks are not give unique tokens per node, and the
+            # dask graph is computed in one go, data won't be uniquely loaded
+            # from each node.
+            xr.testing.assert_identical(tree.compute(), original_tree)
 
     def test_open_groups(self, unaligned_datatree_zarr) -> None:
         """Test `open_groups` with a zarr store of an unaligned group hierarchy."""

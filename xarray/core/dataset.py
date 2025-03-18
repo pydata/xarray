@@ -41,29 +41,23 @@ import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
+from xarray.compat.array_api_compat import to_like_array
+from xarray.computation import ops
+from xarray.computation.arithmetic import DatasetArithmetic
+from xarray.computation.computation import _ensure_numeric, unify_chunks
+from xarray.core import dtypes as xrdtypes
 from xarray.core import (
-    alignment,
     duck_array_ops,
     formatting,
     formatting_html,
-    ops,
     utils,
 )
-from xarray.core import dtypes as xrdtypes
 from xarray.core._aggregations import DatasetAggregations
-from xarray.core.alignment import (
-    _broadcast_helper,
-    _get_broadcast_dims_map_common_coords,
-    align,
-)
-from xarray.core.arithmetic import DatasetArithmetic
-from xarray.core.array_api_compat import to_like_array
 from xarray.core.common import (
     DataWithCoords,
     _contains_datetime_like_objects,
     get_chunksizes,
 )
-from xarray.core.computation import _ensure_numeric, unify_chunks
 from xarray.core.coordinates import (
     Coordinates,
     DatasetCoordinates,
@@ -83,12 +77,6 @@ from xarray.core.indexes import (
     roll_indexes,
 )
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
-from xarray.core.merge import (
-    dataset_merge_method,
-    dataset_update_method,
-    merge_coordinates_without_align,
-    merge_data_and_coords,
-)
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Bins,
@@ -131,6 +119,18 @@ from xarray.core.variable import (
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.namedarray.pycompat import array_type, is_chunked_array, to_numpy
 from xarray.plot.accessor import DatasetPlotAccessor
+from xarray.structure import alignment
+from xarray.structure.alignment import (
+    _broadcast_helper,
+    _get_broadcast_dims_map_common_coords,
+    align,
+)
+from xarray.structure.merge import (
+    dataset_merge_method,
+    dataset_update_method,
+    merge_coordinates_without_align,
+    merge_data_and_coords,
+)
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
@@ -140,11 +140,11 @@ if TYPE_CHECKING:
 
     from xarray.backends import AbstractDataStore, ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
+    from xarray.computation.rolling import DatasetCoarsen, DatasetRolling
+    from xarray.computation.weighted import DatasetWeighted
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
-    from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.resample import DatasetResample
-    from xarray.core.rolling import DatasetCoarsen, DatasetRolling
     from xarray.core.types import (
         CFCalendar,
         CoarsenBoundaryOptions,
@@ -173,9 +173,9 @@ if TYPE_CHECKING:
         T_DatasetPadConstantValues,
         T_Xarray,
     )
-    from xarray.core.weighted import DatasetWeighted
     from xarray.groupers import Grouper, Resampler
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
+    from xarray.structure.merge import CoercibleMapping, CoercibleValue
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -201,7 +201,7 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
     """Set initial guess and bounds for curvefit.
     Priority: 1) passed args 2) func signature 3) scipy defaults
     """
-    from xarray.core.computation import where
+    from xarray.computation.computation import where
 
     def _initialize_feasible(lb, ub):
         # Mimics functionality of scipy.optimize.minpack._initialize_feasible
@@ -1402,8 +1402,8 @@ class Dataset(
         When assigning values to a subset of a Dataset, do consistency check beforehand
         to avoid leaving the dataset in a partially updated state when an error occurs.
         """
-        from xarray.core.alignment import align
         from xarray.core.dataarray import DataArray
+        from xarray.structure.alignment import align
 
         if isinstance(value, Dataset):
             missing_vars = [
@@ -3364,8 +3364,8 @@ class Dataset(
             names to pandas.Index objects, which provides coordinates upon
             which to index the variables in this dataset. The indexes on this
             other object need not be the same as the indexes on this
-            dataset. Any mis-matched index values will be filled in with
-            NaN, and any mis-matched dimension names will simply be ignored.
+            dataset. Any mismatched index values will be filled in with
+            NaN, and any mismatched dimension names will simply be ignored.
         method : {None, "nearest", "pad", "ffill", "backfill", "bfill", None}, optional
             Method to use for filling index values from other not found in this
             dataset:
@@ -3430,8 +3430,8 @@ class Dataset(
         ----------
         indexers : dict, optional
             Dictionary with keys given by dimension names and values given by
-            arrays of coordinates tick labels. Any mis-matched coordinate
-            values will be filled in with NaN, and any mis-matched dimension
+            arrays of coordinates tick labels. Any mismatched coordinate
+            values will be filled in with NaN, and any mismatched dimension
             names will simply be ignored.
             One of indexers or indexers_kwargs must be provided.
         method : {None, "nearest", "pad", "ffill", "backfill", "bfill", None}, optional
@@ -5297,7 +5297,7 @@ class Dataset(
         Dimensions without coordinates: x
 
         """
-        from xarray.core.concat import concat
+        from xarray.structure.concat import concat
 
         stacking_dims = tuple(dim for dim in self.dims if dim not in sample_dims)
 
@@ -9783,9 +9783,9 @@ class Dataset(
         """
         from scipy.optimize import curve_fit
 
-        from xarray.core.alignment import broadcast
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
         from xarray.core.dataarray import _THIS_ARRAY, DataArray
+        from xarray.structure.alignment import broadcast
 
         if p0 is None:
             p0 = {}
@@ -10381,7 +10381,7 @@ class Dataset(
             Tutorial on Weighted Reduction using :py:func:`~xarray.Dataset.weighted`
 
         """
-        from xarray.core.weighted import DatasetWeighted
+        from xarray.computation.weighted import DatasetWeighted
 
         return DatasetWeighted(self, weights)
 
@@ -10421,7 +10421,7 @@ class Dataset(
         DataArray.rolling
         DataArray.rolling_exp
         """
-        from xarray.core.rolling import DatasetRolling
+        from xarray.computation.rolling import DatasetRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DatasetRolling(self, dim, min_periods=min_periods, center=center)
@@ -10453,7 +10453,7 @@ class Dataset(
         Dataset.rolling
         Dataset.rolling_exp
         """
-        from xarray.core.rolling import DatasetRolling
+        from xarray.computation.rolling import DatasetRolling
 
         if isinstance(dim, str):
             if dim not in self.dims:
@@ -10514,7 +10514,7 @@ class Dataset(
             Tutorial on windowed computation using :py:func:`~xarray.Dataset.coarsen`
 
         """
-        from xarray.core.rolling import DatasetCoarsen
+        from xarray.computation.rolling import DatasetCoarsen
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return DatasetCoarsen(

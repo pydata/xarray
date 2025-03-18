@@ -14,7 +14,6 @@ from packaging.version import Version
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
-from xarray.core.alignment import broadcast
 from xarray.core.groupby import _consolidate_slices
 from xarray.core.types import InterpOptions, ResampleCompatible
 from xarray.groupers import (
@@ -25,6 +24,7 @@ from xarray.groupers import (
     UniqueGrouper,
 )
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.structure.alignment import broadcast
 from xarray.tests import (
     InaccessibleArray,
     assert_allclose,

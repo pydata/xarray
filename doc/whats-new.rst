@@ -34,11 +34,20 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Added experimental support for coordinate transforms (not ready for public use yet!) (:pull:`9543`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Similar to our :py:class:`numpy.datetime64` encoding path, automatically
+  modify the units when an integer dtype is specified during eager cftime
+  encoding, but the specified units would not allow for an exact round trip
+  (:pull:`9498`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Support reading to `GPU memory with Zarr <https://zarr.readthedocs.io/en/stable/user-guide/gpu.html>`_ (:pull:`10078`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- Rolled back code that would attempt to catch integer overflow when encoding
+  times with small integer dtypes (:issue:`8542`), since it was inconsistent
+  with xarray's handling of standard integers, and interfered with encoding
+  times with small integer dtypes and missing values (:pull:`9498`). By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 - Warn instead of raise if phony_dims are detected when using h5netcdf-backend and ``phony_dims=None`` (:issue:`10049`, :pull:`10058`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
@@ -64,9 +73,24 @@ Bug fixes
 - Fix DataArray().drop_attrs(deep=False) and add support for attrs to
   DataArray()._replace(). (:issue:`10027`, :pull:`10030`). By `Jan
   Haacker <https://github.com/j-haacker>`_.
+- Fix bug preventing encoding times with missing values with small integer
+  dtype (:issue:`9134`, :pull:`9498`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- More robustly raise an error when lazily encoding times and an integer dtype
+  is specified with units that do not allow for an exact round trip
+  (:pull:`9498`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Prevent false resolution change warnings from being emitted when decoding
+  timedeltas encoded with floating point values, and make it clearer how to
+  silence this warning message in the case that it is rightfully emitted
+  (:issue:`10071`, :pull:`10072`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 - Fix ``isel`` for multi-coordinate Xarray indexes (:issue:`10063`, :pull:`10066`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
-
+- Fix dask tokenization when opening each node in :py:func:`xarray.open_datatree`
+  (:issue:`10098`, :pull:`10100`). By `Sam Levang <https://github.com/slevang>`_.
+- Improve handling of dtype and NaT when encoding/decoding masked and packaged
+  datetimes and timedeltas (:issue:`8957`, :pull:`10050`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -107,7 +131,7 @@ class can be passed through the ``decode_times`` keyword argument (see also
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
     ds = xr.open_dataset(filename, decode_times=coder)
 
-Similar control of the resoution of decoded timedeltas can be achieved through
+Similar control of the resolution of decoded timedeltas can be achieved through
 passing a :py:class:`coders.CFTimedeltaCoder` instance to the
 ``decode_timedelta`` keyword argument:
 
@@ -1466,7 +1490,7 @@ Bug fixes
   special case ``NaT`` handling in :py:meth:`~core.accessor_dt.DatetimeAccessor.isocalendar`
   (:issue:`7928`, :pull:`8084`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- Fix :py:meth:`~core.rolling.DatasetRolling.construct` with stride on Datasets without indexes.
+- Fix :py:meth:`~computation.rolling.DatasetRolling.construct` with stride on Datasets without indexes.
   (:issue:`7021`, :pull:`7578`).
   By `Amrest Chinkamol <https://github.com/p4perf4ce>`_ and `Michael Niklas <https://github.com/headtr1ck>`_.
 - Calling plot with kwargs ``col``, ``row`` or ``hue`` no longer squeezes dimensions passed via these arguments
@@ -2481,8 +2505,8 @@ New Features
 
 - The ``zarr`` backend is now able to read NCZarr.
   By `Mattia Almansi <https://github.com/malmans2>`_.
-- Add a weighted ``quantile`` method to :py:class:`~core.weighted.DatasetWeighted` and
-  :py:class:`~core.weighted.DataArrayWeighted` (:pull:`6059`).
+- Add a weighted ``quantile`` method to :py:class:`.computation.weighted.DatasetWeighted` and
+  :py:class:`~computation.weighted.DataArrayWeighted` (:pull:`6059`).
   By `Christian Jauvin <https://github.com/cjauvin>`_ and `David Huard <https://github.com/huard>`_.
 - Add a ``create_index=True`` parameter to :py:meth:`Dataset.stack` and
   :py:meth:`DataArray.stack` so that the creation of multi-indexes is optional
@@ -2864,7 +2888,7 @@ Thomas Nicholas, Tomas Chor, Tom Augspurger, Victor Negîrneac, Zachary Blackwoo
 
 New Features
 ~~~~~~~~~~~~
-- Add ``std``, ``var``,  ``sum_of_squares`` to :py:class:`~core.weighted.DatasetWeighted` and :py:class:`~core.weighted.DataArrayWeighted`.
+- Add ``std``, ``var``,  ``sum_of_squares`` to :py:class:`~computation.weighted.DatasetWeighted` and :py:class:`~computation.weighted.DataArrayWeighted`.
   By `Christian Jauvin <https://github.com/cjauvin>`_.
 - Added a :py:func:`get_options` method to xarray's root namespace (:issue:`5698`, :pull:`5716`)
   By `Pushkar Kopparla <https://github.com/pkopparla>`_.
@@ -3500,7 +3524,7 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Allow installing from git archives (:pull:`4897`).
   By `Justus Magin <https://github.com/keewis>`_.
-- :py:class:`~core.rolling.DataArrayCoarsen` and :py:class:`~core.rolling.DatasetCoarsen`
+- :py:class:`~computation.rolling.DataArrayCoarsen` and :py:class:`~computation.rolling.DatasetCoarsen`
   now implement a ``reduce`` method, enabling coarsening operations with custom
   reduction functions (:issue:`3741`, :pull:`4939`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
@@ -4345,8 +4369,8 @@ New Features
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
   now work with dask Variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Added the ``count`` reduction method to both :py:class:`~core.rolling.DatasetCoarsen`
-  and :py:class:`~core.rolling.DataArrayCoarsen` objects. (:pull:`3500`)
+- Added the ``count`` reduction method to both :py:class:`~computation.rolling.DatasetCoarsen`
+  and :py:class:`~computation.rolling.DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
 - Add ``meta`` kwarg to :py:func:`~xarray.apply_ufunc`;
   this is passed on to :py:func:`dask.array.blockwise`. (:pull:`3660`)
@@ -4698,7 +4722,7 @@ Bug fixes
 - Fix error in concatenating unlabeled dimensions (:pull:`3362`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Warn if the ``dim`` kwarg is passed to rolling operations. This is redundant since a dimension is
-  specified when the :py:class:`~core.rolling.DatasetRolling` or :py:class:`~core.rolling.DataArrayRolling` object is created.
+  specified when the :py:class:`~computation.rolling.DatasetRolling` or :py:class:`~computation.rolling.DataArrayRolling` object is created.
   (:pull:`3362`). By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
@@ -5929,7 +5953,7 @@ Enhancements
   supplied list, returning a bool array. See :ref:`selecting values with isin`
   for full details. Similar to the ``np.isin`` function.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- Some speed improvement to construct :py:class:`~xarray.core.rolling.DataArrayRolling`
+- Some speed improvement to construct :py:class:`~xarray.computation.rolling.DataArrayRolling`
   object (:issue:`1993`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Handle variables with different values for ``missing_value`` and
@@ -6009,8 +6033,8 @@ Enhancements
   NumPy. By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Improve :py:func:`~xarray.DataArray.rolling` logic.
-  :py:func:`~xarray.core.rolling.DataArrayRolling` object now supports
-  :py:func:`~xarray.core.rolling.DataArrayRolling.construct` method that returns a view
+  :py:func:`~xarray.computation.rolling.DataArrayRolling` object now supports
+  :py:func:`~xarray.computation.rolling.DataArrayRolling.construct` method that returns a view
   of the DataArray / Dataset object with the rolling-window dimension added
   to the last axis. This enables more flexible operation, such as strided
   rolling, windowed rolling, ND-rolling, short-time FFT and convolution.
@@ -6784,7 +6808,7 @@ Enhancements
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
-- New aggregation on rolling objects :py:meth:`~core.rolling.DataArrayRolling.count`
+- New aggregation on rolling objects :py:meth:`~computation.rolling.DataArrayRolling.count`
   which providing a rolling count of valid values (:issue:`1138`).
 
 Bug fixes
