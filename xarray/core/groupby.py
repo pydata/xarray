@@ -1116,6 +1116,8 @@ class GroupBy(Generic[T_Xarray]):
                     # flox always assigns an index so we must drop it here if we don't need it.
                     to_drop.append(grouper.name)
                     continue
+                # TODO: We can't simply use `self.encoded.coords` here because it corresponds to `unique_coord`,
+                # NOT `full_index`. We would need to construct a new Coordinates object, that corresponds to `full_index`.
                 new_coords.append(
                     # Using IndexVariable here ensures we reconstruct PandasMultiIndex with
                     # all associated levels properly.
@@ -1378,11 +1380,11 @@ class GroupBy(Generic[T_Xarray]):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
         if (
-            module_available("flox", minversion="0.9.16")
+            module_available("flox", minversion="0.10.0")
             and OPTIONS["use_flox"]
             and contains_only_chunked_or_numpy(self._obj)
         ):
-            result, *_ = self._flox_reduce(
+            result = self._flox_reduce(
                 dim=None, func=op, skipna=skipna, keep_attrs=keep_attrs
             )
         else:
