@@ -448,10 +448,12 @@ class TestZarrDatatreeIO:
 
         if zarr_format == 2:
             from numcodecs.blosc import Blosc
+
             comp = {"compressors": (Blosc(cname="zstd", clevel=3, shuffle=2),)}
         elif zarr_format == 3:
             # specifying codecs in zarr_format=3 requires importing from zarr 3 namespace
             import numcodecs.zarr3
+
             comp = {"compressors": (numcodecs.zarr3.Blosc(cname="zstd", clevel=3),)}
 
         enc = {"/set2": {var: comp for var in original_dt["/set2"].dataset.data_vars}}
