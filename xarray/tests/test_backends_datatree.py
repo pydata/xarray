@@ -13,6 +13,7 @@ from xarray.backends.api import open_datatree, open_groups
 from xarray.core.datatree import DataTree
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
+    has_zarr_v3,
     parametrize_zarr_format,
     requires_dask,
     requires_h5netcdf,
@@ -448,10 +449,12 @@ class TestZarrDatatreeIO:
 
         if zarr_format == 2:
             from numcodecs.blosc import Blosc
+
             comp = {"compressors": (Blosc(cname="zstd", clevel=3, shuffle=2),)}
         elif zarr_format == 3:
             # specifying codecs in zarr_format=3 requires importing from zarr 3 namespace
             import numcodecs.zarr3
+
             comp = {"compressors": (numcodecs.zarr3.Blosc(cname="zstd", clevel=3),)}
 
         enc = {"/set2": {var: comp for var in original_dt["/set2"].dataset.data_vars}}
@@ -533,6 +536,7 @@ class TestZarrDatatreeIO:
                     # (i.e. they did not contain only fill_value and write_empty_chunks was False)
                     assert chunk_file.exists() and chunk_file.is_file()
                 else:
+                    # either dask array or array of all fill_values
                     assert not chunk_file.exists()
             elif zarr_format == 3:
                 metadata_file = arr_dir / "zarr.json"
@@ -554,6 +558,8 @@ class TestZarrDatatreeIO:
                     assert not chunk_file.exists()
 
         DEFAULT_ZARR_FILL_VALUE = 0
+        # The default value of write_empty_chunks changed from True->False in zarr-python v2->v3
+        WRITE_EMPTY_CHUNKS_DEFAULT = not has_zarr_v3
 
         for node in original_dt.subtree:
             # inherited variables aren't meant to be written to zarr
@@ -567,7 +573,10 @@ class TestZarrDatatreeIO:
                     # also don't expect numpy arrays containing only zarr's fill_value to be written to disk
                     chunks_expected=(
                         not isinstance(var.data, da.Array)
-                        and var.data != DEFAULT_ZARR_FILL_VALUE
+                        and (
+                            var.data != DEFAULT_ZARR_FILL_VALUE
+                            or WRITE_EMPTY_CHUNKS_DEFAULT
+                        )
                     ),
                     is_scalar=not bool(var.dims),
                     zarr_format=zarr_format,
