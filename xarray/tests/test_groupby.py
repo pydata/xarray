@@ -3147,6 +3147,35 @@ def test_time_grouping_seasons_specified():
     assert_identical(actual, expected.reindex(season=labels))
 
 
+def test_multiple_grouper_unsorted_order():
+    time = xr.date_range("2001-01-01", "2003-01-01", freq="MS")
+    ds = xr.Dataset({"foo": np.arange(time.size)}, coords={"time": ("time", time)})
+    labels = ["DJF", "MAM", "JJA", "SON"]
+    actual = ds.groupby(
+        {
+            "time.season": UniqueGrouper(labels=labels),
+            "time.year": UniqueGrouper(labels=[2002, 2001]),
+        }
+    ).sum()
+    expected = (
+        ds.groupby({"time.season": UniqueGrouper(), "time.year": UniqueGrouper()})
+        .sum()
+        .reindex(season=labels, year=[2002, 2001])
+    )
+    assert_identical(actual, expected.reindex(season=labels))
+
+    b = xr.DataArray(
+        np.random.default_rng(0).random((2, 3, 4)),
+        coords={"x": [0, 1], "y": [0, 1, 2]},
+        dims=["x", "y", "z"],
+    )
+    actual = b.groupby(
+        x=UniqueGrouper(labels=[1, 0]), y=UniqueGrouper(labels=[2, 0, 1])
+    ).sum()
+    expected = b.reindex(x=[1, 0], y=[2, 0, 1]).transpose("z", ...)
+    assert_identical(actual, expected)
+
+
 def test_groupby_multiple_bin_grouper_missing_groups():
     from numpy import nan
 
