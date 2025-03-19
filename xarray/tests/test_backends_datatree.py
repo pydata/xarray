@@ -13,6 +13,7 @@ from xarray.backends.api import open_datatree, open_groups
 from xarray.core.datatree import DataTree
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
+    has_zarr_v3,
     parametrize_zarr_format,
     requires_dask,
     requires_h5netcdf,
@@ -119,7 +120,7 @@ def unaligned_datatree_nc(tmp_path_factory):
 def unaligned_datatree_zarr_factory(
     tmp_path_factory,
 ) -> Generator[
-    Callable[[Literal["2", "3"]], Path],
+    Callable[[Literal[2, 3]], Path],
     None,
     None,
 ]:
@@ -148,7 +149,7 @@ def unaligned_datatree_zarr_factory(
                 b        (x) float64 16B ...
     """
 
-    def _unaligned_datatree_zarr(zarr_format: Literal["2", "3"]) -> Path:
+    def _unaligned_datatree_zarr(zarr_format: Literal[2, 3]) -> Path:
         filepath = tmp_path_factory.mktemp("data") / "unaligned_simple_datatree.zarr"
         root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
         set1_data = xr.Dataset({"a": 0, "b": 1})
@@ -462,12 +463,11 @@ class TestZarrDatatreeIO:
         filepath = str(tmpdir / "test.zarr")
         original_dt = simple_datatree
 
-        # TODO add another logical path for zarr-python v2
-
         if zarr_format == 2:
             from numcodecs.blosc import Blosc
 
-            comp = {"compressors": (Blosc(cname="zstd", clevel=3, shuffle=2),)}
+            codec = Blosc(cname="zstd", clevel=3, shuffle=2)
+            comp = {"compressors": (codec,)} if has_zarr_v3 else {"compressor": codec}
         elif zarr_format == 3:
             # specifying codecs in zarr_format=3 requires importing from zarr 3 namespace
             import numcodecs.zarr3
@@ -478,8 +478,9 @@ class TestZarrDatatreeIO:
         original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
+            compressor_key = "compressors" if has_zarr_v3 else "compressor"
             assert (
-                roundtrip_dt["/set2/a"].encoding["compressors"] == comp["compressors"]
+                roundtrip_dt["/set2/a"].encoding[compressor_key] == comp[compressor_key]
             )
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
@@ -516,13 +517,20 @@ class TestZarrDatatreeIO:
     def test_to_zarr_default_write_mode(self, tmpdir, simple_datatree, zarr_format):
         simple_datatree.to_zarr(str(tmpdir), zarr_format=zarr_format)
 
+        import zarr
+
+        # expected exception type changed in zarr-python v2->v3, see https://github.com/zarr-developers/zarr-python/issues/2821
+        expected_exception_type = (
+            FileExistsError if has_zarr_v3 else zarr.errors.ContainsGroupError
+        )
+
         # with default settings, to_zarr should not overwrite an existing dir
-        with pytest.raises(FileExistsError):
+        with pytest.raises(expected_exception_type):
             simple_datatree.to_zarr(str(tmpdir))
 
     @requires_dask
     def test_to_zarr_compute_false(
-        self, tmp_path: Path, simple_datatree: DataTree, zarr_format: Literal["2", "3"]
+        self, tmp_path: Path, simple_datatree: DataTree, zarr_format: Literal[2, 3]
     ):
         import dask.array as da
 
@@ -534,7 +542,7 @@ class TestZarrDatatreeIO:
             arr_dir: Path,
             chunks_expected: bool,
             is_scalar: bool,
-            zarr_format: Literal["2", "3"],
+            zarr_format: Literal[2, 3],
         ) -> None:
             """For one zarr array, check that all expected metadata and chunk data files exist."""
             # TODO: This function is now so complicated that it's practically checking compliance with the whole zarr spec...
@@ -553,6 +561,7 @@ class TestZarrDatatreeIO:
                     # (i.e. they did not contain only fill_value and write_empty_chunks was False)
                     assert chunk_file.exists() and chunk_file.is_file()
                 else:
+                    # either dask array or array of all fill_values
                     assert not chunk_file.exists()
             elif zarr_format == 3:
                 metadata_file = arr_dir / "zarr.json"
@@ -574,6 +583,8 @@ class TestZarrDatatreeIO:
                     assert not chunk_file.exists()
 
         DEFAULT_ZARR_FILL_VALUE = 0
+        # The default value of write_empty_chunks changed from True->False in zarr-python v2->v3
+        WRITE_EMPTY_CHUNKS_DEFAULT = not has_zarr_v3
 
         for node in original_dt.subtree:
             # inherited variables aren't meant to be written to zarr
@@ -587,7 +598,10 @@ class TestZarrDatatreeIO:
                     # also don't expect numpy arrays containing only zarr's fill_value to be written to disk
                     chunks_expected=(
                         not isinstance(var.data, da.Array)
-                        and var.data != DEFAULT_ZARR_FILL_VALUE
+                        and (
+                            var.data != DEFAULT_ZARR_FILL_VALUE
+                            or WRITE_EMPTY_CHUNKS_DEFAULT
+                        )
                     ),
                     is_scalar=not bool(var.dims),
                     zarr_format=zarr_format,
