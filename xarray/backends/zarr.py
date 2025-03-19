@@ -4,6 +4,7 @@ import base64
 import json
 import os
 import struct
+import warnings
 from collections.abc import Hashable, Iterable, Mapping
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -42,6 +43,19 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
     from xarray.core.types import ReadBuffer, ZarrArray, ZarrGroup
+
+
+def _warn_of_consolidated_metadata_deprecation(kwarg_name: str, value: True | False | None) -> None:
+    # in some places this kwarg is called "consolidate" and in other places its called "consolidated"
+    if value is None:
+        warnings.warn(
+            f"The default value of the ``{kwarg_name}`` argument to zarr IO functions will soon change."
+            "The default value of ``None`` used to mean ``True``, but it will be changed to mean ``False``."
+            f"To preserve the same behaviour in future please pass ``{kwarg_name}=True`` explicitly."
+            "If you are not reading and writing from high-latency stores (e.g. Zarr v2/v3 format cloud object stores) you can safely ignore this warning."
+            "See https://github.com/pydata/xarray/issues/10122 for more information.",
+            PendingDeprecationWarning,
+        )
 
 
 def _get_mappers(*, storage_options, store, chunk_store):
@@ -1488,6 +1502,8 @@ def open_zarr(
             "open_zarr() got unexpected keyword arguments " + ",".join(kwargs.keys())
         )
 
+    _warn_of_consolidated_metadata_deprecation(kwarg_name="consolidated", value=consolidated)
+
     backend_kwargs = {
         "synchronizer": synchronizer,
         "consolidated": consolidated,
@@ -1765,6 +1781,8 @@ def _get_open_params(
         missing_exc = ValueError
     else:
         missing_exc = zarr.errors.GroupNotFoundError
+
+    warn_of_consolidated_metadata_deprecation(consolidate=consolidated)
 
     if consolidated is None:
         try:

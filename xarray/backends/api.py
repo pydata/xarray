@@ -2187,7 +2187,9 @@ def to_zarr(
 
     See `Dataset.to_zarr` for full API docs.
     """
-    from xarray.backends.zarr import _choose_default_mode, _get_mappers
+    from xarray.backends.zarr import _choose_default_mode, _get_mappers, _warn_of_consolidated_metadata_deprecation
+
+    _warn_of_consolidated_metadata_deprecation(kwarg_name="consolidated", value=consolidated)
 
     # validate Dataset keys, DataArray names
     _validate_dataset_names(dataset)
