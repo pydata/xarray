@@ -648,7 +648,7 @@ class ZarrStore(AbstractWritableDataStore):
         write_empty: bool | None = None,
         cache_members: bool = True,
     ) -> ZarrStore:
-       (
+        (
             zarr_group,
             consolidate_on_close,
             close_store_on_close,
@@ -669,7 +669,7 @@ class ZarrStore(AbstractWritableDataStore):
 
         from zarr import Group
 
-        group_members: dict[str, Group]
+        group_members: dict[str, Group] = {}
         group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
         for path in group_paths:
             if path == group:
