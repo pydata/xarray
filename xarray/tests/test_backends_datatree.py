@@ -445,12 +445,11 @@ class TestZarrDatatreeIO:
         filepath = str(tmpdir / "test.zarr")
         original_dt = simple_datatree
 
-        # TODO add another logical path for zarr-python v2
-
         if zarr_format == 2:
             from numcodecs.blosc import Blosc
 
-            comp = {"compressors": (Blosc(cname="zstd", clevel=3, shuffle=2),)}
+            codec = Blosc(cname="zstd", clevel=3, shuffle=2)
+            comp = {"compressors": (codec,)} if has_zarr_v3 else {"compressor": codec}
         elif zarr_format == 3:
             # specifying codecs in zarr_format=3 requires importing from zarr 3 namespace
             import numcodecs.zarr3
@@ -461,8 +460,9 @@ class TestZarrDatatreeIO:
         original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
+            compressor_key = "compressors" if has_zarr_v3 else "compressor"
             assert (
-                roundtrip_dt["/set2/a"].encoding["compressors"] == comp["compressors"]
+                roundtrip_dt["/set2/a"].encoding[compressor_key] == comp[compressor_key]
             )
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
