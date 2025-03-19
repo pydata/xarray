@@ -120,7 +120,7 @@ def unaligned_datatree_nc(tmp_path_factory):
 def unaligned_datatree_zarr_factory(
     tmp_path_factory,
 ) -> Generator[
-    Callable[[Literal["2", "3"]], Path],
+    Callable[[Literal[2, 3]], Path],
     None,
     None,
 ]:
@@ -149,7 +149,7 @@ def unaligned_datatree_zarr_factory(
                 b        (x) float64 16B ...
     """
 
-    def _unaligned_datatree_zarr(zarr_format: Literal["2", "3"]) -> Path:
+    def _unaligned_datatree_zarr(zarr_format: Literal[2, 3]) -> Path:
         filepath = tmp_path_factory.mktemp("data") / "unaligned_simple_datatree.zarr"
         root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
         set1_data = xr.Dataset({"a": 0, "b": 1})
@@ -512,7 +512,7 @@ class TestZarrDatatreeIO:
 
     @requires_dask
     def test_to_zarr_compute_false(
-        self, tmp_path: Path, simple_datatree: DataTree, zarr_format: Literal["2", "3"]
+        self, tmp_path: Path, simple_datatree: DataTree, zarr_format: Literal[2, 3]
     ):
         import dask.array as da
 
@@ -524,7 +524,7 @@ class TestZarrDatatreeIO:
             arr_dir: Path,
             chunks_expected: bool,
             is_scalar: bool,
-            zarr_format: Literal["2", "3"],
+            zarr_format: Literal[2, 3],
         ) -> None:
             """For one zarr array, check that all expected metadata and chunk data files exist."""
             # TODO: This function is now so complicated that it's practically checking compliance with the whole zarr spec...
