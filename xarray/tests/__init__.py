@@ -384,14 +384,15 @@ _NON_STANDARD_CALENDAR_NAMES = {
     "366_day",
 }
 _NON_STANDARD_CALENDARS = [
-    pytest.param(
-        cal, marks=requires_cftime
-    )
+    pytest.param(cal, marks=requires_cftime)
     for cal in sorted(_NON_STANDARD_CALENDAR_NAMES)
 ]
 _STANDARD_CALENDARS = [pytest.param(cal) for cal in _STANDARD_CALENDAR_NAMES]
 _ALL_CALENDARS = sorted(_STANDARD_CALENDARS + _NON_STANDARD_CALENDARS)
-_CFTIME_CALENDARS = [pytest.param(*p.values, marks=requires_cftime) for p in _ALL_CALENDARS]
+_CFTIME_CALENDARS = [
+    pytest.param(*p.values, marks=requires_cftime) for p in _ALL_CALENDARS
+]
+
 
 def _all_cftime_date_types():
     import cftime
