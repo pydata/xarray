@@ -3315,13 +3315,7 @@ class TestSeasonGrouperAndResampler:
         expected = xr.DataArray(
             data=np.array([[1.38, 1.616667], [1.51, 1.5]]),
             dims=["year", "season"],
-            coords={
-                "year": [
-                    2001,
-                    2002,
-                ],
-                "season": ["NDJFM", "AMJ"],
-            },
+            coords={"year": [2001, 2002], "season": ["NDJFM", "AMJ"]},
         )
 
         assert_allclose(expected, actual)
@@ -3348,13 +3342,7 @@ class TestSeasonGrouperAndResampler:
         expected = xr.DataArray(
             data=np.array([[1.38, 1.616667], [1.43333333, 1.5]]),
             dims=["year", "season"],
-            coords={
-                "year": [
-                    2001,
-                    2002,
-                ],
-                "season": ["NDJFM", "AMJ"],
-            },
+            coords={"year": [2001, 2002], "season": ["NDJFM", "AMJ"]},
         )
 
         assert_allclose(expected, actual)
@@ -3401,8 +3389,6 @@ class TestSeasonGrouperAndResampler:
     def test_season_grouper_with_months_spanning_calendar_year_using_previous_year(
         self, calendar
     ):
-        # NOTE: This feature is not implemented yet. Maybe it can be a
-        # parameter to the `SeasonGrouper` API (e.g. `use_previous_year=True`).
         time = date_range("2001-01-01", "2002-12-30", freq="MS", calendar=calendar)
         # fmt: off
         data = np.array(
@@ -3413,18 +3399,33 @@ class TestSeasonGrouperAndResampler:
         )
         # fmt: on
         da = DataArray(data, dims="time", coords={"time": time})
-        da["year"] = da.time.dt.year
 
-        gb = da.groupby(year=UniqueGrouper(), time=SeasonGrouper(["NDJFM", "AMJ"]))
+        gb = da.resample(time=SeasonResampler(["NDJFM", "AMJ"], drop_incomplete=False))
         actual = gb.mean()
+
+        new_time = (
+            xr.DataArray(
+                dims="time",
+                data=pd.DatetimeIndex(
+                    [
+                        "2000-11-01",
+                        "2001-04-01",
+                        "2001-11-01",
+                        "2002-04-01",
+                        "2002-11-01",
+                    ]
+                ),
+            )
+            .convert_calendar(calendar=calendar, align_on="date")
+            .time.variable
+        )
 
         # Expected if the previous "ND" is used for seasonal grouping
         expected = xr.DataArray(
-            data=np.array([[1.25, 1.616667], [1.49, 1.5], [1.625, np.nan]]),
-            dims=["year", "season"],
-            coords={"year": [2000, 2001, 2002], "season": ["NDJFM", "AMJ"]},
+            data=np.array([1.25, 1.616667, 1.49, 1.5, 1.625]),
+            dims="time",
+            coords={"time": new_time},
         )
-
         assert_allclose(expected, actual)
 
     @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
