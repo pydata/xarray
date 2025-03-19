@@ -546,19 +546,22 @@ class TestZarrDatatreeIO:
                     assert not chunks_dir.exists()
                     assert not chunk_file.exists()
 
+        DEFAULT_ZARR_FILL_VALUE = 0
+
         for node in original_dt.subtree:
             # inherited variables aren't meant to be written to zarr
-            # TODO perhaps this test fixture should be changed back so there are no inherited coords...
             local_node_variables = node.to_dataset(inherit=False).variables
             for name, var in local_node_variables.items():
                 var_dir = storepath / node.path.removeprefix("/") / name
 
-                # TODO add fill_value considerations to chunks_expected
                 assert_expected_zarr_files_exist(
                     arr_dir=var_dir,
+                    # don't expect dask.Arrays to be written to disk, as compute=False
+                    # also don't expect numpy arrays containing only zarr's fill_value to be written to disk
                     chunks_expected=(
                         not isinstance(var.data, da.Array)
-                    ),  # don't expect dask.Arrays to be written to disk, as compute=False
+                        and var.data != DEFAULT_ZARR_FILL_VALUE
+                    ),
                     is_scalar=not bool(var.dims),
                     zarr_format=zarr_format,
                 )
