@@ -10,8 +10,7 @@ import pytest
 from numpy.testing import assert_allclose, assert_array_equal
 
 import xarray as xr
-from xarray.core.alignment import broadcast
-from xarray.core.computation import (
+from xarray.computation.apply_ufunc import (
     _UFuncSignature,
     apply_ufunc,
     broadcast_compat_data,
@@ -19,9 +18,10 @@ from xarray.core.computation import (
     join_dict_keys,
     ordered_set_intersection,
     ordered_set_union,
-    result_name,
     unified_dim_sizes,
 )
+from xarray.core.utils import result_name
+from xarray.structure.alignment import broadcast
 from xarray.tests import (
     has_dask,
     raise_if_dask_computes,
@@ -634,6 +634,7 @@ def test_apply_groupby_add() -> None:
         add(data_array.groupby("y"), data_array.groupby("x"))
 
 
+@pytest.mark.filterwarnings("ignore:Duplicate dimension names present")
 def test_unified_dim_sizes() -> None:
     assert unified_dim_sizes([xr.Variable((), 0)]) == {}
     assert unified_dim_sizes([xr.Variable("x", [1]), xr.Variable("x", [1])]) == {"x": 1}
@@ -646,9 +647,9 @@ def test_unified_dim_sizes() -> None:
         exclude_dims={"z"},
     ) == {"x": 1, "y": 2}
 
-    # duplicate dimensions
-    with pytest.raises(ValueError):
-        unified_dim_sizes([xr.Variable(("x", "x"), [[1]])])
+    with pytest.raises(ValueError, match="broadcasting cannot handle"):
+        with pytest.warns(UserWarning, match="Duplicate dimension names"):
+            unified_dim_sizes([xr.Variable(("x", "x"), [[1]])])
 
     # mismatched lengths
     with pytest.raises(ValueError):
@@ -2344,6 +2345,20 @@ def test_where_attrs() -> None:
             id="datetime",
         ),
         pytest.param(
+            # Force a non-ns unit for the coordinate, make sure we convert to `ns`
+            # for backwards compatibility at the moment. This can be relaxed in the future.
+            xr.DataArray(
+                pd.date_range("1970-01-01", freq="s", periods=3, unit="s"), dims="x"
+            ),
+            xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]}),
+            xr.DataArray(
+                [0, 1e9, 2e9],
+                dims="x",
+                coords={"x": pd.date_range("1970-01-01", freq="s", periods=3)},
+            ),
+            id="datetime-non-ns",
+        ),
+        pytest.param(
             xr.DataArray(
                 np.array([1000, 2000, 3000], dtype="timedelta64[ns]"), dims="x"
             ),
@@ -2456,6 +2471,14 @@ def test_polyval_degree_dim_checks() -> None:
         pytest.param(
             xr.DataArray(pd.date_range("1970-01-01", freq="ns", periods=3), dims="x"),
             id="datetime",
+        ),
+        # Force a non-ns unit for the coordinate, make sure we convert to `ns` in both polyfit & polval
+        # for backwards compatibility at the moment. This can be relaxed in the future.
+        pytest.param(
+            xr.DataArray(
+                pd.date_range("1970-01-01", freq="s", unit="s", periods=3), dims="x"
+            ),
+            id="datetime-non-ns",
         ),
         pytest.param(
             xr.DataArray(np.array([0, 1, 2], dtype="timedelta64[ns]"), dims="x"),

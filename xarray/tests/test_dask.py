@@ -1815,3 +1815,16 @@ def test_minimize_graph_size():
         # all the other dimensions.
         # e.g. previously for 'x',  actual == numchunks['y'] * numchunks['z']
         assert actual == numchunks[var], (actual, numchunks[var])
+
+
+def test_idxmin_chunking():
+    # GH9425
+    x, y, t = 100, 100, 10
+    rang = np.arange(t * x * y)
+    da = xr.DataArray(
+        rang.reshape(t, x, y), coords={"time": range(t), "x": range(x), "y": range(y)}
+    )
+    da = da.chunk(dict(time=-1, x=25, y=25))
+    actual = da.idxmin("time")
+    assert actual.chunksizes == {k: da.chunksizes[k] for k in ["x", "y"]}
+    assert_identical(actual, da.compute().idxmin("time"))

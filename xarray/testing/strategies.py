@@ -1,3 +1,5 @@
+import datetime
+import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Protocol, overload
 
@@ -473,3 +475,36 @@ def unique_subset_of(
     return (
         {k: objs[k] for k in subset_keys} if isinstance(objs, Mapping) else subset_keys
     )
+
+
+class CFTimeStrategy(st.SearchStrategy):
+    def __init__(self, min_value, max_value):
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def do_draw(self, data):
+        unit_microsecond = datetime.timedelta(microseconds=1)
+        timespan_microseconds = (self.max_value - self.min_value) // unit_microsecond
+        result = data.draw_integer(0, timespan_microseconds)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=".*date/calendar/year zero.*")
+            return self.min_value + datetime.timedelta(microseconds=result)
+
+
+class CFTimeStrategyISO8601(st.SearchStrategy):
+    def __init__(self):
+        from xarray.tests.test_coding_times import _all_cftime_date_types
+
+        self.date_types = _all_cftime_date_types()
+        self.calendars = list(self.date_types)
+
+    def do_draw(self, data):
+        calendar = data.draw(st.sampled_from(self.calendars))
+        date_type = self.date_types[calendar]
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=".*date/calendar/year zero.*")
+            daysinmonth = date_type(99999, 12, 1).daysinmonth
+            min_value = date_type(-99999, 1, 1)
+            max_value = date_type(99999, 12, daysinmonth, 23, 59, 59, 999999)
+            strategy = CFTimeStrategy(min_value, max_value)
+            return strategy.do_draw(data)

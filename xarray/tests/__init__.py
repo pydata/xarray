@@ -111,18 +111,22 @@ has_dask_ge_2024_08_1, requires_dask_ge_2024_08_1 = _importorskip(
     "dask", minversion="2024.08.1"
 )
 has_dask_ge_2024_11_0, requires_dask_ge_2024_11_0 = _importorskip("dask", "2024.11.0")
-with warnings.catch_warnings():
-    warnings.filterwarnings(
-        "ignore",
-        message="The current Dask DataFrame implementation is deprecated.",
-        category=DeprecationWarning,
-    )
-    has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
+has_dask_ge_2025_1_0, requires_dask_ge_2025_1_0 = _importorskip("dask", "2025.1.0")
+if has_dask_ge_2025_1_0:
+    has_dask_expr = True
+    requires_dask_expr = pytest.mark.skipif(not has_dask_expr, reason="should not skip")
+else:
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="The current Dask DataFrame implementation is deprecated.",
+            category=DeprecationWarning,
+        )
+        has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
-# TODO: switch to "3" once Zarr V3 is released
-has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "2.99")
+has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "3.0.0")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg")
@@ -264,9 +268,9 @@ def format_record(record) -> str:
 def assert_no_warnings():
     with warnings.catch_warnings(record=True) as record:
         yield record
-        assert (
-            len(record) == 0
-        ), f"Got {len(record)} unexpected warning(s): {[format_record(r) for r in record]}"
+        assert len(record) == 0, (
+            f"Got {len(record)} unexpected warning(s): {[format_record(r) for r in record]}"
+        )
 
 
 # Internal versions of xarray's test functions that validate additional
@@ -315,10 +319,17 @@ def create_test_data(
     obj["dim2"] = ("dim2", 0.5 * np.arange(_dims["dim2"]))
     if _dims["dim3"] > 26:
         raise RuntimeError(
-            f'Not enough letters for filling this dimension size ({_dims["dim3"]})'
+            f"Not enough letters for filling this dimension size ({_dims['dim3']})"
         )
     obj["dim3"] = ("dim3", list(string.ascii_lowercase[0 : _dims["dim3"]]))
-    obj["time"] = ("time", pd.date_range("2000-01-01", periods=20))
+    obj["time"] = (
+        "time",
+        pd.date_range(
+            "2000-01-01",
+            periods=20,
+            unit="ns",
+        ),
+    )
     for v, dims in sorted(_vars.items()):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
         obj[v] = (dims, data)

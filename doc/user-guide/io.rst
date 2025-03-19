@@ -540,8 +540,8 @@ The ``units`` and ``calendar`` attributes control how xarray serializes ``dateti
 ``timedelta64`` arrays to datasets on disk as numeric values. The ``units`` encoding
 should be a string like ``'days since 1900-01-01'`` for ``datetime64`` data or a string
 like ``'days'`` for ``timedelta64`` data. ``calendar`` should be one of the calendar types
-supported by netCDF4-python: 'standard', 'gregorian', 'proleptic_gregorian' 'noleap',
-'365_day', '360_day', 'julian', 'all_leap', '366_day'.
+supported by netCDF4-python: ``'standard'``, ``'gregorian'``, ``'proleptic_gregorian'``, ``'noleap'``,
+``'365_day'``, ``'360_day'``, ``'julian'``, ``'all_leap'``, ``'366_day'``.
 
 By default, xarray uses the ``'proleptic_gregorian'`` calendar and units of the smallest time
 difference between values, with a reference time of the first time value.
@@ -661,6 +661,7 @@ To write to a local directory, we pass a path to a directory:
     ! rm -rf path/to/directory.zarr
 
 .. ipython:: python
+    :okwarning:
 
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 5))},
@@ -697,6 +698,7 @@ To read back a zarr dataset that has been created this way, we use the
 :py:func:`open_zarr` method:
 
 .. ipython:: python
+    :okwarning:
 
     ds_zarr = xr.open_zarr("path/to/directory.zarr")
     ds_zarr
@@ -771,6 +773,7 @@ to Zarr:
     ! rm -rf path/to/directory.zarr
 
 .. ipython:: python
+    :okwarning:
 
     import dask.array
 
@@ -823,6 +826,7 @@ For example:
     ! rm -rf foo.zarr
 
 .. ipython:: python
+    :okwarning:
 
     import zarr
     from numcodecs.blosc import Blosc
@@ -873,6 +877,7 @@ order, e.g., for time-stepping a simulation:
     ! rm -rf path/to/directory.zarr
 
 .. ipython:: python
+    :okwarning:
 
     ds1 = xr.Dataset(
         {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
@@ -940,6 +945,7 @@ space on disk or in memory, yet when writing to disk the default zarr behavior i
 split them into chunks:
 
 .. ipython:: python
+    :okwarning:
 
     ds.to_zarr("path/to/directory.zarr", mode="w")
     ! ls -R path/to/directory.zarr
@@ -950,6 +956,7 @@ storage provider. To disable this chunking, we can specify a chunk size equal to
 length of each dimension by using the shorthand chunk size ``-1``:
 
 .. ipython:: python
+    :okwarning:
 
     ds.to_zarr(
         "path/to/directory.zarr",

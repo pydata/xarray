@@ -14,7 +14,6 @@ from packaging.version import Version
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
-from xarray.core.alignment import broadcast
 from xarray.core.groupby import _consolidate_slices
 from xarray.core.types import InterpOptions, ResampleCompatible
 from xarray.groupers import (
@@ -25,6 +24,7 @@ from xarray.groupers import (
     UniqueGrouper,
 )
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.structure.alignment import broadcast
 from xarray.tests import (
     InaccessibleArray,
     assert_allclose,
@@ -284,7 +284,6 @@ def test_da_groupby_empty() -> None:
 
 @requires_dask
 def test_dask_da_groupby_quantile() -> None:
-    # Only works when the grouped reduction can run blockwise
     # Scalar quantile
     expected = xr.DataArray(
         data=[2, 5], coords={"x": [1, 2], "quantile": 0.5}, dims="x"
@@ -292,8 +291,6 @@ def test_dask_da_groupby_quantile() -> None:
     array = xr.DataArray(
         data=[1, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
     )
-    with pytest.raises(ValueError):
-        array.chunk(x=1).groupby("x").quantile(0.5)
 
     # will work blockwise with flox
     actual = array.chunk(x=3).groupby("x").quantile(0.5)
@@ -327,7 +324,8 @@ def test_dask_da_groupby_median() -> None:
     assert_identical(expected, actual)
 
 
-def test_da_groupby_quantile() -> None:
+@pytest.mark.parametrize("use_flox", [pytest.param(True, marks=requires_flox), False])
+def test_da_groupby_quantile(use_flox: bool) -> None:
     array = xr.DataArray(
         data=[1, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
     )
@@ -336,8 +334,10 @@ def test_da_groupby_quantile() -> None:
     expected = xr.DataArray(
         data=[2, 5], coords={"x": [1, 2], "quantile": 0.5}, dims="x"
     )
-    actual = array.groupby("x").quantile(0.5)
-    assert_identical(expected, actual)
+
+    with xr.set_options(use_flox=use_flox):
+        actual = array.groupby("x").quantile(0.5)
+        assert_identical(expected, actual)
 
     # Vector quantile
     expected = xr.DataArray(
@@ -345,7 +345,8 @@ def test_da_groupby_quantile() -> None:
         coords={"x": [1, 2], "quantile": [0, 1]},
         dims=("x", "quantile"),
     )
-    actual = array.groupby("x").quantile([0, 1])
+    with xr.set_options(use_flox=use_flox):
+        actual = array.groupby("x").quantile([0, 1])
     assert_identical(expected, actual)
 
     array = xr.DataArray(
@@ -356,7 +357,8 @@ def test_da_groupby_quantile() -> None:
         e = [np.nan, 5] if skipna is False else [2.5, 5]
 
         expected = xr.DataArray(data=e, coords={"x": [1, 2], "quantile": 0.5}, dims="x")
-        actual = array.groupby("x").quantile(0.5, skipna=skipna)
+        with xr.set_options(use_flox=use_flox):
+            actual = array.groupby("x").quantile(0.5, skipna=skipna)
         assert_identical(expected, actual)
 
     # Multiple dimensions
@@ -636,7 +638,6 @@ def test_groupby_repr_datetime(obj) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:No index created for dimension id:UserWarning")
-@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.filterwarnings("ignore:invalid value encountered in divide:RuntimeWarning")
 @pytest.mark.parametrize("shuffle", [True, False])
 @pytest.mark.parametrize(
@@ -1867,7 +1868,7 @@ class TestDataArrayResample:
         def resample_as_pandas(array, *args, **kwargs):
             array_ = array.copy(deep=True)
             if use_cftime:
-                array_["time"] = times.to_datetimeindex()
+                array_["time"] = times.to_datetimeindex(time_unit="ns")
             result = DataArray.from_series(
                 array_.to_series().resample(*args, **kwargs).mean()
             )
@@ -2198,9 +2199,8 @@ class TestDataArrayResample:
             assert_allclose(expected, actual, rtol=1e-16)
 
     @requires_scipy
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_upsample_interpolate_bug_2197(self) -> None:
-        dates = pd.date_range("2007-02-01", "2007-03-01", freq="D")
+        dates = pd.date_range("2007-02-01", "2007-03-01", freq="D", unit="s")
         da = xr.DataArray(np.arange(len(dates)), [("time", dates)])
         result = da.resample(time="ME").interpolate("linear")
         expected_times = np.array(
@@ -2321,7 +2321,7 @@ class TestDatasetResample:
         def resample_as_pandas(ds, *args, **kwargs):
             ds_ = ds.copy(deep=True)
             if use_cftime:
-                ds_["time"] = times.to_datetimeindex()
+                ds_["time"] = times.to_datetimeindex(time_unit="ns")
             result = Dataset.from_dataframe(
                 ds_.to_dataframe().resample(*args, **kwargs).mean()
             )

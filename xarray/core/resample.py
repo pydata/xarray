@@ -232,8 +232,7 @@ class Resample(GroupBy[T_Xarray]):
         )
 
 
-# https://github.com/python/mypy/issues/9031
-class DataArrayResample(  # type: ignore[misc]
+class DataArrayResample(
     Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations
 ):
     """DataArrayGroupBy object specialized to time resampling operations over a
@@ -375,8 +374,7 @@ class DataArrayResample(  # type: ignore[misc]
         return self.mean(None if self._dim is None else [self._dim])
 
 
-# https://github.com/python/mypy/issues/9031
-class DatasetResample(  # type: ignore[misc]
+class DatasetResample(
     Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations
 ):
     """DatasetGroupBy object specialized to resampling a specified dimension"""

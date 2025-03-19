@@ -19,6 +19,7 @@ from xarray.tests import (
     raise_if_dask_computes,
     requires_dask,
 )
+from xarray.tests.arrays import DuckArrayWrapper
 
 B = IndexerMaker(indexing.BasicIndexer)
 
@@ -974,7 +975,7 @@ def test_indexing_1d_object_array() -> None:
 
 
 @requires_dask
-def test_indexing_dask_array():
+def test_indexing_dask_array() -> None:
     import dask.array
 
     da = DataArray(
@@ -988,13 +989,14 @@ def test_indexing_dask_array():
 
 
 @requires_dask
-def test_indexing_dask_array_scalar():
+def test_indexing_dask_array_scalar() -> None:
     # GH4276
     import dask.array
 
     a = dask.array.from_array(np.linspace(0.0, 1.0))
     da = DataArray(a, dims="x")
     x_selector = da.argmax(dim=...)
+    assert not isinstance(x_selector, DataArray)
     with raise_if_dask_computes():
         actual = da.isel(x_selector)
     expected = da.isel(x=-1)
@@ -1002,7 +1004,7 @@ def test_indexing_dask_array_scalar():
 
 
 @requires_dask
-def test_vectorized_indexing_dask_array():
+def test_vectorized_indexing_dask_array() -> None:
     # https://github.com/pydata/xarray/issues/2511#issuecomment-563330352
     darr = DataArray(data=[0.2, 0.4, 0.6], coords={"z": range(3)}, dims=("z",))
     indexer = DataArray(
@@ -1010,12 +1012,30 @@ def test_vectorized_indexing_dask_array():
         coords={"y": range(4), "x": range(2)},
         dims=("y", "x"),
     )
-    with pytest.raises(ValueError, match="Vectorized indexing with Dask arrays"):
-        darr[indexer.chunk({"y": 2})]
+    expected = darr[indexer]
+
+    # fails because we can't index pd.Index lazily (yet).
+    # We could make this succeed by auto-chunking the values
+    # and constructing a lazy index variable, and not automatically
+    # create an index for it.
+    with pytest.raises(ValueError, match="Cannot index with"):
+        with raise_if_dask_computes():
+            darr.chunk()[indexer.chunk({"y": 2})]
+    with pytest.raises(ValueError, match="Cannot index with"):
+        with raise_if_dask_computes():
+            actual = darr[indexer.chunk({"y": 2})]
+
+    with raise_if_dask_computes():
+        actual = darr.drop_vars("z").chunk()[indexer.chunk({"y": 2})]
+    assert_identical(actual, expected.drop_vars("z"))
+
+    with raise_if_dask_computes():
+        actual_variable = darr.variable.chunk()[indexer.variable.chunk({"y": 2})]
+    assert_identical(actual_variable, expected.variable)
 
 
 @requires_dask
-def test_advanced_indexing_dask_array():
+def test_advanced_indexing_dask_array() -> None:
     # GH4663
     import dask.array as da
 
@@ -1033,3 +1053,15 @@ def test_advanced_indexing_dask_array():
     with raise_if_dask_computes():
         actual = ds.b.sel(x=ds.a.data)
     assert_identical(expected, actual)
+
+
+def test_backend_indexing_non_numpy() -> None:
+    """This model indexing of a Zarr store that reads to GPU memory."""
+    array = DuckArrayWrapper(np.array([1, 2, 3]))
+    indexed = indexing.explicit_indexing_adapter(
+        indexing.BasicIndexer((slice(1),)),
+        shape=array.shape,
+        indexing_support=indexing.IndexingSupport.BASIC,
+        raw_indexing_method=array.__getitem__,
+    )
+    np.testing.assert_array_equal(indexed.array, np.array([1]))

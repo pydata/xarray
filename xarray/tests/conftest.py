@@ -164,27 +164,27 @@ def create_test_datatree():
     Create a test datatree with this structure:
 
     <xarray.DataTree>
-    |-- set1
-    |   |-- <xarray.Dataset>
-    |   |   Dimensions:  ()
-    |   |   Data variables:
-    |   |       a        int64 0
-    |   |       b        int64 1
-    |   |-- set1
-    |   |-- set2
-    |-- set2
-    |   |-- <xarray.Dataset>
-    |   |   Dimensions:  (x: 2)
-    |   |   Data variables:
-    |   |       a        (x) int64 2, 3
-    |   |       b        (x) int64 0.1, 0.2
-    |   |-- set1
-    |-- set3
-    |-- <xarray.Dataset>
-    |   Dimensions:  (x: 2, y: 3)
-    |   Data variables:
-    |       a        (y) int64 6, 7, 8
-    |       set0     (x) int64 9, 10
+    Group: /
+    │   Dimensions:  (y: 3, x: 2)
+    │   Dimensions without coordinates: y, x
+    │   Data variables:
+    │       a        (y) int64 24B 6 7 8
+    │       set0     (x) int64 16B 9 10
+    ├── Group: /set1
+    │   │   Dimensions:  ()
+    │   │   Data variables:
+    │   │       a        int64 8B 0
+    │   │       b        int64 8B 1
+    │   ├── Group: /set1/set1
+    │   └── Group: /set1/set2
+    ├── Group: /set2
+    │   │   Dimensions:  (x: 2)
+    │   │   Dimensions without coordinates: x
+    │   │   Data variables:
+    │   │       a        (x) int64 16B 2 3
+    │   │       b        (x) float64 16B 0.1 0.2
+    │   └── Group: /set2/set1
+    └── Group: /set3
 
     The structure has deliberately repeated names of tags, variables, and
     dimensions in order to better check for bugs caused by name conflicts.
@@ -220,3 +220,8 @@ def simple_datatree(create_test_datatree):
     Returns a DataTree.
     """
     return create_test_datatree()
+
+
+@pytest.fixture(scope="module", params=["s", "ms", "us", "ns"])
+def time_unit(request):
+    return request.param

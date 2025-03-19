@@ -6,11 +6,12 @@ from typing import TYPE_CHECKING, Generic, Literal, cast
 import numpy as np
 from numpy.typing import ArrayLike
 
+from xarray.computation.apply_ufunc import apply_ufunc
+from xarray.computation.computation import dot
 from xarray.core import duck_array_ops, utils
-from xarray.core.alignment import align, broadcast
-from xarray.core.computation import apply_ufunc, dot
 from xarray.core.types import Dims, T_DataArray, T_Xarray
 from xarray.namedarray.utils import is_duck_dask_array
+from xarray.structure.alignment import align, broadcast
 
 # Weighted quantile methods are a subset of the numpy supported quantile methods.
 QUANTILE_METHODS = Literal[
@@ -171,7 +172,7 @@ class Weighted(Generic[T_Xarray]):
 
         def _weight_check(w):
             # Ref https://github.com/pydata/xarray/pull/4559/files#r515968670
-            if duck_array_ops.isnull(w).any():
+            if duck_array_ops.array_any(duck_array_ops.isnull(w)):
                 raise ValueError(
                     "`weights` cannot contain missing values. "
                     "Missing values can be replaced by `weights.fillna(0)`."

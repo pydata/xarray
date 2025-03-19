@@ -90,19 +90,19 @@ def text_in_fig() -> set[str]:
     """
     Return the set of all text in the figure
     """
-    return {t.get_text() for t in plt.gcf().findobj(mpl.text.Text)}  # type: ignore[attr-defined] # mpl error?
+    return {t.get_text() for t in plt.gcf().findobj(mpl.text.Text)}
 
 
 def find_possible_colorbars() -> list[mpl.collections.QuadMesh]:
     # nb. this function also matches meshes from pcolormesh
-    return plt.gcf().findobj(mpl.collections.QuadMesh)  # type: ignore[return-value] # mpl error?
+    return plt.gcf().findobj(mpl.collections.QuadMesh)
 
 
 def substring_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
     """
     Return True if a substring is found anywhere in an axes
     """
-    alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}  # type: ignore[attr-defined] # mpl error?
+    alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}
     return any(substring in txt for txt in alltxt)
 
 
@@ -110,7 +110,7 @@ def substring_not_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
     """
     Return True if a substring is not found anywhere in an axes
     """
-    alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}  # type: ignore[attr-defined] # mpl error?
+    alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}
     check = [(substring not in txt) for txt in alltxt]
     return all(check)
 
@@ -122,7 +122,7 @@ def property_in_axes_text(
     Return True if the specified text in an axes
     has the property assigned to property_str
     """
-    alltxt: list[mpl.text.Text] = ax.findobj(mpl.text.Text)  # type: ignore[assignment]
+    alltxt: list[mpl.text.Text] = ax.findobj(mpl.text.Text)
     return all(
         plt.getp(t, property) == property_str
         for t in alltxt
@@ -2962,7 +2962,6 @@ class TestDatetimePlot(PlotTestCase):
         # mpl.dates.AutoDateLocator passes and no other subclasses:
         assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_datetime_plot2d(self) -> None:
         # Test that matplotlib-native datetime works:
         da = DataArray(
@@ -2995,7 +2994,9 @@ class TestCFDatetimePlot(PlotTestCase):
         """
         # case for 1d array
         data = np.random.rand(4, 12)
-        time = xr.cftime_range(start="2017", periods=12, freq="1ME", calendar="noleap")
+        time = xr.date_range(
+            start="2017", periods=12, freq="1ME", calendar="noleap", use_cftime=True
+        )
         darray = DataArray(data, dims=["x", "time"])
         darray.coords["time"] = time
 
@@ -3023,8 +3024,8 @@ class TestNcAxisNotInstalled(PlotTestCase):
         month = np.arange(1, 13, 1)
         data = np.sin(2 * np.pi * month / 12.0)
         darray = DataArray(data, dims=["time"])
-        darray.coords["time"] = xr.cftime_range(
-            start="2017", periods=12, freq="1ME", calendar="noleap"
+        darray.coords["time"] = xr.date_range(
+            start="2017", periods=12, freq="1ME", calendar="noleap", use_cftime=True
         )
 
         self.darray = darray

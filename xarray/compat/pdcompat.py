@@ -39,7 +39,8 @@ from enum import Enum
 from typing import Literal
 
 import pandas as pd
-from packaging.version import Version
+
+from xarray.core.types import PDDatetimeUnitOptions
 
 
 def count_not_none(*args) -> int:
@@ -73,13 +74,26 @@ no_default = (
 NoDefault = Literal[_NoDefault.no_default]  # For typing following pandas
 
 
-def nanosecond_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
-    """Return a nanosecond-precision Timestamp object.
+def timestamp_as_unit(date: pd.Timestamp, unit: PDDatetimeUnitOptions) -> pd.Timestamp:
+    """Convert the underlying int64 representation to the given unit.
 
-    Note this function should no longer be needed after addressing GitHub issue
-    #7493.
+    Compatibility function for pandas issue where "as_unit" is not defined
+    for pandas.Timestamp in pandas versions < 2.2. Can be removed minimum
+    pandas version is >= 2.2.
     """
-    if Version(pd.__version__) >= Version("2.0.0"):
-        return pd.Timestamp(*args, **kwargs).as_unit("ns")
-    else:
-        return pd.Timestamp(*args, **kwargs)
+    if hasattr(date, "as_unit"):
+        date = date.as_unit(unit)
+    elif hasattr(date, "_as_unit"):
+        date = date._as_unit(unit)
+    return date
+
+
+def default_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
+    """Return a Timestamp object with the default precision.
+
+    Xarray default is "ns".
+    """
+    dt = pd.Timestamp(*args, **kwargs)
+    if dt.unit != "ns":
+        dt = timestamp_as_unit(dt, "ns")
+    return dt

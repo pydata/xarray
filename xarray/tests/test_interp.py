@@ -22,6 +22,7 @@ from xarray.tests import (
     has_dask,
     has_scipy,
     has_scipy_ge_1_13,
+    raise_if_dask_computes,
     requires_cftime,
     requires_dask,
     requires_scipy,
@@ -64,6 +65,7 @@ def get_example_data(case: int) -> xr.DataArray:
         )
     elif case == 4:
         # 3D chunked single dim
+        # chunksize=5 lets us check whether we rechunk to 1 with quintic
         return get_example_data(3).chunk({"z": 5})
     else:
         raise ValueError("case must be 1-4")
@@ -292,12 +294,15 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
 @requires_scipy
 @pytest.mark.parametrize("method", get_args(InterpnOptions))
 @pytest.mark.parametrize(
-    "case", [pytest.param(3, id="no_chunk"), pytest.param(4, id="chunked")]
+    "case",
+    [
+        pytest.param(3, id="no_chunk"),
+        pytest.param(
+            4, id="chunked", marks=pytest.mark.skipif(not has_dask, reason="no dask")
+        ),
+    ],
 )
 def test_interpolate_nd(case: int, method: InterpnOptions, nd_interp_coords) -> None:
-    if not has_dask and case == 4:
-        pytest.skip("dask is not installed in the environment.")
-
     da = get_example_data(case)
 
     # grid -> grid
@@ -307,6 +312,7 @@ def test_interpolate_nd(case: int, method: InterpnOptions, nd_interp_coords) -> 
     grid_grid_points = nd_interp_coords["grid_grid_points"]
     # the presence/absence of z coordinate may affect nd interpolants, even when the
     # coordinate is unchanged
+    # TODO: test this?
     actual = da.interp(x=xdestnp, y=ydestnp, z=zdestnp, method=method)
     expected_data = scipy.interpolate.interpn(
         points=(da.x, da.y, da.z),
@@ -396,6 +402,7 @@ def test_interpolate_nd_nd(method: InterpnOptions) -> None:
 
 
 @requires_scipy
+@pytest.mark.filterwarnings("ignore:All-NaN slice")
 def test_interpolate_nd_with_nan() -> None:
     """Interpolate an array with an nd indexer and `NaN` values."""
 
@@ -711,7 +718,6 @@ def test_interp_like() -> None:
         pytest.param("2000-01-01T12:00", 0.5, marks=pytest.mark.xfail),
     ],
 )
-@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 def test_datetime(x_new, expected) -> None:
     da = xr.DataArray(
         np.arange(24),
@@ -745,10 +751,12 @@ def test_datetime_single_string() -> None:
 @requires_cftime
 @requires_scipy
 def test_cftime() -> None:
-    times = xr.cftime_range("2000", periods=24, freq="D")
+    times = xr.date_range("2000", periods=24, freq="D", use_cftime=True)
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
-    times_new = xr.cftime_range("2000-01-01T12:00:00", periods=3, freq="D")
+    times_new = xr.date_range(
+        "2000-01-01T12:00:00", periods=3, freq="D", use_cftime=True
+    )
     actual = da.interp(time=times_new)
     expected = xr.DataArray([0.5, 1.5, 2.5], coords=[times_new], dims=["time"])
 
@@ -758,11 +766,11 @@ def test_cftime() -> None:
 @requires_cftime
 @requires_scipy
 def test_cftime_type_error() -> None:
-    times = xr.cftime_range("2000", periods=24, freq="D")
+    times = xr.date_range("2000", periods=24, freq="D", use_cftime=True)
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
-    times_new = xr.cftime_range(
-        "2000-01-01T12:00:00", periods=3, freq="D", calendar="noleap"
+    times_new = xr.date_range(
+        "2000-01-01T12:00:00", periods=3, freq="D", calendar="noleap", use_cftime=True
     )
     with pytest.raises(TypeError):
         da.interp(time=times_new)
@@ -773,8 +781,8 @@ def test_cftime_type_error() -> None:
 def test_cftime_list_of_strings() -> None:
     from cftime import DatetimeProlepticGregorian
 
-    times = xr.cftime_range(
-        "2000", periods=24, freq="D", calendar="proleptic_gregorian"
+    times = xr.date_range(
+        "2000", periods=24, freq="D", calendar="proleptic_gregorian", use_cftime=True
     )
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
@@ -794,8 +802,8 @@ def test_cftime_list_of_strings() -> None:
 def test_cftime_single_string() -> None:
     from cftime import DatetimeProlepticGregorian
 
-    times = xr.cftime_range(
-        "2000", periods=24, freq="D", calendar="proleptic_gregorian"
+    times = xr.date_range(
+        "2000", periods=24, freq="D", calendar="proleptic_gregorian", use_cftime=True
     )
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
@@ -824,7 +832,7 @@ def test_datetime_to_non_datetime_error() -> None:
 @requires_cftime
 @requires_scipy
 def test_cftime_to_non_cftime_error() -> None:
-    times = xr.cftime_range("2000", periods=24, freq="D")
+    times = xr.date_range("2000", periods=24, freq="D", use_cftime=True)
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
     with pytest.raises(TypeError):
@@ -853,7 +861,7 @@ def test_datetime_interp_noerror() -> None:
 @requires_cftime
 @requires_scipy
 def test_3641() -> None:
-    times = xr.cftime_range("0001", periods=3, freq="500YE")
+    times = xr.date_range("0001", periods=3, freq="500YE", use_cftime=True)
     da = xr.DataArray(range(3), dims=["time"], coords=[times])
     da.interp(time=["0002-05-01"])
 
@@ -892,6 +900,7 @@ def test_decompose(method: InterpOptions) -> None:
         for nscalar in range(interp_ndim + 1)
     ],
 )
+@pytest.mark.filterwarnings("ignore:Increasing number of chunks")
 def test_interpolate_chunk_1d(
     method: InterpOptions, data_ndim, interp_ndim, nscalar, chunked: bool
 ) -> None:
@@ -1093,3 +1102,69 @@ def test_interp_non_numeric_nd() -> None:
     # with numeric only
     expected = ds[["x"]].interp(a=t, method="linear")
     assert_identical(actual[["x"]], expected)
+
+
+@requires_dask
+@requires_scipy
+def test_interp_vectorized_dask() -> None:
+    # Synthetic dataset chunked in the two interpolation dimensions
+    import dask.array as da
+
+    nt = 10
+    nlat = 20
+    nlon = 10
+    nq = 21
+    ds = xr.Dataset(
+        data_vars={
+            "foo": (
+                ("lat", "lon", "dayofyear", "q"),
+                da.random.random((nlat, nlon, nt, nq), chunks=(10, 10, 10, -1)),
+            ),
+            "bar": (("lat", "lon"), da.random.random((nlat, nlon), chunks=(10, 10))),
+        },
+        coords={
+            "lat": np.linspace(-89.5, 89.6, nlat),
+            "lon": np.linspace(-179.5, 179.6, nlon),
+            "dayofyear": np.arange(0, nt),
+            "q": np.linspace(0, 1, nq),
+        },
+    )
+
+    # Interpolate along non-chunked dimension
+    with raise_if_dask_computes():
+        actual = ds.interp(q=ds["bar"], kwargs={"fill_value": None})
+    expected = ds.compute().interp(q=ds["bar"], kwargs={"fill_value": None})
+    assert_identical(actual, expected)
+
+
+@requires_scipy
+@pytest.mark.parametrize(
+    "chunk",
+    [
+        pytest.param(
+            True, marks=pytest.mark.skipif(not has_dask, reason="requires_dask")
+        ),
+        False,
+    ],
+)
+def test_interp_vectorized_shared_dims(chunk: bool) -> None:
+    # GH4463
+    da = xr.DataArray(
+        [[[1, 2, 3], [2, 3, 4]], [[1, 2, 3], [2, 3, 4]]],
+        dims=("t", "x", "y"),
+        coords={"x": [1, 2], "y": [1, 2, 3], "t": [10, 12]},
+    )
+    dy = xr.DataArray([1.5, 2.5], dims=("u",), coords={"u": [45, 55]})
+    dx = xr.DataArray(
+        [[1.5, 1.5], [1.5, 1.5]], dims=("t", "u"), coords={"u": [45, 55], "t": [10, 12]}
+    )
+    if chunk:
+        da = da.chunk(t=1)
+    with raise_if_dask_computes():
+        actual = da.interp(y=dy, x=dx, method="linear")
+    expected = xr.DataArray(
+        [[2, 3], [2, 3]],
+        dims=("t", "u"),
+        coords={"u": [45, 55], "t": [10, 12], "x": dx, "y": dy},
+    )
+    assert_identical(actual, expected)
