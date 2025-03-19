@@ -55,8 +55,11 @@ class Resample(GroupBy[T_Xarray]):
         keep_attrs: bool | None = None,
         **kwargs,
     ) -> T_Xarray:
-        result = super()._flox_reduce(dim=dim, keep_attrs=keep_attrs, **kwargs)
-        result = result.rename({RESAMPLE_DIM: self._group_dim})
+        result: T_Xarray = (
+            super()
+            ._flox_reduce(dim=dim, keep_attrs=keep_attrs, **kwargs)
+            .rename({RESAMPLE_DIM: self._group_dim})  # type: ignore[assignment]
+        )
         return result
 
     def shuffle_to_chunks(self, chunks: T_Chunks = None):
