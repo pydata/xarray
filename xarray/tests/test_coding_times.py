@@ -1932,7 +1932,7 @@ def test_duck_array_decode_times(calendar) -> None:
     decoded = conventions.decode_cf_variable(
         "foo", var, decode_times=CFDatetimeCoder(use_cftime=None)
     )
-    if calendar not in _STANDARD_CALENDARS:
+    if calendar not in _STANDARD_CALENDAR_NAMES:
         assert decoded.dtype == np.dtype("O")
     else:
         assert decoded.dtype == np.dtype("=M8[ns]")
