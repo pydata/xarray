@@ -360,18 +360,16 @@ _CFTIME_CALENDARS = [
     pytest.param(
         cal, marks=pytest.mark.skipif(not has_cftime, reason="requires cftime")
     )
-    for cal in sorted(
-        [
-            "365_day",
-            "360_day",
-            "julian",
-            "all_leap",
-            "366_day",
-            "gregorian",
-            "proleptic_gregorian",
-            "standard",
-        ]
-    )
+    for cal in [
+        "360_day",
+        "365_day",
+        "366_day",
+        "all_leap",
+        "gregorian",
+        "julian",
+        "proleptic_gregorian",
+        "standard",
+    ]
 ]
 
 _STANDARD_CALENDAR_NAMES = sorted(_STANDARD_CALENDARS_UNSORTED)
