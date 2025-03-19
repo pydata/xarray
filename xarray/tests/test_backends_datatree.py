@@ -444,43 +444,26 @@ class TestZarrDatatreeIO:
             assert_equal(original_dt, roundtrip_dt)
 
     def test_zarr_encoding(self, tmpdir, simple_datatree, zarr_format):
-        from numcodecs.blosc import Blosc
-
         filepath = str(tmpdir / "test.zarr")
         original_dt = simple_datatree
 
+        # TODO add another logical path for zarr-python v2
+
         if zarr_format == 2:
-            comp = {"compressor": Blosc(cname="zstd", clevel=3, shuffle=2)}
+            from numcodecs.blosc import Blosc
+            comp = {"compressors": (Blosc(cname="zstd", clevel=3, shuffle=2),)}
         elif zarr_format == 3:
-            blosc = Blosc(cname="zstd", clevel=3, shuffle="shuffle").get_config()
-            comp = {"compressor": {"name": blosc.pop("id"), "configuration": blosc}}
+            # specifying codecs in zarr_format=3 requires importing from zarr 3 namespace
+            import numcodecs.zarr3
+            comp = {"compressors": (numcodecs.zarr3.Blosc(cname="zstd", clevel=3),)}
 
         enc = {"/set2": {var: comp for var in original_dt["/set2"].dataset.data_vars}}
         original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
-            if zarr_format == 2:
-                # TODO there's something wrong here - this is the same as the old code but fails with KeyError: 'compressor' when run with zarr-python v3
-                pytest.xfail()
-                assert (
-                    roundtrip_dt["/set2/a"].encoding["compressor"] == comp["compressor"]
-                )
-            elif zarr_format == 3:
-                retrieved_compressor = roundtrip_dt["/set2/a"].encoding["compressors"][
-                    0
-                ]  # Get the BloscCodec object
-                assert (
-                    retrieved_compressor.cname.name
-                    == comp["compressor"]["configuration"]["cname"]
-                )
-                assert (
-                    retrieved_compressor.clevel
-                    == comp["compressor"]["configuration"]["clevel"]
-                )
-                assert (
-                    retrieved_compressor.shuffle.name
-                    == comp["compressor"]["configuration"]["shuffle"]
-                )
+            assert (
+                roundtrip_dt["/set2/a"].encoding["compressors"] == comp["compressors"]
+            )
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
             with pytest.raises(ValueError, match="unexpected encoding group.*"):
