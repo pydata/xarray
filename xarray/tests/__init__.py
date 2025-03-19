@@ -168,13 +168,14 @@ has_array_api_strict, requires_array_api_strict = _importorskip("array_api_stric
 parametrize_zarr_format = pytest.mark.parametrize(
     "zarr_format",
     [
-        2,
+        pytest.param(2, id="zarr_format=2"),
         pytest.param(
             3,
             marks=pytest.mark.skipif(
                 not has_zarr_v3,
                 reason="zarr-python v2 cannot understand the zarr v3 format",
             ),
+            id="zarr_format=3",
         ),
     ],
 )

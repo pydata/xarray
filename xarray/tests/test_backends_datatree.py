@@ -28,9 +28,6 @@ try:
 except ImportError:
     pass
 
-# TODO shouldn't this just be the has_zarr_v3 flag we already have?
-have_zarr_v3 = xr.backends.zarr._zarr_v3()
-
 
 def diff_chunks(
     comparison: dict[tuple[str, Hashable], bool], tree1: DataTree, tree2: DataTree
@@ -522,6 +519,7 @@ class TestZarrDatatreeIO:
             """For one zarr array, check that all expected metadata and chunk data files exist."""
             # TODO: This function is now so complicated that it's practically checking compliance with the whole zarr spec...
             # TODO: Perhaps it would be better to instead trust that zarr-python is spec-compliant and check `DataTree` against zarr-python?
+            # TODO: The way to do that would ideally be to use zarr-pythons ability to determine how many chunks have been initialized.
 
             if zarr_format == 2:
                 zarray_file, zattrs_file = (arr_dir / ".zarray"), (arr_dir / ".zattrs")
