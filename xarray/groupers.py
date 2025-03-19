@@ -705,6 +705,7 @@ class SeasonGrouper(Grouper):
     ----------
     seasons: sequence of str
         List of strings representing seasons. E.g. ``"JF"`` or ``"JJA"`` etc.
+        Overlapping seasons are allowed (e.g. ``["DJFM", "MAMJ", "JJAS", "SOND"]``)
 
     Examples
     --------
@@ -880,12 +881,6 @@ class SeasonResampler(Resampler):
             ]
         )
 
-        # sbins = first_items.values.astype(int)
-        # group_indices = [
-        #     slice(i, j) for i, j in zip(sbins[:-1], sbins[1:], strict=True)
-        # ]
-        # group_indices += [slice(sbins[-1], None)]
-
         # This sorted call is a hack. It's hard to figure out how
         # to start the iteration for arbitrary season ordering
         # for example "DJF" as first entry or last entry
@@ -919,7 +914,6 @@ class SeasonResampler(Resampler):
                 first_valid_season = seasons[
                     (seasons.index(first_valid_season) + 1) % len(seasons)
                 ]
-                # group_indices = group_indices[slice(1, None)]
                 unique_codes -= 1
 
             if (
@@ -929,7 +923,6 @@ class SeasonResampler(Resampler):
                 last_valid_season = seasons[seasons.index(last_valid_season) - 1]
                 if "DJ" in last_valid_season:
                     last_year -= 1
-                # group_indices = group_indices[slice(-1)]
                 unique_codes[-1] = -1
 
         first_label = get_label(first_year, first_valid_season)
@@ -937,27 +930,12 @@ class SeasonResampler(Resampler):
 
         slicer = complete_index.slice_indexer(first_label, last_label)
         full_index = complete_index[slicer]
-        # TODO: group must be sorted
-        # codes = np.searchsorted(edges, group.data, side="left")
-        # codes -= 1
-        # codes[~present_seasons | group.data >= edges[-1]] = -1
-        # codes[isnull(group.data)] = -1
-        # import ipdb; ipdb.set_trace()
-        # check that there are no "missing" seasons in the middle
-        # if not full_index.equals(unique_coord):
-        # raise ValueError("Are there seasons missing in the middle of the dataset?")
 
         final_codes = np.full(group.data.size, -1)
         final_codes[present_seasons] = np.repeat(unique_codes, counts)
         codes = group.copy(data=final_codes, deep=False)
-        # unique_coord_var = Variable(group.name, unique_coord, group.attrs)
 
-        return EncodedGroups(
-            codes=codes,
-            # group_indices=group_indices,
-            # unique_coord=unique_coord_var,
-            full_index=full_index,
-        )
+        return EncodedGroups(codes=codes, full_index=full_index)
 
     def reset(self) -> Self:
         return type(self)(seasons=self.seasons, drop_incomplete=self.drop_incomplete)
