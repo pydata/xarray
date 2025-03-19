@@ -39,7 +39,6 @@ from enum import Enum
 from typing import Literal
 
 import pandas as pd
-from packaging.version import Version
 
 from xarray.core.types import PDDatetimeUnitOptions
 
@@ -89,13 +88,12 @@ def timestamp_as_unit(date: pd.Timestamp, unit: PDDatetimeUnitOptions) -> pd.Tim
     return date
 
 
-def nanosecond_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
-    """Return a nanosecond-precision Timestamp object.
+def default_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
+    """Return a Timestamp object with the default precision.
 
-    Note this function should no longer be needed after addressing GitHub issue
-    #7493.
+    Xarray default is "ns".
     """
-    if Version(pd.__version__) >= Version("2.0.0"):
-        return pd.Timestamp(*args, **kwargs).as_unit("ns")
-    else:
-        return pd.Timestamp(*args, **kwargs)
+    dt = pd.Timestamp(*args, **kwargs)
+    if dt.unit != "ns":
+        dt = timestamp_as_unit(dt, "ns")
+    return dt

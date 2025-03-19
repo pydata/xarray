@@ -53,6 +53,7 @@ As a concrete example, here we write a tutorial dataset to Zarr and then
 re-open it directly with Zarr:
 
 .. ipython:: python
+    :okwarning:
 
     import os
     import xarray as xr

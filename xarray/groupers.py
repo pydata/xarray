@@ -23,15 +23,14 @@ from numpy.typing import ArrayLike
 
 from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
 from xarray.coding.cftimeindex import CFTimeIndex
-from xarray.core import duck_array_ops
+from xarray.computation.computation import apply_ufunc
 from xarray.core.common import (
     _contains_cftime_datetimes,
     _contains_datetime_like_objects,
 )
-from xarray.core.computation import apply_ufunc
 from xarray.core.coordinates import Coordinates, _coordinates_from_variable
 from xarray.core.dataarray import DataArray
-from xarray.core.duck_array_ops import isnull
+from xarray.core.duck_array_ops import array_all, isnull
 from xarray.core.formatting import first_n_items
 from xarray.core.groupby import T_Group, _DummyGroup
 from xarray.core.indexes import safe_cast_to_index
@@ -247,7 +246,7 @@ class UniqueGrouper(Grouper):
         # look through group to find the unique values
         sort = not isinstance(self.group_as_index, pd.MultiIndex)
         unique_values, codes_ = unique_value_groups(self.group_as_index, sort=sort)
-        if (codes_ == -1).all():
+        if array_all(codes_ == -1):
             raise ValueError(
                 "Failed to group data. Are you grouping by a variable that is all NaN?"
             )
@@ -359,7 +358,7 @@ class BinGrouper(Grouper):
         )
 
     def __post_init__(self) -> None:
-        if duck_array_ops.isnull(self.bins).all():
+        if array_all(isnull(self.bins)):
             raise ValueError("All bin edges are NaN.")
 
     def _cut(self, data):
@@ -393,7 +392,7 @@ class BinGrouper(Grouper):
                 f"Bin edges must be provided when grouping by chunked arrays. Received {self.bins=!r} instead"
             )
         codes = self._factorize_lazy(group)
-        if not by_is_chunked and (codes == -1).all():
+        if not by_is_chunked and array_all(codes == -1):
             raise ValueError(
                 f"None of the data falls within bins with edges {self.bins!r}"
             )
@@ -559,7 +558,7 @@ class TimeResampler(Resampler):
 def _factorize_given_labels(data: np.ndarray, labels: np.ndarray) -> np.ndarray:
     # Copied from flox
     sorter = np.argsort(labels)
-    is_sorted = (sorter == np.arange(sorter.size)).all()
+    is_sorted = array_all(sorter == np.arange(sorter.size))
     codes = np.searchsorted(labels, data, sorter=sorter)
     mask = ~np.isin(data, labels) | isnull(data) | (codes == len(labels))
     # codes is the index in to the sorted array.
@@ -666,13 +665,13 @@ def find_independent_seasons(seasons: Sequence[str]) -> Sequence[SeasonsGroup]:
     Iterates though a list of seasons e.g. ["DJF", "FMA", ...],
     and splits that into multiple sequences of non-overlapping seasons.
     """
-    sinds = season_to_month_tuple(seasons)
+    season_inds = season_to_month_tuple(seasons)
     grouped = defaultdict(list)
     codes = defaultdict(list)
     seen: set[tuple[int, ...]] = set()
     idx = 0
     # This is quadratic, but the length of seasons is at most 12
-    for i, current in enumerate(sinds):
+    for i, current in enumerate(season_inds):
         # Start with a group
         if current not in seen:
             grouped[idx].append(current)
@@ -680,7 +679,7 @@ def find_independent_seasons(seasons: Sequence[str]) -> Sequence[SeasonsGroup]:
             seen.add(current)
 
         # Loop through remaining groups, and look for overlaps
-        for j, second in enumerate(sinds[i:]):
+        for j, second in enumerate(season_inds[i:]):
             if not (set(chain(*grouped[idx])) & set(second)):
                 if second not in seen:
                     grouped[idx].append(second)

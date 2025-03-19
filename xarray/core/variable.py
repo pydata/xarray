@@ -16,9 +16,10 @@ from numpy.typing import ArrayLike
 from pandas.api.types import is_extension_array_dtype
 
 import xarray as xr  # only for Dataset and DataArray
-from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
-from xarray.core.arithmetic import VariableArithmetic
-from xarray.core.array_api_compat import to_like_array
+from xarray.compat.array_api_compat import to_like_array
+from xarray.computation import ops
+from xarray.computation.arithmetic import VariableArithmetic
+from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, utils
 from xarray.core.common import AbstractArray
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
@@ -76,16 +77,6 @@ if TYPE_CHECKING:
         T_VarPadConstantValues,
     )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
-
-
-NON_NANOSECOND_WARNING = (
-    "Converting non-nanosecond precision {case} values to nanosecond precision. "
-    "This behavior can eventually be relaxed in xarray, as it is an artifact from "
-    "pandas which is now beginning to support non-nanosecond precision values. "
-    "This warning is caused by passing non-nanosecond np.datetime64 or "
-    "np.timedelta64 values to the DataArray or Variable constructor; it can be "
-    "silenced by converting the values to nanosecond precision ahead of time."
-)
 
 
 class MissingDimensionsError(ValueError):
@@ -205,51 +196,16 @@ def _maybe_wrap_data(data):
     return data
 
 
-def _as_nanosecond_precision(data):
-    dtype = data.dtype
-    non_ns_datetime64 = (
-        dtype.kind == "M"
-        and isinstance(dtype, np.dtype)
-        and dtype != np.dtype("datetime64[ns]")
-    )
-    non_ns_datetime_tz_dtype = (
-        isinstance(dtype, pd.DatetimeTZDtype) and dtype.unit != "ns"
-    )
-    if non_ns_datetime64 or non_ns_datetime_tz_dtype:
-        utils.emit_user_level_warning(NON_NANOSECOND_WARNING.format(case="datetime"))
-        if isinstance(dtype, pd.DatetimeTZDtype):
-            nanosecond_precision_dtype = pd.DatetimeTZDtype("ns", dtype.tz)
-        else:
-            nanosecond_precision_dtype = "datetime64[ns]"
-        return duck_array_ops.astype(data, nanosecond_precision_dtype)
-    elif dtype.kind == "m" and dtype != np.dtype("timedelta64[ns]"):
-        utils.emit_user_level_warning(NON_NANOSECOND_WARNING.format(case="timedelta"))
-        return duck_array_ops.astype(data, "timedelta64[ns]")
-    else:
-        return data
-
-
 def _possibly_convert_objects(values):
-    """Convert arrays of datetime.datetime and datetime.timedelta objects into
-    datetime64 and timedelta64, according to the pandas convention.
+    """Convert object arrays into datetime64 and timedelta64 according
+    to the pandas convention.
 
     * datetime.datetime
     * datetime.timedelta
     * pd.Timestamp
     * pd.Timedelta
-
-    For the time being, convert any non-nanosecond precision DatetimeIndex or
-    TimedeltaIndex objects to nanosecond precision.  While pandas is relaxing this
-    in version 2.0.0, in xarray we will need to make sure we are ready to handle
-    non-nanosecond precision datetimes or timedeltas in our code before allowing
-    such values to pass through unchanged.  Converting to nanosecond precision
-    through pandas.Series objects ensures that datetimes and timedeltas are
-    within the valid date range for ns precision, as pandas will raise an error
-    if they are not.
     """
     as_series = pd.Series(values.ravel(), copy=False)
-    if as_series.dtype.kind in "mM":
-        as_series = _as_nanosecond_precision(as_series)
     result = np.asarray(as_series).reshape(values.shape)
     if not result.flags.writeable:
         # GH8843, pandas copy-on-write mode creates read-only arrays by default
@@ -260,28 +216,13 @@ def _possibly_convert_objects(values):
     return result
 
 
-def _possibly_convert_datetime_or_timedelta_index(data):
-    """For the time being, convert any non-nanosecond precision DatetimeIndex or
-    TimedeltaIndex objects to nanosecond precision.  While pandas is relaxing
-    this in version 2.0.0, in xarray we will need to make sure we are ready to
-    handle non-nanosecond precision datetimes or timedeltas in our code
-    before allowing such values to pass through unchanged."""
-    if isinstance(data, PandasIndexingAdapter):
-        if isinstance(data.array, pd.DatetimeIndex | pd.TimedeltaIndex):
-            data = PandasIndexingAdapter(_as_nanosecond_precision(data.array))
-    elif isinstance(data, pd.DatetimeIndex | pd.TimedeltaIndex):
-        data = _as_nanosecond_precision(data)
-    return data
-
-
 def as_compatible_data(
     data: T_DuckArray | ArrayLike, fastpath: bool = False
 ) -> T_DuckArray:
     """Prepare and wrap data to put in a Variable.
 
     - If data does not have the necessary attributes, convert it to ndarray.
-    - If data has dtype=datetime64, ensure that it has ns precision. If it's a
-      pandas.Timestamp, convert it to datetime64.
+    - If it's a pandas.Timestamp, convert it to datetime64.
     - If data is already a pandas or xarray object (other than an Index), just
       use the values.
 
@@ -301,7 +242,6 @@ def as_compatible_data(
         return cast("T_DuckArray", data._variable._data)
 
     def convert_non_numpy_type(data):
-        data = _possibly_convert_datetime_or_timedelta_index(data)
         return cast("T_DuckArray", _maybe_wrap_data(data))
 
     if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
@@ -361,10 +301,13 @@ def _as_array_or_item(data):
     """
     data = np.asarray(data)
     if data.ndim == 0:
-        if data.dtype.kind == "M":
-            data = np.datetime64(data, "ns")
-        elif data.dtype.kind == "m":
-            data = np.timedelta64(data, "ns")
+        kind = data.dtype.kind
+        if kind in "mM":
+            unit, _ = np.datetime_data(data.dtype)
+            if kind == "M":
+                data = np.datetime64(data, unit)
+            elif kind == "m":
+                data = np.timedelta64(data, unit)
     return data
 
 
@@ -541,7 +484,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dask.array.Array.astype
         sparse.COO.astype
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
 
         kwargs = dict(order=order, casting=casting, subok=subok, copy=copy)
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
@@ -709,8 +652,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                         )
                     if k.ndim > 1:
                         raise IndexError(
-                            f"{k.ndim}-dimensional boolean indexing is "
-                            "not supported. "
+                            f"{k.ndim}-dimensional boolean indexing is not supported. "
                         )
                     if is_duck_dask_array(k.data):
                         raise KeyError(
@@ -1656,7 +1598,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         numpy.clip : equivalent function
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
 
         xp = duck_array_ops.get_array_namespace(self.data)
         return apply_ufunc(xp.clip, self, min, max, dask="allowed")
@@ -1768,7 +1710,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             Concatenated Variable formed by stacking all the supplied variables
             along the given dimension.
         """
-        from xarray.core.merge import merge_attrs
+        from xarray.structure.merge import merge_attrs
 
         if not isinstance(dim, str):
             (dim,) = dim.dims
@@ -1935,7 +1877,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
            The American Statistician, 50(4), pp. 361-365, 1996
         """
 
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
 
         if interpolation is not None:
             warnings.warn(
@@ -2294,7 +2236,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         <xarray.Variable (x: 3)> Size: 3B
         array([False,  True, False])
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -2328,7 +2270,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         <xarray.Variable (x: 3)> Size: 3B
         array([ True, False,  True])
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -2771,7 +2713,7 @@ class IndexVariable(Variable):
         This exists because we want to avoid converting Index objects to NumPy
         arrays, if possible.
         """
-        from xarray.core.merge import merge_attrs
+        from xarray.structure.merge import merge_attrs
 
         if not isinstance(dim, str):
             (dim,) = dim.dims

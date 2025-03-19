@@ -5,7 +5,7 @@ import json
 import os
 import struct
 from collections.abc import Hashable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -38,13 +38,10 @@ from xarray.namedarray.pycompat import integer_types
 from xarray.namedarray.utils import module_available
 
 if TYPE_CHECKING:
-    from zarr import Array as ZarrArray
-    from zarr import Group as ZarrGroup
-
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
-    from xarray.core.types import ReadBuffer
+    from xarray.core.types import ReadBuffer, ZarrArray, ZarrGroup
 
 
 def _get_mappers(*, storage_options, store, chunk_store):
@@ -108,8 +105,7 @@ def _choose_default_mode(
 
 
 def _zarr_v3() -> bool:
-    # TODO: switch to "3" once Zarr V3 is released
-    return module_available("zarr", minversion="2.99")
+    return module_available("zarr", minversion="3")
 
 
 # need some special secret attributes to tell us the dimensions
@@ -379,6 +375,11 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
         pass
     else:
         attributes = dict(zarr_obj.attrs)
+        if len(zarr_obj.shape) != len(dimensions):
+            raise KeyError(
+                "Zarr object is missing the `dimension_names` metadata which is "
+                "required for xarray to determine variable dimensions."
+            )
         return dimensions, attributes
 
     # Zarr arrays do not have dimensions. To get around this problem, we add
@@ -397,7 +398,13 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
 
         # NCZarr defines dimensions through metadata in .zarray
         zarray_path = os.path.join(zarr_obj.path, ".zarray")
-        zarray = json.loads(zarr_obj.store[zarray_path])
+        if _zarr_v3():
+            import asyncio
+
+            zarray_str = asyncio.run(zarr_obj.store.get(zarray_path)).to_bytes()
+        else:
+            zarray_str = zarr_obj.store.get(zarray_path)
+        zarray = json.loads(zarray_str)
         try:
             # NCZarr uses Fully Qualified Names
             dimensions = [
@@ -448,6 +455,7 @@ def extract_zarr_variable_encoding(
     safe_to_drop = {"source", "original_shape", "preferred_chunks"}
     valid_encodings = {
         "chunks",
+        "shards",
         "compressor",  # TODO: delete when min zarr >=3
         "compressors",
         "filters",
@@ -768,7 +776,7 @@ class ZarrStore(AbstractWritableDataStore):
             self._members = self._fetch_members()
 
     @property
-    def members(self) -> dict[str, ZarrArray]:
+    def members(self) -> dict[str, ZarrArray | ZarrGroup]:
         """
         Model the arrays and groups contained in self.zarr_group as a dict. If `self._cache_members`
         is true, the dict is cached. Otherwise, it is retrieved from storage.
@@ -778,7 +786,7 @@ class ZarrStore(AbstractWritableDataStore):
         else:
             return self._members
 
-    def _fetch_members(self) -> dict[str, ZarrArray]:
+    def _fetch_members(self) -> dict[str, ZarrArray | ZarrGroup]:
         """
         Get the arrays and groups defined in the zarr group modelled by this Store
         """
@@ -829,6 +837,7 @@ class ZarrStore(AbstractWritableDataStore):
                 {
                     "compressors": zarr_array.compressors,
                     "filters": zarr_array.filters,
+                    "shards": zarr_array.shards,
                 }
             )
             if self.zarr_group.metadata.zarr_format == 3:
@@ -1035,6 +1044,7 @@ class ZarrStore(AbstractWritableDataStore):
 
     def _open_existing_array(self, *, name) -> ZarrArray:
         import zarr
+        from zarr import Array as ZarrArray
 
         # TODO: if mode="a", consider overriding the existing variable
         # metadata. This would need some case work properly with region
@@ -1066,7 +1076,7 @@ class ZarrStore(AbstractWritableDataStore):
         else:
             zarr_array = self.zarr_group[name]
 
-        return zarr_array
+        return cast(ZarrArray, zarr_array)
 
     def _create_new_array(
         self, *, name, shape, dtype, fill_value, encoding, attrs

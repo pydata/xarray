@@ -1,18 +1,17 @@
 from __future__ import annotations
 
-import itertools
-from collections import Counter
-from collections.abc import Iterable, Iterator, Sequence
+from collections import Counter, defaultdict
+from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
 from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast
 
 import pandas as pd
 
 from xarray.core import dtypes
-from xarray.core.concat import concat
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
-from xarray.core.merge import merge
 from xarray.core.utils import iterate_nested
+from xarray.structure.concat import concat
+from xarray.structure.merge import merge
 
 if TYPE_CHECKING:
     from xarray.core.types import (
@@ -269,10 +268,7 @@ def _combine_all_along_first_dim(
     combine_attrs: CombineAttrsOptions = "drop",
 ):
     # Group into lines of datasets which must be combined along dim
-    # need to sort by _new_tile_id first for groupby to work
-    # TODO: is the sorted need?
-    combined_ids = dict(sorted(combined_ids.items(), key=_new_tile_id))
-    grouped = itertools.groupby(combined_ids.items(), key=_new_tile_id)
+    grouped = groupby_defaultdict(list(combined_ids.items()), key=_new_tile_id)
 
     # Combine all of these datasets along dim
     new_combined_ids = {}
@@ -604,6 +600,21 @@ def combine_nested(
 
 def vars_as_keys(ds):
     return tuple(sorted(ds))
+
+
+K = TypeVar("K", bound=Hashable)
+
+
+def groupby_defaultdict(
+    iter: list[T],
+    key: Callable[[T], K],
+) -> Iterator[tuple[K, Iterator[T]]]:
+    """replacement for itertools.groupby"""
+    idx = defaultdict(list)
+    for i, obj in enumerate(iter):
+        idx[key(obj)].append(i)
+    for k, ix in idx.items():
+        yield k, (iter[i] for i in ix)
 
 
 def _combine_single_variable_hypercube(
@@ -965,8 +976,7 @@ def combine_by_coords(
         ]
 
         # Group by data vars
-        sorted_datasets = sorted(data_objects, key=vars_as_keys)
-        grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
+        grouped_by_vars = groupby_defaultdict(data_objects, key=vars_as_keys)
 
         # Perform the multidimensional combine on each group of data variables
         # before merging back together

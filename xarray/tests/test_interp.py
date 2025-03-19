@@ -718,7 +718,6 @@ def test_interp_like() -> None:
         pytest.param("2000-01-01T12:00", 0.5, marks=pytest.mark.xfail),
     ],
 )
-@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 def test_datetime(x_new, expected) -> None:
     da = xr.DataArray(
         np.arange(24),
@@ -752,10 +751,12 @@ def test_datetime_single_string() -> None:
 @requires_cftime
 @requires_scipy
 def test_cftime() -> None:
-    times = xr.cftime_range("2000", periods=24, freq="D")
+    times = xr.date_range("2000", periods=24, freq="D", use_cftime=True)
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
-    times_new = xr.cftime_range("2000-01-01T12:00:00", periods=3, freq="D")
+    times_new = xr.date_range(
+        "2000-01-01T12:00:00", periods=3, freq="D", use_cftime=True
+    )
     actual = da.interp(time=times_new)
     expected = xr.DataArray([0.5, 1.5, 2.5], coords=[times_new], dims=["time"])
 
@@ -765,11 +766,11 @@ def test_cftime() -> None:
 @requires_cftime
 @requires_scipy
 def test_cftime_type_error() -> None:
-    times = xr.cftime_range("2000", periods=24, freq="D")
+    times = xr.date_range("2000", periods=24, freq="D", use_cftime=True)
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
-    times_new = xr.cftime_range(
-        "2000-01-01T12:00:00", periods=3, freq="D", calendar="noleap"
+    times_new = xr.date_range(
+        "2000-01-01T12:00:00", periods=3, freq="D", calendar="noleap", use_cftime=True
     )
     with pytest.raises(TypeError):
         da.interp(time=times_new)
@@ -780,8 +781,8 @@ def test_cftime_type_error() -> None:
 def test_cftime_list_of_strings() -> None:
     from cftime import DatetimeProlepticGregorian
 
-    times = xr.cftime_range(
-        "2000", periods=24, freq="D", calendar="proleptic_gregorian"
+    times = xr.date_range(
+        "2000", periods=24, freq="D", calendar="proleptic_gregorian", use_cftime=True
     )
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
@@ -801,8 +802,8 @@ def test_cftime_list_of_strings() -> None:
 def test_cftime_single_string() -> None:
     from cftime import DatetimeProlepticGregorian
 
-    times = xr.cftime_range(
-        "2000", periods=24, freq="D", calendar="proleptic_gregorian"
+    times = xr.date_range(
+        "2000", periods=24, freq="D", calendar="proleptic_gregorian", use_cftime=True
     )
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
@@ -831,7 +832,7 @@ def test_datetime_to_non_datetime_error() -> None:
 @requires_cftime
 @requires_scipy
 def test_cftime_to_non_cftime_error() -> None:
-    times = xr.cftime_range("2000", periods=24, freq="D")
+    times = xr.date_range("2000", periods=24, freq="D", use_cftime=True)
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
     with pytest.raises(TypeError):
@@ -860,7 +861,7 @@ def test_datetime_interp_noerror() -> None:
 @requires_cftime
 @requires_scipy
 def test_3641() -> None:
-    times = xr.cftime_range("0001", periods=3, freq="500YE")
+    times = xr.date_range("0001", periods=3, freq="500YE", use_cftime=True)
     da = xr.DataArray(range(3), dims=["time"], coords=[times])
     da.interp(time=["0002-05-01"])
 

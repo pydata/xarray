@@ -11,13 +11,14 @@ from xarray import (
     Dataset,
     SerializationWarning,
     Variable,
-    cftime_range,
     coding,
     conventions,
+    date_range,
     open_dataset,
 )
 from xarray.backends.common import WritableCFDataStore
 from xarray.backends.memory import InMemoryDataStore
+from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.conventions import decode_cf
 from xarray.testing import assert_identical
 from xarray.tests import (
@@ -213,7 +214,6 @@ class TestEncodeCFVariable:
         vars, attrs = conventions.encode_dataset_coordinates(ds)
         assert attrs["coordinates"] == "bar baz"
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_emit_coordinates_attribute_in_attrs(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
@@ -231,7 +231,6 @@ class TestEncodeCFVariable:
         assert enc["b"].attrs.get("coordinates") == "t"
         assert "coordinates" not in enc["b"].encoding
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_emit_coordinates_attribute_in_encoding(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
@@ -437,7 +436,8 @@ class TestDecodeCF:
         assert_identical(expected, decode_cf(ds, decode_times=decode_times))
 
     @requires_cftime
-    def test_dataset_repr_with_netcdf4_datetimes(self) -> None:
+    @pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
+    def test_dataset_repr_with_netcdf4_datetimes(self, time_unit) -> None:
         # regression test for #347
         attrs = {"units": "days since 0001-01-01", "calendar": "noleap"}
         with warnings.catch_warnings():
@@ -448,8 +448,9 @@ class TestDecodeCF:
         attrs = {"units": "days since 1900-01-01"}
         ds = decode_cf(
             Dataset({"time": ("time", [0, 1], attrs)}),
+            decode_times=CFDatetimeCoder(time_unit=time_unit),
         )
-        assert "(time) datetime64[ns]" in repr(ds)
+        assert f"(time) datetime64[{time_unit}]" in repr(ds)
 
     @requires_cftime
     def test_decode_cf_datetime_transition_to_invalid(self) -> None:
@@ -508,7 +509,8 @@ class TestDecodeCF:
             conventions.decode_cf(original).chunk(),
         )
 
-    def test_decode_cf_time_kwargs(self) -> None:
+    @pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
+    def test_decode_cf_time_kwargs(self, time_unit) -> None:
         ds = Dataset.from_dict(
             {
                 "coords": {
@@ -530,15 +532,23 @@ class TestDecodeCF:
             }
         )
 
-        dsc = conventions.decode_cf(ds)
-        assert dsc.timedelta.dtype == np.dtype("m8[ns]")
-        assert dsc.time.dtype == np.dtype("M8[ns]")
+        dsc = conventions.decode_cf(
+            ds,
+            decode_times=CFDatetimeCoder(time_unit=time_unit),
+            decode_timedelta=CFTimedeltaCoder(time_unit=time_unit),
+        )
+        assert dsc.timedelta.dtype == np.dtype(f"m8[{time_unit}]")
+        assert dsc.time.dtype == np.dtype(f"M8[{time_unit}]")
         dsc = conventions.decode_cf(ds, decode_times=False)
         assert dsc.timedelta.dtype == np.dtype("int64")
         assert dsc.time.dtype == np.dtype("int64")
-        dsc = conventions.decode_cf(ds, decode_times=True, decode_timedelta=False)
+        dsc = conventions.decode_cf(
+            ds,
+            decode_times=CFDatetimeCoder(time_unit=time_unit),
+            decode_timedelta=False,
+        )
         assert dsc.timedelta.dtype == np.dtype("int64")
-        assert dsc.time.dtype == np.dtype("M8[ns]")
+        assert dsc.time.dtype == np.dtype(f"M8[{time_unit}]")
         dsc = conventions.decode_cf(ds, decode_times=False, decode_timedelta=True)
         assert dsc.timedelta.dtype == np.dtype("m8[ns]")
         assert dsc.time.dtype == np.dtype("int64")
@@ -611,7 +621,7 @@ def test_decode_cf_variable_datetime64():
 
 @requires_cftime
 def test_decode_cf_variable_cftime():
-    variable = Variable(["time"], cftime_range("2000", periods=2))
+    variable = Variable(["time"], date_range("2000", periods=2, use_cftime=True))
     decoded = conventions.decode_cf_variable("time", variable)
     assert decoded.encoding == {}
     assert_identical(decoded, variable)
@@ -644,3 +654,15 @@ def test_encode_cf_variable_with_vlen_dtype() -> None:
     encoded_v = conventions.encode_cf_variable(v)
     assert encoded_v.data.dtype.kind == "O"
     assert coding.strings.check_vlen_dtype(encoded_v.data.dtype) is str
+
+
+def test_decode_cf_variables_decode_timedelta_warning() -> None:
+    v = Variable(["time"], [1, 2], attrs={"units": "seconds"})
+    variables = {"a": v}
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", "decode_timedelta", FutureWarning)
+        conventions.decode_cf_variables(variables, {}, decode_timedelta=True)
+
+    with pytest.warns(FutureWarning, match="decode_timedelta"):
+        conventions.decode_cf_variables(variables, {})

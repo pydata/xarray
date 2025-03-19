@@ -10,7 +10,7 @@ This page provides an auto-generated summary of xarray's API. For more details
 and examples, refer to the relevant chapters in the main part of the
 documentation.
 
-See also: :ref:`public api`
+See also: :ref:`public-api` and :ref:`api-stability`.
 
 Top-level functions
 ===================
@@ -67,6 +67,7 @@ Attributes
    Dataset.attrs
    Dataset.encoding
    Dataset.indexes
+   Dataset.xindexes
    Dataset.chunks
    Dataset.chunksizes
    Dataset.nbytes
@@ -275,6 +276,7 @@ Attributes
    DataArray.attrs
    DataArray.encoding
    DataArray.indexes
+   DataArray.xindexes
    DataArray.chunksizes
 
 ndarray attributes
@@ -695,6 +697,7 @@ For manipulating, traversing, navigating, or mapping over the tree structure.
    DataTree.pipe
    DataTree.match
    DataTree.filter
+   DataTree.filter_like
 
 Pathlib-like Interface
 ----------------------
@@ -896,6 +899,84 @@ Methods copied from :py:class:`numpy.ndarray` objects, here applying to the data
 ..    DataTree.pad
 ..    DataTree.sortby
 ..    DataTree.broadcast_like
+
+Coordinates
+===========
+
+Creating coordinates
+--------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   Coordinates
+   Coordinates.from_xindex
+   Coordinates.from_pandas_multiindex
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree: generated/
+
+   Coordinates.dims
+   Coordinates.sizes
+   Coordinates.dtypes
+   Coordinates.variables
+   Coordinates.indexes
+   Coordinates.xindexes
+
+Dictionary Interface
+--------------------
+
+Coordinates implement the mapping interface with keys given by variable names
+and values given by ``DataArray`` objects.
+
+.. autosummary::
+   :toctree: generated/
+
+   Coordinates.__getitem__
+   Coordinates.__setitem__
+   Coordinates.__delitem__
+   Coordinates.update
+   Coordinates.get
+   Coordinates.items
+   Coordinates.keys
+   Coordinates.values
+
+Coordinates contents
+--------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   Coordinates.to_dataset
+   Coordinates.to_index
+   Coordinates.assign
+   Coordinates.merge
+   Coordinates.copy
+
+Comparisons
+-----------
+
+.. autosummary::
+   :toctree: generated/
+
+   Coordinates.equals
+   Coordinates.identical
+
+Proxies
+-------
+
+Coordinates that are accessed from the ``coords`` property of Dataset, DataArray
+and DataTree objects, respectively.
+
+.. autosummary::
+   :toctree: generated/
+
+   core.coordinates.DatasetCoordinates
+   core.coordinates.DataArrayCoordinates
+   core.coordinates.DataTreeCoordinates
 
 Universal functions
 ===================
@@ -1107,27 +1188,6 @@ Coder objects
 
    coders.CFDatetimeCoder
 
-Coordinates objects
-===================
-
-Dataset
--------
-
-.. autosummary::
-   :toctree: generated/
-
-   core.coordinates.DatasetCoordinates
-   core.coordinates.DatasetCoordinates.dtypes
-
-DataArray
----------
-
-.. autosummary::
-   :toctree: generated/
-
-   core.coordinates.DataArrayCoordinates
-   core.coordinates.DataArrayCoordinates.dtypes
-
 Plotting
 ========
 
@@ -1276,7 +1336,7 @@ Grouper Objects
 Rolling objects
 ===============
 
-.. currentmodule:: xarray.core.rolling
+.. currentmodule:: xarray.computation.rolling
 
 Dataset
 -------
@@ -1369,7 +1429,7 @@ DataArray
 Exponential rolling objects
 ===========================
 
-.. currentmodule:: xarray.core.rolling_exp
+.. currentmodule:: xarray.computation.rolling_exp
 
 .. autosummary::
    :toctree: generated/
@@ -1381,7 +1441,7 @@ Exponential rolling objects
 Weighted objects
 ================
 
-.. currentmodule:: xarray.core.weighted
+.. currentmodule:: xarray.computation.weighted
 
 Dataset
 -------
@@ -1533,6 +1593,8 @@ Tutorial
 
    tutorial.open_dataset
    tutorial.load_dataset
+   tutorial.open_datatree
+   tutorial.load_datatree
 
 Testing
 =======
