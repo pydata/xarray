@@ -499,8 +499,15 @@ class TestZarrDatatreeIO:
     def test_to_zarr_default_write_mode(self, tmpdir, simple_datatree, zarr_format):
         simple_datatree.to_zarr(str(tmpdir), zarr_format=zarr_format)
 
+        import zarr
+
+        # expected exception type changed in zarr-python v2->v3, see https://github.com/zarr-developers/zarr-python/issues/2821
+        expected_exception_type = (
+            FileExistsError if has_zarr_v3 else zarr.errors.ContainsGroupError
+        )
+
         # with default settings, to_zarr should not overwrite an existing dir
-        with pytest.raises(FileExistsError):
+        with pytest.raises(expected_exception_type):
             simple_datatree.to_zarr(str(tmpdir))
 
     @requires_dask
