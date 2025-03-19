@@ -431,8 +431,8 @@ class TestZarrDatatreeIO:
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
             if zarr_format == 2:
                 # TODO there's something wrong here - this is the same as the old code but fails with KeyError: 'compressor' when run with zarr-python v3
-                # assert roundtrip_dt["/set2/a"].encoding["compressor"] == comp["compressor"]
-                pass
+                pytest.xfail()
+                assert roundtrip_dt["/set2/a"].encoding["compressor"] == comp["compressor"]
             elif zarr_format == 3:
                 retrieved_compressor = roundtrip_dt["/set2/a"].encoding["compressors"][
                     0
