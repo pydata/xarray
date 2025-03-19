@@ -41,6 +41,11 @@ New Features
 - Support reading to `GPU memory with Zarr <https://zarr.readthedocs.io/en/stable/user-guide/gpu.html>`_ (:pull:`10078`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
+Performance
+~~~~~~~~~~~
+- :py:meth:`DatasetGroupBy.first` and :py:meth:`DatasetGroupBy.last` can now use ``flox`` if available. (:issue:`9647`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - Rolled back code that would attempt to catch integer overflow when encoding
@@ -174,8 +179,6 @@ New Features
   :py:class:`pandas.DatetimeIndex` (:pull:`9965`). By `Spencer Clark
   <https://github.com/spencerkclark>`_ and `Kai Mühlbauer
   <https://github.com/kmuehlbauer>`_.
-- :py:meth:`DatasetGroupBy.first` and :py:meth:`DatasetGroupBy.last` can now use ``flox`` if available. (:issue:`9647`)
-  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
