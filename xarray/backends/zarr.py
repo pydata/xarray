@@ -1046,8 +1046,6 @@ class ZarrStore(AbstractWritableDataStore):
         if self._consolidate_on_close:
             kwargs = {}
             if _zarr_v3():
-                # https://github.com/zarr-developers/zarr-python/pull/2113#issuecomment-2386718323
-                # kwargs["path"] = self.zarr_group.name.lstrip("/")
                 kwargs["zarr_format"] = self.zarr_group.metadata.zarr_format
             zarr.consolidate_metadata(self.zarr_group.store, **kwargs)
 
