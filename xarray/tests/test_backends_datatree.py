@@ -157,35 +157,29 @@ def unaligned_datatree_zarr_factory(
         set1_data = xr.Dataset({"a": 0, "b": 1})
         set2_data = xr.Dataset({"a": ("y", [2, 3]), "b": ("x", [0.1, 0.2])})
 
-        # consolidated metadata is deliberately written only at the root
         root_data.to_zarr(
-            filepath, mode="w", zarr_format=zarr_format, consolidated=False
+            filepath,
+            mode="w",
+            zarr_format=zarr_format,
         )
         set1_data.to_zarr(
             filepath,
             group="/Group1",
             mode="a",
             zarr_format=zarr_format,
-            consolidated=False,
         )
         set2_data.to_zarr(
             filepath,
             group="/Group2",
             mode="a",
             zarr_format=zarr_format,
-            consolidated=False,
         )
         set1_data.to_zarr(
             filepath,
             group="/Group1/subgroup1",
             mode="a",
             zarr_format=zarr_format,
-            consolidated=False,
         )
-
-        import zarr
-
-        zarr.consolidate_metadata(filepath, zarr_format=zarr_format)
 
         return filepath
 
