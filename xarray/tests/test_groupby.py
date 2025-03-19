@@ -13,7 +13,7 @@ import pytest
 from packaging.version import Version
 
 import xarray as xr
-from xarray import DataArray, Dataset, Variable, cftime_range, date_range
+from xarray import DataArray, Dataset, Variable, date_range
 from xarray.core.groupby import _consolidate_slices
 from xarray.core.types import InterpOptions, ResampleCompatible
 from xarray.groupers import (
@@ -3294,7 +3294,7 @@ class TestSeasonGrouperAndResampler:
     def test_season_grouper_with_months_spanning_calendar_year_using_same_year(
         self, calendar
     ):
-        time = cftime_range("2001-01-01", "2002-12-30", freq="MS", calendar=calendar)
+        time = date_range("2001-01-01", "2002-12-30", freq="MS", calendar=calendar)
         # fmt: off
         data = np.array(
             [
@@ -3328,29 +3328,15 @@ class TestSeasonGrouperAndResampler:
 
     @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
     def test_season_grouper_with_partial_years(self, calendar):
-        time = cftime_range("2001-01-01", "2002-06-30", freq="MS", calendar=calendar)
+        time = date_range("2001-01-01", "2002-06-30", freq="MS", calendar=calendar)
+        # fmt: off
         data = np.array(
             [
-                1.0,
-                1.25,
-                1.5,
-                1.75,
-                2.0,
-                1.1,
-                1.35,
-                1.6,
-                1.85,
-                1.2,
-                1.45,
-                1.7,
-                1.95,
-                1.05,
-                1.3,
-                1.55,
-                1.8,
-                1.15,
+                1.0, 1.25, 1.5, 1.75, 2.0, 1.1, 1.35, 1.6, 1.85, 1.2, 1.45, 1.7,
+                1.95, 1.05, 1.3, 1.55, 1.8, 1.15,
             ]
         )
+        # fmt: on
         da = DataArray(data, dims="time", coords={"time": time})
         da["year"] = da.time.dt.year
 
@@ -3375,7 +3361,7 @@ class TestSeasonGrouperAndResampler:
 
     @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
     def test_season_grouper_with_single_month_seasons(self, calendar):
-        time = cftime_range("2001-01-01", "2002-12-30", freq="MS", calendar=calendar)
+        time = date_range("2001-01-01", "2002-12-30", freq="MS", calendar=calendar)
         # fmt: off
         data = np.array(
             [
@@ -3417,7 +3403,7 @@ class TestSeasonGrouperAndResampler:
     ):
         # NOTE: This feature is not implemented yet. Maybe it can be a
         # parameter to the `SeasonGrouper` API (e.g. `use_previous_year=True`).
-        time = cftime_range("2001-01-01", "2002-12-30", freq="MS", calendar=calendar)
+        time = date_range("2001-01-01", "2002-12-30", freq="MS", calendar=calendar)
         # fmt: off
         data = np.array(
             [
@@ -3551,7 +3537,7 @@ class TestSeasonGrouperAndResampler:
 
     @requires_cftime
     def test_season_resampler_errors(self):
-        time = cftime_range("2001-01-01", "2002-12-30", freq="D", calendar="360_day")
+        time = date_range("2001-01-01", "2002-12-30", freq="D", calendar="360_day")
         da = DataArray(np.ones(time.size), dims="time", coords={"time": time})
 
         # non-datetime array
