@@ -403,10 +403,11 @@ class TestH5NetCDFDatatreeIO(DatatreeIOBase):
 class TestZarrDatatreeIO:
     engine = "zarr"
 
-    def test_to_zarr(self, tmpdir, simple_datatree):
+    @parametrize_zarr_format
+    def test_to_zarr(self, tmpdir, simple_datatree, zarr_format):
         filepath = str(tmpdir / "test.zarr")
         original_dt = simple_datatree
-        original_dt.to_zarr(filepath)
+        original_dt.to_zarr(filepath, zarr_format=zarr_format)
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
             assert_equal(original_dt, roundtrip_dt)
@@ -443,24 +444,26 @@ class TestZarrDatatreeIO:
             with pytest.raises(ValueError, match="unexpected encoding group.*"):
                 original_dt.to_zarr(filepath, encoding=enc, engine="zarr")
 
-    def test_to_zarr_zip_store(self, tmpdir, simple_datatree):
+    @parametrize_zarr_format
+    def test_to_zarr_zip_store(self, tmpdir, simple_datatree, zarr_format):
         from zarr.storage import ZipStore
 
         filepath = str(tmpdir / "test.zarr.zip")
         original_dt = simple_datatree
         store = ZipStore(filepath, mode="w")
-        original_dt.to_zarr(store)
+        original_dt.to_zarr(store, zarr_format=zarr_format)
 
         with open_datatree(store, engine="zarr") as roundtrip_dt:  # type: ignore[arg-type, unused-ignore]
             assert_equal(original_dt, roundtrip_dt)
 
-    def test_to_zarr_not_consolidated(self, tmpdir, simple_datatree):
+    @parametrize_zarr_format
+    def test_to_zarr_not_consolidated(self, tmpdir, simple_datatree, zarr_format):
         filepath = tmpdir / "test.zarr"
         zmetadata = filepath / ".zmetadata"
         s1zmetadata = filepath / "set1" / ".zmetadata"
         filepath = str(filepath)  # casting to str avoids a pathlib bug in xarray
         original_dt = simple_datatree
-        original_dt.to_zarr(filepath, consolidated=False)
+        original_dt.to_zarr(filepath, consolidated=False, zarr_format=zarr_format)
         assert not zmetadata.exists()
         assert not s1zmetadata.exists()
 
@@ -468,8 +471,9 @@ class TestZarrDatatreeIO:
             with open_datatree(filepath, engine="zarr") as roundtrip_dt:
                 assert_equal(original_dt, roundtrip_dt)
 
-    def test_to_zarr_default_write_mode(self, tmpdir, simple_datatree):
-        simple_datatree.to_zarr(str(tmpdir))
+    @parametrize_zarr_format
+    def test_to_zarr_default_write_mode(self, tmpdir, simple_datatree, zarr_format):
+        simple_datatree.to_zarr(str(tmpdir), zarr_format=zarr_format)
 
         # with default settings, to_zarr should not overwrite an existing dir
         with pytest.raises(FileExistsError):
@@ -526,6 +530,7 @@ class TestZarrDatatreeIO:
 
         for node in original_dt.subtree:
             # inherited variables aren't meant to be written to zarr
+            # TODO perhaps this test fixture should be changed back so there are no inherited coords...
             local_node_variables = node.to_dataset(inherit=False).variables
             for name, var in local_node_variables.items():
                 var_dir = storepath / node.path.removeprefix("/") / name
@@ -538,7 +543,8 @@ class TestZarrDatatreeIO:
                     zarr_format=zarr_format,
                 )
 
-    def test_to_zarr_inherited_coords(self, tmpdir):
+    @parametrize_zarr_format
+    def test_to_zarr_inherited_coords(self, tmpdir, zarr_format):
         original_dt = DataTree.from_dict(
             {
                 "/": xr.Dataset({"a": (("x",), [1, 2])}, coords={"x": [3, 4]}),
@@ -546,18 +552,19 @@ class TestZarrDatatreeIO:
             }
         )
         filepath = str(tmpdir / "test.zarr")
-        original_dt.to_zarr(filepath)
+        original_dt.to_zarr(filepath, zarr_format=zarr_format)
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
             assert_equal(original_dt, roundtrip_dt)
             subtree = cast(DataTree, roundtrip_dt["/sub"])
             assert "x" not in subtree.to_dataset(inherit=False).coords
 
-    def test_open_groups_round_trip(self, tmpdir, simple_datatree) -> None:
+    @parametrize_zarr_format
+    def test_open_groups_round_trip(self, tmpdir, simple_datatree, zarr_format) -> None:
         """Test `open_groups` opens a zarr store with the `simple_datatree` structure."""
         filepath = str(tmpdir / "test.zarr")
         original_dt = simple_datatree
-        original_dt.to_zarr(filepath)
+        original_dt.to_zarr(filepath, zarr_format=zarr_format)
 
         roundtrip_dict = open_groups(filepath, engine="zarr")
         roundtrip_dt = DataTree.from_dict(roundtrip_dict)
@@ -582,7 +589,8 @@ class TestZarrDatatreeIO:
             open_datatree(unaligned_datatree_zarr, engine="zarr")
 
     @requires_dask
-    def test_open_datatree_chunks(self, tmpdir, simple_datatree) -> None:
+    @parametrize_zarr_format
+    def test_open_datatree_chunks(self, tmpdir, zarr_format) -> None:
         filepath = str(tmpdir / "test.zarr")
 
         chunks = {"x": 2, "y": 1}
@@ -597,7 +605,7 @@ class TestZarrDatatreeIO:
                 "/group2": set2_data.chunk(chunks),
             }
         )
-        original_tree.to_zarr(filepath)
+        original_tree.to_zarr(filepath, zarr_format=zarr_format)
 
         with open_datatree(filepath, engine="zarr", chunks=chunks) as tree:
             xr.testing.assert_identical(tree, original_tree)
@@ -645,14 +653,15 @@ class TestZarrDatatreeIO:
         "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
     )
     @pytest.mark.parametrize("write_consolidated_metadata", [True, False, None])
+    @parametrize_zarr_format
     def test_open_datatree_specific_group(
-        self, tmpdir, simple_datatree, write_consolidated_metadata
+        self, tmpdir, simple_datatree, write_consolidated_metadata, zarr_format,
     ) -> None:
         """Test opening a specific group within a Zarr store using `open_datatree`."""
         filepath = str(tmpdir / "test.zarr")
         group = "/set2"
         original_dt = simple_datatree
-        original_dt.to_zarr(filepath, consolidated=write_consolidated_metadata)
+        original_dt.to_zarr(filepath, consolidated=write_consolidated_metadata, zarr_format=zarr_format)
         expected_subtree = original_dt[group].copy()
         expected_subtree.orphan()
         with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
@@ -660,7 +669,8 @@ class TestZarrDatatreeIO:
             assert_equal(subgroup_tree, expected_subtree)
 
     @requires_dask
-    def test_open_groups_chunks(self, tmpdir) -> None:
+    @parametrize_zarr_format
+    def test_open_groups_chunks(self, tmpdir, zarr_format) -> None:
         """Test `open_groups` with chunks on a zarr store."""
 
         chunks = {"x": 2, "y": 1}
@@ -675,7 +685,7 @@ class TestZarrDatatreeIO:
                 "/group2": set2_data.chunk(chunks),
             }
         )
-        original_tree.to_zarr(filepath, mode="w")
+        original_tree.to_zarr(filepath, mode="w", zarr_format=zarr_format)
 
         dict_of_datasets = open_groups(filepath, engine="zarr", chunks=chunks)
 
@@ -687,7 +697,8 @@ class TestZarrDatatreeIO:
         for ds in dict_of_datasets.values():
             ds.close()
 
-    def test_write_subgroup(self, tmpdir):
+    @parametrize_zarr_format
+    def test_write_subgroup(self, tmpdir, zarr_format):
         original_dt = DataTree.from_dict(
             {
                 "/": xr.Dataset(coords={"x": [1, 2, 3]}),
@@ -699,7 +710,7 @@ class TestZarrDatatreeIO:
         expected_dt.name = None
 
         filepath = str(tmpdir / "test.zarr")
-        original_dt.to_zarr(filepath)
+        original_dt.to_zarr(filepath, zarr_format=zarr_format)
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
             assert_equal(original_dt, roundtrip_dt)
@@ -708,7 +719,8 @@ class TestZarrDatatreeIO:
     @pytest.mark.filterwarnings(
         "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
     )
-    def test_write_inherited_coords_false(self, tmpdir):
+    @parametrize_zarr_format
+    def test_write_inherited_coords_false(self, tmpdir, zarr_format):
         original_dt = DataTree.from_dict(
             {
                 "/": xr.Dataset(coords={"x": [1, 2, 3]}),
@@ -717,7 +729,7 @@ class TestZarrDatatreeIO:
         )
 
         filepath = str(tmpdir / "test.zarr")
-        original_dt.to_zarr(filepath, write_inherited_coords=False)
+        original_dt.to_zarr(filepath, write_inherited_coords=False, zarr_format=zarr_format)
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
             assert_identical(original_dt, roundtrip_dt)
@@ -730,7 +742,8 @@ class TestZarrDatatreeIO:
     @pytest.mark.filterwarnings(
         "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
     )
-    def test_write_inherited_coords_true(self, tmpdir):
+    @parametrize_zarr_format
+    def test_write_inherited_coords_true(self, tmpdir, zarr_format):
         original_dt = DataTree.from_dict(
             {
                 "/": xr.Dataset(coords={"x": [1, 2, 3]}),
@@ -739,7 +752,7 @@ class TestZarrDatatreeIO:
         )
 
         filepath = str(tmpdir / "test.zarr")
-        original_dt.to_zarr(filepath, write_inherited_coords=True)
+        original_dt.to_zarr(filepath, write_inherited_coords=True, zarr_format=zarr_format)
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
             assert_identical(original_dt, roundtrip_dt)
