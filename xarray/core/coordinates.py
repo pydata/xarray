@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import formatting
-from xarray.core.alignment import Aligner
 from xarray.core.indexes import (
     Index,
     Indexes,
@@ -22,7 +21,6 @@ from xarray.core.indexes import (
     assert_no_index_corrupted,
     create_default_index_implicit,
 )
-from xarray.core.merge import merge_coordinates_without_align, merge_coords
 from xarray.core.types import DataVars, Self, T_DataArray, T_Xarray
 from xarray.core.utils import (
     Frozen,
@@ -31,6 +29,8 @@ from xarray.core.utils import (
     emit_user_level_warning,
 )
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from xarray.structure.alignment import Aligner
+from xarray.structure.merge import merge_coordinates_without_align, merge_coords
 
 if TYPE_CHECKING:
     from xarray.core.common import DataWithCoords
@@ -177,13 +177,13 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
 
                 # compute the cartesian product
                 code_list += [
-                    np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i])
+                    np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i]).tolist()
                     for code in codes
                 ]
                 level_list += levels
                 names += index.names
 
-        return pd.MultiIndex(level_list, code_list, names=names)
+        return pd.MultiIndex(levels=level_list, codes=code_list, names=names)
 
 
 class Coordinates(AbstractCoordinates):
