@@ -1334,7 +1334,7 @@ Grouper Objects
 Rolling objects
 ===============
 
-.. currentmodule:: xarray.core.rolling
+.. currentmodule:: xarray.computation.rolling
 
 Dataset
 -------
@@ -1427,7 +1427,7 @@ DataArray
 Exponential rolling objects
 ===========================
 
-.. currentmodule:: xarray.core.rolling_exp
+.. currentmodule:: xarray.computation.rolling_exp
 
 .. autosummary::
    :toctree: generated/
@@ -1439,7 +1439,7 @@ Exponential rolling objects
 Weighted objects
 ================
 
-.. currentmodule:: xarray.core.weighted
+.. currentmodule:: xarray.computation.weighted
 
 Dataset
 -------
@@ -1591,6 +1591,8 @@ Tutorial
 
    tutorial.open_dataset
    tutorial.load_dataset
+   tutorial.open_datatree
+   tutorial.load_datatree
 
 Testing
 =======

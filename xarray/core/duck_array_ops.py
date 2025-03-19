@@ -24,8 +24,9 @@ from numpy import (  # noqa: F401
 )
 from pandas.api.types import is_extension_array_dtype
 
-from xarray.core import dask_array_compat, dask_array_ops, dtypes, nputils
-from xarray.core.array_api_compat import get_array_namespace
+from xarray.compat import dask_array_compat, dask_array_ops
+from xarray.compat.array_api_compat import get_array_namespace
+from xarray.core import dtypes, nputils
 from xarray.core.options import OPTIONS
 from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
 from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -466,8 +467,6 @@ def _ignore_warnings_if(condition):
 
 
 def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
-    from xarray.core import nanops
-
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop("out", None) is not None:
             raise TypeError(f"`out` is not valid for {name}")
@@ -494,6 +493,8 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
                 or dtypes.is_object(values.dtype)
             )
         ):
+            from xarray.computation import nanops
+
             nanname = "nan" + name
             func = getattr(nanops, nanname)
         else:
