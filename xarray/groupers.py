@@ -23,6 +23,7 @@ from numpy.typing import ArrayLike
 
 from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
 from xarray.coding.cftimeindex import CFTimeIndex
+from xarray.compat.toolzcompat import sliding_window
 from xarray.computation.computation import apply_ufunc
 from xarray.core.common import (
     _contains_cftime_datetimes,
@@ -35,7 +36,6 @@ from xarray.core.formatting import first_n_items
 from xarray.core.groupby import T_Group, _DummyGroup
 from xarray.core.indexes import safe_cast_to_index
 from xarray.core.resample_cftime import CFTimeGrouper
-from xarray.core.toolzcompat import sliding_window
 from xarray.core.types import (
     Bins,
     DatetimeLike,
@@ -865,7 +865,7 @@ class SeasonResampler(Resampler):
         first_items = agged["first"]
         counts = agged["count"]
 
-        index_class: CFTimeIndex | pd.DatetimeIndex
+        index_class: type[CFTimeIndex] | type[pd.DatetimeIndex]
         if _contains_cftime_datetimes(group.data):
             index_class = CFTimeIndex
             datetime_class = type(first_n_items(group.data, 1).item())
