@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Hashable
+from collections.abc import Callable, Generator, Hashable
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 
@@ -119,7 +119,13 @@ def unaligned_datatree_nc(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
-def unaligned_datatree_zarr(tmp_path_factory):
+def unaligned_datatree_zarr_factory(
+    tmp_path_factory,
+) -> Generator[
+    Callable[[Literal["2", "3"]], Path],
+    None,
+    None,
+]:
     """Creates a zarr store with the following unaligned group hierarchy:
     Group: /
     │   Dimensions:  (y: 3, x: 2)
@@ -144,15 +150,39 @@ def unaligned_datatree_zarr(tmp_path_factory):
                 a        (y) int64 16B ...
                 b        (x) float64 16B ...
     """
-    filepath = tmp_path_factory.mktemp("data") / "unaligned_simple_datatree.zarr"
-    root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
-    set1_data = xr.Dataset({"a": 0, "b": 1})
-    set2_data = xr.Dataset({"a": ("y", [2, 3]), "b": ("x", [0.1, 0.2])})
-    root_data.to_zarr(filepath, mode="w", consolidated=False)
-    set1_data.to_zarr(filepath, group="/Group1", mode="a", consolidated=False)
-    set2_data.to_zarr(filepath, group="/Group2", mode="a", consolidated=False)
-    set1_data.to_zarr(filepath, group="/Group1/subgroup1", mode="a", consolidated=False)
-    yield filepath
+
+    def _unaligned_datatree_zarr(zarr_format: Literal["2", "3"]) -> Path:
+        filepath = tmp_path_factory.mktemp("data") / "unaligned_simple_datatree.zarr"
+        root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
+        set1_data = xr.Dataset({"a": 0, "b": 1})
+        set2_data = xr.Dataset({"a": ("y", [2, 3]), "b": ("x", [0.1, 0.2])})
+        root_data.to_zarr(
+            filepath, mode="w", zarr_format=zarr_format, consolidated=False
+        )
+        set1_data.to_zarr(
+            filepath,
+            group="/Group1",
+            mode="a",
+            zarr_format=zarr_format,
+            consolidated=False,
+        )
+        set2_data.to_zarr(
+            filepath,
+            group="/Group2",
+            mode="a",
+            zarr_format=zarr_format,
+            consolidated=False,
+        )
+        set1_data.to_zarr(
+            filepath,
+            group="/Group1/subgroup1",
+            mode="a",
+            zarr_format=zarr_format,
+            consolidated=False,
+        )
+        return filepath
+
+    yield _unaligned_datatree_zarr
 
 
 class DatatreeIOBase:
@@ -601,15 +631,18 @@ class TestZarrDatatreeIO:
     @pytest.mark.filterwarnings(
         "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
     )
-    def test_open_datatree(self, unaligned_datatree_zarr) -> None:
+    @parametrize_zarr_format
+    def test_open_datatree(self, unaligned_datatree_zarr_factory, zarr_format) -> None:
         """Test if `open_datatree` fails to open a zarr store with an unaligned group hierarchy."""
+        storepath = unaligned_datatree_zarr_factory(zarr_format=zarr_format)
+
         with pytest.raises(
             ValueError,
             match=(
                 re.escape("group '/Group2' is not aligned with its parents:") + ".*"
             ),
         ):
-            open_datatree(unaligned_datatree_zarr, engine="zarr")
+            open_datatree(storepath, engine="zarr")
 
     @requires_dask
     @parametrize_zarr_format
@@ -642,31 +675,27 @@ class TestZarrDatatreeIO:
     @pytest.mark.filterwarnings(
         "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
     )
-    def test_open_groups(self, unaligned_datatree_zarr) -> None:
+    @parametrize_zarr_format
+    def test_open_groups(self, unaligned_datatree_zarr_factory, zarr_format) -> None:
         """Test `open_groups` with a zarr store of an unaligned group hierarchy."""
 
-        unaligned_dict_of_datasets = open_groups(unaligned_datatree_zarr, engine="zarr")
+        storepath = unaligned_datatree_zarr_factory(zarr_format=zarr_format)
+        unaligned_dict_of_datasets = open_groups(storepath, engine="zarr")
 
         assert "/" in unaligned_dict_of_datasets.keys()
         assert "/Group1" in unaligned_dict_of_datasets.keys()
         assert "/Group1/subgroup1" in unaligned_dict_of_datasets.keys()
         assert "/Group2" in unaligned_dict_of_datasets.keys()
         # Check that group name returns the correct datasets
-        with xr.open_dataset(
-            unaligned_datatree_zarr, group="/", engine="zarr"
-        ) as expected:
+        with xr.open_dataset(storepath, group="/", engine="zarr") as expected:
             assert_identical(unaligned_dict_of_datasets["/"], expected)
-        with xr.open_dataset(
-            unaligned_datatree_zarr, group="Group1", engine="zarr"
-        ) as expected:
+        with xr.open_dataset(storepath, group="Group1", engine="zarr") as expected:
             assert_identical(unaligned_dict_of_datasets["/Group1"], expected)
         with xr.open_dataset(
-            unaligned_datatree_zarr, group="/Group1/subgroup1", engine="zarr"
+            storepath, group="/Group1/subgroup1", engine="zarr"
         ) as expected:
             assert_identical(unaligned_dict_of_datasets["/Group1/subgroup1"], expected)
-        with xr.open_dataset(
-            unaligned_datatree_zarr, group="/Group2", engine="zarr"
-        ) as expected:
+        with xr.open_dataset(storepath, group="/Group2", engine="zarr") as expected:
             assert_identical(unaligned_dict_of_datasets["/Group2"], expected)
 
         for ds in unaligned_dict_of_datasets.values():
