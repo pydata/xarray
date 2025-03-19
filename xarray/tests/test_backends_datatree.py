@@ -432,7 +432,9 @@ class TestZarrDatatreeIO:
             if zarr_format == 2:
                 # TODO there's something wrong here - this is the same as the old code but fails with KeyError: 'compressor' when run with zarr-python v3
                 pytest.xfail()
-                assert roundtrip_dt["/set2/a"].encoding["compressor"] == comp["compressor"]
+                assert (
+                    roundtrip_dt["/set2/a"].encoding["compressor"] == comp["compressor"]
+                )
             elif zarr_format == 3:
                 retrieved_compressor = roundtrip_dt["/set2/a"].encoding["compressors"][
                     0
@@ -505,14 +507,15 @@ class TestZarrDatatreeIO:
         def assert_expected_zarr_files_exist(
             arr_dir: Path,
             chunks_expected: bool,
+            is_scalar: bool,
             zarr_format: Literal["2", "3"],
         ) -> None:
             """For one zarr array, check that all expected metadata and chunk data files exist."""
+            # TODO: This function is now so complicated that it's practically checking compliance with the whole zarr spec...
+            # TODO: Perhaps it would be better to instead trust that zarr-python is spec-compliant and check `DataTree` against zarr-python?
 
             if zarr_format == 2:
                 zarray_file, zattrs_file = (arr_dir / ".zarray"), (arr_dir / ".zattrs")
-
-                print(zarray_file)
 
                 assert zarray_file.exists() and zarray_file.is_file()
                 assert zattrs_file.exists() and zattrs_file.is_file()
@@ -529,15 +532,18 @@ class TestZarrDatatreeIO:
                 assert metadata_file.exists() and metadata_file.is_file()
 
                 chunks_dir = arr_dir / "c"
-                # TODO I think there is a bug in zarr-python here, where c/ doesn't exist if there are no chunks in it
-                # assert chunks_dir.exists() and chunks_dir.is_dir()
                 chunk_file = chunks_dir / "0"
                 if chunks_expected:
                     # assumes empty chunks were written
                     # (i.e. they did not contain only fill_value and write_empty_chunks was False)
-                    # TODO this also seems to be a bug, apparently the chunk doesn't exist
-                    assert chunk_file.exists() and chunk_file.is_file()
+                    if is_scalar:
+                        # this is the expected behaviour for storing scalars in zarr 3, see https://github.com/pydata/xarray/issues/10147
+                        assert chunks_dir.exists() and chunks_dir.is_file()
+                    else:
+                        assert chunks_dir.exists() and chunks_dir.is_dir()
+                        assert chunk_file.exists() and chunk_file.is_file()
                 else:
+                    assert not chunks_dir.exists()
                     assert not chunk_file.exists()
 
         for node in original_dt.subtree:
@@ -547,11 +553,13 @@ class TestZarrDatatreeIO:
             for name, var in local_node_variables.items():
                 var_dir = storepath / node.path.removeprefix("/") / name
 
+                # TODO add fill_value considerations to chunks_expected
                 assert_expected_zarr_files_exist(
                     arr_dir=var_dir,
                     chunks_expected=(
                         not isinstance(var.data, da.Array)
                     ),  # don't expect dask.Arrays to be written to disk, as compute=False
+                    is_scalar=not bool(var.dims),
                     zarr_format=zarr_format,
                 )
 
