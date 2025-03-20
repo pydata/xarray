@@ -356,22 +356,6 @@ def create_test_data(
     return obj
 
 
-_CFTIME_CALENDARS = [
-    pytest.param(
-        cal, marks=pytest.mark.skipif(not has_cftime, reason="requires cftime")
-    )
-    for cal in [
-        "360_day",
-        "365_day",
-        "366_day",
-        "all_leap",
-        "gregorian",
-        "julian",
-        "proleptic_gregorian",
-        "standard",
-    ]
-]
-
 _STANDARD_CALENDAR_NAMES = sorted(_STANDARD_CALENDARS_UNSORTED)
 _NON_STANDARD_CALENDAR_NAMES = {
     "noleap",
