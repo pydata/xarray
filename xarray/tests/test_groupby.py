@@ -3437,22 +3437,23 @@ class TestSeasonGrouperAndResampler:
         gb = da.resample(time=SeasonResampler(["NDJFM", "AMJ"], drop_incomplete=False))
         actual = gb.mean()
 
-        new_time = (
-            xr.DataArray(
-                dims="time",
-                data=pd.DatetimeIndex(
-                    [
-                        "2000-11-01",
-                        "2001-04-01",
-                        "2001-11-01",
-                        "2002-04-01",
-                        "2002-11-01",
-                    ]
-                ),
-            )
-            .convert_calendar(calendar=calendar, align_on="date")
-            .time.variable
+        new_time_da = xr.DataArray(
+            dims="time",
+            data=pd.DatetimeIndex(
+                [
+                    "2000-11-01",
+                    "2001-04-01",
+                    "2001-11-01",
+                    "2002-04-01",
+                    "2002-11-01",
+                ]
+            ),
         )
+        if calendar != "standard":
+            new_time_da = new_time_da.convert_calendar(
+                calendar=calendar, align_on="date"
+            )
+        new_time = new_time_da.time.variable
 
         # Expected if the previous "ND" is used for seasonal grouping
         expected = xr.DataArray(
