@@ -14,17 +14,17 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2025.02.0:
+.. _whats-new.2025.03.0:
 
 v2025.03.0 (Mar 20, 2025)
 -------------------------
 
 This release brings tested support for Python 3.13, support for reading Zarr V3 datasets into a :py:class:`~xarray.DataTree`,
-significant improvements to datetime & timedelta encoding/decoding, and improvements to the :py:class:`~xarray.DataTree` API; 
+significant improvements to datetime & timedelta encoding/decoding, and improvements to the :py:class:`~xarray.DataTree` API;
 in addition to the usual bug fixes and other improvements.
 Thanks to the 26 contributors to this release:
-Alfonso Ladino, Benoit Bovy, Chuck Daniels, Deepak Cherian, Eni, Florian Jetter, Ian Hunt-Isaak, Jan, Joe Hamman, Josh Kihm, Julia Signell, 
-Justus Magin, Kai Mühlbauer, Kobe Vandelanotte, Mathias Hauser, Max Jones, Maximilian Roos, Oliver Watt-Meyer, Sam Levang, Sander van Rijn, 
+Alfonso Ladino, Benoit Bovy, Chuck Daniels, Deepak Cherian, Eni, Florian Jetter, Ian Hunt-Isaak, Jan, Joe Hamman, Josh Kihm, Julia Signell,
+Justus Magin, Kai Mühlbauer, Kobe Vandelanotte, Mathias Hauser, Max Jones, Maximilian Roos, Oliver Watt-Meyer, Sam Levang, Sander van Rijn,
 Spencer Clark, Stephan Hoyer, Tom Nicholas, Tom White, Vecko and maddogghoek
 
 New Features
