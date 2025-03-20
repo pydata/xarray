@@ -47,6 +47,7 @@ if TYPE_CHECKING:
 def _warn_of_consolidated_metadata_deprecation(
     kwarg_name: str, value: True | False | None
 ) -> None:
+    # see issue https://github.com/pydata/xarray/issues/10122
     # in some places this kwarg is called "consolidate" and in other places its called "consolidated"
     if value is None:
         emit_user_level_warning(
