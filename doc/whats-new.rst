@@ -16,7 +16,7 @@ What's New
 
 .. _whats-new.2025.02.0:
 
-v2025.03.0 (Mar 18, 2025)
+v2025.03.0 (Mar 20, 2025)
 -------------------------
 
 This release brings tested support for Python 3.13, significant improvements to datetime & timedelta encoding/decoding,
