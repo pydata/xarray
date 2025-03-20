@@ -3631,7 +3631,7 @@ class TestDeprecateConsolidatedMetadataOnByDefault:
     def test_warn_on_open(self, open_func) -> None:
         with pytest.warns(
             PendingDeprecationWarning,
-            match="default value of the ``consolidate`` argument",
+            match="default value of the ``consolidated`` argument",
         ):
             if open_func is open_zarr:
                 open_zarr(self.store)
@@ -3642,7 +3642,7 @@ class TestDeprecateConsolidatedMetadataOnByDefault:
         da = xr.DataArray(1)
         with pytest.warns(
             PendingDeprecationWarning,
-            match="default value of the ``consolidate`` argument",
+            match="default value of the ``consolidated`` argument",
         ):
             da.to_zarr(tmp_path)
 
@@ -3650,7 +3650,7 @@ class TestDeprecateConsolidatedMetadataOnByDefault:
         ds = xr.Dataset()
         with pytest.warns(
             PendingDeprecationWarning,
-            match="default value of the ``consolidate`` argument",
+            match="default value of the ``consolidated`` argument",
         ):
             ds.to_zarr(tmp_path)
 
@@ -3658,9 +3658,10 @@ class TestDeprecateConsolidatedMetadataOnByDefault:
         dt = xr.DataTree(dataset=xr.Dataset({"a": 1}))
         with pytest.warns(
             PendingDeprecationWarning,
-            match="default value of the ``consolidate`` argument",
+            match="default value of the ``consolidated`` argument",
         ):
             dt.to_zarr(tmp_path)
+
 
 @requires_zarr
 @pytest.mark.skipif(

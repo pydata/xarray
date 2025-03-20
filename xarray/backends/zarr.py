@@ -46,12 +46,11 @@ if TYPE_CHECKING:
 
 def _warn_of_consolidated_metadata_deprecation(value: True | False | None) -> None:
     # see issue https://github.com/pydata/xarray/issues/10122
-    # in some places this kwarg is called "consolidate" and in other places its called "consolidated"
     if value is None:
         emit_user_level_warning(
-            "The default value of the ``consolidate`` argument to zarr IO functions will soon change."
+            "The default value of the ``consolidated`` argument to zarr IO functions will soon change."
             "The default value of ``None`` used to mean ``True``, but it will be changed to mean ``False``."
-            "To preserve the same behaviour in future please pass ``consolidate=True`` explicitly."
+            "To preserve the same behaviour in future please pass ``consolidated=True`` explicitly."
             "If you are not reading and writing from high-latency stores (e.g. Zarr v2/v3 format cloud object stores) you can safely ignore this warning."
             "See https://github.com/pydata/xarray/issues/10122 for more information.",
             PendingDeprecationWarning,
