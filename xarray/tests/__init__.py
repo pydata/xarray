@@ -16,6 +16,7 @@ from pandas.testing import assert_frame_equal  # noqa: F401
 
 import xarray.testing
 from xarray import Dataset
+from xarray.coding.times import _STANDARD_CALENDARS as _STANDARD_CALENDARS_UNSORTED
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.options import set_options
@@ -370,13 +371,36 @@ def create_test_data(
     return obj
 
 
-_CFTIME_CALENDARS = [
+_STANDARD_CALENDAR_NAMES = sorted(_STANDARD_CALENDARS_UNSORTED)
+_NON_STANDARD_CALENDAR_NAMES = {
+    "noleap",
     "365_day",
     "360_day",
     "julian",
     "all_leap",
     "366_day",
-    "gregorian",
-    "proleptic_gregorian",
-    "standard",
+}
+_NON_STANDARD_CALENDARS = [
+    pytest.param(cal, marks=requires_cftime)
+    for cal in sorted(_NON_STANDARD_CALENDAR_NAMES)
 ]
+_STANDARD_CALENDARS = [pytest.param(cal) for cal in _STANDARD_CALENDAR_NAMES]
+_ALL_CALENDARS = sorted(_STANDARD_CALENDARS + _NON_STANDARD_CALENDARS)
+_CFTIME_CALENDARS = [
+    pytest.param(*p.values, marks=requires_cftime) for p in _ALL_CALENDARS
+]
+
+
+def _all_cftime_date_types():
+    import cftime
+
+    return {
+        "noleap": cftime.DatetimeNoLeap,
+        "365_day": cftime.DatetimeNoLeap,
+        "360_day": cftime.Datetime360Day,
+        "julian": cftime.DatetimeJulian,
+        "all_leap": cftime.DatetimeAllLeap,
+        "366_day": cftime.DatetimeAllLeap,
+        "gregorian": cftime.DatetimeGregorian,
+        "proleptic_gregorian": cftime.DatetimeProlepticGregorian,
+    }
