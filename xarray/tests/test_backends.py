@@ -3597,12 +3597,13 @@ class TestZarrDictStore(ZarrBase):
             yield {}
 
 
+# TODO should we test that it doesn't warn if you explicitly pass a value for consolidate?
 @requires_zarr
 class TestDeprecateConsolidatedMetadataOnByDefault:
     @pytest.fixture(autouse=True)
     def create_empty_memorystore(self):
         store = zarr.storage.MemoryStore({}, read_only=False)
-        # TODO I get an error if I don't create an empty root group, is that correct?
+        # TODO I get a weird error if I don't create an empty root group, is that correct?
         zarr.create_group(store=store)
         # needed for open_dataarray to work
         zarr.create_array(
@@ -3615,31 +3616,51 @@ class TestDeprecateConsolidatedMetadataOnByDefault:
         )
         self.store = store
 
-    # TODO do these actually have different kwarg names?
     @pytest.mark.parametrize(
-        "open_func, kwarg_name",
+        "open_func",
         [
-            (open_dataset, "consolidate"),
-            (open_dataarray, "consolidate"),
-            (open_datatree, "consolidate"),
-            (open_groups, "consolidate"),
-            (open_zarr, "consolidate"),
-            (load_dataarray, "consolidate"),
-            (load_dataset, "consolidate"),
+            open_dataset,
+            open_dataarray,
+            open_datatree,
+            open_groups,
+            open_zarr,
+            load_dataarray,
+            load_dataset,
         ],
     )
-    def test_warn_on_open(self, open_func, kwarg_name) -> None:
+    def test_warn_on_open(self, open_func) -> None:
         with pytest.warns(
             PendingDeprecationWarning,
-            match=f"default value of the ``{kwarg_name}`` argument",
+            match="default value of the ``consolidate`` argument",
         ):
             if open_func is open_zarr:
                 open_zarr(self.store)
             else:
                 open_func(self.store, engine="zarr")
 
-    def test_warn_on_to_zarr(self) -> None: ...
+    def test_warn_on_dataarray_to_zarr(self, tmp_path) -> None:
+        da = xr.DataArray(1)
+        with pytest.warns(
+            PendingDeprecationWarning,
+            match="default value of the ``consolidate`` argument",
+        ):
+            da.to_zarr(tmp_path)
 
+    def test_warn_on_dataset_to_zarr(self, tmp_path) -> None:
+        ds = xr.Dataset()
+        with pytest.warns(
+            PendingDeprecationWarning,
+            match="default value of the ``consolidate`` argument",
+        ):
+            ds.to_zarr(tmp_path)
+
+    def test_warn_on_datatree_to_zarr(self, tmp_path) -> None:
+        dt = xr.DataTree(dataset=xr.Dataset({"a": 1}))
+        with pytest.warns(
+            PendingDeprecationWarning,
+            match="default value of the ``consolidate`` argument",
+        ):
+            dt.to_zarr(tmp_path)
 
 @requires_zarr
 @pytest.mark.skipif(
