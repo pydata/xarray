@@ -740,10 +740,12 @@ class SeasonGrouper(Grouper):
     SeasonGrouper(seasons=['JF', 'MAM', 'JJAS', 'OND'])
 
     The ordering is preserved
+
     >>> SeasonGrouper(["MAM", "JJAS", "OND", "JF"])
     SeasonGrouper(seasons=['MAM', 'JJAS', 'OND', 'JF'])
 
     Overlapping seasons are allowed
+
     >>> SeasonGrouper(["DJFM", "MAMJ", "JJAS", "SOND"])
     SeasonGrouper(seasons=['DJFM', 'MAMJ', 'JJAS', 'SOND'])
     """
