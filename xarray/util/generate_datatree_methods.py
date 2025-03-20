@@ -58,7 +58,7 @@ METHODS = (
 )
 
 
-METHOD_TEMPLATE = '''\n
+METHOD_TEMPLATE = '''\
 @_wrap_dataset_method(Dataset.{funcname})
 def {funcname}{signature}:
     """{doc}"""
