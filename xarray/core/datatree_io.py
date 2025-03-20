@@ -103,6 +103,11 @@ def _datatree_to_zarr(
             "specifying a root group for the tree has not been implemented"
         )
 
+    if "append_dim" in kwargs:
+        raise NotImplementedError(
+            "specifying ``append_dim`` with ``DataTree.to_zarr`` has not been implemented"
+        )
+
     if encoding is None:
         encoding = {}
 
