@@ -16,7 +16,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Concatenate,
-    Literal,
     NoReturn,
     ParamSpec,
     TypeVar,
@@ -1741,7 +1740,7 @@ class DataTree(
         consolidated: bool = True,
         group: str | None = None,
         write_inherited_coords: bool = False,
-        compute: Literal[True] = True,
+        compute: bool = True,
         **kwargs,
     ):
         """
