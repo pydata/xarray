@@ -118,7 +118,10 @@ class EncodedGroups:
             self.group_indices = group_indices
 
         if unique_coord is None:
-            unique_values = full_index[np.unique(codes)]
+            unique_codes = np.sort(pd.unique(codes.data))
+            # Skip the -1 sentinel
+            unique_codes = unique_codes[unique_codes >= 0]
+            unique_values = full_index[unique_codes]
             self.unique_coord = Variable(
                 dims=codes.name, data=unique_values, attrs=codes.attrs
             )
