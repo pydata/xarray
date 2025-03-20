@@ -4,7 +4,6 @@ import base64
 import json
 import os
 import struct
-import warnings
 from collections.abc import Hashable, Iterable, Mapping
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -45,10 +44,12 @@ if TYPE_CHECKING:
     from xarray.core.types import ReadBuffer, ZarrArray, ZarrGroup
 
 
-def _warn_of_consolidated_metadata_deprecation(kwarg_name: str, value: True | False | None) -> None:
+def _warn_of_consolidated_metadata_deprecation(
+    kwarg_name: str, value: True | False | None
+) -> None:
     # in some places this kwarg is called "consolidate" and in other places its called "consolidated"
     if value is None:
-        warnings.warn(
+        emit_user_level_warning(
             f"The default value of the ``{kwarg_name}`` argument to zarr IO functions will soon change."
             "The default value of ``None`` used to mean ``True``, but it will be changed to mean ``False``."
             f"To preserve the same behaviour in future please pass ``{kwarg_name}=True`` explicitly."
@@ -1512,7 +1513,9 @@ def open_zarr(
             "open_zarr() got unexpected keyword arguments " + ",".join(kwargs.keys())
         )
 
-    _warn_of_consolidated_metadata_deprecation(kwarg_name="consolidated", value=consolidated)
+    _warn_of_consolidated_metadata_deprecation(
+        kwarg_name="consolidated", value=consolidated
+    )
 
     backend_kwargs = {
         "synchronizer": synchronizer,
@@ -1790,7 +1793,7 @@ def _get_open_params(
     else:
         missing_exc = zarr.errors.GroupNotFoundError
 
-    _warn_of_consolidated_metadata_deprecation(consolidate=consolidated)
+    _warn_of_consolidated_metadata_deprecation("consolidate", value=consolidated)
 
     if consolidated in [None, True]:
         # open the root of the store, in case there is metadata consolidated there

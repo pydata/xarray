@@ -3595,6 +3595,58 @@ class TestZarrDictStore(ZarrBase):
 
 
 @requires_zarr
+class TestDeprecateConsolidatedMetadataOnByDefault:
+    @pytest.fixture(autouse=True)
+    def create_empty_memorystore(self):
+        store = zarr.storage.MemoryStore({}, read_only=False)
+        # TODO I get an error if I don't create an empty root group, is that correct?
+        zarr.create_group(store=store)
+        self.store = store
+
+    def test_warn_on_open(self) -> None:
+        # TODO: refactor to parametrize over these
+        from xarray import (
+            open_dataarray,
+            open_dataset,
+            open_datatree,
+            open_groups,
+            open_zarr,
+        )
+
+        with pytest.warns(
+            PendingDeprecationWarning,
+            match="default value of the ``consolidated`` argument",
+        ):
+            open_zarr(self.store)
+
+        with pytest.warns(
+            PendingDeprecationWarning,
+            match="default value of the ``consolidated`` argument",
+        ):
+            open_dataset(self.store, engine="zarr")
+
+        with pytest.warns(
+            PendingDeprecationWarning,
+            match="default value of the ``consolidated`` argument",
+        ):
+            open_dataarray(self.store, engine="zarr")
+
+        with pytest.warns(
+            PendingDeprecationWarning,
+            match="default value of the ``consolidated`` argument",
+        ):
+            open_groups(self.store, engine="zarr")
+
+        with pytest.warns(
+            PendingDeprecationWarning,
+            match="default value of the ``consolidated`` argument",
+        ):
+            open_datatree(self.store, engine="zarr")
+
+    def test_warn_on_to_zarr(self, store) -> None: ...
+
+
+@requires_zarr
 @pytest.mark.skipif(
     ON_WINDOWS,
     reason="Very flaky on Windows CI. Can re-enable assuming it starts consistently passing.",
