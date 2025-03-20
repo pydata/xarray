@@ -36,7 +36,10 @@ from xarray import (
     load_dataset,
     open_dataarray,
     open_dataset,
+    open_datatree,
+    open_groups,
     open_mfdataset,
+    open_zarr,
     save_mfdataset,
 )
 from xarray.backends.common import robust_getitem
@@ -3603,47 +3606,26 @@ class TestDeprecateConsolidatedMetadataOnByDefault:
         zarr.create_group(store=store)
         self.store = store
 
-    def test_warn_on_open(self) -> None:
-        # TODO: refactor to parametrize over these
-        from xarray import (
+    @pytest.mark.parametrize(
+        "open_func",
+        [
             open_dataarray,
             open_dataset,
             open_datatree,
             open_groups,
             open_zarr,
-        )
-
+            load_dataarray,
+            load_dataset,
+        ],
+    )
+    def test_warn_on_open(self, open_func) -> None:
         with pytest.warns(
             PendingDeprecationWarning,
             match="default value of the ``consolidated`` argument",
         ):
-            open_zarr(self.store)
+            open_func(self.store, engine='zarr')
 
-        with pytest.warns(
-            PendingDeprecationWarning,
-            match="default value of the ``consolidated`` argument",
-        ):
-            open_dataset(self.store, engine="zarr")
-
-        with pytest.warns(
-            PendingDeprecationWarning,
-            match="default value of the ``consolidated`` argument",
-        ):
-            open_dataarray(self.store, engine="zarr")
-
-        with pytest.warns(
-            PendingDeprecationWarning,
-            match="default value of the ``consolidated`` argument",
-        ):
-            open_groups(self.store, engine="zarr")
-
-        with pytest.warns(
-            PendingDeprecationWarning,
-            match="default value of the ``consolidated`` argument",
-        ):
-            open_datatree(self.store, engine="zarr")
-
-    def test_warn_on_to_zarr(self, store) -> None: ...
+    def test_warn_on_to_zarr(self) -> None: ...
 
 
 @requires_zarr
