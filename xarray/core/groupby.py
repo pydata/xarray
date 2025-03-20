@@ -998,7 +998,7 @@ class GroupBy(Generic[T_Xarray]):
         dim: Dims,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ):
+    ) -> T_Xarray:
         """Adaptor function that translates our groupby API to that of flox."""
         import flox
         from flox.xarray import xarray_reduce
@@ -1121,6 +1121,8 @@ class GroupBy(Generic[T_Xarray]):
                     # flox always assigns an index so we must drop it here if we don't need it.
                     to_drop.append(grouper.name)
                     continue
+                # TODO: We can't simply use `self.encoded.coords` here because it corresponds to `unique_coord`,
+                # NOT `full_index`. We would need to construct a new Coordinates object, that corresponds to `full_index`.
                 new_coords.append(
                     # Using IndexVariable here ensures we reconstruct PandasMultiIndex with
                     # all associated levels properly.
@@ -1363,7 +1365,12 @@ class GroupBy(Generic[T_Xarray]):
         """
         return ops.where_method(self, cond, other)
 
-    def _first_or_last(self, op, skipna, keep_attrs):
+    def _first_or_last(
+        self,
+        op: Literal["first" | "last"],
+        skipna: bool | None,
+        keep_attrs: bool | None,
+    ):
         if all(
             isinstance(maybe_slice, slice)
             and (maybe_slice.stop == maybe_slice.start + 1)
@@ -1374,17 +1381,65 @@ class GroupBy(Generic[T_Xarray]):
             return self._obj
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
-        return self.reduce(
-            op, dim=[self._group_dim], skipna=skipna, keep_attrs=keep_attrs
-        )
+        if (
+            module_available("flox", minversion="0.10.0")
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            result = self._flox_reduce(
+                dim=None, func=op, skipna=skipna, keep_attrs=keep_attrs
+            )
+        else:
+            result = self.reduce(
+                getattr(duck_array_ops, op),
+                dim=[self._group_dim],
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+            )
+        return result
 
-    def first(self, skipna: bool | None = None, keep_attrs: bool | None = None):
-        """Return the first element of each group along the group dimension"""
-        return self._first_or_last(duck_array_ops.first, skipna, keep_attrs)
+    def first(
+        self, skipna: bool | None = None, keep_attrs: bool | None = None
+    ) -> T_Xarray:
+        """
+        Return the first element of each group along the group dimension
 
-    def last(self, skipna: bool | None = None, keep_attrs: bool | None = None):
-        """Return the last element of each group along the group dimension"""
-        return self._first_or_last(duck_array_ops.last, skipna, keep_attrs)
+        Parameters
+        ----------
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+
+        """
+        return self._first_or_last("first", skipna, keep_attrs)
+
+    def last(
+        self, skipna: bool | None = None, keep_attrs: bool | None = None
+    ) -> T_Xarray:
+        """
+        Return the last element of each group along the group dimension
+
+        Parameters
+        ----------
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+
+
+        """
+        return self._first_or_last("last", skipna, keep_attrs)
 
     def assign_coords(self, coords=None, **coords_kwargs):
         """Assign coordinates by group.

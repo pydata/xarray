@@ -165,6 +165,21 @@ has_flox_0_9_12, requires_flox_0_9_12 = _importorskip("flox", "0.9.12")
 
 has_array_api_strict, requires_array_api_strict = _importorskip("array_api_strict")
 
+parametrize_zarr_format = pytest.mark.parametrize(
+    "zarr_format",
+    [
+        pytest.param(2, id="zarr_format=2"),
+        pytest.param(
+            3,
+            marks=pytest.mark.skipif(
+                not has_zarr_v3,
+                reason="zarr-python v2 cannot understand the zarr v3 format",
+            ),
+            id="zarr_format=3",
+        ),
+    ],
+)
+
 
 def _importorskip_h5netcdf_ros3(has_h5netcdf: bool):
     if not has_h5netcdf:
@@ -356,24 +371,6 @@ def create_test_data(
     return obj
 
 
-_CFTIME_CALENDARS = [
-    pytest.param(
-        cal, marks=pytest.mark.skipif(not has_cftime, reason="requires cftime")
-    )
-    for cal in sorted(
-        [
-            "365_day",
-            "360_day",
-            "julian",
-            "all_leap",
-            "366_day",
-            "gregorian",
-            "proleptic_gregorian",
-            "standard",
-        ]
-    )
-]
-
 _STANDARD_CALENDAR_NAMES = sorted(_STANDARD_CALENDARS_UNSORTED)
 _NON_STANDARD_CALENDAR_NAMES = {
     "noleap",
@@ -384,13 +381,14 @@ _NON_STANDARD_CALENDAR_NAMES = {
     "366_day",
 }
 _NON_STANDARD_CALENDARS = [
-    pytest.param(
-        cal, marks=pytest.mark.skipif(not has_cftime, reason="requires cftime")
-    )
+    pytest.param(cal, marks=requires_cftime)
     for cal in sorted(_NON_STANDARD_CALENDAR_NAMES)
 ]
-_STANDARD_CALENDARS = [pytest.param(_) for _ in _STANDARD_CALENDAR_NAMES]
+_STANDARD_CALENDARS = [pytest.param(cal) for cal in _STANDARD_CALENDAR_NAMES]
 _ALL_CALENDARS = sorted(_STANDARD_CALENDARS + _NON_STANDARD_CALENDARS)
+_CFTIME_CALENDARS = [
+    pytest.param(*p.values, marks=requires_cftime) for p in _ALL_CALENDARS
+]
 
 
 def _all_cftime_date_types():

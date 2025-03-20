@@ -254,7 +254,11 @@ class UniqueGrouper(Grouper):
         unique_coord = Variable(
             dims=codes.name, data=unique_values, attrs=self.group.attrs
         )
-        full_index = pd.Index(unique_values)
+        full_index = (
+            unique_values
+            if isinstance(unique_values, pd.MultiIndex)
+            else pd.Index(unique_values)
+        )
 
         return EncodedGroups(
             codes=codes,
