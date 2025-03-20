@@ -19,14 +19,18 @@ What's New
 v2025.03.0 (Mar 20, 2025)
 -------------------------
 
-This release brings tested support for Python 3.13, significant improvements to datetime & timedelta encoding/decoding,
-and improvements to the :py:class:`~xarray.DataTree` API; in addition to the usual bug fixes and other improvements.
-Thanks to the 21 contributors to this release:
-Benoit Bovy, Chuck Daniels, Deepak Cherian, Florian Jetter, Jan, Josh Kihm, Julia Signell, Justus Magin, Kai Mühlbauer, Kobe Vandelanotte, Mathias Hauser,
-Max Jones, Maximilian Roos, Oliver Watt-Meyer, Sam Levang, Sander van Rijn, Spencer Clark, Stephan Hoyer, Tom White, Vecko and maddogghoek
+This release brings tested support for Python 3.13, support for reading Zarr V3 datasets into a :py:class:`~xarray.DataTree`,
+significant improvements to datetime & timedelta encoding/decoding, and improvements to the :py:class:`~xarray.DataTree` API; 
+in addition to the usual bug fixes and other improvements.
+Thanks to the 26 contributors to this release:
+Alfonso Ladino, Benoit Bovy, Chuck Daniels, Deepak Cherian, Eni, Florian Jetter, Ian Hunt-Isaak, Jan, Joe Hamman, Josh Kihm, Julia Signell, 
+Justus Magin, Kai Mühlbauer, Kobe Vandelanotte, Mathias Hauser, Max Jones, Maximilian Roos, Oliver Watt-Meyer, Sam Levang, Sander van Rijn, 
+Spencer Clark, Stephan Hoyer, Tom Nicholas, Tom White, Vecko and maddogghoek
 
 New Features
 ~~~~~~~~~~~~
+- Added :py:meth:`tutorial.open_datatree` and :py:meth:`tutorial.load_datatree`
+  By `Eni Awowale <https://github.com/eni-awowale>`_.
 - Added :py:meth:`DataTree.filter_like` to conveniently restructure a DataTree like another DataTree (:issue:`10096`, :pull:`10097`).
   By `Kobe Vandelanotte <https://github.com/kobebryant432>`_.
 - Added :py:meth:`Coordinates.from_xindex` as convenience for creating a new :py:class:`Coordinates` object
@@ -43,6 +47,11 @@ New Features
   encoding, but the specified units would not allow for an exact round trip
   (:pull:`9498`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Support reading to `GPU memory with Zarr <https://zarr.readthedocs.io/en/stable/user-guide/gpu.html>`_ (:pull:`10078`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+Performance
+~~~~~~~~~~~
+- :py:meth:`DatasetGroupBy.first` and :py:meth:`DatasetGroupBy.last` can now use ``flox`` if available. (:issue:`9647`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
@@ -65,6 +74,10 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+
+- Fix ``open_datatree`` incompatibilities with Zarr-Python V3 and refactor
+  ``TestZarrDatatreeIO`` accordingly (:issue:`9960`, :pull:`10020`).
+  By `Alfonso Ladino-Rincon <https://github.com/aladinor>`_.
 - Default to resolution-dependent optimal integer encoding units when saving
   chunked non-nanosecond :py:class:`numpy.datetime64` or
   :py:class:`numpy.timedelta64` arrays to disk. Previously units of
@@ -95,6 +108,7 @@ Bug fixes
 - Improve handling of dtype and NaT when encoding/decoding masked and packaged
   datetimes and timedeltas (:issue:`8957`, :pull:`10050`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
