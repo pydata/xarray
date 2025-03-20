@@ -84,7 +84,7 @@ def _datatree_to_zarr(
     store: ZarrStoreLike,
     mode: ZarrWriteModes = "w-",
     encoding: Mapping[str, Any] | None = None,
-    consolidated: bool = True,
+    consolidated: bool | None = None,
     group: str | None = None,
     write_inherited_coords: bool = False,
     compute: bool = True,
@@ -97,6 +97,8 @@ def _datatree_to_zarr(
     """
 
     from zarr import consolidate_metadata
+
+    from xarray.backends.zarr import _warn_of_consolidated_metadata_deprecation
 
     if group is not None:
         raise NotImplementedError(
@@ -130,5 +132,9 @@ def _datatree_to_zarr(
         if "w" in mode:
             mode = "a"
 
-    if consolidated:
+    _warn_of_consolidated_metadata_deprecation(
+        value=consolidated,
+    )
+
+    if consolidated in [True, None]:
         consolidate_metadata(store)
