@@ -44,16 +44,14 @@ if TYPE_CHECKING:
     from xarray.core.types import ReadBuffer, ZarrArray, ZarrGroup
 
 
-def _warn_of_consolidated_metadata_deprecation(
-    kwarg_name: str, value: True | False | None
-) -> None:
+def _warn_of_consolidated_metadata_deprecation(value: True | False | None) -> None:
     # see issue https://github.com/pydata/xarray/issues/10122
     # in some places this kwarg is called "consolidate" and in other places its called "consolidated"
     if value is None:
         emit_user_level_warning(
-            f"The default value of the ``{kwarg_name}`` argument to zarr IO functions will soon change."
+            "The default value of the ``consolidate`` argument to zarr IO functions will soon change."
             "The default value of ``None`` used to mean ``True``, but it will be changed to mean ``False``."
-            f"To preserve the same behaviour in future please pass ``{kwarg_name}=True`` explicitly."
+            "To preserve the same behaviour in future please pass ``consolidate=True`` explicitly."
             "If you are not reading and writing from high-latency stores (e.g. Zarr v2/v3 format cloud object stores) you can safely ignore this warning."
             "See https://github.com/pydata/xarray/issues/10122 for more information.",
             PendingDeprecationWarning,
@@ -1515,7 +1513,7 @@ def open_zarr(
         )
 
     _warn_of_consolidated_metadata_deprecation(
-        kwarg_name="consolidated", value=consolidated
+        value=consolidated,
     )
 
     backend_kwargs = {
@@ -1794,7 +1792,7 @@ def _get_open_params(
     else:
         missing_exc = zarr.errors.GroupNotFoundError
 
-    _warn_of_consolidated_metadata_deprecation("consolidate", value=consolidated)
+    _warn_of_consolidated_metadata_deprecation(value=consolidated)
 
     if consolidated in [None, True]:
         # open the root of the store, in case there is metadata consolidated there

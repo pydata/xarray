@@ -2194,7 +2194,7 @@ def to_zarr(
     )
 
     _warn_of_consolidated_metadata_deprecation(
-        kwarg_name="consolidated", value=consolidated
+        value=consolidated,
     )
 
     # validate Dataset keys, DataArray names
