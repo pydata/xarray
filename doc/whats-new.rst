@@ -26,6 +26,9 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Explicitly forbid appending a :py:class:`~xarray.DataTree` to zarr using :py:meth:`~xarray.DataTree.to_zarr` with ``append_dim``, because the expected behaviour is currently undefined.
+  (:issue:`9858`, :pull:`10156`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Deprecations
 ~~~~~~~~~~~~
