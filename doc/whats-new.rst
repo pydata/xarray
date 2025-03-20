@@ -66,6 +66,10 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+
+- Fix ``open_datatree`` incompatibilities with Zarr-Python V3 and refactor
+  ``TestZarrDatatreeIO`` accordingly (:issue:`9960`, :pull:`10020`).
+  By `Alfonso Ladino-Rincon <https://github.com/aladinor>`_.
 - Default to resolution-dependent optimal integer encoding units when saving
   chunked non-nanosecond :py:class:`numpy.datetime64` or
   :py:class:`numpy.timedelta64` arrays to disk. Previously units of
@@ -96,6 +100,7 @@ Bug fixes
 - Improve handling of dtype and NaT when encoding/decoding masked and packaged
   datetimes and timedeltas (:issue:`8957`, :pull:`10050`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
