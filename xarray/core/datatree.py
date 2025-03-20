@@ -16,7 +16,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Concatenate,
-    Literal,
     NoReturn,
     ParamSpec,
     TypeVar,
