@@ -19,7 +19,6 @@ from xarray import (
     decode_cf,
 )
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
-from xarray.coding.times import _STANDARD_CALENDARS as _STANDARD_CALENDARS_UNSORTED
 from xarray.coding.times import (
     _encode_datetime_with_cftime,
     _netcdf_to_numpy_timeunit,
@@ -41,8 +40,13 @@ from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.utils import is_duck_dask_array
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
+    _ALL_CALENDARS,
+    _NON_STANDARD_CALENDARS,
+    _STANDARD_CALENDAR_NAMES,
+    _STANDARD_CALENDARS,
     DuckArrayWrapper,
     FirstElementAccessibleArray,
+    _all_cftime_date_types,
     arm_xfail,
     assert_array_equal,
     assert_duckarray_allclose,
@@ -53,17 +57,6 @@ from xarray.tests import (
     requires_dask,
 )
 
-_NON_STANDARD_CALENDARS_SET = {
-    "noleap",
-    "365_day",
-    "360_day",
-    "julian",
-    "all_leap",
-    "366_day",
-}
-_STANDARD_CALENDARS = sorted(_STANDARD_CALENDARS_UNSORTED)
-_ALL_CALENDARS = sorted(_NON_STANDARD_CALENDARS_SET.union(_STANDARD_CALENDARS))
-_NON_STANDARD_CALENDARS = sorted(_NON_STANDARD_CALENDARS_SET)
 _CF_DATETIME_NUM_DATES_UNITS = [
     (np.arange(10), "days since 2000-01-01", "s"),
     (np.arange(10).astype("float64"), "days since 2000-01-01", "s"),
@@ -99,24 +92,9 @@ _CF_DATETIME_NUM_DATES_UNITS = [
 _CF_DATETIME_TESTS = [
     num_dates_units + (calendar,)
     for num_dates_units, calendar in product(
-        _CF_DATETIME_NUM_DATES_UNITS, _STANDARD_CALENDARS
+        _CF_DATETIME_NUM_DATES_UNITS, _STANDARD_CALENDAR_NAMES
     )
 ]
-
-
-def _all_cftime_date_types():
-    import cftime
-
-    return {
-        "noleap": cftime.DatetimeNoLeap,
-        "365_day": cftime.DatetimeNoLeap,
-        "360_day": cftime.Datetime360Day,
-        "julian": cftime.DatetimeJulian,
-        "all_leap": cftime.DatetimeAllLeap,
-        "366_day": cftime.DatetimeAllLeap,
-        "gregorian": cftime.DatetimeGregorian,
-        "proleptic_gregorian": cftime.DatetimeProlepticGregorian,
-    }
 
 
 @requires_cftime
@@ -734,13 +712,13 @@ def test_decode_cf(calendar, time_unit: PDDatetimeUnitOptions) -> None:
         ds[v].attrs["units"] = "days since 2001-01-01"
         ds[v].attrs["calendar"] = calendar
 
-    if not has_cftime and calendar not in _STANDARD_CALENDARS:
+    if not has_cftime and calendar not in _STANDARD_CALENDAR_NAMES:
         with pytest.raises(ValueError):
             ds = decode_cf(ds)
     else:
         ds = decode_cf(ds, decode_times=CFDatetimeCoder(time_unit=time_unit))
 
-        if calendar not in _STANDARD_CALENDARS:
+        if calendar not in _STANDARD_CALENDAR_NAMES:
             assert ds.test.dtype == np.dtype("O")
         else:
             assert ds.test.dtype == np.dtype(f"=M8[{time_unit}]")
@@ -1085,7 +1063,7 @@ def test_decode_ambiguous_time_warns(calendar) -> None:
 
     # we don't decode non-standard calendards with
     # pandas so expect no warning will be emitted
-    is_standard_calendar = calendar in _STANDARD_CALENDARS
+    is_standard_calendar = calendar in _STANDARD_CALENDAR_NAMES
 
     dates = [1, 2, 3]
     units = "days since 1-1-1"
@@ -1954,7 +1932,7 @@ def test_duck_array_decode_times(calendar) -> None:
     decoded = conventions.decode_cf_variable(
         "foo", var, decode_times=CFDatetimeCoder(use_cftime=None)
     )
-    if calendar not in _STANDARD_CALENDARS:
+    if calendar not in _STANDARD_CALENDAR_NAMES:
         assert decoded.dtype == np.dtype("O")
     else:
         assert decoded.dtype == np.dtype("=M8[ns]")
