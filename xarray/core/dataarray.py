@@ -29,18 +29,14 @@ import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex
-from xarray.core import alignment, computation, dtypes, indexing, ops, utils
+from xarray.computation import computation, ops
+from xarray.computation.arithmetic import DataArrayArithmetic
+from xarray.computation.computation import unify_chunks
+from xarray.core import dtypes, indexing, utils
 from xarray.core._aggregations import DataArrayAggregations
 from xarray.core.accessor_dt import CombinedDatetimelikeAccessor
 from xarray.core.accessor_str import StringAccessor
-from xarray.core.alignment import (
-    _broadcast_helper,
-    _get_broadcast_dims_map_common_coords,
-    align,
-)
-from xarray.core.arithmetic import DataArrayArithmetic
 from xarray.core.common import AbstractArray, DataWithCoords, get_chunksizes
-from xarray.core.computation import unify_chunks
 from xarray.core.coordinates import (
     Coordinates,
     DataArrayCoordinates,
@@ -58,7 +54,6 @@ from xarray.core.indexes import (
     isel_indexes,
 )
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
-from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Bins,
@@ -87,6 +82,13 @@ from xarray.core.variable import (
 )
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
+from xarray.structure import alignment
+from xarray.structure.alignment import (
+    _broadcast_helper,
+    _get_broadcast_dims_map_common_coords,
+    align,
+)
+from xarray.structure.merge import PANDAS_TYPES, MergeError
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
@@ -97,9 +99,10 @@ if TYPE_CHECKING:
 
     from xarray.backends import ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
+    from xarray.computation.rolling import DataArrayCoarsen, DataArrayRolling
+    from xarray.computation.weighted import DataArrayWeighted
     from xarray.core.groupby import DataArrayGroupBy
     from xarray.core.resample import DataArrayResample
-    from xarray.core.rolling import DataArrayCoarsen, DataArrayRolling
     from xarray.core.types import (
         CoarsenBoundaryOptions,
         DatetimeLike,
@@ -123,7 +126,6 @@ if TYPE_CHECKING:
         T_ChunksFreq,
         T_Xarray,
     )
-    from xarray.core.weighted import DataArrayWeighted
     from xarray.groupers import Grouper, Resampler
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
@@ -1973,8 +1975,8 @@ class DataArray(
             names to pandas.Index objects, which provides coordinates upon
             which to index the variables in this dataset. The indexes on this
             other object need not be the same as the indexes on this
-            dataset. Any mis-matched index values will be filled in with
-            NaN, and any mis-matched dimension names will simply be ignored.
+            dataset. Any mismatched index values will be filled in with
+            NaN, and any mismatched dimension names will simply be ignored.
         method : {None, "nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method to use for filling index values from other not found on this
             data array:
@@ -2155,8 +2157,8 @@ class DataArray(
         ----------
         indexers : dict, optional
             Dictionary with keys given by dimension names and values given by
-            arrays of coordinates tick labels. Any mis-matched coordinate
-            values will be filled in with NaN, and any mis-matched dimension
+            arrays of coordinates tick labels. Any mismatched coordinate
+            values will be filled in with NaN, and any mismatched dimension
             names will simply be ignored.
             One of indexers or indexers_kwargs must be provided.
         copy : bool, optional
@@ -5625,7 +5627,7 @@ class DataArray(
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
         ...
-        >>> time = xr.cftime_range("1990-01", "1992-01", freq="ME")
+        >>> time = xr.date_range("1990-01", "1992-01", freq="ME", use_cftime=True)
         >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)
         >>> array = xr.DataArray(
@@ -7048,7 +7050,7 @@ class DataArray(
             Tutorial on Weighted Reduction using :py:func:`~xarray.DataArray.weighted`
 
         """
-        from xarray.core.weighted import DataArrayWeighted
+        from xarray.computation.weighted import DataArrayWeighted
 
         return DataArrayWeighted(self, weights)
 
@@ -7122,7 +7124,7 @@ class DataArray(
         Dataset.rolling
         core.rolling.DataArrayRolling
         """
-        from xarray.core.rolling import DataArrayRolling
+        from xarray.computation.rolling import DataArrayRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DataArrayRolling(self, dim, min_periods=min_periods, center=center)
@@ -7182,7 +7184,7 @@ class DataArray(
         Dataset.cumulative
         core.rolling.DataArrayRolling
         """
-        from xarray.core.rolling import DataArrayRolling
+        from xarray.computation.rolling import DataArrayRolling
 
         # Could we abstract this "normalize and check 'dim'" logic? It's currently shared
         # with the same method in Dataset.
@@ -7336,7 +7338,7 @@ class DataArray(
             Tutorial on windowed computation using :py:func:`~xarray.DataArray.coarsen`
 
         """
-        from xarray.core.rolling import DataArrayCoarsen
+        from xarray.computation.rolling import DataArrayCoarsen
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return DataArrayCoarsen(

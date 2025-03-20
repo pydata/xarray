@@ -35,13 +35,9 @@ from xarray.backends.common import (
 from xarray.backends.locks import _get_scheduler
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import indexing
-from xarray.core.combine import (
-    _infer_concat_order_from_positions,
-    _nested_combine,
-    combine_by_coords,
-)
+from xarray.core.chunk import _get_chunk, _maybe_chunk
 from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
+from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees
@@ -49,6 +45,11 @@ from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 from xarray.core.utils import is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
+from xarray.structure.combine import (
+    _infer_concat_order_from_positions,
+    _nested_combine,
+    combine_by_coords,
+)
 
 if TYPE_CHECKING:
     try:
@@ -454,6 +455,7 @@ def _datatree_from_backend_datatree(
                     inline_array,
                     chunked_array_type,
                     from_array_kwargs,
+                    node=path,
                     **extra_tokens,
                 )
                 for path, [node] in group_subtrees(backend_tree)
@@ -1117,7 +1119,7 @@ def open_datatree(
 
     decoders = _resolve_decoders_kwargs(
         decode_cf,
-        open_backend_dataset_parameters=(),
+        open_backend_dataset_parameters=backend.open_dataset_parameters,
         mask_and_scale=mask_and_scale,
         decode_times=decode_times,
         decode_timedelta=decode_timedelta,

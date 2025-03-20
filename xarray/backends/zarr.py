@@ -375,6 +375,11 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
         pass
     else:
         attributes = dict(zarr_obj.attrs)
+        if len(zarr_obj.shape) != len(dimensions):
+            raise KeyError(
+                "Zarr object is missing the `dimension_names` metadata which is "
+                "required for xarray to determine variable dimensions."
+            )
         return dimensions, attributes
 
     # Zarr arrays do not have dimensions. To get around this problem, we add
@@ -393,7 +398,13 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
 
         # NCZarr defines dimensions through metadata in .zarray
         zarray_path = os.path.join(zarr_obj.path, ".zarray")
-        zarray = json.loads(zarr_obj.store[zarray_path])
+        if _zarr_v3():
+            import asyncio
+
+            zarray_str = asyncio.run(zarr_obj.store.get(zarray_path)).to_bytes()
+        else:
+            zarray_str = zarr_obj.store.get(zarray_path)
+        zarray = json.loads(zarray_str)
         try:
             # NCZarr uses Fully Qualified Names
             dimensions = [
@@ -655,10 +666,21 @@ class ZarrStore(AbstractWritableDataStore):
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
         )
+
+        from zarr import Group
+
+        group_members: dict[str, Group] = {}
         group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
-        return {
+        for path in group_paths:
+            if path == group:
+                group_members[path] = zarr_group
+            else:
+                rel_path = path.removeprefix(f"{group}/")
+                group_members[path] = zarr_group[rel_path.removeprefix("/")]
+
+        out = {
             group: cls(
-                zarr_group.get(group),
+                group_store,
                 mode,
                 consolidate_on_close,
                 append_dim,
@@ -669,8 +691,9 @@ class ZarrStore(AbstractWritableDataStore):
                 use_zarr_fill_value_as_mask,
                 cache_members=cache_members,
             )
-            for group in group_paths
+            for group, group_store in group_members.items()
         }
+        return out
 
     @classmethod
     def open_group(
@@ -1023,8 +1046,6 @@ class ZarrStore(AbstractWritableDataStore):
         if self._consolidate_on_close:
             kwargs = {}
             if _zarr_v3():
-                # https://github.com/zarr-developers/zarr-python/pull/2113#issuecomment-2386718323
-                kwargs["path"] = self.zarr_group.name.lstrip("/")
                 kwargs["zarr_format"] = self.zarr_group.metadata.zarr_format
             zarr.consolidate_metadata(self.zarr_group.store, **kwargs)
 
@@ -1651,8 +1672,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         zarr_version=None,
         zarr_format=None,
     ) -> dict[str, Dataset]:
-        from xarray.core.treenode import NodePath
-
         filename_or_obj = _normalize_path(filename_or_obj)
 
         # Check for a group and make it a parent if it exists
@@ -1675,7 +1694,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         )
 
         groups_dict = {}
-
         for path_group, store in stores.items():
             store_entrypoint = StoreBackendEntrypoint()
 
@@ -1751,44 +1769,57 @@ def _get_open_params(
             consolidated = False
 
     if _zarr_v3():
-        missing_exc = ValueError
+        # TODO: replace AssertionError after https://github.com/zarr-developers/zarr-python/issues/2821 is resolved
+        missing_exc = AssertionError
     else:
         missing_exc = zarr.errors.GroupNotFoundError
 
-    if consolidated is None:
-        try:
-            zarr_group = zarr.open_consolidated(store, **open_kwargs)
-        except (ValueError, KeyError):
-            # ValueError in zarr-python 3.x, KeyError in 2.x.
+    if consolidated in [None, True]:
+        # open the root of the store, in case there is metadata consolidated there
+        group = open_kwargs.pop("path")
+
+        if consolidated:
+            # TODO: an option to pass the metadata_key keyword
+            zarr_root_group = zarr.open_consolidated(store, **open_kwargs)
+        elif consolidated is None:
+            # same but with more error handling in case no consolidated metadata found
             try:
-                zarr_group = zarr.open_group(store, **open_kwargs)
-                emit_user_level_warning(
-                    "Failed to open Zarr store with consolidated metadata, "
-                    "but successfully read with non-consolidated metadata. "
-                    "This is typically much slower for opening a dataset. "
-                    "To silence this warning, consider:\n"
-                    "1. Consolidating metadata in this existing store with "
-                    "zarr.consolidate_metadata().\n"
-                    "2. Explicitly setting consolidated=False, to avoid trying "
-                    "to read consolidate metadata, or\n"
-                    "3. Explicitly setting consolidated=True, to raise an "
-                    "error in this case instead of falling back to try "
-                    "reading non-consolidated metadata.",
-                    RuntimeWarning,
-                )
-            except missing_exc as err:
-                raise FileNotFoundError(
-                    f"No such file or directory: '{store}'"
-                ) from err
-    elif consolidated:
-        # TODO: an option to pass the metadata_key keyword
-        zarr_group = zarr.open_consolidated(store, **open_kwargs)
+                zarr_root_group = zarr.open_consolidated(store, **open_kwargs)
+            except (ValueError, KeyError):
+                # ValueError in zarr-python 3.x, KeyError in 2.x.
+                try:
+                    zarr_root_group = zarr.open_group(store, **open_kwargs)
+                    emit_user_level_warning(
+                        "Failed to open Zarr store with consolidated metadata, "
+                        "but successfully read with non-consolidated metadata. "
+                        "This is typically much slower for opening a dataset. "
+                        "To silence this warning, consider:\n"
+                        "1. Consolidating metadata in this existing store with "
+                        "zarr.consolidate_metadata().\n"
+                        "2. Explicitly setting consolidated=False, to avoid trying "
+                        "to read consolidate metadata, or\n"
+                        "3. Explicitly setting consolidated=True, to raise an "
+                        "error in this case instead of falling back to try "
+                        "reading non-consolidated metadata.",
+                        RuntimeWarning,
+                    )
+                except missing_exc as err:
+                    raise FileNotFoundError(
+                        f"No such file or directory: '{store}'"
+                    ) from err
+
+        # but the user should still receive a DataTree whose root is the group they asked for
+        if group and group != "/":
+            zarr_group = zarr_root_group[group.removeprefix("/")]
+        else:
+            zarr_group = zarr_root_group
     else:
         if _zarr_v3():
             # we have determined that we don't want to use consolidated metadata
             # so we set that to False to avoid trying to read it
             open_kwargs["use_consolidated"] = False
         zarr_group = zarr.open_group(store, **open_kwargs)
+
     close_store_on_close = zarr_group.store is not store
 
     # we use this to determine how to handle fill_value

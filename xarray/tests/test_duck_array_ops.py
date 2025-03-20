@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from numpy import array, nan
 
-from xarray import DataArray, Dataset, cftime_range, concat
+from xarray import DataArray, Dataset, concat, date_range
 from xarray.coding.times import _NS_PER_TIME_DELTA
 from xarray.core import dtypes, duck_array_ops
 from xarray.core.duck_array_ops import (
@@ -454,7 +454,7 @@ def test_cftime_datetime_mean(dask):
     if dask and not has_dask:
         pytest.skip("requires dask")
 
-    times = cftime_range("2000", periods=4)
+    times = date_range("2000", periods=4, use_cftime=True)
     da = DataArray(times, dims=["time"])
     da_2d = DataArray(times.values.reshape(2, 2))
 
@@ -501,7 +501,10 @@ def test_mean_over_non_time_dim_of_dataset_with_dask_backed_cftime_data():
     # dimension still fails if the time variable is dask-backed.
     ds = Dataset(
         {
-            "var1": (("time",), cftime_range("2021-10-31", periods=10, freq="D")),
+            "var1": (
+                ("time",),
+                date_range("2021-10-31", periods=10, freq="D", use_cftime=True),
+            ),
             "var2": (("x",), list(range(10))),
         }
     )
@@ -900,7 +903,9 @@ def test_datetime_to_numeric_cftime(dask):
     if dask and not has_dask:
         pytest.skip("requires dask")
 
-    times = cftime_range("2000", periods=5, freq="7D", calendar="standard").values
+    times = date_range(
+        "2000", periods=5, freq="7D", calendar="standard", use_cftime=True
+    ).values
     if dask:
         import dask.array
 
@@ -946,8 +951,8 @@ def test_datetime_to_numeric_potential_overflow(time_unit: PDDatetimeUnitOptions
         pytest.skip("out-of-bounds datetime64 overflow")
     dtype = f"M8[{time_unit}]"
     times = pd.date_range("2000", periods=5, freq="7D").values.astype(dtype)
-    cftimes = cftime_range(
-        "2000", periods=5, freq="7D", calendar="proleptic_gregorian"
+    cftimes = date_range(
+        "2000", periods=5, freq="7D", calendar="proleptic_gregorian", use_cftime=True
     ).values
 
     offset = np.datetime64("0001-01-01", time_unit)

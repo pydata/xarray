@@ -442,6 +442,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     """
     from xarray.core.dataarray import DataArray
     from xarray.core.variable import Variable
+    from xarray.namedarray.pycompat import to_numpy
 
     if isinstance(array, pd.Index):
         index = array
@@ -468,7 +469,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
                 )
                 kwargs["dtype"] = "float64"
 
-        index = pd.Index(np.asarray(array), **kwargs)
+        index = pd.Index(to_numpy(array), **kwargs)
 
     return _maybe_cast_to_cftimeindex(index)
 
@@ -1045,9 +1046,11 @@ class PandasMultiIndex(PandasIndex):
                 *[lev.factorize() for lev in level_indexes], strict=True
             )
             labels_mesh = np.meshgrid(*split_labels, indexing="ij")
-            labels = [x.ravel() for x in labels_mesh]
+            labels = [x.ravel().tolist() for x in labels_mesh]
 
-            index = pd.MultiIndex(levels, labels, sortorder=0, names=variables.keys())
+            index = pd.MultiIndex(
+                levels=levels, codes=labels, sortorder=0, names=variables.keys()
+            )
         level_coords_dtype = {k: var.dtype for k, var in variables.items()}
 
         return cls(index, dim, level_coords_dtype=level_coords_dtype)
@@ -1119,7 +1122,8 @@ class PandasMultiIndex(PandasIndex):
             levels.append(cat.categories)
             level_variables[name] = var
 
-        index = pd.MultiIndex(levels, codes, names=names)
+        codes_as_lists = [list(x) for x in codes]
+        index = pd.MultiIndex(levels=levels, codes=codes_as_lists, names=names)
         level_coords_dtype = {k: var.dtype for k, var in level_variables.items()}
         obj = cls(index, dim, level_coords_dtype=level_coords_dtype)
         index_vars = obj.create_variables(level_variables)
@@ -1463,7 +1467,7 @@ class CoordinateTransformIndex(Index):
         if any(ds != dim_size0 for ds in dim_size):
             raise ValueError(
                 "CoordinateTransformIndex only supports advanced (point-wise) indexing "
-                "with xarray.DataArray or xarray.Variable objects of macthing dimensions."
+                "with xarray.DataArray or xarray.Variable objects of matching dimensions."
             )
 
         coord_labels = {

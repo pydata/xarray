@@ -40,8 +40,12 @@ def da():
 @pytest.fixture
 def cf_da():
     def _cf_da(calendar, freq="1D"):
-        times = xr.cftime_range(
-            start="1970-01-01", freq=freq, periods=10, calendar=calendar
+        times = xr.date_range(
+            start="1970-01-01",
+            freq=freq,
+            periods=10,
+            calendar=calendar,
+            use_cftime=True,
         )
         values = np.arange(10)
         return xr.DataArray(values, dims=("time",), coords={"time": times})
@@ -623,7 +627,11 @@ def test_get_clean_interp_index_potential_overflow():
     da = xr.DataArray(
         [0, 1, 2],
         dims=("time",),
-        coords={"time": xr.cftime_range("0000-01-01", periods=3, calendar="360_day")},
+        coords={
+            "time": xr.date_range(
+                "0000-01-01", periods=3, calendar="360_day", use_cftime=True
+            )
+        },
     )
     get_clean_interp_index(da, "time")
 
@@ -670,17 +678,17 @@ def test_interpolate_na_max_gap_errors(da_time):
 
 @requires_bottleneck
 @pytest.mark.parametrize(
-    "time_range_func",
-    [pd.date_range, pytest.param(xr.cftime_range, marks=requires_cftime)],
+    "use_cftime",
+    [False, pytest.param(True, marks=requires_cftime)],
 )
 @pytest.mark.parametrize("transform", [lambda x: x, lambda x: x.to_dataset(name="a")])
 @pytest.mark.parametrize(
     "max_gap", ["3h", np.timedelta64(3, "h"), pd.to_timedelta("3h")]
 )
-def test_interpolate_na_max_gap_time_specifier(
-    da_time, max_gap, transform, time_range_func
-):
-    da_time["t"] = time_range_func("2001-01-01", freq="h", periods=11)
+def test_interpolate_na_max_gap_time_specifier(da_time, max_gap, transform, use_cftime):
+    da_time["t"] = xr.date_range(
+        "2001-01-01", freq="h", periods=11, use_cftime=use_cftime
+    )
     expected = transform(
         da_time.copy(data=[np.nan, 1, 2, 3, 4, 5, np.nan, np.nan, np.nan, np.nan, 10])
     )

@@ -132,7 +132,9 @@ def test_resample(freqs, closed, label, offset) -> None:
     datetime_index = pd.date_range(
         start=start, periods=5, freq=_new_to_legacy_freq(initial_freq)
     )
-    cftime_index = xr.cftime_range(start=start, periods=5, freq=initial_freq)
+    cftime_index = xr.date_range(
+        start=start, periods=5, freq=initial_freq, use_cftime=True
+    )
     da_datetimeindex = da(datetime_index)
     da_cftimeindex = da(cftime_index)
 
@@ -174,8 +176,12 @@ def test_closed_label_defaults(freq, expected) -> None:
 def test_calendars(calendar: str) -> None:
     # Limited testing for non-standard calendars
     freq, closed, label = "8001min", None, None
-    xr_index = xr.cftime_range(
-        start="2004-01-01T12:07:01", periods=7, freq="3D", calendar=calendar
+    xr_index = xr.date_range(
+        start="2004-01-01T12:07:01",
+        periods=7,
+        freq="3D",
+        calendar=calendar,
+        use_cftime=True,
     )
     pd_index = pd.date_range(start="2004-01-01T12:07:01", periods=7, freq="3D")
     da_cftime = da(xr_index).resample(time=freq, closed=closed, label=label).mean()
@@ -204,7 +210,7 @@ def test_origin(closed, origin) -> None:
     start = "1969-12-31T12:07:01"
     index_kwargs: DateRangeKwargs = dict(start=start, periods=12, freq=initial_freq)
     datetime_index = pd.date_range(**index_kwargs)
-    cftime_index = xr.cftime_range(**index_kwargs)
+    cftime_index = xr.date_range(**index_kwargs, use_cftime=True)
     da_datetimeindex = da(datetime_index)
     da_cftimeindex = da(cftime_index)
 
@@ -219,7 +225,7 @@ def test_origin(closed, origin) -> None:
 
 @pytest.mark.parametrize("offset", ["foo", "5MS", 10])
 def test_invalid_offset_error(offset: str | int) -> None:
-    cftime_index = xr.cftime_range("2000", periods=5)
+    cftime_index = xr.date_range("2000", periods=5, use_cftime=True)
     da_cftime = da(cftime_index)
     with pytest.raises(ValueError, match="offset must be"):
         da_cftime.resample(time="2D", offset=offset)  # type: ignore[arg-type]
@@ -229,7 +235,7 @@ def test_timedelta_offset() -> None:
     timedelta = datetime.timedelta(seconds=5)
     string = "5s"
 
-    cftime_index = xr.cftime_range("2000", periods=5)
+    cftime_index = xr.date_range("2000", periods=5, use_cftime=True)
     da_cftime = da(cftime_index)
 
     timedelta_result = da_cftime.resample(time="2D", offset=timedelta).mean()

@@ -50,7 +50,7 @@ from xarray.backends.pydap_ import PydapDataStore
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
 from xarray.backends.zarr import ZarrStore
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
-from xarray.coding.cftime_offsets import cftime_range
+from xarray.coding.cftime_offsets import date_range
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
@@ -2576,7 +2576,7 @@ class ZarrBase(CFEncodedBase):
             with self.roundtrip(original) as actual:
                 assert_identical(original, actual)
 
-        # but itermediate unaligned chunks are bad
+        # but intermediate unaligned chunks are bad
         badenc = ds.chunk({"x": (3, 5, 3, 1)})
         badenc.var1.encoding["chunks"] = (3,)
         with pytest.raises(ValueError, match=r"would overlap multiple dask chunks"):
@@ -2628,12 +2628,10 @@ class ZarrBase(CFEncodedBase):
                 for var in expected.variables.keys():
                     assert self.DIMENSION_KEY not in expected[var].attrs
 
-            if has_zarr_v3:
-                # temporary workaround for https://github.com/zarr-developers/zarr-python/issues/2338
-                zarr_group.store._is_open = True
-
             # put it back and try removing from a variable
-            del zarr_group["var2"].attrs[self.DIMENSION_KEY]
+            attrs = dict(zarr_group["var2"].attrs)
+            del attrs[self.DIMENSION_KEY]
+            zarr_group["var2"].attrs.put(attrs)
 
             with pytest.raises(KeyError):
                 with xr.decode_cf(store):
@@ -3299,7 +3297,7 @@ class ZarrBase(CFEncodedBase):
     @requires_dask
     def test_chunked_cftime_datetime(self) -> None:
         # Based on @malmans2's test in PR #8253
-        times = cftime_range("2000", freq="D", periods=3)
+        times = date_range("2000", freq="D", periods=3, use_cftime=True)
         original = xr.Dataset(data_vars={"chunked_times": (["time"], times)})
         original = original.chunk({"time": 1})
         with self.roundtrip(original, open_kwargs={"chunks": {}}) as actual:
@@ -4185,7 +4183,7 @@ class TestH5NetCDFData(NetCDF4Base):
                         fx.create_dataset(k, data=v)
             with pytest.warns(UserWarning, match="The 'phony_dims' kwarg"):
                 with xr.open_dataset(tmp_file, engine="h5netcdf", group="bar") as ds:
-                    assert ds.dims == {
+                    assert ds.sizes == {
                         "phony_dim_0": 5,
                         "phony_dim_1": 5,
                         "phony_dim_2": 5,
@@ -4300,7 +4298,8 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             # `raises_regex`?). Ref https://github.com/pydata/xarray/pull/5191
             with open(tmp_file, "rb") as f:
                 f.seek(8)
-                open_dataset(f)
+                with open_dataset(f):  # ensure file gets closed
+                    pass
 
 
 @requires_h5netcdf
@@ -5267,7 +5266,9 @@ class TestPydap:
             # we don't check attributes exactly with assertDatasetIdentical()
             # because the test DAP server seems to insert some extra
             # attributes not found in the netCDF file.
-            assert actual.attrs.keys() == expected.attrs.keys()
+            # 2025/03/18 : The DAP server now modifies the keys too
+            # assert actual.attrs.keys() == expected.attrs.keys()
+            assert len(actual.attrs.keys()) == len(expected.attrs.keys())
 
         with self.create_datasets() as (actual, expected):
             assert_equal(actual[{"l": 2}], expected[{"l": 2}])
@@ -6155,6 +6156,18 @@ def test_zarr_closing_internal_zip_store():
 
 @requires_zarr
 @pytest.mark.usefixtures("default_zarr_format")
+def test_raises_key_error_on_invalid_zarr_store(tmp_path):
+    root = zarr.open_group(tmp_path / "tmp.zarr")
+    if Version(zarr.__version__) < Version("3.0.0"):
+        root.create_dataset("bar", shape=(3, 5), dtype=np.float32)
+    else:
+        root.create_array("bar", shape=(3, 5), dtype=np.float32)
+    with pytest.raises(KeyError, match=r"xarray to determine variable dimensions"):
+        xr.open_zarr(tmp_path / "tmp.zarr", consolidated=False)
+
+
+@requires_zarr
+@pytest.mark.usefixtures("default_zarr_format")
 class TestZarrRegionAuto:
     """These are separated out since we should not need to test this logic with every store."""
 
@@ -6587,11 +6600,11 @@ def test_h5netcdf_storage_options() -> None:
         ds2.to_netcdf(f2, engine="h5netcdf")
 
         files = [f"file://{f}" for f in [f1, f2]]
-        ds = xr.open_mfdataset(
+        with xr.open_mfdataset(
             files,
             engine="h5netcdf",
             concat_dim="time",
             combine="nested",
             storage_options={"skip_instance_cache": False},
-        )
-        assert_identical(xr.concat([ds1, ds2], dim="time"), ds)
+        ) as ds:
+            assert_identical(xr.concat([ds1, ds2], dim="time"), ds)
