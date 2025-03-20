@@ -5,11 +5,11 @@ import pytest
 pytest.importorskip("hypothesis")
 
 import hypothesis.strategies as st
-from hypothesis import given
+from hypothesis import given, note
 
 import xarray as xr
 import xarray.testing.strategies as xrst
-from xarray.groupers import season_to_month_tuple
+from xarray.groupers import find_independent_seasons, season_to_month_tuple
 
 
 @given(attrs=xrst.simple_attrs)
@@ -46,3 +46,18 @@ def test_property_season_month_tuple(roll, breaks):
         rolled_months[start:stop] for start, stop in itertools.pairwise(breaks)
     )
     assert expected == actual
+
+
+@given(data=st.data(), nmonths=st.integers(min_value=1, max_value=11))
+def test_property_find_independent_seasons(data, nmonths):
+    chars = "JFMAMJJASOND"
+    # if stride > nmonths, then we can't infer season order
+    stride = data.draw(st.integers(min_value=1, max_value=nmonths))
+    chars = chars + chars[:nmonths]
+    seasons = [list(chars[i : i + nmonths]) for i in range(0, 12, stride)]
+    note(seasons)
+    groups = find_independent_seasons(seasons)
+    for group in groups:
+        inds = tuple(itertools.chain(*group.inds))
+        assert len(inds) == len(set(inds))
+        assert len(group.codes) == len(set(group.codes))

@@ -604,6 +604,14 @@ def unique_value_groups(
 
 
 def season_to_month_tuple(seasons: Sequence[str]) -> tuple[tuple[int, ...], ...]:
+    """
+    >>> season_to_month_tuple(["DJF", "MAM", "JJA", "SON"])
+    ((12, 1, 2), (3, 4, 5), (6, 7, 8), (9, 10, 11))
+    >>> season_to_month_tuple(["DJFM", "MAMJ", "JJAS", "SOND"])
+    ((12, 1, 2, 3), (3, 4, 5, 6), (6, 7, 8, 9), (9, 10, 11, 12))
+    >>> season_to_month_tuple(["DJFM", "SOND"])
+    ((12, 1, 2, 3), (9, 10, 11, 12))
+    """
     initials = "JFMAMJJASOND"
     starts = dict(
         ("".join(s), i + 1)
@@ -629,7 +637,7 @@ def season_to_month_tuple(seasons: Sequence[str]) -> tuple[tuple[int, ...], ...]
     return tuple(result)
 
 
-def inds_to_string(asints: tuple[tuple[int, ...], ...]) -> tuple[str, ...]:
+def inds_to_season_string(asints: tuple[tuple[int, ...], ...]) -> tuple[str, ...]:
     inits = "JFMAMJJASOND"
     return tuple("".join([inits[i_ - 1] for i_ in t]) for t in asints)
 
@@ -660,10 +668,13 @@ def is_sorted_periodic(lst):
     return lst[-1] <= lst[0]
 
 
-@dataclass
+@dataclass(kw_only=True, frozen=True)
 class SeasonsGroup:
     seasons: tuple[str, ...]
+    # tuple[integer months] corresponding to each season
     inds: tuple[tuple[int, ...], ...]
+    # integer code for each season, this is not simply range(len(seasons))
+    # when the seasons have overlaps
     codes: Sequence[int]
 
 
@@ -671,13 +682,22 @@ def find_independent_seasons(seasons: Sequence[str]) -> Sequence[SeasonsGroup]:
     """
     Iterates though a list of seasons e.g. ["DJF", "FMA", ...],
     and splits that into multiple sequences of non-overlapping seasons.
+
+    >>> find_independent_seasons(
+    ...     ["DJF", "FMA", "AMJ", "JJA", "ASO", "OND"]
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    [SeasonsGroup(seasons=('DJF', 'AMJ', 'ASO'), inds=((12, 1, 2), (4, 5, 6), (8, 9, 10)), codes=[0, 2, 4]),
+    SeasonsGroup(seasons=('FMA', 'JJA', 'OND'), inds=((2, 3, 4), (6, 7, 8), (10, 11, 12)), codes=[1, 3, 5])]
+
+    >>> find_independent_seasons(["DJF", "MAM", "JJA", "SON"])
+    [SeasonsGroup(seasons=('DJF', 'MAM', 'JJA', 'SON'), inds=((12, 1, 2), (3, 4, 5), (6, 7, 8), (9, 10, 11)), codes=[0, 1, 2, 3])]
     """
     season_inds = season_to_month_tuple(seasons)
     grouped = defaultdict(list)
     codes = defaultdict(list)
     seen: set[tuple[int, ...]] = set()
     idx = 0
-    # This is quadratic, but the length of seasons is at most 12
+    # This is quadratic, but the number of seasons is at most 12
     for i, current in enumerate(season_inds):
         # Start with a group
         if current not in seen:
@@ -699,7 +719,7 @@ def find_independent_seasons(seasons: Sequence[str]) -> Sequence[SeasonsGroup]:
 
     grouped_ints = tuple(tuple(idx) for idx in grouped.values() if idx)
     return [
-        SeasonsGroup(seasons=inds_to_string(inds), inds=inds, codes=codes)
+        SeasonsGroup(seasons=inds_to_season_string(inds), inds=inds, codes=codes)
         for inds, codes in zip(grouped_ints, codes.values(), strict=False)
     ]
 

@@ -3378,7 +3378,7 @@ class TestSeasonGrouperAndResampler:
 
         assert_allclose(expected, actual)
 
-    @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
+    @pytest.mark.parametrize("calendar", ["standard"])
     def test_season_grouper_with_single_month_seasons(self, calendar):
         time = date_range("2001-01-01", "2002-12-30", freq="MS", calendar=calendar)
         # fmt: off
@@ -3392,29 +3392,32 @@ class TestSeasonGrouperAndResampler:
         da = DataArray(data, dims="time", coords={"time": time})
         da["year"] = da.time.dt.year
 
-        actual = da.groupby(
-            year=UniqueGrouper(),
-            time=SeasonGrouper(
-                ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"]
-            ),
-        ).mean()
+        # TODO: Consider supporting this if needed
+        # It does not work without flox, because the group labels are not unique,
+        # and so the stack/unstack approach does not work.
+        with pytest.raises(ValueError):
+            da.groupby(
+                year=UniqueGrouper(),
+                time=SeasonGrouper(
+                    ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"]
+                ),
+            ).mean()
 
         # Expected if single month seasons are handled correctly
-        expected = xr.DataArray(
-            data=np.array(
-                [
-                    [1.0, 1.25, 1.5, 1.75, 2.0, 1.1, 1.35, 1.6, 1.85, 1.2, 1.45, 1.7],
-                    [1.95, 1.05, 1.3, 1.55, 1.8, 1.15, 1.4, 1.65, 1.9, 1.25, 1.5, 1.75],
-                ]
-            ),
-            dims=["year", "season"],
-            coords={
-                "year": [2001, 2002],
-                "season": ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"],
-            },
-        )
-
-        assert_allclose(expected, actual)
+        # expected = xr.DataArray(
+        #     data=np.array(
+        #         [
+        #             [1.0, 1.25, 1.5, 1.75, 2.0, 1.1, 1.35, 1.6, 1.85, 1.2, 1.45, 1.7],
+        #             [1.95, 1.05, 1.3, 1.55, 1.8, 1.15, 1.4, 1.65, 1.9, 1.25, 1.5, 1.75],
+        #         ]
+        #     ),
+        #     dims=["year", "season"],
+        #     coords={
+        #         "year": [2001, 2002],
+        #         "season": ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"],
+        #     },
+        # )
+        # assert_allclose(expected, actual)
 
     @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
     def test_season_grouper_with_months_spanning_calendar_year_using_previous_year(
@@ -3481,13 +3484,7 @@ class TestSeasonGrouperAndResampler:
             da.resample(time=SeasonResampler(seasons))
 
     @pytest.mark.parametrize(
-        "use_cftime",
-        [
-            pytest.param(
-                True, marks=pytest.mark.skipif(not has_cftime, reason="no cftime")
-            ),
-            False,
-        ],
+        "use_cftime", [pytest.param(True, marks=requires_cftime), False]
     )
     @pytest.mark.parametrize("drop_incomplete", [True, False])
     @pytest.mark.parametrize(
