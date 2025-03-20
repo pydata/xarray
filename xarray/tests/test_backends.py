@@ -3604,26 +3604,39 @@ class TestDeprecateConsolidatedMetadataOnByDefault:
         store = zarr.storage.MemoryStore({}, read_only=False)
         # TODO I get an error if I don't create an empty root group, is that correct?
         zarr.create_group(store=store)
+        # needed for open_dataarray to work
+        zarr.create_array(
+            store=store,
+            name="foo",
+            shape=(2,),
+            chunks=(2,),
+            dtype="int32",
+            dimension_names=["x"],
+        )
         self.store = store
 
+    # TODO do these actually have different kwarg names?
     @pytest.mark.parametrize(
-        "open_func",
+        "open_func, kwarg_name",
         [
-            open_dataarray,
-            open_dataset,
-            open_datatree,
-            open_groups,
-            open_zarr,
-            load_dataarray,
-            load_dataset,
+            (open_dataset, "consolidate"),
+            (open_dataarray, "consolidate"),
+            (open_datatree, "consolidate"),
+            (open_groups, "consolidate"),
+            (open_zarr, "consolidate"),
+            (load_dataarray, "consolidate"),
+            (load_dataset, "consolidate"),
         ],
     )
-    def test_warn_on_open(self, open_func) -> None:
+    def test_warn_on_open(self, open_func, kwarg_name) -> None:
         with pytest.warns(
             PendingDeprecationWarning,
-            match="default value of the ``consolidated`` argument",
+            match=f"default value of the ``{kwarg_name}`` argument",
         ):
-            open_func(self.store, engine='zarr')
+            if open_func is open_zarr:
+                open_zarr(self.store)
+            else:
+                open_func(self.store, engine="zarr")
 
     def test_warn_on_to_zarr(self) -> None: ...
 
