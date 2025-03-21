@@ -247,9 +247,9 @@ def normalize_slice(sl: slice, size: int) -> slice:
 
     Examples
     --------
-    >>> _normalize_slice(slice(0, 9), 10)
+    >>> normalize_slice(slice(0, 9), 10)
     slice(0, 9, 1)
-    >>> _normalize_slice(slice(0, -1), 10)
+    >>> normalize_slice(slice(0, -1), 10)
     slice(0, 9, 1)
     """
     return slice(*sl.indices(size))
