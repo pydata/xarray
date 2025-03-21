@@ -1500,8 +1500,21 @@ class CoordinateTransformIndex(Index):
         name_dict: Mapping[Any, Hashable],
         dims_dict: Mapping[Any, Hashable],
     ) -> Self:
-        # TODO: maybe update self.transform coord_names, dim_size and dims attributes
-        return self
+        coord_names = self.transform.coord_names
+        dims = self.transform.dims
+        dim_size = self.transform.dim_size
+
+        if not set(coord_names) & set(name_dict) and not set(dims) & set(dims_dict):
+            return self
+
+        new_transform = copy.copy(self.transform)
+        new_transform.coord_names = tuple(name_dict.get(n, n) for n in coord_names)
+        new_transform.dims = tuple(str(dims_dict.get(d, d)) for d in dims)
+        new_transform.dim_size = {
+            str(dims_dict.get(d, d)): v for d, v in dim_size.items()
+        }
+
+        return type(self)(new_transform)
 
 
 def create_default_index_implicit(

@@ -154,6 +154,21 @@ def test_range_index_to_pandas_index() -> None:
     assert actual.equals(expected)
 
 
+def test_range_index_rename() -> None:
+    index = RangeIndex.arange("x", "x", 0.0, 1.0, 0.1)
+    ds = xr.Dataset(coords=xr.Coordinates.from_xindex(index))
+
+    actual = ds.rename_vars(x="y")
+    idx = RangeIndex.arange("y", "x", 0.0, 1.0, 0.1)
+    expected = xr.Dataset(coords=xr.Coordinates.from_xindex(idx))
+    assert_identical(actual, expected, check_default_indexes=False)
+
+    actual = ds.rename_dims(x="y")
+    idx = RangeIndex.arange("x", "y", 0.0, 1.0, 0.1)
+    expected = xr.Dataset(coords=xr.Coordinates.from_xindex(idx))
+    assert_identical(actual, expected, check_default_indexes=False)
+
+
 def test_range_index_repr() -> None:
     index = RangeIndex.arange("x", "x", 0.0, 1.0, 0.1)
     actual = repr(index)

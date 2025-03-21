@@ -19,11 +19,8 @@ class RangeCoordinateTransform(CoordinateTransform):
 
     start: float
     stop: float
-    size: int
-    coord_name: Hashable
-    dim: str
 
-    __slots__ = ("coord_name", "dim", "size", "start", "stop")
+    __slots__ = ("start", "stop")
 
     def __init__(
         self,
@@ -42,17 +39,26 @@ class RangeCoordinateTransform(CoordinateTransform):
         self.start = start
         self.stop = stop
         self.step = (stop - start) / size
-        self.coord_name = coord_name
-        self.dim = dim
-        self.size = size
+
+    @property
+    def coord_name(self) -> Hashable:
+        return self.coord_names[0]
+
+    @property
+    def dim(self) -> str:
+        return self.dims[0]
+
+    @property
+    def size(self) -> int:
+        return self.dim_size[self.dim]
 
     def forward(self, dim_positions: dict[str, Any]) -> dict[Hashable, Any]:
         positions = dim_positions[self.dim]
         labels = self.start + positions * self.step
-        return {self.dim: labels}
+        return {self.coord_name: labels}
 
     def reverse(self, coord_labels: dict[Hashable, Any]) -> dict[str, Any]:
-        labels = coord_labels[self.coord_names[0]]
+        labels = coord_labels[self.coord_name]
         positions = (labels - self.start) / self.step
         return {self.dim: positions}
 
@@ -100,15 +106,9 @@ class RangeIndex(CoordinateTransformIndex):
     """
 
     transform: RangeCoordinateTransform
-    dim: str
-    coord_name: Hashable
-    size: int
 
     def __init__(self, transform: RangeCoordinateTransform):
         super().__init__(transform)
-        self.dim = self.transform.dim
-        self.size = self.transform.size
-        self.coord_name = self.transform.coord_names[0]
 
     @classmethod
     def arange(
@@ -252,6 +252,18 @@ class RangeIndex(CoordinateTransformIndex):
     def step(self) -> float:
         """Returns the spacing between values."""
         return self.transform.step
+
+    @property
+    def coord_name(self) -> Hashable:
+        return self.transform.coord_names[0]
+
+    @property
+    def dim(self) -> str:
+        return self.transform.dims[0]
+
+    @property
+    def size(self) -> int:
+        return self.transform.dim_size[self.dim]
 
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
