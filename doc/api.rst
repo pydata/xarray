@@ -1573,6 +1573,7 @@ Custom Indexes
    :toctree: generated/
 
    CFTimeIndex
+   indexes.RangeIndex
 
 Creating custom indexes
 -----------------------

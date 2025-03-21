@@ -82,6 +82,23 @@ class RangeCoordinateTransform(CoordinateTransform):
 
 
 class RangeIndex(CoordinateTransformIndex):
+    """Xarray index implementing a simple bounded 1-dimension interval with
+    evenly spaced, monotonic floating-point values.
+
+    This index is memory-saving, i.e., the values of its associated coordinate
+    variable are not materialized in memory.
+
+    Do not use :py:meth:`~xarray.indexes.RangeIndex.__init__` directly. Instead
+    use :py:meth:`~xarray.indexes.RangeIndex.arange` or
+    :py:meth:`~xarray.indexes.RangeIndex.linspace`, which are similar to
+    :py:func:`numpy.arange` and :py:func:`numpy.linspace`.
+
+    In the case of a monotonic integer range, it is better using a
+    :py:class:`~xarray.indexes.PandasIndex` that wraps a
+    :py:class:`pandas.RangeIndex`.
+
+    """
+
     transform: RangeCoordinateTransform
     dim: str
     coord_name: Hashable
@@ -99,10 +116,31 @@ class RangeIndex(CoordinateTransformIndex):
         coord_name: Hashable,
         dim: str,
         start: float = 0.0,
-        stop: float = 0.0,
+        stop: float = 1.0,
         step: float = 1.0,
         dtype: Any = None,
     ) -> "RangeIndex":
+        """Create a new RangeIndex from given start, stop and step values.
+
+        Parameters
+        ----------
+        coord_name : Hashable
+            Name of the (lazy) coordinate variable that will be created and
+            associated with the new index.
+        dim : str
+            Dimension name.
+        start : float, optional
+            Start of interval (default: 0.0). The interval includes this value.
+        stop : float, optional
+            End of interval (default: 1.0). In general the interval does not
+            include this value, except floating point round-off affects the
+            size of the dimension.
+        step : float, optional
+            Spacing between values (default: 1.0).
+        dtype : dtype, optional
+            The dtype of the coordinate variable (default: float64).
+
+        """
         size = math.ceil((stop - start) / step)
 
         transform = RangeCoordinateTransform(
@@ -122,6 +160,28 @@ class RangeIndex(CoordinateTransformIndex):
         endpoint: bool = True,
         dtype: Any = None,
     ) -> "RangeIndex":
+        """Create a new RangeIndex from given start / stop values and number of
+        values.
+
+        Parameters
+        ----------
+        coord_name : Hashable
+            Name of the (lazy) coordinate variable that will be created and
+            associated with the new index.
+        dim : str
+            Dimension name.
+        start : float
+            Start of interval. The interval includes this value.
+        stop : float, optional
+            End of interval. The interval includes this value if ``endpoint=True``.
+        num : float, optional
+            Number of values in the interval, i.e., dimension size (default: 50).
+        endpoint : bool, optional
+            If True (default), the ``stop`` value is included in the interval.
+        dtype : dtype, optional
+            The dtype of the coordinate variable (default: float64).
+
+        """
         if endpoint:
             stop += (stop - start) / (num - 1)
 
