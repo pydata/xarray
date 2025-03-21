@@ -155,7 +155,7 @@ class RangeIndex(CoordinateTransformIndex):
         Data variables:
             *empty*
         Indexes:
-            x        RangeIndex
+            x        RangeIndex (start=0, stop=1, step=0.2)
 
         """
         size = math.ceil((stop - start) / step)
@@ -213,7 +213,7 @@ class RangeIndex(CoordinateTransformIndex):
         Data variables:
             *empty*
         Indexes:
-            x        RangeIndex
+            x        RangeIndex (start=0, stop=1.25, step=0.25)
 
         """
         if endpoint:
@@ -238,6 +238,21 @@ class RangeIndex(CoordinateTransformIndex):
             "`Coordinates.from_xindex()`"
         )
 
+    @property
+    def start(self) -> float:
+        """Returns the start of the interval (the interval includes this value)."""
+        return self.transform.start
+
+    @property
+    def stop(self) -> float:
+        """Returns the end of the interval (the interval does not include this value)."""
+        return self.transform.stop
+
+    @property
+    def step(self) -> float:
+        """Returns the spacing between values."""
+        return self.transform.step
+
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
     ) -> Index | None:
@@ -246,13 +261,10 @@ class RangeIndex(CoordinateTransformIndex):
         if isinstance(idxer, slice):
             return RangeIndex(self.transform.slice(idxer))
         elif isinstance(idxer, Variable) and idxer.ndim > 1:
-            # vectorized (fancy) indexing with n-dimensional Variable: drop the index
             return None
         elif np.ndim(idxer) == 0:
-            # scalar value
             return None
         else:
-            # otherwise convert to a PandasIndex
             values = self.transform.forward({self.dim: np.asarray(idxer)})[
                 self.coord_name
             ]
@@ -314,3 +326,12 @@ class RangeIndex(CoordinateTransformIndex):
     def to_pandas_index(self) -> pd.Index:
         values = self.transform.generate_coords()
         return pd.Index(values[self.dim])
+
+    def _repr_inline_(self, max_width) -> str:
+        return repr(self)
+
+    def __repr__(self) -> str:
+        params_fmt = (
+            f"start={self.start:.3g}, stop={self.stop:.3g}, step={self.step:.3g}"
+        )
+        return f"{self.__class__.__name__} ({params_fmt})"

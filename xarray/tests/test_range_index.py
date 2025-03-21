@@ -19,6 +19,9 @@ def test_range_index_arange() -> None:
     actual = xr.Coordinates.from_xindex(index)
     expected = xr.Coordinates({"x": np.arange(0.0, 1.0, 0.1)})
     assert_equal(actual, expected, check_default_indexes=False)
+    assert index.start == 0.0
+    assert index.stop == 1.0
+    assert index.step == 0.1
 
 
 def test_range_index_linspace() -> None:
@@ -26,11 +29,17 @@ def test_range_index_linspace() -> None:
     actual = xr.Coordinates.from_xindex(index)
     expected = xr.Coordinates({"x": np.linspace(0.0, 1.0, num=10, endpoint=False)})
     assert_equal(actual, expected, check_default_indexes=False)
+    assert index.start == 0.0
+    assert index.stop == 1.0
+    assert index.step == 0.1
 
     index = RangeIndex.linspace("x", "x", 0.0, 1.0, num=11, endpoint=True)
     actual = xr.Coordinates.from_xindex(index)
     expected = xr.Coordinates({"x": np.linspace(0.0, 1.0, num=11, endpoint=True)})
     assert_allclose(actual, expected, check_default_indexes=False)
+    assert index.start == 0.0
+    assert index.stop == 1.1
+    assert index.step == 0.1
 
 
 def test_range_index_dtype() -> None:
@@ -143,3 +152,12 @@ def test_range_index_to_pandas_index() -> None:
     actual = ds.indexes["x"]
     expected = pd.Index(np.arange(0.0, 1.0, 0.1))
     assert actual.equals(expected)
+
+
+def test_range_index_repr() -> None:
+    index = RangeIndex.arange("x", "x", 0.0, 1.0, 0.1)
+    actual = repr(index)
+    expected = "RangeIndex (start=0, stop=1, step=0.1)"
+    assert actual == expected
+
+    assert repr(index) == index._repr_inline_(max_width=None)
