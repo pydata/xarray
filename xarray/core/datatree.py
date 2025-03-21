@@ -12,7 +12,17 @@ from collections.abc import (
     Mapping,
 )
 from html import escape
-from typing import TYPE_CHECKING, Any, Literal, NoReturn, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Concatenate,
+    Literal,
+    NoReturn,
+    ParamSpec,
+    TypeVar,
+    Union,
+    overload,
+)
 
 from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
@@ -21,7 +31,8 @@ from xarray.core.alignment import align
 from xarray.core.common import TreeAttrAccessMixin, get_chunksizes
 from xarray.core.coordinates import Coordinates, DataTreeCoordinates
 from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset, DataVariables
+from xarray.core.dataset import Dataset
+from xarray.core.dataset_variables import DataVariables
 from xarray.core.datatree_mapping import (
     map_over_datasets,
 )
@@ -79,18 +90,23 @@ if TYPE_CHECKING:
 # """
 # DEVELOPERS' NOTE
 # ----------------
-# The idea of this module is to create a `DataTree` class which inherits the tree structure from TreeNode, and also copies
-# the entire API of `xarray.Dataset`, but with certain methods decorated to instead map the dataset function over every
-# node in the tree. As this API is copied without directly subclassing `xarray.Dataset` we instead create various Mixin
-# classes (in ops.py) which each define part of `xarray.Dataset`'s extensive API.
+# The idea of this module is to create a `DataTree` class which inherits the tree
+# structure from TreeNode, and also copies the entire API of `xarray.Dataset`, but with
+# certain methods decorated to instead map the dataset function over every node in the
+# tree. As this API is copied without directly subclassing `xarray.Dataset` we instead
+# create various Mixin classes (in ops.py) which each define part of `xarray.Dataset`'s
+# extensive API.
 #
-# Some of these methods must be wrapped to map over all nodes in the subtree. Others are fine to inherit unaltered
-# (normally because they (a) only call dataset properties and (b) don't return a dataset that should be nested into a new
-# tree) and some will get overridden by the class definition of DataTree.
+# Some of these methods must be wrapped to map over all nodes in the subtree. Others are
+# fine to inherit unaltered (normally because they (a) only call dataset properties and
+# (b) don't return a dataset that should be nested into a new tree) and some will get
+# overridden by the class definition of DataTree.
 # """
 
 
 T_Path = Union[str, NodePath]
+T = TypeVar("T")
+P = ParamSpec("P")
 
 
 def _collect_data_and_coord_variables(
@@ -1378,6 +1394,54 @@ class DataTree(
         }
         return DataTree.from_dict(filtered_nodes, name=self.name)
 
+    def filter_like(self, other: DataTree) -> DataTree:
+        """
+        Filter a datatree like another datatree.
+
+        Returns a new tree containing only the nodes in the original tree which are also present in the other tree.
+
+        Parameters
+        ----------
+        other : DataTree
+            The tree to filter this tree by.
+
+        Returns
+        -------
+        DataTree
+
+        See Also
+        --------
+        filter
+        isomorphic
+
+        Examples
+        --------
+
+        >>> dt = DataTree.from_dict(
+        ...     {
+        ...         "/a/A": None,
+        ...         "/a/B": None,
+        ...         "/b/A": None,
+        ...         "/b/B": None,
+        ...     }
+        ... )
+        >>> other = DataTree.from_dict(
+        ...     {
+        ...         "/a/A": None,
+        ...         "/b/A": None,
+        ...     }
+        ... )
+        >>> dt.filter_like(other)
+        <xarray.DataTree>
+        Group: /
+        ├── Group: /a
+        │   └── Group: /a/A
+        └── Group: /b
+            └── Group: /b/A
+        """
+        other_keys = {key for key, _ in other.subtree_with_keys}
+        return self.filter(lambda node: node.relative_to(self) in other_keys)
+
     def match(self, pattern: str) -> DataTree:
         """
         Return nodes with paths matching pattern.
@@ -1428,6 +1492,7 @@ class DataTree(
         self,
         func: Callable,
         *args: Any,
+        kwargs: Mapping[str, Any] | None = None,
     ) -> DataTree | tuple[DataTree, ...]:
         """
         Apply a function to every dataset in this subtree, returning a new tree which stores the results.
@@ -1445,7 +1510,10 @@ class DataTree(
 
             Function will not be applied to any nodes without datasets.
         *args : tuple, optional
-            Positional arguments passed on to `func`.
+            Positional arguments passed on to `func`. Any DataTree arguments will be
+            converted to Dataset objects via `.dataset`.
+        kwargs : dict, optional
+            Optional keyword arguments passed directly to ``func``.
 
         Returns
         -------
@@ -1458,11 +1526,30 @@ class DataTree(
         """
         # TODO this signature means that func has no way to know which node it is being called upon - change?
         # TODO fix this typing error
-        return map_over_datasets(func, self, *args)
+        return map_over_datasets(func, self, *args, kwargs=kwargs)
+
+    @overload
+    def pipe(
+        self,
+        func: Callable[Concatenate[Self, P], T],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T: ...
+
+    @overload
+    def pipe(
+        self,
+        func: tuple[Callable[..., T], str],
+        *args: Any,
+        **kwargs: Any,
+    ) -> T: ...
 
     def pipe(
-        self, func: Callable | tuple[Callable, str], *args: Any, **kwargs: Any
-    ) -> Any:
+        self,
+        func: Callable[Concatenate[Self, P], T] | tuple[Callable[..., T], str],
+        *args: Any,
+        **kwargs: Any,
+    ) -> T:
         """Apply ``func(self, *args, **kwargs)``
 
         This method replicates the pandas method of the same name.
@@ -1482,7 +1569,7 @@ class DataTree(
 
         Returns
         -------
-        object : Any
+        object : T
             the return type of ``func``.
 
         Notes
@@ -1510,15 +1597,19 @@ class DataTree(
 
         """
         if isinstance(func, tuple):
-            func, target = func
+            # Use different var when unpacking function from tuple because the type
+            # signature of the unpacked function differs from the expected type
+            # signature in the case where only a function is given, rather than a tuple.
+            # This makes type checkers happy at both call sites below.
+            f, target = func
             if target in kwargs:
                 raise ValueError(
                     f"{target} is both the pipe target and a keyword argument"
                 )
             kwargs[target] = self
-        else:
-            args = (self,) + args
-        return func(*args, **kwargs)
+            return f(*args, **kwargs)
+
+        return func(self, *args, **kwargs)
 
     # TODO some kind of .collapse() or .flatten() method to merge a subtree
 

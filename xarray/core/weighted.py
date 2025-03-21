@@ -171,7 +171,7 @@ class Weighted(Generic[T_Xarray]):
 
         def _weight_check(w):
             # Ref https://github.com/pydata/xarray/pull/4559/files#r515968670
-            if duck_array_ops.isnull(w).any():
+            if duck_array_ops.array_any(duck_array_ops.isnull(w)):
                 raise ValueError(
                     "`weights` cannot contain missing values. "
                     "Missing values can be replaced by `weights.fillna(0)`."

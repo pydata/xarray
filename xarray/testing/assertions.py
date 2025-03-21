@@ -296,7 +296,7 @@ def assert_duckarray_equal(x, y, err_msg="", verbose=True):
     if (utils.is_duck_array(x) and utils.is_scalar(y)) or (
         utils.is_scalar(x) and utils.is_duck_array(y)
     ):
-        equiv = (x == y).all()
+        equiv = duck_array_ops.array_all(x == y)
     else:
         equiv = duck_array_ops.array_equiv(x, y)
     assert equiv, _format_message(x, y, err_msg=err_msg, verbose=verbose)

@@ -119,12 +119,12 @@ def did_you_mean(
     word: Hashable, possibilities: Iterable[Hashable], *, n: int = 10
 ) -> str:
     """
-    Suggest a few correct words based on a list of possibilites
+    Suggest a few correct words based on a list of possibilities
 
     Parameters
     ----------
     word : Hashable
-        Word to compare to a list of possibilites.
+        Word to compare to a list of possibilities.
     possibilities : Iterable of Hashable
         The iterable of Hashable that contains the correct values.
     n : int, default: 10
@@ -142,15 +142,15 @@ def did_you_mean(
     https://en.wikipedia.org/wiki/String_metric
     """
     # Convert all values to string, get_close_matches doesn't handle all hashables:
-    possibilites_str: dict[str, Hashable] = {str(k): k for k in possibilities}
+    possibilities_str: dict[str, Hashable] = {str(k): k for k in possibilities}
 
     msg = ""
     if len(
         best_str := difflib.get_close_matches(
-            str(word), list(possibilites_str.keys()), n=n
+            str(word), list(possibilities_str.keys()), n=n
         )
     ):
-        best = tuple(possibilites_str[k] for k in best_str)
+        best = tuple(possibilities_str[k] for k in best_str)
         msg = f"Did you mean one of {best}?"
 
     return msg
@@ -1294,3 +1294,28 @@ def result_name(objects: Iterable[Any]) -> Any:
     else:
         name = None
     return name
+
+
+def _get_func_args(func, param_names):
+    """Use `inspect.signature` to try accessing `func` args. Otherwise, ensure
+    they are provided by user.
+    """
+    try:
+        func_args = inspect.signature(func).parameters
+    except ValueError as err:
+        func_args = {}
+        if not param_names:
+            raise ValueError(
+                "Unable to inspect `func` signature, and `param_names` was not provided."
+            ) from err
+    if param_names:
+        params = param_names
+    else:
+        params = list(func_args)[1:]
+        if any(
+            (p.kind in [p.VAR_POSITIONAL, p.VAR_KEYWORD]) for p in func_args.values()
+        ):
+            raise ValueError(
+                "`param_names` must be provided because `func` takes variable length arguments."
+            )
+    return params, func_args

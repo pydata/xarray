@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import datetime
 import warnings
 from collections.abc import (
@@ -522,6 +523,7 @@ class DataArray(
         variable: Variable | None = None,
         coords=None,
         name: Hashable | None | Default = _default,
+        attrs=_default,
         indexes=None,
     ) -> Self:
         if variable is None:
@@ -532,6 +534,11 @@ class DataArray(
             indexes = self._indexes
         if name is _default:
             name = self.name
+        if attrs is _default:
+            attrs = copy.copy(self.attrs)
+        else:
+            variable = variable.copy()
+            variable.attrs = attrs
         return type(self)(variable, coords, name=name, indexes=indexes, fastpath=True)
 
     def _replace_maybe_drop_dims(
@@ -886,7 +893,7 @@ class DataArray(
         return dict(zip(self.dims, key, strict=True))
 
     def _getitem_coord(self, key: Any) -> Self:
-        from xarray.core.dataset import _get_virtual_variable
+        from xarray.core.dataset_utils import _get_virtual_variable
 
         try:
             var = self._coords[key]
@@ -1966,8 +1973,8 @@ class DataArray(
             names to pandas.Index objects, which provides coordinates upon
             which to index the variables in this dataset. The indexes on this
             other object need not be the same as the indexes on this
-            dataset. Any mis-matched index values will be filled in with
-            NaN, and any mis-matched dimension names will simply be ignored.
+            dataset. Any mismatched index values will be filled in with
+            NaN, and any mismatched dimension names will simply be ignored.
         method : {None, "nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method to use for filling index values from other not found on this
             data array:
@@ -2148,8 +2155,8 @@ class DataArray(
         ----------
         indexers : dict, optional
             Dictionary with keys given by dimension names and values given by
-            arrays of coordinates tick labels. Any mis-matched coordinate
-            values will be filled in with NaN, and any mis-matched dimension
+            arrays of coordinates tick labels. Any mismatched coordinate
+            values will be filled in with NaN, and any mismatched dimension
             names will simply be ignored.
             One of indexers or indexers_kwargs must be provided.
         copy : bool, optional
@@ -5618,7 +5625,7 @@ class DataArray(
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
         ...
-        >>> time = xr.cftime_range("1990-01", "1992-01", freq="ME")
+        >>> time = xr.date_range("1990-01", "1992-01", freq="ME", use_cftime=True)
         >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)
         >>> array = xr.DataArray(
@@ -7575,6 +7582,11 @@ class DataArray(
         -------
         DataArray
         """
-        return (
-            self._to_temp_dataset().drop_attrs(deep=deep).pipe(self._from_temp_dataset)
-        )
+        if not deep:
+            return self._replace(attrs={})
+        else:
+            return (
+                self._to_temp_dataset()
+                .drop_attrs(deep=deep)
+                .pipe(self._from_temp_dataset)
+            )
