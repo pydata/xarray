@@ -13,6 +13,7 @@ import sys
 import tempfile
 import uuid
 import warnings
+from collections import ChainMap
 from collections.abc import Generator, Iterator, Mapping
 from contextlib import ExitStack
 from io import BytesIO
@@ -3342,6 +3343,58 @@ class ZarrBase(CFEncodedBase):
 
             observed_keys_2 = sorted(zstore_mut.array_keys())
             assert observed_keys_2 == sorted(array_keys + [new_key])
+
+    @requires_dask
+    @pytest.mark.parametrize("dtype", [int, float])
+    def test_zarr_fill_value_setting(self, dtype):
+        # When zarr_format=2, _FillValue sets fill_value
+        # When zarr_format=3, fill_value is set independently
+        # We test this by writing a dask array with compute=False,
+        # on read we should receive chunks filled with `fill_value`
+        fv = -1
+        ds = xr.Dataset(
+            {"foo": ("x", dask.array.from_array(np.array([0, 0, 0], dtype=dtype)))}
+        )
+        expected = xr.Dataset({"foo": ("x", [fv] * 3)})
+
+        if zarr.config.get("default_zarr_format") == 2:
+            attr = "_FillValue"
+            expected.foo.attrs[attr] = fv
+        else:
+            attr = "fill_value"
+            if dtype is float:
+                # for floats, Xarray inserts a default `np.nan`
+                expected.foo.attrs["_FillValue"] = np.nan
+
+        open_kwargs = {"mask_and_scale": False, "consolidated": False}
+        save_kwargs = dict(compute=False, consolidated=False)
+        with self.roundtrip(
+            ds,
+            save_kwargs=ChainMap(save_kwargs, dict(encoding={"foo": {attr: fv}})),
+            open_kwargs=open_kwargs,
+        ) as actual:
+            assert_identical(actual, expected)
+
+        ds.foo.encoding[attr] = fv
+        with self.roundtrip(
+            ds, save_kwargs=save_kwargs, open_kwargs=open_kwargs
+        ) as actual:
+            assert_identical(actual, expected)
+
+        if zarr.config.get("default_zarr_format") == 2:
+            ds.drop_encoding()
+            with pytest.raises(ValueError, match="_FillValue"):
+                with self.roundtrip(
+                    ds,
+                    save_kwargs=ChainMap(
+                        save_kwargs, dict(encoding={"foo": {"fill_value": fv}})
+                    ),
+                    open_kwargs=open_kwargs,
+                ):
+                    pass
+            # TODO: this doesn't fail because of the
+            # ``raise_on_invalid=vn in check_encoding_set`` line in zarr.py
+            # ds.foo.encoding["fill_value"] = fv
 
 
 @requires_zarr
