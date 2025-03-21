@@ -179,14 +179,31 @@ def encode_zarr_attr_value(value):
     return encoded
 
 
-class ZarrArrayWrapper(BackendArray):
-    __slots__ = ("_array", "dtype", "shape")
+def _is_coordinate_variable(zarr_array, name):
+    if _zarr_v3():
+        if zarr_array.metadata.zarr_format == 2:
+            is_coordinate = name in zarr_array.metadata.attributes.get(
+                "_ARRAY_DIMENSIONS", []
+            )
+        else:
+            is_coordinate = name in (zarr_array.metadata.dimension_names or [])
+    else:
+        is_coordinate = name in zarr_array.attrs.get("_ARRAY_DIMENSIONS", [])
+    return is_coordinate
 
-    def __init__(self, zarr_array):
+
+class ZarrArrayWrapper(BackendArray):
+    __slots__ = ("_array", "coords_buffer_prototype", "dtype", "is_coordinate", "shape")
+
+    def __init__(
+        self, zarr_array, is_coordinate: bool, coords_buffer_prototype: Any | None
+    ):
         # some callers attempt to evaluate an array if an `array` property exists on the object.
         # we prefix with _ to avoid this inference.
         self._array = zarr_array
         self.shape = self._array.shape
+        self.is_coordinate = is_coordinate
+        self.coords_buffer_prototype = coords_buffer_prototype
 
         # preserve vlen string object dtype (GH 7328)
         if (
@@ -210,7 +227,14 @@ class ZarrArrayWrapper(BackendArray):
         return self._array.vindex[key]
 
     def _getitem(self, key):
-        return self._array[key]
+        kwargs = {}
+        if _zarr_v3():
+            if self.is_coordinate:
+                prototype = self.coords_buffer_prototype
+            else:
+                prototype = None
+            kwargs["prototype"] = prototype
+        return self._array.get_basic_selection(key, **kwargs)
 
     def __getitem__(self, key):
         array = self._array
@@ -616,6 +640,7 @@ class ZarrStore(AbstractWritableDataStore):
         "_cache_members",
         "_close_store_on_close",
         "_consolidate_on_close",
+        "_coords_buffer_prototype",
         "_group",
         "_members",
         "_mode",
@@ -647,6 +672,7 @@ class ZarrStore(AbstractWritableDataStore):
         use_zarr_fill_value_as_mask=None,
         write_empty: bool | None = None,
         cache_members: bool = True,
+        coords_buffer_prototype: Any | None = None,
     ):
         (
             zarr_group,
@@ -690,6 +716,7 @@ class ZarrStore(AbstractWritableDataStore):
                 close_store_on_close,
                 use_zarr_fill_value_as_mask,
                 cache_members=cache_members,
+                coords_buffer_prototype=coords_buffer_prototype,
             )
             for group, group_store in group_members.items()
         }
@@ -714,6 +741,7 @@ class ZarrStore(AbstractWritableDataStore):
         use_zarr_fill_value_as_mask=None,
         write_empty: bool | None = None,
         cache_members: bool = True,
+        coords_buffer_prototype: Any | None = None,
     ):
         (
             zarr_group,
@@ -745,6 +773,7 @@ class ZarrStore(AbstractWritableDataStore):
             close_store_on_close,
             use_zarr_fill_value_as_mask,
             cache_members,
+            coords_buffer_prototype,
         )
 
     def __init__(
@@ -759,6 +788,7 @@ class ZarrStore(AbstractWritableDataStore):
         close_store_on_close: bool = False,
         use_zarr_fill_value_as_mask=None,
         cache_members: bool = True,
+        coords_buffer_prototype: Any | None = None,
     ):
         self.zarr_group = zarr_group
         self._read_only = self.zarr_group.read_only
@@ -774,6 +804,14 @@ class ZarrStore(AbstractWritableDataStore):
         self._use_zarr_fill_value_as_mask = use_zarr_fill_value_as_mask
         self._cache_members: bool = cache_members
         self._members: dict[str, ZarrArray | ZarrGroup] = {}
+        if _zarr_v3() and coords_buffer_prototype is None:
+            # Once zarr-v3 is required we can just have this as the default
+            # https://github.com/zarr-developers/zarr-python/issues/2871
+            # Use the public API once available
+            from zarr.core.buffer.cpu import buffer_prototype
+
+            coords_buffer_prototype = buffer_prototype
+        self._coords_buffer_prototype = coords_buffer_prototype
 
         if self._cache_members:
             # initialize the cache
@@ -832,7 +870,15 @@ class ZarrStore(AbstractWritableDataStore):
 
     def open_store_variable(self, name):
         zarr_array = self.members[name]
-        data = indexing.LazilyIndexedArray(ZarrArrayWrapper(zarr_array))
+        is_coordinate = _is_coordinate_variable(zarr_array, name)
+
+        data = indexing.LazilyIndexedArray(
+            ZarrArrayWrapper(
+                zarr_array,
+                is_coordinate=is_coordinate,
+                coords_buffer_prototype=self._coords_buffer_prototype,
+            )
+        )
         try_nczarr = self._mode == "r"
         dimensions, attributes = _get_zarr_dims_and_attrs(
             zarr_array, DIMENSION_KEY, try_nczarr
@@ -1353,6 +1399,7 @@ def open_zarr(
     use_zarr_fill_value_as_mask=None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
+    coords_buffer_prototype: Any | None = None,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -1463,6 +1510,12 @@ def open_zarr(
         chunked arrays, via whichever chunk manager is specified through the ``chunked_array_type`` kwarg.
         Defaults to ``{'manager': 'dask'}``, meaning additional kwargs will be passed eventually to
         :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+    coords_buffer_prototype : zarr.buffer.BufferPrototype, optional
+        The buffer prototype to use for loading coordinate arrays. Zarr offers control over
+        which device's memory buffers are read into. By default, xarray will always load
+        *coordinate* buffers into host (CPU) memory, regardless of the global zarr
+        configuration. To override this behavior, explicitly pass the buffer prototype
+        to use for coordinates here.
 
     Returns
     -------
@@ -1506,6 +1559,7 @@ def open_zarr(
         "storage_options": storage_options,
         "zarr_version": zarr_version,
         "zarr_format": zarr_format,
+        "coords_buffer_prototype": coords_buffer_prototype,
     }
 
     ds = open_dataset(
@@ -1578,6 +1632,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         engine=None,
         use_zarr_fill_value_as_mask=None,
         cache_members: bool = True,
+        coords_buffer_prototype: Any | None = None,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         if not store:
@@ -1594,6 +1649,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 use_zarr_fill_value_as_mask=None,
                 zarr_format=zarr_format,
                 cache_members=cache_members,
+                coords_buffer_prototype=coords_buffer_prototype,
             )
 
         store_entrypoint = StoreBackendEntrypoint()
@@ -1629,6 +1685,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         zarr_version=None,
         zarr_format=None,
+        coords_buffer_prototype: Any | None = None,
     ) -> DataTree:
         filename_or_obj = _normalize_path(filename_or_obj)
         groups_dict = self.open_groups_as_dict(
@@ -1648,6 +1705,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             storage_options=storage_options,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
+            coords_buffer_prototype=coords_buffer_prototype,
         )
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
@@ -1671,6 +1729,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         zarr_version=None,
         zarr_format=None,
+        coords_buffer_prototype: Any | None = None,
     ) -> dict[str, Dataset]:
         filename_or_obj = _normalize_path(filename_or_obj)
 
@@ -1691,6 +1750,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             storage_options=storage_options,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
+            coords_buffer_prototype=coords_buffer_prototype,
         )
 
         groups_dict = {}
