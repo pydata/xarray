@@ -3357,7 +3357,10 @@ class ZarrBase(CFEncodedBase):
         )
         expected = xr.Dataset({"foo": ("x", [fv] * 3)})
 
-        if zarr.config.get("default_zarr_format") == 2:
+        zarr_format_2 = (
+            has_zarr_v3 and zarr.config.get("default_zarr_format") == 2
+        ) or not has_zarr_v3
+        if zarr_format_2:
             attr = "_FillValue"
             expected.foo.attrs[attr] = fv
         else:
@@ -3381,7 +3384,7 @@ class ZarrBase(CFEncodedBase):
         ) as actual:
             assert_identical(actual, expected)
 
-        if zarr.config.get("default_zarr_format") == 2:
+        if zarr_format_2:
             ds = ds.drop_encoding()
             with pytest.raises(ValueError, match="_FillValue"):
                 with self.roundtrip(
