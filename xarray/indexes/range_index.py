@@ -140,6 +140,23 @@ class RangeIndex(CoordinateTransformIndex):
         dtype : dtype, optional
             The dtype of the coordinate variable (default: float64).
 
+        Examples
+        --------
+        >>> from xarray.indexes import RangeIndex
+
+        >>> index = RangeIndex.arange("x", "x", 0.0, 1.0, 0.2)
+        >>> ds = xr.Dataset(coords=xr.Coordinates.from_xindex(index))
+
+        >>> ds
+        <xarray.Dataset> Size: 40B
+        Dimensions:  (x: 5)
+        Coordinates:
+          * x        (x) float64 40B 0.0 0.2 0.4 0.6 0.8
+        Data variables:
+            *empty*
+        Indexes:
+            x        RangeIndex
+
         """
         size = math.ceil((stop - start) / step)
 
@@ -180,6 +197,23 @@ class RangeIndex(CoordinateTransformIndex):
             If True (default), the ``stop`` value is included in the interval.
         dtype : dtype, optional
             The dtype of the coordinate variable (default: float64).
+
+        Examples
+        --------
+        >>> from xarray.indexes import RangeIndex
+
+        >>> index = RangeIndex.linspace("x", "x", 0.0, 1.0, 5)
+        >>> ds = xr.Dataset(coords=xr.Coordinates.from_xindex(index))
+
+        >>> ds
+        <xarray.Dataset> Size: 40B
+        Dimensions:  (x: 5)
+        Coordinates:
+          * x        (x) float64 40B 0.0 0.25 0.5 0.75 1.0
+        Data variables:
+            *empty*
+        Indexes:
+            x        RangeIndex
 
         """
         if endpoint:
