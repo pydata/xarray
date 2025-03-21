@@ -1778,8 +1778,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         copy: bool | None = None,
     ) -> np.ndarray:
         if dtype is None and is_valid_numpy_dtype(self.dtype):
-            dtype = self.dtype
-            dtype = cast(np.dtype, dtype)
+            dtype = cast(np.dtype, self.dtype)
         else:
             dtype = get_valid_numpy_dtype(self.array)
         array = self.array
