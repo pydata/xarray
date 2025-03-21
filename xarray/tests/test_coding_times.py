@@ -1304,6 +1304,19 @@ def test_decode_float_datetime():
     np.testing.assert_equal(actual, expected)
 
 
+def test_roundtrip_float32_datetime():
+    expected = np.array([1867128, 1867134, 1867140], dtype="float32")
+    units = "hours since 1800-01-01"
+    calendar = "standard"
+
+    arr = decode_cf_datetime(expected, units=units, calendar=calendar, use_cftime=False)
+    actual, _, _ = encode_cf_datetime(
+        arr, units=units, calendar=calendar, dtype=expected.dtype
+    )
+    np.testing.assert_equal(actual, expected)
+    assert actual.dtype == expected.dtype
+
+
 @pytest.mark.parametrize("time_unit", ["ms", "us", "ns"])
 def test_decode_float_datetime_with_decimals(
     time_unit: PDDatetimeUnitOptions,
