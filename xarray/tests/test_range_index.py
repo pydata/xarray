@@ -39,6 +39,16 @@ def test_range_index_dtype() -> None:
     assert coords["x"].dtype == np.dtype(np.float32)
 
 
+def test_range_index_set_xindex() -> None:
+    coords = xr.Coordinates({"x": np.arange(0.0, 1.0, 0.1)}, indexes={})
+    ds = xr.Dataset(coords=coords)
+
+    with pytest.raises(
+        NotImplementedError, match="cannot create.*RangeIndex.*existing coordinate"
+    ):
+        ds.set_xindex("x", RangeIndex)
+
+
 def test_range_index_isel() -> None:
     ds = create_dataset_arange(0.0, 1.0, 0.1)
 

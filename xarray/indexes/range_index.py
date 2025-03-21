@@ -131,6 +131,19 @@ class RangeIndex(CoordinateTransformIndex):
 
         return cls(transform)
 
+    @classmethod
+    def from_variables(
+        cls,
+        variables: Mapping[Any, Variable],
+        *,
+        options: Mapping[str, Any],
+    ) -> "RangeIndex":
+        raise NotImplementedError(
+            "cannot create a new RangeIndex from an existing coordinate. Use instead "
+            "either `RangeIndex.arange()` or `RangeIndex.linspace()` together with "
+            "`Coordinates.from_xindex()`"
+        )
+
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
     ) -> Index | None:
