@@ -240,6 +240,9 @@ def assert_allclose(
             a.variables, b.variables, compat=compat_variable
         )
         assert allclose, formatting.diff_dataset_repr(a, b, compat=equiv)
+    elif isinstance(a, Coordinates):
+        allclose = utils.dict_equiv(a.variables, b.variables, compat=compat_variable)
+        assert allclose, formatting.diff_coords_repr(a, b, compat=equiv)
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
