@@ -1,30 +1,35 @@
+import math
 from collections.abc import Hashable, Mapping
 from typing import Any
 
 import numpy as np
+import pandas as pd
 
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.dataarray import DataArray
-from xarray.core.indexes import CoordinateTransformIndex, Index
-from xarray.core.indexing import IndexSelResult
+from xarray.core.indexes import CoordinateTransformIndex, Index, PandasIndex
+from xarray.core.indexing import IndexSelResult, normalize_slice
 from xarray.core.variable import Variable
 
 
 class RangeCoordinateTransform(CoordinateTransform):
-    """Simple bounded interval 1-d coordinate transform."""
+    """1-dimensional coordinate transform representing a simple bounded interval
+    with evenly spaced, floating-point values.
+    """
 
-    left: float
-    right: float
-    dim: str
+    start: float
+    stop: float
     size: int
+    coord_name: Hashable
+    dim: str
 
     def __init__(
         self,
-        left: float,
-        right: float,
+        start: float,
+        stop: float,
+        size: int,
         coord_name: Hashable,
         dim: str,
-        size: int,
         dtype: Any = None,
     ):
         if dtype is None:
@@ -32,19 +37,28 @@ class RangeCoordinateTransform(CoordinateTransform):
 
         super().__init__([coord_name], {dim: size}, dtype=dtype)
 
-        self.left = left
-        self.right = right
+        self.start = start
+        self.stop = stop
+        self.step = (stop - start) / size
+        self.coord_name = coord_name
         self.dim = dim
         self.size = size
 
+    def _replace(
+        self, start: float, stop: float, size: int
+    ) -> "RangeCoordinateTransform":
+        return type(self)(
+            start, stop, size, self.coord_name, self.dim, dtype=self.dtype
+        )
+
     def forward(self, dim_positions: dict[str, Any]) -> dict[Hashable, Any]:
         positions = dim_positions[self.dim]
-        labels = self.left + positions * (self.right - self.left) / self.size
+        labels = self.start + positions * self.step
         return {self.dim: labels}
 
     def reverse(self, coord_labels: dict[Hashable, Any]) -> dict[str, Any]:
         labels = coord_labels[self.coord_names[0]]
-        positions = (labels - self.left) * self.size / (self.right - self.left)
+        positions = (labels - self.start) - self.step
         return {self.dim: positions}
 
     def equals(self, other: CoordinateTransform) -> bool:
@@ -52,10 +66,22 @@ class RangeCoordinateTransform(CoordinateTransform):
             return False
 
         return (
-            self.left == other.left
-            and self.right == other.right
+            self.start == other.start
+            and self.stop == other.stop
             and self.size == other.size
         )
+
+    def slice(self, sl: slice) -> "RangeCoordinateTransform":
+        sl = normalize_slice(sl, self.size)
+
+        # TODO: support reverse transform (i.e., start > stop)?
+        assert sl.start < sl.stop
+
+        new_size = (sl.stop - sl.start) / sl.step
+        new_start = self.start + sl.start * self.step
+        new_stop = new_start + new_size * sl.step * self.step
+
+        return self._replace(new_start, new_stop, new_size)
 
 
 class RangeIndex(CoordinateTransformIndex):
@@ -64,39 +90,71 @@ class RangeIndex(CoordinateTransformIndex):
     coord_name: Hashable
     size: int
 
-    def __init__(
-        self,
-        left: float,
-        right: float,
+    def __init__(self, transform: RangeCoordinateTransform):
+        super().__init__(transform)
+        self.dim = self.transform.dim
+        self.size = self.transform.size
+        self.coord_name = self.transform.coord_names[0]
+
+    @classmethod
+    def arange(
+        cls,
         coord_name: Hashable,
         dim: str,
-        size: int,
+        start: float = 0.0,
+        stop: float = 0.0,
+        step: float = 1.0,
         dtype: Any = None,
-    ):
-        self.transform = RangeCoordinateTransform(
-            left, right, coord_name, dim, size, dtype
+    ) -> "RangeIndex":
+        size = math.ceil((stop - start) / step)
+
+        transform = RangeCoordinateTransform(
+            start, stop, size, coord_name, dim, dtype=dtype
         )
-        self.dim = dim
-        self.coord_name = coord_name
-        self.size = size
+
+        return cls(transform)
+
+    @classmethod
+    def linspace(
+        cls,
+        coord_name: Hashable,
+        dim: str,
+        start: float,
+        stop: float,
+        num: int = 50,
+        endpoint: bool = True,
+        dtype: Any = None,
+    ) -> "RangeIndex":
+        if endpoint:
+            stop += (stop - start) / (num - 1)
+
+        transform = RangeCoordinateTransform(
+            start, stop, num, coord_name, dim, dtype=dtype
+        )
+
+        return cls(transform)
 
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
     ) -> Index | None:
         idxer = indexers[self.dim]
 
-        # straightforward to generate a new index if a slice is given with step 1
-        if isinstance(idxer, slice) and (idxer.step == 1 or idxer.step is None):
-            start = max(idxer.start, 0)
-            stop = min(idxer.stop, self.size)
-
-            new_left = self.transform.forward({self.dim: start})[self.coord_name]
-            new_right = self.transform.forward({self.dim: stop})[self.coord_name]
-            new_size = stop - start
-
-            return RangeIndex(new_left, new_right, self.coord_name, self.dim, new_size)
-
-        return None
+        if isinstance(idxer, slice):
+            return RangeIndex(self.transform.slice(idxer))
+        elif isinstance(idxer, Variable) and idxer.ndim > 1:
+            # vectorized (fancy) indexing with n-dimensional Variable: drop the index
+            return None
+        elif np.ndim(idxer) == 0:
+            # scalar value
+            return None
+        else:
+            # otherwise convert to a PandasIndex
+            values = self.transform.forward({self.dim: idxer})[self.coord_name]
+            if isinstance(idxer, Variable):
+                new_dim = idxer.dims[0]
+            else:
+                new_dim = self.dim
+            return PandasIndex(values, new_dim, coord_dtype=values.dtype)
 
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
@@ -105,11 +163,11 @@ class RangeIndex(CoordinateTransformIndex):
 
         if isinstance(label, slice):
             if label.step is None:
-                # slice indexing (preserve the index)
-                pos = self.transform.reverse(
-                    {self.dim: np.array([label.start, label.stop])}
+                # continuous interval slice indexing (preserves the index)
+                positions = self.transform.reverse(
+                    {self.coord_name: np.array([label.start, label.stop])}
                 )
-                pos = np.round(pos[str(self.coord_name)]).astype("int")
+                pos = np.round(positions[self.dim]).astype("int")
                 new_start = max(pos[0], 0)
                 new_stop = min(pos[1], self.size)
                 return IndexSelResult({self.dim: slice(new_start, new_stop)})
@@ -136,3 +194,7 @@ class RangeIndex(CoordinateTransformIndex):
             result = IndexSelResult(dim_indexers)
 
         return result
+
+    def to_pandas_index(self) -> pd.Index:
+        values = self.transform.generate_coords()
+        return pd.Index(values[self.dim])

@@ -240,7 +240,7 @@ def expanded_indexer(key, ndim):
     return tuple(new_key)
 
 
-def _normalize_slice(sl: slice, size: int) -> slice:
+def normalize_slice(sl: slice, size: int) -> slice:
     """
     Ensure that given slice only contains positive start and stop values
     (stop can be -1 for full-size slices with negative steps, e.g. [-10::-1])
@@ -266,7 +266,7 @@ def _expand_slice(slice_: slice, size: int) -> np.ndarray[Any, np.dtype[np.integ
     >>> _expand_slice(slice(0, -1), 10)
     array([0, 1, 2, 3, 4, 5, 6, 7, 8])
     """
-    sl = _normalize_slice(slice_, size)
+    sl = normalize_slice(slice_, size)
     return np.arange(sl.start, sl.stop, sl.step)
 
 
@@ -275,14 +275,14 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
     index it with another slice to return a new slice equivalent to applying
     the slices sequentially
     """
-    old_slice = _normalize_slice(old_slice, size)
+    old_slice = normalize_slice(old_slice, size)
 
     size_after_old_slice = len(range(old_slice.start, old_slice.stop, old_slice.step))
     if size_after_old_slice == 0:
         # nothing left after applying first slice
         return slice(0)
 
-    applied_slice = _normalize_slice(applied_slice, size_after_old_slice)
+    applied_slice = normalize_slice(applied_slice, size_after_old_slice)
 
     start = old_slice.start + applied_slice.start * old_slice.step
     if start < 0:
