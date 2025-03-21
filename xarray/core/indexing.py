@@ -1779,9 +1779,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     ) -> np.ndarray:
         if dtype is None and is_valid_numpy_dtype(self.dtype):
             dtype = self.dtype
+            dtype = cast(np.dtype, dtype)
         else:
             dtype = get_valid_numpy_dtype(self.array)
-        dtype = cast(np.dtype, dtype)
         array = self.array
         if isinstance(array, pd.PeriodIndex):
             with suppress(AttributeError):
