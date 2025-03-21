@@ -376,7 +376,7 @@ indexing for xarray is based on our
 :ref:`broadcasting rules <compute.broadcasting>`.
 See :ref:`indexing.rules` for the complete specification.
 
-.. _NumPy's advanced indexing: https://numpy.org/doc/stable/reference/arrays.indexing.html
+.. _NumPy's advanced indexing: https://numpy.org/doc/stable/user/basics.indexing.html#advanced-indexing
 
 Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
 
