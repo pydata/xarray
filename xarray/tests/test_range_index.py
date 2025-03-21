@@ -1,11 +1,15 @@
 import numpy as np
+import pandas as pd
+import pytest
 
 import xarray as xr
-from xarray.indexes import RangeIndex
+from xarray.indexes import PandasIndex, RangeIndex
 from xarray.tests import assert_allclose, assert_equal, assert_identical
 
 
-def create_dataset_arange(start: float, stop: float, step: float, dim: str = "x"):
+def create_dataset_arange(
+    start: float, stop: float, step: float, dim: str = "x"
+) -> xr.Dataset:
     index = RangeIndex.arange(dim, dim, start, stop, step)
     return xr.Dataset(coords=xr.Coordinates.from_xindex(index))
 
@@ -21,7 +25,7 @@ def test_range_index_linspace() -> None:
     index = RangeIndex.linspace("x", "x", 0.0, 1.0, num=10, endpoint=False)
     actual = xr.Coordinates.from_xindex(index)
     expected = xr.Coordinates({"x": np.linspace(0.0, 1.0, num=10, endpoint=False)})
-    assert_equal(actual, expected)
+    assert_equal(actual, expected, check_default_indexes=False)
 
     index = RangeIndex.linspace("x", "x", 0.0, 1.0, num=11, endpoint=True)
     actual = xr.Coordinates.from_xindex(index)
@@ -29,9 +33,103 @@ def test_range_index_linspace() -> None:
     assert_allclose(actual, expected, check_default_indexes=False)
 
 
+def test_range_index_dtype() -> None:
+    index = RangeIndex.arange("x", "x", 0.0, 1.0, 0.1, dtype=np.float32)
+    coords = xr.Coordinates.from_xindex(index)
+    assert coords["x"].dtype == np.dtype(np.float32)
+
+
 def test_range_index_isel() -> None:
     ds = create_dataset_arange(0.0, 1.0, 0.1)
+
+    # slicing
+    actual = ds.isel(x=slice(None))
+    assert_identical(actual, ds, check_default_indexes=False)
+
+    actual = ds.isel(x=slice(1, None))
+    expected = create_dataset_arange(0.1, 1.0, 0.1)
+    assert_identical(actual, expected, check_default_indexes=False)
+
+    actual = ds.isel(x=slice(None, 2))
+    expected = create_dataset_arange(0.0, 0.2, 0.1)
+    assert_identical(actual, expected, check_default_indexes=False)
 
     actual = ds.isel(x=slice(1, 3))
     expected = create_dataset_arange(0.1, 0.3, 0.1)
     assert_identical(actual, expected, check_default_indexes=False)
+
+    actual = ds.isel(x=slice(None, None, 2))
+    expected = create_dataset_arange(0.0, 1.0, 0.2)
+    assert_identical(actual, expected, check_default_indexes=False)
+
+    # scalar
+    actual = ds.isel(x=0)
+    expected = xr.Dataset(coords={"x": 0.0})
+    assert_identical(actual, expected)
+
+    # outer indexing with arbitrary array values
+    actual = ds.isel(x=[0, 2])
+    expected = xr.Dataset(coords={"x": [0.0, 0.2]})
+    assert_identical(actual, expected)
+    assert isinstance(actual.xindexes["x"], PandasIndex)
+
+    # fancy indexing with 1-d Variable
+    actual = ds.isel(x=xr.Variable("y", [0, 2]))
+    expected = xr.Dataset(coords={"x": ("y", [0.0, 0.2])}).set_xindex("x")
+    assert_identical(actual, expected, check_default_indexes=False)
+    assert isinstance(actual.xindexes["x"], PandasIndex)
+
+    # fancy indexing with n-d Variable
+    actual = ds.isel(x=xr.Variable(("u", "v"), [[0, 0], [2, 2]]))
+    expected = xr.Dataset(coords={"x": (("u", "v"), [[0.0, 0.0], [0.2, 0.2]])})
+    assert_identical(actual, expected)
+
+
+def test_range_index_sel() -> None:
+    ds = create_dataset_arange(0.0, 1.0, 0.1)
+
+    # start-stop slice
+    actual = ds.sel(x=slice(0.12, 0.28), method="nearest")
+    expected = create_dataset_arange(0.1, 0.3, 0.1)
+    assert_identical(actual, expected, check_default_indexes=False)
+
+    # start-stop-step slice
+    actual = ds.sel(x=slice(0.0, 1.0, 0.2), method="nearest")
+    expected = ds.isel(x=range(0, 10, 2))
+    assert_identical(actual, expected, check_default_indexes=False)
+
+    # basic indexing
+    actual = ds.sel(x=0.52, method="nearest")
+    expected = xr.Dataset(coords={"x": 0.5})
+    assert_allclose(actual, expected)
+
+    actual = ds.sel(x=0.58, method="nearest")
+    expected = xr.Dataset(coords={"x": 0.6})
+    assert_allclose(actual, expected)
+
+    # 1-d array indexing
+    actual = ds.sel(x=[0.52, 0.58], method="nearest")
+    expected = xr.Dataset(coords={"x": [0.5, 0.6]})
+    assert_allclose(actual, expected)
+
+    actual = ds.sel(x=xr.Variable("y", [0.52, 0.58]), method="nearest")
+    expected = xr.Dataset(coords={"x": ("y", [0.5, 0.6])}).set_xindex("x")
+    assert_allclose(actual, expected, check_default_indexes=False)
+
+    actual = ds.sel(x=xr.DataArray([0.52, 0.58], dims="y"), method="nearest")
+    expected = xr.Dataset(coords={"x": ("y", [0.5, 0.6])}).set_xindex("x")
+    assert_allclose(actual, expected, check_default_indexes=False)
+
+    with pytest.raises(ValueError, match="RangeIndex only supports.*method.*nearest"):
+        ds.sel(x=0.1)
+
+    with pytest.raises(ValueError, match="RangeIndex doesn't support.*tolerance"):
+        ds.sel(x=0.1, method="nearest", tolerance=1e-3)
+
+
+def test_range_index_to_pandas_index() -> None:
+    ds = create_dataset_arange(0.0, 1.0, 0.1)
+
+    actual = ds.indexes["x"]
+    expected = pd.Index(np.arange(0.0, 1.0, 0.1))
+    assert actual.equals(expected)

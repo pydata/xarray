@@ -23,6 +23,8 @@ class RangeCoordinateTransform(CoordinateTransform):
     coord_name: Hashable
     dim: str
 
+    __slots__ = ("coord_name", "dim", "size", "start", "stop")
+
     def __init__(
         self,
         start: float,
@@ -44,13 +46,6 @@ class RangeCoordinateTransform(CoordinateTransform):
         self.dim = dim
         self.size = size
 
-    def _replace(
-        self, start: float, stop: float, size: int
-    ) -> "RangeCoordinateTransform":
-        return type(self)(
-            start, stop, size, self.coord_name, self.dim, dtype=self.dtype
-        )
-
     def forward(self, dim_positions: dict[str, Any]) -> dict[Hashable, Any]:
         positions = dim_positions[self.dim]
         labels = self.start + positions * self.step
@@ -58,7 +53,7 @@ class RangeCoordinateTransform(CoordinateTransform):
 
     def reverse(self, coord_labels: dict[Hashable, Any]) -> dict[str, Any]:
         labels = coord_labels[self.coord_names[0]]
-        positions = (labels - self.start) - self.step
+        positions = (labels - self.start) / self.step
         return {self.dim: positions}
 
     def equals(self, other: CoordinateTransform) -> bool:
@@ -77,11 +72,13 @@ class RangeCoordinateTransform(CoordinateTransform):
         # TODO: support reverse transform (i.e., start > stop)?
         assert sl.start < sl.stop
 
-        new_size = (sl.stop - sl.start) / sl.step
+        new_size = (sl.stop - sl.start) // sl.step
         new_start = self.start + sl.start * self.step
         new_stop = new_start + new_size * sl.step * self.step
 
-        return self._replace(new_start, new_stop, new_size)
+        return type(self)(
+            new_start, new_stop, new_size, self.coord_name, self.dim, dtype=self.dtype
+        )
 
 
 class RangeIndex(CoordinateTransformIndex):
@@ -149,17 +146,29 @@ class RangeIndex(CoordinateTransformIndex):
             return None
         else:
             # otherwise convert to a PandasIndex
-            values = self.transform.forward({self.dim: idxer})[self.coord_name]
+            values = self.transform.forward({self.dim: np.asarray(idxer)})[
+                self.coord_name
+            ]
             if isinstance(idxer, Variable):
                 new_dim = idxer.dims[0]
             else:
                 new_dim = self.dim
-            return PandasIndex(values, new_dim, coord_dtype=values.dtype)
+            pd_index = pd.Index(values, name=self.coord_name)
+            return PandasIndex(pd_index, new_dim, coord_dtype=values.dtype)
 
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
     ) -> IndexSelResult:
         label = labels[self.dim]
+
+        if method != "nearest":
+            raise ValueError("RangeIndex only supports selection with method='nearest'")
+
+        # TODO: for RangeIndex it might not be too hard to support tolerance
+        if tolerance is not None:
+            raise ValueError(
+                "RangeIndex doesn't support selection with a given tolerance value yet"
+            )
 
         if isinstance(label, slice):
             if label.step is None:
