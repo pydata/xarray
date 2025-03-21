@@ -262,6 +262,8 @@ def _ensure_1d(
     from xarray.core.dataarray import DataArray
 
     if isinstance(group, DataArray):
+        for dim in set(group.dims) - set(obj.dims):
+            obj = obj.expand_dims(dim)
         # try to stack the dims of the group into a single dim
         orig_dims = group.dims
         stacked_dim = "stacked_" + "_".join(map(str, orig_dims))
@@ -534,6 +536,11 @@ class ComposedGrouper:
             list(grouper.full_index.values for grouper in groupers),
             names=tuple(grouper.name for grouper in groupers),
         )
+        if not full_index.is_unique:
+            raise ValueError(
+                "The output index for the GroupBy is non-unique. "
+                "This is a bug in the Grouper provided."
+            )
         # This will be unused when grouping by dask arrays, so skip..
         if not is_chunked_array(_flatcodes):
             # Constructing an index from the product is wrong when there are missing groups
@@ -829,7 +836,10 @@ class GroupBy(Generic[T_Xarray]):
         for grouper in self.groupers:
             coord = grouper.unique_coord
             labels = ", ".join(format_array_flat(coord, 30).split())
-            text += f"\n    {grouper.name!r}: {coord.size}/{grouper.full_index.size} groups present with labels {labels}"
+            text += (
+                f"\n    {grouper.name!r}: {type(grouper.grouper).__name__}({grouper.group.name!r}), "
+                f"{coord.size}/{grouper.full_index.size} groups with labels {labels}"
+            )
         return text + ">"
 
     def _iter_grouped(self) -> Iterator[T_Xarray]:
@@ -942,17 +952,29 @@ class GroupBy(Generic[T_Xarray]):
     def _restore_dim_order(self, stacked):
         raise NotImplementedError
 
-    def _maybe_restore_empty_groups(self, combined):
-        """Our index contained empty groups (e.g., from a resampling or binning). If we
+    def _maybe_reindex(self, combined):
+        """Reindexing is needed in two cases:
+        1. Our index contained empty groups (e.g., from a resampling or binning). If we
         reduced on that dimension, we want to restore the full index.
+
+        2. We use a MultiIndex for multi-variable GroupBy.
+        The MultiIndex stores each level's labels in sorted order
+        which are then assigned on unstacking. So we need to restore
+        the correct order here.
         """
         has_missing_groups = (
             self.encoded.unique_coord.size != self.encoded.full_index.size
         )
         indexers = {}
         for grouper in self.groupers:
-            if has_missing_groups and grouper.name in combined._indexes:
+            index = combined._indexes.get(grouper.name, None)
+            if has_missing_groups and index is not None:
                 indexers[grouper.name] = grouper.full_index
+            elif len(self.groupers) > 1:
+                if not isinstance(
+                    grouper.full_index, pd.RangeIndex
+                ) and not index.index.equals(grouper.full_index):
+                    indexers[grouper.name] = grouper.full_index
         if indexers:
             combined = combined.reindex(**indexers)
         return combined
@@ -1055,7 +1077,7 @@ class GroupBy(Generic[T_Xarray]):
             parsed_dim_list = list()
             # preserve order
             for dim_ in itertools.chain(
-                *(grouper.group.dims for grouper in self.groupers)
+                *(grouper.codes.dims for grouper in self.groupers)
             ):
                 if dim_ not in parsed_dim_list:
                     parsed_dim_list.append(dim_)
@@ -1069,7 +1091,7 @@ class GroupBy(Generic[T_Xarray]):
         # Better to control it here than in flox.
         for grouper in self.groupers:
             if any(
-                d not in grouper.group.dims and d not in obj.dims for d in parsed_dim
+                d not in grouper.codes.dims and d not in obj.dims for d in parsed_dim
             ):
                 raise ValueError(f"cannot reduce over dimensions {dim}.")
 
@@ -1314,9 +1336,6 @@ class GroupBy(Generic[T_Xarray]):
            "Sample quantiles in statistical packages,"
            The American Statistician, 50(4), pp. 361-365, 1996
         """
-        if dim is None:
-            dim = (self._group_dim,)
-
         # Dataset.quantile does this, do it for flox to ensure same output.
         q = np.asarray(q, dtype=np.float64)
 
@@ -1335,7 +1354,7 @@ class GroupBy(Generic[T_Xarray]):
                 self._obj.__class__.quantile,
                 shortcut=False,
                 q=q,
-                dim=dim,
+                dim=dim or self._group_dim,
                 method=method,
                 keep_attrs=keep_attrs,
                 skipna=skipna,
@@ -1595,7 +1614,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         if dim not in applied_example.dims:
             combined = combined.assign_coords(self.encoded.coords)
         combined = self._maybe_unstack(combined)
-        combined = self._maybe_restore_empty_groups(combined)
+        combined = self._maybe_reindex(combined)
         return combined
 
     def reduce(
@@ -1751,7 +1770,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         if dim not in applied_example.dims:
             combined = combined.assign_coords(self.encoded.coords)
         combined = self._maybe_unstack(combined)
-        combined = self._maybe_restore_empty_groups(combined)
+        combined = self._maybe_reindex(combined)
         return combined
 
     def reduce(
