@@ -17,7 +17,7 @@ import pandas as pd
 from numpy.typing import ArrayLike
 
 from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
-from xarray.core.computation import apply_ufunc
+from xarray.computation.computation import apply_ufunc
 from xarray.core.coordinates import Coordinates, _coordinates_from_variable
 from xarray.core.dataarray import DataArray
 from xarray.core.duck_array_ops import array_all, isnull
@@ -242,7 +242,11 @@ class UniqueGrouper(Grouper):
         unique_coord = Variable(
             dims=codes.name, data=unique_values, attrs=self.group.attrs
         )
-        full_index = pd.Index(unique_values)
+        full_index = (
+            unique_values
+            if isinstance(unique_values, pd.MultiIndex)
+            else pd.Index(unique_values)
+        )
 
         return EncodedGroups(
             codes=codes,

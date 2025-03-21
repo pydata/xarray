@@ -16,7 +16,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Concatenate,
-    Literal,
     NoReturn,
     ParamSpec,
     TypeVar,
@@ -27,7 +26,6 @@ from typing import (
 from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
 from xarray.core._typed_ops import DataTreeOpsMixin
-from xarray.core.alignment import align
 from xarray.core.common import TreeAttrAccessMixin, get_chunksizes
 from xarray.core.coordinates import Coordinates, DataTreeCoordinates
 from xarray.core.dataarray import DataArray
@@ -45,7 +43,6 @@ from xarray.core.formatting_html import (
     datatree_repr as datatree_repr_html,
 )
 from xarray.core.indexes import Index, Indexes
-from xarray.core.merge import dataset_update_method
 from xarray.core.options import OPTIONS as XR_OPTS
 from xarray.core.treenode import NamedNode, NodePath, zip_subtrees
 from xarray.core.types import Self
@@ -62,6 +59,8 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.structure.alignment import align
+from xarray.structure.merge import dataset_update_method
 
 try:
     from xarray.core.variable import calculate_dimensions
@@ -74,7 +73,6 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
-    from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.types import (
         Dims,
         DtCompatible,
@@ -86,6 +84,7 @@ if TYPE_CHECKING:
         ZarrWriteModes,
     )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
+    from xarray.structure.merge import CoercibleMapping, CoercibleValue
 
 # """
 # DEVELOPERS' NOTE
@@ -1741,7 +1740,7 @@ class DataTree(
         consolidated: bool = True,
         group: str | None = None,
         write_inherited_coords: bool = False,
-        compute: Literal[True] = True,
+        compute: bool = True,
         **kwargs,
     ):
         """
