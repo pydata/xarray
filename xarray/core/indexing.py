@@ -1953,8 +1953,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         copy: bool | None = None,
     ) -> np.ndarray:
         if dtype is None:
-            dtype = self.dtype
-        dtype = cast(np.dtype, dtype)
+            dtype = cast(np.dtype, self.dtype)
         if self.level is not None:
             return np.asarray(
                 self.array.get_level_values(self.level).values, dtype=dtype
