@@ -28,6 +28,7 @@ from xarray.core.utils import (
     is_duck_array,
     is_duck_dask_array,
     is_scalar,
+    is_valid_numpy_dtype,
     to_0d_array,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -1734,14 +1735,14 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     def __array__(
         self,
-        dtype: np.typing.DTypeLike | pd.api.extensions.ExtensionDtype | None = None,
+        dtype: np.typing.DTypeLike | None = None,
         /,
         *,
         copy: bool | None = None,
     ) -> np.ndarray:
-        if dtype is None:
+        if dtype is None and is_valid_numpy_dtype(self.dtype):
             dtype = self.dtype
-        if pd.api.types.is_extension_array_dtype(dtype):
+        else:
             dtype = get_valid_numpy_dtype(self.array)
         dtype = cast(np.dtype, dtype)
         array = self.array
@@ -1910,7 +1911,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
 
     def __array__(
         self,
-        dtype: DTypeLike | pd.api.extensions.ExtensionDtype | None = None,
+        dtype: DTypeLike | None = None,
         /,
         *,
         copy: bool | None = None,
