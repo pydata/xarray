@@ -2041,7 +2041,7 @@ def test_literal_timedelta_decoding_mask_and_scale_error(invalid_key) -> None:
     ],
     ids=lambda x: f"{x!r}",
 )
-def test_timedelta_coding_options(
+def test_timedelta_decoding_options(
     decode_via_units, decode_via_dtype, attrs, expect_timedelta64
 ) -> None:
     array = np.array([0, 1, 2], dtype=np.int64)
