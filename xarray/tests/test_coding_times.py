@@ -2016,4 +2016,51 @@ def test_literal_timedelta_encoding_mask_and_scale_error(invalid_key) -> None:
     timedeltas = pd.timedelta_range(0, freq="D", periods=3)
     variable = Variable(["time"], timedeltas, encoding=encoding)
     with pytest.raises(ValueError, match=invalid_key):
-        conventions.encode_cf_variable(variable, name="foo")
+        conventions.encode_cf_variable(variable)
+
+
+@pytest.mark.parametrize("invalid_key", _INVALID_LITERAL_TIMEDELTA64_ENCODING_KEYS)
+def test_literal_timedelta_decoding_mask_and_scale_error(invalid_key) -> None:
+    attrs = {invalid_key: 1.0, "dtype": "timedelta64[s]", "units": "seconds"}
+    variable = Variable(["time"], [0, 1, 2], attrs=attrs)
+    with pytest.raises(ValueError, match=invalid_key):
+        conventions.decode_cf_variable("foo", variable)
+
+
+@pytest.mark.parametrize(
+    ("decode_via_units", "decode_via_dtype", "attrs", "expect_timedelta64"),
+    [
+        (True, True, {"units": "seconds"}, True),
+        (True, False, {"units": "seconds"}, True),
+        (False, True, {"units": "seconds"}, False),
+        (False, False, {"units": "seconds"}, False),
+        (True, True, {"dtype": "timedelta64[s]", "units": "seconds"}, True),
+        (True, False, {"dtype": "timedelta64[s]", "units": "seconds"}, True),
+        (False, True, {"dtype": "timedelta64[s]", "units": "seconds"}, True),
+        (False, False, {"dtype": "timedelta64[s]", "units": "seconds"}, False),
+    ],
+    ids=lambda x: f"{x!r}",
+)
+def test_timedelta_coding_options(
+    decode_via_units, decode_via_dtype, attrs, expect_timedelta64
+) -> None:
+    array = np.array([0, 1, 2], dtype=np.int64)
+    encoded = Variable(["time"], array, attrs=attrs)
+
+    # Confirm we decode to the expected dtype.
+    decode_timedelta = CFTimedeltaCoder(
+        time_unit="s",
+        decode_via_units=decode_via_units,
+        decode_via_dtype=decode_via_dtype,
+    )
+    decoded = conventions.decode_cf_variable(
+        "foo", encoded, decode_timedelta=decode_timedelta
+    )
+    if expect_timedelta64:
+        assert decoded.dtype == np.dtype("timedelta64[s]")
+    else:
+        assert decoded.dtype == np.dtype("int64")
+
+    # Confirm we exactly roundtrip.
+    reencoded = conventions.encode_cf_variable(decoded)
+    assert_identical(reencoded, encoded)

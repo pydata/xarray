@@ -1414,14 +1414,27 @@ class CFTimedeltaCoder(VariableCoder):
     Parameters
     ----------
     time_unit : PDDatetimeUnitOptions
-          Target resolution when decoding timedeltas. Defaults to "ns".
+        Target resolution when decoding timedeltas via units. Defaults to "ns".
+        When decoding via dtype, the resolution is specified in the dtype
+        attribute, so this parameter is ignored.
+    decode_via_units : bool
+        Whether to decode timedeltas based on the presence of a timedelta-like
+        units attribute, e.g. "seconds". Defaults to True, but in the future
+        will default to False.
+    decode_via_dtype : bool
+        Whether to decode timedeltas based on the presence of a np.timedelta64
+        dtype attribute, e.g. "np.datetime64[s]". Defaults to True.
     """
 
     def __init__(
         self,
         time_unit: PDDatetimeUnitOptions = "ns",
+        decode_via_units: bool = True,
+        decode_via_dtype: bool = True,
     ) -> None:
         self.time_unit = time_unit
+        self.decode_via_units = decode_via_units
+        self.decode_via_dtype = decode_via_dtype
         self._emit_decode_timedelta_future_warning = False
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
@@ -1471,10 +1484,25 @@ class CFTimedeltaCoder(VariableCoder):
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         units = variable.attrs.get("units", None)
-        if isinstance(units, str) and units in TIME_UNITS:
+        has_timedelta_units = isinstance(units, str) and units in TIME_UNITS
+        has_timedelta_dtype = has_timedelta64_encoding_dtype(variable.attrs)
+        is_dtype_decodable = has_timedelta_units and has_timedelta_dtype
+        is_units_decodable = has_timedelta_units
+        if (is_dtype_decodable and self.decode_via_dtype) or (
+            is_units_decodable and self.decode_via_units
+        ):
             dims, data, attrs, encoding = unpack_for_decoding(variable)
             units = pop_to(attrs, encoding, "units")
-            if has_timedelta64_encoding_dtype(variable.attrs):
+            if is_dtype_decodable and self.decode_via_dtype:
+                if any(
+                    k in encoding for k in _INVALID_LITERAL_TIMEDELTA64_ENCODING_KEYS
+                ):
+                    raise ValueError(
+                        "Decoding np.timedelta64 values via dtype is not "
+                        "supported when '_FillValue', 'missing_value', "
+                        "'add_offset', or 'scale_factor' are present in "
+                        "encoding."
+                    )
                 dtype = pop_to(attrs, encoding, "dtype", name=name)
                 dtype = np.dtype(dtype)
                 resolution, _ = np.datetime_data(dtype)
@@ -1486,12 +1514,21 @@ class CFTimedeltaCoder(VariableCoder):
                         f"{resolution!r}."
                     )
                 time_unit = cast(PDDatetimeUnitOptions, resolution)
-            else:
+            elif self.decode_via_units:
                 if self._emit_decode_timedelta_future_warning:
                     emit_user_level_warning(
-                        "In a future version of xarray decode_timedelta will "
-                        "default to False rather than None. To silence this "
-                        "warning, set decode_timedelta to True, False, or a "
+                        "In a future version, xarray will not decode "
+                        "timedelta values based on the presence of a "
+                        "timedelta-like units attribute by default. Instead "
+                        "it will rely on the presence of a np.timedelta64 "
+                        "dtype attribute, which is now xarray's default way "
+                        "of encoding np.timedelta64 values. To continue "
+                        "decoding timedeltas based on the presence of a "
+                        "timedelta-like units attribute, users will need to "
+                        "explicitly opt-in by passing True or "
+                        "CFTimedeltaCoder(decode_via_units=True) to "
+                        "decode_timedelta. To silence this warning, set "
+                        "decode_timedelta to True, False, or a "
                         "'CFTimedeltaCoder' instance.",
                         FutureWarning,
                     )
