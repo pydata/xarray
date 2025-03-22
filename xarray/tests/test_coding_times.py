@@ -2081,3 +2081,5 @@ def test_timedelta_encoding_explicit_non_timedelta64_dtype() -> None:
 
     reencoded = conventions.encode_cf_variable(decoded)
     assert_identical(reencoded, encoded)
+    assert encoded.attrs["units"] == "days"
+    assert encoded.dtype == np.dtype("int32")
