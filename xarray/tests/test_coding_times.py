@@ -2064,3 +2064,20 @@ def test_timedelta_decoding_options(
     # Confirm we exactly roundtrip.
     reencoded = conventions.encode_cf_variable(decoded)
     assert_identical(reencoded, encoded)
+
+
+def test_timedelta_encoding_explicit_non_timedelta64_dtype() -> None:
+    encoding = {"dtype": np.dtype("int32")}
+    timedeltas = pd.timedelta_range(0, freq="D", periods=3)
+    variable = Variable(["time"], timedeltas, encoding=encoding)
+
+    encoded = conventions.encode_cf_variable(variable)
+    assert encoded.attrs["units"] == "days"
+    assert encoded.dtype == np.dtype("int32")
+
+    with pytest.warns(FutureWarning, match="timedelta"):
+        decoded = conventions.decode_cf_variable("foo", encoded)
+    assert_identical(decoded, variable)
+
+    reencoded = conventions.encode_cf_variable(decoded)
+    assert_identical(reencoded, encoded)
