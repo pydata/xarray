@@ -21,7 +21,16 @@ v2025.03.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- By default xarray now encodes :py:class:`numpy.timedelta64` values by
+  converting to :py:class:`numpy.int64` values and storing ``"dtype"`` and
+  ``"units"`` attributes consistent with the dtype of the in-memory
+  :py:class:`numpy.timedelta64` values, e.g. for ``"timedelta64[s]"`` and
+  ``"seconds"`` for second-resolution timedeltas. These values will always be
+  decoded to timedeltas without a warning moving forward. Timedeltas encoded
+  via the previous approach can still be roundtripped exactly, but in the
+  future will not be decoded by default (:issue:`1621`,
+  :issue:`10099`, :pull:`10101`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -79,14 +88,6 @@ New Features
   (:pull:`9498`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Support reading to `GPU memory with Zarr <https://zarr.readthedocs.io/en/stable/user-guide/gpu.html>`_ (:pull:`10078`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- If not set to be encoded via the existing
-  :py:class:`coders.CFTimedeltaCoder`, automatically encode
-  :py:class:`numpy.timedelta64` values by converting to :py:class:`numpy.int64`
-  values and storing ``"dtype"`` and ``"units"`` attributes. Unlike those coded
-  through the :py:class:`coders.CFTimedeltaCoder`, these values will
-  always be decoded without a warning moving forward (:issue:`1621`,
-  :issue:`10099`, :pull:`10101`). By `Spencer Clark
-  <https://github.com/spencerkclark>`_.
 
 Performance
 ~~~~~~~~~~~
