@@ -93,6 +93,14 @@ TIME_UNITS = frozenset(
 )
 
 
+_INVALID_LITERAL_TIMEDELTA64_ENCODING_KEYS = [
+    "_FillValue",
+    "missing_value",
+    "add_offset",
+    "scale_factor",
+]
+
+
 def _is_standard_calendar(calendar: str) -> bool:
     return calendar.lower() in _STANDARD_CALENDARS
 
@@ -1422,6 +1430,13 @@ class CFTimedeltaCoder(VariableCoder):
             if "units" in encoding and not has_timedelta64_encoding_dtype(encoding):
                 dtype = encoding.get("dtype", None)
                 units = encoding.pop("units", None)
+
+                # in the case of packed data we need to encode into
+                # float first, the correct dtype will be established
+                # via CFScaleOffsetCoder/CFMaskCoder
+                if "add_offset" in encoding or "scale_factor" in encoding:
+                    dtype = data.dtype if data.dtype.kind == "f" else "float64"
+
             else:
                 resolution, _ = np.datetime_data(variable.dtype)
                 dtype = np.int64
@@ -1432,11 +1447,21 @@ class CFTimedeltaCoder(VariableCoder):
                 # interfering downstream in NonStringCoder.
                 encoding.pop("dtype", None)
 
-            # in the case of packed data we need to encode into
-            # float first, the correct dtype will be established
-            # via CFScaleOffsetCoder/CFMaskCoder
-            if "add_offset" in encoding or "scale_factor" in encoding:
-                dtype = data.dtype if data.dtype.kind == "f" else "float64"
+                if any(
+                    k in encoding for k in _INVALID_LITERAL_TIMEDELTA64_ENCODING_KEYS
+                ):
+                    raise ValueError(
+                        f"Specifying '_FillValue', 'missing_value', "
+                        f"'add_offset', or 'scale_factor' is not supported "
+                        f"when literally encoding the np.timedelta64 values "
+                        f"of variable {name!r}. To encode {name!r} with such "
+                        f"encoding parameters, additionally set "
+                        f"encoding['units'] to a unit of time, e.g. "
+                        f"'seconds'. To proceed with literal np.timedelta64 "
+                        f"encoding of {name!r}, remove any encoding entries "
+                        f"for '_FillValue', 'missing_value', 'add_offset', "
+                        f"or 'scale_factor'."
+                    )
 
             data, units = encode_cf_timedelta(data, units, dtype)
             safe_setitem(attrs, "units", units, name=name)

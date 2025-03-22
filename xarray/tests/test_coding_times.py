@@ -20,6 +20,7 @@ from xarray import (
 )
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding.times import (
+    _INVALID_LITERAL_TIMEDELTA64_ENCODING_KEYS,
     _encode_datetime_with_cftime,
     _netcdf_to_numpy_timeunit,
     _numpy_to_netcdf_timeunit,
@@ -2009,15 +2010,10 @@ def test_literal_timedelta_encode_invalid_attribute(attribute) -> None:
         conventions.encode_cf_variable(variable)
 
 
-def test_literal_timedelta_coding_mask_and_scale() -> None:
-    attrs = {
-        "units": "nanoseconds",
-        "dtype": "timedelta64[ns]",
-        "_FillValue": np.int16(-1),
-        "add_offset": 100000.0,
-    }
-    encoded = Variable(["time"], np.array([0, -1, 1], "int16"), attrs=attrs)
-    decoded = conventions.decode_cf_variable("foo", encoded)
-    result = conventions.encode_cf_variable(decoded, name="foo")
-    assert_identical(encoded, result)
-    assert encoded.dtype == result.dtype
+@pytest.mark.parametrize("invalid_key", _INVALID_LITERAL_TIMEDELTA64_ENCODING_KEYS)
+def test_literal_timedelta_encoding_mask_and_scale_error(invalid_key) -> None:
+    encoding = {invalid_key: 1.0}
+    timedeltas = pd.timedelta_range(0, freq="D", periods=3)
+    variable = Variable(["time"], timedeltas, encoding=encoding)
+    with pytest.raises(ValueError, match=invalid_key):
+        conventions.encode_cf_variable(variable, name="foo")
