@@ -2044,7 +2044,7 @@ def test_literal_timedelta_decoding_mask_and_scale_error(invalid_key) -> None:
 def test_timedelta_decoding_options(
     decode_via_units, decode_via_dtype, attrs, expect_timedelta64
 ) -> None:
-    array = np.array([0, 1, 2], dtype=np.int64)
+    array = np.array([0, 1, 2], dtype=np.dtype("int64"))
     encoded = Variable(["time"], array, attrs=attrs)
 
     # Confirm we decode to the expected dtype.
