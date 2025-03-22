@@ -1207,7 +1207,7 @@ class ZarrStore(AbstractWritableDataStore):
                 region=region,
                 mode=self._mode,
                 shape=zarr_shape,
-                zarr_format=self.zarr_group.metadata.zarr_format,
+                zarr_format=3 if is_zarr_v3_format else 2,
             )
 
             if self._mode == "w" or name not in existing_keys:
