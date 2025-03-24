@@ -14,7 +14,6 @@ from packaging.version import Version
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
-from xarray.core.alignment import broadcast
 from xarray.core.groupby import _consolidate_slices
 from xarray.core.types import InterpOptions, ResampleCompatible
 from xarray.groupers import (
@@ -25,6 +24,7 @@ from xarray.groupers import (
     UniqueGrouper,
 )
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.structure.alignment import broadcast
 from xarray.tests import (
     InaccessibleArray,
     assert_allclose,
@@ -1618,6 +1618,8 @@ class TestDataArrayGroupBy:
         expected = array  # should be a no-op
         assert_identical(expected, actual)
 
+        # TODO: groupby_bins too
+
     def make_groupby_multidim_example_array(self) -> DataArray:
         return DataArray(
             [[[0, 1], [2, 3]], [[5, 10], [15, 20]]],
@@ -2374,13 +2376,13 @@ class TestDatasetResample:
         # upsampling
         expected_time = pd.date_range("2000-01-01", freq="3h", periods=19)
         expected = ds.reindex(time=expected_time)
-        actual = ds.resample(time="3h")
+        rs = ds.resample(time="3h")
         for how in ["mean", "sum", "first", "last"]:
-            method = getattr(actual, how)
+            method = getattr(rs, how)
             result = method()
             assert_equal(expected, result)
         for method in [np.mean]:
-            result = actual.reduce(method)
+            result = rs.reduce(method)
             assert_equal(expected, result)
 
     def test_resample_min_count(self) -> None:
