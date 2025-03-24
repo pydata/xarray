@@ -3369,7 +3369,13 @@ class ZarrBase(CFEncodedBase):
                 # for floats, Xarray inserts a default `np.nan`
                 expected.foo.attrs["_FillValue"] = np.nan
 
-        open_kwargs = {"mask_and_scale": False, "consolidated": False}
+        # turn off all decoding so we see what Zarr returns to us.
+        # Since chunks, are not written, we should receive on `fill_value`
+        open_kwargs = {
+            "mask_and_scale": False,
+            "consolidated": False,
+            "use_zarr_fill_value_as_mask": False,
+        }
         save_kwargs = dict(compute=False, consolidated=False)
         with self.roundtrip(
             ds,
