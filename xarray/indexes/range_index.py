@@ -38,7 +38,6 @@ class RangeCoordinateTransform(CoordinateTransform):
 
         self.start = start
         self.stop = stop
-        self.step = (stop - start) / size
 
     @property
     def coord_name(self) -> Hashable:
@@ -51,6 +50,10 @@ class RangeCoordinateTransform(CoordinateTransform):
     @property
     def size(self) -> int:
         return self.dim_size[self.dim]
+
+    @property
+    def step(self) -> float:
+        return (self.stop - self.start) / self.size
 
     def forward(self, dim_positions: dict[str, Any]) -> dict[Hashable, Any]:
         positions = dim_positions[self.dim]
