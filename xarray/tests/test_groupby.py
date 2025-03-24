@@ -154,7 +154,7 @@ def test_multi_index_groupby_sum() -> None:
 
 
 @requires_pandas_ge_2_2
-def test_multi_index_propagation():
+def test_multi_index_propagation() -> None:
     # regression test for GH9648
     times = pd.date_range("2023-01-01", periods=4)
     locations = ["A", "B"]
@@ -2291,7 +2291,7 @@ class TestDataArrayResample:
         times = pd.date_range("2000-01-01T02:03:01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
 
-        origin = "start"
+        origin: Literal["start"] = "start"
         actual = array.resample(time="24h", origin=origin).mean()
         expected = DataArray(array.to_series().resample("24h", origin=origin).mean())
         assert_identical(expected, actual)
@@ -2696,7 +2696,7 @@ def test_default_flox_method() -> None:
 
 @requires_cftime
 @pytest.mark.filterwarnings("ignore")
-def test_cftime_resample_gh_9108():
+def test_cftime_resample_gh_9108() -> None:
     import cftime
 
     ds = Dataset(
@@ -3046,7 +3046,7 @@ def test_gappy_resample_reductions(reduction):
     assert_identical(expected, actual)
 
 
-def test_groupby_transpose():
+def test_groupby_transpose() -> None:
     # GH5361
     data = xr.DataArray(
         np.random.randn(4, 2),
@@ -3106,7 +3106,7 @@ def test_lazy_grouping(grouper, expect_index):
 
 
 @requires_dask
-def test_lazy_grouping_errors():
+def test_lazy_grouping_errors() -> None:
     import dask.array
 
     data = DataArray(
@@ -3132,7 +3132,7 @@ def test_lazy_grouping_errors():
 
 
 @requires_dask
-def test_lazy_int_bins_error():
+def test_lazy_int_bins_error() -> None:
     import dask.array
 
     with pytest.raises(ValueError, match="Bin edges must be provided"):
@@ -3140,7 +3140,7 @@ def test_lazy_int_bins_error():
             _ = BinGrouper(bins=4).factorize(DataArray(dask.array.arange(3)))
 
 
-def test_time_grouping_seasons_specified():
+def test_time_grouping_seasons_specified() -> None:
     time = xr.date_range("2001-01-01", "2002-01-01", freq="D")
     ds = xr.Dataset({"foo": np.arange(time.size)}, coords={"time": ("time", time)})
     labels = ["DJF", "MAM", "JJA", "SON"]
@@ -3149,7 +3149,36 @@ def test_time_grouping_seasons_specified():
     assert_identical(actual, expected.reindex(season=labels))
 
 
-def test_groupby_multiple_bin_grouper_missing_groups():
+def test_multiple_grouper_unsorted_order() -> None:
+    time = xr.date_range("2001-01-01", "2003-01-01", freq="MS")
+    ds = xr.Dataset({"foo": np.arange(time.size)}, coords={"time": ("time", time)})
+    labels = ["DJF", "MAM", "JJA", "SON"]
+    actual = ds.groupby(
+        {
+            "time.season": UniqueGrouper(labels=labels),
+            "time.year": UniqueGrouper(labels=[2002, 2001]),
+        }
+    ).sum()
+    expected = (
+        ds.groupby({"time.season": UniqueGrouper(), "time.year": UniqueGrouper()})
+        .sum()
+        .reindex(season=labels, year=[2002, 2001])
+    )
+    assert_identical(actual, expected.reindex(season=labels))
+
+    b = xr.DataArray(
+        np.random.default_rng(0).random((2, 3, 4)),
+        coords={"x": [0, 1], "y": [0, 1, 2]},
+        dims=["x", "y", "z"],
+    )
+    actual2 = b.groupby(
+        x=UniqueGrouper(labels=[1, 0]), y=UniqueGrouper(labels=[2, 0, 1])
+    ).sum()
+    expected2 = b.reindex(x=[1, 0], y=[2, 0, 1]).transpose("z", ...)
+    assert_identical(actual2, expected2)
+
+
+def test_groupby_multiple_bin_grouper_missing_groups() -> None:
     from numpy import nan
 
     ds = xr.Dataset(
@@ -3226,7 +3255,7 @@ def test_shuffle_by(chunks, expected_chunks):
 
 
 @requires_dask
-def test_groupby_dask_eager_load_warnings():
+def test_groupby_dask_eager_load_warnings() -> None:
     ds = xr.Dataset(
         {"foo": (("z"), np.arange(12))},
         coords={"x": ("z", np.arange(12)), "y": ("z", np.arange(12))},

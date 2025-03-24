@@ -534,6 +534,11 @@ class ComposedGrouper:
             list(grouper.full_index.values for grouper in groupers),
             names=tuple(grouper.name for grouper in groupers),
         )
+        if not full_index.is_unique:
+            raise ValueError(
+                "The output index for the GroupBy is non-unique. "
+                "This is a bug in the Grouper provided."
+            )
         # This will be unused when grouping by dask arrays, so skip..
         if not is_chunked_array(_flatcodes):
             # Constructing an index from the product is wrong when there are missing groups
@@ -942,17 +947,29 @@ class GroupBy(Generic[T_Xarray]):
     def _restore_dim_order(self, stacked):
         raise NotImplementedError
 
-    def _maybe_restore_empty_groups(self, combined):
-        """Our index contained empty groups (e.g., from a resampling or binning). If we
+    def _maybe_reindex(self, combined):
+        """Reindexing is needed in two cases:
+        1. Our index contained empty groups (e.g., from a resampling or binning). If we
         reduced on that dimension, we want to restore the full index.
+
+        2. We use a MultiIndex for multi-variable GroupBy.
+        The MultiIndex stores each level's labels in sorted order
+        which are then assigned on unstacking. So we need to restore
+        the correct order here.
         """
         has_missing_groups = (
             self.encoded.unique_coord.size != self.encoded.full_index.size
         )
         indexers = {}
         for grouper in self.groupers:
-            if has_missing_groups and grouper.name in combined._indexes:
+            index = combined._indexes.get(grouper.name, None)
+            if has_missing_groups and index is not None:
                 indexers[grouper.name] = grouper.full_index
+            elif len(self.groupers) > 1:
+                if not isinstance(
+                    grouper.full_index, pd.RangeIndex
+                ) and not index.index.equals(grouper.full_index):
+                    indexers[grouper.name] = grouper.full_index
         if indexers:
             combined = combined.reindex(**indexers)
         return combined
@@ -1595,7 +1612,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         if dim not in applied_example.dims:
             combined = combined.assign_coords(self.encoded.coords)
         combined = self._maybe_unstack(combined)
-        combined = self._maybe_restore_empty_groups(combined)
+        combined = self._maybe_reindex(combined)
         return combined
 
     def reduce(
@@ -1751,7 +1768,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         if dim not in applied_example.dims:
             combined = combined.assign_coords(self.encoded.coords)
         combined = self._maybe_unstack(combined)
-        combined = self._maybe_restore_empty_groups(combined)
+        combined = self._maybe_reindex(combined)
         return combined
 
     def reduce(
