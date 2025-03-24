@@ -521,7 +521,7 @@ class TimeResampler(Resampler):
             counts = grouped.count()
             # This way we generate codes for the final output index: full_index.
             # So for _flox_reduce we avoid one reindex and copy by avoiding
-            # _maybe_restore_empty_groups
+            # _maybe_reindex
             codes = np.repeat(np.arange(len(first_items)), counts)
             return first_items, codes
 
