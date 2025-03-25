@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """Script to fix remaining import errors in variable.py and dataset.py."""
 
-
 files_to_fix = [
     "/Users/maximilian/workspace/xarray/xarray/core/variable.py",
     "/Users/maximilian/workspace/xarray/xarray/core/dataset.py",
