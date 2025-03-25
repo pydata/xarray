@@ -21,7 +21,8 @@ try:
 except ImportError:
     from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
 
-from xarray.computation.computation import _ensure_numeric, apply_ufunc, where
+from xarray.computation.apply_ufunc import apply_ufunc
+from xarray.computation.computation import _ensure_numeric, where
 from xarray.core.dataarray import DataArray
 from xarray.core.duck_array_ops import is_duck_dask_array, least_squares
 from xarray.core.types import Dims, ErrorOptions
