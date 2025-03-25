@@ -9784,7 +9784,7 @@ class Dataset(
         """
         from scipy.optimize import curve_fit
 
-        from xarray.computation.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
         from xarray.core.dataarray import _THIS_ARRAY, DataArray
         from xarray.structure.alignment import broadcast
 
