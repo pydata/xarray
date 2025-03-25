@@ -1978,10 +1978,14 @@ class TestDataArrayResample:
         expected = array.isel(time=[3, 7, 9]).assign_coords(time=times[::4])
         assert_identical(expected, actual)
 
-        # missing periods
+        # missing periods, GH10169
         actual = array.isel(time=[0, 1, 2, 3, 8, 9]).resample(time="1D").last()
-        expected = array.isel(time=[3, 7, 9]).assign_coords(time=times[::4])
-        expected.data[1] = np.datetime64("NaT")
+        expected = DataArray(
+            np.array([times[3], np.datetime64("NaT"), times[9]]),
+            dims="time",
+            coords={"time": times[::4]},
+            name="time",
+        )
         assert_identical(expected, actual)
 
     def test_resample_bad_resample_dim(self) -> None:
