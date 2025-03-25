@@ -24,7 +24,7 @@ from numpy.typing import ArrayLike
 from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.compat.toolzcompat import sliding_window
-from xarray.computation.computation import apply_ufunc
+from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.core.common import (
     _contains_cftime_datetimes,
     _contains_datetime_like_objects,

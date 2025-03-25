@@ -14,10 +14,53 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2025.02.0:
+.. _whats-new.2025.03.1:
 
-v2025.02.0 (unreleased)
+v2025.03.1 (unreleased)
 -----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Explicitly forbid appending a :py:class:`~xarray.DataTree` to zarr using :py:meth:`~xarray.DataTree.to_zarr` with ``append_dim``, because the expected behaviour is currently undefined.
+  (:issue:`9858`, :pull:`10156`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+- Update the parameters of :py:meth:`~xarray.DataArray.to_zarr` to match :py:meth:`~xarray.Dataset.to_zarr`.
+  This fixes the issue where using the ``zarr_version`` parameter would raise a deprecation warning telling the user to use
+  a non-existent ``zarr_format`` parameter instead. (:issue:`10163`, :pull:`10164`)
+  By `Karl Krauth <https://github.com/Karl-Krauth>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+.. _whats-new.2025.03.0:
+
+v2025.03.0 (Mar 20, 2025)
+-------------------------
+
+This release brings tested support for Python 3.13, support for reading Zarr V3 datasets into a :py:class:`~xarray.DataTree`,
+significant improvements to datetime & timedelta encoding/decoding, and improvements to the :py:class:`~xarray.DataTree` API;
+in addition to the usual bug fixes and other improvements.
+Thanks to the 26 contributors to this release:
+Alfonso Ladino, Benoit Bovy, Chuck Daniels, Deepak Cherian, Eni, Florian Jetter, Ian Hunt-Isaak, Jan, Joe Hamman, Josh Kihm, Julia Signell,
+Justus Magin, Kai Mühlbauer, Kobe Vandelanotte, Mathias Hauser, Max Jones, Maximilian Roos, Oliver Watt-Meyer, Sam Levang, Sander van Rijn,
+Spencer Clark, Stephan Hoyer, Tom Nicholas, Tom White, Vecko and maddogghoek
 
 New Features
 ~~~~~~~~~~~~
@@ -79,8 +122,8 @@ Bug fixes
 - Use mean of min/max years as offset in calculation of datetime64 mean
   (:issue:`10019`, :pull:`10035`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- Fix DataArray().drop_attrs(deep=False) and add support for attrs to
-  DataArray()._replace(). (:issue:`10027`, :pull:`10030`). By `Jan
+- Fix ``DataArray().drop_attrs(deep=False)`` and add support for attrs to
+  ``DataArray()._replace()``. (:issue:`10027`, :pull:`10030`). By `Jan
   Haacker <https://github.com/j-haacker>`_.
 - Fix bug preventing encoding times with missing values with small integer
   dtype (:issue:`9134`, :pull:`9498`). By `Spencer Clark
@@ -106,9 +149,6 @@ Documentation
 ~~~~~~~~~~~~~
 - Better expose the :py:class:`Coordinates` class in API reference (:pull:`10000`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
-
-Internal Changes
-~~~~~~~~~~~~~~~~
 
 
 .. _whats-new.2025.01.2:
@@ -184,9 +224,6 @@ New Features
   :py:class:`pandas.DatetimeIndex` (:pull:`9965`). By `Spencer Clark
   <https://github.com/spencerkclark>`_ and `Kai Mühlbauer
   <https://github.com/kmuehlbauer>`_.
-
-Breaking changes
-~~~~~~~~~~~~~~~~
 - Adds shards to the list of valid_encodings in the zarr backend, so that
   sharded Zarr V3s can be written (:issue:`9947`, :pull:`9948`).
   By `Jacob Prince_Bieker <https://github.com/jacobbieker>`_
