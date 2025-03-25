@@ -13,12 +13,11 @@ from collections.abc import (
     Callable,
     Hashable,
 )
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
 
 from xarray.compat.array_api_compat import to_like_array
-from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.common import zeros_like
 from xarray.core.duck_array_ops import datetime_to_numeric
@@ -467,6 +466,8 @@ def cross(
                 " dimensions without coordinates must have have a length of 2 or 3"
             )
 
+    from xarray.computation.apply_ufunc import apply_ufunc
+
     c = apply_ufunc(
         duck_array_ops.cross,
         a,
@@ -629,6 +630,8 @@ def dot(
     # subscripts should be passed to np.einsum as arg, not as kwargs. We need
     # to construct a partial function for apply_ufunc to work.
     func = functools.partial(duck_array_ops.einsum, subscripts, **kwargs)
+    from xarray.computation.apply_ufunc import apply_ufunc
+
     result = apply_ufunc(
         func,
         *arrays,
@@ -729,6 +732,8 @@ def where(cond, x, y, keep_attrs=None):
         keep_attrs = _get_keep_attrs(default=False)
 
     # alignment for three arguments is complicated, so don't support it yet
+    from xarray.computation.apply_ufunc import apply_ufunc
+
     result = apply_ufunc(
         duck_array_ops.where,
         cond,
@@ -951,80 +956,3 @@ def _calc_idxminmax(
     res.attrs = indx.attrs
 
     return res
-
-
-_T = TypeVar("_T", bound=Union["Dataset", "DataArray"])
-_U = TypeVar("_U", bound=Union["Dataset", "DataArray"])
-_V = TypeVar("_V", bound=Union["Dataset", "DataArray"])
-
-
-@overload
-def unify_chunks(__obj: _T) -> tuple[_T]: ...
-
-
-@overload
-def unify_chunks(__obj1: _T, __obj2: _U) -> tuple[_T, _U]: ...
-
-
-@overload
-def unify_chunks(__obj1: _T, __obj2: _U, __obj3: _V) -> tuple[_T, _U, _V]: ...
-
-
-@overload
-def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]: ...
-
-
-def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]:
-    """
-    Given any number of Dataset and/or DataArray objects, returns
-    new objects with unified chunk size along all chunked dimensions.
-
-    Returns
-    -------
-    unified (DataArray or Dataset) – Tuple of objects with the same type as
-    *objects with consistent chunk sizes for all dask-array variables
-
-    See Also
-    --------
-    dask.array.core.unify_chunks
-    """
-    from xarray.core.dataarray import DataArray
-
-    # Convert all objects to datasets
-    datasets = [
-        obj._to_temp_dataset() if isinstance(obj, DataArray) else obj.copy()
-        for obj in objects
-    ]
-
-    # Get arguments to pass into dask.array.core.unify_chunks
-    unify_chunks_args = []
-    sizes: dict[Hashable, int] = {}
-    for ds in datasets:
-        for v in ds._variables.values():
-            if v.chunks is not None:
-                # Check that sizes match across different datasets
-                for dim, size in v.sizes.items():
-                    try:
-                        if sizes[dim] != size:
-                            raise ValueError(
-                                f"Dimension {dim!r} size mismatch: {sizes[dim]} != {size}"
-                            )
-                    except KeyError:
-                        sizes[dim] = size
-                unify_chunks_args += [v._data, v._dims]
-
-    # No dask arrays: Return inputs
-    if not unify_chunks_args:
-        return objects
-
-    chunkmanager = get_chunked_array_type(*list(unify_chunks_args))
-    _, chunked_data = chunkmanager.unify_chunks(*unify_chunks_args)
-    chunked_data_iter = iter(chunked_data)
-    out: list[Dataset | DataArray] = []
-    for obj, ds in zip(objects, datasets, strict=True):
-        for k, v in ds._variables.items():
-            if v.chunks is not None:
-                ds._variables[k] = v.copy(data=next(chunked_data_iter))
-        out.append(obj._from_temp_dataset(ds) if isinstance(obj, DataArray) else ds)
-
-    return tuple(out)

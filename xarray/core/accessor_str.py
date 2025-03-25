@@ -51,7 +51,6 @@ from unicodedata import normalize
 
 import numpy as np
 
-from xarray.computation.computation import apply_ufunc
 from xarray.core import duck_array_ops
 from xarray.core.types import T_DataArray
 
@@ -126,6 +125,8 @@ def _apply_str_ufunc(
     dask_gufunc_kwargs = dict()
     if output_sizes is not None:
         dask_gufunc_kwargs["output_sizes"] = output_sizes
+
+    from xarray.computation.apply_ufunc import apply_ufunc
 
     return apply_ufunc(
         func,
