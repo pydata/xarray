@@ -4589,7 +4589,7 @@ class TestDataArray:
         fit = da.curvefit(
             coords=[da.t], func=exp_decay, p0={"n0": 4}, bounds={"tau": (2, 6)}
         )
-        assert_allclose(fit["<this-array>_curvefit_coefficients"], expected, rtol=1e-3)
+        assert_allclose(fit.curvefit_coefficients, expected, rtol=1e-3)
 
         da = da.compute()
         fit = da.curvefit(coords="t", func=np.power, reduce_dims="x", param_names=["a"])
@@ -4669,7 +4669,7 @@ class TestDataArray:
             func=sine,
             p0={"a": a_guess, "p": p_guess, "f": 2},
         )
-        assert_allclose(fit["<this-array>_curvefit_coefficients"], expected)
+        assert_allclose(fit.curvefit_coefficients, expected)
 
         with pytest.raises(
             ValueError,
@@ -4720,7 +4720,7 @@ class TestDataArray:
                 ),
             },
         )
-        assert_allclose(fit["<this-array>_curvefit_coefficients"], expected)
+        assert_allclose(fit.curvefit_coefficients, expected)
 
         # Scalar lower bound with array upper bound
         fit2 = da.curvefit(
@@ -4731,7 +4731,7 @@ class TestDataArray:
                 "a": (-2, DataArray([2, 0], coords=[da.x])),
             },
         )
-        assert_allclose(fit2["<this-array>_curvefit_coefficients"], expected)
+        assert_allclose(fit2.curvefit_coefficients, expected)
 
         with pytest.raises(
             ValueError,
@@ -4785,7 +4785,7 @@ class TestDataArray:
             kwargs=dict(maxfev=5),
         ).compute()
 
-        assert_allclose(fit["<this-array>_curvefit_coefficients"], expected)
+        assert_allclose(fit.curvefit_coefficients, expected)
 
 
 class TestReduce:

@@ -256,10 +256,16 @@ def polyfit(
                 lhs, rhs.data, rcond=rcond, skipna=skipna_da
             )
 
-        if isinstance(name, str):
+        from xarray.core.dataarray import _THIS_ARRAY
+        
+        if name is _THIS_ARRAY:
+            # When polyfit is called on a DataArray, ensure the resulting 
+            # dataset is backwards compatible with previous behavior
+            name = ""
+        elif isinstance(name, str):
             name = f"{name}_"
         else:
-            # Thus a ReprObject => polyfit was called on a DataArray
+            # For other non-string names
             name = ""
 
         variables[name + "polyfit_coefficients"] = Variable(
@@ -483,9 +489,16 @@ def curvefit(
 
         return popt, pcov
 
+    from xarray.core.dataarray import _THIS_ARRAY
+    
     result = type(obj)()
     for name, da in obj.data_vars.items():
-        name = f"{name}_"
+        if name is _THIS_ARRAY:
+            # When curvefit is called on a DataArray, ensure the resulting 
+            # dataset is backwards compatible with previous behavior
+            var_name = ""
+        else:
+            var_name = f"{name}_"
 
         input_core_dims = [reduce_dims_ for _ in range(n_coords + 1)]
         input_core_dims.extend(
@@ -514,8 +527,8 @@ def curvefit(
             exclude_dims=set(reduce_dims_),
             kwargs=kwargs,
         )
-        result[name + "curvefit_coefficients"] = popt
-        result[name + "curvefit_covariance"] = pcov
+        result[var_name + "curvefit_coefficients"] = popt
+        result[var_name + "curvefit_covariance"] = pcov
 
     result = result.assign_coords({"param": params, "cov_i": params, "cov_j": params})
     result.attrs = obj.attrs.copy()
