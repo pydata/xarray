@@ -1845,7 +1845,6 @@ class TestDataArrayGroupBy:
 
 class TestDataArrayResample:
     @pytest.mark.parametrize("shuffle", [True, False])
-    @pytest.mark.parametrize("use_cftime", [True, False])
     @pytest.mark.parametrize(
         "resample_freq",
         [
@@ -1906,12 +1905,8 @@ class TestDataArrayResample:
         with pytest.raises(ValueError):
             reverse.resample(time=resample_freq).mean()
 
-    @pytest.mark.parametrize("use_cftime", [True, False])
     def test_resample_doctest(self, use_cftime: bool) -> None:
         # run the doctest example here so we are not surprised
-        if use_cftime and not has_cftime:
-            pytest.skip()
-
         da = xr.DataArray(
             np.array([1, 2, 3, 1, 2, np.nan]),
             dims="time",
@@ -1947,8 +1942,10 @@ class TestDataArrayResample:
         actual = da.resample(time="D").map(func, args=(1.0,), arg3=1.0)
         assert_identical(actual, expected)
 
-    def test_resample_first(self) -> None:
-        times = pd.date_range("2000-01-01", freq="6h", periods=10)
+    def test_resample_first_last(self, use_cftime) -> None:
+        times = xr.date_range(
+            "2000-01-01", freq="6h", periods=10, use_cftime=use_cftime
+        )
         array = DataArray(np.arange(10), [("time", times)])
 
         # resample to same frequency
@@ -1961,7 +1958,7 @@ class TestDataArrayResample:
 
         # verify that labels don't use the first value
         actual = array.resample(time="24h").first()
-        expected = DataArray(array.to_series().resample("24h").first())
+        expected = array.isel(time=[0, 4, 8])
         assert_identical(expected, actual)
 
         # missing values
@@ -1978,10 +1975,13 @@ class TestDataArrayResample:
         # regression test for https://stackoverflow.com/questions/33158558/
         array = Dataset({"time": times})["time"]
         actual = array.resample(time="1D").last()
-        expected_times = pd.to_datetime(
-            ["2000-01-01T18", "2000-01-02T18", "2000-01-03T06"], unit="ns"
-        )
-        expected = DataArray(expected_times, [("time", times[::4])], name="time")
+        expected = array.isel(time=[3, 7, 9]).assign_coords(time=times[::4])
+        assert_identical(expected, actual)
+
+        # missing periods
+        actual = array.isel(time=[0, 1, 2, 3, 8, 9]).resample(time="1D").last()
+        expected = array.isel(time=[3, 7, 9]).assign_coords(time=times[::4])
+        expected.data[1] = np.datetime64("NaT")
         assert_identical(expected, actual)
 
     def test_resample_bad_resample_dim(self) -> None:
@@ -2298,7 +2298,6 @@ class TestDataArrayResample:
 
 
 class TestDatasetResample:
-    @pytest.mark.parametrize("use_cftime", [True, False])
     @pytest.mark.parametrize(
         "resample_freq",
         [
