@@ -4589,7 +4589,7 @@ class TestDataArray:
         fit = da.curvefit(
             coords=[da.t], func=exp_decay, p0={"n0": 4}, bounds={"tau": (2, 6)}
         )
-        assert_allclose(fit.curvefit_coefficients, expected, rtol=1e-3)
+        assert_allclose(fit["<this-array>_curvefit_coefficients"], expected, rtol=1e-3)
 
         da = da.compute()
         fit = da.curvefit(coords="t", func=np.power, reduce_dims="x", param_names=["a"])
@@ -4600,16 +4600,18 @@ class TestDataArray:
         def exp_decay(t, n0, tau=1):
             return n0 * np.exp(-t / tau)
 
-        params, func_args = xr.core.dataset._get_func_args(exp_decay, [])
+        from xarray.computation.fit import _get_func_args, _initialize_curvefit_params
+
+        params, func_args = _get_func_args(exp_decay, [])
         assert params == ["n0", "tau"]
-        param_defaults, bounds_defaults = xr.core.dataset._initialize_curvefit_params(
+        param_defaults, bounds_defaults = _initialize_curvefit_params(
             params, {"n0": 4}, {"tau": [5, np.inf]}, func_args
         )
         assert param_defaults == {"n0": 4, "tau": 6}
         assert bounds_defaults == {"n0": (-np.inf, np.inf), "tau": (5, np.inf)}
 
         # DataArray as bound
-        param_defaults, bounds_defaults = xr.core.dataset._initialize_curvefit_params(
+        param_defaults, bounds_defaults = _initialize_curvefit_params(
             params=params,
             p0={"n0": 4},
             bounds={"tau": [DataArray([3, 4], coords=[("x", [1, 2])]), np.inf]},
@@ -4626,10 +4628,10 @@ class TestDataArray:
         assert bounds_defaults["tau"][1] == np.inf
 
         param_names = ["a"]
-        params, func_args = xr.core.dataset._get_func_args(np.power, param_names)
+        params, func_args = _get_func_args(np.power, param_names)
         assert params == param_names
         with pytest.raises(ValueError):
-            xr.core.dataset._get_func_args(np.power, [])
+            _get_func_args(np.power, [])
 
     @requires_scipy
     @pytest.mark.parametrize("use_dask", [True, False])
@@ -4667,7 +4669,7 @@ class TestDataArray:
             func=sine,
             p0={"a": a_guess, "p": p_guess, "f": 2},
         )
-        assert_allclose(fit.curvefit_coefficients, expected)
+        assert_allclose(fit["<this-array>_curvefit_coefficients"], expected)
 
         with pytest.raises(
             ValueError,
@@ -4718,7 +4720,7 @@ class TestDataArray:
                 ),
             },
         )
-        assert_allclose(fit.curvefit_coefficients, expected)
+        assert_allclose(fit["<this-array>_curvefit_coefficients"], expected)
 
         # Scalar lower bound with array upper bound
         fit2 = da.curvefit(
@@ -4729,7 +4731,7 @@ class TestDataArray:
                 "a": (-2, DataArray([2, 0], coords=[da.x])),
             },
         )
-        assert_allclose(fit2.curvefit_coefficients, expected)
+        assert_allclose(fit2["<this-array>_curvefit_coefficients"], expected)
 
         with pytest.raises(
             ValueError,
@@ -4783,7 +4785,7 @@ class TestDataArray:
             kwargs=dict(maxfev=5),
         ).compute()
 
-        assert_allclose(fit.curvefit_coefficients, expected)
+        assert_allclose(fit["<this-array>_curvefit_coefficients"], expected)
 
 
 class TestReduce:

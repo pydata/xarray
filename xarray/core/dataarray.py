@@ -5757,6 +5757,7 @@ class DataArray(
         xarray.polyval
         DataArray.curvefit
         """
+        # For DataArray, use the original implementation by converting to a dataset
         return self._to_temp_dataset().polyfit(
             dim, deg, skipna=skipna, rcond=rcond, w=w, full=full, cov=cov
         )
@@ -6558,6 +6559,7 @@ class DataArray(
         DataArray.polyfit
         scipy.optimize.curve_fit
         """
+        # For DataArray, use the original implementation by converting to a dataset first
         return self._to_temp_dataset().curvefit(
             coords,
             func,
