@@ -9,7 +9,7 @@ from xarray.coding.times import (
     _should_cftime_be_used,
     convert_times,
 )
-from xarray.computation.apply_ufunc import apply_ufunc
+
 from xarray.core.common import (
     _contains_datetime_like_objects,
     full_like,
@@ -333,6 +333,8 @@ def _decimal_year(times):
     else:
         function = _decimal_year_numpy
         kwargs = {"dtype": times.dtype}
+    from xarray.computation.apply_ufunc import apply_ufunc
+
     return apply_ufunc(
         function,
         times,

@@ -27,9 +27,9 @@ from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload
 import numpy as np
 from pandas.api.types import is_extension_array_dtype
 
-from xarray.core.chunk import _maybe_chunk
 from xarray.core.dataset_utils import _get_virtual_variable, _LocIndexer
 from xarray.core.dataset_variables import DataVariables
+from xarray.structure.chunks import _maybe_chunk
 
 # remove once numpy 2.0 is the oldest supported version
 try:
@@ -44,7 +44,7 @@ from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_string
 from xarray.compat.array_api_compat import to_like_array
 from xarray.computation import ops
 from xarray.computation.arithmetic import DatasetArithmetic
-from xarray.computation.computation import _ensure_numeric, unify_chunks
+from xarray.computation.computation import _ensure_numeric
 from xarray.core import dtypes as xrdtypes
 from xarray.core import (
     duck_array_ops,
@@ -125,6 +125,7 @@ from xarray.structure.alignment import (
     _get_broadcast_dims_map_common_coords,
     align,
 )
+from xarray.structure.chunks import unify_chunks
 from xarray.structure.merge import (
     dataset_merge_method,
     dataset_update_method,
