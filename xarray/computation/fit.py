@@ -257,9 +257,9 @@ def polyfit(
             )
 
         from xarray.core.dataarray import _THIS_ARRAY
-        
+
         if name is _THIS_ARRAY:
-            # When polyfit is called on a DataArray, ensure the resulting 
+            # When polyfit is called on a DataArray, ensure the resulting
             # dataset is backwards compatible with previous behavior
             name = ""
         elif isinstance(name, str):
@@ -490,11 +490,11 @@ def curvefit(
         return popt, pcov
 
     from xarray.core.dataarray import _THIS_ARRAY
-    
+
     result = type(obj)()
     for name, da in obj.data_vars.items():
         if name is _THIS_ARRAY:
-            # When curvefit is called on a DataArray, ensure the resulting 
+            # When curvefit is called on a DataArray, ensure the resulting
             # dataset is backwards compatible with previous behavior
             var_name = ""
         else:
