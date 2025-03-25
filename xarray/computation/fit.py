@@ -38,7 +38,7 @@ def _get_func_args(func, param_names):
     try:
         func_args = inspect.signature(func).parameters
     except ValueError as err:
-        func_args = {}  # type: ignore[assignment]
+        func_args = {}  # type: ignore[assignment,unused-ignore]
         if not param_names:
             raise ValueError(
                 "Unable to inspect `func` signature, and `param_names` was not provided."
