@@ -1401,8 +1401,14 @@ class GroupBy(Generic[T_Xarray]):
             and OPTIONS["use_flox"]
             and contains_only_chunked_or_numpy(self._obj)
         ):
+            import flox.xrdtypes
+
             result = self._flox_reduce(
-                dim=None, func=op, skipna=skipna, keep_attrs=keep_attrs
+                dim=None,
+                func=op,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                fill_value=flox.xrdtypes.NA,
             )
         else:
             result = self.reduce(
