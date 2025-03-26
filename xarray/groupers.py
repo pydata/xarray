@@ -643,6 +643,7 @@ def inds_to_season_string(asints: tuple[tuple[int, ...], ...]) -> tuple[str, ...
 
 
 def is_sorted_periodic(lst):
+    """Used to verify that seasons provided to SeasonResampler are in order."""
     n = len(lst)
 
     # Find the wraparound point where the list decreases
