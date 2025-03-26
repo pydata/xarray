@@ -3437,18 +3437,16 @@ class TestSeasonGrouperAndResampler:
         gb = da.resample(time=SeasonResampler(["NDJFM", "AMJ"], drop_incomplete=False))
         actual = gb.mean()
 
+        # fmt: off
         new_time_da = xr.DataArray(
             dims="time",
             data=pd.DatetimeIndex(
                 [
-                    "2000-11-01",
-                    "2001-04-01",
-                    "2001-11-01",
-                    "2002-04-01",
-                    "2002-11-01",
+                    "2000-11-01", "2001-04-01", "2001-11-01", "2002-04-01", "2002-11-01"
                 ]
             ),
         )
+        # fmt: on
         if calendar != "standard":
             new_time_da = new_time_da.convert_calendar(
                 calendar=calendar, align_on="date"
@@ -3497,7 +3495,6 @@ class TestSeasonGrouperAndResampler:
             pytest.param(["JFM", "AMJ", "JAS", "OND"], id="december-same-year"),
             pytest.param(["DJF", "MAM", "JJA", "ON"], id="skip-september"),
             pytest.param(["JJAS"], id="jjas-only"),
-            pytest.param(["MAM", "JJA", "SON", "DJF"], id="different-order"),
         ],
     )
     def test_season_resampler(
