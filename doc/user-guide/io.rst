@@ -1021,6 +1021,22 @@ reads. Because this fall-back option is so much slower, xarray issues a
        instead of falling back to try reading non-consolidated metadata.
 
 
+Fill Values
+~~~~~~~~~~~
+
+Zarr arrays have a ``fill_value`` that is used for chunks that were never written to disk.
+For the Zarr version 2 format, Xarray will set ``fill_value`` to be equal to the CF/NetCDF ``"_FillValue"``.
+This is ``np.nan`` by default for floats, and unset otherwise. Note that the Zarr library will set a
+default ``fill_value`` if not specified (usually ``0``).
+
+For the Zarr version 3 format, ``_FillValue`` and ```fill_value`` are decoupled.
+So you can set ``fill_value`` in ``encoding`` as usual.
+
+Note that at read-time, you can control whether ``_FillValue`` is masked using the
+``mask_and_scale`` kwarg; and whether Zarr's ``fill_value`` is treated as synonymous
+with ``_FillValue`` using the ``use_zarr_fill_value_as_mask`` kwarg to :py:func:`xarray.open_zarr`.
+
+
 .. _io.kerchunk:
 
 Kerchunk
