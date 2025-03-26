@@ -1106,6 +1106,14 @@ class ZarrStore(AbstractWritableDataStore):
             else:
                 encoding["write_empty_chunks"] = self._write_empty
 
+        if _zarr_v3():
+            # zarr v3 deprecated origin and write_empty_chunks
+            # instead preferring to pass them via the config argument
+            encoding["config"] = {}
+            for c in ("write_empty_chunks", "order"):
+                if c in encoding:
+                    encoding["config"][c] = encoding.pop(c)
+
         zarr_array = self.zarr_group.create(
             name,
             shape=shape,
