@@ -426,6 +426,7 @@ def extract_zarr_variable_encoding(
     raise_on_invalid=False,
     name=None,
     *,
+    zarr_format: ZarrFormat,
     safe_chunks=True,
     region=None,
     mode=None,
@@ -443,6 +444,7 @@ def extract_zarr_variable_encoding(
     region: tuple[slice, ...], optional
     mode: str, optional
     shape: tuple[int, ...], optional
+    zarr_format: Literal[2,3]
     Returns
     -------
     encoding : dict
@@ -463,6 +465,8 @@ def extract_zarr_variable_encoding(
         "cache_metadata",
         "write_empty_chunks",
     }
+    if zarr_format == 3:
+        valid_encodings.add("fill_value")
 
     for k in safe_to_drop:
         if k in encoding:
@@ -470,9 +474,14 @@ def extract_zarr_variable_encoding(
 
     if raise_on_invalid:
         invalid = [k for k in encoding if k not in valid_encodings]
+        if "fill_value" in invalid and zarr_format == 2:
+            msg = " Use `_FillValue` to set the Zarr array `fill_value`"
+        else:
+            msg = ""
+
         if invalid:
             raise ValueError(
-                f"unexpected encoding parameters for zarr backend:  {invalid!r}"
+                f"unexpected encoding parameters for zarr backend:  {invalid!r}." + msg
             )
     else:
         for k in list(encoding):
@@ -1161,7 +1170,7 @@ class ZarrStore(AbstractWritableDataStore):
             if self._use_zarr_fill_value_as_mask:
                 fill_value = attrs.pop("_FillValue", None)
             else:
-                fill_value = None
+                fill_value = v.encoding.pop("fill_value", None)
                 if "_FillValue" in attrs:
                     # replace with encoded fill value
                     fv = attrs.pop("_FillValue")
@@ -1212,6 +1221,7 @@ class ZarrStore(AbstractWritableDataStore):
                 region=region,
                 mode=self._mode,
                 shape=zarr_shape,
+                zarr_format=3 if is_zarr_v3_format else 2,
             )
 
             if self._mode == "w" or name not in existing_keys:
