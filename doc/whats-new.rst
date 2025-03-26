@@ -41,6 +41,9 @@ Bug fixes
   This fixes the issue where using the ``zarr_version`` parameter would raise a deprecation warning telling the user to use
   a non-existent ``zarr_format`` parameter instead. (:issue:`10163`, :pull:`10164`)
   By `Karl Krauth <https://github.com/Karl-Krauth>`_.
+- Fix grouped and resampled ``first``, ``last`` with datetimes (:issue:`10169`, :pull:`10173`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
