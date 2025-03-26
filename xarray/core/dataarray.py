@@ -31,7 +31,6 @@ from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.computation import computation, ops
 from xarray.computation.arithmetic import DataArrayArithmetic
-from xarray.computation.computation import unify_chunks
 from xarray.core import dtypes, indexing, utils
 from xarray.core._aggregations import DataArrayAggregations
 from xarray.core.accessor_dt import CombinedDatetimelikeAccessor
@@ -88,6 +87,7 @@ from xarray.structure.alignment import (
     _get_broadcast_dims_map_common_coords,
     align,
 )
+from xarray.structure.chunks import unify_chunks
 from xarray.structure.merge import PANDAS_TYPES, MergeError
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
@@ -5757,6 +5757,7 @@ class DataArray(
         xarray.polyval
         DataArray.curvefit
         """
+        # For DataArray, use the original implementation by converting to a dataset
         return self._to_temp_dataset().polyfit(
             dim, deg, skipna=skipna, rcond=rcond, w=w, full=full, cov=cov
         )
@@ -6558,6 +6559,7 @@ class DataArray(
         DataArray.polyfit
         scipy.optimize.curve_fit
         """
+        # For DataArray, use the original implementation by converting to a dataset first
         return self._to_temp_dataset().curvefit(
             coords,
             func,
