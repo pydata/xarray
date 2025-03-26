@@ -1075,13 +1075,18 @@ class ZarrStore(AbstractWritableDataStore):
             #     - Existing variables already have their attrs included in the consolidated metadata file.
             #     - The size of dimensions can not be expanded, that would require a call using `append_dim`
             #        which is mutually exclusive with `region`
+            if _zarr_v3():
+                empty = dict(config={"write_empty_chunks": self._write_empty})
+            else:
+                empty = dict(write_empty_chunks=self._write_empty)
+
             zarr_array = zarr.open(
                 store=(
                     self.zarr_group.store if _zarr_v3() else self.zarr_group.chunk_store
                 ),
                 # TODO: see if zarr should normalize these strings.
                 path="/".join([self.zarr_group.name.rstrip("/"), name]).lstrip("/"),
-                write_empty_chunks=self._write_empty,
+                **empty,
             )
         else:
             zarr_array = self.zarr_group[name]
