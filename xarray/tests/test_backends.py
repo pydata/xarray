@@ -3640,7 +3640,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         consolidated: bool | None,
         write_empty: bool | None,
     ) -> None:
-        def assert_expected_files(expected: set[str], store: str) -> None:
+        def assert_expected_files(expected: list[str], store: str) -> None:
             """Convenience for comparing with actual files written"""
             ls = []
             test_root = os.path.join(store, "test")
@@ -3662,7 +3662,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
 
         # The zarr format is set by the `default_zarr_format`
         # pytest fixture that acts on a superclass
-        zarr_format_3 = zarr.config.config["default_zarr_format"] == 3
+        zarr_format_3 = has_zarr_v3 and zarr.config.config["default_zarr_format"] == 3
         if (write_empty is False) or (write_empty is None and has_zarr_v3):
             expected = ["0.1.0"]
         else:
