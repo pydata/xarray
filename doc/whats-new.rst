@@ -22,6 +22,8 @@ v2025.03.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Allow setting a ``fill_value`` for Zarr format 3 arrays. Specify ``fill_value`` in ``encoding`` as usual.
+  (:issue:`10064`). By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -36,6 +38,15 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+
+- Update the parameters of :py:meth:`~xarray.DataArray.to_zarr` to match :py:meth:`~xarray.Dataset.to_zarr`.
+  This fixes the issue where using the ``zarr_version`` parameter would raise a deprecation warning telling the user to use
+  a non-existent ``zarr_format`` parameter instead. (:issue:`10163`, :pull:`10164`)
+  By `Karl Krauth <https://github.com/Karl-Krauth>`_.
+- :py:meth:`DataTree.sel` and :py:meth:`DataTree.isel` display the path of the first failed node again  (:pull:`10154`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+- Fix grouped and resampled ``first``, ``last`` with datetimes (:issue:`10169`, :pull:`10173`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Documentation
