@@ -1245,37 +1245,40 @@ over the network until we look at particular values:
 
 .. image:: ../_static/opendap-prism-tmax.png
 
-Some servers require authentication before we can access the data. For this
-purpose we can explicitly create a :py:class:`backends.PydapDataStore`
-and pass in a `Requests`__ session object. For example for
-HTTP Basic authentication::
-
-    import xarray as xr
-    import requests
-
-    session = requests.Session()
-    session.auth = ('username', 'password')
-
-    store = xr.backends.PydapDataStore.open('http://example.com/data',
-                                            session=session)
-    ds = xr.open_dataset(store)
-
-`Pydap's cas module`__ has functions that generate custom sessions for
-servers that use CAS single sign-on. For example, to connect to servers
-that require NASA's URS authentication::
+Some servers require authentication before we can access the data. `Pydap` uses
+a `Requests`__ session object (which the user can pre-define), and this 
+session object can recover authentication credentials from a locally stored 
+`.netrc` file. For example, to connect to server that require NASA's 
+URS authentication, with the username/password credentials stored on a locally 
+accessible `.netrc`, access to OPeNDAP data should be as simple as this::
 
   import xarray as xr
-  from pydata.cas.urs import setup_session
+  import requests
+
+  my_session = requests.Session()
 
   ds_url = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
 
-  session = setup_session('username', 'password', check_url=ds_url)
-  store = xr.backends.PydapDataStore.open(ds_url, session=session)
+  ds = xr.open_dataset(ds_url, session=my_session, engine="pydap")
 
-  ds = xr.open_dataset(store)
+Moreover, a bearer token header can be included in a `Requests`__ session 
+object, allowing for token-based authentication which  OPeNDAP servers can use
+to avoid some redirects. 
+
+
+Lastly, OPeNDAP servers may provide endpoint URLs for different OPeNDAP protocols,
+DAP2 and DAP4. To specify which protocol between the two options to use, you can 
+replace the scheme of the url with the name of the protocol. For example:: 
+
+    # dap2 url 
+    ds_url = 'dap2://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
+
+    # dap4 url 
+    ds_url = 'dap4://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
 
 __ https://docs.python-requests.org
-__ https://www.pydap.org/en/latest/client.html#authentication
+__ https://pydap.github.io/pydap/en/notebooks/Authentication.html
+__ https://pydap.github.io/pydap/en/Q3.html
 
 .. _io.pickle:
 
