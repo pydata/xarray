@@ -1252,14 +1252,14 @@ session object can recover authentication credentials from a locally stored
 URS authentication, with the username/password credentials stored on a locally 
 accessible `.netrc`, access to OPeNDAP data should be as simple as this::
 
-  import xarray as xr
-  import requests
+    import xarray as xr
+    import requests
 
-  my_session = requests.Session()
+    my_session = requests.Session()
 
-  ds_url = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
+    ds_url = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
 
-  ds = xr.open_dataset(ds_url, session=my_session, engine="pydap")
+    ds = xr.open_dataset(ds_url, session=my_session, engine="pydap")
 
 Moreover, a bearer token header can be included in a `Requests`__ session 
 object, allowing for token-based authentication which  OPeNDAP servers can use
