@@ -369,6 +369,8 @@ class DatasetIOBase:
     def roundtrip(
         self, data, save_kwargs=None, open_kwargs=None, allow_cleanup_failure=False
     ):
+        print(save_kwargs)
+        print(open_kwargs)
         if save_kwargs is None:
             save_kwargs = {}
         if open_kwargs is None:
@@ -926,6 +928,9 @@ class CFEncodedBase(DatasetIOBase):
         encoding = {"_FillValue": b"X", "dtype": "S1"}
         original = Dataset({"x": ("t", values, {}, encoding)})
         expected = original.copy(deep=True)
+        zarr_format_3 = has_zarr_v3 and zarr.config.config["default_zarr_format"] == 3
+        print(zarr_format_3)
+        print(self.version_kwargs)
         with self.roundtrip(original) as actual:
             assert_identical(expected, actual)
 
@@ -2363,6 +2368,7 @@ class ZarrBase(CFEncodedBase):
             )
 
     def save(self, dataset, store_target, **kwargs):  # type: ignore[override]
+        print("ver kwargs", self.version_kwargs)
         return dataset.to_zarr(store=store_target, **kwargs, **self.version_kwargs)
 
     @contextlib.contextmanager
@@ -3832,6 +3838,10 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         if open_kwargs is None:
             open_kwargs = {}
 
+        print("here?")
+        print(save_kwargs)
+        print(self.version_kwargs)
+        print(open_kwargs)
         data.to_zarr(store, **save_kwargs, **self.version_kwargs)
         with xr.open_dataset(
             store, engine="zarr", **open_kwargs, **self.version_kwargs

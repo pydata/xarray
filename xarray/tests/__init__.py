@@ -129,7 +129,7 @@ else:
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
-has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "3.0.0")
+has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "3.0.0a01")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg")
