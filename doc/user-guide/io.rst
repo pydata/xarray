@@ -1246,10 +1246,10 @@ over the network until we look at particular values:
 .. image:: ../_static/opendap-prism-tmax.png
 
 Some servers require authentication before we can access the data. `Pydap` uses
-a `Requests`__ session object (which the user can pre-define), and this 
-session object can recover authentication credentials from a locally stored 
-`.netrc` file. For example, to connect to server that require NASA's 
-URS authentication, with the username/password credentials stored on a locally 
+a `Requests`__ session object (which the user can pre-define), and this
+session object can recover authentication credentials from a locally stored
+`.netrc` file. For example, to connect to server that require NASA's
+URS authentication, with the username/password credentials stored on a locally
 accessible `.netrc`, access to OPeNDAP data should be as simple as this::
 
     import xarray as xr
@@ -1261,19 +1261,19 @@ accessible `.netrc`, access to OPeNDAP data should be as simple as this::
 
     ds = xr.open_dataset(ds_url, session=my_session, engine="pydap")
 
-Moreover, a bearer token header can be included in a `Requests`__ session 
+Moreover, a bearer token header can be included in a `Requests`__ session
 object, allowing for token-based authentication which  OPeNDAP servers can use
-to avoid some redirects. 
+to avoid some redirects.
 
 
 Lastly, OPeNDAP servers may provide endpoint URLs for different OPeNDAP protocols,
-DAP2 and DAP4. To specify which protocol between the two options to use, you can 
-replace the scheme of the url with the name of the protocol. For example:: 
+DAP2 and DAP4. To specify which protocol between the two options to use, you can
+replace the scheme of the url with the name of the protocol. For example::
 
-    # dap2 url 
+    # dap2 url
     ds_url = 'dap2://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
 
-    # dap4 url 
+    # dap4 url
     ds_url = 'dap4://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
 
 __ https://docs.python-requests.org
