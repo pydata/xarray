@@ -21,6 +21,9 @@ v2025.03.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Add convenience methods ``as_array_type`` and ``is_array_type`` for converting wrapped
+  data to other duck array types. (:issue:`7848`, :pull:`9823`).
+  By `Sam Levang <https://github.com/slevang>`_.
 
 - Allow setting a ``fill_value`` for Zarr format 3 arrays. Specify ``fill_value`` in ``encoding`` as usual.
   (:issue:`10064`). By `Deepak Cherian <https://github.com/dcherian>`_.
