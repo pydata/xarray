@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+from requests.utils import urlparse
 
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
@@ -18,7 +19,6 @@ from xarray.core.utils import (
     Frozen,
     FrozenDict,
     close_on_error,
-    is_dict_like,
     is_remote_uri,
 )
 from xarray.core.variable import Variable
@@ -49,36 +49,14 @@ class PydapArrayWrapper(BackendArray):
         )
 
     def _getitem(self, key):
-        # pull the data from the array attribute if possible, to avoid
-        # downloading coordinate data twice
-        array = getattr(self.array, "array", self.array)
-        result = robust_getitem(array, key, catch=ValueError)
-        result = np.asarray(result)
+        result = robust_getitem(self.array, key, catch=ValueError)
         # in some cases, pydap doesn't squeeze axes automatically like numpy
+        result = np.asarray(result)
         axis = tuple(n for n, k in enumerate(key) if isinstance(k, integer_types))
-        if result.ndim + len(axis) != array.ndim and axis:
+        if result.ndim + len(axis) != self.array.ndim and axis:
             result = np.squeeze(result, axis)
 
         return result
-
-
-def _fix_attributes(attributes):
-    attributes = dict(attributes)
-    for k in list(attributes):
-        if k.lower() == "global" or k.lower().endswith("_global"):
-            # move global attributes to the top level, like the netcdf-C
-            # DAP client
-            attributes.update(attributes.pop(k))
-        elif is_dict_like(attributes[k]):
-            # Make Hierarchical attributes to a single level with a
-            # dot-separated key
-            attributes.update(
-                {
-                    f"{k}.{k_child}": v_child
-                    for k_child, v_child in attributes.pop(k).items()
-                }
-            )
-    return attributes
 
 
 class PydapDataStore(AbstractDataStore):
@@ -88,13 +66,15 @@ class PydapDataStore(AbstractDataStore):
     be useful if the netCDF4 library is not available.
     """
 
-    def __init__(self, ds):
+    def __init__(self, ds, dap2=True):
         """
         Parameters
         ----------
         ds : pydap DatasetType
+        dap2 : bool (default=True). When DAP4 set dap2=`False`.
         """
         self.ds = ds
+        self.dap2 = dap2
 
     @classmethod
     def open(
@@ -102,44 +82,58 @@ class PydapDataStore(AbstractDataStore):
         url,
         application=None,
         session=None,
-        output_grid=None,
         timeout=None,
         verify=None,
         user_charset=None,
+        use_cache=None,
+        session_kwargs=None,
+        cache_kwargs=None,
+        get_kwargs=None,
     ):
-        import pydap.client
-        import pydap.lib
-
-        if timeout is None:
-            from pydap.lib import DEFAULT_TIMEOUT
-
-            timeout = DEFAULT_TIMEOUT
+        from pydap.client import open_url
+        from pydap.net import DEFAULT_TIMEOUT
 
         kwargs = {
             "url": url,
             "application": application,
             "session": session,
-            "output_grid": output_grid or True,
-            "timeout": timeout,
+            "timeout": timeout or DEFAULT_TIMEOUT,
+            "verify": verify or True,
+            "user_charset": user_charset,
+            "use_cache": use_cache or False,
+            "session_kwargs": session_kwargs or {},
+            "cache_kwargs": cache_kwargs or {},
+            "get_kwargs": get_kwargs or {},
         }
-        if verify is not None:
-            kwargs.update({"verify": verify})
-        if user_charset is not None:
-            kwargs.update({"user_charset": user_charset})
-        ds = pydap.client.open_url(**kwargs)
-        return cls(ds)
+        if urlparse(url).scheme == "dap4":
+            args = {"dap2": False}
+        else:
+            args = {"dap2": True}
+        ds = open_url(**kwargs)
+        args["ds"] = ds
+        return cls(**args)
 
     def open_store_variable(self, var):
         data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
-        return Variable(var.dimensions, data, _fix_attributes(var.attributes))
+        if self.dap2:
+            dimensions = var.dimensions
+        else:
+            dimensions = var.dims
+        return Variable(dimensions, data, var.attributes)
 
     def get_variables(self):
-        return FrozenDict(
-            (k, self.open_store_variable(self.ds[k])) for k in self.ds.keys()
-        )
+        # get first all variables arrays, excluding any container type like,
+        # `Groups`, `Sequence` or `Structure` types
+        _vars = list(self.ds.variables())
+        _vars += list(self.ds.grids())  # dap2 objects
+        return FrozenDict((k, self.open_store_variable(self.ds[k])) for k in _vars)
 
     def get_attrs(self):
-        return Frozen(_fix_attributes(self.ds.attributes))
+        """Remove any opendap specific attributes"""
+        opendap_attrs = ("configuration", "build_dmrpp", "bes", "libdap", "invocation")
+        attrs = self.ds.attributes
+        list(map(attrs.pop, opendap_attrs, [None] * 5))
+        return Frozen(attrs)
 
     def get_dimensions(self):
         return Frozen(self.ds.dimensions)
@@ -183,21 +177,26 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         decode_timedelta=None,
         application=None,
         session=None,
-        output_grid=None,
         timeout=None,
         verify=None,
         user_charset=None,
+        use_cache=None,
+        session_kwargs=None,
+        cache_kwargs=None,
+        get_kwargs=None,
     ) -> Dataset:
         store = PydapDataStore.open(
             url=filename_or_obj,
             application=application,
             session=session,
-            output_grid=output_grid,
             timeout=timeout,
             verify=verify,
             user_charset=user_charset,
+            use_cache=use_cache,
+            session_kwargs=session_kwargs,
+            cache_kwargs=cache_kwargs,
+            get_kwargs=get_kwargs,
         )
-
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
             ds = store_entrypoint.open_dataset(
