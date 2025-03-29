@@ -2407,10 +2407,17 @@ class TestVariableWithDask(VariableSubclassobjects):
     def test_pad(self, mode, xr_arg, np_arg):
         super().test_pad(mode, xr_arg, np_arg)
 
+    @pytest.mark.skip(reason="dask doesn't support extension arrays")
+    def test_pandas_period_index(self):
+        super().test_pandas_period_index()
+
+    @pytest.mark.skip(reason="dask doesn't support extension arrays")
+    def test_pandas_datetime64_with_tz(self):
+        super().test_pandas_datetime64_with_tz()
+
+    @pytest.mark.skip(reason="dask doesn't support extension arrays")
     def test_pandas_categorical_dtype(self):
-        data = pd.Categorical(np.arange(10, dtype="int64"))
-        v = self.cls("x", data)
-        assert (v.data.compute() == data.to_numpy()).all()
+        super().test_pandas_categorical_dtype()
 
 
 @requires_sparse

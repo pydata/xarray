@@ -5,7 +5,6 @@ import math
 import sys
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
-from importlib.util import find_spec
 from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
@@ -835,18 +834,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if chunkmanager.is_chunked_array(data_old):
             data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
         else:
-            if find_spec("pandas"):
-                from pandas.api.types import is_extension_array_dtype
-            else:
-
-                def is_extension_array_dtype(dtype: Any) -> Literal[False]:  # type: ignore[misc]
-                    return False
-
             ndata: duckarray[Any, Any]
-            if is_extension_array_dtype(data_old.dtype):
-                # One of PandasExtensionArray or PandasIndexingAdapter?
-                ndata = np.asarray(data_old)
-            elif not isinstance(data_old, ExplicitlyIndexed):
+            if not isinstance(data_old, ExplicitlyIndexed):
                 ndata = data_old
             else:
                 # Unambiguously handle array storage backends (like NetCDF4 and h5py)
