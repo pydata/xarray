@@ -2431,9 +2431,10 @@ class TestFacetGrid(PlotTestCase):
 
     @pytest.mark.slow
     def test_units_appear_somewhere(self) -> None:
-
         # assign coordinates to all dims so we can test for units
-        darray = self.darray.assign_coords({"x": np.arange(self.darray.x.size), "y": np.arange(self.darray.y.size)})
+        darray = self.darray.assign_coords(
+            {"x": np.arange(self.darray.x.size), "y": np.arange(self.darray.y.size)}
+        )
 
         darray.x.attrs["units"] = "x_unit"
         darray.y.attrs["units"] = "y_unit"
