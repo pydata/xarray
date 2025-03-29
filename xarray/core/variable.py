@@ -412,10 +412,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if is_duck_array(self._data):
             return self._data
         elif isinstance(self._data, indexing.ExplicitlyIndexed):
-            if pd.api.types.is_extension_array_dtype(self._data) and isinstance(
-                self._data, PandasIndexingAdapter
-            ):
-                return self._data.array
             return self._data.get_duck_array()
         else:
             return self.values

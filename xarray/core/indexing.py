@@ -1793,6 +1793,11 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             return np.asarray(array.values, dtype=dtype)
 
     def get_duck_array(self) -> np.ndarray:
+        # TODO: what do we do here?
+        # 1. Do we consider pandas ExtensionArray a duckarray?
+        # 2. Do we always return a pandas array instead of casting to numpy?
+        # if pd.api.types.is_extension_array_dtype(self.array):
+        #     return self.array.array
         return np.asarray(self)
 
     @property
