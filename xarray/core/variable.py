@@ -944,7 +944,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         dask.array.compute
         """
-        self._data = to_duck_array(self._data, **kwargs)
+        self._data = _maybe_wrap_data(to_duck_array(self._data, **kwargs))
         return self
 
     def compute(self, **kwargs):
