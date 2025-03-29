@@ -2179,7 +2179,7 @@ class Dataset(
             - Dimensions cannot be included in both ``region`` and
               ``append_dim`` at the same time. To create empty arrays to fill
               in with ``region``, use a separate call to ``to_zarr()`` with
-              ``compute=False``. See "Appending to existing Zarr stores" in
+              ``compute=False``. See "Modifying existing Zarr stores" in
               the reference documentation for full details.
 
             Users are expected to ensure that the specified region aligns with
