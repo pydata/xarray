@@ -47,7 +47,8 @@ Bug fixes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Fix grouped and resampled ``first``, ``last`` with datetimes (:issue:`10169`, :pull:`10173`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
+- FacetGrid plots now include units in their axis labels when available (:issue:`10184`, :pull:`10185`)
+  By `Andre Wendlinger <https://github.com/andrewendlinger>`_.
 
 Documentation
 ~~~~~~~~~~~~~
