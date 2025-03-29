@@ -37,7 +37,7 @@ from xarray.namedarray.pycompat import array_type, integer_types, is_chunked_arr
 
 if TYPE_CHECKING:
     from xarray.core.indexes import Index
-    from xarray.core.types import Self
+    from xarray.core.types import Self, T_ExtensionArray
     from xarray.core.variable import Variable
     from xarray.namedarray._typing import _Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
@@ -1792,12 +1792,12 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         else:
             return np.asarray(array.values, dtype=dtype)
 
-    def get_duck_array(self) -> np.ndarray:
+    def get_duck_array(self) -> np.ndarray | T_ExtensionArray:
         # TODO: what do we do here?
         # 1. Do we consider pandas ExtensionArray a duckarray?
         # 2. Do we always return a pandas array instead of casting to numpy?
-        # if pd.api.types.is_extension_array_dtype(self.array):
-        #     return self.array.array
+        if pd.api.types.is_extension_array_dtype(self.array):
+            return cast(T_ExtensionArray, self.array.array)
         return np.asarray(self)
 
     @property
