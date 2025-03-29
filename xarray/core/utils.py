@@ -629,10 +629,6 @@ class NDArrayMixin(NdimSizeLenMixin):
     def shape(self: Any) -> tuple[int, ...]:
         return self.array.shape
 
-    @property
-    def nbytes(self: Any) -> int:
-        return self.array.nbytes
-
     def __getitem__(self: Any, key):
         return self.array[key]
 
