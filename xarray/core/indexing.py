@@ -21,7 +21,7 @@ from xarray.core import duck_array_ops
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.nputils import NumpyVIndexAdapter
 from xarray.core.options import OPTIONS
-from xarray.core.types import T_Xarray
+from xarray.core.types import T_ExtensionArray, T_Xarray
 from xarray.core.utils import (
     NDArrayMixin,
     either_dict_or_kwargs,
@@ -37,7 +37,7 @@ from xarray.namedarray.pycompat import array_type, integer_types, is_chunked_arr
 
 if TYPE_CHECKING:
     from xarray.core.indexes import Index
-    from xarray.core.types import Self, T_ExtensionArray
+    from xarray.core.types import Self
     from xarray.core.variable import Variable
     from xarray.namedarray._typing import _Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
