@@ -1507,7 +1507,7 @@ class CoordinateTransformIndex(Index):
         if not set(coord_names) & set(name_dict) and not set(dims) & set(dims_dict):
             return self
 
-        new_transform = copy.copy(self.transform)
+        new_transform = copy.deepcopy(self.transform)
         new_transform.coord_names = tuple(name_dict.get(n, n) for n in coord_names)
         new_transform.dims = tuple(str(dims_dict.get(d, d)) for d in dims)
         new_transform.dim_size = {
