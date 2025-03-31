@@ -16,8 +16,12 @@ What's New
 
 .. _whats-new.2025.03.1:
 
-v2025.03.1 (unreleased)
------------------------
+v2025.03.1 (Mar 30, 2025)
+-------------------------
+
+This release brings the ability to specify ``fill_value`` and ``write_empty_chunks`` for Zarr V3 stores, and a few bug fixes.
+Thanks to the 10 contributors to this release:
+Andrecho, Deepak Cherian, Ian Hunt-Isaak, Karl Krauth, Mathias Hauser, Maximilian Roos, Nick Hodgskin (🦎 Vecko), Spencer Clark, Tom Nicholas and wpbonelli.
 
 New Features
 ~~~~~~~~~~~~
@@ -31,10 +35,6 @@ Breaking changes
 - Explicitly forbid appending a :py:class:`~xarray.DataTree` to zarr using :py:meth:`~xarray.DataTree.to_zarr` with ``append_dim``, because the expected behaviour is currently undefined.
   (:issue:`9858`, :pull:`10156`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
-Deprecations
-~~~~~~~~~~~~
-
 
 Bug fixes
 ~~~~~~~~~
@@ -50,12 +50,6 @@ Bug fixes
 - FacetGrid plots now include units in their axis labels when available (:issue:`10184`, :pull:`10185`)
   By `Andre Wendlinger <https://github.com/andrewendlinger>`_.
 
-Documentation
-~~~~~~~~~~~~~
-
-
-Internal Changes
-~~~~~~~~~~~~~~~~
 
 .. _whats-new.2025.03.0:
 
