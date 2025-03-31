@@ -14,10 +14,42 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2025.04.0:
+
+v2025.04.0 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
 .. _whats-new.2025.03.1:
 
-v2025.03.1 (unreleased)
------------------------
+v2025.03.1 (Mar 30, 2025)
+-------------------------
+
+This release brings the ability to specify ``fill_value`` and ``write_empty_chunks`` for Zarr V3 stores, and a few bug fixes.
+Thanks to the 10 contributors to this release:
+Andrecho, Deepak Cherian, Ian Hunt-Isaak, Karl Krauth, Mathias Hauser, Maximilian Roos, Nick Hodgskin (🦎 Vecko), Spencer Clark, Tom Nicholas and wpbonelli.
 
 New Features
 ~~~~~~~~~~~~
@@ -34,10 +66,6 @@ Breaking changes
   (:issue:`9858`, :pull:`10156`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
-Deprecations
-~~~~~~~~~~~~
-
-
 Bug fixes
 ~~~~~~~~~
 
@@ -49,14 +77,9 @@ Bug fixes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Fix grouped and resampled ``first``, ``last`` with datetimes (:issue:`10169`, :pull:`10173`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- FacetGrid plots now include units in their axis labels when available (:issue:`10184`, :pull:`10185`)
+  By `Andre Wendlinger <https://github.com/andrewendlinger>`_.
 
-
-Documentation
-~~~~~~~~~~~~~
-
-
-Internal Changes
-~~~~~~~~~~~~~~~~
 
 .. _whats-new.2025.03.0:
 
