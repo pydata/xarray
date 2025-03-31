@@ -203,7 +203,7 @@ class Index:
     ):
         """Validate an index coordinate variable to include in a DataArray.
 
-        This method is called repeatedly for each coordinate associated with
+        This method is called repeatedly for each Variable associated with
         this index when creating a new DataArray (via its constructor or from a
         Dataset) or updating an existing one.
 
