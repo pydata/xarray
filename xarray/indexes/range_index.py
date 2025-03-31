@@ -353,10 +353,14 @@ class RangeIndex(CoordinateTransformIndex):
         return pd.Index(values[self.dim])
 
     def _repr_inline_(self, max_width) -> str:
-        return repr(self)
+        params_fmt = (
+            f"start={self.start:.3g}, stop={self.stop:.3g}, step={self.step:.3g}"
+        )
+        return f"{self.__class__.__name__} ({params_fmt})"
 
     def __repr__(self) -> str:
         params_fmt = (
-            f"start={self.start:.3g}, stop={self.stop:.3g}, step={self.step:.3g}"
+            f"start={self.start:.3g}, stop={self.stop:.3g}, step={self.step:.3g}, "
+            f"size={self.size}, coord_name={self.coord_name!r}, dim={self.dim!r}"
         )
         return f"{self.__class__.__name__} ({params_fmt})"

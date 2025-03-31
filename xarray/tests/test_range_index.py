@@ -172,7 +172,14 @@ def test_range_index_rename() -> None:
 def test_range_index_repr() -> None:
     index = RangeIndex.arange(0.0, 1.0, 0.1, dim="x")
     actual = repr(index)
-    expected = "RangeIndex (start=0, stop=1, step=0.1)"
+    expected = (
+        "RangeIndex (start=0, stop=1, step=0.1, size=10, coord_name='x', dim='x')"
+    )
     assert actual == expected
 
-    assert repr(index) == index._repr_inline_(max_width=None)
+
+def test_range_index_repr_inline() -> None:
+    index = RangeIndex.arange(0.0, 1.0, 0.1, dim="x")
+    actual = index._repr_inline_(max_width=None)
+    expected = "RangeIndex (start=0, stop=1, step=0.1)"
+    assert actual == expected
