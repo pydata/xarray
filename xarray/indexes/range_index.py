@@ -116,22 +116,18 @@ class RangeIndex(CoordinateTransformIndex):
     @classmethod
     def arange(
         cls,
-        coord_name: Hashable,
-        dim: str,
         start: float = 0.0,
         stop: float = 1.0,
         step: float = 1.0,
+        *,
+        coord_name: Hashable | None = None,
+        dim: str,
         dtype: Any = None,
     ) -> "RangeIndex":
         """Create a new RangeIndex from given start, stop and step values.
 
         Parameters
         ----------
-        coord_name : Hashable
-            Name of the (lazy) coordinate variable that will be created and
-            associated with the new index.
-        dim : str
-            Dimension name.
         start : float, optional
             Start of interval (default: 0.0). The interval includes this value.
         stop : float, optional
@@ -140,6 +136,12 @@ class RangeIndex(CoordinateTransformIndex):
             size of the dimension.
         step : float, optional
             Spacing between values (default: 1.0).
+        coord_name : Hashable, optional
+            Name of the (lazy) coordinate variable that will be created and
+            associated with the new index. If ``None``, the coordinate is named
+            as the dimension name.
+        dim : str
+            Dimension name.
         dtype : dtype, optional
             The dtype of the coordinate variable (default: float64).
 
@@ -161,6 +163,9 @@ class RangeIndex(CoordinateTransformIndex):
             x        RangeIndex (start=0, stop=1, step=0.2)
 
         """
+        if coord_name is None:
+            coord_name = dim
+
         size = math.ceil((stop - start) / step)
 
         transform = RangeCoordinateTransform(
@@ -172,12 +177,13 @@ class RangeIndex(CoordinateTransformIndex):
     @classmethod
     def linspace(
         cls,
-        coord_name: Hashable,
-        dim: str,
         start: float,
         stop: float,
         num: int = 50,
         endpoint: bool = True,
+        *,
+        coord_name: Hashable | None = None,
+        dim: str,
         dtype: Any = None,
     ) -> "RangeIndex":
         """Create a new RangeIndex from given start / stop values and number of
@@ -185,11 +191,6 @@ class RangeIndex(CoordinateTransformIndex):
 
         Parameters
         ----------
-        coord_name : Hashable
-            Name of the (lazy) coordinate variable that will be created and
-            associated with the new index.
-        dim : str
-            Dimension name.
         start : float
             Start of interval. The interval includes this value.
         stop : float, optional
@@ -198,6 +199,12 @@ class RangeIndex(CoordinateTransformIndex):
             Number of values in the interval, i.e., dimension size (default: 50).
         endpoint : bool, optional
             If True (default), the ``stop`` value is included in the interval.
+        coord_name : Hashable, optional
+            Name of the (lazy) coordinate variable that will be created and
+            associated with the new index. If ``None``, the coordinate is named
+            as the dimension name.
+        dim : str
+            Dimension name.
         dtype : dtype, optional
             The dtype of the coordinate variable (default: float64).
 
@@ -219,6 +226,9 @@ class RangeIndex(CoordinateTransformIndex):
             x        RangeIndex (start=0, stop=1.25, step=0.25)
 
         """
+        if coord_name is None:
+            coord_name = dim
+
         if endpoint:
             stop += (stop - start) / (num - 1)
 

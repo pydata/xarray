@@ -10,12 +10,12 @@ from xarray.tests import assert_allclose, assert_equal, assert_identical
 def create_dataset_arange(
     start: float, stop: float, step: float, dim: str = "x"
 ) -> xr.Dataset:
-    index = RangeIndex.arange(dim, dim, start, stop, step)
+    index = RangeIndex.arange(start, stop, step, dim=dim)
     return xr.Dataset(coords=xr.Coordinates.from_xindex(index))
 
 
 def test_range_index_arange() -> None:
-    index = RangeIndex.arange("x", "x", 0.0, 1.0, 0.1)
+    index = RangeIndex.arange(0.0, 1.0, 0.1, dim="x")
     actual = xr.Coordinates.from_xindex(index)
     expected = xr.Coordinates({"x": np.arange(0.0, 1.0, 0.1)})
     assert_equal(actual, expected, check_default_indexes=False)
@@ -25,7 +25,7 @@ def test_range_index_arange() -> None:
 
 
 def test_range_index_linspace() -> None:
-    index = RangeIndex.linspace("x", "x", 0.0, 1.0, num=10, endpoint=False)
+    index = RangeIndex.linspace(0.0, 1.0, num=10, endpoint=False, dim="x")
     actual = xr.Coordinates.from_xindex(index)
     expected = xr.Coordinates({"x": np.linspace(0.0, 1.0, num=10, endpoint=False)})
     assert_equal(actual, expected, check_default_indexes=False)
@@ -33,7 +33,7 @@ def test_range_index_linspace() -> None:
     assert index.stop == 1.0
     assert index.step == 0.1
 
-    index = RangeIndex.linspace("x", "x", 0.0, 1.0, num=11, endpoint=True)
+    index = RangeIndex.linspace(0.0, 1.0, num=11, endpoint=True, dim="x")
     actual = xr.Coordinates.from_xindex(index)
     expected = xr.Coordinates({"x": np.linspace(0.0, 1.0, num=11, endpoint=True)})
     assert_allclose(actual, expected, check_default_indexes=False)
@@ -43,7 +43,7 @@ def test_range_index_linspace() -> None:
 
 
 def test_range_index_dtype() -> None:
-    index = RangeIndex.arange("x", "x", 0.0, 1.0, 0.1, dtype=np.float32)
+    index = RangeIndex.arange(0.0, 1.0, 0.1, dim="x", dtype=np.float32)
     coords = xr.Coordinates.from_xindex(index)
     assert coords["x"].dtype == np.dtype(np.float32)
 
@@ -155,22 +155,22 @@ def test_range_index_to_pandas_index() -> None:
 
 
 def test_range_index_rename() -> None:
-    index = RangeIndex.arange("x", "x", 0.0, 1.0, 0.1)
+    index = RangeIndex.arange(0.0, 1.0, 0.1, dim="x")
     ds = xr.Dataset(coords=xr.Coordinates.from_xindex(index))
 
     actual = ds.rename_vars(x="y")
-    idx = RangeIndex.arange("y", "x", 0.0, 1.0, 0.1)
+    idx = RangeIndex.arange(0.0, 1.0, 0.1, coord_name="y", dim="x")
     expected = xr.Dataset(coords=xr.Coordinates.from_xindex(idx))
     assert_identical(actual, expected, check_default_indexes=False)
 
     actual = ds.rename_dims(x="y")
-    idx = RangeIndex.arange("x", "y", 0.0, 1.0, 0.1)
+    idx = RangeIndex.arange(0.0, 1.0, 0.1, coord_name="x", dim="y")
     expected = xr.Dataset(coords=xr.Coordinates.from_xindex(idx))
     assert_identical(actual, expected, check_default_indexes=False)
 
 
 def test_range_index_repr() -> None:
-    index = RangeIndex.arange("x", "x", 0.0, 1.0, 0.1)
+    index = RangeIndex.arange(0.0, 1.0, 0.1, dim="x")
     actual = repr(index)
     expected = "RangeIndex (start=0, stop=1, step=0.1)"
     assert actual == expected
