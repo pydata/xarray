@@ -1583,6 +1583,8 @@ Creating custom indexes
    cftime_range
    date_range
    date_range_like
+   indexes.RangeIndex.arange
+   indexes.RangeIndex.linspace
 
 Tutorial
 ========

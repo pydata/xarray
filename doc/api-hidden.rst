@@ -530,8 +530,6 @@
    Index.rename
    Index.copy
 
-   indexes.RangeIndex.arange
-   indexes.RangeIndex.linspace
    indexes.RangeIndex.start
    indexes.RangeIndex.stop
    indexes.RangeIndex.step
