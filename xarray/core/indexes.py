@@ -219,9 +219,9 @@ class Index:
         If the validation passes (i.e., no error raised), the coordinate will be
         included in the DataArray regardless of its dimensions.
 
-        If this method raises when a DataArray is constructed from a Dataset,  
+        If this method raises when a DataArray is constructed from a Dataset,
         Xarray will fail back to propagating the coordinate
-        according to the default rules for DataArray --- i.e., the dimensions of every 
+        according to the default rules for DataArray --- i.e., the dimensions of every
         coordinate variable must be a subset of DataArray.dims --- which may drop this index.
 
         Parameters
