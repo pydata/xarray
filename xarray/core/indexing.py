@@ -19,9 +19,10 @@ from packaging.version import Version
 
 from xarray.core import duck_array_ops
 from xarray.core.coordinate_transform import CoordinateTransform
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.nputils import NumpyVIndexAdapter
 from xarray.core.options import OPTIONS
-from xarray.core.types import T_ExtensionArray, T_Xarray
+from xarray.core.types import T_Xarray
 from xarray.core.utils import (
     NDArrayMixin,
     either_dict_or_kwargs,
@@ -1792,12 +1793,12 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         else:
             return np.asarray(array.values, dtype=dtype)
 
-    def get_duck_array(self) -> np.ndarray | T_ExtensionArray:
+    def get_duck_array(self) -> np.ndarray | PandasExtensionArray:
         # TODO: what do we do here?
         # 1. Do we consider pandas ExtensionArray a duckarray?
         # 2. Do we always return a pandas array instead of casting to numpy?
         if pd.api.types.is_extension_array_dtype(self.array):
-            return cast(T_ExtensionArray, self.array.array)
+            return PandasExtensionArray(self.array.array)
         return np.asarray(self)
 
     @property
