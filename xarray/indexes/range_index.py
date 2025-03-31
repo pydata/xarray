@@ -149,7 +149,7 @@ class RangeIndex(CoordinateTransformIndex):
         --------
         >>> from xarray.indexes import RangeIndex
 
-        >>> index = RangeIndex.arange("x", "x", 0.0, 1.0, 0.2)
+        >>> index = RangeIndex.arange(0.0, 1.0, 0.2, dim="x")
         >>> ds = xr.Dataset(coords=xr.Coordinates.from_xindex(index))
 
         >>> ds
@@ -212,7 +212,7 @@ class RangeIndex(CoordinateTransformIndex):
         --------
         >>> from xarray.indexes import RangeIndex
 
-        >>> index = RangeIndex.linspace("x", "x", 0.0, 1.0, 5)
+        >>> index = RangeIndex.linspace(0.0, 1.0, 5, dim="x")
         >>> ds = xr.Dataset(coords=xr.Coordinates.from_xindex(index))
 
         >>> ds
