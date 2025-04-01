@@ -1681,13 +1681,9 @@ class TestDataArrayGroupBy:
         df["dim_0_bins"] = pd.cut(array["dim_0"], bins, **cut_kwargs)  # type: ignore[call-overload]
 
         expected_df = df.groupby("dim_0_bins", observed=True).sum()
-        # TODO: can't convert df with IntervalIndex to Xarray
-        expected = (
-            expected_df.reset_index(drop=True)
-            .to_xarray()
-            .assign_coords(index=np.array(expected_df.index))
-            .rename({"index": "dim_0_bins"})["a"]
-        )
+        expected = expected_df.to_xarray().assign_coords(
+            dim_0_bins=expected_df.index.categories
+        )["a"]
 
         with xr.set_options(use_flox=use_flox):
             gb = array.groupby_bins("dim_0", bins=bins, **cut_kwargs)
