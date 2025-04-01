@@ -158,7 +158,7 @@ class TestDataFrameToXArray:
         assert result.sizes["foo"] == 0
         assert isinstance(result, Dataset)
 
-    def test_to_xarray_with_multiindex(self, df, using_infer_string):
+    def test_to_xarray_with_multiindex(self, df):
         from xarray import Dataset
 
         # MultiIndex
@@ -173,9 +173,7 @@ class TestDataFrameToXArray:
 
         result = result.to_dataframe()
         expected = df.copy()
-        expected["f"] = expected["f"].astype(
-            object if not using_infer_string else "str"
-        )
+        expected["f"] = expected["f"].astype(object)
         expected.columns.name = None
         tm.assert_frame_equal(result, expected)
 
