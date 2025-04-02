@@ -14,9 +14,9 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2025.03.1:
+.. _whats-new.2025.04.0:
 
-v2025.03.1 (unreleased)
+v2025.04.0 (unreleased)
 -----------------------
 
 New Features
@@ -26,9 +26,6 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- Explicitly forbid appending a :py:class:`~xarray.DataTree` to zarr using :py:meth:`~xarray.DataTree.to_zarr` with ``append_dim``, because the expected behaviour is currently undefined.
-  (:issue:`9858`, :pull:`10156`)
-  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -37,10 +34,6 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
-- Update the parameters of :py:meth:`~xarray.DataArray.to_zarr` to match :py:meth:`~xarray.Dataset.to_zarr`.
-  This fixes the issue where using the ``zarr_version`` parameter would raise a deprecation warning telling the user to use
-  a non-existent ``zarr_format`` parameter instead. (:issue:`10163`, :pull:`10164`)
-  By `Karl Krauth <https://github.com/Karl-Krauth>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -48,6 +41,43 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+.. _whats-new.2025.03.1:
+
+v2025.03.1 (Mar 30, 2025)
+-------------------------
+
+This release brings the ability to specify ``fill_value`` and ``write_empty_chunks`` for Zarr V3 stores, and a few bug fixes.
+Thanks to the 10 contributors to this release:
+Andrecho, Deepak Cherian, Ian Hunt-Isaak, Karl Krauth, Mathias Hauser, Maximilian Roos, Nick Hodgskin (🦎 Vecko), Spencer Clark, Tom Nicholas and wpbonelli.
+
+New Features
+~~~~~~~~~~~~
+
+- Allow setting a ``fill_value`` for Zarr format 3 arrays. Specify ``fill_value`` in ``encoding`` as usual.
+  (:issue:`10064`). By `Deepak Cherian <https://github.com/dcherian>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Explicitly forbid appending a :py:class:`~xarray.DataTree` to zarr using :py:meth:`~xarray.DataTree.to_zarr` with ``append_dim``, because the expected behaviour is currently undefined.
+  (:issue:`9858`, :pull:`10156`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Update the parameters of :py:meth:`~xarray.DataArray.to_zarr` to match :py:meth:`~xarray.Dataset.to_zarr`.
+  This fixes the issue where using the ``zarr_version`` parameter would raise a deprecation warning telling the user to use
+  a non-existent ``zarr_format`` parameter instead. (:issue:`10163`, :pull:`10164`)
+  By `Karl Krauth <https://github.com/Karl-Krauth>`_.
+- :py:meth:`DataTree.sel` and :py:meth:`DataTree.isel` display the path of the first failed node again  (:pull:`10154`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+- Fix grouped and resampled ``first``, ``last`` with datetimes (:issue:`10169`, :pull:`10173`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- FacetGrid plots now include units in their axis labels when available (:issue:`10184`, :pull:`10185`)
+  By `Andre Wendlinger <https://github.com/andrewendlinger>`_.
+
 
 .. _whats-new.2025.03.0:
 

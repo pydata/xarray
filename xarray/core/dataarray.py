@@ -4362,7 +4362,7 @@ class DataArray(
             - Dimensions cannot be included in both ``region`` and
               ``append_dim`` at the same time. To create empty arrays to fill
               in with ``region``, use a separate call to ``to_zarr()`` with
-              ``compute=False``. See "Appending to existing Zarr stores" in
+              ``compute=False``. See "Modifying existing Zarr stores" in
               the reference documentation for full details.
 
             Users are expected to ensure that the specified region aligns with
@@ -5757,6 +5757,7 @@ class DataArray(
         xarray.polyval
         DataArray.curvefit
         """
+        # For DataArray, use the original implementation by converting to a dataset
         return self._to_temp_dataset().polyfit(
             dim, deg, skipna=skipna, rcond=rcond, w=w, full=full, cov=cov
         )
@@ -6558,6 +6559,7 @@ class DataArray(
         DataArray.polyfit
         scipy.optimize.curve_fit
         """
+        # For DataArray, use the original implementation by converting to a dataset first
         return self._to_temp_dataset().curvefit(
             coords,
             func,
