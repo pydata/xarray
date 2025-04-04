@@ -276,10 +276,9 @@ ignore = [
   "RUF001",  # string contains ambiguous unicode character
   "RUF002",  # docstring contains ambiguous acute accent unicode character
   "RUF003",  # comment contains ambiguous no-break space unicode character
-  "RUF005",  # consider upacking operator instead of concatenation
+  "RUF005",  # consider unpacking operator instead of concatenation
   "RUF012",  # mutable class attributes
 ]
-
 
 [tool.ruff.lint.per-file-ignores]
 # don't enforce absolute imports
