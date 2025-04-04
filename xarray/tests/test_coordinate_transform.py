@@ -7,7 +7,7 @@ import pytest
 import xarray as xr
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.indexes import CoordinateTransformIndex
-from xarray.tests import assert_equal
+from xarray.tests import assert_equal, assert_identical
 
 
 class SimpleCoordinateTransform(CoordinateTransform):
@@ -24,7 +24,10 @@ class SimpleCoordinateTransform(CoordinateTransform):
 
     def forward(self, dim_positions: dict[str, Any]) -> dict[Hashable, Any]:
         assert set(dim_positions) == set(self.dims)
-        return {dim: dim_positions[dim] * self.scale for dim in self.xy_dims}
+        return {
+            name: dim_positions[dim] * self.scale
+            for name, dim in zip(self.coord_names, self.xy_dims, strict=False)
+        }
 
     def reverse(self, coord_labels: dict[Hashable, Any]) -> dict[str, Any]:
         return {dim: coord_labels[dim] / self.scale for dim in self.xy_dims}
@@ -216,3 +219,9 @@ def test_coordinate_transform_sel() -> None:
             y=xr.Variable("z", [0.0, 0.5, 1.5]),
             method="nearest",
         )
+
+
+def test_coordinate_transform_rename() -> None:
+    ds = xr.Dataset(coords=create_coords(scale=2.0, shape=(2, 2)))
+    roundtripped = ds.rename(x="u", y="v").rename(u="x", v="y")
+    assert_identical(ds, roundtripped, check_default_indexes=False)
