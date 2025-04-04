@@ -1,53 +1,53 @@
 Automation:
-- changed-files:
-  - any-glob-to-any-file:
-    - .github/**
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/**
 
 CI:
-- changed-files:
-  - any-glob-to-any-file:
-    - ci/**
+  - changed-files:
+      - any-glob-to-any-file:
+          - ci/**
 
 dependencies:
-- changed-files:
-  - any-glob-to-any-file:
-    - ci/requirements/*
+  - changed-files:
+      - any-glob-to-any-file:
+          - ci/requirements/*
 
 topic-arrays:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/core/duck_array_ops.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/core/duck_array_ops.py
 
 topic-backends:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/backends/**
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/backends/**
 
 topic-cftime:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/coding/*time*
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/coding/*time*
 
 topic-CF conventions:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/conventions.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/conventions.py
 
 topic-combine:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/core/combine.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/core/combine.py
 
 topic-dask:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/core/dask*
-    - xarray/core/parallel.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/core/dask*
+          - xarray/core/parallel.py
 
 topic-DataTree:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/core/datatree*
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/core/datatree*
 
 # topic-documentation:
 # - changed-files:
@@ -55,76 +55,76 @@ topic-DataTree:
 #     - ['doc/*', '!doc/whats-new.rst', 'doc/**/*']
 
 topic-faq:
-- changed-files:
-  - any-glob-to-any-file:
-    - doc/howdoi.rst
+  - changed-files:
+      - any-glob-to-any-file:
+          - doc/howdoi.rst
 
 topic-groupby:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/core/groupby.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/core/groupby.py
 
 topic-html-repr:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/core/formatting_html.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/core/formatting_html.py
 
 topic-hypothesis:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/properties/*
-    - xarray/testing/strategies/*
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/properties/*
+          - xarray/testing/strategies/*
 
 topic-indexing:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/core/indexes.py
-    - xarray/core/indexing.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/core/indexes.py
+          - xarray/core/indexing.py
 
 topic-NamedArray:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/namedarray/*
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/namedarray/*
 
 topic-performance:
-- changed-files:
-  - any-glob-to-any-file:
-    - asv_bench/benchmarks/**
+  - changed-files:
+      - any-glob-to-any-file:
+          - asv_bench/benchmarks/**
 
 topic-plotting:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/plot/*
-    - xarray/plot/**/*
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/plot/*
+          - xarray/plot/**/*
 
 topic-rolling:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/core/rolling.py
-    - xarray/core/rolling_exp.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/core/rolling.py
+          - xarray/core/rolling_exp.py
 
 topic-testing:
-- changed-files:
-  - any-glob-to-any-file:
-    - conftest.py
-    - xarray/testing.py
-    - xarray/testing/*
+  - changed-files:
+      - any-glob-to-any-file:
+          - conftest.py
+          - xarray/testing.py
+          - xarray/testing/*
 
 topic-typing:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/core/types.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/core/types.py
 
 topic-zarr:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/backends/zarr.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/backends/zarr.py
 
 io:
-- changed-files:
-  - any-glob-to-any-file:
-    - xarray/backends/**
+  - changed-files:
+      - any-glob-to-any-file:
+          - xarray/backends/**
 
 # label all PRs as "needs triage"
 needs triage:
-- head-branch: ".*"
+  - head-branch: ".*"
