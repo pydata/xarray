@@ -1,10 +1,8 @@
 Automation:
-  - .github/*
-  - .github/**/*
+  - .github/**
 
 CI:
-  - ci/*
-  - ci/**/*
+  - ci/**
 
 dependencies:
   - requirements.txt
@@ -14,8 +12,7 @@ topic-arrays:
   - xarray/core/duck_array_ops.py
 
 topic-backends:
-  - xarray/backends/*
-  - xarray/backends/**/*
+  - xarray/backends/**
 
 topic-cftime:
   - xarray/coding/*time*
@@ -58,8 +55,7 @@ topic-NamedArray:
   - xarray/namedarray/*
 
 topic-performance:
-  - asv_bench/benchmarks/*
-  - asv_bench/benchmarks/**/*
+  - asv_bench/benchmarks/**
 
 topic-plotting:
   - xarray/plot/*
@@ -81,5 +77,4 @@ topic-zarr:
   - xarray/backends/zarr.py
 
 io:
-  - xarray/backends/*
-  - xarray/backends/**/*
+  - xarray/backends/**
