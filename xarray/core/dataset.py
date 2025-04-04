@@ -7077,10 +7077,9 @@ class Dataset(
         for extension_array_column in extension_array_columns:
             extension_array = self.variables[extension_array_column].data.array
             index = self[self.variables[extension_array_column].dims[0]].data
-            if isinstance(index, PandasExtensionArray):
-                index = index.array
             extension_array_df = pd.DataFrame(
-                {extension_array_column: extension_array}, index=index
+                {extension_array_column: extension_array},
+                index=index.array if isinstance(index, PandasExtensionArray) else index,
             )
             extension_array_df.index.name = self.variables[extension_array_column].dims[
                 0
