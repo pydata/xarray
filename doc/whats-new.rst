@@ -237,26 +237,8 @@ eventually be deprecated.
 
 New Features
 ~~~~~~~~~~~~
-- Relax nanosecond resolution restriction in CF time coding and permit
-  :py:class:`numpy.datetime64` or :py:class:`numpy.timedelta64` dtype arrays
-  with ``"s"``, ``"ms"``, ``"us"``, or ``"ns"`` resolution throughout xarray
-  (:issue:`7493`, :pull:`9618`, :pull:`9977`, :pull:`9966`, :pull:`9999`). By
-  `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark
-  <https://github.com/spencerkclark>`_.
-- Enable the ``compute=False`` option in :py:meth:`DataTree.to_zarr`. (:pull:`9958`).
-  By `Sam Levang <https://github.com/slevang>`_.
-- Improve the error message raised when no key is matching the available variables in a dataset.  (:pull:`9943`)
-  By `Jimmy Westling <https://github.com/illviljan>`_.
-- Added a ``time_unit`` argument to :py:meth:`CFTimeIndex.to_datetimeindex`.
-  Note that in a future version of xarray,
-  :py:meth:`CFTimeIndex.to_datetimeindex` will return a microsecond-resolution
-  :py:class:`pandas.DatetimeIndex` instead of a nanosecond-resolution
-  :py:class:`pandas.DatetimeIndex` (:pull:`9965`). By `Spencer Clark
-  <https://github.com/spencerkclark>`_ and `Kai Mühlbauer
-  <https://github.com/kmuehlbauer>`_.
-- Adds shards to the list of valid_encodings in the zarr backend, so that
-  sharded Zarr V3s can be written (:issue:`9947`, :pull:`9948`).
-  By `Jacob Prince_Bieker <https://github.com/jacobbieker>`_
+- Add new ``errors`` arg to :py:meth:`open_mfdataset` to better handle invalid files.
+  (:issue:`6736`, :pull:`9955`). By `Pratiman Patel <https://github.com/pratiman-91>`_.
 
 Deprecations
 ~~~~~~~~~~~~
