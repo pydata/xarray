@@ -191,6 +191,8 @@ def _maybe_wrap_data(data):
     if isinstance(data, pd.Index):
         return PandasIndexingAdapter(data)
     if isinstance(data, pd.api.extensions.ExtensionArray):
+        if isinstance(data.dtype, pd.Int64Dtype | pd.Float64Dtype | pd.StringDtype):
+            return np.array(data)
         return PandasExtensionArray(data)
     return data
 
