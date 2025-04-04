@@ -1369,7 +1369,7 @@ def open_groups(
     return groups
 
 
-def remove_path(paths, path_to_remove):
+def _remove_path(paths, path_to_remove) -> list:
     """
     Recursively removes specific path from a nested or non-nested list.
 
@@ -1391,7 +1391,7 @@ def remove_path(paths, path_to_remove):
     for item in paths:
         if isinstance(item, list):
             # If the current item is a list, recursively call remove_elements on it
-            nested_result = remove_path(item, path_to_remove)
+            nested_result = _remove_path(item, path_to_remove)
             if nested_result:  # Only add non-empty lists to avoid adding empty lists
                 result.append(nested_result)
         elif item not in path_to_remove:
@@ -1664,7 +1664,7 @@ def open_mfdataset(
         except Exception:
             # remove invalid paths
             if combine == "nested":
-                paths = remove_path(paths, p)
+                paths = _remove_path(paths, p)
                 remove_paths = True
             if errors == "raise":
                 raise
