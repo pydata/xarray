@@ -125,3 +125,7 @@ io:
 - changed-files:
   - any-glob-to-any-file:
     - xarray/backends/**
+
+# label all PRs as "needs triage"
+needs triage:
+- head-branch: "*"
