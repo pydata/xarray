@@ -48,6 +48,7 @@ from xarray.core.common import (
 )
 from xarray.core.coordinates import (
     Coordinates,
+    CoordinateValidationError,
     DatasetCoordinates,
     assert_coordinate_consistent,
 )
@@ -1159,7 +1160,18 @@ class Dataset(
         coords: dict[Hashable, Variable] = {}
         # preserve ordering
         for k in self._variables:
-            if k in self._coord_names and set(self._variables[k].dims) <= needed_dims:
+            var_dims = set(self._variables[k].dims)
+            if k in self._indexes:
+                try:
+                    self._indexes[k].validate_dataarray_coord(
+                        k, self._variables[k], needed_dims
+                    )
+                    coords[k] = self._variables[k]
+                except CoordinateValidationError:
+                    # failback to strict DataArray model check (index may be dropped later)
+                    if var_dims <= needed_dims:
+                        coords[k] = self._variables[k]
+            elif k in self._coord_names and var_dims <= needed_dims:
                 coords[k] = self._variables[k]
 
         indexes = filter_indexes_from_coords(self._indexes, set(coords))
