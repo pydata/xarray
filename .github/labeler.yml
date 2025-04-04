@@ -127,4 +127,4 @@ io:
 
 # label all PRs as "needs triage"
 needs triage:
-- head-branch: "*"
+- head-branch: ".*"
