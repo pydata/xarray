@@ -16,6 +16,7 @@ from pandas.testing import assert_frame_equal  # noqa: F401
 
 import xarray.testing
 from xarray import Dataset
+from xarray.coding.times import _STANDARD_CALENDARS as _STANDARD_CALENDARS_UNSORTED
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.options import set_options
@@ -111,18 +112,22 @@ has_dask_ge_2024_08_1, requires_dask_ge_2024_08_1 = _importorskip(
     "dask", minversion="2024.08.1"
 )
 has_dask_ge_2024_11_0, requires_dask_ge_2024_11_0 = _importorskip("dask", "2024.11.0")
-with warnings.catch_warnings():
-    warnings.filterwarnings(
-        "ignore",
-        message="The current Dask DataFrame implementation is deprecated.",
-        category=DeprecationWarning,
-    )
-    has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
+has_dask_ge_2025_1_0, requires_dask_ge_2025_1_0 = _importorskip("dask", "2025.1.0")
+if has_dask_ge_2025_1_0:
+    has_dask_expr = True
+    requires_dask_expr = pytest.mark.skipif(not has_dask_expr, reason="should not skip")
+else:
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="The current Dask DataFrame implementation is deprecated.",
+            category=DeprecationWarning,
+        )
+        has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
-# TODO: switch to "3" once Zarr V3 is released
-has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "2.99")
+has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "3.0.0")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg")
@@ -159,6 +164,21 @@ has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
 has_flox_0_9_12, requires_flox_0_9_12 = _importorskip("flox", "0.9.12")
 
 has_array_api_strict, requires_array_api_strict = _importorskip("array_api_strict")
+
+parametrize_zarr_format = pytest.mark.parametrize(
+    "zarr_format",
+    [
+        pytest.param(2, id="zarr_format=2"),
+        pytest.param(
+            3,
+            marks=pytest.mark.skipif(
+                not has_zarr_v3,
+                reason="zarr-python v2 cannot understand the zarr v3 format",
+            ),
+            id="zarr_format=3",
+        ),
+    ],
+)
 
 
 def _importorskip_h5netcdf_ros3(has_h5netcdf: bool):
@@ -264,9 +284,9 @@ def format_record(record) -> str:
 def assert_no_warnings():
     with warnings.catch_warnings(record=True) as record:
         yield record
-        assert (
-            len(record) == 0
-        ), f"Got {len(record)} unexpected warning(s): {[format_record(r) for r in record]}"
+        assert len(record) == 0, (
+            f"Got {len(record)} unexpected warning(s): {[format_record(r) for r in record]}"
+        )
 
 
 # Internal versions of xarray's test functions that validate additional
@@ -315,7 +335,7 @@ def create_test_data(
     obj["dim2"] = ("dim2", 0.5 * np.arange(_dims["dim2"]))
     if _dims["dim3"] > 26:
         raise RuntimeError(
-            f'Not enough letters for filling this dimension size ({_dims["dim3"]})'
+            f"Not enough letters for filling this dimension size ({_dims['dim3']})"
         )
     obj["dim3"] = ("dim3", list(string.ascii_lowercase[0 : _dims["dim3"]]))
     obj["time"] = (
@@ -351,13 +371,36 @@ def create_test_data(
     return obj
 
 
-_CFTIME_CALENDARS = [
+_STANDARD_CALENDAR_NAMES = sorted(_STANDARD_CALENDARS_UNSORTED)
+_NON_STANDARD_CALENDAR_NAMES = {
+    "noleap",
     "365_day",
     "360_day",
     "julian",
     "all_leap",
     "366_day",
-    "gregorian",
-    "proleptic_gregorian",
-    "standard",
+}
+_NON_STANDARD_CALENDARS = [
+    pytest.param(cal, marks=requires_cftime)
+    for cal in sorted(_NON_STANDARD_CALENDAR_NAMES)
 ]
+_STANDARD_CALENDARS = [pytest.param(cal) for cal in _STANDARD_CALENDAR_NAMES]
+_ALL_CALENDARS = sorted(_STANDARD_CALENDARS + _NON_STANDARD_CALENDARS)
+_CFTIME_CALENDARS = [
+    pytest.param(*p.values, marks=requires_cftime) for p in _ALL_CALENDARS
+]
+
+
+def _all_cftime_date_types():
+    import cftime
+
+    return {
+        "noleap": cftime.DatetimeNoLeap,
+        "365_day": cftime.DatetimeNoLeap,
+        "360_day": cftime.Datetime360Day,
+        "julian": cftime.DatetimeJulian,
+        "all_leap": cftime.DatetimeAllLeap,
+        "366_day": cftime.DatetimeAllLeap,
+        "gregorian": cftime.DatetimeGregorian,
+        "proleptic_gregorian": cftime.DatetimeProlepticGregorian,
+    }

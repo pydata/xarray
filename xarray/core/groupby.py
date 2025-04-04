@@ -12,15 +12,17 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from xarray.core import dtypes, duck_array_ops, nputils, ops
+from xarray.computation import ops
+from xarray.computation.arithmetic import (
+    DataArrayGroupbyArithmetic,
+    DatasetGroupbyArithmetic,
+)
+from xarray.core import dtypes, duck_array_ops, nputils
 from xarray.core._aggregations import (
     DataArrayGroupByAggregations,
     DatasetGroupByAggregations,
 )
-from xarray.core.alignment import align, broadcast
-from xarray.core.arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
-from xarray.core.concat import concat
 from xarray.core.coordinates import Coordinates, _coordinates_from_variable
 from xarray.core.duck_array_ops import where
 from xarray.core.formatting import format_array_flat
@@ -28,7 +30,6 @@ from xarray.core.indexes import (
     PandasMultiIndex,
     filter_indexes_from_coords,
 )
-from xarray.core.merge import merge_coords
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Dims,
@@ -50,6 +51,9 @@ from xarray.core.utils import (
 )
 from xarray.core.variable import IndexVariable, Variable
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.structure.alignment import align, broadcast
+from xarray.structure.concat import concat
+from xarray.structure.merge import merge_coords
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
@@ -524,12 +528,17 @@ class ComposedGrouper:
         # Restore these after the raveling
         broadcasted_masks = broadcast(*masks)
         mask = functools.reduce(np.logical_or, broadcasted_masks)  # type: ignore[arg-type]
-        _flatcodes = where(mask, -1, _flatcodes)
+        _flatcodes = where(mask.data, -1, _flatcodes)
 
         full_index = pd.MultiIndex.from_product(
-            (grouper.full_index.values for grouper in groupers),
+            list(grouper.full_index.values for grouper in groupers),
             names=tuple(grouper.name for grouper in groupers),
         )
+        if not full_index.is_unique:
+            raise ValueError(
+                "The output index for the GroupBy is non-unique. "
+                "This is a bug in the Grouper provided."
+            )
         # This will be unused when grouping by dask arrays, so skip..
         if not is_chunked_array(_flatcodes):
             # Constructing an index from the product is wrong when there are missing groups
@@ -938,17 +947,29 @@ class GroupBy(Generic[T_Xarray]):
     def _restore_dim_order(self, stacked):
         raise NotImplementedError
 
-    def _maybe_restore_empty_groups(self, combined):
-        """Our index contained empty groups (e.g., from a resampling or binning). If we
+    def _maybe_reindex(self, combined):
+        """Reindexing is needed in two cases:
+        1. Our index contained empty groups (e.g., from a resampling or binning). If we
         reduced on that dimension, we want to restore the full index.
+
+        2. We use a MultiIndex for multi-variable GroupBy.
+        The MultiIndex stores each level's labels in sorted order
+        which are then assigned on unstacking. So we need to restore
+        the correct order here.
         """
         has_missing_groups = (
             self.encoded.unique_coord.size != self.encoded.full_index.size
         )
         indexers = {}
         for grouper in self.groupers:
-            if has_missing_groups and grouper.name in combined._indexes:
+            index = combined._indexes.get(grouper.name, None)
+            if has_missing_groups and index is not None:
                 indexers[grouper.name] = grouper.full_index
+            elif len(self.groupers) > 1:
+                if not isinstance(
+                    grouper.full_index, pd.RangeIndex
+                ) and not index.index.equals(grouper.full_index):
+                    indexers[grouper.name] = grouper.full_index
         if indexers:
             combined = combined.reindex(**indexers)
         return combined
@@ -989,7 +1010,7 @@ class GroupBy(Generic[T_Xarray]):
         dim: Dims,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ):
+    ) -> T_Xarray:
         """Adaptor function that translates our groupby API to that of flox."""
         import flox
         from flox.xarray import xarray_reduce
@@ -1112,6 +1133,8 @@ class GroupBy(Generic[T_Xarray]):
                     # flox always assigns an index so we must drop it here if we don't need it.
                     to_drop.append(grouper.name)
                     continue
+                # TODO: We can't simply use `self.encoded.coords` here because it corresponds to `unique_coord`,
+                # NOT `full_index`. We would need to construct a new Coordinates object, that corresponds to `full_index`.
                 new_coords.append(
                     # Using IndexVariable here ensures we reconstruct PandasMultiIndex with
                     # all associated levels properly.
@@ -1357,7 +1380,12 @@ class GroupBy(Generic[T_Xarray]):
         """
         return ops.where_method(self, cond, other)
 
-    def _first_or_last(self, op, skipna, keep_attrs):
+    def _first_or_last(
+        self,
+        op: Literal["first" | "last"],
+        skipna: bool | None,
+        keep_attrs: bool | None,
+    ):
         if all(
             isinstance(maybe_slice, slice)
             and (maybe_slice.stop == maybe_slice.start + 1)
@@ -1368,17 +1396,71 @@ class GroupBy(Generic[T_Xarray]):
             return self._obj
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
-        return self.reduce(
-            op, dim=[self._group_dim], skipna=skipna, keep_attrs=keep_attrs
-        )
+        if (
+            module_available("flox", minversion="0.10.0")
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            import flox.xrdtypes
 
-    def first(self, skipna: bool | None = None, keep_attrs: bool | None = None):
-        """Return the first element of each group along the group dimension"""
-        return self._first_or_last(duck_array_ops.first, skipna, keep_attrs)
+            result = self._flox_reduce(
+                dim=None,
+                func=op,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                fill_value=flox.xrdtypes.NA,
+            )
+        else:
+            result = self.reduce(
+                getattr(duck_array_ops, op),
+                dim=[self._group_dim],
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+            )
+        return result
 
-    def last(self, skipna: bool | None = None, keep_attrs: bool | None = None):
-        """Return the last element of each group along the group dimension"""
-        return self._first_or_last(duck_array_ops.last, skipna, keep_attrs)
+    def first(
+        self, skipna: bool | None = None, keep_attrs: bool | None = None
+    ) -> T_Xarray:
+        """
+        Return the first element of each group along the group dimension
+
+        Parameters
+        ----------
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+
+        """
+        return self._first_or_last("first", skipna, keep_attrs)
+
+    def last(
+        self, skipna: bool | None = None, keep_attrs: bool | None = None
+    ) -> T_Xarray:
+        """
+        Return the last element of each group along the group dimension
+
+        Parameters
+        ----------
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+
+
+        """
+        return self._first_or_last("last", skipna, keep_attrs)
 
     def assign_coords(self, coords=None, **coords_kwargs):
         """Assign coordinates by group.
@@ -1536,7 +1618,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         if dim not in applied_example.dims:
             combined = combined.assign_coords(self.encoded.coords)
         combined = self._maybe_unstack(combined)
-        combined = self._maybe_restore_empty_groups(combined)
+        combined = self._maybe_reindex(combined)
         return combined
 
     def reduce(
@@ -1606,8 +1688,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         return self.map(reduce_array, shortcut=shortcut)
 
 
-# https://github.com/python/mypy/issues/9031
-class DataArrayGroupBy(  # type: ignore[misc]
+class DataArrayGroupBy(
     DataArrayGroupByBase,
     DataArrayGroupByAggregations,
     ImplementsArrayReduce,
@@ -1693,7 +1774,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         if dim not in applied_example.dims:
             combined = combined.assign_coords(self.encoded.coords)
         combined = self._maybe_unstack(combined)
-        combined = self._maybe_restore_empty_groups(combined)
+        combined = self._maybe_reindex(combined)
         return combined
 
     def reduce(
@@ -1774,8 +1855,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         return self.map(lambda ds: ds.assign(**kwargs))
 
 
-# https://github.com/python/mypy/issues/9031
-class DatasetGroupBy(  # type: ignore[misc]
+class DatasetGroupBy(
     DatasetGroupByBase,
     DatasetGroupByAggregations,
     ImplementsDatasetReduce,

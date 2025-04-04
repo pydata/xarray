@@ -6,8 +6,9 @@ from typing import Any
 import numpy as np
 from pandas.api.types import is_extension_array_dtype
 
-from xarray.core import array_api_compat, npcompat, utils
-from xarray.core.npcompat import HAS_STRING_DTYPE
+from xarray.compat import array_api_compat, npcompat
+from xarray.compat.npcompat import HAS_STRING_DTYPE
+from xarray.core import utils
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject("<NA>")
@@ -62,7 +63,7 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     # N.B. these casting rules should match pandas
     dtype_: np.typing.DTypeLike
     fill_value: Any
-    if HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):  # type: ignore[attr-defined]
+    if HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):
         # for now, we always promote string dtypes to object for consistency with existing behavior
         # TODO: refactor this once we have a better way to handle numpy vlen-string dtypes
         dtype_ = object

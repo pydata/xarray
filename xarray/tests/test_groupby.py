@@ -14,7 +14,6 @@ from packaging.version import Version
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
-from xarray.core.alignment import broadcast
 from xarray.core.groupby import _consolidate_slices
 from xarray.core.types import InterpOptions, ResampleCompatible
 from xarray.groupers import (
@@ -25,6 +24,7 @@ from xarray.groupers import (
     UniqueGrouper,
 )
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.structure.alignment import broadcast
 from xarray.tests import (
     InaccessibleArray,
     assert_allclose,
@@ -154,7 +154,7 @@ def test_multi_index_groupby_sum() -> None:
 
 
 @requires_pandas_ge_2_2
-def test_multi_index_propagation():
+def test_multi_index_propagation() -> None:
     # regression test for GH9648
     times = pd.date_range("2023-01-01", periods=4)
     locations = ["A", "B"]
@@ -1618,6 +1618,8 @@ class TestDataArrayGroupBy:
         expected = array  # should be a no-op
         assert_identical(expected, actual)
 
+        # TODO: groupby_bins too
+
     def make_groupby_multidim_example_array(self) -> DataArray:
         return DataArray(
             [[[0, 1], [2, 3]], [[5, 10], [15, 20]]],
@@ -1843,7 +1845,6 @@ class TestDataArrayGroupBy:
 
 class TestDataArrayResample:
     @pytest.mark.parametrize("shuffle", [True, False])
-    @pytest.mark.parametrize("use_cftime", [True, False])
     @pytest.mark.parametrize(
         "resample_freq",
         [
@@ -1868,7 +1869,7 @@ class TestDataArrayResample:
         def resample_as_pandas(array, *args, **kwargs):
             array_ = array.copy(deep=True)
             if use_cftime:
-                array_["time"] = times.to_datetimeindex()
+                array_["time"] = times.to_datetimeindex(time_unit="ns")
             result = DataArray.from_series(
                 array_.to_series().resample(*args, **kwargs).mean()
             )
@@ -1904,12 +1905,8 @@ class TestDataArrayResample:
         with pytest.raises(ValueError):
             reverse.resample(time=resample_freq).mean()
 
-    @pytest.mark.parametrize("use_cftime", [True, False])
     def test_resample_doctest(self, use_cftime: bool) -> None:
         # run the doctest example here so we are not surprised
-        if use_cftime and not has_cftime:
-            pytest.skip()
-
         da = xr.DataArray(
             np.array([1, 2, 3, 1, 2, np.nan]),
             dims="time",
@@ -1945,8 +1942,10 @@ class TestDataArrayResample:
         actual = da.resample(time="D").map(func, args=(1.0,), arg3=1.0)
         assert_identical(actual, expected)
 
-    def test_resample_first(self) -> None:
-        times = pd.date_range("2000-01-01", freq="6h", periods=10)
+    def test_resample_first_last(self, use_cftime) -> None:
+        times = xr.date_range(
+            "2000-01-01", freq="6h", periods=10, use_cftime=use_cftime
+        )
         array = DataArray(np.arange(10), [("time", times)])
 
         # resample to same frequency
@@ -1959,7 +1958,7 @@ class TestDataArrayResample:
 
         # verify that labels don't use the first value
         actual = array.resample(time="24h").first()
-        expected = DataArray(array.to_series().resample("24h").first())
+        expected = array.isel(time=[0, 4, 8])
         assert_identical(expected, actual)
 
         # missing values
@@ -1976,10 +1975,17 @@ class TestDataArrayResample:
         # regression test for https://stackoverflow.com/questions/33158558/
         array = Dataset({"time": times})["time"]
         actual = array.resample(time="1D").last()
-        expected_times = pd.to_datetime(
-            ["2000-01-01T18", "2000-01-02T18", "2000-01-03T06"], unit="ns"
+        expected = array.isel(time=[3, 7, 9]).assign_coords(time=times[::4])
+        assert_identical(expected, actual)
+
+        # missing periods, GH10169
+        actual = array.isel(time=[0, 1, 2, 3, 8, 9]).resample(time="1D").last()
+        expected = DataArray(
+            np.array([times[3], np.datetime64("NaT"), times[9]]),
+            dims="time",
+            coords={"time": times[::4]},
+            name="time",
         )
-        expected = DataArray(expected_times, [("time", times[::4])], name="time")
         assert_identical(expected, actual)
 
     def test_resample_bad_resample_dim(self) -> None:
@@ -2289,14 +2295,13 @@ class TestDataArrayResample:
         times = pd.date_range("2000-01-01T02:03:01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
 
-        origin = "start"
+        origin: Literal["start"] = "start"
         actual = array.resample(time="24h", origin=origin).mean()
         expected = DataArray(array.to_series().resample("24h", origin=origin).mean())
         assert_identical(expected, actual)
 
 
 class TestDatasetResample:
-    @pytest.mark.parametrize("use_cftime", [True, False])
     @pytest.mark.parametrize(
         "resample_freq",
         [
@@ -2321,7 +2326,7 @@ class TestDatasetResample:
         def resample_as_pandas(ds, *args, **kwargs):
             ds_ = ds.copy(deep=True)
             if use_cftime:
-                ds_["time"] = times.to_datetimeindex()
+                ds_["time"] = times.to_datetimeindex(time_unit="ns")
             result = Dataset.from_dataframe(
                 ds_.to_dataframe().resample(*args, **kwargs).mean()
             )
@@ -2374,13 +2379,13 @@ class TestDatasetResample:
         # upsampling
         expected_time = pd.date_range("2000-01-01", freq="3h", periods=19)
         expected = ds.reindex(time=expected_time)
-        actual = ds.resample(time="3h")
+        rs = ds.resample(time="3h")
         for how in ["mean", "sum", "first", "last"]:
-            method = getattr(actual, how)
+            method = getattr(rs, how)
             result = method()
             assert_equal(expected, result)
         for method in [np.mean]:
-            result = actual.reduce(method)
+            result = rs.reduce(method)
             assert_equal(expected, result)
 
     def test_resample_min_count(self) -> None:
@@ -2694,7 +2699,7 @@ def test_default_flox_method() -> None:
 
 @requires_cftime
 @pytest.mark.filterwarnings("ignore")
-def test_cftime_resample_gh_9108():
+def test_cftime_resample_gh_9108() -> None:
     import cftime
 
     ds = Dataset(
@@ -3044,7 +3049,7 @@ def test_gappy_resample_reductions(reduction):
     assert_identical(expected, actual)
 
 
-def test_groupby_transpose():
+def test_groupby_transpose() -> None:
     # GH5361
     data = xr.DataArray(
         np.random.randn(4, 2),
@@ -3104,7 +3109,7 @@ def test_lazy_grouping(grouper, expect_index):
 
 
 @requires_dask
-def test_lazy_grouping_errors():
+def test_lazy_grouping_errors() -> None:
     import dask.array
 
     data = DataArray(
@@ -3130,7 +3135,7 @@ def test_lazy_grouping_errors():
 
 
 @requires_dask
-def test_lazy_int_bins_error():
+def test_lazy_int_bins_error() -> None:
     import dask.array
 
     with pytest.raises(ValueError, match="Bin edges must be provided"):
@@ -3138,7 +3143,7 @@ def test_lazy_int_bins_error():
             _ = BinGrouper(bins=4).factorize(DataArray(dask.array.arange(3)))
 
 
-def test_time_grouping_seasons_specified():
+def test_time_grouping_seasons_specified() -> None:
     time = xr.date_range("2001-01-01", "2002-01-01", freq="D")
     ds = xr.Dataset({"foo": np.arange(time.size)}, coords={"time": ("time", time)})
     labels = ["DJF", "MAM", "JJA", "SON"]
@@ -3147,7 +3152,36 @@ def test_time_grouping_seasons_specified():
     assert_identical(actual, expected.reindex(season=labels))
 
 
-def test_groupby_multiple_bin_grouper_missing_groups():
+def test_multiple_grouper_unsorted_order() -> None:
+    time = xr.date_range("2001-01-01", "2003-01-01", freq="MS")
+    ds = xr.Dataset({"foo": np.arange(time.size)}, coords={"time": ("time", time)})
+    labels = ["DJF", "MAM", "JJA", "SON"]
+    actual = ds.groupby(
+        {
+            "time.season": UniqueGrouper(labels=labels),
+            "time.year": UniqueGrouper(labels=[2002, 2001]),
+        }
+    ).sum()
+    expected = (
+        ds.groupby({"time.season": UniqueGrouper(), "time.year": UniqueGrouper()})
+        .sum()
+        .reindex(season=labels, year=[2002, 2001])
+    )
+    assert_identical(actual, expected.reindex(season=labels))
+
+    b = xr.DataArray(
+        np.random.default_rng(0).random((2, 3, 4)),
+        coords={"x": [0, 1], "y": [0, 1, 2]},
+        dims=["x", "y", "z"],
+    )
+    actual2 = b.groupby(
+        x=UniqueGrouper(labels=[1, 0]), y=UniqueGrouper(labels=[2, 0, 1])
+    ).sum()
+    expected2 = b.reindex(x=[1, 0], y=[2, 0, 1]).transpose("z", ...)
+    assert_identical(actual2, expected2)
+
+
+def test_groupby_multiple_bin_grouper_missing_groups() -> None:
     from numpy import nan
 
     ds = xr.Dataset(
@@ -3224,7 +3258,7 @@ def test_shuffle_by(chunks, expected_chunks):
 
 
 @requires_dask
-def test_groupby_dask_eager_load_warnings():
+def test_groupby_dask_eager_load_warnings() -> None:
     ds = xr.Dataset(
         {"foo": (("z"), np.arange(12))},
         coords={"x": ("z", np.arange(12)), "y": ("z", np.arange(12))},
