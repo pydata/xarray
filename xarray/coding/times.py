@@ -94,8 +94,6 @@ TIME_UNITS = frozenset(
 
 
 _INVALID_LITERAL_TIMEDELTA64_ENCODING_KEYS = [
-    "_FillValue",
-    "missing_value",
     "add_offset",
     "scale_factor",
 ]
@@ -1465,17 +1463,17 @@ class CFTimedeltaCoder(VariableCoder):
                     k in encoding for k in _INVALID_LITERAL_TIMEDELTA64_ENCODING_KEYS
                 ):
                     raise ValueError(
-                        f"Specifying '_FillValue', 'missing_value', "
-                        f"'add_offset', or 'scale_factor' is not supported "
-                        f"when literally encoding the np.timedelta64 values "
-                        f"of variable {name!r}. To encode {name!r} with such "
-                        f"encoding parameters, additionally set "
-                        f"encoding['units'] to a unit of time, e.g. "
-                        f"'seconds'. To proceed with literal np.timedelta64 "
-                        f"encoding of {name!r}, remove any encoding entries "
-                        f"for '_FillValue', 'missing_value', 'add_offset', "
-                        f"or 'scale_factor'."
+                        f"Specifying 'add_offset' or 'scale_factor' is not "
+                        f"supported when literally encoding the "
+                        f"np.timedelta64 values of variable {name!r}. To "
+                        f"encode {name!r} with such encoding parameters, "
+                        f"additionally set encoding['units'] to a unit of "
+                        f"time, e.g. 'seconds'. To proceed with literal "
+                        f"np.timedelta64 encoding of {name!r}, remove any "
+                        f"encoding entries for 'add_offset' or 'scale_factor'."
                     )
+                if "_FillValue" not in encoding and "missing_value" not in encoding:
+                    encoding["_FillValue"] = np.iinfo(np.int64).min
 
             data, units = encode_cf_timedelta(data, units, dtype)
             safe_setitem(attrs, "units", units, name=name)
@@ -1500,9 +1498,8 @@ class CFTimedeltaCoder(VariableCoder):
                 ):
                     raise ValueError(
                         "Decoding np.timedelta64 values via dtype is not "
-                        "supported when '_FillValue', 'missing_value', "
-                        "'add_offset', or 'scale_factor' are present in "
-                        "encoding."
+                        "supported when 'add_offset', or 'scale_factor' are "
+                        "present in encoding."
                     )
                 dtype = pop_to(attrs, encoding, "dtype", name=name)
                 dtype = np.dtype(dtype)

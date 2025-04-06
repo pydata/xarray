@@ -1964,7 +1964,7 @@ def test_decode_floating_point_timedelta_no_serialization_warning() -> None:
 
 
 def test_literal_timedelta64_coding(time_unit: PDDatetimeUnitOptions) -> None:
-    timedeltas = pd.timedelta_range(0, freq="D", periods=3, unit=time_unit)  # type: ignore[call-arg]
+    timedeltas = np.array([0, 1, "NaT"], dtype=f"timedelta64[{time_unit}]")
     variable = Variable(["time"], timedeltas)
     expected_dtype = f"timedelta64[{time_unit}]"
     expected_units = _numpy_to_netcdf_timeunit(time_unit)
@@ -1972,6 +1972,7 @@ def test_literal_timedelta64_coding(time_unit: PDDatetimeUnitOptions) -> None:
     encoded = conventions.encode_cf_variable(variable)
     assert encoded.attrs["dtype"] == expected_dtype
     assert encoded.attrs["units"] == expected_units
+    assert encoded.attrs["_FillValue"] == np.iinfo(np.int64).min
 
     decoded = conventions.decode_cf_variable("timedeltas", encoded)
     assert decoded.encoding["dtype"] == expected_dtype
@@ -2011,7 +2012,7 @@ def test_literal_timedelta_encode_invalid_attribute(attribute) -> None:
 
 
 @pytest.mark.parametrize("invalid_key", _INVALID_LITERAL_TIMEDELTA64_ENCODING_KEYS)
-def test_literal_timedelta_encoding_mask_and_scale_error(invalid_key) -> None:
+def test_literal_timedelta_encoding_invalid_key_error(invalid_key) -> None:
     encoding = {invalid_key: 1.0}
     timedeltas = pd.timedelta_range(0, freq="D", periods=3)
     variable = Variable(["time"], timedeltas, encoding=encoding)
@@ -2020,7 +2021,7 @@ def test_literal_timedelta_encoding_mask_and_scale_error(invalid_key) -> None:
 
 
 @pytest.mark.parametrize("invalid_key", _INVALID_LITERAL_TIMEDELTA64_ENCODING_KEYS)
-def test_literal_timedelta_decoding_mask_and_scale_error(invalid_key) -> None:
+def test_literal_timedelta_decoding_invalid_key_error(invalid_key) -> None:
     attrs = {invalid_key: 1.0, "dtype": "timedelta64[s]", "units": "seconds"}
     variable = Variable(["time"], [0, 1, 2], attrs=attrs)
     with pytest.raises(ValueError, match=invalid_key):
@@ -2044,6 +2045,12 @@ def test_literal_timedelta_decoding_mask_and_scale_error(invalid_key) -> None:
 def test_timedelta_decoding_options(
     decode_via_units, decode_via_dtype, attrs, expect_timedelta64
 ) -> None:
+    # Note with literal timedelta encoding, we always add a _FillValue, even
+    # if one is not present in the original encoding parameters, which is why
+    # we ensure one is defined here when "dtype" is present in attrs.
+    if "dtype" in attrs:
+        attrs["_FillValue"] = np.iinfo(np.int64).min
+
     array = np.array([0, 1, 2], dtype=np.dtype("int64"))
     encoded = Variable(["time"], array, attrs=attrs)
 
@@ -2083,3 +2090,33 @@ def test_timedelta_encoding_explicit_non_timedelta64_dtype() -> None:
     assert_identical(reencoded, encoded)
     assert encoded.attrs["units"] == "days"
     assert encoded.dtype == np.dtype("int32")
+
+
+@pytest.mark.parametrize("mask_attribute", ["_FillValue", "missing_value"])
+def test_literal_timedelta64_coding_with_mask(
+    time_unit: PDDatetimeUnitOptions, mask_attribute: str
+) -> None:
+    timedeltas = np.array([0, 1, "NaT"], dtype=f"timedelta64[{time_unit}]")
+    mask = 10
+    variable = Variable(["time"], timedeltas, encoding={mask_attribute: mask})
+    expected_dtype = f"timedelta64[{time_unit}]"
+    expected_units = _numpy_to_netcdf_timeunit(time_unit)
+
+    encoded = conventions.encode_cf_variable(variable)
+    assert encoded.attrs["dtype"] == expected_dtype
+    assert encoded.attrs["units"] == expected_units
+    assert encoded.attrs[mask_attribute] == mask
+    assert encoded[-1] == mask
+
+    decoded = conventions.decode_cf_variable("timedeltas", encoded)
+    assert decoded.encoding["dtype"] == expected_dtype
+    assert decoded.encoding["units"] == expected_units
+    assert decoded.encoding[mask_attribute] == mask
+    assert np.isnat(decoded[-1])
+
+    assert_identical(decoded, variable)
+    assert decoded.dtype == variable.dtype
+
+    reencoded = conventions.encode_cf_variable(decoded)
+    assert_identical(reencoded, encoded)
+    assert reencoded.dtype == encoded.dtype
