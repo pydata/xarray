@@ -17,7 +17,7 @@ import pandas as pd
 from numpy.typing import ArrayLike
 
 from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
-from xarray.computation.computation import apply_ufunc
+from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.core.coordinates import Coordinates, _coordinates_from_variable
 from xarray.core.dataarray import DataArray
 from xarray.core.duck_array_ops import array_all, isnull
@@ -521,7 +521,7 @@ class TimeResampler(Resampler):
             counts = grouped.count()
             # This way we generate codes for the final output index: full_index.
             # So for _flox_reduce we avoid one reindex and copy by avoiding
-            # _maybe_restore_empty_groups
+            # _maybe_reindex
             codes = np.repeat(np.arange(len(first_items)), counts)
             return first_items, codes
 
