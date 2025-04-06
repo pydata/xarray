@@ -22,6 +22,8 @@ v2025.04.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added `scipy-stubs <https://github.com/scipy/scipy-stubs>`_ to the ``xarray[types]`` dependencies.
+  By `Joren Hammudoglu <https://github.com/jorenham>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
