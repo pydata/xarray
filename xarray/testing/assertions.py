@@ -340,7 +340,7 @@ def _assert_indexes_invariants_checks(
         if isinstance(index, PandasIndex):
             pd_index = index.index
             var = possible_coord_variables[k]
-            assert (index.dim,) == var.dims, (pd_index, var)
+            assert (index.dim,) == var.dims, (index, index.dim, var)
             if k == index.dim:
                 # skip multi-index levels here (checked below)
                 assert index.coord_dtype == var.dtype, (index.coord_dtype, var.dtype)

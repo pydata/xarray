@@ -3350,6 +3350,13 @@ class TestDataset:
         assert isinstance(actual.variables["x"], Variable)
         assert actual.xindexes["y"].equals(expected.xindexes["y"])
 
+    def test_swap_dims_after_rename_vars(self) -> None:
+        # https://github.com/pydata/xarray/issues/8646
+        ds = Dataset(coords={"y": [1, 2]})
+        actual = ds.rename_vars(y="z").swap_dims(y="z")
+        expected = Dataset(coords={"z": [1, 2]})
+        assert_identical(actual, expected)
+
     def test_expand_dims_error(self) -> None:
         original = Dataset(
             {
