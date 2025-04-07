@@ -4281,7 +4281,7 @@ New Features
 ~~~~~~~~~~~~
 
 - Weighted array reductions are now supported via the new :py:meth:`DataArray.weighted`
-  and :py:meth:`Dataset.weighted` methods. See :ref:`comput.weighted`. (:issue:`422`, :pull:`2922`).
+  and :py:meth:`Dataset.weighted` methods. See :ref:`compute.weighted`. (:issue:`422`, :pull:`2922`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 - The new jupyter notebook repr (``Dataset._repr_html_`` and
   ``DataArray._repr_html_``) (introduced in 0.14.1) is now on by default. To
@@ -6412,7 +6412,7 @@ Enhancements
 - New helper function :py:func:`~xarray.apply_ufunc` for wrapping functions
   written to work on NumPy arrays to support labels on xarray objects
   (:issue:`770`). ``apply_ufunc`` also support automatic parallelization for
-  many functions with dask. See :ref:`comput.wrapping-custom` and
+  many functions with dask. See :ref:`compute.wrapping-custom` and
   :ref:`dask.automatic-parallelization` for details.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
@@ -7434,7 +7434,7 @@ Enhancements
       * x        (x) int64 0 1 2
       * y        (y) int64 0 1 2 3 4
 
-  See :ref:`comput.rolling` for more details. By
+  See :ref:`compute.rolling` for more details. By
   `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
