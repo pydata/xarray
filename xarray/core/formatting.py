@@ -1147,8 +1147,7 @@ def datatree_repr(dt: DataTree) -> str:
     lines = [header]
     show_inherited = True
 
-    rendered_items = list(renderer)
-    for pre, fill, node in rendered_items:
+    for pre, fill, node in renderer:
         if isinstance(node, str):
             lines.append(f"{fill}{node}")
             continue
