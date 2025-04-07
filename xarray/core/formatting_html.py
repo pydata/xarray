@@ -205,8 +205,8 @@ def _mapping_section(
     expanded = _get_boolean_with_default(
         expand_option_name, n_items < max_items_collapse
     )
-    max_items = OPTIONS.get(max_option_name)
     collapsed = not expanded
+    max_items = OPTIONS.get(max_option_name)
     truncated = max_items is not None and n_items > max_items
     inline_details = f"({max_items}/{n_items})" if truncated else ""
 
