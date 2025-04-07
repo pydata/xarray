@@ -7072,7 +7072,7 @@ class DataArray(
 
         Returns
         -------
-        core.weighted.DataArrayWeighted
+        computation.weighted.DataArrayWeighted
 
         See Also
         --------
@@ -7117,7 +7117,7 @@ class DataArray(
 
         Returns
         -------
-        core.rolling.DataArrayRolling
+        computation.rolling.DataArrayRolling
 
         Examples
         --------
@@ -7157,7 +7157,7 @@ class DataArray(
         --------
         DataArray.cumulative
         Dataset.rolling
-        core.rolling.DataArrayRolling
+        computation.rolling.DataArrayRolling
         """
         from xarray.computation.rolling import DataArrayRolling
 
@@ -7183,7 +7183,7 @@ class DataArray(
 
         Returns
         -------
-        core.rolling.DataArrayRolling
+        computation.rolling.DataArrayRolling
 
         Examples
         --------
@@ -7217,7 +7217,7 @@ class DataArray(
         --------
         DataArray.rolling
         Dataset.cumulative
-        core.rolling.DataArrayRolling
+        computation.rolling.DataArrayRolling
         """
         from xarray.computation.rolling import DataArrayRolling
 
@@ -7265,7 +7265,7 @@ class DataArray(
 
         Returns
         -------
-        core.rolling.DataArrayCoarsen
+        computation.rolling.DataArrayCoarsen
 
         Examples
         --------
@@ -7360,7 +7360,7 @@ class DataArray(
 
         See Also
         --------
-        :class:`core.rolling.DataArrayCoarsen <core.rolling.DataArrayCoarsen>`
+        :class:`computation.rolling.DataArrayCoarsen <computation.rolling.DataArrayCoarsen>`
         :func:`Dataset.coarsen <Dataset.coarsen>`
 
         :ref:`reshape.coarsen`

@@ -480,7 +480,7 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-- ``persist`` methods now route through the :py:class:`xr.core.parallelcompat.ChunkManagerEntrypoint` (:pull:`9682`).
+- ``persist`` methods now route through the :py:class:`xr.namedarray.parallelcompat.ChunkManagerEntrypoint` (:pull:`9682`).
   By `Sam Levang <https://github.com/slevang>`_.
 
 .. _whats-new.2024.10.0:
@@ -1868,7 +1868,7 @@ Bug fixes
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Experimental support for wrapping chunked array libraries other than dask.
-  A new ABC is defined - :py:class:`xr.core.parallelcompat.ChunkManagerEntrypoint` - which can be subclassed and then
+  A new ABC is defined - :py:class:`xr.namedarray.parallelcompat.ChunkManagerEntrypoint` - which can be subclassed and then
   registered by alternative chunked array implementations. (:issue:`6807`, :pull:`7019`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
