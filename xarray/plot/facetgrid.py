@@ -353,6 +353,8 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             if k not in {"cmap", "colors", "cbar_kwargs", "levels"}
         }
         func_kwargs.update(cmap_params)
+        # to avoid redundant calling, colorbar and labelling is instead handled
+        # by `_finalize_grid` at the end
         func_kwargs["add_colorbar"] = False
         if func.__name__ != "surface":
             func_kwargs["add_labels"] = False
@@ -375,7 +377,10 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
                 )
                 self._mappables.append(mappable)
 
-        self._finalize_grid(x, y)
+        xlabel = label_from_attrs(self.data[x])
+        ylabel = label_from_attrs(self.data[y])
+
+        self._finalize_grid(xlabel, ylabel)
 
         if kwargs.get("add_colorbar", True):
             self.add_colorbar(**cbar_kwargs)
