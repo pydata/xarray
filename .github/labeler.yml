@@ -36,12 +36,12 @@ topic-CF conventions:
 topic-combine:
   - changed-files:
       - any-glob-to-any-file:
-          - xarray/core/combine.py
+          - xarray/structure/combine.py
 
 topic-dask:
   - changed-files:
       - any-glob-to-any-file:
-          - xarray/core/dask*
+          - xarray/compat/dask*
           - xarray/core/parallel.py
 
 topic-DataTree:
@@ -72,8 +72,8 @@ topic-html-repr:
 topic-hypothesis:
   - changed-files:
       - any-glob-to-any-file:
-          - xarray/properties/*
-          - xarray/testing/strategies/*
+          - properties/**
+          - xarray/testing/strategies.py
 
 topic-indexing:
   - changed-files:
@@ -100,14 +100,13 @@ topic-plotting:
 topic-rolling:
   - changed-files:
       - any-glob-to-any-file:
-          - xarray/core/rolling.py
-          - xarray/core/rolling_exp.py
+          - xarray/computation/rolling.py
+          - xarray/computation/rolling_exp.py
 
 topic-testing:
   - changed-files:
       - any-glob-to-any-file:
           - conftest.py
-          - xarray/testing.py
           - xarray/testing/*
 
 topic-typing:
