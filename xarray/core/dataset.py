@@ -25,26 +25,14 @@ from types import EllipsisType
 from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
-from pandas.api.types import is_extension_array_dtype
-
-from xarray.core.chunk import _maybe_chunk
-from xarray.core.dataset_utils import _get_virtual_variable, _LocIndexer
-from xarray.core.dataset_variables import DataVariables
-
-# remove once numpy 2.0 is the oldest supported version
-try:
-    from numpy.exceptions import RankWarning
-except ImportError:
-    from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
-
 import pandas as pd
+from pandas.api.types import is_extension_array_dtype
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
 from xarray.compat.array_api_compat import to_like_array
 from xarray.computation import ops
 from xarray.computation.arithmetic import DatasetArithmetic
-from xarray.computation.computation import _ensure_numeric, unify_chunks
 from xarray.core import dtypes as xrdtypes
 from xarray.core import (
     duck_array_ops,
@@ -63,6 +51,8 @@ from xarray.core.coordinates import (
     DatasetCoordinates,
     assert_coordinate_consistent,
 )
+from xarray.core.dataset_utils import _get_virtual_variable, _LocIndexer
+from xarray.core.dataset_variables import DataVariables
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import (
     Index,
@@ -96,7 +86,6 @@ from xarray.core.utils import (
     FrozenMappingWarningOnValuesAccess,
     OrderedSet,
     _default,
-    _get_func_args,
     decode_numpy_dict_values,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
@@ -125,6 +114,7 @@ from xarray.structure.alignment import (
     _get_broadcast_dims_map_common_coords,
     align,
 )
+from xarray.structure.chunks import _maybe_chunk, unify_chunks
 from xarray.structure.merge import (
     dataset_merge_method,
     dataset_update_method,
@@ -195,49 +185,6 @@ _DATETIMEINDEX_COMPONENTS = [
     "dayofweek",
     "quarter",
 ]
-
-
-def _initialize_curvefit_params(params, p0, bounds, func_args):
-    """Set initial guess and bounds for curvefit.
-    Priority: 1) passed args 2) func signature 3) scipy defaults
-    """
-    from xarray.computation.computation import where
-
-    def _initialize_feasible(lb, ub):
-        # Mimics functionality of scipy.optimize.minpack._initialize_feasible
-        lb_finite = np.isfinite(lb)
-        ub_finite = np.isfinite(ub)
-        p0 = where(
-            lb_finite,
-            where(
-                ub_finite,
-                0.5 * (lb + ub),  # both bounds finite
-                lb + 1,  # lower bound finite, upper infinite
-            ),
-            where(
-                ub_finite,
-                ub - 1,  # lower bound infinite, upper finite
-                0,  # both bounds infinite
-            ),
-        )
-        return p0
-
-    param_defaults = {p: 1 for p in params}
-    bounds_defaults = {p: (-np.inf, np.inf) for p in params}
-    for p in params:
-        if p in func_args and func_args[p].default is not func_args[p].empty:
-            param_defaults[p] = func_args[p].default
-        if p in bounds:
-            lb, ub = bounds[p]
-            bounds_defaults[p] = (lb, ub)
-            param_defaults[p] = where(
-                (param_defaults[p] < lb) | (param_defaults[p] > ub),
-                _initialize_feasible(lb, ub),
-                param_defaults[p],
-            )
-        if p in p0:
-            param_defaults[p] = p0[p]
-    return param_defaults, bounds_defaults
 
 
 class Dataset(
@@ -2232,7 +2179,7 @@ class Dataset(
             - Dimensions cannot be included in both ``region`` and
               ``append_dim`` at the same time. To create empty arrays to fill
               in with ``region``, use a separate call to ``to_zarr()`` with
-              ``compute=False``. See "Appending to existing Zarr stores" in
+              ``compute=False``. See "Modifying existing Zarr stores" in
               the reference documentation for full details.
 
             Users are expected to ensure that the specified region aligns with
@@ -8824,139 +8771,9 @@ class Dataset(
         numpy.polyval
         xarray.polyval
         """
-        variables: dict[Hashable, Variable] = {}
-        skipna_da = skipna
+        from xarray.computation.fit import polyfit as polyfit_impl
 
-        x = np.asarray(_ensure_numeric(self.coords[dim]).astype(np.float64))
-
-        xname = f"{self[dim].name}_"
-        order = int(deg) + 1
-        degree_coord_values = np.arange(order)[::-1]
-        lhs = np.vander(x, order)
-
-        if rcond is None:
-            rcond = x.shape[0] * np.finfo(x.dtype).eps
-
-        # Weights:
-        if w is not None:
-            if isinstance(w, Hashable):
-                w = self.coords[w]
-            w = np.asarray(w)
-            if w.ndim != 1:
-                raise TypeError("Expected a 1-d array for weights.")
-            if w.shape[0] != lhs.shape[0]:
-                raise TypeError(f"Expected w and {dim} to have the same length")
-            lhs *= w[:, np.newaxis]
-
-        # Scaling
-        scale = np.sqrt((lhs * lhs).sum(axis=0))
-        lhs /= scale
-
-        degree_dim = utils.get_temp_dimname(self.dims, "degree")
-
-        rank = np.linalg.matrix_rank(lhs)
-
-        if full:
-            rank = Variable(dims=(), data=rank)
-            variables[xname + "matrix_rank"] = rank
-            _sing = np.linalg.svd(lhs, compute_uv=False)
-            variables[xname + "singular_values"] = Variable(
-                dims=(degree_dim,),
-                data=np.concatenate([np.full((order - rank.data,), np.nan), _sing]),
-            )
-
-        # If we have a coordinate get its underlying dimension.
-        (true_dim,) = self.coords[dim].dims
-
-        other_coords = {
-            dim: self._variables[dim]
-            for dim in set(self.dims) - {true_dim}
-            if dim in self._variables
-        }
-        present_dims: set[Hashable] = set()
-        for name, var in self._variables.items():
-            if name in self._coord_names or name in self.dims:
-                continue
-            if true_dim not in var.dims:
-                continue
-
-            if is_duck_dask_array(var._data) and (
-                rank != order or full or skipna is None
-            ):
-                # Current algorithm with dask and skipna=False neither supports
-                # deficient ranks nor does it output the "full" info (issue dask/dask#6516)
-                skipna_da = True
-            elif skipna is None:
-                skipna_da = bool(np.any(var.isnull()))
-
-            if var.ndim > 1:
-                rhs = var.transpose(true_dim, ...)
-                other_dims = rhs.dims[1:]
-                scale_da = scale.reshape(-1, *((1,) * len(other_dims)))
-            else:
-                rhs = var
-                scale_da = scale
-                other_dims = ()
-
-            present_dims.update(other_dims)
-            if w is not None:
-                rhs = rhs * w.reshape(-1, *((1,) * len(other_dims)))
-
-            with warnings.catch_warnings():
-                if full:  # Copy np.polyfit behavior
-                    warnings.simplefilter("ignore", RankWarning)
-                else:  # Raise only once per variable
-                    warnings.simplefilter("once", RankWarning)
-
-                coeffs, residuals = duck_array_ops.least_squares(
-                    lhs, rhs.data, rcond=rcond, skipna=skipna_da
-                )
-
-            if isinstance(name, str):
-                name = f"{name}_"
-            else:
-                # Thus a ReprObject => polyfit was called on a DataArray
-                name = ""
-
-            variables[name + "polyfit_coefficients"] = Variable(
-                data=coeffs / scale_da, dims=(degree_dim,) + other_dims
-            )
-
-            if full or (cov is True):
-                variables[name + "polyfit_residuals"] = Variable(
-                    data=residuals if var.ndim > 1 else residuals.squeeze(),
-                    dims=other_dims,
-                )
-
-            if cov:
-                Vbase = np.linalg.inv(np.dot(lhs.T, lhs))
-                Vbase /= np.outer(scale, scale)
-                if TYPE_CHECKING:
-                    fac: int | Variable
-                if cov == "unscaled":
-                    fac = 1
-                else:
-                    if x.shape[0] <= order:
-                        raise ValueError(
-                            "The number of data points must exceed order to scale the covariance matrix."
-                        )
-                    fac = variables[name + "polyfit_residuals"] / (x.shape[0] - order)
-                variables[name + "polyfit_covariance"] = (
-                    Variable(data=Vbase, dims=("cov_i", "cov_j")) * fac
-                )
-
-        return type(self)(
-            data_vars=variables,
-            coords={
-                degree_dim: degree_coord_values,
-                **{
-                    name: coord
-                    for name, coord in other_coords.items()
-                    if name in present_dims
-                },
-            },
-            attrs=self.attrs.copy(),
-        )
+        return polyfit_impl(self, dim, deg, skipna, rcond, w, full, cov)
 
     def pad(
         self,
@@ -9781,159 +9598,20 @@ class Dataset(
         Dataset.polyfit
         scipy.optimize.curve_fit
         """
-        from scipy.optimize import curve_fit
+        from xarray.computation.fit import curvefit as curvefit_impl
 
-        from xarray.computation.computation import apply_ufunc
-        from xarray.core.dataarray import _THIS_ARRAY, DataArray
-        from xarray.structure.alignment import broadcast
-
-        if p0 is None:
-            p0 = {}
-        if bounds is None:
-            bounds = {}
-        if kwargs is None:
-            kwargs = {}
-
-        reduce_dims_: list[Hashable]
-        if not reduce_dims:
-            reduce_dims_ = []
-        elif isinstance(reduce_dims, str) or not isinstance(reduce_dims, Iterable):
-            reduce_dims_ = [reduce_dims]
-        else:
-            reduce_dims_ = list(reduce_dims)
-
-        if isinstance(coords, str | DataArray) or not isinstance(coords, Iterable):
-            coords = [coords]
-        coords_: Sequence[DataArray] = [
-            self[coord] if isinstance(coord, str) else coord for coord in coords
-        ]
-
-        # Determine whether any coords are dims on self
-        for coord in coords_:
-            reduce_dims_ += [c for c in self.dims if coord.equals(self[c])]
-        reduce_dims_ = list(set(reduce_dims_))
-        preserved_dims = list(set(self.dims) - set(reduce_dims_))
-        if not reduce_dims_:
-            raise ValueError(
-                "No arguments to `coords` were identified as a dimension on the calling "
-                "object, and no dims were supplied to `reduce_dims`. This would result "
-                "in fitting on scalar data."
-            )
-
-        # Check that initial guess and bounds only contain coordinates that are in preserved_dims
-        for param, guess in p0.items():
-            if isinstance(guess, DataArray):
-                unexpected = set(guess.dims) - set(preserved_dims)
-                if unexpected:
-                    raise ValueError(
-                        f"Initial guess for '{param}' has unexpected dimensions "
-                        f"{tuple(unexpected)}. It should only have dimensions that are in data "
-                        f"dimensions {preserved_dims}."
-                    )
-        for param, (lb, ub) in bounds.items():
-            for label, bound in zip(("Lower", "Upper"), (lb, ub), strict=True):
-                if isinstance(bound, DataArray):
-                    unexpected = set(bound.dims) - set(preserved_dims)
-                    if unexpected:
-                        raise ValueError(
-                            f"{label} bound for '{param}' has unexpected dimensions "
-                            f"{tuple(unexpected)}. It should only have dimensions that are in data "
-                            f"dimensions {preserved_dims}."
-                        )
-
-        if errors not in ["raise", "ignore"]:
-            raise ValueError('errors must be either "raise" or "ignore"')
-
-        # Broadcast all coords with each other
-        coords_ = broadcast(*coords_)
-        coords_ = [
-            coord.broadcast_like(self, exclude=preserved_dims) for coord in coords_
-        ]
-        n_coords = len(coords_)
-
-        params, func_args = _get_func_args(func, param_names)
-        param_defaults, bounds_defaults = _initialize_curvefit_params(
-            params, p0, bounds, func_args
+        return curvefit_impl(
+            self,
+            coords,
+            func,
+            reduce_dims,
+            skipna,
+            p0,
+            bounds,
+            param_names,
+            errors,
+            kwargs,
         )
-        n_params = len(params)
-
-        def _wrapper(Y, *args, **kwargs):
-            # Wrap curve_fit with raveled coordinates and pointwise NaN handling
-            # *args contains:
-            #   - the coordinates
-            #   - initial guess
-            #   - lower bounds
-            #   - upper bounds
-            coords__ = args[:n_coords]
-            p0_ = args[n_coords + 0 * n_params : n_coords + 1 * n_params]
-            lb = args[n_coords + 1 * n_params : n_coords + 2 * n_params]
-            ub = args[n_coords + 2 * n_params :]
-
-            x = np.vstack([c.ravel() for c in coords__])
-            y = Y.ravel()
-            if skipna:
-                mask = np.all([np.any(~np.isnan(x), axis=0), ~np.isnan(y)], axis=0)
-                x = x[:, mask]
-                y = y[mask]
-                if not len(y):
-                    popt = np.full([n_params], np.nan)
-                    pcov = np.full([n_params, n_params], np.nan)
-                    return popt, pcov
-            x = np.squeeze(x)
-
-            try:
-                popt, pcov = curve_fit(func, x, y, p0=p0_, bounds=(lb, ub), **kwargs)
-            except RuntimeError:
-                if errors == "raise":
-                    raise
-                popt = np.full([n_params], np.nan)
-                pcov = np.full([n_params, n_params], np.nan)
-
-            return popt, pcov
-
-        result = type(self)()
-        for name, da in self.data_vars.items():
-            if name is _THIS_ARRAY:
-                name = ""
-            else:
-                name = f"{name}_"
-
-            input_core_dims = [reduce_dims_ for _ in range(n_coords + 1)]
-            input_core_dims.extend(
-                [[] for _ in range(3 * n_params)]
-            )  # core_dims for p0 and bounds
-
-            popt, pcov = apply_ufunc(
-                _wrapper,
-                da,
-                *coords_,
-                *param_defaults.values(),
-                *[b[0] for b in bounds_defaults.values()],
-                *[b[1] for b in bounds_defaults.values()],
-                vectorize=True,
-                dask="parallelized",
-                input_core_dims=input_core_dims,
-                output_core_dims=[["param"], ["cov_i", "cov_j"]],
-                dask_gufunc_kwargs={
-                    "output_sizes": {
-                        "param": n_params,
-                        "cov_i": n_params,
-                        "cov_j": n_params,
-                    },
-                },
-                output_dtypes=(np.float64, np.float64),
-                exclude_dims=set(reduce_dims_),
-                kwargs=kwargs,
-            )
-            result[name + "curvefit_coefficients"] = popt
-            result[name + "curvefit_covariance"] = pcov
-
-        result = result.assign_coords(
-            {"param": params, "cov_i": params, "cov_j": params}
-        )
-        result.attrs = self.attrs.copy()
-
-        return result
 
     def drop_duplicates(
         self,

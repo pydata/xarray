@@ -2025,6 +2025,26 @@ class TestIndexing:
         )
         assert_identical(actual, expected)
 
+    def test_sel_isel_error_has_node_info(self) -> None:
+        tree = DataTree.from_dict(
+            {
+                "/first": xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"x": [1, 2, 3]}),
+                "/second": xr.Dataset({"b": ("x", [4, 5])}, coords={"x": [2, 3]}),
+            }
+        )
+
+        with pytest.raises(
+            KeyError,
+            match="Raised whilst mapping function over node with path 'second'",
+        ):
+            tree.sel(x=1)
+
+        with pytest.raises(
+            IndexError,
+            match="Raised whilst mapping function over node with path 'first'",
+        ):
+            tree.isel(x=4)
+
 
 class TestAggregations:
     def test_reduce_method(self) -> None:
