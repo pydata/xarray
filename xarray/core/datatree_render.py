@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections import namedtuple
 from collections.abc import Iterable, Iterator
+from math import ceil
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -89,10 +90,10 @@ class RenderDataTree:
                 Iterables that change the order of children  cannot be used
                 (e.g., `reversed`).
             maxlevel: Limit rendering to this depth.
-            maxchildren: Limit number of children to roughly this number. In practice,
-                for an arbitrarily large DataTree the number of children returned
-                will be (maxchildren * maxchildren - 1) / 2. The last child is also
-                included.
+            maxchildren: Limit number total number of nodes to roughly this number. In practice,
+                for an arbitrarily large DataTree the number of nodes returned
+                will be (maxchildren * maxchildren - 1) / 2. The included nodes are half from
+                the start of the tree and half from the end of the tree.
         :any:`RenderDataTree` is an iterator, returning a tuple with 3 items:
         `pre`
             tree prefix.
@@ -166,13 +167,15 @@ class RenderDataTree:
         ├── sub0
         └── sub1
 
-        # `maxchildren` roughly limits the total number of children
+        # `maxchildren` limits the number of children per node
 
-        >>> print(RenderDataTree(root, maxchildren=3).by_attr())
+        >>> print(RenderDataTree(root, maxchildren=1).by_attr("name"))
         root
         ├── sub0
         │   ├── sub0B
-        └── sub1
+        │   ...
+        ...
+
         """
         if style is None:
             style = ContStyle()
@@ -192,26 +195,30 @@ class RenderDataTree:
         node: DataTree,
         continues: tuple[bool, ...],
         level: int = 0,
-        nchildren: int = 0,
     ) -> Iterator[Row]:
         yield RenderDataTree.__item(node, continues, self.style)
         children = node.children.values()
         level += 1
         if children and (self.maxlevel is None or level < self.maxlevel):
+            nchildren = len(children)
             children = self.childiter(children)
-            for child, is_last in _is_last(children):
-                nchildren += 1
+            for i, (child, is_last) in enumerate(_is_last(children)):
                 if (
                     self.maxchildren is None
-                    or nchildren < self.maxchildren
-                    or (not any(continues) and is_last)
+                    or i < ceil(self.maxchildren / 2)
+                    or i >= ceil(nchildren - self.maxchildren / 2)
                 ):
                     yield from self.__next(
                         child,
                         continues + (not is_last,),
                         level=level,
-                        nchildren=nchildren,
                     )
+                if (
+                    self.maxchildren is not None
+                    and nchildren > self.maxchildren
+                    and i == ceil(self.maxchildren / 2)
+                ):
+                    yield RenderDataTree.__item("...", continues, self.style)
 
     @staticmethod
     def __item(
@@ -273,6 +280,9 @@ class RenderDataTree:
 
         def get() -> Iterator[str]:
             for pre, fill, node in self:
+                if isinstance(node, str):
+                    yield f"{fill}{node}"
+                    continue
                 attr = (
                     attrname(node)
                     if callable(attrname)

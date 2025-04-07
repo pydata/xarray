@@ -1206,7 +1206,9 @@ class TestRepr:
                 tree_dict[f"file_{f}/group_{g}"] = Dataset({"g": f * g})
 
         tree = DataTree.from_dict(tree_dict)
-        result = repr(tree)
+        with xr.set_options(display_max_children=3):
+            result = repr(tree)
+
         expected = dedent(
             """
             <xarray.DataTree>
@@ -1220,14 +1222,7 @@ class TestRepr:
             │   │       Dimensions:  ()
             │   │       Data variables:
             │   │           g        int64 8B 0
-            │   ├── Group: /file_0/group_2
-            │   │       Dimensions:  ()
-            │   │       Data variables:
-            │   │           g        int64 8B 0
-            │   ├── Group: /file_0/group_3
-            │   │       Dimensions:  ()
-            │   │       Data variables:
-            │   │           g        int64 8B 0
+            │   ...
             │   └── Group: /file_0/group_4
             │           Dimensions:  ()
             │           Data variables:
@@ -1241,15 +1236,22 @@ class TestRepr:
             │   │       Dimensions:  ()
             │   │       Data variables:
             │   │           g        int64 8B 1
-            │   ├── Group: /file_1/group_2
-            │   │       Dimensions:  ()
-            │   │       Data variables:
-            │   │           g        int64 8B 2
-            │   ├── Group: /file_1/group_3
-            │   │       Dimensions:  ()
-            │   │       Data variables:
-            │   │           g        int64 8B 3
+            │   ...
+            │   └── Group: /file_1/group_4
+            │           Dimensions:  ()
+            │           Data variables:
+            │               g        int64 8B 4
             ...
+            └── Group: /file_9
+                ├── Group: /file_9/group_0
+                │       Dimensions:  ()
+                │       Data variables:
+                │           g        int64 8B 0
+                ├── Group: /file_9/group_1
+                │       Dimensions:  ()
+                │       Data variables:
+                │           g        int64 8B 9
+                ...
                 └── Group: /file_9/group_4
                         Dimensions:  ()
                         Data variables:
@@ -1258,29 +1260,11 @@ class TestRepr:
         ).strip()
         assert expected == result
 
-        with xr.set_options(display_max_rows=4):
+        with xr.set_options(display_max_children=10):
             result = repr(tree)
-            expected = dedent(
-                """
-                <xarray.DataTree>
-                Group: /
-                ├── Group: /file_0
-                │   ├── Group: /file_0/group_0
-                │   │       Dimensions:  ()
-                │   │       Data variables:
-                │   │           g        int64 8B 0
-                │   ├── Group: /file_0/group_1
-                │   │       Dimensions:  ()
-                │   │       Data variables:
-                │   │           g        int64 8B 0
-                ...
-                    └── Group: /file_9/group_4
-                            Dimensions:  ()
-                            Data variables:
-                                g        int64 8B 36
-                """
-            ).strip()
-            assert expected == result
+
+        for key in tree_dict:
+            assert key in result
 
     def test_repr_inherited_dims(self) -> None:
         tree = DataTree.from_dict(

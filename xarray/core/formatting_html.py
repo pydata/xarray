@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from functools import lru_cache, partial
 from html import escape
 from importlib.resources import files
+from math import ceil
 from typing import TYPE_CHECKING
 
 from xarray.core.formatting import (
@@ -198,17 +199,16 @@ def _mapping_section(
     max_items_collapse,
     expand_option_name,
     enabled=True,
-    max_items_truncate: int | None = None,
+    max_option_name: str | None = None,
 ) -> str:
     n_items = len(mapping)
     expanded = _get_boolean_with_default(
         expand_option_name, n_items < max_items_collapse
     )
+    max_items = OPTIONS.get(max_option_name)
     collapsed = not expanded
-    truncated = max_items_truncate is not None and n_items > max_items_truncate
-    inline_details = (
-        f"Only first {max_items_truncate} will show in dropdown" if truncated else ""
-    )
+    truncated = max_items is not None and n_items > max_items
+    inline_details = f"({max_items}/{n_items})" if truncated else ""
 
     return collapsible_section(
         name,
@@ -359,19 +359,31 @@ def dataset_repr(ds) -> str:
 
 
 def summarize_datatree_children(children: Mapping[str, DataTree]) -> str:
-    N_CHILDREN = len(children) - 1
-    MAX_CHILDREN = OPTIONS["display_max_rows"]
+    MAX_CHILDREN = OPTIONS["display_max_children"]
+    n_children = len(children)
 
-    children_html = "".join(
-        _wrap_datatree_repr(datatree_node_repr(n, c), end=i == N_CHILDREN)
-        for i, (n, c) in enumerate(children.items())
-        if i < MAX_CHILDREN
-    )
+    children_html = []
+    for i, (n, c) in enumerate(children.items()):
+        if (
+            MAX_CHILDREN is None
+            or i < ceil(MAX_CHILDREN / 2)
+            or i >= ceil(n_children - MAX_CHILDREN / 2)
+        ):
+            is_last = i == (n_children - 1)
+            children_html.append(
+                _wrap_datatree_repr(datatree_node_repr(n, c), end=is_last)
+            )
+        elif (
+            MAX_CHILDREN is not None
+            and n_children > MAX_CHILDREN
+            and i == ceil(MAX_CHILDREN / 2)
+        ):
+            children_html.append("<div>...</div>")
 
     return "".join(
         [
             "<div style='display: inline-grid; grid-template-columns: 100%; grid-column: 1 / -1'>",
-            children_html,
+            "".join(children_html),
             "</div>",
         ]
     )
@@ -382,7 +394,7 @@ children_section = partial(
     name="Groups",
     details_func=summarize_datatree_children,
     max_items_collapse=1,
-    max_items_truncate=OPTIONS["display_max_rows"],
+    max_option_name="display_max_children",
     expand_option_name="display_expand_groups",
 )
 
@@ -427,7 +439,7 @@ def datatree_node_repr(group_title: str, node: DataTree, show_inherited=False) -
     return _obj_repr(ds, header_components, sections)
 
 
-def _wrap_datatree_repr(r: str, end: bool = False, skipped_some: bool = False) -> str:
+def _wrap_datatree_repr(r: str, end: bool = False) -> str:
     """
     Wrap HTML representation with a tee to the left of it.
 

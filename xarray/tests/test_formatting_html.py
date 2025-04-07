@@ -334,28 +334,36 @@ class TestDataTreeTruncatesNodes:
         with xr.set_options(display_style="html"):
             result = tree._repr_html_()
 
-        assert "Only first 12 will show in dropdown"
-        assert "file_0" in result
-        assert "file_11" in result
-        assert "file_12" not in result
-        assert "file_19" not in result
-        assert "group_0" in result
-        assert "group_11" in result
-        assert "group_12" not in result
-        assert "group_24" not in result
+        assert "6/20" in result
+        for i in range(number_of_files):
+            if i < 3 or i >= (number_of_files - 3):
+                assert f"file_{i}</div>" in result
+            else:
+                assert f"file_{i}</div>" not in result
 
-        with xr.set_options(display_style="html", display_max_rows=4):
+        assert "6/25" in result
+        for i in range(number_of_groups):
+            if i < 3 or i >= (number_of_groups - 3):
+                assert f"group_{i}</div>" in result
+            else:
+                assert f"group_{i}</div>" not in result
+
+        with xr.set_options(display_style="html", display_max_children=3):
             result = tree._repr_html_()
 
-        assert "Only first 4 will show in dropdown"
-        assert "file_0" in result
-        assert "file_3" in result
-        assert "file_4" not in result
-        assert "file_19" not in result
-        assert "group_0" in result
-        assert "group_3" in result
-        assert "group_4" not in result
-        assert "group_24" not in result
+        assert "3/20" in result
+        for i in range(number_of_files):
+            if i < 2 or i >= (number_of_files - 1):
+                assert f"file_{i}</div>" in result
+            else:
+                assert f"file_{i}</div>" not in result
+
+        assert "3/25" in result
+        for i in range(number_of_groups):
+            if i < 2 or i >= (number_of_groups - 1):
+                assert f"group_{i}</div>" in result
+            else:
+                assert f"group_{i}</div>" not in result
 
 
 class TestDataTreeInheritance:

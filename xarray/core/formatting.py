@@ -1137,9 +1137,9 @@ def _datatree_node_repr(node: DataTree, show_inherited: bool) -> str:
 
 def datatree_repr(dt: DataTree) -> str:
     """A printable representation of the structure of this entire tree."""
-    max_rows = OPTIONS["display_max_rows"]
+    max_children = OPTIONS["display_max_children"]
 
-    renderer = RenderDataTree(dt, maxchildren=max_rows)
+    renderer = RenderDataTree(dt, maxchildren=max_children)
 
     name_info = "" if dt.name is None else f" {dt.name!r}"
     header = f"<xarray.DataTree{name_info}>"
@@ -1148,12 +1148,10 @@ def datatree_repr(dt: DataTree) -> str:
     show_inherited = True
 
     rendered_items = list(renderer)
-    for i, (pre, fill, node) in enumerate(rendered_items):
-        if len(rendered_items) > max_rows:
-            if i == max_rows:
-                lines.append("...")
-            if i >= max_rows and i != (len(rendered_items) - 1):
-                continue
+    for pre, fill, node in rendered_items:
+        if isinstance(node, str):
+            lines.append(f"{fill}{node}")
+            continue
 
         node_repr = _datatree_node_repr(node, show_inherited=show_inherited)
         show_inherited = False  # only show inherited coords on the root
