@@ -40,6 +40,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Fix references to core classes in docs (:issue:`10195`, :pull:`10207`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
