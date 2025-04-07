@@ -34,6 +34,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- :py:meth:`~xarray.Dataset.to_stacked_array` now uses dimensions in order of appearance.
+  This fixes the issue where using :py:meth:`~xarray.Dataset.transpose` before :py:meth:`~xarray.Dataset.to_stacked_array`
+  had no effect. (Mentioned in :issue:`9921`)
 
 Documentation
 ~~~~~~~~~~~~~
