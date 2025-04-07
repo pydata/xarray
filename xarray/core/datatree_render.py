@@ -90,10 +90,7 @@ class RenderDataTree:
                 Iterables that change the order of children  cannot be used
                 (e.g., `reversed`).
             maxlevel: Limit rendering to this depth.
-            maxchildren: Limit number total number of nodes to roughly this number. In practice,
-                for an arbitrarily large DataTree the number of nodes returned
-                will be (maxchildren * maxchildren - 1) / 2. The included nodes are half from
-                the start of the tree and half from the end of the tree.
+            maxchildren: Limit number of children at each node.
         :any:`RenderDataTree` is an iterator, returning a tuple with 3 items:
         `pre`
             tree prefix.
