@@ -33,11 +33,6 @@ topic-CF conventions:
       - any-glob-to-any-file:
           - xarray/conventions.py
 
-topic-combine:
-  - changed-files:
-      - any-glob-to-any-file:
-          - xarray/structure/combine.py
-
 topic-dask:
   - changed-files:
       - any-glob-to-any-file:
@@ -49,15 +44,12 @@ topic-DataTree:
       - any-glob-to-any-file:
           - xarray/core/datatree*
 
-# topic-documentation:
-# - changed-files:
-#   - any-glob-to-any-file:
-#     - ['doc/*', '!doc/whats-new.rst', 'doc/**/*']
-
-topic-faq:
+topic-documentation:
   - changed-files:
       - any-glob-to-any-file:
-          - doc/howdoi.rst
+          - doc/*
+          - "!doc/whats-new.rst"
+          - doc/**/*
 
 topic-groupby:
   - changed-files:
@@ -123,7 +115,3 @@ io:
   - changed-files:
       - any-glob-to-any-file:
           - xarray/backends/**
-
-# label all PRs as "needs triage"
-needs triage:
-  - head-branch: ".*"
