@@ -10046,7 +10046,7 @@ class Dataset(
 
         Returns
         -------
-        core.weighted.DatasetWeighted
+        computation.weighted.DatasetWeighted
 
         See Also
         --------
@@ -10091,7 +10091,7 @@ class Dataset(
 
         Returns
         -------
-        core.rolling.DatasetRolling
+        computation.rolling.DatasetRolling
 
         See Also
         --------
@@ -10123,7 +10123,7 @@ class Dataset(
 
         Returns
         -------
-        core.rolling.DatasetRolling
+        computation.rolling.DatasetRolling
 
         See Also
         --------
@@ -10175,11 +10175,11 @@ class Dataset(
 
         Returns
         -------
-        core.rolling.DatasetCoarsen
+        computation.rolling.DatasetCoarsen
 
         See Also
         --------
-        :class:`core.rolling.DatasetCoarsen`
+        :class:`computation.rolling.DatasetCoarsen`
         :func:`DataArray.coarsen <DataArray.coarsen>`
 
         :ref:`reshape.coarsen`

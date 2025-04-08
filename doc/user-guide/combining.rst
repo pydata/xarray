@@ -22,7 +22,7 @@ Combining data
 Concatenate
 ~~~~~~~~~~~
 
-To combine :py:class:`~xarray.Dataset`s / :py:class:`~xarray.DataArray`s along an existing or new dimension
+To combine :py:class:`~xarray.Dataset` / :py:class:`~xarray.DataArray` objects along an existing or new dimension
 into a larger object, you can use :py:func:`~xarray.concat`. ``concat``
 takes an iterable of ``DataArray`` or ``Dataset`` objects, as well as a
 dimension name, and concatenates along that dimension:

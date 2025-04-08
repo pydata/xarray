@@ -86,9 +86,9 @@ DataArray Objects
 
 The simplest data structure used by most users is :py:class:`~xarray.DataArray`.
 A :py:class:`~xarray.DataArray` is a composite object consisting of multiple
-:py:class:`~xarray.core.variable.Variable` objects which store related data.
+:py:class:`~xarray.Variable` objects which store related data.
 
-A single :py:class:`~xarray.core.Variable` is referred to as the "data variable", and stored under the :py:attr:`~xarray.DataArray.variable`` attribute.
+A single :py:class:`~xarray.Variable` is referred to as the "data variable", and stored under the :py:attr:`~xarray.DataArray.variable`` attribute.
 A :py:class:`~xarray.DataArray` inherits all of the properties of this data variable, i.e. ``dims``, ``data``, ``attrs`` and ``encoding``,
 all of which are implemented by forwarding on to the underlying ``Variable`` object.
 
@@ -111,7 +111,7 @@ Finally a :py:class:`~xarray.DataArray` defines a :py:attr:`~xarray.DataArray.na
 variable but is stored on the wrapping ``DataArray`` class.
 The ``name`` attribute is primarily used when one or more :py:class:`~xarray.DataArray` objects are promoted into a :py:class:`~xarray.Dataset`
 (e.g. via :py:meth:`~xarray.DataArray.to_dataset`).
-Note that the underlying :py:class:`~xarray.core.Variable` objects are all unnamed, so they can always be referred to uniquely via a
+Note that the underlying :py:class:`~xarray.Variable` objects are all unnamed, so they can always be referred to uniquely via a
 dict-like mapping.
 
 .. _internal design.dataset:
