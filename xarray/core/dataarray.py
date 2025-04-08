@@ -7078,7 +7078,7 @@ class DataArray(
         --------
         :func:`Dataset.weighted <Dataset.weighted>`
 
-        :ref:`comput.weighted`
+        :ref:`compute.weighted`
             User guide on weighted array reduction using :py:func:`~xarray.DataArray.weighted`
 
         :doc:`xarray-tutorial:fundamentals/03.4_weighted`

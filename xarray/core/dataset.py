@@ -1122,7 +1122,7 @@ class Dataset(
                     coord_names.add(var_name)
                 if (var_name,) == var.dims:
                     index, index_vars = create_default_index_implicit(var, names)
-                    indexes.update({k: index for k in index_vars})
+                    indexes.update(dict.fromkeys(index_vars, index))
                     variables.update(index_vars)
                     coord_names.update(index_vars)
 
@@ -3012,7 +3012,7 @@ class Dataset(
             if not isinstance(indexers, int) and not is_dict_like(indexers):
                 raise TypeError("indexers must be either dict-like or a single integer")
         if isinstance(indexers, int):
-            indexers = {dim: indexers for dim in self.dims}
+            indexers = dict.fromkeys(self.dims, indexers)
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "head")
         for k, v in indexers.items():
             if not isinstance(v, int):
@@ -3100,7 +3100,7 @@ class Dataset(
             if not isinstance(indexers, int) and not is_dict_like(indexers):
                 raise TypeError("indexers must be either dict-like or a single integer")
         if isinstance(indexers, int):
-            indexers = {dim: indexers for dim in self.dims}
+            indexers = dict.fromkeys(self.dims, indexers)
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "tail")
         for k, v in indexers.items():
             if not isinstance(v, int):
@@ -3186,7 +3186,7 @@ class Dataset(
         ):
             raise TypeError("indexers must be either dict-like or a single integer")
         if isinstance(indexers, int):
-            indexers = {dim: indexers for dim in self.dims}
+            indexers = dict.fromkeys(self.dims, indexers)
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "thin")
         for k, v in indexers.items():
             if not isinstance(v, int):
@@ -4029,7 +4029,7 @@ class Dataset(
         for index, coord_names in self.xindexes.group_by_index():
             new_index = index.rename(name_dict, dims_dict)
             new_coord_names = [name_dict.get(k, k) for k in coord_names]
-            indexes.update({k: new_index for k in new_coord_names})
+            indexes.update(dict.fromkeys(new_coord_names, new_index))
             new_index_vars = new_index.create_variables(
                 {
                     new: self._variables[old]
@@ -4315,7 +4315,7 @@ class Dataset(
                     variables[current_name] = var
                 else:
                     index, index_vars = create_default_index_implicit(var)
-                    indexes.update({name: index for name in index_vars})
+                    indexes.update(dict.fromkeys(index_vars, index))
                     variables.update(index_vars)
                     coord_names.update(index_vars)
             else:
@@ -4474,7 +4474,7 @@ class Dataset(
         elif isinstance(dim, Sequence):
             if len(dim) != len(set(dim)):
                 raise ValueError("dims should not contain duplicate values.")
-            dim = {d: 1 for d in dim}
+            dim = dict.fromkeys(dim, 1)
 
         dim = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
         assert isinstance(dim, MutableMapping)
@@ -4700,7 +4700,7 @@ class Dataset(
                 for n in idx.index.names:
                     replace_dims[n] = dim
 
-            new_indexes.update({k: idx for k in idx_vars})
+            new_indexes.update(dict.fromkeys(idx_vars, idx))
             new_variables.update(idx_vars)
 
         # re-add deindexed coordinates (convert to base variables)
@@ -4816,7 +4816,7 @@ class Dataset(
                     # instead replace it by a new (multi-)index with dropped level(s)
                     idx = index.keep_levels(keep_level_vars)
                     idx_vars = idx.create_variables(keep_level_vars)
-                    new_indexes.update({k: idx for k in idx_vars})
+                    new_indexes.update(dict.fromkeys(idx_vars, idx))
                     new_variables.update(idx_vars)
                     if not isinstance(idx, PandasMultiIndex):
                         # multi-index reduced to single index
@@ -4996,7 +4996,7 @@ class Dataset(
             level_vars = {k: self._variables[k] for k in order}
             idx = index.reorder_levels(level_vars)
             idx_vars = idx.create_variables(level_vars)
-            new_indexes.update({k: idx for k in idx_vars})
+            new_indexes.update(dict.fromkeys(idx_vars, idx))
             new_variables.update(idx_vars)
 
         indexes = {k: v for k, v in self._indexes.items() if k not in new_indexes}
@@ -5104,7 +5104,7 @@ class Dataset(
             if len(product_vars) == len(dims):
                 idx = index_cls.stack(product_vars, new_dim)
                 new_indexes[new_dim] = idx
-                new_indexes.update({k: idx for k in product_vars})
+                new_indexes.update(dict.fromkeys(product_vars, idx))
                 idx_vars = idx.create_variables(product_vars)
                 # keep consistent multi-index coordinate order
                 for k in idx_vars:
@@ -5351,7 +5351,7 @@ class Dataset(
             # TODO: we may depreciate implicit re-indexing with a pandas.MultiIndex
             xr_full_idx = PandasMultiIndex(full_idx, dim)
             indexers = Indexes(
-                {k: xr_full_idx for k in index_vars},
+                dict.fromkeys(index_vars, xr_full_idx),
                 xr_full_idx.create_variables(index_vars),
             )
             obj = self._reindex(
@@ -10052,7 +10052,7 @@ class Dataset(
         --------
         :func:`DataArray.weighted <DataArray.weighted>`
 
-        :ref:`comput.weighted`
+        :ref:`compute.weighted`
             User guide on weighted array reduction using :py:func:`~xarray.Dataset.weighted`
 
         :doc:`xarray-tutorial:fundamentals/03.4_weighted`
