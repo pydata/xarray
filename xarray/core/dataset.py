@@ -5246,7 +5246,13 @@ class Dataset(
         """
         from xarray.structure.concat import concat
 
-        stacking_dims = tuple(dim for dim in self.dims if dim not in sample_dims)
+        # add stacking dims by order of appearance
+        stacking_dims_list: list[Hashable] = []
+        for da in self.data_vars.values():
+            for dim in da.dims:
+                if dim not in sample_dims and dim not in stacking_dims_list:
+                    stacking_dims_list.append(dim)
+        stacking_dims = tuple(stacking_dims_list)
 
         for key, da in self.data_vars.items():
             missing_sample_dims = set(sample_dims) - set(da.dims)

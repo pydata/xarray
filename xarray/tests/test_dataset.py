@@ -4098,6 +4098,33 @@ class TestDataset:
             expected_stacked_variable,
         )
 
+    def test_to_stacked_array_transposed(self) -> None:
+        # test that to_stacked_array uses updated dim order after transposition
+        ds = xr.Dataset(
+            data_vars=dict(
+                v1=(["d1", "d2"], np.arange(6).reshape((2, 3))),
+            ),
+            coords=dict(
+                d1=(["d1"], np.arange(2)),
+                d2=(["d2"], np.arange(3)),
+            ),
+        )
+        da = ds.to_stacked_array(
+            new_dim="new_dim",
+            sample_dims=[],
+            variable_dim="variable",
+        )
+        dsT = ds.transpose()
+        daT = dsT.to_stacked_array(
+            new_dim="new_dim",
+            sample_dims=[],
+            variable_dim="variable",
+        )
+        v1 = np.arange(6)
+        v1T = np.arange(6).reshape((2, 3)).T.flatten()
+        np.testing.assert_equal(da.to_numpy(), v1)
+        np.testing.assert_equal(daT.to_numpy(), v1T)
+
     def test_update(self) -> None:
         data = create_test_data(seed=0)
         expected = data.copy()
