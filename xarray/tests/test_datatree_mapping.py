@@ -32,7 +32,7 @@ class TestMapOverSubTree:
     def test_no_trees_returned(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
-        expected = xr.DataTree.from_dict({k: None for k in dt1.to_dict()})
+        expected = xr.DataTree.from_dict(dict.fromkeys(dt1.to_dict()))
         actual = map_over_datasets(lambda x, y: None, dt1, dt2)
         assert_equal(expected, actual)
 

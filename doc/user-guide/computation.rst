@@ -1,6 +1,6 @@
 .. currentmodule:: xarray
 
-.. _comput:
+.. _compute:
 
 ###########
 Computation
@@ -236,7 +236,7 @@ These operations automatically skip missing values, like in pandas:
 If desired, you can disable this behavior by invoking the aggregation method
 with ``skipna=False``.
 
-.. _comput.rolling:
+.. _compute.rolling:
 
 Rolling window operations
 =========================
@@ -308,7 +308,7 @@ We can also manually iterate through ``Rolling`` objects:
         # arr_window is a view of x
         ...
 
-.. _comput.rolling_exp:
+.. _compute.rolling_exp:
 
 While ``rolling`` provides a simple moving average, ``DataArray`` also supports
 an exponential moving average with :py:meth:`~xarray.DataArray.rolling_exp`.
@@ -354,7 +354,7 @@ You can also use ``construct`` to compute a weighted rolling sum:
   To avoid this, use ``skipna=False`` as the above example.
 
 
-.. _comput.weighted:
+.. _compute.weighted:
 
 Weighted array reductions
 =========================
@@ -823,7 +823,7 @@ Arithmetic between two datasets matches data variables of the same name:
 Similarly to index based alignment, the result has the intersection of all
 matching data variables.
 
-.. _comput.wrapping-custom:
+.. _compute.wrapping-custom:
 
 Wrapping custom computation
 ===========================

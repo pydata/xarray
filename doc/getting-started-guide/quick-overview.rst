@@ -128,7 +128,7 @@ Operations also align based on index labels:
 
     data[:-1] - data[:1]
 
-For more, see :ref:`comput`.
+For more, see :ref:`compute`.
 
 GroupBy
 -------

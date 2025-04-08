@@ -367,7 +367,7 @@ def construct_dataarray(dim_num, dtype, contains_nan, dask):
     da = DataArray(array, dims=dims, coords={"x": np.arange(16)}, name="da")
 
     if dask and has_dask:
-        chunks = {d: 4 for d in dims}
+        chunks = dict.fromkeys(dims, 4)
         da = da.chunk(chunks)
 
     return da

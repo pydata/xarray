@@ -1087,7 +1087,7 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
         if utils.is_dict_like(coord_func):
             coord_func_map = coord_func
         else:
-            coord_func_map = {d: coord_func for d in self.obj.dims}
+            coord_func_map = dict.fromkeys(self.obj.dims, coord_func)
         for c in self.obj.coords:
             if c not in coord_func_map:
                 coord_func_map[c] = duck_array_ops.mean  # type: ignore[index]

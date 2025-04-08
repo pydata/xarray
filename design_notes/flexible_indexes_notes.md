@@ -166,7 +166,7 @@ Besides `pandas.Index`, other indexes currently supported in Xarray like `CFTime
 
 Like for the indexes, explicit coordinate creation should be preferred over implicit coordinate creation. However, there may be some situations where we would like to keep creating coordinates implicitly for backwards compatibility.
 
-For example, it is currently possible to pass a `pandas.MulitIndex` object as a coordinate to the Dataset/DataArray constructor:
+For example, it is currently possible to pass a `pandas.MultiIndex` object as a coordinate to the Dataset/DataArray constructor:
 
 ```python
 >>> midx = pd.MultiIndex.from_arrays([['a', 'b'], [0, 1]], names=['lvl1', 'lvl2'])

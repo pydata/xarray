@@ -1043,7 +1043,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         numpy.squeeze
         """
         dims = common.get_squeeze_dims(self, dim)
-        return self.isel({d: 0 for d in dims})
+        return self.isel(dict.fromkeys(dims, 0))
 
     def _shift_one_dim(self, dim, count, fill_value=dtypes.NA):
         axis = self.get_axis_num(dim)
@@ -2152,10 +2152,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         Construct a reshaped-array for coarsen
         """
         if not is_dict_like(boundary):
-            boundary = {d: boundary for d in windows.keys()}
+            boundary = dict.fromkeys(windows.keys(), boundary)
 
         if not is_dict_like(side):
-            side = {d: side for d in windows.keys()}
+            side = dict.fromkeys(windows.keys(), side)
 
         # remove unrelated dimensions
         boundary = {k: v for k, v in boundary.items() if k in windows}
