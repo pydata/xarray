@@ -11,6 +11,7 @@ import pandas as pd
 
 from xarray.core import formatting, nputils, utils
 from xarray.core.coordinate_transform import CoordinateTransform
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
     CoordinateTransformIndexingAdapter,
     IndexSelResult,
@@ -444,6 +445,8 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     from xarray.core.variable import Variable
     from xarray.namedarray.pycompat import to_numpy
 
+    if isinstance(array, PandasExtensionArray):
+        array = pd.Index(array.array)
     if isinstance(array, pd.Index):
         index = array
     elif isinstance(array, DataArray | Variable):
