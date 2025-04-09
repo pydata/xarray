@@ -40,7 +40,7 @@ class DataVariables(Mapping[Any, "DataArray"]):
         raise KeyError(key)
 
     def __repr__(self) -> str:
-        return formatting.data_vars_repr(self)
+        return formatting.data_vars_repr(self.variables)
 
     @property
     def variables(self) -> Mapping[Hashable, Variable]:
