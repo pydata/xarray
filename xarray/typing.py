@@ -7,17 +7,17 @@ from xarray.computation.rolling import (
     DataArrayRolling,
     DatasetRolling,
 )
-from xarray.computation.weighted import Weighted, DataArrayWeighted, DatasetWeighted
+from xarray.computation.weighted import DataArrayWeighted, DatasetWeighted, Weighted
 from xarray.core.groupby import DataArrayGroupBy
 from xarray.core.resample import DataArrayResample
 
 __all__ = [
     "DataArrayCoarsen",
-    "DataArrayRolling",
-    "DatasetRolling",
-    "Weighted",
-    "DataArrayWeighted",
-    "DatasetWeighted",
     "DataArrayGroupBy",
     "DataArrayResample",
+    "DataArrayRolling",
+    "DataArrayWeighted",
+    "DatasetRolling",
+    "DatasetWeighted",
+    "Weighted",
 ]
