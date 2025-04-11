@@ -39,6 +39,8 @@ Bug fixes
 - :py:meth:`~xarray.Dataset.to_stacked_array` now uses dimensions in order of appearance.
   This fixes the issue where using :py:meth:`~xarray.Dataset.transpose` before :py:meth:`~xarray.Dataset.to_stacked_array`
   had no effect. (Mentioned in :issue:`9921`)
+- Enable ``keep_attrs`` in ``DatasetView.map`` relevant for :py:func:`map_over_datasets`  (:pull:`10219`)
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
