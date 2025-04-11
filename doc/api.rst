@@ -1641,6 +1641,7 @@ Exceptions
 .. autosummary::
    :toctree: generated/
 
+   CoordinateValidationError
    MergeError
    SerializationWarning
 
