@@ -1033,8 +1033,7 @@ class TestDatasetView:
         expected = dt.mean(keep_attrs=True)
         xr.testing.assert_identical(result, expected)
 
-        # per default
-
+        # per default DatasetView.map does not keep attrs
         def func(ds):
             # x.mean() removes the attrs of the data_vars
             return ds.map(lambda x: x.mean())
