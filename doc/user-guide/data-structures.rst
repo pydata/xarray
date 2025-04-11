@@ -880,7 +880,7 @@ them into dataset objects:
 
 The merge method is particularly interesting, because it implements the same
 logic used for merging coordinates in arithmetic operations
-(see :ref:`comput`):
+(see :ref:`compute`):
 
 .. ipython:: python
 

@@ -36,10 +36,15 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- :py:meth:`~xarray.Dataset.to_stacked_array` now uses dimensions in order of appearance.
+  This fixes the issue where using :py:meth:`~xarray.Dataset.transpose` before :py:meth:`~xarray.Dataset.to_stacked_array`
+  had no effect. (Mentioned in :issue:`9921`)
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Fix references to core classes in docs (:issue:`10195`, :pull:`10207`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -480,7 +485,7 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-- ``persist`` methods now route through the :py:class:`xr.core.parallelcompat.ChunkManagerEntrypoint` (:pull:`9682`).
+- ``persist`` methods now route through the :py:class:`xr.namedarray.parallelcompat.ChunkManagerEntrypoint` (:pull:`9682`).
   By `Sam Levang <https://github.com/slevang>`_.
 
 .. _whats-new.2024.10.0:
@@ -1868,7 +1873,7 @@ Bug fixes
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Experimental support for wrapping chunked array libraries other than dask.
-  A new ABC is defined - :py:class:`xr.core.parallelcompat.ChunkManagerEntrypoint` - which can be subclassed and then
+  A new ABC is defined - :py:class:`xr.namedarray.parallelcompat.ChunkManagerEntrypoint` - which can be subclassed and then
   registered by alternative chunked array implementations. (:issue:`6807`, :pull:`7019`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
@@ -4281,7 +4286,7 @@ New Features
 ~~~~~~~~~~~~
 
 - Weighted array reductions are now supported via the new :py:meth:`DataArray.weighted`
-  and :py:meth:`Dataset.weighted` methods. See :ref:`comput.weighted`. (:issue:`422`, :pull:`2922`).
+  and :py:meth:`Dataset.weighted` methods. See :ref:`compute.weighted`. (:issue:`422`, :pull:`2922`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 - The new jupyter notebook repr (``Dataset._repr_html_`` and
   ``DataArray._repr_html_``) (introduced in 0.14.1) is now on by default. To
@@ -6412,7 +6417,7 @@ Enhancements
 - New helper function :py:func:`~xarray.apply_ufunc` for wrapping functions
   written to work on NumPy arrays to support labels on xarray objects
   (:issue:`770`). ``apply_ufunc`` also support automatic parallelization for
-  many functions with dask. See :ref:`comput.wrapping-custom` and
+  many functions with dask. See :ref:`compute.wrapping-custom` and
   :ref:`dask.automatic-parallelization` for details.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
@@ -7434,7 +7439,7 @@ Enhancements
       * x        (x) int64 0 1 2
       * y        (y) int64 0 1 2 3 4
 
-  See :ref:`comput.rolling` for more details. By
+  See :ref:`compute.rolling` for more details. By
   `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes

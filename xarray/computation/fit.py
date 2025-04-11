@@ -80,8 +80,8 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
         )
         return p0
 
-    param_defaults = {p: 1 for p in params}
-    bounds_defaults = {p: (-np.inf, np.inf) for p in params}
+    param_defaults = dict.fromkeys(params, 1)
+    bounds_defaults = dict.fromkeys(params, (-np.inf, np.inf))
     for p in params:
         if p in func_args and func_args[p].default is not func_args[p].empty:
             param_defaults[p] = func_args[p].default
