@@ -5375,12 +5375,20 @@ class TestPydapOnline(TestPydap):
     def test_session(self) -> None:
         from pydap.net import create_session
 
-        session = create_session()  # black requests.Session object
+        session = create_session()  # blank requests.Session object
         with mock.patch("pydap.client.open_url") as mock_func:
             xr.backends.PydapDataStore.open("http://test.url", session=session)
         mock_func.assert_called_with(
             url="http://test.url",
+            application=None,
             session=session,
+            timeout=120,
+            verify=True,
+            user_charset=None,
+            use_cache=False,
+            session_kwargs={},
+            cache_kwargs={},
+            get_kwargs={},
         )
 
 
