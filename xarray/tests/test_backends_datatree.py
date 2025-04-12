@@ -428,8 +428,8 @@ class TestPyDAPDatatreeIO:
     unaligned_datatree_url = (
         "dap4://test.opendap.org/opendap/dap4/unaligned_simple_datatree.nc.h5"
     )
-    aligned_datatree_url = (
-        "dap4://test.opendap.org/opendap/dap4/unaligned_simple_datatree.nc.h5"
+    all_aligned_child_nodes_url = (
+        "dap4://test.opendap.org/opendap/dap4/all_aligned_child_nodes.nc.h5"
     )
     simplegroup_datatree_url = "dap4://test.opendap.org/opendap/dap4/SimpleGroup.nc4.h5"
 
@@ -493,7 +493,6 @@ class TestPyDAPDatatreeIO:
             │       Temperature  (time, Z, Y, X) float32 ...
             |       Salinity     (time, Z, Y, X) float32 ...
         """
-        print(url)
         tree = open_datatree(url, engine="pydap")
         assert list(tree.dims) == ["time", "Z", "nv"]
         assert tree["/SimpleGroup"].coords["time"].dims == ("time",)
@@ -504,6 +503,12 @@ class TestPyDAPDatatreeIO:
             assert set(tree["/SimpleGroup"].dims) == set(
                 list(expected.dims) + ["Z", "nv"]
             )
+
+    def test_open_groups_to_dict(self, url=all_aligned_child_nodes_url) -> None:
+        aligned_dict_of_datasets = open_groups(url, engine="pydap")
+        aligned_dt = DataTree.from_dict(aligned_dict_of_datasets)
+        with open_datatree(url, engine="pydap") as opened_tree:
+            assert opened_tree.identical(aligned_dt)
 
 
 @requires_h5netcdf
