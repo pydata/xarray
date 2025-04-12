@@ -11,6 +11,8 @@ from xarray.backends.common import (
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
+    _normalize_path,
+    datatree_from_dict_with_io_cleanup,
     robust_getitem,
 )
 from xarray.backends.store import StoreBackendEntrypoint
@@ -28,6 +30,7 @@ if TYPE_CHECKING:
     import os
 
     from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
     from xarray.core.types import ReadBuffer
 
 
@@ -59,7 +62,7 @@ class PydapArrayWrapper(BackendArray):
         return result
 
 
-def _pydap_check_groups(ds, group):
+def get_group(ds, group):
     if group in {None, "", "/"}:
         # use the root group
         return ds
@@ -69,17 +72,17 @@ def _pydap_check_groups(ds, group):
         if not isinstance(group, str):
             raise ValueError("group must be a string")
         # support path-like syntax
-        path = group.strip("/").split("/")
-        for key in path:
-            try:
-                ds = ds.groups[key]
-            except KeyError as e:
-                if mode != "r":
-                    ds = create_group(ds, key)
-                else:
-                    # wrap error to provide slightly more helpful message
-                    raise OSError(f"group not found: {key}", e) from e
-        return ds
+        path = group.split("/")
+        gname = path[-1]
+        # update path to group
+        path = ("/").join(path[:-1]) + "/"
+        # check if group exists
+        try:
+            assert Groups[gname] == path
+            return ds[group]
+        except (KeyError, AssertionError) as e:
+            # wrap error to provide slightly more helpful message
+            raise KeyError(f"group not found: {group}", e) from e
 
 
 class PydapDataStore(AbstractDataStore):
@@ -89,20 +92,22 @@ class PydapDataStore(AbstractDataStore):
     be useful if the netCDF4 library is not available.
     """
 
-    def __init__(self, ds, dap2=True):
+    def __init__(self, dataset, dap2=True, group=None):
         """
         Parameters
         ----------
         ds : pydap DatasetType
         dap2 : bool (default=True). When DAP4, dap2=`False`.
         """
-        self.ds = ds
+        self.dataset = dataset
         self.dap2 = dap2
+        self.group = group
 
     @classmethod
     def open(
         cls,
         url,
+        group=None,
         application=None,
         session=None,
         timeout=None,
@@ -132,8 +137,11 @@ class PydapDataStore(AbstractDataStore):
             args = {"dap2": False}
         else:
             args = {"dap2": True}
-        ds = open_url(**kwargs)
-        args["ds"] = ds
+        dataset = open_url(**kwargs)
+        args["dataset"] = dataset
+        if group:
+            # only then, change the default
+            args["group"] = group
         return cls(**args)
 
     def open_store_variable(self, var):
@@ -141,7 +149,9 @@ class PydapDataStore(AbstractDataStore):
         if self.dap2:
             dimensions = var.dimensions
         else:
-            dimensions = var.dims
+            dimensions = [
+                dim.split("/")[-1] if dim.startswith("/") else dim for dim in var.dims
+            ]
         return Variable(dimensions, data, var.attributes)
 
     def get_variables(self):
@@ -160,6 +170,10 @@ class PydapDataStore(AbstractDataStore):
 
     def get_dimensions(self):
         return Frozen(self.ds.dimensions)
+
+    @property
+    def ds(self):
+        return get_group(self.dataset, self.group)
 
 
 class PydapBackendEntrypoint(BackendEntrypoint):
@@ -211,6 +225,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     ) -> Dataset:
         store = PydapDataStore.open(
             url=filename_or_obj,
+            group=group,
             application=application,
             session=session,
             timeout=timeout,
@@ -235,6 +250,51 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             )
             return ds
 
+    def open_datatree(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group: str | None = None,
+        application=None,
+        session=None,
+        timeout=None,
+        verify=None,
+        user_charset=None,
+        use_cache=None,
+        session_kwargs=None,
+        cache_kwargs=None,
+        get_kwargs=None,
+    ) -> DataTree:
+        groups_dict = self.open_groups_as_dict(
+            filename_or_obj,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+            group=group,
+            application=None,
+            session=None,
+            timeout=None,
+            verify=None,
+            user_charset=None,
+            use_cache=None,
+            session_kwargs=None,
+            cache_kwargs=None,
+            get_kwargs=None,
+        )
+
+        return datatree_from_dict_with_io_cleanup(groups_dict)
+
     def open_groups_as_dict(
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
@@ -257,7 +317,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         cache_kwargs=None,
         get_kwargs=None,
     ) -> dict[str, Dataset]:
-        from xarray.backends.common import _iter_nc_groups
         from xarray.core.treenode import NodePath
 
         filename_or_obj = _normalize_path(filename_or_obj)
@@ -276,33 +335,39 @@ class PydapBackendEntrypoint(BackendEntrypoint):
 
         # Check for a group and make it a parent if it exists
         if group:
-            parent = NodePath("/") / NodePath(group)
+            parent = str(NodePath("/") / NodePath(group))
         else:
-            parent = NodePath("/")
+            parent = str(NodePath("/"))
 
-        manager = store._manager
         groups_dict = {}
-        for path_group in _iter_nc_groups(store.ds, parent=parent):
-            print(path_group, parent)
-            # group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
-            # store_entrypoint = StoreBackendEntrypoint()
-            # with close_on_error(group_store):
-            #     group_ds = store_entrypoint.open_dataset(
-            #         group_store,
-            #         mask_and_scale=mask_and_scale,
-            #         decode_times=decode_times,
-            #         concat_characters=concat_characters,
-            #         decode_coords=decode_coords,
-            #         drop_variables=drop_variables,
-            #         use_cftime=use_cftime,
-            #         decode_timedelta=decode_timedelta,
-            #     )
-            # if group:
-            #     group_name = str(NodePath(path_group).relative_to(parent))
-            # else:
-            #     group_name = str(NodePath(path_group))
-            # groups_dict[group_name] = group_ds
+        group_names = [parent]
+        # construct fully qualified path to group
+        group_names += [
+            str(NodePath(path_to_group) / NodePath(group))
+            for group, path_to_group in store.ds[parent].groups().items()
+        ]
+        for path_group in group_names:
+            # get a group from the store
+            store.group = path_group
+            store_entrypoint = StoreBackendEntrypoint()
+            with close_on_error(store):
+                group_ds = store_entrypoint.open_dataset(
+                    store,
+                    mask_and_scale=mask_and_scale,
+                    decode_times=decode_times,
+                    concat_characters=concat_characters,
+                    decode_coords=decode_coords,
+                    drop_variables=drop_variables,
+                    use_cftime=use_cftime,
+                    decode_timedelta=decode_timedelta,
+                )
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
+            groups_dict[group_name] = group_ds
 
         return groups_dict
+
 
 BACKEND_ENTRYPOINTS["pydap"] = ("pydap", PydapBackendEntrypoint)
