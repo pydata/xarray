@@ -160,9 +160,17 @@ class PydapDataStore(AbstractDataStore):
 
     def get_attrs(self):
         """Remove any opendap specific attributes"""
-        opendap_attrs = ("configuration", "build_dmrpp", "bes", "libdap", "invocation")
+        opendap_attrs = (
+            "configuration",
+            "build_dmrpp",
+            "bes",
+            "libdap",
+            "invocation",
+            "dimensions",
+            "path",
+        )
         attrs = self.ds.attributes
-        list(map(attrs.pop, opendap_attrs, [None] * 5))
+        list(map(attrs.pop, opendap_attrs, [None] * 7))
         return Frozen(attrs)
 
     def get_dimensions(self):
