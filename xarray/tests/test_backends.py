@@ -5279,11 +5279,11 @@ class TestPydap:
 
         ds = DatasetType("bears", **original.attrs)
         for key, var in original.data_vars.items():
-            ds[key] = BaseType(key, var.values, dimensions=var.dims, **var.attrs)
+            ds[key] = BaseType(key, var.values, dims=var.dims, **var.attrs)
         # check all dims are stored in ds
         for d in original.coords:
             ds[d] = BaseType(
-                d, original[d].values, dimensions=(d,), **original[d].attrs
+                d, original[d].values, dims=(d,), **original[d].attrs
             )
         return ds
 
@@ -5365,12 +5365,6 @@ class TestPydapOnline(TestPydap):
             # workaround to restore string which is converted to byte
             expected["bears"] = expected["bears"].astype(str)
             yield actual, expected
-
-    def test_protocol(self):
-        url2 = "dap2://test.opendap.org/opendap/data/nc/bears.nc"
-        url4 = "dap4://test.opendap.org/opendap/data/nc/bears.nc"
-        assert PydapDataStore.open(url2).dap2
-        assert not PydapDataStore.open(url4).dap2
 
     def test_session(self) -> None:
         from pydap.net import create_session

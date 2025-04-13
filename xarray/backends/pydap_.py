@@ -92,15 +92,15 @@ class PydapDataStore(AbstractDataStore):
     be useful if the netCDF4 library is not available.
     """
 
-    def __init__(self, dataset, dap2=True, group=None):
+    def __init__(self, dataset, group=None):
         """
         Parameters
         ----------
         ds : pydap DatasetType
-        dap2 : bool (default=True). When DAP4, dap2=`False`.
+        group: str or None (default None)
+            The group to open. If None, the root group is opened.
         """
         self.dataset = dataset
-        self.dap2 = dap2
         self.group = group
 
     @classmethod
@@ -133,12 +133,14 @@ class PydapDataStore(AbstractDataStore):
             "cache_kwargs": cache_kwargs or {},
             "get_kwargs": get_kwargs or {},
         }
-        if urlparse(url).scheme == "dap4":
-            args = {"dap2": False}
-        else:
-            args = {"dap2": True}
-        dataset = open_url(**kwargs)
-        args["dataset"] = dataset
+        if isinstance(url, str):
+            # check uit begins with an acceptable scheme
+            dataset = open_url(**kwargs)
+        elif hasattr(url, "ds"):
+            # pydap dataset
+            dataset = url.ds
+            groups = dataset.groups()
+        args = {"dataset": dataset}
         if group:
             # only then, change the default
             args["group"] = group
@@ -146,12 +148,9 @@ class PydapDataStore(AbstractDataStore):
 
     def open_store_variable(self, var):
         data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
-        if self.dap2:
-            dimensions = var.dimensions
-        else:
-            dimensions = [
-                dim.split("/")[-1] if dim.startswith("/") else dim for dim in var.dims
-            ]
+        dimensions = [
+            dim.split("/")[-1] if dim.startswith("/") else dim for dim in var.dims
+        ]
         return Variable(dimensions, data, var.attributes)
 
     def get_variables(self):
