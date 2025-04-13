@@ -4,7 +4,6 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from requests.utils import urlparse
 
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
@@ -139,7 +138,6 @@ class PydapDataStore(AbstractDataStore):
         elif hasattr(url, "ds"):
             # pydap dataset
             dataset = url.ds
-            groups = dataset.groups()
         args = {"dataset": dataset}
         if group:
             # only then, change the default
