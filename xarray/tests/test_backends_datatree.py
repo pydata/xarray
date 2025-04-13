@@ -423,7 +423,9 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
 @network
 @requires_pydap
 class TestPyDAPDatatreeIO:
-    # engine: T_DataTreeNetcdfEngine | None = "pydap"
+    """Test PyDAP backend for DataTree."""
+
+    engine: T_DataTreeNetcdfEngine | None = "pydap"
     # you can check these by adding a .dmr to urls, and replacing dap4 with http
     unaligned_datatree_url = (
         "dap4://test.opendap.org/opendap/dap4/unaligned_simple_datatree.nc.h5"
@@ -445,25 +447,25 @@ class TestPyDAPDatatreeIO:
                 + ".*"
             ),
         ):
-            open_datatree(url, engine="pydap")
+            open_datatree(url, engine=self.engine)
 
     def test_open_groups(self, url=unaligned_datatree_url) -> None:
         """Test `open_groups` with a netCDF4/HDF5 file with an unaligned group hierarchy."""
-        unaligned_dict_of_datasets = open_groups(url, engine="pydap")
+        unaligned_dict_of_datasets = open_groups(url, engine=self.engine)
 
         # Check that group names are keys in the dictionary of `xr.Datasets`
         assert "/" in unaligned_dict_of_datasets.keys()
         assert "/Group1" in unaligned_dict_of_datasets.keys()
         assert "/Group1/subgroup1" in unaligned_dict_of_datasets.keys()
         # Check that group name returns the correct datasets
-        with xr.open_dataset(url, engine="pydap", group="/") as expected:
+        with xr.open_dataset(url, engine=self.engine, group="/") as expected:
             assert_identical(unaligned_dict_of_datasets["/"], expected)
-        with xr.open_dataset(url, group="Group1", engine="pydap") as expected:
+        with xr.open_dataset(url, group="Group1", engine=self.engine) as expected:
             assert_identical(unaligned_dict_of_datasets["/Group1"], expected)
         with xr.open_dataset(
             url,
             group="/Group1/subgroup1",
-            engine="pydap",
+            engine=self.engine,
         ) as expected:
             assert_identical(unaligned_dict_of_datasets["/Group1/subgroup1"], expected)
 
@@ -493,21 +495,21 @@ class TestPyDAPDatatreeIO:
             │       Temperature  (time, Z, Y, X) float32 ...
             |       Salinity     (time, Z, Y, X) float32 ...
         """
-        tree = open_datatree(url, engine="pydap")
+        tree = open_datatree(url, engine=self.engine)
         assert list(tree.dims) == ["time", "Z", "nv"]
         assert tree["/SimpleGroup"].coords["time"].dims == ("time",)
         assert tree["/SimpleGroup"].coords["Z"].dims == ("Z",)
         assert tree["/SimpleGroup"].coords["Y"].dims == ("Y",)
         assert tree["/SimpleGroup"].coords["X"].dims == ("X",)
-        with xr.open_dataset(url, engine="pydap", group="/SimpleGroup") as expected:
+        with xr.open_dataset(url, engine=self.engine, group="/SimpleGroup") as expected:
             assert set(tree["/SimpleGroup"].dims) == set(
                 list(expected.dims) + ["Z", "nv"]
             )
 
     def test_open_groups_to_dict(self, url=all_aligned_child_nodes_url) -> None:
-        aligned_dict_of_datasets = open_groups(url, engine="pydap")
+        aligned_dict_of_datasets = open_groups(url, engine=self.engine)
         aligned_dt = DataTree.from_dict(aligned_dict_of_datasets)
-        with open_datatree(url, engine="pydap") as opened_tree:
+        with open_datatree(url, engine=self.engine) as opened_tree:
             assert opened_tree.identical(aligned_dt)
 
 
