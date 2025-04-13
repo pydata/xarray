@@ -167,10 +167,9 @@ class PydapDataStore(AbstractDataStore):
             "libdap",
             "invocation",
             "dimensions",
-            "path",
         )
         attrs = self.ds.attributes
-        list(map(attrs.pop, opendap_attrs, [None] * 7))
+        list(map(attrs.pop, opendap_attrs, [None] * 6))
         return Frozen(attrs)
 
     def get_dimensions(self):
