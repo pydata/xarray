@@ -131,7 +131,10 @@ class PydapDataStore(AbstractDataStore):
 
     def open_store_variable(self, var):
         data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
-        return Variable(var.dimensions, data, _fix_attributes(var.attributes))
+        return Variable(
+            var.dimensions if hasattr(var, "dimensions") else var.dims,
+            data, _fix_attributes(var.attributes)
+        )
 
     def get_variables(self):
         return FrozenDict(
