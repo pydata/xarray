@@ -309,7 +309,7 @@ class Coordinates(AbstractCoordinates):
                 var = as_variable(data, name=name, auto_convert=False)
                 if var.dims == (name,) and indexes is None:
                     index, index_vars = create_default_index_implicit(var, list(coords))
-                    default_indexes.update({k: index for k in index_vars})
+                    default_indexes.update(dict.fromkeys(index_vars, index))
                     variables.update(index_vars)
                 else:
                     variables[name] = var
@@ -384,7 +384,7 @@ class Coordinates(AbstractCoordinates):
                 f"create any coordinate.\n{index!r}"
             )
 
-        indexes = {name: index for name in variables}
+        indexes = dict.fromkeys(variables, index)
 
         return cls(coords=variables, indexes=indexes)
 
@@ -412,7 +412,7 @@ class Coordinates(AbstractCoordinates):
         xr_idx = PandasMultiIndex(midx, dim)
 
         variables = xr_idx.create_variables()
-        indexes = {k: xr_idx for k in variables}
+        indexes = dict.fromkeys(variables, xr_idx)
 
         return cls(coords=variables, indexes=indexes)
 
@@ -1134,7 +1134,7 @@ def create_coords_with_default_indexes(
             # pandas multi-index edge cases.
             variable = variable.to_index_variable()
             idx, idx_vars = create_default_index_implicit(variable, all_variables)
-            indexes.update({k: idx for k in idx_vars})
+            indexes.update(dict.fromkeys(idx_vars, idx))
             variables.update(idx_vars)
             all_variables.update(idx_vars)
         else:
@@ -1159,7 +1159,7 @@ def _coordinates_from_variable(variable: Variable) -> Coordinates:
 
     (name,) = variable.dims
     new_index, index_vars = create_default_index_implicit(variable)
-    indexes = {k: new_index for k in index_vars}
+    indexes = dict.fromkeys(index_vars, new_index)
     new_vars = new_index.create_variables()
     new_vars[name].attrs = variable.attrs
     return Coordinates(new_vars, indexes)
