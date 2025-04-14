@@ -722,7 +722,7 @@ Bug fixes
 - Promote floating-point numeric datetimes before decoding (:issue:`9179`, :pull:`9182`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Address regression introduced in :pull:`9002` that prevented objects returned
-  by py:meth:`DataArray.convert_calendar` to be indexed by a time index in
+  by :py:meth:`DataArray.convert_calendar` to be indexed by a time index in
   certain circumstances (:issue:`9138`, :pull:`9192`).
   By `Mark Harfouche <https://github.com/hmaarrfk>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
 - Fix static typing of tolerance arguments by allowing ``str`` type (:issue:`8892`, :pull:`9194`).
