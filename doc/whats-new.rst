@@ -26,7 +26,7 @@ New Features
   By `Joren Hammudoglu <https://github.com/jorenham>`_.
 - Added ``errors`` arg to :py:meth:`open_mfdataset` to better handle invalid files.
   (:issue:`6736`, :pull:`9955`). By `Pratiman Patel <https://github.com/pratiman-91>`_.
-  
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
