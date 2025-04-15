@@ -5355,10 +5355,10 @@ class TestPydapOnline(TestPydap):
             # workaround to restore string which is converted to byte
             expected["bears"] = expected["bears"].astype(str)
             yield actual, expected
-        
+
     def output_grid_deprecation_warning_dap2dataset(self):
         with pytest.warns(DeprecationWarning, match="`output_grid` is deprecated"):
-            with self.create_dap2_datasets(outout_grid=True) as (actual, expected):
+            with self.create_dap2_datasets(output_grid=True) as (actual, expected):
                 assert_equal(actual, expected)
 
     def create_dap4_dataset(self, **kwargs):
