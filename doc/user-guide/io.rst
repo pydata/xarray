@@ -1245,12 +1245,12 @@ over the network until we look at particular values:
 
 .. image:: ../_static/opendap-prism-tmax.png
 
-Some servers require authentication before we can access the data. `Pydap` uses
+Some servers require authentication before we can access the data. Pydap uses
 a `Requests`__ session object (which the user can pre-define), and this
-session object can recover authentication credentials from a locally stored
-`.netrc` file. For example, to connect to server that require NASA's
+session object can recover `authentication`__` credentials from a locally stored
+``.netrc`` file. For example, to connect to a server that requires NASA's
 URS authentication, with the username/password credentials stored on a locally
-accessible `.netrc`, access to OPeNDAP data should be as simple as this::
+accessible ``.netrc``, access to OPeNDAP data should be as simple as this::
 
     import xarray as xr
     import requests
@@ -1276,9 +1276,13 @@ replace the scheme of the url with the name of the protocol. For example::
     # dap4 url
     ds_url = 'dap4://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
 
+While most OPeNDAP servers implement DAP2, not all servers implement DAP4. It
+is recommended to check if the URL you are using `supports DAP4`__ by checking the
+URL on a browser.
+
 __ https://docs.python-requests.org
 __ https://pydap.github.io/pydap/en/notebooks/Authentication.html
-__ https://pydap.github.io/pydap/en/Q3.html
+__ https://pydap.github.io/pydap/en/faqs/dap2_or_dap4_url.html
 
 .. _io.pickle:
 
