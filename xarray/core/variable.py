@@ -2628,12 +2628,14 @@ class IndexVariable(Variable):
     unless another name is given.
     """
 
-    __slots__ = ()
+    __slots__ = ("_name",)
 
     # TODO: PandasIndexingAdapter doesn't match the array api:
     _data: PandasIndexingAdapter  # type: ignore[assignment]
 
-    def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
+    def __init__(
+        self, dims, data, attrs=None, encoding=None, fastpath=False, name=None
+    ):
         super().__init__(dims, data, attrs, encoding, fastpath)
         if self.ndim != 1:
             raise ValueError(f"{type(self).__name__} objects must be 1-dimensional")
@@ -2641,6 +2643,11 @@ class IndexVariable(Variable):
         # Unlike in Variable, always eagerly load values into memory
         if not isinstance(self._data, PandasIndexingAdapter):
             self._data = PandasIndexingAdapter(self._data)
+
+        if name is None:
+            self._name = self.dims[0]
+        else:
+            self._name = name
 
     def __dask_tokenize__(self) -> object:
         from dask.base import normalize_token
@@ -2791,7 +2798,22 @@ class IndexVariable(Variable):
         attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
         encoding = copy.deepcopy(self._encoding) if deep else copy.copy(self._encoding)
 
-        return self._replace(data=ndata, attrs=attrs, encoding=encoding)
+        copied = self._replace(data=ndata, attrs=attrs, encoding=encoding)
+
+        return copied
+
+    def _replace(
+        self,
+        dims=_default,
+        data=_default,
+        attrs=_default,
+        encoding=_default,
+    ) -> Self:
+        replaced = super()._replace(
+            dims=dims, data=data, attrs=attrs, encoding=encoding
+        )
+        replaced._name = self._name
+        return replaced
 
     def equals(self, other, equiv=None):
         # if equiv is specified, super up
@@ -2863,7 +2885,7 @@ class IndexVariable(Variable):
 
     @property
     def name(self) -> Hashable:
-        return self.dims[0]
+        return self._name
 
     @name.setter
     def name(self, value) -> NoReturn:
