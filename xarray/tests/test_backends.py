@@ -5355,6 +5355,11 @@ class TestPydapOnline(TestPydap):
             # workaround to restore string which is converted to byte
             expected["bears"] = expected["bears"].astype(str)
             yield actual, expected
+        
+    def output_grid_deprecation_warning_dap2dataset(self):
+        with pytest.warns(DeprecationWarning, match="`output_grid` is deprecated"):
+            with self.create_dap2_datasets(outout_grid=True) as (actual, expected):
+                assert_equal(actual, expected)
 
     def create_dap4_dataset(self, **kwargs):
         url = "dap4://test.opendap.org/opendap/data/nc/bears.nc"
@@ -5377,10 +5382,6 @@ class TestPydapOnline(TestPydap):
             timeout=120,
             verify=True,
             user_charset=None,
-            use_cache=False,
-            session_kwargs={},
-            cache_kwargs={},
-            get_kwargs={},
         )
 
 

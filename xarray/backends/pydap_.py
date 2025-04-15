@@ -109,17 +109,23 @@ class PydapDataStore(AbstractDataStore):
         group=None,
         application=None,
         session=None,
+        output_grid=None,
         timeout=None,
         verify=None,
         user_charset=None,
-        use_cache=None,
-        session_kwargs=None,
-        cache_kwargs=None,
-        get_kwargs=None,
     ):
         from pydap.client import open_url
         from pydap.net import DEFAULT_TIMEOUT
 
+        if output_grid is not None:
+            # output_grid is no longer passed to pydap.client.open_url
+            from xarray.core.utils import emit_user_level_warning
+
+            emit_user_level_warning(
+                "`output_grid` is deprecated and will be removed in a future version"
+                " of xarray. Will be set to `None`, the new default. ",
+                DeprecationWarning,
+            )
         kwargs = {
             "url": url,
             "application": application,
@@ -127,10 +133,6 @@ class PydapDataStore(AbstractDataStore):
             "timeout": timeout or DEFAULT_TIMEOUT,
             "verify": verify or True,
             "user_charset": user_charset,
-            "use_cache": use_cache or False,
-            "session_kwargs": session_kwargs or {},
-            "cache_kwargs": cache_kwargs or {},
-            "get_kwargs": get_kwargs or {},
         }
         if isinstance(url, str):
             # check uit begins with an acceptable scheme
@@ -146,9 +148,14 @@ class PydapDataStore(AbstractDataStore):
 
     def open_store_variable(self, var):
         data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
-        dimensions = [
-            dim.split("/")[-1] if dim.startswith("/") else dim for dim in var.dims
-        ]
+        try:
+            dimensions = [
+                dim.split("/")[-1] if dim.startswith("/") else dim for dim in var.dims
+            ]
+        except AttributeError:
+            # GridType does not have a dims attribute - instead get `dimensions`
+            # see https://github.com/pydap/pydap/issues/485
+            dimensions = var.dimensions
         return Variable(dimensions, data, var.attributes)
 
     def get_variables(self):
@@ -219,26 +226,20 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         group=None,
         application=None,
         session=None,
+        output_grid=None,
         timeout=None,
         verify=None,
         user_charset=None,
-        use_cache=None,
-        session_kwargs=None,
-        cache_kwargs=None,
-        get_kwargs=None,
     ) -> Dataset:
         store = PydapDataStore.open(
             url=filename_or_obj,
             group=group,
             application=application,
             session=session,
+            output_grid=output_grid,
             timeout=timeout,
             verify=verify,
             user_charset=user_charset,
-            use_cache=use_cache,
-            session_kwargs=session_kwargs,
-            cache_kwargs=cache_kwargs,
-            get_kwargs=get_kwargs,
         )
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
@@ -271,10 +272,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-        use_cache=None,
-        session_kwargs=None,
-        cache_kwargs=None,
-        get_kwargs=None,
     ) -> DataTree:
         groups_dict = self.open_groups_as_dict(
             filename_or_obj,
@@ -291,10 +288,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             timeout=None,
             verify=None,
             user_charset=None,
-            use_cache=None,
-            session_kwargs=None,
-            cache_kwargs=None,
-            get_kwargs=None,
         )
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
@@ -316,10 +309,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-        use_cache=None,
-        session_kwargs=None,
-        cache_kwargs=None,
-        get_kwargs=None,
     ) -> dict[str, Dataset]:
         from xarray.core.treenode import NodePath
 
@@ -331,10 +320,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             timeout=timeout,
             verify=verify,
             user_charset=user_charset,
-            use_cache=use_cache,
-            session_kwargs=session_kwargs,
-            cache_kwargs=cache_kwargs,
-            get_kwargs=get_kwargs,
         )
 
         # Check for a group and make it a parent if it exists
