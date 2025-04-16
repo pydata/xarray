@@ -657,7 +657,7 @@ def _dataset_concat(
                 else:
                     # index created from a scalar coordinate
                     idx_vars = {name: datasets[0][name].variable}
-                result_indexes.update({k: combined_idx for k in idx_vars})
+                result_indexes.update(dict.fromkeys(idx_vars, combined_idx))
                 combined_idx_vars = combined_idx.create_variables(idx_vars)
                 for k, v in combined_idx_vars.items():
                     v.attrs = merge_attrs(

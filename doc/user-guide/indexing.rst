@@ -276,7 +276,7 @@ This is particularly useful for ragged indexing of multi-dimensional data,
 e.g., to apply a 2D mask to an image. Note that ``where`` follows all the
 usual xarray broadcasting and alignment rules for binary operations (e.g.,
 ``+``) between the object being indexed and the condition, as described in
-:ref:`comput`:
+:ref:`compute`:
 
 .. ipython:: python
 
