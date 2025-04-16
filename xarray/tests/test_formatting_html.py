@@ -321,7 +321,7 @@ class Test_summarize_datatree_children:
 
 
 class TestDataTreeTruncatesNodes:
-    def test_many_nodes(self):
+    def test_many_nodes(self) -> None:
         # construct a datatree with 500 nodes
         number_of_files = 20
         number_of_groups = 25
