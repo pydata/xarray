@@ -282,7 +282,7 @@ we use to calculate `Spearman's rank-correlation coefficient <https://en.wikiped
 
 The only aspect of this example that is different from standard usage of
 ``apply_ufunc()`` is that we needed to supply the ``output_dtypes`` arguments.
-(Read up on :ref:`comput.wrapping-custom` for an explanation of the
+(Read up on :ref:`compute.wrapping-custom` for an explanation of the
 "core dimensions" listed in ``input_core_dims``.)
 
 Our new ``spearman_correlation()`` function achieves near linear speedup
