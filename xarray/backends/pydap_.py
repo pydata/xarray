@@ -66,20 +66,9 @@ def get_group(ds, group):
         # use the root group
         return ds
     else:
-        Groups = ds.groups()
-        # make sure it's a string
-        if not isinstance(group, str):
-            raise ValueError("group must be a string")
-        # support path-like syntax
-        path = group.split("/")
-        gname = path[-1]
-        # update path to group
-        path = ("/").join(path[:-1]) + "/"
-        # check if group exists
         try:
-            assert Groups[gname] == path
             return ds[group]
-        except (KeyError, AssertionError) as e:
+        except KeyError as e:
             # wrap error to provide slightly more helpful message
             raise KeyError(f"group not found: {group}", e) from e
 
@@ -126,10 +115,12 @@ class PydapDataStore(AbstractDataStore):
                 " of xarray. Will be set to `None`, the new default. ",
                 DeprecationWarning,
             )
+            output_grid = False  # new default behavior
         kwargs = {
             "url": url,
             "application": application,
             "session": session,
+            "output_grid": output_grid or False,
             "timeout": timeout or DEFAULT_TIMEOUT,
             "verify": verify or True,
             "user_charset": user_charset,
@@ -161,8 +152,17 @@ class PydapDataStore(AbstractDataStore):
     def get_variables(self):
         # get first all variables arrays, excluding any container type like,
         # `Groups`, `Sequence` or `Structure` types
-        _vars = list(self.ds.variables())
-        _vars += list(self.ds.grids())  # dap2 objects
+        try:
+            _vars = list(self.ds.variables())
+            _vars += list(self.ds.grids())  # dap2 objects
+        except AttributeError:
+            from pydap.model import GroupType
+
+            _vars = list(self.ds.keys())
+            # check the key is a BaseType or GridType
+            for var in _vars:
+                if isinstance(self.ds[var], GroupType):
+                    _vars.remove(var)
         return FrozenDict((k, self.open_store_variable(self.ds[k])) for k in _vars)
 
     def get_attrs(self):
@@ -331,9 +331,41 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         groups_dict = {}
         group_names = [parent]
         # construct fully qualified path to group
+        try:
+            # this works for pydap >= 3.5.1
+            Groups = store.ds[parent].groups()
+        except AttributeError:
+            # THIS IS ONLY NEEDED FOR `pydap == 3.5.0`
+            # `pydap>= 3.5.1` has a new method `groups()`
+            # that returns a dict of group names and their paths
+            def group_fqn(store, path=None, g_fqn=None) -> dict[str, str]:
+                """To be removed for pydap > 3.5.0.
+                Derives the fully qualifying name of a Group."""
+                from pydap.model import GroupType
+
+                if not path:
+                    path = "/"  # parent
+                if not g_fqn:
+                    g_fqn = {}
+                groups = [
+                    store[key].id
+                    for key in store.keys()
+                    if isinstance(store[key], GroupType)
+                ]
+                for g in groups:
+                    g_fqn.update({g: path})
+                    subgroups = [
+                        var for var in store[g] if isinstance(store[g][var], GroupType)
+                    ]
+                    if len(subgroups) > 0:
+                        npath = path + g
+                        g_fqn = group_fqn(store[g], npath, g_fqn)
+                return g_fqn
+
+            Groups = group_fqn(store.ds)
         group_names += [
             str(NodePath(path_to_group) / NodePath(group))
-            for group, path_to_group in store.ds[parent].groups().items()
+            for group, path_to_group in Groups.items()
         ]
         for path_group in group_names:
             # get a group from the store

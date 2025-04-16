@@ -5409,7 +5409,8 @@ class TestPydap:
 class TestPydapOnline(TestPydap):
     @contextlib.contextmanager
     def create_dap2_datasets(self, **kwargs):
-        url = "dap2://test.opendap.org/opendap/data/nc/bears.nc"
+        # in pydap 3.5.0, urls defaults to dap2.
+        url = "http://test.opendap.org/opendap/data/nc/bears.nc"
         actual = open_dataset(url, engine="pydap", **kwargs)
         with open_example_dataset("bears.nc") as expected:
             # workaround to restore string which is converted to byte
@@ -5430,15 +5431,16 @@ class TestPydapOnline(TestPydap):
             yield actual, expected
 
     def test_session(self) -> None:
-        from pydap.net import create_session
+        from requests import Session
 
-        session = create_session()  # blank requests.Session object
+        session = Session()  # blank requests.Session object
         with mock.patch("pydap.client.open_url") as mock_func:
             xr.backends.PydapDataStore.open("http://test.url", session=session)
         mock_func.assert_called_with(
             url="http://test.url",
             application=None,
             session=session,
+            output_grid=False,
             timeout=120,
             verify=True,
             user_charset=None,
