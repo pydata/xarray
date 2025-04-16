@@ -7,7 +7,7 @@ from functools import lru_cache, partial
 from html import escape
 from importlib.resources import files
 from math import ceil
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from xarray.core.formatting import (
     inherited_vars,
@@ -199,16 +199,19 @@ def _mapping_section(
     max_items_collapse,
     expand_option_name,
     enabled=True,
-    max_option_name: str | None = None,
+    max_option_name: Literal["display_max_children"] | None = None,
 ) -> str:
     n_items = len(mapping)
     expanded = _get_boolean_with_default(
         expand_option_name, n_items < max_items_collapse
     )
     collapsed = not expanded
-    max_items = OPTIONS.get(max_option_name)
-    truncated = max_items is not None and n_items > max_items
-    inline_details = f"({max_items}/{n_items})" if truncated else ""
+
+    inline_details = ""
+    if max_option_name and max_option_name in OPTIONS:
+        max_items = int(OPTIONS[max_option_name])
+        if n_items > max_items:
+            inline_details = f"({max_items}/{n_items})"
 
     return collapsible_section(
         name,
@@ -364,20 +367,12 @@ def summarize_datatree_children(children: Mapping[str, DataTree]) -> str:
 
     children_html = []
     for i, (n, c) in enumerate(children.items()):
-        if (
-            MAX_CHILDREN is None
-            or i < ceil(MAX_CHILDREN / 2)
-            or i >= ceil(n_children - MAX_CHILDREN / 2)
-        ):
+        if i < ceil(MAX_CHILDREN / 2) or i >= ceil(n_children - MAX_CHILDREN / 2):
             is_last = i == (n_children - 1)
             children_html.append(
                 _wrap_datatree_repr(datatree_node_repr(n, c), end=is_last)
             )
-        elif (
-            MAX_CHILDREN is not None
-            and n_children > MAX_CHILDREN
-            and i == ceil(MAX_CHILDREN / 2)
-        ):
+        elif n_children > MAX_CHILDREN and i == ceil(MAX_CHILDREN / 2):
             children_html.append("<div>...</div>")
 
     return "".join(

@@ -227,7 +227,7 @@ class set_options:
         * ``False`` : to always collapse indexes
         * ``default`` : to expand unless over a pre-defined limit (always collapse for html style)
     display_max_children : int, default: 6
-        Maximum number of children to display for each node in a DataTree
+        Maximum number of children to display for each node in a DataTree.
     display_max_rows : int, default: 12
         Maximum display rows.
     display_values_threshold : int, default: 200

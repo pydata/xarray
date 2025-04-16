@@ -219,7 +219,7 @@ class RenderDataTree:
 
     @staticmethod
     def __item(
-        node: DataTree, continues: tuple[bool, ...], style: AbstractStyle
+        node: DataTree | str, continues: tuple[bool, ...], style: AbstractStyle
     ) -> Row:
         if not continues:
             return Row("", "", node)
