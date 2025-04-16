@@ -14,11 +14,51 @@ def create_dataset_arange(
     return xr.Dataset(coords=xr.Coordinates.from_xindex(index))
 
 
-def test_range_index_arange() -> None:
-    index = RangeIndex.arange(0.0, 1.0, 0.1, dim="x")
+@pytest.mark.parametrize(
+    "args,kwargs",
+    [
+        ((10.0,), {}),
+        ((), {"stop": 10.0}),
+        (
+            (
+                2.0,
+                10.0,
+            ),
+            {},
+        ),
+        ((2.0,), {"stop": 10.0}),
+        ((), {"start": 2.0, "stop": 10.0}),
+        ((2.0, 10.0, 2.0), {}),
+        ((), {"start": 2.0, "stop": 10.0, "step": 2.0}),
+    ],
+)
+def test_range_index_arange(args, kwargs) -> None:
+    index = RangeIndex.arange(*args, **kwargs, dim="x")
     actual = xr.Coordinates.from_xindex(index)
-    expected = xr.Coordinates({"x": np.arange(0.0, 1.0, 0.1)})
+    expected = xr.Coordinates({"x": np.arange(*args, **kwargs)})
     assert_equal(actual, expected, check_default_indexes=False)
+
+
+def test_range_index_arange_error() -> None:
+    with pytest.raises(TypeError, match=".*requires stop to be specified"):
+        RangeIndex.arange(dim="x")
+
+
+def test_range_index_arange_start_as_stop() -> None:
+    # Weird although probably very unlikely case where only `start` is given
+    # as keyword argument, which is interpreted as `stop`.
+    # This has been fixed in numpy (https://github.com/numpy/numpy/pull/17878)
+    # using Python C API. In pure Python it's more tricky as there's no easy way to know
+    # whether a value has been passed as positional or keyword argument.
+    # Note: `pandas.RangeIndex` constructor still has this weird behavior.
+    index = RangeIndex.arange(start=10.0, dim="x")
+    actual = xr.Coordinates.from_xindex(index)
+    expected = xr.Coordinates({"x": np.arange(10.0)})
+    assert_equal(actual, expected, check_default_indexes=False)
+
+
+def test_range_index_arange_properties() -> None:
+    index = RangeIndex.arange(0.0, 1.0, 0.1, dim="x")
     assert index.start == 0.0
     assert index.stop == 1.0
     assert index.step == 0.1

@@ -116,9 +116,9 @@ class RangeIndex(CoordinateTransformIndex):
     @classmethod
     def arange(
         cls,
-        start: float = 0.0,
-        stop: float = 1.0,
-        step: float = 1.0,
+        start: float | None = None,
+        stop: float | None = None,
+        step: float | None = None,
         *,
         coord_name: Hashable | None = None,
         dim: str,
@@ -126,14 +126,35 @@ class RangeIndex(CoordinateTransformIndex):
     ) -> "RangeIndex":
         """Create a new RangeIndex from given start, stop and step values.
 
+        ``RangeIndex.arange`` can be called with a varying number of positional arguments:
+
+        - ``RangeIndex.arange(stop)``: the index is within the half-open interval [0, stop)
+          (in other words, the interval including start but excluding stop).
+
+        - ``RangeIndex.arange(start, stop)``: the index is within the half-open interval
+          [start, stop).
+
+        - ``RangeIndex.arange(start, stop, step)``: the index is within the half-open interval
+          [start, stop), with spacing between values given by step.
+
+        .. note::
+           When using a non-integer step, such as 0.1, it is often better to use
+           :py:meth:`~xarray.indexes.RangeIndex.linspace`.
+
+        .. note::
+           ``RangeIndex.arange(start=4.0)`` returns a range index in the [0.0, 4.0)
+           interval, i.e., ``start`` is interpreted as ``stop`` even when it is given
+           as a unique keyword argument.
+
         Parameters
         ----------
         start : float, optional
-            Start of interval (default: 0.0). The interval includes this value.
-        stop : float, optional
-            End of interval (default: 1.0). In general the interval does not
-            include this value, except floating point round-off affects the
-            size of the dimension.
+            Start of interval. The interval includes this value. The default start
+            value is 0. If ``stop`` is not given, the value given here is interpreted
+            as the end of the interval.
+        stop : float
+            End of interval. In general the interval does not include this value,
+            except floating point round-off affects the size of the dimension.
         step : float, optional
             Spacing between values (default: 1.0).
         coord_name : Hashable, optional
@@ -163,6 +184,18 @@ class RangeIndex(CoordinateTransformIndex):
             x        RangeIndex (start=0, stop=1, step=0.2)
 
         """
+        if stop is None:
+            if start is None:
+                raise TypeError("RangeIndex.arange() requires stop to be specified")
+            else:
+                stop = start
+                start = None
+        if start is None:
+            start = 0.0
+
+        if step is None:
+            step = 1.0
+
         if coord_name is None:
             coord_name = dim
 
