@@ -195,6 +195,59 @@ class Index:
         else:
             return {}
 
+    def validate_dataarray_coord(
+        self,
+        name: Hashable,
+        var: Variable,
+        dims: set[Hashable],
+    ):
+        """Validate an index coordinate variable to include in a DataArray.
+
+        This method is called repeatedly for each Variable associated with
+        this index when creating a new DataArray (via its constructor or from a
+        Dataset) or updating an existing one.
+
+        By default raises a :py:class:`CoordinateValidationError` if the
+        dimensions of the coordinate variable do conflict with the array
+        dimensions (DataArray model).
+
+        This method may be overridden in Index subclasses, e.g., to validate
+        index coordinates even when they do not strictly conform with the
+        DataArray model. This is useful for example to include (n+1)-dimensional
+        cell boundary coordinates attached to an index.
+
+        If the validation passes (i.e., no error raised), the coordinate will be
+        included in the DataArray regardless of its dimensions.
+
+        If this method raises when a DataArray is constructed from a Dataset,
+        Xarray will fail back to propagating the coordinate
+        according to the default rules for DataArray --- i.e., the dimensions of every
+        coordinate variable must be a subset of DataArray.dims --- which may drop this index.
+
+        Parameters
+        ----------
+        name : Hashable
+            Name of a coordinate variable associated to this index.
+        var : Variable
+            Coordinate variable object.
+        dims: tuple
+            Dataarray's dimensions.
+
+        Raises
+        ------
+        CoordinateValidationError
+            When validation fails.
+
+        """
+        from xarray.core.coordinates import CoordinateValidationError
+
+        if any(d not in dims for d in var.dims):
+            raise CoordinateValidationError(
+                f"coordinate {name} has dimensions {var.dims}, but these "
+                "are not a subset of the DataArray "
+                f"dimensions {dims}"
+            )
+
     def to_pandas_index(self) -> pd.Index:
         """Cast this xarray index to a pandas.Index object or raise a
         ``TypeError`` if this is not supported.
