@@ -12,18 +12,27 @@ from collections.abc import (
     Mapping,
 )
 from html import escape
-from typing import TYPE_CHECKING, Any, Literal, NoReturn, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Concatenate,
+    NoReturn,
+    ParamSpec,
+    TypeVar,
+    Union,
+    overload,
+)
 
 from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
 from xarray.core._typed_ops import DataTreeOpsMixin
-from xarray.core.alignment import align
 from xarray.core.common import TreeAttrAccessMixin, get_chunksizes
 from xarray.core.coordinates import Coordinates, DataTreeCoordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.dataset_variables import DataVariables
 from xarray.core.datatree_mapping import (
+    _handle_errors_with_path_context,
     map_over_datasets,
 )
 from xarray.core.formatting import (
@@ -35,8 +44,8 @@ from xarray.core.formatting_html import (
     datatree_repr as datatree_repr_html,
 )
 from xarray.core.indexes import Index, Indexes
-from xarray.core.merge import dataset_update_method
 from xarray.core.options import OPTIONS as XR_OPTS
+from xarray.core.options import _get_keep_attrs
 from xarray.core.treenode import NamedNode, NodePath, zip_subtrees
 from xarray.core.types import Self
 from xarray.core.utils import (
@@ -52,6 +61,8 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.structure.alignment import align
+from xarray.structure.merge import dataset_update_method
 
 try:
     from xarray.core.variable import calculate_dimensions
@@ -64,7 +75,6 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
-    from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.types import (
         Dims,
         DtCompatible,
@@ -76,22 +86,28 @@ if TYPE_CHECKING:
         ZarrWriteModes,
     )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
+    from xarray.structure.merge import CoercibleMapping, CoercibleValue
 
 # """
 # DEVELOPERS' NOTE
 # ----------------
-# The idea of this module is to create a `DataTree` class which inherits the tree structure from TreeNode, and also copies
-# the entire API of `xarray.Dataset`, but with certain methods decorated to instead map the dataset function over every
-# node in the tree. As this API is copied without directly subclassing `xarray.Dataset` we instead create various Mixin
-# classes (in ops.py) which each define part of `xarray.Dataset`'s extensive API.
+# The idea of this module is to create a `DataTree` class which inherits the tree
+# structure from TreeNode, and also copies the entire API of `xarray.Dataset`, but with
+# certain methods decorated to instead map the dataset function over every node in the
+# tree. As this API is copied without directly subclassing `xarray.Dataset` we instead
+# create various Mixin classes (in ops.py) which each define part of `xarray.Dataset`'s
+# extensive API.
 #
-# Some of these methods must be wrapped to map over all nodes in the subtree. Others are fine to inherit unaltered
-# (normally because they (a) only call dataset properties and (b) don't return a dataset that should be nested into a new
-# tree) and some will get overridden by the class definition of DataTree.
+# Some of these methods must be wrapped to map over all nodes in the subtree. Others are
+# fine to inherit unaltered (normally because they (a) only call dataset properties and
+# (b) don't return a dataset that should be nested into a new tree) and some will get
+# overridden by the class definition of DataTree.
 # """
 
 
 T_Path = Union[str, NodePath]
+T = TypeVar("T")
+P = ParamSpec("P")
 
 
 def _collect_data_and_coord_variables(
@@ -406,13 +422,18 @@ class DatasetView(Dataset):
 
         # Copied from xarray.Dataset so as not to call type(self), which causes problems (see https://github.com/xarray-contrib/datatree/issues/188).
         # TODO Refactor xarray upstream to avoid needing to overwrite this.
-        # TODO This copied version will drop all attrs - the keep_attrs stuff should be re-instated
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
         variables = {
             k: maybe_wrap_array(v, func(v, *args, **kwargs))
             for k, v in self.data_vars.items()
         }
+        if keep_attrs:
+            for k, v in variables.items():
+                v._copy_attrs_from(self.data_vars[k])
+        attrs = self.attrs if keep_attrs else None
         # return type(self)(variables, attrs=attrs)
-        return Dataset(variables)
+        return Dataset(variables, attrs=attrs)
 
 
 class DataTree(
@@ -1379,6 +1400,54 @@ class DataTree(
         }
         return DataTree.from_dict(filtered_nodes, name=self.name)
 
+    def filter_like(self, other: DataTree) -> DataTree:
+        """
+        Filter a datatree like another datatree.
+
+        Returns a new tree containing only the nodes in the original tree which are also present in the other tree.
+
+        Parameters
+        ----------
+        other : DataTree
+            The tree to filter this tree by.
+
+        Returns
+        -------
+        DataTree
+
+        See Also
+        --------
+        filter
+        isomorphic
+
+        Examples
+        --------
+
+        >>> dt = DataTree.from_dict(
+        ...     {
+        ...         "/a/A": None,
+        ...         "/a/B": None,
+        ...         "/b/A": None,
+        ...         "/b/B": None,
+        ...     }
+        ... )
+        >>> other = DataTree.from_dict(
+        ...     {
+        ...         "/a/A": None,
+        ...         "/b/A": None,
+        ...     }
+        ... )
+        >>> dt.filter_like(other)
+        <xarray.DataTree>
+        Group: /
+        ├── Group: /a
+        │   └── Group: /a/A
+        └── Group: /b
+            └── Group: /b/A
+        """
+        other_keys = {key for key, _ in other.subtree_with_keys}
+        return self.filter(lambda node: node.relative_to(self) in other_keys)
+
     def match(self, pattern: str) -> DataTree:
         """
         Return nodes with paths matching pattern.
@@ -1465,9 +1534,28 @@ class DataTree(
         # TODO fix this typing error
         return map_over_datasets(func, self, *args, kwargs=kwargs)
 
+    @overload
     def pipe(
-        self, func: Callable | tuple[Callable, str], *args: Any, **kwargs: Any
-    ) -> Any:
+        self,
+        func: Callable[Concatenate[Self, P], T],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T: ...
+
+    @overload
+    def pipe(
+        self,
+        func: tuple[Callable[..., T], str],
+        *args: Any,
+        **kwargs: Any,
+    ) -> T: ...
+
+    def pipe(
+        self,
+        func: Callable[Concatenate[Self, P], T] | tuple[Callable[..., T], str],
+        *args: Any,
+        **kwargs: Any,
+    ) -> T:
         """Apply ``func(self, *args, **kwargs)``
 
         This method replicates the pandas method of the same name.
@@ -1487,7 +1575,7 @@ class DataTree(
 
         Returns
         -------
-        object : Any
+        object : T
             the return type of ``func``.
 
         Notes
@@ -1515,15 +1603,19 @@ class DataTree(
 
         """
         if isinstance(func, tuple):
-            func, target = func
+            # Use different var when unpacking function from tuple because the type
+            # signature of the unpacked function differs from the expected type
+            # signature in the case where only a function is given, rather than a tuple.
+            # This makes type checkers happy at both call sites below.
+            f, target = func
             if target in kwargs:
                 raise ValueError(
                     f"{target} is both the pipe target and a keyword argument"
                 )
             kwargs[target] = self
-        else:
-            args = (self,) + args
-        return func(*args, **kwargs)
+            return f(*args, **kwargs)
+
+        return func(self, *args, **kwargs)
 
     # TODO some kind of .collapse() or .flatten() method to merge a subtree
 
@@ -1655,7 +1747,7 @@ class DataTree(
         consolidated: bool = True,
         group: str | None = None,
         write_inherited_coords: bool = False,
-        compute: Literal[True] = True,
+        compute: bool = True,
         **kwargs,
     ):
         """
@@ -1760,7 +1852,8 @@ class DataTree(
         result = {}
         for path, node in self.subtree_with_keys:
             node_indexers = {k: v for k, v in indexers.items() if k in node.dims}
-            node_result = func(node.dataset, node_indexers)
+            func_with_error_context = _handle_errors_with_path_context(path)(func)
+            node_result = func_with_error_context(node.dataset, node_indexers)
             # Indexing datasets corresponding to each node results in redundant
             # coordinates when indexes from a parent node are inherited.
             # Ideally, we would avoid creating such coordinates in the first

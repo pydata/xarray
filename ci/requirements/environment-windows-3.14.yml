@@ -25,6 +25,7 @@ dependencies:
   - numpy
   - packaging
   - pandas
+  - pandas-stubs<=2.2.3.241126 # https://github.com/pydata/xarray/issues/10110
   # - pint>=0.22
   - pip
   - pre-commit
@@ -33,12 +34,24 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-env
-  - pytest-xdist
+  - pytest-mypy-plugins
   - pytest-timeout
+  - pytest-xdist
   - rasterio
   - scipy
   - seaborn
   # - sparse
   - toolz
+  - types-colorama
+  - types-docutils
+  - types-psutil
+  - types-Pygments
+  - types-python-dateutil
+  - types-pytz
+  - types-PyYAML
+  - types-setuptools
   - typing_extensions
   - zarr
+  - pip:
+      - types-defusedxml
+      - types-pexpect

@@ -14,7 +14,6 @@ from xarray.core.common import (
     full_like,
     is_np_datetime_like,
 )
-from xarray.core.computation import apply_ufunc
 
 try:
     import cftime
@@ -333,6 +332,8 @@ def _decimal_year(times):
     else:
         function = _decimal_year_numpy
         kwargs = {"dtype": times.dtype}
+    from xarray.computation.apply_ufunc import apply_ufunc
+
     return apply_ufunc(
         function,
         times,

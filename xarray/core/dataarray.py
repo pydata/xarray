@@ -29,18 +29,13 @@ import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex
-from xarray.core import alignment, computation, dtypes, indexing, ops, utils
+from xarray.computation import computation, ops
+from xarray.computation.arithmetic import DataArrayArithmetic
+from xarray.core import dtypes, indexing, utils
 from xarray.core._aggregations import DataArrayAggregations
 from xarray.core.accessor_dt import CombinedDatetimelikeAccessor
 from xarray.core.accessor_str import StringAccessor
-from xarray.core.alignment import (
-    _broadcast_helper,
-    _get_broadcast_dims_map_common_coords,
-    align,
-)
-from xarray.core.arithmetic import DataArrayArithmetic
 from xarray.core.common import AbstractArray, DataWithCoords, get_chunksizes
-from xarray.core.computation import unify_chunks
 from xarray.core.coordinates import (
     Coordinates,
     DataArrayCoordinates,
@@ -58,7 +53,6 @@ from xarray.core.indexes import (
     isel_indexes,
 )
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
-from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Bins,
@@ -87,6 +81,14 @@ from xarray.core.variable import (
 )
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
+from xarray.structure import alignment
+from xarray.structure.alignment import (
+    _broadcast_helper,
+    _get_broadcast_dims_map_common_coords,
+    align,
+)
+from xarray.structure.chunks import unify_chunks
+from xarray.structure.merge import PANDAS_TYPES, MergeError
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
@@ -97,9 +99,10 @@ if TYPE_CHECKING:
 
     from xarray.backends import ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
+    from xarray.computation.rolling import DataArrayCoarsen, DataArrayRolling
+    from xarray.computation.weighted import DataArrayWeighted
     from xarray.core.groupby import DataArrayGroupBy
     from xarray.core.resample import DataArrayResample
-    from xarray.core.rolling import DataArrayCoarsen, DataArrayRolling
     from xarray.core.types import (
         CoarsenBoundaryOptions,
         DatetimeLike,
@@ -123,7 +126,6 @@ if TYPE_CHECKING:
         T_ChunksFreq,
         T_Xarray,
     )
-    from xarray.core.weighted import DataArrayWeighted
     from xarray.groupers import Grouper, Resampler
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
@@ -351,7 +353,7 @@ class DataArray(
         Attributes to assign to the new instance. By default, an empty
         attribute dictionary is initialized.
         (see FAQ, :ref:`approach to metadata`)
-    indexes : py:class:`~xarray.Indexes` or dict-like, optional
+    indexes : :py:class:`~xarray.Indexes` or dict-like, optional
         For internal use only. For passing indexes objects to the
         new DataArray, use the ``coords`` argument instead with a
         :py:class:`~xarray.Coordinate` object (both coordinate variables
@@ -1973,8 +1975,8 @@ class DataArray(
             names to pandas.Index objects, which provides coordinates upon
             which to index the variables in this dataset. The indexes on this
             other object need not be the same as the indexes on this
-            dataset. Any mis-matched index values will be filled in with
-            NaN, and any mis-matched dimension names will simply be ignored.
+            dataset. Any mismatched index values will be filled in with
+            NaN, and any mismatched dimension names will simply be ignored.
         method : {None, "nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method to use for filling index values from other not found on this
             data array:
@@ -2155,8 +2157,8 @@ class DataArray(
         ----------
         indexers : dict, optional
             Dictionary with keys given by dimension names and values given by
-            arrays of coordinates tick labels. Any mis-matched coordinate
-            values will be filled in with NaN, and any mis-matched dimension
+            arrays of coordinates tick labels. Any mismatched coordinate
+            values will be filled in with NaN, and any mismatched dimension
             names will simply be ignored.
             One of indexers or indexers_kwargs must be provided.
         copy : bool, optional
@@ -4240,6 +4242,9 @@ class DataArray(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        zarr_format: int | None = None,
+        write_empty_chunks: bool | None = None,
+        chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore: ...
 
     # compute=False returns dask.Delayed
@@ -4260,6 +4265,9 @@ class DataArray(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        zarr_format: int | None = None,
+        write_empty_chunks: bool | None = None,
+        chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> Delayed: ...
 
     def to_zarr(
@@ -4278,6 +4286,9 @@ class DataArray(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        zarr_format: int | None = None,
+        write_empty_chunks: bool | None = None,
+        chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore | Delayed:
         """Write DataArray contents to a Zarr store
 
@@ -4351,7 +4362,7 @@ class DataArray(
             - Dimensions cannot be included in both ``region`` and
               ``append_dim`` at the same time. To create empty arrays to fill
               in with ``region``, use a separate call to ``to_zarr()`` with
-              ``compute=False``. See "Appending to existing Zarr stores" in
+              ``compute=False``. See "Modifying existing Zarr stores" in
               the reference documentation for full details.
 
             Users are expected to ensure that the specified region aligns with
@@ -4378,9 +4389,30 @@ class DataArray(
             Any additional parameters for the storage backend (ignored for local
             paths).
         zarr_version : int or None, optional
-            The desired zarr spec version to target (currently 2 or 3). The
-            default of None will attempt to determine the zarr version from
-            ``store`` when possible, otherwise defaulting to 2.
+
+            .. deprecated:: 2024.9.1
+            Use ``zarr_format`` instead.
+
+        zarr_format : int or None, optional
+            The desired zarr format to target (currently 2 or 3). The default
+            of None will attempt to determine the zarr version from ``store`` when
+            possible, otherwise defaulting to the default version used by
+            the zarr-python library installed.
+        write_empty_chunks : bool or None, optional
+            If True, all chunks will be stored regardless of their
+            contents. If False, each chunk is compared to the array's fill value
+            prior to storing. If a chunk is uniformly equal to the fill value, then
+            that chunk is not be stored, and the store entry for that chunk's key
+            is deleted. This setting enables sparser storage, as only chunks with
+            non-fill-value data are stored, at the expense of overhead associated
+            with checking the data of each chunk. If None (default) fall back to
+            specification(s) in ``encoding`` or Zarr defaults. A ``ValueError``
+            will be raised if the value of this (if not None) differs with
+            ``encoding``.
+        chunkmanager_store_kwargs : dict, optional
+            Additional keyword arguments passed on to the `ChunkManager.store` method used to store
+            chunked arrays. For example for a dask array additional kwargs will be passed eventually to
+            :py:func:`dask.array.store()`. Experimental API that should not be relied upon.
 
         Returns
         -------
@@ -4446,6 +4478,9 @@ class DataArray(
             safe_chunks=safe_chunks,
             storage_options=storage_options,
             zarr_version=zarr_version,
+            zarr_format=zarr_format,
+            write_empty_chunks=write_empty_chunks,
+            chunkmanager_store_kwargs=chunkmanager_store_kwargs,
         )
 
     def to_dict(
@@ -5625,7 +5660,7 @@ class DataArray(
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
         ...
-        >>> time = xr.cftime_range("1990-01", "1992-01", freq="ME")
+        >>> time = xr.date_range("1990-01", "1992-01", freq="ME", use_cftime=True)
         >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)
         >>> array = xr.DataArray(
@@ -5722,6 +5757,7 @@ class DataArray(
         xarray.polyval
         DataArray.curvefit
         """
+        # For DataArray, use the original implementation by converting to a dataset
         return self._to_temp_dataset().polyfit(
             dim, deg, skipna=skipna, rcond=rcond, w=w, full=full, cov=cov
         )
@@ -6523,6 +6559,7 @@ class DataArray(
         DataArray.polyfit
         scipy.optimize.curve_fit
         """
+        # For DataArray, use the original implementation by converting to a dataset first
         return self._to_temp_dataset().curvefit(
             coords,
             func,
@@ -6820,12 +6857,12 @@ class DataArray(
         >>> da
         <xarray.DataArray (time: 1827)> Size: 15kB
         array([0.000e+00, 1.000e+00, 2.000e+00, ..., 1.824e+03, 1.825e+03,
-               1.826e+03])
+               1.826e+03], shape=(1827,))
         Coordinates:
           * time     (time) datetime64[ns] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
         >>> da.groupby("time.dayofyear") - da.groupby("time.dayofyear").mean("time")
         <xarray.DataArray (time: 1827)> Size: 15kB
-        array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5])
+        array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5], shape=(1827,))
         Coordinates:
           * time       (time) datetime64[ns] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
             dayofyear  (time) int64 15kB 1 2 3 4 5 6 7 8 ... 360 361 362 363 364 365 366
@@ -7035,20 +7072,20 @@ class DataArray(
 
         Returns
         -------
-        core.weighted.DataArrayWeighted
+        computation.weighted.DataArrayWeighted
 
         See Also
         --------
         :func:`Dataset.weighted <Dataset.weighted>`
 
-        :ref:`comput.weighted`
+        :ref:`compute.weighted`
             User guide on weighted array reduction using :py:func:`~xarray.DataArray.weighted`
 
         :doc:`xarray-tutorial:fundamentals/03.4_weighted`
             Tutorial on Weighted Reduction using :py:func:`~xarray.DataArray.weighted`
 
         """
-        from xarray.core.weighted import DataArrayWeighted
+        from xarray.computation.weighted import DataArrayWeighted
 
         return DataArrayWeighted(self, weights)
 
@@ -7080,7 +7117,7 @@ class DataArray(
 
         Returns
         -------
-        core.rolling.DataArrayRolling
+        computation.rolling.DataArrayRolling
 
         Examples
         --------
@@ -7120,9 +7157,9 @@ class DataArray(
         --------
         DataArray.cumulative
         Dataset.rolling
-        core.rolling.DataArrayRolling
+        computation.rolling.DataArrayRolling
         """
-        from xarray.core.rolling import DataArrayRolling
+        from xarray.computation.rolling import DataArrayRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DataArrayRolling(self, dim, min_periods=min_periods, center=center)
@@ -7146,7 +7183,7 @@ class DataArray(
 
         Returns
         -------
-        core.rolling.DataArrayRolling
+        computation.rolling.DataArrayRolling
 
         Examples
         --------
@@ -7180,9 +7217,9 @@ class DataArray(
         --------
         DataArray.rolling
         Dataset.cumulative
-        core.rolling.DataArrayRolling
+        computation.rolling.DataArrayRolling
         """
-        from xarray.core.rolling import DataArrayRolling
+        from xarray.computation.rolling import DataArrayRolling
 
         # Could we abstract this "normalize and check 'dim'" logic? It's currently shared
         # with the same method in Dataset.
@@ -7228,7 +7265,7 @@ class DataArray(
 
         Returns
         -------
-        core.rolling.DataArrayCoarsen
+        computation.rolling.DataArrayCoarsen
 
         Examples
         --------
@@ -7323,7 +7360,7 @@ class DataArray(
 
         See Also
         --------
-        :class:`core.rolling.DataArrayCoarsen <core.rolling.DataArrayCoarsen>`
+        :class:`computation.rolling.DataArrayCoarsen <computation.rolling.DataArrayCoarsen>`
         :func:`Dataset.coarsen <Dataset.coarsen>`
 
         :ref:`reshape.coarsen`
@@ -7336,7 +7373,7 @@ class DataArray(
             Tutorial on windowed computation using :py:func:`~xarray.DataArray.coarsen`
 
         """
-        from xarray.core.rolling import DataArrayCoarsen
+        from xarray.computation.rolling import DataArrayCoarsen
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return DataArrayCoarsen(

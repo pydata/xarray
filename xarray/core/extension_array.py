@@ -106,7 +106,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
         return ufunc(*inputs, **kwargs)
 
     def __repr__(self):
-        return f"{type(self)}(array={self.array!r})"
+        return f"PandasExtensionArray(array={self.array!r})"
 
     def __getattr__(self, attr: str) -> object:
         return getattr(self.array, attr)

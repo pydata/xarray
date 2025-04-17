@@ -833,7 +833,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     a = np.char.add(long_name, np.arange(0, n_vars).astype(str))
     b = np.char.add("attr_", np.arange(0, n_attr).astype(str))
     c = np.char.add("coord", np.arange(0, n_vars).astype(str))
-    attrs = {k: 2 for k in b}
+    attrs = dict.fromkeys(b, 2)
     coords = {_c: np.array([0, 1], dtype=np.uint64) for _c in c}
     data_vars = dict()
     for v, _c in zip(a, coords.items(), strict=True):

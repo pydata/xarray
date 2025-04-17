@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, NamedTuple, Union
 import pandas as pd
 
 from xarray.core import dtypes
-from xarray.core.alignment import deep_align
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import (
     Index,
@@ -17,12 +16,18 @@ from xarray.core.indexes import (
 )
 from xarray.core.utils import Frozen, compat_dict_union, dict_equiv, equivalent
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from xarray.structure.alignment import deep_align
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.types import CombineAttrsOptions, CompatOptions, JoinOptions
+    from xarray.core.types import (
+        CombineAttrsOptions,
+        CompatOptions,
+        DataVars,
+        JoinOptions,
+    )
 
     DimsLike = Union[Hashable, Sequence[Hashable]]
     ArrayLike = Any
@@ -360,7 +365,7 @@ def collect_variables_and_indexes(
                 append(name, variable, indexes[name])
             elif variable.dims == (name,):
                 idx, idx_vars = create_default_index_implicit(variable)
-                append_all(idx_vars, {k: idx for k in idx_vars})
+                append_all(idx_vars, dict.fromkeys(idx_vars, idx))
             else:
                 append(name, variable, None)
 
@@ -672,10 +677,6 @@ def merge_core(
         Dictionary mapping from dimension names to sizes.
     attrs : dict
         Dictionary of attributes
-
-    Raises
-    ------
-    MergeError if the merge cannot be done successfully.
     """
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
@@ -1057,4 +1058,26 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
         priority_arg=1,
         indexes=dataset.xindexes,
         combine_attrs="override",
+    )
+
+
+def merge_data_and_coords(data_vars: DataVars, coords) -> _MergeResult:
+    """Used in Dataset.__init__."""
+    from xarray.core.coordinates import Coordinates, create_coords_with_default_indexes
+
+    if isinstance(coords, Coordinates):
+        coords = coords.copy()
+    else:
+        coords = create_coords_with_default_indexes(coords, data_vars)
+
+    # exclude coords from alignment (all variables in a Coordinates object should
+    # already be aligned together) and use coordinates' indexes to align data_vars
+    return merge_core(
+        [data_vars, coords],
+        compat="broadcast_equals",
+        join="outer",
+        explicit_coords=tuple(coords),
+        indexes=coords.xindexes,
+        priority_arg=1,
+        skip_align_args=[1],
     )

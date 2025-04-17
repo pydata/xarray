@@ -1,7 +1,5 @@
 [project]
-authors = [
-  { name = "xarray Developers", email = "xarray@googlegroups.com" },
-]
+authors = [{ name = "xarray Developers", email = "xarray@googlegroups.com" }]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "License :: OSI Approved :: Apache Software License",
@@ -22,11 +20,7 @@ name = "xarray"
 readme = "README.md"
 requires-python = ">=3.10"
 
-dependencies = [
-  "numpy>=1.24",
-  "packaging>=23.2",
-  "pandas>=2.1",
-]
+dependencies = ["numpy>=1.24", "packaging>=23.2", "pandas>=2.1"]
 
 # We don't encode minimum requirements here (though if we can write a script to
 # generate the text from `min_deps_check.py`, that's welcome...). We do add
@@ -36,21 +30,6 @@ dependencies = [
 [project.optional-dependencies]
 accel = ["scipy", "bottleneck", "numbagg", "numba>=0.54", "flox", "opt_einsum"]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
-dev = [
-  "hypothesis",
-  "jinja2",
-  "mypy",
-  "pre-commit",
-  "pytest",
-  "pytest-cov",
-  "pytest-env",
-  "pytest-xdist",
-  "pytest-timeout",
-  "ruff>=0.8.0",
-  "sphinx",
-  "sphinx_autosummary_accessors",
-  "xarray[complete,types]",
-]
 io = [
   "netCDF4",
   "h5netcdf",
@@ -66,18 +45,39 @@ parallel = ["dask[complete]"]
 viz = ["cartopy", "matplotlib", "nc-time-axis", "seaborn"]
 types = [
   "pandas-stubs",
+  "scipy-stubs",
   "types-PyYAML",
   "types-Pygments",
   "types-colorama",
+  "types-decorator",
   "types-defusedxml",
   "types-docutils",
   "types-networkx",
   "types-pexpect",
   "types-psutil",
   "types-pycurl",
+  "types-openpyxl",
   "types-python-dateutil",
   "types-pytz",
   "types-setuptools",
+]
+
+[dependency-groups]
+dev = [
+  "hypothesis",
+  "jinja2",
+  "mypy",
+  "pre-commit",
+  "pytest",
+  "pytest-cov",
+  "pytest-env",
+  "pytest-mypy-plugins",
+  "pytest-timeout",
+  "pytest-xdist",
+  "ruff>=0.8.0",
+  "sphinx",
+  "sphinx_autosummary_accessors",
+  "xarray[complete,types]",
 ]
 
 [project.urls]
@@ -92,10 +92,7 @@ dask = "xarray.namedarray.daskmanager:DaskManager"
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = [
-  "setuptools>=42",
-  "setuptools-scm>=7",
-]
+requires = ["setuptools>=42", "setuptools-scm>=7"]
 
 [tool.setuptools]
 packages = ["xarray"]
@@ -106,10 +103,10 @@ fallback_version = "9999"
 [tool.coverage.run]
 omit = [
   "*/xarray/tests/*",
-  "*/xarray/core/dask_array_compat.py",
-  "*/xarray/core/npcompat.py",
-  "*/xarray/core/pdcompat.py",
-  "*/xarray/core/pycompat.py",
+  "*/xarray/compat/dask_array_compat.py",
+  "*/xarray/compat/npcompat.py",
+  "*/xarray/compat/pdcompat.py",
+  "*/xarray/namedarray/pycompat.py",
   "*/xarray/core/types.py",
 ]
 source = ["xarray"]
@@ -119,10 +116,7 @@ exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 
 [tool.mypy]
 enable_error_code = ["ignore-without-code", "redundant-self", "redundant-expr"]
-exclude = [
-  'build',
-  'xarray/util/generate_.*\.py',
-]
+exclude = ['build', 'xarray/util/generate_.*\.py']
 files = "xarray"
 show_error_context = true
 warn_redundant_casts = true
@@ -176,9 +170,8 @@ check_untyped_defs = true
 module = [
   "xarray.core.accessor_dt",
   "xarray.core.accessor_str",
-  "xarray.core.alignment",
-  "xarray.core.computation",
-  "xarray.core.rolling_exp",
+  "xarray.structure.alignment",
+  "xarray.computation.*",
   "xarray.indexes.*",
   "xarray.tests.*",
 ]
@@ -253,10 +246,7 @@ module = ["xarray.namedarray.*", "xarray.tests.test_namedarray"]
 # reportMissingTypeStubs = false
 
 [tool.ruff]
-extend-exclude = [
-  "doc",
-  "_typed_ops.pyi",
-]
+extend-exclude = ["doc", "_typed_ops.pyi"]
 
 [tool.ruff.lint]
 extend-select = [
@@ -287,10 +277,9 @@ ignore = [
   "RUF001",  # string contains ambiguous unicode character
   "RUF002",  # docstring contains ambiguous acute accent unicode character
   "RUF003",  # comment contains ambiguous no-break space unicode character
-  "RUF005",  # consider upacking operator instead of concatenation
+  "RUF005",  # consider unpacking operator instead of concatenation
   "RUF012",  # mutable class attributes
 ]
-
 
 [tool.ruff.lint.per-file-ignores]
 # don't enforce absolute imports
@@ -304,7 +293,12 @@ known-first-party = ["xarray"]
 ban-relative-imports = "all"
 
 [tool.pytest.ini_options]
-addopts = ["--strict-config", "--strict-markers"]
+addopts = [
+  "--strict-config",
+  "--strict-markers",
+  "--mypy-only-local-stub",
+  "--mypy-pyproject-toml-file=pyproject.toml",
+]
 
 # We want to forbid warnings from within xarray in our tests — instead we should
 # fix our own code, or mark the test itself as expecting a warning. So this:
@@ -361,12 +355,13 @@ filterwarnings = [
 log_cli_level = "INFO"
 markers = [
   "flaky: flaky tests",
+  "mypy: type annotation tests",
   "network: tests requiring a network connection",
   "slow: slow tests",
   "slow_hypothesis: slow hypothesis tests",
 ]
 minversion = "7"
-python_files = "test_*.py"
+python_files = ["test_*.py"]
 testpaths = ["xarray/tests", "properties"]
 
 [tool.aliases]
@@ -376,3 +371,64 @@ test = "pytest"
 ignore = [
   "PP308", # This option creates a large amount of log lines.
 ]
+
+[tool.typos]
+
+[tool.typos.default]
+extend-ignore-identifiers-re = [
+  # Variable names
+  "nd_.*",
+  ".*_nd",
+  "ba_.*",
+  ".*_ba",
+  "ser_.*",
+  ".*_ser",
+  # Function/class names
+  "NDArray.*",
+  ".*NDArray.*",
+]
+
+[tool.typos.default.extend-words]
+# NumPy function names
+arange = "arange"
+
+# Technical terms
+nd = "nd"
+nin = "nin"
+
+# Variable names
+ba = "ba"
+ser = "ser"
+fo = "fo"
+iy = "iy"
+vart = "vart"
+ede = "ede"
+
+# Organization/Institution names
+Stichting = "Stichting"
+Mathematisch = "Mathematisch"
+
+# People's names
+Soler = "Soler"
+Bruning = "Bruning"
+Tung = "Tung"
+Claus = "Claus"
+Celles = "Celles"
+slowy = "slowy"
+Commun = "Commun"
+
+# Tests
+Ome = "Ome"
+SUR = "SUR"
+Tio = "Tio"
+Ono = "Ono"
+abl = "abl"
+
+# Technical terms
+splitted = "splitted"
+childs = "childs"
+cutted = "cutted"
+LOCA = "LOCA"
+
+[tool.typos.type.jupyter]
+extend-ignore-re = ["\"id\": \".*\""]

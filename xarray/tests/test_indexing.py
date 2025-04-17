@@ -19,6 +19,7 @@ from xarray.tests import (
     raise_if_dask_computes,
     requires_dask,
 )
+from xarray.tests.arrays import DuckArrayWrapper
 
 B = IndexerMaker(indexing.BasicIndexer)
 
@@ -128,7 +129,7 @@ class TestIndexers:
         ):
             dim_indexers = {"x": x_indexer}
             index_vars = x_index.create_variables()
-            indexes = {k: x_index for k in index_vars}
+            indexes = dict.fromkeys(index_vars, x_index)
             variables = {}
             variables.update(index_vars)
             variables.update(other_vars)
@@ -1052,3 +1053,15 @@ def test_advanced_indexing_dask_array() -> None:
     with raise_if_dask_computes():
         actual = ds.b.sel(x=ds.a.data)
     assert_identical(expected, actual)
+
+
+def test_backend_indexing_non_numpy() -> None:
+    """This model indexing of a Zarr store that reads to GPU memory."""
+    array = DuckArrayWrapper(np.array([1, 2, 3]))
+    indexed = indexing.explicit_indexing_adapter(
+        indexing.BasicIndexer((slice(1),)),
+        shape=array.shape,
+        indexing_support=indexing.IndexingSupport.BASIC,
+        raw_indexing_method=array.__getitem__,
+    )
+    np.testing.assert_array_equal(indexed.array, np.array([1]))

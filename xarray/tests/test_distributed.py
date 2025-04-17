@@ -132,7 +132,7 @@ def test_dask_distributed_write_netcdf_with_dimensionless_variables(
 @requires_netCDF4
 @pytest.mark.parametrize("parallel", (True, False))
 def test_open_mfdataset_can_open_files_with_cftime_index(parallel, tmp_path):
-    T = xr.cftime_range("20010101", "20010501", calendar="360_day")
+    T = xr.date_range("20010101", "20010501", calendar="360_day", use_cftime=True)
     Lon = np.arange(100)
     data = np.random.random((T.size, Lon.size))
     da = xr.DataArray(data, coords={"time": T, "Lon": Lon}, name="test")
@@ -149,7 +149,7 @@ def test_open_mfdataset_can_open_files_with_cftime_index(parallel, tmp_path):
 @pytest.mark.parametrize("parallel", (True, False))
 def test_open_mfdataset_multiple_files_parallel_distributed(parallel, tmp_path):
     lon = np.arange(100)
-    time = xr.cftime_range("20010101", periods=100, calendar="360_day")
+    time = xr.date_range("20010101", periods=100, calendar="360_day", use_cftime=True)
     data = np.random.random((time.size, lon.size))
     da = xr.DataArray(data, coords={"time": time, "lon": lon}, name="test")
 
@@ -177,7 +177,7 @@ def test_open_mfdataset_multiple_files_parallel(parallel, tmp_path):
             "Flaky in CI. Would be a welcome contribution to make a similar test reliable."
         )
     lon = np.arange(100)
-    time = xr.cftime_range("20010101", periods=100, calendar="360_day")
+    time = xr.date_range("20010101", periods=100, calendar="360_day", use_cftime=True)
     data = np.random.random((time.size, lon.size))
     da = xr.DataArray(data, coords={"time": time, "lon": lon}, name="test")
 
@@ -283,7 +283,7 @@ async def test_async(c, s, a, b) -> None:
     assert dask.is_dask_collection(y.var1)
     assert dask.is_dask_collection(y.var2)
 
-    z = y.persist()
+    z = c.persist(y)
     assert str(z)
 
     assert dask.is_dask_collection(z)

@@ -11,9 +11,9 @@ from xarray import (
     Dataset,
     SerializationWarning,
     Variable,
-    cftime_range,
     coding,
     conventions,
+    date_range,
     open_dataset,
 )
 from xarray.backends.common import WritableCFDataStore
@@ -511,16 +511,13 @@ class TestDecodeCF:
 
     @pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
     def test_decode_cf_time_kwargs(self, time_unit) -> None:
-        # todo: if we set timedelta attrs "units": "days"
-        #  this errors on the last decode_cf wrt to the lazy_elemwise_func
-        #  trying to convert twice
         ds = Dataset.from_dict(
             {
                 "coords": {
                     "timedelta": {
                         "data": np.array([1, 2, 3], dtype="int64"),
                         "dims": "timedelta",
-                        "attrs": {"units": "seconds"},
+                        "attrs": {"units": "days"},
                     },
                     "time": {
                         "data": np.array([1, 2, 3], dtype="int64"),
@@ -624,7 +621,7 @@ def test_decode_cf_variable_datetime64():
 
 @requires_cftime
 def test_decode_cf_variable_cftime():
-    variable = Variable(["time"], cftime_range("2000", periods=2))
+    variable = Variable(["time"], date_range("2000", periods=2, use_cftime=True))
     decoded = conventions.decode_cf_variable("time", variable)
     assert decoded.encoding == {}
     assert_identical(decoded, variable)
