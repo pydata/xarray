@@ -103,7 +103,7 @@ def polyfit(
     dim: Hashable,
     deg: int,
     skipna: bool | None = None,
-    rcond: float | None = None,
+    rcond: np.floating[Any] | float | None = None,
     w: Hashable | Any = None,
     full: bool = False,
     cov: bool | Literal["unscaled"] = False,
@@ -278,6 +278,7 @@ def polyfit(
                 dims=other_dims,
             )
 
+        fac: Variable | int
         if cov:
             Vbase = np.linalg.inv(np.dot(lhs.T, lhs))
             Vbase /= np.outer(scale, scale)

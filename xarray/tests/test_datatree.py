@@ -1025,11 +1025,11 @@ class TestDatasetView:
         ds = xr.Dataset({"data": data}, attrs={"ds": "attrs"})
         dt = DataTree(ds)
 
-        def func(ds):
+        def func_keep(ds):
             # x.mean() removes the attrs of the data_vars
             return ds.map(lambda x: x.mean(), keep_attrs=True)
 
-        result = xr.map_over_datasets(func, dt)
+        result = xr.map_over_datasets(func_keep, dt)
         expected = dt.mean(keep_attrs=True)
         xr.testing.assert_identical(result, expected)
 
