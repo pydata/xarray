@@ -51,7 +51,7 @@ from pandas import (
     timedelta_range,
 )
 
-indices_dict = {
+indices_dict: dict[str, Index] = {
     "object": Index([f"pandas_{i}" for i in range(10)], dtype=object),
     "string": Index([f"pandas_{i}" for i in range(10)], dtype="str"),
     "datetime": date_range("2020-01-01", periods=10),
@@ -78,7 +78,7 @@ indices_dict = {
         np.arange(10, dtype="complex128") + 1.0j * np.arange(10, dtype="complex128")
     ),
     "categorical": CategoricalIndex(list("abcd") * 2),
-    "interval": IntervalIndex.from_breaks(np.linspace(0, 100, num=11)),
+    "interval": IntervalIndex.from_breaks(np.linspace(0, 100, num=11, dtype="int")),
     "empty": Index([]),
     # "tuples": MultiIndex.from_tuples(zip(["foo", "bar", "baz"], [1, 2, 3])),
     # "mi-with-dt64tz-level": _create_mi_with_dt64tz_level(),

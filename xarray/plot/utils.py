@@ -13,7 +13,7 @@ from collections.abc import (
 )
 from datetime import date, datetime
 from inspect import getfullargspec
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -1744,8 +1744,8 @@ def _add_legend(
             # Only save unique values:
             u, ind = np.unique(lbl, return_index=True)
             ind = np.argsort(ind)
-            lbl = u[ind].tolist()
-            hdl = np.array(hdl)[ind].tolist()
+            lbl = cast(list, u[ind].tolist())
+            hdl = cast(list, np.array(hdl)[ind].tolist())
 
             # Add a subtitle:
             hdl, lbl = _legend_add_subtitle(hdl, lbl, label_from_attrs(huesizeplt.data))
