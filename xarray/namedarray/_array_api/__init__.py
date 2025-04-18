@@ -244,9 +244,9 @@ import xarray.namedarray._array_api._fft as fft
 
 __all__ = ["fft"]
 
-from xarray.namedarray._array_api._indexing_functions import take
+from xarray.namedarray._array_api._indexing_functions import take, take_along_axis
 
-__all__ += ["take"]
+__all__ += ["take", "take_along_axis"]
 
 from xarray.namedarray._array_api._info import __array_namespace_info__
 
