@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from xarray.namedarray.core import NamedArray
-from xarray.namedarray._array_api._dtypes import _dtype_categories
 from xarray.namedarray._array_api._data_type_functions import iinfo
-
+from xarray.namedarray._array_api._dtypes import _dtype_categories
+from xarray.namedarray.core import NamedArray
 
 _py_scalars = (bool, int, float, complex)
 
@@ -16,7 +15,6 @@ def _maybe_normalize_py_scalars(
     dtype_category: str,
     func_name: str,
 ) -> tuple[NamedArray[Any, Any], NamedArray[Any, Any]]:
-
     _allowed_dtypes = _dtype_categories[dtype_category]
 
     if isinstance(x1, _py_scalars):
