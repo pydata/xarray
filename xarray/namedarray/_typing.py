@@ -18,8 +18,9 @@ from typing import (
 )
 
 import numpy as np
-from numpy.typing import ArrayLike as _ArrayLike
+from numpy.typing import ArrayLike as _npArrayLike
 
+_ArrayLike = _npArrayLike
 try:
     if sys.version_info >= (3, 11):
         from typing import Never, TypeAlias
