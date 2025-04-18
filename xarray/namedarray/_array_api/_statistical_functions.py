@@ -73,6 +73,60 @@ def cumulative_sum(
     return x._new(dims=x.dims, data=_data)
 
 
+def cumulative_prod(
+    x: NamedArray[_ShapeType, _DType],
+    /,
+    *,
+    dim: _Dim | Default = _default,
+    dtype: _DType | None = None,
+    include_initial: bool = False,
+    axis: int | None = None,
+) -> NamedArray[_ShapeType, _DType]:
+    xp = _get_data_namespace(x)
+
+    a = _dims_to_axis(x, dim, axis)
+    _axis_none: int | None
+    if a is None:
+        _axis_none = a
+    else:
+        _axis_none = a[0]
+
+    # TODO: The standard is not clear about what should happen when x.ndim == 0.
+    _axis: int
+    if _axis_none is None:
+        if x.ndim > 1:
+            raise ValueError(
+                "axis must be specified in cumulative_sum for more than one dimension"
+            )
+        _axis = 0
+    else:
+        _axis = _axis_none
+
+    try:
+        _data = xp.cumulative_prod(
+            x._data, axis=_axis, dtype=dtype, include_initial=include_initial
+        )
+    except AttributeError:
+        # Use np.cumprod until new name is introduced:
+        # np.cumsum does not support include_initial
+        if include_initial:
+            if _axis < 0:
+                _axis += x.ndim
+            d = xp.concat(
+                [
+                    xp.ones(
+                        x.shape[:_axis] + (1,) + x.shape[_axis + 1 :], dtype=x.dtype
+                    ),
+                    x._data,
+                ],
+                axis=_axis,
+            )
+        else:
+            d = x._data
+        _data = xp.cumprod(d, axis=_axis, dtype=dtype)
+    return x._new(dims=x.dims, data=_data)
+
+
 def max(
     x: NamedArray[Any, _DType],
     /,
