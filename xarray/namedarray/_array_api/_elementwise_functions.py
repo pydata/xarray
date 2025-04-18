@@ -529,6 +529,13 @@ def real(
     return x._new(_dims, _data)
 
 
+def reciprocal(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
+    xp = _get_data_namespace(x)
+    _dims = x.dims
+    _data = xp.reciprocal(x._data)
+    return x._new(_dims, _data)
+
+
 def remainder(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
