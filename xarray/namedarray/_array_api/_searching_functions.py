@@ -7,12 +7,14 @@ from xarray.namedarray._array_api._utils import (
     _get_data_namespace,
     _infer_dims,
     _reduce_dims,
+    _dims_to_axis,
 )
 from xarray.namedarray._typing import (
     Default,
     _arrayapi,
     _default,
     _Dim,
+    _DimsLike2,
 )
 from xarray.namedarray.core import (
     NamedArray,
@@ -50,6 +52,21 @@ def argmin(
     _data = xp.argmin(x._data, axis=_axis, keepdims=keepdims)
     _dims = _reduce_dims(x.dims, axis=_axis, keepdims=keepdims)
     return x._new(dims=_dims, data=_data)
+
+
+def count_nonzero(
+    x: NamedArray[Any, Any],
+    /,
+    *,
+    dims: _DimsLike2 | Default = _default,
+    keepdims: bool = False,
+    axis: int | tuple[int, ...] | None = None,
+) -> NamedArray[Any, Any]:
+    xp = _get_data_namespace(x)
+    _axis = _dims_to_axis(x, dims, axis)
+    _data = xp.count_nonzero(x._data, axis=_axis, keepdims=keepdims)
+    _dims = _reduce_dims(x.dims, axis=_axis, keepdims=keepdims)
+    return NamedArray(_dims, _data)
 
 
 def nonzero(x: NamedArray[Any, Any], /) -> tuple[NamedArray[Any, Any], ...]:
