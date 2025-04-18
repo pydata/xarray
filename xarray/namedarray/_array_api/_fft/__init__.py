@@ -18,6 +18,7 @@ from xarray.namedarray._array_api._fft._fft import (
 )
 
 __all__ = [
+    # Keep same order as array api spec for readability:
     "fft",
     "ifft",
     "fftn",
