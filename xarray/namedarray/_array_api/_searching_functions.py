@@ -86,9 +86,11 @@ def count_nonzero(
 
 def nonzero(x: NamedArray[Any, Any], /) -> tuple[NamedArray[Any, Any], ...]:
     xp = _get_data_namespace(x)
-    _data: tuple[_arrayapi[Any, Any], ...] = xp.nonzero(x._data)
+    _data_list: tuple[_arrayapi[Any, Any], ...] = xp.nonzero(x._data)
     # TODO: Verify that dims and axis matches here:
-    return tuple(x._new((dim,), data) for dim, data in zip(x.dims, _data, strict=False))
+    return tuple(
+        x._new((dim,), data) for dim, data in zip(x.dims, _data_list, strict=False)
+    )
 
 
 def searchsorted(
