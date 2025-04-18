@@ -498,12 +498,12 @@ def meshgrid(
 
     arr = arrays[0]
     xp = _get_data_namespace(arr)
-    _datas = xp.meshgrid(*[a._data for a in arrays], indexing=indexing)
+    _data = xp.meshgrid(*[a._data for a in arrays], indexing=indexing)
     _dims, _ = _broadcast_dims(*arrays)
-    _dims = _infer_dims(_datas[0].shape, _dims)
+    _dims = _infer_dims(_data[0].shape, _dims)
     if indexing == "xy" and len(_dims) > 1:
         _dims = _move_dims(_dims, 0, 1)
-    return [arr._new(_dims, _data) for _data in _datas]
+    return [arr._new(_dims, _data) for _data in _data]
 
 
 def ones(

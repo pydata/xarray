@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING, Any
 
 from xarray.namedarray._array_api._utils import (
     _dim_to_optional_axis,
+    _dims_to_axis,
     _get_data_namespace,
     _infer_dims,
     _reduce_dims,
-    _dims_to_axis,
 )
 from xarray.namedarray._typing import (
     Default,
@@ -86,10 +86,10 @@ def count_nonzero(
 
 def nonzero(x: NamedArray[Any, Any], /) -> tuple[NamedArray[Any, Any], ...]:
     xp = _get_data_namespace(x)
-    _datas: tuple[_arrayapi[Any, Any], ...] = xp.nonzero(x._data)
+    _data: tuple[_arrayapi[Any, Any], ...] = xp.nonzero(x._data)
     # TODO: Verify that dims and axis matches here:
     return tuple(
-        x._new((dim,), data) for dim, data in zip(x.dims, _datas, strict=False)
+        x._new((dim,), data) for dim, data in zip(x.dims, _data, strict=False)
     )
 
 

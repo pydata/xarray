@@ -60,8 +60,8 @@ def broadcast_arrays(*arrays: NamedArray[Any, Any]) -> list[NamedArray[Any, Any]
     xp = _get_data_namespace(x)
     _dims, _ = _broadcast_dims(*arrays)
     _arrays = tuple(a._data for a in arrays)
-    _datas = xp.broadcast_arrays(*_arrays)
-    return [arr._new(_dims, _data) for arr, _data in zip(arrays, _datas, strict=False)]
+    _data = xp.broadcast_arrays(*_arrays)
+    return [arr._new(_dims, _data) for arr, _data in zip(arrays, _data, strict=False)]
 
 
 def broadcast_to(
@@ -506,12 +506,12 @@ def unstack(
     array([[3, 4, 5]])
     """
     xp = _get_data_namespace(x)
-    _datas = xp.unstack(x._data, axis=axis)
+    _data = xp.unstack(x._data, axis=axis)
     key = [slice(None)] * x.ndim
     key[axis] = 0
     _dims = _dims_from_tuple_indexing(x.dims, tuple(key))
     out: tuple[NamedArray[Any, Any], ...] = ()
-    for _data in _datas:
+    for _data in _data:
         out += (x._new(_dims, _data),)
     return out
 
