@@ -306,6 +306,7 @@ __all__ += [
 from xarray.namedarray._array_api._searching_functions import (
     argmax,
     argmin,
+    count_nonzero,
     nonzero,
     searchsorted,
     where,
@@ -314,6 +315,7 @@ from xarray.namedarray._array_api._searching_functions import (
 __all__ += [
     "argmax",
     "argmin",
+    "count_nonzero",
     "nonzero",
     "searchsorted",
     "where",
