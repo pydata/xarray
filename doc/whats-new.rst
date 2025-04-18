@@ -62,9 +62,11 @@ Andrecho, Deepak Cherian, Ian Hunt-Isaak, Karl Krauth, Mathias Hauser, Maximilia
 
 New Features
 ~~~~~~~~~~~~
-
 - Allow setting a ``fill_value`` for Zarr format 3 arrays. Specify ``fill_value`` in ``encoding`` as usual.
   (:issue:`10064`). By `Deepak Cherian <https://github.com/dcherian>`_.
+- Added :py:class:`indexes.RangeIndex` as an alternative, memory saving Xarray index representing
+  a 1-dimensional bounded interval with evenly spaced floating values (:issue:`8473`, :pull:`10076`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
