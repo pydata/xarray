@@ -8,6 +8,7 @@ from xarray.namedarray._array_api._manipulation_functions import _arithmetic_bro
 from xarray.namedarray._array_api._utils import (
     _get_data_namespace,
 )
+from xarray.namedarray._array_api._utils_inputs import _maybe_normalize_py_scalars
 from xarray.namedarray._typing import (
     _DType,
     _ScalarType,
@@ -456,6 +457,17 @@ def negative(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
     _dims = x.dims
     _data = xp.negative(x._data)
     return x._new(_dims, _data)
+
+
+def nextafter(
+    x1: NamedArray[Any, Any] | int | float, x2: NamedArray[Any, Any] | int | float, /
+) -> NamedArray[Any, Any]:
+    x1, x2 = _maybe_normalize_py_scalars(x1, x2, "real floating-point", "nextafter")
+    xp = _get_data_namespace(x1)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.not_equal(x1_new._data, x2_new._data)
+    return x1._new(_dims, _data)
 
 
 def not_equal(
