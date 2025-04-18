@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 from xarray.namedarray._array_api._utils import _dims_to_axis, _get_data_namespace
 from xarray.namedarray._typing import (
     Default,
