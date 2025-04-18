@@ -100,7 +100,7 @@ def matrix_norm(
     ord: int | float | Literal["fro", "nuc"] | None = "fro",
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x)
-    _data = xp.linalg.matrix_norm(x._data, keepdims=keepdims, ord=ord)  # ckeck xp.mean
+    _data = xp.linalg.matrix_norm(x._data, keepdims=keepdims, ord=ord)  # check xp.mean
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
     return x._new(_dims, _data)
 
