@@ -167,7 +167,12 @@ class _FInfo(Protocol):
 
 
 _Capabilities = TypedDict(
-    "_Capabilities", {"boolean indexing": bool, "data-dependent shapes": bool}
+    "_Capabilities",
+    {
+        "boolean indexing": bool,
+        "data-dependent shapes": bool,
+        "max rank": int | None,
+    },
 )
 
 _DefaultDataTypes = TypedDict(
