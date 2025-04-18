@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import warnings
 from collections.abc import (
     Callable,
     Hashable,
@@ -61,6 +62,7 @@ if TYPE_CHECKING:
     from xarray.core.types import (
         CombineAttrsOptions,
         CompatOptions,
+        ErrorOptionsWithWarn,
         JoinOptions,
         NestedSequence,
         ReadBuffer,
@@ -1389,6 +1391,38 @@ def open_groups(
     return groups
 
 
+def _remove_path(paths, path_to_remove) -> list:
+    """
+    Recursively removes specific path from a nested or non-nested list.
+
+    Parameters
+    ----------
+    paths: list
+        The path list (nested or not) from which to remove paths.
+    path_to_remove: str or list
+        The path to be removed.
+
+    Returns
+    -------
+    list
+        A new list with specified paths removed.
+    """
+    # Initialize an empty list to store the result
+    result = []
+
+    for item in paths:
+        if isinstance(item, list):
+            # If the current item is a list, recursively call remove_elements on it
+            nested_result = _remove_path(item, path_to_remove)
+            if nested_result:  # Only add non-empty lists to avoid adding empty lists
+                result.append(nested_result)
+        elif item not in path_to_remove:
+            # Add the item to the result if it is not in the set of elements to remove
+            result.append(item)
+
+    return result
+
+
 def open_mfdataset(
     paths: str
     | os.PathLike
@@ -1414,6 +1448,7 @@ def open_mfdataset(
     join: JoinOptions = "outer",
     attrs_file: str | os.PathLike | None = None,
     combine_attrs: CombineAttrsOptions = "override",
+    errors: ErrorOptionsWithWarn = "raise",
     **kwargs,
 ) -> Dataset:
     """Open multiple files as a single dataset.
@@ -1540,7 +1575,12 @@ def open_mfdataset(
 
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
-    **kwargs : optional
+    errors : {'raise', 'warn', 'ignore'}, default 'raise'
+        - If 'raise', then invalid dataset will raise an exception.
+        - If 'warn', then a warning will be issued for each invalid dataset.
+        - If 'ignore', then invalid dataset will be ignored.
+
+   **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`. For an
         overview of some of the possible options, see the documentation of
         :py:func:`xarray.open_dataset`
@@ -1632,7 +1672,32 @@ def open_mfdataset(
         open_ = open_dataset
         getattr_ = getattr
 
-    datasets = [open_(p, **open_kwargs) for p in paths1d]
+    if errors not in ("raise", "warn", "ignore"):
+        raise ValueError(
+            f"'errors' must be 'raise', 'warn' or 'ignore', got '{errors}'"
+        )
+
+    datasets = []
+    remove_paths = False
+    for p in paths1d:
+        try:
+            ds = open_(p, **open_kwargs)
+            datasets.append(ds)
+        except Exception:
+            # remove invalid paths
+            if combine == "nested":
+                paths = _remove_path(paths, p)
+                remove_paths = True
+            if errors == "raise":
+                raise
+            elif errors == "warn":
+                warnings.warn(
+                    f"Could not open {p}. Ignoring.", UserWarning, stacklevel=2
+                )
+                continue
+            else:
+                continue
+
     closers = [getattr_(ds, "_close") for ds in datasets]
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
@@ -1645,6 +1710,11 @@ def open_mfdataset(
     # Combine all datasets, closing them in case of a ValueError
     try:
         if combine == "nested":
+            # Create new ids and paths based on removed items
+            if remove_paths:
+                combined_ids_paths = _infer_concat_order_from_positions(paths)
+                ids = list(combined_ids_paths.keys())
+
             # Combined nested list by successive concat and merge operations
             # along each dimension, using structure given by "ids"
             combined = _nested_combine(
