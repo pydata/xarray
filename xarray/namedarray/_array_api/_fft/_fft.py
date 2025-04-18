@@ -157,19 +157,29 @@ def ihfft(
 
 
 def fftfreq(
-    n: int, /, *, d: float = 1.0, device: _Device | None = None
+    n: int,
+    /,
+    *,
+    d: float = 1.0,
+    dtype: _DType | None = None,
+    device: _Device | None = None,
 ) -> NamedArray[Any, Any]:
     xp = _maybe_default_namespace()  # TODO: Can use device?
-    _data = xp.fft.fftfreq(n, d=d, device=device)
+    _data = xp.fft.fftfreq(n, d=d, dtype=dtype, device=device)
     _dims = _infer_dims(_data.shape)
     return NamedArray(_dims, _data)
 
 
 def rfftfreq(
-    n: int, /, *, d: float = 1.0, device: _Device | None = None
+    n: int,
+    /,
+    *,
+    d: float = 1.0,
+    dtype: _DType | None = None,
+    device: _Device | None = None,
 ) -> NamedArray[Any, Any]:
     xp = _maybe_default_namespace()  # TODO: Can use device?
-    _data = xp.fft.rfftfreq(n, d=d, device=device)
+    _data = xp.fft.rfftfreq(n, d=d, dtype=dtype, device=device)
     _dims = _infer_dims(_data.shape)
     return NamedArray(_dims, _data)
 
