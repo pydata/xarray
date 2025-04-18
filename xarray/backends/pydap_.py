@@ -131,7 +131,12 @@ class PydapDataStore(AbstractDataStore):
 
     def open_store_variable(self, var):
         data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
-        return Variable(var.dimensions, data, _fix_attributes(var.attributes))
+        # dimensions was renamed in https://github.com/pydap/pydap/pull/481
+        try:
+            dims = var.dimensions
+        except AttributeError:
+            dims = var.dims
+        return Variable(dims, data, _fix_attributes(var.attributes))
 
     def get_variables(self):
         return FrozenDict(
@@ -142,7 +147,12 @@ class PydapDataStore(AbstractDataStore):
         return Frozen(_fix_attributes(self.ds.attributes))
 
     def get_dimensions(self):
-        return Frozen(self.ds.dimensions)
+        # dimensions was renamed in https://github.com/pydap/pydap/pull/481
+        try:
+            dims = self.ds.dimensions
+        except AttributeError:
+            dims = self.ds.dims
+        return Frozen(dims)
 
 
 class PydapBackendEntrypoint(BackendEntrypoint):
