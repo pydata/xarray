@@ -17,8 +17,7 @@ from xarray.namedarray._array_api._fft._fft import (
     rfftn,
 )
 
-__all__ = [
-    # Keep same order as array api spec for readability:
+__all__ = [  # noqa: RUF022 # Keep same order as array api spec for readability.
     "fft",
     "ifft",
     "fftn",
