@@ -12,6 +12,7 @@ from xarray.namedarray._typing import (
     Default,
     _Axis,
     _AxisLike,
+    _arrayapi,
     _default,
     _Dim,
     _DimsLike2,
@@ -100,11 +101,11 @@ def diff(
     x: NamedArray[Any, Any],
     /,
     *,
-    axis: _Axis = -1,
+    dims: _Dim | Default = _default,
     n: int = 1,
     prepend: NamedArray[Any, Any] | None = None,
     append: NamedArray[Any, Any] | None = None,
-    dims: _Dim | Default = _default,
+    axis: _Axis = -1,
 ) -> NamedArray[Any, Any]:
     """
     Calculates the n-th discrete forward difference along a specified axis.
@@ -134,7 +135,26 @@ def diff(
     """
     xp = _get_data_namespace(x)
     _axis = _dim_to_axis(x, dims, axis, axis_default=-1)
-    _data = xp.diff(x._data, axis=_axis, n=n)  # TODO: , prepend=prepend, append=append
+    try:
+        _data = xp.diff(x._data, axis=_axis, n=n, prepend=prepend, append=append)
+    except:
+        # NumPy does not support prepend=None or append=None
+        kwargs: dict[str, int | _arrayapi] = {"axis": _axis, "n": n}
+        if prepend is not None:
+            if prepend.device != x.device:
+                raise ValueError(
+                    f"Arrays from two different devices ({prepend.device} and {x.device}) can not be combined."
+                )
+            kwargs["prepend"] = prepend._data
+        if append is not None:
+            if append.device != x.device:
+                raise ValueError(
+                    f"Arrays from two different devices ({append.device} and {x.device}) can not be combined."
+                )
+            kwargs["append"] = append._data
+
+        _data = xp.diff(x._data, **kwargs)
+
     return NamedArray(x.dims, _data)
 
 

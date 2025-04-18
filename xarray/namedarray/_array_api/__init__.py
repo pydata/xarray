@@ -367,9 +367,11 @@ __all__ += [
 from xarray.namedarray._array_api._utility_functions import (
     all,
     any,
+    diff,
 )
 
 __all__ += [
     "all",
     "any",
+    "diff",
 ]
