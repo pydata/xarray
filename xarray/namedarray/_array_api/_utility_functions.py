@@ -137,20 +137,20 @@ def diff(
     _axis = _dim_to_axis(x, dims, axis, axis_default=-1)
     try:
         _data = xp.diff(x._data, axis=_axis, n=n, prepend=prepend, append=append)
-    except:
+    except TypeError as err:
         # NumPy does not support prepend=None or append=None
         kwargs: dict[str, int | _arrayapi] = {"axis": _axis, "n": n}
         if prepend is not None:
             if prepend.device != x.device:
                 raise ValueError(
                     f"Arrays from two different devices ({prepend.device} and {x.device}) can not be combined."
-                )
+                ) from err
             kwargs["prepend"] = prepend._data
         if append is not None:
             if append.device != x.device:
                 raise ValueError(
                     f"Arrays from two different devices ({append.device} and {x.device}) can not be combined."
-                )
+                ) from err
             kwargs["append"] = append._data
 
         _data = xp.diff(x._data, **kwargs)
