@@ -3,7 +3,16 @@ from __future__ import annotations
 from typing import Any
 
 from xarray.namedarray._array_api._data_type_functions import iinfo
-from xarray.namedarray._array_api._dtypes import _dtype_categories
+from xarray.namedarray._array_api._dtypes import (
+    _dtype_categories,
+    _boolean_dtypes,
+    _integer_dtypes,
+    _floating_dtypes,
+    _real_floating_dtypes,
+    _real_to_complex_map,
+)
+from xarray.namedarray._array_api._utils import _get_data_namespace
+
 from xarray.namedarray.core import NamedArray
 
 _py_scalars = (bool, int, float, complex)
@@ -54,6 +63,7 @@ def _promote_scalar(x, scalar: _py_scalars) -> NamedArray[Any, Any]:
     integer that is too large to fit in a NumPy integer dtype, or
     TypeError when the scalar type is incompatible with the dtype of x.
     """
+    xp = _get_data_namespace(x)
 
     target_dtype = x.dtype
     # Note: Only Python scalar types that match the array dtype are

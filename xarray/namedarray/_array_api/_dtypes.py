@@ -88,3 +88,5 @@ _dtype_categories = {
     "complex floating-point": _complex_floating_dtypes,
     "floating-point": _floating_dtypes,
 }
+
+_real_to_complex_map = {float32: complex64, float64: complex128}
