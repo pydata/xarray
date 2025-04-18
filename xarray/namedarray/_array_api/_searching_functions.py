@@ -62,9 +62,24 @@ def count_nonzero(
     keepdims: bool = False,
     axis: int | tuple[int, ...] | None = None,
 ) -> NamedArray[Any, Any]:
+    """
+    Counts the number of array elements which are non-zero.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x", "y"), np.asarray([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]))
+    >>> count_nonzero(x)
+    <xarray.NamedArray ()> Size: 8B
+    array(5)
+    >>> count_nonzero(x, dims="x")
+    <xarray.NamedArray (y: 3)> Size: 24B
+    array([1, 2, 2])
+    """
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dims, axis)
     _data = xp.count_nonzero(x._data, axis=_axis, keepdims=keepdims)
+    _data = xp.asarray(_data)  # TODO: np.count_nonzero returns an int.
     _dims = _reduce_dims(x.dims, axis=_axis, keepdims=keepdims)
     return NamedArray(_dims, _data)
 
@@ -104,3 +119,9 @@ def where(
     # TODO: Wrong, _dims should be either of the arguments. How to choose?
     _dims = _infer_dims(_data.shape)
     return NamedArray(_dims, _data)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
