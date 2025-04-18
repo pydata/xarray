@@ -25,6 +25,13 @@ New Features
 - Added `scipy-stubs <https://github.com/scipy/scipy-stubs>`_ to the ``xarray[types]`` dependencies.
   By `Joren Hammudoglu <https://github.com/jorenham>`_.
 
+Performance
+~~~~~~~~~~~
+
+- Small optimizations to help reduce indexing speed of datasets (:pull:`9003`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
+
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
