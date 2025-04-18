@@ -11,36 +11,36 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.12']
+        python-version: ["3.12"]
         exclude:
-          - python-version: '3.8'
+          - python-version: "3.8"
 
     steps:
-    - name: Checkout xarray
-      uses: actions/checkout@v4
-      with:
-        path: xarray
-    - name: Checkout array-api-tests
-      uses: actions/checkout@v4
-      with:
-        repository: data-apis/array-api-tests
-        submodules: 'true'
-        path: array-api-tests
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install ${GITHUB_WORKSPACE}/xarray
-        python -m pip install -r ${GITHUB_WORKSPACE}/array-api-tests/requirements.txt
-        python -m pip install hypothesis
-        python -m pip install array-api-strict
-        python -m pip install array-api-compat
-    - name: Run the array API testsuite
-      env:
-        ARRAY_API_TESTS_MODULE: xarray.namedarray._array_api
-      run: |
-        cd ${GITHUB_WORKSPACE}/array-api-tests
-        pytest array_api_tests/ --skips-file ${GITHUB_WORKSPACE}/xarray/xarray/tests/namedarray_array_api_skips.txt ${PYTEST_ARGS}
+      - name: Checkout xarray
+        uses: actions/checkout@v4
+        with:
+          path: xarray
+      - name: Checkout array-api-tests
+        uses: actions/checkout@v4
+        with:
+          repository: data-apis/array-api-tests
+          submodules: "true"
+          path: array-api-tests
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ${GITHUB_WORKSPACE}/xarray
+          python -m pip install -r ${GITHUB_WORKSPACE}/array-api-tests/requirements.txt
+          python -m pip install hypothesis
+          python -m pip install array-api-strict
+          python -m pip install array-api-compat
+      - name: Run the array API testsuite
+        env:
+          ARRAY_API_TESTS_MODULE: xarray.namedarray._array_api
+        run: |
+          cd ${GITHUB_WORKSPACE}/array-api-tests
+          pytest array_api_tests/ --skips-file ${GITHUB_WORKSPACE}/xarray/xarray/tests/namedarray_array_api_skips.txt ${PYTEST_ARGS}
