@@ -35,7 +35,6 @@ from xarray.backends.common import (
 from xarray.backends.locks import _get_scheduler
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import dtypes, indexing
-from xarray.core.chunk import _get_chunk, _maybe_chunk
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
@@ -45,6 +44,7 @@ from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 from xarray.core.utils import is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
+from xarray.structure.chunks import _get_chunk, _maybe_chunk
 from xarray.structure.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
@@ -1126,7 +1126,7 @@ def open_datatree(
 
     decoders = _resolve_decoders_kwargs(
         decode_cf,
-        open_backend_dataset_parameters=(),
+        open_backend_dataset_parameters=backend.open_dataset_parameters,
         mask_and_scale=mask_and_scale,
         decode_times=decode_times,
         decode_timedelta=decode_timedelta,

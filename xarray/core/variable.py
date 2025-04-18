@@ -484,7 +484,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dask.array.Array.astype
         sparse.COO.astype
         """
-        from xarray.computation.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
 
         kwargs = dict(order=order, casting=casting, subok=subok, copy=copy)
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
@@ -1043,7 +1043,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         numpy.squeeze
         """
         dims = common.get_squeeze_dims(self, dim)
-        return self.isel({d: 0 for d in dims})
+        return self.isel(dict.fromkeys(dims, 0))
 
     def _shift_one_dim(self, dim, count, fill_value=dtypes.NA):
         axis = self.get_axis_num(dim)
@@ -1598,7 +1598,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         numpy.clip : equivalent function
         """
-        from xarray.computation.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
 
         xp = duck_array_ops.get_array_namespace(self.data)
         return apply_ufunc(xp.clip, self, min, max, dask="allowed")
@@ -1877,7 +1877,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
            The American Statistician, 50(4), pp. 361-365, 1996
         """
 
-        from xarray.computation.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
 
         if interpolation is not None:
             warnings.warn(
@@ -2152,10 +2152,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         Construct a reshaped-array for coarsen
         """
         if not is_dict_like(boundary):
-            boundary = {d: boundary for d in windows.keys()}
+            boundary = dict.fromkeys(windows.keys(), boundary)
 
         if not is_dict_like(side):
-            side = {d: side for d in windows.keys()}
+            side = dict.fromkeys(windows.keys(), side)
 
         # remove unrelated dimensions
         boundary = {k: v for k, v in boundary.items() if k in windows}
@@ -2236,7 +2236,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         <xarray.Variable (x: 3)> Size: 3B
         array([False,  True, False])
         """
-        from xarray.computation.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -2270,7 +2270,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         <xarray.Variable (x: 3)> Size: 3B
         array([ True, False,  True])
         """
-        from xarray.computation.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)

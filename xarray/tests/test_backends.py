@@ -13,10 +13,10 @@ import sys
 import tempfile
 import uuid
 import warnings
+from collections import ChainMap
 from collections.abc import Generator, Iterator, Mapping
 from contextlib import ExitStack
 from io import BytesIO
-from os import listdir
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 from unittest.mock import patch
@@ -3343,6 +3343,67 @@ class ZarrBase(CFEncodedBase):
             observed_keys_2 = sorted(zstore_mut.array_keys())
             assert observed_keys_2 == sorted(array_keys + [new_key])
 
+    @requires_dask
+    @pytest.mark.parametrize("dtype", [int, float])
+    def test_zarr_fill_value_setting(self, dtype):
+        # When zarr_format=2, _FillValue sets fill_value
+        # When zarr_format=3, fill_value is set independently
+        # We test this by writing a dask array with compute=False,
+        # on read we should receive chunks filled with `fill_value`
+        fv = -1
+        ds = xr.Dataset(
+            {"foo": ("x", dask.array.from_array(np.array([0, 0, 0], dtype=dtype)))}
+        )
+        expected = xr.Dataset({"foo": ("x", [fv] * 3)})
+
+        zarr_format_2 = (
+            has_zarr_v3 and zarr.config.get("default_zarr_format") == 2
+        ) or not has_zarr_v3
+        if zarr_format_2:
+            attr = "_FillValue"
+            expected.foo.attrs[attr] = fv
+        else:
+            attr = "fill_value"
+            if dtype is float:
+                # for floats, Xarray inserts a default `np.nan`
+                expected.foo.attrs["_FillValue"] = np.nan
+
+        # turn off all decoding so we see what Zarr returns to us.
+        # Since chunks, are not written, we should receive on `fill_value`
+        open_kwargs = {
+            "mask_and_scale": False,
+            "consolidated": False,
+            "use_zarr_fill_value_as_mask": False,
+        }
+        save_kwargs = dict(compute=False, consolidated=False)
+        with self.roundtrip(
+            ds,
+            save_kwargs=ChainMap(save_kwargs, dict(encoding={"foo": {attr: fv}})),
+            open_kwargs=open_kwargs,
+        ) as actual:
+            assert_identical(actual, expected)
+
+        ds.foo.encoding[attr] = fv
+        with self.roundtrip(
+            ds, save_kwargs=save_kwargs, open_kwargs=open_kwargs
+        ) as actual:
+            assert_identical(actual, expected)
+
+        if zarr_format_2:
+            ds = ds.drop_encoding()
+            with pytest.raises(ValueError, match="_FillValue"):
+                with self.roundtrip(
+                    ds,
+                    save_kwargs=ChainMap(
+                        save_kwargs, dict(encoding={"foo": {"fill_value": fv}})
+                    ),
+                    open_kwargs=open_kwargs,
+                ):
+                    pass
+            # TODO: this doesn't fail because of the
+            # ``raise_on_invalid=vn in check_encoding_set`` line in zarr.py
+            # ds.foo.encoding["fill_value"] = fv
+
 
 @requires_zarr
 @pytest.mark.skipif(
@@ -3636,34 +3697,54 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
 
     @pytest.mark.parametrize("consolidated", [True, False, None])
     @pytest.mark.parametrize("write_empty", [True, False, None])
-    @pytest.mark.skipif(
-        has_zarr_v3, reason="zarr-python 3.x removed write_empty_chunks"
-    )
     def test_write_empty(
-        self, consolidated: bool | None, write_empty: bool | None
+        self,
+        consolidated: bool | None,
+        write_empty: bool | None,
     ) -> None:
-        if write_empty is False:
-            expected = ["0.1.0", "1.1.0"]
+        def assert_expected_files(expected: list[str], store: str) -> None:
+            """Convenience for comparing with actual files written"""
+            ls = []
+            test_root = os.path.join(store, "test")
+            for root, _, files in os.walk(test_root):
+                ls.extend(
+                    [
+                        os.path.join(root, f).removeprefix(test_root).lstrip("/")
+                        for f in files
+                    ]
+                )
+
+            assert set(expected) == set(
+                [
+                    file.lstrip("c/")
+                    for file in ls
+                    if (file not in (".zattrs", ".zarray", "zarr.json"))
+                ]
+            )
+
+        # The zarr format is set by the `default_zarr_format`
+        # pytest fixture that acts on a superclass
+        zarr_format_3 = has_zarr_v3 and zarr.config.config["default_zarr_format"] == 3
+        if (write_empty is False) or (write_empty is None and has_zarr_v3):
+            expected = ["0.1.0"]
         else:
             expected = [
                 "0.0.0",
                 "0.0.1",
                 "0.1.0",
                 "0.1.1",
-                "1.0.0",
-                "1.0.1",
-                "1.1.0",
-                "1.1.1",
             ]
 
-        ds = xr.Dataset(
-            data_vars={
-                "test": (
-                    ("Z", "Y", "X"),
-                    np.array([np.nan, np.nan, 1.0, np.nan]).reshape((1, 2, 2)),
-                )
-            }
-        )
+        if zarr_format_3:
+            data = np.array([0.0, 0, 1.0, 0]).reshape((1, 2, 2))
+            # transform to the path style of zarr 3
+            # e.g. 0/0/1
+            expected = [e.replace(".", "/") for e in expected]
+        else:
+            # use nan for default fill_value behaviour
+            data = np.array([np.nan, np.nan, 1.0, np.nan]).reshape((1, 2, 2))
+
+        ds = xr.Dataset(data_vars={"test": (("Z", "Y", "X"), data)})
 
         if has_dask:
             ds["test"] = ds["test"].chunk(1)
@@ -3679,17 +3760,42 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 write_empty_chunks=write_empty,
             )
 
+            # check expected files after a write
+            assert_expected_files(expected, store)
+
             with self.roundtrip_dir(
                 ds,
                 store,
-                {"mode": "a", "append_dim": "Z", "write_empty_chunks": write_empty},
+                save_kwargs={
+                    "mode": "a",
+                    "append_dim": "Z",
+                    "write_empty_chunks": write_empty,
+                },
             ) as a_ds:
                 expected_ds = xr.concat([ds, ds], dim="Z")
 
-                assert_identical(a_ds, expected_ds)
-
-                ls = listdir(os.path.join(store, "test"))
-                assert set(expected) == set([file for file in ls if file[0] != "."])
+                assert_identical(a_ds, expected_ds.compute())
+                # add the new files we expect to be created by the append
+                # that was performed by the roundtrip_dir
+                if (write_empty is False) or (write_empty is None and has_zarr_v3):
+                    expected.append("1.1.0")
+                else:
+                    if not has_zarr_v3:
+                        # TODO: remove zarr3 if once zarr issue is fixed
+                        # https://github.com/zarr-developers/zarr-python/issues/2931
+                        expected.extend(
+                            [
+                                "1.1.0",
+                                "1.0.0",
+                                "1.0.1",
+                                "1.1.1",
+                            ]
+                        )
+                    else:
+                        expected.append("1.1.0")
+                if zarr_format_3:
+                    expected = [e.replace(".", "/") for e in expected]
+                assert_expected_files(expected, store)
 
     def test_avoid_excess_metadata_calls(self) -> None:
         """Test that chunk requests do not trigger redundant metadata requests.
@@ -5412,7 +5518,9 @@ class TestPydap:
             # we don't check attributes exactly with assertDatasetIdentical()
             # because the test DAP server seems to insert some extra
             # attributes not found in the netCDF file.
-            assert actual.attrs.keys() == expected.attrs.keys()
+            # 2025/03/18 : The DAP server now modifies the keys too
+            # assert actual.attrs.keys() == expected.attrs.keys()
+            assert len(actual.attrs.keys()) == len(expected.attrs.keys())
 
         with self.create_datasets() as (actual, expected):
             assert_equal(actual[{"l": 2}], expected[{"l": 2}])
@@ -5971,23 +6079,23 @@ def test_encode_zarr_attr_value() -> None:
 @requires_zarr
 def test_extract_zarr_variable_encoding() -> None:
     var = xr.Variable("x", [1, 2])
-    actual = backends.zarr.extract_zarr_variable_encoding(var)
+    actual = backends.zarr.extract_zarr_variable_encoding(var, zarr_format=3)
     assert "chunks" in actual
     assert actual["chunks"] == ("auto" if has_zarr_v3 else None)
 
     var = xr.Variable("x", [1, 2], encoding={"chunks": (1,)})
-    actual = backends.zarr.extract_zarr_variable_encoding(var)
+    actual = backends.zarr.extract_zarr_variable_encoding(var, zarr_format=3)
     assert actual["chunks"] == (1,)
 
     # does not raise on invalid
     var = xr.Variable("x", [1, 2], encoding={"foo": (1,)})
-    actual = backends.zarr.extract_zarr_variable_encoding(var)
+    actual = backends.zarr.extract_zarr_variable_encoding(var, zarr_format=3)
 
     # raises on invalid
     var = xr.Variable("x", [1, 2], encoding={"foo": (1,)})
     with pytest.raises(ValueError, match=r"unexpected encoding parameters"):
         actual = backends.zarr.extract_zarr_variable_encoding(
-            var, raise_on_invalid=True
+            var, raise_on_invalid=True, zarr_format=3
         )
 
 

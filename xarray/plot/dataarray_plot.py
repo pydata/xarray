@@ -703,8 +703,8 @@ def hist(
 
     ax = get_axis(figsize, size, aspect, ax)
 
-    no_nan = np.ravel(darray.to_numpy())
-    no_nan = no_nan[pd.notnull(no_nan)]
+    no_nan_arr = np.ravel(darray.to_numpy())
+    no_nan = no_nan_arr[pd.notnull(no_nan_arr)]
 
     n, bins, patches = cast(
         tuple[np.ndarray, np.ndarray, Union["BarContainer", "Polygon"]],

@@ -44,7 +44,7 @@ def create_concat_datasets(
                 ["x", "y", "day"],
                 rng.standard_normal(size=(1, 4, 2)),
             )
-            data_vars = {v: data_tuple for v in variables}
+            data_vars = dict.fromkeys(variables, data_tuple)
             result.append(
                 Dataset(
                     data_vars=data_vars,
@@ -60,7 +60,7 @@ def create_concat_datasets(
                 ["x", "y"],
                 rng.standard_normal(size=(1, 4)),
             )
-            data_vars = {v: data_tuple for v in variables}
+            data_vars = dict.fromkeys(variables, data_tuple)
             result.append(
                 Dataset(
                     data_vars=data_vars,

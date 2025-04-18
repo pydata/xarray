@@ -16,7 +16,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Concatenate,
-    Literal,
     NoReturn,
     ParamSpec,
     TypeVar,
@@ -33,6 +32,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.dataset_variables import DataVariables
 from xarray.core.datatree_mapping import (
+    _handle_errors_with_path_context,
     map_over_datasets,
 )
 from xarray.core.formatting import (
@@ -45,6 +45,7 @@ from xarray.core.formatting_html import (
 )
 from xarray.core.indexes import Index, Indexes
 from xarray.core.options import OPTIONS as XR_OPTS
+from xarray.core.options import _get_keep_attrs
 from xarray.core.treenode import NamedNode, NodePath, zip_subtrees
 from xarray.core.types import Self
 from xarray.core.utils import (
@@ -421,13 +422,18 @@ class DatasetView(Dataset):
 
         # Copied from xarray.Dataset so as not to call type(self), which causes problems (see https://github.com/xarray-contrib/datatree/issues/188).
         # TODO Refactor xarray upstream to avoid needing to overwrite this.
-        # TODO This copied version will drop all attrs - the keep_attrs stuff should be re-instated
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
         variables = {
             k: maybe_wrap_array(v, func(v, *args, **kwargs))
             for k, v in self.data_vars.items()
         }
+        if keep_attrs:
+            for k, v in variables.items():
+                v._copy_attrs_from(self.data_vars[k])
+        attrs = self.attrs if keep_attrs else None
         # return type(self)(variables, attrs=attrs)
-        return Dataset(variables)
+        return Dataset(variables, attrs=attrs)
 
 
 class DataTree(
@@ -1741,7 +1747,7 @@ class DataTree(
         consolidated: bool = True,
         group: str | None = None,
         write_inherited_coords: bool = False,
-        compute: Literal[True] = True,
+        compute: bool = True,
         **kwargs,
     ):
         """
@@ -1846,7 +1852,8 @@ class DataTree(
         result = {}
         for path, node in self.subtree_with_keys:
             node_indexers = {k: v for k, v in indexers.items() if k in node.dims}
-            node_result = func(node.dataset, node_indexers)
+            func_with_error_context = _handle_errors_with_path_context(path)(func)
+            node_result = func_with_error_context(node.dataset, node_indexers)
             # Indexing datasets corresponding to each node results in redundant
             # coordinates when indexes from a parent node are inherited.
             # Ideally, we would avoid creating such coordinates in the first
