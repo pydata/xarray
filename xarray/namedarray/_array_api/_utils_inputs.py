@@ -43,7 +43,7 @@ def _maybe_normalize_py_scalars(
             raise TypeError(
                 f"Only {dtype_category} dtypes are allowed {func_name}. Got {x1.dtype}."
             )
-        x2 = x1._promote_scalar(x2)
+        x2 = _promote_scalar(x1, x2)
     else:
         if x1.dtype not in _allowed_dtypes or x2.dtype not in _allowed_dtypes:
             raise TypeError(
@@ -103,9 +103,7 @@ def _promote_scalar(x, scalar: _py_scalars) -> NamedArray[Any, Any]:
     # behavior for integers within the bounds of the integer dtype.
     # Outside of those bounds we use the default NumPy behavior (either
     # cast or raise OverflowError).
-    return NamedArray(
-        (), xp.array(scalar, dtype=target_dtype._np_dtype), device=x.device
-    )
+    return NamedArray((), xp.asarray(scalar, dtype=target_dtype, device=x.device))
 
 
 if __name__ == "__main__":

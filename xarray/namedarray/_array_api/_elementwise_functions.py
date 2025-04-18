@@ -460,13 +460,37 @@ def negative(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
 
 
 def nextafter(
-    x1: NamedArray[Any, Any] | int | float, x2: NamedArray[Any, Any] | int | float, /
-) -> NamedArray[Any, Any]:
-    x1, x2 = _maybe_normalize_py_scalars(x1, x2, "real floating-point", "nextafter")
-    xp = _get_data_namespace(x1)
-    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    x1: NamedArray[_ShapeType, _DType] | int | float,
+    x2: NamedArray[_ShapeType, _DType] | int | float,
+    /,
+) -> NamedArray[_ShapeType, _DType]:
+    """
+    Returns the next representable floating-point value for each element x1_i of the
+    input array x1 in the direction of the respective element x2_i of the input
+    array x2.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> eps = np.finfo(np.float64).eps
+    >>> x1 = NamedArray((), np.array(1.0))
+    >>> x2 = 2.0
+    >>> nextafter(x1, x2) == eps + 1
+    <xarray.NamedArray ()> Size: 1B
+    np.True_
+    >>> x1 = NamedArray(("x",), np.array([1.0, 2.0]))
+    >>> x2 = NamedArray(("x",), np.array([2.0, 1.0]))
+    >>> expected = NamedArray(("x",), np.array([eps + 1, 2 - eps]))
+    >>> actual = nextafter(x1, x2)
+    >>> actual == expected
+    <xarray.NamedArray (x: 2)> Size: 2B
+    array([ True,  True])
+    """
+    _x1, _x2 = _maybe_normalize_py_scalars(x1, x2, "real floating-point", "nextafter")
+    xp = _get_data_namespace(_x1)
+    x1_new, x2_new = _arithmetic_broadcast(_x1, _x2)
     _dims = x1_new.dims
-    _data = xp.not_equal(x1_new._data, x2_new._data)
+    _data = xp.nextafter(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
 
 
@@ -624,3 +648,9 @@ def trunc(x: NamedArray[_ShapeType, _DType], /) -> NamedArray[_ShapeType, _DType
     _dims = x.dims
     _data = xp.trunc(x._data)
     return x._new(_dims, _data)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
