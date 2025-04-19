@@ -2407,6 +2407,7 @@ class TestDatasetResample:
                 for i in range(3)
             ],
             dim=actual["time"],
+            data_vars="all",
         )
         assert_allclose(expected, actual)
 
