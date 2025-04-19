@@ -3292,6 +3292,33 @@ def test_groupby_dask_eager_load_warnings() -> None:
     ds.groupby_bins("x", bins=[1, 2, 3], eagerly_compute_group=False)
 
 
+@pytest.mark.parametrize(
+    "chunk",
+    [
+        pytest.param(
+            True, marks=pytest.mark.skipif(not has_dask, reason="requires dask")
+        ),
+        False,
+    ],
+)
+def test_datetime_mean(chunk, use_cftime):
+    ds = xr.Dataset(
+        {
+            "var1": (
+                ("time",),
+                xr.date_range(
+                    "2021-10-31", periods=10, freq="D", use_cftime=use_cftime
+                ),
+            ),
+            "var2": (("x",), list(range(10))),
+        }
+    )
+    if chunk:
+        ds = ds.chunk()
+    assert "var1" in ds.groupby("x").mean("time")
+    assert "var1" in ds.mean("x")
+
+
 # TODO: Possible property tests to add to this module
 # 1. lambda x: x
 # 2. grouped-reduce on unique coords is identical to array
