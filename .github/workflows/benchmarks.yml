@@ -12,7 +12,7 @@ jobs:
   benchmark:
     if: ${{ contains( github.event.pull_request.labels.*.name, 'run-benchmark') && github.event_name == 'pull_request' || contains( github.event.pull_request.labels.*.name, 'topic-performance') && github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
     name: Linux
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       ASV_DIR: "./asv_bench"
       CONDA_ENV_FILE: ci/requirements/environment.yml
