@@ -649,7 +649,7 @@ def short_array_repr(array):
 def short_data_repr(array):
     """Format "data" for DataArray and Variable."""
     internal_data = getattr(array, "variable", array)._data
-    if isinstance(array, np.ndarray):
+    if isinstance(internal_data, np.ndarray):
         return short_array_repr(array)
     elif is_duck_array(internal_data):
         return limit_lines(repr(array.data), limit=40)
