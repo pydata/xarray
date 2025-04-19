@@ -51,11 +51,12 @@ def astype(
 
     Examples
     --------
-    >>> narr = NamedArray(("x",), np.asarray([1.5, 2.5]))
-    >>> narr
+    >>> import numpy as np
+    >>> x = NamedArray(("x",), np.asarray([1.5, 2.5]))
+    >>> x
     <xarray.NamedArray (x: 2)> Size: 16B
     array([1.5, 2.5])
-    >>> astype(narr, np.dtype(np.int32))
+    >>> astype(x, np.dtype(np.int32))
     <xarray.NamedArray (x: 2)> Size: 8B
     array([1, 2], dtype=int32)
     """
@@ -78,18 +79,54 @@ def can_cast(from_: _dtype[Any] | NamedArray[Any, Any], to: _dtype[Any], /) -> b
 
 
 def finfo(type: _dtype[Any] | NamedArray[Any, Any], /) -> _FInfo:
+    """
+    Machine limits for floating-point data types.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> dtype = np.float32
+    >>> x = NamedArray((), np.array(1, dtype=dtype))
+    >>> finfo(dtype)
+    finfo(resolution=1e-06, min=-3.4028235e+38, max=3.4028235e+38, dtype=float32)
+    >>> finfo(x)
+    finfo(resolution=1e-06, min=-3.4028235e+38, max=3.4028235e+38, dtype=float32)
+    """
     if isinstance(type, NamedArray):
         xp = _get_data_namespace(type)
-        return cast(_FInfo, xp.finfo(type._data))  # TODO: Why is cast necessary?
+        try:
+            return cast(_FInfo, xp.finfo(type._data))  # TODO: Why is cast necessary?
+        except ValueError:
+            # TODO: numpy 2.2 does not support arrays as input.
+            # TODO: Why is cast necessary?
+            return cast(_FInfo, xp.finfo(type._data.dtype))
     else:
         xp = _get_namespace_dtype(type)
         return cast(_FInfo, xp.finfo(type))  # TODO: Why is cast necessary?
 
 
 def iinfo(type: _dtype[Any] | NamedArray[Any, Any], /) -> _IInfo:
+    """
+    Machine limits for integer data types.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> dtype = np.int8
+    >>> x = NamedArray((), np.array(1, dtype=dtype))
+    >>> iinfo(dtype)
+    iinfo(min=-128, max=127, dtype=int8)
+    >>> iinfo(x)
+    iinfo(min=-128, max=127, dtype=int8)
+    """
     if isinstance(type, NamedArray):
         xp = _get_data_namespace(type)
-        return cast(_IInfo, xp.iinfo(type._data))  # TODO: Why is cast necessary?
+        try:
+            return cast(_IInfo, xp.iinfo(type._data))  # TODO: Why is cast necessary?
+        except ValueError:
+            # TODO: numpy 2.2 does not support arrays as input.
+            # TODO: Why is cast necessary?
+            return cast(_IInfo, xp.iinfo(type._data.dtype))
     else:
         xp = _get_namespace_dtype(type)
         return cast(_IInfo, xp.iinfo(type))  # TODO: Why is cast necessary?
@@ -116,3 +153,9 @@ def result_type(*arrays_and_dtypes: NamedArray[Any, Any] | _dtype[Any]) -> _dtyp
             *(a.dtype if isinstance(a, NamedArray) else a for a in arrays_and_dtypes)
         ),
     )  # TODO: Why is cast necessary?
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
