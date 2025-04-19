@@ -463,6 +463,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             "2021.12",
             "2022.12",
             "2023.12",
+            "2024.12",
         ):
             raise ValueError(f"Unrecognized array API version: {api_version!r}")
         import xarray.namedarray._array_api as array_api

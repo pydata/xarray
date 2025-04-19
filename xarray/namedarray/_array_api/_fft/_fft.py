@@ -165,7 +165,12 @@ def fftfreq(
     device: _Device | None = None,
 ) -> NamedArray[Any, Any]:
     xp = _maybe_default_namespace()  # TODO: Can use device?
-    _data = xp.fft.fftfreq(n, d=d, dtype=dtype, device=device)
+    try:
+        _data = xp.fft.fftfreq(n, d=d, dtype=dtype, device=device)
+    except TypeError:
+        # numpy 2.2 does not have the dtype kwarg:
+        _data_nodtype = xp.fft.fftfreq(n, d=d, device=device)
+        _data = xp.astype(_data_nodtype, dtype) if dtype is not None else _data_nodtype
     _dims = _infer_dims(_data.shape)
     return NamedArray(_dims, _data)
 
@@ -179,7 +184,12 @@ def rfftfreq(
     device: _Device | None = None,
 ) -> NamedArray[Any, Any]:
     xp = _maybe_default_namespace()  # TODO: Can use device?
-    _data = xp.fft.rfftfreq(n, d=d, dtype=dtype, device=device)
+    try:
+        _data = xp.fft.rfftfreq(n, d=d, dtype=dtype, device=device)
+    except TypeError:
+        # numpy 2.2 does not have the dtype kwarg:
+        _data_nodtype = xp.fft.rfftfreq(n, d=d, device=device)
+        _data = xp.astype(_data_nodtype, dtype) if dtype is not None else _data_nodtype
     _dims = _infer_dims(_data.shape)
     return NamedArray(_dims, _data)
 
