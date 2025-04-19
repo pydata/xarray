@@ -14,10 +14,12 @@ from xarray.core.datatree import DataTree
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
     has_zarr_v3,
+    network,
     parametrize_zarr_format,
     requires_dask,
     requires_h5netcdf,
     requires_netCDF4,
+    requires_pydap,
     requires_zarr,
 )
 
@@ -416,6 +418,99 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
             assert subgroup_tree.root.parent is None
             assert_equal(subgroup_tree, expected_subtree)
+
+
+@network
+@requires_pydap
+class TestPyDAPDatatreeIO:
+    """Test PyDAP backend for DataTree."""
+
+    engine: T_DataTreeNetcdfEngine | None = "pydap"
+    # you can check these by adding a .dmr to urls, and replacing dap4 with http
+    unaligned_datatree_url = (
+        "dap4://test.opendap.org/opendap/dap4/unaligned_simple_datatree.nc.h5"
+    )
+    all_aligned_child_nodes_url = (
+        "dap4://test.opendap.org/opendap/dap4/all_aligned_child_nodes.nc.h5"
+    )
+    simplegroup_datatree_url = "dap4://test.opendap.org/opendap/dap4/SimpleGroup.nc4.h5"
+
+    def test_open_datatree(self, url=unaligned_datatree_url) -> None:
+        """Test if `open_datatree` fails to open a netCDF4 with an unaligned group hierarchy."""
+
+        with pytest.raises(
+            ValueError,
+            match=(
+                re.escape(
+                    "group '/Group1/subgroup1' is not aligned with its parents:\nGroup:\n"
+                )
+                + ".*"
+            ),
+        ):
+            open_datatree(url, engine=self.engine)
+
+    def test_open_groups(self, url=unaligned_datatree_url) -> None:
+        """Test `open_groups` with a netCDF4/HDF5 file with an unaligned group hierarchy."""
+        unaligned_dict_of_datasets = open_groups(url, engine=self.engine)
+
+        # Check that group names are keys in the dictionary of `xr.Datasets`
+        assert "/" in unaligned_dict_of_datasets.keys()
+        assert "/Group1" in unaligned_dict_of_datasets.keys()
+        assert "/Group1/subgroup1" in unaligned_dict_of_datasets.keys()
+        # Check that group name returns the correct datasets
+        with xr.open_dataset(url, engine=self.engine, group="/") as expected:
+            assert_identical(unaligned_dict_of_datasets["/"], expected)
+        with xr.open_dataset(url, group="Group1", engine=self.engine) as expected:
+            assert_identical(unaligned_dict_of_datasets["/Group1"], expected)
+        with xr.open_dataset(
+            url,
+            group="/Group1/subgroup1",
+            engine=self.engine,
+        ) as expected:
+            assert_identical(unaligned_dict_of_datasets["/Group1/subgroup1"], expected)
+
+    def test_inherited_coords(self, url=simplegroup_datatree_url) -> None:
+        """Test that `open_datatree` inherits coordinates from root tree.
+
+        This particular h5 file is a test file that inherits the time coordinate from the root
+        dataset to the child dataset.
+
+        Group: /
+        │   Dimensions:        (time: 1, Z: 1000, nv: 2)
+        │   Coordinates:
+        |       time: (time)    float32 0.5
+        |       Z:    (Z)       float32 -0.0 -1.0 -2.0 ...
+        │   Data variables:
+        │       Pressure  (Z)   float32 ...
+        |       time_bnds (time, nv) float32 ...
+        └── Group: /SimpleGroup
+            │   Dimensions:      (time: 1, Z: 1000, nv: 2, Y: 40, X: 40)
+            │   Coordinates:
+            |      Y:   (Y)     int16 1 2 3 4 ...
+            |      X:   (X)     int16 1 2 3 4 ...
+            |   Inherited coordinates:
+            |      time: (time)    float32 0.5
+            |      Z:    (Z)       float32 -0.0 -1.0 -2.0 ...
+            │   Data variables:
+            │       Temperature  (time, Z, Y, X) float32 ...
+            |       Salinity     (time, Z, Y, X) float32 ...
+        """
+        tree = open_datatree(url, engine=self.engine)
+        assert list(tree.dims) == ["time", "Z", "nv"]
+        assert tree["/SimpleGroup"].coords["time"].dims == ("time",)
+        assert tree["/SimpleGroup"].coords["Z"].dims == ("Z",)
+        assert tree["/SimpleGroup"].coords["Y"].dims == ("Y",)
+        assert tree["/SimpleGroup"].coords["X"].dims == ("X",)
+        with xr.open_dataset(url, engine=self.engine, group="/SimpleGroup") as expected:
+            assert set(tree["/SimpleGroup"].dims) == set(
+                list(expected.dims) + ["Z", "nv"]
+            )
+
+    def test_open_groups_to_dict(self, url=all_aligned_child_nodes_url) -> None:
+        aligned_dict_of_datasets = open_groups(url, engine=self.engine)
+        aligned_dt = DataTree.from_dict(aligned_dict_of_datasets)
+        with open_datatree(url, engine=self.engine) as opened_tree:
+            assert opened_tree.identical(aligned_dt)
 
 
 @requires_h5netcdf
