@@ -834,6 +834,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if chunkmanager.is_chunked_array(data_old):
             data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
         else:
+            ndata: duckarray[Any, Any]
             if not isinstance(data_old, ExplicitlyIndexed):
                 ndata = data_old
             else:

@@ -7059,6 +7059,8 @@ class Dataset(
         )
 
     def _to_dataframe(self, ordered_dims: Mapping[Any, int]):
+        from xarray.core.extension_array import PandasExtensionArray
+
         columns_in_order = [k for k in self.variables if k not in self.dims]
         non_extension_array_columns = [
             k
@@ -7083,7 +7085,7 @@ class Dataset(
             index = self[self.variables[extension_array_column].dims[0]].data
             extension_array_df = pd.DataFrame(
                 {extension_array_column: extension_array},
-                index=self[self.variables[extension_array_column].dims[0]].data,
+                index=index.array if isinstance(index, PandasExtensionArray) else index,
             )
             extension_array_df.index.name = self.variables[extension_array_column].dims[
                 0
@@ -9895,7 +9897,7 @@ class Dataset(
         <xarray.Dataset> Size: 128B
         Dimensions:  (y: 3, x_bins: 2, letters: 2)
         Coordinates:
-          * x_bins   (x_bins) object 16B (5, 15] (15, 25]
+          * x_bins   (x_bins) interval[int64, right] 16B (5, 15] (15, 25]
           * letters  (letters) object 16B 'a' 'b'
         Dimensions without coordinates: y
         Data variables:

@@ -104,15 +104,9 @@ def index_flat(request):
     index fixture, but excluding MultiIndex cases.
     """
     key = request.param
+    if key in ["bool-object", "bool-dtype", "nullable_bool", "repeats"]:
+        pytest.xfail(reason="doesn't work")
     return indices_dict[key].copy()
-
-
-@pytest.fixture
-def using_infer_string() -> bool:
-    """
-    Fixture to check if infer string option is enabled.
-    """
-    return pd.options.future.infer_string is True  # type: ignore[union-attr]
 
 
 class TestDataFrameToXArray:
@@ -131,8 +125,7 @@ class TestDataFrameToXArray:
             }
         )
 
-    @pytest.mark.xfail(reason="needs some work")
-    def test_to_xarray_index_types(self, index_flat, df, using_infer_string):
+    def test_to_xarray_index_types(self, index_flat, df):
         index = index_flat
         # MultiIndex is tested in test_to_xarray_with_multiindex
         if len(index) == 0:
@@ -154,9 +147,6 @@ class TestDataFrameToXArray:
         # datetimes w/tz are preserved
         # column names are lost
         expected = df.copy()
-        expected["f"] = expected["f"].astype(
-            object if not using_infer_string else "str"
-        )
         expected.columns.name = None
         tm.assert_frame_equal(result.to_dataframe(), expected)
 
@@ -168,7 +158,7 @@ class TestDataFrameToXArray:
         assert result.sizes["foo"] == 0
         assert isinstance(result, Dataset)
 
-    def test_to_xarray_with_multiindex(self, df, using_infer_string):
+    def test_to_xarray_with_multiindex(self, df):
         from xarray import Dataset
 
         # MultiIndex
@@ -183,9 +173,7 @@ class TestDataFrameToXArray:
 
         result = result.to_dataframe()
         expected = df.copy()
-        expected["f"] = expected["f"].astype(
-            object if not using_infer_string else "str"
-        )
+        expected["f"] = expected["f"].astype(object)
         expected.columns.name = None
         tm.assert_frame_equal(result, expected)
 

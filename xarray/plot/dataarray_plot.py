@@ -524,7 +524,7 @@ def line(
         assert hueplt is not None
         ax.legend(handles=primitive, labels=list(hueplt.to_numpy()), title=hue_label)
 
-    if np.issubdtype(xplt.dtype, np.datetime64):
+    if isinstance(xplt.dtype, np.dtype) and np.issubdtype(xplt.dtype, np.datetime64):  # type: ignore[redundant-expr]
         _set_concise_date(ax, axis="x")
 
     _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
