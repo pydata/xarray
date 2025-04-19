@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal, get_args
 from xarray.core.datatree import DataTree
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 
-T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf"]
+T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf", "pydap"]
 T_DataTreeNetcdfTypes = Literal["NETCDF4"]
 
 if TYPE_CHECKING:
