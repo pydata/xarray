@@ -453,7 +453,59 @@ class TestDataArrayRollingExp:
     @pytest.mark.parametrize("dim", ["time", "x"])
     @pytest.mark.parametrize(
         "window_type, window",
-        [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]],
+        [
+            ["span", pd.Timedelta(days=5)],
+            ["alpha", pd.Timedelta(days=5)],
+            ["com", pd.Timedelta(days=5)],
+            ["halflife", pd.Timedelta(days=5)],
+        ],
+    )
+    @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
+    @pytest.mark.parametrize("func", ["mean", "sum", "var", "std"])
+    def test_rolling_exp_runs_timedelta(
+        self, da, dim, window_type, window, func
+    ) -> None:
+        """Test that rolling_exp works with Timedelta windows
+        only for halflife window_type and datetime index, and only
+        mean operation is supported.
+        """
+        da = da.where(da > 0.2)
+
+        # Only halflife window_type should work with Timedelta
+        if window_type != "halflife":
+            with pytest.raises(ValueError):
+                da.rolling_exp(window_type=window_type, **{dim: window})
+            return
+
+        # Timedelta only works with datetime index
+        if dim != "time":
+            with pytest.raises(
+                NotImplementedError,
+            ):
+                da.rolling_exp(window_type=window_type, **{dim: window})
+            return
+
+        rolling_exp = da.rolling_exp(window_type=window_type, **{dim: window})
+
+        # Only mean is supported for Timedelta windows
+        if func == "mean":
+            result = rolling_exp.mean()
+            assert isinstance(result, DataArray)
+        else:
+            with pytest.raises(
+                NotImplementedError, match="Only 'mean' operation is supported"
+            ):
+                getattr(rolling_exp, func)()
+
+    @pytest.mark.parametrize("dim", ["time", "x"])
+    @pytest.mark.parametrize(
+        "window_type, window",
+        [
+            ["span", 5],
+            ["alpha", 0.5],
+            ["com", 0.5],
+            ["halflife", 5],
+        ],
     )
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
     def test_rolling_exp_mean_pandas(self, da, dim, window_type, window) -> None:
@@ -466,10 +518,47 @@ class TestDataArrayRollingExp:
         assert pandas_array.index.name == "time"
         if dim == "x":
             pandas_array = pandas_array.T
+
         expected = xr.DataArray(
             pandas_array.ewm(**{window_type: window}).mean()
         ).transpose(*da.dims)
 
+        assert_allclose(expected.variable, result.variable)
+
+    @pytest.mark.parametrize(
+        "window",
+        [
+            pd.Timedelta(days=5),
+            pd.Timedelta(days=10),
+            pd.Timedelta(weeks=1),
+        ],
+    )
+    @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
+    def test_rolling_exp_mean_pandas_halflife(self, da, window) -> None:
+        dim = "time"
+        window_type = "halflife"
+
+        da = da.isel(a=0).where(lambda x: x > 0.2)
+
+        result = da.rolling_exp(window_type=window_type, **{dim: window}).mean()
+        assert isinstance(result, DataArray)
+
+        pandas_array = da.to_pandas()
+        assert pandas_array.index.name == "time"
+
+        expected = xr.DataArray(
+            pandas_array.ewm(**{window_type: window}, times=pandas_array.index).mean()
+        ).transpose(*da.dims)
+
+        assert_allclose(expected.variable, result.variable)
+
+        # test with different time units (ms -> s)
+        da["time"] = da.get_index("time").astype("datetime64[s]")
+        result = da.rolling_exp(window_type=window_type, **{dim: window}).mean()
+        pandas_array = da.to_pandas()
+        expected = xr.DataArray(
+            pandas_array.ewm(**{window_type: window}, times=pandas_array.index).mean()
+        ).transpose(*da.dims)
         assert_allclose(expected.variable, result.variable)
 
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
@@ -899,7 +988,7 @@ class TestDatasetRollingExp:
         # discard attrs
         result = ds.rolling_exp(time=10).mean(keep_attrs=False)
         assert result.attrs == {}
-        # TODO: from #8114 — this arguably should be empty, but `apply_ufunc` doesn't do
+        # TODO: from #8114 — this arguably should be empty, but `apply_ufunc` doesn't do
         # that at the moment. We should change in `apply_func` rather than
         # special-case it here.
         #
