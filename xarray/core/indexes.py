@@ -1584,6 +1584,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
     """
 
     _index_type: type[Index] | type[pd.Index]
+    _index_dims: dict[Hashable, Mapping[Hashable, int]]
     _indexes: dict[Any, T_PandasOrXarrayIndex]
     _variables: dict[Any, Variable]
 
@@ -1592,6 +1593,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         "__id_coord_names",
         "__id_index",
         "_dims",
+        "_index_dims",
         "_index_type",
         "_indexes",
         "_variables",
@@ -1635,6 +1637,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
             )
 
         self._index_type = index_type
+        self._index_dims = {}
         self._indexes = dict(**indexes)
         self._variables = dict(**variables)
 
@@ -1753,7 +1756,13 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         """
         from xarray.core.variable import calculate_dimensions
 
-        return calculate_dimensions(self.get_all_coords(key, errors=errors))
+        if key in self._index_dims:
+            return self._index_dims[key]
+        else:
+            dims = calculate_dimensions(self.get_all_coords(key, errors=errors))
+            if dims:
+                self._index_dims[key] = dims
+            return dims
 
     def group_by_index(
         self,
