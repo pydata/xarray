@@ -635,7 +635,10 @@ class DatasetIOBase:
         #  though we cannot test that until we fix the timedelta decoding
         #  to support large ranges
         time_deltas = pd.to_timedelta(["1h", "2h", "NaT"]).as_unit("s")  # type: ignore[arg-type, unused-ignore]
+        encoding = {"units": "seconds"}
         expected = Dataset({"td": ("td", time_deltas), "td0": time_deltas[0]})
+        expected["td"].encoding = encoding
+        expected["td0"].encoding = encoding
         with self.roundtrip(
             expected, open_kwargs={"decode_timedelta": CFTimedeltaCoder(time_unit="ns")}
         ) as actual:
