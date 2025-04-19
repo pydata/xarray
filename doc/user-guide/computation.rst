@@ -324,6 +324,22 @@ The ``rolling_exp`` method takes a ``window_type`` kwarg, which can be ``'alpha'
 ``'com'`` (for ``center-of-mass``), ``'span'``, and ``'halflife'``. The default is
 ``span``.
 
+For datetime axes, ``rolling_exp`` can work with timedelta windows when using ``window_type='halflife'``.
+This enables handling irregular time series by computing weights based on the actual time differences
+between points, similar to pandas' ``ewm`` with ``times`` parameter:
+
+.. code:: python
+
+    # Create a DataArray with datetime index
+    times = pd.date_range("2020-01-01", periods=5, freq="1D")
+    da = xr.DataArray([1, 2, 3, 4, 5], dims="time", coords={"time": times})
+
+    # Apply exponential moving average with 1-day halflife
+    da.rolling_exp(time=pd.Timedelta(days=1), window_type="halflife").mean()
+
+Note that when using timedeltas with ``window_type='halflife'``, only the ``mean()`` operation is currently
+supported, and it must be applied to a datetime coordinate.
+
 Finally, the rolling object has a ``construct`` method which returns a
 view of the original ``DataArray`` with the windowed dimension in
 the last position.
