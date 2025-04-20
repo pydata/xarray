@@ -48,6 +48,9 @@ Documentation
 - Fix references to core classes in docs (:issue:`10195`, :pull:`10207`).
   By `Mattia Almansi <https://github.com/malmans2>`_.
 
+- Add a dedicated 'Complex Numbers' sections to the User Guide (:issue:`10213`, :pull:`10235`).
+  By `Andre Wendlinger <https://github.com/andrewendlinger>`_.
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
