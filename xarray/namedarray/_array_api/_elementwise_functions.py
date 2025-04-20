@@ -45,9 +45,9 @@ def add(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr_arr = _promote_scalars(x1, x2, "numeric", "add")
+    x1_arr, x2_arr_arr = _promote_scalars(x1, x2, "numeric", "add")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr_arr)
     _dims = x1_new.dims
     _data = xp.add(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -79,9 +79,9 @@ def atan2(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr_arr = _promote_scalars(x1, x2, "real floating-point", "atan2")
+    x1_arr, x2_arr_arr = _promote_scalars(x1, x2, "real floating-point", "atan2")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr_arr)
     _dims = x1_new.dims
     _data = xp.atan2(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -99,9 +99,9 @@ def bitwise_and(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr_arr = _promote_scalars(x1, x2, "integer or boolean", "bitwise_and")
+    x1_arr, x2_arr_arr = _promote_scalars(x1, x2, "integer or boolean", "bitwise_and")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr_arr)
     _dims = x1_new.dims
     _data = xp.bitwise_and(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -119,9 +119,9 @@ def bitwise_left_shift(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "integer", "bitwise_left_shift")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "integer", "bitwise_left_shift")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.bitwise_left_shift(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -132,9 +132,9 @@ def bitwise_or(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "integer or boolean", "bitwise_or")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "integer or boolean", "bitwise_or")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.bitwise_or(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -145,9 +145,9 @@ def bitwise_right_shift(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "integer", "bitwise_right_shift")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "integer", "bitwise_right_shift")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.bitwise_right_shift(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -158,9 +158,9 @@ def bitwise_xor(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "integer or boolean", "bitwise_xor")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "integer or boolean", "bitwise_xor")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.bitwise_xor(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -197,9 +197,9 @@ def copysign(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "real floating-point", "copysign")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "real floating-point", "copysign")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.copysign(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -224,9 +224,9 @@ def divide(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "floating-point", "divide")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "floating-point", "divide")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.divide(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -251,9 +251,9 @@ def equal(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "all", "equal")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "all", "equal")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.equal(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -271,8 +271,9 @@ def floor_divide(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    xp = _get_data_namespace(x1)
-    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "real numeric", "floor_divide")
+    xp = _get_data_namespace(x1_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.floor_divide(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -283,9 +284,9 @@ def greater(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "real numeric", "greater")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "real numeric", "greater")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.greater(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -296,9 +297,9 @@ def greater_equal(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "real numeric", "greater_equal")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "real numeric", "greater_equal")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.greater_equal(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -309,9 +310,9 @@ def hypot(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "real floating-point", "hypot")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "real floating-point", "hypot")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.hypot(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -377,9 +378,9 @@ def less(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "real numeric", "less")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "real numeric", "less")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.less(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -390,9 +391,9 @@ def less_equal(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "real numeric", "less_equal")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "real numeric", "less_equal")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.less_equal(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -431,9 +432,9 @@ def logaddexp(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "real floating-point", "logaddexp")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "real floating-point", "logaddexp")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.logaddexp(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -444,9 +445,9 @@ def logical_and(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "boolean", "logical_and")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "boolean", "logical_and")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.logical_and(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -464,9 +465,9 @@ def logical_or(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "boolean", "logical_or")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "boolean", "logical_or")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.logical_or(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -477,9 +478,9 @@ def logical_xor(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "boolean", "logical_xor")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "boolean", "logical_xor")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.logical_xor(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -490,9 +491,9 @@ def maximum(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "real numeric", "maximum")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "real numeric", "maximum")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.maximum(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -503,9 +504,9 @@ def minimum(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "real numeric", "minimum")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "real numeric", "minimum")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.minimum(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -516,9 +517,9 @@ def multiply(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "numeric", "multiply")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "numeric", "multiply")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.multiply(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -558,9 +559,9 @@ def nextafter(
     <xarray.NamedArray (x: 2)> Size: 2B
     array([ True,  True])
     """
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "real floating-point", "nextafter")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "real floating-point", "nextafter")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.nextafter(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -571,9 +572,9 @@ def not_equal(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "all", "not_equal")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "all", "not_equal")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.not_equal(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -591,9 +592,9 @@ def pow(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "numeric", "pow")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "numeric", "pow")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.pow(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -645,9 +646,9 @@ def remainder(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr = _promote_scalars(x1, x2, "real numeric", "remainder")
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "real numeric", "remainder")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr)
     _dims = x1_new.dims
     _data = xp.remainder(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
@@ -707,9 +708,9 @@ def subtract(
     x2: NamedArray[Any, Any] | bool | int | float | complex,
     /,
 ) -> NamedArray[Any, Any]:
-    x1_arr, _x2_arr_arr = _promote_scalars(x1, x2, "numeric", "subtract")
+    x1_arr, x2_arr_arr = _promote_scalars(x1, x2, "numeric", "subtract")
     xp = _get_data_namespace(x1_arr)
-    x1_new, x2_new = _arithmetic_broadcast(x1_arr, _x2_arr_arr)
+    x1_new, x2_new = _arithmetic_broadcast(x1_arr, x2_arr_arr)
     _dims = x1_new.dims
     _data = xp.subtract(x1_new._data, x2_new._data)
     return x1._new(_dims, _data)
