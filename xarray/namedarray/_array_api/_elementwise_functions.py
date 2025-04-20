@@ -42,7 +42,9 @@ def acosh(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
 
 
 def add(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr_arr = _promote_scalars(x1, x2, "numeric", "add")
     xp = _get_data_namespace(x1_arr)
@@ -74,7 +76,9 @@ def atan(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
 
 
 def atan2(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr_arr = _promote_scalars(x1, x2, "real floating-point", "atan2")
     xp = _get_data_namespace(x1_arr)
@@ -92,7 +96,9 @@ def atanh(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
 
 
 def bitwise_and(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr_arr = _promote_scalars(x1, x2, "integer or boolean", "bitwise_and")
     xp = _get_data_namespace(x1_arr)
@@ -110,7 +116,9 @@ def bitwise_invert(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, 
 
 
 def bitwise_left_shift(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "integer", "bitwise_left_shift")
     xp = _get_data_namespace(x1_arr)
@@ -121,7 +129,9 @@ def bitwise_left_shift(
 
 
 def bitwise_or(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "integer or boolean", "bitwise_or")
     xp = _get_data_namespace(x1_arr)
@@ -132,7 +142,9 @@ def bitwise_or(
 
 
 def bitwise_right_shift(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "integer", "bitwise_right_shift")
     xp = _get_data_namespace(x1_arr)
@@ -143,7 +155,9 @@ def bitwise_right_shift(
 
 
 def bitwise_xor(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "integer or boolean", "bitwise_xor")
     xp = _get_data_namespace(x1_arr)
@@ -180,7 +194,9 @@ def conj(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
 
 
 def copysign(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "real floating-point", "copysign")
     xp = _get_data_namespace(x1_arr)
@@ -205,7 +221,9 @@ def cosh(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
 
 
 def divide(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "floating-point", "divide")
     xp = _get_data_namespace(x1_arr)
@@ -230,7 +248,9 @@ def expm1(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
 
 
 def equal(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "all", "equal")
     xp = _get_data_namespace(x1_arr)
@@ -248,7 +268,9 @@ def floor(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
 
 
 def floor_divide(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
     x1_new, x2_new = _arithmetic_broadcast(x1, x2)
@@ -258,7 +280,9 @@ def floor_divide(
 
 
 def greater(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "real numeric", "greater")
     xp = _get_data_namespace(x1_arr)
@@ -269,7 +293,9 @@ def greater(
 
 
 def greater_equal(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "real numeric", "greater_equal")
     xp = _get_data_namespace(x1_arr)
@@ -280,7 +306,9 @@ def greater_equal(
 
 
 def hypot(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "real floating-point", "hypot")
     xp = _get_data_namespace(x1_arr)
@@ -346,7 +374,9 @@ def isnan(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
 
 
 def less(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "real numeric", "less")
     xp = _get_data_namespace(x1_arr)
@@ -357,7 +387,9 @@ def less(
 
 
 def less_equal(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "real numeric", "less_equal")
     xp = _get_data_namespace(x1_arr)
@@ -396,7 +428,9 @@ def log10(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
 
 
 def logaddexp(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "real floating-point", "logaddexp")
     xp = _get_data_namespace(x1_arr)
@@ -407,7 +441,9 @@ def logaddexp(
 
 
 def logical_and(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "boolean", "logical_and")
     xp = _get_data_namespace(x1_arr)
@@ -425,7 +461,9 @@ def logical_not(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any
 
 
 def logical_or(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "boolean", "logical_or")
     xp = _get_data_namespace(x1_arr)
@@ -436,7 +474,9 @@ def logical_or(
 
 
 def logical_xor(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "boolean", "logical_xor")
     xp = _get_data_namespace(x1_arr)
@@ -447,7 +487,9 @@ def logical_xor(
 
 
 def maximum(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "real numeric", "maximum")
     xp = _get_data_namespace(x1_arr)
@@ -458,7 +500,9 @@ def maximum(
 
 
 def minimum(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "real numeric", "minimum")
     xp = _get_data_namespace(x1_arr)
@@ -469,7 +513,9 @@ def minimum(
 
 
 def multiply(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "numeric", "multiply")
     xp = _get_data_namespace(x1_arr)
@@ -522,7 +568,9 @@ def nextafter(
 
 
 def not_equal(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "all", "not_equal")
     xp = _get_data_namespace(x1_arr)
@@ -540,7 +588,9 @@ def positive(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
 
 
 def pow(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "numeric", "pow")
     xp = _get_data_namespace(x1_arr)
@@ -592,7 +642,9 @@ def reciprocal(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]
 
 
 def remainder(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr = _promote_scalars(x1, x2, "real numeric", "remainder")
     xp = _get_data_namespace(x1_arr)
@@ -652,7 +704,9 @@ def square(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
 
 
 def subtract(
-    x1: NamedArray[Any, Any] | _PYScalars, x2: NamedArray[Any, Any] | _PYScalars, /
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    /,
 ) -> NamedArray[Any, Any]:
     x1_arr, _x2_arr_arr = _promote_scalars(x1, x2, "numeric", "subtract")
     xp = _get_data_namespace(x1_arr)
