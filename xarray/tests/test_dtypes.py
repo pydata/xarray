@@ -4,6 +4,18 @@ import numpy as np
 import pytest
 
 from xarray.core import dtypes
+from xarray.tests import requires_array_api_strict
+
+try:
+    import array_api_strict
+except ImportError:
+
+    class DummyArrayAPINamespace:
+        bool = None  # type: ignore[unused-ignore,var-annotated]
+        int32 = None  # type: ignore[unused-ignore,var-annotated]
+        float64 = None  # type: ignore[unused-ignore,var-annotated]
+
+    array_api_strict = DummyArrayAPINamespace
 
 
 @pytest.mark.parametrize(
@@ -16,6 +28,10 @@ from xarray.core import dtypes
         ([np.str_, np.int64], np.object_),
         ([np.str_, np.str_], np.str_),
         ([np.bytes_, np.str_], np.object_),
+        ([np.dtype("<U2"), np.str_], np.dtype("U")),
+        ([np.dtype("<U2"), str], np.dtype("U")),
+        ([np.dtype("S3"), np.bytes_], np.dtype("S")),
+        ([np.dtype("S10"), bytes], np.dtype("S")),
     ],
 )
 def test_result_type(args, expected) -> None:
@@ -23,9 +39,23 @@ def test_result_type(args, expected) -> None:
     assert actual == expected
 
 
-def test_result_type_scalar() -> None:
-    actual = dtypes.result_type(np.arange(3, dtype=np.float32), np.nan)
-    assert actual == np.float32
+@pytest.mark.parametrize(
+    ["values", "expected"],
+    (
+        ([np.arange(3, dtype="float32"), np.nan], np.float32),
+        ([np.arange(3, dtype="int8"), 1], np.int8),
+        ([np.array(["a", "b"], dtype=str), np.nan], object),
+        ([np.array([b"a", b"b"], dtype=bytes), True], object),
+        ([np.array([b"a", b"b"], dtype=bytes), "c"], object),
+        ([np.array(["a", "b"], dtype=str), "c"], np.dtype(str)),
+        ([np.array(["a", "b"], dtype=str), None], object),
+        ([0, 1], np.dtype("int")),
+    ),
+)
+def test_result_type_scalars(values, expected) -> None:
+    actual = dtypes.result_type(*values)
+
+    assert np.issubdtype(actual, expected)
 
 
 def test_result_type_dask_array() -> None:
@@ -58,7 +88,6 @@ def test_inf(obj) -> None:
 @pytest.mark.parametrize(
     "kind, expected",
     [
-        ("a", (np.dtype("O"), "nan")),  # dtype('S')
         ("b", (np.float32, "nan")),  # dtype('int8')
         ("B", (np.float32, "nan")),  # dtype('uint8')
         ("c", (np.dtype("O"), "nan")),  # dtype('S1')
@@ -98,3 +127,54 @@ def test_nat_types_membership() -> None:
     assert np.datetime64("NaT").dtype in dtypes.NAT_TYPES
     assert np.timedelta64("NaT").dtype in dtypes.NAT_TYPES
     assert np.float64 not in dtypes.NAT_TYPES
+
+
+@pytest.mark.parametrize(
+    ["dtype", "kinds", "xp", "expected"],
+    (
+        (np.dtype("int32"), "integral", np, True),
+        (np.dtype("float16"), "real floating", np, True),
+        (np.dtype("complex128"), "complex floating", np, True),
+        (np.dtype("U"), "numeric", np, False),
+        pytest.param(
+            array_api_strict.int32,
+            "integral",
+            array_api_strict,
+            True,
+            marks=requires_array_api_strict,
+            id="array_api-int",
+        ),
+        pytest.param(
+            array_api_strict.float64,
+            "real floating",
+            array_api_strict,
+            True,
+            marks=requires_array_api_strict,
+            id="array_api-float",
+        ),
+        pytest.param(
+            array_api_strict.bool,
+            "numeric",
+            array_api_strict,
+            False,
+            marks=requires_array_api_strict,
+            id="array_api-bool",
+        ),
+    ),
+)
+def test_isdtype(dtype, kinds, xp, expected) -> None:
+    actual = dtypes.isdtype(dtype, kinds, xp=xp)
+    assert actual == expected
+
+
+@pytest.mark.parametrize(
+    ["dtype", "kinds", "xp", "error", "pattern"],
+    (
+        (np.dtype("int32"), "foo", np, (TypeError, ValueError), "kind"),
+        (np.dtype("int32"), np.signedinteger, np, TypeError, "kind"),
+        (np.dtype("float16"), 1, np, TypeError, "kind"),
+    ),
+)
+def test_isdtype_error(dtype, kinds, xp, error, pattern):
+    with pytest.raises(error, match=pattern):
+        dtypes.isdtype(dtype, kinds, xp=xp)

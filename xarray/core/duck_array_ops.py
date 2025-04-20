@@ -3,40 +3,34 @@
 Currently, this means Dask or NumPy arrays. None of these functions should
 accept or return xarray objects.
 """
+
 from __future__ import annotations
 
 import contextlib
 import datetime
 import inspect
 import warnings
+from collections.abc import Callable
 from functools import partial
 from importlib import import_module
 
 import numpy as np
 import pandas as pd
-from numpy import all as array_all  # noqa
-from numpy import any as array_any  # noqa
-from numpy import (  # noqa
-    around,  # noqa
-    full_like,
-    gradient,
+from numpy import (  # noqa: F401
     isclose,
-    isin,
     isnat,
     take,
-    tensordot,
-    transpose,
     unravel_index,
 )
-from numpy import concatenate as _concatenate
-from numpy.lib.stride_tricks import sliding_window_view  # noqa
-from packaging.version import Version
+from pandas.api.types import is_extension_array_dtype
 
-from xarray.core import dask_array_ops, dtypes, nputils, pycompat
+from xarray.compat import dask_array_compat, dask_array_ops
+from xarray.compat.array_api_compat import get_array_namespace
+from xarray.core import dtypes, nputils
 from xarray.core.options import OPTIONS
-from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
-from xarray.core.pycompat import array_type, is_duck_dask_array
-from xarray.core.utils import is_duck_array, module_available
+from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import array_type, is_chunked_array
 
 # remove once numpy 2.0 is the oldest supported version
 if module_available("numpy", minversion="2.0.0.dev0"):
@@ -52,13 +46,6 @@ else:
 dask_available = module_available("dask")
 
 
-def get_array_namespace(x):
-    if hasattr(x, "__array_namespace__"):
-        return x.__array_namespace__()
-    else:
-        return np
-
-
 def einsum(*args, **kwargs):
     from xarray.core.options import OPTIONS
 
@@ -67,26 +54,48 @@ def einsum(*args, **kwargs):
 
         return opt_einsum.contract(*args, **kwargs)
     else:
-        return np.einsum(*args, **kwargs)
+        xp = get_array_namespace(*args)
+        return xp.einsum(*args, **kwargs)
+
+
+def tensordot(*args, **kwargs):
+    xp = get_array_namespace(*args)
+    return xp.tensordot(*args, **kwargs)
+
+
+def cross(*args, **kwargs):
+    xp = get_array_namespace(*args)
+    return xp.cross(*args, **kwargs)
+
+
+def gradient(f, *varargs, axis=None, edge_order=1):
+    xp = get_array_namespace(f)
+    return xp.gradient(f, *varargs, axis=axis, edge_order=edge_order)
 
 
 def _dask_or_eager_func(
     name,
     eager_module=np,
     dask_module="dask.array",
+    dask_only_kwargs=tuple(),
+    numpy_only_kwargs=tuple(),
 ):
     """Create a function that dispatches to dask for dask array inputs."""
 
     def f(*args, **kwargs):
-        if any(is_duck_dask_array(a) for a in args):
+        if dask_available and any(is_duck_dask_array(a) for a in args):
             mod = (
                 import_module(dask_module)
                 if isinstance(dask_module, str)
                 else dask_module
             )
             wrapped = getattr(mod, name)
+            for kwarg in numpy_only_kwargs:
+                kwargs.pop(kwarg, None)
         else:
             wrapped = getattr(eager_module, name)
+            for kwarg in dask_only_kwargs:
+                kwargs.pop(kwarg, None)
         return wrapped(*args, **kwargs)
 
     return f
@@ -104,57 +113,64 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
 # Requires special-casing because pandas won't automatically dispatch to dask.isnull via NEP-18
 pandas_isnull = _dask_or_eager_func("isnull", eager_module=pd, dask_module="dask.array")
 
-# np.around has failing doctests, overwrite it so they pass:
-# https://github.com/numpy/numpy/issues/19759
-around.__doc__ = str.replace(
-    around.__doc__ or "",
-    "array([0.,  2.])",
-    "array([0., 2.])",
+# TODO replace with simply np.ma.masked_invalid once numpy/numpy#16022 is fixed
+# TODO: replacing breaks iris + dask tests
+masked_invalid = _dask_or_eager_func(
+    "masked_invalid", eager_module=np.ma, dask_module="dask.array.ma"
 )
-around.__doc__ = str.replace(
-    around.__doc__ or "",
-    "array([0.,  2.])",
-    "array([0., 2.])",
-)
-around.__doc__ = str.replace(
-    around.__doc__ or "",
-    "array([0.4,  1.6])",
-    "array([0.4, 1.6])",
-)
-around.__doc__ = str.replace(
-    around.__doc__ or "",
-    "array([0.,  2.,  2.,  4.,  4.])",
-    "array([0., 2., 2., 4., 4.])",
-)
-around.__doc__ = str.replace(
-    around.__doc__ or "",
-    (
-        '    .. [2] "How Futile are Mindless Assessments of\n'
-        '           Roundoff in Floating-Point Computation?", William Kahan,\n'
-        "           https://people.eecs.berkeley.edu/~wkahan/Mindless.pdf\n"
-    ),
-    "",
-)
+
+
+def sliding_window_view(array, window_shape, axis=None, **kwargs):
+    # TODO: some libraries (e.g. jax) don't have this, implement an alternative?
+    xp = get_array_namespace(array)
+    # sliding_window_view will not dispatch arbitrary kwargs (automatic_rechunk),
+    # so we need to hand-code this.
+    func = _dask_or_eager_func(
+        "sliding_window_view",
+        eager_module=xp.lib.stride_tricks,
+        dask_module=dask_array_compat,
+        dask_only_kwargs=("automatic_rechunk",),
+        numpy_only_kwargs=("subok", "writeable"),
+    )
+    return func(array, window_shape, axis=axis, **kwargs)
+
+
+def round(array):
+    xp = get_array_namespace(array)
+    return xp.round(array)
+
+
+around: Callable = round
 
 
 def isnull(data):
     data = asarray(data)
-    scalar_type = data.dtype.type
-    if issubclass(scalar_type, (np.datetime64, np.timedelta64)):
+
+    xp = get_array_namespace(data)
+    scalar_type = data.dtype
+    if dtypes.is_datetime_like(scalar_type):
         # datetime types use NaT for null
         # note: must check timedelta64 before integers, because currently
         # timedelta64 inherits from np.integer
         return isnat(data)
-    elif issubclass(scalar_type, np.inexact):
+    elif dtypes.isdtype(scalar_type, ("real floating", "complex floating"), xp=xp):
         # float types use NaN for null
         xp = get_array_namespace(data)
         return xp.isnan(data)
-    elif issubclass(scalar_type, (np.bool_, np.integer, np.character, np.void)):
+    elif dtypes.isdtype(scalar_type, ("bool", "integral"), xp=xp) or (
+        isinstance(scalar_type, np.dtype)
+        and (
+            np.issubdtype(scalar_type, np.character)
+            or np.issubdtype(scalar_type, np.void)
+        )
+    ):
         # these types cannot represent missing values
-        return full_like(data, dtype=bool, fill_value=False)
+        # bool_ is for backwards compat with numpy<2, and cupy
+        dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
+        return full_like(data, dtype=dtype, fill_value=False)
     else:
         # at this point, array should have dtype=object
-        if isinstance(data, np.ndarray):
+        if isinstance(data, np.ndarray) or is_extension_array_dtype(data):
             return pandas_isnull(data)
         else:
             # Not reachable yet, but intended for use with other duck array
@@ -166,12 +182,6 @@ def isnull(data):
 
 def notnull(data):
     return ~isnull(data)
-
-
-# TODO replace with simply np.ma.masked_invalid once numpy/numpy#16022 is fixed
-masked_invalid = _dask_or_eager_func(
-    "masked_invalid", eager_module=np.ma, dask_module="dask.array.ma"
-)
 
 
 def trapz(y, x, axis):
@@ -198,42 +208,79 @@ def cumulative_trapezoid(y, x, axis):
 
     # Pad so that 'axis' has same length in result as it did in y
     pads = [(1, 0) if i == axis else (0, 0) for i in range(y.ndim)]
-    integrand = np.pad(integrand, pads, mode="constant", constant_values=0.0)
+
+    xp = get_array_namespace(y, x)
+    integrand = xp.pad(integrand, pads, mode="constant", constant_values=0.0)
 
     return cumsum(integrand, axis=axis, skipna=False)
 
 
-def astype(data, dtype, **kwargs):
-    if hasattr(data, "__array_namespace__"):
+def full_like(a, fill_value, **kwargs):
+    xp = get_array_namespace(a)
+    return xp.full_like(a, fill_value, **kwargs)
+
+
+def empty_like(a, **kwargs):
+    xp = get_array_namespace(a)
+    return xp.empty_like(a, **kwargs)
+
+
+def astype(data, dtype, *, xp=None, **kwargs):
+    if not hasattr(data, "__array_namespace__") and xp is None:
+        return data.astype(dtype, **kwargs)
+
+    if xp is None:
         xp = get_array_namespace(data)
-        if xp == np:
-            # numpy currently doesn't have a astype:
-            return data.astype(dtype, **kwargs)
-        return xp.astype(data, dtype, **kwargs)
-    return data.astype(dtype, **kwargs)
+
+    if xp == np:
+        # numpy currently doesn't have a astype:
+        return data.astype(dtype, **kwargs)
+    return xp.astype(data, dtype, **kwargs)
 
 
-def asarray(data, xp=np):
-    return data if is_duck_array(data) else xp.asarray(data)
+def asarray(data, xp=np, dtype=None):
+    converted = data if is_duck_array(data) else xp.asarray(data)
+
+    if dtype is None or converted.dtype == dtype:
+        return converted
+
+    if xp is np or not hasattr(xp, "astype"):
+        return converted.astype(dtype)
+    else:
+        return xp.astype(converted, dtype)
 
 
-def as_shared_dtype(scalars_or_arrays, xp=np):
+def as_shared_dtype(scalars_or_arrays, xp=None):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
+    if any(is_extension_array_dtype(x) for x in scalars_or_arrays):
+        extension_array_types = [
+            x.dtype for x in scalars_or_arrays if is_extension_array_dtype(x)
+        ]
+        if len(extension_array_types) == len(scalars_or_arrays) and all(
+            isinstance(x, type(extension_array_types[0])) for x in extension_array_types
+        ):
+            return scalars_or_arrays
+        raise ValueError(
+            "Cannot cast arrays to shared type, found"
+            f" array types {[x.dtype for x in scalars_or_arrays]}"
+        )
+
+    # Avoid calling array_type("cupy") repeatidely in the any check
     array_type_cupy = array_type("cupy")
-    if array_type_cupy and any(
-        isinstance(x, array_type_cupy) for x in scalars_or_arrays
-    ):
+    if any(isinstance(x, array_type_cupy) for x in scalars_or_arrays):
         import cupy as cp
 
-        arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
-    else:
-        arrays = [asarray(x, xp=xp) for x in scalars_or_arrays]
+        xp = cp
+    elif xp is None:
+        xp = get_array_namespace(scalars_or_arrays)
+
     # Pass arrays directly instead of dtypes to result_type so scalars
     # get handled properly.
     # Note that result_type() safely gets the dtype from dask arrays without
     # evaluating them.
-    out_type = dtypes.result_type(*arrays)
-    return [astype(x, out_type, copy=False) for x in arrays]
+    dtype = dtypes.result_type(*scalars_or_arrays, xp=xp)
+
+    return [asarray(x, dtype=dtype, xp=xp) for x in scalars_or_arrays]
 
 
 def broadcast_to(array, shape):
@@ -274,7 +321,9 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
     if lazy_equiv is None:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", r"All-NaN (slice|axis) encountered")
-            return bool(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all())
+            return bool(
+                array_all(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True))
+            )
     else:
         return lazy_equiv
 
@@ -288,7 +337,7 @@ def array_equiv(arr1, arr2):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "In the future, 'NAT == x'")
             flag_array = (arr1 == arr2) | (isnull(arr1) & isnull(arr2))
-            return bool(flag_array.all())
+            return bool(array_all(flag_array))
     else:
         return lazy_equiv
 
@@ -304,14 +353,15 @@ def array_notnull_equiv(arr1, arr2):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "In the future, 'NAT == x'")
             flag_array = (arr1 == arr2) | isnull(arr1) | isnull(arr2)
-            return bool(flag_array.all())
+            return bool(array_all(flag_array))
     else:
         return lazy_equiv
 
 
 def count(data, axis=None):
     """Count the number of non-NA in this array along the given axis or axes"""
-    return np.sum(np.logical_not(isnull(data)), axis=axis)
+    xp = get_array_namespace(data)
+    return xp.sum(xp.logical_not(isnull(data)), axis=axis)
 
 
 def sum_where(data, axis=None, dtype=None, where=None):
@@ -326,7 +376,14 @@ def sum_where(data, axis=None, dtype=None, where=None):
 
 def where(condition, x, y):
     """Three argument where() with better dtype promotion rules."""
-    xp = get_array_namespace(condition)
+    xp = get_array_namespace(condition, x, y)
+
+    dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
+    if not is_duck_array(condition):
+        condition = asarray(condition, dtype=dtype, xp=xp)
+    else:
+        condition = astype(condition, dtype=dtype, xp=xp)
+
     return xp.where(condition, *as_shared_dtype([x, y], xp=xp))
 
 
@@ -343,15 +400,25 @@ def fillna(data, other):
     return where(notnull(data), data, other)
 
 
+def logical_not(data):
+    xp = get_array_namespace(data)
+    return xp.logical_not(data)
+
+
+def clip(data, min=None, max=None):
+    xp = get_array_namespace(data)
+    return xp.clip(data, min, max)
+
+
 def concatenate(arrays, axis=0):
     """concatenate() with better dtype promotion rules."""
-    # TODO: remove the additional check once `numpy` adds `concat` to its array namespace
-    if hasattr(arrays[0], "__array_namespace__") and not isinstance(
-        arrays[0], np.ndarray
-    ):
-        xp = get_array_namespace(arrays[0])
+    # TODO: `concat` is the xp compliant name, but fallback to concatenate for
+    # older numpy and for cupy
+    xp = get_array_namespace(*arrays)
+    if hasattr(xp, "concat"):
         return xp.concat(as_shared_dtype(arrays, xp=xp), axis=axis)
-    return _concatenate(as_shared_dtype(arrays), axis=axis)
+    else:
+        return xp.concatenate(as_shared_dtype(arrays, xp=xp), axis=axis)
 
 
 def stack(arrays, axis=0):
@@ -369,6 +436,26 @@ def ravel(array):
     return reshape(array, (-1,))
 
 
+def transpose(array, axes=None):
+    xp = get_array_namespace(array)
+    return xp.transpose(array, axes)
+
+
+def moveaxis(array, source, destination):
+    xp = get_array_namespace(array)
+    return xp.moveaxis(array, source, destination)
+
+
+def pad(array, pad_width, **kwargs):
+    xp = get_array_namespace(array)
+    return xp.pad(array, pad_width, **kwargs)
+
+
+def quantile(array, q, axis=None, **kwargs):
+    xp = get_array_namespace(array)
+    return xp.quantile(array, q, axis=axis, **kwargs)
+
+
 @contextlib.contextmanager
 def _ignore_warnings_if(condition):
     if condition:
@@ -380,8 +467,6 @@ def _ignore_warnings_if(condition):
 
 
 def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
-    from xarray.core import nanops
-
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop("out", None) is not None:
             raise TypeError(f"`out` is not valid for {name}")
@@ -392,13 +477,24 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
         if invariant_0d and axis == ():
             return values
 
-        values = asarray(values)
+        xp = get_array_namespace(values)
+        values = asarray(values, xp=xp)
 
-        if coerce_strings and values.dtype.kind in "SU":
+        if coerce_strings and dtypes.is_string(values.dtype):
             values = astype(values, object)
 
         func = None
-        if skipna or (skipna is None and values.dtype.kind in "cfO"):
+        if skipna or (
+            skipna is None
+            and (
+                dtypes.isdtype(
+                    values.dtype, ("complex floating", "real floating"), xp=xp
+                )
+                or dtypes.is_object(values.dtype)
+            )
+        ):
+            from xarray.computation import nanops
+
             nanname = "nan" + name
             func = getattr(nanops, nanname)
         else:
@@ -418,10 +514,10 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
             try:  # dask/dask#3133 dask sometimes needs dtype argument
                 # if func does not accept dtype, then raises TypeError
                 return func(values, axis=axis, dtype=values.dtype, **kwargs)
-            except (AttributeError, TypeError):
+            except (AttributeError, TypeError) as err:
                 raise NotImplementedError(
                     f"{name} is not yet implemented on dask arrays"
-                )
+                ) from err
 
     f.__name__ = name
     return f
@@ -451,11 +547,25 @@ cumsum_1d = _create_nan_agg_method("cumsum", invariant_0d=True)
 cumsum_1d.numeric_only = True
 
 
+def array_all(array, axis=None, keepdims=False, **kwargs):
+    xp = get_array_namespace(array)
+    return xp.all(array, axis=axis, keepdims=keepdims, **kwargs)
+
+
+def array_any(array, axis=None, keepdims=False, **kwargs):
+    xp = get_array_namespace(array)
+    return xp.any(array, axis=axis, keepdims=keepdims, **kwargs)
+
+
 _mean = _create_nan_agg_method("mean", invariant_0d=True)
 
 
 def _datetime_nanmin(array):
-    """nanmin() function for datetime64.
+    return _datetime_nanreduce(array, min)
+
+
+def _datetime_nanreduce(array, func):
+    """nanreduce() function for datetime64.
 
     Caveats that this function deals with:
 
@@ -463,11 +573,11 @@ def _datetime_nanmin(array):
     - numpy nanmin() don't work on datetime64 (all versions at the moment of writing)
     - dask min() does not work on datetime64 (all versions at the moment of writing)
     """
-    assert array.dtype.kind in "mM"
     dtype = array.dtype
+    assert dtypes.is_datetime_like(dtype)
     # (NaT).astype(float) does not produce NaN...
     array = where(pandas_isnull(array), np.nan, array.astype(float))
-    array = min(array, skipna=True)
+    array = func(array, skipna=True)
     if isinstance(array, float):
         array = np.array(array)
     # ...but (NaN).astype("M8") does produce NaT
@@ -501,8 +611,8 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     """
     # Set offset to minimum if not given
     if offset is None:
-        if array.dtype.kind in "Mm":
-            offset = _datetime_nanmin(array)
+        if dtypes.is_datetime_like(array.dtype):
+            offset = _datetime_nanreduce(array, min)
         else:
             offset = min(array)
 
@@ -513,7 +623,7 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     # This map_blocks call is for backwards compatibility.
     # dask == 2021.04.1 does not support subtracting object arrays
     # which is required for cftime
-    if is_duck_dask_array(array) and np.issubdtype(array.dtype, object):
+    if is_duck_dask_array(array) and dtypes.is_object(array.dtype):
         array = array.map_blocks(lambda a, b: a - b, offset, meta=array._meta)
     else:
         array = array - offset
@@ -523,11 +633,11 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
         array = np.array(array)
 
     # Convert timedelta objects to float by first converting to microseconds.
-    if array.dtype.kind in "O":
+    if dtypes.is_object(array.dtype):
         return py_timedelta_to_float(array, datetime_unit or "ns").astype(dtype)
 
     # Convert np.NaT to np.nan
-    elif array.dtype.kind in "mM":
+    elif dtypes.is_datetime_like(array.dtype):
         # Convert to specified timedelta units.
         if datetime_unit:
             array = array / np.timedelta64(1, datetime_unit)
@@ -559,10 +669,10 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
     elif isinstance(value, str):
         try:
             a = pd.to_timedelta(value)
-        except ValueError:
+        except ValueError as err:
             raise ValueError(
                 f"Could not convert {value!r} to timedelta64 using pandas.to_timedelta"
-            )
+            ) from err
         return py_timedelta_to_float(a, datetime_unit)
     else:
         raise TypeError(
@@ -577,16 +687,10 @@ def _to_pytimedelta(array, unit="us"):
 
 
 def np_timedelta64_to_float(array, datetime_unit):
-    """Convert numpy.timedelta64 to float.
-
-    Notes
-    -----
-    The array is first converted to microseconds, which is less likely to
-    cause overflow errors.
-    """
-    array = array.astype("timedelta64[ns]").astype(np.float64)
-    conversion_factor = np.timedelta64(1, "ns") / np.timedelta64(1, datetime_unit)
-    return conversion_factor * array
+    """Convert numpy.timedelta64 to float, possibly at a loss of resolution."""
+    unit, _ = np.datetime_data(array.dtype)
+    conversion_factor = np.timedelta64(1, unit) / np.timedelta64(1, datetime_unit)
+    return conversion_factor * array.astype(np.float64)
 
 
 def pd_timedelta_to_float(value, datetime_unit):
@@ -627,15 +731,21 @@ def mean(array, axis=None, skipna=None, **kwargs):
     from xarray.core.common import _contains_cftime_datetimes
 
     array = asarray(array)
-    if array.dtype.kind in "Mm":
-        offset = _datetime_nanmin(array)
-
-        # xarray always uses np.datetime64[ns] for np.datetime64 data
-        dtype = "timedelta64[ns]"
+    if dtypes.is_datetime_like(array.dtype):
+        dmin = _datetime_nanreduce(array, min).astype("datetime64[Y]").astype(int)
+        dmax = _datetime_nanreduce(array, max).astype("datetime64[Y]").astype(int)
+        offset = (
+            np.array((dmin + dmax) // 2).astype("datetime64[Y]").astype(array.dtype)
+        )
+        # From version 2025.01.2 xarray uses np.datetime64[unit], where unit
+        # is one of "s", "ms", "us", "ns".
+        # To not have to worry about the resolution, we just convert the output
+        # to "timedelta64" (without unit) and let the dtype of offset take precedence.
+        # This is fully backwards compatible with datetime64[ns].
         return (
             _mean(
                 datetime_to_numeric(array, offset), axis=axis, skipna=skipna, **kwargs
-            ).astype(dtype)
+            ).astype("timedelta64")
             + offset
         )
     elif _contains_cftime_datetimes(array):
@@ -675,24 +785,35 @@ def cumsum(array, axis=None, **kwargs):
 
 def first(values, axis, skipna=None):
     """Return the first non-NA elements in this array along the given axis"""
-    if (skipna or skipna is None) and values.dtype.kind not in "iSU":
+    if (skipna or skipna is None) and not (
+        dtypes.isdtype(values.dtype, "signed integer") or dtypes.is_string(values.dtype)
+    ):
         # only bother for dtypes that can hold NaN
         if is_chunked_array(values):
             return chunked_nanfirst(values, axis)
         else:
             return nputils.nanfirst(values, axis)
+
     return take(values, 0, axis=axis)
 
 
 def last(values, axis, skipna=None):
     """Return the last non-NA elements in this array along the given axis"""
-    if (skipna or skipna is None) and values.dtype.kind not in "iSU":
+    if (skipna or skipna is None) and not (
+        dtypes.isdtype(values.dtype, "signed integer") or dtypes.is_string(values.dtype)
+    ):
         # only bother for dtypes that can hold NaN
         if is_chunked_array(values):
             return chunked_nanlast(values, axis)
         else:
             return nputils.nanlast(values, axis)
+
     return take(values, -1, axis=axis)
+
+
+def isin(element, test_elements, **kwargs):
+    xp = get_array_namespace(element, test_elements)
+    return xp.isin(element, test_elements, **kwargs)
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
@@ -716,12 +837,7 @@ def _push(array, n: int | None = None, axis: int = -1):
     if OPTIONS["use_numbagg"] and module_available("numbagg"):
         import numbagg
 
-        if pycompat.mod_version("numbagg") < Version("0.6.2"):
-            warnings.warn(
-                f"numbagg >= 0.6.2 is required for bfill & ffill; {pycompat.mod_version('numbagg')} is installed. We'll attempt with bottleneck instead."
-            )
-        else:
-            return numbagg.ffill(array, limit=n, axis=axis)
+        return numbagg.ffill(array, limit=n, axis=axis)
 
     # work around for bottleneck 178
     limit = n if n is not None else array.shape[axis]
@@ -731,14 +847,14 @@ def _push(array, n: int | None = None, axis: int = -1):
     return bn.push(array, limit, axis)
 
 
-def push(array, n, axis):
+def push(array, n, axis, method="blelloch"):
     if not OPTIONS["use_bottleneck"] and not OPTIONS["use_numbagg"]:
         raise RuntimeError(
             "ffill & bfill requires bottleneck or numbagg to be enabled."
             " Call `xr.set_options(use_bottleneck=True)` or `xr.set_options(use_numbagg=True)` to enable one."
         )
     if is_duck_dask_array(array):
-        return dask_array_ops.push(array, n, axis)
+        return dask_array_ops.push(array, n, axis, method=method)
     else:
         return _push(array, n, axis)
 

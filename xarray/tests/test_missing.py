@@ -14,7 +14,7 @@ from xarray.core.missing import (
     _get_nan_block_lengths,
     get_clean_interp_index,
 )
-from xarray.core.pycompat import array_type
+from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     _CFTIME_CALENDARS,
     assert_allclose,
@@ -40,8 +40,12 @@ def da():
 @pytest.fixture
 def cf_da():
     def _cf_da(calendar, freq="1D"):
-        times = xr.cftime_range(
-            start="1970-01-01", freq=freq, periods=10, calendar=calendar
+        times = xr.date_range(
+            start="1970-01-01",
+            freq=freq,
+            periods=10,
+            calendar=calendar,
+            use_cftime=True,
         )
         values = np.arange(10)
         return xr.DataArray(values, dims=("time",), coords={"time": times})
@@ -62,7 +66,7 @@ def ds():
 
 
 def make_interpolate_example_data(shape, frac_nan, seed=12345, non_uniform=False):
-    rs = np.random.RandomState(seed)
+    rs = np.random.default_rng(seed)
     vals = rs.normal(size=shape)
     if frac_nan == 1:
         vals[:] = np.nan
@@ -84,7 +88,7 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345, non_uniform=False
 
     if non_uniform:
         # construct a datetime index that has irregular spacing
-        deltas = pd.TimedeltaIndex(unit="d", data=rs.normal(size=shape[0], scale=10))
+        deltas = pd.to_timedelta(rs.normal(size=shape[0], scale=10), unit="D")
         coords = {"time": (pd.Timestamp("2000-01-01") + deltas).sort_values()}
     else:
         coords = {"time": pd.date_range("2000-01-01", freq="D", periods=shape[0])}
@@ -122,10 +126,13 @@ def test_interpolate_pd_compat(method, fill_value) -> None:
                 # for the numpy linear methods.
                 # see https://github.com/pandas-dev/pandas/issues/55144
                 # This aligns the pandas output with the xarray output
-                expected.values[pd.isnull(actual.values)] = np.nan
-                expected.values[actual.values == fill_value] = fill_value
+                fixed = expected.values.copy()
+                fixed[pd.isnull(actual.values)] = np.nan
+                fixed[actual.values == fill_value] = fill_value
+            else:
+                fixed = expected.values
 
-            np.testing.assert_allclose(actual.values, expected.values)
+            np.testing.assert_allclose(actual.values, fixed)
 
 
 @requires_scipy
@@ -134,7 +141,11 @@ def test_scipy_methods_function(method) -> None:
     # Note: Pandas does some wacky things with these methods and the full
     # integration tests won't work.
     da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
-    actual = da.interpolate_na(method=method, dim="time")
+    if method == "spline":
+        with pytest.warns(PendingDeprecationWarning):
+            actual = da.interpolate_na(method=method, dim="time")
+    else:
+        actual = da.interpolate_na(method=method, dim="time")
     assert (da.count("time") <= actual.count("time")).all()
 
 
@@ -161,9 +172,10 @@ def test_interpolate_pd_compat_non_uniform_index():
             # for the linear methods. This next line inforces the xarray
             # fill_value convention on the pandas output. Therefore, this test
             # only checks that interpolated values are the same (not nans)
-            expected.values[pd.isnull(actual.values)] = np.nan
+            expected_values = expected.values.copy()
+            expected_values[pd.isnull(actual.values)] = np.nan
 
-            np.testing.assert_allclose(actual.values, expected.values)
+            np.testing.assert_allclose(actual.values, expected_values)
 
 
 @requires_scipy
@@ -417,46 +429,37 @@ def test_ffill():
     assert_equal(actual, expected)
 
 
-def test_ffill_use_bottleneck_numbagg():
+@pytest.mark.parametrize("compute_backend", [None], indirect=True)
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_b_ffill_use_bottleneck_numbagg(method, compute_backend):
+    """
+    bfill & ffill fail if both bottleneck and numba are disabled
+    """
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-    with xr.set_options(use_bottleneck=False, use_numbagg=False):
-        with pytest.raises(RuntimeError):
-            da.ffill("x")
+    with pytest.raises(RuntimeError):
+        getattr(da, method)("x")
 
 
 @requires_dask
-def test_ffill_use_bottleneck_dask():
+@pytest.mark.parametrize("compute_backend", [None], indirect=True)
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_b_ffill_use_bottleneck_dask(method, compute_backend):
+    """
+    ffill fails if both bottleneck and numba are disabled, on dask arrays
+    """
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-    da = da.chunk({"x": 1})
-    with xr.set_options(use_bottleneck=False, use_numbagg=False):
-        with pytest.raises(RuntimeError):
-            da.ffill("x")
+    with pytest.raises(RuntimeError):
+        getattr(da, method)("x")
 
 
 @requires_numbagg
 @requires_dask
-def test_ffill_use_numbagg_dask():
-    with xr.set_options(use_bottleneck=False):
-        da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-        da = da.chunk(x=-1)
-        # Succeeds with a single chunk:
-        _ = da.ffill("x").compute()
-
-
-def test_bfill_use_bottleneck():
+@pytest.mark.parametrize("compute_backend", ["numbagg"], indirect=True)
+def test_ffill_use_numbagg_dask(compute_backend):
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-    with xr.set_options(use_bottleneck=False, use_numbagg=False):
-        with pytest.raises(RuntimeError):
-            da.bfill("x")
-
-
-@requires_dask
-def test_bfill_use_bottleneck_dask():
-    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-    da = da.chunk({"x": 1})
-    with xr.set_options(use_bottleneck=False, use_numbagg=False):
-        with pytest.raises(RuntimeError):
-            da.bfill("x")
+    da = da.chunk(x=-1)
+    # Succeeds with a single chunk:
+    _ = da.ffill("x").compute()
 
 
 @requires_bottleneck
@@ -605,13 +608,14 @@ def test_get_clean_interp_index_cf_calendar(cf_da, calendar):
 
 
 @requires_cftime
-@pytest.mark.parametrize(
-    ("calendar", "freq"), zip(["gregorian", "proleptic_gregorian"], ["1D", "1M", "1Y"])
-)
-def test_get_clean_interp_index_dt(cf_da, calendar, freq):
+@pytest.mark.parametrize("calendar", ["gregorian", "proleptic_gregorian"])
+@pytest.mark.parametrize("freq", ["1D", "1ME", "1YE"])
+def test_get_clean_interp_index_dt(cf_da, calendar, freq) -> None:
     """In the gregorian case, the index should be proportional to normal datetimes."""
     g = cf_da(calendar, freq=freq)
-    g["stime"] = xr.Variable(data=g.time.to_index().to_datetimeindex(), dims=("time",))
+    g["stime"] = xr.Variable(
+        data=g.time.to_index().to_datetimeindex(time_unit="ns"), dims=("time",)
+    )
 
     gi = get_clean_interp_index(g, "time")
     si = get_clean_interp_index(g, "time", use_coordinate="stime")
@@ -623,7 +627,11 @@ def test_get_clean_interp_index_potential_overflow():
     da = xr.DataArray(
         [0, 1, 2],
         dims=("time",),
-        coords={"time": xr.cftime_range("0000-01-01", periods=3, calendar="360_day")},
+        coords={
+            "time": xr.date_range(
+                "0000-01-01", periods=3, calendar="360_day", use_cftime=True
+            )
+        },
     )
     get_clean_interp_index(da, "time")
 
@@ -670,17 +678,17 @@ def test_interpolate_na_max_gap_errors(da_time):
 
 @requires_bottleneck
 @pytest.mark.parametrize(
-    "time_range_func",
-    [pd.date_range, pytest.param(xr.cftime_range, marks=requires_cftime)],
+    "use_cftime",
+    [False, pytest.param(True, marks=requires_cftime)],
 )
 @pytest.mark.parametrize("transform", [lambda x: x, lambda x: x.to_dataset(name="a")])
 @pytest.mark.parametrize(
     "max_gap", ["3h", np.timedelta64(3, "h"), pd.to_timedelta("3h")]
 )
-def test_interpolate_na_max_gap_time_specifier(
-    da_time, max_gap, transform, time_range_func
-):
-    da_time["t"] = time_range_func("2001-01-01", freq="h", periods=11)
+def test_interpolate_na_max_gap_time_specifier(da_time, max_gap, transform, use_cftime):
+    da_time["t"] = xr.date_range(
+        "2001-01-01", freq="h", periods=11, use_cftime=use_cftime
+    )
     expected = transform(
         da_time.copy(data=[np.nan, 1, 2, 3, 4, 5, np.nan, np.nan, np.nan, np.nan, 10])
     )

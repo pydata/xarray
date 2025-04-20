@@ -215,7 +215,7 @@ Whilst the features above allow many numpy-like array libraries to be used prett
 makes sense to use an interfacing package to make certain tasks easier.
 
 For example the `pint-xarray package <https://pint-xarray.readthedocs.io>`_ offers a custom ``.pint`` accessor (see :ref:`internals.accessors`) which provides
-convenient access to information stored within the wrapped array (e.g. ``.units`` and ``.magnitude``), and makes makes
+convenient access to information stored within the wrapped array (e.g. ``.units`` and ``.magnitude``), and makes
 creating wrapped pint arrays (and especially xarray-wrapping-pint-wrapping-dask arrays) simpler for the user.
 
 We maintain a list of libraries extending ``xarray`` to make working with particular wrapped duck arrays

@@ -26,22 +26,22 @@ from xarray.core.indexing import (
     PandasIndexingAdapter,
     VectorizedIndexer,
 )
-from xarray.core.pycompat import array_type
 from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
+from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     assert_allclose,
     assert_array_equal,
     assert_equal,
     assert_identical,
     assert_no_warnings,
-    has_pandas_version_two,
+    has_dask_ge_2024_11_0,
+    has_pandas_3,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
     requires_dask,
-    requires_pandas_version_two,
     requires_pint,
     requires_sparse,
     source_ndarray,
@@ -62,6 +62,21 @@ _PAD_XR_NP_ARGS = [
 @pytest.fixture
 def var():
     return Variable(dims=list("xyz"), data=np.random.rand(3, 4, 5))
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        np.array(["a", "bc", "def"], dtype=object),
+        np.array(["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[ns]"),
+    ],
+)
+def test_as_compatible_data_writeable(data):
+    pd.set_option("mode.copy_on_write", True)
+    # GH8843, ensure writeable arrays for data_vars even with
+    # pandas copy-on-write mode
+    assert as_compatible_data(data).flags.writeable
+    pd.reset_option("mode.copy_on_write")
 
 
 class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
@@ -164,8 +179,8 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         # check type or dtype is consistent for both ndarray and Variable
         if expected_dtype is None:
             # check output type instead of array dtype
-            assert type(variable.values[0]) == type(expected_value0)
-            assert type(variable[0].values) == type(expected_value0)
+            assert type(variable.values[0]) is type(expected_value0)
+            assert type(variable[0].values) is type(expected_value0)
         elif expected_dtype is not False:
             assert variable.values[0].dtype == expected_dtype
             assert variable[0].values.dtype == expected_dtype
@@ -186,24 +201,27 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         x = self.cls(["x"], [value])
         self._assertIndexedLikeNDArray(x, value, dtype)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_index_0d_datetime(self):
         d = datetime(2000, 1, 1)
         x = self.cls(["x"], [d])
         self._assertIndexedLikeNDArray(x, np.datetime64(d))
 
         x = self.cls(["x"], [np.datetime64(d)])
-        self._assertIndexedLikeNDArray(x, np.datetime64(d), "datetime64[ns]")
+        self._assertIndexedLikeNDArray(x, np.datetime64(d), "datetime64[us]")
 
+        expected_unit = "us" if has_pandas_3 else "ns"
         x = self.cls(["x"], pd.DatetimeIndex([d]))
-        self._assertIndexedLikeNDArray(x, np.datetime64(d), "datetime64[ns]")
+        self._assertIndexedLikeNDArray(
+            x, np.datetime64(d), f"datetime64[{expected_unit}]"
+        )
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_index_0d_timedelta64(self):
         td = timedelta(hours=1)
-
+        # todo: discussion needed
         x = self.cls(["x"], [np.timedelta64(td)])
-        self._assertIndexedLikeNDArray(x, np.timedelta64(td), "timedelta64[ns]")
+        self._assertIndexedLikeNDArray(
+            x, np.timedelta64(td), np.dtype("timedelta64[us]")
+        )
 
         x = self.cls(["x"], pd.to_timedelta([td]))
         self._assertIndexedLikeNDArray(x, np.timedelta64(td), "timedelta64[ns]")
@@ -259,57 +277,51 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         expected = np.datetime64("2000-01-01", "ns")
         assert x[0].values == expected
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
-    def test_datetime64_conversion(self):
-        times = pd.date_range("2000-01-01", periods=3)
-        for values, preserve_source in [
-            (times, True),
-            (times.values, True),
-            (times.values.astype("datetime64[s]"), False),
-            (times.to_pydatetime(), False),
-        ]:
-            v = self.cls(["t"], values)
-            assert v.dtype == np.dtype("datetime64[ns]")
-            assert_array_equal(v.values, times.values)
-            assert v.values.dtype == np.dtype("datetime64[ns]")
-            same_source = source_ndarray(v.values) is source_ndarray(values)
-            assert preserve_source == same_source
+    dt64_data = pd.date_range("1970-01-01", periods=3)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
-    def test_timedelta64_conversion(self):
-        times = pd.timedelta_range(start=0, periods=3)
-        for values, preserve_source in [
-            (times, True),
-            (times.values, True),
-            (times.values.astype("timedelta64[s]"), False),
-            (times.to_pytimedelta(), False),
-        ]:
-            v = self.cls(["t"], values)
-            assert v.dtype == np.dtype("timedelta64[ns]")
-            assert_array_equal(v.values, times.values)
-            assert v.values.dtype == np.dtype("timedelta64[ns]")
-            same_source = source_ndarray(v.values) is source_ndarray(values)
-            assert preserve_source == same_source
+    @pytest.mark.parametrize(
+        "values, unit",
+        [
+            (dt64_data, "ns"),
+            (dt64_data.values, "ns"),
+            (dt64_data.values.astype("datetime64[m]"), "s"),
+            (dt64_data.values.astype("datetime64[s]"), "s"),
+            (dt64_data.values.astype("datetime64[ps]"), "ns"),
+            (
+                dt64_data.to_pydatetime(),
+                "us" if has_pandas_3 else "ns",
+            ),
+        ],
+    )
+    def test_datetime64_conversion(self, values, unit):
+        v = self.cls(["t"], values)
+        assert v.dtype == np.dtype(f"datetime64[{unit}]")
+        assert_array_equal(v.values, self.dt64_data.values)
+        assert v.values.dtype == np.dtype(f"datetime64[{unit}]")
+
+    td64_data = pd.timedelta_range(start=0, periods=3)
+
+    @pytest.mark.parametrize(
+        "values, unit",
+        [
+            (td64_data, "ns"),
+            (td64_data.values, "ns"),
+            (td64_data.values.astype("timedelta64[m]"), "s"),
+            (td64_data.values.astype("timedelta64[s]"), "s"),
+            (td64_data.values.astype("timedelta64[ps]"), "ns"),
+            (td64_data.to_pytimedelta(), "ns"),
+        ],
+    )
+    def test_timedelta64_conversion(self, values, unit):
+        v = self.cls(["t"], values)
+        assert v.dtype == np.dtype(f"timedelta64[{unit}]")
+        assert_array_equal(v.values, self.td64_data.values)
+        assert v.values.dtype == np.dtype(f"timedelta64[{unit}]")
 
     def test_object_conversion(self):
         data = np.arange(5).astype(str).astype(object)
         actual = self.cls("x", data)
         assert actual.dtype == data.dtype
-
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
-    def test_datetime64_valid_range(self):
-        data = np.datetime64("1250-01-01", "us")
-        pderror = pd.errors.OutOfBoundsDatetime
-        with pytest.raises(pderror, match=r"Out of bounds nanosecond"):
-            self.cls(["t"], [data])
-
-    @pytest.mark.xfail(reason="pandas issue 36615")
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
-    def test_timedelta64_valid_range(self):
-        data = np.timedelta64("200000", "D")
-        pderror = pd.errors.OutOfBoundsTimedelta
-        with pytest.raises(pderror, match=r"Out of bounds nanosecond"):
-            self.cls(["t"], [data])
 
     def test_pandas_data(self):
         v = self.cls(["x"], pd.Series([0, 1, 2], index=[3, 2, 1]))
@@ -562,7 +574,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         # lets just ensure that deep copy works without RecursionError
         v.copy(deep=True)
 
-        # indirect recusrion
+        # indirect recursion
         v2 = self.cls("y", [2, 3])
         v.attrs["other"] = v2
         v2.attrs["other"] = v
@@ -640,7 +652,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         expected = Variable((), 0.5 + 1j)
         assert_allclose(v.mean(), expected)
 
-    def test_pandas_cateogrical_dtype(self):
+    def test_pandas_categorical_dtype(self):
         data = pd.Categorical(np.arange(10, dtype="int64"))
         v = self.cls("x", data)
         print(v)  # should not error
@@ -856,7 +868,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
 
         v = Variable(["x", "y", "z"], np.arange(60).reshape(3, 4, 5))
         ind = Variable(["x"], [0, 1])
-        with pytest.raises(IndexError, match=r"Dimensions of indexers mis"):
+        with pytest.raises(IndexError, match=r"Dimensions of indexers mismatch"):
             v[:, ind]
 
     @pytest.mark.parametrize(
@@ -1003,7 +1015,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             fill_value=np.nan,
         )
         expected = x
-        for dim, win, cent in zip(dims, window, center):
+        for dim, win, cent in zip(dims, window, center, strict=True):
             expected = expected.rolling_window(
                 dim=dim,
                 window=win,
@@ -1057,36 +1069,47 @@ class TestVariable(VariableSubclassobjects):
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
         assert v.item() == 0
-        assert type(v.item()) is float  # noqa: E721
+        assert type(v.item()) is float
 
         v = IndexVariable("x", np.arange(5))
         assert 2 == v.searchsorted(2)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
-    def test_datetime64_conversion_scalar(self):
-        expected = np.datetime64("2000-01-01", "ns")
-        for values in [
-            np.datetime64("2000-01-01"),
-            pd.Timestamp("2000-01-01T00"),
-            datetime(2000, 1, 1),
-        ]:
-            v = Variable([], values)
-            assert v.dtype == np.dtype("datetime64[ns]")
-            assert v.values == expected
-            assert v.values.dtype == np.dtype("datetime64[ns]")
+    @pytest.mark.parametrize(
+        "values, unit",
+        [
+            (np.datetime64("2000-01-01"), "s"),
+            (
+                pd.Timestamp("2000-01-01T00"),
+                "s" if has_pandas_3 else "ns",
+            ),
+            (
+                datetime(2000, 1, 1),
+                "us" if has_pandas_3 else "ns",
+            ),
+            (np.datetime64("2000-01-01T00:00:00.1234567891"), "ns"),
+        ],
+    )
+    def test_datetime64_conversion_scalar(self, values, unit):
+        v = Variable([], values)
+        assert v.dtype == np.dtype(f"datetime64[{unit}]")
+        assert np.issubdtype(v.values, "datetime64")
+        assert v.values.dtype == np.dtype(f"datetime64[{unit}]")
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
-    def test_timedelta64_conversion_scalar(self):
-        expected = np.timedelta64(24 * 60 * 60 * 10**9, "ns")
-        for values in [
-            np.timedelta64(1, "D"),
-            pd.Timedelta("1 day"),
-            timedelta(days=1),
-        ]:
-            v = Variable([], values)
-            assert v.dtype == np.dtype("timedelta64[ns]")
-            assert v.values == expected
-            assert v.values.dtype == np.dtype("timedelta64[ns]")
+    @pytest.mark.parametrize(
+        "values, unit",
+        [
+            (np.timedelta64(1, "m"), "s"),
+            (np.timedelta64(1, "D"), "s"),
+            (np.timedelta64(1001, "ps"), "ns"),
+            (pd.Timedelta("1 day"), "ns"),
+            (timedelta(days=1), "ns"),
+        ],
+    )
+    def test_timedelta64_conversion_scalar(self, values, unit):
+        v = Variable([], values)
+        assert v.dtype == np.dtype(f"timedelta64[{unit}]")
+        assert np.issubdtype(v.values, "timedelta64")
+        assert v.values.dtype == np.dtype(f"timedelta64[{unit}]")
 
     def test_0d_str(self):
         v = Variable([], "foo")
@@ -1099,15 +1122,18 @@ class TestVariable(VariableSubclassobjects):
 
     def test_0d_datetime(self):
         v = Variable([], pd.Timestamp("2000-01-01"))
-        assert v.dtype == np.dtype("datetime64[ns]")
-        assert v.values == np.datetime64("2000-01-01", "ns")
+        expected_unit = "s" if has_pandas_3 else "ns"
+        assert v.dtype == np.dtype(f"datetime64[{expected_unit}]")
+        assert v.values == np.datetime64("2000-01-01", expected_unit)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
-    def test_0d_timedelta(self):
-        for td in [pd.to_timedelta("1s"), np.timedelta64(1, "s")]:
-            v = Variable([], td)
-            assert v.dtype == np.dtype("timedelta64[ns]")
-            assert v.values == np.timedelta64(10**9, "ns")
+    @pytest.mark.parametrize(
+        "values, unit", [(pd.to_timedelta("1s"), "ns"), (np.timedelta64(1, "s"), "s")]
+    )
+    def test_0d_timedelta(self, values, unit):
+        # todo: check, if this test is OK
+        v = Variable([], values)
+        assert v.dtype == np.dtype(f"timedelta64[{unit}]")
+        assert v.values == np.timedelta64(10**9, "ns")
 
     def test_equals_and_identical(self):
         d = np.random.rand(10, 3)
@@ -1201,7 +1227,8 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(TypeError, match=r"without an explicit list of dimensions"):
             as_variable(data)
 
-        actual = as_variable(data, name="x")
+        with pytest.warns(FutureWarning, match="IndexVariable"):
+            actual = as_variable(data, name="x")
         assert_identical(expected.to_index_variable(), actual)
 
         actual = as_variable(0)
@@ -1219,20 +1246,23 @@ class TestVariable(VariableSubclassobjects):
 
         # test datetime, timedelta conversion
         dt = np.array([datetime(1999, 1, 1) + timedelta(days=x) for x in range(10)])
-        assert as_variable(dt, "time").dtype.kind == "M"
+        with pytest.warns(FutureWarning, match="IndexVariable"):
+            assert as_variable(dt, "time").dtype.kind == "M"
         td = np.array([timedelta(days=x) for x in range(10)])
-        assert as_variable(td, "time").dtype.kind == "m"
+        with pytest.warns(FutureWarning, match="IndexVariable"):
+            assert as_variable(td, "time").dtype.kind == "m"
 
         with pytest.raises(TypeError):
             as_variable(("x", DataArray([])))
 
     def test_repr(self):
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
+        v = v.astype(np.uint64)
         expected = dedent(
             """
-        <xarray.Variable (time: 2, x: 3)>
+        <xarray.Variable (time: 2, x: 3)> Size: 48B
         array([[1, 2, 3],
-               [4, 5, 6]])
+               [4, 5, 6]], dtype=uint64)
         Attributes:
             foo:      bar
         """
@@ -1250,38 +1280,38 @@ class TestVariable(VariableSubclassobjects):
         v = Variable(["x", "y"], data)
 
         _, ind, _ = v._broadcast_indexes((0, 1))
-        assert type(ind) == indexing.BasicIndexer
+        assert type(ind) is indexing.BasicIndexer
 
         _, ind, _ = v._broadcast_indexes((0, slice(0, 8, 2)))
-        assert type(ind) == indexing.BasicIndexer
+        assert type(ind) is indexing.BasicIndexer
 
         _, ind, _ = v._broadcast_indexes((0, [0, 1]))
-        assert type(ind) == indexing.OuterIndexer
+        assert type(ind) is indexing.OuterIndexer
 
         _, ind, _ = v._broadcast_indexes(([0, 1], 1))
-        assert type(ind) == indexing.OuterIndexer
+        assert type(ind) is indexing.OuterIndexer
 
         _, ind, _ = v._broadcast_indexes(([0, 1], [1, 2]))
-        assert type(ind) == indexing.OuterIndexer
+        assert type(ind) is indexing.OuterIndexer
 
         _, ind, _ = v._broadcast_indexes(([0, 1], slice(0, 8, 2)))
-        assert type(ind) == indexing.OuterIndexer
+        assert type(ind) is indexing.OuterIndexer
 
         vind = Variable(("a",), [0, 1])
         _, ind, _ = v._broadcast_indexes((vind, slice(0, 8, 2)))
-        assert type(ind) == indexing.OuterIndexer
+        assert type(ind) is indexing.OuterIndexer
 
         vind = Variable(("y",), [0, 1])
         _, ind, _ = v._broadcast_indexes((vind, 3))
-        assert type(ind) == indexing.OuterIndexer
+        assert type(ind) is indexing.OuterIndexer
 
         vind = Variable(("a",), [0, 1])
         _, ind, _ = v._broadcast_indexes((vind, vind))
-        assert type(ind) == indexing.VectorizedIndexer
+        assert type(ind) is indexing.VectorizedIndexer
 
         vind = Variable(("a", "b"), [[0, 2], [1, 3]])
         _, ind, _ = v._broadcast_indexes((vind, 3))
-        assert type(ind) == indexing.VectorizedIndexer
+        assert type(ind) is indexing.VectorizedIndexer
 
     def test_indexer_type(self):
         # GH:issue:1688. Wrong indexer type induces NotImplementedError
@@ -1543,7 +1573,6 @@ class TestVariable(VariableSubclassobjects):
             v.transpose(..., "not_a_dim", missing_dims="warn")
             assert_identical(expected_ell, actual)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_transpose_0d(self):
         for value in [
             3.5,
@@ -1556,6 +1585,20 @@ class TestVariable(VariableSubclassobjects):
             variable = Variable([], value)
             actual = variable.transpose()
             assert_identical(actual, variable)
+
+    def test_pandas_categorical_dtype(self):
+        data = pd.Categorical(np.arange(10, dtype="int64"))
+        v = self.cls("x", data)
+        print(v)  # should not error
+        assert pd.api.types.is_extension_array_dtype(v.dtype)
+
+    def test_pandas_categorical_no_chunk(self):
+        data = pd.Categorical(np.arange(10, dtype="int64"))
+        v = self.cls("x", data)
+        with pytest.raises(
+            ValueError, match=r".*was found to be a Pandas ExtensionArray.*"
+        ):
+            v.chunk((5,))
 
     def test_squeeze(self):
         v = Variable(["x", "y"], [[1]])
@@ -1571,7 +1614,7 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(ValueError, match=r"cannot select a dimension"):
             v.squeeze("y")
 
-    def test_get_axis_num(self):
+    def test_get_axis_num(self) -> None:
         v = Variable(["x", "y", "z"], np.random.randn(2, 3, 4))
         assert v.get_axis_num("x") == 0
         assert v.get_axis_num(["x"]) == (0,)
@@ -1579,6 +1622,11 @@ class TestVariable(VariableSubclassobjects):
         assert v.get_axis_num(["z", "y", "x"]) == (2, 1, 0)
         with pytest.raises(ValueError, match=r"not found in array dim"):
             v.get_axis_num("foobar")
+        # Test the type annotations: mypy will complain if the inferred
+        # type is wrong
+        v.get_axis_num("x") + 0
+        v.get_axis_num(["x"]) + ()
+        v.get_axis_num(("x", "y")) + ()
 
     def test_set_dims(self):
         v = Variable(["x"], [0, 1])
@@ -1774,7 +1822,8 @@ class TestVariable(VariableSubclassobjects):
     @pytest.mark.parametrize("skipna", [True, False, None])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
-        "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
+        "axis, dim",
+        zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]], strict=True),
     )
     def test_quantile(self, q, axis, dim, skipna):
         d = self.d.copy()
@@ -1838,17 +1887,26 @@ class TestVariable(VariableSubclassobjects):
     def test_quantile_chunked_dim_error(self):
         v = Variable(["x", "y"], self.d).chunk({"x": 2})
 
-        # this checks for ValueError in dask.array.apply_gufunc
-        with pytest.raises(ValueError, match=r"consists of multiple chunks"):
-            v.quantile(0.5, dim="x")
+        if has_dask_ge_2024_11_0:
+            # Dask rechunks
+            np.testing.assert_allclose(
+                v.compute().quantile(0.5, dim="x"), v.quantile(0.5, dim="x")
+            )
 
+        else:
+            # this checks for ValueError in dask.array.apply_gufunc
+            with pytest.raises(ValueError, match=r"consists of multiple chunks"):
+                v.quantile(0.5, dim="x")
+
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
-    def test_quantile_out_of_bounds(self, q):
+    def test_quantile_out_of_bounds(self, q, compute_backend):
         v = Variable(["x", "y"], self.d)
 
         # escape special characters
         with pytest.raises(
-            ValueError, match=r"Quantiles must be in the range \[0, 1\]"
+            ValueError,
+            match=r"(Q|q)uantiles must be in the range \[0, 1\]",
         ):
             v.quantile(q, dim="x")
 
@@ -1935,26 +1993,27 @@ class TestVariable(VariableSubclassobjects):
     def test_reduce_keepdims(self):
         v = Variable(["x", "y"], self.d)
 
-        assert_identical(
-            v.mean(keepdims=True), Variable(v.dims, np.mean(self.d, keepdims=True))
-        )
-        assert_identical(
-            v.mean(dim="x", keepdims=True),
-            Variable(v.dims, np.mean(self.d, axis=0, keepdims=True)),
-        )
-        assert_identical(
-            v.mean(dim="y", keepdims=True),
-            Variable(v.dims, np.mean(self.d, axis=1, keepdims=True)),
-        )
-        assert_identical(
-            v.mean(dim=["y", "x"], keepdims=True),
-            Variable(v.dims, np.mean(self.d, axis=(1, 0), keepdims=True)),
-        )
+        with set_options(use_numbagg=False):
+            assert_identical(
+                v.mean(keepdims=True), Variable(v.dims, np.mean(self.d, keepdims=True))
+            )
+            assert_identical(
+                v.mean(dim="x", keepdims=True),
+                Variable(v.dims, np.mean(self.d, axis=0, keepdims=True)),
+            )
+            assert_identical(
+                v.mean(dim="y", keepdims=True),
+                Variable(v.dims, np.mean(self.d, axis=1, keepdims=True)),
+            )
+            assert_identical(
+                v.mean(dim=["y", "x"], keepdims=True),
+                Variable(v.dims, np.mean(self.d, axis=(1, 0), keepdims=True)),
+            )
 
-        v = Variable([], 1.0)
-        assert_identical(
-            v.mean(keepdims=True), Variable([], np.mean(v.data, keepdims=True))
-        )
+            v = Variable([], 1.0)
+            assert_identical(
+                v.mean(keepdims=True), Variable([], np.mean(v.data, keepdims=True))
+            )
 
     @requires_dask
     def test_reduce_keepdims_dask(self):
@@ -2266,20 +2325,20 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert blocked.chunks == ((3,), (3, 1))
         assert blocked.data.name != first_dask_name
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_0d_object_array_with_list(self):
         super().test_0d_object_array_with_list()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_array_interface(self):
         # dask array does not have `argsort`
         super().test_array_interface()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_copy_index(self):
         super().test_copy_index()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     @pytest.mark.filterwarnings("ignore:elementwise comparison failed.*:FutureWarning")
     def test_eq_all_dtypes(self):
         super().test_eq_all_dtypes()
@@ -2323,6 +2382,7 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert actual.shape == expected.shape
         assert_equal(actual, expected)
 
+    @pytest.mark.xfail(reason="https://github.com/dask/dask/issues/11585")
     def test_multiindex(self):
         super().test_multiindex()
 
@@ -2351,6 +2411,11 @@ class TestVariableWithDask(VariableSubclassobjects):
     )
     def test_pad(self, mode, xr_arg, np_arg):
         super().test_pad(mode, xr_arg, np_arg)
+
+    def test_pandas_categorical_dtype(self):
+        data = pd.Categorical(np.arange(10, dtype="int64"))
+        with pytest.raises(ValueError, match="was found to be a Pandas ExtensionArray"):
+            self.cls("x", data)
 
 
 @requires_sparse
@@ -2545,10 +2610,15 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
                 assert source_ndarray(x) is source_ndarray(as_compatible_data(x))
 
     def test_converted_types(self):
-        for input_array in [[[0, 1, 2]], pd.DataFrame([[0, 1, 2]])]:
+        for input_array in [
+            [[0, 1, 2]],
+            pd.DataFrame([[0, 1, 2]]),
+            np.float64(1.4),
+            np.str_("abc"),
+        ]:
             actual = as_compatible_data(input_array)
             assert_array_equal(np.asarray(input_array), actual)
-            assert np.ndarray == type(actual)
+            assert np.ndarray is type(actual)
             assert np.asarray(input_array).dtype == actual.dtype
 
     def test_masked_array(self):
@@ -2578,52 +2648,53 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         assert_array_equal(expected, actual)
         assert actual.dtype == expected.dtype
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_datetime(self):
         expected = np.datetime64("2000-01-01")
         actual = as_compatible_data(expected)
         assert expected == actual
-        assert np.ndarray == type(actual)
-        assert np.dtype("datetime64[ns]") == actual.dtype
+        assert np.ndarray is type(actual)
+        assert np.dtype("datetime64[s]") == actual.dtype
 
         expected = np.array([np.datetime64("2000-01-01")])
         actual = as_compatible_data(expected)
         assert np.asarray(expected) == actual
-        assert np.ndarray == type(actual)
-        assert np.dtype("datetime64[ns]") == actual.dtype
+        assert np.ndarray is type(actual)
+        assert np.dtype("datetime64[s]") == actual.dtype
 
         expected = np.array([np.datetime64("2000-01-01", "ns")])
         actual = as_compatible_data(expected)
         assert np.asarray(expected) == actual
-        assert np.ndarray == type(actual)
+        assert np.ndarray is type(actual)
         assert np.dtype("datetime64[ns]") == actual.dtype
         assert expected is source_ndarray(np.asarray(actual))
 
-        expected = np.datetime64("2000-01-01", "ns")
+        expected = np.datetime64(
+            "2000-01-01",
+            "us" if has_pandas_3 else "ns",
+        )
         actual = as_compatible_data(datetime(2000, 1, 1))
         assert np.asarray(expected) == actual
-        assert np.ndarray == type(actual)
-        assert np.dtype("datetime64[ns]") == actual.dtype
+        assert np.ndarray is type(actual)
+        assert expected.dtype == actual.dtype
 
-    @requires_pandas_version_two
     def test_tz_datetime(self) -> None:
         tz = pytz.timezone("America/New_York")
         times_ns = pd.date_range("2000", periods=1, tz=tz)
 
-        times_s = times_ns.astype(pd.DatetimeTZDtype("s", tz))
+        times_s = times_ns.astype(pd.DatetimeTZDtype("s", tz))  # type: ignore[arg-type]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             actual: T_DuckArray = as_compatible_data(times_s)
         assert actual.array == times_s
-        assert actual.array.dtype == pd.DatetimeTZDtype("ns", tz)
+        assert actual.array.dtype == pd.DatetimeTZDtype("s", tz)  # type: ignore[arg-type]
 
         series = pd.Series(times_s)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             actual2: T_DuckArray = as_compatible_data(series)
 
-        np.testing.assert_array_equal(actual2, series.values)
-        assert actual2.dtype == np.dtype("datetime64[ns]")
+        np.testing.assert_array_equal(actual2, np.asarray(series.values))
+        assert actual2.dtype == np.dtype("datetime64[s]")
 
     def test_full_like(self) -> None:
         # For more thorough tests, see test_variable.py
@@ -2632,11 +2703,12 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         )
 
         expect = orig.copy(deep=True)
-        expect.values = [[2.0, 2.0], [2.0, 2.0]]
+        # see https://github.com/python/mypy/issues/3004 for why we need to ignore type
+        expect.values = [[2.0, 2.0], [2.0, 2.0]]  # type: ignore[assignment]
         assert_identical(expect, full_like(orig, 2))
 
         # override dtype
-        expect.values = [[True, True], [True, True]]
+        expect.values = [[True, True], [True, True]]  # type: ignore[assignment]
         assert expect.dtype == bool
         assert_identical(expect, full_like(orig, True, dtype=bool))
 
@@ -2693,6 +2765,26 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         assert_identical(ones_like(orig), full_like(orig, 1))
         assert_identical(ones_like(orig, dtype=int), full_like(orig, 1, dtype=int))
 
+    def test_numpy_ndarray_subclass(self):
+        class SubclassedArray(np.ndarray):
+            def __new__(cls, array, foo):
+                obj = np.asarray(array).view(cls)
+                obj.foo = foo
+                return obj
+
+        data = SubclassedArray([1, 2, 3], foo="bar")
+        actual = as_compatible_data(data)
+        assert isinstance(actual, SubclassedArray)
+        assert actual.foo == "bar"
+        assert_array_equal(data, actual)
+
+    def test_numpy_matrix(self):
+        with pytest.warns(PendingDeprecationWarning):
+            data = np.matrix([[1, 2], [3, 4]])
+        actual = as_compatible_data(data)
+        assert isinstance(actual, np.ndarray)
+        assert_array_equal(data, actual)
+
     def test_unsupported_type(self):
         # Non indexable type
         class CustomArray(NDArrayMixin):
@@ -2722,7 +2814,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
 
 def test_raise_no_warning_for_nan_in_binary_ops():
     with assert_no_warnings():
-        Variable("x", [1, 2, np.nan]) > 0
+        _ = Variable("x", [1, 2, np.nan]) > 0
 
 
 class TestBackendIndexing:
@@ -2860,7 +2952,8 @@ class TestNumpyCoercion:
         import sparse
 
         arr = np.diagflat([1, 2, 3])
-        sparr = sparse.COO(coords=[[0, 1, 2], [0, 1, 2]], data=[1, 2, 3])
+        coords = np.array([[0, 1, 2], [0, 1, 2]])
+        sparr = sparse.COO(coords=coords, data=[1, 2, 3], shape=(3, 3))
         v = Variable(["x", "y"], sparr)
 
         assert_identical(v.as_numpy(), Variable(["x", "y"], arr))
@@ -2898,37 +2991,37 @@ class TestNumpyCoercion:
 
 
 @pytest.mark.parametrize(
-    ("values", "warns_under_pandas_version_two"),
+    ("values", "unit"),
     [
-        (np.datetime64("2000-01-01", "ns"), False),
-        (np.datetime64("2000-01-01", "s"), True),
-        (np.array([np.datetime64("2000-01-01", "ns")]), False),
-        (np.array([np.datetime64("2000-01-01", "s")]), True),
-        (pd.date_range("2000", periods=1), False),
-        (datetime(2000, 1, 1), False),
-        (np.array([datetime(2000, 1, 1)]), False),
-        (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), False),
+        (np.datetime64("2000-01-01", "ns"), "ns"),
+        (np.datetime64("2000-01-01", "s"), "s"),
+        (np.array([np.datetime64("2000-01-01", "ns")]), "ns"),
+        (np.array([np.datetime64("2000-01-01", "s")]), "s"),
+        (pd.date_range("2000", periods=1), "ns"),
+        (
+            datetime(2000, 1, 1),
+            "us" if has_pandas_3 else "ns",
+        ),
+        (
+            np.array([datetime(2000, 1, 1)]),
+            "us" if has_pandas_3 else "ns",
+        ),
+        (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), "ns"),
         (
             pd.Series(
                 pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
             ),
-            False,
+            "ns",
         ),
     ],
     ids=lambda x: f"{x}",
 )
-def test_datetime_conversion_warning(values, warns_under_pandas_version_two) -> None:
-    dims = ["time"] if isinstance(values, (np.ndarray, pd.Index, pd.Series)) else []
-    if warns_under_pandas_version_two and has_pandas_version_two:
-        with pytest.warns(UserWarning, match="non-nanosecond precision datetime"):
-            var = Variable(dims, values)
-    else:
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
-            var = Variable(dims, values)
-
+def test_datetime_conversion(values, unit) -> None:
+    # todo: check for redundancy (suggested per review)
+    dims = ["time"] if isinstance(values, np.ndarray | pd.Index | pd.Series) else []
+    var = Variable(dims, values)
     if var.dtype.kind == "M":
-        assert var.dtype == np.dtype("datetime64[ns]")
+        assert var.dtype == np.dtype(f"datetime64[{unit}]")
     else:
         # The only case where a non-datetime64 dtype can occur currently is in
         # the case that the variable is backed by a timezone-aware
@@ -2939,72 +3032,62 @@ def test_datetime_conversion_warning(values, warns_under_pandas_version_two) -> 
         )
 
 
-@requires_pandas_version_two
-def test_pandas_two_only_datetime_conversion_warnings() -> None:
-    # Note these tests rely on pandas features that are only present in pandas
-    # 2.0.0 and above, and so for now cannot be parametrized.
-    cases = [
-        (pd.date_range("2000", periods=1), "datetime64[s]"),
-        (pd.Series(pd.date_range("2000", periods=1)), "datetime64[s]"),
-        (
-            pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")),
-            pd.DatetimeTZDtype("s", pytz.timezone("America/New_York")),
-        ),
-        (
-            pd.Series(
-                pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
-            ),
-            pd.DatetimeTZDtype("s", pytz.timezone("America/New_York")),
-        ),
-    ]
-    for data, dtype in cases:
-        with pytest.warns(UserWarning, match="non-nanosecond precision datetime"):
-            var = Variable(["time"], data.astype(dtype))
-
-    if var.dtype.kind == "M":
-        assert var.dtype == np.dtype("datetime64[ns]")
-    else:
-        # The only case where a non-datetime64 dtype can occur currently is in
-        # the case that the variable is backed by a timezone-aware
-        # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
-        assert isinstance(var._data, PandasIndexingAdapter)
-        assert var._data.array.dtype == pd.DatetimeTZDtype(
-            "ns", pytz.timezone("America/New_York")
-        )
+tz_ny = pytz.timezone("America/New_York")
 
 
 @pytest.mark.parametrize(
-    ("values", "warns_under_pandas_version_two"),
+    ["data", "dtype"],
     [
-        (np.timedelta64(10, "ns"), False),
-        (np.timedelta64(10, "s"), True),
-        (np.array([np.timedelta64(10, "ns")]), False),
-        (np.array([np.timedelta64(10, "s")]), True),
-        (pd.timedelta_range("1", periods=1), False),
-        (timedelta(days=1), False),
-        (np.array([timedelta(days=1)]), False),
+        pytest.param(pd.date_range("2000", periods=1), "datetime64[s]", id="index-sec"),
+        pytest.param(
+            pd.Series(pd.date_range("2000", periods=1)),
+            "datetime64[s]",
+            id="series-sec",
+        ),
+        pytest.param(
+            pd.date_range("2000", periods=1, tz=tz_ny),
+            pd.DatetimeTZDtype("s", tz_ny),  # type: ignore[arg-type]
+            id="index-timezone",
+        ),
+        pytest.param(
+            pd.Series(pd.date_range("2000", periods=1, tz=tz_ny)),
+            pd.DatetimeTZDtype("s", tz_ny),  # type: ignore[arg-type]
+            id="series-timezone",
+        ),
+    ],
+)
+def test_pandas_two_only_datetime_conversion_warnings(
+    data: pd.DatetimeIndex | pd.Series, dtype: str | pd.DatetimeTZDtype
+) -> None:
+    # todo: check for redundancy (suggested per review)
+    var = Variable(["time"], data.astype(dtype))  # type: ignore[arg-type]
+
+    if var.dtype.kind == "M":
+        assert var.dtype == np.dtype("datetime64[s]")
+    else:
+        # The only case where a non-datetime64 dtype can occur currently is in
+        # the case that the variable is backed by a timezone-aware
+        # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
+        assert isinstance(var._data, PandasIndexingAdapter)
+        assert var._data.array.dtype == pd.DatetimeTZDtype("s", tz_ny)
+
+
+@pytest.mark.parametrize(
+    ("values", "unit"),
+    [
+        (np.timedelta64(10, "ns"), "ns"),
+        (np.timedelta64(10, "s"), "s"),
+        (np.array([np.timedelta64(10, "ns")]), "ns"),
+        (np.array([np.timedelta64(10, "s")]), "s"),
+        (pd.timedelta_range("1", periods=1), "ns"),
+        (timedelta(days=1), "ns"),
+        (np.array([timedelta(days=1)]), "ns"),
+        (pd.timedelta_range("1", periods=1).astype("timedelta64[s]"), "s"),
     ],
     ids=lambda x: f"{x}",
 )
-def test_timedelta_conversion_warning(values, warns_under_pandas_version_two) -> None:
-    dims = ["time"] if isinstance(values, (np.ndarray, pd.Index)) else []
-    if warns_under_pandas_version_two and has_pandas_version_two:
-        with pytest.warns(UserWarning, match="non-nanosecond precision timedelta"):
-            var = Variable(dims, values)
-    else:
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
-            var = Variable(dims, values)
-
-    assert var.dtype == np.dtype("timedelta64[ns]")
-
-
-@requires_pandas_version_two
-def test_pandas_two_only_timedelta_conversion_warning() -> None:
-    # Note this test relies on a pandas feature that is only present in pandas
-    # 2.0.0 and above, and so for now cannot be parametrized.
-    data = pd.timedelta_range("1", periods=1).astype("timedelta64[s]")
-    with pytest.warns(UserWarning, match="non-nanosecond precision timedelta"):
-        var = Variable(["time"], data)
-
-    assert var.dtype == np.dtype("timedelta64[ns]")
+def test_timedelta_conversion(values, unit) -> None:
+    # todo: check for redundancy
+    dims = ["time"] if isinstance(values, np.ndarray | pd.Index) else []
+    var = Variable(dims, values)
+    assert var.dtype == np.dtype(f"timedelta64[{unit}]")

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import threading
 from collections import OrderedDict
-from collections.abc import Iterator, MutableMapping
-from typing import Any, Callable, TypeVar
+from collections.abc import Callable, Iterator, MutableMapping
+from typing import Any, TypeVar
 
 K = TypeVar("K")
 V = TypeVar("V")

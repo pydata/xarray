@@ -1,8 +1,8 @@
 """Testing functions exposed to the user API"""
+
 import functools
 import warnings
 from collections.abc import Hashable
-from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -11,6 +11,8 @@ from xarray.core import duck_array_ops, formatting, utils
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
+from xarray.core.datatree import DataTree
+from xarray.core.formatting import diff_datatree_repr
 from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex, default_indexes
 from xarray.core.variable import IndexVariable, Variable
 
@@ -33,7 +35,7 @@ def ensure_warnings(func):
 
 def _decode_string_data(data):
     if data.dtype.kind == "S":
-        return np.core.defchararray.decode(data, "utf-8", "replace")
+        return np.char.decode(data, "utf-8", "replace")
     return data
 
 
@@ -49,7 +51,52 @@ def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08, decode_bytes=Tru
 
 
 @ensure_warnings
-def assert_equal(a, b):
+def assert_isomorphic(a: DataTree, b: DataTree):
+    """
+    Two DataTrees are considered isomorphic if the set of paths to their
+    descendent nodes are the same.
+
+    Nothing about the data or attrs in each node is checked.
+
+    Isomorphism is a necessary condition for two trees to be used in a nodewise binary operation,
+    such as tree1 + tree2.
+
+    Parameters
+    ----------
+    a : DataTree
+        The first object to compare.
+    b : DataTree
+        The second object to compare.
+
+    See Also
+    --------
+    DataTree.isomorphic
+    assert_equal
+    assert_identical
+    """
+    __tracebackhide__ = True
+    assert isinstance(a, type(b))
+
+    if isinstance(a, DataTree):
+        assert a.isomorphic(b), diff_datatree_repr(a, b, "isomorphic")
+    else:
+        raise TypeError(f"{type(a)} not of type DataTree")
+
+
+def maybe_transpose_dims(a, b, check_dim_order: bool):
+    """Helper for assert_equal/allclose/identical"""
+    __tracebackhide__ = True
+    if not isinstance(a, Variable | DataArray | Dataset):
+        return b
+    if not check_dim_order and set(a.dims) == set(b.dims):
+        # Ensure transpose won't fail if a dimension is missing
+        # If this is the case, the difference will be caught by the caller
+        return b.transpose(*a.dims)
+    return b
+
+
+@ensure_warnings
+def assert_equal(a, b, check_dim_order: bool = True):
     """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
     objects.
 
@@ -58,12 +105,18 @@ def assert_equal(a, b):
     (except for Dataset objects for which the variable names must match).
     Arrays with NaN in the same location are considered equal.
 
+    For DataTree objects, assert_equal is mapped over all Datasets on each node,
+    with the DataTrees being equal if both are isomorphic and the corresponding
+    Datasets at each node are themselves equal.
+
     Parameters
     ----------
-    a : xarray.Dataset, xarray.DataArray, xarray.Variable or xarray.Coordinates
-        The first object to compare.
-    b : xarray.Dataset, xarray.DataArray, xarray.Variable or xarray.Coordinates
-        The second object to compare.
+    a : xarray.Dataset, xarray.DataArray, xarray.Variable, xarray.Coordinates
+        or xarray.core.datatree.DataTree. The first object to compare.
+    b : xarray.Dataset, xarray.DataArray, xarray.Variable, xarray.Coordinates
+        or xarray.core.datatree.DataTree. The second object to compare.
+    check_dim_order : bool, optional, default is True
+        Whether dimensions must be in the same order.
 
     See Also
     --------
@@ -71,15 +124,18 @@ def assert_equal(a, b):
     numpy.testing.assert_array_equal
     """
     __tracebackhide__ = True
-    assert (
-        type(a) == type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
+    assert type(a) is type(b) or (
+        isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
-    if isinstance(a, (Variable, DataArray)):
+    b = maybe_transpose_dims(a, b, check_dim_order)
+    if isinstance(a, Variable | DataArray):
         assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
     elif isinstance(a, Dataset):
         assert a.equals(b), formatting.diff_dataset_repr(a, b, "equals")
     elif isinstance(a, Coordinates):
         assert a.equals(b), formatting.diff_coords_repr(a, b, "equals")
+    elif isinstance(a, DataTree):
+        assert a.equals(b), diff_datatree_repr(a, b, "equals")
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
@@ -90,6 +146,10 @@ def assert_identical(a, b):
     objects' names and attributes.
 
     Raises an AssertionError if two objects are not identical.
+
+    For DataTree objects, assert_identical is mapped over all Datasets on each
+    node, with the DataTrees being identical if both are isomorphic and the
+    corresponding Datasets at each node are themselves identical.
 
     Parameters
     ----------
@@ -103,24 +163,30 @@ def assert_identical(a, b):
     assert_equal, assert_allclose, Dataset.equals, DataArray.equals
     """
     __tracebackhide__ = True
-    assert (
-        type(a) == type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
+    assert type(a) is type(b) or (
+        isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
     if isinstance(a, Variable):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, DataArray):
-        assert a.name == b.name
+        assert a.name == b.name, (
+            f"DataArray names are different. L: {a.name}, R: {b.name}"
+        )
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
-    elif isinstance(a, (Dataset, Variable)):
+    elif isinstance(a, Dataset | Variable):
         assert a.identical(b), formatting.diff_dataset_repr(a, b, "identical")
     elif isinstance(a, Coordinates):
         assert a.identical(b), formatting.diff_coords_repr(a, b, "identical")
+    elif isinstance(a, DataTree):
+        assert a.identical(b), diff_datatree_repr(a, b, "identical")
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
 
 @ensure_warnings
-def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
+def assert_allclose(
+    a, b, rtol=1e-05, atol=1e-08, decode_bytes=True, check_dim_order: bool = True
+):
     """Like :py:func:`numpy.testing.assert_allclose`, but for xarray objects.
 
     Raises an AssertionError if two objects are not equal up to desired
@@ -140,23 +206,25 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
         Whether byte dtypes should be decoded to strings as UTF-8 or not.
         This is useful for testing serialization methods on Python 3 that
         return saved strings as bytes.
+    check_dim_order : bool, optional, default is True
+        Whether dimensions must be in the same order.
 
     See Also
     --------
     assert_identical, assert_equal, numpy.testing.assert_allclose
     """
     __tracebackhide__ = True
-    assert type(a) == type(b)
+    assert type(a) is type(b)
+    b = maybe_transpose_dims(a, b, check_dim_order)
 
     equiv = functools.partial(
         _data_allclose_or_equiv, rtol=rtol, atol=atol, decode_bytes=decode_bytes
     )
-    equiv.__name__ = "allclose"
+    equiv.__name__ = "allclose"  # type: ignore[attr-defined]
 
     def compat_variable(a, b):
         a = getattr(a, "variable", a)
         b = getattr(b, "variable", b)
-
         return a.dims == b.dims and (a._data is b._data or equiv(a.data, b.data))
 
     if isinstance(a, Variable):
@@ -172,6 +240,9 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
             a.variables, b.variables, compat=compat_variable
         )
         assert allclose, formatting.diff_dataset_repr(a, b, compat=equiv)
+    elif isinstance(a, Coordinates):
+        allclose = utils.dict_equiv(a.variables, b.variables, compat=compat_variable)
+        assert allclose, formatting.diff_coords_repr(a, b, compat=equiv)
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
@@ -228,7 +299,7 @@ def assert_duckarray_equal(x, y, err_msg="", verbose=True):
     if (utils.is_duck_array(x) and utils.is_scalar(y)) or (
         utils.is_scalar(x) and utils.is_duck_array(y)
     ):
-        equiv = (x == y).all()
+        equiv = duck_array_ops.array_all(x == y)
     else:
         equiv = duck_array_ops.array_equiv(x, y)
     assert equiv, _format_message(x, y, err_msg=err_msg, verbose=verbose)
@@ -262,10 +333,13 @@ def _assert_indexes_invariants_checks(
         k: type(v) for k, v in indexes.items()
     }
 
-    index_vars = {
-        k for k, v in possible_coord_variables.items() if isinstance(v, IndexVariable)
-    }
-    assert indexes.keys() <= index_vars, (set(indexes), index_vars)
+    if check_default:
+        index_vars = {
+            k
+            for k, v in possible_coord_variables.items()
+            if isinstance(v, IndexVariable)
+        }
+        assert indexes.keys() <= index_vars, (set(indexes), index_vars)
 
     # check pandas index wrappers vs. coordinate data adapters
     for k, index in indexes.items():
@@ -315,10 +389,10 @@ def _assert_variable_invariants(var: Variable, name: Hashable = None):
         var._dims,
         var._data.shape,
     )
-    assert isinstance(var._encoding, (type(None), dict)), name_or_empty + (
+    assert isinstance(var._encoding, type(None) | dict), name_or_empty + (
         var._encoding,
     )
-    assert isinstance(var._attrs, (type(None), dict)), name_or_empty + (var._attrs,)
+    assert isinstance(var._attrs, type(None) | dict), name_or_empty + (var._attrs,)
 
 
 def _assert_dataarray_invariants(da: DataArray, check_default_indexes: bool):
@@ -331,9 +405,14 @@ def _assert_dataarray_invariants(da: DataArray, check_default_indexes: bool):
         da.dims,
         {k: v.dims for k, v in da._coords.items()},
     )
-    assert all(
-        isinstance(v, IndexVariable) for (k, v) in da._coords.items() if v.dims == (k,)
-    ), {k: type(v) for k, v in da._coords.items()}
+
+    if check_default_indexes:
+        assert all(
+            isinstance(v, IndexVariable)
+            for (k, v) in da._coords.items()
+            if v.dims == (k,)
+        ), {k: type(v) for k, v in da._coords.items()}
+
     for k, v in da._coords.items():
         _assert_variable_invariants(v, k)
 
@@ -355,7 +434,7 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
         set(ds._variables),
     )
 
-    assert type(ds._dims) is dict, ds._dims  # noqa: E721
+    assert type(ds._dims) is dict, ds._dims
     assert all(isinstance(v, int) for v in ds._dims.values()), ds._dims
     var_dims: set[Hashable] = set()
     for v in ds._variables.values():
@@ -377,12 +456,12 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
             ds._indexes, ds._variables, ds._dims, check_default=check_default_indexes
         )
 
-    assert isinstance(ds._encoding, (type(None), dict))
-    assert isinstance(ds._attrs, (type(None), dict))
+    assert isinstance(ds._encoding, type(None) | dict)
+    assert isinstance(ds._attrs, type(None) | dict)
 
 
 def _assert_internal_invariants(
-    xarray_obj: Union[DataArray, Dataset, Variable], check_default_indexes: bool
+    xarray_obj: DataArray | Dataset | Variable, check_default_indexes: bool
 ):
     """Validate that an xarray object satisfies its own internal invariants.
 

@@ -146,6 +146,9 @@ for conflicts between ``attrs`` when combining arrays and datasets, unless
 explicitly requested with the option ``compat='identical'``. The guiding
 principle is that metadata should not be allowed to get in the way.
 
+In general xarray uses the capabilities of the backends for reading and writing
+attributes. That has some implications on roundtripping. One example for such inconsistency is that size-1 lists will roundtrip as single element (for netcdf4 backends).
+
 What other netCDF related Python libraries should I know about?
 ---------------------------------------------------------------
 
@@ -170,9 +173,9 @@ integration with Cartopy_.
 
 We think the design decisions we have made for xarray (namely, basing it on
 pandas) make it a faster and more flexible data analysis tool. That said, Iris
-has some great domain specific functionality, and xarray includes
-methods for converting back and forth between xarray and Iris. See
-:py:meth:`~xarray.DataArray.to_iris` for more details.
+has some great domain specific functionality, and there are dedicated methods for
+converting back and forth between xarray and Iris. See
+:ref:`Reading and Writing Iris data <io.iris>` for more details.
 
 What other projects leverage xarray?
 ------------------------------------
@@ -188,7 +191,7 @@ To open format X file in xarray, you need to know the `format of the data <https
    :header: "File Format", "Open via", " Related Packages"
    :widths: 15, 45, 15
 
-   "NetCDF (.nc, .nc4, .cdf)","``open_dataset()`` OR ``open_mfdataset()``", "`netCDF4 <https://pypi.org/project/netCDF4/>`_, `netcdf <https://pypi.org/project/netcdf/>`_ , `cdms2 <https://cdms.readthedocs.io/en/latest/cdms2.html>`_"
+   "NetCDF (.nc, .nc4, .cdf)","``open_dataset()`` OR ``open_mfdataset()``", "`netCDF4 <https://pypi.org/project/netCDF4/>`_, `cdms2 <https://cdms.readthedocs.io/en/latest/cdms2.html>`_"
    "HDF5 (.h5, .hdf5)","``open_dataset()`` OR ``open_mfdataset()``", "`h5py <https://www.h5py.org/>`_, `pytables <https://www.pytables.org/>`_ "
    "GRIB (.grb, .grib)", "``open_dataset()``", "`cfgrib <https://pypi.org/project/cfgrib/>`_, `pygrib <https://pypi.org/project/pygrib/>`_"
    "CSV (.csv)","``open_dataset()``", "`pandas`_ , `dask <https://www.dask.org/>`_"
@@ -210,11 +213,11 @@ Therefore, it's good practice to always specify the engine explicitly, to ensure
 
 :py:func:`xarray.backends.list_engines` is a function in xarray that returns a dictionary of available engines and their BackendEntrypoint objects.
 
-You can use the `engine` argument to specify the backend when calling ``open_dataset()`` or other reading functions in xarray, as shown below:
+You can use the ``engine`` argument to specify the backend when calling ``open_dataset()`` or other reading functions in xarray, as shown below:
 
 NetCDF
 ~~~~~~
-If you are reading a netCDF file with a ".nc" extension, the default engine is `netcdf4`. However if you have files with non-standard extensions or if the file format is ambiguous. Specify the engine explicitly, to ensure that the correct backend is used.
+If you are reading a netCDF file with a ".nc" extension, the default engine is ``netcdf4``. However if you have files with non-standard extensions or if the file format is ambiguous. Specify the engine explicitly, to ensure that the correct backend is used.
 
 Use :py:func:`~xarray.open_dataset` to open a NetCDF file and return an xarray Dataset object.
 
@@ -234,7 +237,7 @@ Use :py:func:`~xarray.open_dataset` to open a NetCDF file and return an xarray D
 
     ds = xr.open_dataset("/path/to/my/file.nc", engine="scipy")
 
-We recommend installing `scipy` via conda using the below given code:
+We recommend installing ``scipy`` via conda using the below given code:
 
 ::
 
@@ -244,9 +247,9 @@ HDF5
 ~~~~
 Use :py:func:`~xarray.open_dataset` to open an HDF5 file and return an xarray Dataset object.
 
-You should specify the `engine` keyword argument when reading HDF5 files with xarray, as there are multiple backends that can be used to read HDF5 files, and xarray may not always be able to automatically detect the correct one based on the file extension or file format.
+You should specify the ``engine`` keyword argument when reading HDF5 files with xarray, as there are multiple backends that can be used to read HDF5 files, and xarray may not always be able to automatically detect the correct one based on the file extension or file format.
 
-To read HDF5 files with xarray, you can use the :py:func:`~xarray.open_dataset` function from the `h5netcdf` backend, as follows:
+To read HDF5 files with xarray, you can use the :py:func:`~xarray.open_dataset` function from the ``h5netcdf`` backend, as follows:
 
 .. code:: python
 
@@ -260,13 +263,13 @@ To read HDF5 files with xarray, you can use the :py:func:`~xarray.open_dataset` 
 
     print(ds)
 
-We recommend you to install `h5netcdf` library using the below given code:
+We recommend you to install ``h5netcdf`` library using the below given code:
 
 ::
 
     conda install -c conda-forge h5netcdf
 
-If you want to use the `netCDF4` backend to read a file with a ".h5" extension (which is typically associated with HDF5 file format), you can specify the engine argument as follows:
+If you want to use the ``netCDF4`` backend to read a file with a ".h5" extension (which is typically associated with HDF5 file format), you can specify the engine argument as follows:
 
 .. code:: python
 
@@ -274,9 +277,9 @@ If you want to use the `netCDF4` backend to read a file with a ".h5" extension (
 
 GRIB
 ~~~~
-You should specify the `engine` keyword argument when reading GRIB files with xarray, as there are multiple backends that can be used to read GRIB files, and xarray may not always be able to automatically detect the correct one based on the file extension or file format.
+You should specify the ``engine`` keyword argument when reading GRIB files with xarray, as there are multiple backends that can be used to read GRIB files, and xarray may not always be able to automatically detect the correct one based on the file extension or file format.
 
-Use the :py:func:`~xarray.open_dataset` function from the `cfgrib` package to open a GRIB file as an xarray Dataset.
+Use the :py:func:`~xarray.open_dataset` function from the ``cfgrib`` package to open a GRIB file as an xarray Dataset.
 
 .. code:: python
 
@@ -291,7 +294,7 @@ Use the :py:func:`~xarray.open_dataset` function from the `cfgrib` package to op
 
     print(ds)
 
-We recommend installing `cfgrib` via conda using the below given code:
+We recommend installing ``cfgrib`` via conda using the below given code:
 
 ::
 
@@ -299,7 +302,7 @@ We recommend installing `cfgrib` via conda using the below given code:
 
 CSV
 ~~~
-By default, xarray uses the built-in `pandas` library to read CSV files. In general, you don't need to specify the engine keyword argument when reading CSV files with xarray, as the default `pandas` engine is usually sufficient for most use cases. If you are working with very large CSV files or if you need to perform certain types of data processing that are not supported by the default `pandas` engine, you may want to use a different backend.
+By default, xarray uses the built-in ``pandas`` library to read CSV files. In general, you don't need to specify the engine keyword argument when reading CSV files with xarray, as the default ``pandas`` engine is usually sufficient for most use cases. If you are working with very large CSV files or if you need to perform certain types of data processing that are not supported by the default ``pandas`` engine, you may want to use a different backend.
 In such cases, you can specify the engine argument when reading the CSV file with xarray.
 
 To read CSV files with xarray, use the :py:func:`~xarray.open_dataset` function and specify the path to the CSV file as follows:
@@ -323,7 +326,7 @@ To read CSV files with xarray, use the :py:func:`~xarray.open_dataset` function 
 
 Zarr
 ~~~~
-When opening a Zarr dataset with xarray, the `engine` is automatically detected based on the file extension or the type of input provided. If the dataset is stored in a directory with a ".zarr" extension, xarray will automatically use the "zarr" engine.
+When opening a Zarr dataset with xarray, the ``engine`` is automatically detected based on the file extension or the type of input provided. If the dataset is stored in a directory with a ".zarr" extension, xarray will automatically use the "zarr" engine.
 
 To read zarr files with xarray, use the :py:func:`~xarray.open_dataset` function and specify the path to the zarr file as follows:
 
@@ -339,22 +342,22 @@ To read zarr files with xarray, use the :py:func:`~xarray.open_dataset` function
 
     print(ds)
 
-We recommend installing `zarr` via conda using the below given code:
+We recommend installing ``zarr`` via conda using the below given code:
 
 ::
 
     conda install -c conda-forge zarr
 
-There may be situations where you need to specify the engine manually using the `engine` keyword argument. For example, if you have a Zarr dataset stored in a file with a different extension (e.g., ".npy"), you will need to specify the engine as "zarr" explicitly when opening the dataset.
+There may be situations where you need to specify the engine manually using the ``engine`` keyword argument. For example, if you have a Zarr dataset stored in a file with a different extension (e.g., ".npy"), you will need to specify the engine as "zarr" explicitly when opening the dataset.
 
 Some packages may have additional functionality beyond what is shown here. You can refer to the documentation for each package for more information.
 
 How does xarray handle missing values?
 --------------------------------------
 
-**xarray can handle missing values using ``np.NaN``**
+**xarray can handle missing values using ``np.nan``**
 
-- ``np.NaN`` is  used to represent missing values in labeled arrays and datasets. It is a commonly used standard for representing missing or undefined numerical data in scientific computing. ``np.NaN`` is a constant value in NumPy that represents "Not a Number" or missing values.
+- ``np.nan`` is  used to represent missing values in labeled arrays and datasets. It is a commonly used standard for representing missing or undefined numerical data in scientific computing. ``np.nan`` is a constant value in NumPy that represents "Not a Number" or missing values.
 
 - Most of xarray's computation methods are designed to automatically handle missing values appropriately.
 
@@ -362,7 +365,7 @@ How does xarray handle missing values?
 
 - Many of xarray's `aggregation methods <https://docs.xarray.dev/en/stable/user-guide/computation.html#aggregation>`_, such as ``sum()``, ``mean()``, ``min()``, ``max()``, and others, have a skipna argument that controls whether missing values (represented by NaN) should be skipped (True) or treated as NaN (False) when performing the calculation.
 
-  By default, ``skipna`` is set to `True`, so missing values are ignored when computing the result. However, you can set ``skipna`` to `False` if you want missing values to be treated as NaN and included in the calculation.
+  By default, ``skipna`` is set to ``True``, so missing values are ignored when computing the result. However, you can set ``skipna`` to ``False`` if you want missing values to be treated as NaN and included in the calculation.
 
 - On `plotting <https://docs.xarray.dev/en/stable/user-guide/plotting.html#missing-values>`_ an xarray dataset or array that contains missing values, xarray will simply leave the missing values as blank spaces in the plot.
 
@@ -413,7 +416,19 @@ would certainly appreciate it. We recommend two citations.
                  url    = {https://doi.org/10.5281/zenodo.59499}
                 }
 
-.. _public api:
+.. _api-stability:
+
+How stable is Xarray's API?
+---------------------------
+
+Xarray tries very hard to maintain backwards compatibility in our :ref:`api` between released versions.
+Whilst we do occasionally make breaking changes in order to improve the library,
+we `signpost changes <https://docs.xarray.dev/en/stable/contributing.html#backwards-compatibility>`_ with ``DeprecationWarnings`` for many releases in advance.
+(An exception is bugs - whose behaviour we try to fix as soon as we notice them.)
+Our `test-driven development practices <https://docs.xarray.dev/en/stable/contributing.html#test-driven-development-code-writing>`_ helps to ensure any accidental regressions are caught.
+This philosophy applies to everything in the `public API <https://docs.xarray.dev/en/stable/getting-started-guide/faq.html#what-parts-of-xarray-are-considered-public-api>`_.
+
+.. _public-api:
 
 What parts of xarray are considered public API?
 -----------------------------------------------

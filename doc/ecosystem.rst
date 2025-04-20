@@ -17,6 +17,7 @@ Geosciences
 - `climpred <https://climpred.readthedocs.io>`_: Analysis of ensemble forecast models for climate prediction.
 - `geocube <https://corteva.github.io/geocube>`_: Tool to convert geopandas vector data into rasterized xarray data.
 - `GeoWombat <https://github.com/jgrss/geowombat>`_: Utilities for analysis of remotely sensed and gridded raster data at scale (easily tame Landsat, Sentinel, Quickbird, and PlanetScope).
+- `grib2io <https://github.com/NOAA-MDL/grib2io>`_: Utility to work with GRIB2 files including an xarray backend, DASK support for parallel reading in open_mfdataset, lazy loading of data, editing of GRIB2 attributes and GRIB2IO DataArray attrs, and spatial interpolation and reprojection of GRIB2 messages and GRIB2IO Datasets/DataArrays for both grid to grid and grid to stations.
 - `gsw-xarray <https://github.com/DocOtak/gsw-xarray>`_: a wrapper around `gsw <https://teos-10.github.io/GSW-Python>`_ that adds CF compliant attributes when possible, units, name.
 - `infinite-diff <https://github.com/spencerahill/infinite-diff>`_: xarray-based finite-differencing, focused on gridded climate/meteorology data
 - `marc_analysis <https://github.com/darothen/marc_analysis>`_: Analysis package for CESM/MARC experiments and output.
@@ -25,7 +26,7 @@ Geosciences
 - `OGGM <https://oggm.org/>`_: Open Global Glacier Model
 - `Oocgcm <https://oocgcm.readthedocs.io/>`_: Analysis of large gridded geophysical datasets
 - `Open Data Cube <https://www.opendatacube.org/>`_: Analysis toolkit of continental scale Earth Observation data from satellites.
-- `Pangaea: <https://pangaea.readthedocs.io/en/latest/>`_: xarray extension for gridded land surface & weather model output).
+- `Pangaea <https://pangaea.readthedocs.io/en/latest/>`_: xarray extension for gridded land surface & weather model output).
 - `Pangeo <https://pangeo.io>`_: A community effort for big data geoscience in the cloud.
 - `PyGDX <https://pygdx.readthedocs.io/en/latest/>`_: Python 3 package for
   accessing data stored in GAMS Data eXchange (GDX) files. Also uses a custom
@@ -36,6 +37,8 @@ Geosciences
 - `rioxarray <https://corteva.github.io/rioxarray>`_: geospatial xarray extension powered by rasterio
 - `salem <https://salem.readthedocs.io>`_: Adds geolocalised subsetting, masking, and plotting operations to xarray's data structures via accessors.
 - `SatPy <https://satpy.readthedocs.io/>`_ : Library for reading and manipulating meteorological remote sensing data and writing it to various image and data file formats.
+- `SARXarray <https://tudelftgeodesy.github.io/sarxarray/>`_: xarray extension for reading and processing large Synthetic Aperture Radar (SAR) data stacks.
+- `shxarray <https://shxarray.wobbly.earth/>`_: Convert, filter,and map geodesy related spherical harmonic representations of gravity and terrestrial water storage through an xarray extension.
 - `Spyfit <https://spyfit.readthedocs.io/en/master/>`_: FTIR spectroscopy of the atmosphere
 - `windspharm <https://ajdawson.github.io/windspharm/index.html>`_: Spherical
   harmonic wind analysis in Python.
@@ -50,7 +53,7 @@ Geosciences
 - `xclim <https://xclim.readthedocs.io/>`_: A library for calculating climate science indices with unit handling built from xarray and dask.
 - `xESMF <https://pangeo-xesmf.readthedocs.io/>`_: Universal regridder for geospatial data.
 - `xgcm <https://xgcm.readthedocs.io/>`_: Extends the xarray data model to understand finite volume grid cells (common in General Circulation Models) and provides interpolation and difference operations for such grids.
-- `xmitgcm <http://xmitgcm.readthedocs.io/>`_: a python package for reading `MITgcm <https://mitgcm.org/>`_ binary MDS files into xarray data structures.
+- `xmitgcm <https://xmitgcm.readthedocs.io/>`_: a python package for reading `MITgcm <https://mitgcm.org/>`_ binary MDS files into xarray data structures.
 - `xnemogcm <https://github.com/rcaneill/xnemogcm/>`_: a package to read `NEMO <https://nemo-ocean.eu/>`_ output files and add attributes to interface with xgcm.
 
 Machine Learning
@@ -73,6 +76,7 @@ Extend xarray capabilities
 - `Collocate <https://github.com/cistools/collocate>`_: Collocate xarray trajectories in arbitrary physical dimensions
 - `eofs <https://ajdawson.github.io/eofs/>`_: EOF analysis in Python.
 - `hypothesis-gufunc <https://hypothesis-gufunc.readthedocs.io/en/latest/>`_: Extension to hypothesis. Makes it easy to write unit tests with xarray objects as input.
+- `ntv-pandas <https://github.com/loco-philippe/ntv-pandas>`_ : A tabular analyzer and a semantic, compact and reversible converter for multidimensional and tabular data
 - `nxarray <https://github.com/nxarray/nxarray>`_: NeXus input/output capability for xarray.
 - `xarray-compare <https://github.com/astropenguin/xarray-compare>`_: xarray extension for data comparison.
 - `xarray-dataclasses <https://github.com/astropenguin/xarray-dataclasses>`_: xarray extension for typed DataArray and Dataset creation.
@@ -84,11 +88,11 @@ Extend xarray capabilities
 - `xr-scipy <https://xr-scipy.readthedocs.io>`_: A lightweight scipy wrapper for xarray.
 - `X-regression <https://github.com/kuchaale/X-regression>`_: Multiple linear regression from Statsmodels library coupled with Xarray library.
 - `xskillscore <https://github.com/xarray-contrib/xskillscore>`_: Metrics for verifying forecasts.
-- `xyzpy <http://xyzpy.readthedocs.io>`_: Easily generate high dimensional data, including parallelization.
+- `xyzpy <https://xyzpy.readthedocs.io>`_: Easily generate high dimensional data, including parallelization.
 
 Visualization
 ~~~~~~~~~~~~~
-- `datashader <https://datashader.org>`_, `geoviews <http://geoviews.org>`_, `holoviews <http://holoviews.org/>`_, : visualization packages for large data.
+- `datashader <https://datashader.org>`_, `geoviews <https://geoviews.org>`_, `holoviews <https://holoviews.org/>`_, : visualization packages for large data.
 - `hvplot <https://hvplot.pyviz.org/>`_ : A high-level plotting API for the PyData ecosystem built on HoloViews.
 - `psyplot <https://psyplot.readthedocs.io>`_: Interactive data visualization with python.
 - `xarray-leaflet <https://github.com/davidbrochart/xarray_leaflet>`_: An xarray extension for tiled map plotting based on ipyleaflet.

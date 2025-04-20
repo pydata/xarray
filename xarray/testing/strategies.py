@@ -1,12 +1,7 @@
+import datetime
+import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Protocol, Union, overload
-
-try:
-    import hypothesis.strategies as st
-except ImportError as e:
-    raise ImportError(
-        "`xarray.testing.strategies` requires `hypothesis` to be installed."
-    ) from e
+from typing import TYPE_CHECKING, Any, Protocol, overload
 
 import hypothesis.extra.numpy as npst
 import numpy as np
@@ -14,19 +9,26 @@ from hypothesis.errors import InvalidArgument
 
 import xarray as xr
 from xarray.core.types import T_DuckArray
+from xarray.core.utils import attempt_import
 
 if TYPE_CHECKING:
     from xarray.core.types import _DTypeLikeNested, _ShapeLike
 
 
+if TYPE_CHECKING:
+    import hypothesis.strategies as st
+else:
+    st = attempt_import("hypothesis.strategies")
+
 __all__ = [
-    "supported_dtypes",
-    "names",
+    "attrs",
     "dimension_names",
     "dimension_sizes",
-    "attrs",
-    "variables",
+    "names",
+    "pandas_index_dtypes",
+    "supported_dtypes",
     "unique_subset_of",
+    "variables",
 ]
 
 
@@ -36,8 +38,7 @@ class ArrayStrategyFn(Protocol[T_DuckArray]):
         *,
         shape: "_ShapeLike",
         dtype: "_DTypeLikeNested",
-    ) -> st.SearchStrategy[T_DuckArray]:
-        ...
+    ) -> st.SearchStrategy[T_DuckArray]: ...
 
 
 def supported_dtypes() -> st.SearchStrategy[np.dtype]:
@@ -45,7 +46,7 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     Generates only those numpy dtypes which xarray can handle.
 
     Use instead of hypothesis.extra.numpy.scalar_dtypes in order to exclude weirder dtypes such as unicode, byte_string, array, or nested dtypes.
-    Also excludes datetimes, which dodges bugs with pandas non-nanosecond datetime overflows.
+    Also excludes datetimes, which dodges bugs with pandas non-nanosecond datetime overflows.  Checks only native endianness.
 
     Requires the hypothesis package to be installed.
 
@@ -56,10 +57,30 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     # TODO should this be exposed publicly?
     # We should at least decide what the set of numpy dtypes that xarray officially supports is.
     return (
-        npst.integer_dtypes()
-        | npst.unsigned_integer_dtypes()
-        | npst.floating_dtypes()
-        | npst.complex_number_dtypes()
+        npst.integer_dtypes(endianness="=")
+        | npst.unsigned_integer_dtypes(endianness="=")
+        | npst.floating_dtypes(endianness="=")
+        | npst.complex_number_dtypes(endianness="=")
+        # | npst.datetime64_dtypes()
+        # | npst.timedelta64_dtypes()
+        # | npst.unicode_string_dtypes()
+    )
+
+
+def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
+    """
+    Dtypes supported by pandas indexes.
+    Restrict datetime64 and timedelta64 to ns frequency till Xarray relaxes that.
+    """
+    return (
+        npst.integer_dtypes(endianness="=", sizes=(32, 64))
+        | npst.unsigned_integer_dtypes(endianness="=", sizes=(32, 64))
+        | npst.floating_dtypes(endianness="=", sizes=(32, 64))
+        # TODO: unset max_period
+        | npst.datetime64_dtypes(endianness="=", max_period="ns")
+        # TODO: set max_period="D"
+        | npst.timedelta64_dtypes(endianness="=", max_period="ns")
+        | npst.unicode_string_dtypes(endianness="=")
     )
 
 
@@ -88,6 +109,7 @@ def names() -> st.SearchStrategy[str]:
 
 def dimension_names(
     *,
+    name_strategy=None,
     min_dims: int = 0,
     max_dims: int = 3,
 ) -> st.SearchStrategy[list[Hashable]]:
@@ -98,14 +120,18 @@ def dimension_names(
 
     Parameters
     ----------
+    name_strategy
+        Strategy for making names. Useful if we need to share this.
     min_dims
         Minimum number of dimensions in generated list.
     max_dims
         Maximum number of dimensions in generated list.
     """
+    if name_strategy is None:
+        name_strategy = names()
 
     return st.lists(
-        elements=names(),
+        elements=name_strategy,
         min_size=min_dims,
         max_size=max_dims,
         unique=True,
@@ -114,11 +140,11 @@ def dimension_names(
 
 def dimension_sizes(
     *,
-    dim_names: st.SearchStrategy[Hashable] = names(),
+    dim_names: st.SearchStrategy[Hashable] = names(),  # noqa: B008
     min_dims: int = 0,
     max_dims: int = 3,
     min_side: int = 1,
-    max_side: Union[int, None] = None,
+    max_side: int | None = None,
 ) -> st.SearchStrategy[Mapping[Hashable, int]]:
     """
     Generates an arbitrary mapping from dimension names to lengths.
@@ -169,9 +195,13 @@ _small_arrays = npst.arrays(
         max_side=2,
         max_dims=2,
     ),
-    dtype=npst.scalar_dtypes(),
+    dtype=npst.scalar_dtypes()
+    | npst.byte_string_dtypes()
+    | npst.unicode_string_dtypes(),
 )
 _attr_values = st.none() | st.booleans() | _readable_strings | _small_arrays
+
+simple_attrs = st.dictionaries(_attr_keys, _attr_values)
 
 
 def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
@@ -193,17 +223,17 @@ def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
     )
 
 
+ATTRS = attrs()
+
+
 @st.composite
 def variables(
     draw: st.DrawFn,
     *,
-    array_strategy_fn: Union[ArrayStrategyFn, None] = None,
-    dims: Union[
-        st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]],
-        None,
-    ] = None,
-    dtype: st.SearchStrategy[np.dtype] = supported_dtypes(),
-    attrs: st.SearchStrategy[Mapping] = attrs(),
+    array_strategy_fn: ArrayStrategyFn | None = None,
+    dims: st.SearchStrategy[Sequence[Hashable] | Mapping[Hashable, int]] | None = None,
+    dtype: st.SearchStrategy[np.dtype] | None = None,
+    attrs: st.SearchStrategy[Mapping] = ATTRS,
 ) -> xr.Variable:
     """
     Generates arbitrary xarray.Variable objects.
@@ -286,6 +316,8 @@ def variables(
     --------
     :ref:`testing.hypothesis`_
     """
+    if dtype is None:
+        dtype = supported_dtypes()
 
     if not isinstance(dims, st.SearchStrategy) and dims is not None:
         raise InvalidArgument(
@@ -327,7 +359,7 @@ def variables(
             valid_shapes = npst.array_shapes(min_dims=len(_dims), max_dims=len(_dims))
             _shape = draw(valid_shapes)
             array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)
-        elif isinstance(_dims, (Mapping, dict)):
+        elif isinstance(_dims, Mapping | dict):
             # should be a mapping of form {dim_names: lengths}
             dim_names, _shape = list(_dims.keys()), tuple(_dims.values())
             array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)
@@ -367,9 +399,8 @@ def unique_subset_of(
     objs: Sequence[Hashable],
     *,
     min_size: int = 0,
-    max_size: Union[int, None] = None,
-) -> st.SearchStrategy[Sequence[Hashable]]:
-    ...
+    max_size: int | None = None,
+) -> st.SearchStrategy[Sequence[Hashable]]: ...
 
 
 @overload
@@ -377,19 +408,18 @@ def unique_subset_of(
     objs: Mapping[Hashable, Any],
     *,
     min_size: int = 0,
-    max_size: Union[int, None] = None,
-) -> st.SearchStrategy[Mapping[Hashable, Any]]:
-    ...
+    max_size: int | None = None,
+) -> st.SearchStrategy[Mapping[Hashable, Any]]: ...
 
 
 @st.composite
 def unique_subset_of(
     draw: st.DrawFn,
-    objs: Union[Sequence[Hashable], Mapping[Hashable, Any]],
+    objs: Sequence[Hashable] | Mapping[Hashable, Any],
     *,
     min_size: int = 0,
-    max_size: Union[int, None] = None,
-) -> Union[Sequence[Hashable], Mapping[Hashable, Any]]:
+    max_size: int | None = None,
+) -> Sequence[Hashable] | Mapping[Hashable, Any]:
     """
     Return a strategy which generates a unique subset of the given objects.
 
@@ -445,3 +475,36 @@ def unique_subset_of(
     return (
         {k: objs[k] for k in subset_keys} if isinstance(objs, Mapping) else subset_keys
     )
+
+
+class CFTimeStrategy(st.SearchStrategy):
+    def __init__(self, min_value, max_value):
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def do_draw(self, data):
+        unit_microsecond = datetime.timedelta(microseconds=1)
+        timespan_microseconds = (self.max_value - self.min_value) // unit_microsecond
+        result = data.draw_integer(0, timespan_microseconds)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=".*date/calendar/year zero.*")
+            return self.min_value + datetime.timedelta(microseconds=result)
+
+
+class CFTimeStrategyISO8601(st.SearchStrategy):
+    def __init__(self):
+        from xarray.tests.test_coding_times import _all_cftime_date_types
+
+        self.date_types = _all_cftime_date_types()
+        self.calendars = list(self.date_types)
+
+    def do_draw(self, data):
+        calendar = data.draw(st.sampled_from(self.calendars))
+        date_type = self.date_types[calendar]
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=".*date/calendar/year zero.*")
+            daysinmonth = date_type(99999, 12, 1).daysinmonth
+            min_value = date_type(-99999, 1, 1)
+            max_value = date_type(99999, 12, daysinmonth, 23, 59, 59, 999999)
+            strategy = CFTimeStrategy(min_value, max_value)
+            return strategy.do_draw(data)

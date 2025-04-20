@@ -39,7 +39,7 @@
 from __future__ import annotations
 
 import re
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -291,9 +291,7 @@ def test_case_str() -> None:
     exp_norm_nfc = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(np.str_)
     exp_norm_nfkc = xr.DataArray(["SOme wOrd DŽ ß ᾛ ΣΣ ffi5Å Ç I"]).astype(np.str_)
     exp_norm_nfd = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(np.str_)
-    exp_norm_nfkd = xr.DataArray(["SOme wOrd DŽ ß ᾛ ΣΣ ffi5Å Ç I"]).astype(
-        np.str_
-    )
+    exp_norm_nfkd = xr.DataArray(["SOme wOrd DŽ ß ᾛ ΣΣ ffi5Å Ç I"]).astype(np.str_)
 
     res_capitalized = value.str.capitalize()
     res_casefolded = value.str.casefold()

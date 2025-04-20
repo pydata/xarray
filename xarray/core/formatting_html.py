@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import uuid
 from collections import OrderedDict
+from collections.abc import Mapping
 from functools import lru_cache, partial
 from html import escape
 from importlib.resources import files
+from typing import TYPE_CHECKING
 
 from xarray.core.formatting import (
+    inherited_vars,
     inline_index_repr,
     inline_variable_array_repr,
     short_data_repr,
@@ -17,6 +20,9 @@ STATIC_FILES = (
     ("xarray.static.html", "icons-svg-inline.html"),
     ("xarray.static.css", "style.css"),
 )
+
+if TYPE_CHECKING:
+    from xarray.core.datatree import DataTree
 
 
 @lru_cache(None)
@@ -66,10 +72,7 @@ def summarize_attrs(attrs) -> str:
 def _icon(icon_name) -> str:
     # icon_name should be defined in xarray/static/html/icon-svg-inline.html
     return (
-        f"<svg class='icon xr-{icon_name}'>"
-        f"<use xlink:href='#{icon_name}'>"
-        "</use>"
-        "</svg>"
+        f"<svg class='icon xr-{icon_name}'><use xlink:href='#{icon_name}'></use></svg>"
     )
 
 
@@ -149,7 +152,9 @@ def summarize_index(coord_names, index) -> str:
     return (
         f"<div class='xr-index-name'><div>{name}</div></div>"
         f"<div class='xr-index-preview'>{preview}</div>"
-        f"<div></div>"
+        # need empty input + label here to conform to the fixed CSS grid layout
+        f"<input type='checkbox' disabled/>"
+        f"<label></label>"
         f"<input id='{index_id}' class='xr-index-data-in' type='checkbox'/>"
         f"<label for='{index_id}' title='Show/Hide index repr'>{data_icon}</label>"
         f"<div class='xr-index-data'>{details}</div>"
@@ -243,7 +248,6 @@ coord_section = partial(
     expand_option_name="display_expand_coords",
 )
 
-
 datavar_section = partial(
     _mapping_section,
     name="Data variables",
@@ -298,7 +302,7 @@ def _obj_repr(obj, header_components, sections):
 
 
 def array_repr(arr) -> str:
-    dims = OrderedDict((k, v) for k, v in zip(arr.dims, arr.shape))
+    dims = OrderedDict((k, v) for k, v in zip(arr.dims, arr.shape, strict=True))
     if hasattr(arr, "xindexes"):
         indexed_dims = arr.xindexes.dims
     else:
@@ -341,3 +345,153 @@ def dataset_repr(ds) -> str:
     ]
 
     return _obj_repr(ds, header_components, sections)
+
+
+def summarize_datatree_children(children: Mapping[str, DataTree]) -> str:
+    N_CHILDREN = len(children) - 1
+
+    # Get result from datatree_node_repr and wrap it
+    lines_callback = lambda n, c, end: _wrap_datatree_repr(
+        datatree_node_repr(n, c), end=end
+    )
+
+    children_html = "".join(
+        (
+            lines_callback(n, c, end=False)  # Long lines
+            if i < N_CHILDREN
+            else lines_callback(n, c, end=True)
+        )  # Short lines
+        for i, (n, c) in enumerate(children.items())
+    )
+
+    return "".join(
+        [
+            "<div style='display: inline-grid; grid-template-columns: 100%; grid-column: 1 / -1'>",
+            children_html,
+            "</div>",
+        ]
+    )
+
+
+children_section = partial(
+    _mapping_section,
+    name="Groups",
+    details_func=summarize_datatree_children,
+    max_items_collapse=1,
+    expand_option_name="display_expand_groups",
+)
+
+inherited_coord_section = partial(
+    _mapping_section,
+    name="Inherited coordinates",
+    details_func=summarize_coords,
+    max_items_collapse=25,
+    expand_option_name="display_expand_coords",
+)
+
+
+def datatree_node_repr(group_title: str, node: DataTree, show_inherited=False) -> str:
+    from xarray.core.coordinates import Coordinates
+
+    header_components = [f"<div class='xr-obj-type'>{escape(group_title)}</div>"]
+
+    ds = node._to_dataset_view(rebuild_dims=False, inherit=True)
+    node_coords = node.to_dataset(inherit=False).coords
+
+    # use this class to get access to .xindexes property
+    inherited_coords = Coordinates(
+        coords=inherited_vars(node._coord_variables),
+        indexes=inherited_vars(node._indexes),
+    )
+
+    sections = [
+        children_section(node.children),
+        dim_section(ds),
+        coord_section(node_coords),
+    ]
+
+    # only show inherited coordinates on the root
+    if show_inherited:
+        sections.append(inherited_coord_section(inherited_coords))
+
+    sections += [
+        datavar_section(ds.data_vars),
+        attr_section(ds.attrs),
+    ]
+
+    return _obj_repr(ds, header_components, sections)
+
+
+def _wrap_datatree_repr(r: str, end: bool = False) -> str:
+    """
+    Wrap HTML representation with a tee to the left of it.
+
+    Enclosing HTML tag is a <div> with :code:`display: inline-grid` style.
+
+    Turns:
+    [    title    ]
+    |   details   |
+    |_____________|
+
+    into (A):
+    |─ [    title    ]
+    |  |   details   |
+    |  |_____________|
+
+    or (B):
+    └─ [    title    ]
+       |   details   |
+       |_____________|
+
+    Parameters
+    ----------
+    r: str
+        HTML representation to wrap.
+    end: bool
+        Specify if the line on the left should continue or end.
+
+        Default is True.
+
+    Returns
+    -------
+    str
+        Wrapped HTML representation.
+
+        Tee color is set to the variable :code:`--xr-border-color`.
+    """
+    # height of line
+    end = bool(end)
+    height = "100%" if end is False else "1.2em"
+    return "".join(
+        [
+            "<div style='display: inline-grid; grid-template-columns: 0px 20px auto; width: 100%;'>",
+            "<div style='",
+            "grid-column-start: 1;",
+            "border-right: 0.2em solid;",
+            "border-color: var(--xr-border-color);",
+            f"height: {height};",
+            "width: 0px;",
+            "'>",
+            "</div>",
+            "<div style='",
+            "grid-column-start: 2;",
+            "grid-row-start: 1;",
+            "height: 1em;",
+            "width: 20px;",
+            "border-bottom: 0.2em solid;",
+            "border-color: var(--xr-border-color);",
+            "'>",
+            "</div>",
+            "<div style='",
+            "grid-column-start: 3;",
+            "'>",
+            r,
+            "</div>",
+            "</div>",
+        ]
+    )
+
+
+def datatree_repr(dt: DataTree) -> str:
+    obj_type = f"xarray.{type(dt).__name__}"
+    return datatree_node_repr(obj_type, dt, show_inherited=True)

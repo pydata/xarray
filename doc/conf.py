@@ -59,6 +59,7 @@ except ImportError:
     )
 
 nbsphinx_allow_errors = False
+nbsphinx_requirejs_path = ""
 
 # -- General configuration ------------------------------------------------
 
@@ -68,7 +69,9 @@ nbsphinx_allow_errors = False
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+
 extensions = [
+    "sphinxcontrib.mermaid",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
@@ -85,16 +88,18 @@ extensions = [
     "sphinxext.rediraffe",
     "sphinx_design",
     "sphinx_inline_tabs",
+    "sphinx_remove_toctrees",
 ]
 
 
 extlinks = {
     "issue": ("https://github.com/pydata/xarray/issues/%s", "GH%s"),
     "pull": ("https://github.com/pydata/xarray/pull/%s", "PR%s"),
+    "discussion": ("https://github.com/pydata/xarray/discussions/%s", "D%s"),
 }
 
 # sphinx-copybutton configurations
-copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "
+copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.{3,}: | {5,8}: "
 copybutton_prompt_is_regexp = True
 
 # nbsphinx configurations
@@ -149,12 +154,18 @@ napoleon_type_aliases = {
     "matplotlib colormap name": ":doc:`matplotlib colormap name <matplotlib:gallery/color/colormap_reference>`",
     "matplotlib axes object": ":py:class:`matplotlib axes object <matplotlib.axes.Axes>`",
     "colormap": ":py:class:`colormap <matplotlib.colors.Colormap>`",
+    # xarray terms
+    "dim name": ":term:`dimension name <name>`",
+    "var name": ":term:`variable name <name>`",
     # objects without namespace: xarray
     "DataArray": "~xarray.DataArray",
     "Dataset": "~xarray.Dataset",
     "Variable": "~xarray.Variable",
+    "DataTree": "~xarray.DataTree",
     "DatasetGroupBy": "~xarray.core.groupby.DatasetGroupBy",
     "DataArrayGroupBy": "~xarray.core.groupby.DataArrayGroupBy",
+    "Grouper": "~xarray.groupers.Grouper",
+    "Resampler": "~xarray.groupers.Resampler",
     # objects without namespace: numpy
     "ndarray": "~numpy.ndarray",
     "MaskedArray": "~numpy.ma.MaskedArray",
@@ -166,6 +177,7 @@ napoleon_type_aliases = {
     "CategoricalIndex": "~pandas.CategoricalIndex",
     "TimedeltaIndex": "~pandas.TimedeltaIndex",
     "DatetimeIndex": "~pandas.DatetimeIndex",
+    "IntervalIndex": "~pandas.IntervalIndex",
     "Series": "~pandas.Series",
     "DataFrame": "~pandas.DataFrame",
     "Categorical": "~pandas.Categorical",
@@ -175,6 +187,8 @@ napoleon_type_aliases = {
     "pd.NaT": "~pandas.NaT",
 }
 
+# mermaid config
+mermaid_version = "10.9.1"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
@@ -185,6 +199,8 @@ templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
 
 # The master toctree document.
 master_doc = "index"
+
+remove_from_toctrees = ["generated/*"]
 
 # General information about the project.
 project = "xarray"
@@ -232,6 +248,7 @@ html_theme_options = dict(
     github_url="https://github.com/pydata/xarray",
     # repository_branch="main",
     navigation_with_keys=False,  # pydata/pydata-sphinx-theme#1492
+    navigation_depth=4,
     # path_to_docs="doc",
     use_edit_page_button=True,
     # use_repository_button=True,
@@ -242,7 +259,7 @@ html_theme_options = dict(
     Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
     twitter_url="https://twitter.com/xarray_dev",
     icon_links=[],  # workaround for pydata/pydata-sphinx-theme#1220
-    announcement="🍾 <a href='https://github.com/pydata/xarray/discussions/8462'>Xarray is now 10 years old!</a> 🎉",
+    # announcement="<a href='https://forms.gle/KEq7WviCdz9xTaJX6'>Xarray's 2024 User Survey is live now. Please take ~5 minutes to fill it out and help us improve Xarray.</a>",
 )
 
 
@@ -316,21 +333,21 @@ htmlhelp_basename = "xarraydoc"
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    "python": ("https://docs.python.org/3/", None),
-    "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
-    "iris": ("https://scitools-iris.readthedocs.io/en/latest", None),
-    "numpy": ("https://numpy.org/doc/stable", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy", None),
-    "numba": ("https://numba.readthedocs.io/en/stable/", None),
-    "matplotlib": ("https://matplotlib.org/stable/", None),
-    "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
-    "sparse": ("https://sparse.pydata.org/en/latest/", None),
+    "cubed": ("https://cubed-dev.github.io/cubed/", None),
+    "dask": ("https://docs.dask.org/en/latest", None),
+    "flox": ("https://flox.readthedocs.io/en/latest/", None),
     "hypothesis": ("https://hypothesis.readthedocs.io/en/latest/", None),
-    "cubed": ("https://tom-e-white.com/cubed/", None),
-    "datatree": ("https://xarray-datatree.readthedocs.io/en/latest/", None),
+    "iris": ("https://scitools-iris.readthedocs.io/en/latest", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+    "numba": ("https://numba.readthedocs.io/en/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
+    "python": ("https://docs.python.org/3/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
+    "sparse": ("https://sparse.pydata.org/en/latest/", None),
     "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
-    # "opt_einsum": ("https://dgasmith.github.io/opt_einsum/", None),
+    "zarr": ("https://zarr.readthedocs.io/en/stable/", None),
 }
 
 

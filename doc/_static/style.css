@@ -1,23 +1,25 @@
 table.colwidths-given {
-    table-layout: fixed;
-    width: 100%;
+  table-layout: fixed;
+  width: 100%;
 }
 table.docutils td {
-    white-space: unset;
-    word-wrap: break-word;
+  white-space: unset;
+  word-wrap: break-word;
 }
 
-div.bd-header-announcement {
-  background-color: unset;
-  color: #000;
+.bd-header-announcement {
+  background-color: var(--pst-color-info-bg);
 }
 
 /* Reduce left and right margins */
 
-.container, .container-lg, .container-md, .container-sm, .container-xl {
+.container,
+.container-lg,
+.container-md,
+.container-sm,
+.container-xl {
   max-width: 1350px !important;
 }
-
 
 /* Copied from
 https://github.com/bokeh/bokeh/blob/branch-2.4/sphinx/source/bokeh/static/custom.css
@@ -216,14 +218,12 @@ dt:target {
  https://github.com/pandas-dev/pandas-sphinx-theme/issues/6 */
 main *:target::before {
   display: block;
-  content: '';
+  content: "";
   height: var(--navbar-height);
   margin-top: calc(-1 * var(--navbar-height));
 }
 
 body {
-  /* Add padding to body to avoid overlap with navbar. */
-  padding-top: var(--navbar-height);
   width: 100%;
 }
 

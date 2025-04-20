@@ -19,8 +19,31 @@ from xarray.tests import (
     raise_if_dask_computes,
     requires_dask,
 )
+from xarray.tests.arrays import DuckArrayWrapper
 
 B = IndexerMaker(indexing.BasicIndexer)
+
+
+class TestIndexCallable:
+    def test_getitem(self):
+        def getter(key):
+            return key * 2
+
+        indexer = indexing.IndexCallable(getter)
+        assert indexer[3] == 6
+        assert indexer[0] == 0
+        assert indexer[-1] == -2
+
+    def test_setitem(self):
+        def getter(key):
+            return key * 2
+
+        def setter(key, value):
+            raise NotImplementedError("Setter not implemented")
+
+        indexer = indexing.IndexCallable(getter, setter)
+        with pytest.raises(NotImplementedError):
+            indexer[3] = 6
 
 
 class TestIndexers:
@@ -106,7 +129,7 @@ class TestIndexers:
         ):
             dim_indexers = {"x": x_indexer}
             index_vars = x_index.create_variables()
-            indexes = {k: x_index for k in index_vars}
+            indexes = dict.fromkeys(index_vars, x_index)
             variables = {}
             variables.update(index_vars)
             variables.update(other_vars)
@@ -311,7 +334,7 @@ class TestLazyArray:
 
                         # make sure actual.key is appropriate type
                         if all(
-                            isinstance(k, (int, slice)) for k in v_lazy._data.key.tuple
+                            isinstance(k, int | slice) for k in v_lazy._data.key.tuple
                         ):
                             assert isinstance(v_lazy._data.key, indexing.BasicIndexer)
                         else:
@@ -341,10 +364,7 @@ class TestLazyArray:
                 assert_array_equal(expected_b.transpose(*order), transposed)
                 assert isinstance(
                     actual._data,
-                    (
-                        indexing.LazilyVectorizedIndexedArray,
-                        indexing.LazilyIndexedArray,
-                    ),
+                    indexing.LazilyVectorizedIndexedArray | indexing.LazilyIndexedArray,
                 )
 
             assert isinstance(actual._data, indexing.LazilyIndexedArray)
@@ -365,10 +385,7 @@ class TestLazyArray:
                 assert expected.shape == actual.shape
                 assert isinstance(
                     actual._data,
-                    (
-                        indexing.LazilyVectorizedIndexedArray,
-                        indexing.LazilyIndexedArray,
-                    ),
+                    indexing.LazilyVectorizedIndexedArray | indexing.LazilyIndexedArray,
                 )
                 assert_array_equal(expected, actual)
                 v_eager = expected
@@ -397,6 +414,40 @@ class TestLazyArray:
             (Variable(["i", "j"], [[0, 1], [1, 2]]),),
         ]
         check_indexing(v_eager, v_lazy, indexers)
+
+    def test_lazily_indexed_array_vindex_setitem(self) -> None:
+        lazy = indexing.LazilyIndexedArray(np.random.rand(10, 20, 30))
+
+        # vectorized indexing
+        indexer = indexing.VectorizedIndexer(
+            (np.array([0, 1]), np.array([0, 1]), slice(None, None, None))
+        )
+        with pytest.raises(
+            NotImplementedError,
+            match=r"Lazy item assignment with the vectorized indexer is not yet",
+        ):
+            lazy.vindex[indexer] = 0
+
+    @pytest.mark.parametrize(
+        "indexer_class, key, value",
+        [
+            (indexing.OuterIndexer, (0, 1, slice(None, None, None)), 10),
+            (indexing.BasicIndexer, (0, 1, slice(None, None, None)), 10),
+        ],
+    )
+    def test_lazily_indexed_array_setitem(self, indexer_class, key, value) -> None:
+        original = np.random.rand(10, 20, 30)
+        x = indexing.NumpyIndexingAdapter(original)
+        lazy = indexing.LazilyIndexedArray(x)
+
+        if indexer_class is indexing.BasicIndexer:
+            indexer = indexer_class(key)
+            lazy[indexer] = value
+        elif indexer_class is indexing.OuterIndexer:
+            indexer = indexer_class(key)
+            lazy.oindex[indexer] = value
+
+        assert_array_equal(original[key], value)
 
 
 class TestCopyOnWriteArray:
@@ -556,7 +607,9 @@ class Test_vectorized_indexer:
             vindex_array = indexing._arrayize_vectorized_indexer(
                 vindex, self.data.shape
             )
-            np.testing.assert_array_equal(self.data[vindex], self.data[vindex_array])
+            np.testing.assert_array_equal(
+                self.data.vindex[vindex], self.data.vindex[vindex_array]
+            )
 
         actual = indexing._arrayize_vectorized_indexer(
             indexing.VectorizedIndexer((slice(None),)), shape=(5,)
@@ -667,16 +720,39 @@ def test_decompose_indexers(shape, indexer_mode, indexing_support) -> None:
     indexer = get_indexers(shape, indexer_mode)
 
     backend_ind, np_ind = indexing.decompose_indexer(indexer, shape, indexing_support)
+    indexing_adapter = indexing.NumpyIndexingAdapter(data)
 
-    expected = indexing.NumpyIndexingAdapter(data)[indexer]
-    array = indexing.NumpyIndexingAdapter(data)[backend_ind]
+    # Dispatch to appropriate indexing method
+    if indexer_mode.startswith("vectorized"):
+        expected = indexing_adapter.vindex[indexer]
+
+    elif indexer_mode.startswith("outer"):
+        expected = indexing_adapter.oindex[indexer]
+
+    else:
+        expected = indexing_adapter[indexer]  # Basic indexing
+
+    if isinstance(backend_ind, indexing.VectorizedIndexer):
+        array = indexing_adapter.vindex[backend_ind]
+    elif isinstance(backend_ind, indexing.OuterIndexer):
+        array = indexing_adapter.oindex[backend_ind]
+    else:
+        array = indexing_adapter[backend_ind]
+
     if len(np_ind.tuple) > 0:
-        array = indexing.NumpyIndexingAdapter(array)[np_ind]
+        array_indexing_adapter = indexing.NumpyIndexingAdapter(array)
+        if isinstance(np_ind, indexing.VectorizedIndexer):
+            array = array_indexing_adapter.vindex[np_ind]
+        elif isinstance(np_ind, indexing.OuterIndexer):
+            array = array_indexing_adapter.oindex[np_ind]
+        else:
+            array = array_indexing_adapter[np_ind]
     np.testing.assert_array_equal(expected, array)
 
     if not all(isinstance(k, indexing.integer_types) for k in np_ind.tuple):
         combined_ind = indexing._combine_indexers(backend_ind, shape, np_ind)
-        array = indexing.NumpyIndexingAdapter(data)[combined_ind]
+        assert isinstance(combined_ind, indexing.VectorizedIndexer)
+        array = indexing_adapter.vindex[combined_ind]
         np.testing.assert_array_equal(expected, array)
 
 
@@ -797,7 +873,7 @@ def test_create_mask_dask() -> None:
 
 def test_create_mask_error() -> None:
     with pytest.raises(TypeError, match=r"unexpected key type"):
-        indexing.create_mask((1, 2), (3, 4))
+        indexing.create_mask((1, 2), (3, 4))  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -817,6 +893,74 @@ def test_posify_mask_subindexer(indices, expected) -> None:
     np.testing.assert_array_equal(expected, actual)
 
 
+class ArrayWithNamespace:
+    def __array_namespace__(self, version=None):
+        pass
+
+
+class ArrayWithArrayFunction:
+    def __array_function__(self, func, types, args, kwargs):
+        pass
+
+
+class ArrayWithNamespaceAndArrayFunction:
+    def __array_namespace__(self, version=None):
+        pass
+
+    def __array_function__(self, func, types, args, kwargs):
+        pass
+
+
+def as_dask_array(arr, chunks):
+    try:
+        import dask.array as da
+    except ImportError:
+        return None
+
+    return da.from_array(arr, chunks=chunks)
+
+
+@pytest.mark.parametrize(
+    ["array", "expected_type"],
+    (
+        pytest.param(
+            indexing.CopyOnWriteArray(np.array([1, 2])),
+            indexing.CopyOnWriteArray,
+            id="ExplicitlyIndexed",
+        ),
+        pytest.param(
+            np.array([1, 2]), indexing.NumpyIndexingAdapter, id="numpy.ndarray"
+        ),
+        pytest.param(
+            pd.Index([1, 2]), indexing.PandasIndexingAdapter, id="pandas.Index"
+        ),
+        pytest.param(
+            as_dask_array(np.array([1, 2]), chunks=(1,)),
+            indexing.DaskIndexingAdapter,
+            id="dask.array",
+            marks=requires_dask,
+        ),
+        pytest.param(
+            ArrayWithNamespace(), indexing.ArrayApiIndexingAdapter, id="array_api"
+        ),
+        pytest.param(
+            ArrayWithArrayFunction(),
+            indexing.NdArrayLikeIndexingAdapter,
+            id="array_like",
+        ),
+        pytest.param(
+            ArrayWithNamespaceAndArrayFunction(),
+            indexing.ArrayApiIndexingAdapter,
+            id="array_api_with_fallback",
+        ),
+    ),
+)
+def test_as_indexable(array, expected_type):
+    actual = indexing.as_indexable(array)
+
+    assert isinstance(actual, expected_type)
+
+
 def test_indexing_1d_object_array() -> None:
     items = (np.arange(3), np.arange(6))
     arr = DataArray(np.array(items, dtype=object))
@@ -831,7 +975,7 @@ def test_indexing_1d_object_array() -> None:
 
 
 @requires_dask
-def test_indexing_dask_array():
+def test_indexing_dask_array() -> None:
     import dask.array
 
     da = DataArray(
@@ -845,13 +989,14 @@ def test_indexing_dask_array():
 
 
 @requires_dask
-def test_indexing_dask_array_scalar():
+def test_indexing_dask_array_scalar() -> None:
     # GH4276
     import dask.array
 
     a = dask.array.from_array(np.linspace(0.0, 1.0))
     da = DataArray(a, dims="x")
     x_selector = da.argmax(dim=...)
+    assert not isinstance(x_selector, DataArray)
     with raise_if_dask_computes():
         actual = da.isel(x_selector)
     expected = da.isel(x=-1)
@@ -859,7 +1004,7 @@ def test_indexing_dask_array_scalar():
 
 
 @requires_dask
-def test_vectorized_indexing_dask_array():
+def test_vectorized_indexing_dask_array() -> None:
     # https://github.com/pydata/xarray/issues/2511#issuecomment-563330352
     darr = DataArray(data=[0.2, 0.4, 0.6], coords={"z": range(3)}, dims=("z",))
     indexer = DataArray(
@@ -867,12 +1012,30 @@ def test_vectorized_indexing_dask_array():
         coords={"y": range(4), "x": range(2)},
         dims=("y", "x"),
     )
-    with pytest.raises(ValueError, match="Vectorized indexing with Dask arrays"):
-        darr[indexer.chunk({"y": 2})]
+    expected = darr[indexer]
+
+    # fails because we can't index pd.Index lazily (yet).
+    # We could make this succeed by auto-chunking the values
+    # and constructing a lazy index variable, and not automatically
+    # create an index for it.
+    with pytest.raises(ValueError, match="Cannot index with"):
+        with raise_if_dask_computes():
+            darr.chunk()[indexer.chunk({"y": 2})]
+    with pytest.raises(ValueError, match="Cannot index with"):
+        with raise_if_dask_computes():
+            actual = darr[indexer.chunk({"y": 2})]
+
+    with raise_if_dask_computes():
+        actual = darr.drop_vars("z").chunk()[indexer.chunk({"y": 2})]
+    assert_identical(actual, expected.drop_vars("z"))
+
+    with raise_if_dask_computes():
+        actual_variable = darr.variable.chunk()[indexer.variable.chunk({"y": 2})]
+    assert_identical(actual_variable, expected.variable)
 
 
 @requires_dask
-def test_advanced_indexing_dask_array():
+def test_advanced_indexing_dask_array() -> None:
     # GH4663
     import dask.array as da
 
@@ -890,3 +1053,15 @@ def test_advanced_indexing_dask_array():
     with raise_if_dask_computes():
         actual = ds.b.sel(x=ds.a.data)
     assert_identical(expected, actual)
+
+
+def test_backend_indexing_non_numpy() -> None:
+    """This model indexing of a Zarr store that reads to GPU memory."""
+    array = DuckArrayWrapper(np.array([1, 2, 3]))
+    indexed = indexing.explicit_indexing_adapter(
+        indexing.BasicIndexer((slice(1),)),
+        shape=array.shape,
+        indexing_support=indexing.IndexingSupport.BASIC,
+        raw_indexing_method=array.__getitem__,
+    )
+    np.testing.assert_array_equal(indexed.array, np.array([1]))

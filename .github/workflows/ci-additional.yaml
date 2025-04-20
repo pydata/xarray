@@ -12,6 +12,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_COLOR: 3
+
 jobs:
   detect-ci-trigger:
     name: detect ci trigger
@@ -35,14 +38,13 @@ jobs:
     runs-on: "ubuntu-latest"
     needs: detect-ci-trigger
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
+
     defaults:
       run:
         shell: bash -l {0}
-
     env:
       CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.11"
-
+      PYTHON_VERSION: "3.12"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,13 +55,12 @@ jobs:
           echo "TODAY=$(date  +'%Y-%m-%d')" >> $GITHUB_ENV
 
       - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
           create-args: >-
             python=${{env.PYTHON_VERSION}}
-            conda
           cache-environment: true
           cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
 
@@ -68,8 +69,6 @@ jobs:
           python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          conda info -a
-          conda list
           python xarray/util/print_versions.py
       - name: Run doctests
         run: |
@@ -79,8 +78,7 @@ jobs:
           #
           # If dependencies emit warnings we can't do anything about, add ignores to
           # `xarray/tests/__init__.py`.
-          # [MHS, 01/25/2024] Skip datatree_ documentation remove after #8572
-          python -m pytest --doctest-modules xarray --ignore xarray/tests --ignore xarray/datatree_ -Werror
+          python -m pytest --doctest-modules xarray --ignore xarray/tests -Werror
 
   mypy:
     name: Mypy
@@ -91,7 +89,7 @@ jobs:
         shell: bash -l {0}
     env:
       CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.11"
+      PYTHON_VERSION: "3.12"
 
     steps:
       - uses: actions/checkout@v4
@@ -102,13 +100,12 @@ jobs:
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
       - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
           create-args: >-
             python=${{env.PYTHON_VERSION}}
-            conda
           cache-environment: true
           cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
       - name: Install xarray
@@ -116,19 +113,17 @@ jobs:
           python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          conda info -a
-          conda list
           python xarray/util/print_versions.py
       - name: Install mypy
         run: |
-          python -m pip install "mypy<1.9" --force-reinstall
+          python -m pip install "mypy==1.15" --force-reinstall
 
       - name: Run mypy
         run: |
-          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report xarray/
+          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v3.1.5
+        uses: codecov/codecov-action@v5.4.0
         with:
           file: mypy_report/cobertura.xml
           flags: mypy
@@ -136,71 +131,10 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
 
-  mypy39:
-    name: Mypy 3.9
+  mypy-min:
+    name: Mypy 3.10
     runs-on: "ubuntu-latest"
     needs: detect-ci-trigger
-    defaults:
-      run:
-        shell: bash -l {0}
-    env:
-      CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.9"
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Fetch all history for all branches and tags.
-
-      - name: set environment variables
-        run: |
-          echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-      - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: ${{env.CONDA_ENV_FILE}}
-          environment-name: xarray-tests
-          create-args: >-
-            python=${{env.PYTHON_VERSION}}
-            conda
-          cache-environment: true
-          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
-      - name: Install xarray
-        run: |
-          python -m pip install --no-deps -e .
-      - name: Version info
-        run: |
-          conda info -a
-          conda list
-          python xarray/util/print_versions.py
-      - name: Install mypy
-        run: |
-          python -m pip install "mypy<1.9" --force-reinstall
-
-      - name: Run mypy
-        run: |
-          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report xarray/
-
-      - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v3.1.5
-        with:
-          file: mypy_report/cobertura.xml
-          flags: mypy39
-          env_vars: PYTHON_VERSION
-          name: codecov-umbrella
-          fail_ci_if_error: false
-
-
-
-  pyright:
-    name: Pyright
-    runs-on: "ubuntu-latest"
-    needs: detect-ci-trigger
-    if: |
-        always()
-        && (
-            contains( github.event.pull_request.labels.*.name, 'run-pyright')
-        )
     defaults:
       run:
         shell: bash -l {0}
@@ -217,13 +151,12 @@ jobs:
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
       - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
           create-args: >-
             python=${{env.PYTHON_VERSION}}
-            conda
           cache-environment: true
           cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
       - name: Install xarray
@@ -231,41 +164,39 @@ jobs:
           python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          conda info -a
-          conda list
           python xarray/util/print_versions.py
-      - name: Install pyright
+      - name: Install mypy
         run: |
-          python -m pip install pyright --force-reinstall
+          python -m pip install "mypy==1.15" --force-reinstall
 
-      - name: Run pyright
+      - name: Run mypy
         run: |
-          python -m pyright xarray/
+          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
-      - name: Upload pyright coverage to Codecov
-        uses: codecov/codecov-action@v3.1.5
+      - name: Upload mypy coverage to Codecov
+        uses: codecov/codecov-action@v5.4.0
         with:
-          file: pyright_report/cobertura.xml
-          flags: pyright
+          file: mypy_report/cobertura.xml
+          flags: mypy-min
           env_vars: PYTHON_VERSION
           name: codecov-umbrella
           fail_ci_if_error: false
 
-  pyright39:
-    name: Pyright 3.9
+  pyright:
+    name: Pyright
     runs-on: "ubuntu-latest"
     needs: detect-ci-trigger
     if: |
-        always()
-        && (
-            contains( github.event.pull_request.labels.*.name, 'run-pyright')
-        )
+      always()
+      && (
+          contains( github.event.pull_request.labels.*.name, 'run-pyright')
+      )
     defaults:
       run:
         shell: bash -l {0}
     env:
       CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.9"
+      PYTHON_VERSION: "3.12"
 
     steps:
       - uses: actions/checkout@v4
@@ -276,13 +207,12 @@ jobs:
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
       - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
           create-args: >-
             python=${{env.PYTHON_VERSION}}
-            conda
           cache-environment: true
           cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
       - name: Install xarray
@@ -290,8 +220,6 @@ jobs:
           python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          conda info -a
-          conda list
           python xarray/util/print_versions.py
       - name: Install pyright
         run: |
@@ -302,15 +230,69 @@ jobs:
           python -m pyright xarray/
 
       - name: Upload pyright coverage to Codecov
-        uses: codecov/codecov-action@v3.1.5
+        uses: codecov/codecov-action@v5.4.0
+        with:
+          file: pyright_report/cobertura.xml
+          flags: pyright
+          env_vars: PYTHON_VERSION
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+  pyright39:
+    name: Pyright 3.10
+    runs-on: "ubuntu-latest"
+    needs: detect-ci-trigger
+    if: |
+      always()
+      && (
+          contains( github.event.pull_request.labels.*.name, 'run-pyright')
+      )
+    defaults:
+      run:
+        shell: bash -l {0}
+    env:
+      CONDA_ENV_FILE: ci/requirements/environment.yml
+      PYTHON_VERSION: "3.10"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for all branches and tags.
+
+      - name: set environment variables
+        run: |
+          echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+      - name: Setup micromamba
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: ${{env.CONDA_ENV_FILE}}
+          environment-name: xarray-tests
+          create-args: >-
+            python=${{env.PYTHON_VERSION}}
+          cache-environment: true
+          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
+      - name: Install xarray
+        run: |
+          python -m pip install --no-deps -e .
+      - name: Version info
+        run: |
+          python xarray/util/print_versions.py
+      - name: Install pyright
+        run: |
+          python -m pip install pyright --force-reinstall
+
+      - name: Run pyright
+        run: |
+          python -m pyright xarray/
+
+      - name: Upload pyright coverage to Codecov
+        uses: codecov/codecov-action@v5.4.0
         with:
           file: pyright_report/cobertura.xml
           flags: pyright39
           env_vars: PYTHON_VERSION
           name: codecov-umbrella
           fail_ci_if_error: false
-
-
 
   min-version-policy:
     name: Minimum Version Policy
@@ -321,25 +303,31 @@ jobs:
       run:
         shell: bash -l {0}
 
+    env:
+      COLUMNS: 120
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
       - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-name: xarray-tests
           create-args: >-
-            python=3.11
+            python=3.12
             pyyaml
-            conda
             python-dateutil
+            cytoolz
+            rich
+            rich-click
+            py-rattler
 
       - name: All-deps minimum versions policy
         run: |
-          python ci/min_deps_check.py ci/requirements/min-all-deps.yml
+          python ci/minimum_versions.py ci/requirements/min-all-deps.yml
 
       - name: Bare minimum versions policy
         run: |
-          python ci/min_deps_check.py ci/requirements/bare-minimum.yml
+          python ci/minimum_versions.py ci/requirements/bare-minimum.yml

@@ -17,7 +17,7 @@ to our :ref:`indexing <indexing>`.
 
 .. note::
 
-  ``interp`` requires `scipy` installed.
+  ``interp`` requires ``scipy`` installed.
 
 
 Scalar and 1-dimensional interpolation
@@ -132,10 +132,11 @@ It is now possible to safely compute the difference ``other - interpolated``.
 Interpolation methods
 ---------------------
 
-We use :py:class:`scipy.interpolate.interp1d` for 1-dimensional interpolation.
+We use either :py:class:`scipy.interpolate.interp1d` or special interpolants from
+:py:class:`scipy.interpolate` for 1-dimensional interpolation (see :py:meth:`~xarray.Dataset.interp`).
 For multi-dimensional interpolation, an attempt is first made to decompose the
 interpolation in a series of 1-dimensional interpolations, in which case
-:py:class:`scipy.interpolate.interp1d` is used. If a decomposition cannot be
+the relevant 1-dimensional interpolator is used. If a decomposition cannot be
 made (e.g. with advanced interpolation), :py:func:`scipy.interpolate.interpn` is
 used.
 
@@ -292,8 +293,8 @@ Let's see how :py:meth:`~xarray.DataArray.interp` works on real data.
     axes[0].set_title("Raw data")
 
     # Interpolated data
-    new_lon = np.linspace(ds.lon[0], ds.lon[-1], ds.sizes["lon"] * 4)
-    new_lat = np.linspace(ds.lat[0], ds.lat[-1], ds.sizes["lat"] * 4)
+    new_lon = np.linspace(ds.lon[0].item(), ds.lon[-1].item(), ds.sizes["lon"] * 4)
+    new_lat = np.linspace(ds.lat[0].item(), ds.lat[-1].item(), ds.sizes["lat"] * 4)
     dsi = ds.interp(lat=new_lat, lon=new_lon)
     dsi.air.plot(ax=axes[1])
     @savefig interpolation_sample3.png width=8in

@@ -11,7 +11,7 @@ from xarray.tests import has_dask
 try:
     from dask.array import from_array as dask_from_array
 except ImportError:
-    dask_from_array = lambda x: x  # type: ignore
+    dask_from_array = lambda x: x  # type: ignore[assignment, misc]
 
 try:
     import pint
@@ -52,11 +52,40 @@ def test_allclose_regression() -> None:
             xr.Dataset({"a": ("x", [0, 2]), "b": ("y", [0, 1])}),
             id="Dataset",
         ),
+        pytest.param(
+            xr.DataArray(np.array("a", dtype="|S1")),
+            xr.DataArray(np.array("b", dtype="|S1")),
+            id="DataArray_with_character_dtype",
+        ),
+        pytest.param(
+            xr.Coordinates({"x": [1e-17, 2]}),
+            xr.Coordinates({"x": [0, 3]}),
+            id="Coordinates",
+        ),
     ),
 )
 def test_assert_allclose(obj1, obj2) -> None:
     with pytest.raises(AssertionError):
         xr.testing.assert_allclose(obj1, obj2)
+    with pytest.raises(AssertionError):
+        xr.testing.assert_allclose(obj1, obj2, check_dim_order=False)
+
+
+@pytest.mark.parametrize("func", ["assert_equal", "assert_allclose"])
+def test_assert_allclose_equal_transpose(func) -> None:
+    """Transposed DataArray raises assertion unless check_dim_order=False."""
+    obj1 = xr.DataArray([[0, 1, 2], [2, 3, 4]], dims=["a", "b"])
+    obj2 = xr.DataArray([[0, 2], [1, 3], [2, 4]], dims=["b", "a"])
+    with pytest.raises(AssertionError):
+        getattr(xr.testing, func)(obj1, obj2)
+    getattr(xr.testing, func)(obj1, obj2, check_dim_order=False)
+    ds1 = obj1.to_dataset(name="varname")
+    ds1["var2"] = obj1
+    ds2 = obj1.to_dataset(name="varname")
+    ds2["var2"] = obj1.transpose()
+    with pytest.raises(AssertionError):
+        getattr(xr.testing, func)(ds1, ds2)
+    getattr(xr.testing, func)(ds1, ds2, check_dim_order=False)
 
 
 @pytest.mark.filterwarnings("error")
@@ -146,12 +175,14 @@ def test_ensure_warnings_not_elevated(func) -> None:
     class WarningVariable(xr.Variable):
         @property  # type: ignore[misc]
         def dims(self):
-            warnings.warn("warning in test")
+            warnings.warn("warning in test", stacklevel=2)
             return super().dims
 
-        def __array__(self):
-            warnings.warn("warning in test")
-            return super().__array__()
+        def __array__(
+            self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        ) -> np.ndarray:
+            warnings.warn("warning in test", stacklevel=2)
+            return super().__array__(dtype, copy=copy)
 
     a = WarningVariable("x", [1])
     b = WarningVariable("x", [2])
@@ -166,7 +197,7 @@ def test_ensure_warnings_not_elevated(func) -> None:
 
         # ensure warnings still raise outside of assert_*
         with pytest.raises(UserWarning):
-            warnings.warn("test")
+            warnings.warn("test", stacklevel=2)
 
     # ensure warnings stay ignored in assert_*
     with warnings.catch_warnings(record=True) as w:

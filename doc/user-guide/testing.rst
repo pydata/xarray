@@ -193,7 +193,7 @@ different type:
 
 .. ipython:: python
 
-    def sparse_random_arrays(shape: tuple[int]) -> sparse._coo.core.COO:
+    def sparse_random_arrays(shape: tuple[int, ...]) -> sparse._coo.core.COO:
         """Strategy which generates random sparse.COO arrays"""
         if shape is None:
             shape = npst.array_shapes()
@@ -239,9 +239,10 @@ If the array type you want to generate has an array API-compliant top-level name
 you can use this neat trick:
 
 .. ipython:: python
-    :okwarning:
 
-    from numpy import array_api as xp  # available in numpy 1.26.0
+    import numpy as xp  # compatible in numpy 2.0
+
+    # use `import numpy.array_api as xp` in numpy>=1.23,<2.0
 
     from hypothesis.extra.array_api import make_strategies_namespace
 

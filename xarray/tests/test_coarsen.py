@@ -68,10 +68,10 @@ def test_coarsen_coords(ds, dask):
 
 @requires_cftime
 def test_coarsen_coords_cftime():
-    times = xr.cftime_range("2000", periods=6)
+    times = xr.date_range("2000", periods=6, use_cftime=True)
     da = xr.DataArray(range(6), [("time", times)])
     actual = da.coarsen(time=3).mean()
-    expected_times = xr.cftime_range("2000-01-02", freq="3D", periods=2)
+    expected_times = xr.date_range("2000-01-02", freq="3D", periods=2, use_cftime=True)
     np.testing.assert_array_equal(actual.time, expected_times)
 
 
@@ -203,14 +203,15 @@ def test_coarsen_da_keep_attrs(funcname, argument) -> None:
     func = getattr(da.coarsen(dim={"coord": 5}), funcname)
     result = func(*argument)
     assert result.attrs == attrs_da
-    da.coord.attrs == attrs_coords
+    assert da.coord.attrs == attrs_coords
     assert result.name == "name"
 
     # discard attrs
     func = getattr(da.coarsen(dim={"coord": 5}), funcname)
     result = func(*argument, keep_attrs=False)
     assert result.attrs == {}
-    da.coord.attrs == {}
+    # XXX: no assert?
+    _ = da.coord.attrs == {}
     assert result.name == "name"
 
     # test discard attrs using global option
@@ -218,7 +219,8 @@ def test_coarsen_da_keep_attrs(funcname, argument) -> None:
     with set_options(keep_attrs=False):
         result = func(*argument)
     assert result.attrs == {}
-    da.coord.attrs == {}
+    # XXX: no assert?
+    _ = da.coord.attrs == {}
     assert result.name == "name"
 
     # keyword takes precedence over global option
@@ -226,14 +228,16 @@ def test_coarsen_da_keep_attrs(funcname, argument) -> None:
     with set_options(keep_attrs=False):
         result = func(*argument, keep_attrs=True)
     assert result.attrs == attrs_da
-    da.coord.attrs == {}
+    # XXX: no assert?
+    _ = da.coord.attrs == {}
     assert result.name == "name"
 
     func = getattr(da.coarsen(dim={"coord": 5}), funcname)
     with set_options(keep_attrs=True):
         result = func(*argument, keep_attrs=False)
     assert result.attrs == {}
-    da.coord.attrs == {}
+    # XXX: no assert?
+    _ = da.coord.attrs == {}
     assert result.name == "name"
 
 

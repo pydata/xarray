@@ -1,4 +1,5 @@
 """Utility functions for printing version information."""
+
 import importlib
 import locale
 import os
@@ -48,8 +49,8 @@ def get_sys_info():
                 ("machine", f"{machine}"),
                 ("processor", f"{processor}"),
                 ("byteorder", f"{sys.byteorder}"),
-                ("LC_ALL", f'{os.environ.get("LC_ALL", "None")}'),
-                ("LANG", f'{os.environ.get("LANG", "None")}'),
+                ("LC_ALL", f"{os.environ.get('LC_ALL', 'None')}"),
+                ("LANG", f"{os.environ.get('LANG', 'None')}"),
                 ("LOCALE", f"{locale.getlocale()}"),
             ]
         )
@@ -103,7 +104,6 @@ def show_versions(file=sys.stdout):
         ("pydap", lambda mod: mod.__version__),
         ("h5netcdf", lambda mod: mod.__version__),
         ("h5py", lambda mod: mod.__version__),
-        ("Nio", lambda mod: mod.__version__),
         ("zarr", lambda mod: mod.__version__),
         ("cftime", lambda mod: mod.__version__),
         ("nc_time_axis", lambda mod: mod.__version__),

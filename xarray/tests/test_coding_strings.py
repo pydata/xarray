@@ -21,13 +21,13 @@ with suppress(ImportError):
 
 def test_vlen_dtype() -> None:
     dtype = strings.create_vlen_dtype(str)
-    assert dtype.metadata["element_type"] == str
+    assert dtype.metadata["element_type"] is str
     assert strings.is_unicode_dtype(dtype)
     assert not strings.is_bytes_dtype(dtype)
     assert strings.check_vlen_dtype(dtype) is str
 
     dtype = strings.create_vlen_dtype(bytes)
-    assert dtype.metadata["element_type"] == bytes
+    assert dtype.metadata["element_type"] is bytes
     assert not strings.is_unicode_dtype(dtype)
     assert strings.is_bytes_dtype(dtype)
     assert strings.check_vlen_dtype(dtype) is bytes
@@ -181,7 +181,7 @@ def test_StackedBytesArray_vectorized_indexing() -> None:
 
     V = IndexerMaker(indexing.VectorizedIndexer)
     indexer = V[np.array([[0, 1], [1, 0]])]
-    actual = stacked[indexer]
+    actual = stacked.vindex[indexer]
     assert_array_equal(actual, expected)
 
 

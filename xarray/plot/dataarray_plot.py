@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import functools
 import warnings
-from collections.abc import Hashable, Iterable, MutableMapping
-from typing import TYPE_CHECKING, Any, Callable, Literal, Union, cast, overload
+from collections.abc import Callable, Hashable, Iterable, MutableMapping
+from typing import TYPE_CHECKING, Any, Literal, Union, cast, overload
 
 import numpy as np
 import pandas as pd
 
-from xarray.core.alignment import broadcast
-from xarray.core.concat import concat
+from xarray.core.utils import attempt_import
 from xarray.plot.facetgrid import _easy_facetgrid
 from xarray.plot.utils import (
     _LINEWIDTH_RANGE,
@@ -32,6 +31,8 @@ from xarray.plot.utils import (
     get_axis,
     label_from_attrs,
 )
+from xarray.structure.alignment import broadcast
+from xarray.structure.concat import concat
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
@@ -210,7 +211,7 @@ def _prepare_plot1d_data(
     plts.update(
         {k: darray.coords[v] for k, v in coords_to_plot.items() if v is not None}
     )
-    plts = dict(zip(plts.keys(), broadcast(*(plts.values()))))
+    plts = dict(zip(plts.keys(), broadcast(*(plts.values())), strict=True))
 
     return plts
 
@@ -333,8 +334,7 @@ def line(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
-) -> list[Line3D]:
-    ...
+) -> list[Line3D]: ...
 
 
 @overload
@@ -361,8 +361,7 @@ def line(
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @overload
@@ -389,8 +388,7 @@ def line(
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 # This function signature should not change so that it can use
@@ -544,8 +542,7 @@ def step(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     row: None = None,  # no wrap -> primitive
     col: None = None,  # no wrap -> primitive
     **kwargs: Any,
-) -> list[Line3D]:
-    ...
+) -> list[Line3D]: ...
 
 
 @overload
@@ -558,8 +555,7 @@ def step(
     row: Hashable,  # wrap -> FacetGrid
     col: Hashable | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
-    ...
+) -> FacetGrid[DataArray]: ...
 
 
 @overload
@@ -572,8 +568,7 @@ def step(
     row: Hashable | None = None,
     col: Hashable,  # wrap -> FacetGrid
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
-    ...
+) -> FacetGrid[DataArray]: ...
 
 
 def step(
@@ -702,8 +697,8 @@ def hist(
 
     ax = get_axis(figsize, size, aspect, ax)
 
-    no_nan = np.ravel(darray.to_numpy())
-    no_nan = no_nan[pd.notnull(no_nan)]
+    no_nan_arr = np.ravel(darray.to_numpy())
+    no_nan = no_nan_arr[pd.notnull(no_nan_arr)]
 
     n, bins, patches = cast(
         tuple[np.ndarray, np.ndarray, Union["BarContainer", "Polygon"]],
@@ -879,7 +874,10 @@ def _plot1d(plotfunc):
         # All 1d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
-        import matplotlib.pyplot as plt
+        if TYPE_CHECKING:
+            import matplotlib.pyplot as plt
+        else:
+            plt = attempt_import("matplotlib.pyplot")
 
         if subplot_kws is None:
             subplot_kws = dict()
@@ -948,7 +946,7 @@ def _plot1d(plotfunc):
             # Remove any nulls, .where(m, drop=True) doesn't work when m is
             # a dask array, so load the array to memory.
             # It will have to be loaded to memory at some point anyway:
-            darray = darray.load()
+            darray = darray.compute()
             darray = darray.where(darray.notnull(), drop=True)
         else:
             size_ = kwargs.pop("_size", linewidth)
@@ -1036,15 +1034,17 @@ def _plot1d(plotfunc):
                 cbar_kwargs["label"] = label_from_attrs(hueplt_norm.data)
 
             _add_colorbar(
-                primitive, ax, kwargs.get("cbar_ax", None), cbar_kwargs, cmap_params
+                primitive, ax, kwargs.get("cbar_ax"), cbar_kwargs, cmap_params
             )
 
         if add_legend_:
             if plotfunc.__name__ in ["scatter", "line"]:
                 _add_legend(
-                    hueplt_norm
-                    if add_legend or not add_colorbar_
-                    else _Normalize(None),
+                    (
+                        hueplt_norm
+                        if add_legend or not add_colorbar_
+                        else _Normalize(None)
+                    ),
                     sizeplt_norm,
                     primitive,
                     legend_ax=ax,
@@ -1093,7 +1093,9 @@ def _add_labels(
     """Set x, y, z labels."""
     add_labels = [add_labels] * 3 if isinstance(add_labels, bool) else add_labels
     axes: tuple[Literal["x", "y", "z"], ...] = ("x", "y", "z")
-    for axis, add_label, darray, suffix in zip(axes, add_labels, darrays, suffixes):
+    for axis, add_label, darray, suffix in zip(
+        axes, add_labels, darrays, suffixes, strict=True
+    ):
         if darray is None:
             continue
 
@@ -1144,8 +1146,7 @@ def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> PathCollection:
-    ...
+) -> PathCollection: ...
 
 
 @overload
@@ -1186,8 +1187,7 @@ def scatter(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @overload
@@ -1228,8 +1228,7 @@ def scatter(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @_plot1d
@@ -1485,7 +1484,7 @@ def _plot2d(plotfunc):
             if ax is None:
                 # TODO: Importing Axes3D is no longer necessary in matplotlib >= 3.2.
                 # Remove when minimum requirement of matplotlib is 3.2:
-                from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+                from mpl_toolkits.mplot3d import Axes3D
 
                 # delete so it does not end up in locals()
                 del Axes3D
@@ -1696,8 +1695,7 @@ def imshow(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> AxesImage:
-    ...
+) -> AxesImage: ...
 
 
 @overload
@@ -1737,8 +1735,7 @@ def imshow(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @overload
@@ -1778,8 +1775,7 @@ def imshow(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @_plot2d
@@ -1858,9 +1854,10 @@ def imshow(
         # missing data transparent.  We therefore add an alpha channel if
         # there isn't one, and set it to transparent where data is masked.
         if z.shape[-1] == 3:
-            alpha = np.ma.ones(z.shape[:2] + (1,), dtype=z.dtype)
+            safe_dtype = np.promote_types(z.dtype, np.uint8)
+            alpha = np.ma.ones(z.shape[:2] + (1,), dtype=safe_dtype)
             if np.issubdtype(z.dtype, np.integer):
-                alpha *= 255
+                alpha[:] = 255
             z = np.ma.concatenate((z, alpha), axis=2)
         else:
             z = z.copy()
@@ -1915,8 +1912,7 @@ def contour(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> QuadContourSet:
-    ...
+) -> QuadContourSet: ...
 
 
 @overload
@@ -1956,8 +1952,7 @@ def contour(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @overload
@@ -1997,8 +1992,7 @@ def contour(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @_plot2d
@@ -2051,8 +2045,7 @@ def contourf(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> QuadContourSet:
-    ...
+) -> QuadContourSet: ...
 
 
 @overload
@@ -2092,8 +2085,7 @@ def contourf(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @overload
@@ -2133,8 +2125,7 @@ def contourf(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @_plot2d
@@ -2187,8 +2178,7 @@ def pcolormesh(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> QuadMesh:
-    ...
+) -> QuadMesh: ...
 
 
 @overload
@@ -2228,8 +2218,7 @@ def pcolormesh(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @overload
@@ -2269,8 +2258,7 @@ def pcolormesh(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @_plot2d
@@ -2374,8 +2362,7 @@ def surface(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> Poly3DCollection:
-    ...
+) -> Poly3DCollection: ...
 
 
 @overload
@@ -2415,8 +2402,7 @@ def surface(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @overload
@@ -2456,8 +2442,7 @@ def surface(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @_plot2d

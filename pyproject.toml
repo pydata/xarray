@@ -1,7 +1,5 @@
 [project]
-authors = [
-  {name = "xarray Developers", email = "xarray@googlegroups.com"},
-]
+authors = [{ name = "xarray Developers", email = "xarray@googlegroups.com" }]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "License :: OSI Approved :: Apache Software License",
@@ -9,42 +7,78 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering",
 ]
 description = "N-D labeled arrays and datasets in Python"
 dynamic = ["version"]
-license = {text = "Apache-2.0"}
+license = { text = "Apache-2.0" }
 name = "xarray"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
-dependencies = [
-  "numpy>=1.23",
-  "packaging>=22",
-  "pandas>=1.5",
-]
+dependencies = ["numpy>=1.24", "packaging>=23.2", "pandas>=2.1"]
+
+# We don't encode minimum requirements here (though if we can write a script to
+# generate the text from `min_deps_check.py`, that's welcome...). We do add
+# `numba>=0.54` here because of https://github.com/astral-sh/uv/issues/7881;
+# note that it's not a direct dependency of xarray.
 
 [project.optional-dependencies]
-accel = ["scipy", "bottleneck", "numbagg", "flox", "opt_einsum"]
-complete = ["xarray[accel,io,parallel,viz,dev]"]
+accel = ["scipy", "bottleneck", "numbagg", "numba>=0.54", "flox", "opt_einsum"]
+complete = ["xarray[accel,etc,io,parallel,viz]"]
+io = [
+  "netCDF4",
+  "h5netcdf",
+  "scipy",
+  'pydap; python_version<"3.10"',
+  "zarr",
+  "fsspec",
+  "cftime",
+  "pooch",
+]
+etc = ["sparse"]
+parallel = ["dask[complete]"]
+viz = ["cartopy", "matplotlib", "nc-time-axis", "seaborn"]
+types = [
+  "pandas-stubs",
+  "scipy-stubs",
+  "types-PyYAML",
+  "types-Pygments",
+  "types-colorama",
+  "types-decorator",
+  "types-defusedxml",
+  "types-docutils",
+  "types-networkx",
+  "types-pexpect",
+  "types-psutil",
+  "types-pycurl",
+  "types-openpyxl",
+  "types-python-dateutil",
+  "types-pytz",
+  "types-setuptools",
+]
+
+[dependency-groups]
 dev = [
   "hypothesis",
+  "jinja2",
+  "mypy",
   "pre-commit",
   "pytest",
   "pytest-cov",
   "pytest-env",
-  "pytest-xdist",
+  "pytest-mypy-plugins",
   "pytest-timeout",
-  "ruff",
-  "xarray[complete]",
+  "pytest-xdist",
+  "ruff>=0.8.0",
+  "sphinx",
+  "sphinx_autosummary_accessors",
+  "xarray[complete,types]",
 ]
-io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
-parallel = ["dask[complete]"]
-viz = ["matplotlib", "seaborn", "nc-time-axis"]
 
 [project.urls]
 Documentation = "https://docs.xarray.dev"
@@ -54,14 +88,11 @@ issue-tracker = "https://github.com/pydata/xarray/issues"
 source-code = "https://github.com/pydata/xarray"
 
 [project.entry-points."xarray.chunkmanagers"]
-dask = "xarray.core.daskmanager:DaskManager"
+dask = "xarray.namedarray.daskmanager:DaskManager"
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = [
-  "setuptools>=42",
-  "setuptools-scm>=7",
-]
+requires = ["setuptools>=42", "setuptools-scm>=7"]
 
 [tool.setuptools]
 packages = ["xarray"]
@@ -72,10 +103,10 @@ fallback_version = "9999"
 [tool.coverage.run]
 omit = [
   "*/xarray/tests/*",
-  "*/xarray/core/dask_array_compat.py",
-  "*/xarray/core/npcompat.py",
-  "*/xarray/core/pdcompat.py",
-  "*/xarray/core/pycompat.py",
+  "*/xarray/compat/dask_array_compat.py",
+  "*/xarray/compat/npcompat.py",
+  "*/xarray/compat/pdcompat.py",
+  "*/xarray/namedarray/pycompat.py",
   "*/xarray/core/types.py",
 ]
 source = ["xarray"]
@@ -84,13 +115,9 @@ source = ["xarray"]
 exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 
 [tool.mypy]
-enable_error_code = "redundant-self"
-exclude = [
-	'xarray/util/generate_.*\.py',
-	'xarray/datatree_/.*\.py',
-]
+enable_error_code = ["ignore-without-code", "redundant-self", "redundant-expr"]
+exclude = ['build', 'xarray/util/generate_.*\.py']
 files = "xarray"
-show_error_codes = true
 show_error_context = true
 warn_redundant_casts = true
 warn_unused_configs = true
@@ -109,23 +136,20 @@ module = [
   "cloudpickle.*",
   "cubed.*",
   "cupy.*",
-  "dask.types.*",
   "fsspec.*",
   "h5netcdf.*",
   "h5py.*",
   "iris.*",
-  "matplotlib.*",
   "mpl_toolkits.*",
-  "Nio.*",
   "nc_time_axis.*",
-  "numbagg.*",
   "netCDF4.*",
   "netcdftime.*",
+  "numcodecs.*",
   "opt_einsum.*",
-  "pandas.*",
+  "pint.*",
   "pooch.*",
+  "pyarrow.*",
   "pydap.*",
-  "pytest.*",
   "scipy.*",
   "seaborn.*",
   "setuptools",
@@ -133,6 +157,7 @@ module = [
   "toolz.*",
   "zarr.*",
   "numpy.exceptions.*", # remove once support for `numpy<2.0` has been dropped
+  "array_api_strict.*",
 ]
 
 # Gradually we want to add more modules to this list, ratcheting up our total
@@ -145,9 +170,8 @@ check_untyped_defs = true
 module = [
   "xarray.core.accessor_dt",
   "xarray.core.accessor_str",
-  "xarray.core.alignment",
-  "xarray.core.computation",
-  "xarray.core.rolling_exp",
+  "xarray.structure.alignment",
+  "xarray.computation.*",
   "xarray.indexes.*",
   "xarray.tests.*",
 ]
@@ -165,12 +189,10 @@ module = [
   "xarray.tests.test_dask",
   "xarray.tests.test_dataarray",
   "xarray.tests.test_duck_array_ops",
-  "xarray.tests.test_groupby",
   "xarray.tests.test_indexing",
   "xarray.tests.test_merge",
   "xarray.tests.test_missing",
   "xarray.tests.test_parallelcompat",
-  "xarray.tests.test_plot",
   "xarray.tests.test_sparse",
   "xarray.tests.test_ufuncs",
   "xarray.tests.test_units",
@@ -212,65 +234,56 @@ warn_return_any = true
 
 module = ["xarray.namedarray.*", "xarray.tests.test_namedarray"]
 
-[tool.pyright]
-# include = ["src"]
-# exclude = ["**/node_modules",
-# "**/__pycache__",
-# "src/experimental",
-# "src/typestubs"
-# ]
-# ignore = ["src/oldstuff"]
-defineConstant = {DEBUG = true}
-# stubPath = "src/stubs"
-# venv = "env367"
+# We disable pyright here for now, since including it means that all errors show
+# up in devs' VS Code, which then makes it more difficult to work with actual
+# errors. It overrides local VS Code settings so isn't escapable.
 
-# Enabling this means that developers who have disabled the warning locally —
-# because not all dependencies are installable — are overridden
-# reportMissingImports = true
-reportMissingTypeStubs = false
-
-# pythonVersion = "3.6"
-# pythonPlatform = "Linux"
-
-# executionEnvironments = [
-# { root = "src/web", pythonVersion = "3.5", pythonPlatform = "Windows", extraPaths = [ "src/service_libs" ] },
-# { root = "src/sdk", pythonVersion = "3.0", extraPaths = [ "src/backend" ] },
-# { root = "src/tests", extraPaths = ["src/tests/e2e", "src/sdk" ]},
-# { root = "src" }
-# ]
+# [tool.pyright]
+# defineConstant = {DEBUG = true}
+# # Enabling this means that developers who have disabled the warning locally —
+# # because not all dependencies are installable — are overridden
+# # reportMissingImports = true
+# reportMissingTypeStubs = false
 
 [tool.ruff]
-builtins = ["ellipsis"]
-extend-exclude = [
-  "doc",
-  "_typed_ops.pyi",
+extend-exclude = ["doc", "_typed_ops.pyi"]
+
+[tool.ruff.lint]
+extend-select = [
+  "F",    # Pyflakes
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "I",    # isort
+  "UP",   # pyupgrade
+  "B",    # flake8-bugbear
+  "C4",   # flake8-comprehensions
+  "PIE",  # flake8-pie
+  "TID",  # flake8-tidy-imports (absolute imports)
+  "PGH",  # pygrep-hooks
+  "PERF", # Perflint
+  "RUF",
 ]
 extend-safe-fixes = [
   "TID252", # absolute imports
 ]
-target-version = "py39"
+ignore = [
+  "E402",    # module level import not at top of file
+  "E501",    # line too long - let the formatter worry about that
+  "E731",    # do not assign a lambda expression, use a def
+  "UP007",   # use X | Y for type annotations
+  "C40",     # unnecessary generator, comprehension, or literal
+  "PIE790",  # unnecessary pass statement
+  "PERF203", # try-except within a loop incurs performance overhead
+  "RUF001",  # string contains ambiguous unicode character
+  "RUF002",  # docstring contains ambiguous acute accent unicode character
+  "RUF003",  # comment contains ambiguous no-break space unicode character
+  "RUF005",  # consider unpacking operator instead of concatenation
+  "RUF012",  # mutable class attributes
+]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 # don't enforce absolute imports
 "asv_bench/**" = ["TID252"]
-
-[tool.ruff.lint]
-# E402: module level import not at top of file
-# E501: line too long - let black worry about that
-# E731: do not assign a lambda expression, use a def
-ignore = [
-  "E402",
-  "E501",
-  "E731",
-]
-select = [
-  "F", # Pyflakes
-  "E", # Pycodestyle
-  "W",
-  "TID", # flake8-tidy-imports (absolute imports)
-  "I", # isort
-  "UP", # Pyupgrade
-]
 
 [tool.ruff.lint.isort]
 known-first-party = ["xarray"]
@@ -280,18 +293,75 @@ known-first-party = ["xarray"]
 ban-relative-imports = "all"
 
 [tool.pytest.ini_options]
-addopts = ["--strict-config", "--strict-markers"]
-filterwarnings = [
-  "ignore:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
+addopts = [
+  "--strict-config",
+  "--strict-markers",
+  "--mypy-only-local-stub",
+  "--mypy-pyproject-toml-file=pyproject.toml",
 ]
+
+# We want to forbid warnings from within xarray in our tests — instead we should
+# fix our own code, or mark the test itself as expecting a warning. So this:
+# - Converts any warning from xarray into an error
+# - Allows some warnings ("default") which the test suite currently raises,
+#   since it wasn't practical to fix them all before merging this config. The
+#   warnings are reported in CI (since it uses `default`, not `ignore`).
+#
+# Over time, we can remove these rules allowing warnings. A valued contribution
+# is removing a line, seeing what breaks, and then fixing the library code or
+# tests so that it doesn't raise warnings.
+#
+# There are some instance where we'll want to add to these rules:
+# - While we only raise errors on warnings from within xarray, a dependency can
+#   raise a warning with a stacklevel such that it's interpreted to be raised
+#   from xarray and this will mistakenly convert it to an error. If that
+#   happens, please feel free to add a rule switching it to `default` here, and
+#   disabling the error.
+# - If these settings get in the way of making progress, it's also acceptable to
+#   temporarily add additional `default` rules.
+# - But we should only add `ignore` rules if we're confident that we'll never
+#   need to address a warning.
+
+filterwarnings = [
+  "error:::xarray.*",
+  "default:No index created:UserWarning:xarray.core.dataset",
+  "default::UserWarning:xarray.tests.test_coding_times",
+  "default::UserWarning:xarray.tests.test_computation",
+  "default::UserWarning:xarray.tests.test_dataset",
+  "default:`ancestors` has been deprecated:DeprecationWarning:xarray.core.treenode",
+  "default:`iter_lineage` has been deprecated:DeprecationWarning:xarray.core.treenode",
+  "default:`lineage` has been deprecated:DeprecationWarning:xarray.core.treenode",
+  "default:coords should be an ndarray:DeprecationWarning:xarray.tests.test_variable",
+  "default:deallocating CachingFileManager:RuntimeWarning:xarray.backends.*",
+  "default:deallocating CachingFileManager:RuntimeWarning:xarray.backends.netCDF4_",
+  "default:deallocating CachingFileManager:RuntimeWarning:xarray.core.indexing",
+  "default:Failed to decode variable.*NumPy will stop allowing conversion of out-of-bound Python integers to integer arrays:DeprecationWarning",
+  "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning:xarray.*",
+  "default:invalid value encountered in cast:RuntimeWarning:xarray.core.duck_array_ops",
+  "default:invalid value encountered in cast:RuntimeWarning:xarray.conventions",
+  "default:invalid value encountered in cast:RuntimeWarning:xarray.tests.test_units",
+  "default:invalid value encountered in cast:RuntimeWarning:xarray.tests.test_array_api",
+  "default:NumPy will stop allowing conversion of:DeprecationWarning",
+  "default:shape should be provided:DeprecationWarning:xarray.tests.test_variable",
+  "default:the `pandas.MultiIndex` object:FutureWarning:xarray.tests.test_variable",
+  "default:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
+  "default:Duplicate dimension names present:UserWarning:xarray.namedarray.core",
+  # TODO: this is raised for vlen-utf8, consolidated metadata, U1 dtype
+  "ignore:is currently not part .* the Zarr version 3 specification.",
+  # TODO: remove once we know how to deal with a changed signature in protocols
+  "default:::xarray.tests.test_strategies",
+]
+
 log_cli_level = "INFO"
 markers = [
   "flaky: flaky tests",
+  "mypy: type annotation tests",
   "network: tests requiring a network connection",
   "slow: slow tests",
+  "slow_hypothesis: slow hypothesis tests",
 ]
 minversion = "7"
-python_files = "test_*.py"
+python_files = ["test_*.py"]
 testpaths = ["xarray/tests", "properties"]
 
 [tool.aliases]
@@ -301,3 +371,64 @@ test = "pytest"
 ignore = [
   "PP308", # This option creates a large amount of log lines.
 ]
+
+[tool.typos]
+
+[tool.typos.default]
+extend-ignore-identifiers-re = [
+  # Variable names
+  "nd_.*",
+  ".*_nd",
+  "ba_.*",
+  ".*_ba",
+  "ser_.*",
+  ".*_ser",
+  # Function/class names
+  "NDArray.*",
+  ".*NDArray.*",
+]
+
+[tool.typos.default.extend-words]
+# NumPy function names
+arange = "arange"
+
+# Technical terms
+nd = "nd"
+nin = "nin"
+
+# Variable names
+ba = "ba"
+ser = "ser"
+fo = "fo"
+iy = "iy"
+vart = "vart"
+ede = "ede"
+
+# Organization/Institution names
+Stichting = "Stichting"
+Mathematisch = "Mathematisch"
+
+# People's names
+Soler = "Soler"
+Bruning = "Bruning"
+Tung = "Tung"
+Claus = "Claus"
+Celles = "Celles"
+slowy = "slowy"
+Commun = "Commun"
+
+# Tests
+Ome = "Ome"
+SUR = "SUR"
+Tio = "Tio"
+Ono = "Ono"
+abl = "abl"
+
+# Technical terms
+splitted = "splitted"
+childs = "childs"
+cutted = "cutted"
+LOCA = "LOCA"
+
+[tool.typos.type.jupyter]
+extend-ignore-re = ["\"id\": \".*\""]

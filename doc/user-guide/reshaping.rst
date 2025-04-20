@@ -274,7 +274,7 @@ Sort
 ----
 
 One may sort a DataArray/Dataset via :py:meth:`~xarray.DataArray.sortby` and
-:py:meth:`~xarray.Dataset.sortby`.  The input can be an individual or list of
+:py:meth:`~xarray.Dataset.sortby`. The input can be an individual or list of
 1D ``DataArray`` objects:
 
 .. ipython:: python
@@ -305,7 +305,7 @@ Reshaping via coarsen
 
 Whilst :py:class:`~xarray.DataArray.coarsen` is normally used for reducing your data's resolution by applying a reduction function
 (see the :ref:`page on computation<compute.coarsen>`),
-it can also be used to reorganise your data without applying a computation via :py:meth:`~xarray.core.rolling.DataArrayCoarsen.construct`.
+it can also be used to reorganise your data without applying a computation via :py:meth:`~xarray.computation.rolling.DataArrayCoarsen.construct`.
 
 Taking our example tutorial air temperature dataset over the Northern US
 
@@ -324,7 +324,7 @@ Taking our example tutorial air temperature dataset over the Northern US
     @savefig pre_coarsening.png
     air.isel(time=0).plot(x="lon", y="lat")
 
-we can split this up into sub-regions of size ``(9, 18)`` points using :py:meth:`~xarray.core.rolling.DataArrayCoarsen.construct`:
+we can split this up into sub-regions of size ``(9, 18)`` points using :py:meth:`~xarray.computation.rolling.DataArrayCoarsen.construct`:
 
 .. ipython:: python
 
