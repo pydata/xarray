@@ -27,6 +27,10 @@ New Features
 - Improved compatibility with OPeNDAP DAP4 data model for backend engine ``pydap``. This
   includes ``datatree`` support, and removing slashes from dimension names. By
   `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+- Extended ``rolling_exp`` to support ``pd.Timedelta`` objects for the window size when using
+  ``window_type="halflife"`` along datetime dimensions, similar to pandas' ``ewm``. This allows
+  expressions like ``da.rolling_exp(time=pd.Timedelta("1D"), window_type="halflife").mean()``.
+  By `Andrea Biasioli <https://github.com/abiasiol>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
