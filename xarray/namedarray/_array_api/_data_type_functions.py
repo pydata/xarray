@@ -145,7 +145,7 @@ def result_type(
     | float
     | complex
     | bool
-    | _dtype[Any]
+    | _dtype[Any],
 ) -> _dtype[Any]:
     """
     Returns the dtype that results from applying type promotion rules to the arguments.

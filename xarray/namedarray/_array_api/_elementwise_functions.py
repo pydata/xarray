@@ -4,19 +4,18 @@ from typing import Any
 
 import numpy as np
 
-from xarray.namedarray._array_api._manipulation_functions import _arithmetic_broadcast
 from xarray.namedarray._array_api._data_type_functions import _promote_scalars
+from xarray.namedarray._array_api._manipulation_functions import _arithmetic_broadcast
 from xarray.namedarray._array_api._utils import (
     _get_data_namespace,
 )
-from xarray.namedarray._array_api._utils_inputs import _maybe_normalize_py_scalars
 from xarray.namedarray._typing import (
     _DType,
+    _PYScalars,
     _ScalarType,
     _ShapeType,
     _SupportsImag,
     _SupportsReal,
-    _PYScalars,
 )
 from xarray.namedarray.core import NamedArray
 
