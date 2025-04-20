@@ -11,7 +11,6 @@ from xarray.namedarray._array_api._utils import (
 )
 from xarray.namedarray._typing import (
     _DType,
-    _PYScalars,
     _ScalarType,
     _ShapeType,
     _SupportsImag,
