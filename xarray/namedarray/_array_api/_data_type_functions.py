@@ -185,7 +185,7 @@ def result_type(
     for a in arrays_and_dtypes:
         if isinstance(a, NamedArray):
             dtypes.append(a.dtype)
-        elif isinstance(a, (bool, int, float, complex)):
+        elif isinstance(a, bool | int | float | complex):
             scalars.append(a)
         else:
             dtypes.append(a)
