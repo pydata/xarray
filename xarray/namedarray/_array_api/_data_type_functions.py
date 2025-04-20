@@ -139,20 +139,66 @@ def isdtype(
     return cast(bool, xp.isdtype(dtype, kind))  # TODO: Why is cast necessary?
 
 
-def result_type(*arrays_and_dtypes: NamedArray[Any, Any] | _dtype[Any]) -> _dtype[Any]:
-    # TODO: Empty arg?
-    arr_or_dtype = arrays_and_dtypes[0]
-    if isinstance(arr_or_dtype, NamedArray):
-        xp = _get_data_namespace(arr_or_dtype)
-    else:
-        xp = _get_namespace_dtype(arr_or_dtype)
+def result_type(
+    *arrays_and_dtypes: NamedArray[Any, Any]
+    | int
+    | float
+    | complex
+    | bool
+    | _dtype[Any]
+) -> _dtype[Any]:
+    """
+    Returns the dtype that results from applying type promotion rules to the arguments.
 
-    return cast(
-        _dtype[Any],
-        xp.result_type(
-            *(a.dtype if isinstance(a, NamedArray) else a for a in arrays_and_dtypes)
-        ),
-    )  # TODO: Why is cast necessary?
+    Examples
+    --------
+
+    Array and Array
+
+    >>> import numpy as np
+    >>> x1 = NamedArray((), np.array(-2, dtype=np.int8))
+    >>> x2 = NamedArray((), np.array(3, dtype=np.int64))
+    >>> result_type(x1, x2)
+    dtype('int64')
+
+    Array and DType
+
+    >>> x1 = NamedArray((), np.array(-2, dtype=np.int8))
+    >>> x2 = np.int64
+    >>> result_type(x1, x2)
+    dtype('int64')
+
+    Scalar and Array
+
+    >>> x1 = 3
+    >>> x2 = NamedArray((), np.array(-2, dtype=np.int8))
+    >>> result_type(x1, x2)
+    dtype('int8')
+
+    Scalar and Scalar uses the default namespace
+
+    >>> result_type(3.0, 2)
+    dtype('float64')
+    """
+    dtypes = []
+    scalars = []
+    for a in arrays_and_dtypes:
+        if isinstance(a, NamedArray):
+            dtypes.append(a.dtype)
+        elif isinstance(a, (bool, int, float, complex)):
+            scalars.append(a)
+        else:
+            dtypes.append(a)
+
+    # if not dtypes:
+    #     # Need at least 1 array or dtype to retrieve namespace otherwise need to use
+    #     # the default namespace.
+    #     raise ValueError("at least one array or dtype is required")
+
+    xp = _get_namespace_dtype(next(iter(dtypes), None))
+
+    # TODO: Why is cast necessary?
+    return cast(_dtype[Any], xp.result_type(*dtypes + scalars))
 
 
 if __name__ == "__main__":
