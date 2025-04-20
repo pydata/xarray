@@ -469,10 +469,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             _allowed_dtypes = _dtype_categories[dtype_category]
             if self.dtype not in _allowed_dtypes:
                 raise TypeError(
-
-                        f"Only {dtype_category} dtypes are allowed in {func_name}. "
-                        "Got {self.dtype}."
-
+                    f"Only {dtype_category} dtypes are allowed in {func_name}. "
+                    "Got {self.dtype}."
                 )
 
         # Note: Only Python scalar types that match the array dtype are
