@@ -555,10 +555,9 @@ class TestDataArrayRollingExp:
         # test with different time units (ms -> s)
         da["time"] = da.get_index("time").astype("datetime64[s]")
         result = da.rolling_exp(window_type=window_type, **{dim: window}).mean()
-        pandas_array = da.to_pandas()
-        expected = xr.DataArray(
-            pandas_array.ewm(**{window_type: window}, times=pandas_array.index).mean()
-        ).transpose(*da.dims)
+
+        # pandas < 2.2.0 does not support non-ns resolution for ewm
+        # so let's not re-assign pandas_array
         assert_allclose(expected.variable, result.variable)
 
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
