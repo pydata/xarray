@@ -435,6 +435,87 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         # TODO: Is this a good idea? x[Any, int] + 1.4 => int result then.
         return asarray(x, dtype=self.dtype)
 
+    def _promote_scalar(
+        self: NamedArray[Any, Any],
+        scalar: bool | int | float | complex,
+        dtype_category: str | None = None,
+        func_name: str = "",
+    ) -> NamedArray[Any, Any]:
+        """
+        Returns a promoted version of a Python scalar appropriate for use with
+        operations on x.
+
+        This may raise an OverflowError in cases where the scalar is an
+        integer that is too large to fit in a NumPy integer dtype, or
+        TypeError when the scalar type is incompatible with the dtype of x.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> x = NamedArray((), np.array(-2, dtype=np.int8))
+        >>> x._promote_scalar(3)
+        <xarray.NamedArray ()> Size: 1B
+        array(3, dtype=int8)
+        """
+        from xarray.namedarray._array_api import asarray, iinfo
+        from xarray.namedarray._array_api._dtypes import (
+            _boolean_dtypes,
+            _dtype_categories,
+            _floating_dtypes,
+            _integer_dtypes,
+        )
+
+        if dtype_category is not None:
+            _allowed_dtypes = _dtype_categories[dtype_category]
+            if self.dtype not in _allowed_dtypes:
+                raise TypeError(
+                    (
+                        f"Only {dtype_category} dtypes are allowed in {func_name}. "
+                        "Got {self.dtype}."
+                    )
+                )
+
+        # Note: Only Python scalar types that match the array dtype are
+        # allowed.
+        if isinstance(scalar, bool):
+            if self.dtype not in _boolean_dtypes:
+                raise TypeError(
+                    "Python bool scalars can only be promoted with bool arrays"
+                )
+        elif isinstance(scalar, int):
+            if self.dtype in _boolean_dtypes:
+                raise TypeError(
+                    "Python int scalars cannot be promoted with bool arrays"
+                )
+            if self.dtype in _integer_dtypes:
+                info = iinfo(self.dtype)
+                if not (info.min <= scalar <= info.max):
+                    raise OverflowError(
+                        "Python int scalars must be within the bounds of the dtype for integer arrays"
+                    )
+            # int + array(floating) is allowed
+        elif isinstance(scalar, float):
+            if self.dtype not in _floating_dtypes:
+                raise TypeError(
+                    "Python float scalars can only be promoted with floating-point arrays."
+                )
+        elif isinstance(scalar, complex):
+            if self.dtype not in _floating_dtypes:
+                raise TypeError(
+                    "Python complex scalars can only be promoted with floating-point arrays."
+                )
+        else:
+            raise TypeError("'scalar' must be a Python scalar")
+
+        # Note: scalars are unconditionally cast to the same dtype as the
+        # array.
+
+        # Note: the spec only specifies integer-dtype/int promotion
+        # behavior for integers within the bounds of the integer dtype.
+        # Outside of those bounds we use the default NumPy behavior (either
+        # cast or raise OverflowError).
+        return asarray(scalar, dtype=self.dtype, device=self.device)
+
     # Required methods below:
 
     def __abs__(self, /) -> Self:
