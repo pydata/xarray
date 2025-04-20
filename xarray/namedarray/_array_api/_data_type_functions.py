@@ -221,8 +221,8 @@ def _promote_scalars(
     array(3, dtype=int8))
 
     """
-    x1_is_scalar = isinstance(x1, (bool, int, float, complex))
-    x2_is_scalar = isinstance(x2, (bool, int, float, complex))
+    x1_is_scalar = isinstance(x1, bool | int | float | complex)
+    x2_is_scalar = isinstance(x2, bool | int | float | complex)
     if x1_is_scalar and x2_is_scalar:
         raise TypeError(f"At least one of x1 and x2 must be an array in {func_name}")
     elif x1_is_scalar:
