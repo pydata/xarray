@@ -201,6 +201,38 @@ def result_type(
     return cast(_dtype[Any], xp.result_type(*dtypes + scalars))
 
 
+# %% NamedArray helpers
+def _promote_scalars(
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    dtype_category: str | None = None,
+    func_name: str = "",
+) -> tuple[NamedArray[Any, Any], NamedArray[Any, Any]]:
+    """
+    Promote at most one of x1 or x2 to an array from a Python scalar
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray((), np.array(-2, dtype=np.int8))
+    >>> _promote_scalars(x, 3)
+    (<xarray.NamedArray ()> Size: 1B
+    array(-2, dtype=int8), <xarray.NamedArray ()> Size: 1B
+    array(3, dtype=int8))
+
+    """
+    x1_is_scalar = isinstance(x1, (bool, int, float, complex))
+    x2_is_scalar = isinstance(x2, (bool, int, float, complex))
+    if x1_is_scalar and x2_is_scalar:
+        raise TypeError(f"At least one of x1 and x2 must be an array in {func_name}")
+    elif x1_is_scalar:
+        x1 = x2._promote_scalar(x1, dtype_category, func_name)
+    elif x2_is_scalar:
+        x2 = x1._promote_scalar(x2, dtype_category, func_name)
+    return x1, x2
+
+
+# %% Test
 if __name__ == "__main__":
     import doctest
 
