@@ -1356,7 +1356,10 @@ To export just the dataset schema without the data itself, use the
     # However, `ds` (rather than the unpickled dataset) refers to the open file.  Delete
     # `ds` to close the file.
     del ds
-    os.remove("saved_on_disk.nc")
+
+    for f in ["saved_on_disk.nc", "saved_on_disk.h5"]:
+        if os.path.exists(f):
+            os.remove(f)
 
 This can be useful for generating indices of dataset contents to expose to
 search indices or other automated data discovery tools.
