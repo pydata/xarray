@@ -1278,7 +1278,6 @@ def scatter(
 
 def _plot2d(plotfunc):
     """Decorator for common 2d plotting logic."""
-    # NOTE: dedent to make autodoc happy
     commondoc = """
 Parameters
 ----------
@@ -1995,7 +1994,7 @@ def contour(
 ) -> FacetGrid[T_DataArray]: ...
 
 
-# @_plot2d
+@_plot2d
 def contour(
     x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
 ) -> QuadContourSet:
