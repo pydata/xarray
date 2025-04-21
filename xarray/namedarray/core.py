@@ -67,6 +67,7 @@ if TYPE_CHECKING:
         _DimsLike,
         _DType,
         _IndexKeyLike,
+        _IndexKey,
         _IntOrUnknown,
         _ScalarType,
         _Shape,
@@ -594,7 +595,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return greater_equal(self, other)
 
     def __getitem__(
-        self, key: _IndexKeyLike | NamedArray[Any, Any]
+        self,
+        key: NamedArray[Any, Any] | _IndexKey | tuple[NamedArray[Any, Any] | _IndexKey],
     ) -> NamedArray[Any, Any]:
         """
         Returns self[key].
@@ -782,12 +784,55 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def __setitem__(
         self,
-        key: _IndexKeyLike,
+        key: NamedArray[Any, Any] | _IndexKey | tuple[NamedArray[Any, Any] | _IndexKey],
         value: int | float | bool | NamedArray[Any, Any],
         /,
     ) -> None:
-        _key = key._data if isinstance(key, NamedArray) else key
+        """
+        Sets self[key] to value.
+
+        Examples
+        --------
+
+        1D array
+
+        >>> import numpy as np
+        >>> x = NamedArray(("x",), np.array([1, 2, 3]))
+        >>> key = NamedArray(("x",), np.array([0, 1, 2]))
+        >>> x[key] = 7
+        >>> x
+        <xarray.NamedArray (x: 3)> Size: 24B
+        array([7, 7, 7])
+
+        ND array
+
+        >>> x = NamedArray(("x", "y"), np.array([[1, 2, 3]]))
+        >>> key = (0, NamedArray(("y",), np.array([1])),)
+        >>> value = 7
+        >>> x[key] = value
+        >>> x
+        <xarray.NamedArray (x: 1, y: 3)> Size: 24B
+        array([[1, 7, 3]])
+        """
+        keys = []
+        for i, k in enumerate(key if isinstance(key, tuple) else (key,)):
+            if isinstance(k, NamedArray):
+                if k.dims != self.dims[i : i + 1]:
+
+                    warnings.warn(
+                        (
+                            "Dimension name of indexing array does not match.\n"
+                            f"{self.dims[i:i+1]=} != {k.dims=}"
+                        ),
+                        stacklevel=2,
+                    )
+                keys.append(k._data)
+            else:
+                keys.append(k)
+        _key = tuple(keys)
+
         _value = value._data if isinstance(value, NamedArray) else value
+
         self._data[_key] = _value
 
     def __sub__(
