@@ -814,7 +814,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __iadd__(
         self, other: int | float | NamedArray[Any, Any], /
     ) -> NamedArray[Any, Any]:
-        self._data += other._data
+        self._data += self._promote_scalar(other._data)
         return self
 
     def __radd__(
@@ -827,7 +827,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __iand__(
         self, other: int | bool | NamedArray[Any, Any], /
     ) -> NamedArray[Any, Any]:
-        self._data &= other._data
+        self._data &= self._promote_scalar(other._data)
         return self
 
     def __rand__(
@@ -840,7 +840,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __ifloordiv__(
         self, other: int | float | NamedArray[Any, Any], /
     ) -> NamedArray[Any, Any]:
-        self._data //= other._data
+        self._data //= self._promote_scalar(other._data)
         return self
 
     def __rfloordiv__(
@@ -851,7 +851,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return floor_divide(other, self)
 
     def __ilshift__(self, other: int | NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
-        self._data <<= other._data
+        self._data <<= self._promote_scalar(other._data)
         return self
 
     def __rlshift__(self, other: int | NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
@@ -860,7 +860,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return bitwise_left_shift(other, self)
 
     def __imatmul__(self, other: NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
-        self._data @= other._data
+        self._data @= self._promote_scalar(other._data)
         return self
 
     def __rmatmul__(self, other: NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
@@ -871,7 +871,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __imod__(
         self, other: int | float | NamedArray[Any, Any], /
     ) -> NamedArray[Any, Any]:
-        self._data %= other._data
+        self._data %= self._promote_scalar(other._data)
         return self
 
     def __rmod__(
@@ -884,7 +884,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __imul__(
         self, other: int | float | NamedArray[Any, Any], /
     ) -> NamedArray[Any, Any]:
-        self._data *= other._data
+        self._data *= self._promote_scalar(other._data)
         return self
 
     def __rmul__(
@@ -897,7 +897,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __ior__(
         self, other: int | bool | NamedArray[Any, Any], /
     ) -> NamedArray[Any, Any]:
-        self._data |= other._data
+        self._data |= self._promote_scalar(other._data)
 
         return self
 
@@ -911,7 +911,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __ipow__(
         self, other: int | float | NamedArray[Any, Any], /
     ) -> NamedArray[Any, Any]:
-        self._data **= other._data
+        self._data **= self._promote_scalar(other._data)
         return self
 
     def __rpow__(
@@ -922,7 +922,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return pow(other, self)
 
     def __irshift__(self, other: int | NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
-        self._data >>= other._data
+        self._data >>= self._promote_scalar(other._data)
         return self
 
     def __rrshift__(self, other: int | NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
@@ -933,7 +933,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __isub__(
         self, other: int | float | NamedArray[Any, Any], /
     ) -> NamedArray[Any, Any]:
-        self._data -= other._data
+        self._data -= self._promote_scalar(other._data)
         return self
 
     def __rsub__(
@@ -946,7 +946,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __itruediv__(
         self, other: float | NamedArray[Any, Any], /
     ) -> NamedArray[Any, Any]:
-        self._data /= other._data
+        self._data /= self._promote_scalar(other._data)
         return self
 
     def __rtruediv__(
@@ -959,7 +959,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __ixor__(
         self, other: int | bool | NamedArray[Any, Any], /
     ) -> NamedArray[Any, Any]:
-        self._data ^= other._data
+        self._data ^= self._promote_scalar(other._data)
         return self
 
     def __rxor__(
