@@ -149,8 +149,6 @@ _AttrsLike = Union[Mapping[Any, Any], None]
 
 _Device = Any
 
-_PYScalars = Union[bool, int, float, complex]
-
 
 class _IInfo(Protocol):
     bits: int
