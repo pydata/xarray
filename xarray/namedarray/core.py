@@ -786,9 +786,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         value: int | float | bool | NamedArray[Any, Any],
         /,
     ) -> None:
-        if isinstance(key, NamedArray):
-            key = key._data
-        self._data.__setitem__(key, self._maybe_asarray(value)._data)
+        _key = key._data if isinstance(key, NamedArray) else key
+        _value = value._data if isinstance(value, NamedArray) else value
+        self._data[_key] = _value
 
     def __sub__(
         self, other: int | float | NamedArray[Any, Any], /
