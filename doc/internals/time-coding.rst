@@ -535,3 +535,20 @@ To opt-out of timedelta decoding (see issue `Undesired decoding to timedelta64 <
 .. note::
     Note that in the future the default value of ``decode_timedelta`` will be
     ``False`` rather than ``None``.
+
+
+
+.. ipython:: python
+    :suppress:
+
+    # Cleanup
+    import os
+
+    for f in [
+        "test-datetimes1.nc",
+        "test-datetimes2.nc",
+        "test-timedeltas1.nc",
+        "test-timedeltas2.nc",
+    ]:
+        if os.path.exists(f):
+            os.remove(f)
