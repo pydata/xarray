@@ -999,7 +999,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if isinstance(self._data, _arrayapi):
             return self._data.device
         else:
-            raise NotImplementedError("self._data missing device")
+            try:
+                return self._data.device
+            except AttributeError as err:
+                raise NotImplementedError(f"{self._data=} missing device") from err
 
     @property
     def mT(self) -> NamedArray[Any, _DType_co]:
