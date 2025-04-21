@@ -7,15 +7,12 @@ import sys
 from contextlib import suppress
 from textwrap import dedent, indent
 
-# Necessary?
 import sphinx_autosummary_accessors
 import yaml
 from sphinx.application import Sphinx
 from sphinx.util import logging
 
-# For Sphinx autodoc https://github.com/pydata/xarray/issues/4279
 import xarray
-#xarray.DataArray.__module__ = "xarray"
 
 LOGGER = logging.getLogger("conf")
 
@@ -106,7 +103,6 @@ You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/
 # AutoDoc configuration
 autosummary_generate = True
 autodoc_typehints = "none"
-autodoc_docstring_signature = False
 
 # Napoleon configuration
 napoleon_google_docstring = False
@@ -238,14 +234,6 @@ html_theme_options = {
 }
 # pydata_sphinx_theme use_edit_page_button with github link seems better
 html_show_sourcelink = False
-
-# No sidebars on main page (like Numpy)
-html_sidebars = {
-  "index": [],
-}
-html_theme_options["secondary_sidebar_items"] = {
-    "index": [],
-}
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
