@@ -4,7 +4,7 @@ import datetime
 import operator
 import warnings
 from itertools import pairwise
-from typing import Literal
+from typing import Literal, cast
 from unittest import mock
 
 import numpy as np
@@ -1682,7 +1682,7 @@ class TestDataArrayGroupBy:
 
         expected_df = df.groupby("dim_0_bins", observed=True).sum()
         expected = expected_df.to_xarray().assign_coords(
-            dim_0_bins=expected_df.index.categories
+            dim_0_bins=cast(pd.CategoricalIndex, expected_df.index).categories
         )["a"]
 
         with xr.set_options(use_flox=use_flox):

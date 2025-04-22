@@ -4979,15 +4979,15 @@ class TestDataset:
 
     def test_from_dataframe_int_float_str_pandas_dtype(self) -> None:
         df = pd.DataFrame([1, 2, 3], dtype=pd.Int64Dtype())
-        ds = xr.Dataset(df)
+        ds = xr.Dataset.from_dataframe(df)
         assert isinstance(ds[0].data, np.ndarray)
 
         df = pd.DataFrame([1, 2, 3], dtype=pd.Float64Dtype())
-        ds = xr.Dataset(df)
+        ds = xr.Dataset.from_dataframe(df)
         assert isinstance(ds[0].data, np.ndarray)
 
         df = pd.DataFrame(["1", "2", "3"], dtype=pd.StringDtype())
-        ds = xr.Dataset(df)
+        ds = xr.Dataset.from_dataframe(df)
         assert isinstance(ds[0].data, np.ndarray)
 
     def test_from_dataframe_categorical_dtype_index(self) -> None:

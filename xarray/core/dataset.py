@@ -7085,7 +7085,9 @@ class Dataset(
             index = self[self.variables[extension_array_column].dims[0]].data
             extension_array_df = pd.DataFrame(
                 {extension_array_column: extension_array},
-                index=index.array if isinstance(index, PandasExtensionArray) else index,
+                index=pd.Index(index.array)
+                if isinstance(index, PandasExtensionArray)
+                else index,
             )
             extension_array_df.index.name = self.variables[extension_array_column].dims[
                 0
