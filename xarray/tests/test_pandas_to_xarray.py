@@ -104,8 +104,6 @@ def index_flat(request):
     index fixture, but excluding MultiIndex cases.
     """
     key = request.param
-    if key in ["bool-object", "bool-dtype", "nullable_bool", "repeats"]:
-        pytest.xfail(reason="doesn't work")
     return indices_dict[key].copy()
 
 

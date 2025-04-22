@@ -1926,6 +1926,10 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         array = self.array.copy(deep=True) if deep else self.array
         return type(self)(array, self._dtype)
 
+    @property
+    def nbytes(self) -> int:
+        return self.array.nbytes
+
 
 class PandasMultiIndexingAdapter(PandasIndexingAdapter):
     """Handles explicit indexing for a pandas.MultiIndex.

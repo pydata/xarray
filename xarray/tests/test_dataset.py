@@ -4380,13 +4380,7 @@ class TestDataset:
         ds = self.make_example_math_dataset()
         ds["x"] = np.arange(3)
         ds_copy = ds.copy()
-        series = ds["bar"].to_pandas()
-        # to_pandas will actually give the result where the internal array of the series is a NumpyExtensionArray
-        # but ds["bar"] is a numpy array.
-        # TODO: should assert_equal be updated to handle?
-        assert (ds["bar"] == series).all()
-        del ds["bar"]
-        del ds_copy["bar"]
+        ds_copy["bar"] = ds["bar"].to_pandas()
         assert_equal(ds, ds_copy)
 
     def test_setitem_auto_align(self) -> None:
@@ -4976,19 +4970,6 @@ class TestDataset:
         idx = pd.MultiIndex.from_arrays([[0], [1]], names=["x", "y"])
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
-
-    def test_from_dataframe_int_float_str_pandas_dtype(self) -> None:
-        df = pd.DataFrame([1, 2, 3], dtype=pd.Int64Dtype())
-        ds = xr.Dataset.from_dataframe(df)
-        assert isinstance(ds[0].data, np.ndarray)
-
-        df = pd.DataFrame([1, 2, 3], dtype=pd.Float64Dtype())
-        ds = xr.Dataset.from_dataframe(df)
-        assert isinstance(ds[0].data, np.ndarray)
-
-        df = pd.DataFrame(["1", "2", "3"], dtype=pd.StringDtype())
-        ds = xr.Dataset.from_dataframe(df)
-        assert isinstance(ds[0].data, np.ndarray)
 
     def test_from_dataframe_categorical_dtype_index(self) -> None:
         cat = pd.CategoricalIndex(list("abcd"))
