@@ -1042,6 +1042,12 @@ def test_basic_compute():
             ds.foo.variable.compute()
 
 
+def test_dataset_as_delayed():
+    ds = Dataset({"foo": ("x", range(5)), "bar": ("x", range(5))}).chunk()
+
+    assert dask.delayed(ds).compute() == ds.compute()
+
+
 def make_da():
     da = xr.DataArray(
         np.ones((10, 20)),
