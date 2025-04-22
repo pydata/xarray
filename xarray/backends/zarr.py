@@ -1290,7 +1290,7 @@ class ZarrStore(AbstractWritableDataStore):
         region = self._write_region
 
         if region == "auto":
-            region = {dim: "auto" for dim in ds.dims}
+            region = dict.fromkeys(ds.dims, "auto")
 
         if not isinstance(region, dict):
             raise TypeError(f"``region`` must be a dict, got {type(region)}")
