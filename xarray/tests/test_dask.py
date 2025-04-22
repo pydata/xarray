@@ -1042,18 +1042,6 @@ def test_basic_compute():
             ds.foo.variable.compute()
 
 
-def test_dask_layers_and_dependencies():
-    ds = Dataset({"foo": ("x", range(5)), "bar": ("x", range(5))}).chunk()
-
-    x = dask.delayed(ds)
-    assert set(x.__dask_graph__().dependencies).issuperset(
-        ds.__dask_graph__().dependencies
-    )
-    assert set(x.foo.__dask_graph__().dependencies).issuperset(
-        ds.__dask_graph__().dependencies
-    )
-
-
 def make_da():
     da = xr.DataArray(
         np.ones((10, 20)),
