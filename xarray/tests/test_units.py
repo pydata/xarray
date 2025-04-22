@@ -1385,7 +1385,7 @@ def test_replication_full_like_dataset(variant, dtype):
 
     units = {
         **extract_units(ds),
-        **{name: unit_registry.degK for name in ds.data_vars},
+        **dict.fromkeys(ds.data_vars, unit_registry.degK),
     }
     expected = attach_units(
         xr.full_like(strip_units(ds), fill_value=strip_units(fill_value)), units
@@ -1871,7 +1871,7 @@ class TestVariable:
     )
     def test_isel(self, variable, indexers, dask, dtype):
         if dask:
-            variable = variable.chunk({dim: 2 for dim in variable.dims})
+            variable = variable.chunk(dict.fromkeys(variable.dims, 2))
         quantified = xr.Variable(
             variable.dims, variable.data.astype(dtype) * unit_registry.s
         )

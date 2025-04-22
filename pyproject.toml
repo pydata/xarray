@@ -45,6 +45,7 @@ parallel = ["dask[complete]"]
 viz = ["cartopy", "matplotlib", "nc-time-axis", "seaborn"]
 types = [
   "pandas-stubs",
+  "scipy-stubs",
   "types-PyYAML",
   "types-Pygments",
   "types-colorama",

@@ -1019,6 +1019,29 @@ class TestDatasetView:
 
         weighted_mean(dt.dataset)
 
+    def test_map_keep_attrs(self) -> None:
+        # test DatasetView.map(..., keep_attrs=...)
+        data = xr.DataArray([1, 2, 3], dims="x", attrs={"da": "attrs"})
+        ds = xr.Dataset({"data": data}, attrs={"ds": "attrs"})
+        dt = DataTree(ds)
+
+        def func_keep(ds):
+            # x.mean() removes the attrs of the data_vars
+            return ds.map(lambda x: x.mean(), keep_attrs=True)
+
+        result = xr.map_over_datasets(func_keep, dt)
+        expected = dt.mean(keep_attrs=True)
+        xr.testing.assert_identical(result, expected)
+
+        # per default DatasetView.map does not keep attrs
+        def func(ds):
+            # x.mean() removes the attrs of the data_vars
+            return ds.map(lambda x: x.mean())
+
+        result = xr.map_over_datasets(func, dt)
+        expected = dt.mean()
+        xr.testing.assert_identical(result, expected.mean())
+
 
 class TestAccess:
     def test_attribute_access(self, create_test_datatree) -> None:
