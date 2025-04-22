@@ -7072,17 +7072,36 @@ class Dataset(
             for k in columns_in_order
             if is_extension_array_dtype(self.variables[k].data)
         ]
+        extension_array_columns_different_index = [
+            k
+            for k in extension_array_columns
+            if set(self.variables[k].dims) != set(ordered_dims.keys())
+        ]
+        extension_array_columns_same_index = [
+            k
+            for k in extension_array_columns
+            if k not in extension_array_columns_different_index
+        ]
         data = [
             self._variables[k].set_dims(ordered_dims).values.reshape(-1)
             for k in non_extension_array_columns
         ]
         index = self.coords.to_index([*ordered_dims])
         broadcasted_df = pd.DataFrame(
-            dict(zip(non_extension_array_columns, data, strict=True)), index=index
+            {
+                **dict(zip(non_extension_array_columns, data, strict=True)),
+                **{
+                    c: self.variables[c].data.array
+                    for c in extension_array_columns_same_index
+                },
+            },
+            index=index,
         )
-        for extension_array_column in extension_array_columns:
+        for extension_array_column in extension_array_columns_different_index:
             extension_array = self.variables[extension_array_column].data.array
-            index = self[self.variables[extension_array_column].dims[0]].data
+            index = self[
+                self.variables[extension_array_column].dims[0]
+            ].coords.to_index()
             extension_array_df = pd.DataFrame(
                 {extension_array_column: extension_array},
                 index=pd.Index(index.array)
