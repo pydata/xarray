@@ -336,10 +336,7 @@ def summarize_variable(
     else:
         dims_str = ""
 
-    try:
-        nbytes_str = f" {render_human_readable_nbytes(variable.nbytes)}"
-    except TypeError:
-        nbytes_str = " ?"
+    nbytes_str = f" {render_human_readable_nbytes(variable.nbytes)}"
     front_str = f"{first_col}{dims_str}{variable.dtype}{nbytes_str} "
 
     values_width = max_width - len(front_str)

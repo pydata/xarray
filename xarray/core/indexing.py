@@ -1928,7 +1928,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     @property
     def nbytes(self) -> int:
-        return self.array.nbytes
+        if pd.api.types.is_extension_array_dtype(self.dtype):
+            return self.array.nbytes
+        return cast(np.dtype, self.dtype).itemsize * len(self.array)
 
 
 class PandasMultiIndexingAdapter(PandasIndexingAdapter):
