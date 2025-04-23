@@ -475,7 +475,7 @@ def exact_cftime_datetime_difference(a: CFTimeDatetime, b: CFTimeDatetime):
     datetime.timedelta
     """
     seconds = b.replace(microsecond=0) - a.replace(microsecond=0)
-    seconds = int(round(seconds.total_seconds()))
+    seconds = round(seconds.total_seconds())
     microseconds = b.microsecond - a.microsecond
     return datetime.timedelta(seconds=seconds, microseconds=microseconds)
 

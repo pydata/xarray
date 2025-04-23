@@ -17,7 +17,6 @@ from collections import ChainMap
 from collections.abc import Generator, Iterator, Mapping
 from contextlib import ExitStack
 from io import BytesIO
-from os import listdir
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 from unittest.mock import patch
@@ -3698,34 +3697,54 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
 
     @pytest.mark.parametrize("consolidated", [True, False, None])
     @pytest.mark.parametrize("write_empty", [True, False, None])
-    @pytest.mark.skipif(
-        has_zarr_v3, reason="zarr-python 3.x removed write_empty_chunks"
-    )
     def test_write_empty(
-        self, consolidated: bool | None, write_empty: bool | None
+        self,
+        consolidated: bool | None,
+        write_empty: bool | None,
     ) -> None:
-        if write_empty is False:
-            expected = ["0.1.0", "1.1.0"]
+        def assert_expected_files(expected: list[str], store: str) -> None:
+            """Convenience for comparing with actual files written"""
+            ls = []
+            test_root = os.path.join(store, "test")
+            for root, _, files in os.walk(test_root):
+                ls.extend(
+                    [
+                        os.path.join(root, f).removeprefix(test_root).lstrip("/")
+                        for f in files
+                    ]
+                )
+
+            assert set(expected) == set(
+                [
+                    file.lstrip("c/")
+                    for file in ls
+                    if (file not in (".zattrs", ".zarray", "zarr.json"))
+                ]
+            )
+
+        # The zarr format is set by the `default_zarr_format`
+        # pytest fixture that acts on a superclass
+        zarr_format_3 = has_zarr_v3 and zarr.config.config["default_zarr_format"] == 3
+        if (write_empty is False) or (write_empty is None and has_zarr_v3):
+            expected = ["0.1.0"]
         else:
             expected = [
                 "0.0.0",
                 "0.0.1",
                 "0.1.0",
                 "0.1.1",
-                "1.0.0",
-                "1.0.1",
-                "1.1.0",
-                "1.1.1",
             ]
 
-        ds = xr.Dataset(
-            data_vars={
-                "test": (
-                    ("Z", "Y", "X"),
-                    np.array([np.nan, np.nan, 1.0, np.nan]).reshape((1, 2, 2)),
-                )
-            }
-        )
+        if zarr_format_3:
+            data = np.array([0.0, 0, 1.0, 0]).reshape((1, 2, 2))
+            # transform to the path style of zarr 3
+            # e.g. 0/0/1
+            expected = [e.replace(".", "/") for e in expected]
+        else:
+            # use nan for default fill_value behaviour
+            data = np.array([np.nan, np.nan, 1.0, np.nan]).reshape((1, 2, 2))
+
+        ds = xr.Dataset(data_vars={"test": (("Z", "Y", "X"), data)})
 
         if has_dask:
             ds["test"] = ds["test"].chunk(1)
@@ -3741,17 +3760,42 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 write_empty_chunks=write_empty,
             )
 
+            # check expected files after a write
+            assert_expected_files(expected, store)
+
             with self.roundtrip_dir(
                 ds,
                 store,
-                {"mode": "a", "append_dim": "Z", "write_empty_chunks": write_empty},
+                save_kwargs={
+                    "mode": "a",
+                    "append_dim": "Z",
+                    "write_empty_chunks": write_empty,
+                },
             ) as a_ds:
                 expected_ds = xr.concat([ds, ds], dim="Z")
 
-                assert_identical(a_ds, expected_ds)
-
-                ls = listdir(os.path.join(store, "test"))
-                assert set(expected) == set([file for file in ls if file[0] != "."])
+                assert_identical(a_ds, expected_ds.compute())
+                # add the new files we expect to be created by the append
+                # that was performed by the roundtrip_dir
+                if (write_empty is False) or (write_empty is None and has_zarr_v3):
+                    expected.append("1.1.0")
+                else:
+                    if not has_zarr_v3:
+                        # TODO: remove zarr3 if once zarr issue is fixed
+                        # https://github.com/zarr-developers/zarr-python/issues/2931
+                        expected.extend(
+                            [
+                                "1.1.0",
+                                "1.0.0",
+                                "1.0.1",
+                                "1.1.1",
+                            ]
+                        )
+                    else:
+                        expected.append("1.1.0")
+                if zarr_format_3:
+                    expected = [e.replace(".", "/") for e in expected]
+                assert_expected_files(expected, store)
 
     def test_avoid_excess_metadata_calls(self) -> None:
         """Test that chunk requests do not trigger redundant metadata requests.
@@ -5291,20 +5335,14 @@ class TestDask(DatasetIOBase):
 @pytest.mark.filterwarnings("ignore:The binary mode of fromstring is deprecated")
 class TestPydap:
     def convert_to_pydap_dataset(self, original):
-        from pydap.model import BaseType, DatasetType, GridType
+        from pydap.model import BaseType, DatasetType
 
         ds = DatasetType("bears", **original.attrs)
         for key, var in original.data_vars.items():
-            v = GridType(key)
-            v[key] = BaseType(key, var.values, dimensions=var.dims, **var.attrs)
-            for d in var.dims:
-                v[d] = BaseType(d, var[d].values)
-            ds[key] = v
+            ds[key] = BaseType(key, var.values, dims=var.dims, **var.attrs)
         # check all dims are stored in ds
         for d in original.coords:
-            ds[d] = BaseType(
-                d, original[d].values, dimensions=(d,), **original[d].attrs
-            )
+            ds[d] = BaseType(d, original[d].values, dims=(d,), **original[d].attrs)
         return ds
 
     @contextlib.contextmanager
@@ -5328,9 +5366,7 @@ class TestPydap:
             # we don't check attributes exactly with assertDatasetIdentical()
             # because the test DAP server seems to insert some extra
             # attributes not found in the netCDF file.
-            # 2025/03/18 : The DAP server now modifies the keys too
-            # assert actual.attrs.keys() == expected.attrs.keys()
-            assert len(actual.attrs.keys()) == len(expected.attrs.keys())
+            assert actual.attrs.keys() == expected.attrs.keys()
 
         with self.create_datasets() as (actual, expected):
             assert_equal(actual[{"l": 2}], expected[{"l": 2}])
@@ -5372,7 +5408,8 @@ class TestPydap:
 @requires_pydap
 class TestPydapOnline(TestPydap):
     @contextlib.contextmanager
-    def create_datasets(self, **kwargs):
+    def create_dap2_datasets(self, **kwargs):
+        # in pydap 3.5.0, urls defaults to dap2.
         url = "http://test.opendap.org/opendap/data/nc/bears.nc"
         actual = open_dataset(url, engine="pydap", **kwargs)
         with open_example_dataset("bears.nc") as expected:
@@ -5380,18 +5417,33 @@ class TestPydapOnline(TestPydap):
             expected["bears"] = expected["bears"].astype(str)
             yield actual, expected
 
-    def test_session(self) -> None:
-        from pydap.cas.urs import setup_session
+    def output_grid_deprecation_warning_dap2dataset(self):
+        with pytest.warns(DeprecationWarning, match="`output_grid` is deprecated"):
+            with self.create_dap2_datasets(output_grid=True) as (actual, expected):
+                assert_equal(actual, expected)
 
-        session = setup_session("XarrayTestUser", "Xarray2017")
+    def create_dap4_dataset(self, **kwargs):
+        url = "dap4://test.opendap.org/opendap/data/nc/bears.nc"
+        actual = open_dataset(url, engine="pydap", **kwargs)
+        with open_example_dataset("bears.nc") as expected:
+            # workaround to restore string which is converted to byte
+            expected["bears"] = expected["bears"].astype(str)
+            yield actual, expected
+
+    def test_session(self) -> None:
+        from requests import Session
+
+        session = Session()  # blank requests.Session object
         with mock.patch("pydap.client.open_url") as mock_func:
             xr.backends.PydapDataStore.open("http://test.url", session=session)
         mock_func.assert_called_with(
             url="http://test.url",
             application=None,
             session=session,
-            output_grid=True,
+            output_grid=False,
             timeout=120,
+            verify=True,
+            user_charset=None,
         )
 
 

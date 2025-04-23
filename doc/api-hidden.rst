@@ -531,6 +531,10 @@
    Index.rename
    Index.copy
 
+   indexes.RangeIndex.start
+   indexes.RangeIndex.stop
+   indexes.RangeIndex.step
+
    backends.NetCDF4DataStore.close
    backends.NetCDF4DataStore.encode
    backends.NetCDF4DataStore.encode_attribute

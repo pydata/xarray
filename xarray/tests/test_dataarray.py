@@ -752,7 +752,7 @@ class TestDataArray:
 
     def test_setitem(self) -> None:
         # basic indexing should work as numpy's indexing
-        tuples = [
+        tuples: list[tuple[int | list[int] | slice, int | list[int] | slice]] = [
             (0, 0),
             (0, slice(None, None)),
             (slice(None, None), slice(None, None)),
@@ -3658,8 +3658,8 @@ class TestDataArray:
         return_data = array.to_numpy()
         coords_data = np.array(["a", "b"])
         if data == "list" or data is True:
-            return_data = return_data.tolist()
-            coords_data = coords_data.tolist()
+            return_data = return_data.tolist()  # type:ignore[assignment]
+            coords_data = coords_data.tolist()  # type:ignore[assignment]
 
         expected: dict[str, Any] = {
             "name": "foo",
