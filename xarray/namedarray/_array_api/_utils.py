@@ -5,6 +5,7 @@ from collections.abc import Callable, Iterable, Iterator
 from itertools import zip_longest
 from types import ModuleType
 from typing import Any, TypeGuard, cast
+import warnings
 
 from xarray.namedarray._typing import (
     _T,
@@ -470,6 +471,23 @@ def _replace_ellipsis(key: _IndexKeys, ndim: int) -> _IndexKeysNoEllipsis:
     return out
 
 
+def _check_indexing_dims(original_dims: _Dims, indexing_dims: _Dims) -> None:
+    """
+    Check if dims do not match. If it does not, something is likely wrong.
+
+    Normally NamedArray should raise an error when it doesn't match but since indexing
+    arrays is also a Array API feature we can only warn the user.
+    """
+    if original_dims != indexing_dims:
+        warnings.warn(
+            (
+                "Dimension name of indexing array does not match.\n"
+                f"{original_dims=} != {indexing_dims=}"
+            ),
+            stacklevel=2,
+        )
+
+
 def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
     """
     Get the expected dims when using tuples in __getitem__.
@@ -498,23 +516,42 @@ def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
     ('dim_1', 'dim_2')
     >>> _dims_from_tuple_indexing(("x",), (..., 0))
     ()
+
+    Indexing array
+
+    >>> import numpy as np
+    >>> key = (0, NamedArray((), np.array(0, dtype=int)))
+    >>> _dims_from_tuple_indexing(("x", "y", "z"), key)
+    ('z',)
+    >>> key = (0, NamedArray(("y",), np.array([0], dtype=int)))
+    >>> _dims_from_tuple_indexing(("x", "y", "z"), key)
+    ('y', 'z')
     """
     key_no_ellipsis = _replace_ellipsis(key, len(dims))
-    _dims = list(dims)
-    j = 0
-    for k in key_no_ellipsis:
+
+    new_dims = list(dims)
+    j = 0  # keeps track of where the original dims are.
+    for i, k in enumerate(key_no_ellipsis):
         if k is None:
             # None adds 1 dimension:
-            _dims.insert(j, _new_unique_dim_name(tuple(_dims)))
+            new_dims.insert(j, _new_unique_dim_name(tuple(new_dims)))
             j += 1
         elif isinstance(k, int):
             # Integer removes 1 dimension:
-            _dims.pop(j)
+            new_dims.pop(j)
         elif isinstance(k, slice):
             # Slice retains the dimension.
             j += 1
+        elif isinstance(k, NamedArray):
+            if len(k.dims) == 0:
+                # if 0 dim, removes 1 dimension
+                new_dims.pop(j)
+            else:
+                # same size retains the dimension:
+                _check_indexing_dims(dims[i : i + 1], k.dims)
+                j += 1
 
-    return tuple(_dims)
+    return tuple(new_dims)
 
 
 def _atleast1d_dims(dims: _Dims) -> _Dims:
