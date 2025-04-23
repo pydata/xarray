@@ -17,6 +17,49 @@ from xarray.namedarray.core import NamedArray
 _py_scalars = (bool, int, float, complex)
 
 
+def _check_args(
+    x1: NamedArray[Any, Any] | bool | int | float | complex,
+    x2: NamedArray[Any, Any] | bool | int | float | complex,
+    # dtype_category: str,
+    # func_name: str,
+) -> tuple[NamedArray[Any, Any], NamedArray[Any, Any]]:
+    """
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x1 = NamedArray(("x",), np.array([1, 2, 3]))
+    >>> x2 = 2
+    >>> _normalize_args(x1, x2)
+    """
+    if isinstance(x1, _py_scalars):
+        if isinstance(x2, _py_scalars):
+            raise TypeError(
+                f"Two scalars not allowed, got {type(x1) = } and {type(x2) =}"
+            )
+        # x2 must be an array
+        if x2.dtype not in _allowed_dtypes:
+            raise TypeError(
+                f"Only {dtype_category} dtypes are allowed {func_name}. Got {x2.dtype}."
+            )
+        x1 = _promote_scalar(x2, x1)
+
+    elif isinstance(x2, _py_scalars):
+        # x1 must be an array
+        if x1.dtype not in _allowed_dtypes:
+            raise TypeError(
+                f"Only {dtype_category} dtypes are allowed {func_name}. Got {x1.dtype}."
+            )
+        x2 = _promote_scalar(x1, x2)
+    else:
+        if x1.dtype not in _allowed_dtypes or x2.dtype not in _allowed_dtypes:
+            raise TypeError(
+                f"Only {dtype_category} dtypes are allowed in {func_name}(...). "
+                f"Got {x1.dtype} and {x2.dtype}."
+            )
+    return x1, x2
+
+
 def _maybe_normalize_py_scalars(
     x1: NamedArray[Any, Any] | bool | int | float | complex,
     x2: NamedArray[Any, Any] | bool | int | float | complex,
@@ -35,7 +78,7 @@ def _maybe_normalize_py_scalars(
             raise TypeError(
                 f"Only {dtype_category} dtypes are allowed {func_name}. Got {x2.dtype}."
             )
-        x1 = x2._promote_scalar(x1)
+        x1 = _promote_scalar(x2, x1)
 
     elif isinstance(x2, _py_scalars):
         # x1 must be an array
@@ -53,57 +96,51 @@ def _maybe_normalize_py_scalars(
     return x1, x2
 
 
-def _promote_scalar(x, scalar: _py_scalars) -> NamedArray[Any, Any]:
+def _maybe_asarray(
+    self, x: bool | int | float | complex | NamedArray[Any, Any]
+) -> NamedArray[Any, Any]:
     """
-    Returns a promoted version of a Python scalar appropriate for use with
-    operations on x.
+    If x is a scalar, use asarray with the same dtype as self.
+    If it is namedarray already, respect the dtype and return it.
 
-    This may raise an OverflowError in cases where the scalar is an
-    integer that is too large to fit in a NumPy integer dtype, or
-    TypeError when the scalar type is incompatible with the dtype of x.
+    Array API always promotes scalars to the same dtype as the other array.
+    Arrays are promoted according to result_types.
     """
-    xp = _get_data_namespace(x)
+    from xarray.namedarray._array_api import asarray
 
-    target_dtype = x.dtype
-    # Note: Only Python scalar types that match the array dtype are
-    # allowed.
-    if isinstance(scalar, bool):
-        if x.dtype not in _boolean_dtypes:
-            raise TypeError("Python bool scalars can only be promoted with bool arrays")
-    elif isinstance(scalar, int):
-        if x.dtype in _boolean_dtypes:
-            raise TypeError("Python int scalars cannot be promoted with bool arrays")
-        if x.dtype in _integer_dtypes:
-            info = iinfo(x.dtype)
-            if not (info.min <= scalar <= info.max):
-                raise OverflowError(
-                    "Python int scalars must be within the bounds of the dtype for integer arrays"
-                )
-        # int + array(floating) is allowed
-    elif isinstance(scalar, float):
-        if x.dtype not in _floating_dtypes:
-            raise TypeError(
-                "Python float scalars can only be promoted with floating-point arrays."
-            )
-    elif isinstance(scalar, complex):
-        if x.dtype not in _floating_dtypes:
-            raise TypeError(
-                "Python complex scalars can only be promoted with floating-point arrays."
-            )
-        # 1j * array(floating) is allowed
-        if x.dtype in _real_floating_dtypes:
-            target_dtype = _real_to_complex_map[x.dtype]
-    else:
-        raise TypeError("'scalar' must be a Python scalar")
+    if isinstance(x, NamedArray):
+        # x is proper array. Respect the chosen dtype.
+        return x
+    # x is a scalar. Use the same dtype as self.
+    # TODO: Is this a good idea? x[Any, int] + 1.4 => int result then.
+    return asarray(x, dtype=self.dtype)
 
-    # Note: scalars are unconditionally cast to the same dtype as the
-    # array.
 
-    # Note: the spec only specifies integer-dtype/int promotion
-    # behavior for integers within the bounds of the integer dtype.
-    # Outside of those bounds we use the default NumPy behavior (either
-    # cast or raise OverflowError).
-    return NamedArray((), xp.asarray(scalar, dtype=target_dtype, device=x.device))
+def _split_args(
+    *arrays_dtypes_scalars: NamedArray[Any, Any]
+    | int
+    | float
+    | complex
+    | bool
+    | _dtype[Any]
+):
+    arrays: list[NamedArray[Any, Any]] = []
+    dtypes: list[_dtype[Any]] = []
+    scalars: list[bool | int | float | complex] = []
+    for a in arrays_dtypes_scalars:
+        if isinstance(a, NamedArray):
+            arrays.append(a)
+        elif isinstance(a, (bool, int, float, complex)):
+            scalars.append(a)
+        else:
+            dtypes.append(a)
+
+    # if not dtypes:
+    #     # Need at least 1 array or dtype to retrieve namespace otherwise need to use
+    #     # the default namespace.
+    #     raise ValueError("at least one array or dtype is required")
+
+    return arrays, dtypes, scalars
 
 
 if __name__ == "__main__":
