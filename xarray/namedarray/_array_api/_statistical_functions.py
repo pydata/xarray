@@ -266,9 +266,22 @@ def sum(
     keepdims: bool = False,
     axis: _AxisLike | None = None,
 ) -> NamedArray[Any, _DType]:
+    """
+    Calculates the sum of the input array x.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> sum(NamedArray(("x",), np.array([0.5, 1.5])))
+    <xarray.NamedArray ()> Size: 8B
+    np.float64(2.0)
+    >>> sum(NamedArray(("x",), np.array([0.5, 0.7, 0.2, 1.5])), dtype=np.int32)
+    <xarray.NamedArray ()> Size: 4B
+    np.int32(1)
+    """
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dims, axis)
-    _data = xp.sum(x._data, axis=_axis, keepdims=keepdims)
+    _data = xp.sum(x._data, axis=_axis, dtype=dtype, keepdims=keepdims)
     _dims = _reduce_dims(x.dims, axis=_axis, keepdims=keepdims)
     return x._new(dims=_dims, data=_data)
 
