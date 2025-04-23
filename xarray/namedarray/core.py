@@ -663,22 +663,11 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             _data = self_new._data[key_new._data]
             _dims = _flatten_dims(_atleast1d_dims(self_new.dims))
             return self._new(_dims, _data)
-        # elif isinstance(key, int):
-        #     return self._new(self.dims[1:], self._data[key])
-        # elif isinstance(key, slice) or key is ...:
-        #     return self._new(self.dims, self._data[key])
-        # elif key is None:
-        #     return expand_dims(self)
-        # elif isinstance(key, tuple):
-        #     _dims = _dims_from_tuple_indexing(self.dims, key)
-        #     return self._new(_dims, self._data[key])
-
         elif isinstance(key, int | slice | tuple) or key is None or key is ...:
             # TODO: __getitem__ not always available, use expand_dims
             _data = self._data[key]
-            _dims = _dims_from_tuple_indexing(
-                self.dims, key if isinstance(key, tuple) else (key,)
-            )
+            _key_tuple = key if isinstance(key, tuple) else (key,)
+            _dims = _dims_from_tuple_indexing(self.dims, _key_tuple)
             return self._new(_dims, _data)
         else:
             raise NotImplementedError(f"{key=} is not supported")
