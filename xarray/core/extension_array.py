@@ -33,12 +33,12 @@ def __extension_duck_array__issubdtype(
 def __extension_duck_array__broadcast(arr: T_ExtensionArray, shape: tuple):
     if shape[0] == len(arr) and len(shape) == 1:
         return arr
-    raise NotImplementedError("Cannot broadcast 1d-only pandas categorical array.")
+    raise NotImplementedError("Cannot broadcast 1d-only pandas extension array.")
 
 
 @implements(np.stack)
 def __extension_duck_array__stack(arr: T_ExtensionArray, axis: int):
-    raise NotImplementedError("Cannot stack 1d-only pandas categorical array.")
+    raise NotImplementedError("Cannot stack 1d-only pandas extension array.")
 
 
 @implements(np.concatenate)

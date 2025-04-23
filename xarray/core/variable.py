@@ -410,12 +410,13 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         Variable.as_numpy
         Variable.values
         """
+        if isinstance(self._data, PandasExtensionArray):
+            return self._data.array
         if is_duck_array(self._data):
             return self._data
-        elif isinstance(self._data, indexing.ExplicitlyIndexed):
+        if isinstance(self._data, indexing.ExplicitlyIndexed):
             return self._data.get_duck_array()
-        else:
-            return self.values
+        return self.values
 
     @data.setter
     def data(self, data: T_DuckArray | ArrayLike) -> None:
@@ -1366,7 +1367,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         elif shape is not None:
             dims_map = dict(zip(dim, shape, strict=True))
             tmp_shape = tuple(dims_map[d] for d in expanded_dims)
-            expanded_data = duck_array_ops.broadcast_to(self.data, tmp_shape)
+            expanded_data = duck_array_ops.broadcast_to(self._data, tmp_shape)
         else:
             indexer = (None,) * (len(expanded_dims) - self.ndim) + (...,)
             expanded_data = self.data[indexer]

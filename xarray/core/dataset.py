@@ -7091,14 +7091,14 @@ class Dataset(
             {
                 **dict(zip(non_extension_array_columns, data, strict=True)),
                 **{
-                    c: self.variables[c].data.array
+                    c: self.variables[c].data
                     for c in extension_array_columns_same_index
                 },
             },
             index=index,
         )
         for extension_array_column in extension_array_columns_different_index:
-            extension_array = self.variables[extension_array_column].data.array
+            extension_array = self.variables[extension_array_column].data
             index = self[
                 self.variables[extension_array_column].dims[0]
             ].coords.to_index()
