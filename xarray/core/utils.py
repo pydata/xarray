@@ -172,6 +172,16 @@ def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
     Used for wrapping a pandas.Index as an xarray.Variable.
 
     """
+    if isinstance(array, pd.PeriodIndex):
+        return np.dtype("O")
+
+    if hasattr(array, "categories"):
+        # category isn't a real numpy dtype
+        dtype = array.categories.dtype
+        if not is_valid_numpy_dtype(dtype):
+            dtype = np.dtype("O")
+        return dtype
+
     if not is_valid_numpy_dtype(array.dtype):
         return np.dtype("O")
 
