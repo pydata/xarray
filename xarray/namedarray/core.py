@@ -66,7 +66,6 @@ if TYPE_CHECKING:
         _Dims,
         _DimsLike,
         _DType,
-        _IndexKeyLike,
         _IndexKey,
         _IntOrUnknown,
         _ScalarType,
@@ -807,7 +806,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         ND array
 
         >>> x = NamedArray(("x", "y"), np.array([[1, 2, 3]]))
-        >>> key = (0, NamedArray(("y",), np.array([1])),)
+        >>> key = (
+        ...     0,
+        ...     NamedArray(("y",), np.array([1])),
+        ... )
         >>> value = 7
         >>> x[key] = value
         >>> x
@@ -818,7 +820,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         for i, k in enumerate(key if isinstance(key, tuple) else (key,)):
             if isinstance(k, NamedArray):
                 if k.dims != self.dims[i : i + 1]:
-
                     warnings.warn(
                         (
                             "Dimension name of indexing array does not match.\n"
