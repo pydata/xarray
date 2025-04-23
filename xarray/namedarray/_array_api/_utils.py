@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import math
+import warnings
 from collections.abc import Callable, Iterable, Iterator
 from itertools import zip_longest
 from types import ModuleType
 from typing import Any, TypeGuard, cast
-import warnings
 
 from xarray.namedarray._typing import (
     _T,

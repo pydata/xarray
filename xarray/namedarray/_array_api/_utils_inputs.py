@@ -2,16 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from xarray.namedarray._array_api._data_type_functions import iinfo
 from xarray.namedarray._array_api._dtypes import (
-    _boolean_dtypes,
     _dtype_categories,
-    _floating_dtypes,
-    _integer_dtypes,
-    _real_floating_dtypes,
-    _real_to_complex_map,
 )
-from xarray.namedarray._array_api._utils import _get_data_namespace
 from xarray.namedarray.core import NamedArray
 
 _py_scalars = (bool, int, float, complex)
@@ -122,7 +115,7 @@ def _split_args(
     | float
     | complex
     | bool
-    | _dtype[Any]
+    | _dtype[Any],
 ):
     arrays: list[NamedArray[Any, Any]] = []
     dtypes: list[_dtype[Any]] = []
