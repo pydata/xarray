@@ -221,7 +221,7 @@ class Index:
           coordinate directly to a new or an existing DataArray, e.g., via
           ``DataArray.__init__()`` or ``DataArray.assign_coords()``
 
-        - drop the coordinate --- and maybe drop the index too --- when a new
+        - drop the coordinate (and therefore drop the index) when a new
           DataArray is constructed by indexing a Dataset
 
         Parameters
