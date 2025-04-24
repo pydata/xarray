@@ -1177,8 +1177,11 @@ def validate_dataarray_coords(
 
     for k, v in coords.items():
         if k in indexes:
-            indexes[k].validate_dataarray_coord(k, v, dim_set)
-        elif any(d not in dim for d in v.dims):
+            invalid = not indexes[k].should_add_coord_in_dataarray(k, v, dim_set)
+        else:
+            invalid = any(d not in dim for d in v.dims)
+
+        if invalid:
             raise CoordinateValidationError(
                 f"coordinate {k} has dimensions {v.dims}, but these "
                 "are not a subset of the DataArray "

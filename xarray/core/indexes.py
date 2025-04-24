@@ -195,34 +195,34 @@ class Index:
         else:
             return {}
 
-    def validate_dataarray_coord(
+    def should_add_coord_in_dataarray(
         self,
         name: Hashable,
         var: Variable,
         dims: set[Hashable],
-    ):
-        """Validate an index coordinate variable to include in a DataArray.
+    ) -> bool:
+        """Define whether or not an index coordinate variable should be added in
+        a new DataArray.
 
         This method is called repeatedly for each Variable associated with
         this index when creating a new DataArray (via its constructor or from a
         Dataset) or updating an existing one.
 
-        By default raises a :py:class:`CoordinateValidationError` if the
-        dimensions of the coordinate variable do conflict with the array
-        dimensions (DataArray model).
+        By default returns ``True`` if the dimensions of the coordinate variable
+        are a subset of the array dimensions and ``False`` otherwise (DataArray
+        model). This default behavior may be overridden in Index subclasses to
+        bypass strict conformance with the DataArray model. This is useful for
+        example to include the (n+1)-dimensional cell boundary coordinate
+        associated with an interval index.
 
-        This method may be overridden in Index subclasses, e.g., to validate
-        index coordinates even when they do not strictly conform with the
-        DataArray model. This is useful for example to include (n+1)-dimensional
-        cell boundary coordinates attached to an index.
+        Returning ``False`` will either:
 
-        If the validation passes (i.e., no error raised), the coordinate will be
-        included in the DataArray regardless of its dimensions.
+        - raise a :py:class:`CoordinateValidationError` when passing the
+          coordinate directly to a new or an existing DataArray, e.g., via
+          ``DataArray.__init__()`` or ``DataArray.assign_coords()``
 
-        If this method raises when a DataArray is constructed from a Dataset,
-        Xarray will fail back to propagating the coordinate
-        according to the default rules for DataArray --- i.e., the dimensions of every
-        coordinate variable must be a subset of DataArray.dims --- which may drop this index.
+        - drop the coordinate --- and maybe drop the index too --- when a new
+          DataArray is constructed by indexing a Dataset
 
         Parameters
         ----------
@@ -233,20 +233,11 @@ class Index:
         dims: tuple
             Dataarray's dimensions.
 
-        Raises
-        ------
-        CoordinateValidationError
-            When validation fails.
-
         """
-        from xarray.core.coordinates import CoordinateValidationError
-
         if any(d not in dims for d in var.dims):
-            raise CoordinateValidationError(
-                f"coordinate {name} has dimensions {var.dims}, but these "
-                "are not a subset of the DataArray "
-                f"dimensions {dims}"
-            )
+            return False
+        else:
+            return True
 
     def to_pandas_index(self) -> pd.Index:
         """Cast this xarray index to a pandas.Index object or raise a
