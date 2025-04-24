@@ -27,6 +27,10 @@ New Features
 - Improved compatibility with OPeNDAP DAP4 data model for backend engine ``pydap``. This
   includes ``datatree`` support, and removing slashes from dimension names. By
   `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+- Allow assigning index coordinates with non-array dimension(s) in a :py:class:`DataArray` by overriding
+  :py:meth:`Index.should_add_coord_in_dataarray`. For example, this enables support for CF boundaries coordinate (e.g.,
+  ``time(time)`` and ``time_bnds(time, nbnd)``) in a DataArray (:pull:`10137`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -136,10 +140,6 @@ New Features
   (:pull:`9498`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Support reading to `GPU memory with Zarr <https://zarr.readthedocs.io/en/stable/user-guide/gpu.html>`_ (:pull:`10078`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Allow assigning index coordinates with non-array dimension(s) in a :py:class:`DataArray` by overriding
-  :py:meth:`Index.validate_dataarray_coord`. For example, this enables support for CF boundaries coordinate (e.g.,
-  ``time(time)`` and ``time_bnds(time, nbnd)``) in a DataArray (:pull:`10137`).
-  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Performance
 ~~~~~~~~~~~
