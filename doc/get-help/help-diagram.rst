@@ -73,3 +73,10 @@ Regardless of how you interact with us, we're always thrilled to hear from you!
 - `Xarray Issues <https://github.com/pydata/xarray/issues>`__
 - `Xarray Contributors Guide <https://docs.xarray.dev/en/stable/contributing.html>`__
 - `Developer's Meeting <https://docs.xarray.dev/en/stable/developers-meeting.html>`__
+
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+
+   howdoi
+   faq

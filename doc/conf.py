@@ -44,9 +44,6 @@ except ImportError:
         ]
     )
 
-nbsphinx_allow_errors = False
-nbsphinx_requirejs_path = ""
-
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -66,6 +63,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "IPython.sphinxext.ipython_directive",
     "IPython.sphinxext.ipython_console_highlighting",
+    "jupyter_sphinx",
     "nbsphinx",
     "sphinx_autosummary_accessors",
     "sphinx.ext.linkcode",
@@ -91,6 +89,18 @@ copybutton_prompt_is_regexp = True
 # NBSphinx configuration
 nbsphinx_timeout = 600
 nbsphinx_execute = "always"
+nbsphinx_allow_errors = False
+nbsphinx_requirejs_path = ""
+#  png2x/retina rendering of figues in docs would also need to modify custom.css:
+# https://github.com/spatialaudio/nbsphinx/issues/464#issuecomment-652729126
+#  .rst-content .image-reference img {
+#   max-width: unset;
+#   width: 100% !important;
+#   height: auto !important;
+#  }
+# nbsphinx_execute_arguments = [
+#     "--InlineBackend.figure_formats=['png2x']",
+# ]
 nbsphinx_prolog = """
 {% set docname = env.doc2path(env.docname, base=None) %}
 
@@ -224,11 +234,13 @@ html_context = {
 
 # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/layout.html#references
 html_theme_options = {
+    "logo": {"image_dark": "https://docs.xarray.dev/en/stable/_static/logos/Xarray_Logo_FullColor_InverseRGB_Final.svg"},
     "github_url":"https://github.com/pydata/xarray",
-    "navigation_depth":4,
     "twitter_url":"https://twitter.com/xarray_dev",
     "show_version_warning_banner":True,
     "use_edit_page_button":True,
+    "header_links_before_dropdown": 7,
+    "navbar_align": "left",
     "footer_center":["last-updated"],
     #"announcement":"🍾 <a href='https://github.com/pydata/xarray/discussions/8462'>Xarray is now 10 years old!</a> 🎉",
 }
@@ -261,7 +273,6 @@ ogp_custom_meta_tags = [
 ]
 
 # Redirects for pages that were moved to new locations
-
 rediraffe_redirects = {
     "terminology.rst": "user-guide/terminology.rst",
     "data-structures.rst": "user-guide/data-structures.rst",
@@ -278,8 +289,8 @@ rediraffe_redirects = {
     "dask.rst": "user-guide/dask.rst",
     "plotting.rst": "user-guide/plotting.rst",
     "duckarrays.rst": "user-guide/duckarrays.rst",
-    "related-projects.rst": "ecosystem.rst",
-    "faq.rst": "getting-started-guide/faq.rst",
+    "related-projects.rst": "user-guide/ecosystem.rst",
+    "faq.rst": "get-help/faq.rst",
     "why-xarray.rst": "getting-started-guide/why-xarray.rst",
     "installing.rst": "getting-started-guide/installing.rst",
     "quick-overview.rst": "getting-started-guide/quick-overview.rst",
