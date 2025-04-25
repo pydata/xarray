@@ -1825,6 +1825,12 @@ class TestDataset:
         actual = ds.reindex(cat=["foo"])["cat"].values
         assert (actual == np.array(["foo"])).all()
 
+    def test_extension_array_reindex_same(self) -> None:
+        series = pd.Series([1, 2, pd.NA, 3], dtype=pd.Int32Dtype())
+        test = xr.Dataset({"test": series})
+        res = test.reindex(dim_0=series.index)
+        assert (res["dim_0"] == series.index).all()
+
     def test_categorical_multiindex(self) -> None:
         i1 = pd.Series([0, 0])
         cat = pd.CategoricalDtype(categories=["foo", "baz", "bar"])
