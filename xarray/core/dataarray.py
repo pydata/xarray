@@ -6857,12 +6857,12 @@ class DataArray(
         >>> da
         <xarray.DataArray (time: 1827)> Size: 15kB
         array([0.000e+00, 1.000e+00, 2.000e+00, ..., 1.824e+03, 1.825e+03,
-               1.826e+03])
+               1.826e+03], shape=(1827,))
         Coordinates:
           * time     (time) datetime64[ns] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
         >>> da.groupby("time.dayofyear") - da.groupby("time.dayofyear").mean("time")
         <xarray.DataArray (time: 1827)> Size: 15kB
-        array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5])
+        array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5], shape=(1827,))
         Coordinates:
           * time       (time) datetime64[ns] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
             dayofyear  (time) int64 15kB 1 2 3 4 5 6 7 8 ... 360 361 362 363 364 365 366
