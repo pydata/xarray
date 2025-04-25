@@ -22,10 +22,22 @@ v2025.04.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added `scipy-stubs <https://github.com/scipy/scipy-stubs>`_ to the ``xarray[types]`` dependencies.
+  By `Joren Hammudoglu <https://github.com/jorenham>`_.
+- Improved compatibility with OPeNDAP DAP4 data model for backend engine ``pydap``. This
+  includes ``datatree`` support, and removing slashes from dimension names. By
+  `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The minimum versions of some dependencies were changed
+
+  ===================== =========  =======
+   Package                    Old      New
+  ===================== =========  =======
+    pydap                    3.4     3.5.0
+  ===================== =========  =======
 
 Deprecations
 ~~~~~~~~~~~~
@@ -45,6 +57,8 @@ Documentation
 
 - Fix references to core classes in docs (:issue:`10195`, :pull:`10207`).
   By `Mattia Almansi <https://github.com/malmans2>`_.
+- Fix references to point to updated pydap documentation (:pull:`10182`).
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -60,9 +74,11 @@ Andrecho, Deepak Cherian, Ian Hunt-Isaak, Karl Krauth, Mathias Hauser, Maximilia
 
 New Features
 ~~~~~~~~~~~~
-
 - Allow setting a ``fill_value`` for Zarr format 3 arrays. Specify ``fill_value`` in ``encoding`` as usual.
   (:issue:`10064`). By `Deepak Cherian <https://github.com/dcherian>`_.
+- Added :py:class:`indexes.RangeIndex` as an alternative, memory saving Xarray index representing
+  a 1-dimensional bounded interval with evenly spaced floating values (:issue:`8473`, :pull:`10076`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -244,8 +260,26 @@ eventually be deprecated.
 
 New Features
 ~~~~~~~~~~~~
-- Add new ``errors`` arg to :py:meth:`open_mfdataset` to better handle invalid files.
-  (:issue:`6736`, :pull:`9955`). By `Pratiman Patel <https://github.com/pratiman-91>`_.
+- Relax nanosecond resolution restriction in CF time coding and permit
+  :py:class:`numpy.datetime64` or :py:class:`numpy.timedelta64` dtype arrays
+  with ``"s"``, ``"ms"``, ``"us"``, or ``"ns"`` resolution throughout xarray
+  (:issue:`7493`, :pull:`9618`, :pull:`9977`, :pull:`9966`, :pull:`9999`). By
+  `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Enable the ``compute=False`` option in :py:meth:`DataTree.to_zarr`. (:pull:`9958`).
+  By `Sam Levang <https://github.com/slevang>`_.
+- Improve the error message raised when no key is matching the available variables in a dataset.  (:pull:`9943`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Added a ``time_unit`` argument to :py:meth:`CFTimeIndex.to_datetimeindex`.
+  Note that in a future version of xarray,
+  :py:meth:`CFTimeIndex.to_datetimeindex` will return a microsecond-resolution
+  :py:class:`pandas.DatetimeIndex` instead of a nanosecond-resolution
+  :py:class:`pandas.DatetimeIndex` (:pull:`9965`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_ and `Kai Mühlbauer
+  <https://github.com/kmuehlbauer>`_.
+- Adds shards to the list of valid_encodings in the zarr backend, so that
+  sharded Zarr V3s can be written (:issue:`9947`, :pull:`9948`).
+  By `Jacob Prince_Bieker <https://github.com/jacobbieker>`_
 
 Deprecations
 ~~~~~~~~~~~~
