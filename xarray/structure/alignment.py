@@ -35,6 +35,10 @@ if TYPE_CHECKING:
     )
 
 
+class AlignmentError(ValueError):
+    """Error class for alignment failures due to incompatible arguments."""
+
+
 def reindex_variables(
     variables: Mapping[Any, Variable],
     dim_pos_indexers: Mapping[Any, Any],
@@ -196,7 +200,7 @@ class Aligner(Generic[T_Alignable]):
         for k, idx in indexes.items():
             if not isinstance(idx, Index):
                 if getattr(idx, "dims", (k,)) != (k,):
-                    raise ValueError(
+                    raise AlignmentError(
                         f"Indexer has dimensions {idx.dims} that are different "
                         f"from that to be indexed along '{k}'"
                     )
@@ -227,7 +231,7 @@ class Aligner(Generic[T_Alignable]):
             elif exclude_dims:
                 excl_dims_str = ", ".join(str(d) for d in exclude_dims)
                 incl_dims_str = ", ".join(str(d) for d in all_dims - exclude_dims)
-                raise ValueError(
+                raise AlignmentError(
                     f"cannot exclude dimension(s) {excl_dims_str} from alignment because "
                     "these are used by an index together with non-excluded dimensions "
                     f"{incl_dims_str}"
@@ -268,7 +272,7 @@ class Aligner(Generic[T_Alignable]):
             for dim_sizes in all_indexes_dim_sizes.values():
                 for dim, sizes in dim_sizes.items():
                     if len(sizes) > 1:
-                        raise ValueError(
+                        raise AlignmentError(
                             "cannot align objects with join='override' with matching indexes "
                             f"along dimension {dim!r} that don't have the same size"
                         )
@@ -362,7 +366,7 @@ class Aligner(Generic[T_Alignable]):
                 if name in new_indexes:
                     other_idx = new_indexes[name]
                     other_var = new_index_vars[name]
-                    raise ValueError(
+                    raise AlignmentError(
                         "cannot align objects on coordinate {name!r} because of conflicting indexes\n"
                         f"first index: {idx!r}\nsecond index: {other_idx!r}\n"
                         f"first variable: {var!r}\nsecond variable: {other_var!r}\n"
@@ -400,7 +404,7 @@ class Aligner(Generic[T_Alignable]):
                     need_reindex = False
                 if need_reindex:
                     if self.join == "exact":
-                        raise ValueError(
+                        raise AlignmentError(
                             "cannot align objects with join='exact' where "
                             "index/labels/sizes are not equal along "
                             "these coordinates (dimensions): "
@@ -444,7 +448,7 @@ class Aligner(Generic[T_Alignable]):
             else:
                 add_err_msg = ""
             if len(sizes) > 1:
-                raise ValueError(
+                raise AlignmentError(
                     f"cannot reindex or align along dimension {dim!r} "
                     f"because of conflicting dimension sizes: {sizes!r}" + add_err_msg
                 )
@@ -484,7 +488,7 @@ class Aligner(Generic[T_Alignable]):
                         if dim in dim_pos_indexers and not np.array_equal(
                             idxer, dim_pos_indexers[dim]
                         ):
-                            raise ValueError(
+                            raise AlignmentError(
                                 "cannot align or reindex object along dimension {dim!r} because "
                                 "of conflicting re-indexers computed from distinct indexes\n"
                                 f"first index: {obj_idx!r}\nsecond index: {dim_index[dim]!r}\n"
@@ -715,7 +719,7 @@ def align(
 
     Raises
     ------
-    ValueError
+    AlignmentError
         If any dimensions without labels on the arguments have different sizes,
         or a different size than the size of the aligned dimension labels.
 
