@@ -234,15 +234,32 @@ html_context = {
 
 # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/layout.html#references
 html_theme_options = {
+    #"announcement":"🍾 <a href='https://github.com/pydata/xarray/discussions/8462'>Xarray is now 10 years old!</a> 🎉",
     "logo": {"image_dark": "https://docs.xarray.dev/en/stable/_static/logos/Xarray_Logo_FullColor_InverseRGB_Final.svg"},
     "github_url":"https://github.com/pydata/xarray",
-    "twitter_url":"https://twitter.com/xarray_dev",
     "show_version_warning_banner":True,
     "use_edit_page_button":True,
-    "header_links_before_dropdown": 7,
+    "header_links_before_dropdown": 8,
     "navbar_align": "left",
     "footer_center":["last-updated"],
-    #"announcement":"🍾 <a href='https://github.com/pydata/xarray/discussions/8462'>Xarray is now 10 years old!</a> 🎉",
+    # Instead of adding these to the header bar they are linked in 'getting help' and 'contributing'
+    # "icon_links": [
+    # {
+    #     "name": "Discord",
+    #     "url": "https://discord.com/invite/wEKPCt4PDu",
+    #     "icon": "fa-brands fa-discord",
+    # },
+    # {
+    #     "name": "X",
+    #     "url": "https://x.com/xarray_dev",
+    #     "icon": "fa-brands fa-x-twitter",
+    # },
+    # {
+    #     "name": "Bluesky",
+    #     "url": "https://bsky.app/profile/xarray.bsky.social",
+    #     "icon": "fa-brands fa-bluesky",
+    # },
+    # ]
 }
 # pydata_sphinx_theme use_edit_page_button with github link seems better
 html_show_sourcelink = False

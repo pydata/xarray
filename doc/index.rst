@@ -8,7 +8,7 @@ Xarray documentation
 Xarray makes working with labelled multi-dimensional arrays in Python simple,
 efficient, and fun!
 
-**Version**: |version|
+**Version**: |version| - :ref:`whats-new`
 
 **Useful links**:
 `Home <https://xarray.dev>`__ |
@@ -16,11 +16,9 @@ efficient, and fun!
 `Issues <https://github.com/pydata/xarray/issues>`__ |
 `Discussions <https://github.com/pydata/xarray/discussions>`__ |
 `Releases <https://github.com/pydata/xarray/releases>`__ |
+`Tutorial <https://tutorial.xarray.dev>`__ |
 `Stack Overflow <https://stackoverflow.com/questions/tagged/python-xarray>`__ |
-`Mailing List <https://groups.google.com/g/xarray>`__ |
 `Blog <https://xarray.dev/blog>`__ |
-`Tutorials <https://tutorial.xarray.dev/>`__
-
 
 .. grid:: 1 1 2 2
     :gutter: 2
@@ -73,3 +71,4 @@ efficient, and fun!
    API Reference <api>
    Get Help <get-help/help-diagram>
    Contribute <contribute/index>
+   Release Notes <whats-new>

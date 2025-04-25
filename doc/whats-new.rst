@@ -1,5 +1,7 @@
 .. currentmodule:: xarray
 
+.. _whats-new:
+
 What's New
 ==========
 
@@ -59,6 +61,8 @@ Documentation
   By `Mattia Almansi <https://github.com/malmans2>`_.
 - Fix references to point to updated pydap documentation (:pull:`10182`).
   By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+- Switch to `pydata-sphinx-theme <https://github.com/pydata/pydata-sphinx-theme>`_ from `sphinx-book-theme <https://github.com/executablebooks/sphinx-book-theme>`_ (:pull:`8708`).
+  By `Scott Henderson <https://github.com/scottyhq>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

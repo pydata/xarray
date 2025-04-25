@@ -4,7 +4,12 @@ Getting Help
 Navigating the wealth of resources available for Xarray can be overwhelming.
 We've created this flow chart to help guide you towards the best way to get help, depending on what you're working towards.
 The links to each resource are provided below the diagram.
-Regardless of how you interact with us, we're always thrilled to hear from you!
+
+Also be sure to check out our "FAQ" and "How do I..." pages in this section for solutions to common questions.
+
+A major strength of Xarray is in the user community. Sometimes you might not have a concrete question by would simply like to connect with other Xarray users. We have a few
+
+We look forward to hearing from you!
 
 .. mermaid::
     :alt: Flowchart illustrating the different ways to access help using or contributing to Xarray.
@@ -62,21 +67,24 @@ Regardless of how you interact with us, we're always thrilled to hear from you!
 
         linkStyle default font-size:20pt,color:#206C89
 
-
+Flowchart links
+---------------
 - `Xarray Tutorials <https://tutorial.xarray.dev/>`__
-- `Xarray Docs <https://docs.xarray.dev/en/stable/>`__
+- `Xarray Docs <https://docs.xarray.dev>`__
 - `Google/Stack Exchange <https://stackoverflow.com/questions/tagged/python-xarray>`__
 - `Xarray Discussions <https://github.com/pydata/xarray/discussions>`__
 - `Xarray Discord <https://discord.com/invite/wEKPCt4PDu>`__
 - `Xarray Office Hours <https://github.com/pydata/xarray/discussions/categories/office-hours>`__
 - `Pangeo Discourse <https://discourse.pangeo.io/>`__
 - `Xarray Issues <https://github.com/pydata/xarray/issues>`__
-- `Xarray Contributors Guide <https://docs.xarray.dev/en/stable/contributing.html>`__
-- `Developer's Meeting <https://docs.xarray.dev/en/stable/developers-meeting.html>`__
+- :ref:`contributing`
+- :ref:`developers-meeting`
+
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :hidden:
 
-   howdoi
    faq
+   howdoi
+   socials
