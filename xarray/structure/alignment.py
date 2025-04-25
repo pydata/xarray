@@ -367,7 +367,7 @@ class Aligner(Generic[T_Alignable]):
                     other_idx = new_indexes[name]
                     other_var = new_index_vars[name]
                     raise AlignmentError(
-                        "cannot align objects on coordinate {name!r} because of conflicting indexes\n"
+                        f"cannot align objects on coordinate {name!r} because of conflicting indexes\n"
                         f"first index: {idx!r}\nsecond index: {other_idx!r}\n"
                         f"first variable: {var!r}\nsecond variable: {other_var!r}\n"
                     )
@@ -489,8 +489,8 @@ class Aligner(Generic[T_Alignable]):
                             idxer, dim_pos_indexers[dim]
                         ):
                             raise AlignmentError(
-                                "cannot align or reindex object along dimension {dim!r} because "
-                                "of conflicting re-indexers computed from distinct indexes\n"
+                                f"cannot reindex or align along dimension {dim!r} because "
+                                "of conflicting re-indexers returned by multiple indexes\n"
                                 f"first index: {obj_idx!r}\nsecond index: {dim_index[dim]!r}\n"
                             )
                         dim_pos_indexers[dim] = idxer
