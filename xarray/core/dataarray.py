@@ -6899,7 +6899,7 @@ class DataArray(
                [[nan, nan, nan],
                 [ 3.,  4.,  5.]]])
         Coordinates:
-          * x_bins   (x_bins) object 16B (5, 15] (15, 25]
+          * x_bins   (x_bins) interval[int64, right] 32B (5, 15] (15, 25]
           * letters  (letters) object 16B 'a' 'b'
         Dimensions without coordinates: y
 

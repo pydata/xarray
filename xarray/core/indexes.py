@@ -11,6 +11,7 @@ import pandas as pd
 
 from xarray.core import formatting, nputils, utils
 from xarray.core.coordinate_transform import CoordinateTransform
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
     CoordinateTransformIndexingAdapter,
     IndexSelResult,
@@ -488,6 +489,8 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     from xarray.core.variable import Variable
     from xarray.namedarray.pycompat import to_numpy
 
+    if isinstance(array, PandasExtensionArray):
+        array = pd.Index(array.array)
     if isinstance(array, pd.Index):
         index = array
     elif isinstance(array, DataArray | Variable):
@@ -646,7 +649,11 @@ class PandasIndex(Index):
         self.dim = dim
 
         if coord_dtype is None:
-            coord_dtype = get_valid_numpy_dtype(index)
+            if pd.api.types.is_extension_array_dtype(index.dtype):
+                cast(pd.api.extensions.ExtensionDtype, index.dtype)
+                coord_dtype = index.dtype
+            else:
+                coord_dtype = get_valid_numpy_dtype(index)
         self.coord_dtype = coord_dtype
 
     def _replace(self, index, dim=None, coord_dtype=None):
@@ -742,6 +749,8 @@ class PandasIndex(Index):
 
         if not indexes:
             coord_dtype = None
+        elif len(set(idx.coord_dtype for idx in indexes)) == 1:
+            coord_dtype = indexes[0].coord_dtype
         else:
             coord_dtype = np.result_type(*[idx.coord_dtype for idx in indexes])
 
