@@ -312,7 +312,7 @@ def inline_variable_array_repr(var, max_width):
 def summarize_variable(
     name: Hashable,
     var: Variable,
-    col_width: int,
+    col_width: int | None = None,
     max_width: int | None = None,
     is_index: bool = False,
 ):
@@ -327,7 +327,9 @@ def summarize_variable(
             max_width = max_width_options
 
     marker = "*" if is_index else " "
-    first_col = pretty_print(f"  {marker} {name} ", col_width)
+    first_col = f"  {marker} {name} "
+    if col_width is not None:
+        first_col = pretty_print(first_col, col_width)
 
     if variable.dims:
         dims_str = "({}) ".format(", ".join(map(str, variable.dims)))
