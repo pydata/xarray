@@ -1,5 +1,7 @@
 .. currentmodule:: xarray
 
+.. _whats-new:
+
 What's New
 ==========
 
@@ -68,6 +70,8 @@ Documentation
   By `Mattia Almansi <https://github.com/malmans2>`_.
 - Fix references to point to updated pydap documentation (:pull:`10182`).
   By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+- Switch to `pydata-sphinx-theme <https://github.com/pydata/pydata-sphinx-theme>`_ from `sphinx-book-theme <https://github.com/executablebooks/sphinx-book-theme>`_ (:pull:`8708`).
+  By `Scott Henderson <https://github.com/scottyhq>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -3870,11 +3874,11 @@ Documentation
 - Raise a more informative error when :py:meth:`DataArray.to_dataframe` is
   is called on a scalar, (:issue:`4228`);
   By `Pieter Gijsbers <https://github.com/pgijsbers>`_.
-- Fix grammar and typos in the :doc:`contributing` guide (:pull:`4545`).
+- Fix grammar and typos in the :ref:`contributing` guide (:pull:`4545`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
 - Fix grammar and typos in the :doc:`user-guide/io` guide (:pull:`4553`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
-- Update link to NumPy docstring standard in the :doc:`contributing` guide (:pull:`4558`).
+- Update link to NumPy docstring standard in the :ref:`contributing` guide (:pull:`4558`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
 - Add docstrings to ``isnull`` and ``notnull``, and fix the displayed signature
   (:issue:`2760`, :pull:`4618`).
@@ -6181,7 +6185,7 @@ Documentation
 - Added apply_ufunc example to :ref:`/examples/weather-data.ipynb#Toy-weather-data` (:issue:`1844`).
   By `Liam Brannigan <https://github.com/braaannigan>`_.
 - New entry ``Why don’t aggregations return Python scalars?`` in the
-  :doc:`getting-started-guide/faq` (:issue:`1726`).
+  :ref:`faq` (:issue:`1726`).
   By `0x0L <https://github.com/0x0L>`_.
 
 Enhancements
