@@ -24,10 +24,20 @@ New Features
 
 - Added `scipy-stubs <https://github.com/scipy/scipy-stubs>`_ to the ``xarray[types]`` dependencies.
   By `Joren Hammudoglu <https://github.com/jorenham>`_.
+- Improved compatibility with OPeNDAP DAP4 data model for backend engine ``pydap``. This
+  includes ``datatree`` support, and removing slashes from dimension names. By
+  `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The minimum versions of some dependencies were changed
+
+  ===================== =========  =======
+   Package                    Old      New
+  ===================== =========  =======
+    pydap                    3.4     3.5.0
+  ===================== =========  =======
 
 Deprecations
 ~~~~~~~~~~~~
@@ -50,6 +60,8 @@ Documentation
 
 - Fix references to core classes in docs (:issue:`10195`, :pull:`10207`).
   By `Mattia Almansi <https://github.com/malmans2>`_.
+- Fix references to point to updated pydap documentation (:pull:`10182`).
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -65,9 +77,11 @@ Andrecho, Deepak Cherian, Ian Hunt-Isaak, Karl Krauth, Mathias Hauser, Maximilia
 
 New Features
 ~~~~~~~~~~~~
-
 - Allow setting a ``fill_value`` for Zarr format 3 arrays. Specify ``fill_value`` in ``encoding`` as usual.
   (:issue:`10064`). By `Deepak Cherian <https://github.com/dcherian>`_.
+- Added :py:class:`indexes.RangeIndex` as an alternative, memory saving Xarray index representing
+  a 1-dimensional bounded interval with evenly spaced floating values (:issue:`8473`, :pull:`10076`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
