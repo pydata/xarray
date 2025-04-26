@@ -3656,8 +3656,8 @@ class TestDataArray:
         return_data = array.to_numpy()
         coords_data = np.array(["a", "b"])
         if data == "list" or data is True:
-            return_data = return_data.tolist()  # type:ignore[assignment]
-            coords_data = coords_data.tolist()  # type:ignore[assignment]
+            return_data = return_data.tolist()
+            coords_data = coords_data.tolist()
 
         expected: dict[str, Any] = {
             "name": "foo",
