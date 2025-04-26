@@ -673,7 +673,7 @@ class GroupBy(Generic[T_Xarray]):
             # This transpose preserves dim order behaviour
             self._obj = obj.transpose(..., *codes.dims)
             self._stacked_dim = None
-            self._inserted_dims = None
+            self._inserted_dims = []
             self._group_dim = None
 
         # cached attributes
