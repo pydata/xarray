@@ -27,4 +27,5 @@ examples that describe many common tasks that you can accomplish with xarray.
    options
    testing
    duckarrays
+   complex-numbers
    hierarchical-data

@@ -60,6 +60,9 @@ Documentation
 - Fix references to point to updated pydap documentation (:pull:`10182`).
   By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 
+- Add a dedicated 'Complex Numbers' sections to the User Guide (:issue:`10213`, :pull:`10235`).
+  By `Andre Wendlinger <https://github.com/andrewendlinger>`_.
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
