@@ -319,7 +319,7 @@ class BinGrouper(Grouper):
         the resulting bins. If False, returns only integer indicators of the
         bins. This affects the type of the output container (see below).
         This argument is ignored when `bins` is an IntervalIndex. If True,
-        raises an error. When `ordered=False`, labels must be provided.
+        raises an error.
     retbins : bool, default False
         Whether to return the bins or not. Useful when bins is provided
         as a scalar.
@@ -394,8 +394,13 @@ class BinGrouper(Grouper):
 
         # This seems silly, but it lets us have Pandas handle the complexity
         # of `labels`, `precision`, and `include_lowest`, even when group is a chunked array
-        dummy, _ = self._cut(np.array([0]).astype(group.dtype))
-        full_index = dummy.categories
+        # Pandas ignores labels when IntervalIndex is passed
+        if not isinstance(self.bins, pd.IntervalIndex):
+            dummy, _ = self._cut(np.array([0]).astype(group.dtype))
+            full_index = dummy.categories
+        else:
+            full_index = pd.Index(self.labels)
+
         if not by_is_chunked:
             uniques = np.sort(pd.unique(codes.data.ravel()))
             unique_values = full_index[uniques[uniques != -1]]
