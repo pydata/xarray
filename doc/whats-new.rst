@@ -29,6 +29,9 @@ New Features
 - Improved compatibility with OPeNDAP DAP4 data model for backend engine ``pydap``. This
   includes ``datatree`` support, and removing slashes from dimension names. By
   `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+- Improved support pandas Extension Arrays. (:issue:`9661`, :pull:`9671`)
+  By `Ilan Gold <https://github.com/ilan-gold>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -40,6 +43,12 @@ Breaking changes
   ===================== =========  =======
     pydap                    3.4     3.5.0
   ===================== =========  =======
+
+
+- Reductions with ``groupby_bins`` or those that involve :py:class:`xarray.groupers.BinGrouper`
+  now return objects indexed by :py:meth:`pandas.IntervalArray` objects,
+  instead of numpy object arrays containing tuples. This change enables interval-aware indexing of
+  such Xarray objects. (:pull:`9671`). By `Ilan Gold <https://github.com/ilan-gold>`_.
 
 Deprecations
 ~~~~~~~~~~~~
