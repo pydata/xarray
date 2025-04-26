@@ -2920,7 +2920,7 @@ def test_multiple_groupers(use_flox: bool, shuffle: bool) -> None:
             coords={"xy": ("xy", ["a", "b", "c"], {"foo": "bar"})},
         )
         with raise_if_dask_computes(max_computes=0):
-            gb = b.groupby(x=UniqueGrouper(), xy=UniqueGrouper(labels=["a", "b", "c"]))  # type: ignore[arg-type]
+            gb = b.groupby(x=UniqueGrouper(), xy=UniqueGrouper(labels=["a", "b", "c"]))
         assert is_chunked_array(gb.encoded.codes.data)
         assert not gb.encoded.group_indices
         if has_flox:
