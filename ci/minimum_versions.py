@@ -20,6 +20,12 @@ click.rich_click.SHOW_ARGUMENTS = True
 
 channels = ["conda-forge"]
 platforms = ["noarch", "linux-64"]
+# these packages don't fail the CI, but will be printed in the report
+ignore_failure_packages = [
+    # remove when we can pin to pydap 3.5.1 without error
+    "pydap",
+]
+# these packages are completely ignored
 ignored_packages = [
     "coveralls",
     "pip",
@@ -171,7 +177,11 @@ def compare_versions(environments, policy_versions):
     status = {}
     for env, specs in environments.items():
         env_status = any(
-            spec.version > policy_versions[spec.name].version for spec in specs
+            (
+                (spec.version > policy_versions[spec.name].version)
+                and (spec.name not in ignore_failure_packages)
+            )
+            for spec in specs
         )
         status[env] = env_status
     return status

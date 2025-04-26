@@ -2320,6 +2320,9 @@ class ZarrBase(CFEncodedBase):
             with self.open(store_target, **open_kwargs) as ds:
                 yield ds
 
+    def test_roundtrip_bytes_with_fill_value(self):
+        pytest.xfail("Broken by Zarr 3.0.7")
+
     @pytest.mark.parametrize("consolidated", [False, True, None])
     def test_roundtrip_consolidated(self, consolidated) -> None:
         expected = create_test_data()
@@ -3548,6 +3551,10 @@ class TestInstrumentedZarrStore:
                 )
 
     @requires_dask
+    @pytest.mark.skipif(
+        sys.version_info.major == 3 and sys.version_info.minor < 11,
+        reason="zarr too old",
+    )
     def test_region_write(self) -> None:
         ds = Dataset({"foo": ("x", [1, 2, 3])}, coords={"x": [1, 2, 3]}).chunk()
         with self.create_zarr_target() as store:

@@ -346,6 +346,8 @@ filterwarnings = [
   "default:the `pandas.MultiIndex` object:FutureWarning:xarray.tests.test_variable",
   "default:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
   "default:Duplicate dimension names present:UserWarning:xarray.namedarray.core",
+  # Zarr 2 V3 implementation
+  "ignore:Zarr-Python is not in alignment with the final V3 specification",
   # TODO: this is raised for vlen-utf8, consolidated metadata, U1 dtype
   "ignore:is currently not part .* the Zarr version 3 specification.",
   # TODO: remove once we know how to deal with a changed signature in protocols
