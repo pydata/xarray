@@ -42,7 +42,6 @@ from xarray.core.utils import (
     FrozenMappingWarningOnValuesAccess,
     contains_only_chunked_or_numpy,
     either_dict_or_kwargs,
-    emit_user_level_warning,
     hashable,
     is_scalar,
     maybe_wrap_array,
@@ -294,7 +293,7 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
     grouper: Grouper
     group: T_Group
     obj: T_DataWithCoords
-    eagerly_compute_group: bool = field(repr=False)
+    eagerly_compute_group: Literal[False] = field(repr=False)
 
     # returned by factorize:
     encoded: EncodedGroups = field(init=False, repr=False)
@@ -323,39 +322,33 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
 
         self.group = _resolve_group(self.obj, self.group)
 
+        if self.eagerly_compute_group is not False:
+            raise ValueError(
+                f""""Eagerly computing the DataArray you're grouping by ({self.group.name!r}) "
+                has been removed.
+                Please load this array's data manually using `.compute` or `.load`.
+                To intentionally avoid eager loading, either (1) specify
+                `.groupby({self.group.name}=UniqueGrouper(labels=...), eagerly_load_group=False)`
+                or (2) pass explicit bin edges using or `.groupby({self.group.name}=BinGrouper(bins=...),
+                eagerly_load_group=False)`; as appropriate."""
+            )
+
         if not isinstance(self.group, _DummyGroup) and is_chunked_array(
             self.group.variable._data
         ):
-            if self.eagerly_compute_group is False:
-                # This requires a pass to discover the groups present
-                if (
-                    isinstance(self.grouper, UniqueGrouper)
-                    and self.grouper.labels is None
-                ):
-                    raise ValueError(
-                        "Please pass `labels` to UniqueGrouper when grouping by a chunked array."
-                    )
-                # this requires a pass to compute the bin edges
-                if isinstance(self.grouper, BinGrouper) and isinstance(
-                    self.grouper.bins, int
-                ):
-                    raise ValueError(
-                        "Please pass explicit bin edges to BinGrouper using the ``bins`` kwarg"
-                        "when grouping by a chunked array."
-                    )
-
-            if self.eagerly_compute_group:
-                emit_user_level_warning(
-                    f""""Eagerly computing the DataArray you're grouping by ({self.group.name!r}) "
-                    is deprecated and will raise an error in v2025.05.0.
-                    Please load this array's data manually using `.compute` or `.load`.
-                    To intentionally avoid eager loading, either (1) specify
-                    `.groupby({self.group.name}=UniqueGrouper(labels=...), eagerly_load_group=False)`
-                    or (2) pass explicit bin edges using or `.groupby({self.group.name}=BinGrouper(bins=...),
-                    eagerly_load_group=False)`; as appropriate.""",
-                    DeprecationWarning,
+            # This requires a pass to discover the groups present
+            if isinstance(self.grouper, UniqueGrouper) and self.grouper.labels is None:
+                raise ValueError(
+                    "Please pass `labels` to UniqueGrouper when grouping by a chunked array."
                 )
-                self.group = self.group.compute()
+            # this requires a pass to compute the bin edges
+            if isinstance(self.grouper, BinGrouper) and isinstance(
+                self.grouper.bins, int
+            ):
+                raise ValueError(
+                    "Please pass explicit bin edges to BinGrouper using the ``bins`` kwarg"
+                    "when grouping by a chunked array."
+                )
 
         self.encoded = self.grouper.factorize(self.group)
 

@@ -32,6 +32,9 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- The deprecation cycle for the  ``eagerly_compute_group`` kwarg to ``groupby`` and ``groupby_bins``
+  is now complete. The only acceptable value now is ``False``.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
