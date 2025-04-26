@@ -102,7 +102,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
             return type(self)[type(res)](res)
         return res
 
-    def __array_ufunc__(ufunc, method, *inputs, **kwargs):
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         return ufunc(*inputs, **kwargs)
 
     def __repr__(self):
