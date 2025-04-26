@@ -50,6 +50,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Avoid stacking when grouping by a chunked array. This can be a large performance improvement.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.2025.03.1:
 
