@@ -1,3 +1,5 @@
+.. _developers-meeting:
+
 Developers meeting
 ------------------
 
