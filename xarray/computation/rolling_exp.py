@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Generic
+from typing import Any, Generic, Literal
 
 import numpy as np
+import pandas as pd
+from pandas.core.arrays.datetimelike import dtype_to_unit
 
 from xarray.compat.pdcompat import count_not_none
 from xarray.computation.apply_ufunc import apply_ufunc
+from xarray.core.common import is_np_datetime_like
 from xarray.core.options import _get_keep_attrs
 from xarray.core.types import T_DataWithCoords
 from xarray.core.utils import module_available
@@ -46,22 +49,119 @@ def _get_alpha(
         raise ValueError("Must pass one of comass, span, halflife, or alpha")
 
 
+def _raise_if_array(alpha: float | np.ndarray):
+    """Check if alpha is a float, raise NotImplementedError if not.
+
+    If alpha is an array, it means window_type='halflife' with Timedelta window,
+    and the operation is applied on a datetime index. The 'mean' operation is the
+    only one supported for this type of operation.
+
+    Parameters
+    ----------
+    alpha : float or np.ndarray
+        If array, only the 'mean' operation is supported.
+
+    Raises
+    ------
+    NotImplementedError
+        If alpha is an array.
+    """
+    if not isinstance(alpha, float):
+        msg = (
+            "Operation not supported for window_type='halflife' with 'Timedelta' window. "
+            "Only 'mean' operation is supported with those window parameters."
+        )
+        raise NotImplementedError(msg)
+
+
+def _calculate_deltas(
+    times: np.ndarray,
+    halflife: pd.Timedelta,
+):
+    """
+    Return the diff of the times divided by the half-life. These values are used in
+    the calculation of the ewm mean.
+
+    Parameters
+    ----------
+    times : np.ndarray, Series
+        Times corresponding to the observations. Must be monotonically increasing
+        and ``datetime64[ns]`` dtype.
+    halflife : float, str, timedelta, optional
+        Half-life specifying the decay
+
+    Returns
+    -------
+    np.ndarray
+        Diff of the times divided by the half-life
+    """
+    unit = dtype_to_unit(times.dtype)
+    _times = np.asarray(times.view(np.int64), dtype=np.float64)
+    _halflife = float(pd.Timedelta(halflife).as_unit(unit)._value)
+    deltas = np.diff(_times) / _halflife
+    deltas = np.insert(deltas, 0, 1)
+    return deltas
+
+
+def _verify_timedelta_requirements(
+    window_type: Literal["span", "com", "halflife", "alpha"], dim_type: np.dtype
+):
+    """
+    Check if the window type and dimension type are compatible.
+
+    This function is called when a window with data type 'Timedelta' is used,
+    and verifies that the window type is 'halflife' and the dimension type is
+    datetime64.
+
+    Parameters
+    ----------
+    window_type : str
+        The type of the window.
+    dim_type : np.dtype
+        The type of the dimension.
+
+    Raises
+    ------
+    ValueError
+        If the window type is not 'halflife' or the dimension type is not datetime64.
+    NotImplementedError
+        If the window type is 'halflife' and the dimension type is not datetime64.
+    """
+    if window_type != "halflife":
+        raise ValueError(
+            "window with data type 'Timedelta' can only be used with window_type='halflife'"
+        )
+    if not is_np_datetime_like(dim_type):
+        raise NotImplementedError(
+            "window with data type 'Timedelta' must be used with a datetime64 coordinate"
+        )
+
+
 class RollingExp(Generic[T_DataWithCoords]):
     """
     Exponentially-weighted moving window object.
-    Similar to EWM in pandas
+
+    Similar to EWM in pandas. When using a Timedelta window with window_type='halflife',
+    the alpha values are computed based on the actual time differences between points,
+    allowing for irregular time series. This matches pandas' implementation in
+    pd.DataFrame.ewm(halflife=..., times=...).
 
     Parameters
     ----------
     obj : Dataset or DataArray
         Object to window.
-    windows : mapping of hashable to int (or float for alpha type)
+    windows : mapping of hashable to int, float, or pd.Timedelta
         A mapping from the name of the dimension to create the rolling
         exponential window along (e.g. `time`) to the size of the moving window.
+        A pd.Timedelta can be provided for datetime dimensions only,
+        when using window_type='halflife'.
     window_type : {"span", "com", "halflife", "alpha"}, default: "span"
         The format of the previously supplied window. Each is a simple
         numerical transformation of the others. Described in detail:
         https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.ewm.html
+        When using a pd.Timedelta window, only 'halflife' is supported for window_type,
+        and it must be applied to a datetime coordinate. In this case, only the 'mean'
+        operation is supported.
 
     Returns
     -------
@@ -71,8 +171,8 @@ class RollingExp(Generic[T_DataWithCoords]):
     def __init__(
         self,
         obj: T_DataWithCoords,
-        windows: Mapping[Any, int | float],
-        window_type: str = "span",
+        windows: Mapping[Any, int | float | pd.Timedelta],
+        window_type: Literal["span", "com", "halflife", "alpha"] = "span",
         min_weight: float = 0.0,
     ):
         if not module_available("numbagg"):
@@ -82,8 +182,16 @@ class RollingExp(Generic[T_DataWithCoords]):
 
         self.obj: T_DataWithCoords = obj
         dim, window = next(iter(windows.items()))
+
+        if isinstance(window, pd.Timedelta):
+            _verify_timedelta_requirements(window_type, self.obj[dim].dtype)
+            deltas = _calculate_deltas(self.obj.get_index(dim), window)
+            # Equivalent to unweighted alpha=0.5 (like in pandas implementation)
+            self.alpha = 1 - (1 - 0.5) ** deltas
+        else:
+            self.alpha = _get_alpha(**{window_type: window})
+
         self.dim = dim
-        self.alpha = _get_alpha(**{window_type: window})
         self.min_weight = min_weight
         # Don't pass min_weight=0 so we can support older versions of numbagg
         kwargs = dict(alpha=self.alpha, axis=-1)
@@ -148,6 +256,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         array([1.        , 1.33333333, 2.44444444, 2.81481481, 2.9382716 ])
         Dimensions without coordinates: x
         """
+        _raise_if_array(self.alpha)
 
         import numbagg
 
@@ -181,6 +290,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         array([       nan, 0.        , 0.67936622, 0.42966892, 0.25389527])
         Dimensions without coordinates: x
         """
+        _raise_if_array(self.alpha)
 
         import numbagg
 
@@ -211,6 +321,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         array([       nan, 0.        , 0.46153846, 0.18461538, 0.06446281])
         Dimensions without coordinates: x
         """
+        _raise_if_array(self.alpha)
         dim_order = self.obj.dims
         import numbagg
 
@@ -239,7 +350,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         array([       nan, 0.        , 1.38461538, 0.55384615, 0.19338843])
         Dimensions without coordinates: x
         """
-
+        _raise_if_array(self.alpha)
         dim_order = self.obj.dims
         import numbagg
 
@@ -269,7 +380,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         array([       nan,        nan,        nan, 0.4330127 , 0.48038446])
         Dimensions without coordinates: x
         """
-
+        _raise_if_array(self.alpha)
         dim_order = self.obj.dims
         import numbagg
 
