@@ -2,6 +2,9 @@
 Tutorials and Videos
 ====================
 
+There are an abundance of tutorials and videos available for learning how to use *xarray*.
+Often, these tutorials are taught to workshop attendees at conferences or other events.
+We highlight a number of these resources below, but this is by no means an exhaustive list!
 
 Tutorials
 ----------
@@ -11,11 +14,10 @@ Tutorials
 - `Nicolas Fauchereau's 2015 tutorial`_ on xarray for netCDF users.
 
 
-
 Videos
 -------
 
-.. include:: videos-gallery.txt
+.. include:: ../videos-gallery.txt
 
 
 Books, Chapters and Articles
