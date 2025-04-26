@@ -476,8 +476,8 @@ class Aligner(Generic[T_Alignable]):
         self,
         matching_indexes: dict[MatchingIndexKey, Index],
     ) -> dict[Hashable, Any]:
-        dim_pos_indexers = {}
-        dim_index = {}
+        dim_pos_indexers: dict[Hashable, Any] = {}
+        dim_index: dict[Hashable, Index] = {}
 
         for key, aligned_idx in self.aligned_indexes.items():
             obj_idx = matching_indexes.get(key)
@@ -837,7 +837,7 @@ def align(
     >>> a, b = xr.align(x, y, join="exact")
     Traceback (most recent call last):
     ...
-    ValueError: cannot align objects with join='exact' ...
+    AlignmentError: cannot align objects with join='exact' ...
 
     >>> a, b = xr.align(x, y, join="override")
     >>> a
