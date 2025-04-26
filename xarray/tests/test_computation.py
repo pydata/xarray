@@ -10,24 +10,17 @@ import pytest
 from numpy.testing import assert_allclose, assert_array_equal
 
 import xarray as xr
-from xarray.computation.apply_ufunc import (
-    _UFuncSignature,
-    apply_ufunc,
-    broadcast_compat_data,
-    collect_dict_values,
-    join_dict_keys,
-    ordered_set_intersection,
-    ordered_set_union,
-    unified_dim_sizes,
-)
+from xarray.computation.apply_ufunc import (_UFuncSignature, apply_ufunc,
+                                            broadcast_compat_data,
+                                            collect_dict_values,
+                                            join_dict_keys,
+                                            ordered_set_intersection,
+                                            ordered_set_union,
+                                            unified_dim_sizes)
 from xarray.core.utils import result_name
 from xarray.structure.alignment import broadcast
-from xarray.tests import (
-    has_dask,
-    raise_if_dask_computes,
-    requires_cftime,
-    requires_dask,
-)
+from xarray.tests import (has_dask, raise_if_dask_computes, requires_cftime,
+                          requires_dask)
 
 
 def assert_identical(a, b):
@@ -2627,3 +2620,22 @@ def test_complex_number_reduce(compute_backend):
     # Check that xarray doesn't call into numbagg, which doesn't compile for complex
     # numbers at the moment (but will when numba supports dynamic compilation)
     da.min()
+
+
+@pytest.mark.parametrize("use_dask", [False, True])
+def test_fix(use_dask: bool) -> None:
+
+    val = 3.0
+    val_fixed = np.fix(val)
+
+    da = xr.DataArray([val])
+    expected = xr.DataArray([val_fixed])
+
+    if use_dask:
+        if not has_dask:
+            pytest.skip("test for dask.")
+        da = da.chunk()
+        expected = expected.chunk()
+
+    actual = np.fix(da)
+    xr.testing.assert_duckarray_allclose(expected, actual)
