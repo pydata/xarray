@@ -450,7 +450,7 @@ Example:
 **OUTER**
 
 The ``OUTER`` indexing shall support number, slices and in addition it shall
-support also lists of integers. The the outer indexing is equivalent to
+support also lists of integers. The outer indexing is equivalent to
 combining multiple input list with ``itertools.product()``:
 
 .. ipython::
@@ -467,7 +467,7 @@ combining multiple input list with ``itertools.product()``:
 **OUTER_1VECTOR**
 
 The ``OUTER_1VECTOR`` indexing shall supports number, slices and at most one
-list. The behaviour with the list shall be the same of ``OUTER`` indexing.
+list. The behaviour with the list shall be the same as ``OUTER`` indexing.
 
 If you support more complex indexing as explicit indexing or
 numpy indexing, you can have a look to the implementation of Zarr backend and Scipy backend,
