@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import uuid
 from collections import OrderedDict
 from collections.abc import Mapping
@@ -15,6 +16,9 @@ from xarray.core.formatting import (
     short_data_repr,
 )
 from xarray.core.options import _get_boolean_with_default
+from xarray.vendor.dask.array.svg import svg
+from xarray.vendor.dask.utils import format_bytes
+from xarray.vendor.dask.widgets.widgets import get_template
 
 STATIC_FILES = (
     ("xarray.static.html", "icons-svg-inline.html"),
@@ -34,13 +38,39 @@ def _load_static_files():
     ]
 
 
+def data_repr_template(array):
+    name = getattr(array, "name", "")
+    array_grid = svg(tuple((s,) for s in array.shape), dims=array.dims, name=name)
+    if not math.isnan(array.nbytes):
+        nbytes = format_bytes(array.nbytes)
+    else:
+        nbytes = "unknown"
+
+    array_svg_repr = get_template("array.html.j2").render(
+        array=array,
+        nbytes=nbytes,
+        grid=array_grid,
+    )
+    array_text_repr = collapsible_section(
+        name="Values",
+        details=escape(short_data_repr(array)),
+        n_items=25,
+        enabled=True,
+        collapsed=True,
+    )
+    return f"<pre>{array_text_repr}</pre>{array_svg_repr}"
+
+
 def short_data_repr_html(array) -> str:
     """Format "data" for DataArray and Variable."""
     internal_data = getattr(array, "variable", array)._data
     if hasattr(internal_data, "_repr_html_"):
         return internal_data._repr_html_()
-    text = escape(short_data_repr(array))
-    return f"<pre>{text}</pre>"
+    else:
+        try:
+            return data_repr_template(array)
+        except:
+            return f"<pre>{escape(short_data_repr(array))}</pre>"
 
 
 def format_dims(dim_sizes, dims_with_index) -> str:
