@@ -328,9 +328,9 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
                 has been removed.
                 Please load this array's data manually using `.compute` or `.load`.
                 To intentionally avoid eager loading, either (1) specify
-                `.groupby({self.group.name}=UniqueGrouper(labels=...), eagerly_load_group=False)`
-                or (2) pass explicit bin edges using or `.groupby({self.group.name}=BinGrouper(bins=...),
-                eagerly_load_group=False)`; as appropriate."""
+                `.groupby({self.group.name}=UniqueGrouper(labels=...))`
+                or (2) pass explicit bin edges using ``bins`` or
+                `.groupby({self.group.name}=BinGrouper(bins=...))`; as appropriate."""
             )
 
         if not isinstance(self.group, _DummyGroup) and is_chunked_array(
