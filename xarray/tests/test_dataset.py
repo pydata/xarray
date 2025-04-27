@@ -1243,7 +1243,7 @@ class TestDataset:
         assert rechunked.chunksizes["time"] == expected
         assert rechunked.chunksizes["x"] == (2,) * 5
 
-    def test_chunk_by_frequecy_errors(self):
+    def test_chunk_by_frequency_errors(self):
         ds = Dataset({"foo": ("x", [1, 2, 3])})
         with pytest.raises(ValueError, match="virtual variable"):
             ds.chunk(x=TimeResampler("YE"))
@@ -2204,7 +2204,7 @@ class TestDataset:
 
         # invalid dimension
         # TODO: (benbovy - explicit indexes): uncomment?
-        # --> from reindex docstrings: "any mis-matched dimension is simply ignored"
+        # --> from reindex docstrings: "any mismatched dimension is simply ignored"
         # with pytest.raises(ValueError, match=r"indexer keys.*not correspond.*"):
         #     data.reindex(invalid=0)
 
@@ -2923,7 +2923,7 @@ class TestDataset:
         assert_identical(actual, ds)
 
         # test index corrupted
-        midx = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
+        midx = pd.MultiIndex.from_tuples([(1, 2), (3, 4)], names=["a", "b"])
         midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         ds = Dataset(coords=midx_coords)
 
@@ -3219,7 +3219,7 @@ class TestDataset:
             ds.rename(x="x")
 
     def test_rename_multiindex(self) -> None:
-        midx = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
+        midx = pd.MultiIndex.from_tuples([(1, 2), (3, 4)], names=["a", "b"])
         midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         original = Dataset({}, midx_coords)
 
@@ -4098,6 +4098,33 @@ class TestDataset:
             expected_stacked_variable,
         )
 
+    def test_to_stacked_array_transposed(self) -> None:
+        # test that to_stacked_array uses updated dim order after transposition
+        ds = xr.Dataset(
+            data_vars=dict(
+                v1=(["d1", "d2"], np.arange(6).reshape((2, 3))),
+            ),
+            coords=dict(
+                d1=(["d1"], np.arange(2)),
+                d2=(["d2"], np.arange(3)),
+            ),
+        )
+        da = ds.to_stacked_array(
+            new_dim="new_dim",
+            sample_dims=[],
+            variable_dim="variable",
+        )
+        dsT = ds.transpose()
+        daT = dsT.to_stacked_array(
+            new_dim="new_dim",
+            sample_dims=[],
+            variable_dim="variable",
+        )
+        v1 = np.arange(6)
+        v1T = np.arange(6).reshape((2, 3)).T.flatten()
+        np.testing.assert_equal(da.to_numpy(), v1)
+        np.testing.assert_equal(daT.to_numpy(), v1T)
+
     def test_update(self) -> None:
         data = create_test_data(seed=0)
         expected = data.copy()
@@ -4354,7 +4381,6 @@ class TestDataset:
         ds["x"] = np.arange(3)
         ds_copy = ds.copy()
         ds_copy["bar"] = ds["bar"].to_pandas()
-
         assert_equal(ds, ds_copy)
 
     def test_setitem_auto_align(self) -> None:
@@ -4945,6 +4971,16 @@ class TestDataset:
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
+    def test_from_dataframe_categorical_dtype_index(self) -> None:
+        cat = pd.CategoricalIndex(list("abcd"))
+        df = pd.DataFrame({"f": [0, 1, 2, 3]}, index=cat)
+        ds = df.to_xarray()
+        restored = ds.to_dataframe()
+        df.index.name = (
+            "index"  # restored gets the name because it has the coord with the name
+        )
+        pd.testing.assert_frame_equal(df, restored)
+
     def test_from_dataframe_categorical_index(self) -> None:
         cat = pd.CategoricalDtype(
             categories=["foo", "bar", "baz", "qux", "quux", "corge"]
@@ -4969,7 +5005,7 @@ class TestDataset:
         )
         ser = pd.Series(1, index=cat)
         ds = ser.to_xarray()
-        assert ds.coords.dtypes["index"] == np.dtype("O")
+        assert ds.coords.dtypes["index"] == ser.index.dtype
 
     @requires_sparse
     def test_from_dataframe_sparse(self) -> None:
@@ -6007,6 +6043,8 @@ class TestDataset:
         actual += 0
         assert_identical(ds, actual)
 
+    # casting nan warns
+    @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
     def test_unary_ops(self) -> None:
         ds = self.make_example_math_dataset()
 

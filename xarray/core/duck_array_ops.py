@@ -24,8 +24,9 @@ from numpy import (  # noqa: F401
 )
 from pandas.api.types import is_extension_array_dtype
 
-from xarray.core import dask_array_compat, dask_array_ops, dtypes, nputils
-from xarray.core.array_api_compat import get_array_namespace
+from xarray.compat import dask_array_compat, dask_array_ops
+from xarray.compat.array_api_compat import get_array_namespace
+from xarray.core import dtypes, nputils
 from xarray.core.options import OPTIONS
 from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
 from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -224,14 +225,17 @@ def empty_like(a, **kwargs):
     return xp.empty_like(a, **kwargs)
 
 
-def astype(data, dtype, **kwargs):
-    if hasattr(data, "__array_namespace__"):
+def astype(data, dtype, *, xp=None, **kwargs):
+    if not hasattr(data, "__array_namespace__") and xp is None:
+        return data.astype(dtype, **kwargs)
+
+    if xp is None:
         xp = get_array_namespace(data)
-        if xp == np:
-            # numpy currently doesn't have a astype:
-            return data.astype(dtype, **kwargs)
-        return xp.astype(data, dtype, **kwargs)
-    return data.astype(dtype, **kwargs)
+
+    if xp == np:
+        # numpy currently doesn't have a astype:
+        return data.astype(dtype, **kwargs)
+    return xp.astype(data, dtype, **kwargs)
 
 
 def asarray(data, xp=np, dtype=None):
@@ -373,6 +377,13 @@ def sum_where(data, axis=None, dtype=None, where=None):
 def where(condition, x, y):
     """Three argument where() with better dtype promotion rules."""
     xp = get_array_namespace(condition, x, y)
+
+    dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
+    if not is_duck_array(condition):
+        condition = asarray(condition, dtype=dtype, xp=xp)
+    else:
+        condition = astype(condition, dtype=dtype, xp=xp)
+
     return xp.where(condition, *as_shared_dtype([x, y], xp=xp))
 
 
@@ -456,8 +467,6 @@ def _ignore_warnings_if(condition):
 
 
 def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
-    from xarray.core import nanops
-
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop("out", None) is not None:
             raise TypeError(f"`out` is not valid for {name}")
@@ -484,6 +493,8 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
                 or dtypes.is_object(values.dtype)
             )
         ):
+            from xarray.computation import nanops
+
             nanname = "nan" + name
             func = getattr(nanops, nanname)
         else:

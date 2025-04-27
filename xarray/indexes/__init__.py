@@ -8,5 +8,6 @@ from xarray.core.indexes import (
     PandasIndex,
     PandasMultiIndex,
 )
+from xarray.indexes.range_index import RangeIndex
 
-__all__ = ["Index", "PandasIndex", "PandasMultiIndex"]
+__all__ = ["Index", "PandasIndex", "PandasMultiIndex", "RangeIndex"]
