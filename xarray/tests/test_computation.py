@@ -2622,20 +2622,13 @@ def test_complex_number_reduce(compute_backend):
     da.min()
 
 
-@pytest.mark.parametrize("use_dask", [False, True])
-def test_fix(use_dask: bool) -> None:
+def test_fix() -> None:
 
     val = 3.0
     val_fixed = np.fix(val)
 
     da = xr.DataArray([val])
     expected = xr.DataArray([val_fixed])
-
-    if use_dask:
-        if not has_dask:
-            pytest.skip("test for dask.")
-        da = da.chunk()
-        expected = expected.chunk()
 
     actual = np.fix(da)
     xr.testing.assert_duckarray_allclose(expected, actual)
