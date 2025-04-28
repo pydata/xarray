@@ -2637,4 +2637,4 @@ def test_fix() -> None:
     expected = xr.DataArray([val_fixed])
 
     actual = np.fix(da)
-    xr.testing.assert_duckarray_allclose(expected, actual)
+    assert_identical(expected, actual)
