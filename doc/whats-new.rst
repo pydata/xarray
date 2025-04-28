@@ -52,6 +52,12 @@ Breaking changes
   now return objects indexed by :py:meth:`pandas.IntervalArray` objects,
   instead of numpy object arrays containing tuples. This change enables interval-aware indexing of
   such Xarray objects. (:pull:`9671`). By `Ilan Gold <https://github.com/ilan-gold>`_.
+- The html and text ``repr`` for ``DataTree`` are now truncated. Up to 6 children are displayed
+  for each node -- the first 3 and the last 3 children -- with a ``...`` between them. The number
+  of children to include in the display is configurable via options. For instance use
+  ``set_options(display_max_children=8)`` to display 8 children rather than the default 6. (:pull:`10139`)
+  By `Julia Signell <https://github.com/jsignell>`_.
+
 
 Deprecations
 ~~~~~~~~~~~~
