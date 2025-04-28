@@ -1644,6 +1644,7 @@ Exceptions
 .. autosummary::
    :toctree: generated/
 
+   AlignmentError
    MergeError
    SerializationWarning
 

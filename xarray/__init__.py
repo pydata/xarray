@@ -50,7 +50,7 @@ from xarray.core.treenode import (
 )
 from xarray.core.variable import IndexVariable, Variable, as_variable
 from xarray.namedarray.core import NamedArray
-from xarray.structure.alignment import align, broadcast
+from xarray.structure.alignment import AlignmentError, align, broadcast
 from xarray.structure.chunks import unify_chunks
 from xarray.structure.combine import combine_by_coords, combine_nested
 from xarray.structure.concat import concat
@@ -128,6 +128,7 @@ __all__ = (  # noqa: RUF022
     "NamedArray",
     "Variable",
     # Exceptions
+    "AlignmentError",
     "InvalidTreeError",
     "MergeError",
     "NotFoundInTreeError",

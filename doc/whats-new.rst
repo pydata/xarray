@@ -31,7 +31,10 @@ New Features
   `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 - Improved support pandas Extension Arrays. (:issue:`9661`, :pull:`9671`)
   By `Ilan Gold <https://github.com/ilan-gold>`_.
-
+- Improved checks and errors raised when trying to align objects with conflicting indexes.
+  It is now possible to align objects each with multiple indexes sharing common dimension(s).
+  (:issue:`7695`, :pull:`10251`)
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
