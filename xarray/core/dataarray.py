@@ -3,13 +3,18 @@ from __future__ import annotations
 import copy
 import datetime
 import warnings
-from collections.abc import (Callable, Hashable, Iterable, Mapping,
-                             MutableMapping, Sequence)
+from collections.abc import (
+    Callable,
+    Hashable,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from functools import partial
 from os import PathLike
 from types import EllipsisType
-from typing import (TYPE_CHECKING, Any, Generic, Literal, NoReturn, TypeVar,
-                    overload)
+from typing import TYPE_CHECKING, Any, Generic, Literal, NoReturn, TypeVar, overload
 
 import numpy as np
 import pandas as pd
@@ -23,33 +28,60 @@ from xarray.core._aggregations import DataArrayAggregations
 from xarray.core.accessor_dt import CombinedDatetimelikeAccessor
 from xarray.core.accessor_str import StringAccessor
 from xarray.core.common import AbstractArray, DataWithCoords, get_chunksizes
-from xarray.core.coordinates import (Coordinates, DataArrayCoordinates,
-                                     assert_coordinate_consistent,
-                                     create_coords_with_default_indexes)
+from xarray.core.coordinates import (
+    Coordinates,
+    DataArrayCoordinates,
+    assert_coordinate_consistent,
+    create_coords_with_default_indexes,
+)
 from xarray.core.dataset import Dataset
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.formatting import format_item
-from xarray.core.indexes import (Index, Indexes, PandasMultiIndex,
-                                 filter_indexes_from_coords, isel_indexes)
+from xarray.core.indexes import (
+    Index,
+    Indexes,
+    PandasMultiIndex,
+    filter_indexes_from_coords,
+    isel_indexes,
+)
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.types import (Bins, DaCompatible, NetcdfWriteModes, T_Chunks,
-                               T_DataArray, T_DataArrayOrSet, ZarrWriteModes)
-from xarray.core.utils import (Default, FilteredMapping, ReprObject, _default,
-                               either_dict_or_kwargs, hashable, infix_dims,
-                               result_name)
-from xarray.core.variable import (IndexVariable, Variable, as_compatible_data,
-                                  as_variable)
+from xarray.core.types import (
+    Bins,
+    DaCompatible,
+    NetcdfWriteModes,
+    T_Chunks,
+    T_DataArray,
+    T_DataArrayOrSet,
+    ZarrWriteModes,
+)
+from xarray.core.utils import (
+    Default,
+    FilteredMapping,
+    ReprObject,
+    _default,
+    either_dict_or_kwargs,
+    hashable,
+    infix_dims,
+    result_name,
+)
+from xarray.core.variable import (
+    IndexVariable,
+    Variable,
+    as_compatible_data,
+    as_variable,
+)
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
 from xarray.structure import alignment
-from xarray.structure.alignment import (_broadcast_helper,
-                                        _get_broadcast_dims_map_common_coords,
-                                        align)
+from xarray.structure.alignment import (
+    _broadcast_helper,
+    _get_broadcast_dims_map_common_coords,
+    align,
+)
 from xarray.structure.chunks import unify_chunks
 from xarray.structure.merge import PANDAS_TYPES, MergeError
-from xarray.util.deprecation_helpers import (_deprecate_positional_args,
-                                             deprecate_dims)
+from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
     from dask.dataframe import DataFrame as DaskDataFrame
@@ -63,15 +95,29 @@ if TYPE_CHECKING:
     from xarray.computation.weighted import DataArrayWeighted
     from xarray.core.groupby import DataArrayGroupBy
     from xarray.core.resample import DataArrayResample
-    from xarray.core.types import (CoarsenBoundaryOptions, DatetimeLike,
-                                   DatetimeUnitOptions, Dims, ErrorOptions,
-                                   ErrorOptionsWithWarn, GroupIndices,
-                                   GroupInput, InterpOptions, PadModeOptions,
-                                   PadReflectOptions, QuantileMethods,
-                                   QueryEngineOptions, QueryParserOptions,
-                                   ReindexMethodOptions, ResampleCompatible,
-                                   Self, SideOptions, T_ChunkDimFreq,
-                                   T_ChunksFreq, T_Xarray)
+    from xarray.core.types import (
+        CoarsenBoundaryOptions,
+        DatetimeLike,
+        DatetimeUnitOptions,
+        Dims,
+        ErrorOptions,
+        ErrorOptionsWithWarn,
+        GroupIndices,
+        GroupInput,
+        InterpOptions,
+        PadModeOptions,
+        PadReflectOptions,
+        QuantileMethods,
+        QueryEngineOptions,
+        QueryParserOptions,
+        ReindexMethodOptions,
+        ResampleCompatible,
+        Self,
+        SideOptions,
+        T_ChunkDimFreq,
+        T_ChunksFreq,
+        T_Xarray,
+    )
     from xarray.groupers import Grouper, Resampler
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
@@ -4141,8 +4187,7 @@ class DataArray(
         --------
         Dataset.to_netcdf
         """
-        from xarray.backends.api import (DATAARRAY_NAME, DATAARRAY_VARIABLE,
-                                         to_netcdf)
+        from xarray.backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE, to_netcdf
 
         if self.name is None:
             # If no name is set then use a generic xarray name
@@ -4396,8 +4441,7 @@ class DataArray(
         :ref:`io.zarr`
             The I/O user guide, with more details and examples.
         """
-        from xarray.backends.api import (DATAARRAY_NAME, DATAARRAY_VARIABLE,
-                                         to_zarr)
+        from xarray.backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE, to_zarr
 
         if self.name is None:
             # If no name is set then use a generic xarray name
@@ -6889,9 +6933,11 @@ class DataArray(
         :func:`Dataset.resample <Dataset.resample>`
         :func:`DataArray.resample <DataArray.resample>`
         """
-        from xarray.core.groupby import (DataArrayGroupBy,
-                                         _parse_group_and_groupers,
-                                         _validate_groupby_squeeze)
+        from xarray.core.groupby import (
+            DataArrayGroupBy,
+            _parse_group_and_groupers,
+            _validate_groupby_squeeze,
+        )
 
         _validate_groupby_squeeze(squeeze)
         rgroupers = _parse_group_and_groupers(
@@ -6975,8 +7021,11 @@ class DataArray(
         ----------
         .. [1] https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.cut.html
         """
-        from xarray.core.groupby import (DataArrayGroupBy, ResolvedGrouper,
-                                         _validate_groupby_squeeze)
+        from xarray.core.groupby import (
+            DataArrayGroupBy,
+            ResolvedGrouper,
+            _validate_groupby_squeeze,
+        )
         from xarray.groupers import BinGrouper
 
         _validate_groupby_squeeze(squeeze)
