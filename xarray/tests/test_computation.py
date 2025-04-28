@@ -2627,3 +2627,14 @@ def test_complex_number_reduce(compute_backend):
     # Check that xarray doesn't call into numbagg, which doesn't compile for complex
     # numbers at the moment (but will when numba supports dynamic compilation)
     da.min()
+
+
+def test_fix() -> None:
+    val = 3.0
+    val_fixed = np.fix(val)
+
+    da = xr.DataArray([val])
+    expected = xr.DataArray([val_fixed])
+
+    actual = np.fix(da)
+    assert_identical(expected, actual)
