@@ -2623,7 +2623,6 @@ def test_complex_number_reduce(compute_backend):
 
 
 def test_fix() -> None:
-
     val = 3.0
     val_fixed = np.fix(val)
 
