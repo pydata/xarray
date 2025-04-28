@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from typing import Generic, cast
 
 import numpy as np
@@ -34,12 +35,12 @@ def __extension_duck_array__issubdtype(
 def __extension_duck_array__broadcast(arr: T_ExtensionArray, shape: tuple):
     if shape[0] == len(arr) and len(shape) == 1:
         return arr
-    raise NotImplementedError("Cannot broadcast 1d-only pandas categorical array.")
+    raise NotImplementedError("Cannot broadcast 1d-only pandas extension array.")
 
 
 @implements(np.stack)
 def __extension_duck_array__stack(arr: T_ExtensionArray, axis: int):
-    raise NotImplementedError("Cannot stack 1d-only pandas categorical array.")
+    raise NotImplementedError("Cannot stack 1d-only pandas extension array.")
 
 
 @implements(np.concatenate)
@@ -63,21 +64,22 @@ def __extension_duck_array__where(
     return cast(T_ExtensionArray, pd.Series(x).where(condition, pd.Series(y)).array)
 
 
+@dataclass(frozen=True)
 class PandasExtensionArray(Generic[T_ExtensionArray]):
+    """NEP-18 compliant wrapper for pandas extension arrays.
+
+    Parameters
+    ----------
+    array : T_ExtensionArray
+        The array to be wrapped upon e.g,. :py:class:`xarray.Variable` creation.
+    ```
+    """
+
     array: T_ExtensionArray
 
-    def __init__(self, array: T_ExtensionArray):
-        """NEP-18 compliant wrapper for pandas extension arrays.
-
-        Parameters
-        ----------
-        array : T_ExtensionArray
-            The array to be wrapped upon e.g,. :py:class:`xarray.Variable` creation.
-        ```
-        """
-        if not isinstance(array, pd.api.extensions.ExtensionArray):
-            raise TypeError(f"{array} is not an pandas ExtensionArray.")
-        self.array = array
+    def __post_init__(self):
+        if not isinstance(self.array, pd.api.extensions.ExtensionArray):
+            raise TypeError(f"{self.array} is not an pandas ExtensionArray.")
 
     def __copy__(self):
         return PandasExtensionArray(copy.copy(self.array))
@@ -109,14 +111,14 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
             return type(self)[type(res)](res)
         return res
 
-    def __array_ufunc__(ufunc, method, *inputs, **kwargs):
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         return ufunc(*inputs, **kwargs)
 
     def __repr__(self):
         return f"PandasExtensionArray(array={self.array!r})"
 
     def __getattr__(self, attr: str) -> object:
-        return getattr(self.array, attr)
+        return getattr(super().__getattribute__("array"), attr)
 
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
         item = self.array[key]

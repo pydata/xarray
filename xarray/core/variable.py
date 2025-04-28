@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any, NoReturn, cast
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
-from pandas.api.types import is_extension_array_dtype
 
 import xarray as xr  # only for Dataset and DataArray
 from xarray.compat.array_api_compat import to_like_array
@@ -60,6 +59,7 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
     pd.Index,
     pd.api.extensions.ExtensionArray,
+    PandasExtensionArray,
 )
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
@@ -192,7 +192,7 @@ def _maybe_wrap_data(data):
     if isinstance(data, pd.Index):
         return PandasIndexingAdapter(data)
     if isinstance(data, pd.api.extensions.ExtensionArray):
-        return PandasExtensionArray[type(data)](data)
+        return PandasExtensionArray(data)
     return data
 
 
@@ -410,12 +410,13 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         Variable.as_numpy
         Variable.values
         """
+        if isinstance(self._data, PandasExtensionArray):
+            return self._data.array
         if is_duck_array(self._data):
             return self._data
-        elif isinstance(self._data, indexing.ExplicitlyIndexed):
+        if isinstance(self._data, indexing.ExplicitlyIndexed):
             return self._data.get_duck_array()
-        else:
-            return self.values
+        return self.values
 
     @data.setter
     def data(self, data: T_DuckArray | ArrayLike) -> None:
@@ -1366,7 +1367,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         elif shape is not None:
             dims_map = dict(zip(dim, shape, strict=True))
             tmp_shape = tuple(dims_map[d] for d in expanded_dims)
-            expanded_data = duck_array_ops.broadcast_to(self.data, tmp_shape)
+            expanded_data = duck_array_ops.broadcast_to(self._data, tmp_shape)
         else:
             indexer = (None,) * (len(expanded_dims) - self.ndim) + (...,)
             expanded_data = self.data[indexer]
@@ -2592,11 +2593,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         xarray.unify_chunks
         dask.array.from_array
         """
-
-        if is_extension_array_dtype(self):
-            raise ValueError(
-                f"{self} was found to be a Pandas ExtensionArray.  Please convert to numpy first."
-            )
 
         if from_array_kwargs is None:
             from_array_kwargs = {}

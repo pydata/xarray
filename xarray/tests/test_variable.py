@@ -333,7 +333,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         v = self.cls(["x"], pd.period_range(start="2000", periods=20, freq="D"))
         v = v.load()  # for dask-based Variable
         assert v[0] == pd.Period("2000", freq="D")
-        assert "Period('2000-01-01', 'D')" in repr(v)
+        assert "PeriodArray" in repr(v)
 
     @pytest.mark.parametrize("dtype", [float, int])
     def test_1d_math(self, dtype: np.typing.DTypeLike) -> None:
@@ -656,7 +656,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         data = pd.Categorical(np.arange(10, dtype="int64"))
         v = self.cls("x", data)
         print(v)  # should not error
-        assert v.dtype == "int64"
+        assert v.dtype == data.dtype
 
     def test_pandas_datetime64_with_tz(self):
         data = pd.date_range(
@@ -667,9 +667,12 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         )
         v = self.cls("x", data)
         print(v)  # should not error
-        if "America/New_York" in str(data.dtype):
-            # pandas is new enough that it has datetime64 with timezone dtype
-            assert v.dtype == "object"
+        if v.dtype == np.dtype("O"):
+            import dask.array as da
+
+            assert isinstance(v.data, da.Array)
+        else:
+            assert v.dtype == data.dtype
 
     def test_multiindex(self):
         idx = pd.MultiIndex.from_product([list("abc"), [0, 1]])
@@ -1592,14 +1595,6 @@ class TestVariable(VariableSubclassobjects):
         print(v)  # should not error
         assert pd.api.types.is_extension_array_dtype(v.dtype)
 
-    def test_pandas_categorical_no_chunk(self):
-        data = pd.Categorical(np.arange(10, dtype="int64"))
-        v = self.cls("x", data)
-        with pytest.raises(
-            ValueError, match=r".*was found to be a Pandas ExtensionArray.*"
-        ):
-            v.chunk((5,))
-
     def test_squeeze(self):
         v = Variable(["x", "y"], [[1]])
         assert_identical(Variable([], 1), v.squeeze())
@@ -2412,10 +2407,17 @@ class TestVariableWithDask(VariableSubclassobjects):
     def test_pad(self, mode, xr_arg, np_arg):
         super().test_pad(mode, xr_arg, np_arg)
 
+    @pytest.mark.skip(reason="dask doesn't support extension arrays")
+    def test_pandas_period_index(self):
+        super().test_pandas_period_index()
+
+    @pytest.mark.skip(reason="dask doesn't support extension arrays")
+    def test_pandas_datetime64_with_tz(self):
+        super().test_pandas_datetime64_with_tz()
+
+    @pytest.mark.skip(reason="dask doesn't support extension arrays")
     def test_pandas_categorical_dtype(self):
-        data = pd.Categorical(np.arange(10, dtype="int64"))
-        with pytest.raises(ValueError, match="was found to be a Pandas ExtensionArray"):
-            self.cls("x", data)
+        super().test_pandas_categorical_dtype()
 
 
 @requires_sparse
@@ -2444,7 +2446,8 @@ class TestIndexVariable(VariableSubclassobjects):
 
     def test_to_index_multiindex_level(self):
         midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
-        ds = Dataset(coords={"x": midx})
+        with pytest.warns(FutureWarning):
+            ds = Dataset(coords={"x": midx})
         assert ds.one.variable.to_index().equals(midx.get_level_values("one"))
 
     def test_multiindex_default_level_names(self):
@@ -3020,7 +3023,7 @@ def test_datetime_conversion(values, unit) -> None:
     # todo: check for redundancy (suggested per review)
     dims = ["time"] if isinstance(values, np.ndarray | pd.Index | pd.Series) else []
     var = Variable(dims, values)
-    if var.dtype.kind == "M":
+    if var.dtype.kind == "M" and isinstance(var.dtype, np.dtype):
         assert var.dtype == np.dtype(f"datetime64[{unit}]")
     else:
         # The only case where a non-datetime64 dtype can occur currently is in
@@ -3062,8 +3065,12 @@ def test_pandas_two_only_datetime_conversion_warnings(
     # todo: check for redundancy (suggested per review)
     var = Variable(["time"], data.astype(dtype))  # type: ignore[arg-type]
 
-    if var.dtype.kind == "M":
+    # we internally convert series to numpy representations to avoid too much nastiness with extension arrays
+    # when calling data.array e.g., with NumpyExtensionArrays
+    if isinstance(data, pd.Series):
         assert var.dtype == np.dtype("datetime64[s]")
+    elif var.dtype.kind == "M":
+        assert var.dtype == dtype
     else:
         # The only case where a non-datetime64 dtype can occur currently is in
         # the case that the variable is backed by a timezone-aware
