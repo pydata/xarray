@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Generic, cast
@@ -80,12 +79,6 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
     def __post_init__(self):
         if not isinstance(self.array, pd.api.extensions.ExtensionArray):
             raise TypeError(f"{self.array} is not an pandas ExtensionArray.")
-
-    def __copy__(self):
-        return PandasExtensionArray(copy.copy(self.array))
-
-    def __deepcopy__(self, memo):
-        return PandasExtensionArray(copy.deepcopy(self.array, memo=memo))
 
     def __array_function__(self, func, types, args, kwargs):
         def replace_duck_with_extension_array(args) -> list:
