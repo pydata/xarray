@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from typing import Generic, cast
 
 import numpy as np
@@ -62,21 +63,22 @@ def __extension_duck_array__where(
     return cast(T_ExtensionArray, pd.Series(x).where(condition, pd.Series(y)).array)
 
 
+@dataclass(frozen=True)
 class PandasExtensionArray(Generic[T_ExtensionArray]):
+    """NEP-18 compliant wrapper for pandas extension arrays.
+
+    Parameters
+    ----------
+    array : T_ExtensionArray
+        The array to be wrapped upon e.g,. :py:class:`xarray.Variable` creation.
+    ```
+    """
+
     array: T_ExtensionArray
 
-    def __init__(self, array: T_ExtensionArray):
-        """NEP-18 compliant wrapper for pandas extension arrays.
-
-        Parameters
-        ----------
-        array : T_ExtensionArray
-            The array to be wrapped upon e.g,. :py:class:`xarray.Variable` creation.
-        ```
-        """
-        if not isinstance(array, pd.api.extensions.ExtensionArray):
-            raise TypeError(f"{array} is not an pandas ExtensionArray.")
-        self.array = array
+    def __post_init__(self):
+        if not isinstance(self.array, pd.api.extensions.ExtensionArray):
+            raise TypeError(f"{self.array} is not an pandas ExtensionArray.")
 
     def __array_function__(self, func, types, args, kwargs):
         def replace_duck_with_extension_array(args) -> list:
@@ -109,7 +111,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
         return f"PandasExtensionArray(array={self.array!r})"
 
     def __getattr__(self, attr: str) -> object:
-        return getattr(self.array, attr)
+        return getattr(super().__getattribute__("array"), attr)
 
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
         item = self.array[key]
