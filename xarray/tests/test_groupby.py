@@ -1062,6 +1062,12 @@ def test_groupby_bins_cut_kwargs(use_flox: bool) -> None:
         ).mean()
     assert_identical(expected, actual)
 
+    with xr.set_options(use_flox=use_flox):
+        bins_index = pd.IntervalIndex.from_breaks(x_bins)
+        labels = ["one", "two", "three"]
+        actual = da.groupby(x=BinGrouper(bins=bins_index, labels=labels)).sum()
+        assert actual.xindexes["x_bins"].index.equals(pd.Index(labels))  # type: ignore[attr-defined]
+
 
 @pytest.mark.parametrize("indexed_coord", [True, False])
 @pytest.mark.parametrize(
