@@ -53,7 +53,7 @@ Breaking changes
   for each node -- the first 3 and the last 3 children -- with a ``...`` between them. The number
   of children to include in the display is configurable via options. For instance use
   ``set_options(display_max_children=8)`` to display 8 children rather than the default 6. (:pull:`10139`)
-  By `Julia Signell <https://github.com.jsignell>`_.
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 
 Deprecations
