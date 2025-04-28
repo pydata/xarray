@@ -1210,7 +1210,7 @@ def apply_ufunc(
 
     if kwargs:
         if "where" in kwargs and isinstance(kwargs["where"], DataArray):
-            kwargs["where"] = kwargs["where"].data # type:ignore[index]
+            kwargs["where"] = kwargs["where"].data  # type:ignore[index]
         func = functools.partial(func, **kwargs)
 
     if keep_attrs is None:
