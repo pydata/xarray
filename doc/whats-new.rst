@@ -29,7 +29,7 @@ New Features
 - Improved compatibility with OPeNDAP DAP4 data model for backend engine ``pydap``. This
   includes ``datatree`` support, and removing slashes from dimension names. By
   `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
-- Improved support pandas Extension Arrays. (:issue:`9661`, :pull:`9671`)
+- Improved support pandas categorical extension as indices (i.e., :py:class:`pandas.IntervalIndex`). (:issue:`9661`, :pull:`9671`)
   By `Ilan Gold <https://github.com/ilan-gold>`_.
 
 
@@ -49,6 +49,7 @@ Breaking changes
   now return objects indexed by :py:meth:`pandas.IntervalArray` objects,
   instead of numpy object arrays containing tuples. This change enables interval-aware indexing of
   such Xarray objects. (:pull:`9671`). By `Ilan Gold <https://github.com/ilan-gold>`_.
+- Remove ``PandasExtensionArrayIndex`` from :py:attr:`xarray.Variable.data` when the attribute is a :py:class:`pandas.api.extensions.ExtensionArray` (:pull:`10263`). By `Ilan Gold <https://github.com/ilan-gold>`_.
 
 Deprecations
 ~~~~~~~~~~~~
