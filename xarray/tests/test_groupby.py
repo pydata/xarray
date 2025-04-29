@@ -3089,9 +3089,7 @@ def test_lazy_grouping(grouper, expect_index):
 
     if has_flox:
         lazy = (
-            xr.Dataset({"foo": data}, coords={"zoo": data})
-            .groupby(zoo=grouper, eagerly_compute_group=False)
-            .count()
+            xr.Dataset({"foo": data}, coords={"zoo": data}).groupby(zoo=grouper).count()
         )
         assert_identical(eager, lazy)
 
@@ -3107,9 +3105,7 @@ def test_lazy_grouping_errors() -> None:
         coords={"y": ("x", dask.array.arange(20, chunks=3))},
     )
 
-    gb = data.groupby(
-        y=UniqueGrouper(labels=np.arange(5, 10)), eagerly_compute_group=False
-    )
+    gb = data.groupby(y=UniqueGrouper(labels=np.arange(5, 10)))
     message = "not supported when lazily grouping by"
     with pytest.raises(ValueError, match=message):
         gb.map(lambda x: x)
@@ -3253,18 +3249,26 @@ def test_groupby_dask_eager_load_warnings() -> None:
     ).chunk(z=6)
 
     with pytest.raises(ValueError, match="Please pass"):
-        ds.groupby("x", eagerly_compute_group=False)
+        with pytest.warns(DeprecationWarning):
+            ds.groupby("x", eagerly_compute_group=False)
+    with pytest.raises(ValueError, match="Eagerly computing"):
+        ds.groupby("x", eagerly_compute_group=True)
 
     # This is technically fine but anyone iterating over the groupby object
     # will see an error, so let's warn and have them opt-in.
     ds.groupby(x=UniqueGrouper(labels=[1, 2, 3]))
 
-    ds.groupby(x=UniqueGrouper(labels=[1, 2, 3]), eagerly_compute_group=False)
+    with pytest.warns(DeprecationWarning):
+        ds.groupby(x=UniqueGrouper(labels=[1, 2, 3]), eagerly_compute_group=False)
 
     with pytest.raises(ValueError, match="Please pass"):
-        ds.groupby_bins("x", bins=3, eagerly_compute_group=False)
+        with pytest.warns(DeprecationWarning):
+            ds.groupby_bins("x", bins=3, eagerly_compute_group=False)
+    with pytest.raises(ValueError, match="Eagerly computing"):
+        ds.groupby_bins("x", bins=3, eagerly_compute_group=True)
     ds.groupby_bins("x", bins=[1, 2, 3])
-    ds.groupby_bins("x", bins=[1, 2, 3], eagerly_compute_group=False)
+    with pytest.warns(DeprecationWarning):
+        ds.groupby_bins("x", bins=[1, 2, 3], eagerly_compute_group=False)
 
 
 # TODO: Possible property tests to add to this module

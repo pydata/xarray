@@ -42,6 +42,7 @@ from xarray.core.utils import (
     FrozenMappingWarningOnValuesAccess,
     contains_only_chunked_or_numpy,
     either_dict_or_kwargs,
+    emit_user_level_warning,
     hashable,
     is_scalar,
     maybe_wrap_array,
@@ -293,7 +294,7 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
     grouper: Grouper
     group: T_Group
     obj: T_DataWithCoords
-    eagerly_compute_group: Literal[False] = field(repr=False)
+    eagerly_compute_group: Literal[False] | None = field(repr=False, default=None)
 
     # returned by factorize:
     encoded: EncodedGroups = field(init=False, repr=False)
@@ -322,7 +323,7 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
 
         self.group = _resolve_group(self.obj, self.group)
 
-        if self.eagerly_compute_group is not False:
+        if self.eagerly_compute_group:
             raise ValueError(
                 f""""Eagerly computing the DataArray you're grouping by ({self.group.name!r}) "
                 has been removed.
@@ -331,6 +332,11 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
                 `.groupby({self.group.name}=UniqueGrouper(labels=...))`
                 or (2) pass explicit bin edges using ``bins`` or
                 `.groupby({self.group.name}=BinGrouper(bins=...))`; as appropriate."""
+            )
+        if self.eagerly_compute_group is not None:
+            emit_user_level_warning(
+                "Passing `eagerly_compute_group` is now deprecated. It has no effect.",
+                DeprecationWarning,
             )
 
         if not isinstance(self.group, _DummyGroup) and is_chunked_array(
