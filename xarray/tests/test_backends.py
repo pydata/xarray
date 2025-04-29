@@ -3661,6 +3661,39 @@ class TestZarrDictStore(ZarrBase):
         else:
             yield {}
 
+    def test_chunk_key_encoding(self) -> None:
+        from zarr.core.chunk_key_encodings import V2ChunkKeyEncoding
+
+        # Create a dataset with a variable name containing a period
+        data = np.ones((4, 4))
+        original = Dataset({"var1": (("x", "y"), data)})
+
+        # Set up chunk key encoding with slash separator
+        encoding = {
+            "var1": {
+                "chunk_key_encoding": V2ChunkKeyEncoding(separator="/").to_dict(),
+                "chunks": (2, 2),
+            }
+        }
+
+        # Write to store with custom encoding
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, encoding=encoding)
+
+            # Verify the chunk keys in store use the slash separator
+            if not has_zarr_v3:
+                chunk_keys = [k for k in store.keys() if k.startswith("var1/")]
+                assert len(chunk_keys) > 0
+                for key in chunk_keys:
+                    assert "/" in key
+                    assert "." not in key.split("/")[1:]  # No dots in chunk coordinates
+
+            # Read back and verify data
+            with xr.open_zarr(store) as actual:
+                assert_identical(original, actual)
+                # Verify chunks are preserved
+                assert actual["var1"].encoding["chunks"] == (2, 2)
+
 
 @requires_zarr
 @pytest.mark.skipif(

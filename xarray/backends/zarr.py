@@ -464,6 +464,7 @@ def extract_zarr_variable_encoding(
         "serializer",
         "cache_metadata",
         "write_empty_chunks",
+        "chunk_key_encoding",
     }
     if zarr_format == 3:
         valid_encodings.add("fill_value")
