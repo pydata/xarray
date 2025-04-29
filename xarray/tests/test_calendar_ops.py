@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray import CFTimeIndex, DataArray, infer_freq
+from xarray import CFTimeIndex, DataArray, Dataset, infer_freq
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftime_offsets import date_range
 from xarray.testing import assert_identical
@@ -61,6 +61,24 @@ def test_convert_calendar(source, target, use_cftime, freq):
         )
         expected_times = expected_times_pre_leap.append(expected_times_post_leap)
     np.testing.assert_array_equal(conv.time, expected_times)
+
+
+def test_convert_calendar_dataset():
+    # Check that variables without a time dimension are not modified
+    src = DataArray(
+        date_range("2004-01-01", "2004-12-31", freq="D", calendar="standard"),
+        dims=("time",),
+        name="time",
+    )
+    da_src = DataArray(
+        np.linspace(0, 1, src.size), dims=("time",), coords={"time": src}
+    ).expand_dims(lat=[0, 1])
+    ds_src = Dataset({"hastime": da_src, "notime": (("lat",), [0, 1])})
+
+    conv = convert_calendar(ds_src, "360_day", align_on="date")
+
+    assert conv.time.dt.calendar == "360_day"
+    assert_identical(ds_src.notime, conv.notime)
 
 
 @pytest.mark.parametrize(
