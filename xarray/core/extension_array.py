@@ -113,7 +113,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
         if is_extension_array_dtype(item):
             return PandasExtensionArray(item)
         if np.isscalar(item) or isinstance(key, int):
-            return PandasExtensionArray(type(self.array)._from_sequence([item]))  # type: ignore[call-arg]  # only subclasses with proper __init__ allowed
+            return PandasExtensionArray(type(self.array)._from_sequence([item]))  # type: ignore[call-arg,attr-defined,unused-ignore]
         return PandasExtensionArray(item)
 
     def __setitem__(self, key, val):
