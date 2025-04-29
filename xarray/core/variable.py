@@ -2304,7 +2304,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         return self._new(data=self.data.real)
 
-    def __array_wrap__(self, obj, context=None):
+    def __array_wrap__(self, obj, context=None, return_scalar=False):
         return Variable(self.dims, obj)
 
     def _unary_op(self, f, *args, **kwargs):
