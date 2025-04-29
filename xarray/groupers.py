@@ -365,15 +365,12 @@ class BinGrouper(Grouper):
             retbins=True,
         )
 
-    def _factorize_lazy(self, group: T_Group) -> DataArray:
-        def _wrapper(data, **kwargs):
-            binned, bins = self._cut(data)
-            if isinstance(self.bins, int):
-                # we are running eagerly, update self.bins with actual edges instead
-                self.bins = bins
-            return binned.codes.reshape(data.shape)
-
-        return apply_ufunc(_wrapper, group, dask="parallelized", keep_attrs=True)
+    def _pandas_cut_wrapper(self, data, **kwargs):
+        binned, bins = self._cut(data)
+        if isinstance(self.bins, int):
+            # we are running eagerly, update self.bins with actual edges instead
+            self.bins = bins
+        return binned.codes.reshape(data.shape)
 
     def factorize(self, group: T_Group) -> EncodedGroups:
         if isinstance(group, _DummyGroup):
@@ -383,7 +380,13 @@ class BinGrouper(Grouper):
             raise ValueError(
                 f"Bin edges must be provided when grouping by chunked arrays. Received {self.bins=!r} instead"
             )
-        codes = self._factorize_lazy(group)
+        codes = apply_ufunc(
+            self._pandas_cut_wrapper,
+            group,
+            dask="parallelized",
+            keep_attrs=True,
+            output_dtypes=[np.int64],
+        )
         if not by_is_chunked and array_all(codes == -1):
             raise ValueError(
                 f"None of the data falls within bins with edges {self.bins!r}"
