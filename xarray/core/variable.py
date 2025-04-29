@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any, NoReturn, cast
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
-from pandas.api.types import is_extension_array_dtype
 
 import xarray as xr  # only for Dataset and DataArray
 from xarray.compat.array_api_compat import to_like_array
@@ -60,6 +59,7 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
     pd.Index,
     pd.api.extensions.ExtensionArray,
+    PandasExtensionArray,
 )
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
@@ -192,7 +192,7 @@ def _maybe_wrap_data(data):
     if isinstance(data, pd.Index):
         return PandasIndexingAdapter(data)
     if isinstance(data, pd.api.extensions.ExtensionArray):
-        return PandasExtensionArray[type(data)](data)
+        return PandasExtensionArray(data)
     return data
 
 
@@ -1043,7 +1043,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         numpy.squeeze
         """
         dims = common.get_squeeze_dims(self, dim)
-        return self.isel({d: 0 for d in dims})
+        return self.isel(dict.fromkeys(dims, 0))
 
     def _shift_one_dim(self, dim, count, fill_value=dtypes.NA):
         axis = self.get_axis_num(dim)
@@ -2152,10 +2152,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         Construct a reshaped-array for coarsen
         """
         if not is_dict_like(boundary):
-            boundary = {d: boundary for d in windows.keys()}
+            boundary = dict.fromkeys(windows.keys(), boundary)
 
         if not is_dict_like(side):
-            side = {d: side for d in windows.keys()}
+            side = dict.fromkeys(windows.keys(), side)
 
         # remove unrelated dimensions
         boundary = {k: v for k, v in boundary.items() if k in windows}
@@ -2304,7 +2304,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         return self._new(data=self.data.real)
 
-    def __array_wrap__(self, obj, context=None):
+    def __array_wrap__(self, obj, context=None, return_scalar=False):
         return Variable(self.dims, obj)
 
     def _unary_op(self, f, *args, **kwargs):
@@ -2592,11 +2592,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         xarray.unify_chunks
         dask.array.from_array
         """
-
-        if is_extension_array_dtype(self):
-            raise ValueError(
-                f"{self} was found to be a Pandas ExtensionArray.  Please convert to numpy first."
-            )
 
         if from_array_kwargs is None:
             from_array_kwargs = {}

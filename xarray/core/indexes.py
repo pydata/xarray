@@ -11,6 +11,7 @@ import pandas as pd
 
 from xarray.core import formatting, nputils, utils
 from xarray.core.coordinate_transform import CoordinateTransform
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
     CoordinateTransformIndexingAdapter,
     IndexSelResult,
@@ -444,6 +445,8 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     from xarray.core.variable import Variable
     from xarray.namedarray.pycompat import to_numpy
 
+    if isinstance(array, PandasExtensionArray):
+        array = pd.Index(array.array)
     if isinstance(array, pd.Index):
         index = array
     elif isinstance(array, DataArray | Variable):
@@ -602,7 +605,11 @@ class PandasIndex(Index):
         self.dim = dim
 
         if coord_dtype is None:
-            coord_dtype = get_valid_numpy_dtype(index)
+            if pd.api.types.is_extension_array_dtype(index.dtype):
+                cast(pd.api.extensions.ExtensionDtype, index.dtype)
+                coord_dtype = index.dtype
+            else:
+                coord_dtype = get_valid_numpy_dtype(index)
         self.coord_dtype = coord_dtype
 
     def _replace(self, index, dim=None, coord_dtype=None):
@@ -698,6 +705,8 @@ class PandasIndex(Index):
 
         if not indexes:
             coord_dtype = None
+        elif len(set(idx.coord_dtype for idx in indexes)) == 1:
+            coord_dtype = indexes[0].coord_dtype
         else:
             coord_dtype = np.result_type(*[idx.coord_dtype for idx in indexes])
 
@@ -1329,7 +1338,7 @@ class PandasMultiIndex(PandasIndex):
             # variable(s) attrs and encoding metadata are propagated
             # when replacing the indexes in the resulting xarray object
             new_vars = new_index.create_variables()
-            indexes = cast(dict[Any, Index], {k: new_index for k in new_vars})
+            indexes = cast(dict[Any, Index], dict.fromkeys(new_vars, new_index))
 
             # add scalar variable for each dropped level
             variables = new_vars
@@ -1500,8 +1509,21 @@ class CoordinateTransformIndex(Index):
         name_dict: Mapping[Any, Hashable],
         dims_dict: Mapping[Any, Hashable],
     ) -> Self:
-        # TODO: maybe update self.transform coord_names, dim_size and dims attributes
-        return self
+        coord_names = self.transform.coord_names
+        dims = self.transform.dims
+        dim_size = self.transform.dim_size
+
+        if not set(coord_names) & set(name_dict) and not set(dims) & set(dims_dict):
+            return self
+
+        new_transform = copy.deepcopy(self.transform)
+        new_transform.coord_names = tuple(name_dict.get(n, n) for n in coord_names)
+        new_transform.dims = tuple(str(dims_dict.get(d, d)) for d in dims)
+        new_transform.dim_size = {
+            str(dims_dict.get(d, d)): v for d, v in dim_size.items()
+        }
+
+        return type(self)(new_transform)
 
 
 def create_default_index_implicit(
@@ -1518,7 +1540,7 @@ def create_default_index_implicit(
     if all_variables is None:
         all_variables = {}
     if not isinstance(all_variables, Mapping):
-        all_variables = {k: None for k in all_variables}
+        all_variables = dict.fromkeys(all_variables)
 
     name = dim_variable.dims[0]
     array = getattr(dim_variable._data, "array", None)
@@ -1809,7 +1831,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
             if convert_new_idx:
                 new_idx = new_idx.index  # type: ignore[attr-defined]
 
-            new_indexes.update({k: new_idx for k in coords})
+            new_indexes.update(dict.fromkeys(coords, new_idx))
             new_index_vars.update(idx_vars)
 
         return new_indexes, new_index_vars
@@ -1855,7 +1877,7 @@ def default_indexes(
         if name in dims and var.ndim == 1:
             index, index_vars = create_default_index_implicit(var, coords)
             if set(index_vars) <= coord_names:
-                indexes.update({k: index for k in index_vars})
+                indexes.update(dict.fromkeys(index_vars, index))
 
     return indexes
 
@@ -1958,7 +1980,7 @@ def _apply_indexes_fast(indexes: Indexes[Index], args: Mapping[Any, Any], func: 
         if index_args:
             new_index = getattr(index, func)(index_args)
             if new_index is not None:
-                new_indexes.update({k: new_index for k in index_vars})
+                new_indexes.update(dict.fromkeys(index_vars, new_index))
                 new_index_vars = new_index.create_variables(index_vars)
                 new_index_variables.update(new_index_vars)
             else:
@@ -1981,7 +2003,7 @@ def _apply_indexes(
         if index_args:
             new_index = getattr(index, func)(index_args)
             if new_index is not None:
-                new_indexes.update({k: new_index for k in index_vars})
+                new_indexes.update(dict.fromkeys(index_vars, new_index))
                 new_index_vars = new_index.create_variables(index_vars)
                 new_index_variables.update(new_index_vars)
             else:

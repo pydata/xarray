@@ -365,7 +365,7 @@ def collect_variables_and_indexes(
                 append(name, variable, indexes[name])
             elif variable.dims == (name,):
                 idx, idx_vars = create_default_index_implicit(variable)
-                append_all(idx_vars, {k: idx for k in idx_vars})
+                append_all(idx_vars, dict.fromkeys(idx_vars, idx))
             else:
                 append(name, variable, None)
 
@@ -942,7 +942,7 @@ def merge(
     >>> xr.merge([x, y, z], join="exact")
     Traceback (most recent call last):
     ...
-    ValueError: cannot align objects with join='exact' where ...
+    xarray.structure.alignment.AlignmentError: cannot align objects with join='exact' where ...
 
     Raises
     ------

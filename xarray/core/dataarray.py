@@ -14,15 +14,7 @@ from collections.abc import (
 from functools import partial
 from os import PathLike
 from types import EllipsisType
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Literal,
-    NoReturn,
-    TypeVar,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Generic, Literal, NoReturn, TypeVar, overload
 
 import numpy as np
 import pandas as pd
@@ -353,7 +345,7 @@ class DataArray(
         Attributes to assign to the new instance. By default, an empty
         attribute dictionary is initialized.
         (see FAQ, :ref:`approach to metadata`)
-    indexes : py:class:`~xarray.Indexes` or dict-like, optional
+    indexes : :py:class:`~xarray.Indexes` or dict-like, optional
         For internal use only. For passing indexes objects to the
         new DataArray, use the ``coords`` argument instead with a
         :py:class:`~xarray.Coordinate` object (both coordinate variables
@@ -4812,8 +4804,8 @@ class DataArray(
         except (TypeError, AttributeError):
             return False
 
-    def __array_wrap__(self, obj, context=None) -> Self:
-        new_var = self.variable.__array_wrap__(obj, context)
+    def __array_wrap__(self, obj, context=None, return_scalar=False) -> Self:
+        new_var = self.variable.__array_wrap__(obj, context, return_scalar)
         return self._replace(new_var)
 
     def __matmul__(self, obj: T_Xarray) -> T_Xarray:
@@ -6813,7 +6805,7 @@ class DataArray(
         *,
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
-        eagerly_compute_group: bool = True,
+        eagerly_compute_group: Literal[False] | None = None,
         **groupers: Grouper,
     ) -> DataArrayGroupBy:
         """Returns a DataArrayGroupBy object for performing grouped operations.
@@ -6829,11 +6821,8 @@ class DataArray(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
-        eagerly_compute_group: bool
-            Whether to eagerly compute ``group`` when it is a chunked array.
-            This option is to maintain backwards compatibility. Set to False
-            to opt-in to future behaviour, where ``group`` is not automatically loaded
-            into memory.
+        eagerly_compute_group: bool, optional
+            This argument is deprecated.
         **groupers : Mapping of str to Grouper or Resampler
             Mapping of variable name to group by to :py:class:`Grouper` or :py:class:`Resampler` object.
             One of ``group`` or ``groupers`` must be provided.
@@ -6857,12 +6846,12 @@ class DataArray(
         >>> da
         <xarray.DataArray (time: 1827)> Size: 15kB
         array([0.000e+00, 1.000e+00, 2.000e+00, ..., 1.824e+03, 1.825e+03,
-               1.826e+03])
+               1.826e+03], shape=(1827,))
         Coordinates:
           * time     (time) datetime64[ns] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
         >>> da.groupby("time.dayofyear") - da.groupby("time.dayofyear").mean("time")
         <xarray.DataArray (time: 1827)> Size: 15kB
-        array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5])
+        array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5], shape=(1827,))
         Coordinates:
           * time       (time) datetime64[ns] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
             dayofyear  (time) int64 15kB 1 2 3 4 5 6 7 8 ... 360 361 362 363 364 365 366
@@ -6917,7 +6906,7 @@ class DataArray(
                [[nan, nan, nan],
                 [ 3.,  4.,  5.]]])
         Coordinates:
-          * x_bins   (x_bins) object 16B (5, 15] (15, 25]
+          * x_bins   (x_bins) interval[int64, right] 32B (5, 15] (15, 25]
           * letters  (letters) object 16B 'a' 'b'
         Dimensions without coordinates: y
 
@@ -6965,7 +6954,7 @@ class DataArray(
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
         duplicates: Literal["raise", "drop"] = "raise",
-        eagerly_compute_group: bool = True,
+        eagerly_compute_group: Literal[False] | None = None,
     ) -> DataArrayGroupBy:
         """Returns a DataArrayGroupBy object for performing grouped operations.
 
@@ -7002,11 +6991,8 @@ class DataArray(
             coordinates.
         duplicates : {"raise", "drop"}, default: "raise"
             If bin edges are not unique, raise ValueError or drop non-uniques.
-        eagerly_compute_group: bool
-            Whether to eagerly compute ``group`` when it is a chunked array.
-            This option is to maintain backwards compatibility. Set to False
-            to opt-in to future behaviour, where ``group`` is not automatically loaded
-            into memory.
+        eagerly_compute_group: bool, optional
+            This argument is deprecated.
 
         Returns
         -------
@@ -7072,13 +7058,13 @@ class DataArray(
 
         Returns
         -------
-        core.weighted.DataArrayWeighted
+        computation.weighted.DataArrayWeighted
 
         See Also
         --------
         :func:`Dataset.weighted <Dataset.weighted>`
 
-        :ref:`comput.weighted`
+        :ref:`compute.weighted`
             User guide on weighted array reduction using :py:func:`~xarray.DataArray.weighted`
 
         :doc:`xarray-tutorial:fundamentals/03.4_weighted`
@@ -7117,7 +7103,7 @@ class DataArray(
 
         Returns
         -------
-        core.rolling.DataArrayRolling
+        computation.rolling.DataArrayRolling
 
         Examples
         --------
@@ -7157,7 +7143,7 @@ class DataArray(
         --------
         DataArray.cumulative
         Dataset.rolling
-        core.rolling.DataArrayRolling
+        computation.rolling.DataArrayRolling
         """
         from xarray.computation.rolling import DataArrayRolling
 
@@ -7183,7 +7169,7 @@ class DataArray(
 
         Returns
         -------
-        core.rolling.DataArrayRolling
+        computation.rolling.DataArrayRolling
 
         Examples
         --------
@@ -7217,7 +7203,7 @@ class DataArray(
         --------
         DataArray.rolling
         Dataset.cumulative
-        core.rolling.DataArrayRolling
+        computation.rolling.DataArrayRolling
         """
         from xarray.computation.rolling import DataArrayRolling
 
@@ -7265,7 +7251,7 @@ class DataArray(
 
         Returns
         -------
-        core.rolling.DataArrayCoarsen
+        computation.rolling.DataArrayCoarsen
 
         Examples
         --------
@@ -7360,7 +7346,7 @@ class DataArray(
 
         See Also
         --------
-        :class:`core.rolling.DataArrayCoarsen <core.rolling.DataArrayCoarsen>`
+        :class:`computation.rolling.DataArrayCoarsen <computation.rolling.DataArrayCoarsen>`
         :func:`Dataset.coarsen <Dataset.coarsen>`
 
         :ref:`reshape.coarsen`

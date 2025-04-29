@@ -23,6 +23,7 @@ except ImportError:
 
 import xarray as xr
 from xarray import (
+    AlignmentError,
     DataArray,
     Dataset,
     IndexVariable,
@@ -2543,6 +2544,28 @@ class TestDataset:
 
         assert_identical(expected_x2, x2)
 
+    def test_align_multiple_indexes_common_dim(self) -> None:
+        a = Dataset(coords={"x": [1, 2], "xb": ("x", [3, 4])}).set_xindex("xb")
+        b = Dataset(coords={"x": [1], "xb": ("x", [3])}).set_xindex("xb")
+
+        (a2, b2) = align(a, b, join="inner")
+        assert_identical(a2, b, check_default_indexes=False)
+        assert_identical(b2, b, check_default_indexes=False)
+
+        c = Dataset(coords={"x": [1, 3], "xb": ("x", [2, 4])}).set_xindex("xb")
+
+        with pytest.raises(AlignmentError, match=".*conflicting re-indexers"):
+            align(a, c)
+
+    def test_align_conflicting_indexes(self) -> None:
+        class CustomIndex(PandasIndex): ...
+
+        a = Dataset(coords={"xb": ("x", [3, 4])}).set_xindex("xb")
+        b = Dataset(coords={"xb": ("x", [3])}).set_xindex("xb", CustomIndex)
+
+        with pytest.raises(AlignmentError, match="cannot align.*conflicting indexes"):
+            align(a, b)
+
     def test_align_non_unique(self) -> None:
         x = Dataset({"foo": ("x", [3, 4, 5]), "x": [0, 0, 1]})
         x1, x2 = align(x, x)
@@ -4098,6 +4121,33 @@ class TestDataset:
             expected_stacked_variable,
         )
 
+    def test_to_stacked_array_transposed(self) -> None:
+        # test that to_stacked_array uses updated dim order after transposition
+        ds = xr.Dataset(
+            data_vars=dict(
+                v1=(["d1", "d2"], np.arange(6).reshape((2, 3))),
+            ),
+            coords=dict(
+                d1=(["d1"], np.arange(2)),
+                d2=(["d2"], np.arange(3)),
+            ),
+        )
+        da = ds.to_stacked_array(
+            new_dim="new_dim",
+            sample_dims=[],
+            variable_dim="variable",
+        )
+        dsT = ds.transpose()
+        daT = dsT.to_stacked_array(
+            new_dim="new_dim",
+            sample_dims=[],
+            variable_dim="variable",
+        )
+        v1 = np.arange(6)
+        v1T = np.arange(6).reshape((2, 3)).T.flatten()
+        np.testing.assert_equal(da.to_numpy(), v1)
+        np.testing.assert_equal(daT.to_numpy(), v1T)
+
     def test_update(self) -> None:
         data = create_test_data(seed=0)
         expected = data.copy()
@@ -4354,7 +4404,6 @@ class TestDataset:
         ds["x"] = np.arange(3)
         ds_copy = ds.copy()
         ds_copy["bar"] = ds["bar"].to_pandas()
-
         assert_equal(ds, ds_copy)
 
     def test_setitem_auto_align(self) -> None:
@@ -4945,6 +4994,16 @@ class TestDataset:
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
+    def test_from_dataframe_categorical_dtype_index(self) -> None:
+        cat = pd.CategoricalIndex(list("abcd"))
+        df = pd.DataFrame({"f": [0, 1, 2, 3]}, index=cat)
+        ds = df.to_xarray()
+        restored = ds.to_dataframe()
+        df.index.name = (
+            "index"  # restored gets the name because it has the coord with the name
+        )
+        pd.testing.assert_frame_equal(df, restored)
+
     def test_from_dataframe_categorical_index(self) -> None:
         cat = pd.CategoricalDtype(
             categories=["foo", "bar", "baz", "qux", "quux", "corge"]
@@ -4969,7 +5028,7 @@ class TestDataset:
         )
         ser = pd.Series(1, index=cat)
         ds = ser.to_xarray()
-        assert ds.coords.dtypes["index"] == np.dtype("O")
+        assert ds.coords.dtypes["index"] == ser.index.dtype
 
     @requires_sparse
     def test_from_dataframe_sparse(self) -> None:

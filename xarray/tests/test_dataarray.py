@@ -724,7 +724,7 @@ class TestDataArray:
 
     def test_setitem(self) -> None:
         # basic indexing should work as numpy's indexing
-        tuples = [
+        tuples: list[tuple[int | list[int] | slice, int | list[int] | slice]] = [
             (0, 0),
             (0, slice(None, None)),
             (slice(None, None), slice(None, None)),
