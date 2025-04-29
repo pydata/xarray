@@ -19,7 +19,6 @@ from packaging.version import Version
 
 from xarray.core import duck_array_ops
 from xarray.core.coordinate_transform import CoordinateTransform
-from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.nputils import NumpyVIndexAdapter
 from xarray.core.options import OPTIONS
 from xarray.core.types import T_Xarray
@@ -37,6 +36,7 @@ from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import array_type, integer_types, is_chunked_array
 
 if TYPE_CHECKING:
+    from xarray.core.extension_array import PandasExtensionArray
     from xarray.core.indexes import Index
     from xarray.core.types import Self
     from xarray.core.variable import Variable
@@ -1797,6 +1797,8 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         # We return an PandasExtensionArray wrapper type that satisfies
         # duck array protocols. This is what's needed for tests to pass.
         if pd.api.types.is_extension_array_dtype(self.array):
+            from xarray.core.extension_array import PandasExtensionArray
+
             return PandasExtensionArray(self.array.array)
         return np.asarray(self)
 

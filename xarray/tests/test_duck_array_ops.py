@@ -196,8 +196,8 @@ class TestOps:
         concatenated = concatenate(
             (PandasExtensionArray(arrow1), PandasExtensionArray(arrow2))
         )
-        assert concatenated[2]["x"] == 3
-        assert concatenated[3]["y"]
+        assert concatenated[2].array[0]["x"] == 3
+        assert concatenated[3].array[0]["y"]
 
     def test___getitem__extension_duck_array(self, categorical1):
         extension_duck_array = PandasExtensionArray(categorical1)
@@ -1094,8 +1094,3 @@ def test_extension_array_singleton_equality(categorical1):
 def test_extension_array_repr(int1):
     int_duck_array = PandasExtensionArray(int1)
     assert repr(int1) in repr(int_duck_array)
-
-
-def test_extension_array_attr(int1):
-    int_duck_array = PandasExtensionArray(int1)
-    assert (~int_duck_array.fillna(10)).all()

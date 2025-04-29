@@ -626,6 +626,8 @@ def short_array_repr(array):
 
     if isinstance(array, AbstractArray):
         array = array.data
+    if isinstance(array, pd.api.extensions.ExtensionArray):
+        return repr(array)
     array = to_duck_array(array)
 
     # default to lower precision so a full (abbreviated) line can fit on

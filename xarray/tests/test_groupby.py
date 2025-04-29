@@ -815,7 +815,7 @@ def test_groupby_getitem(dataset) -> None:
     assert_identical(dataset.cat.sel(y=[1]), dataset.cat.groupby("y")[1])
 
     with pytest.raises(
-        NotImplementedError, match="Cannot broadcast 1d-only pandas categorical array."
+        NotImplementedError, match="Cannot broadcast 1d-only pandas extension array."
     ):
         dataset.groupby("boo")
     dataset = dataset.drop_vars(["cat"])
