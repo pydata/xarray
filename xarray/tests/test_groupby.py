@@ -3268,7 +3268,7 @@ def test_groupby_dask_eager_load_warnings() -> None:
         with pytest.warns(DeprecationWarning):
             ds.groupby("x", eagerly_compute_group=False)
     with pytest.raises(ValueError, match="Eagerly computing"):
-        ds.groupby("x", eagerly_compute_group=True)
+        ds.groupby("x", eagerly_compute_group=True)  # type: ignore[arg-type]
 
     # This is technically fine but anyone iterating over the groupby object
     # will see an error, so let's warn and have them opt-in.
@@ -3281,7 +3281,7 @@ def test_groupby_dask_eager_load_warnings() -> None:
         with pytest.warns(DeprecationWarning):
             ds.groupby_bins("x", bins=3, eagerly_compute_group=False)
     with pytest.raises(ValueError, match="Eagerly computing"):
-        ds.groupby_bins("x", bins=3, eagerly_compute_group=True)
+        ds.groupby_bins("x", bins=3, eagerly_compute_group=True)  # type: ignore[arg-type]
     ds.groupby_bins("x", bins=[1, 2, 3])
     with pytest.warns(DeprecationWarning):
         ds.groupby_bins("x", bins=[1, 2, 3], eagerly_compute_group=False)
