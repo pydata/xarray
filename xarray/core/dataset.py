@@ -9863,7 +9863,7 @@ class Dataset(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
-        eagerly_compute_group: False
+        eagerly_compute_group: False, optional
             This argument is deprecated.
         **groupers : Mapping of str to Grouper or Resampler
             Mapping of variable name to group by to :py:class:`Grouper` or :py:class:`Resampler` object.
@@ -10002,7 +10002,7 @@ class Dataset(
             coordinates.
         duplicates : {"raise", "drop"}, default: "raise"
             If bin edges are not unique, raise ValueError or drop non-uniques.
-        eagerly_compute_group: False
+        eagerly_compute_group: False, optional
             This argument is deprecated.
 
         Returns
