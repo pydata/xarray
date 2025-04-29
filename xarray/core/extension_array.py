@@ -6,8 +6,8 @@ from typing import Generic, cast
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 from pandas.api.types import is_extension_array_dtype
-from rattler import Version
 
 from xarray.core.types import DTypeLikeSave, T_ExtensionArray
 from xarray.core.utils import NDArrayMixin
