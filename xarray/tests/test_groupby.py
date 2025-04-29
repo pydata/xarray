@@ -3308,6 +3308,33 @@ def test_groupby_dask_eager_load_warnings() -> None:
     ds.groupby_bins("x", bins=[1, 2, 3], eagerly_compute_group=False)
 
 
+def test_groupby_return_group_dataset_type(dataset):
+    # Checks GH10246
+    def group_val(groupers):
+        ret = next(iter(groupers))[0]
+        return ret
+
+    assert isinstance(group_val(dataset.groupby("baz")), str)
+    assert isinstance(group_val(dataset.groupby(["baz"])), tuple)
+    assert isinstance(group_val(dataset.groupby(["baz"]))[0], str)
+
+
+def test_groupby_return_group_dataarray_type(array):
+    # Checks GH10246
+    def group_val(groupers):
+        ret = next(iter(groupers))[0]
+        return ret
+
+    assert isinstance(group_val(array.groupby("x")), str)
+    assert isinstance(group_val(array.groupby(["x"])), tuple)
+    assert isinstance(group_val(array.groupby(["x"]))[0], str)
+
+
+def test_groupby_return_group_type_raise(dataset):
+    with pytest.raises(TypeError, match="xarray variable or dimension"):
+        dataset.groupby_bins(["y"], [0, 1])
+
+
 # TODO: Possible property tests to add to this module
 # 1. lambda x: x
 # 2. grouped-reduce on unique coords is identical to array
