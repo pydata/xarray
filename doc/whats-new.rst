@@ -76,6 +76,8 @@ Bug fixes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Variables with no temporal dimension are left untouched by :py:meth:`~xarray.Dataset.convert_calendar`. (:issue:`10266`,  :pull:`10268`)
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
+- Enable `chunk_key_encoding` in :py:meth:`~xarray.Dataset.to_zarr` for Zarr v2 Datasets (:pull:`10274`)
+  By `BrianMichell <https://github.com/BrianMichell>`_.
 
 Documentation
 ~~~~~~~~~~~~~
