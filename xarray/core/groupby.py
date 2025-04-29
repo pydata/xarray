@@ -381,7 +381,7 @@ def _parse_group_and_groupers(
     group: GroupInput,
     groupers: dict[str, Grouper],
     *,
-    eagerly_compute_group: Literal[False],
+    eagerly_compute_group: Literal[False] | None,
 ) -> tuple[ResolvedGrouper, ...]:
     from xarray.core.dataarray import DataArray
     from xarray.core.variable import Variable
