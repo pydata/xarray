@@ -7,6 +7,7 @@ from typing import Generic, cast
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_extension_array_dtype
+from rattler import Version
 
 from xarray.core.types import DTypeLikeSave, T_ExtensionArray
 from xarray.core.utils import NDArrayMixin
@@ -137,4 +138,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
     def __array__(
         self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
-        return np.array(self.array, dtype=dtype, copy=copy)
+        if Version(np.__version__) >= Version("2.0.0"):
+            return np.asarray(self.array, dtype=dtype, copy=copy)
+        else:
+            return np.asarray(self.array, dtype=dtype)
