@@ -78,7 +78,8 @@ def check_reduce_dims(reduce_dims, dimensions):
         if any(dim not in dimensions for dim in reduce_dims):
             raise ValueError(
                 f"cannot reduce over dimensions {reduce_dims!r}. expected either '...' "
-                f"to reduce over all dimensions or one or more of {dimensions!r}."
+                f"to reduce over all dimensions or one or more of {dimensions!r}. "
+                f"Alternatively, install the `flox` package. "
             )
 
 
@@ -1135,7 +1136,7 @@ class GroupBy(Generic[T_Xarray]):
         group_dims = set(grouper.group.dims)
         new_coords = []
         to_drop = []
-        if group_dims.issubset(set(parsed_dim)):
+        if group_dims & set(parsed_dim):
             for grouper in self.groupers:
                 output_index = grouper.full_index
                 if isinstance(output_index, pd.RangeIndex):
