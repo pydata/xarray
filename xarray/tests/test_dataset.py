@@ -1829,7 +1829,7 @@ class TestDataset:
         series = pd.Series([1, 2, pd.NA, 3], dtype=pd.Int32Dtype())
         test = xr.Dataset({"test": series})
         res = test.reindex(dim_0=series.index)
-        assert (res["dim_0"] == series.index).all()
+        align(res, test, join="exact")
 
     def test_categorical_multiindex(self) -> None:
         i1 = pd.Series([0, 0])
