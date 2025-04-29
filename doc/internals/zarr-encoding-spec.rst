@@ -97,9 +97,12 @@ For example, to specify a custom separator for chunk keys:
     # Create and write a dataset with custom chunk key encoding
     arr = np.ones((42, 100))
     ds = xr.DataArray(arr, name="var1").to_dataset()
-    ds.to_zarr("example.zarr", zarr_format=2, mode="w",
-               encoding={"var1": {"chunks": (42, 50),
-                                 "chunk_key_encoding": enc}})
+    ds.to_zarr(
+        "example.zarr",
+        zarr_format=2,
+        mode="w",
+        encoding={"var1": {"chunks": (42, 50), "chunk_key_encoding": enc}},
+    )
 
 The ``chunk_key_encoding`` option accepts a dictionary that specifies the encoding
 configuration. For Zarr V2 arrays, you can use the ``V2ChunkKeyEncoding`` class from
@@ -116,4 +119,5 @@ when working with tools that expect a particular chunk key format.
     :suppress:
 
     import shutil
+
     shutil.rmtree("example.zarr")
