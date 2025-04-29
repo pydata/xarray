@@ -3662,7 +3662,12 @@ class TestZarrDictStore(ZarrBase):
             yield {}
 
     def test_chunk_key_encoding(self) -> None:
-        from zarr.core.chunk_key_encodings import V2ChunkKeyEncoding
+        try:
+            from zarr.core.chunk_key_encodings import V2ChunkKeyEncoding
+            encoding = V2ChunkKeyEncoding(separator="/").to_dict()
+        except ImportError:
+            # Fallback for zarr<3
+            encoding = {'name': 'v2', 'configuration': {'separator': '/'}}
 
         # Create a dataset with a variable name containing a period
         data = np.ones((4, 4))
@@ -3671,7 +3676,7 @@ class TestZarrDictStore(ZarrBase):
         # Set up chunk key encoding with slash separator
         encoding = {
             "var1": {
-                "chunk_key_encoding": V2ChunkKeyEncoding(separator="/").to_dict(),
+                "chunk_key_encoding": encoding,
                 "chunks": (2, 2),
             }
         }
