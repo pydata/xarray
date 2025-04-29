@@ -6805,7 +6805,7 @@ class DataArray(
         *,
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
-        eagerly_compute_group: bool = True,
+        eagerly_compute_group: Literal[False] | None = None,
         **groupers: Grouper,
     ) -> DataArrayGroupBy:
         """Returns a DataArrayGroupBy object for performing grouped operations.
@@ -6821,11 +6821,8 @@ class DataArray(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
-        eagerly_compute_group: bool
-            Whether to eagerly compute ``group`` when it is a chunked array.
-            This option is to maintain backwards compatibility. Set to False
-            to opt-in to future behaviour, where ``group`` is not automatically loaded
-            into memory.
+        eagerly_compute_group: bool, optional
+            This argument is deprecated.
         **groupers : Mapping of str to Grouper or Resampler
             Mapping of variable name to group by to :py:class:`Grouper` or :py:class:`Resampler` object.
             One of ``group`` or ``groupers`` must be provided.
@@ -6957,7 +6954,7 @@ class DataArray(
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
         duplicates: Literal["raise", "drop"] = "raise",
-        eagerly_compute_group: bool = True,
+        eagerly_compute_group: Literal[False] | None = None,
     ) -> DataArrayGroupBy:
         """Returns a DataArrayGroupBy object for performing grouped operations.
 
@@ -6994,11 +6991,8 @@ class DataArray(
             coordinates.
         duplicates : {"raise", "drop"}, default: "raise"
             If bin edges are not unique, raise ValueError or drop non-uniques.
-        eagerly_compute_group: bool
-            Whether to eagerly compute ``group`` when it is a chunked array.
-            This option is to maintain backwards compatibility. Set to False
-            to opt-in to future behaviour, where ``group`` is not automatically loaded
-            into memory.
+        eagerly_compute_group: bool, optional
+            This argument is deprecated.
 
         Returns
         -------
