@@ -1644,6 +1644,7 @@ Exceptions
 .. autosummary::
    :toctree: generated/
 
+   AlignmentError
    MergeError
    SerializationWarning
 
@@ -1655,9 +1656,9 @@ Exceptions raised when manipulating trees.
 .. autosummary::
    :toctree: generated/
 
-   xarray.TreeIsomorphismError
-   xarray.InvalidTreeError
-   xarray.NotFoundInTreeError
+   TreeIsomorphismError
+   InvalidTreeError
+   NotFoundInTreeError
 
 Advanced API
 ============

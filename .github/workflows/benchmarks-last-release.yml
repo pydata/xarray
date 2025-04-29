@@ -9,7 +9,7 @@ on:
 jobs:
   benchmark:
     name: Linux
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     env:
       ASV_DIR: "./asv_bench"
       CONDA_ENV_FILE: ci/requirements/environment.yml
