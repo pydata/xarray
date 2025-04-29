@@ -31,7 +31,10 @@ New Features
   `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 - Improved support pandas categorical extension as indices (i.e., :py:class:`pandas.IntervalIndex`). (:issue:`9661`, :pull:`9671`)
   By `Ilan Gold <https://github.com/ilan-gold>`_.
-
+- Improved checks and errors raised when trying to align objects with conflicting indexes.
+  It is now possible to align objects each with multiple indexes sharing common dimension(s).
+  (:issue:`7695`, :pull:`10251`)
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -50,6 +53,12 @@ Breaking changes
   instead of numpy object arrays containing tuples. This change enables interval-aware indexing of
   such Xarray objects. (:pull:`9671`). By `Ilan Gold <https://github.com/ilan-gold>`_.
 - Remove ``PandasExtensionArrayIndex`` from :py:attr:`xarray.Variable.data` when the attribute is a :py:class:`pandas.api.extensions.ExtensionArray` (:pull:`10263`). By `Ilan Gold <https://github.com/ilan-gold>`_.
+- The html and text ``repr`` for ``DataTree`` are now truncated. Up to 6 children are displayed
+  for each node -- the first 3 and the last 3 children -- with a ``...`` between them. The number
+  of children to include in the display is configurable via options. For instance use
+  ``set_options(display_max_children=8)`` to display 8 children rather than the default 6. (:pull:`10139`)
+  By `Julia Signell <https://github.com/jsignell>`_.
+
 
 Deprecations
 ~~~~~~~~~~~~
@@ -63,6 +72,8 @@ Bug fixes
   had no effect. (Mentioned in :issue:`9921`)
 - Enable ``keep_attrs`` in ``DatasetView.map`` relevant for :py:func:`map_over_datasets`  (:pull:`10219`)
   By `Mathias Hauser <https://github.com/mathause>`_.
+- Variables with no temporal dimension are left untouched by :py:meth:`~xarray.Dataset.convert_calendar`. (:issue:`10266`,  :pull:`10268`)
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -76,6 +87,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Avoid stacking when grouping by a chunked array. This can be a large performance improvement.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.2025.03.1:
 

@@ -23,6 +23,7 @@ except ImportError:
 
 import xarray as xr
 from xarray import (
+    AlignmentError,
     DataArray,
     Dataset,
     IndexVariable,
@@ -2548,6 +2549,28 @@ class TestDataset:
         )
 
         assert_identical(expected_x2, x2)
+
+    def test_align_multiple_indexes_common_dim(self) -> None:
+        a = Dataset(coords={"x": [1, 2], "xb": ("x", [3, 4])}).set_xindex("xb")
+        b = Dataset(coords={"x": [1], "xb": ("x", [3])}).set_xindex("xb")
+
+        (a2, b2) = align(a, b, join="inner")
+        assert_identical(a2, b, check_default_indexes=False)
+        assert_identical(b2, b, check_default_indexes=False)
+
+        c = Dataset(coords={"x": [1, 3], "xb": ("x", [2, 4])}).set_xindex("xb")
+
+        with pytest.raises(AlignmentError, match=".*conflicting re-indexers"):
+            align(a, c)
+
+    def test_align_conflicting_indexes(self) -> None:
+        class CustomIndex(PandasIndex): ...
+
+        a = Dataset(coords={"xb": ("x", [3, 4])}).set_xindex("xb")
+        b = Dataset(coords={"xb": ("x", [3])}).set_xindex("xb", CustomIndex)
+
+        with pytest.raises(AlignmentError, match="cannot align.*conflicting indexes"):
+            align(a, b)
 
     def test_align_non_unique(self) -> None:
         x = Dataset({"foo": ("x", [3, 4, 5]), "x": [0, 0, 1]})
