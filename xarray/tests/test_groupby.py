@@ -1646,6 +1646,19 @@ class TestDataArrayGroupBy:
             actual_sum = array.groupby(dim).sum(...)
             assert_identical(expected_sum, actual_sum)
 
+        if has_flox:
+            # GH9803
+            # reduce over one dim of a nD grouper
+            array.coords["labels"] = (("ny", "nx"), np.array([["a", "b"], ["b", "a"]]))
+            actual = array.groupby("labels").sum("nx")
+            expected_np = np.array([[[0, 1], [3, 2]], [[5, 10], [20, 15]]])
+            expected = xr.DataArray(
+                expected_np,
+                dims=("time", "ny", "labels"),
+                coords={"labels": ["a", "b"]},
+            )
+            assert_identical(expected, actual)
+
     def test_groupby_multidim_map(self) -> None:
         array = self.make_groupby_multidim_example_array()
         actual = array.groupby("lon").map(lambda x: x - x.mean())
