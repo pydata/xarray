@@ -9,6 +9,7 @@ import pandas as pd
 from pandas.api.types import is_extension_array_dtype
 
 from xarray.core.types import DTypeLikeSave, T_ExtensionArray
+from xarray.core.utils import NDArrayMixin
 
 HANDLED_EXTENSION_ARRAY_FUNCTIONS: dict[Callable, Callable] = {}
 
@@ -64,7 +65,7 @@ def __extension_duck_array__where(
 
 
 @dataclass(frozen=True)
-class PandasExtensionArray(Generic[T_ExtensionArray]):
+class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
     """NEP-18 compliant wrapper for pandas extension arrays.
 
     Parameters
@@ -107,19 +108,13 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         return ufunc(*inputs, **kwargs)
 
-    def __repr__(self):
-        return f"PandasExtensionArray(array={self.array!r})"
-
-    def __getattr__(self, attr: str) -> object:
-        return getattr(super().__getattribute__("array"), attr)
-
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
         item = self.array[key]
         if is_extension_array_dtype(item):
-            return type(self)(item)
-        if np.isscalar(item):
-            return type(self)(type(self.array)([item]))  # type: ignore[call-arg]  # only subclasses with proper __init__ allowed
-        return item
+            return PandasExtensionArray(item)
+        if np.isscalar(item) or isinstance(key, int):
+            return PandasExtensionArray(type(self.array)._from_sequence([item]))  # type: ignore[call-arg]  # only subclasses with proper __init__ allowed
+        return PandasExtensionArray(item)
 
     def __setitem__(self, key, val):
         self.array[key] = val
@@ -134,3 +129,12 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
 
     def __len__(self):
         return len(self.array)
+
+    @property
+    def ndim(self) -> int:
+        return 1
+
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray:
+        return np.array(self.array, dtype=dtype, copy=copy)

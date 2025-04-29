@@ -411,12 +411,19 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         Variable.values
         """
         if isinstance(self._data, PandasExtensionArray):
-            return self._data.array
-        if is_duck_array(self._data):
-            return self._data
-        if isinstance(self._data, indexing.ExplicitlyIndexed):
-            return self._data.get_duck_array()
-        return self.values
+            duck_array = self._data.array
+        elif isinstance(self._data, indexing.ExplicitlyIndexed):
+            duck_array = self._data.get_duck_array()
+        elif is_duck_array(self._data):
+            duck_array = self._data
+        else:
+            duck_array = self.values
+        if isinstance(duck_array, PandasExtensionArray):
+            # even though PandasExtensionArray is a duck array,
+            # we should not return the PandasExtensionArray wrapper,
+            # and instead return the underlying data.
+            return duck_array.array
+        return duck_array
 
     @data.setter
     def data(self, data: T_DuckArray | ArrayLike) -> None:
