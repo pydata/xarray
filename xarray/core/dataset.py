@@ -9566,7 +9566,7 @@ class Dataset(
         """
         Curve fitting optimization for arbitrary functions.
 
-        Wraps `scipy.optimize.curve_fit` with `apply_ufunc`.
+        Wraps :py:func:`scipy.optimize.curve_fit` with :py:func:`~xarray.apply_ufunc`.
 
         Parameters
         ----------
@@ -9626,6 +9626,9 @@ class Dataset(
         --------
         Dataset.polyfit
         scipy.optimize.curve_fit
+        xarray.Dataset.xlm.modelfit
+            External method from `xarray-lmfit <https://xarray-lmfit.readthedocs.io/>`_
+            with more curve fitting functionality.
         """
         from xarray.computation.fit import curvefit as curvefit_impl
 
