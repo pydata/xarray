@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Generic, cast
+from typing import Any, Generic, cast
 
 import numpy as np
 import pandas as pd
@@ -142,3 +142,6 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
             return np.asarray(self.array, dtype=dtype, copy=copy)
         else:
             return np.asarray(self.array, dtype=dtype)
+
+    def __getattr__(self, attr: str) -> Any:
+        return getattr(self.array, attr)

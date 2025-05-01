@@ -1094,3 +1094,8 @@ def test_extension_array_singleton_equality(categorical1):
 def test_extension_array_repr(int1):
     int_duck_array = PandasExtensionArray(int1)
     assert repr(int1) in repr(int_duck_array)
+
+
+def test_extension_array_attr():
+    array = pd.Categorical(["cat2", "cat1", "cat2", "cat3", "cat1"])
+    assert (array.categories == PandasExtensionArray(array).categories).all()

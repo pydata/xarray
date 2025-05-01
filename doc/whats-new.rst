@@ -16,10 +16,22 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2025.05.0:
+
+v2025.05.0 (unreleased)
+-----------------------
+
+Bug fixes
+~~~~~~~~~
+
+- Allow accessing arbitrary attributes on Pandas ExtensionArrays.
+  By `Deepak Cherian <https://github.com/dcherian`_.
+
+
 .. _whats-new.2025.04.0:
 
-v2025.04.0 (unreleased)
------------------------
+v2025.04.0 (Apr 28, 2025)
+-------------------------
 
 This release brings bug fixes, better support for extension arrays including returning a
 :py:class:`pandas.IntervalArray` from ``groupby_bins``, and performance improvements.
