@@ -1680,6 +1680,14 @@ class TestVariable(VariableSubclassobjects):
         assert v_expanded.dims == ("z", "x", "y")
         assert v_expanded.shape == (1, 3, 4)
 
+        v_expanded = v.set_dims(["x", "z", "y"])
+        assert v_expanded.dims == ("x", "z", "y")
+        assert v_expanded.shape == (3, 1, 4)
+
+        v_expanded = v.set_dims(["x", "y", "z"])
+        assert v_expanded.dims == ("x", "y", "z")
+        assert v_expanded.shape == (3, 4, 1)
+
         # Explicitly asking for a shape of 1 triggers a different
         # codepath in set_dims
         # https://github.com/pydata/xarray/issues/9462
