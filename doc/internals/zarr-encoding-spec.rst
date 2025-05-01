@@ -75,7 +75,7 @@ re-open it directly with Zarr:
     shutil.rmtree("rasm.zarr")
 
 Chunk Key Encoding
------------------
+------------------
 
 When writing data to Zarr stores, Xarray supports customizing how chunk keys are encoded
 through the ``chunk_key_encoding`` parameter in the variable's encoding dictionary. This
