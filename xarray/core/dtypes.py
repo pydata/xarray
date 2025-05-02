@@ -67,7 +67,7 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
         # for now, we always promote string dtypes to object for consistency with existing behavior
         # TODO: refactor this once we have a better way to handle numpy vlen-string dtypes
         dtype_ = object
-        fill_value = np.nan
+        fill_value = ""
     elif isdtype(dtype, "real floating"):
         dtype_ = dtype
         fill_value = np.nan
