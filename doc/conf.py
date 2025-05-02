@@ -340,6 +340,7 @@ intersphinx_mapping = {
     "sparse": ("https://sparse.pydata.org/en/latest/", None),
     "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
     "zarr": ("https://zarr.readthedocs.io/en/stable/", None),
+    "xarray-lmfit": ("https://xarray-lmfit.readthedocs.io/stable", None),
 }
 
 # based on numpy doc/source/conf.py
