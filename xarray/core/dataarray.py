@@ -6410,7 +6410,7 @@ class DataArray(
         """
         Curve fitting optimization for arbitrary functions.
 
-        Wraps `scipy.optimize.curve_fit` with `apply_ufunc`.
+        Wraps :py:func:`scipy.optimize.curve_fit` with :py:func:`~xarray.apply_ufunc`.
 
         Parameters
         ----------
@@ -6550,6 +6550,9 @@ class DataArray(
         --------
         DataArray.polyfit
         scipy.optimize.curve_fit
+        xarray.DataArray.xlm.modelfit
+            External method from `xarray-lmfit <https://xarray-lmfit.readthedocs.io/>`_
+            with more curve fitting functionality.
         """
         # For DataArray, use the original implementation by converting to a dataset first
         return self._to_temp_dataset().curvefit(

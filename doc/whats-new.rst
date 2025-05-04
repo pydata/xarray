@@ -21,6 +21,11 @@ What's New
 v2025.04.0 (unreleased)
 -----------------------
 
+This release brings bug fixes, better support for extension arrays including returning a
+:py:class:`pandas.IntervalArray` from ``groupby_bins``, and performance improvements.
+Thanks to the 24 contributors to this release:
+Alban Farchi, Andrecho, Benoit Bovy, Deepak Cherian, Dimitri Papadopoulos Orfanos, Florian Jetter, Giacomo Caria, Ilan Gold, Illviljan, Joren Hammudoglu, Julia Signell, Kai Muehlbauer, Kai Mühlbauer, Mathias Hauser, Mattia Almansi, Michael Sumner, Miguel Jimenez, Nick Hodgskin (🦎 Vecko), Pascal Bourgault, Philip Chmielowiec, Scott Henderson, Spencer Clark, Stephan Hoyer and Tom Nicholas
+
 New Features
 ~~~~~~~~~~~~
 
@@ -29,7 +34,7 @@ New Features
 - Improved compatibility with OPeNDAP DAP4 data model for backend engine ``pydap``. This
   includes ``datatree`` support, and removing slashes from dimension names. By
   `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
-- Improved support pandas Extension Arrays. (:issue:`9661`, :pull:`9671`)
+- Improved support pandas categorical extension as indices (i.e., :py:class:`pandas.IntervalIndex`). (:issue:`9661`, :pull:`9671`)
   By `Ilan Gold <https://github.com/ilan-gold>`_.
 - Improved checks and errors raised when trying to align objects with conflicting indexes.
   It is now possible to align objects each with multiple indexes sharing common dimension(s).
@@ -52,6 +57,7 @@ Breaking changes
   now return objects indexed by :py:meth:`pandas.IntervalArray` objects,
   instead of numpy object arrays containing tuples. This change enables interval-aware indexing of
   such Xarray objects. (:pull:`9671`). By `Ilan Gold <https://github.com/ilan-gold>`_.
+- Remove ``PandasExtensionArrayIndex`` from :py:attr:`xarray.Variable.data` when the attribute is a :py:class:`pandas.api.extensions.ExtensionArray` (:pull:`10263`). By `Ilan Gold <https://github.com/ilan-gold>`_.
 - The html and text ``repr`` for ``DataTree`` are now truncated. Up to 6 children are displayed
   for each node -- the first 3 and the last 3 children -- with a ``...`` between them. The number
   of children to include in the display is configurable via options. For instance use
