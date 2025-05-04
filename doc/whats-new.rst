@@ -41,6 +41,13 @@ New Features
   (:issue:`7695`, :pull:`10251`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
 
+Performance
+~~~~~~~~~~~
+
+- Small optimizations to help reduce indexing speed of datasets (:pull:`9003`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
+
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
