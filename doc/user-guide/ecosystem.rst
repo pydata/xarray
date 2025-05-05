@@ -89,6 +89,7 @@ Extend xarray capabilities
 - `X-regression <https://github.com/kuchaale/X-regression>`_: Multiple linear regression from Statsmodels library coupled with Xarray library.
 - `xskillscore <https://github.com/xarray-contrib/xskillscore>`_: Metrics for verifying forecasts.
 - `xyzpy <https://xyzpy.readthedocs.io>`_: Easily generate high dimensional data, including parallelization.
+- `xarray-lmfit <https://github.com/kmnhan/xarray-lmfit>`_: xarray extension for curve fitting using `lmfit <https://lmfit.github.io/lmfit-py/>`_.
 
 Visualization
 ~~~~~~~~~~~~~

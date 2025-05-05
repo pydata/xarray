@@ -196,8 +196,8 @@ class TestOps:
         concatenated = concatenate(
             (PandasExtensionArray(arrow1), PandasExtensionArray(arrow2))
         )
-        assert concatenated[2]["x"] == 3
-        assert concatenated[3]["y"]
+        assert concatenated[2].array[0]["x"] == 3
+        assert concatenated[3].array[0]["y"]
 
     def test___getitem__extension_duck_array(self, categorical1):
         extension_duck_array = PandasExtensionArray(categorical1)
@@ -367,7 +367,7 @@ def construct_dataarray(dim_num, dtype, contains_nan, dask):
     da = DataArray(array, dims=dims, coords={"x": np.arange(16)}, name="da")
 
     if dask and has_dask:
-        chunks = {d: 4 for d in dims}
+        chunks = dict.fromkeys(dims, 4)
         da = da.chunk(chunks)
 
     return da
@@ -1094,8 +1094,3 @@ def test_extension_array_singleton_equality(categorical1):
 def test_extension_array_repr(int1):
     int_duck_array = PandasExtensionArray(int1)
     assert repr(int1) in repr(int_duck_array)
-
-
-def test_extension_array_attr(int1):
-    int_duck_array = PandasExtensionArray(int1)
-    assert (~int_duck_array.fillna(10)).all()

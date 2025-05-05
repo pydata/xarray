@@ -4,7 +4,7 @@ import datetime
 import operator
 import warnings
 from itertools import pairwise
-from typing import Literal
+from typing import Literal, cast
 from unittest import mock
 
 import numpy as np
@@ -14,7 +14,6 @@ from packaging.version import Version
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
-from xarray.core.alignment import broadcast
 from xarray.core.groupby import _consolidate_slices
 from xarray.core.types import InterpOptions, ResampleCompatible
 from xarray.groupers import (
@@ -25,6 +24,7 @@ from xarray.groupers import (
     UniqueGrouper,
 )
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.structure.alignment import broadcast
 from xarray.tests import (
     InaccessibleArray,
     assert_allclose,
@@ -154,7 +154,7 @@ def test_multi_index_groupby_sum() -> None:
 
 
 @requires_pandas_ge_2_2
-def test_multi_index_propagation():
+def test_multi_index_propagation() -> None:
     # regression test for GH9648
     times = pd.date_range("2023-01-01", periods=4)
     locations = ["A", "B"]
@@ -815,7 +815,7 @@ def test_groupby_getitem(dataset) -> None:
     assert_identical(dataset.cat.sel(y=[1]), dataset.cat.groupby("y")[1])
 
     with pytest.raises(
-        NotImplementedError, match="Cannot broadcast 1d-only pandas categorical array."
+        NotImplementedError, match="Cannot broadcast 1d-only pandas extension array."
     ):
         dataset.groupby("boo")
     dataset = dataset.drop_vars(["cat"])
@@ -1062,6 +1062,12 @@ def test_groupby_bins_cut_kwargs(use_flox: bool) -> None:
         ).mean()
     assert_identical(expected, actual)
 
+    with xr.set_options(use_flox=use_flox):
+        bins_index = pd.IntervalIndex.from_breaks(x_bins)
+        labels = ["one", "two", "three"]
+        actual = da.groupby(x=BinGrouper(bins=bins_index, labels=labels)).sum()
+        assert actual.xindexes["x_bins"].index.equals(pd.Index(labels))  # type: ignore[attr-defined]
+
 
 @pytest.mark.parametrize("indexed_coord", [True, False])
 @pytest.mark.parametrize(
@@ -1118,7 +1124,8 @@ def test_groupby_math_nD_group() -> None:
     expected = da.isel(x=slice(30)) - expanded_mean
     expected["labels"] = expected.labels.broadcast_like(expected.labels2d)
     expected["num"] = expected.num.broadcast_like(expected.num2d)
-    expected["num2d_bins"] = (("x", "y"), mean.num2d_bins.data[idxr])
+    # mean.num2d_bins.data is a pandas IntervalArray so needs to be put in `numpy` to allow indexing
+    expected["num2d_bins"] = (("x", "y"), mean.num2d_bins.data.to_numpy()[idxr])
     actual = g - mean
     assert_identical(expected, actual)
 
@@ -1618,6 +1625,8 @@ class TestDataArrayGroupBy:
         expected = array  # should be a no-op
         assert_identical(expected, actual)
 
+        # TODO: groupby_bins too
+
     def make_groupby_multidim_example_array(self) -> DataArray:
         return DataArray(
             [[[0, 1], [2, 3]], [[5, 10], [15, 20]]],
@@ -1636,6 +1645,19 @@ class TestDataArrayGroupBy:
         ]:
             actual_sum = array.groupby(dim).sum(...)
             assert_identical(expected_sum, actual_sum)
+
+        if has_flox:
+            # GH9803
+            # reduce over one dim of a nD grouper
+            array.coords["labels"] = (("ny", "nx"), np.array([["a", "b"], ["b", "a"]]))
+            actual = array.groupby("labels").sum("nx")
+            expected_np = np.array([[[0, 1], [3, 2]], [[5, 10], [20, 15]]])
+            expected = xr.DataArray(
+                expected_np,
+                dims=("time", "ny", "labels"),
+                coords={"labels": ["a", "b"]},
+            )
+            assert_identical(expected, actual)
 
     def test_groupby_multidim_map(self) -> None:
         array = self.make_groupby_multidim_example_array()
@@ -1678,13 +1700,9 @@ class TestDataArrayGroupBy:
         df["dim_0_bins"] = pd.cut(array["dim_0"], bins, **cut_kwargs)  # type: ignore[call-overload]
 
         expected_df = df.groupby("dim_0_bins", observed=True).sum()
-        # TODO: can't convert df with IntervalIndex to Xarray
-        expected = (
-            expected_df.reset_index(drop=True)
-            .to_xarray()
-            .assign_coords(index=np.array(expected_df.index))
-            .rename({"index": "dim_0_bins"})["a"]
-        )
+        expected = expected_df.to_xarray().assign_coords(
+            dim_0_bins=cast(pd.CategoricalIndex, expected_df.index).categories
+        )["a"]
 
         with xr.set_options(use_flox=use_flox):
             gb = array.groupby_bins("dim_0", bins=bins, **cut_kwargs)
@@ -1843,7 +1861,6 @@ class TestDataArrayGroupBy:
 
 class TestDataArrayResample:
     @pytest.mark.parametrize("shuffle", [True, False])
-    @pytest.mark.parametrize("use_cftime", [True, False])
     @pytest.mark.parametrize(
         "resample_freq",
         [
@@ -1904,12 +1921,8 @@ class TestDataArrayResample:
         with pytest.raises(ValueError):
             reverse.resample(time=resample_freq).mean()
 
-    @pytest.mark.parametrize("use_cftime", [True, False])
     def test_resample_doctest(self, use_cftime: bool) -> None:
         # run the doctest example here so we are not surprised
-        if use_cftime and not has_cftime:
-            pytest.skip()
-
         da = xr.DataArray(
             np.array([1, 2, 3, 1, 2, np.nan]),
             dims="time",
@@ -1945,8 +1958,10 @@ class TestDataArrayResample:
         actual = da.resample(time="D").map(func, args=(1.0,), arg3=1.0)
         assert_identical(actual, expected)
 
-    def test_resample_first(self) -> None:
-        times = pd.date_range("2000-01-01", freq="6h", periods=10)
+    def test_resample_first_last(self, use_cftime) -> None:
+        times = xr.date_range(
+            "2000-01-01", freq="6h", periods=10, use_cftime=use_cftime
+        )
         array = DataArray(np.arange(10), [("time", times)])
 
         # resample to same frequency
@@ -1959,7 +1974,7 @@ class TestDataArrayResample:
 
         # verify that labels don't use the first value
         actual = array.resample(time="24h").first()
-        expected = DataArray(array.to_series().resample("24h").first())
+        expected = array.isel(time=[0, 4, 8])
         assert_identical(expected, actual)
 
         # missing values
@@ -1976,10 +1991,17 @@ class TestDataArrayResample:
         # regression test for https://stackoverflow.com/questions/33158558/
         array = Dataset({"time": times})["time"]
         actual = array.resample(time="1D").last()
-        expected_times = pd.to_datetime(
-            ["2000-01-01T18", "2000-01-02T18", "2000-01-03T06"], unit="ns"
+        expected = array.isel(time=[3, 7, 9]).assign_coords(time=times[::4])
+        assert_identical(expected, actual)
+
+        # missing periods, GH10169
+        actual = array.isel(time=[0, 1, 2, 3, 8, 9]).resample(time="1D").last()
+        expected = DataArray(
+            np.array([times[3], np.datetime64("NaT"), times[9]]),
+            dims="time",
+            coords={"time": times[::4]},
+            name="time",
         )
-        expected = DataArray(expected_times, [("time", times[::4])], name="time")
         assert_identical(expected, actual)
 
     def test_resample_bad_resample_dim(self) -> None:
@@ -2289,14 +2311,13 @@ class TestDataArrayResample:
         times = pd.date_range("2000-01-01T02:03:01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
 
-        origin = "start"
+        origin: Literal["start"] = "start"
         actual = array.resample(time="24h", origin=origin).mean()
         expected = DataArray(array.to_series().resample("24h", origin=origin).mean())
         assert_identical(expected, actual)
 
 
 class TestDatasetResample:
-    @pytest.mark.parametrize("use_cftime", [True, False])
     @pytest.mark.parametrize(
         "resample_freq",
         [
@@ -2374,13 +2395,13 @@ class TestDatasetResample:
         # upsampling
         expected_time = pd.date_range("2000-01-01", freq="3h", periods=19)
         expected = ds.reindex(time=expected_time)
-        actual = ds.resample(time="3h")
+        rs = ds.resample(time="3h")
         for how in ["mean", "sum", "first", "last"]:
-            method = getattr(actual, how)
+            method = getattr(rs, how)
             result = method()
             assert_equal(expected, result)
         for method in [np.mean]:
-            result = actual.reduce(method)
+            result = rs.reduce(method)
             assert_equal(expected, result)
 
     def test_resample_min_count(self) -> None:
@@ -2694,7 +2715,7 @@ def test_default_flox_method() -> None:
 
 @requires_cftime
 @pytest.mark.filterwarnings("ignore")
-def test_cftime_resample_gh_9108():
+def test_cftime_resample_gh_9108() -> None:
     import cftime
 
     ds = Dataset(
@@ -2909,33 +2930,21 @@ def test_multiple_groupers(use_flox: bool, shuffle: bool) -> None:
 
     if has_dask:
         b["xy"] = b["xy"].chunk()
-        for eagerly_compute_group in [True, False]:
-            kwargs = dict(
-                x=UniqueGrouper(),
-                xy=UniqueGrouper(labels=["a", "b", "c"]),
-                eagerly_compute_group=eagerly_compute_group,
-            )
-            expected = xr.DataArray(
-                [[[1, 1, 1], [np.nan, 1, 2]]] * 4,
-                dims=("z", "x", "xy"),
-                coords={"xy": ("xy", ["a", "b", "c"], {"foo": "bar"})},
-            )
-            if eagerly_compute_group:
-                with raise_if_dask_computes(max_computes=1):
-                    with pytest.warns(DeprecationWarning):
-                        gb = b.groupby(**kwargs)  # type: ignore[arg-type]
-                    assert_identical(gb.count(), expected)
-            else:
-                with raise_if_dask_computes(max_computes=0):
-                    gb = b.groupby(**kwargs)  # type: ignore[arg-type]
-                assert is_chunked_array(gb.encoded.codes.data)
-                assert not gb.encoded.group_indices
-                if has_flox:
-                    with raise_if_dask_computes(max_computes=1):
-                        assert_identical(gb.count(), expected)
-                else:
-                    with pytest.raises(ValueError, match="when lazily grouping"):
-                        gb.count()
+        expected = xr.DataArray(
+            [[[1, 1, 1], [np.nan, 1, 2]]] * 4,
+            dims=("z", "x", "xy"),
+            coords={"xy": ("xy", ["a", "b", "c"], {"foo": "bar"})},
+        )
+        with raise_if_dask_computes(max_computes=0):
+            gb = b.groupby(x=UniqueGrouper(), xy=UniqueGrouper(labels=["a", "b", "c"]))
+        assert is_chunked_array(gb.encoded.codes.data)
+        assert not gb.encoded.group_indices
+        if has_flox:
+            with raise_if_dask_computes(max_computes=1):
+                assert_identical(gb.count(), expected)
+        else:
+            with pytest.raises(ValueError, match="when lazily grouping"):
+                gb.count()
 
 
 @pytest.mark.parametrize("use_flox", [True, False])
@@ -3044,7 +3053,7 @@ def test_gappy_resample_reductions(reduction):
     assert_identical(expected, actual)
 
 
-def test_groupby_transpose():
+def test_groupby_transpose() -> None:
     # GH5361
     data = xr.DataArray(
         np.random.randn(4, 2),
@@ -3096,15 +3105,13 @@ def test_lazy_grouping(grouper, expect_index):
 
     if has_flox:
         lazy = (
-            xr.Dataset({"foo": data}, coords={"zoo": data})
-            .groupby(zoo=grouper, eagerly_compute_group=False)
-            .count()
+            xr.Dataset({"foo": data}, coords={"zoo": data}).groupby(zoo=grouper).count()
         )
         assert_identical(eager, lazy)
 
 
 @requires_dask
-def test_lazy_grouping_errors():
+def test_lazy_grouping_errors() -> None:
     import dask.array
 
     data = DataArray(
@@ -3114,9 +3121,7 @@ def test_lazy_grouping_errors():
         coords={"y": ("x", dask.array.arange(20, chunks=3))},
     )
 
-    gb = data.groupby(
-        y=UniqueGrouper(labels=np.arange(5, 10)), eagerly_compute_group=False
-    )
+    gb = data.groupby(y=UniqueGrouper(labels=np.arange(5, 10)))
     message = "not supported when lazily grouping by"
     with pytest.raises(ValueError, match=message):
         gb.map(lambda x: x)
@@ -3130,7 +3135,7 @@ def test_lazy_grouping_errors():
 
 
 @requires_dask
-def test_lazy_int_bins_error():
+def test_lazy_int_bins_error() -> None:
     import dask.array
 
     with pytest.raises(ValueError, match="Bin edges must be provided"):
@@ -3138,7 +3143,7 @@ def test_lazy_int_bins_error():
             _ = BinGrouper(bins=4).factorize(DataArray(dask.array.arange(3)))
 
 
-def test_time_grouping_seasons_specified():
+def test_time_grouping_seasons_specified() -> None:
     time = xr.date_range("2001-01-01", "2002-01-01", freq="D")
     ds = xr.Dataset({"foo": np.arange(time.size)}, coords={"time": ("time", time)})
     labels = ["DJF", "MAM", "JJA", "SON"]
@@ -3147,7 +3152,36 @@ def test_time_grouping_seasons_specified():
     assert_identical(actual, expected.reindex(season=labels))
 
 
-def test_groupby_multiple_bin_grouper_missing_groups():
+def test_multiple_grouper_unsorted_order() -> None:
+    time = xr.date_range("2001-01-01", "2003-01-01", freq="MS")
+    ds = xr.Dataset({"foo": np.arange(time.size)}, coords={"time": ("time", time)})
+    labels = ["DJF", "MAM", "JJA", "SON"]
+    actual = ds.groupby(
+        {
+            "time.season": UniqueGrouper(labels=labels),
+            "time.year": UniqueGrouper(labels=[2002, 2001]),
+        }
+    ).sum()
+    expected = (
+        ds.groupby({"time.season": UniqueGrouper(), "time.year": UniqueGrouper()})
+        .sum()
+        .reindex(season=labels, year=[2002, 2001])
+    )
+    assert_identical(actual, expected.reindex(season=labels))
+
+    b = xr.DataArray(
+        np.random.default_rng(0).random((2, 3, 4)),
+        coords={"x": [0, 1], "y": [0, 1, 2]},
+        dims=["x", "y", "z"],
+    )
+    actual2 = b.groupby(
+        x=UniqueGrouper(labels=[1, 0]), y=UniqueGrouper(labels=[2, 0, 1])
+    ).sum()
+    expected2 = b.reindex(x=[1, 0], y=[2, 0, 1]).transpose("z", ...)
+    assert_identical(actual2, expected2)
+
+
+def test_groupby_multiple_bin_grouper_missing_groups() -> None:
     from numpy import nan
 
     ds = xr.Dataset(
@@ -3224,38 +3258,33 @@ def test_shuffle_by(chunks, expected_chunks):
 
 
 @requires_dask
-def test_groupby_dask_eager_load_warnings():
+def test_groupby_dask_eager_load_warnings() -> None:
     ds = xr.Dataset(
         {"foo": (("z"), np.arange(12))},
         coords={"x": ("z", np.arange(12)), "y": ("z", np.arange(12))},
     ).chunk(z=6)
 
-    with pytest.warns(DeprecationWarning):
-        ds.groupby(x=UniqueGrouper())
-
-    with pytest.warns(DeprecationWarning):
-        ds.groupby("x")
-
-    with pytest.warns(DeprecationWarning):
-        ds.groupby(ds.x)
-
     with pytest.raises(ValueError, match="Please pass"):
-        ds.groupby("x", eagerly_compute_group=False)
+        with pytest.warns(DeprecationWarning):
+            ds.groupby("x", eagerly_compute_group=False)
+    with pytest.raises(ValueError, match="Eagerly computing"):
+        ds.groupby("x", eagerly_compute_group=True)  # type: ignore[arg-type]
 
     # This is technically fine but anyone iterating over the groupby object
     # will see an error, so let's warn and have them opt-in.
-    with pytest.warns(DeprecationWarning):
-        ds.groupby(x=UniqueGrouper(labels=[1, 2, 3]))
-
-    ds.groupby(x=UniqueGrouper(labels=[1, 2, 3]), eagerly_compute_group=False)
+    ds.groupby(x=UniqueGrouper(labels=[1, 2, 3]))
 
     with pytest.warns(DeprecationWarning):
-        ds.groupby_bins("x", bins=3)
+        ds.groupby(x=UniqueGrouper(labels=[1, 2, 3]), eagerly_compute_group=False)
+
     with pytest.raises(ValueError, match="Please pass"):
-        ds.groupby_bins("x", bins=3, eagerly_compute_group=False)
+        with pytest.warns(DeprecationWarning):
+            ds.groupby_bins("x", bins=3, eagerly_compute_group=False)
+    with pytest.raises(ValueError, match="Eagerly computing"):
+        ds.groupby_bins("x", bins=3, eagerly_compute_group=True)  # type: ignore[arg-type]
+    ds.groupby_bins("x", bins=[1, 2, 3])
     with pytest.warns(DeprecationWarning):
-        ds.groupby_bins("x", bins=[1, 2, 3])
-    ds.groupby_bins("x", bins=[1, 2, 3], eagerly_compute_group=False)
+        ds.groupby_bins("x", bins=[1, 2, 3], eagerly_compute_group=False)
 
 
 # TODO: Possible property tests to add to this module

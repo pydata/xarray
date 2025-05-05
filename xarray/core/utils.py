@@ -67,7 +67,16 @@ from collections.abc import (
 from enum import Enum
 from pathlib import Path
 from types import EllipsisType, ModuleType
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeGuard, TypeVar, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Literal,
+    TypeGuard,
+    TypeVar,
+    cast,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -751,7 +760,7 @@ def decode_numpy_dict_values(attrs: Mapping[K, V]) -> dict[K, V]:
     attrs = dict(attrs)
     for k, v in attrs.items():
         if isinstance(v, np.ndarray):
-            attrs[k] = v.tolist()
+            attrs[k] = cast(V, v.tolist())
         elif isinstance(v, np.generic):
             attrs[k] = v.item()
     return attrs
@@ -1304,3 +1313,28 @@ def result_name(objects: Iterable[Any]) -> Any:
     else:
         name = None
     return name
+
+
+def _get_func_args(func, param_names):
+    """Use `inspect.signature` to try accessing `func` args. Otherwise, ensure
+    they are provided by user.
+    """
+    try:
+        func_args = inspect.signature(func).parameters
+    except ValueError as err:
+        func_args = {}
+        if not param_names:
+            raise ValueError(
+                "Unable to inspect `func` signature, and `param_names` was not provided."
+            ) from err
+    if param_names:
+        params = param_names
+    else:
+        params = list(func_args)[1:]
+        if any(
+            (p.kind in [p.VAR_POSITIONAL, p.VAR_KEYWORD]) for p in func_args.values()
+        ):
+            raise ValueError(
+                "`param_names` must be provided because `func` takes variable length arguments."
+            )
+    return params, func_args

@@ -1021,6 +1021,22 @@ reads. Because this fall-back option is so much slower, xarray issues a
        instead of falling back to try reading non-consolidated metadata.
 
 
+Fill Values
+~~~~~~~~~~~
+
+Zarr arrays have a ``fill_value`` that is used for chunks that were never written to disk.
+For the Zarr version 2 format, Xarray will set ``fill_value`` to be equal to the CF/NetCDF ``"_FillValue"``.
+This is ``np.nan`` by default for floats, and unset otherwise. Note that the Zarr library will set a
+default ``fill_value`` if not specified (usually ``0``).
+
+For the Zarr version 3 format, ``_FillValue`` and ```fill_value`` are decoupled.
+So you can set ``fill_value`` in ``encoding`` as usual.
+
+Note that at read-time, you can control whether ``_FillValue`` is masked using the
+``mask_and_scale`` kwarg; and whether Zarr's ``fill_value`` is treated as synonymous
+with ``_FillValue`` using the ``use_zarr_fill_value_as_mask`` kwarg to :py:func:`xarray.open_zarr`.
+
+
 .. _io.kerchunk:
 
 Kerchunk
@@ -1229,37 +1245,44 @@ over the network until we look at particular values:
 
 .. image:: ../_static/opendap-prism-tmax.png
 
-Some servers require authentication before we can access the data. For this
-purpose we can explicitly create a :py:class:`backends.PydapDataStore`
-and pass in a `Requests`__ session object. For example for
-HTTP Basic authentication::
+Some servers require authentication before we can access the data. Pydap uses
+a `Requests`__ session object (which the user can pre-define), and this
+session object can recover `authentication`__` credentials from a locally stored
+``.netrc`` file. For example, to connect to a server that requires NASA's
+URS authentication, with the username/password credentials stored on a locally
+accessible ``.netrc``, access to OPeNDAP data should be as simple as this::
 
     import xarray as xr
     import requests
 
-    session = requests.Session()
-    session.auth = ('username', 'password')
+    my_session = requests.Session()
 
-    store = xr.backends.PydapDataStore.open('http://example.com/data',
-                                            session=session)
-    ds = xr.open_dataset(store)
+    ds_url = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
 
-`Pydap's cas module`__ has functions that generate custom sessions for
-servers that use CAS single sign-on. For example, to connect to servers
-that require NASA's URS authentication::
+    ds = xr.open_dataset(ds_url, session=my_session, engine="pydap")
 
-  import xarray as xr
-  from pydata.cas.urs import setup_session
+Moreover, a bearer token header can be included in a `Requests`__ session
+object, allowing for token-based authentication which  OPeNDAP servers can use
+to avoid some redirects.
 
-  ds_url = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
 
-  session = setup_session('username', 'password', check_url=ds_url)
-  store = xr.backends.PydapDataStore.open(ds_url, session=session)
+Lastly, OPeNDAP servers may provide endpoint URLs for different OPeNDAP protocols,
+DAP2 and DAP4. To specify which protocol between the two options to use, you can
+replace the scheme of the url with the name of the protocol. For example::
 
-  ds = xr.open_dataset(store)
+    # dap2 url
+    ds_url = 'dap2://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
+
+    # dap4 url
+    ds_url = 'dap4://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
+
+While most OPeNDAP servers implement DAP2, not all servers implement DAP4. It
+is recommended to check if the URL you are using `supports DAP4`__ by checking the
+URL on a browser.
 
 __ https://docs.python-requests.org
-__ https://www.pydap.org/en/latest/client.html#authentication
+__ https://pydap.github.io/pydap/en/notebooks/Authentication.html
+__ https://pydap.github.io/pydap/en/faqs/dap2_or_dap4_url.html
 
 .. _io.pickle:
 
@@ -1340,7 +1363,10 @@ To export just the dataset schema without the data itself, use the
     # However, `ds` (rather than the unpickled dataset) refers to the open file.  Delete
     # `ds` to close the file.
     del ds
-    os.remove("saved_on_disk.nc")
+
+    for f in ["saved_on_disk.nc", "saved_on_disk.h5"]:
+        if os.path.exists(f):
+            os.remove(f)
 
 This can be useful for generating indices of dataset contents to expose to
 search indices or other automated data discovery tools.

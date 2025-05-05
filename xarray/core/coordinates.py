@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import formatting
-from xarray.core.alignment import Aligner
 from xarray.core.indexes import (
     Index,
     Indexes,
@@ -22,7 +21,6 @@ from xarray.core.indexes import (
     assert_no_index_corrupted,
     create_default_index_implicit,
 )
-from xarray.core.merge import merge_coordinates_without_align, merge_coords
 from xarray.core.types import DataVars, Self, T_DataArray, T_Xarray
 from xarray.core.utils import (
     Frozen,
@@ -31,6 +29,8 @@ from xarray.core.utils import (
     emit_user_level_warning,
 )
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from xarray.structure.alignment import Aligner
+from xarray.structure.merge import merge_coordinates_without_align, merge_coords
 
 if TYPE_CHECKING:
     from xarray.core.common import DataWithCoords
@@ -177,13 +177,13 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
 
                 # compute the cartesian product
                 code_list += [
-                    np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i])
+                    np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i]).tolist()
                     for code in codes
                 ]
                 level_list += levels
                 names += index.names
 
-        return pd.MultiIndex(level_list, code_list, names=names)
+        return pd.MultiIndex(levels=level_list, codes=code_list, names=names)
 
 
 class Coordinates(AbstractCoordinates):
@@ -309,7 +309,7 @@ class Coordinates(AbstractCoordinates):
                 var = as_variable(data, name=name, auto_convert=False)
                 if var.dims == (name,) and indexes is None:
                     index, index_vars = create_default_index_implicit(var, list(coords))
-                    default_indexes.update({k: index for k in index_vars})
+                    default_indexes.update(dict.fromkeys(index_vars, index))
                     variables.update(index_vars)
                 else:
                     variables[name] = var
@@ -384,7 +384,7 @@ class Coordinates(AbstractCoordinates):
                 f"create any coordinate.\n{index!r}"
             )
 
-        indexes = {name: index for name in variables}
+        indexes = dict.fromkeys(variables, index)
 
         return cls(coords=variables, indexes=indexes)
 
@@ -412,7 +412,7 @@ class Coordinates(AbstractCoordinates):
         xr_idx = PandasMultiIndex(midx, dim)
 
         variables = xr_idx.create_variables()
-        indexes = {k: xr_idx for k in variables}
+        indexes = dict.fromkeys(variables, xr_idx)
 
         return cls(coords=variables, indexes=indexes)
 
@@ -1134,7 +1134,7 @@ def create_coords_with_default_indexes(
             # pandas multi-index edge cases.
             variable = variable.to_index_variable()
             idx, idx_vars = create_default_index_implicit(variable, all_variables)
-            indexes.update({k: idx for k in idx_vars})
+            indexes.update(dict.fromkeys(idx_vars, idx))
             variables.update(idx_vars)
             all_variables.update(idx_vars)
         else:
@@ -1159,7 +1159,7 @@ def _coordinates_from_variable(variable: Variable) -> Coordinates:
 
     (name,) = variable.dims
     new_index, index_vars = create_default_index_implicit(variable)
-    indexes = {k: new_index for k in index_vars}
+    indexes = dict.fromkeys(index_vars, new_index)
     new_vars = new_index.create_variables()
     new_vars[name].attrs = variable.attrs
     return Coordinates(new_vars, indexes)

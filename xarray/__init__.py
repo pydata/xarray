@@ -15,21 +15,19 @@ from xarray.backends.zarr import open_zarr
 from xarray.coding.cftime_offsets import cftime_range, date_range, date_range_like
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.frequencies import infer_freq
-from xarray.conventions import SerializationWarning, decode_cf
-from xarray.core.alignment import align, broadcast
-from xarray.core.combine import combine_by_coords, combine_nested
-from xarray.core.common import ALL_DIMS, full_like, ones_like, zeros_like
-from xarray.core.computation import (
+from xarray.computation.apply_ufunc import (
     apply_ufunc,
+)
+from xarray.computation.computation import (
     corr,
     cov,
     cross,
     dot,
     polyval,
-    unify_chunks,
     where,
 )
-from xarray.core.concat import concat
+from xarray.conventions import SerializationWarning, decode_cf
+from xarray.core.common import ALL_DIMS, full_like, ones_like, zeros_like
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
@@ -42,7 +40,6 @@ from xarray.core.extensions import (
 )
 from xarray.core.indexes import Index
 from xarray.core.indexing import IndexSelResult
-from xarray.core.merge import Context, MergeError, merge
 from xarray.core.options import get_options, set_options
 from xarray.core.parallel import map_blocks
 from xarray.core.treenode import (
@@ -53,6 +50,11 @@ from xarray.core.treenode import (
 )
 from xarray.core.variable import IndexVariable, Variable, as_variable
 from xarray.namedarray.core import NamedArray
+from xarray.structure.alignment import AlignmentError, align, broadcast
+from xarray.structure.chunks import unify_chunks
+from xarray.structure.combine import combine_by_coords, combine_nested
+from xarray.structure.concat import concat
+from xarray.structure.merge import Context, MergeError, merge
 from xarray.util.print_versions import show_versions
 
 try:
@@ -126,6 +128,7 @@ __all__ = (  # noqa: RUF022
     "NamedArray",
     "Variable",
     # Exceptions
+    "AlignmentError",
     "InvalidTreeError",
     "MergeError",
     "NotFoundInTreeError",
