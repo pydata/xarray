@@ -539,7 +539,7 @@ class TestDataArray:
 
     def test_constructor_extra_dim_index_coord(self) -> None:
         class AnyIndex(Index):
-            def should_add_coord_in_dataarray(self, name, var, dims):
+            def should_add_coord_to_array(self, name, var, dims):
                 return True
 
         idx = AnyIndex()
@@ -1663,7 +1663,7 @@ class TestDataArray:
 
     def test_assign_coords_extra_dim_index_coord(self) -> None:
         class AnyIndex(Index):
-            def should_add_coord_in_dataarray(self, name, var, dims):
+            def should_add_coord_to_array(self, name, var, dims):
                 return True
 
         idx = AnyIndex()

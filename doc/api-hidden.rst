@@ -520,7 +520,7 @@
    Index.stack
    Index.unstack
    Index.create_variables
-   Index.should_add_coord_in_dataarray
+   Index.should_add_coord_to_array
    Index.to_pandas_index
    Index.isel
    Index.sel

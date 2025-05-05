@@ -1160,7 +1160,7 @@ class Dataset(
         # preserve ordering
         for k in self._variables:
             if k in self._indexes:
-                add_coord = self._indexes[k].should_add_coord_in_dataarray(
+                add_coord = self._indexes[k].should_add_coord_to_array(
                     k, self._variables[k], needed_dims
                 )
             else:

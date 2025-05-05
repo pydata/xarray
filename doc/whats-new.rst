@@ -30,7 +30,7 @@ New Features
   includes ``datatree`` support, and removing slashes from dimension names. By
   `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 - Allow assigning index coordinates with non-array dimension(s) in a :py:class:`DataArray` by overriding
-  :py:meth:`Index.should_add_coord_in_dataarray`. For example, this enables support for CF boundaries coordinate (e.g.,
+  :py:meth:`Index.should_add_coord_to_array`. For example, this enables support for CF boundaries coordinate (e.g.,
   ``time(time)`` and ``time_bnds(time, nbnd)``) in a DataArray (:pull:`10137`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
 - Improved support pandas Extension Arrays. (:issue:`9661`, :pull:`9671`)

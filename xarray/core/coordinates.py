@@ -1177,7 +1177,7 @@ def validate_dataarray_coords(
 
     for k, v in coords.items():
         if k in indexes:
-            invalid = not indexes[k].should_add_coord_in_dataarray(k, v, dim_set)
+            invalid = not indexes[k].should_add_coord_to_array(k, v, dim_set)
         else:
             invalid = any(d not in dim for d in v.dims)
 

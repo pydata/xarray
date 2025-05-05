@@ -196,7 +196,7 @@ class Index:
         else:
             return {}
 
-    def should_add_coord_in_dataarray(
+    def should_add_coord_to_array(
         self,
         name: Hashable,
         var: Variable,
