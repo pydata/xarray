@@ -14,15 +14,7 @@ from collections.abc import (
 from functools import partial
 from os import PathLike
 from types import EllipsisType
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Literal,
-    NoReturn,
-    TypeVar,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Generic, Literal, NoReturn, TypeVar, overload
 
 import numpy as np
 import pandas as pd
@@ -4794,8 +4786,8 @@ class DataArray(
         except (TypeError, AttributeError):
             return False
 
-    def __array_wrap__(self, obj, context=None) -> Self:
-        new_var = self.variable.__array_wrap__(obj, context)
+    def __array_wrap__(self, obj, context=None, return_scalar=False) -> Self:
+        new_var = self.variable.__array_wrap__(obj, context, return_scalar)
         return self._replace(new_var)
 
     def __matmul__(self, obj: T_Xarray) -> T_Xarray:
@@ -6400,7 +6392,7 @@ class DataArray(
         """
         Curve fitting optimization for arbitrary functions.
 
-        Wraps `scipy.optimize.curve_fit` with `apply_ufunc`.
+        Wraps :py:func:`scipy.optimize.curve_fit` with :py:func:`~xarray.apply_ufunc`.
 
         Parameters
         ----------
@@ -6540,6 +6532,9 @@ class DataArray(
         --------
         DataArray.polyfit
         scipy.optimize.curve_fit
+        xarray.DataArray.xlm.modelfit
+            External method from `xarray-lmfit <https://xarray-lmfit.readthedocs.io/>`_
+            with more curve fitting functionality.
         """
         # For DataArray, use the original implementation by converting to a dataset first
         return self._to_temp_dataset().curvefit(
@@ -6795,7 +6790,7 @@ class DataArray(
         *,
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
-        eagerly_compute_group: bool = True,
+        eagerly_compute_group: Literal[False] | None = None,
         **groupers: Grouper,
     ) -> DataArrayGroupBy:
         """Returns a DataArrayGroupBy object for performing grouped operations.
@@ -6811,11 +6806,8 @@ class DataArray(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
-        eagerly_compute_group: bool
-            Whether to eagerly compute ``group`` when it is a chunked array.
-            This option is to maintain backwards compatibility. Set to False
-            to opt-in to future behaviour, where ``group`` is not automatically loaded
-            into memory.
+        eagerly_compute_group: bool, optional
+            This argument is deprecated.
         **groupers : Mapping of str to Grouper or Resampler
             Mapping of variable name to group by to :py:class:`Grouper` or :py:class:`Resampler` object.
             One of ``group`` or ``groupers`` must be provided.
@@ -6947,7 +6939,7 @@ class DataArray(
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
         duplicates: Literal["raise", "drop"] = "raise",
-        eagerly_compute_group: bool = True,
+        eagerly_compute_group: Literal[False] | None = None,
     ) -> DataArrayGroupBy:
         """Returns a DataArrayGroupBy object for performing grouped operations.
 
@@ -6984,11 +6976,8 @@ class DataArray(
             coordinates.
         duplicates : {"raise", "drop"}, default: "raise"
             If bin edges are not unique, raise ValueError or drop non-uniques.
-        eagerly_compute_group: bool
-            Whether to eagerly compute ``group`` when it is a chunked array.
-            This option is to maintain backwards compatibility. Set to False
-            to opt-in to future behaviour, where ``group`` is not automatically loaded
-            into memory.
+        eagerly_compute_group: bool, optional
+            This argument is deprecated.
 
         Returns
         -------

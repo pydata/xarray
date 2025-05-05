@@ -7099,21 +7099,21 @@ class Dataset(
             {
                 **dict(zip(non_extension_array_columns, data, strict=True)),
                 **{
-                    c: self.variables[c].data.array
+                    c: self.variables[c].data
                     for c in extension_array_columns_same_index
                 },
             },
             index=index,
         )
         for extension_array_column in extension_array_columns_different_index:
-            extension_array = self.variables[extension_array_column].data.array
+            extension_array = self.variables[extension_array_column].data
             index = self[
                 self.variables[extension_array_column].dims[0]
             ].coords.to_index()
             extension_array_df = pd.DataFrame(
                 {extension_array_column: extension_array},
                 index=pd.Index(index.array)
-                if isinstance(index, PandasExtensionArray)
+                if isinstance(index, PandasExtensionArray)  # type: ignore[redundant-expr]
                 else index,
             )
             extension_array_df.index.name = self.variables[extension_array_column].dims[
@@ -9574,7 +9574,7 @@ class Dataset(
         """
         Curve fitting optimization for arbitrary functions.
 
-        Wraps `scipy.optimize.curve_fit` with `apply_ufunc`.
+        Wraps :py:func:`scipy.optimize.curve_fit` with :py:func:`~xarray.apply_ufunc`.
 
         Parameters
         ----------
@@ -9634,6 +9634,9 @@ class Dataset(
         --------
         Dataset.polyfit
         scipy.optimize.curve_fit
+        xarray.Dataset.xlm.modelfit
+            External method from `xarray-lmfit <https://xarray-lmfit.readthedocs.io/>`_
+            with more curve fitting functionality.
         """
         from xarray.computation.fit import curvefit as curvefit_impl
 
@@ -9855,7 +9858,7 @@ class Dataset(
         *,
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
-        eagerly_compute_group: bool = True,
+        eagerly_compute_group: Literal[False] | None = None,
         **groupers: Grouper,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
@@ -9871,11 +9874,8 @@ class Dataset(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
-        eagerly_compute_group: bool
-            Whether to eagerly compute ``group`` when it is a chunked array.
-            This option is to maintain backwards compatibility. Set to False
-            to opt-in to future behaviour, where ``group`` is not automatically loaded
-            into memory.
+        eagerly_compute_group: False, optional
+            This argument is deprecated.
         **groupers : Mapping of str to Grouper or Resampler
             Mapping of variable name to group by to :py:class:`Grouper` or :py:class:`Resampler` object.
             One of ``group`` or ``groupers`` must be provided.
@@ -9976,7 +9976,7 @@ class Dataset(
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
         duplicates: Literal["raise", "drop"] = "raise",
-        eagerly_compute_group: bool = True,
+        eagerly_compute_group: Literal[False] | None = None,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
 
@@ -10013,11 +10013,8 @@ class Dataset(
             coordinates.
         duplicates : {"raise", "drop"}, default: "raise"
             If bin edges are not unique, raise ValueError or drop non-uniques.
-        eagerly_compute_group: bool
-            Whether to eagerly compute ``group`` when it is a chunked array.
-            This option is to maintain backwards compatibility. Set to False
-            to opt-in to future behaviour, where ``group`` is not automatically loaded
-            into memory.
+        eagerly_compute_group: False, optional
+            This argument is deprecated.
 
         Returns
         -------

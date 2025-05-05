@@ -167,8 +167,8 @@ We plan to publicize this document on :
 
 - [x] `Xarray dev call`
 - [ ] `Scientific Python discourse`
-- [ ] `Xarray Github`
-- [ ] `Twitter`
+- [ ] `Xarray GitHub`
+- [ ] `Twitter (X)`
 - [ ] `Respond to NamedTensor and Scikit-Learn issues?`
 - [ ] `Pangeo Discourse`
 - [ ] `Numpy, SciPy email lists?`

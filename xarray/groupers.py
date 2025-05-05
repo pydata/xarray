@@ -319,7 +319,7 @@ class BinGrouper(Grouper):
         the resulting bins. If False, returns only integer indicators of the
         bins. This affects the type of the output container (see below).
         This argument is ignored when `bins` is an IntervalIndex. If True,
-        raises an error. When `ordered=False`, labels must be provided.
+        raises an error.
     retbins : bool, default False
         Whether to return the bins or not. Useful when bins is provided
         as a scalar.
@@ -365,15 +365,12 @@ class BinGrouper(Grouper):
             retbins=True,
         )
 
-    def _factorize_lazy(self, group: T_Group) -> DataArray:
-        def _wrapper(data, **kwargs):
-            binned, bins = self._cut(data)
-            if isinstance(self.bins, int):
-                # we are running eagerly, update self.bins with actual edges instead
-                self.bins = bins
-            return binned.codes.reshape(data.shape)
-
-        return apply_ufunc(_wrapper, group, dask="parallelized", keep_attrs=True)
+    def _pandas_cut_wrapper(self, data, **kwargs):
+        binned, bins = self._cut(data)
+        if isinstance(self.bins, int):
+            # we are running eagerly, update self.bins with actual edges instead
+            self.bins = bins
+        return binned.codes.reshape(data.shape)
 
     def factorize(self, group: T_Group) -> EncodedGroups:
         if isinstance(group, _DummyGroup):
@@ -383,7 +380,13 @@ class BinGrouper(Grouper):
             raise ValueError(
                 f"Bin edges must be provided when grouping by chunked arrays. Received {self.bins=!r} instead"
             )
-        codes = self._factorize_lazy(group)
+        codes = apply_ufunc(
+            self._pandas_cut_wrapper,
+            group,
+            dask="parallelized",
+            keep_attrs=True,
+            output_dtypes=[np.int64],
+        )
         if not by_is_chunked and array_all(codes == -1):
             raise ValueError(
                 f"None of the data falls within bins with edges {self.bins!r}"
@@ -394,8 +397,13 @@ class BinGrouper(Grouper):
 
         # This seems silly, but it lets us have Pandas handle the complexity
         # of `labels`, `precision`, and `include_lowest`, even when group is a chunked array
-        dummy, _ = self._cut(np.array([0]).astype(group.dtype))
-        full_index = dummy.categories
+        # Pandas ignores labels when IntervalIndex is passed
+        if not isinstance(self.bins, pd.IntervalIndex):
+            dummy, _ = self._cut(np.array([0]).astype(group.dtype))
+            full_index = dummy.categories
+        else:
+            full_index = pd.Index(self.labels)
+
         if not by_is_chunked:
             uniques = np.sort(pd.unique(codes.data.ravel()))
             unique_values = full_index[uniques[uniques != -1]]
