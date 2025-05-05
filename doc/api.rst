@@ -1644,9 +1644,9 @@ Exceptions
 .. autosummary::
    :toctree: generated/
 
-   AlignmentError
-   MergeError
-   SerializationWarning
+   errors.AlignmentError
+   errors.MergeError
+   errors.SerializationWarning
 
 DataTree
 --------
@@ -1656,9 +1656,9 @@ Exceptions raised when manipulating trees.
 .. autosummary::
    :toctree: generated/
 
-   TreeIsomorphismError
-   InvalidTreeError
-   NotFoundInTreeError
+   errors.TreeIsomorphismError
+   errors.InvalidTreeError
+   errors.NotFoundInTreeError
 
 Advanced API
 ============

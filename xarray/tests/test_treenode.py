@@ -5,13 +5,13 @@ import re
 import pytest
 
 from xarray.core.treenode import (
-    InvalidTreeError,
     NamedNode,
     NodePath,
     TreeNode,
     group_subtrees,
     zip_subtrees,
 )
+from xarray.errors import InvalidTreeError
 
 
 class TestFamilyTree:

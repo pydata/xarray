@@ -787,7 +787,7 @@ def test_keep_attrs_strategies_variable(strategy, attrs, expected, error) -> Non
     c = xr.Variable("x", [0, 1], attrs=attrs[2])
 
     if error:
-        with pytest.raises(xr.MergeError):
+        with pytest.raises(xr.errors.MergeError):
             apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
     else:
         expected = xr.Variable("x", [0, 3], attrs=expected)
@@ -856,7 +856,7 @@ def test_keep_attrs_strategies_dataarray(strategy, attrs, expected, error) -> No
     c = xr.DataArray(dims="x", data=[0, 1], attrs=attrs[2])
 
     if error:
-        with pytest.raises(xr.MergeError):
+        with pytest.raises(xr.errors.MergeError):
             apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
     else:
         expected = xr.DataArray(dims="x", data=[0, 3], attrs=expected)
@@ -947,7 +947,7 @@ def test_keep_attrs_strategies_dataarray_variables(
     )
 
     if error:
-        with pytest.raises(xr.MergeError):
+        with pytest.raises(xr.errors.MergeError):
             apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
     else:
         dim_attrs, coord_attrs = compute_attrs(expected, {})
@@ -1021,7 +1021,7 @@ def test_keep_attrs_strategies_dataset(strategy, attrs, expected, error) -> None
     c = xr.Dataset({"a": ("x", [0, 1])}, attrs=attrs[2])
 
     if error:
-        with pytest.raises(xr.MergeError):
+        with pytest.raises(xr.errors.MergeError):
             apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
     else:
         expected = xr.Dataset({"a": ("x", [0, 3])}, attrs=expected)
@@ -1109,7 +1109,7 @@ def test_keep_attrs_strategies_dataset_variables(
     )
 
     if error:
-        with pytest.raises(xr.MergeError):
+        with pytest.raises(xr.errors.MergeError):
             apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
     else:
         data_attrs, dim_attrs, coord_attrs = compute_attrs(expected, {})

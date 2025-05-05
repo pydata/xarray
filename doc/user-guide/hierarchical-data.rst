@@ -143,7 +143,7 @@ We can add Herbert to the family tree without displacing Homer by :py:meth:`~xar
 
 Certain manipulations of our tree are forbidden, if they would create an inconsistent result.
 In episode 51 of the show Futurama, Philip J. Fry travels back in time and accidentally becomes his own Grandfather.
-If we try similar time-travelling hijinks with Homer, we get a :py:class:`~xarray.InvalidTreeError` raised:
+If we try similar time-travelling hijinks with Homer, we get a :py:class:`~xarray.errors.InvalidTreeError` raised:
 
 .. ipython:: python
     :okexcept:
@@ -621,7 +621,7 @@ each tree needs to have the same structure. Specifically two trees can only be c
 or "isomorphic", if the full paths to all of their descendent nodes are the same.
 
 Applying :py:func:`~xarray.group_subtrees` to trees with different structures
-raises :py:class:`~xarray.TreeIsomorphismError`:
+raises :py:class:`~xarray.errors.TreeIsomorphismError`:
 
 .. ipython:: python
     :okexcept:

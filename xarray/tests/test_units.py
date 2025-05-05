@@ -3960,11 +3960,11 @@ class TestDataset:
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(1, xr.MergeError, id="no_unit"),
+            pytest.param(1, xr.errors.MergeError, id="no_unit"),
             pytest.param(
-                unit_registry.dimensionless, xr.MergeError, id="dimensionless"
+                unit_registry.dimensionless, xr.errors.MergeError, id="dimensionless"
             ),
-            pytest.param(unit_registry.s, xr.MergeError, id="incompatible_unit"),
+            pytest.param(unit_registry.s, xr.errors.MergeError, id="incompatible_unit"),
             pytest.param(unit_registry.mm, None, id="compatible_unit"),
             pytest.param(unit_registry.m, None, id="same_unit"),
         ),
@@ -5554,12 +5554,12 @@ class TestDataset:
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(1, xr.MergeError, id="no_unit"),
+            pytest.param(1, xr.errors.MergeError, id="no_unit"),
             pytest.param(
-                unit_registry.dimensionless, xr.MergeError, id="dimensionless"
+                unit_registry.dimensionless, xr.errors.MergeError, id="dimensionless"
             ),
-            pytest.param(unit_registry.s, xr.MergeError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, xr.MergeError, id="compatible_unit"),
+            pytest.param(unit_registry.s, xr.errors.MergeError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, xr.errors.MergeError, id="compatible_unit"),
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )

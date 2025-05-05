@@ -52,11 +52,11 @@ from xarray.backends.zarr import ZarrStore
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding.cftime_offsets import date_range
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
-from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.utils import module_available
+from xarray.errors import SerializationWarning
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     assert_allclose,
@@ -4709,7 +4709,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds.to_netcdf(f)
 
             if expect_error:
-                with pytest.raises(xr.MergeError):
+                with pytest.raises(xr.errors.MergeError):
                     xr.open_mfdataset(
                         files,
                         combine="nested",

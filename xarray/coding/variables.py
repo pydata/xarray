@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 
 from xarray.coding.common import (
-    SerializationWarning,
     VariableCoder,
     lazy_elemwise_func,
     pop_to,
@@ -22,6 +21,7 @@ from xarray.coding.common import (
 from xarray.coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.variable import Variable
+from xarray.errors import SerializationWarning
 
 if TYPE_CHECKING:
     T_VarTuple = tuple[tuple[Hashable, ...], Any, dict, dict]

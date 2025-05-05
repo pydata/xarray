@@ -5,7 +5,7 @@ import pytest
 
 import xarray as xr
 from xarray.core.datatree_mapping import map_over_datasets
-from xarray.core.treenode import TreeIsomorphismError
+from xarray.errors import TreeIsomorphismError
 from xarray.testing import assert_equal, assert_identical
 
 empty = xr.Dataset()

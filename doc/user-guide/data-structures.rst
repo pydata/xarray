@@ -610,7 +610,7 @@ We have created a tree with three nodes in it:
 
 Consistency checks are enforced. For instance, if we try to create a cycle,
 where the root node is also a child of a descendant, the constructor will raise
-an (:py:class:`~xarray.InvalidTreeError`):
+an (:py:class:`~xarray.errors.InvalidTreeError`):
 
 .. ipython:: python
     :okexcept:

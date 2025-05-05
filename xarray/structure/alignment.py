@@ -22,6 +22,7 @@ from xarray.core.indexes import (
 from xarray.core.types import T_Alignable
 from xarray.core.utils import is_dict_like, is_full_slice
 from xarray.core.variable import Variable, as_compatible_data, calculate_dimensions
+from xarray.errors import AlignmentError
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -33,10 +34,6 @@ if TYPE_CHECKING:
         T_Dataset,
         T_DuckArray,
     )
-
-
-class AlignmentError(ValueError):
-    """Error class for alignment failures due to incompatible arguments."""
 
 
 def reindex_variables(
@@ -837,7 +834,7 @@ def align(
     >>> a, b = xr.align(x, y, join="exact")
     Traceback (most recent call last):
     ...
-    xarray.structure.alignment.AlignmentError: cannot align objects with join='exact' ...
+    xarray.errors.AlignmentError: cannot align objects with join='exact' ...
 
     >>> a, b = xr.align(x, y, join="override")
     >>> a

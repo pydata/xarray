@@ -2365,9 +2365,13 @@ class TestDataArray:
     def test_inplace_math_automatic_alignment(self) -> None:
         a = DataArray(range(5), [("x", range(5))])
         b = DataArray(range(1, 6), [("x", range(1, 6))])
-        with pytest.raises(xr.MergeError, match="Automatic alignment is not supported"):
+        with pytest.raises(
+            xr.errors.MergeError, match="Automatic alignment is not supported"
+        ):
             a += b
-        with pytest.raises(xr.MergeError, match="Automatic alignment is not supported"):
+        with pytest.raises(
+            xr.errors.MergeError, match="Automatic alignment is not supported"
+        ):
             b += a
 
     def test_math_name(self) -> None:

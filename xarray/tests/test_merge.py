@@ -5,8 +5,8 @@ import pytest
 
 import xarray as xr
 from xarray.core import dtypes
+from xarray.errors import MergeError
 from xarray.structure import merge
-from xarray.structure.merge import MergeError
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests.test_dataset import create_test_data
 
