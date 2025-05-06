@@ -31,9 +31,16 @@ New Features
 
 - Added `scipy-stubs <https://github.com/scipy/scipy-stubs>`_ to the ``xarray[types]`` dependencies.
   By `Joren Hammudoglu <https://github.com/jorenham>`_.
+- Added a :mod:`xarray.typing` module  to expose selected public types for use in downstream libraries and static type checking.
+  (:issue:`10179`, :pull:`10215`).
+  By `Michele Guerreri <https://github.com/micguerr-bopen>`_.
 - Improved compatibility with OPeNDAP DAP4 data model for backend engine ``pydap``. This
   includes ``datatree`` support, and removing slashes from dimension names. By
   `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+- Allow assigning index coordinates with non-array dimension(s) in a :py:class:`DataArray` by overriding
+  :py:meth:`Index.should_add_coord_to_array`. For example, this enables support for CF boundaries coordinate (e.g.,
+  ``time(time)`` and ``time_bnds(time, nbnd)``) in a DataArray (:pull:`10137`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 - Improved support pandas categorical extension as indices (i.e., :py:class:`pandas.IntervalIndex`). (:issue:`9661`, :pull:`9671`)
   By `Ilan Gold <https://github.com/ilan-gold>`_.
 - Improved checks and errors raised when trying to align objects with conflicting indexes.
@@ -97,6 +104,11 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 - Avoid stacking when grouping by a chunked array. This can be a large performance improvement.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- The implementation of ``Variable.set_dims`` has changed to use array indexing syntax
+  instead of ``np.broadcast_to`` to perform dimension expansions where
+  all new dimensions have a size of 1. This should improve compatibility with
+  duck arrays that do not support broadcasting (:issue:`9462`, :pull:`10277`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
 
 .. _whats-new.2025.03.1:
 

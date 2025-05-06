@@ -23,7 +23,7 @@ from xarray.core._aggregations import (
     DatasetGroupByAggregations,
 )
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
-from xarray.core.coordinates import Coordinates, _coordinates_from_variable
+from xarray.core.coordinates import Coordinates, coordinates_from_variable
 from xarray.core.duck_array_ops import where
 from xarray.core.formatting import format_array_flat
 from xarray.core.indexes import (
@@ -1152,7 +1152,7 @@ class GroupBy(Generic[T_Xarray]):
                 new_coords.append(
                     # Using IndexVariable here ensures we reconstruct PandasMultiIndex with
                     # all associated levels properly.
-                    _coordinates_from_variable(
+                    coordinates_from_variable(
                         IndexVariable(
                             dims=grouper.name,
                             data=output_index,

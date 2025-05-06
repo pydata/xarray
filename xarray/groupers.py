@@ -29,7 +29,8 @@ from xarray.core.common import (
     _contains_cftime_datetimes,
     _contains_datetime_like_objects,
 )
-from xarray.core.coordinates import Coordinates, _coordinates_from_variable
+from xarray.core.coordinates import Coordinates, coordinates_from_variable
+from xarray.core.coordinates import Coordinates, coordinates_from_variable
 from xarray.core.dataarray import DataArray
 from xarray.core.duck_array_ops import array_all, isnull
 from xarray.core.formatting import first_n_items
@@ -130,7 +131,7 @@ class EncodedGroups:
 
         if coords is None:
             assert not isinstance(self.unique_coord, _DummyGroup)
-            self.coords = _coordinates_from_variable(self.unique_coord)
+            self.coords = coordinates_from_variable(self.unique_coord)
         else:
             self.coords = coords
 
@@ -267,7 +268,7 @@ class UniqueGrouper(Grouper):
             codes=codes,
             full_index=full_index,
             unique_coord=unique_coord,
-            coords=_coordinates_from_variable(unique_coord),
+            coords=coordinates_from_variable(unique_coord),
         )
 
     def _factorize_dummy(self) -> EncodedGroups:
@@ -295,7 +296,7 @@ class UniqueGrouper(Grouper):
             else:
                 if TYPE_CHECKING:
                     assert isinstance(unique_coord, Variable)
-                coords = _coordinates_from_variable(unique_coord)
+                coords = coordinates_from_variable(unique_coord)
 
         return EncodedGroups(
             codes=codes,
@@ -432,7 +433,7 @@ class BinGrouper(Grouper):
             codes=codes,
             full_index=full_index,
             unique_coord=unique_coord,
-            coords=_coordinates_from_variable(unique_coord),
+            coords=coordinates_from_variable(unique_coord),
         )
 
 
@@ -566,7 +567,7 @@ class TimeResampler(Resampler):
             group_indices=group_indices,
             full_index=full_index,
             unique_coord=unique_coord,
-            coords=_coordinates_from_variable(unique_coord),
+            coords=coordinates_from_variable(unique_coord),
         )
 
 

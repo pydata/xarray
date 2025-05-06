@@ -1647,6 +1647,7 @@ Exceptions
    :toctree: generated/
 
    AlignmentError
+   CoordinateValidationError
    MergeError
    SerializationWarning
 
