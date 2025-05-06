@@ -235,10 +235,7 @@ class Index:
             Dataarray's dimensions.
 
         """
-        if any(d not in dims for d in var.dims):
-            return False
-        else:
-            return True
+        return all(d in dims for d in var.dims)
 
     def to_pandas_index(self) -> pd.Index:
         """Cast this xarray index to a pandas.Index object or raise a
