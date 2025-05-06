@@ -28,7 +28,7 @@ from xarray.computation.computation import (
 )
 from xarray.conventions import SerializationWarning, decode_cf
 from xarray.core.common import ALL_DIMS, full_like, ones_like, zeros_like
-from xarray.core.coordinates import Coordinates
+from xarray.core.coordinates import Coordinates, CoordinateValidationError
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
@@ -129,6 +129,7 @@ __all__ = (  # noqa: RUF022
     "Variable",
     # Exceptions
     "AlignmentError",
+    "CoordinateValidationError",
     "InvalidTreeError",
     "MergeError",
     "NotFoundInTreeError",
