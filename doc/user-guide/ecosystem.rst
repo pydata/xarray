@@ -44,6 +44,7 @@ Geosciences
   harmonic wind analysis in Python.
 - `wradlib <https://wradlib.org/>`_: An Open Source Library for Weather Radar Data Processing.
 - `wrf-python <https://wrf-python.readthedocs.io/>`_: A collection of diagnostic and interpolation routines for use with output of the Weather Research and Forecasting (WRF-ARW) Model.
+- `xarray-eopf <https://github.com/EOPF-Sample-Service/xarray-eopf>`_: An xarray backend implementation for opening ESA EOPF data products in Zarr format.
 - `xarray-regrid <https://github.com/EXCITED-CO2/xarray-regrid>`_: xarray extension for regridding rectilinear data.
 - `xarray-simlab <https://xarray-simlab.readthedocs.io>`_: xarray extension for computer model simulations.
 - `xarray-spatial <https://xarray-spatial.org/>`_: Numba-accelerated raster-based spatial processing tools (NDVI, curvature, zonal-statistics, proximity, hillshading, viewshed, etc.)
