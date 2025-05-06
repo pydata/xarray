@@ -30,7 +30,6 @@ from xarray.core.common import (
     _contains_datetime_like_objects,
 )
 from xarray.core.coordinates import Coordinates, coordinates_from_variable
-from xarray.core.coordinates import Coordinates, coordinates_from_variable
 from xarray.core.dataarray import DataArray
 from xarray.core.duck_array_ops import array_all, isnull
 from xarray.core.formatting import first_n_items
