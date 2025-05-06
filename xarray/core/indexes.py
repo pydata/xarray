@@ -202,7 +202,7 @@ class Index:
         var: Variable,
         dims: set[Hashable],
     ) -> bool:
-        """Define whether or not an index coordinate variable should be added in
+        """Define whether or not an index coordinate variable should be added to
         a new DataArray.
 
         This method is called repeatedly for each Variable associated with this
@@ -234,7 +234,7 @@ class Index:
         var : Variable
             Coordinate variable object.
         dims: tuple
-            Dataarray's dimensions.
+            Dimensions of the new DataArray object being created.
 
         """
         return all(d in dims for d in var.dims)
