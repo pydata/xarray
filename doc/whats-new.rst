@@ -31,6 +31,9 @@ New Features
 
 - Added `scipy-stubs <https://github.com/scipy/scipy-stubs>`_ to the ``xarray[types]`` dependencies.
   By `Joren Hammudoglu <https://github.com/jorenham>`_.
+- Added a :mod:`xarray.typing` module  to expose selected public types for use in downstream libraries and static type checking.
+  (:issue:`10179`, :pull:`10215`).
+  By `Michele Guerreri <https://github.com/micguerr-bopen>`_.
 - Improved compatibility with OPeNDAP DAP4 data model for backend engine ``pydap``. This
   includes ``datatree`` support, and removing slashes from dimension names. By
   `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
