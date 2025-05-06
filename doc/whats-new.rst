@@ -104,6 +104,11 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 - Avoid stacking when grouping by a chunked array. This can be a large performance improvement.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- The implementation of ``Variable.set_dims`` has changed to use array indexing syntax
+  instead of ``np.broadcast_to`` to perform dimension expansions where
+  all new dimensions have a size of 1. This should improve compatibility with
+  duck arrays that do not support broadcasting (:issue:`9462`, :pull:`10277`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
 
 .. _whats-new.2025.03.1:
 
