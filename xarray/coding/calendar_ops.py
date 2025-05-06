@@ -213,7 +213,7 @@ def convert_calendar(
         out[dim] = new_times
 
         # Remove NaN that where put on invalid dates in target calendar
-        out = out.where(out[dim].notnull(), drop=True)
+        out = out.sel(time=out[dim].notnull())
 
         if use_cftime:
             # Reassign times to ensure time index of output is a CFTimeIndex

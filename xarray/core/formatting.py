@@ -626,6 +626,8 @@ def short_array_repr(array):
 
     if isinstance(array, AbstractArray):
         array = array.data
+    if isinstance(array, pd.api.extensions.ExtensionArray):
+        return repr(array)
     array = to_duck_array(array)
 
     # default to lower precision so a full (abbreviated) line can fit on
@@ -1139,14 +1141,21 @@ def _datatree_node_repr(node: DataTree, show_inherited: bool) -> str:
 
 def datatree_repr(dt: DataTree) -> str:
     """A printable representation of the structure of this entire tree."""
-    renderer = RenderDataTree(dt)
+    max_children = OPTIONS["display_max_children"]
+
+    renderer = RenderDataTree(dt, maxchildren=max_children)
 
     name_info = "" if dt.name is None else f" {dt.name!r}"
     header = f"<xarray.DataTree{name_info}>"
 
     lines = [header]
     show_inherited = True
+
     for pre, fill, node in renderer:
+        if isinstance(node, str):
+            lines.append(f"{fill}{node}")
+            continue
+
         node_repr = _datatree_node_repr(node, show_inherited=show_inherited)
         show_inherited = False  # only show inherited coords on the root
 

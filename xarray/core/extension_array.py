@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from typing import Generic, cast
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 from pandas.api.types import is_extension_array_dtype
 
 from xarray.core.types import DTypeLikeSave, T_ExtensionArray
+from xarray.core.utils import NDArrayMixin
 
 HANDLED_EXTENSION_ARRAY_FUNCTIONS: dict[Callable, Callable] = {}
 
@@ -33,12 +36,12 @@ def __extension_duck_array__issubdtype(
 def __extension_duck_array__broadcast(arr: T_ExtensionArray, shape: tuple):
     if shape[0] == len(arr) and len(shape) == 1:
         return arr
-    raise NotImplementedError("Cannot broadcast 1d-only pandas categorical array.")
+    raise NotImplementedError("Cannot broadcast 1d-only pandas extension array.")
 
 
 @implements(np.stack)
 def __extension_duck_array__stack(arr: T_ExtensionArray, axis: int):
-    raise NotImplementedError("Cannot stack 1d-only pandas categorical array.")
+    raise NotImplementedError("Cannot stack 1d-only pandas extension array.")
 
 
 @implements(np.concatenate)
@@ -62,21 +65,22 @@ def __extension_duck_array__where(
     return cast(T_ExtensionArray, pd.Series(x).where(condition, pd.Series(y)).array)
 
 
-class PandasExtensionArray(Generic[T_ExtensionArray]):
+@dataclass(frozen=True)
+class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
+    """NEP-18 compliant wrapper for pandas extension arrays.
+
+    Parameters
+    ----------
+    array : T_ExtensionArray
+        The array to be wrapped upon e.g,. :py:class:`xarray.Variable` creation.
+    ```
+    """
+
     array: T_ExtensionArray
 
-    def __init__(self, array: T_ExtensionArray):
-        """NEP-18 compliant wrapper for pandas extension arrays.
-
-        Parameters
-        ----------
-        array : T_ExtensionArray
-            The array to be wrapped upon e.g,. :py:class:`xarray.Variable` creation.
-        ```
-        """
-        if not isinstance(array, pd.api.extensions.ExtensionArray):
-            raise TypeError(f"{array} is not an pandas ExtensionArray.")
-        self.array = array
+    def __post_init__(self):
+        if not isinstance(self.array, pd.api.extensions.ExtensionArray):
+            raise TypeError(f"{self.array} is not an pandas ExtensionArray.")
 
     def __array_function__(self, func, types, args, kwargs):
         def replace_duck_with_extension_array(args) -> list:
@@ -102,22 +106,16 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
             return type(self)[type(res)](res)
         return res
 
-    def __array_ufunc__(ufunc, method, *inputs, **kwargs):
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         return ufunc(*inputs, **kwargs)
-
-    def __repr__(self):
-        return f"PandasExtensionArray(array={self.array!r})"
-
-    def __getattr__(self, attr: str) -> object:
-        return getattr(self.array, attr)
 
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
         item = self.array[key]
         if is_extension_array_dtype(item):
-            return type(self)(item)
-        if np.isscalar(item):
-            return type(self)(type(self.array)([item]))  # type: ignore[call-arg]  # only subclasses with proper __init__ allowed
-        return item
+            return PandasExtensionArray(item)
+        if np.isscalar(item) or isinstance(key, int):
+            return PandasExtensionArray(type(self.array)._from_sequence([item]))  # type: ignore[call-arg,attr-defined,unused-ignore]
+        return PandasExtensionArray(item)
 
     def __setitem__(self, key, val):
         self.array[key] = val
@@ -132,3 +130,15 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
 
     def __len__(self):
         return len(self.array)
+
+    @property
+    def ndim(self) -> int:
+        return 1
+
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray:
+        if Version(np.__version__) >= Version("2.0.0"):
+            return np.asarray(self.array, dtype=dtype, copy=copy)
+        else:
+            return np.asarray(self.array, dtype=dtype)

@@ -11,6 +11,7 @@ import pandas as pd
 
 from xarray.core import formatting, nputils, utils
 from xarray.core.coordinate_transform import CoordinateTransform
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
     CoordinateTransformIndexingAdapter,
     IndexSelResult,
@@ -194,6 +195,49 @@ class Index:
             return dict(**variables)
         else:
             return {}
+
+    def should_add_coord_to_array(
+        self,
+        name: Hashable,
+        var: Variable,
+        dims: set[Hashable],
+    ) -> bool:
+        """Define whether or not an index coordinate variable should be added to
+        a new DataArray.
+
+        This method is called repeatedly for each Variable associated with this
+        index when creating a new DataArray (via its constructor or from a
+        Dataset) or updating an existing one. The variables associated with this
+        index are the ones passed to :py:meth:`Index.from_variables` and/or
+        returned by :py:meth:`Index.create_variables`.
+
+        By default returns ``True`` if the dimensions of the coordinate variable
+        are a subset of the array dimensions and ``False`` otherwise (DataArray
+        model). This default behavior may be overridden in Index subclasses to
+        bypass strict conformance with the DataArray model. This is useful for
+        example to include the (n+1)-dimensional cell boundary coordinate
+        associated with an interval index.
+
+        Returning ``False`` will either:
+
+        - raise a :py:class:`CoordinateValidationError` when passing the
+          coordinate directly to a new or an existing DataArray, e.g., via
+          ``DataArray.__init__()`` or ``DataArray.assign_coords()``
+
+        - drop the coordinate (and therefore drop the index) when a new
+          DataArray is constructed by indexing a Dataset
+
+        Parameters
+        ----------
+        name : Hashable
+            Name of a coordinate variable associated to this index.
+        var : Variable
+            Coordinate variable object.
+        dims: tuple
+            Dimensions of the new DataArray object being created.
+
+        """
+        return all(d in dims for d in var.dims)
 
     def to_pandas_index(self) -> pd.Index:
         """Cast this xarray index to a pandas.Index object or raise a
@@ -444,6 +488,8 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     from xarray.core.variable import Variable
     from xarray.namedarray.pycompat import to_numpy
 
+    if isinstance(array, PandasExtensionArray):
+        array = pd.Index(array.array)
     if isinstance(array, pd.Index):
         index = array
     elif isinstance(array, DataArray | Variable):
@@ -602,7 +648,11 @@ class PandasIndex(Index):
         self.dim = dim
 
         if coord_dtype is None:
-            coord_dtype = get_valid_numpy_dtype(index)
+            if pd.api.types.is_extension_array_dtype(index.dtype):
+                cast(pd.api.extensions.ExtensionDtype, index.dtype)
+                coord_dtype = index.dtype
+            else:
+                coord_dtype = get_valid_numpy_dtype(index)
         self.coord_dtype = coord_dtype
 
     def _replace(self, index, dim=None, coord_dtype=None):
@@ -698,6 +748,8 @@ class PandasIndex(Index):
 
         if not indexes:
             coord_dtype = None
+        elif len(set(idx.coord_dtype for idx in indexes)) == 1:
+            coord_dtype = indexes[0].coord_dtype
         else:
             coord_dtype = np.result_type(*[idx.coord_dtype for idx in indexes])
 
