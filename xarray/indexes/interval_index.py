@@ -1,10 +1,17 @@
-from collections.abc import Hashable
+from __future__ import annotations
+
+from collections.abc import Hashable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
 
 from xarray import Variable
 from xarray.core.indexes import Index, PandasIndex
+from xarray.core.indexing import IndexSelResult
+
+if TYPE_CHECKING:
+    from xarray.core.types import Self
 
 
 class IntervalIndex(Index):
@@ -24,6 +31,10 @@ class IntervalIndex(Index):
 
     """
 
+    _index: PandasIndex
+    _bounds_name: Hashable
+    _bounds_dim: str
+
     def __init__(self, index: PandasIndex, bounds_name: Hashable, bounds_dim: str):
         assert isinstance(index.index, pd.IntervalIndex)
         self._index = index
@@ -31,7 +42,12 @@ class IntervalIndex(Index):
         self._bounds_dim = bounds_dim
 
     @classmethod
-    def from_variables(cls, variables, options):
+    def from_variables(
+        cls,
+        variables: Mapping[Any, Variable],
+        *,
+        options: Mapping[str, Any],
+    ) -> Self:
         assert len(variables) == 2
 
         for k, v in variables.items():
@@ -45,10 +61,15 @@ class IntervalIndex(Index):
         index = PandasIndex(pd.IntervalIndex.from_arrays(left, right), dim)
         bounds_dim = (set(bounds.dims) - set(dim)).pop()
 
-        return cls(index, bounds_name, bounds_dim)
+        return cls(index, bounds_name, str(bounds_dim))
 
     @classmethod
-    def concat(cls, indexes, dim, positions=None):
+    def concat(
+        cls,
+        indexes: Sequence[IntervalIndex],
+        dim: Hashable,
+        positions: Iterable[Iterable[int]] | None = None,
+    ) -> IntervalIndex:
         new_index = PandasIndex.concat(
             [idx._index for idx in indexes], dim, positions=positions
         )
@@ -70,25 +91,41 @@ class IntervalIndex(Index):
 
         return cls(new_index, bounds_name, bounds_dim)
 
-    def create_variables(self, variables=None):
+    @property
+    def _pd_index(self) -> pd.IntervalIndex:
+        # For typing purpose only
+        # TODO: cleaner to make PandasIndex a generic class, i.e., PandasIndex[pd.IntervalIndex]
+        # will be easier once PEP 696 is fully supported (starting from Python 3.13)
+        return cast(pd.IntervalIndex, self._index.index)
+
+    def create_variables(
+        self, variables: Mapping[Any, Variable] | None = None
+    ) -> dict[Any, Variable]:
+        if variables is None:
+            variables = {}
         empty_var = Variable((), 0)
         bounds_attrs = variables.get(self._bounds_name, empty_var).attrs
         mid_attrs = variables.get(self._index.dim, empty_var).attrs
 
         bounds_var = Variable(
             dims=(self._bounds_dim, self._index.dim),
-            data=np.stack([self._index.index.left, self._index.index.right], axis=0),
+            data=np.stack([self._pd_index.left, self._pd_index.right], axis=0),
             attrs=bounds_attrs,
         )
         mid_var = Variable(
             dims=(self._index.dim,),
-            data=self._index.index.mid,
+            data=self._pd_index.mid,
             attrs=mid_attrs,
         )
 
         return {self._index.dim: mid_var, self._bounds_name: bounds_var}
 
-    def should_add_coord_to_array(self, name, var, dims):
+    def should_add_coord_to_array(
+        self,
+        name: Hashable,
+        var: Variable,
+        dims: set[Hashable],
+    ) -> bool:
         # add both the mid and boundary coordinates if the index dimension
         # is present in the array dimensions
         if self._index.dim in dims:
@@ -96,33 +133,42 @@ class IntervalIndex(Index):
         else:
             return False
 
-    def equals(self, other):
+    def to_pandas_index(self) -> pd.Index:
+        return self._pd_index
+
+    def equals(self, other: Index) -> bool:
         if not isinstance(other, IntervalIndex):
             return False
-        return self._index.equals(other._index, exclude_dims=frozenset())
+        return self._index.equals(other._index)
 
-    def sel(self, labels, **kwargs):
+    def sel(self, labels: dict[Any, Any], **kwargs) -> IndexSelResult:
         return self._index.sel(labels, **kwargs)
 
-    def isel(self, indexers):
+    def isel(
+        self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
+    ) -> Self | None:
         new_index = self._index.isel(indexers)
         if new_index is not None:
             return type(self)(new_index, self._bounds_name, self._bounds_dim)
         else:
             return None
 
-    def roll(self, shifts):
+    def roll(self, shifts: Mapping[Any, int]) -> Self | None:
         new_index = self._index.roll(shifts)
         return type(self)(new_index, self._bounds_name, self._bounds_dim)
 
-    def rename(self, name_dict, dims_dict):
+    def rename(
+        self,
+        name_dict: Mapping[Any, Hashable],
+        dims_dict: Mapping[Any, Hashable],
+    ) -> Self:
         new_index = self._index.rename(name_dict, dims_dict)
 
         bounds_name = name_dict.get(self._bounds_name, self._bounds_name)
         bounds_dim = dims_dict.get(self._bounds_dim, self._bounds_dim)
 
-        return type(self)(new_index, bounds_name, bounds_dim)
+        return type(self)(new_index, bounds_name, str(bounds_dim))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         string = f"{self._index!r}"
         return string
