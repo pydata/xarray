@@ -144,4 +144,11 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
             return np.asarray(self.array, dtype=dtype)
 
     def __getattr__(self, attr: str) -> Any:
-        return getattr(self.array, attr)
+        #  without __deepcopy__ or __copy__, the object is first constructed and then the sub-objects are attached:
+        # "A shallow copy constructs a new compound object and then (to the extent possible) inserts references into it to the objects found in the original" +
+        # "A deep copy constructs a new compound object and then, recursively, inserts copies into it of the objects found in the original."
+        # So without array, this method then calls getattr for "array" again while looking for __setstate__
+        # (which is apparently the first thing sought in copy.copy from the under-construction copied object)
+        # because of self.array. __getattribute__ bypasses the lookup mechanism of __getattr__.
+        # See stackoverflow.com/questions/40583131/python-deepcopy-with-custom-getattr-and-setattr as well.
+        return getattr(super().__getattribute__("array"), attr)

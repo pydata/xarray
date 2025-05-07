@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import pickle
 import warnings
 
 import numpy as np
@@ -1098,4 +1099,8 @@ def test_extension_array_repr(int1):
 
 def test_extension_array_attr():
     array = pd.Categorical(["cat2", "cat1", "cat2", "cat3", "cat1"])
-    assert (array.categories == PandasExtensionArray(array).categories).all()
+    wrapped = PandasExtensionArray(array)
+    assert (array.categories == wrapped.categories).all()
+    assert array.nbytes == wrapped.nbytes
+
+    assert (pickle.loads(pickle.dumps(wrapped)) == wrapped).all()
