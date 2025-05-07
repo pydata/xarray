@@ -4279,6 +4279,26 @@ class TestDataset:
         dataset = Dataset({key: ("dim0", range(1)) for key in keys})
         assert_identical(dataset, dataset[keys])
 
+    def test_getitem_extra_dim_index_coord(self) -> None:
+        class AnyIndex(Index):
+            def should_add_coord_to_array(self, name, var, dims):
+                return True
+
+        idx = AnyIndex()
+        coords = Coordinates(
+            coords={
+                "x": ("x", [1, 2]),
+                "x_bounds": (("x", "x_bnds"), [(0.5, 1.5), (1.5, 2.5)]),
+            },
+            indexes={"x": idx, "x_bounds": idx},
+        )
+
+        ds = Dataset({"foo": (("x"), [1.0, 2.0])}, coords=coords)
+        actual = ds["foo"]
+
+        assert_identical(actual.coords, coords, check_default_indexes=False)
+        assert "x_bnds" not in actual.dims
+
     def test_virtual_variables_default_coords(self) -> None:
         dataset = Dataset({"foo": ("x", range(10))})
         expected1 = DataArray(range(10), dims="x", name="x")

@@ -311,6 +311,7 @@ rediraffe_redirects = {
     "why-xarray.rst": "getting-started-guide/why-xarray.rst",
     "installing.rst": "getting-started-guide/installing.rst",
     "quick-overview.rst": "getting-started-guide/quick-overview.rst",
+    "contributing.rst": "contribute/contributing.rst",
 }
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
