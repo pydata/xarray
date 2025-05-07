@@ -391,7 +391,7 @@ def where(condition, x, y):
         condition = asarray(condition, dtype=dtype, xp=xp)
     else:
         condition = astype(condition, dtype=dtype, xp=xp)
-    print(as_shared_dtype([x, y], xp=xp))
+
     return xp.where(condition, *as_shared_dtype([x, y], xp=xp))
 
 
