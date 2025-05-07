@@ -280,7 +280,7 @@ class AccessibleAsDuckArrayDataStore(backends.InMemoryDataStore):
 
 class TestDataset:
     def test_repr(self) -> None:
-        data = create_test_data(seed=123)
+        data = create_test_data(seed=123, use_extension_array=True)
         data.attrs["foo"] = "bar"
         # need to insert str dtype at runtime to handle different endianness
         expected = dedent(
@@ -297,6 +297,7 @@ class TestDataset:
                 var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
                 var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
                 var3     (dim3, dim1) float64 640B 0.4107 0.9941 0.1665 ... 0.716 1.555
+                var4     (dim1) category 64B 'b' 'c' 'b' 'a' 'c' 'a' 'c' 'a'
             Attributes:
                 foo:      bar""".format(
                 data["dim3"].dtype,
@@ -1814,7 +1815,7 @@ class TestDataset:
         actual3 = ds.unstack("index")
         assert actual3["var"].shape == (2, 2)
 
-    def test_categorical_reindex(self) -> None:
+    def test_categorical_index_reindex(self) -> None:
         cat = pd.CategoricalIndex(
             ["foo", "bar", "baz"],
             categories=["foo", "bar", "baz", "qux", "quux", "corge"],
@@ -4261,6 +4262,26 @@ class TestDataset:
         keys = ["foo", 1]
         dataset = Dataset({key: ("dim0", range(1)) for key in keys})
         assert_identical(dataset, dataset[keys])
+
+    def test_getitem_extra_dim_index_coord(self) -> None:
+        class AnyIndex(Index):
+            def should_add_coord_to_array(self, name, var, dims):
+                return True
+
+        idx = AnyIndex()
+        coords = Coordinates(
+            coords={
+                "x": ("x", [1, 2]),
+                "x_bounds": (("x", "x_bnds"), [(0.5, 1.5), (1.5, 2.5)]),
+            },
+            indexes={"x": idx, "x_bounds": idx},
+        )
+
+        ds = Dataset({"foo": (("x"), [1.0, 2.0])}, coords=coords)
+        actual = ds["foo"]
+
+        assert_identical(actual.coords, coords, check_default_indexes=False)
+        assert "x_bnds" not in actual.dims
 
     def test_virtual_variables_default_coords(self) -> None:
         dataset = Dataset({"foo": ("x", range(10))})

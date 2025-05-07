@@ -114,7 +114,7 @@ upstream        https://github.com/pydata/xarray (push)
       - SHA256 hash (Click "Show Hashes" next to the link to the wheel)
     - Open a pull request to pyodide
 
-14. Issue the release announcement to mailing lists & Twitter. For bug fix releases, I
+14. Issue the release announcement to mailing lists & Twitter (X). For bug fix releases, I
     usually only email xarray@googlegroups.com. For major/feature releases, I will email a broader
     list (no more than once every 3-6 months):
 
