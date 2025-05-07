@@ -13,6 +13,7 @@ import warnings
 from collections.abc import Callable
 from functools import partial
 from importlib import import_module
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -144,6 +145,21 @@ def round(array):
 around: Callable = round
 
 
+def isna(data: Any) -> bool:
+    """Checks if data is literally np.nan or pd.NA.
+
+    Parameters
+    ----------
+    data
+        Any python object
+
+    Returns
+    -------
+        Whether or not the data is np.nan or pd.NA
+    """
+    return data is pd.NA or data is np.nan
+
+
 def isnull(data):
     data = asarray(data)
 
@@ -257,13 +273,13 @@ def as_shared_dtype(scalars_or_arrays, xp=None):
         extension_array_types = [
             x.dtype for x in scalars_or_arrays if is_extension_array_dtype(x)
         ]
-        non_nans = [x for x in scalars_or_arrays if not (x is pd.NA or x is np.nan)]
+        non_nans = [x for x in scalars_or_arrays if not isna(x)]
         if len(extension_array_types) == len(non_nans) and all(
             isinstance(x, type(extension_array_types[0])) for x in extension_array_types
         ):
             return [
                 x
-                if not (x is pd.NA or x is np.nan)
+                if not isna(x)
                 else PandasExtensionArray(
                     type(non_nans[0].array)._from_sequence([x], dtype=non_nans[0].dtype)
                 )
