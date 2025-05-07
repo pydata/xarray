@@ -38,7 +38,7 @@ Bug fixes
 ~~~~~~~~~
 
 - Allow accessing arbitrary attributes on Pandas ExtensionArrays.
-  By `Deepak Cherian <https://github.com/dcherian`_.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Documentation
