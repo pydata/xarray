@@ -392,7 +392,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     @property
     def _in_memory(self):
         return isinstance(
-            self._data, np.ndarray | np.number | PandasIndexingAdapter
+            self._data,
+            np.ndarray | np.number | PandasIndexingAdapter | PandasExtensionArray,
         ) or (
             isinstance(self._data, indexing.MemoryCachedArray)
             and isinstance(self._data.array, indexing.NumpyIndexingAdapter)
