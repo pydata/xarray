@@ -48,16 +48,22 @@ class IntervalIndex(Index):
         *,
         options: Mapping[str, Any],
     ) -> Self:
+        # TODO: allow set the index from one variable? Guess bounds like cf_xarray's add_bounds
         assert len(variables) == 2
 
         for k, v in variables.items():
             if v.ndim == 2:
+                # TODO: be flexible with dimension order? Check which dim has length 2
                 bounds_name, bounds = k, v
             elif v.ndim == 1:
                 dim, _ = k, v
 
         bounds = bounds.transpose(..., dim)
         left, right = bounds.data.tolist()
+        # TODO: support non-dimension coordinates (pass variable name to pd.IntervalIndex.from_arrays)
+        # TODO: propagate coordinate dtype (pass it to PandasIndex constructor)
+        # TODO: add "closed" build option (maybe choose "closed='both'" as default here? to be consistent with
+        # CF conventions: https://cfconventions.org/cf-conventions/cf-conventions.html#bounds-one-d)
         index = PandasIndex(pd.IntervalIndex.from_arrays(left, right), dim)
         bounds_dim = (set(bounds.dims) - set(dim)).pop()
 
@@ -107,11 +113,16 @@ class IntervalIndex(Index):
         bounds_attrs = variables.get(self._bounds_name, empty_var).attrs
         mid_attrs = variables.get(self._index.dim, empty_var).attrs
 
+        # TODO: create a PandasIndexingAdapter subclass for the boundary variable
+        # and wrap it here (avoid data copy)
         bounds_var = Variable(
             dims=(self._bounds_dim, self._index.dim),
             data=np.stack([self._pd_index.left, self._pd_index.right], axis=0),
             attrs=bounds_attrs,
         )
+        # TODO: use PandasIndexingAdapter directly (avoid data copy)
+        # and/or maybe add an index build option to preserve original labels?
+        # (if those differ from interval midpoints as defined by pd.IntervalIndex)
         mid_var = Variable(
             dims=(self._index.dim,),
             data=self._pd_index.mid,
