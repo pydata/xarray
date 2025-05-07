@@ -332,6 +332,14 @@ Different groupers can be combined to construct sophisticated GroupBy operations
     ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper()).sum()
 
 
+Time Grouping and Resampling
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. seealso::
+
+   See :ref:`resampling`.
+
+
 Shuffling
 ~~~~~~~~~
 

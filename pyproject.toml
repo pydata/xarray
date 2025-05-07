@@ -393,6 +393,8 @@ extend-ignore-identifiers-re = [
 [tool.typos.default.extend-words]
 # NumPy function names
 arange = "arange"
+ond = "ond"
+aso = "aso"
 
 # Technical terms
 nd = "nd"

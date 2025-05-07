@@ -182,6 +182,8 @@ napoleon_type_aliases = {
     "pd.NaT": "~pandas.NaT",
 }
 
+autodoc_type_aliases = napoleon_type_aliases  # Keep both in sync
+
 # mermaid config
 mermaid_version = "10.9.1"
 
