@@ -8,6 +8,22 @@ from xarray.core.indexes import Index, PandasIndex
 
 
 class IntervalIndex(Index):
+    """Xarray index of 1-dimensional intervals.
+
+    This index is built on top of :py:class:`~xarray.indexes.PandasIndex` and
+    wraps a :py:class:`pandas.IntervalIndex`. It is associated with two
+    coordinate variables:
+
+    - a 1-dimensional coordinate where each label represents an interval that is
+      materialized by its midpoint (i.e., the average of its left and right
+      boundaries)
+
+    - a 2-dimensional coordinate that represents the left and right boundaries
+      of each interval. One of the two dimensions is shared with the
+      aforementioned coordinate and the other one has length 2.
+
+    """
+
     def __init__(self, index: PandasIndex, bounds_name: Hashable, bounds_dim: str):
         assert isinstance(index.index, pd.IntervalIndex)
         self._index = index
