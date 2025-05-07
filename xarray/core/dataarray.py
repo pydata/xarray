@@ -33,6 +33,7 @@ from xarray.core.coordinates import (
     DataArrayCoordinates,
     assert_coordinate_consistent,
     create_coords_with_default_indexes,
+    validate_dataarray_coords,
 )
 from xarray.core.dataset import Dataset
 from xarray.core.extension_array import PandasExtensionArray
@@ -125,25 +126,6 @@ if TYPE_CHECKING:
     T_XarrayOther = TypeVar("T_XarrayOther", bound="DataArray" | Dataset)
 
 
-def _check_coords_dims(shape, coords, dim):
-    sizes = dict(zip(dim, shape, strict=True))
-    for k, v in coords.items():
-        if any(d not in dim for d in v.dims):
-            raise ValueError(
-                f"coordinate {k} has dimensions {v.dims}, but these "
-                "are not a subset of the DataArray "
-                f"dimensions {dim}"
-            )
-
-        for d, s in v.sizes.items():
-            if s != sizes[d]:
-                raise ValueError(
-                    f"conflicting sizes for dimension {d!r}: "
-                    f"length {sizes[d]} on the data but length {s} on "
-                    f"coordinate {k!r}"
-                )
-
-
 def _infer_coords_and_dims(
     shape: tuple[int, ...],
     coords: (
@@ -207,7 +189,7 @@ def _infer_coords_and_dims(
                 var.dims = (dim,)
                 new_coords[dim] = var.to_index_variable()
 
-    _check_coords_dims(shape, new_coords, dims_tuple)
+    validate_dataarray_coords(shape, new_coords, dims_tuple)
 
     return new_coords, dims_tuple
 

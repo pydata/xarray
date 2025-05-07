@@ -7,6 +7,10 @@ class AlignmentError(ValueError):
     """Error class for alignment failures due to incompatible arguments."""
 
 
+class CoordinateValidationError(ValueError):
+    """Error class for Xarray coordinate validation failures."""
+
+
 class MergeError(ValueError):
     """Error class for merge failures due to incompatible arguments."""
 
@@ -29,6 +33,7 @@ class SerializationWarning(RuntimeWarning):
 
 __all__ = [
     "AlignmentError",
+    "CoordinateValidationError",
     "InvalidTreeError",
     "MergeError",
     "SerializationWarning",

@@ -48,6 +48,7 @@ from xarray.core.variable import IndexVariable, Variable, as_variable
 # import custom error classes in root namespace for backward compatibility
 from xarray.errors import (
     AlignmentError,
+    CoordinateValidationError,
     InvalidTreeError,
     MergeError,
     NotFoundInTreeError,
@@ -135,6 +136,7 @@ __all__ = (  # noqa: RUF022
     "Variable",
     # Exceptions
     "AlignmentError",
+    "CoordinateValidationError",
     "InvalidTreeError",
     "MergeError",
     "NotFoundInTreeError",
