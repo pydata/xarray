@@ -219,7 +219,7 @@ today_fmt = "%Y-%m-%d"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build", "**.ipynb_checkpoints"]
+exclude_patterns = ["_build", "**.ipynb_checkpoints", "_contents"]
 
 
 # The name of the Pygments (syntax highlighting) style to use.
