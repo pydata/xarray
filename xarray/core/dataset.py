@@ -1159,7 +1159,15 @@ class Dataset(
         coords: dict[Hashable, Variable] = {}
         # preserve ordering
         for k in self._variables:
-            if k in self._coord_names and set(self._variables[k].dims) <= needed_dims:
+            if k in self._indexes:
+                add_coord = self._indexes[k].should_add_coord_to_array(
+                    k, self._variables[k], needed_dims
+                )
+            else:
+                var_dims = set(self._variables[k].dims)
+                add_coord = k in self._coord_names and var_dims <= needed_dims
+
+            if add_coord:
                 coords[k] = self._variables[k]
 
         indexes = filter_indexes_from_coords(self._indexes, set(coords))
@@ -7059,6 +7067,8 @@ class Dataset(
         )
 
     def _to_dataframe(self, ordered_dims: Mapping[Any, int]):
+        from xarray.core.extension_array import PandasExtensionArray
+
         columns_in_order = [k for k in self.variables if k not in self.dims]
         non_extension_array_columns = [
             k
@@ -7070,20 +7080,41 @@ class Dataset(
             for k in columns_in_order
             if is_extension_array_dtype(self.variables[k].data)
         ]
+        extension_array_columns_different_index = [
+            k
+            for k in extension_array_columns
+            if set(self.variables[k].dims) != set(ordered_dims.keys())
+        ]
+        extension_array_columns_same_index = [
+            k
+            for k in extension_array_columns
+            if k not in extension_array_columns_different_index
+        ]
         data = [
             self._variables[k].set_dims(ordered_dims).values.reshape(-1)
             for k in non_extension_array_columns
         ]
         index = self.coords.to_index([*ordered_dims])
         broadcasted_df = pd.DataFrame(
-            dict(zip(non_extension_array_columns, data, strict=True)), index=index
+            {
+                **dict(zip(non_extension_array_columns, data, strict=True)),
+                **{
+                    c: self.variables[c].data
+                    for c in extension_array_columns_same_index
+                },
+            },
+            index=index,
         )
-        for extension_array_column in extension_array_columns:
-            extension_array = self.variables[extension_array_column].data.array
-            index = self[self.variables[extension_array_column].dims[0]].data
+        for extension_array_column in extension_array_columns_different_index:
+            extension_array = self.variables[extension_array_column].data
+            index = self[
+                self.variables[extension_array_column].dims[0]
+            ].coords.to_index()
             extension_array_df = pd.DataFrame(
                 {extension_array_column: extension_array},
-                index=self[self.variables[extension_array_column].dims[0]].data,
+                index=pd.Index(index.array)
+                if isinstance(index, PandasExtensionArray)  # type: ignore[redundant-expr]
+                else index,
             )
             extension_array_df.index.name = self.variables[extension_array_column].dims[
                 0
@@ -9543,7 +9574,7 @@ class Dataset(
         """
         Curve fitting optimization for arbitrary functions.
 
-        Wraps `scipy.optimize.curve_fit` with `apply_ufunc`.
+        Wraps :py:func:`scipy.optimize.curve_fit` with :py:func:`~xarray.apply_ufunc`.
 
         Parameters
         ----------
@@ -9603,6 +9634,9 @@ class Dataset(
         --------
         Dataset.polyfit
         scipy.optimize.curve_fit
+        xarray.Dataset.xlm.modelfit
+            External method from `xarray-lmfit <https://xarray-lmfit.readthedocs.io/>`_
+            with more curve fitting functionality.
         """
         from xarray.computation.fit import curvefit as curvefit_impl
 
@@ -9824,7 +9858,7 @@ class Dataset(
         *,
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
-        eagerly_compute_group: bool = True,
+        eagerly_compute_group: Literal[False] | None = None,
         **groupers: Grouper,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
@@ -9840,11 +9874,8 @@ class Dataset(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
-        eagerly_compute_group: bool
-            Whether to eagerly compute ``group`` when it is a chunked array.
-            This option is to maintain backwards compatibility. Set to False
-            to opt-in to future behaviour, where ``group`` is not automatically loaded
-            into memory.
+        eagerly_compute_group: False, optional
+            This argument is deprecated.
         **groupers : Mapping of str to Grouper or Resampler
             Mapping of variable name to group by to :py:class:`Grouper` or :py:class:`Resampler` object.
             One of ``group`` or ``groupers`` must be provided.
@@ -9867,7 +9898,7 @@ class Dataset(
 
         >>> ds.groupby("letters")
         <DatasetGroupBy, grouped over 1 grouper(s), 2 groups in total:
-            'letters': 2/2 groups present with labels 'a', 'b'>
+            'letters': UniqueGrouper('letters'), 2/2 groups with labels 'a', 'b'>
 
         Execute a reduction
 
@@ -9884,18 +9915,18 @@ class Dataset(
 
         >>> ds.groupby(["letters", "x"])
         <DatasetGroupBy, grouped over 2 grouper(s), 8 groups in total:
-            'letters': 2/2 groups present with labels 'a', 'b'
-            'x': 4/4 groups present with labels 10, 20, 30, 40>
+            'letters': UniqueGrouper('letters'), 2/2 groups with labels 'a', 'b'
+            'x': UniqueGrouper('x'), 4/4 groups with labels 10, 20, 30, 40>
 
         Use Grouper objects to express more complicated GroupBy operations
 
         >>> from xarray.groupers import BinGrouper, UniqueGrouper
         >>>
         >>> ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper()).sum()
-        <xarray.Dataset> Size: 128B
+        <xarray.Dataset> Size: 144B
         Dimensions:  (y: 3, x_bins: 2, letters: 2)
         Coordinates:
-          * x_bins   (x_bins) object 16B (5, 15] (15, 25]
+          * x_bins   (x_bins) interval[int64, right] 32B (5, 15] (15, 25]
           * letters  (letters) object 16B 'a' 'b'
         Dimensions without coordinates: y
         Data variables:
@@ -9945,7 +9976,7 @@ class Dataset(
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
         duplicates: Literal["raise", "drop"] = "raise",
-        eagerly_compute_group: bool = True,
+        eagerly_compute_group: Literal[False] | None = None,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
 
@@ -9982,11 +10013,8 @@ class Dataset(
             coordinates.
         duplicates : {"raise", "drop"}, default: "raise"
             If bin edges are not unique, raise ValueError or drop non-uniques.
-        eagerly_compute_group: bool
-            Whether to eagerly compute ``group`` when it is a chunked array.
-            This option is to maintain backwards compatibility. Set to False
-            to opt-in to future behaviour, where ``group`` is not automatically loaded
-            into memory.
+        eagerly_compute_group: False, optional
+            This argument is deprecated.
 
         Returns
         -------

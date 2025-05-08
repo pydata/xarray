@@ -30,10 +30,7 @@ from xarray.core import duck_array_ops, utils
 from xarray.core.formatting import limit_lines
 from xarray.core.indexes import Index, filter_indexes_from_coords
 from xarray.core.options import _get_keep_attrs
-from xarray.core.utils import (
-    is_dict_like,
-    result_name,
-)
+from xarray.core.utils import is_dict_like, result_name
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
@@ -1212,6 +1209,8 @@ def apply_ufunc(
             dask_gufunc_kwargs.setdefault("output_sizes", output_sizes)
 
     if kwargs:
+        if "where" in kwargs and isinstance(kwargs["where"], DataArray):
+            kwargs["where"] = kwargs["where"].data  # type:ignore[index]
         func = functools.partial(func, **kwargs)
 
     if keep_attrs is None:

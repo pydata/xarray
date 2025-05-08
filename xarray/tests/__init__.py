@@ -60,7 +60,9 @@ def assert_writeable(ds):
         name
         for name, var in ds.variables.items()
         if not isinstance(var, IndexVariable)
-        and not isinstance(var.data, PandasExtensionArray)
+        and not isinstance(
+            var.data, PandasExtensionArray | pd.api.extensions.ExtensionArray
+        )
         and not var.data.flags.writeable
     ]
     assert not readonly, readonly
@@ -384,7 +386,10 @@ _NON_STANDARD_CALENDARS = [
     pytest.param(cal, marks=requires_cftime)
     for cal in sorted(_NON_STANDARD_CALENDAR_NAMES)
 ]
-_STANDARD_CALENDARS = [pytest.param(cal) for cal in _STANDARD_CALENDAR_NAMES]
+_STANDARD_CALENDARS = [
+    pytest.param(cal, marks=requires_cftime if cal != "standard" else ())
+    for cal in _STANDARD_CALENDAR_NAMES
+]
 _ALL_CALENDARS = sorted(_STANDARD_CALENDARS + _NON_STANDARD_CALENDARS)
 _CFTIME_CALENDARS = [
     pytest.param(*p.values, marks=requires_cftime) for p in _ALL_CALENDARS
