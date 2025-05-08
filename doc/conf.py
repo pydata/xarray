@@ -114,7 +114,6 @@ You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/
 # AutoDoc configuration
 autosummary_generate = True
 autodoc_typehints = "none"
-autodoc_type_aliases = napoleon_type_aliases  # Keep both in sync
 
 # Napoleon configuration
 napoleon_google_docstring = False
@@ -183,6 +182,7 @@ napoleon_type_aliases = {
     "pd.Index": "~pandas.Index",
     "pd.NaT": "~pandas.NaT",
 }
+autodoc_type_aliases = napoleon_type_aliases  # Keep both in sync
 
 # jupyterlite try_examples config
 global_enable_try_examples = True
