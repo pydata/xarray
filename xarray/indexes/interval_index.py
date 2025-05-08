@@ -74,7 +74,7 @@ class IntervalIndex(Index):
                     "invalid coordinates given to IntervalIndex. When two coordinates are given, "
                     "one must be 1-dimensional (central values) and the other must be "
                     "2-dimensional (boundaries). Actual coordinate variables:\n"
-                    + "\n".join(variables.values())
+                    + "\n".join(str(var) for var in variables.values())
                 )
 
             if mid_var.dims[0] == bounds_var.dims[0]:
@@ -204,6 +204,7 @@ class IntervalIndex(Index):
     def equals(self, other: Index) -> bool:
         if not isinstance(other, IntervalIndex):
             return False
+
         return self._mid_index.equals(other._mid_index) and self._bounds_index.equals(
             other._bounds_index
         )
@@ -220,7 +221,7 @@ class IntervalIndex(Index):
         if new_mid_index is None or new_bounds_index is None:
             return None
         else:
-            return type(self)(new_mid_index, new_bounds_index, self.bounds_dim)
+            return type(self)(new_mid_index, new_bounds_index, str(self.bounds_dim))
 
     def roll(self, shifts: Mapping[Any, int]) -> Self | None:
         new_mid_index = self._mid_index.roll(shifts)
