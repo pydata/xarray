@@ -106,6 +106,14 @@ class IntervalIndex(Index):
                 pd_bounds_index, dim, coord_dtype=bounds_var.dtype
             )
 
+            actual_indexer = pd_bounds_index.get_indexer(pd_mid_index)
+            expected_indexer = np.arange(pd_mid_index.size)
+            if not np.array_equal(actual_indexer, expected_indexer):
+                raise ValueError(
+                    "invalid coordinates given to IntervalIndex. Not all central values are "
+                    "in their corresponding interval"
+                )
+
         elif len(variables) == 1:
             # TODO: allow setting the index from one variable? Perhaps in this fallback order:
             # - check if the coordinate wraps a pd.IntervalIndex
