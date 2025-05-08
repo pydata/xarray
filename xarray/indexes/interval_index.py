@@ -139,14 +139,14 @@ class IntervalIndex(Index):
         positions: Iterable[Iterable[int]] | None = None,
     ) -> IntervalIndex:
         new_mid_index = PandasIndex.concat(
-            [idx._mid_index for idx in indexes], dim, positions=positions
+            [idx.mid_index for idx in indexes], dim, positions=positions
         )
         new_bounds_index = PandasIndex.concat(
-            [idx._bounds_index for idx in indexes], dim, positions=positions
+            [idx.bounds_index for idx in indexes], dim, positions=positions
         )
 
         if indexes:
-            bounds_dim = indexes[0]._bounds_dim
+            bounds_dim = indexes[0].bounds_dim
             # TODO: check whether this may actually happen or concat fails early during alignment
             if any(idx._bounds_dim != bounds_dim for idx in indexes):
                 raise ValueError(
@@ -156,11 +156,19 @@ class IntervalIndex(Index):
         else:
             bounds_dim = "bounds"
 
-        return cls(new_mid_index, new_bounds_index, bounds_dim)
+        return cls(new_mid_index, new_bounds_index, str(bounds_dim))
+
+    @property
+    def mid_index(self) -> PandasIndex:
+        return self._mid_index
+
+    @property
+    def bounds_index(self) -> PandasIndex:
+        return self._bounds_index
 
     @property
     def dim(self) -> Hashable:
-        return self._mid_index.dim
+        return self.mid_index.dim
 
     @property
     def bounds_dim(self) -> Hashable:
@@ -169,10 +177,10 @@ class IntervalIndex(Index):
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> dict[Any, Variable]:
-        new_variables = self._mid_index.create_variables(variables)
+        new_variables = self.mid_index.create_variables(variables)
 
-        # boundary variable (we cannot just defer to self._bounds_index.create_variables())
-        bounds_pd_index = cast(pd.IntervalIndex, self._bounds_index.index)
+        # boundary variable (we cannot just defer to self.bounds_index.create_variables())
+        bounds_pd_index = cast(pd.IntervalIndex, self.bounds_index.index)
         bounds_varname = bounds_pd_index.name
         attrs: Mapping[Hashable, Any] | None
         encoding: Mapping[Hashable, Any] | None
@@ -209,13 +217,13 @@ class IntervalIndex(Index):
         if not isinstance(other, IntervalIndex):
             return False
 
-        return self._mid_index.equals(other._mid_index) and self._bounds_index.equals(
-            other._bounds_index
+        return self.mid_index.equals(other.mid_index) and self.bounds_index.equals(
+            other.bounds_index
         )
 
     def join(self, other: Self, how: str = "inner") -> Self:
-        joined_mid_index = self._mid_index.join(other._mid_index, how=how)
-        joined_bounds_index = self._bounds_index.join(other._bounds_index, how=how)
+        joined_mid_index = self.mid_index.join(other.mid_index, how=how)
+        joined_bounds_index = self.bounds_index.join(other.bounds_index, how=how)
 
         assert isinstance(joined_bounds_index, pd.IntervalIndex)
         check_mid_in_interval(
@@ -227,11 +235,11 @@ class IntervalIndex(Index):
     def reindex_like(
         self, other: Self, method=None, tolerance=None
     ) -> dict[Hashable, Any]:
-        mid_indexers = self._mid_index.reindex_like(
-            other._mid_index, method=method, tolerance=tolerance
+        mid_indexers = self.mid_index.reindex_like(
+            other.mid_index, method=method, tolerance=tolerance
         )
-        bounds_indexers = self._mid_index.reindex_like(
-            other._bounds_index, method=method, tolerance=tolerance
+        bounds_indexers = self.mid_index.reindex_like(
+            other.bounds_index, method=method, tolerance=tolerance
         )
 
         if not np.array_equal(mid_indexers[self.dim], bounds_indexers[self.dim]):
@@ -242,13 +250,13 @@ class IntervalIndex(Index):
         return mid_indexers
 
     def sel(self, labels: dict[Any, Any], **kwargs) -> IndexSelResult:
-        return self._bounds_index.sel(labels, **kwargs)
+        return self.bounds_index.sel(labels, **kwargs)
 
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
     ) -> Self | None:
-        new_mid_index = self._mid_index.isel(indexers)
-        new_bounds_index = self._bounds_index.isel(indexers)
+        new_mid_index = self.mid_index.isel(indexers)
+        new_bounds_index = self.bounds_index.isel(indexers)
 
         if new_mid_index is None or new_bounds_index is None:
             return None
@@ -256,8 +264,8 @@ class IntervalIndex(Index):
             return type(self)(new_mid_index, new_bounds_index, str(self.bounds_dim))
 
     def roll(self, shifts: Mapping[Any, int]) -> Self | None:
-        new_mid_index = self._mid_index.roll(shifts)
-        new_bounds_index = self._bounds_index.roll(shifts)
+        new_mid_index = self.mid_index.roll(shifts)
+        new_bounds_index = self.bounds_index.roll(shifts)
 
         return type(self)(new_mid_index, new_bounds_index, self._bounds_dim)
 
@@ -266,8 +274,8 @@ class IntervalIndex(Index):
         name_dict: Mapping[Any, Hashable],
         dims_dict: Mapping[Any, Hashable],
     ) -> Self:
-        new_mid_index = self._mid_index.rename(name_dict, dims_dict)
-        new_bounds_index = self._bounds_index.rename(name_dict, dims_dict)
+        new_mid_index = self.mid_index.rename(name_dict, dims_dict)
+        new_bounds_index = self.bounds_index.rename(name_dict, dims_dict)
 
         bounds_dim = dims_dict.get(self.bounds_dim, self.bounds_dim)
 
@@ -275,6 +283,6 @@ class IntervalIndex(Index):
 
     def __repr__(self) -> str:
         text = "IntervalIndex\n"
-        text += f"- central values:\n{self._mid_index!r}\n"
-        text += f"- boundaries:\n{self._bounds_index!r}\n"
+        text += f"- central values:\n{self.mid_index!r}\n"
+        text += f"- boundaries:\n{self.bounds_index!r}\n"
         return text
