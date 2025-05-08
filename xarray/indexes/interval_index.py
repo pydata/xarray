@@ -14,6 +14,13 @@ if TYPE_CHECKING:
     from xarray.core.types import Self
 
 
+def check_mid_in_interval(mid_index: pd.Index, bounds_index: pd.IntervalIndex):
+    actual_indexer = bounds_index.get_indexer(mid_index)
+    expected_indexer = np.arange(mid_index.size)
+    if not np.array_equal(actual_indexer, expected_indexer):
+        raise ValueError("not all central values are in their corresponding interval")
+
+
 class IntervalIndex(Index):
     """Xarray index of 1-dimensional intervals.
 
@@ -43,6 +50,8 @@ class IntervalIndex(Index):
         bounds_dim: str | None = None,
     ):
         assert isinstance(bounds_index.index, pd.IntervalIndex)
+        assert mid_index.dim == bounds_index.dim
+
         self._mid_index = mid_index
         self._bounds_index = bounds_index
 
@@ -91,7 +100,8 @@ class IntervalIndex(Index):
 
             if bounds_var.sizes[bounds_dim] != 2:
                 raise ValueError(
-                    f"invalid shape for the boundary coordinate given to IntervalIndex (expected dimension {bounds_dim!r} of size 2)"
+                    "invalid shape for the boundary coordinate given to IntervalIndex "
+                    f"(expected dimension {bounds_dim!r} of size 2)"
                 )
 
             pd_mid_index = pd.Index(mid_var.values, name=mid_name)
@@ -106,13 +116,7 @@ class IntervalIndex(Index):
                 pd_bounds_index, dim, coord_dtype=bounds_var.dtype
             )
 
-            actual_indexer = pd_bounds_index.get_indexer(pd_mid_index)
-            expected_indexer = np.arange(pd_mid_index.size)
-            if not np.array_equal(actual_indexer, expected_indexer):
-                raise ValueError(
-                    "invalid coordinates given to IntervalIndex. Not all central values are "
-                    "in their corresponding interval"
-                )
+            check_mid_in_interval(pd_mid_index, pd_bounds_index)
 
         elif len(variables) == 1:
             # TODO: allow setting the index from one variable? Perhaps in this fallback order:
@@ -156,7 +160,7 @@ class IntervalIndex(Index):
 
     @property
     def dim(self) -> Hashable:
-        return self._bounds_index.dim
+        return self._mid_index.dim
 
     @property
     def bounds_dim(self) -> Hashable:
@@ -208,6 +212,34 @@ class IntervalIndex(Index):
         return self._mid_index.equals(other._mid_index) and self._bounds_index.equals(
             other._bounds_index
         )
+
+    def join(self, other: Self, how: str = "inner") -> Self:
+        joined_mid_index = self._mid_index.join(other._mid_index, how=how)
+        joined_bounds_index = self._bounds_index.join(other._bounds_index, how=how)
+
+        assert isinstance(joined_bounds_index, pd.IntervalIndex)
+        check_mid_in_interval(
+            joined_mid_index.index, cast(pd.IntervalIndex, joined_bounds_index.index)
+        )
+
+        return type(self)(joined_mid_index, joined_bounds_index, self.bounds_dim)
+
+    def reindex_like(
+        self, other: Self, method=None, tolerance=None
+    ) -> dict[Hashable, Any]:
+        mid_indexers = self._mid_index.reindex_like(
+            other._mid_index, method=method, tolerance=tolerance
+        )
+        bounds_indexers = self._mid_index.reindex_like(
+            other._bounds_index, method=method, tolerance=tolerance
+        )
+
+        if not np.array_equal(mid_indexers[self.dim], bounds_indexers[self.dim]):
+            raise ValueError(
+                f"conflicting reindexing of central values and intervals along dimension {self.dim!r}"
+            )
+
+        return mid_indexers
 
     def sel(self, labels: dict[Any, Any], **kwargs) -> IndexSelResult:
         return self._bounds_index.sel(labels, **kwargs)
