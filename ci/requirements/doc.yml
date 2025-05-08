@@ -18,6 +18,7 @@ dependencies:
   - iris
   - jupyter_client
   - jupyter_sphinx
+  - jupyterlite-sphinx
   - matplotlib-base
   - nbsphinx
   - ncdata
