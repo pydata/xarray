@@ -99,7 +99,7 @@ coordinates:
     other = xr.Dataset({"bar": ("x", [1, 2, 3, 4]), "x": list("abcd")})
     xr.merge([ds, other])
 
-This ensures that ``merge`` is non-destructive. ``xarray.MergeError`` is raised
+This ensures that ``merge`` is non-destructive. ``xarray.errors.MergeError`` is raised
 if you attempt to merge two variables with the same name but different values:
 
 .. ipython::
