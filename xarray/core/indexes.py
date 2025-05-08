@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import collections.abc
 import copy
+import inspect
 from collections import defaultdict
-from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -348,7 +349,15 @@ class Index:
         """
         raise NotImplementedError(f"{self!r} doesn't support re-indexing labels")
 
-    def equals(self, other: Index) -> bool:
+    @overload
+    def equals(self, other: Index) -> bool: ...
+
+    @overload
+    def equals(
+        self, other: Index, *, exclude_dims: frozenset[Hashable] | None = None
+    ) -> bool: ...
+
+    def equals(self, other: Index, **kwargs) -> bool:
         """Compare this index with another index of the same type.
 
         Implementation is optional but required in order to support alignment.
@@ -357,6 +366,16 @@ class Index:
         ----------
         other : Index
             The other Index object to compare with this object.
+        exclude_dims : frozenset of hashable, optional
+            All the dimensions that are excluded from alignment, or None by default
+            (i.e., when this method is not called in the context of alignment).
+            For a n-dimensional index it allows ignoring any relevant dimension found
+            in ``exclude_dims`` when comparing this index with the other index.
+            For a 1-dimensional index it can be always safely ignored as this
+            method is not called when all of the index's dimensions are also excluded
+            from alignment
+            (note: the index's dimensions correspond to the union of the dimensions
+            of all coordinate variables associated with this index).
 
         Returns
         -------
@@ -863,7 +882,7 @@ class PandasIndex(Index):
 
         return IndexSelResult({self.dim: indexer})
 
-    def equals(self, other: Index):
+    def equals(self, other: Index, *, exclude_dims: frozenset[Hashable] | None = None):
         if not isinstance(other, PandasIndex):
             return False
         return self.index.equals(other.index) and self.dim == other.dim
@@ -1542,7 +1561,9 @@ class CoordinateTransformIndex(Index):
 
         return IndexSelResult(results)
 
-    def equals(self, other: Index) -> bool:
+    def equals(
+        self, other: Index, *, exclude_dims: frozenset[Hashable] | None = None
+    ) -> bool:
         if not isinstance(other, CoordinateTransformIndex):
             return False
         return self.transform.equals(other.transform)
@@ -1925,6 +1946,36 @@ def default_indexes(
     return indexes
 
 
+def _wrap_index_equals(
+    index: Index,
+) -> Callable[[Index, frozenset[Hashable]], bool]:
+    # TODO: remove this Index.equals() wrapper (backward compatibility)
+
+    sig = inspect.signature(index.equals)
+
+    if len(sig.parameters) == 1:
+        index_cls_name = type(index).__module__ + "." + type(index).__qualname__
+        emit_user_level_warning(
+            f"the signature ``{index_cls_name}.equals(self, other)`` is deprecated. "
+            f"Please update it to "
+            f"``{index_cls_name}.equals(self, other, *, exclude_dims=None)`` "
+            "or kindly ask the maintainers doing it. "
+            "See documentation of xarray.Index.equals() for more info.",
+            FutureWarning,
+        )
+        exclude_dims_kwarg = False
+    else:
+        exclude_dims_kwarg = True
+
+    def equals_wrapper(other: Index, exclude_dims: frozenset[Hashable]) -> bool:
+        if exclude_dims_kwarg:
+            return index.equals(other, exclude_dims=exclude_dims)
+        else:
+            return index.equals(other)
+
+    return equals_wrapper
+
+
 def indexes_equal(
     index: Index,
     other_index: Index,
@@ -1966,6 +2017,7 @@ def indexes_equal(
 
 def indexes_all_equal(
     elements: Sequence[tuple[Index, dict[Hashable, Variable]]],
+    exclude_dims: frozenset[Hashable],
 ) -> bool:
     """Check if indexes are all equal.
 
@@ -1990,9 +2042,11 @@ def indexes_all_equal(
 
     same_type = all(type(indexes[0]) is type(other_idx) for other_idx in indexes[1:])
     if same_type:
+        index_equals_func = _wrap_index_equals(indexes[0])
         try:
             not_equal = any(
-                not indexes[0].equals(other_idx) for other_idx in indexes[1:]
+                not index_equals_func(other_idx, exclude_dims)
+                for other_idx in indexes[1:]
             )
         except NotImplementedError:
             not_equal = check_variables()

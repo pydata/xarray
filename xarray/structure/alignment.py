@@ -216,30 +216,37 @@ class Aligner(Generic[T_Alignable]):
 
         normalized_indexes = {}
         normalized_index_vars = {}
-        for idx, index_vars in Indexes(xr_indexes, xr_variables).group_by_index():
-            coord_names_and_dims = []
-            all_dims: set[Hashable] = set()
 
-            for name, var in index_vars.items():
+        for idx, idx_vars in Indexes(xr_indexes, xr_variables).group_by_index():
+            idx_coord_names_and_dims = []
+            idx_all_dims: set[Hashable] = set()
+
+            for name, var in idx_vars.items():
                 dims = var.dims
-                coord_names_and_dims.append((name, dims))
-                all_dims.update(dims)
+                idx_coord_names_and_dims.append((name, dims))
+                idx_all_dims.update(dims)
 
-            exclude_dims = all_dims & self.exclude_dims
-            if exclude_dims == all_dims:
-                continue
-            elif exclude_dims:
-                excl_dims_str = ", ".join(str(d) for d in exclude_dims)
-                incl_dims_str = ", ".join(str(d) for d in all_dims - exclude_dims)
-                raise AlignmentError(
-                    f"cannot exclude dimension(s) {excl_dims_str} from alignment because "
-                    "these are used by an index together with non-excluded dimensions "
-                    f"{incl_dims_str}"
-                )
+            # We can ignore an index if all the dimensions it uses are also excluded
+            # from the alignment (do not ignore the index if it has no related dimension, i.e.,
+            # it is associated with one or more scalar coordinates).
+            if idx_all_dims:
+                exclude_dims = idx_all_dims & self.exclude_dims
+                if exclude_dims == idx_all_dims:
+                    continue
+                elif exclude_dims and self.join != "exact":
+                    excl_dims_str = ", ".join(str(d) for d in exclude_dims)
+                    incl_dims_str = ", ".join(
+                        str(d) for d in idx_all_dims - exclude_dims
+                    )
+                    raise AlignmentError(
+                        f"cannot exclude dimension(s) {excl_dims_str} from non-exact alignment "
+                        "because these are used by an index together with non-excluded dimensions "
+                        f"{incl_dims_str}"
+                    )
 
-            key = (tuple(coord_names_and_dims), type(idx))
+            key = (tuple(idx_coord_names_and_dims), type(idx))
             normalized_indexes[key] = idx
-            normalized_index_vars[key] = index_vars
+            normalized_index_vars[key] = idx_vars
 
         return normalized_indexes, normalized_index_vars
 
@@ -298,7 +305,7 @@ class Aligner(Generic[T_Alignable]):
           pandas). This is useful, e.g., for overwriting such duplicate indexes.
 
         """
-        if not indexes_all_equal(cmp_indexes):
+        if not indexes_all_equal(cmp_indexes, self.exclude_dims):
             # always reindex when matching indexes are not equal
             return True
 
