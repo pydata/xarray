@@ -139,10 +139,7 @@ class IntervalIndex(Index):
     ) -> bool:
         # add both the mid and boundary coordinates if the index dimension
         # is present in the array dimensions
-        if self._index.dim in dims:
-            return True
-        else:
-            return False
+        return self._index.dim in dims
 
     def to_pandas_index(self) -> pd.Index:
         return self._pd_index
