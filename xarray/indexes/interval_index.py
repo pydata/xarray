@@ -22,7 +22,7 @@ class IntervalIndex(Index):
     coordinate variables:
 
     - a 1-dimensional coordinate where each label represents an interval that is
-      materialized by its midpoint (i.e., the average of its left and right
+      materialized by a central value (commonly the average of its left and right
       boundaries)
 
     - a 2-dimensional coordinate that represents the left and right boundaries
