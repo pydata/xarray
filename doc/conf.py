@@ -89,6 +89,7 @@ extensions = [
     "sphinx_design",
     "sphinx_inline_tabs",
     "sphinx_remove_toctrees",
+    "jupyterlite_sphinx",
 ]
 
 
@@ -186,6 +187,11 @@ napoleon_type_aliases = {
     "pd.Index": "~pandas.Index",
     "pd.NaT": "~pandas.NaT",
 }
+
+# jupyterlite try_examples config
+global_enable_try_examples = True
+try_examples_global_button_text = "Try it in your browser!"
+try_examples_global_warning_text = "Interactive examples are experimental and may not always work as expected."
 
 # mermaid config
 mermaid_version = "10.9.1"
