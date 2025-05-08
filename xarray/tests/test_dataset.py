@@ -8,7 +8,7 @@ from collections.abc import Hashable
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -1826,6 +1826,26 @@ class TestDataset:
         )
         actual = ds.reindex(cat=["foo"])["cat"].values
         assert (actual == np.array(["foo"])).all()
+
+    @pytest.mark.parametrize("fill_value", [np.nan, pd.NA])
+    def test_extensionarray_negative_reindex(self, fill_value) -> None:
+        cat = pd.Categorical(
+            ["foo", "bar", "baz"],
+            categories=["foo", "bar", "baz", "qux", "quux", "corge"],
+        )
+        ds = xr.Dataset(
+            {"cat": ("index", cat)},
+            coords={"index": ("index", np.arange(3))},
+        )
+        reindexed_cat = cast(
+            pd.api.extensions.ExtensionArray,
+            (
+                ds.reindex(index=[-1, 1, 1], fill_value=fill_value)["cat"]
+                .to_pandas()
+                .values
+            ),
+        )
+        assert reindexed_cat.equals(pd.array([pd.NA, "bar", "bar"], dtype=cat.dtype))  # type: ignore[attr-defined]
 
     def test_extension_array_reindex_same(self) -> None:
         series = pd.Series([1, 2, pd.NA, 3], dtype=pd.Int32Dtype())
