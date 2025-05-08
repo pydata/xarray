@@ -1042,10 +1042,12 @@ def test_groupby_math_bitshift() -> None:
     assert_equal(right_expected, right_actual)
 
 
+@pytest.mark.parametrize(
+    "x_bins", ((0, 2, 4, 6), pd.IntervalIndex.from_breaks((0, 2, 4, 6), closed="left"))
+)
 @pytest.mark.parametrize("use_flox", [True, False])
-def test_groupby_bins_cut_kwargs(use_flox: bool) -> None:
+def test_groupby_bins_cut_kwargs(use_flox: bool, x_bins) -> None:
     da = xr.DataArray(np.arange(12).reshape(6, 2), dims=("x", "y"))
-    x_bins = (0, 2, 4, 6)
 
     with xr.set_options(use_flox=use_flox):
         actual = da.groupby_bins(
@@ -1055,7 +1057,12 @@ def test_groupby_bins_cut_kwargs(use_flox: bool) -> None:
         np.array([[1.0, 2.0], [5.0, 6.0], [9.0, 10.0]]),
         dims=("x_bins", "y"),
         coords={
-            "x_bins": ("x_bins", pd.IntervalIndex.from_breaks(x_bins, closed="left"))
+            "x_bins": (
+                "x_bins",
+                x_bins
+                if isinstance(x_bins, pd.IntervalIndex)
+                else pd.IntervalIndex.from_breaks(x_bins, closed="left"),
+            )
         },
     )
     assert_identical(expected, actual)
@@ -1067,9 +1074,8 @@ def test_groupby_bins_cut_kwargs(use_flox: bool) -> None:
     assert_identical(expected, actual)
 
     with xr.set_options(use_flox=use_flox):
-        bins_index = pd.IntervalIndex.from_breaks(x_bins)
         labels = ["one", "two", "three"]
-        actual = da.groupby(x=BinGrouper(bins=bins_index, labels=labels)).sum()
+        actual = da.groupby(x=BinGrouper(bins=x_bins, labels=labels)).sum()
         assert actual.xindexes["x_bins"].index.equals(pd.Index(labels))  # type: ignore[attr-defined]
 
 
