@@ -140,10 +140,13 @@ def test_roundtrip_pandas_dataframe_datetime(df) -> None:
         pd.Categorical(["a", "b", "c"]),
         pd.array([1, 2, 3], dtype="int64"),
         pd.array(["a", "b", "c"], dtype="string"),
+        pd.arrays.IntervalArray(
+            [pd.Interval(0, 1), pd.Interval(1, 5), pd.Interval(2, 6)]
+        ),
     ],
 )
-def test_roundtrip_1d_pandas_extension_array(extension_Array) -> None:
-    df = pd.DataFrame({"arr": extension_Array})
+def test_roundtrip_1d_pandas_extension_array(extension_array) -> None:
+    df = pd.DataFrame({"arr": extension_array})
     arr = xr.Dataset.from_dataframe(df)["arr"]
     roundtripped = arr.to_pandas()
     assert (df["arr"] == roundtripped).all()
