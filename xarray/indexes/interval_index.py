@@ -8,7 +8,7 @@ import pandas as pd
 
 from xarray import Variable
 from xarray.core.indexes import Index, PandasIndex
-from xarray.core.indexing import IndexSelResult
+from xarray.core.indexing import IndexSelResult, PandasIntervalIndexingAdapter
 
 if TYPE_CHECKING:
     from xarray.core.types import Self
@@ -193,10 +193,11 @@ class IntervalIndex(Index):
             attrs = None
             encoding = None
 
-        # TODO: wrap index data in a PandasIndexingAdapter subclass instead
         # TODO: do we want to preserve the original dimension order for the boundary coordinate?
         # (using CF-compliant order below)
-        data = np.stack([bounds_pd_index.left, bounds_pd_index.right], axis=-1)
+        data = PandasIntervalIndexingAdapter(
+            bounds_pd_index, dtype=self.bounds_index.coord_dtype
+        )
         new_variables[bounds_varname] = Variable(
             (self.dim, self.bounds_dim), data, attrs=attrs, encoding=encoding
         )

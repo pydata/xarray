@@ -28,6 +28,7 @@ from xarray.core.utils import (
     get_valid_numpy_dtype,
     is_duck_array,
     is_duck_dask_array,
+    is_full_slice,
     is_scalar,
     is_valid_numpy_dtype,
     to_0d_array,
@@ -1991,6 +1992,94 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         # see PandasIndexingAdapter.copy
         array = self.array.copy(deep=True) if deep else self.array
         return type(self)(array, self._dtype, self.level)
+
+
+class PandasIntervalIndexingAdapter(PandasIndexingAdapter):
+    """Wraps a pandas.IntervalIndex as a 2-dimensional coordinate array.
+
+    When the array is not transposed, left and right interval boundaries are on
+    the 2nd axis, i.e., shape is (N, 2).
+
+    """
+
+    __slots__ = ("_bounds_axis", "_dtype", "array")
+
+    array: pd.IntervalIndex
+    _dtype: np.dtype | pd.api.extensions.ExtensionDtype
+    _bounds_axis: int
+
+    def __init__(
+        self,
+        array: pd.IntervalIndex,
+        dtype: DTypeLike | pd.api.extensions.ExtensionDtype | None = None,
+        transpose: bool = False,
+    ):
+        super().__init__(array, dtype=dtype)
+
+        if transpose:
+            self._bounds_axis = 0
+        else:
+            self._bounds_axis = -1
+
+    @property
+    def shape(self) -> _Shape:
+        if self._bounds_axis == 0:
+            return (2, len(self.array))
+        else:
+            return (len(self.array), 2)
+
+    def __array__(
+        self,
+        dtype: np.typing.DTypeLike | None = None,
+        /,
+        *,
+        copy: bool | None = None,
+    ) -> np.ndarray:
+        if dtype is None and is_valid_numpy_dtype(self.dtype):
+            dtype = cast(np.dtype, self.dtype)
+        else:
+            dtype = get_valid_numpy_dtype(self.array)
+
+        return np.stack(
+            [self.array.left, self.array.right], axis=self._bounds_axis, dtype=dtype
+        )
+
+    def get_duck_array(self) -> np.ndarray:
+        return np.asarray(self)
+
+    def _index_get(
+        self, indexer: ExplicitIndexer, func_name: str
+    ) -> PandasIndexingAdapter | np.ndarray:
+        key = indexer.tuple
+
+        if len(key) == 1:
+            # unpack key so it can index a pandas.Index object (pandas.Index
+            # objects don't like tuples)
+            (key,) = key
+        elif len(key) == 2 and is_full_slice(key[self._bounds_axis]):
+            # OK to index the pandas.IntervalIndex and keep it wrapped
+            # (drop the bounds axis key)
+            key = key[self._bounds_axis + 1]
+
+        # if length-2 or multidimensional key, convert the index to numpy array
+        # and index the latter
+        if (isinstance(key, tuple) and len(key) == 2) or getattr(key, "ndim", 0) > 1:
+            indexable = NumpyIndexingAdapter(np.asarray(self))
+            return getattr(indexable, func_name)(indexer)
+
+        # otherwise index the pandas IntervalIndex then re-wrap or convert the result
+        result = self.array[key]
+
+        if isinstance(result, pd.IntervalIndex):
+            return type(self)(result, dtype=self.dtype)
+        elif isinstance(result, pd.Interval):
+            return np.array([result.left, result.right])
+        else:
+            return self._convert_scalar(result)
+
+    def transpose(self, order: Iterable[int]) -> Self:
+        transpose = tuple(order) == (1, 0)
+        return type(self)(self.array, dtype=self.dtype, transpose=transpose)
 
 
 class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
