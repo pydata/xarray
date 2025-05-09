@@ -63,7 +63,9 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     # N.B. these casting rules should match pandas
     dtype_: np.typing.DTypeLike
     fill_value: Any
-    if HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):
+    if is_extension_array_dtype(dtype):
+        return dtype, dtype.na_value
+    elif HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):
         # for now, we always promote string dtypes to object for consistency with existing behavior
         # TODO: refactor this once we have a better way to handle numpy vlen-string dtypes
         dtype_ = object
@@ -222,19 +224,51 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
         return xp.isdtype(dtype, kind)
 
 
-def preprocess_types(t):
-    if isinstance(t, str | bytes):
-        return type(t)
-    elif isinstance(dtype := getattr(t, "dtype", t), np.dtype) and (
-        np.issubdtype(dtype, np.str_) or np.issubdtype(dtype, np.bytes_)
-    ):
+def maybe_promote_to_variable_width(
+    array_or_dtype: np.typing.ArrayLike | np.typing.DTypeLike,
+) -> np.typing.ArrayLike | np.typing.DTypeLike:
+    if isinstance(array_or_dtype, str | bytes):
+        return type(array_or_dtype)
+    elif isinstance(
+        dtype := getattr(array_or_dtype, "dtype", array_or_dtype), np.dtype
+    ) and (np.issubdtype(dtype, np.str_) or np.issubdtype(dtype, np.bytes_)):
         # drop the length from numpy's fixed-width string dtypes, it is better to
         # recalculate
         # TODO(keewis): remove once the minimum version of `numpy.result_type` does this
         # for us
         return dtype.type
     else:
-        return t
+        return array_or_dtype
+
+
+def should_promote_to_object(
+    arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike, xp
+) -> bool:
+    """
+    Test whether the given arrays_and_dtypes, when evaluated individually, match the
+    type promotion rules found in PROMOTE_TO_OBJECT.
+    """
+    np_result_types = set()
+    for arr_or_dtype in arrays_and_dtypes:
+        try:
+            result_type = array_api_compat.result_type(
+                maybe_promote_to_variable_width(arr_or_dtype), xp=xp
+            )
+            if isinstance(result_type, np.dtype):
+                np_result_types.add(result_type)
+        except TypeError:
+            # passing individual objects to xp.result_type means NEP-18 implementations won't have
+            # a chance to intercept special values (such as NA) that numpy core cannot handle
+            pass
+
+    if np_result_types:
+        for left, right in PROMOTE_TO_OBJECT:
+            if any(np.issubdtype(t, left) for t in np_result_types) and any(
+                np.issubdtype(t, right) for t in np_result_types
+            ):
+                return True
+
+    return False
 
 
 def result_type(
@@ -263,19 +297,9 @@ def result_type(
     if xp is None:
         xp = get_array_namespace(arrays_and_dtypes)
 
-    types = {
-        array_api_compat.result_type(preprocess_types(t), xp=xp)
-        for t in arrays_and_dtypes
-    }
-    if any(isinstance(t, np.dtype) for t in types):
-        # only check if there's numpy dtypes – the array API does not
-        # define the types we're checking for
-        for left, right in PROMOTE_TO_OBJECT:
-            if any(np.issubdtype(t, left) for t in types) and any(
-                np.issubdtype(t, right) for t in types
-            ):
-                return np.dtype(object)
+    if should_promote_to_object(arrays_and_dtypes, xp):
+        return np.dtype(object)
 
     return array_api_compat.result_type(
-        *map(preprocess_types, arrays_and_dtypes), xp=xp
+        *map(maybe_promote_to_variable_width, arrays_and_dtypes), xp=xp
     )

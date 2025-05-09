@@ -34,6 +34,7 @@ from xarray.coders import CFDatetimeCoder
 from xarray.core import dtypes
 from xarray.core.common import full_like
 from xarray.core.coordinates import Coordinates
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
 from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
@@ -1792,12 +1793,37 @@ class TestDataArray:
         x = xr.DataArray([], dims=("x",), coords={"x": []}).astype("float32")
         y = x.reindex(x=[1.0, 2.0])
 
-        assert x.dtype == y.dtype, (
-            "Dtype of reindexed DataArray should match dtype of the original DataArray"
-        )
-        assert y.dtype == np.float32, (
-            "Dtype of reindexed DataArray should remain float32"
-        )
+        assert (
+            x.dtype == y.dtype
+        ), "Dtype of reindexed DataArray should match dtype of the original DataArray"
+        assert (
+            y.dtype == np.float32
+        ), "Dtype of reindexed DataArray should remain float32"
+
+    def test_reindex_extension_array(self) -> None:
+        index1 = np.array([1, 2, 3])
+        index2 = np.array([1, 2, 4])
+        srs = pd.Series(index=index1, data=1).convert_dtypes()
+        x = srs.to_xarray()
+        y = x.reindex(index=index2)  # used to fail (GH #10301)
+        assert_array_equal(x, pd.array([1, 1, 1]))
+        assert_array_equal(y, pd.array([1, 1, pd.NA]))
+        assert x.dtype == y.dtype == pd.Int64Dtype()
+        assert x.index.dtype == y.index.dtype == np.dtype("int64")
+
+    def test_reindex_categorical(self) -> None:
+        index1 = pd.Categorical(["a", "b", "c"])
+        index2 = pd.Categorical(["a", "b", "d"])
+        srs = pd.Series(index=index1, data=1).convert_dtypes()
+        x = srs.to_xarray()
+        y = x.reindex(index=index2)
+        assert_array_equal(x, pd.array([1, 1, 1]))
+        assert_array_equal(y, pd.array([1, 1, pd.NA]))
+        assert x.dtype == y.dtype == pd.Int64Dtype()
+        assert isinstance(x.index.dtype, pd.CategoricalDtype)
+        assert isinstance(y.index.dtype, pd.CategoricalDtype)
+        assert_array_equal(x.index.dtype.categories, np.array(["a", "b", "c"]))
+        assert_array_equal(y.index.dtype.categories, np.array(["a", "b", "d"]))
 
     def test_rename(self) -> None:
         da = xr.DataArray(
@@ -7255,3 +7281,34 @@ def test_unstack_index_var() -> None:
         name="x",
     )
     assert_identical(actual, expected)
+
+
+def test_from_series_regression() -> None:
+    # all of these examples used to fail
+    # see GH:issue:10301
+    srs = pd.Series(index=[1, 2, 3], data=pd.array([1, 1, pd.NA]))
+    arr = srs.to_xarray()
+
+    # binary operator
+    res = arr * 5
+    assert_array_equal(res, np.array([5, 5, np.nan]))
+    assert res.dtype == pd.Int64Dtype()
+    assert isinstance(res, xr.DataArray)
+
+    # NEP-13 ufunc
+    res = np.add(3, arr)
+    assert_array_equal(np.add(2, arr), np.array([3, 3, np.nan]))
+    assert res.dtype == pd.Int64Dtype()
+    assert isinstance(res, xr.DataArray)
+
+    # NEP-18 array_function
+    res = np.astype(arr.data, pd.Int32Dtype())
+    assert_array_equal(res, arr)
+    assert res.dtype == pd.Int32Dtype()
+    assert isinstance(res, PandasExtensionArray)
+
+    # xarray ufunc
+    res = arr.fillna(0)
+    assert_array_equal(res, np.array([1, 1, 0]))
+    assert res.dtype == pd.Int64Dtype()
+    assert isinstance(res, xr.DataArray)

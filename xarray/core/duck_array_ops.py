@@ -27,6 +27,11 @@ from pandas.api.types import is_extension_array_dtype
 from xarray.compat import dask_array_compat, dask_array_ops
 from xarray.compat.array_api_compat import get_array_namespace
 from xarray.core import dtypes, nputils
+from xarray.core.extension_array import (
+    PandasExtensionArray,
+    as_extension_array,
+    is_scalar,
+)
 from xarray.core.options import OPTIONS
 from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
 from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -239,7 +244,14 @@ def astype(data, dtype, *, xp=None, **kwargs):
 
 
 def asarray(data, xp=np, dtype=None):
-    converted = data if is_duck_array(data) else xp.asarray(data)
+    if is_duck_array(data):
+        converted = data
+    elif is_extension_array_dtype(dtype):
+        # data may or may not be an ExtensionArray, so we can't rely on
+        # np.asarray to call our NEP-18 handler; gotta hook it ourselves
+        converted = PandasExtensionArray(as_extension_array(data, dtype))
+    else:
+        converted = xp.asarray(data, dtype=dtype)
 
     if dtype is None or converted.dtype == dtype:
         return converted
@@ -252,19 +264,6 @@ def asarray(data, xp=np, dtype=None):
 
 def as_shared_dtype(scalars_or_arrays, xp=None):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
-    if any(is_extension_array_dtype(x) for x in scalars_or_arrays):
-        extension_array_types = [
-            x.dtype for x in scalars_or_arrays if is_extension_array_dtype(x)
-        ]
-        if len(extension_array_types) == len(scalars_or_arrays) and all(
-            isinstance(x, type(extension_array_types[0])) for x in extension_array_types
-        ):
-            return scalars_or_arrays
-        raise ValueError(
-            "Cannot cast arrays to shared type, found"
-            f" array types {[x.dtype for x in scalars_or_arrays]}"
-        )
-
     # Avoid calling array_type("cupy") repeatidely in the any check
     array_type_cupy = array_type("cupy")
     if any(isinstance(x, array_type_cupy) for x in scalars_or_arrays):
@@ -384,7 +383,12 @@ def where(condition, x, y):
     else:
         condition = astype(condition, dtype=dtype, xp=xp)
 
-    return xp.where(condition, *as_shared_dtype([x, y], xp=xp))
+    promoted_x, promoted_y = as_shared_dtype([x, y], xp=xp)
+
+    # pd.where won't broadcast 0-dim arrays across a series; scalar y's must be preserved
+    maybe_promoted_y = y if is_extension_array_dtype(x) and is_scalar(y) else promoted_y
+
+    return xp.where(condition, promoted_x, maybe_promoted_y)
 
 
 def where_method(data, cond, other=dtypes.NA):
