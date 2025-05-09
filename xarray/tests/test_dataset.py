@@ -298,6 +298,8 @@ class TestDataset:
                 var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
                 var3     (dim3, dim1) float64 640B 0.4107 0.9941 0.1665 ... 0.716 1.555
                 var4     (dim1) category 32B 'b' 'c' 'b' 'a' 'c' 'a' 'c' 'a'
+                var5     (dim1) Int64 72B 5 9 7 2 6 2 8 1
+                var6     (dim1) string 64B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h'
             Attributes:
                 foo:      bar""".format(
                 data["dim3"].dtype,
@@ -1827,25 +1829,36 @@ class TestDataset:
         actual = ds.reindex(cat=["foo"])["cat"].values
         assert (actual == np.array(["foo"])).all()
 
-    @pytest.mark.parametrize("fill_value", [np.nan, pd.NA])
-    def test_extensionarray_negative_reindex(self, fill_value) -> None:
-        cat = pd.Categorical(
-            ["foo", "bar", "baz"],
-            categories=["foo", "bar", "baz", "qux", "quux", "corge"],
-        )
+    @pytest.mark.parametrize("fill_value", [np.nan, pd.NA, None])
+    @pytest.mark.parametrize(
+        "extension_array",
+        [
+            pd.Categorical(
+                ["foo", "bar", "baz"],
+                categories=["foo", "bar", "baz", "qux"],
+            ),
+            pd.array([1, 2, 3], dtype=pd.Int32Dtype()),
+            pd.array(["a", "b", "c"], dtype="string"),
+        ],
+    )
+    def test_extensionarray_negative_reindex(self, fill_value, extension_array) -> None:
         ds = xr.Dataset(
-            {"cat": ("index", cat)},
+            {"arr": ("index", extension_array)},
             coords={"index": ("index", np.arange(3))},
         )
+        kwargs = {}
+        if fill_value is not None:
+            kwargs["fill_value"] = fill_value
         reindexed_cat = cast(
             pd.api.extensions.ExtensionArray,
-            (
-                ds.reindex(index=[-1, 1, 1], fill_value=fill_value)["cat"]
-                .to_pandas()
-                .values
-            ),
+            (ds.reindex(index=[-1, 1, 1], **kwargs)["arr"].to_pandas().values),
         )
-        assert reindexed_cat.equals(pd.array([pd.NA, "bar", "bar"], dtype=cat.dtype))  # type: ignore[attr-defined]
+        assert reindexed_cat.equals(
+            pd.array(
+                [pd.NA, extension_array[1], extension_array[1]],
+                dtype=extension_array.dtype,
+            )
+        )  # type: ignore[attr-defined]
 
     def test_extension_array_reindex_same(self) -> None:
         series = pd.Series([1, 2, pd.NA, 3], dtype=pd.Int32Dtype())
@@ -5442,6 +5455,20 @@ class TestDataset:
             ds.dropna("a", how="somehow")  # type: ignore[arg-type]
         with pytest.raises(TypeError, match=r"must specify how or thresh"):
             ds.dropna("a", how=None)  # type: ignore[arg-type]
+
+    def test_fillna_extension_array_int(self) -> None:
+        srs = pd.DataFrame({"data": pd.array([pd.NA, 1, 1])}, index=np.array([1, 2, 3]))
+        ds = srs.to_xarray()
+        filled = ds.fillna(0)
+        assert filled["data"].dtype == pd.Int64Dtype()
+        assert (filled["data"].values == np.array([0, 1, 1])).all()
+
+    def test_dropna_extension_array_int(self) -> None:
+        srs = pd.DataFrame({"data": pd.array([pd.NA, 1, 1])}, index=np.array([1, 2, 3]))
+        ds = srs.to_xarray()
+        dropped = ds.dropna("index")
+        assert dropped["data"].dtype == pd.Int64Dtype()
+        assert (dropped["data"].values == np.array([1, 1])).all()
 
     def test_fillna(self) -> None:
         ds = Dataset({"a": ("x", [np.nan, 1, np.nan, 3])}, {"x": [0, 1, 2, 3]})
