@@ -1778,6 +1778,15 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def dtype(self) -> np.dtype | pd.api.extensions.ExtensionDtype:  # type: ignore[override]
         return self._dtype
 
+    def _get_numpy_dtype(self, dtype: np.typing.DTypeLike | None = None) -> np.dtype:
+        if dtype is None:
+            if is_valid_numpy_dtype(self.dtype):
+                return cast(np.dtype, self.dtype)
+            else:
+                return get_valid_numpy_dtype(self.array)
+        else:
+            return np.dtype(dtype)
+
     def __array__(
         self,
         dtype: np.typing.DTypeLike | None = None,
@@ -1785,11 +1794,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         *,
         copy: bool | None = None,
     ) -> np.ndarray:
-        if dtype is None and is_valid_numpy_dtype(self.dtype):
-            dtype = cast(np.dtype, self.dtype)
-        else:
-            dtype = get_valid_numpy_dtype(self.array)
+        dtype = self._get_numpy_dtype(dtype)
         array = self.array
+
         if isinstance(array, pd.PeriodIndex):
             with suppress(AttributeError):
                 # this might not be public API
@@ -1829,10 +1836,8 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             # numpy fails to convert pd.Timestamp to np.datetime64[ns]
             item = np.asarray(item.to_datetime64())
         elif self.dtype != object:
-            dtype = self.dtype
-            if pd.api.types.is_extension_array_dtype(dtype):
-                dtype = get_valid_numpy_dtype(self.array)
-            item = np.asarray(item, dtype=cast(np.dtype, dtype))
+            dtype = self._get_numpy_dtype()
+            item = np.asarray(item, dtype=dtype)
 
         # as for numpy.ndarray indexing, we always want the result to be
         # a NumPy array.
@@ -1896,7 +1901,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def nbytes(self) -> int:
         if pd.api.types.is_extension_array_dtype(self.dtype):
             return self.array.nbytes
-        return cast(np.dtype, self.dtype).itemsize * len(self.array)
+
+        dtype = self._get_numpy_dtype()
+        return dtype.itemsize * len(self.array)
 
 
 class PandasMultiIndexingAdapter(PandasIndexingAdapter):
