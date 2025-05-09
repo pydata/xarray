@@ -33,6 +33,15 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- Start deprecation cycle for changing the default keyword arguments to ``concat``, ``merge``, ``combine``, ``open_mfdataset``.
+  Emits a ``FutureWarning`` when using old defaults and new defaults would result in different behavior.
+  Adds an option: ``use_new_combine_kwarg_defaults`` to opt in to new defaults immediately.
+  New values are:
+    - ``data_vars``: "minimal"
+    - ``coords``: "minimal"
+    - ``compat``: "override"
+    - ``join``: "exact"
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -8121,13 +8130,17 @@ Backwards incompatible changes
   Now, the default always concatenates data variables:
 
   .. ipython:: python
-      :suppress:
+    :verbatim:
 
-      ds = xray.Dataset({"x": 0})
+    In [1]: ds = xray.Dataset({"x": 0})
 
-  .. ipython:: python
-
-      xray.concat([ds, ds], dim="y")
+    In [2]: xray.concat([ds, ds], dim="y")
+    Out[2]:
+    <xarray.Dataset> Size: 16B
+    Dimensions:  (y: 2)
+    Dimensions without coordinates: y
+    Data variables:
+        x        (y) int64 16B 0 0
 
   To obtain the old behavior, supply the argument ``concat_over=[]``.
 
