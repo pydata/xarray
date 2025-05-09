@@ -413,7 +413,7 @@ class BinGrouper(Grouper):
         # This seems silly, but it lets us have Pandas handle the complexity
         # of `labels`, `precision`, and `include_lowest`, even when group is a chunked array
         # Pandas ignores labels when IntervalIndex is passed
-        if not isinstance(self.bins, pd.IntervalIndex):
+        if self.labels is None or not isinstance(self.bins, pd.IntervalIndex):
             dummy, _ = self._cut(np.array([0]).astype(group.dtype))
             full_index = dummy.categories
         else:
