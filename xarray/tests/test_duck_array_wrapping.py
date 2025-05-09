@@ -101,6 +101,14 @@ NAMESPACE_ARRAYS = {
     },
 }
 
+try:
+    import jax
+
+    # enable double-precision
+    jax.config.update("jax_enable_x64", True)
+except ImportError:
+    pass
+
 
 class _BaseTest:
     def setup_for_test(self, request, namespace):

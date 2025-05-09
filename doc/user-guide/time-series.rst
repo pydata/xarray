@@ -1,3 +1,5 @@
+.. currentmodule:: xarray
+
 .. _time-series:
 
 ================
@@ -21,12 +23,12 @@ core functionality.
 Creating datetime64 data
 ------------------------
 
-Xarray uses the numpy dtypes ``datetime64[unit]`` and ``timedelta64[unit]``
-(where unit is one of ``"s"``, ``"ms"``, ``"us"`` and ``"ns"``) to represent datetime
+Xarray uses the numpy dtypes :py:class:`numpy.datetime64` and :py:class:`numpy.timedelta64`
+with specified units (one of ``"s"``, ``"ms"``, ``"us"`` and ``"ns"``) to represent datetime
 data, which offer vectorized operations with numpy and smooth integration with pandas.
 
-To convert to or create regular arrays of ``datetime64`` data, we recommend
-using :py:func:`pandas.to_datetime` and :py:func:`pandas.date_range`:
+To convert to or create regular arrays of :py:class:`numpy.datetime64` data, we recommend
+using :py:func:`pandas.to_datetime`, :py:class:`pandas.DatetimeIndex`, or :py:func:`xarray.date_range`:
 
 .. ipython:: python
 
@@ -34,13 +36,6 @@ using :py:func:`pandas.to_datetime` and :py:func:`pandas.date_range`:
     pd.DatetimeIndex(
         ["2000-01-01 00:00:00", "2000-02-02 00:00:00"], dtype="datetime64[s]"
     )
-    pd.date_range("2000-01-01", periods=365)
-    pd.date_range("2000-01-01", periods=365, unit="s")
-
-It is also possible to use corresponding :py:func:`xarray.date_range`:
-
-.. ipython:: python
-
     xr.date_range("2000-01-01", periods=365)
     xr.date_range("2000-01-01", periods=365, unit="s")
 
@@ -81,7 +76,7 @@ attribute like ``'days since 2000-01-01'``).
 
 
 You can manual decode arrays in this form by passing a dataset to
-:py:func:`~xarray.decode_cf`:
+:py:func:`decode_cf`:
 
 .. ipython:: python
 
@@ -93,8 +88,8 @@ You can manual decode arrays in this form by passing a dataset to
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
     xr.decode_cf(ds, decode_times=coder)
 
-From xarray 2025.01.2 the resolution of the dates can be one of ``"s"``, ``"ms"``, ``"us"`` or ``"ns"``. One limitation of using ``datetime64[ns]`` is that it limits the native representation of dates to those that fall between the years 1678 and 2262, which gets increased significantly with lower resolutions. When a store contains dates outside of these bounds (or dates < `1582-10-15`_ with a Gregorian, also known as standard, calendar), dates will be returned as arrays of :py:class:`cftime.datetime` objects and a :py:class:`~xarray.CFTimeIndex` will be used for indexing.
-:py:class:`~xarray.CFTimeIndex` enables most of the indexing functionality of a :py:class:`pandas.DatetimeIndex`.
+From xarray 2025.01.2 the resolution of the dates can be one of ``"s"``, ``"ms"``, ``"us"`` or ``"ns"``. One limitation of using ``datetime64[ns]`` is that it limits the native representation of dates to those that fall between the years 1678 and 2262, which gets increased significantly with lower resolutions. When a store contains dates outside of these bounds (or dates < `1582-10-15`_ with a Gregorian, also known as standard, calendar), dates will be returned as arrays of :py:class:`cftime.datetime` objects and a :py:class:`CFTimeIndex` will be used for indexing.
+:py:class:`CFTimeIndex` enables most of the indexing functionality of a :py:class:`pandas.DatetimeIndex`.
 See :ref:`CFTimeIndex` for more information.
 
 Datetime indexing
@@ -205,35 +200,37 @@ You can also search for multiple months (in this case January through March), us
 Resampling and grouped operations
 ---------------------------------
 
-Datetime components couple particularly well with grouped operations (see
-:ref:`groupby`) for analyzing features that repeat over time. Here's how to
-calculate the mean by time of day:
+
+.. seealso::
+
+   For more generic documentation on grouping, see :ref:`groupby`.
+
+
+Datetime components couple particularly well with grouped operations for analyzing features that repeat over time.
+Here's how to calculate the mean by time of day:
 
 .. ipython:: python
-    :okwarning:
 
     ds.groupby("time.hour").mean()
 
 For upsampling or downsampling temporal resolutions, xarray offers a
-:py:meth:`~xarray.Dataset.resample` method building on the core functionality
+:py:meth:`Dataset.resample` method building on the core functionality
 offered by the pandas method of the same name. Resample uses essentially the
-same api as ``resample`` `in pandas`_.
+same api as :py:meth:`pandas.DataFrame.resample` `in pandas`_.
 
 .. _in pandas: https://pandas.pydata.org/pandas-docs/stable/timeseries.html#up-and-downsampling
 
 For example, we can downsample our dataset from hourly to 6-hourly:
 
 .. ipython:: python
-    :okwarning:
 
     ds.resample(time="6h")
 
-This will create a specialized ``Resample`` object which saves information
-necessary for resampling. All of the reduction methods which work with
-``Resample`` objects can also be used for resampling:
+This will create a specialized :py:class:`~xarray.core.resample.DatasetResample` or :py:class:`~xarray.core.resample.DataArrayResample`
+object which saves information necessary for resampling. All of the reduction methods which work with
+:py:class:`Dataset` or :py:class:`DataArray` objects can also be used for resampling:
 
 .. ipython:: python
-    :okwarning:
 
     ds.resample(time="6h").mean()
 
@@ -252,7 +249,7 @@ by specifying the ``dim`` keyword argument
     ds.resample(time="6h").mean(dim=["time", "latitude", "longitude"])
 
 For upsampling, xarray provides six methods: ``asfreq``, ``ffill``, ``bfill``, ``pad``,
-``nearest`` and ``interpolate``. ``interpolate`` extends ``scipy.interpolate.interp1d``
+``nearest`` and ``interpolate``. ``interpolate`` extends :py:func:`scipy.interpolate.interp1d`
 and supports all of its schemes. All of these resampling operations work on both
 Dataset and DataArray objects with an arbitrary number of dimensions.
 
@@ -266,9 +263,7 @@ Data that has indices outside of the given ``tolerance`` are set to ``NaN``.
 
 It is often desirable to center the time values after a resampling operation.
 That can be accomplished by updating the resampled dataset time coordinate values
-using time offset arithmetic via the `pandas.tseries.frequencies.to_offset`_ function.
-
-.. _pandas.tseries.frequencies.to_offset: https://pandas.pydata.org/docs/reference/api/pandas.tseries.frequencies.to_offset.html
+using time offset arithmetic via the :py:func:`pandas.tseries.frequencies.to_offset` function.
 
 .. ipython:: python
 
@@ -277,5 +272,80 @@ using time offset arithmetic via the `pandas.tseries.frequencies.to_offset`_ fun
     resampled_ds["time"] = resampled_ds.get_index("time") + offset
     resampled_ds
 
-For more examples of using grouped operations on a time dimension, see
-:doc:`../examples/weather-data`.
+
+.. seealso::
+
+   For more examples of using grouped operations on a time dimension, see :doc:`../examples/weather-data`.
+
+
+Handling Seasons
+~~~~~~~~~~~~~~~~
+
+Two extremely common time series operations are to group by seasons, and resample to a seasonal frequency.
+Xarray has historically supported some simple versions of these computations.
+For example, ``.groupby("time.season")`` (where the seasons are DJF, MAM, JJA, SON)
+and resampling to a seasonal frequency using Pandas syntax: ``.resample(time="QS-DEC")``.
+
+Quite commonly one wants more flexibility in defining seasons. For these use-cases, Xarray provides
+:py:class:`groupers.SeasonGrouper` and :py:class:`groupers.SeasonResampler`.
+
+
+.. currentmodule:: xarray.groupers
+
+.. ipython:: python
+
+    from xarray.groupers import SeasonGrouper
+
+    ds.groupby(time=SeasonGrouper(["DJF", "MAM", "JJA", "SON"])).mean()
+
+
+Note how the seasons are in the specified order, unlike ``.groupby("time.season")`` where the
+seasons are sorted alphabetically.
+
+.. ipython:: python
+
+    ds.groupby("time.season").mean()
+
+
+:py:class:`SeasonGrouper` supports overlapping seasons:
+
+.. ipython:: python
+
+    ds.groupby(time=SeasonGrouper(["DJFM", "MAMJ", "JJAS", "SOND"])).mean()
+
+
+Skipping months is allowed:
+
+.. ipython:: python
+
+    ds.groupby(time=SeasonGrouper(["JJAS"])).mean()
+
+
+Use :py:class:`SeasonResampler` to specify custom seasons.
+
+.. ipython:: python
+
+    from xarray.groupers import SeasonResampler
+
+    ds.resample(time=SeasonResampler(["DJF", "MAM", "JJA", "SON"])).mean()
+
+
+:py:class:`SeasonResampler` is smart enough to correctly handle years for seasons that
+span the end of the year (e.g. DJF). By default :py:class:`SeasonResampler` will skip any
+season that is incomplete (e.g. the first DJF season for a time series that starts in Jan).
+Pass the ``drop_incomplete=False`` kwarg to :py:class:`SeasonResampler` to disable this behaviour.
+
+.. ipython:: python
+
+    from xarray.groupers import SeasonResampler
+
+    ds.resample(
+        time=SeasonResampler(["DJF", "MAM", "JJA", "SON"], drop_incomplete=False)
+    ).mean()
+
+
+Seasons need not be of the same length:
+
+.. ipython:: python
+
+    ds.resample(time=SeasonResampler(["JF", "MAM", "JJAS", "OND"])).mean()
