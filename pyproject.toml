@@ -2,7 +2,6 @@
 authors = [{ name = "xarray Developers", email = "xarray@googlegroups.com" }]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
-  "License :: OSI Approved :: Apache Software License",
   "Operating System :: OS Independent",
   "Intended Audience :: Science/Research",
   "Programming Language :: Python",
@@ -15,7 +14,7 @@ classifiers = [
 ]
 description = "N-D labeled arrays and datasets in Python"
 dynamic = ["version"]
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 name = "xarray"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -96,6 +95,10 @@ requires = ["setuptools>=42", "setuptools-scm>=7"]
 
 [tool.setuptools]
 packages = ["xarray"]
+include-package-data = false
+
+[tool.setuptools.package-data]
+"*" = ["*.py"]
 
 [tool.setuptools_scm]
 fallback_version = "9999"
