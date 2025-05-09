@@ -16,20 +16,66 @@ What's New
 
     np.random.seed(123456)
 
+
+.. _whats-new.2025.05.0:
+
+v2025.05.0 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+- Fix :py:class:`~xarray.groupers.BinGrouper` when ``labels`` is not specified (:issue:`10284`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+- Allow accessing arbitrary attributes on Pandas ExtensionArrays.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
 .. _whats-new.2025.04.0:
 
-v2025.04.0 (unreleased)
------------------------
+v2025.04.0 (Apr 29, 2025)
+-------------------------
+
+This release brings bug fixes, better support for extension arrays including returning a
+:py:class:`pandas.IntervalArray` from ``groupby_bins``, and performance improvements.
+Thanks to the 24 contributors to this release:
+Alban Farchi, Andrecho, Benoit Bovy, Deepak Cherian, Dimitri Papadopoulos Orfanos, Florian Jetter, Giacomo Caria, Ilan Gold, Illviljan, Joren Hammudoglu, Julia Signell, Kai Muehlbauer, Kai Mühlbauer, Mathias Hauser, Mattia Almansi, Michael Sumner, Miguel Jimenez, Nick Hodgskin (🦎 Vecko), Pascal Bourgault, Philip Chmielowiec, Scott Henderson, Spencer Clark, Stephan Hoyer and Tom Nicholas
 
 New Features
 ~~~~~~~~~~~~
 
 - Added `scipy-stubs <https://github.com/scipy/scipy-stubs>`_ to the ``xarray[types]`` dependencies.
   By `Joren Hammudoglu <https://github.com/jorenham>`_.
+- Added a :mod:`xarray.typing` module  to expose selected public types for use in downstream libraries and static type checking.
+  (:issue:`10179`, :pull:`10215`).
+  By `Michele Guerreri <https://github.com/micguerr-bopen>`_.
 - Improved compatibility with OPeNDAP DAP4 data model for backend engine ``pydap``. This
   includes ``datatree`` support, and removing slashes from dimension names. By
   `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
-- Improved support pandas Extension Arrays. (:issue:`9661`, :pull:`9671`)
+- Allow assigning index coordinates with non-array dimension(s) in a :py:class:`DataArray` by overriding
+  :py:meth:`Index.should_add_coord_to_array`. For example, this enables support for CF boundaries coordinate (e.g.,
+  ``time(time)`` and ``time_bnds(time, nbnd)``) in a DataArray (:pull:`10137`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+- Improved support pandas categorical extension as indices (i.e., :py:class:`pandas.IntervalIndex`). (:issue:`9661`, :pull:`9671`)
   By `Ilan Gold <https://github.com/ilan-gold>`_.
 - Improved checks and errors raised when trying to align objects with conflicting indexes.
   It is now possible to align objects each with multiple indexes sharing common dimension(s).
@@ -52,6 +98,7 @@ Breaking changes
   now return objects indexed by :py:meth:`pandas.IntervalArray` objects,
   instead of numpy object arrays containing tuples. This change enables interval-aware indexing of
   such Xarray objects. (:pull:`9671`). By `Ilan Gold <https://github.com/ilan-gold>`_.
+- Remove ``PandasExtensionArrayIndex`` from :py:attr:`xarray.Variable.data` when the attribute is a :py:class:`pandas.api.extensions.ExtensionArray` (:pull:`10263`). By `Ilan Gold <https://github.com/ilan-gold>`_.
 - The html and text ``repr`` for ``DataTree`` are now truncated. Up to 6 children are displayed
   for each node -- the first 3 and the last 3 children -- with a ``...`` between them. The number
   of children to include in the display is configurable via options. For instance use
@@ -62,6 +109,9 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- The deprecation cycle for the  ``eagerly_compute_group`` kwarg to ``groupby`` and ``groupby_bins``
+  is now complete.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -71,6 +121,8 @@ Bug fixes
   had no effect. (Mentioned in :issue:`9921`)
 - Enable ``keep_attrs`` in ``DatasetView.map`` relevant for :py:func:`map_over_datasets`  (:pull:`10219`)
   By `Mathias Hauser <https://github.com/mathause>`_.
+- Variables with no temporal dimension are left untouched by :py:meth:`~xarray.Dataset.convert_calendar`. (:issue:`10266`,  :pull:`10268`)
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -86,6 +138,11 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 - Avoid stacking when grouping by a chunked array. This can be a large performance improvement.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- The implementation of ``Variable.set_dims`` has changed to use array indexing syntax
+  instead of ``np.broadcast_to`` to perform dimension expansions where
+  all new dimensions have a size of 1. This should improve compatibility with
+  duck arrays that do not support broadcasting (:issue:`9462`, :pull:`10277`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
 
 .. _whats-new.2025.03.1:
 

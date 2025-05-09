@@ -549,8 +549,7 @@ Code Formatting
 
 xarray uses several tools to ensure a consistent code format throughout the project:
 
-- `ruff <https://github.com/astral-sh/ruff>`_ for formatting, code quality checks and standardized order in imports
-- `absolufy-imports <https://github.com/MarcoGorelli/absolufy-imports>`_ for absolute instead of relative imports from different files,
+- `ruff <https://github.com/astral-sh/ruff>`_ for formatting, code quality checks and standardized order in imports, and
 - `mypy <https://mypy-lang.org/>`_ for static type checking on `type hints
   <https://docs.python.org/3/library/typing.html>`_.
 

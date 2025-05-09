@@ -392,7 +392,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     @property
     def _in_memory(self):
         return isinstance(
-            self._data, np.ndarray | np.number | PandasIndexingAdapter
+            self._data,
+            np.ndarray | np.number | PandasIndexingAdapter | PandasExtensionArray,
         ) or (
             isinstance(self._data, indexing.MemoryCachedArray)
             and isinstance(self._data.array, indexing.NumpyIndexingAdapter)
@@ -410,12 +411,20 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         Variable.as_numpy
         Variable.values
         """
-        if is_duck_array(self._data):
-            return self._data
+        if isinstance(self._data, PandasExtensionArray):
+            duck_array = self._data.array
         elif isinstance(self._data, indexing.ExplicitlyIndexed):
-            return self._data.get_duck_array()
+            duck_array = self._data.get_duck_array()
+        elif is_duck_array(self._data):
+            duck_array = self._data
         else:
-            return self.values
+            duck_array = self.values
+        if isinstance(duck_array, PandasExtensionArray):
+            # even though PandasExtensionArray is a duck array,
+            # we should not return the PandasExtensionArray wrapper,
+            # and instead return the underlying data.
+            return duck_array.array
+        return duck_array
 
     @data.setter
     def data(self, data: T_DuckArray | ArrayLike) -> None:
@@ -1347,7 +1356,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             dim = [dim]
 
         if shape is None and is_dict_like(dim):
-            shape = dim.values()
+            shape = tuple(dim.values())
 
         missing_dims = set(self.dims) - set(dim)
         if missing_dims:
@@ -1363,13 +1372,18 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             # don't use broadcast_to unless necessary so the result remains
             # writeable if possible
             expanded_data = self.data
-        elif shape is not None:
-            dims_map = dict(zip(dim, shape, strict=True))
-            tmp_shape = tuple(dims_map[d] for d in expanded_dims)
-            expanded_data = duck_array_ops.broadcast_to(self.data, tmp_shape)
-        else:
+        elif shape is None or all(
+            s == 1 for s, e in zip(shape, dim, strict=True) if e not in self_dims
+        ):
+            # "Trivial" broadcasting, i.e. simply inserting a new dimension
+            # This is typically easier for duck arrays to implement
+            # than the full "broadcast_to" semantics
             indexer = (None,) * (len(expanded_dims) - self.ndim) + (...,)
             expanded_data = self.data[indexer]
+        else:  # elif shape is not None:
+            dims_map = dict(zip(dim, shape, strict=True))
+            tmp_shape = tuple(dims_map[d] for d in expanded_dims)
+            expanded_data = duck_array_ops.broadcast_to(self._data, tmp_shape)
 
         expanded_var = Variable(
             expanded_dims, expanded_data, self._attrs, self._encoding, fastpath=True
@@ -2304,7 +2318,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         return self._new(data=self.data.real)
 
-    def __array_wrap__(self, obj, context=None):
+    def __array_wrap__(self, obj, context=None, return_scalar=False):
         return Variable(self.dims, obj)
 
     def _unary_op(self, f, *args, **kwargs):
