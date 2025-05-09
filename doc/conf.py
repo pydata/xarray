@@ -182,6 +182,8 @@ napoleon_type_aliases = {
     "pd.NaT": "~pandas.NaT",
 }
 
+autodoc_type_aliases = napoleon_type_aliases  # Keep both in sync
+
 # mermaid config
 mermaid_version = "10.9.1"
 
@@ -311,6 +313,7 @@ rediraffe_redirects = {
     "why-xarray.rst": "getting-started-guide/why-xarray.rst",
     "installing.rst": "getting-started-guide/installing.rst",
     "quick-overview.rst": "getting-started-guide/quick-overview.rst",
+    "contributing.rst": "contribute/contributing.rst",
 }
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
