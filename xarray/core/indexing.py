@@ -1838,57 +1838,42 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         # a NumPy array.
         return to_0d_array(item)
 
-    def _prepare_key(self, key: Any | tuple[Any, ...]) -> tuple[Any, ...]:
-        if isinstance(key, tuple) and len(key) == 1:
+    def _index_get(
+        self, indexer: ExplicitIndexer, func_name: str
+    ) -> PandasIndexingAdapter | np.ndarray:
+        key = indexer.tuple
+
+        if len(key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
             # objects don't like tuples)
             (key,) = key
 
-        return key
+        # if multidimensional key, convert the index to numpy array and index the latter
+        if getattr(key, "ndim", 0) > 1:
+            indexable = NumpyIndexingAdapter(np.asarray(self))
+            return getattr(indexable, func_name)(indexer)
 
-    def _handle_result(self, result: Any) -> PandasIndexingAdapter | np.ndarray:
+        # otherwise index the pandas index then re-wrap or convert the result
+        result = self.array[key]
+
         if isinstance(result, pd.Index):
             return type(self)(result, dtype=self.dtype)
         else:
             return self._convert_scalar(result)
 
     def _oindex_get(self, indexer: OuterIndexer) -> PandasIndexingAdapter | np.ndarray:
-        key = self._prepare_key(indexer.tuple)
-
-        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
-            indexable = NumpyIndexingAdapter(np.asarray(self))
-            return indexable.oindex[indexer]
-
-        result = self.array[key]
-
-        return self._handle_result(result)
+        return self._index_get(indexer, "_oindex_get")
 
     def _vindex_get(
         self, indexer: VectorizedIndexer
     ) -> PandasIndexingAdapter | np.ndarray:
         _assert_not_chunked_indexer(indexer.tuple)
-        key = self._prepare_key(indexer.tuple)
-
-        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
-            indexable = NumpyIndexingAdapter(np.asarray(self))
-            return indexable.vindex[indexer]
-
-        result = self.array[key]
-
-        return self._handle_result(result)
+        return self._index_get(indexer, "_vindex_get")
 
     def __getitem__(
         self, indexer: ExplicitIndexer
     ) -> PandasIndexingAdapter | np.ndarray:
-        key = self._prepare_key(indexer.tuple)
-
-        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
-            indexable = NumpyIndexingAdapter(np.asarray(self))
-            return indexable[indexer]
-
-        result = self.array[key]
-
-        return self._handle_result(result)
+        return self._index_get(indexer, "__getitem__")
 
     def transpose(self, order) -> pd.Index:
         return self.array  # self.array should be always one-dimensional
@@ -1953,28 +1938,16 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         else:
             return super().__array__(dtype, copy=copy)
 
-    def _convert_scalar(self, item):
+    def _convert_scalar(self, item: Any):
         if isinstance(item, tuple) and self.level is not None:
             idx = tuple(self.array.names).index(self.level)
             item = item[idx]
         return super()._convert_scalar(item)
 
-    def _oindex_get(self, indexer: OuterIndexer) -> PandasIndexingAdapter | np.ndarray:
-        result = super()._oindex_get(indexer)
-        if isinstance(result, type(self)):
-            result.level = self.level
-        return result
-
-    def _vindex_get(
-        self, indexer: VectorizedIndexer
+    def _index_get(
+        self, indexer: ExplicitIndexer, func_name: str
     ) -> PandasIndexingAdapter | np.ndarray:
-        result = super()._vindex_get(indexer)
-        if isinstance(result, type(self)):
-            result.level = self.level
-        return result
-
-    def __getitem__(self, indexer: ExplicitIndexer):
-        result = super().__getitem__(indexer)
+        result = super()._index_get(indexer, func_name)
         if isinstance(result, type(self)):
             result.level = self.level
         return result
