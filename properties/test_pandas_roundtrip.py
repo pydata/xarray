@@ -135,7 +135,7 @@ def test_roundtrip_pandas_dataframe_datetime(df) -> None:
 
 
 @pytest.mark.parametrize(
-    "extension_Array",
+    "extension_array",
     [
         pd.Categorical(["a", "b", "c"]),
         pd.array([1, 2, 3], dtype="int64"),
