@@ -3075,6 +3075,13 @@ class TestDataArray:
         with set_options(keep_attrs=True):
             assert func(da).attrs == da.attrs
 
+    def test_fillna_extension_array_int(self) -> None:
+        srs = pd.Series(index=np.array([1, 2, 3]), data=pd.array([pd.NA, 1, 1]))
+        da = srs.to_xarray()
+        filled = da.fillna(0)
+        assert filled.dtype == pd.Int64Dtype()
+        assert (filled.values == np.array([0, 1, 1])).all()
+
     def test_fillna(self) -> None:
         a = DataArray([np.nan, 1, np.nan, 3], coords={"x": range(4)}, dims="x")
         actual = a.fillna(-1)
