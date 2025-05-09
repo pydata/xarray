@@ -1881,7 +1881,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     ) -> PandasIndexingAdapter | np.ndarray:
         return self._index_get(indexer, "__getitem__")
 
-    def transpose(self, order) -> pd.Index:
+    def transpose(self, order) -> Self | pd.Index:
         return self.array  # self.array should be always one-dimensional
 
     def __repr__(self) -> str:
@@ -2057,7 +2057,7 @@ class PandasIntervalIndexingAdapter(PandasIndexingAdapter):
     def _index_get(
         self, indexer: ExplicitIndexer, func_name: str
     ) -> PandasIndexingAdapter | np.ndarray:
-        key = indexer.tuple
+        key: tuple | Any = indexer.tuple
 
         if len(key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
