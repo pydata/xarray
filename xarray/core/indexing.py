@@ -1937,8 +1937,8 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         *,
         copy: bool | None = None,
     ) -> np.ndarray:
-        if dtype is None:
-            dtype = cast(np.dtype, self.dtype)
+        dtype = self._get_numpy_dtype(dtype)
+
         if self.level is not None:
             return np.asarray(
                 self.array.get_level_values(self.level).values, dtype=dtype
@@ -2042,10 +2042,7 @@ class PandasIntervalIndexingAdapter(PandasIndexingAdapter):
         *,
         copy: bool | None = None,
     ) -> np.ndarray:
-        if dtype is None and is_valid_numpy_dtype(self.dtype):
-            dtype = cast(np.dtype, self.dtype)
-        else:
-            dtype = get_valid_numpy_dtype(self.array)
+        dtype = self._get_numpy_dtype(dtype)
 
         return np.stack(
             [self.array.left, self.array.right], axis=self._bounds_axis, dtype=dtype
@@ -2080,7 +2077,8 @@ class PandasIntervalIndexingAdapter(PandasIndexingAdapter):
         if isinstance(result, pd.IntervalIndex):
             return type(self)(result, dtype=self.dtype)
         elif isinstance(result, pd.Interval):
-            return np.array([result.left, result.right], dtype=self._get_numpy_dtype())
+            dtype = self._get_numpy_dtype()
+            return np.array([result.left, result.right], dtype=dtype)
         else:
             return self._convert_scalar(result)
 
