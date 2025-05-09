@@ -5460,8 +5460,15 @@ class TestDataset:
         srs = pd.DataFrame({"data": pd.array([pd.NA, 1, 1])}, index=np.array([1, 2, 3]))
         ds = srs.to_xarray()
         filled = ds.fillna(0)
-        assert filled.dtype == pd.Int64Dtype()
-        assert (filled.values == np.array([0, 1, 1])).all()
+        assert filled["data"].dtype == pd.Int64Dtype()
+        assert (filled["data"].values == np.array([0, 1, 1])).all()
+
+    def test_dropna_extension_array_int(self) -> None:
+        srs = pd.DataFrame({"data": pd.array([pd.NA, 1, 1])}, index=np.array([1, 2, 3]))
+        ds = srs.to_xarray()
+        dropped = ds.dropna("index")
+        assert dropped["data"].dtype == pd.Int64Dtype()
+        assert (dropped["data"].values == np.array([1, 1])).all()
 
     def test_fillna(self) -> None:
         ds = Dataset({"a": ("x", [np.nan, 1, np.nan, 3])}, {"x": [0, 1, 2, 3]})
