@@ -9,6 +9,7 @@ import pandas as pd
 from xarray import Variable
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.indexing import IndexSelResult, PandasIntervalIndexingAdapter
+from xarray.core.utils import is_full_slice
 
 if TYPE_CHECKING:
     from xarray.core.types import Self
@@ -251,11 +252,30 @@ class IntervalIndex(Index):
         return mid_indexers
 
     def sel(self, labels: dict[Any, Any], **kwargs) -> IndexSelResult:
+        bounds_coord_name = self.bounds_index.index.name
+        if bounds_coord_name in labels:
+            raise ValueError(
+                "IntervalIndex doesn't support label-based selection "
+                f"using the boundary coordinate {bounds_coord_name!r}"
+            )
+
         return self.bounds_index.sel(labels, **kwargs)
 
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
     ) -> Self | None:
+        indexers = dict(indexers)
+
+        if self.bounds_dim in indexers:
+            if is_full_slice(indexers[self._bounds_dim]):
+                # prevent errors raised when calling isel on the underlying PandasIndex objects
+                indexers.pop(self.bounds_dim)
+                if self.dim not in indexers:
+                    indexers[self.dim] = slice(None)
+            else:
+                # drop the index when selecting on the bounds dimension
+                return None
+
         new_mid_index = self.mid_index.isel(indexers)
         new_bounds_index = self.bounds_index.isel(indexers)
 
