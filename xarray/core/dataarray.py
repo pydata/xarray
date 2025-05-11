@@ -5372,7 +5372,7 @@ class DataArray(
         self,
         coord: Hashable,
         edge_order: Literal[1, 2] = 1,
-        datetime_unit: DatetimeUnitOptions | None = None,
+        datetime_unit: DatetimeUnitOptions = None,
     ) -> Self:
         """Differentiate the array with the second order accurate central
         differences.
@@ -5434,7 +5434,7 @@ class DataArray(
     def integrate(
         self,
         coord: Hashable | Sequence[Hashable] = None,
-        datetime_unit: DatetimeUnitOptions | None = None,
+        datetime_unit: DatetimeUnitOptions = None,
     ) -> Self:
         """Integrate along the given coordinate using the trapezoidal rule.
 
@@ -5446,7 +5446,7 @@ class DataArray(
         ----------
         coord : Hashable, or sequence of Hashable
             Coordinate(s) used for the integration.
-        datetime_unit : {'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as', None}, optional
             Specify the unit if a datetime coordinate is used.
 
@@ -5488,7 +5488,7 @@ class DataArray(
     def cumulative_integrate(
         self,
         coord: Hashable | Sequence[Hashable] = None,
-        datetime_unit: DatetimeUnitOptions | None = None,
+        datetime_unit: DatetimeUnitOptions = None,
     ) -> Self:
         """Integrate cumulatively along the given coordinate using the trapezoidal rule.
 
@@ -5503,7 +5503,7 @@ class DataArray(
         ----------
         coord : Hashable, or sequence of Hashable
             Coordinate(s) used for the integration.
-        datetime_unit : {'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as', None}, optional
             Specify the unit if a datetime coordinate is used.
 

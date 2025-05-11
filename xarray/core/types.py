@@ -254,7 +254,7 @@ InterpnOptions = Literal["linear", "nearest", "slinear", "cubic", "quintic", "pc
 InterpOptions = Union[Interp1dOptions, InterpolantOptions, InterpnOptions]
 
 DatetimeUnitOptions = Literal[
-    "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as"
+    "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
 ]
 NPDatetimeUnitOptions = Literal["D", "h", "m", "s", "ms", "us", "ns"]
 PDDatetimeUnitOptions = Literal["s", "ms", "us", "ns"]

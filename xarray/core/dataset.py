@@ -8247,7 +8247,7 @@ class Dataset(
             The coordinate to be used to compute the gradient.
         edge_order : {1, 2}, default: 1
             N-th order accurate differences at the boundaries.
-        datetime_unit : None or {"W", "D", "h", "m", "s", "ms", \
+        datetime_unit : None or {"Y", "M", "W", "D", "h", "m", "s", "ms", \
             "us", "ns", "ps", "fs", "as", None}, default: None
             Unit to compute gradient. Only valid for datetime coordinate.
 
@@ -8303,7 +8303,7 @@ class Dataset(
     def integrate(
         self,
         coord: Hashable | Sequence[Hashable],
-        datetime_unit: DatetimeUnitOptions | None = None,
+        datetime_unit: DatetimeUnitOptions = None,
     ) -> Self:
         """Integrate along the given coordinate using the trapezoidal rule.
 
@@ -8315,7 +8315,7 @@ class Dataset(
         ----------
         coord : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
-        datetime_unit : {'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as', None}, optional
             Specify the unit if datetime coordinate is used.
 
@@ -8423,7 +8423,7 @@ class Dataset(
     def cumulative_integrate(
         self,
         coord: Hashable | Sequence[Hashable],
-        datetime_unit: DatetimeUnitOptions | None = None,
+        datetime_unit: DatetimeUnitOptions = None,
     ) -> Self:
         """Integrate along the given coordinate using the trapezoidal rule.
 
@@ -8439,7 +8439,7 @@ class Dataset(
         ----------
         coord : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
-        datetime_unit : {'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as', None}, optional
             Specify the unit if datetime coordinate is used.
 
