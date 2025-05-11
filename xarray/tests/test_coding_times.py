@@ -1986,11 +1986,16 @@ def test_literal_timedelta64_coding(time_unit: PDDatetimeUnitOptions) -> None:
     assert reencoded.dtype == encoded.dtype
 
 
-def test_literal_timedelta_coding_resolution_error() -> None:
+def test_literal_timedelta_coding_non_pandas_resolution_warning() -> None:
     attrs = {"dtype": "timedelta64[D]", "units": "days"}
     encoded = Variable(["time"], [0, 1, 2], attrs=attrs)
-    with pytest.raises(ValueError, match="xarray only supports"):
-        conventions.decode_cf_variable("timedeltas", encoded)
+    with pytest.warns(UserWarning, match="xarray only supports"):
+        decoded = conventions.decode_cf_variable("timedeltas", encoded)
+    expected_array = np.array([0, 1, 2], dtype="timedelta64[D]")
+    expected_array = expected_array.astype("timedelta64[s]")
+    expected = Variable(["time"], expected_array)
+    assert_identical(decoded, expected)
+    assert decoded.dtype == np.dtype("timedelta64[s]")
 
 
 @pytest.mark.parametrize("attribute", ["dtype", "units"])

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-import typing
 import warnings
 from collections.abc import Callable, Hashable
 from datetime import datetime, timedelta
@@ -1464,13 +1463,16 @@ class CFTimedeltaCoder(VariableCoder):
                 ):
                     raise ValueError(
                         f"Specifying 'add_offset' or 'scale_factor' is not "
-                        f"supported when literally encoding the "
-                        f"np.timedelta64 values of variable {name!r}. To "
-                        f"encode {name!r} with such encoding parameters, "
-                        f"additionally set encoding['units'] to a unit of "
-                        f"time, e.g. 'seconds'. To proceed with literal "
-                        f"np.timedelta64 encoding of {name!r}, remove any "
-                        f"encoding entries for 'add_offset' or 'scale_factor'."
+                        f"supported when encoding the timedelta64 values of "
+                        f"variable {name!r} with xarray's new default "
+                        f"timedelta64 encoding approach. To encode {name!r} "
+                        f"with xarray's previous timedelta64 encoding "
+                        f"approach, which supports the 'add_offset' and "
+                        f"'scale_factor' parameters, additionally set "
+                        f"encoding['units'] to a unit of time, e.g. "
+                        f"'seconds'. To proceed with encoding of {name!r} "
+                        f"via xarray's new approach, remove any encoding "
+                        f"entries for 'add_offset' or 'scale_factor'."
                     )
                 if "_FillValue" not in encoding and "missing_value" not in encoding:
                     encoding["_FillValue"] = np.iinfo(np.int64).min
@@ -1497,33 +1499,59 @@ class CFTimedeltaCoder(VariableCoder):
                     k in encoding for k in _INVALID_LITERAL_TIMEDELTA64_ENCODING_KEYS
                 ):
                     raise ValueError(
-                        "Decoding np.timedelta64 values via dtype is not "
-                        "supported when 'add_offset', or 'scale_factor' are "
-                        "present in encoding."
+                        f"Decoding timedelta64 values via dtype is not "
+                        f"supported when 'add_offset', or 'scale_factor' are "
+                        f"present in encoding. Check the encoding parameters "
+                        f"of variable {name!r}."
                     )
                 dtype = pop_to(attrs, encoding, "dtype", name=name)
                 dtype = np.dtype(dtype)
                 resolution, _ = np.datetime_data(dtype)
-                if resolution not in typing.get_args(PDDatetimeUnitOptions):
-                    raise ValueError(
+                if np.timedelta64(1, resolution) > np.timedelta64(1, "s"):
+                    time_unit = cast(PDDatetimeUnitOptions, "s")
+                    dtype = np.dtype("timedelta64[s]")
+                    message = (
                         f"Following pandas, xarray only supports decoding to "
                         f"timedelta64 values with a resolution of 's', 'ms', "
-                        f"'us', or 'ns'. Encoded values have a resolution of "
-                        f"{resolution!r}."
+                        f"'us', or 'ns'. Encoded values for variable {name!r} "
+                        f"have a resolution of {resolution!r}. Attempting to "
+                        f"decode to a resolution of 's'. Note, depending on "
+                        f"the encoded values, this may lead to an "
+                        f"OverflowError. Additionally, data will not be "
+                        f"identically round tripped; xarray will choose an "
+                        f"encoding dtype of 'timedelta64[s]' when re-encoding."
                     )
-                time_unit = cast(PDDatetimeUnitOptions, resolution)
+                    emit_user_level_warning(message)
+                elif np.timedelta64(1, resolution) < np.timedelta64(1, "ns"):
+                    time_unit = cast(PDDatetimeUnitOptions, "ns")
+                    dtype = np.dtype("timedelta64[ns]")
+                    message = (
+                        f"Following pandas, xarray only supports decoding to "
+                        f"timedelta64 values with a resolution of 's', 'ms', "
+                        f"'us', or 'ns'. Encoded values for variable {name!r} "
+                        f"have a resolution of {resolution!r}. Attempting to "
+                        f"decode to a resolution of 'ns'. Note, depending on "
+                        f"the encoded values, this may lead to loss of "
+                        f"precision. Additionally, data will not be "
+                        f"identically round tripped; xarray will choose an "
+                        f"encoding dtype of 'timedelta64[ns]' "
+                        f"when re-encoding."
+                    )
+                    emit_user_level_warning(message)
+                else:
+                    time_unit = cast(PDDatetimeUnitOptions, resolution)
             elif self.decode_via_units:
                 if self._emit_decode_timedelta_future_warning:
                     emit_user_level_warning(
                         "In a future version, xarray will not decode "
                         "timedelta values based on the presence of a "
                         "timedelta-like units attribute by default. Instead "
-                        "it will rely on the presence of a np.timedelta64 "
-                        "dtype attribute, which is now xarray's default way "
-                        "of encoding np.timedelta64 values. To continue "
-                        "decoding timedeltas based on the presence of a "
-                        "timedelta-like units attribute, users will need to "
-                        "explicitly opt-in by passing True or "
+                        "it will rely on the presence of a timedelta64 dtype "
+                        "attribute, which is now xarray's default way of "
+                        "encoding timedelta64 values. To continue decoding "
+                        "timedeltas based on the presence of a timedelta-like "
+                        "units attribute, users will need to explicitly "
+                        "opt-in by passing True or "
                         "CFTimedeltaCoder(decode_via_units=True) to "
                         "decode_timedelta. To silence this warning, set "
                         "decode_timedelta to True, False, or a "
