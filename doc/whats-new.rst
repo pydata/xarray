@@ -16,10 +16,44 @@ What's New
 
     np.random.seed(123456)
 
+
+.. _whats-new.2025.05.0:
+
+v2025.05.0 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+- Fix :py:class:`~xarray.groupers.BinGrouper` when ``labels`` is not specified (:issue:`10284`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+- Allow accessing arbitrary attributes on Pandas ExtensionArrays.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
 .. _whats-new.2025.04.0:
 
-v2025.04.0 (unreleased)
------------------------
+v2025.04.0 (Apr 29, 2025)
+-------------------------
 
 This release brings bug fixes, better support for extension arrays including returning a
 :py:class:`pandas.IntervalArray` from ``groupby_bins``, and performance improvements.
