@@ -1507,6 +1507,7 @@ class CFTimedeltaCoder(VariableCoder):
                 dtype = pop_to(attrs, encoding, "dtype", name=name)
                 dtype = np.dtype(dtype)
                 resolution, _ = np.datetime_data(dtype)
+                resolution = cast(NPDatetimeUnitOptions, resolution)
                 if np.timedelta64(1, resolution) > np.timedelta64(1, "s"):
                     time_unit = cast(PDDatetimeUnitOptions, "s")
                     dtype = np.dtype("timedelta64[s]")
