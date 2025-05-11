@@ -5,7 +5,7 @@ import warnings
 from collections.abc import Callable, Hashable
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Union, cast
+from typing import TYPE_CHECKING, Literal, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -25,6 +25,7 @@ from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
 from xarray.core.duck_array_ops import array_all, asarray, ravel, reshape
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
+from xarray.core.types import DatetimeUnitOptions
 from xarray.core.utils import attempt_import, emit_user_level_warning
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import T_ChunkedArray, get_chunked_array_type
@@ -1507,6 +1508,7 @@ class CFTimedeltaCoder(VariableCoder):
                 dtype = pop_to(attrs, encoding, "dtype", name=name)
                 dtype = np.dtype(dtype)
                 resolution, _ = np.datetime_data(dtype)
+                resolution = cast(Literal["Y", "M"] | DatetimeUnitOptions, resolution)
                 if np.timedelta64(1, resolution) > np.timedelta64(1, "s"):
                     time_unit = cast(PDDatetimeUnitOptions, "s")
                     dtype = np.dtype("timedelta64[s]")
