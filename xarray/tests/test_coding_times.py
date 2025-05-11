@@ -1986,7 +1986,7 @@ def test_literal_timedelta64_coding(time_unit: PDDatetimeUnitOptions) -> None:
     assert reencoded.dtype == encoded.dtype
 
 
-def test_literal_timedelta_coding_non_pandas_resolution_warning() -> None:
+def test_literal_timedelta_coding_non_pandas_coarse_resolution_warning() -> None:
     attrs = {"dtype": "timedelta64[D]", "units": "days"}
     encoded = Variable(["time"], [0, 1, 2], attrs=attrs)
     with pytest.warns(UserWarning, match="xarray only supports"):
@@ -1996,6 +1996,19 @@ def test_literal_timedelta_coding_non_pandas_resolution_warning() -> None:
     expected = Variable(["time"], expected_array)
     assert_identical(decoded, expected)
     assert decoded.dtype == np.dtype("timedelta64[s]")
+
+
+@pytest.mark.xfail(reason="xarray does not recognize picoseconds as time-like")
+def test_literal_timedelta_coding_non_pandas_fine_resolution_warning() -> None:
+    attrs = {"dtype": "timedelta64[ps]", "units": "picoseconds"}
+    encoded = Variable(["time"], [0, 1000, 2000], attrs=attrs)
+    with pytest.warns(UserWarning, match="xarray only supports"):
+        decoded = conventions.decode_cf_variable("timedeltas", encoded)
+    expected_array = np.array([0, 1000, 2000], dtype="timedelta64[ps]")
+    expected_array = expected_array.astype("timedelta64[ns]")
+    expected = Variable(["time"], expected_array)
+    assert_identical(decoded, expected)
+    assert decoded.dtype == np.dtype("timedelta64[ns]")
 
 
 @pytest.mark.parametrize("attribute", ["dtype", "units"])
