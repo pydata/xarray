@@ -65,6 +65,7 @@ from xarray.tests import (
     requires_dask,
     requires_numexpr,
     requires_pint,
+    requires_pyarrow,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -1836,7 +1837,9 @@ class TestDataset:
                 ["foo", "bar", "baz"],
                 categories=["foo", "bar", "baz", "qux"],
             ),
-            pd.array([1, 1, None], dtype="int64[pyarrow]"),
+            pytest.param(
+                pd.array([1, 1, None], dtype="int64[pyarrow]"), marks=requires_pyarrow
+            ),
         ],
     )
     def test_extensionarray_negative_reindex(self, fill_value, extension_array) -> None:
@@ -1858,8 +1861,9 @@ class TestDataset:
             )
         )  # type: ignore[attr-defined]
 
+    @requires_pyarrow
     def test_extension_array_reindex_same(self) -> None:
-        series = pd.Series([1, 2, pd.NA, 3], dtype=pd.Int32Dtype())
+        series = pd.Series([1, 2, pd.NA, 3], dtype="int32[pyarrow]")
         test = xr.Dataset({"test": series})
         res = test.reindex(dim_0=series.index)
         align(res, test, join="exact")
@@ -5454,19 +5458,44 @@ class TestDataset:
         with pytest.raises(TypeError, match=r"must specify how or thresh"):
             ds.dropna("a", how=None)  # type: ignore[arg-type]
 
-    def test_fillna_extension_array_int(self) -> None:
-        srs = pd.DataFrame({"data": pd.array([pd.NA, 1, 1])}, index=np.array([1, 2, 3]))
+    @pytest.mark.parametrize(
+        "fill_value,extension_array",
+        [
+            ("a", pd.Categorical([pd.NA, "a", "b"])),
+            pytest.param(
+                0,
+                pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
+                marks=requires_pyarrow,
+            ),
+        ],
+        ids=["categorical", "int64[pyarrow]"],
+    )
+    def test_fillna_extension_array(self, fill_value, extension_array) -> None:
+        srs = pd.DataFrame({"data": extension_array}, index=np.array([1, 2, 3]))
         ds = srs.to_xarray()
-        filled = ds.fillna(0)
-        assert filled["data"].dtype == pd.Int64Dtype()
-        assert (filled["data"].values == np.array([0, 1, 1])).all()
+        filled = ds.fillna(fill_value)
+        assert filled["data"].dtype == extension_array.dtype
+        assert (
+            filled["data"].values
+            == np.array([fill_value, *srs["data"].values[1:]], dtype="object")
+        ).all()
 
-    def test_dropna_extension_array_int(self) -> None:
-        srs = pd.DataFrame({"data": pd.array([pd.NA, 1, 1])}, index=np.array([1, 2, 3]))
+    @pytest.mark.parametrize(
+        "extension_array",
+        [
+            pd.Categorical([pd.NA, "a", "b"]),
+            pytest.param(
+                pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"), marks=requires_pyarrow
+            ),
+        ],
+        ids=["categorical", "int64[pyarrow]"],
+    )
+    def test_dropna_extension_array(self, extension_array) -> None:
+        srs = pd.DataFrame({"data": extension_array}, index=np.array([1, 2, 3]))
         ds = srs.to_xarray()
         dropped = ds.dropna("index")
-        assert dropped["data"].dtype == pd.Int64Dtype()
-        assert (dropped["data"].values == np.array([1, 1])).all()
+        assert dropped["data"].dtype == extension_array.dtype
+        assert (dropped["data"].values == srs["data"].values[1:]).all()
 
     def test_fillna(self) -> None:
         ds = Dataset({"a": ("x", [np.nan, 1, np.nan, 3])}, {"x": [0, 1, 2, 3]})

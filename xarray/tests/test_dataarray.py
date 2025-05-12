@@ -61,6 +61,7 @@ from xarray.tests import (
     requires_iris,
     requires_numexpr,
     requires_pint,
+    requires_pyarrow,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -3079,7 +3080,11 @@ class TestDataArray:
         "fill_value,extension_array",
         [
             ("a", pd.Categorical([pd.NA, "a", "b"])),
-            (0, pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]")),
+            pytest.param(
+                0,
+                pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
+                marks=requires_pyarrow,
+            ),
         ],
         ids=["categorical", "int64[pyarrow]"],
     )
@@ -3090,6 +3095,7 @@ class TestDataArray:
         assert filled.dtype == srs.dtype
         assert (filled.values == np.array([fill_value, *(srs.values[1:])])).all()
 
+    @requires_pyarrow
     def test_fillna_extension_array_bad_val(self) -> None:
         srs: pd.Series = pd.Series(
             index=np.array([1, 2, 3]),
@@ -3103,7 +3109,9 @@ class TestDataArray:
         "extension_array",
         [
             pd.Categorical([pd.NA, "a", "b"]),
-            pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
+            pytest.param(
+                pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"), marks=requires_pyarrow
+            ),
         ],
         ids=["categorical", "int64[pyarrow]"],
     )
