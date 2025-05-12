@@ -111,7 +111,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
 
         args = tuple(replace_duck_with_extension_array(args))
         if func not in HANDLED_EXTENSION_ARRAY_FUNCTIONS:
-            return func(*args, **kwargs)
+            raise KeyError("Function not registered for pandas extension arrays.")
         res = HANDLED_EXTENSION_ARRAY_FUNCTIONS[func](*args, **kwargs)
         if is_extension_array_dtype(res):
             return PandasExtensionArray(res)
@@ -121,9 +121,9 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
         return ufunc(*inputs, **kwargs)
 
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
-        if isinstance(key, tuple):
-            if len(key) > 1:
-                raise IndexError("Too many indices for array.")
+        if (
+            isinstance(key, tuple) and len(key) == 1
+        ):  # pyarrow type arrays can't handle since-length tuples
             key = key[0]
         item = self.array[key]
         if is_extension_array_dtype(item):

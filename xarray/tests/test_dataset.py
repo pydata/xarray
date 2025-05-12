@@ -1841,6 +1841,7 @@ class TestDataset:
                 pd.array([1, 1, None], dtype="int64[pyarrow]"), marks=requires_pyarrow
             ),
         ],
+        ids=["categorical", "int64[pyarrow]"],
     )
     def test_extensionarray_negative_reindex(self, fill_value, extension_array) -> None:
         ds = xr.Dataset(
