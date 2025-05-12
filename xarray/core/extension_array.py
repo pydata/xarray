@@ -51,6 +51,17 @@ def __extension_duck_array__concatenate(
     return type(arrays[0])._concat_same_type(arrays)  # type: ignore[attr-defined]
 
 
+@implements(np.reshape)
+def __extension_duck_array__concatenate(
+    arr: T_ExtensionArray, shape: tuple
+) -> T_ExtensionArray:
+    if (shape[0] == len(arr) and len(shape) == 1) or shape == (-1,):
+        return arr
+    raise NotImplementedError(
+        f"Cannot reshape 1d-only pandas extension array to: {shape}"
+    )
+
+
 @implements(np.where)
 def __extension_duck_array__where(
     condition: np.ndarray, x: T_ExtensionArray, y: T_ExtensionArray
@@ -103,7 +114,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
             return func(*args, **kwargs)
         res = HANDLED_EXTENSION_ARRAY_FUNCTIONS[func](*args, **kwargs)
         if is_extension_array_dtype(res):
-            return type(self)[type(res)](res)
+            return PandasExtensionArray(res)
         return res
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):

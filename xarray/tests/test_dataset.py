@@ -297,9 +297,8 @@ class TestDataset:
                 var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
                 var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
                 var3     (dim3, dim1) float64 640B 0.4107 0.9941 0.1665 ... 0.716 1.555
-                var4     (dim1) category 32B 'b' 'c' 'b' 'a' 'c' 'a' 'c' 'a'
-                var5     (dim1) Int64 72B 5 9 7 2 6 2 8 1
-                var6     (dim1) string 64B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h'
+                var4     (dim1) category 32B b c b a c a c a
+                var5     (dim1) int64[pyarrow] 64B 5 9 7 2 6 2 8 1
             Attributes:
                 foo:      bar""".format(
                 data["dim3"].dtype,
@@ -1837,8 +1836,7 @@ class TestDataset:
                 ["foo", "bar", "baz"],
                 categories=["foo", "bar", "baz", "qux"],
             ),
-            pd.array([1, 2, 3], dtype=pd.Int32Dtype()),
-            pd.array(["a", "b", "c"], dtype="string"),
+            pd.array([1, 1, None], dtype="int64[pyarrow]"),
         ],
     )
     def test_extensionarray_negative_reindex(self, fill_value, extension_array) -> None:

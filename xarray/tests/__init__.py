@@ -366,12 +366,8 @@ def create_test_data(
         obj["var5"] = (
             "dim1",
             pd.array(
-                rs.integers(1, 10, size=dim_sizes[0]).tolist(), dtype=pd.Int64Dtype()
+                rs.integers(1, 10, size=dim_sizes[0]).tolist(), dtype="int64[pyarrow]"
             ),
-        )
-        obj["var6"] = (
-            "dim1",
-            pd.array(list(string.ascii_lowercase[: dim_sizes[0]]), dtype="string"),
         )
     if dim_sizes == _DEFAULT_TEST_DIM_SIZES:
         numbers_values = np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64")
