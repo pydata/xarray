@@ -367,14 +367,13 @@ class Index:
         other : Index
             The other Index object to compare with this object.
         exclude_dims : frozenset of hashable, optional
-            All the dimensions that are excluded from alignment, or None by default
+            Dimensions excluded from checking. It is None by default,
             (i.e., when this method is not called in the context of alignment).
-            For a n-dimensional index it allows ignoring any relevant dimension found
-            in ``exclude_dims`` when comparing this index with the other index.
-            For a 1-dimensional index it can be always safely ignored as this
-            method is not called when all of the index's dimensions are also excluded
-            from alignment
-            (note: the index's dimensions correspond to the union of the dimensions
+            For a n-dimensional index this option allows an Index to optionally, 
+            ignore any dimension in ``exclude_dims`` when comparing 
+            ``self`` with ``other``. For a 1-dimensional index this kwarg can be safely ignored ,
+            as this method is not called when all of the index's dimensions are also excluded
+            from alignment (note: the index's dimensions correspond to the union of the dimensions
             of all coordinate variables associated with this index).
 
         Returns
