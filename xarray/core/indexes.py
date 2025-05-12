@@ -354,7 +354,7 @@ class Index:
 
     @overload
     def equals(
-        self, other: Index, *, exclude_dims: frozenset[Hashable] | None = None
+        self, other: Index, *, exclude: frozenset[Hashable] | None = None
     ) -> bool: ...
 
     def equals(self, other: Index, **kwargs) -> bool:
@@ -366,20 +366,22 @@ class Index:
         ----------
         other : Index
             The other Index object to compare with this object.
-        exclude_dims : frozenset of hashable, optional
-            Dimensions excluded from checking. It is None by default,
-            (i.e., when this method is not called in the context of alignment).
-            For a n-dimensional index this option allows an Index to optionally,
-            ignore any dimension in ``exclude_dims`` when comparing
-            ``self`` with ``other``. For a 1-dimensional index this kwarg can be safely ignored ,
-            as this method is not called when all of the index's dimensions are also excluded
-            from alignment (note: the index's dimensions correspond to the union of the dimensions
-            of all coordinate variables associated with this index).
+        exclude : frozenset of hashable, optional
+            Dimensions excluded from checking. It is None by default, (i.e.,
+            when this method is not called in the context of alignment). For a
+            n-dimensional index this option allows an Index to optionally ignore
+            any dimension in ``exclude`` when comparing ``self`` with ``other``.
+            For a 1-dimensional index this kwarg can be safely ignored, as this
+            method is not called when all of the index's dimensions are also
+            excluded from alignment (note: the index's dimensions correspond to
+            the union of the dimensions of all coordinate variables associated
+            with this index).
 
         Returns
         -------
         is_equal : bool
             ``True`` if the indexes are equal, ``False`` otherwise.
+
         """
         raise NotImplementedError()
 
@@ -881,7 +883,7 @@ class PandasIndex(Index):
 
         return IndexSelResult({self.dim: indexer})
 
-    def equals(self, other: Index, *, exclude_dims: frozenset[Hashable] | None = None):
+    def equals(self, other: Index, *, exclude: frozenset[Hashable] | None = None):
         if not isinstance(other, PandasIndex):
             return False
         return self.index.equals(other.index) and self.dim == other.dim
@@ -1561,7 +1563,7 @@ class CoordinateTransformIndex(Index):
         return IndexSelResult(results)
 
     def equals(
-        self, other: Index, *, exclude_dims: frozenset[Hashable] | None = None
+        self, other: Index, *, exclude: frozenset[Hashable] | None = None
     ) -> bool:
         if not isinstance(other, CoordinateTransformIndex):
             return False
@@ -1957,18 +1959,18 @@ def _wrap_index_equals(
         emit_user_level_warning(
             f"the signature ``{index_cls_name}.equals(self, other)`` is deprecated. "
             f"Please update it to "
-            f"``{index_cls_name}.equals(self, other, *, exclude_dims=None)`` "
+            f"``{index_cls_name}.equals(self, other, *, exclude=None)`` "
             "or kindly ask the maintainers of ``{index_cls_name}`` to do it. "
             "See documentation of xarray.Index.equals() for more info.",
             FutureWarning,
         )
-        exclude_dims_kwarg = False
+        exclude_kwarg = False
     else:
-        exclude_dims_kwarg = True
+        exclude_kwarg = True
 
-    def equals_wrapper(other: Index, exclude_dims: frozenset[Hashable]) -> bool:
-        if exclude_dims_kwarg:
-            return index.equals(other, exclude_dims=exclude_dims)
+    def equals_wrapper(other: Index, exclude: frozenset[Hashable]) -> bool:
+        if exclude_kwarg:
+            return index.equals(other, exclude=exclude)
         else:
             return index.equals(other)
 

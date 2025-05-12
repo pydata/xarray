@@ -2627,7 +2627,7 @@ class TestDataset:
                 var = next(iter(variables.values()))
                 return cls(int(var.values))
 
-            def equals(self, other, *, exclude_dims=None):
+            def equals(self, other, *, exclude=None):
                 return isinstance(other, ScalarIndex) and other.value == self.value
 
         ds1 = Dataset(coords={"x": 0}).set_xindex("x", ScalarIndex)
@@ -2659,9 +2659,9 @@ class TestDataset:
                     ),
                 )
 
-            def equals(self, other, exclude_dims=None):
-                x_eq = True if self.x.dim in exclude_dims else self.x.equals(other.x)
-                y_eq = True if self.y.dim in exclude_dims else self.y.equals(other.y)
+            def equals(self, other, exclude=None):
+                x_eq = True if self.x.dim in exclude else self.x.equals(other.x)
+                y_eq = True if self.y.dim in exclude else self.y.equals(other.y)
                 return x_eq and y_eq
 
         ds1 = (
@@ -2691,7 +2691,7 @@ class TestDataset:
         # TODO: remove this test once the deprecation cycle is completed
         class DeprecatedEqualsSignatureIndex(PandasIndex):
             def equals(self, other: Index) -> bool:  # type: ignore[override]
-                return super().equals(other, exclude_dims=None)
+                return super().equals(other, exclude=None)
 
         ds = (
             Dataset(coords={"x": [1, 2]})
