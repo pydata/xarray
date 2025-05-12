@@ -53,6 +53,7 @@ from xarray.tests import (
     assert_no_warnings,
     has_dask,
     has_dask_ge_2025_1_0,
+    has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -3079,14 +3080,17 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "fill_value,extension_array",
         [
-            ("a", pd.Categorical([pd.NA, "a", "b"])),
+            pytest.param("a", pd.Categorical([pd.NA, "a", "b"]), id="categorical"),
+        ]
+        + [
             pytest.param(
                 0,
                 pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
-                marks=requires_pyarrow,
-            ),
-        ],
-        ids=["categorical", "int64[pyarrow]"],
+                id="int64[pyarrow]",
+            )
+        ]
+        if has_pyarrow
+        else [],
     )
     def test_fillna_extension_array(self, fill_value, extension_array) -> None:
         srs: pd.Series = pd.Series(index=np.array([1, 2, 3]), data=extension_array)
@@ -3108,12 +3112,15 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "extension_array",
         [
-            pd.Categorical([pd.NA, "a", "b"]),
+            pytest.param(pd.Categorical([pd.NA, "a", "b"]), id="categorical"),
+        ]
+        + [
             pytest.param(
-                pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"), marks=requires_pyarrow
-            ),
-        ],
-        ids=["categorical", "int64[pyarrow]"],
+                pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"), id="int64[pyarrow]"
+            )
+        ]
+        if has_pyarrow
+        else [],
     )
     def test_dropna_extension_array(self, extension_array) -> None:
         srs: pd.Series = pd.Series(index=np.array([1, 2, 3]), data=extension_array)

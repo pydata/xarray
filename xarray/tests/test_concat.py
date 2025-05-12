@@ -155,21 +155,20 @@ def test_concat_missing_var() -> None:
     assert_identical(actual, expected)
 
 
-@requires_pyarrow
-def test_concat_extension_array() -> None:
+@pytest.mark.parametrize("var", ["var4", pytest.param("var5", marks=requires_pyarrow)])
+def test_concat_extension_array(var) -> None:
     data1 = create_test_data(use_extension_array=True)
     data2 = create_test_data(use_extension_array=True)
     concatenated = concat([data1, data2], dim="dim1")
-    for var in ["var4", "var5"]:
-        assert pd.Series(
-            concatenated[var]
-            == type(data2[var].variable.data)._concat_same_type(
-                [
-                    data1[var].variable.data,
-                    data2[var].variable.data,
-                ]
-            )
-        ).all()  # need to wrap in series because pyarrow bool does not support `all`
+    assert pd.Series(
+        concatenated[var]
+        == type(data2[var].variable.data)._concat_same_type(
+            [
+                data1[var].variable.data,
+                data2[var].variable.data,
+            ]
+        )
+    ).all()  # need to wrap in series because pyarrow bool does not support `all`
 
 
 def test_concat_missing_multiple_consecutive_var() -> None:

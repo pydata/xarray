@@ -58,6 +58,7 @@ from xarray.tests import (
     create_test_data,
     has_cftime,
     has_dask,
+    has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
@@ -298,12 +299,14 @@ class TestDataset:
                 var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
                 var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
                 var3     (dim3, dim1) float64 640B 0.4107 0.9941 0.1665 ... 0.716 1.555
-                var4     (dim1) category 32B b c b a c a c a
-                var5     (dim1) int64[pyarrow] 64B 5 9 7 2 6 2 8 1
+                var4     (dim1) category 32B b c b a c a c a{}
             Attributes:
                 foo:      bar""".format(
                 data["dim3"].dtype,
                 "ns",
+                "var5     (dim1) int64[pyarrow] 64B 5 9 7 2 6 2 8 1"
+                if has_pyarrow
+                else "",
             )
         )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
@@ -1833,15 +1836,21 @@ class TestDataset:
     @pytest.mark.parametrize(
         "extension_array",
         [
-            pd.Categorical(
-                ["foo", "bar", "baz"],
-                categories=["foo", "bar", "baz", "qux"],
-            ),
             pytest.param(
-                pd.array([1, 1, None], dtype="int64[pyarrow]"), marks=requires_pyarrow
+                pd.Categorical(
+                    ["foo", "bar", "baz"],
+                    categories=["foo", "bar", "baz", "qux"],
+                ),
+                id="categorical",
             ),
-        ],
-        ids=["categorical", "int64[pyarrow]"],
+        ]
+        + [
+            pytest.param(
+                pd.array([1, 1, None], dtype="int64[pyarrow]"), id="int64[pyarrow]"
+            )
+        ]
+        if has_pyarrow
+        else [],
     )
     def test_extensionarray_negative_reindex(self, fill_value, extension_array) -> None:
         ds = xr.Dataset(
@@ -5462,14 +5471,17 @@ class TestDataset:
     @pytest.mark.parametrize(
         "fill_value,extension_array",
         [
-            ("a", pd.Categorical([pd.NA, "a", "b"])),
+            pytest.param("a", pd.Categorical([pd.NA, "a", "b"]), id="category"),
+        ]
+        + [
             pytest.param(
                 0,
                 pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
-                marks=requires_pyarrow,
-            ),
-        ],
-        ids=["categorical", "int64[pyarrow]"],
+                id="int64[pyarrow]",
+            )
+        ]
+        if has_pyarrow
+        else [],
     )
     def test_fillna_extension_array(self, fill_value, extension_array) -> None:
         srs = pd.DataFrame({"data": extension_array}, index=np.array([1, 2, 3]))
@@ -5484,12 +5496,15 @@ class TestDataset:
     @pytest.mark.parametrize(
         "extension_array",
         [
-            pd.Categorical([pd.NA, "a", "b"]),
+            pytest.param(pd.Categorical([pd.NA, "a", "b"]), id="category"),
+        ]
+        + [
             pytest.param(
-                pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"), marks=requires_pyarrow
-            ),
-        ],
-        ids=["categorical", "int64[pyarrow]"],
+                pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"), id="int64[pyarrow]"
+            )
+        ]
+        if has_pyarrow
+        else [],
     )
     def test_dropna_extension_array(self, extension_array) -> None:
         srs = pd.DataFrame({"data": extension_array}, index=np.array([1, 2, 3]))
