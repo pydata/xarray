@@ -121,6 +121,10 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
         return ufunc(*inputs, **kwargs)
 
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
+        if isinstance(key, tuple):
+            if len(key) > 1:
+                raise IndexError("Too many indices for array.")
+            key = key[0]
         item = self.array[key]
         if is_extension_array_dtype(item):
             return PandasExtensionArray(item)

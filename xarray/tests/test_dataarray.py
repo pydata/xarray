@@ -3075,23 +3075,44 @@ class TestDataArray:
         with set_options(keep_attrs=True):
             assert func(da).attrs == da.attrs
 
-    def test_fillna_extension_array(self) -> None:
+    @pytest.mark.parametrize(
+        "fill_value,extension_array",
+        [
+            ("a", pd.Categorical([pd.NA, "a", "b"])),
+            (0, pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]")),
+        ],
+        ids=["categorical", "int64[pyarrow]"],
+    )
+    def test_fillna_extension_array(self, fill_value, extension_array) -> None:
+        srs: pd.Series = pd.Series(index=np.array([1, 2, 3]), data=extension_array)
+        da = srs.to_xarray()
+        filled = da.fillna(fill_value)
+        assert filled.dtype == srs.dtype
+        assert (filled.values == np.array([fill_value, *(srs.values[1:])])).all()
+
+    def test_fillna_extension_array_bad_val(self) -> None:
         srs: pd.Series = pd.Series(
-            index=np.array([1, 2, 3]), data=pd.Categorical([pd.NA, "a", "b"])
+            index=np.array([1, 2, 3]),
+            data=pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
         )
         da = srs.to_xarray()
-        filled = da.fillna(0)
-        assert filled.dtype == srs.dtype
-        assert (filled.values == np.array([0, 1, 1])).all()
+        with pytest.raises(ValueError):
+            da.fillna("a")
 
-    def test_dropna_extension_array(self) -> None:
-        srs: pd.Series = pd.Series(
-            index=np.array([1, 2, 3]), data=pd.Categorical([pd.NA, "a", "b"])
-        )
+    @pytest.mark.parametrize(
+        "extension_array",
+        [
+            pd.Categorical([pd.NA, "a", "b"]),
+            pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
+        ],
+        ids=["categorical", "int64[pyarrow]"],
+    )
+    def test_dropna_extension_array(self, extension_array) -> None:
+        srs: pd.Series = pd.Series(index=np.array([1, 2, 3]), data=extension_array)
         da = srs.to_xarray()
         filled = da.dropna("index")
         assert filled.dtype == srs.dtype
-        assert (filled.values == np.array(["a", "b"])).all()
+        assert (filled.values == srs.values[1:]).all()
 
     def test_fillna(self) -> None:
         a = DataArray([np.nan, 1, np.nan, 3], coords={"x": range(4)}, dims="x")
