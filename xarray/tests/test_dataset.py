@@ -1864,12 +1864,12 @@ class TestDataset:
             pd.api.extensions.ExtensionArray,
             (ds.reindex(index=[-1, 1, 1], **kwargs)["arr"].to_pandas().values),
         )
-        assert reindexed_cat.equals(
+        assert reindexed_cat.equals(  # type: ignore[attr-defined]
             pd.array(
                 [pd.NA, extension_array[1], extension_array[1]],
                 dtype=extension_array.dtype,
             )
-        )  # type: ignore[attr-defined]
+        )
 
     @requires_pyarrow
     def test_extension_array_reindex_same(self) -> None:
