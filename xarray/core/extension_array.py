@@ -52,7 +52,7 @@ def __extension_duck_array__concatenate(
 
 
 @implements(np.reshape)
-def __extension_duck_array__concatenate(
+def __extension_duck_array__reshape(
     arr: T_ExtensionArray, shape: tuple
 ) -> T_ExtensionArray:
     if (shape[0] == len(arr) and len(shape) == 1) or shape == (-1,):
