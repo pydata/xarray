@@ -94,10 +94,47 @@ def reindex_variables(
     return new_variables
 
 
+def _normalize_indexes(
+    indexes: Mapping[Any, Any | T_DuckArray],
+) -> Indexes:
+    """Normalize the indexes/indexers given for re-indexing or alignment.
+
+    Wrap any arbitrary array or `pandas.Index` as an Xarray `PandasIndex`
+    and create the index variable(s).
+
+    """
+    xr_indexes: dict[Hashable, Index] = {}
+    xr_variables: dict[Hashable, Variable]
+
+    if isinstance(indexes, Indexes):
+        xr_variables = dict(indexes.variables)
+    else:
+        xr_variables = {}
+
+    for k, idx in indexes.items():
+        if not isinstance(idx, Index):
+            if getattr(idx, "dims", (k,)) != (k,):
+                raise AlignmentError(
+                    f"Indexer has dimensions {idx.dims} that are different "
+                    f"from that to be indexed along '{k}'"
+                )
+            data: T_DuckArray = as_compatible_data(idx)
+            pd_idx = safe_cast_to_index(data)
+            pd_idx.name = k
+            if isinstance(pd_idx, pd.MultiIndex):
+                idx = PandasMultiIndex(pd_idx, k)
+            else:
+                idx = PandasIndex(pd_idx, k, coord_dtype=data.dtype)
+            xr_variables.update(idx.create_variables())
+        xr_indexes[k] = idx
+
+    return Indexes(xr_indexes, xr_variables)
+
+
 CoordNamesAndDims = tuple[tuple[Hashable, tuple[Hashable, ...]], ...]
 MatchingIndexKey = tuple[CoordNamesAndDims, type[Index]]
-NormalizedIndexes = dict[MatchingIndexKey, Index]
-NormalizedIndexVars = dict[MatchingIndexKey, dict[Hashable, Variable]]
+IndexesToAlign = dict[MatchingIndexKey, Index]
+IndexVarsToAlign = dict[MatchingIndexKey, dict[Hashable, Variable]]
 
 
 class Aligner(Generic[T_Alignable]):
@@ -169,7 +206,9 @@ class Aligner(Generic[T_Alignable]):
 
         if indexes is None:
             indexes = {}
-        self.indexes, self.index_vars = self._normalize_indexes(indexes)
+        self.indexes, self.index_vars = self._collect_indexes(
+            _normalize_indexes(indexes)
+        )
 
         self.all_indexes = {}
         self.all_index_vars = {}
@@ -181,43 +220,21 @@ class Aligner(Generic[T_Alignable]):
 
         self.results = tuple()
 
-    def _normalize_indexes(
-        self,
-        indexes: Mapping[Any, Any | T_DuckArray],
-    ) -> tuple[NormalizedIndexes, NormalizedIndexVars]:
-        """Normalize the indexes/indexers used for re-indexing or alignment.
+    def _collect_indexes(
+        self, indexes: Indexes
+    ) -> tuple[IndexesToAlign, IndexVarsToAlign]:
+        """Collect input and/or object indexes for alignment.
 
-        Return dictionaries of xarray Index objects and coordinate variables
-        such that we can group matching indexes based on the dictionary keys.
+        Return new dictionaries of xarray Index objects and coordinate
+        variables, whose keys are used to later retrieve all the indexes to
+        compare with each other (based on the name and dimensions of their
+        associated coordinate variables as well as the Index type).
 
         """
-        if isinstance(indexes, Indexes):
-            xr_variables = dict(indexes.variables)
-        else:
-            xr_variables = {}
+        collected_indexes = {}
+        collected_index_vars = {}
 
-        xr_indexes: dict[Hashable, Index] = {}
-        for k, idx in indexes.items():
-            if not isinstance(idx, Index):
-                if getattr(idx, "dims", (k,)) != (k,):
-                    raise AlignmentError(
-                        f"Indexer has dimensions {idx.dims} that are different "
-                        f"from that to be indexed along '{k}'"
-                    )
-                data: T_DuckArray = as_compatible_data(idx)
-                pd_idx = safe_cast_to_index(data)
-                pd_idx.name = k
-                if isinstance(pd_idx, pd.MultiIndex):
-                    idx = PandasMultiIndex(pd_idx, k)
-                else:
-                    idx = PandasIndex(pd_idx, k, coord_dtype=data.dtype)
-                xr_variables.update(idx.create_variables())
-            xr_indexes[k] = idx
-
-        normalized_indexes = {}
-        normalized_index_vars = {}
-
-        for idx, idx_vars in Indexes(xr_indexes, xr_variables).group_by_index():
+        for idx, idx_vars in indexes.group_by_index():
             idx_coord_names_and_dims = []
             idx_all_dims: set[Hashable] = set()
 
@@ -226,8 +243,8 @@ class Aligner(Generic[T_Alignable]):
                 idx_coord_names_and_dims.append((name, dims))
                 idx_all_dims.update(dims)
 
-            # We can ignore an index if all the dimensions it uses are also excluded
-            # from the alignment (do not ignore the index if it has no related dimension, i.e.,
+            # Do not collect an index if all the dimensions it uses are also excluded
+            # from the alignment (always collect the index if it has no related dimension, i.e.,
             # it is associated with one or more scalar coordinates).
             if idx_all_dims:
                 exclude_dims = idx_all_dims & self.exclude_dims
@@ -244,11 +261,11 @@ class Aligner(Generic[T_Alignable]):
                         f"{incl_dims_str}"
                     )
 
-            key = (tuple(idx_coord_names_and_dims), type(idx))
-            normalized_indexes[key] = idx
-            normalized_index_vars[key] = idx_vars
+            key: MatchingIndexKey = (tuple(idx_coord_names_and_dims), type(idx))
+            collected_indexes[key] = idx
+            collected_index_vars[key] = idx_vars
 
-        return normalized_indexes, normalized_index_vars
+        return collected_indexes, collected_index_vars
 
     def find_matching_indexes(self) -> None:
         all_indexes: dict[MatchingIndexKey, list[Index]]
@@ -262,7 +279,7 @@ class Aligner(Generic[T_Alignable]):
         objects_matching_indexes = []
 
         for obj in self.objects:
-            obj_indexes, obj_index_vars = self._normalize_indexes(obj.xindexes)
+            obj_indexes, obj_index_vars = self._collect_indexes(obj.xindexes)
             objects_matching_indexes.append(obj_indexes)
             for key, idx in obj_indexes.items():
                 all_indexes[key].append(idx)
