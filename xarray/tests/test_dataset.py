@@ -2685,7 +2685,7 @@ class TestDataset:
             xr.align(ds1, ds2, join="exact")
 
         with pytest.raises(AlignmentError, match="cannot exclude dimension"):
-            xr.align(ds1, ds2, join="outer", exclude="y")
+            xr.align(ds1, ds2, join="override", exclude="y")
 
     def test_align_index_equals_future_warning(self) -> None:
         # TODO: remove this test once the deprecation cycle is completed
