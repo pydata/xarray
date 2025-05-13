@@ -488,7 +488,7 @@ class VectorizedIndexer(ExplicitIndexer):
                         "invalid indexer key: ndarray arguments "
                         f"have different numbers of dimensions: {ndims}"
                     )
-                k = k.astype(np.int64)  # type: ignore[union-attr]
+                k = k.astype(np.int64, copy=False)  # type: ignore[union-attr]
             else:
                 raise TypeError(
                     f"unexpected indexer type for {type(self).__name__}: {k!r}"
