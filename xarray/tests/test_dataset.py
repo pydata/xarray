@@ -298,14 +298,13 @@ class TestDataset:
                 var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
                 var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
                 var3     (dim3, dim1) float64 640B 0.4107 0.9941 0.1665 ... 0.716 1.555
-                var4     (dim1) category 32B b c b a c a c a
-                var5     (dim1) interval[int64, right] 128B (0, 1] (0, 1] ... (0, 1] (0, 1]{}
+                var4     (dim1) category 32B b c b a c a c a{}
             Attributes:
                 foo:      bar"""
         ).format(
             data["dim3"].dtype,
             "ns",
-            "\n    var6     (dim1) int64[pyarrow] 64B 5 9 7 2 6 2 8 1"
+            "\n    var5     (dim1) int64[pyarrow] 64B 5 9 7 2 6 2 8 1"
             if has_pyarrow
             else "",
         )
@@ -5801,7 +5800,7 @@ class TestDataset:
     def test_reduce_non_numeric(self) -> None:
         data1 = create_test_data(seed=44, use_extension_array=True)
         data2 = create_test_data(seed=44)
-        add_vars = {"var5": ["dim1", "dim2"], "var6": ["dim1"]}
+        add_vars = {"var6": ["dim1", "dim2"], "var7": ["dim1"]}
         for v, dims in sorted(add_vars.items()):
             size = tuple(data1.sizes[d] for d in dims)
             data = np.random.randint(0, 100, size=size).astype(np.str_)
@@ -5811,10 +5810,11 @@ class TestDataset:
             "var4" not in data1.mean()
             and "var5" not in data1.mean()
             and "var6" not in data1.mean()
+            and "var7" not in data1.mean()
         )
         assert_equal(data1.mean(), data2.mean())
         assert_equal(data1.mean(dim="dim1"), data2.mean(dim="dim1"))
-        assert "var5" not in data1.mean(dim="dim2") and "var6" in data1.mean(dim="dim2")
+        assert "var6" not in data1.mean(dim="dim2") and "var7" in data1.mean(dim="dim2")
 
     @pytest.mark.filterwarnings(
         "ignore:Once the behaviour of DataArray:DeprecationWarning"

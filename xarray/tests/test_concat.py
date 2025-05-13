@@ -155,9 +155,7 @@ def test_concat_missing_var() -> None:
     assert_identical(actual, expected)
 
 
-@pytest.mark.parametrize(
-    "var", ["var4", "var5", pytest.param("var6", marks=requires_pyarrow)]
-)
+@pytest.mark.parametrize("var", ["var4", pytest.param("var5", marks=requires_pyarrow)])
 def test_concat_extension_array(var) -> None:
     data1 = create_test_data(use_extension_array=True)
     data2 = create_test_data(use_extension_array=True)

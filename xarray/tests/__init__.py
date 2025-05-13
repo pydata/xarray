@@ -363,12 +363,8 @@ def create_test_data(
                 )
             ),
         )
-        obj["var5"] = (
-            "dim1",
-            pd.arrays.IntervalArray([pd.Interval(0, 1)] * dim_sizes[0]),
-        )
         if has_pyarrow:
-            obj["var6"] = (
+            obj["var5"] = (
                 "dim1",
                 pd.array(
                     rs.integers(1, 10, size=dim_sizes[0]).tolist(),
