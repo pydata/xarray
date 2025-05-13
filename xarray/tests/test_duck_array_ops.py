@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import datetime as dt
 import pickle
 import warnings
@@ -199,6 +200,16 @@ class TestOps:
         )
         assert concatenated[2].array[0]["x"] == 3
         assert concatenated[3].array[0]["y"]
+
+    @requires_pyarrow
+    def test_extension_array_copy_arrow_type(self):
+        arr = pd.array([pd.NA, 1, 2], dtype="int64[pyarrow]")
+        # Relying on the `__getattr__` of `PandasExtensionArray` to do the deep copy
+        # recursively only fails for `int64[pyarrow]` and similar types so this
+        # test ensures that copying still works there.
+        assert isinstance(
+            copy.deepcopy(PandasExtensionArray(arr), memo=None).array, type(arr)
+        )
 
     def test___getitem__extension_duck_array(self, categorical1):
         extension_duck_array = PandasExtensionArray(categorical1)
