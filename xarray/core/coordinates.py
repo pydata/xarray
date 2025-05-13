@@ -561,6 +561,31 @@ class Coordinates(AbstractCoordinates):
             variables=coords, coord_names=coord_names, indexes=indexes
         )
 
+    def __or__(self, other: Self) -> Self:
+        """Merge two sets of coordinates to create a new Coordinates object
+
+        The method implements the logic used for joining coordinates in the
+        result of a binary operation performed on xarray objects:
+
+        - If two index coordinates conflict (are not equal), an exception is
+          raised. You must align your data before passing it to this method.
+        - If an index coordinate and a non-index coordinate conflict, the non-
+          index coordinate is dropped.
+        - If two non-index coordinates conflict, both are dropped.
+
+        Parameters
+        ----------
+        other : dict-like, optional
+            A :py:class:`Coordinates` object or any mapping that can be turned
+            into coordinates.
+
+        Returns
+        -------
+        merged : Coordinates
+            A new Coordinates object with merged coordinates.
+        """
+        return self.merge(other).coords
+
     def __setitem__(self, key: Hashable, value: Any) -> None:
         self.update({key: value})
 
