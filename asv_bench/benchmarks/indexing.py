@@ -27,11 +27,21 @@ basic_assignment_values = {
     ),
 }
 
-outer_indexes = {
-    "1d": {"x": randint(0, nx, 400)},
-    "2d": {"x": randint(0, nx, 500), "y": randint(0, ny, 400)},
-    "2d-1scalar": {"x": randint(0, nx, 100), "y": 1, "t": randint(0, nt, 400)},
-}
+
+def make_outer_indexes(n_index):
+    return {
+        "1d": {"x": randint(0, nx, n_index)},
+        "2d": {"x": randint(0, nx, n_index), "y": randint(0, ny, n_index)},
+        "2d-1scalar": {
+            "x": randint(0, nx, n_index),
+            "y": 1,
+            "t": randint(0, nt, n_index),
+        },
+    }
+
+
+outer_indexes = make_outer_indexes(400)
+big_outer_indexes = make_outer_indexes(400_000)
 
 outer_assignment_values = {
     "1d": xr.DataArray(randn((400, ny), frac_nan=0.1), dims=["x", "y"]),
@@ -39,31 +49,38 @@ outer_assignment_values = {
     "2d-1scalar": xr.DataArray(randn(100, frac_nan=0.1), dims=["x"]),
 }
 
-n_index = 400000
-vectorized_indexes = {
-    "1-1d": {"x": xr.DataArray(randint(0, nx, n_index), dims="a")},
-    "2-1d": {
-        "x": xr.DataArray(randint(0, nx, n_index), dims="a"),
-        "y": xr.DataArray(randint(0, ny, n_index), dims="a"),
-    },
-    "3-2d": {
-        "x": xr.DataArray(
-            randint(0, nx, n_index).reshape(n_index // 100, 100), dims=["a", "b"]
-        ),
-        "y": xr.DataArray(
-            randint(0, ny, n_index).reshape(n_index // 100, 100), dims=["a", "b"]
-        ),
-        "t": xr.DataArray(
-            randint(0, nt, n_index).reshape(n_index // 100, 100), dims=["a", "b"]
-        ),
-    },
-}
+
+def make_vectorized_indexes(n_index):
+    return {
+        "1-1d": {"x": xr.DataArray(randint(0, nx, n_index), dims="a")},
+        "2-1d": {
+            "x": xr.DataArray(randint(0, nx, n_index), dims="a"),
+            "y": xr.DataArray(randint(0, ny, n_index), dims="a"),
+        },
+        "3-2d": {
+            "x": xr.DataArray(
+                randint(0, nx, n_index).reshape(n_index // 100, 100), dims=["a", "b"]
+            ),
+            "y": xr.DataArray(
+                randint(0, ny, n_index).reshape(n_index // 100, 100), dims=["a", "b"]
+            ),
+            "t": xr.DataArray(
+                randint(0, nt, n_index).reshape(n_index // 100, 100), dims=["a", "b"]
+            ),
+        },
+    }
+
+
+vectorized_indexes = make_vectorized_indexes(400)
+big_vectorized_indexes = make_vectorized_indexes(400_000)
 
 vectorized_assignment_values = {
     "1-1d": xr.DataArray(randn((400, ny)), dims=["a", "y"], coords={"a": randn(400)}),
     "2-1d": xr.DataArray(randn(400), dims=["a"], coords={"a": randn(400)}),
     "3-2d": xr.DataArray(
-        randn((4, 100)), dims=["a", "b"], coords={"a": randn(4), "b": randn(100)}
+        randn((400 // 100, 100)),
+        dims=["a", "b"],
+        coords={"a": randn(400 // 100), "b": randn(100)},
     ),
 }
 
@@ -106,6 +123,20 @@ class Indexing(Base):
     def time_indexing_basic_ds_large(self, key):
         # https://github.com/pydata/xarray/pull/9003
         self.ds_large.isel(**basic_indexes[key]).load()
+
+
+class IndexingOnly(Base):
+    @parameterized(["key"], [list(basic_indexes.keys())])
+    def time_indexing_basic(self, key):
+        self.ds.isel(**basic_indexes[key])
+
+    @parameterized(["key"], [list(big_outer_indexes.keys())])
+    def time_indexing_outer(self, key):
+        self.ds.isel(**big_outer_indexes[key])
+
+    @parameterized(["key"], [list(big_vectorized_indexes.keys())])
+    def time_indexing_vectorized(self, key):
+        self.ds.isel(**big_vectorized_indexes[key])
 
 
 class Assignment(Base):
