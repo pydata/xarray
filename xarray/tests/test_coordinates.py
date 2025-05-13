@@ -208,3 +208,19 @@ class TestCoordinates:
         coords = Coordinates(coords={"x": var}, indexes={})
         ds = Dataset(coords=coords)
         assert ds.coords["x"].dims == ("x", "y")
+
+    def test_drop_vars(self):
+        coords = Coordinates(
+            coords={
+                "x": Variable("x", range(3)),
+                "y": Variable("y", list("ab")),
+                "a": Variable(["x", "y"], np.arange(6).reshape(3, 2)),
+            },
+            indexes={},
+        )
+
+        actual = coords.drop_vars("x")
+        assert set(actual.variables) == {"a", "y"}
+
+        actual = coords.drop_vars(["x", "y"])
+        assert set(actual.variables) == {"a"}
