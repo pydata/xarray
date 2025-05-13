@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any, Generic, cast
@@ -164,3 +165,11 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
         # (which is apparently the first thing sought in copy.copy from the under-construction copied object),
         # which would cause a recursion error since `array` is not present on the object when it is being constructed during `__{deep}copy__`.
         return getattr(super().__getattribute__("array"), attr)
+
+    def __copy__(self) -> PandasExtensionArray[T_ExtensionArray]:
+        return PandasExtensionArray(copy.copy(self.array))
+
+    def __deepcopy__(
+        self, memo: dict[int, Any] | None = None
+    ) -> PandasExtensionArray[T_ExtensionArray]:
+        return PandasExtensionArray(copy.deepcopy(self.array, memo=memo))
