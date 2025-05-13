@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Hashable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from typing import (
     TYPE_CHECKING,
@@ -21,7 +21,7 @@ from xarray.core.indexes import (
     assert_no_index_corrupted,
     create_default_index_implicit,
 )
-from xarray.core.types import DataVars, Self, T_DataArray, T_Xarray
+from xarray.core.types import DataVars, ErrorOptions, Self, T_DataArray, T_Xarray
 from xarray.core.utils import (
     Frozen,
     ReprObject,
@@ -718,6 +718,78 @@ class Coordinates(AbstractCoordinates):
                 coords=variables, indexes=dict(self.xindexes), dims=dict(self.sizes)
             ),
         )
+
+    def drop_vars(
+        self,
+        names: str | Iterable[Hashable] | Callable[[Self], str | Iterable[Hashable]],
+        *,
+        errors: ErrorOptions = "raise",
+    ) -> Self:
+        """Drop variables from this Coordinates object.
+
+        Note that indexes that depend on these variables will also be dropped.
+
+        Parameters
+        ----------
+        names : hashable or iterable or callable
+            Name(s) of variables to drop. If a callable, this is object is passed as its
+            only argument and its result is used.
+        errors : {"raise", "ignore"}, default: "raise"
+            Error treatment.
+
+            - ``'raise'``: raises a :py:class:`ValueError` error if any of the variable
+              passed are not in the dataset
+            - ``'ignore'``: any given names that are in the dataset are dropped and no
+              error is raised.
+        """
+        return self.to_dataset().drop_vars(names, errors=errors).coords
+
+    def rename_dims(
+        self,
+        dims_dict: Mapping[Any, Hashable] | None = None,
+        **dims: Hashable,
+    ) -> Self:
+        """Returns a new object with renamed dimensions only.
+
+        Parameters
+        ----------
+        dims_dict : dict-like, optional
+            Dictionary whose keys are current dimension names and
+            whose values are the desired names. The desired names must
+            not be the name of an existing dimension or Variable in the Dataset.
+        **dims : optional
+            Keyword form of ``dims_dict``.
+            One of dims_dict or dims must be provided.
+
+        Returns
+        -------
+        renamed : Coordinates
+            Coordinates object with renamed dimensions.
+        """
+        return self.to_dataset().rename_dims(dims_dict, **dims).coords
+
+    def rename_vars(
+        self,
+        name_dict: Mapping[Any, Hashable] | None = None,
+        **names: Hashable,
+    ) -> Self:
+        """Returns a new object with renamed variables including coordinates
+
+        Parameters
+        ----------
+        name_dict : dict-like, optional
+            Dictionary whose keys are current variable or coordinate names and
+            whose values are the desired names.
+        **names : optional
+            Keyword form of ``name_dict``.
+            One of name_dict or names must be provided.
+
+        Returns
+        -------
+        renamed : Dataset
+            Dataset with renamed variables including coordinates
+        """
+        return self.to_dataset().rename_vars(name_dict, **names)
 
 
 class DatasetCoordinates(Coordinates):
