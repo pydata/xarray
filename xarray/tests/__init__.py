@@ -363,6 +363,18 @@ def create_test_data(
                 )
             ),
         )
+        obj["var5"] = (
+            "dim1",
+            pd.arrays.IntervalArray([pd.Interval(0, 1)] * dim_sizes[0]),
+        )
+        if has_pyarrow:
+            obj["var6"] = (
+                "dim1",
+                pd.array(
+                    rs.integers(1, 10, size=dim_sizes[0]).tolist(),
+                    dtype="int64[pyarrow]",
+                ),
+            )
     if dim_sizes == _DEFAULT_TEST_DIM_SIZES:
         numbers_values = np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64")
     else:
