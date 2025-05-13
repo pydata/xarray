@@ -260,3 +260,11 @@ class TestCoordinates:
         actual = coords.rename_vars({"x": "u", "y": "v"})
         assert set(actual.dims) == {"x", "y"}
         assert set(actual.variables) == {"a", "u", "v"}
+
+    def test_operator_merge(self):
+        coords1 = Coordinates({"x": ("x", [0, 1, 2])})
+        coords2 = Coordinates({"y": ("y", [3, 4, 5])})
+        expected = Dataset(coords={"x": [0, 1, 2], "y": [3, 4, 5]})
+
+        actual = coords1 | coords2
+        assert_identical(Dataset(coords=actual), expected)
