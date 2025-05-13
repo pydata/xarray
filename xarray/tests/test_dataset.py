@@ -2675,9 +2675,10 @@ class TestDataset:
             .set_xindex(["x", "y"], XYIndex)
         )
 
-        actual = xr.align(ds1, ds2, join="exact", exclude="y")
-        assert_identical(actual[0], ds1, check_default_indexes=False)
-        assert_identical(actual[1], ds2, check_default_indexes=False)
+        for join in ("outer", "exact"):
+            actual = xr.align(ds1, ds2, join=join, exclude="y")
+            assert_identical(actual[0], ds1, check_default_indexes=False)
+            assert_identical(actual[1], ds2, check_default_indexes=False)
 
         with pytest.raises(
             AlignmentError, match="cannot align objects.*index.*not equal"
