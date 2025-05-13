@@ -39,16 +39,23 @@ outer_assignment_values = {
     "2d-1scalar": xr.DataArray(randn(100, frac_nan=0.1), dims=["x"]),
 }
 
+n_index = 400000
 vectorized_indexes = {
-    "1-1d": {"x": xr.DataArray(randint(0, nx, 400), dims="a")},
+    "1-1d": {"x": xr.DataArray(randint(0, nx, n_index), dims="a")},
     "2-1d": {
-        "x": xr.DataArray(randint(0, nx, 400), dims="a"),
-        "y": xr.DataArray(randint(0, ny, 400), dims="a"),
+        "x": xr.DataArray(randint(0, nx, n_index), dims="a"),
+        "y": xr.DataArray(randint(0, ny, n_index), dims="a"),
     },
     "3-2d": {
-        "x": xr.DataArray(randint(0, nx, 400).reshape(4, 100), dims=["a", "b"]),
-        "y": xr.DataArray(randint(0, ny, 400).reshape(4, 100), dims=["a", "b"]),
-        "t": xr.DataArray(randint(0, nt, 400).reshape(4, 100), dims=["a", "b"]),
+        "x": xr.DataArray(
+            randint(0, nx, n_index).reshape(n_index // 100, 100), dims=["a", "b"]
+        ),
+        "y": xr.DataArray(
+            randint(0, ny, n_index).reshape(n_index // 100, 100), dims=["a", "b"]
+        ),
+        "t": xr.DataArray(
+            randint(0, nt, n_index).reshape(n_index // 100, 100), dims=["a", "b"]
+        ),
     },
 }
 
