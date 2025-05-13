@@ -1567,7 +1567,7 @@ class CoordinateTransformIndex(Index):
     ) -> bool:
         if not isinstance(other, CoordinateTransformIndex):
             return False
-        return self.transform.equals(other.transform)
+        return self.transform.equals(other.transform, exclude=exclude)
 
     def rename(
         self,
