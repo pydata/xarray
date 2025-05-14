@@ -27,7 +27,6 @@ basic_assignment_values = {
     ),
 }
 
-
 outer_indexes = {
     "1d": {"x": randint(0, nx, 400)},
     "2d": {"x": randint(0, nx, 500), "y": randint(0, ny, 400)},
@@ -69,9 +68,7 @@ vectorized_assignment_values = {
     "1-1d": xr.DataArray(randn((400, ny)), dims=["a", "y"], coords={"a": randn(400)}),
     "2-1d": xr.DataArray(randn(400), dims=["a"], coords={"a": randn(400)}),
     "3-2d": xr.DataArray(
-        randn((400 // 100, 100)),
-        dims=["a", "b"],
-        coords={"a": randn(400 // 100), "b": randn(100)},
+        randn((4, 100)), dims=["a", "b"], coords={"a": randn(4), "b": randn(100)}
     ),
 }
 
