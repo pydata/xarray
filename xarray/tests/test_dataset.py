@@ -5804,7 +5804,7 @@ class TestDataset:
             size = tuple(data1.sizes[d] for d in dims)
             data = np.random.randint(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {"foo": "variable"})
-        # var4 is extension array categorical and should be dropped
+        # var4 and var5 are extension arrays and should be dropped
         assert (
             "var4" not in data1.mean()
             and "var5" not in data1.mean()
