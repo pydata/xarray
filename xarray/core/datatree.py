@@ -248,7 +248,7 @@ class DatasetView(Dataset):
         coords: Mapping[Any, Any] | None = None,
         attrs: Mapping[Any, Any] | None = None,
     ):
-        raise AttributeError("DatasetView objects are not to be initialized directly")
+        raise TypeError("DatasetView objects are not to be initialized directly")
 
     @classmethod
     def _constructor(

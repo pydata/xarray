@@ -209,7 +209,7 @@ class TestSetNodes:
         mary: TreeNode = TreeNode()
         john: TreeNode = TreeNode(children={"Mary": mary})
         mary_2: TreeNode = TreeNode()
-        with pytest.raises(KeyError):
+        with pytest.raises(ValueError):
             john._set_item("Mary", mary_2, allow_overwrite=False)
 
     def test_set_grandchild(self) -> None:
@@ -230,7 +230,7 @@ class TestSetNodes:
         rose: TreeNode = TreeNode()
 
         # test intermediate children not allowed
-        with pytest.raises(KeyError, match="Could not reach"):
+        with pytest.raises(ValueError, match="could not reach"):
             john._set_item(path="Mary/Rose", item=rose, new_nodes_along_path=False)
 
         # test intermediate children allowed
@@ -249,7 +249,7 @@ class TestSetNodes:
 
         # test overwriting not allowed
         marys_evil_twin: TreeNode = TreeNode()
-        with pytest.raises(KeyError, match="Already a node object"):
+        with pytest.raises(ValueError, match="already a node object"):
             john._set_item("Mary", marys_evil_twin, allow_overwrite=False)
         assert john.children["Mary"] is mary
         assert marys_evil_twin.parent is None
