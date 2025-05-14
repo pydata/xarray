@@ -650,7 +650,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         Multidmensional basic indexing:
 
-        >>> x = NamedArray(("z", "y", "x"), np.array([[[1], [2], [3]], [[4], [5], [6]]]))
+        >>> x = NamedArray(
+        ...     ("z", "y", "x"), np.array([[[1], [2], [3]], [[4], [5], [6]]])
+        ... )
         >>> x[0, 0, 0]
         <xarray.NamedArray ()> Size: 8B
         np.int64(1)
@@ -676,7 +678,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         Multidimensional indexing with integer array:
 
-        >>> x = NamedArray(("z", "y", "x"), np.array([[[1], [2], [3]], [[4], [5], [6]]]))
+        >>> x = NamedArray(
+        ...     ("z", "y", "x"), np.array([[[1], [2], [3]], [[4], [5], [6]]])
+        ... )
         >>> key = NamedArray(("z",), np.array([1, -1]))
         >>> x[key]
         <xarray.NamedArray (z: 2, y: 3, x: 1)> Size: 48B
