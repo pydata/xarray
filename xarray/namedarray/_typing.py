@@ -143,6 +143,7 @@ _IndexKeyNoEllipsis = Union[int, slice, None]
 _IndexKey = Union[_IndexKeyNoEllipsis, EllipsisType]
 _IndexKeysNoEllipsis = tuple[_IndexKeyNoEllipsis, ...]
 _IndexKeys = tuple[_IndexKey, ...]  #  tuple[Union[_IndexKey, None], ...]
+_IndexKeysDims = tuple[Union[_IndexKey, _Dims], ...]
 _IndexKeyLike = Union[_IndexKey, _IndexKeys]
 
 _AttrsLike = Union[Mapping[Any, Any], None]

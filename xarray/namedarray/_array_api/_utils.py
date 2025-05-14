@@ -20,6 +20,7 @@ from xarray.namedarray._typing import (
     _DimsLike2,
     _dtype,
     _IndexKeys,
+    _IndexKeysDims,
     _IndexKeysNoEllipsis,
     _Shape,
 )
@@ -488,7 +489,7 @@ def _check_indexing_dims(original_dims: _Dims, indexing_dims: _Dims) -> None:
         )
 
 
-def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
+def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeysDims) -> _Dims:
     """
     Get the expected dims when using tuples in __getitem__.
 
@@ -517,15 +518,18 @@ def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
     >>> _dims_from_tuple_indexing(("x",), (..., 0))
     ()
 
-    Indexing array
+    Indexing array is converted to dims
 
     >>> import numpy as np
-    >>> key = (0, NamedArray((), np.array(0, dtype=int)))
+    >>> key = (0, NamedArray((), np.array(0, dtype=int)).dims)
     >>> _dims_from_tuple_indexing(("x", "y", "z"), key)
     ('z',)
-    >>> key = (0, NamedArray(("y",), np.array([0], dtype=int)))
+    >>> key = (0, NamedArray(("y",), np.array([0], dtype=int)).dims)
     >>> _dims_from_tuple_indexing(("x", "y", "z"), key)
     ('y', 'z')
+    >>> key = (NamedArray(("x",), np.array([0])).dims, 0)
+    >>> _dims_from_tuple_indexing(("x", "y", "z"), key)
+    ('x', 'z')
     """
     key_no_ellipsis = _replace_ellipsis(key, len(dims))
 
@@ -542,14 +546,20 @@ def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
         elif isinstance(k, slice):
             # Slice retains the dimension.
             j += 1
-        elif isinstance(k, NamedArray):
-            if len(k.dims) == 0:
+        elif isinstance(k, tuple):
+            _dims = k
+            if len(_dims) == 0:
                 # if 0 dim, removes 1 dimension
                 new_dims.pop(j)
-            else:
+            elif len(_dims) == 1:
                 # same size retains the dimension:
-                _check_indexing_dims(dims[i : i + 1], k.dims)
+                _check_indexing_dims(dims[i : i + 1], _dims)
                 j += 1
+                # new_dims.pop(j)
+            else:
+                raise NotImplementedError(
+                    f"What happens here? {key_no_ellipsis=}, {dims=}, {i=}, {k=}"
+                )
 
     return tuple(new_dims)
 

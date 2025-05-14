@@ -601,29 +601,100 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         Returns self[key].
 
         Some rules:
-        * Integers removes the dim.
-        * Slices and ellipsis maintains same dim.
-        * None adds a dim.
+        * Integer, removes the dim.
+        * Slice and ellipsis, maintains same dim.
+        * None, adds a dim.
+        * integer array, removes the dim if 1 sized(?)
+        * boolean array,
         * tuple follows above but on that specific axis.
 
         Examples
         --------
 
-        1D
+        Basic indexing:
 
-        >>> x = NamedArray(("x",), np.array([0, 1, 2]))
-        >>> key = NamedArray(("x",), np.array([1, 0, 0], dtype=bool))
-        >>> xm = x[key]
-        >>> xm.dims, xm.shape
-        (('x',), (1,))
+        >>> x = NamedArray(("x",), np.array([3, 5, 7]))
+        >>> x[0]
+        <xarray.NamedArray ()> Size: 8B
+        np.int64(3)
+        >>> x[-1]
+        <xarray.NamedArray ()> Size: 8B
+        np.int64(7)
+        >>> x[0:2]
+        <xarray.NamedArray (x: 2)> Size: 16B
+        array([3, 5])
+        >>> x[None]
+        <xarray.NamedArray (dim_1: 1, x: 3)> Size: 24B
+        array([[3, 5, 7]])
+        >>> x[...]
+        <xarray.NamedArray (x: 3)> Size: 24B
+        array([3, 5, 7])
 
-        >>> x = NamedArray(("x",), np.array([0, 1, 2]))
+        Indexing with integer array:
+
+        >>> key = NamedArray(("x",), np.array([0, 0, 0, -1], dtype=int))
+        >>> x[key]
+        <xarray.NamedArray (x: 4)> Size: 32B
+        array([3, 3, 3, 7])
+
+        Indexing with boolean array:
+
+        >>> key = NamedArray(("x",), np.array([1, 0, 1], dtype=bool))
+        >>> x[key]
+        <xarray.NamedArray (x: 2)> Size: 16B
+        array([3, 7])
         >>> key = NamedArray(("x",), np.array([0, 0, 0], dtype=bool))
-        >>> xm = x[key]
-        >>> xm.dims, xm.shape
-        (('x',), (0,))
+        >>> x[key]
+        <xarray.NamedArray (x: 0)> Size: 0B
+        array([], dtype=int64)
 
-        Setup a ND array:
+        Multidmensional basic indexing:
+
+        >>> x = NamedArray(("z", "y", "x"), np.array([[[1], [2], [3]], [[4], [5], [6]]]))
+        >>> x[0, 0, 0]
+        <xarray.NamedArray ()> Size: 8B
+        np.int64(1)
+        >>> x[1:2]
+        <xarray.NamedArray (z: 1, y: 3, x: 1)> Size: 24B
+        array([[[4],
+                [5],
+                [6]]])
+        >>> x[:, None, :, :]
+        <xarray.NamedArray (z: 2, dim_3: 1, y: 3, x: 1)> Size: 48B
+        array([[[[1],
+                 [2],
+                 [3]]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[4],
+                 [5],
+                 [6]]]])
+        >>> x[..., 0]
+        <xarray.NamedArray (z: 2, y: 3)> Size: 48B
+        array([[1, 2, 3],
+               [4, 5, 6]])
+
+        Multidimensional indexing with integer array:
+
+        >>> x = NamedArray(("z", "y", "x"), np.array([[[1], [2], [3]], [[4], [5], [6]]]))
+        >>> key = NamedArray(("z",), np.array([1, -1]))
+        >>> x[key]
+        <xarray.NamedArray (z: 2, y: 3, x: 1)> Size: 48B
+        array([[[4],
+                [5],
+                [6]],
+        <BLANKLINE>
+               [[4],
+                [5],
+                [6]]])
+        >>> x[key, 0]
+        <xarray.NamedArray (z: 2, x: 1)> Size: 16B
+        array([[4],
+               [4]])
+
+        OLD
+
+        ND array:
 
         >>> x = NamedArray(("x", "y"), np.arange(3 * 4).reshape((3, 4)))
         >>> xm = x[0]
@@ -635,13 +706,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         >>> xm = x[None]
         >>> xm.dims, xm.shape
         (('dim_2', 'x', 'y'), (1, 3, 4))
-
         >>> key = NamedArray(("x", "y"), np.ones((3, 4), dtype=bool))
         >>> xm = x[key]
         >>> xm.dims, xm.shape
         ((('x', 'y'),), (12,))
 
-        0D
+        0D array:
 
         >>> x = NamedArray((), np.array(False, dtype=np.bool))
         >>> key = NamedArray((), np.array(False, dtype=np.bool))
@@ -649,6 +719,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         >>> xm.dims, xm.shape
         (('dim_0',), (0,))
         """
+        from xarray.namedarray._array_api._data_type_functions import (
+            isdtype,
+        )
         from xarray.namedarray._array_api._manipulation_functions import (
             _broadcast_arrays,
         )
@@ -658,16 +731,30 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             _flatten_dims,
         )
 
-        if isinstance(key, NamedArray):
+        if isinstance(key, NamedArray) and isdtype(key.dtype, "bool"):
             self_new, key_new = _broadcast_arrays(self, key)
+            # self_new, key_new = self, key
             _data = self_new._data[key_new._data]
             _dims = _flatten_dims(_atleast1d_dims(self_new.dims))
+            # _dims = dims
             return self._new(_dims, _data)
-        elif isinstance(key, int | slice | tuple) or key is None or key is ...:
+        elif (
+            isinstance(key, int | slice | tuple | NamedArray)
+            or key is None
+            or key is ...
+        ):
             # TODO: __getitem__ not always available, use expand_dims
-            _data = self._data[key]
             _key_tuple = key if isinstance(key, tuple) else (key,)
-            _dims = _dims_from_tuple_indexing(self.dims, _key_tuple)
+            # _dims = _dims_from_tuple_indexing(self.dims, _key_tuple)
+            _dims = _dims_from_tuple_indexing(
+                self.dims,
+                tuple(k.dims if isinstance(k, NamedArray) else k for k in _key_tuple),
+            )
+
+            _data = self._data[
+                tuple(k._data if isinstance(k, NamedArray) else k for k in _key_tuple)
+            ]
+
             return self._new(_dims, _data)
         else:
             raise NotImplementedError(f"{key=} is not supported")
