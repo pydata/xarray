@@ -3907,6 +3907,37 @@ def test_zarr_version_deprecated() -> None:
         xr.open_zarr(store=store, zarr_version=2, zarr_format=3)
 
 
+@requires_zarr
+def test_coords_buffer_prototype() -> None:
+    pytest.importorskip("zarr", minversion="3")
+
+    from zarr.core.buffer import cpu
+    from zarr.core.buffer.core import BufferPrototype
+
+    counter = 0
+
+    class Buffer(cpu.Buffer):
+        def __init__(self, *args, **kwargs):
+            nonlocal counter
+            counter += 1
+            super().__init__(*args, **kwargs)
+
+    class NDBuffer(cpu.NDBuffer):
+        def __init__(self, *args, **kwargs):
+            nonlocal counter
+            counter += 1
+            super().__init__(*args, **kwargs)
+
+    prototype = BufferPrototype(buffer=Buffer, nd_buffer=NDBuffer)
+
+    ds = create_test_data()
+    store = KVStore()
+    # type-ignore for zarr v2/v3 compat, even though this test is skipped for v2
+    ds.to_zarr(store=store, zarr_format=3)  # type: ignore[call-overload, unused-ignore]
+    xr.open_dataset(store, engine="zarr", coords_buffer_prototype=prototype)  # type: ignore[arg-type, unused-ignore]
+    assert counter > 0
+
+
 @requires_scipy
 class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only):
     engine: T_NetcdfEngine = "scipy"
