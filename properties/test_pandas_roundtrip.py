@@ -134,10 +134,26 @@ def test_roundtrip_pandas_dataframe_datetime(df) -> None:
     xr.testing.assert_identical(dataset, roundtripped.to_xarray())
 
 
-def test_roundtrip_1d_pandas_extension_array() -> None:
-    df = pd.DataFrame({"cat": pd.Categorical(["a", "b", "c"])})
-    arr = xr.Dataset.from_dataframe(df)["cat"]
+@pytest.mark.parametrize(
+    "extension_array",
+    [
+        pd.Categorical(["a", "b", "c"]),
+        pd.array([1, 2, 3], dtype="int64"),
+        pd.array(["a", "b", "c"], dtype="string"),
+        pd.arrays.IntervalArray(
+            [pd.Interval(0, 1), pd.Interval(1, 5), pd.Interval(2, 6)]
+        ),
+        np.array([1, 2, 3], dtype="int64"),
+    ],
+)
+def test_roundtrip_1d_pandas_extension_array(extension_array) -> None:
+    df = pd.DataFrame({"arr": extension_array})
+    arr = xr.Dataset.from_dataframe(df)["arr"]
     roundtripped = arr.to_pandas()
-    assert (df["cat"] == roundtripped).all()
-    assert df["cat"].dtype == roundtripped.dtype
-    xr.testing.assert_identical(arr, roundtripped.to_xarray())
+    assert (df["arr"] == roundtripped).all()
+    # `NumpyExtensionArray` types are not roundtripped, including `StringArray` which subtypes.
+    if isinstance(extension_array, pd.arrays.NumpyExtensionArray):
+        assert isinstance(arr.data, np.ndarray)
+    else:
+        assert df["arr"].dtype == roundtripped.dtype
+        xr.testing.assert_identical(arr, roundtripped.to_xarray())

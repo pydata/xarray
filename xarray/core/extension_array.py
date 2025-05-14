@@ -82,6 +82,10 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
     def __post_init__(self):
         if not isinstance(self.array, pd.api.extensions.ExtensionArray):
             raise TypeError(f"{self.array} is not an pandas ExtensionArray.")
+        if isinstance(self.array, pd.arrays.NumpyExtensionArray):
+            raise TypeError(
+                "`NumpyExtensionArray` should be converted to a numpy array in `xarray` internally."
+            )
 
     def __array_function__(self, func, types, args, kwargs):
         def replace_duck_with_extension_array(args) -> list:
