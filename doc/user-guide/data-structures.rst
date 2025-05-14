@@ -808,6 +808,19 @@ For more examples and further discussion see :ref:`alignment and coordinate inhe
 Coordinates
 -----------
 
+The :py:class:`xarray.Coordinates` object is a dict-like container that contains coordinate variables and the associated indexes. It is mainly used as the return value of the ``coords`` property of the ``DataArray``, ``Dataset``, and ``DataTree``:
+
+.. ipython:: python
+
+    foo.coords
+    ds.coords
+    dt.coords
+
+But can also be used to customize the behavior of the constructors of these classes or to transfer or combine coordinates from different objects.
+
+Coordinate variables
+~~~~~~~~~~~~~~~~~~~~
+
 Coordinates are ancillary variables stored for ``DataArray`` and ``Dataset``
 objects in the ``coords`` attribute:
 
