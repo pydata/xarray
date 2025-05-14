@@ -26,6 +26,13 @@ New Features
 ~~~~~~~~~~~~
 
 
+Performance
+~~~~~~~~~~~
+
+- Small optimizations to help reduce indexing speed of datasets (:pull:`9003`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
+
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
