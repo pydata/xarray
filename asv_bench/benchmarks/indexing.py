@@ -28,20 +28,11 @@ basic_assignment_values = {
 }
 
 
-def make_outer_indexes(n_index):
-    return {
-        "1d": {"x": randint(0, nx, n_index)},
-        "2d": {"x": randint(0, nx, n_index), "y": randint(0, ny, n_index)},
-        "2d-1scalar": {
-            "x": randint(0, nx, n_index),
-            "y": 1,
-            "t": randint(0, nt, n_index),
-        },
-    }
-
-
-outer_indexes = make_outer_indexes(400)
-big_outer_indexes = make_outer_indexes(400_000)
+outer_indexes = {
+    "1d": {"x": randint(0, nx, 400)},
+    "2d": {"x": randint(0, nx, 500), "y": randint(0, ny, 400)},
+    "2d-1scalar": {"x": randint(0, nx, 100), "y": 1, "t": randint(0, nt, 400)},
+}
 
 outer_assignment_values = {
     "1d": xr.DataArray(randn((400, ny), frac_nan=0.1), dims=["x", "y"]),
@@ -130,12 +121,12 @@ class IndexingOnly(Base):
     def time_indexing_basic(self, key):
         self.ds.isel(**basic_indexes[key])
 
-    @parameterized(["key"], [list(big_outer_indexes.keys())])
+    @parameterized(["key"], [list(outer_indexes.keys())])
     def time_indexing_outer(self, key):
-        self.ds.isel(**big_outer_indexes[key])
+        self.ds.isel(**outer_indexes[key])
 
     @parameterized(["key"], [list(big_vectorized_indexes.keys())])
-    def time_indexing_vectorized(self, key):
+    def time_indexing_big_vectorized(self, key):
         self.ds.isel(**big_vectorized_indexes[key])
 
 
