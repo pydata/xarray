@@ -38,9 +38,10 @@ Bug fixes
 ~~~~~~~~~
 - Fix :py:class:`~xarray.groupers.BinGrouper` when ``labels`` is not specified (:issue:`10284`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
 - Allow accessing arbitrary attributes on Pandas ExtensionArrays.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix coding empty (zero-size) timedelta64 arrays, ``units`` taking precedence when encoding, fallback to default values when decoding.
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Documentation
