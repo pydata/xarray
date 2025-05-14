@@ -821,16 +821,7 @@ But can also be used to customize the behavior of the constructors of these clas
 Coordinate variables
 ~~~~~~~~~~~~~~~~~~~~
 
-Coordinates are ancillary variables stored for ``DataArray`` and ``Dataset``
-objects in the ``coords`` attribute:
-
-.. ipython:: python
-
-    ds.coords
-
-Unlike attributes, xarray *does* interpret and persist coordinates in
-operations that transform xarray objects. There are two types of coordinates
-in xarray:
+Coordinate variables (or simply coordinates) are ancillary variables stored in ``DataArray``, ``Dataset``, and ``DataTree`` objects. Unlike attributes, xarray *does* interpret coordinates in operations that transform xarray objects. There are two types of coordinates in xarray:
 
 - **dimension coordinates** are one dimensional coordinates with a name equal
   to their sole dimension (marked by ``*`` when printing a dataset or data
