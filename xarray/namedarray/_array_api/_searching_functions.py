@@ -110,11 +110,11 @@ def searchsorted(
 
 def where(
     condition: NamedArray[Any, Any],
-    x1: NamedArray[Any, Any],
-    x2: NamedArray[Any, Any],
+    x1: NamedArray[Any, Any] | int | float | complex | bool,
+    x2: NamedArray[Any, Any] | int | float | complex | bool,
     /,
 ) -> NamedArray[Any, Any]:
-    xp = _get_data_namespace(x1)
+    xp = _get_data_namespace(condition)
     _data = xp.where(condition._data, x1._data, x2._data)
     # TODO: Wrong, _dims should be either of the arguments. How to choose?
     _dims = _infer_dims(_data.shape)
