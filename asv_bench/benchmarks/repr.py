@@ -25,6 +25,25 @@ class Repr:
         self.ds._repr_html_()
 
 
+class ReprDataTree:
+    def setup(self):
+        # construct a datatree with 500 nodes
+        number_of_files = 20
+        number_of_groups = 25
+        tree_dict = {}
+        for f in range(number_of_files):
+            for g in range(number_of_groups):
+                tree_dict[f"file_{f}/group_{g}"] = xr.Dataset({"g": f * g})
+
+        self.dt = xr.DataTree.from_dict(tree_dict)
+
+    def time_repr(self):
+        repr(self.dt)
+
+    def time_repr_html(self):
+        self.dt._repr_html_()
+
+
 class ReprMultiIndex:
     def setup(self):
         index = pd.MultiIndex.from_product(

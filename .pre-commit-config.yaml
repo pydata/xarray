@@ -25,7 +25,7 @@ repos:
       - id: text-unicode-replacement-char
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.9.9
+    rev: v0.11.8
     hooks:
       - id: ruff-format
       - id: ruff
@@ -69,12 +69,12 @@ repos:
       - id: taplo-format
         args: ["--option", "array_auto_collapse=false"]
   - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.23
+    rev: v0.24.1
     hooks:
       - id: validate-pyproject
         additional_dependencies: ["validate-pyproject-schema-store[all]"]
   - repo: https://github.com/crate-ci/typos
-    rev: dictgen-v0.3.1
+    rev: v1
     hooks:
       - id: typos
         # https://github.com/crate-ci/typos/issues/347

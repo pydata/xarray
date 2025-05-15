@@ -1122,7 +1122,7 @@ class Dataset(
                     coord_names.add(var_name)
                 if (var_name,) == var.dims:
                     index, index_vars = create_default_index_implicit(var, names)
-                    indexes.update({k: index for k in index_vars})
+                    indexes.update(dict.fromkeys(index_vars, index))
                     variables.update(index_vars)
                     coord_names.update(index_vars)
 
@@ -1159,7 +1159,15 @@ class Dataset(
         coords: dict[Hashable, Variable] = {}
         # preserve ordering
         for k in self._variables:
-            if k in self._coord_names and set(self._variables[k].dims) <= needed_dims:
+            if k in self._indexes:
+                add_coord = self._indexes[k].should_add_coord_to_array(
+                    k, self._variables[k], needed_dims
+                )
+            else:
+                var_dims = set(self._variables[k].dims)
+                add_coord = k in self._coord_names and var_dims <= needed_dims
+
+            if add_coord:
                 coords[k] = self._variables[k]
 
         indexes = filter_indexes_from_coords(self._indexes, set(coords))
@@ -3012,7 +3020,7 @@ class Dataset(
             if not isinstance(indexers, int) and not is_dict_like(indexers):
                 raise TypeError("indexers must be either dict-like or a single integer")
         if isinstance(indexers, int):
-            indexers = {dim: indexers for dim in self.dims}
+            indexers = dict.fromkeys(self.dims, indexers)
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "head")
         for k, v in indexers.items():
             if not isinstance(v, int):
@@ -3100,7 +3108,7 @@ class Dataset(
             if not isinstance(indexers, int) and not is_dict_like(indexers):
                 raise TypeError("indexers must be either dict-like or a single integer")
         if isinstance(indexers, int):
-            indexers = {dim: indexers for dim in self.dims}
+            indexers = dict.fromkeys(self.dims, indexers)
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "tail")
         for k, v in indexers.items():
             if not isinstance(v, int):
@@ -3186,7 +3194,7 @@ class Dataset(
         ):
             raise TypeError("indexers must be either dict-like or a single integer")
         if isinstance(indexers, int):
-            indexers = {dim: indexers for dim in self.dims}
+            indexers = dict.fromkeys(self.dims, indexers)
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "thin")
         for k, v in indexers.items():
             if not isinstance(v, int):
@@ -4029,7 +4037,7 @@ class Dataset(
         for index, coord_names in self.xindexes.group_by_index():
             new_index = index.rename(name_dict, dims_dict)
             new_coord_names = [name_dict.get(k, k) for k in coord_names]
-            indexes.update({k: new_index for k in new_coord_names})
+            indexes.update(dict.fromkeys(new_coord_names, new_index))
             new_index_vars = new_index.create_variables(
                 {
                     new: self._variables[old]
@@ -4315,7 +4323,7 @@ class Dataset(
                     variables[current_name] = var
                 else:
                     index, index_vars = create_default_index_implicit(var)
-                    indexes.update({name: index for name in index_vars})
+                    indexes.update(dict.fromkeys(index_vars, index))
                     variables.update(index_vars)
                     coord_names.update(index_vars)
             else:
@@ -4474,7 +4482,7 @@ class Dataset(
         elif isinstance(dim, Sequence):
             if len(dim) != len(set(dim)):
                 raise ValueError("dims should not contain duplicate values.")
-            dim = {d: 1 for d in dim}
+            dim = dict.fromkeys(dim, 1)
 
         dim = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
         assert isinstance(dim, MutableMapping)
@@ -4700,7 +4708,7 @@ class Dataset(
                 for n in idx.index.names:
                     replace_dims[n] = dim
 
-            new_indexes.update({k: idx for k in idx_vars})
+            new_indexes.update(dict.fromkeys(idx_vars, idx))
             new_variables.update(idx_vars)
 
         # re-add deindexed coordinates (convert to base variables)
@@ -4816,7 +4824,7 @@ class Dataset(
                     # instead replace it by a new (multi-)index with dropped level(s)
                     idx = index.keep_levels(keep_level_vars)
                     idx_vars = idx.create_variables(keep_level_vars)
-                    new_indexes.update({k: idx for k in idx_vars})
+                    new_indexes.update(dict.fromkeys(idx_vars, idx))
                     new_variables.update(idx_vars)
                     if not isinstance(idx, PandasMultiIndex):
                         # multi-index reduced to single index
@@ -4996,7 +5004,7 @@ class Dataset(
             level_vars = {k: self._variables[k] for k in order}
             idx = index.reorder_levels(level_vars)
             idx_vars = idx.create_variables(level_vars)
-            new_indexes.update({k: idx for k in idx_vars})
+            new_indexes.update(dict.fromkeys(idx_vars, idx))
             new_variables.update(idx_vars)
 
         indexes = {k: v for k, v in self._indexes.items() if k not in new_indexes}
@@ -5104,7 +5112,7 @@ class Dataset(
             if len(product_vars) == len(dims):
                 idx = index_cls.stack(product_vars, new_dim)
                 new_indexes[new_dim] = idx
-                new_indexes.update({k: idx for k in product_vars})
+                new_indexes.update(dict.fromkeys(product_vars, idx))
                 idx_vars = idx.create_variables(product_vars)
                 # keep consistent multi-index coordinate order
                 for k in idx_vars:
@@ -5246,7 +5254,13 @@ class Dataset(
         """
         from xarray.structure.concat import concat
 
-        stacking_dims = tuple(dim for dim in self.dims if dim not in sample_dims)
+        # add stacking dims by order of appearance
+        stacking_dims_list: list[Hashable] = []
+        for da in self.data_vars.values():
+            for dim in da.dims:
+                if dim not in sample_dims and dim not in stacking_dims_list:
+                    stacking_dims_list.append(dim)
+        stacking_dims = tuple(stacking_dims_list)
 
         for key, da in self.data_vars.items():
             missing_sample_dims = set(sample_dims) - set(da.dims)
@@ -5351,7 +5365,7 @@ class Dataset(
             # TODO: we may depreciate implicit re-indexing with a pandas.MultiIndex
             xr_full_idx = PandasMultiIndex(full_idx, dim)
             indexers = Indexes(
-                {k: xr_full_idx for k in index_vars},
+                dict.fromkeys(index_vars, xr_full_idx),
                 xr_full_idx.create_variables(index_vars),
             )
             obj = self._reindex(
@@ -7053,6 +7067,8 @@ class Dataset(
         )
 
     def _to_dataframe(self, ordered_dims: Mapping[Any, int]):
+        from xarray.core.extension_array import PandasExtensionArray
+
         columns_in_order = [k for k in self.variables if k not in self.dims]
         non_extension_array_columns = [
             k
@@ -7064,20 +7080,41 @@ class Dataset(
             for k in columns_in_order
             if is_extension_array_dtype(self.variables[k].data)
         ]
+        extension_array_columns_different_index = [
+            k
+            for k in extension_array_columns
+            if set(self.variables[k].dims) != set(ordered_dims.keys())
+        ]
+        extension_array_columns_same_index = [
+            k
+            for k in extension_array_columns
+            if k not in extension_array_columns_different_index
+        ]
         data = [
             self._variables[k].set_dims(ordered_dims).values.reshape(-1)
             for k in non_extension_array_columns
         ]
         index = self.coords.to_index([*ordered_dims])
         broadcasted_df = pd.DataFrame(
-            dict(zip(non_extension_array_columns, data, strict=True)), index=index
+            {
+                **dict(zip(non_extension_array_columns, data, strict=True)),
+                **{
+                    c: self.variables[c].data
+                    for c in extension_array_columns_same_index
+                },
+            },
+            index=index,
         )
-        for extension_array_column in extension_array_columns:
-            extension_array = self.variables[extension_array_column].data.array
-            index = self[self.variables[extension_array_column].dims[0]].data
+        for extension_array_column in extension_array_columns_different_index:
+            extension_array = self.variables[extension_array_column].data
+            index = self[
+                self.variables[extension_array_column].dims[0]
+            ].coords.to_index()
             extension_array_df = pd.DataFrame(
                 {extension_array_column: extension_array},
-                index=self[self.variables[extension_array_column].dims[0]].data,
+                index=pd.Index(index.array)
+                if isinstance(index, PandasExtensionArray)  # type: ignore[redundant-expr]
+                else index,
             )
             extension_array_df.index.name = self.variables[extension_array_column].dims[
                 0
@@ -9537,7 +9574,7 @@ class Dataset(
         """
         Curve fitting optimization for arbitrary functions.
 
-        Wraps `scipy.optimize.curve_fit` with `apply_ufunc`.
+        Wraps :py:func:`scipy.optimize.curve_fit` with :py:func:`~xarray.apply_ufunc`.
 
         Parameters
         ----------
@@ -9597,6 +9634,9 @@ class Dataset(
         --------
         Dataset.polyfit
         scipy.optimize.curve_fit
+        xarray.Dataset.xlm.modelfit
+            External method from `xarray-lmfit <https://xarray-lmfit.readthedocs.io/>`_
+            with more curve fitting functionality.
         """
         from xarray.computation.fit import curvefit as curvefit_impl
 
@@ -9818,7 +9858,7 @@ class Dataset(
         *,
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
-        eagerly_compute_group: bool = True,
+        eagerly_compute_group: Literal[False] | None = None,
         **groupers: Grouper,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
@@ -9834,11 +9874,8 @@ class Dataset(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
-        eagerly_compute_group: bool
-            Whether to eagerly compute ``group`` when it is a chunked array.
-            This option is to maintain backwards compatibility. Set to False
-            to opt-in to future behaviour, where ``group`` is not automatically loaded
-            into memory.
+        eagerly_compute_group: False, optional
+            This argument is deprecated.
         **groupers : Mapping of str to Grouper or Resampler
             Mapping of variable name to group by to :py:class:`Grouper` or :py:class:`Resampler` object.
             One of ``group`` or ``groupers`` must be provided.
@@ -9861,7 +9898,7 @@ class Dataset(
 
         >>> ds.groupby("letters")
         <DatasetGroupBy, grouped over 1 grouper(s), 2 groups in total:
-            'letters': 2/2 groups present with labels 'a', 'b'>
+            'letters': UniqueGrouper('letters'), 2/2 groups with labels 'a', 'b'>
 
         Execute a reduction
 
@@ -9878,18 +9915,18 @@ class Dataset(
 
         >>> ds.groupby(["letters", "x"])
         <DatasetGroupBy, grouped over 2 grouper(s), 8 groups in total:
-            'letters': 2/2 groups present with labels 'a', 'b'
-            'x': 4/4 groups present with labels 10, 20, 30, 40>
+            'letters': UniqueGrouper('letters'), 2/2 groups with labels 'a', 'b'
+            'x': UniqueGrouper('x'), 4/4 groups with labels 10, 20, 30, 40>
 
         Use Grouper objects to express more complicated GroupBy operations
 
         >>> from xarray.groupers import BinGrouper, UniqueGrouper
         >>>
         >>> ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper()).sum()
-        <xarray.Dataset> Size: 128B
+        <xarray.Dataset> Size: 144B
         Dimensions:  (y: 3, x_bins: 2, letters: 2)
         Coordinates:
-          * x_bins   (x_bins) object 16B (5, 15] (15, 25]
+          * x_bins   (x_bins) interval[int64, right] 32B (5, 15] (15, 25]
           * letters  (letters) object 16B 'a' 'b'
         Dimensions without coordinates: y
         Data variables:
@@ -9939,7 +9976,7 @@ class Dataset(
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
         duplicates: Literal["raise", "drop"] = "raise",
-        eagerly_compute_group: bool = True,
+        eagerly_compute_group: Literal[False] | None = None,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
 
@@ -9976,11 +10013,8 @@ class Dataset(
             coordinates.
         duplicates : {"raise", "drop"}, default: "raise"
             If bin edges are not unique, raise ValueError or drop non-uniques.
-        eagerly_compute_group: bool
-            Whether to eagerly compute ``group`` when it is a chunked array.
-            This option is to maintain backwards compatibility. Set to False
-            to opt-in to future behaviour, where ``group`` is not automatically loaded
-            into memory.
+        eagerly_compute_group: False, optional
+            This argument is deprecated.
 
         Returns
         -------
@@ -10046,13 +10080,13 @@ class Dataset(
 
         Returns
         -------
-        core.weighted.DatasetWeighted
+        computation.weighted.DatasetWeighted
 
         See Also
         --------
         :func:`DataArray.weighted <DataArray.weighted>`
 
-        :ref:`comput.weighted`
+        :ref:`compute.weighted`
             User guide on weighted array reduction using :py:func:`~xarray.Dataset.weighted`
 
         :doc:`xarray-tutorial:fundamentals/03.4_weighted`
@@ -10091,7 +10125,7 @@ class Dataset(
 
         Returns
         -------
-        core.rolling.DatasetRolling
+        computation.rolling.DatasetRolling
 
         See Also
         --------
@@ -10123,7 +10157,7 @@ class Dataset(
 
         Returns
         -------
-        core.rolling.DatasetRolling
+        computation.rolling.DatasetRolling
 
         See Also
         --------
@@ -10175,11 +10209,11 @@ class Dataset(
 
         Returns
         -------
-        core.rolling.DatasetCoarsen
+        computation.rolling.DatasetCoarsen
 
         See Also
         --------
-        :class:`core.rolling.DatasetCoarsen`
+        :class:`computation.rolling.DatasetCoarsen`
         :func:`DataArray.coarsen <DataArray.coarsen>`
 
         :ref:`reshape.coarsen`

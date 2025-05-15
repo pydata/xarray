@@ -457,7 +457,7 @@ class DataWithCoords(AttrAccessMixin):
         numpy.squeeze
         """
         dims = get_squeeze_dims(self, dim, axis)
-        return self.isel(drop=drop, **{d: 0 for d in dims})
+        return self.isel(drop=drop, **dict.fromkeys(dims, 0))
 
     def clip(
         self,
@@ -1118,7 +1118,7 @@ class DataWithCoords(AttrAccessMixin):
                 f"Received {type(freq)} instead."
             )
 
-        rgrouper = ResolvedGrouper(grouper, group, self, eagerly_compute_group=False)
+        rgrouper = ResolvedGrouper(grouper, group, self)
 
         return resample_cls(
             self,
@@ -1701,11 +1701,11 @@ def full_like(
 
     if isinstance(other, Dataset):
         if not isinstance(fill_value, dict):
-            fill_value = {k: fill_value for k in other.data_vars.keys()}
+            fill_value = dict.fromkeys(other.data_vars.keys(), fill_value)
 
         dtype_: Mapping[Any, DTypeLikeSave]
         if not isinstance(dtype, Mapping):
-            dtype_ = {k: dtype for k in other.data_vars.keys()}
+            dtype_ = dict.fromkeys(other.data_vars.keys(), dtype)
         else:
             dtype_ = dtype
 

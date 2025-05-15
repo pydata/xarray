@@ -1,5 +1,7 @@
 .. currentmodule:: xarray
 
+.. _whats-new:
+
 What's New
 ==========
 
@@ -14,16 +16,15 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2025.04.0:
 
-v2025.04.0 (unreleased)
+.. _whats-new.2025.05.0:
+
+v2025.05.0 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
 
-- Added `scipy-stubs <https://github.com/scipy/scipy-stubs>`_ to the ``xarray[types]`` dependencies.
-  By `Joren Hammudoglu <https://github.com/jorenham>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -35,6 +36,11 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Fix :py:class:`~xarray.groupers.BinGrouper` when ``labels`` is not specified (:issue:`10284`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+- Allow accessing arbitrary attributes on Pandas ExtensionArrays.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Documentation
@@ -43,6 +49,100 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+.. _whats-new.2025.04.0:
+
+v2025.04.0 (Apr 29, 2025)
+-------------------------
+
+This release brings bug fixes, better support for extension arrays including returning a
+:py:class:`pandas.IntervalArray` from ``groupby_bins``, and performance improvements.
+Thanks to the 24 contributors to this release:
+Alban Farchi, Andrecho, Benoit Bovy, Deepak Cherian, Dimitri Papadopoulos Orfanos, Florian Jetter, Giacomo Caria, Ilan Gold, Illviljan, Joren Hammudoglu, Julia Signell, Kai Muehlbauer, Kai Mühlbauer, Mathias Hauser, Mattia Almansi, Michael Sumner, Miguel Jimenez, Nick Hodgskin (🦎 Vecko), Pascal Bourgault, Philip Chmielowiec, Scott Henderson, Spencer Clark, Stephan Hoyer and Tom Nicholas
+
+New Features
+~~~~~~~~~~~~
+
+- Added `scipy-stubs <https://github.com/scipy/scipy-stubs>`_ to the ``xarray[types]`` dependencies.
+  By `Joren Hammudoglu <https://github.com/jorenham>`_.
+- Added a :mod:`xarray.typing` module  to expose selected public types for use in downstream libraries and static type checking.
+  (:issue:`10179`, :pull:`10215`).
+  By `Michele Guerreri <https://github.com/micguerr-bopen>`_.
+- Improved compatibility with OPeNDAP DAP4 data model for backend engine ``pydap``. This
+  includes ``datatree`` support, and removing slashes from dimension names. By
+  `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+- Allow assigning index coordinates with non-array dimension(s) in a :py:class:`DataArray` by overriding
+  :py:meth:`Index.should_add_coord_to_array`. For example, this enables support for CF boundaries coordinate (e.g.,
+  ``time(time)`` and ``time_bnds(time, nbnd)``) in a DataArray (:pull:`10137`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+- Improved support pandas categorical extension as indices (i.e., :py:class:`pandas.IntervalIndex`). (:issue:`9661`, :pull:`9671`)
+  By `Ilan Gold <https://github.com/ilan-gold>`_.
+- Improved checks and errors raised when trying to align objects with conflicting indexes.
+  It is now possible to align objects each with multiple indexes sharing common dimension(s).
+  (:issue:`7695`, :pull:`10251`)
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- The minimum versions of some dependencies were changed
+
+  ===================== =========  =======
+   Package                    Old      New
+  ===================== =========  =======
+    pydap                    3.4     3.5.0
+  ===================== =========  =======
+
+
+- Reductions with ``groupby_bins`` or those that involve :py:class:`xarray.groupers.BinGrouper`
+  now return objects indexed by :py:meth:`pandas.IntervalArray` objects,
+  instead of numpy object arrays containing tuples. This change enables interval-aware indexing of
+  such Xarray objects. (:pull:`9671`). By `Ilan Gold <https://github.com/ilan-gold>`_.
+- Remove ``PandasExtensionArrayIndex`` from :py:attr:`xarray.Variable.data` when the attribute is a :py:class:`pandas.api.extensions.ExtensionArray` (:pull:`10263`). By `Ilan Gold <https://github.com/ilan-gold>`_.
+- The html and text ``repr`` for ``DataTree`` are now truncated. Up to 6 children are displayed
+  for each node -- the first 3 and the last 3 children -- with a ``...`` between them. The number
+  of children to include in the display is configurable via options. For instance use
+  ``set_options(display_max_children=8)`` to display 8 children rather than the default 6. (:pull:`10139`)
+  By `Julia Signell <https://github.com/jsignell>`_.
+
+
+Deprecations
+~~~~~~~~~~~~
+
+- The deprecation cycle for the  ``eagerly_compute_group`` kwarg to ``groupby`` and ``groupby_bins``
+  is now complete.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- :py:meth:`~xarray.Dataset.to_stacked_array` now uses dimensions in order of appearance.
+  This fixes the issue where using :py:meth:`~xarray.Dataset.transpose` before :py:meth:`~xarray.Dataset.to_stacked_array`
+  had no effect. (Mentioned in :issue:`9921`)
+- Enable ``keep_attrs`` in ``DatasetView.map`` relevant for :py:func:`map_over_datasets`  (:pull:`10219`)
+  By `Mathias Hauser <https://github.com/mathause>`_.
+- Variables with no temporal dimension are left untouched by :py:meth:`~xarray.Dataset.convert_calendar`. (:issue:`10266`,  :pull:`10268`)
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Fix references to core classes in docs (:issue:`10195`, :pull:`10207`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
+- Fix references to point to updated pydap documentation (:pull:`10182`).
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+- Switch to `pydata-sphinx-theme <https://github.com/pydata/pydata-sphinx-theme>`_ from `sphinx-book-theme <https://github.com/executablebooks/sphinx-book-theme>`_ (:pull:`8708`).
+  By `Scott Henderson <https://github.com/scottyhq>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Avoid stacking when grouping by a chunked array. This can be a large performance improvement.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- The implementation of ``Variable.set_dims`` has changed to use array indexing syntax
+  instead of ``np.broadcast_to`` to perform dimension expansions where
+  all new dimensions have a size of 1. This should improve compatibility with
+  duck arrays that do not support broadcasting (:issue:`9462`, :pull:`10277`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
 
 .. _whats-new.2025.03.1:
 
@@ -55,9 +155,11 @@ Andrecho, Deepak Cherian, Ian Hunt-Isaak, Karl Krauth, Mathias Hauser, Maximilia
 
 New Features
 ~~~~~~~~~~~~
-
 - Allow setting a ``fill_value`` for Zarr format 3 arrays. Specify ``fill_value`` in ``encoding`` as usual.
   (:issue:`10064`). By `Deepak Cherian <https://github.com/dcherian>`_.
+- Added :py:class:`indexes.RangeIndex` as an alternative, memory saving Xarray index representing
+  a 1-dimensional bounded interval with evenly spaced floating values (:issue:`8473`, :pull:`10076`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -480,7 +582,7 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-- ``persist`` methods now route through the :py:class:`xr.core.parallelcompat.ChunkManagerEntrypoint` (:pull:`9682`).
+- ``persist`` methods now route through the :py:class:`xr.namedarray.parallelcompat.ChunkManagerEntrypoint` (:pull:`9682`).
   By `Sam Levang <https://github.com/slevang>`_.
 
 .. _whats-new.2024.10.0:
@@ -717,7 +819,7 @@ Bug fixes
 - Promote floating-point numeric datetimes before decoding (:issue:`9179`, :pull:`9182`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Address regression introduced in :pull:`9002` that prevented objects returned
-  by py:meth:`DataArray.convert_calendar` to be indexed by a time index in
+  by :py:meth:`DataArray.convert_calendar` to be indexed by a time index in
   certain circumstances (:issue:`9138`, :pull:`9192`).
   By `Mark Harfouche <https://github.com/hmaarrfk>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
 - Fix static typing of tolerance arguments by allowing ``str`` type (:issue:`8892`, :pull:`9194`).
@@ -1691,7 +1793,7 @@ Documentation
 - Added page on the internal design of xarray objects.
   (:pull:`7991`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added examples to docstrings of :py:meth:`Dataset.assign_attrs`, :py:meth:`Dataset.broadcast_equals`,
-  :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.expand_dims`,:py:meth:`Dataset.drop_vars`
+  :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.expand_dims`, :py:meth:`Dataset.drop_vars`
   (:issue:`6793`, :pull:`7937`) By `Harshitha <https://github.com/harshitha1201>`_.
 - Add docstrings for the :py:class:`Index` base class and add some documentation on how to
   create custom, Xarray-compatible indexes (:pull:`6975`)
@@ -1736,7 +1838,7 @@ Documentation
 ~~~~~~~~~~~~~
 
 - Added examples to docstrings of :py:meth:`Dataset.assign_attrs`, :py:meth:`Dataset.broadcast_equals`,
-  :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.expand_dims`,:py:meth:`Dataset.drop_vars`
+  :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.expand_dims`, :py:meth:`Dataset.drop_vars`
   (:issue:`6793`, :pull:`7937`) By `Harshitha <https://github.com/harshitha1201>`_.
 - Added page on wrapping chunked numpy-like arrays as alternatives to dask arrays.
   (:pull:`7951`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
@@ -1868,7 +1970,7 @@ Bug fixes
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Experimental support for wrapping chunked array libraries other than dask.
-  A new ABC is defined - :py:class:`xr.core.parallelcompat.ChunkManagerEntrypoint` - which can be subclassed and then
+  A new ABC is defined - :py:class:`xr.namedarray.parallelcompat.ChunkManagerEntrypoint` - which can be subclassed and then
   registered by alternative chunked array implementations. (:issue:`6807`, :pull:`7019`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
@@ -3840,11 +3942,11 @@ Documentation
 - Raise a more informative error when :py:meth:`DataArray.to_dataframe` is
   is called on a scalar, (:issue:`4228`);
   By `Pieter Gijsbers <https://github.com/pgijsbers>`_.
-- Fix grammar and typos in the :doc:`contributing` guide (:pull:`4545`).
+- Fix grammar and typos in the :ref:`contributing` guide (:pull:`4545`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
 - Fix grammar and typos in the :doc:`user-guide/io` guide (:pull:`4553`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
-- Update link to NumPy docstring standard in the :doc:`contributing` guide (:pull:`4558`).
+- Update link to NumPy docstring standard in the :ref:`contributing` guide (:pull:`4558`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
 - Add docstrings to ``isnull`` and ``notnull``, and fix the displayed signature
   (:issue:`2760`, :pull:`4618`).
@@ -4281,7 +4383,7 @@ New Features
 ~~~~~~~~~~~~
 
 - Weighted array reductions are now supported via the new :py:meth:`DataArray.weighted`
-  and :py:meth:`Dataset.weighted` methods. See :ref:`comput.weighted`. (:issue:`422`, :pull:`2922`).
+  and :py:meth:`Dataset.weighted` methods. See :ref:`compute.weighted`. (:issue:`422`, :pull:`2922`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 - The new jupyter notebook repr (``Dataset._repr_html_`` and
   ``DataArray._repr_html_``) (introduced in 0.14.1) is now on by default. To
@@ -6151,7 +6253,7 @@ Documentation
 - Added apply_ufunc example to :ref:`/examples/weather-data.ipynb#Toy-weather-data` (:issue:`1844`).
   By `Liam Brannigan <https://github.com/braaannigan>`_.
 - New entry ``Why don’t aggregations return Python scalars?`` in the
-  :doc:`getting-started-guide/faq` (:issue:`1726`).
+  :ref:`faq` (:issue:`1726`).
   By `0x0L <https://github.com/0x0L>`_.
 
 Enhancements
@@ -6412,7 +6514,7 @@ Enhancements
 - New helper function :py:func:`~xarray.apply_ufunc` for wrapping functions
   written to work on NumPy arrays to support labels on xarray objects
   (:issue:`770`). ``apply_ufunc`` also support automatic parallelization for
-  many functions with dask. See :ref:`comput.wrapping-custom` and
+  many functions with dask. See :ref:`compute.wrapping-custom` and
   :ref:`dask.automatic-parallelization` for details.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
@@ -7434,7 +7536,7 @@ Enhancements
       * x        (x) int64 0 1 2
       * y        (y) int64 0 1 2 3 4
 
-  See :ref:`comput.rolling` for more details. By
+  See :ref:`compute.rolling` for more details. By
   `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
