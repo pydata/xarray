@@ -200,6 +200,10 @@ class Rolling(Generic[T_Xarray]):
         )
         if keep_attrs:
             result.attrs = self.obj.attrs
+
+        # if obj.dtype is not bool or int, set dtype to the original dtype
+        if self.obj.dtype.kind not in "bi":
+            result = result.astype(self.obj.dtype, copy=False)
         return result
 
     _mean.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name="mean")

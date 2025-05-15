@@ -433,6 +433,21 @@ class TestDataArrayRolling:
         chunked_result = data.chunk({"x": 1}).rolling(x=3, min_periods=1).mean()
         assert chunked_result.dtype == unchunked_result.dtype
 
+    def test_rolling_mean_bool(self) -> None:
+        bool_raster = DataArray(
+            data=[0, 1, 1, 0, 1, 0],
+            dims=("x"),
+        ).astype(bool)
+
+        expected = DataArray(
+            data=[np.nan, 2 / 3, 2 / 3, 2 / 3, 1 / 3, np.nan],
+            dims=("x"),
+        )
+
+        # rolling mean on bool array should be the same as on int array
+        result = bool_raster.rolling(x=3, center=True).mean()
+        assert_allclose(result, expected)
+
 
 @requires_numbagg
 class TestDataArrayRollingExp:
