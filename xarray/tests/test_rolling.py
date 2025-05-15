@@ -444,7 +444,6 @@ class TestDataArrayRolling:
             dims=("x"),
         )
 
-        # rolling mean on bool array should be the same as on int array
         result = bool_raster.rolling(x=3, center=True).mean()
         assert_allclose(result, expected)
 
