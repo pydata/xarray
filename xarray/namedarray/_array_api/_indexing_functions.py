@@ -36,7 +36,7 @@ def take_along_axis(
     axis: int = -1,
 ) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
-    _axis = _dims_to_axis(x, dim, axis, default_axis=-1)[0]
+    _axis = _dims_to_axis(x, dim, axis, axis_default=-1)[0]
     _data = xp.take_along_axis(x._data, indices._data, axis=_axis)
     _dims = x.dims
     return NamedArray(_dims, _data)
