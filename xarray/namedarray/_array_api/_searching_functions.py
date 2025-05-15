@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from xarray.namedarray._array_api._data_type_functions import _promote_scalars
 from xarray.namedarray._array_api._utils import (
     _dim_to_optional_axis,
     _dims_to_axis,
@@ -115,7 +116,8 @@ def where(
     /,
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(condition)
-    _data = xp.where(condition._data, x1._data, x2._data)
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "all", "where")
+    _data = xp.where(condition._data, x1_arr._data, x2_arr._data)
     # TODO: Wrong, _dims should be either of the arguments. How to choose?
     _dims = _infer_dims(_data.shape)
     return NamedArray(_dims, _data)
