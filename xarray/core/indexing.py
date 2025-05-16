@@ -523,6 +523,10 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
         key = BasicIndexer((slice(None),) * self.ndim)
         return self[key]
 
+    async def async_get_duck_array(self):
+        key = BasicIndexer((slice(None),) * self.ndim)
+        return self[key]
+
     def _oindex_get(self, indexer: OuterIndexer):
         raise NotImplementedError(
             f"{self.__class__.__name__}._oindex_get method should be overridden"
@@ -661,6 +665,22 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
             array = array.get_duck_array()
         return _wrap_numpy_scalars(array)
 
+    async def async_get_duck_array(self):
+        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
+            array = apply_indexer(self.array, self.key)
+        else:
+            # If the array is not an ExplicitlyIndexedNDArrayMixin,
+            # it may wrap a BackendArray so use its (async) getitem
+            array = await self.array.async_getitem(self.key)
+
+        # self.array[self.key] is now a numpy array when
+        # self.array is a BackendArray subclass
+        # and self.key is BasicIndexer((slice(None, None, None),))
+        # so we need the explicit check for ExplicitlyIndexed
+        if isinstance(array, ExplicitlyIndexed):
+            array = await array.async_get_duck_array()
+        return _wrap_numpy_scalars(array)
+
     def transpose(self, order):
         return LazilyVectorizedIndexedArray(self.array, self.key).transpose(order)
 
@@ -797,6 +817,9 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         return self.array.get_duck_array()
 
+    async def async_get_duck_array(self):
+        return await self.array.async_get_duck_array()
+
     def _oindex_get(self, indexer: OuterIndexer):
         return type(self)(_wrap_numpy_scalars(self.array.oindex[indexer]))
 
@@ -839,10 +862,18 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
 
     def _ensure_cached(self):
         self.array = as_indexable(self.array.get_duck_array())
+    
+    async def _async_ensure_cached(self):
+        duck_array = await self.array.async_get_duck_array()
+        self.array = as_indexable(duck_array)
 
     def get_duck_array(self):
         self._ensure_cached()
         return self.array.get_duck_array()
+    
+    async def async_get_duck_array(self):
+        await self._async_ensure_cached()
+        return await self.array.async_get_duck_array()
 
     def _oindex_get(self, indexer: OuterIndexer):
         return type(self)(_wrap_numpy_scalars(self.array.oindex[indexer]))
@@ -1020,6 +1051,21 @@ def explicit_indexing_adapter(
     """
     raw_key, numpy_indices = decompose_indexer(key, shape, indexing_support)
     result = raw_indexing_method(raw_key.tuple)
+    if numpy_indices.tuple:
+        # index the loaded duck array
+        indexable = as_indexable(result)
+        result = apply_indexer(indexable, numpy_indices)
+    return result
+
+
+async def async_explicit_indexing_adapter(
+    key: ExplicitIndexer,
+    shape: _Shape,
+    indexing_support: IndexingSupport,
+    raw_indexing_method: Callable[..., Any],
+) -> Any:
+    raw_key, numpy_indices = decompose_indexer(key, shape, indexing_support)
+    result = await raw_indexing_method(raw_key.tuple)
     if numpy_indices.tuple:
         # index the loaded duck array
         indexable = as_indexable(result)

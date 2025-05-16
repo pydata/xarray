@@ -51,6 +51,7 @@ from xarray.namedarray.pycompat import (
     is_0d_dask_array,
     is_chunked_array,
     to_duck_array,
+    async_to_duck_array,
 )
 from xarray.namedarray.utils import module_available
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
@@ -955,6 +956,11 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dask.array.compute
         """
         self._data = to_duck_array(self._data, **kwargs)
+        return self
+    
+    async def async_load(self, **kwargs):
+        print("async inside Variable")
+        self._data = await async_to_duck_array(self._data, **kwargs)
         return self
 
     def compute(self, **kwargs):
