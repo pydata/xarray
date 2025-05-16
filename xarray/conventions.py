@@ -10,7 +10,7 @@ import numpy as np
 
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding import strings, variables
-from xarray.coding.variables import SerializationWarning, pop_to
+from xarray.coding.variables import pop_to
 from xarray.core import indexing
 from xarray.core.common import (
     _contains_datetime_like_objects,
@@ -18,6 +18,7 @@ from xarray.core.common import (
 )
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import IndexVariable, Variable
+from xarray.errors import SerializationWarning
 from xarray.namedarray.utils import is_duck_dask_array
 
 CF_RELATED_DATA = (

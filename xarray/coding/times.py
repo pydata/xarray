@@ -12,7 +12,6 @@ import pandas as pd
 from pandas.errors import OutOfBoundsDatetime, OutOfBoundsTimedelta
 
 from xarray.coding.common import (
-    SerializationWarning,
     VariableCoder,
     lazy_elemwise_func,
     pop_to,
@@ -27,6 +26,7 @@ from xarray.core.duck_array_ops import array_all, asarray, ravel, reshape
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
 from xarray.core.utils import attempt_import, emit_user_level_warning
 from xarray.core.variable import Variable
+from xarray.errors import SerializationWarning
 from xarray.namedarray.parallelcompat import T_ChunkedArray, get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array, to_numpy
 from xarray.namedarray.utils import is_duck_dask_array

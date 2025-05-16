@@ -33,7 +33,7 @@ from xarray import (
 from xarray.coders import CFDatetimeCoder
 from xarray.core import dtypes
 from xarray.core.common import full_like
-from xarray.core.coordinates import Coordinates, CoordinateValidationError
+from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import (
     Index,
     PandasIndex,
@@ -41,6 +41,7 @@ from xarray.core.indexes import (
 )
 from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
+from xarray.errors import CoordinateValidationError
 from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
     InaccessibleArray,
@@ -2413,9 +2414,13 @@ class TestDataArray:
     def test_inplace_math_automatic_alignment(self) -> None:
         a = DataArray(range(5), [("x", range(5))])
         b = DataArray(range(1, 6), [("x", range(1, 6))])
-        with pytest.raises(xr.MergeError, match="Automatic alignment is not supported"):
+        with pytest.raises(
+            xr.errors.MergeError, match="Automatic alignment is not supported"
+        ):
             a += b
-        with pytest.raises(xr.MergeError, match="Automatic alignment is not supported"):
+        with pytest.raises(
+            xr.errors.MergeError, match="Automatic alignment is not supported"
+        ):
             b += a
 
     def test_math_name(self) -> None:

@@ -12,7 +12,7 @@ from xarray import DataArray, Dataset, Variable, concat
 from xarray.core import dtypes
 from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import PandasIndex
-from xarray.structure import merge
+from xarray.errors import MergeError
 from xarray.tests import (
     ConcatenatableArray,
     InaccessibleArray,
@@ -587,7 +587,7 @@ class TestConcatDataset:
             actual = concat(objs, dim="x", coords=coords)
             assert_identical(expected, actual)
         for coords in ["minimal", []]:
-            with pytest.raises(merge.MergeError, match="conflicting values"):
+            with pytest.raises(MergeError, match="conflicting values"):
                 concat(objs, dim="x", coords=coords)
 
     def test_concat_constant_index(self):
@@ -599,7 +599,7 @@ class TestConcatDataset:
         for mode in ["different", "all", ["foo"]]:
             actual = concat([ds1, ds2], "y", data_vars=mode)
             assert_identical(expected, actual)
-        with pytest.raises(merge.MergeError, match="conflicting values"):
+        with pytest.raises(MergeError, match="conflicting values"):
             # previously dim="y", and raised error which makes no sense.
             # "foo" has dimension "y" so minimal should concatenate it?
             concat([ds1, ds2], "new_dim", data_vars="minimal")
