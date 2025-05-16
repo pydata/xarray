@@ -11,45 +11,41 @@ A major strength of Xarray is in the user community. Sometimes you might not hav
 We look forward to hearing from you!
 
 .. mermaid::
-    :config: {"theme": "default", "fontSize":"16pt"}
+    :config: {"theme":"base","themeVariables":{"fontSize":"20px","darkMode":"true","primaryColor":"#0e4666","primaryTextColor":"#fff","primaryBorderColor":"#59c7d6","lineColor":"#e28126","secondaryColor":"#8e8d99"}}
     :alt: Flowchart illustrating the different ways to access help using or contributing to Xarray.
 
     flowchart TD
         intro[Welcome to Xarray! How can we help?]:::quesNodefmt
-        usage(["fa:fa-chalkboard-user <a href="https://tutorial.xarray.dev">Xarray Tutorial</a>
+        usage([fa:fa-chalkboard-user <a href="https://tutorial.xarray.dev">Xarray Tutorial</a>
             fab:fa-readme <a href="https://docs.xarray.dev">Xarray Docs</a>
             fab:fa-google fab:fa-stack-overflow <a href="https://stackoverflow.com/questions/tagged/python-xarray">Google/Stack Exchange</a>
-            fa:fa-robot Ask AI/a Language Learning Model (LLM)"]):::ansNodefmt
-        API([fab:fa-readme <a href="https://docs.xarray.dev">Xarray Docs</a>
-            fab:fa-readme Extension's docs]):::ansNodefmt
+            fa:fa-robot Ask AI/a Language Learning Model]):::ansNodefmt
+        extensions([Extension docs:
+            fab:fa-readme <a href="https://docs.dask.org">Dask</a>
+            fab:fa-readme <a href="https://corteva.github.io/rioxarray">Rioxarray</a>]):::ansNodefmt
         help([fab:fa-github <a href="https://github.com/pydata/xarray/discussions">Xarray Discussions</a>
             fab:fa-discord <a href="https://discord.com/invite/wEKPCt4PDu">Xarray Discord</a>
-            fa:fa-users <a href="https://github.com/pydata/xarray/discussions/categories/office-hours">Xarray Office Hours</a>
             fa:fa-globe <a href="https://discourse.pangeo.io">Pangeo Discourse</a>]):::ansNodefmt
-        bug([Report and Propose here:
+        bug([Let us know:
             fab:fa-github <a href="https://github.com/pydata/xarray/issues">Xarray Issues</a>]):::ansNodefmt
         contrib([fa:fa-book-open <a href="https://docs.xarray.dev/en/latest/contribute">Xarray Contributor's Guide</a>]):::ansNodefmt
-        pr(["fab:fa-github <a href="https://github.com/pydata/xarray/pulls">Pull Request (PR)</a>"]):::ansNodefmt
-        dev([fab:fa-github Comment on your PR
-            fa:fa-users <a href="https://docs.xarray.dev/en/stable/contribute/developers-meeting.html">Developer's Meeting</a> ]):::ansNodefmt
+        pr([fab:fa-github <a href="https://github.com/pydata/xarray/pulls">Pull Request</a>]):::ansNodefmt
+        dev([fab:fa-github Add PR Comment
+            fa:fa-users <a href="https://docs.xarray.dev/en/stable/contribute/developers-meeting.html">Attend Developer's Meeting</a> ]):::ansNodefmt
         report[Thanks for letting us know!]:::quesNodefmt
-        merged[fa:fa-hands-clapping Your PR was merged.
-            Thanks for contributing to Xarray!]:::quesNodefmt
+        merged[fa:fa-hands-clapping Thanks for contributing to Xarray!]:::quesNodefmt
 
 
         intro -->|How do I use Xarray?| usage
-        usage -->|"with extensions (like Dask)"| API
+        usage -->|"With extensions (like Dask, Rioxarray, etc.)"| extensions
 
-        usage -->|I'd like some more help| help
-        intro -->|I found a bug| bug
-        intro -->|I'd like to make a small change| contrib
-        subgraph bugcontrib["`**Bugs and Contributions**`"]
-            bug
-            contrib
-            bug -->|I just wanted to tell you| report
-            bug<-->|I'd like to fix the bug!| contrib
-            pr -->|my PR was approved| merged
-        end
+        usage -->|I still have questions or could use some guidance | help
+        intro -->|I think I found a bug| bug
+        bug
+        contrib
+        bug -->|I just wanted to tell you| report
+        bug<-->|I'd like to fix the bug!| contrib
+        pr -->|my PR was approved| merged
 
 
         intro -->|I wish Xarray could...| bug
@@ -58,14 +54,9 @@ We look forward to hearing from you!
         pr <-->|my PR is quiet| dev
         contrib -->pr
 
-        classDef quesNodefmt font-size:18pt,fill:#9DEEF4,stroke:#206C89
-
-        classDef ansNodefmt font-size:14pt,fill:#FFAA05,stroke:#E37F17
-
-        classDef boxfmt fill:#FFF5ED,stroke:#E37F17
-        class bugcontrib boxfmt
-
-        linkStyle default font-size:16pt,color:#206C89
+        classDef quesNodefmt font-size:18pt,fill:#17afb4,stroke:#0e4666,stroke-width:2
+        classDef ansNodefmt stroke-width:2,color:white
+        linkStyle default stroke-width:4
 
 .. toctree::
    :maxdepth: 1
