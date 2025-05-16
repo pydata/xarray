@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
+import xarray.testing as xrt
 from xarray.tests import has_zarr_v3, requires_zarr_v3
 
 if has_zarr_v3:
@@ -84,29 +85,43 @@ def memorystore() -> "MemoryStore":
     )
     z[:, :] = np.random.random((10, 10))
 
+    z = zarr.create_array(
+        store=memorystore,
+        name="bar",
+        shape=(10,),
+        chunks=(5),
+        dtype="f4",
+        dimension_names=["x"],
+    )
+    z[:] = np.random.random((10,))
+
     return memorystore
 
 
 @requires_zarr_v3
 @pytest.mark.asyncio
-async def test_async_load(memorystore):
-    N_LOADS = 10
-    LATENCY = 1.0
+class TestAsyncLoad:
+    async def test_async_load_variable(self, memorystore):
+        N_LOADS = 5
+        LATENCY = 1.0
 
-    latencystore = LatencyStore(memorystore, latency=LATENCY)
-    ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
+        latencystore = LatencyStore(memorystore, latency=LATENCY)
+        ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
 
-    # TODO add async load to Dataset and DataArray as well as to Variable
-    # TODO change the syntax to `.async.load()`?
-    start_time = time.time()
-    tasks = [ds["foo"].variable.async_load() for _ in range(N_LOADS)]
-    results = await asyncio.gather(*tasks)
-    total_time = time.time() - start_time
+        # TODO add async load to Dataset and DataArray as well as to Variable
+        # TODO change the syntax to `.async.load()`?
+        start_time = time.time()
+        tasks = [ds["foo"].variable.async_load() for _ in range(N_LOADS)]
+        results = await asyncio.gather(*tasks)
+        total_time = time.time() - start_time
 
-    assert total_time > LATENCY  # Cannot possibly be quicker than this
-    assert (
-        total_time < LATENCY * N_LOADS
-    )  # If this isn't true we're gaining nothing from async
-    assert (
-        abs(total_time - LATENCY) < 0.5
-    )  # Should take approximately LATENCY seconds, but allow some buffer
+        for result in results:
+            xrt.assert_identical(result, ds["foo"].variable.load())
+
+        assert total_time > LATENCY  # Cannot possibly be quicker than this
+        assert (
+            total_time < LATENCY * N_LOADS
+        )  # If this isn't true we're gaining nothing from async
+        assert (
+            abs(total_time - LATENCY) < 0.5
+        )  # Should take approximately LATENCY seconds, but allow some buffer
