@@ -191,6 +191,13 @@ def _maybe_wrap_data(data):
     """
     if isinstance(data, pd.Index):
         return PandasIndexingAdapter(data)
+    if isinstance(
+        data,
+        pd.arrays.DatetimeArray
+        | pd.arrays.TimedeltaArray
+        | pd.arrays.NumpyExtensionArray,
+    ):
+        return data.to_numpy()
     if isinstance(data, pd.api.extensions.ExtensionArray):
         return PandasExtensionArray(data)
     return data
@@ -252,7 +259,19 @@ def as_compatible_data(
 
     # we don't want nested self-described arrays
     if isinstance(data, pd.Series | pd.DataFrame):
-        pandas_data = data.values
+        if (
+            isinstance(data, pd.Series)
+            and pd.api.types.is_extension_array_dtype(data)
+            and not isinstance(
+                data.array,
+                pd.arrays.DatetimeArray
+                | pd.arrays.TimedeltaArray
+                | pd.arrays.NumpyExtensionArray,
+            )
+        ):
+            pandas_data = data.array
+        else:
+            pandas_data = data.values
         if isinstance(pandas_data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
             return convert_non_numpy_type(pandas_data)
         else:
