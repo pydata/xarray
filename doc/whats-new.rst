@@ -60,6 +60,8 @@ This release brings bug fixes, better support for extension arrays including ret
 Thanks to the 24 contributors to this release:
 Alban Farchi, Andrecho, Benoit Bovy, Deepak Cherian, Dimitri Papadopoulos Orfanos, Florian Jetter, Giacomo Caria, Ilan Gold, Illviljan, Joren Hammudoglu, Julia Signell, Kai Muehlbauer, Kai Mühlbauer, Mathias Hauser, Mattia Almansi, Michael Sumner, Miguel Jimenez, Nick Hodgskin (🦎 Vecko), Pascal Bourgault, Philip Chmielowiec, Scott Henderson, Spencer Clark, Stephan Hoyer and Tom Nicholas
 
+A number of changes involve :py:class:`pandas.api.extensions.ExtensionDtype` (as an index or `Variable.data`).  To convert to `numpy`, you can use `numpy.asarray`, converting to a :py:class:`pandas.Series` and then calling :py:meth:`pandas.Series.to_numpy`, or `pandas.api.extensions.ExtensionArray.astype` with a `numpy` type.
+
 New Features
 ~~~~~~~~~~~~
 
