@@ -204,8 +204,10 @@ def decode_cf_variable(
             var = coder.decode(var, name=name)
 
     if decode_timedelta:
-        if not isinstance(decode_timedelta, CFTimedeltaCoder):
-            decode_timedelta = CFTimedeltaCoder()
+        if isinstance(decode_timedelta, bool):
+            decode_timedelta = CFTimedeltaCoder(
+                decode_via_units=decode_timedelta, decode_via_dtype=decode_timedelta
+            )
         decode_timedelta._emit_decode_timedelta_future_warning = (
             decode_timedelta_was_none
         )
