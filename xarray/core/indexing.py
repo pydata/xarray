@@ -28,6 +28,7 @@ from xarray.core.utils import (
     get_valid_numpy_dtype,
     is_duck_array,
     is_duck_dask_array,
+    is_full_slice,
     is_scalar,
     is_valid_numpy_dtype,
     to_0d_array,
@@ -1778,6 +1779,15 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def dtype(self) -> np.dtype | pd.api.extensions.ExtensionDtype:  # type: ignore[override]
         return self._dtype
 
+    def _get_numpy_dtype(self, dtype: np.typing.DTypeLike | None = None) -> np.dtype:
+        if dtype is None:
+            if is_valid_numpy_dtype(self.dtype):
+                return cast(np.dtype, self.dtype)
+            else:
+                return get_valid_numpy_dtype(self.array)
+        else:
+            return np.dtype(dtype)
+
     def __array__(
         self,
         dtype: np.typing.DTypeLike | None = None,
@@ -1785,11 +1795,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         *,
         copy: bool | None = None,
     ) -> np.ndarray:
-        if dtype is None and is_valid_numpy_dtype(self.dtype):
-            dtype = cast(np.dtype, self.dtype)
-        else:
-            dtype = get_valid_numpy_dtype(self.array)
+        dtype = self._get_numpy_dtype(dtype)
         array = self.array
+
         if isinstance(array, pd.PeriodIndex):
             with suppress(AttributeError):
                 # this might not be public API
@@ -1829,96 +1837,51 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             # numpy fails to convert pd.Timestamp to np.datetime64[ns]
             item = np.asarray(item.to_datetime64())
         elif self.dtype != object:
-            dtype = self.dtype
-            if pd.api.types.is_extension_array_dtype(dtype):
-                dtype = get_valid_numpy_dtype(self.array)
-            item = np.asarray(item, dtype=cast(np.dtype, dtype))
+            dtype = self._get_numpy_dtype()
+            item = np.asarray(item, dtype=dtype)
 
         # as for numpy.ndarray indexing, we always want the result to be
         # a NumPy array.
         return to_0d_array(item)
 
-    def _prepare_key(self, key: Any | tuple[Any, ...]) -> tuple[Any, ...]:
-        if isinstance(key, tuple) and len(key) == 1:
+    def _index_get(
+        self, indexer: ExplicitIndexer, func_name: str
+    ) -> PandasIndexingAdapter | np.ndarray:
+        key = indexer.tuple
+
+        if len(key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
             # objects don't like tuples)
             (key,) = key
 
-        return key
+        # if multidimensional key, convert the index to numpy array and index the latter
+        if getattr(key, "ndim", 0) > 1:
+            indexable = NumpyIndexingAdapter(np.asarray(self))
+            return getattr(indexable, func_name)(indexer)
 
-    def _handle_result(
-        self, result: Any
-    ) -> (
-        PandasIndexingAdapter
-        | NumpyIndexingAdapter
-        | np.ndarray
-        | np.datetime64
-        | np.timedelta64
-    ):
+        # otherwise index the pandas index then re-wrap or convert the result
+        result = self.array[key]
+
         if isinstance(result, pd.Index):
             return type(self)(result, dtype=self.dtype)
         else:
             return self._convert_scalar(result)
 
-    def _oindex_get(
-        self, indexer: OuterIndexer
-    ) -> (
-        PandasIndexingAdapter
-        | NumpyIndexingAdapter
-        | np.ndarray
-        | np.datetime64
-        | np.timedelta64
-    ):
-        key = self._prepare_key(indexer.tuple)
-
-        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
-            indexable = NumpyIndexingAdapter(np.asarray(self))
-            return indexable.oindex[indexer]
-
-        result = self.array[key]
-
-        return self._handle_result(result)
+    def _oindex_get(self, indexer: OuterIndexer) -> PandasIndexingAdapter | np.ndarray:
+        return self._index_get(indexer, "_oindex_get")
 
     def _vindex_get(
         self, indexer: VectorizedIndexer
-    ) -> (
-        PandasIndexingAdapter
-        | NumpyIndexingAdapter
-        | np.ndarray
-        | np.datetime64
-        | np.timedelta64
-    ):
+    ) -> PandasIndexingAdapter | np.ndarray:
         _assert_not_chunked_indexer(indexer.tuple)
-        key = self._prepare_key(indexer.tuple)
-
-        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
-            indexable = NumpyIndexingAdapter(np.asarray(self))
-            return indexable.vindex[indexer]
-
-        result = self.array[key]
-
-        return self._handle_result(result)
+        return self._index_get(indexer, "_vindex_get")
 
     def __getitem__(
         self, indexer: ExplicitIndexer
-    ) -> (
-        PandasIndexingAdapter
-        | NumpyIndexingAdapter
-        | np.ndarray
-        | np.datetime64
-        | np.timedelta64
-    ):
-        key = self._prepare_key(indexer.tuple)
+    ) -> PandasIndexingAdapter | np.ndarray:
+        return self._index_get(indexer, "__getitem__")
 
-        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
-            indexable = NumpyIndexingAdapter(np.asarray(self))
-            return indexable[indexer]
-
-        result = self.array[key]
-
-        return self._handle_result(result)
-
-    def transpose(self, order) -> pd.Index:
+    def transpose(self, order) -> Self | pd.Index:
         return self.array  # self.array should be always one-dimensional
 
     def __repr__(self) -> str:
@@ -1939,7 +1902,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def nbytes(self) -> int:
         if pd.api.types.is_extension_array_dtype(self.dtype):
             return self.array.nbytes
-        return cast(np.dtype, self.dtype).itemsize * len(self.array)
+
+        dtype = self._get_numpy_dtype()
+        return dtype.itemsize * len(self.array)
 
 
 class PandasMultiIndexingAdapter(PandasIndexingAdapter):
@@ -1972,8 +1937,8 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         *,
         copy: bool | None = None,
     ) -> np.ndarray:
-        if dtype is None:
-            dtype = cast(np.dtype, self.dtype)
+        dtype = self._get_numpy_dtype(dtype)
+
         if self.level is not None:
             return np.asarray(
                 self.array.get_level_values(self.level).values, dtype=dtype
@@ -1981,45 +1946,18 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         else:
             return super().__array__(dtype, copy=copy)
 
-    def _convert_scalar(self, item):
+    def _convert_scalar(self, item: Any):
         if isinstance(item, tuple) and self.level is not None:
             idx = tuple(self.array.names).index(self.level)
             item = item[idx]
         return super()._convert_scalar(item)
 
-    def _oindex_get(
-        self, indexer: OuterIndexer
-    ) -> (
-        PandasIndexingAdapter
-        | NumpyIndexingAdapter
-        | np.ndarray
-        | np.datetime64
-        | np.timedelta64
-    ):
-        result = super()._oindex_get(indexer)
+    def _index_get(
+        self, indexer: ExplicitIndexer, func_name: str
+    ) -> PandasIndexingAdapter | np.ndarray:
+        result = super()._index_get(indexer, func_name)
         if isinstance(result, type(self)):
             result.level = self.level
-        return result
-
-    def _vindex_get(
-        self, indexer: VectorizedIndexer
-    ) -> (
-        PandasIndexingAdapter
-        | NumpyIndexingAdapter
-        | np.ndarray
-        | np.datetime64
-        | np.timedelta64
-    ):
-        result = super()._vindex_get(indexer)
-        if isinstance(result, type(self)):
-            result.level = self.level
-        return result
-
-    def __getitem__(self, indexer: ExplicitIndexer):
-        result = super().__getitem__(indexer)
-        if isinstance(result, type(self)):
-            result.level = self.level
-
         return result
 
     def __repr__(self) -> str:
@@ -2061,6 +1999,92 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         # see PandasIndexingAdapter.copy
         array = self.array.copy(deep=True) if deep else self.array
         return type(self)(array, self._dtype, self.level)
+
+
+class PandasIntervalIndexingAdapter(PandasIndexingAdapter):
+    """Wraps a pandas.IntervalIndex as a 2-dimensional coordinate array.
+
+    When the array is not transposed, left and right interval boundaries are on
+    the 2nd axis, i.e., shape is (N, 2).
+
+    """
+
+    __slots__ = ("_bounds_axis", "_dtype", "array")
+
+    array: pd.IntervalIndex
+    _dtype: np.dtype | pd.api.extensions.ExtensionDtype
+    _bounds_axis: int
+
+    def __init__(
+        self,
+        array: pd.IntervalIndex,
+        dtype: DTypeLike | pd.api.extensions.ExtensionDtype | None = None,
+        transpose: bool = False,
+    ):
+        super().__init__(array, dtype=dtype)
+
+        if transpose:
+            self._bounds_axis = 0
+        else:
+            self._bounds_axis = -1
+
+    @property
+    def shape(self) -> _Shape:
+        if self._bounds_axis == 0:
+            return (2, len(self.array))
+        else:
+            return (len(self.array), 2)
+
+    def __array__(
+        self,
+        dtype: np.typing.DTypeLike | None = None,
+        /,
+        *,
+        copy: bool | None = None,
+    ) -> np.ndarray:
+        dtype = self._get_numpy_dtype(dtype)
+
+        return np.stack(
+            [self.array.left, self.array.right], axis=self._bounds_axis, dtype=dtype
+        )
+
+    def get_duck_array(self) -> np.ndarray:
+        return np.asarray(self)
+
+    def _index_get(
+        self, indexer: ExplicitIndexer, func_name: str
+    ) -> PandasIndexingAdapter | np.ndarray:
+        key: tuple | Any = indexer.tuple
+
+        if len(key) == 1:
+            # unpack key so it can index a pandas.Index object (pandas.Index
+            # objects don't like tuples)
+            (key,) = key
+        elif len(key) == 2 and is_full_slice(key[self._bounds_axis]):
+            # OK to index the pandas.IntervalIndex and keep it wrapped
+            # (drop the bounds axis key)
+            key = key[self._bounds_axis + 1]
+
+        # if length-2 or multidimensional key, convert the index to numpy array
+        # and index the latter
+        if (isinstance(key, tuple) and len(key) == 2) or getattr(key, "ndim", 0) > 1:
+            indexable = NumpyIndexingAdapter(np.asarray(self))
+            return getattr(indexable, func_name)(indexer)
+
+        # otherwise index the pandas IntervalIndex then re-wrap or convert the result
+        result = self.array[key]
+
+        if isinstance(result, pd.IntervalIndex):
+            return type(self)(result, dtype=self.dtype)
+        elif isinstance(result, pd.Interval):
+            dtype = self._get_numpy_dtype()
+            return np.array([result.left, result.right], dtype=dtype)
+        else:
+            return self._convert_scalar(result)
+
+    def transpose(self, order: Iterable[int]) -> Self:
+        transpose = tuple(order) == (1, 0)
+        return type(self)(self.array, dtype=self.dtype, transpose=transpose)
 
 
 class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
