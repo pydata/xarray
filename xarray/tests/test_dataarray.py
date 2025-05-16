@@ -3637,7 +3637,7 @@ class TestDataArray:
 
         s = pd.Series(np.arange(5), index=pd.CategoricalIndex(list("aabbc")))
         arr = DataArray(s)
-        assert "'a'" in repr(arr)  # should not error
+        assert "a a b b" in repr(arr)  # should not error
 
     @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.parametrize("data", ["list", "array", True])

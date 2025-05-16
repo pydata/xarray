@@ -21,6 +21,7 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     requires_dask,
+    requires_pyarrow,
 )
 from xarray.tests.test_dataset import create_test_data
 
@@ -154,19 +155,20 @@ def test_concat_missing_var() -> None:
     assert_identical(actual, expected)
 
 
-def test_concat_categorical() -> None:
+@pytest.mark.parametrize("var", ["var4", pytest.param("var5", marks=requires_pyarrow)])
+def test_concat_extension_array(var) -> None:
     data1 = create_test_data(use_extension_array=True)
     data2 = create_test_data(use_extension_array=True)
     concatenated = concat([data1, data2], dim="dim1")
-    assert (
-        concatenated["var4"]
-        == type(data2["var4"].variable.data)._concat_same_type(
+    assert pd.Series(
+        concatenated[var]
+        == type(data2[var].variable.data)._concat_same_type(
             [
-                data1["var4"].variable.data,
-                data2["var4"].variable.data,
+                data1[var].variable.data,
+                data2[var].variable.data,
             ]
         )
-    ).all()
+    ).all()  # need to wrap in series because pyarrow bool does not support `all`
 
 
 def test_concat_missing_multiple_consecutive_var() -> None:
