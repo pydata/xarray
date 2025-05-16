@@ -47,6 +47,14 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
+Performance
+~~~~~~~~~~~
+- Lazily indexed arrays now use less memory to store keys by avoiding copies
+  in :py:class:`~xarray.indexing.VectorizedIndexer` and :py:class:`~xarray.indexing.OuterIndexer`
+  (:issue:`10316`).
+  By `Jesse Rusak <https://github.com/jder>`_.
+
+
 Documentation
 ~~~~~~~~~~~~~
 
