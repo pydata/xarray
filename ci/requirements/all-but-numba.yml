@@ -41,6 +41,7 @@ dependencies:
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - pydap
   - pytest
+  - pytest-asyncio
   - pytest-cov
   - pytest-env
   - pytest-mypy-plugins

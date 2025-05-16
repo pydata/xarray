@@ -38,6 +38,7 @@ dependencies:
   - pydap
   - pydap-server
   - pytest
+  - pytest-asyncio
   - pytest-cov
   - pytest-env
   - pytest-mypy-plugins
