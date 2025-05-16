@@ -1,28 +1,26 @@
-from typing import TypeVar, Iterable
 import asyncio
 import time
+from collections.abc import Iterable
+from typing import TypeVar
 
-import pytest
 import numpy as np
+import pytest
 
-from xarray.tests import has_zarr_v3, requires_zarr_v3
 import xarray as xr
-
+from xarray.tests import has_zarr_v3, requires_zarr_v3
 
 if has_zarr_v3:
     import zarr
-    from zarr.abc.store import Store
+    from zarr.abc.store import ByteRequest, Store
+    from zarr.core.buffer import Buffer, BufferPrototype
     from zarr.storage import MemoryStore
     from zarr.storage._wrapper import WrapperStore
 
-    from zarr.abc.store import ByteRequest
-    from zarr.core.buffer import Buffer, BufferPrototype
-
     T_Store = TypeVar("T_Store", bound=Store)
-
 
     class LatencyStore(WrapperStore[T_Store]):
         """Works the same way as the zarr LoggingStore"""
+
         latency: float
 
         def __init__(
@@ -42,7 +40,7 @@ if has_zarr_v3:
             """
             super().__init__(store)
             self.latency = latency
-        
+
         def __str__(self) -> str:
             return f"latency-{self._store}"
 
@@ -56,15 +54,19 @@ if has_zarr_v3:
             byte_range: ByteRequest | None = None,
         ) -> Buffer | None:
             await asyncio.sleep(self.latency)
-            return await self._store.get(key=key, prototype=prototype, byte_range=byte_range)
-        
+            return await self._store.get(
+                key=key, prototype=prototype, byte_range=byte_range
+            )
+
         async def get_partial_values(
             self,
             prototype: BufferPrototype,
             key_ranges: Iterable[tuple[str, ByteRequest | None]],
         ) -> list[Buffer | None]:
             await asyncio.sleep(self.latency)
-            return await self._store.get_partial_values(prototype=prototype, key_ranges=key_ranges)
+            return await self._store.get_partial_values(
+                prototype=prototype, key_ranges=key_ranges
+            )
 else:
     LatencyStore = {}
 
@@ -76,9 +78,9 @@ def memorystore() -> "MemoryStore":
         store=memorystore,
         name="foo",
         shape=(10, 10),
-        chunks=(5, 5), 
+        chunks=(5, 5),
         dtype="f4",
-        dimension_names=["x", "y"]
+        dimension_names=["x", "y"],
     )
     z[:, :] = np.random.random((10, 10))
 
@@ -88,7 +90,7 @@ def memorystore() -> "MemoryStore":
 @requires_zarr_v3
 @pytest.mark.asyncio
 async def test_async_load(memorystore):
-    N_LOADS= 10
+    N_LOADS = 10
     LATENCY = 1.0
 
     latencystore = LatencyStore(memorystore, latency=LATENCY)
@@ -97,10 +99,14 @@ async def test_async_load(memorystore):
     # TODO add async load to Dataset and DataArray as well as to Variable
     # TODO change the syntax to `.async.load()`?
     start_time = time.time()
-    tasks = [ds['foo'].variable.async_load() for _ in range(N_LOADS)]
+    tasks = [ds["foo"].variable.async_load() for _ in range(N_LOADS)]
     results = await asyncio.gather(*tasks)
     total_time = time.time() - start_time
-    
+
     assert total_time > LATENCY  # Cannot possibly be quicker than this
-    assert total_time < LATENCY * N_LOADS # If this isn't true we're gaining nothing from async
-    assert abs(total_time - LATENCY) < 0.5  # Should take approximately LATENCY seconds, but allow some buffer
+    assert (
+        total_time < LATENCY * N_LOADS
+    )  # If this isn't true we're gaining nothing from async
+    assert (
+        abs(total_time - LATENCY) < 0.5
+    )  # Should take approximately LATENCY seconds, but allow some buffer

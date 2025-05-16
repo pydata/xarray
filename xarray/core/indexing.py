@@ -862,7 +862,7 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
 
     def _ensure_cached(self):
         self.array = as_indexable(self.array.get_duck_array())
-    
+
     async def _async_ensure_cached(self):
         duck_array = await self.array.async_get_duck_array()
         self.array = as_indexable(duck_array)
@@ -870,7 +870,7 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         self._ensure_cached()
         return self.array.get_duck_array()
-    
+
     async def async_get_duck_array(self):
         await self._async_ensure_cached()
         return await self.array.async_get_duck_array()

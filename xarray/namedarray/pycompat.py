@@ -145,9 +145,11 @@ def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, 
         return data
     else:
         return np.asarray(data)  # type: ignore[return-value]
-    
 
-async def async_to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, _DType]:
+
+async def async_to_duck_array(
+    data: Any, **kwargs: dict[str, Any]
+) -> duckarray[_ShapeType, _DType]:
     from xarray.core.indexing import (
         ExplicitlyIndexed,
         ImplicitToExplicitIndexingAdapter,

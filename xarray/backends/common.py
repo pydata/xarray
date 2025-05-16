@@ -273,7 +273,7 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     def get_duck_array(self, dtype: np.typing.DTypeLike = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return self[key]  # type: ignore[index]
-    
+
     async def async_get_duck_array(self, dtype: np.typing.DTypeLike = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         # TODO use zarr-python async get method here?
