@@ -88,22 +88,19 @@ def memorystore() -> "MemoryStore":
 @requires_zarr_v3
 @pytest.mark.asyncio
 async def test_async_load(memorystore):
-    N_DATASETS = 10
+    N_LOADS= 10
     LATENCY = 1.0
 
     latencystore = LatencyStore(memorystore, latency=LATENCY)
-    datasets = [xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None) for _ in range(N_DATASETS)]
+    ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
 
     # TODO add async load to Dataset and DataArray as well as to Variable
+    # TODO change the syntax to `.async.load()`?
     start_time = time.time()
-    tasks = [ds['foo'].variable.async_load() for ds in datasets]
+    tasks = [ds['foo'].variable.async_load() for _ in range(N_LOADS)]
     results = await asyncio.gather(*tasks)
-    #results = [ds['foo'].variable.load() for ds in datasets]
     total_time = time.time() - start_time
     
     assert total_time > LATENCY  # Cannot possibly be quicker than this
-    assert total_time < LATENCY * N_DATASETS # If this isn't true we're gaining nothing from async
+    assert total_time < LATENCY * N_LOADS # If this isn't true we're gaining nothing from async
     assert abs(total_time - LATENCY) < 0.5  # Should take approximately LATENCY seconds, but allow some buffer
-
-    print(total_time)
-    assert False
