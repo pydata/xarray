@@ -163,7 +163,7 @@ class TestTopLevelMethods(_BaseTest):
         assert isinstance(result.data, self.Array)
 
     def test_merge(self):
-        result = xr.merge([self.x1, self.x2], compat="override")
+        result = xr.merge([self.x1, self.x2], compat="override", join="outer")
         assert isinstance(result.foo.data, self.Array)
 
     def test_where(self):
