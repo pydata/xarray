@@ -32,7 +32,9 @@ class SimpleCoordinateTransform(CoordinateTransform):
     def reverse(self, coord_labels: dict[Hashable, Any]) -> dict[str, Any]:
         return {dim: coord_labels[dim] / self.scale for dim in self.xy_dims}
 
-    def equals(self, other: "CoordinateTransform") -> bool:
+    def equals(
+        self, other: CoordinateTransform, exclude: frozenset[Hashable] | None = None
+    ) -> bool:
         if not isinstance(other, SimpleCoordinateTransform):
             return False
         return self.scale == other.scale
