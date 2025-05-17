@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 from xarray import coding, conventions
 from xarray.backends.chunks import grid_rechunk, validate_grid_chunks_alignment
@@ -819,10 +820,24 @@ class ZarrStore(AbstractWritableDataStore):
             if zarr_array.fill_value is not None:
                 attributes["_FillValue"] = zarr_array.fill_value
         elif "_FillValue" in attributes:
-            attributes["_FillValue"] = FillValueCoder.decode(
-                attributes["_FillValue"], zarr_array.dtype
-            )
+            # TODO update version check for the released version with dtypes
+            #  probably be 3.1
+            import zarr
 
+            if Version(zarr.__version__) >= Version("3.0.6"):
+                attributes["_FillValue"] = (
+                    # Use the new dtype infrastructure instead of doing xarray
+                    # specific fill value decoding
+                    zarr_array.metadata.data_type.from_json_value(
+                        attributes["_FillValue"],
+                        zarr_format=zarr_array.metadata.zarr_format,
+                    )
+                )
+            else:
+                original_zarr_dtype = zarr_array.metadata.data_type
+                attributes["_FillValue"] = FillValueCoder.decode(
+                    attributes["_FillValue"], original_zarr_dtype.value
+                )
         return Variable(dimensions, data, attributes, encoding)
 
     def get_variables(self):
@@ -1070,10 +1085,6 @@ class ZarrStore(AbstractWritableDataStore):
                 if c in encoding:
                     encoding["config"][c] = encoding.pop(c)
 
-        print(fill_value)
-        print(encoding)
-        print(dtype)
-        print(shape)
         zarr_array = self.zarr_group.create(
             name,
             shape=shape,
