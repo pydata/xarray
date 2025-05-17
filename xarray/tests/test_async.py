@@ -146,9 +146,8 @@ class TestAsyncLoad:
         )  # Should take approximately LATENCY seconds, but allow some buffer
 
     async def test_async_load(self, xr_obj):
-        # TODO change the syntax to `.async.load()`?
         async with AsyncTimer().measure() as timer:
-            tasks = [xr_obj.async_load() for _ in range(self.N_LOADS)]
+            tasks = [xr_obj.load_async() for _ in range(self.N_LOADS)]
             results = await asyncio.gather(*tasks)
 
         for result in results:

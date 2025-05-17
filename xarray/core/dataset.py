@@ -552,7 +552,7 @@ class Dataset(
 
         return self
 
-    async def async_load(self, **kwargs) -> Self:
+    async def load_async(self, **kwargs) -> Self:
         # this blocks on chunked arrays but not on lazily indexed arrays
 
         # access .data to coerce everything to numpy or dask arrays
@@ -573,7 +573,7 @@ class Dataset(
         # load everything else sequentially
         for k, v in self.variables.items():
             if k not in lazy_data:
-                await v.async_load()
+                await v.load_async()
 
         return self
 

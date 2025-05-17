@@ -1160,9 +1160,9 @@ class DataArray(
         self._coords = new._coords
         return self
 
-    async def async_load(self, **kwargs) -> Self:
+    async def load_async(self, **kwargs) -> Self:
         temp_ds = self._to_temp_dataset()
-        ds = await temp_ds.async_load(**kwargs)
+        ds = await temp_ds.load_async(**kwargs)
         new = self._from_temp_dataset(ds)
         self._variable = new._variable
         self._coords = new._coords
