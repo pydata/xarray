@@ -552,6 +552,31 @@ class Dataset(
 
         return self
 
+    async def async_load(self, **kwargs) -> Self:
+        # this blocks on chunked arrays but not on lazily indexed arrays
+
+        # access .data to coerce everything to numpy or dask arrays
+        lazy_data = {
+            k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
+        }
+        if lazy_data:
+            chunkmanager = get_chunked_array_type(*lazy_data.values())
+
+            # evaluate all the chunked arrays simultaneously
+            evaluated_data: tuple[np.ndarray[Any, Any], ...] = chunkmanager.compute(
+                *lazy_data.values(), **kwargs
+            )
+
+            for k, data in zip(lazy_data, evaluated_data, strict=False):
+                self.variables[k].data = data
+
+        # load everything else sequentially
+        for k, v in self.variables.items():
+            if k not in lazy_data:
+                await v.async_load()
+
+        return self
+
     def __dask_tokenize__(self) -> object:
         from dask.base import normalize_token
 

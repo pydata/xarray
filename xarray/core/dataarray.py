@@ -1160,6 +1160,14 @@ class DataArray(
         self._coords = new._coords
         return self
 
+    async def async_load(self, **kwargs) -> Self:
+        temp_ds = self._to_temp_dataset()
+        ds = await temp_ds.async_load(**kwargs)
+        new = self._from_temp_dataset(ds)
+        self._variable = new._variable
+        self._coords = new._coords
+        return self
+
     def compute(self, **kwargs) -> Self:
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return a new array.

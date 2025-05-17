@@ -101,27 +101,70 @@ def memorystore() -> "MemoryStore":
 @requires_zarr_v3
 @pytest.mark.asyncio
 class TestAsyncLoad:
-    async def test_async_load_variable(self, memorystore):
-        N_LOADS = 5
-        LATENCY = 1.0
+    N_LOADS = 10
+    LATENCY = 1.0
 
-        latencystore = LatencyStore(memorystore, latency=LATENCY)
+    # TODO refactor these tests
+    async def test_async_load_variable(self, memorystore):
+        latencystore = LatencyStore(memorystore, latency=self.LATENCY)
         ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
 
         # TODO add async load to Dataset and DataArray as well as to Variable
         # TODO change the syntax to `.async.load()`?
         start_time = time.time()
-        tasks = [ds["foo"].variable.async_load() for _ in range(N_LOADS)]
+        tasks = [ds["foo"].variable.async_load() for _ in range(self.N_LOADS)]
         results = await asyncio.gather(*tasks)
         total_time = time.time() - start_time
 
         for result in results:
             xrt.assert_identical(result, ds["foo"].variable.load())
 
-        assert total_time > LATENCY  # Cannot possibly be quicker than this
+        assert total_time > self.LATENCY  # Cannot possibly be quicker than this
         assert (
-            total_time < LATENCY * N_LOADS
+            total_time < self.LATENCY * self.N_LOADS
         )  # If this isn't true we're gaining nothing from async
         assert (
-            abs(total_time - LATENCY) < 0.5
+            abs(total_time - self.LATENCY) < 0.5
+        )  # Should take approximately LATENCY seconds, but allow some buffer
+
+    async def test_async_load_dataarray(self, memorystore):
+        latencystore = LatencyStore(memorystore, latency=self.LATENCY)
+        ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
+
+        # TODO change the syntax to `.async.load()`?
+        start_time = time.time()
+        tasks = [ds["foo"].async_load() for _ in range(self.N_LOADS)]
+        results = await asyncio.gather(*tasks)
+        total_time = time.time() - start_time
+
+        for result in results:
+            xrt.assert_identical(result, ds["foo"].load())
+
+        assert total_time > self.LATENCY  # Cannot possibly be quicker than this
+        assert (
+            total_time < self.LATENCY * self.N_LOADS
+        )  # If this isn't true we're gaining nothing from async
+        assert (
+            abs(total_time - self.LATENCY) < 0.5
+        )  # Should take approximately LATENCY seconds, but allow some buffer
+
+    async def test_async_load_dataset(self, memorystore):
+        latencystore = LatencyStore(memorystore, latency=self.LATENCY)
+        ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
+
+        # TODO change the syntax to `.async.load()`?
+        start_time = time.time()
+        tasks = [ds.async_load() for _ in range(self.N_LOADS)]
+        results = await asyncio.gather(*tasks)
+        total_time = time.time() - start_time
+
+        for result in results:
+            xrt.assert_identical(result, ds.load())
+
+        assert total_time > self.LATENCY  # Cannot possibly be quicker than this
+        assert (
+            total_time < self.LATENCY * self.N_LOADS
+        )  # If this isn't true we're gaining nothing from async
+        assert (
+            abs(total_time - self.LATENCY) < 0.5
         )  # Should take approximately LATENCY seconds, but allow some buffer
