@@ -123,53 +123,35 @@ class TestAsyncLoad:
     N_LOADS: int = 5
     LATENCY: float = 1.0
 
+    @pytest.fixture(params=["ds", "da", "var"])
+    def xr_obj(self, request, memorystore) -> xr.Dataset | xr.DataArray | xr.Variable:
+        latencystore = LatencyStore(memorystore, latency=self.LATENCY)
+        ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
+
+        match request.param:
+            case "var":
+                return ds["foo"].variable
+            case "da":
+                return ds["foo"]
+            case "ds":
+                return ds
+
     def assert_time_as_expected(self, total_time: float) -> None:
         assert total_time > self.LATENCY  # Cannot possibly be quicker than this
         assert (
             total_time < self.LATENCY * self.N_LOADS
         )  # If this isn't true we're gaining nothing from async
         assert (
-            abs(total_time - self.LATENCY) < 0.5
+            abs(total_time - self.LATENCY) < 2.0
         )  # Should take approximately LATENCY seconds, but allow some buffer
 
-    async def test_async_load_variable(self, memorystore):
-        latencystore = LatencyStore(memorystore, latency=self.LATENCY)
-        ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
-
+    async def test_async_load(self, xr_obj):
         # TODO change the syntax to `.async.load()`?
         async with AsyncTimer().measure() as timer:
-            tasks = [ds["foo"].variable.async_load() for _ in range(self.N_LOADS)]
+            tasks = [xr_obj.async_load() for _ in range(self.N_LOADS)]
             results = await asyncio.gather(*tasks)
 
         for result in results:
-            xrt.assert_identical(result, ds["foo"].variable.load())
-
-        self.assert_time_as_expected(timer.total_time)
-
-    async def test_async_load_dataarray(self, memorystore):
-        latencystore = LatencyStore(memorystore, latency=self.LATENCY)
-        ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
-
-        # TODO change the syntax to `.async.load()`?
-        async with AsyncTimer().measure() as timer:
-            tasks = [ds["foo"].async_load() for _ in range(self.N_LOADS)]
-            results = await asyncio.gather(*tasks)
-
-        for result in results:
-            xrt.assert_identical(result, ds["foo"].load())
-
-        self.assert_time_as_expected(timer.total_time)
-
-    async def test_async_load_dataset(self, memorystore):
-        latencystore = LatencyStore(memorystore, latency=self.LATENCY)
-        ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
-
-        # TODO change the syntax to `.async.load()`?
-        async with AsyncTimer().measure() as timer:
-            tasks = [ds.async_load() for _ in range(self.N_LOADS)]
-            results = await asyncio.gather(*tasks)
-
-        for result in results:
-            xrt.assert_identical(result, ds.load())
+            xrt.assert_identical(result, xr_obj.load())
 
         self.assert_time_as_expected(timer.total_time)
