@@ -30,7 +30,8 @@ We look forward to hearing from you!
         intro[Welcome to Xarray! How can we help?]:::quesNodefmt
         usage([fa:fa-chalkboard-user <a href="https://tutorial.xarray.dev">Xarray Tutorial</a>
             fab:fa-readme <a href="https://docs.xarray.dev">Xarray Docs</a>
-            fab:fa-google fab:fa-stack-overflow <a href="https://stackoverflow.com/questions/tagged/python-xarray">Google/Stack Exchange</a>
+            fab:fa-stack-overflow <a href="https://stackoverflow.com/questions/tagged/python-xarray">Stack Exchange</a>
+            fab:fa-google <a href="https://www.google.com">Ask Google</a>
             fa:fa-robot Ask AI ChatBot]):::ansNodefmt
         extensions([Extension docs:
             fab:fa-readme <a href="https://docs.dask.org">Dask</a>
