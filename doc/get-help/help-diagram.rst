@@ -79,6 +79,20 @@ We look forward to hearing from you!
         classDef ansNodefmt font-size:18pt,fill:#4a4a4a,stroke:#17afb4,stroke-width:3
         linkStyle default font-size:16pt,stroke-width:4
 
+
+Flowchart links
+---------------
+- `Xarray Tutorials <https://tutorial.xarray.dev/>`__
+- `Xarray Docs <https://docs.xarray.dev>`__
+- `Stack Exchange <https://stackoverflow.com/questions/tagged/python-xarray>`__
+- `Xarray Discussions <https://github.com/pydata/xarray/discussions>`__
+- `Xarray Discord <https://discord.com/invite/wEKPCt4PDu>`__
+- `Xarray Office Hours <https://github.com/pydata/xarray/discussions/categories/office-hours>`__
+- `Pangeo Discourse <https://discourse.pangeo.io/>`__
+- `Xarray Issues <https://github.com/pydata/xarray/issues>`__
+- :ref:`contributing`
+- :ref:`developers-meeting`
+
 .. toctree::
    :maxdepth: 1
    :hidden:
