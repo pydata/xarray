@@ -4,6 +4,7 @@ import logging
 import os
 import time
 import traceback
+from abc import ABC, abstractmethod
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from glob import glob
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, Union, overload
@@ -267,8 +268,14 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
             time.sleep(1e-3 * next_delay)
 
 
-class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
+class BackendArray(ABC, NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     __slots__ = ()
+
+    @abstractmethod
+    def __getitem__(key: indexing.ExplicitIndexer) -> np.typing.ArrayLike: ...
+
+    async def async_getitem(key: indexing.ExplicitIndexer) -> np.typing.ArrayLike:
+        raise NotImplementedError("Backend does not not support asynchronous loading")
 
     def get_duck_array(self, dtype: np.typing.DTypeLike = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
@@ -276,9 +283,7 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
 
     async def async_get_duck_array(self, dtype: np.typing.DTypeLike = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
-        # TODO use zarr-python async get method here?
-        print("async inside BackendArray")
-        return await self.getitem(key)  # type: ignore[index]
+        return await self.async_getitem(key)  # type: ignore[index]
 
 
 class AbstractDataStore:
