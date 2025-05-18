@@ -4,12 +4,14 @@ Getting Help
 Navigating the wealth of resources available for Xarray can be overwhelming.
 We've created this flow chart to help guide you towards the best way to get help, depending on what you're working towards.
 
-Also be sure to check out our "FAQ" and "How do I..." pages in this section for solutions to common questions.
+Also be sure to check out our :ref:`faq`. and :ref:`howdoi` pages for solutions to common questions.
 
-A major strength of Xarray is in the user community. Sometimes you might not have a concrete question by would simply like to connect with other Xarray users. We have a few
+A major strength of Xarray is in the user community. Sometimes you might not yet have a concrete question but would simply like to connect with other Xarray users. We have a few accounts on different social platforms for that! :ref:`socials`.
 
 We look forward to hearing from you!
 
+Help Flowchart
+--------------
 ..
    _comment: mermaid Flowcharg "link" text gets secondary color background, SVG icon fill gets primary color
 
