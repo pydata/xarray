@@ -16,9 +16,17 @@ We look forward to hearing from you!
 .. raw:: html
 
     <style>
-      /* Ensure PST blue links don't override mermaid white text */
-      a {
+      /* Ensure PST link colors don't override mermaid text colors */
+      .mermaid a {
         color: white;
+      }
+      .mermaid a:hover {
+        color: magenta;
+        text-decoration-color: magenta;
+      }
+      .mermaid a:visited {
+        color: white;
+        text-decoration-color: white;
       }
     </style>
 
