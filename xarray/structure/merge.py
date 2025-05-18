@@ -283,7 +283,7 @@ def merge_collected(
                                 "conflicting attribute values on combined "
                                 f"variable {name!r}:\nfirst value: {variable.attrs!r}\nsecond value: {other_variable.attrs!r}"
                             )
-                # Make a shallow copy to so that assigning merged_vars[name].attrs 
+                # Make a shallow copy to so that assigning merged_vars[name].attrs
                 # does not affect the original input variable.
                 merged_vars[name] = variable.copy(False)
                 merged_vars[name].attrs = merge_attrs(

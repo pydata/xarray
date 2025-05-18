@@ -2227,7 +2227,7 @@ def test_where_attrs() -> None:
     actual = xr.where(cond, x, y, keep_attrs=False)
     expected = xr.DataArray([1, 0], coords={"a": [0, 1]})
     assert_identical(expected, actual)
-    assert_identical(expected.coords['a'], actual.coords['a'])
+    assert_identical(expected.coords["a"], actual.coords["a"])
     # Check also that input coordinate attributes weren't modified by reference
     assert x["a"].attrs == {"attr": "x_coord"}
     assert y["a"].attrs == {"attr": "y_coord"}
