@@ -325,39 +325,42 @@ information on plugins.
 How to support lazy loading
 +++++++++++++++++++++++++++
 
-If you want to make your backend effective with big datasets, then you should
-support lazy loading.
-Basically, you shall replace the :py:class:`numpy.ndarray` inside the
-variables with a custom class that supports lazy loading indexing.
+If you want to make your backend effective with big datasets, then you should take advantage of xarray's 
+support for lazy loading and indexing.
+
+Basically, when your backend constructs the ``Variable`` objects,
+you need to replace the :py:class:`numpy.ndarray` inside the
+variables with a custom :py:class:`~xarray.backends.BackendArray` subclass that supports lazy loading and indexing.
 See the example below:
 
 .. code-block:: python
-
     backend_array = MyBackendArray()
     data = indexing.LazilyIndexedArray(backend_array)
     var = xr.Variable(dims, data, attrs=attrs, encoding=encoding)
 
 Where:
 
-- :py:class:`~xarray.core.indexing.LazilyIndexedArray` is a class
-  provided by Xarray that manages the lazy loading.
-- ``MyBackendArray`` shall be implemented by the backend and shall inherit
+- :py:class:`~xarray.core.indexing.LazilyIndexedArray` is a wrapper class
+  provided by Xarray that manages the lazy loading and indexing.
+- ``MyBackendArray`` should be implemented by the backend and must inherit
   from :py:class:`~xarray.backends.BackendArray`.
 
 BackendArray subclassing
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-The BackendArray subclass shall implement the following method and attributes:
+The BackendArray subclass must implement the following method and attributes:
 
-- the ``__getitem__`` method that takes in input an index and returns a
-  `NumPy <https://numpy.org/>`__ array
-- the ``shape`` attribute
+- the ``__getitem__`` method that takes an index as an input and returns a
+  `NumPy <https://numpy.org/>`__ array,
+- the ``shape`` attribute,
 - the ``dtype`` attribute.
 
-Xarray supports different type of :doc:`/user-guide/indexing`, that can be
-grouped in three types of indexes
+It may also optionally implement an additional ``async_getitem`` method.
+
+Xarray supports different types of :doc:`/user-guide/indexing`, that can be
+grouped in three types of indexes:
 :py:class:`~xarray.core.indexing.BasicIndexer`,
-:py:class:`~xarray.core.indexing.OuterIndexer` and
+:py:class:`~xarray.core.indexing.OuterIndexer`, and
 :py:class:`~xarray.core.indexing.VectorizedIndexer`.
 This implies that the implementation of the method ``__getitem__`` can be tricky.
 In order to simplify this task, Xarray provides a helper function,
@@ -413,8 +416,22 @@ input the ``key``, the array ``shape`` and the following parameters:
 For more details see
 :py:class:`~xarray.core.indexing.IndexingSupport` and :ref:`RST indexing`.
 
+Async support
+^^^^^^^^^^^^^
+
+Backends can also optionally support loading data asynchronously via xarray's asynchronous loading methods
+(e.g. ``~xarray.Dataset.load_async``).
+To support async loading the `BackendArray` subclass must additionally implement the ``BackendArray.async_getitem`` method.
+
+Note that implementing this method is only necessary if you want to be able to load data from different xarray objects concurrently.
+Even without this method your ``BackendArray`` implementation is still free to concurrently load chunks of data for a single ``Variable`` itself, 
+so long as it does so behind the synchronous ``__getitem__`` interface.
+
+Dask support
+^^^^^^^^^^^^
+
 In order to support `Dask Distributed <https://distributed.dask.org/>`__ and
-:py:mod:`multiprocessing`, ``BackendArray`` subclass should be serializable
+:py:mod:`multiprocessing`, the ``BackendArray`` subclass should be serializable
 either with :ref:`io.pickle` or
 `cloudpickle <https://github.com/cloudpipe/cloudpickle>`__.
 That implies that all the reference to open files should be dropped. For
