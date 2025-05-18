@@ -10,8 +10,20 @@ A major strength of Xarray is in the user community. Sometimes you might not hav
 
 We look forward to hearing from you!
 
+..
+   _comment: mermaid Flowcharg "link" text gets secondary color background, SVG icon fill gets primary color
+
+.. raw:: html
+
+    <style>
+      /* Ensure PST blue links don't override mermaid white text */
+      a {
+        color: white;
+      }
+    </style>
+
 .. mermaid::
-    :config: {"theme":"base","themeVariables":{"fontSize":"20px","darkMode":"true","primaryColor":"#0e4666","primaryTextColor":"#fff","primaryBorderColor":"#59c7d6","lineColor":"#e28126","secondaryColor":"#8e8d99"}}
+    :config: {"theme":"base","themeVariables":{"fontSize":"20px","primaryColor":"#fff","primaryTextColor":"#fff","primaryBorderColor":"#59c7d6","lineColor":"#e28126","secondaryColor":"#767985"}}
     :alt: Flowchart illustrating the different ways to access help using or contributing to Xarray.
 
     flowchart TD
@@ -19,7 +31,7 @@ We look forward to hearing from you!
         usage([fa:fa-chalkboard-user <a href="https://tutorial.xarray.dev">Xarray Tutorial</a>
             fab:fa-readme <a href="https://docs.xarray.dev">Xarray Docs</a>
             fab:fa-google fab:fa-stack-overflow <a href="https://stackoverflow.com/questions/tagged/python-xarray">Google/Stack Exchange</a>
-            fa:fa-robot Ask AI/a Language Learning Model]):::ansNodefmt
+            fa:fa-robot Ask AI ChatBot]):::ansNodefmt
         extensions([Extension docs:
             fab:fa-readme <a href="https://docs.dask.org">Dask</a>
             fab:fa-readme <a href="https://corteva.github.io/rioxarray">Rioxarray</a>]):::ansNodefmt
@@ -54,9 +66,9 @@ We look forward to hearing from you!
         pr <-->|my PR is quiet| dev
         contrib -->pr
 
-        classDef quesNodefmt font-size:18pt,fill:#17afb4,stroke:#0e4666,stroke-width:2
-        classDef ansNodefmt stroke-width:2,color:white
-        linkStyle default stroke-width:4
+        classDef quesNodefmt font-size:20pt,fill:#0e4666,stroke:#59c7d6,stroke-width:3
+        classDef ansNodefmt font-size:18pt,fill:#4a4a4a,stroke:#17afb4,stroke-width:3
+        linkStyle default font-size:16pt,stroke-width:4
 
 .. toctree::
    :maxdepth: 1
