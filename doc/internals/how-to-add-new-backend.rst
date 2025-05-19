@@ -325,7 +325,7 @@ information on plugins.
 How to support lazy loading
 +++++++++++++++++++++++++++
 
-If you want to make your backend effective with big datasets, then you should take advantage of xarray's 
+If you want to make your backend effective with big datasets, then you should take advantage of xarray's
 support for lazy loading and indexing.
 
 Basically, when your backend constructs the ``Variable`` objects,
@@ -334,6 +334,7 @@ variables with a custom :py:class:`~xarray.backends.BackendArray` subclass that 
 See the example below:
 
 .. code-block:: python
+
     backend_array = MyBackendArray()
     data = indexing.LazilyIndexedArray(backend_array)
     var = xr.Variable(dims, data, attrs=attrs, encoding=encoding)
@@ -424,7 +425,7 @@ Backends can also optionally support loading data asynchronously via xarray's as
 To support async loading the `BackendArray` subclass must additionally implement the ``BackendArray.async_getitem`` method.
 
 Note that implementing this method is only necessary if you want to be able to load data from different xarray objects concurrently.
-Even without this method your ``BackendArray`` implementation is still free to concurrently load chunks of data for a single ``Variable`` itself, 
+Even without this method your ``BackendArray`` implementation is still free to concurrently load chunks of data for a single ``Variable`` itself,
 so long as it does so behind the synchronous ``__getitem__`` interface.
 
 Dask support
