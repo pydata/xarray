@@ -39,7 +39,7 @@ from xarray import (
     open_mfdataset,
     save_mfdataset,
 )
-from xarray.backends.common import robust_getitem
+from xarray.backends.common import robust_getitem, ChunksUtilities
 from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint
 from xarray.backends.netcdf3 import _nc3_dtype_coercions
 from xarray.backends.netCDF4_ import (
@@ -6759,3 +6759,16 @@ def test_h5netcdf_storage_options() -> None:
             storage_options={"skip_instance_cache": False},
         ) as ds:
             assert_identical(xr.concat([ds1, ds2], dim="time"), ds)
+
+
+def test_align_variable_chunks():
+    arr = xr.DataArray(
+        list(range(11)), dims=["a"], coords={"a": list(range(11))}, name="foo"
+    )
+    region_arr = arr.isel(a=slice(0, 5)).chunk(a=(3, 1, 1))
+    result = ChunksUtilities.align_variable_chunks(
+        region_arr.variable,
+        enc_chunks=(3,),
+        regions=(slice(0, 5),),
+    )
+    assert result.chunks == ((3, 2),)

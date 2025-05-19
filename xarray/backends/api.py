@@ -2132,6 +2132,7 @@ def to_zarr(
     append_dim: Hashable | None = None,
     region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
+    align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
@@ -2155,6 +2156,7 @@ def to_zarr(
     append_dim: Hashable | None = None,
     region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
+    align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
@@ -2176,6 +2178,7 @@ def to_zarr(
     append_dim: Hashable | None = None,
     region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
+    align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
     zarr_format: int | None = None,
@@ -2225,13 +2228,17 @@ def to_zarr(
         append_dim=append_dim,
         write_region=region,
         safe_chunks=safe_chunks,
+        align_chunks=align_chunks,
         zarr_version=zarr_version,
         zarr_format=zarr_format,
         write_empty=write_empty_chunks,
         **kwargs,
     )
 
-    dataset = zstore._validate_and_autodetect_region(dataset)
+    dataset = zstore._validate_and_autodetect_region(
+        dataset,
+
+    )
     zstore._validate_encoding(encoding)
 
     writer = ArrayWriter()

@@ -20,6 +20,7 @@ from xarray.backends.common import (
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
     ensure_dtype_not_object,
+    ChunksUtilities
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
@@ -634,6 +635,7 @@ class ZarrStore(AbstractWritableDataStore):
         "_use_zarr_fill_value_as_mask",
         "_write_empty",
         "_write_region",
+        "_align_chunks",
         "zarr_group",
     )
 
@@ -651,6 +653,7 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
         safe_chunks=True,
+        align_chunks=False,
         zarr_version=None,
         zarr_format=None,
         use_zarr_fill_value_as_mask=None,
@@ -698,6 +701,7 @@ class ZarrStore(AbstractWritableDataStore):
                 write_empty,
                 close_store_on_close,
                 use_zarr_fill_value_as_mask,
+                align_chunks=align_chunks,
                 cache_members=cache_members,
             )
             for group, group_store in group_members.items()
@@ -718,6 +722,7 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
         safe_chunks=True,
+        align_chunks=False,
         zarr_version=None,
         zarr_format=None,
         use_zarr_fill_value_as_mask=None,
@@ -753,7 +758,8 @@ class ZarrStore(AbstractWritableDataStore):
             write_empty,
             close_store_on_close,
             use_zarr_fill_value_as_mask,
-            cache_members,
+            align_chunks=align_chunks,
+            cache_members=cache_members,
         )
 
     def __init__(
@@ -767,8 +773,13 @@ class ZarrStore(AbstractWritableDataStore):
         write_empty: bool | None = None,
         close_store_on_close: bool = False,
         use_zarr_fill_value_as_mask=None,
+        align_chunks: bool = False,
         cache_members: bool = True,
     ):
+        if align_chunks:
+            # Disabled the safe_chunks validations if the alignment is going to be applied
+            safe_chunks = False
+
         self.zarr_group = zarr_group
         self._read_only = self.zarr_group.read_only
         self._synchronizer = self.zarr_group.synchronizer
@@ -777,6 +788,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._consolidate_on_close = consolidate_on_close
         self._append_dim = append_dim
         self._write_region = write_region
+        self._align_chunks = align_chunks
         self._safe_chunks = safe_chunks
         self._write_empty = write_empty
         self._close_store_on_close = close_store_on_close
@@ -1139,7 +1151,13 @@ class ZarrStore(AbstractWritableDataStore):
         zarr_array = _put_attrs(zarr_array, attrs)
         return zarr_array
 
-    def set_variables(self, variables, check_encoding_set, writer, unlimited_dims=None):
+    def set_variables(
+        self,
+        variables: dict[str, Variable],
+        check_encoding_set,
+        writer,
+        unlimited_dims=None
+    ):
         """
         This provides a centralized method to set the variables on the data
         store.
@@ -1244,6 +1262,12 @@ class ZarrStore(AbstractWritableDataStore):
                     attrs=encoded_attrs,
                 )
 
+            if self._align_chunks:
+                v = ChunksUtilities.align_variable_chunks(
+                    v,
+                    encoding["chunks"],
+                    region,
+                )
             writer.add(v.data, zarr_array, region)
 
     def close(self) -> None:
