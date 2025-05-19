@@ -433,6 +433,20 @@ class TestDataArrayRolling:
         chunked_result = data.chunk({"x": 1}).rolling(x=3, min_periods=1).mean()
         assert chunked_result.dtype == unchunked_result.dtype
 
+    def test_rolling_mean_bool(self) -> None:
+        bool_raster = DataArray(
+            data=[0, 1, 1, 0, 1, 0],
+            dims=("x"),
+        ).astype(bool)
+
+        expected = DataArray(
+            data=[np.nan, 2 / 3, 2 / 3, 2 / 3, 1 / 3, np.nan],
+            dims=("x"),
+        )
+
+        result = bool_raster.rolling(x=3, center=True).mean()
+        assert_allclose(result, expected)
+
 
 @requires_numbagg
 class TestDataArrayRollingExp:
@@ -606,7 +620,7 @@ class TestDatasetRolling:
 
         # Construct dataset with chunk size of (400, 400, 1) or 1.22 MiB
         da = DataArray(
-            dims=["latitute", "longitude", "time"],
+            dims=["latitude", "longitude", "time"],
             data=dask.array.random.random((400, 400, 400), chunks=(-1, -1, 1)),
             name="foo",
         )

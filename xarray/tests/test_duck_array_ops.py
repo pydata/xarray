@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import copy
 import datetime as dt
+import pickle
 import warnings
 
 import numpy as np
@@ -8,7 +10,7 @@ import pandas as pd
 import pytest
 from numpy import array, nan
 
-from xarray import DataArray, Dataset, cftime_range, concat
+from xarray import DataArray, Dataset, concat, date_range
 from xarray.coding.times import _NS_PER_TIME_DELTA
 from xarray.core import dtypes, duck_array_ops
 from xarray.core.duck_array_ops import (
@@ -196,8 +198,18 @@ class TestOps:
         concatenated = concatenate(
             (PandasExtensionArray(arrow1), PandasExtensionArray(arrow2))
         )
-        assert concatenated[2]["x"] == 3
-        assert concatenated[3]["y"]
+        assert concatenated[2].array[0]["x"] == 3
+        assert concatenated[3].array[0]["y"]
+
+    @requires_pyarrow
+    def test_extension_array_copy_arrow_type(self):
+        arr = pd.array([pd.NA, 1, 2], dtype="int64[pyarrow]")
+        # Relying on the `__getattr__` of `PandasExtensionArray` to do the deep copy
+        # recursively only fails for `int64[pyarrow]` and similar types so this
+        # test ensures that copying still works there.
+        assert isinstance(
+            copy.deepcopy(PandasExtensionArray(arr), memo=None).array, type(arr)
+        )
 
     def test___getitem__extension_duck_array(self, categorical1):
         extension_duck_array = PandasExtensionArray(categorical1)
@@ -367,7 +379,7 @@ def construct_dataarray(dim_num, dtype, contains_nan, dask):
     da = DataArray(array, dims=dims, coords={"x": np.arange(16)}, name="da")
 
     if dask and has_dask:
-        chunks = {d: 4 for d in dims}
+        chunks = dict.fromkeys(dims, 4)
         da = da.chunk(chunks)
 
     return da
@@ -454,7 +466,7 @@ def test_cftime_datetime_mean(dask):
     if dask and not has_dask:
         pytest.skip("requires dask")
 
-    times = cftime_range("2000", periods=4)
+    times = date_range("2000", periods=4, use_cftime=True)
     da = DataArray(times, dims=["time"])
     da_2d = DataArray(times.values.reshape(2, 2))
 
@@ -481,6 +493,19 @@ def test_cftime_datetime_mean(dask):
     assert_equal(result, expected)
 
 
+@pytest.mark.parametrize("dask", [False, True])
+def test_mean_over_long_spanning_datetime64(dask) -> None:
+    if dask and not has_dask:
+        pytest.skip("requires dask")
+    array = np.array(["1678-01-01", "NaT", "2260-01-01"], dtype="datetime64[ns]")
+    da = DataArray(array, dims=["time"])
+    if dask:
+        da = da.chunk({"time": 2})
+    expected = DataArray(np.array("1969-01-01", dtype="datetime64[ns]"))
+    result = da.mean()
+    assert_equal(result, expected)
+
+
 @requires_cftime
 @requires_dask
 def test_mean_over_non_time_dim_of_dataset_with_dask_backed_cftime_data():
@@ -488,7 +513,10 @@ def test_mean_over_non_time_dim_of_dataset_with_dask_backed_cftime_data():
     # dimension still fails if the time variable is dask-backed.
     ds = Dataset(
         {
-            "var1": (("time",), cftime_range("2021-10-31", periods=10, freq="D")),
+            "var1": (
+                ("time",),
+                date_range("2021-10-31", periods=10, freq="D", use_cftime=True),
+            ),
             "var2": (("x",), list(range(10))),
         }
     )
@@ -887,7 +915,9 @@ def test_datetime_to_numeric_cftime(dask):
     if dask and not has_dask:
         pytest.skip("requires dask")
 
-    times = cftime_range("2000", periods=5, freq="7D", calendar="standard").values
+    times = date_range(
+        "2000", periods=5, freq="7D", calendar="standard", use_cftime=True
+    ).values
     if dask:
         import dask.array
 
@@ -933,8 +963,8 @@ def test_datetime_to_numeric_potential_overflow(time_unit: PDDatetimeUnitOptions
         pytest.skip("out-of-bounds datetime64 overflow")
     dtype = f"M8[{time_unit}]"
     times = pd.date_range("2000", periods=5, freq="7D").values.astype(dtype)
-    cftimes = cftime_range(
-        "2000", periods=5, freq="7D", calendar="proleptic_gregorian"
+    cftimes = date_range(
+        "2000", periods=5, freq="7D", calendar="proleptic_gregorian", use_cftime=True
     ).values
 
     offset = np.datetime64("0001-01-01", time_unit)
@@ -1025,30 +1055,39 @@ def test_least_squares(use_dask, skipna):
 @requires_dask
 @requires_bottleneck
 @pytest.mark.parametrize("method", ["sequential", "blelloch"])
-def test_push_dask(method):
+@pytest.mark.parametrize(
+    "arr",
+    [
+        [np.nan, 1, 2, 3, np.nan, np.nan, np.nan, np.nan, 4, 5, np.nan, 6],
+        [
+            np.nan,
+            np.nan,
+            np.nan,
+            2,
+            np.nan,
+            np.nan,
+            np.nan,
+            9,
+            np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
+        ],
+    ],
+)
+def test_push_dask(method, arr):
     import bottleneck
-    import dask.array
+    import dask.array as da
 
-    array = np.array([np.nan, 1, 2, 3, np.nan, np.nan, np.nan, np.nan, 4, 5, np.nan, 6])
+    arr = np.array(arr)
+    chunks = list(range(1, 11)) + [(1, 2, 3, 2, 2, 1, 1)]
 
     for n in [None, 1, 2, 3, 4, 5, 11]:
-        expected = bottleneck.push(array, axis=0, n=n)
-        for c in range(1, 11):
+        expected = bottleneck.push(arr, axis=0, n=n)
+        for c in chunks:
             with raise_if_dask_computes():
-                actual = push(
-                    dask.array.from_array(array, chunks=c), axis=0, n=n, method=method
-                )
+                actual = push(da.from_array(arr, chunks=c), axis=0, n=n, method=method)
             np.testing.assert_equal(actual, expected)
-
-        # some chunks of size-1 with NaN
-        with raise_if_dask_computes():
-            actual = push(
-                dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)),
-                axis=0,
-                n=n,
-                method=method,
-            )
-        np.testing.assert_equal(actual, expected)
 
 
 def test_extension_array_equality(categorical1, int1):
@@ -1069,6 +1108,17 @@ def test_extension_array_repr(int1):
     assert repr(int1) in repr(int_duck_array)
 
 
-def test_extension_array_attr(int1):
-    int_duck_array = PandasExtensionArray(int1)
-    assert (~int_duck_array.fillna(10)).all()
+def test_extension_array_attr():
+    array = pd.Categorical(["cat2", "cat1", "cat2", "cat3", "cat1"])
+    wrapped = PandasExtensionArray(array)
+    assert_array_equal(array.categories, wrapped.categories)
+    assert array.nbytes == wrapped.nbytes
+
+    roundtripped = pickle.loads(pickle.dumps(wrapped))
+    assert isinstance(roundtripped, PandasExtensionArray)
+    assert (roundtripped == wrapped).all()
+
+    interval_array = pd.arrays.IntervalArray.from_breaks([0, 1, 2, 3], closed="right")
+    wrapped = PandasExtensionArray(interval_array)
+    assert_array_equal(wrapped.left, interval_array.left, strict=True)
+    assert wrapped.closed == interval_array.closed

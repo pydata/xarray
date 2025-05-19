@@ -236,7 +236,7 @@ class CFTimeIndex(pd.Index):
 
     See Also
     --------
-    cftime_range
+    date_range
     """
 
     _data: np.ndarray
@@ -294,7 +294,7 @@ class CFTimeIndex(pd.Index):
                 offset=offset,
                 first_row_offset=offset,
             )
-            datastr = "\n".join([front_str, f"{' '*offset}...", end_str])
+            datastr = "\n".join([front_str, f"{' ' * offset}...", end_str])
 
         attrs_str = format_attrs(self)
         # oneliner only if smaller than display_width
@@ -302,8 +302,10 @@ class CFTimeIndex(pd.Index):
         if len(full_repr_str) > display_width:
             # if attrs_str too long, one per line
             if len(attrs_str) >= display_width - offset:
-                attrs_str = attrs_str.replace(",", f",\n{' '*(offset-2)}")
-            full_repr_str = f"{klass_name}([{datastr}],\n{' '*(offset-1)}{attrs_str})"
+                attrs_str = attrs_str.replace(",", f",\n{' ' * (offset - 2)}")
+            full_repr_str = (
+                f"{klass_name}([{datastr}],\n{' ' * (offset - 1)}{attrs_str})"
+            )
 
         return full_repr_str
 
@@ -461,7 +463,7 @@ class CFTimeIndex(pd.Index):
     ) -> Self:
         """Shift the CFTimeIndex a multiple of the given frequency.
 
-        See the documentation for :py:func:`~xarray.cftime_range` for a
+        See the documentation for :py:func:`~xarray.date_range` for a
         complete listing of valid frequency strings.
 
         Parameters
@@ -481,7 +483,7 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> index = xr.cftime_range("2000", periods=1, freq="ME")
+        >>> index = xr.date_range("2000", periods=1, freq="ME", use_cftime=True)
         >>> index
         CFTimeIndex([2000-01-31 00:00:00],
                     dtype='object', length=1, calendar='standard', freq=None)
@@ -584,7 +586,9 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> times = xr.cftime_range("2000", periods=2, calendar="gregorian")
+        >>> times = xr.date_range(
+        ...     "2000", periods=2, calendar="gregorian", use_cftime=True
+        ... )
         >>> times
         CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
                     dtype='object', length=2, calendar='standard', freq=None)
@@ -650,8 +654,12 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> rng = xr.cftime_range(
-        ...     start="2000", periods=5, freq="2MS", calendar="noleap"
+        >>> rng = xr.date_range(
+        ...     start="2000",
+        ...     periods=5,
+        ...     freq="2MS",
+        ...     calendar="noleap",
+        ...     use_cftime=True,
         ... )
         >>> rng.strftime("%B %d, %Y, %r")
         Index(['January 01, 2000, 12:00:00 AM', 'March 01, 2000, 12:00:00 AM',
