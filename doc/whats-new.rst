@@ -25,6 +25,8 @@ v2025.05.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added new asynchronous loading methods :py:meth:`~xarray.Dataset.load_async`, :py:meth:`~xarray.DataArray.load_async`, :py:meth:`~xarray.Variable.load_async`.
+  (:issue:`10326`, :pull:`10327`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -38,7 +40,6 @@ Bug fixes
 ~~~~~~~~~
 - Fix :py:class:`~xarray.groupers.BinGrouper` when ``labels`` is not specified (:issue:`10284`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
 - Allow accessing arbitrary attributes on Pandas ExtensionArrays.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
