@@ -16,11 +16,11 @@ from xarray.backends.common import (
     AbstractWritableDataStore,
     BackendArray,
     BackendEntrypoint,
+    ChunksUtilities,
     _encode_variable_name,
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
     ensure_dtype_not_object,
-    ChunksUtilities
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
@@ -622,6 +622,7 @@ class ZarrStore(AbstractWritableDataStore):
     """Store for reading and writing data via zarr"""
 
     __slots__ = (
+        "_align_chunks",
         "_append_dim",
         "_cache_members",
         "_close_store_on_close",
@@ -635,7 +636,6 @@ class ZarrStore(AbstractWritableDataStore):
         "_use_zarr_fill_value_as_mask",
         "_write_empty",
         "_write_region",
-        "_align_chunks",
         "zarr_group",
     )
 
@@ -1156,7 +1156,7 @@ class ZarrStore(AbstractWritableDataStore):
         variables: dict[str, Variable],
         check_encoding_set,
         writer,
-        unlimited_dims=None
+        unlimited_dims=None,
     ):
         """
         This provides a centralized method to set the variables on the data

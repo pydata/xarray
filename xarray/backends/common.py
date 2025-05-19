@@ -752,7 +752,6 @@ class ChunksUtilities:
         nd_var_chunks: tuple[tuple[int, ...], ...],
         nd_backend_chunks: tuple[tuple[int, ...], ...],
     ) -> tuple[tuple[int], ...]:
-
         if len(nd_backend_chunks) != len(nd_var_chunks):
             raise ValueError(
                 "The number of dimensions on the backend and the variable "
@@ -769,18 +768,18 @@ class ChunksUtilities:
             # Validate that they have the same number of elements
             if sum(backend_chunks) != sum(var_chunks):
                 raise ValueError(
-                    f"The number of elements on the backend is different than "
-                    f"the number of elements on the variable,"
-                    f"this should never happen at this point."
+                    "The number of elements on the backend is different than "
+                    "the number of elements on the variable,"
+                    "this should never happen at this point."
                 )
 
             # Validate if the backend_chunks satisfy the condition that all the values
             # excluding the borders are equal
             if len(set(backend_chunks[1:-1])) > 1:
                 raise ValueError(
-                    f"For the moment this function only support aligning chunks "
-                    f"when the backend chunks are equal, excluding the borders. "
-                    f"In other words the backend chunks must have a grid form"
+                    "For the moment this function only support aligning chunks "
+                    "when the backend chunks are equal, excluding the borders. "
+                    "In other words the backend chunks must have a grid form"
                 )
 
             # The algorithm assumes that there are always two borders on the
@@ -834,14 +833,18 @@ class ChunksUtilities:
                         # we need to increase the last chunk as much as possible
                         # but keeping it aligned, and then add a new chunk
                         max_increase = max_chunk - aligned_chunks[-1]
-                        max_increase = max_increase - (max_increase - unfilled_size) % fixed_chunk
+                        max_increase = (
+                            max_increase - (max_increase - unfilled_size) % fixed_chunk
+                        )
                         aligned_chunks[-1] += max_increase
                     else:
                         # Perfect scenario where the chunks can be merged without any split.
                         aligned_chunks[-1] = ideal_chunk
 
                     ideal_chunk -= aligned_chunks[-1]
-                    unfilled_size = (fixed_chunk - aligned_chunks[-1] % fixed_chunk) % fixed_chunk
+                    unfilled_size = (
+                        fixed_chunk - aligned_chunks[-1] % fixed_chunk
+                    ) % fixed_chunk
 
             # Now we have to remove the artificial data added to the borders
             for order in [-1, 1]:
@@ -851,9 +854,9 @@ class ChunksUtilities:
                 var_chunks = var_chunks[::order]
                 var_chunks[0] -= border_size
                 if (
-                    len(aligned_chunks) >= 2 and
-                    aligned_chunks[0] + aligned_chunks[1] <= max_chunk and
-                    aligned_chunks[0] != var_chunks[0]
+                    len(aligned_chunks) >= 2
+                    and aligned_chunks[0] + aligned_chunks[1] <= max_chunk
+                    and aligned_chunks[0] != var_chunks[0]
                 ):
                     # The artificial data added to the border can introduce inefficient chunks
                     # on the borders, for that reason, we will check if we can merge them or not
@@ -876,16 +879,14 @@ class ChunksUtilities:
         return tuple(nd_aligned_chunks)
 
     @staticmethod
-    def get_chunks_on_region(
-        n_elements: int,
-        region: slice,
-        chunk_size: int
-    ):
+    def get_chunks_on_region(n_elements: int, region: slice, chunk_size: int):
         if region is None:
             region = slice(0, n_elements)
         # Generate the zarr chunks inside the region of this dim
         chunks_on_region = [chunk_size - (region.start % chunk_size)]
-        chunks_on_region.extend([chunk_size] * ((n_elements - chunks_on_region[0]) // chunk_size))
+        chunks_on_region.extend(
+            [chunk_size] * ((n_elements - chunks_on_region[0]) // chunk_size)
+        )
         if (n_elements - chunks_on_region[0]) % chunk_size != 0:
             chunks_on_region.append((n_elements - chunks_on_region[0]) % chunk_size)
         return chunks_on_region
@@ -916,8 +917,7 @@ class ChunksUtilities:
             nd_var_chunks=nd_var_chunks,
             nd_backend_chunks=tuple(nd_backend_chunks),
         )
-        v = v.chunk({
-            dim: chunk
-            for dim, chunk in zip(v.dims, aligned_chunks, strict=True)
-        })
+        v = v.chunk(
+            {dim: chunk for dim, chunk in zip(v.dims, aligned_chunks, strict=True)}
+        )
         return v
