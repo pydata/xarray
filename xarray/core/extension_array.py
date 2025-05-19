@@ -80,11 +80,13 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
     array: T_ExtensionArray
 
     def __post_init__(self):
+        from xarray.core.variable import UNSUPPORTED_EXTENSION_ARRAY_TYPES
+
         if not isinstance(self.array, pd.api.extensions.ExtensionArray):
             raise TypeError(f"{self.array} is not an pandas ExtensionArray.")
-        if isinstance(self.array, pd.arrays.NumpyExtensionArray):
+        if isinstance(self.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES):
             raise TypeError(
-                "`NumpyExtensionArray` should be converted to a numpy array in `xarray` internally."
+                f"`{type(self.array)}` should be converted to a numpy array in `xarray` internally."
             )
 
     def __array_function__(self, func, types, args, kwargs):
