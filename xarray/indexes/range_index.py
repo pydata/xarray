@@ -65,7 +65,9 @@ class RangeCoordinateTransform(CoordinateTransform):
         positions = (labels - self.start) / self.step
         return {self.dim: positions}
 
-    def equals(self, other: CoordinateTransform) -> bool:
+    def equals(
+        self, other: CoordinateTransform, exclude: frozenset[Hashable] | None = None
+    ) -> bool:
         if not isinstance(other, RangeCoordinateTransform):
             return False
 
