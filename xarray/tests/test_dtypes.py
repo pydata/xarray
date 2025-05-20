@@ -32,6 +32,10 @@ except ImportError:
         ([np.dtype("<U2"), str], np.dtype("U")),
         ([np.dtype("S3"), np.bytes_], np.dtype("S")),
         ([np.dtype("S10"), bytes], np.dtype("S")),
+        ([type('Foo', (object,), {'foo' : 'bar'})()], np.object_),
+        ([np.float32, type('Foo', (object,), {'foo' : 'bar'})()], np.object_),
+        ([np.str_, type('Foo', (object,), {'foo' : 'bar'})()], np.object_),
+        ([np.bytes_, type('Foo', (object,), {'foo' : 'bar'})()], np.object_),
     ],
 )
 def test_result_type(args, expected) -> None:
