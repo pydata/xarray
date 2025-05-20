@@ -51,16 +51,8 @@ def module_available(module: str, minversion: str | None = None) -> bool:
     """
     if importlib.util.find_spec(module) is None:
         return False
-
     if minversion is not None:
-        # special case for zarr, because importlib.metadata.version doesn't retrieve the correct
-        # zarr version under some circumstances. See https://github.com/pydata/xarray/issues/10335
-        if module == "zarr":
-            import zarr
-
-            version = zarr.__version__
-        else:
-            version = importlib.metadata.version(module)
+        version = importlib.metadata.version(module)
 
         return Version(version) >= Version(minversion)
 
