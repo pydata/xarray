@@ -53,7 +53,7 @@ python -m pip install \
     git+https://github.com/dask/dask \
     git+https://github.com/dask/dask-expr \
     git+https://github.com/dask/distributed \
-    git+https://github.com/zarr-developers/zarr-python \
+    git+https://github.com/d-v-b/zarr-python.git@feat/fixed-length-strings \
     git+https://github.com/Unidata/cftime \
     git+https://github.com/pypa/packaging \
     git+https://github.com/hgrecco/pint \
