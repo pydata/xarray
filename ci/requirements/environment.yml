@@ -58,8 +58,8 @@ dependencies:
   - types-setuptools
   - types-openpyxl
   - typing_extensions
+  - zarr
   - pip:
       - jax # no way to get cpu-only jaxlib from conda if gpu is present
       - types-defusedxml
       - types-pexpect
-      - git+https://github.com/d-v-b/zarr-python.git@feat/fixed-length-strings=zarr
