@@ -2237,7 +2237,6 @@ def to_zarr(
 
     dataset = zstore._validate_and_autodetect_region(
         dataset,
-
     )
     zstore._validate_encoding(encoding)
 
