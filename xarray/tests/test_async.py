@@ -120,7 +120,6 @@ class AsyncTimer:
 @requires_zarr_v3
 @pytest.mark.asyncio
 class TestAsyncLoad:
-    N_LOADS: int = 5
     LATENCY: float = 1.0
 
     @pytest.fixture(params=["ds", "da", "var"])
@@ -136,21 +135,42 @@ class TestAsyncLoad:
             case "ds":
                 return ds
 
-    def assert_time_as_expected(self, total_time: float) -> None:
-        assert total_time > self.LATENCY  # Cannot possibly be quicker than this
+    def assert_time_as_expected(
+        self, total_time: float, latency: float, n_loads: int
+    ) -> None:
+        assert total_time > latency  # Cannot possibly be quicker than this
         assert (
-            total_time < self.LATENCY * self.N_LOADS
+            total_time < latency * n_loads
         )  # If this isn't true we're gaining nothing from async
         assert (
-            abs(total_time - self.LATENCY) < 2.0
-        )  # Should take approximately LATENCY seconds, but allow some buffer
+            abs(total_time - latency) < 2.0
+        )  # Should take approximately `latency` seconds, but allow some buffer
 
-    async def test_async_load(self, xr_obj):
+    async def test_concurrent_load_multiple_objects(self, xr_obj) -> None:
+        N_OBJECTS = 5
+
         async with AsyncTimer().measure() as timer:
-            tasks = [xr_obj.load_async() for _ in range(self.N_LOADS)]
+            tasks = [xr_obj.load_async() for _ in range(N_OBJECTS)]
             results = await asyncio.gather(*tasks)
 
         for result in results:
             xrt.assert_identical(result, xr_obj.load())
 
-        self.assert_time_as_expected(timer.total_time)
+        self.assert_time_as_expected(
+            total_time=timer.total_time, latency=self.LATENCY, n_loads=N_OBJECTS
+        )
+
+    async def test_concurrent_load_multiple_variables(self, memorystore) -> None:
+        latencystore = LatencyStore(memorystore, latency=self.LATENCY)
+        ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
+
+        # TODO up the number of variables in the dataset?
+        async with AsyncTimer().measure() as timer:
+            result_ds = await ds.load_async()
+
+        xrt.assert_identical(result_ds, ds.load())
+
+        # 2 because there are 2 lazy variables in the dataset
+        self.assert_time_as_expected(
+            total_time=timer.total_time, latency=self.LATENCY, n_loads=2
+        )
