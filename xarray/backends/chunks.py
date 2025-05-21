@@ -6,18 +6,16 @@ from xarray.core.datatree import Variable
 def align_chunks(
     nd_var_chunks: tuple[tuple[int, ...], ...],
     nd_backend_chunks: tuple[tuple[int, ...], ...],
-) -> tuple[tuple[int], ...]:
+) -> tuple[tuple[int, ...], ...]:
     if len(nd_backend_chunks) != len(nd_var_chunks):
         raise ValueError(
             "The number of dimensions on the backend and the variable must be the same."
         )
 
-    nd_aligned_chunks = []
+    nd_aligned_chunks: list[tuple[int, ...]] = []
     for backend_chunks, var_chunks in zip(
         nd_backend_chunks, nd_var_chunks, strict=True
     ):
-        # Let's create a mutable copy of the var_chunks
-        var_chunks = list(var_chunks)
 
         # Validate that they have the same number of elements
         if sum(backend_chunks) != sum(var_chunks):
@@ -49,6 +47,7 @@ def align_chunks(
             nd_aligned_chunks.append(var_chunks)
             continue
 
+
         # Size of the chunk on the backend
         fixed_chunk = max(backend_chunks)
 
@@ -58,19 +57,20 @@ def align_chunks(
 
         # The algorithm assumes that the chunks on this array are aligned except the last one
         # because it can be considered a partial one
-        aligned_chunks = []
+        aligned_chunks: list[int] = []
 
         # For simplicity of the algorithm, let's transform the Array chunks in such a way that
         # we remove the partial chunks. To achieve this, we add artificial data to the borders
-        var_chunks[0] += fixed_chunk - backend_chunks[0]
-        var_chunks[-1] += fixed_chunk - backend_chunks[-1]
+        t_var_chunks = list(var_chunks)
+        t_var_chunks[0] += fixed_chunk - backend_chunks[0]
+        t_var_chunks[-1] += fixed_chunk - backend_chunks[-1]
 
         # The unfilled_size is the amount of space that has not been filled on the last
         # processed chunk; this is equivalent to the amount of data that would need to be
         # added to a partial Zarr chunk to fill it up to the fixed_chunk size
         unfilled_size = 0
 
-        for var_chunk in var_chunks:
+        for var_chunk in t_var_chunks:
             # Ideally, we should try to preserve the original Dask chunks, but this is only
             # possible if the last processed chunk was aligned (unfilled_size == 0)
             ideal_chunk = var_chunk
@@ -107,19 +107,19 @@ def align_chunks(
             border_size = fixed_chunk - backend_chunks[::order][0]
             aligned_chunks = aligned_chunks[::order]
             aligned_chunks[0] -= border_size
-            var_chunks = var_chunks[::order]
-            var_chunks[0] -= border_size
+            t_var_chunks = t_var_chunks[::order]
+            t_var_chunks[0] -= border_size
             if (
                 len(aligned_chunks) >= 2
                 and aligned_chunks[0] + aligned_chunks[1] <= max_chunk
-                and aligned_chunks[0] != var_chunks[0]
+                and aligned_chunks[0] != t_var_chunks[0]
             ):
                 # The artificial data added to the border can introduce inefficient chunks
                 # on the borders, for that reason, we will check if we can merge them or not
                 # Example:
                 # backend_chunks = [6, 6, 1]
                 # var_chunks = [6, 7]
-                # transformed_var_chunks = [6, 12]
+                # t_var_chunks = [6, 12]
                 # The ideal output should preserve the same var_chunks, but the previous loop
                 # is going to produce aligned_chunks = [6, 6, 6]
                 # And after removing the artificial data, we will end up with aligned_chunks = [6, 6, 1]
@@ -127,7 +127,7 @@ def align_chunks(
                 aligned_chunks[1] += aligned_chunks[0]
                 aligned_chunks = aligned_chunks[1:]
 
-            var_chunks = var_chunks[::order]
+            t_var_chunks = t_var_chunks[::order]
             aligned_chunks = aligned_chunks[::order]
 
         nd_aligned_chunks.append(tuple(aligned_chunks))

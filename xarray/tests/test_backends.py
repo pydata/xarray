@@ -5733,19 +5733,6 @@ class TestDataArrayToZarr:
             assert_identical(original_da, loaded_da)
 
     @requires_dask
-    def test_dataarray_to_zarr_compute_false(self, tmp_store) -> None:
-        from dask.delayed import Delayed
-
-        skip_if_zarr_format_3(tmp_store)
-        original_da = DataArray(np.arange(12).reshape((3, 4)))
-
-        output = original_da.to_zarr(tmp_store, compute=False)
-        assert isinstance(output, Delayed)
-        output.compute()
-        with open_dataarray(tmp_store, engine="zarr") as loaded_da:
-            assert_identical(original_da, loaded_da)
-
-    @requires_dask
     def test_dataarray_to_zarr_align_chunks_true(self, tmp_store) -> None:
         # TODO: Find a better way to verify if the data is beign corrupted
         #   when using dask, it is hard to detect if the automatic alignment

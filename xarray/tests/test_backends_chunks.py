@@ -3,11 +3,13 @@ import pytest
 
 import xarray as xr
 from xarray.backends.chunks import grid_rechunk
+from xarray.tests import requires_dask
 
 # TODO: Not sure if it would be good to add a test for the other functions inside the chunks module
 #     at the end they are already being used internally by the grid_rechunk
 
 
+@requires_dask
 @pytest.mark.parametrize(
     "enc_chunks, region, nd_var_chunks, expected_chunks",
     [
@@ -65,9 +67,8 @@ def test_grid_rechunk(enc_chunks, region, nd_var_chunks, expected_chunks):
         dim: list(range(r.start, r.stop)) for dim, r in zip(dims, region, strict=False)
     }
     shape = tuple(r.stop - r.start for r in region)
-    arr = np.arange(np.prod(shape)).reshape(shape)
     arr = xr.DataArray(
-        arr,
+        np.arange(np.prod(shape)).reshape(shape),
         dims=dims,
         coords=coords,
     )
