@@ -11,6 +11,7 @@ import xarray as xr
 import xarray.testing as xrt
 from xarray.tests import has_zarr_v3, requires_zarr_v3
 
+
 if has_zarr_v3:
     import zarr
     from zarr.abc.store import ByteRequest, Store
@@ -146,20 +147,6 @@ class TestAsyncLoad:
             abs(total_time - latency) < 2.0
         )  # Should take approximately `latency` seconds, but allow some buffer
 
-    async def test_concurrent_load_multiple_objects(self, xr_obj) -> None:
-        N_OBJECTS = 5
-
-        async with AsyncTimer().measure() as timer:
-            tasks = [xr_obj.load_async() for _ in range(N_OBJECTS)]
-            results = await asyncio.gather(*tasks)
-
-        for result in results:
-            xrt.assert_identical(result, xr_obj.load())
-
-        self.assert_time_as_expected(
-            total_time=timer.total_time, latency=self.LATENCY, n_loads=N_OBJECTS
-        )
-
     async def test_concurrent_load_multiple_variables(self, memorystore) -> None:
         latencystore = LatencyStore(memorystore, latency=self.LATENCY)
         ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
@@ -173,4 +160,18 @@ class TestAsyncLoad:
         # 2 because there are 2 lazy variables in the dataset
         self.assert_time_as_expected(
             total_time=timer.total_time, latency=self.LATENCY, n_loads=2
+        )
+
+    async def test_concurrent_load_multiple_objects(self, xr_obj) -> None:
+        N_OBJECTS = 5
+
+        async with AsyncTimer().measure() as timer:
+            coros = [xr_obj.load_async() for _ in range(N_OBJECTS)]
+            results = await asyncio.gather(*coros)
+
+        for result in results:
+            xrt.assert_identical(result, xr_obj.load())
+
+        self.assert_time_as_expected(
+            total_time=timer.total_time, latency=self.LATENCY, n_loads=N_OBJECTS
         )
