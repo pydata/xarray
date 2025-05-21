@@ -402,6 +402,9 @@ class AbstractWritableDataStore(AbstractDataStore):
         """encode one attribute"""
         return a
 
+    def prepare_variable(self, name, variable, check_encoding, unlimited_dims):
+        raise NotImplementedError()
+
     def set_dimension(self, dim, length, is_unlimited):  # pragma: no cover
         raise NotImplementedError()
 
