@@ -190,14 +190,14 @@ def validate_grid_chunks_alignment(
 ):
     if nd_var_chunks is None:
         return
-
     base_error = (
-        "The {var_chunk_pos}th chunk with size {var_chunk_size} of your variable {name} "
-        "on the {dim_i}th dim is unaligned with the backend chunks of "
-        "size {chunk_size} on the region {region}. This could lead to corrupted data "
-        "because multiple chunks of your variable would write on parallel on "
-        "the same backend chunk or write on the partial chunk (read the mode and safe_chunks "
-        "docs for more info about the validation on partial chunk). "
+        "Specified zarr chunks encoding['chunks']={enc_chunks!r} for "
+        "variable named {name!r} would overlap multiple dask chunks. "
+        "Please take a look on the chunk at position {var_chunk_pos} "
+        "whose size is {var_chunk_size} on the dimension {dim_i}, "
+        "it is unaligned with the backend chunks of "
+        "size {chunk_size} on the region {region}. "
+        "Writing this array in parallel with dask could lead to corrupted data. "
         "Consider either rechunking using `chunk()`, deleting "
         "or modifying `encoding['chunks']`, specify `safe_chunks=False` "
         "or `align_chunks=True`."
@@ -221,6 +221,7 @@ def validate_grid_chunks_alignment(
                         dim_i=dim_i,
                         chunk_size=chunk_size,
                         region=interval,
+                        enc_chunks=enc_chunks
                     )
                 )
 
@@ -242,6 +243,7 @@ def validate_grid_chunks_alignment(
                         dim_i=dim_i,
                         chunk_size=chunk_size,
                         region=interval,
+                        enc_chunks=enc_chunks,
                     )
                 )
 
@@ -255,6 +257,7 @@ def validate_grid_chunks_alignment(
                 dim_i=dim_i,
                 chunk_size=chunk_size,
                 region=interval,
+                        enc_chunks=enc_chunks,
             )
             if interval_start % chunk_size:
                 # The last chunk which can also be the only one is a partial chunk
