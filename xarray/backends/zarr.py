@@ -17,7 +17,6 @@ from xarray.backends.common import (
     AbstractWritableDataStore,
     BackendArray,
     BackendEntrypoint,
-    ChunksUtilities,
     _encode_variable_name,
     _normalize_path,
     datatree_from_dict_with_io_cleanup,

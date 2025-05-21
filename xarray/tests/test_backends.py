@@ -5751,14 +5751,10 @@ class TestDataArrayToZarr:
         #   when using dask, it is hard to detect if the automatic alignment
         #   is being applied or not, but for now is fine to at least check
         #   that the parameter is there.
-        from dask.delayed import Delayed
 
         skip_if_zarr_format_3(tmp_store)
         arr = DataArray(
-            np.arange(4),
-            dims=["a"],
-            coords={"a": np.arange(4)},
-            name="foo"
+            np.arange(4), dims=["a"], coords={"a": np.arange(4)}, name="foo"
         ).chunk(a=(2, 1, 1))
 
         output = arr.to_zarr(
