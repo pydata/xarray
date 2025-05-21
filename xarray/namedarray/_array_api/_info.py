@@ -48,7 +48,7 @@ def default_device() -> _Device:
 
     xp = _maybe_default_namespace()
     info = xp.__array_namespace_info__()
-    return info.default_device
+    return info.default_device()
 
 
 def default_dtypes(
