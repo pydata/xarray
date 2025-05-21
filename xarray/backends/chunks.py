@@ -16,7 +16,6 @@ def align_chunks(
     for backend_chunks, var_chunks in zip(
         nd_backend_chunks, nd_var_chunks, strict=True
     ):
-
         # Validate that they have the same number of elements
         if sum(backend_chunks) != sum(var_chunks):
             raise ValueError(
@@ -46,7 +45,6 @@ def align_chunks(
         if len(var_chunks) == 1:
             nd_aligned_chunks.append(var_chunks)
             continue
-
 
         # Size of the chunk on the backend
         fixed_chunk = max(backend_chunks)
