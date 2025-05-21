@@ -172,7 +172,7 @@ _Capabilities = TypedDict(
     {
         "boolean indexing": bool,
         "data-dependent shapes": bool,
-        "max rank": int | None,
+        "max dimensions": int | None,
     },
 )
 

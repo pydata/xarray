@@ -39,7 +39,7 @@ def capabilities() -> _Capabilities:
     return {
         "boolean indexing": False,
         "data-dependent shapes": False,
-        "max rank": int | None,
+        "max dimensions": None,
     }
 
 
