@@ -547,12 +547,12 @@ class Dataset(
                 self.variables[k].data = data
 
         # load everything else sequentially
-        [v.load_async() for k, v in self.variables.items() if k not in chunked_data]
+        [v.load() for k, v in self.variables.items() if k not in chunked_data]
 
         return self
 
     async def load_async(self, **kwargs) -> Self:
-        # TODO refactor this to pul out the common chunked_data codepath
+        # TODO refactor this to pull out the common chunked_data codepath
 
         # this blocks on chunked arrays but not on lazily indexed arrays
 
@@ -572,10 +572,10 @@ class Dataset(
                 self.variables[k].data = data
 
         # load everything else concurrently
-        tasks = [
+        coros = [
             v.load_async() for k, v in self.variables.items() if k not in chunked_data
         ]
-        await asyncio.gather(*tasks)
+        await asyncio.gather(*coros)
 
         return self
 
