@@ -61,7 +61,9 @@ from xarray.backends.chunks import grid_rechunk
 )
 def test_grid_rechunk(enc_chunks, region, nd_var_chunks, expected_chunks):
     dims = [f"dim_{i}" for i in range(len(region))]
-    coords = {dim: list(range(r.start, r.stop)) for dim, r in zip(dims, region, strict=False)}
+    coords = {
+        dim: list(range(r.start, r.stop)) for dim, r in zip(dims, region, strict=False)
+    }
     shape = tuple(r.stop - r.start for r in region)
     arr = np.arange(np.prod(shape)).reshape(shape)
     arr = xr.DataArray(
