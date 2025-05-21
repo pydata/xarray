@@ -39,7 +39,7 @@ from xarray import (
     open_mfdataset,
     save_mfdataset,
 )
-from xarray.backends.common import robust_getitem, ChunksUtilities
+from xarray.backends.common import robust_getitem
 from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint
 from xarray.backends.netcdf3 import _nc3_dtype_coercions
 from xarray.backends.netCDF4_ import (
@@ -5732,6 +5732,43 @@ class TestDataArrayToZarr:
         with open_dataarray(tmp_store, engine="zarr") as loaded_da:
             assert_identical(original_da, loaded_da)
 
+    @requires_dask
+    def test_dataarray_to_zarr_compute_false(self, tmp_store) -> None:
+        from dask.delayed import Delayed
+
+        skip_if_zarr_format_3(tmp_store)
+        original_da = DataArray(np.arange(12).reshape((3, 4)))
+
+        output = original_da.to_zarr(tmp_store, compute=False)
+        assert isinstance(output, Delayed)
+        output.compute()
+        with open_dataarray(tmp_store, engine="zarr") as loaded_da:
+            assert_identical(original_da, loaded_da)
+
+    @requires_dask
+    def test_dataarray_to_zarr_align_chunks_true(self, tmp_store) -> None:
+        # TODO: Find a better way to verify if the data is beign corrupted
+        #   when using dask, it is hard to detect if the automatic alignment
+        #   is being applied or not, but for now is fine to at least check
+        #   that the parameter is there.
+        from dask.delayed import Delayed
+
+        skip_if_zarr_format_3(tmp_store)
+        arr = DataArray(
+            np.arange(4),
+            dims=["a"],
+            coords={"a": np.arange(4)},
+            name="foo"
+        ).chunk(a=(2, 1, 1))
+
+        output = arr.to_zarr(
+            tmp_store,
+            align_chunks=True,
+            encoding={"foo": {"chunks": (3,)}},
+        )
+        with open_dataarray(tmp_store, engine="zarr") as loaded_da:
+            assert_identical(arr, loaded_da)
+
 
 @requires_scipy_or_netCDF4
 def test_no_warning_from_dask_effective_get() -> None:
@@ -6759,16 +6796,3 @@ def test_h5netcdf_storage_options() -> None:
             storage_options={"skip_instance_cache": False},
         ) as ds:
             assert_identical(xr.concat([ds1, ds2], dim="time"), ds)
-
-
-def test_align_variable_chunks():
-    arr = xr.DataArray(
-        list(range(11)), dims=["a"], coords={"a": list(range(11))}, name="foo"
-    )
-    region_arr = arr.isel(a=slice(0, 5)).chunk(a=(3, 1, 1))
-    result = ChunksUtilities.align_variable_chunks(
-        region_arr.variable,
-        enc_chunks=(3,),
-        regions=(slice(0, 5),),
-    )
-    assert result.chunks == ((3, 2),)

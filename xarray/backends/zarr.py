@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from xarray import coding, conventions
+from xarray.backends.chunks import grid_rechunk, validate_grid_chunks_alignment
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractWritableDataStore,
@@ -20,7 +21,6 @@ from xarray.backends.common import (
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
     ensure_dtype_not_object,
-    ChunksUtilities
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
@@ -229,9 +229,7 @@ class ZarrArrayWrapper(BackendArray):
         # could possibly have a work-around for 0d data here
 
 
-def _determine_zarr_chunks(
-    enc_chunks, var_chunks, ndim, name, safe_chunks, region, mode, shape
-):
+def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
     """
     Given encoding chunks (possibly None or []) and variable chunks
     (possibly None or []).
@@ -269,7 +267,7 @@ def _determine_zarr_chunks(
         # return the first chunk for each dimension
         return tuple(chunk[0] for chunk in var_chunks)
 
-    # from here on, we are dealing with user-specified chunks in encoding
+    # From here on, we are dealing with user-specified chunks in encoding
     # zarr allows chunks to be an integer, in which case it uses the same chunk
     # size on each dimension.
     # Here we re-implement this expansion ourselves. That makes the logic of
@@ -283,7 +281,10 @@ def _determine_zarr_chunks(
     if len(enc_chunks_tuple) != ndim:
         # throw away encoding chunks, start over
         return _determine_zarr_chunks(
-            None, var_chunks, ndim, name, safe_chunks, region, mode, shape
+            None,
+            var_chunks,
+            ndim,
+            name,
         )
 
     for x in enc_chunks_tuple:
@@ -299,68 +300,6 @@ def _determine_zarr_chunks(
     # we use the specified chunks
     if not var_chunks:
         return enc_chunks_tuple
-
-    # the hard case
-    # DESIGN CHOICE: do not allow multiple dask chunks on a single zarr chunk
-    # this avoids the need to get involved in zarr synchronization / locking
-    # From zarr docs:
-    #  "If each worker in a parallel computation is writing to a
-    #   separate region of the array, and if region boundaries are perfectly aligned
-    #   with chunk boundaries, then no synchronization is required."
-    # TODO: incorporate synchronizer to allow writes from multiple dask
-    # threads
-
-    # If it is possible to write on partial chunks then it is not necessary to check
-    # the last one contained on the region
-    allow_partial_chunks = mode != "r+"
-
-    base_error = (
-        f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
-        f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r} "
-        f"on the region {region}. "
-        f"Writing this array in parallel with dask could lead to corrupted data. "
-        f"Consider either rechunking using `chunk()`, deleting "
-        f"or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
-    )
-
-    for zchunk, dchunks, interval, size in zip(
-        enc_chunks_tuple, var_chunks, region, shape, strict=True
-    ):
-        if not safe_chunks:
-            continue
-
-        for dchunk in dchunks[1:-1]:
-            if dchunk % zchunk:
-                raise ValueError(base_error)
-
-        region_start = interval.start if interval.start else 0
-
-        if len(dchunks) > 1:
-            # The first border size is the amount of data that needs to be updated on the
-            # first chunk taking into account the region slice.
-            first_border_size = zchunk
-            if allow_partial_chunks:
-                first_border_size = zchunk - region_start % zchunk
-
-            if (dchunks[0] - first_border_size) % zchunk:
-                raise ValueError(base_error)
-
-        if not allow_partial_chunks:
-            region_stop = interval.stop if interval.stop else size
-
-            if region_start % zchunk:
-                # The last chunk which can also be the only one is a partial chunk
-                # if it is not aligned at the beginning
-                raise ValueError(base_error)
-
-            if np.ceil(region_stop / zchunk) == np.ceil(size / zchunk):
-                # If the region is covering the last chunk then check
-                # if the reminder with the default chunk size
-                # is equal to the size of the last chunk
-                if dchunks[-1] % zchunk != size % zchunk:
-                    raise ValueError(base_error)
-            elif dchunks[-1] % zchunk:
-                raise ValueError(base_error)
 
     return enc_chunks_tuple
 
@@ -428,10 +367,6 @@ def extract_zarr_variable_encoding(
     name=None,
     *,
     zarr_format: ZarrFormat,
-    safe_chunks=True,
-    region=None,
-    mode=None,
-    shape=None,
 ):
     """
     Extract zarr encoding dictionary from xarray Variable
@@ -441,10 +376,6 @@ def extract_zarr_variable_encoding(
     variable : Variable
     raise_on_invalid : bool, optional
     name: str | Hashable, optional
-    safe_chunks: bool, optional
-    region: tuple[slice, ...], optional
-    mode: str, optional
-    shape: tuple[int, ...], optional
     zarr_format: Literal[2,3]
     Returns
     -------
@@ -452,7 +383,6 @@ def extract_zarr_variable_encoding(
         Zarr encoding for `variable`
     """
 
-    shape = shape if shape else variable.shape
     encoding = variable.encoding.copy()
 
     safe_to_drop = {"source", "original_shape", "preferred_chunks"}
@@ -494,10 +424,6 @@ def extract_zarr_variable_encoding(
         var_chunks=variable.chunks,
         ndim=variable.ndim,
         name=name,
-        safe_chunks=safe_chunks,
-        region=region,
-        mode=mode,
-        shape=shape,
     )
     if _zarr_v3() and chunks is None:
         chunks = "auto"
@@ -622,6 +548,7 @@ class ZarrStore(AbstractWritableDataStore):
     """Store for reading and writing data via zarr"""
 
     __slots__ = (
+        "_align_chunks",
         "_append_dim",
         "_cache_members",
         "_close_store_on_close",
@@ -635,7 +562,6 @@ class ZarrStore(AbstractWritableDataStore):
         "_use_zarr_fill_value_as_mask",
         "_write_empty",
         "_write_region",
-        "_align_chunks",
         "zarr_group",
     )
 
@@ -1156,7 +1082,7 @@ class ZarrStore(AbstractWritableDataStore):
         variables: dict[str, Variable],
         check_encoding_set,
         writer,
-        unlimited_dims=None
+        unlimited_dims=None,
     ):
         """
         This provides a centralized method to set the variables on the data
@@ -1235,12 +1161,35 @@ class ZarrStore(AbstractWritableDataStore):
                 v,
                 raise_on_invalid=vn in check_encoding_set,
                 name=vn,
-                safe_chunks=self._safe_chunks,
-                region=region,
-                mode=self._mode,
-                shape=zarr_shape,
                 zarr_format=3 if is_zarr_v3_format else 2,
             )
+
+            if self._align_chunks and isinstance(encoding["chunks"], tuple):
+                v = grid_rechunk(
+                    v=v,
+                    enc_chunks=encoding["chunks"],
+                    region=region,
+                )
+
+            if self._safe_chunks and isinstance(encoding["chunks"], tuple):
+                # the hard case
+                # DESIGN CHOICE: do not allow multiple dask chunks on a single zarr chunk
+                # this avoids the need to get involved in zarr synchronization / locking
+                # From zarr docs:
+                #  "If each worker in a parallel computation is writing to a
+                #   separate region of the array, and if region boundaries are perfectly aligned
+                #   with chunk boundaries, then no synchronization is required."
+                # TODO: incorporate synchronizer to allow writes from multiple dask
+                # threads
+                shape = zarr_shape if zarr_shape else v.shape
+                validate_grid_chunks_alignment(
+                    nd_var_chunks=v.chunks,
+                    enc_chunks=encoding["chunks"],
+                    region=region,
+                    allow_partial_chunks=self._mode != "r+",
+                    name=name,
+                    backend_shape=shape,
+                )
 
             if self._mode == "w" or name not in existing_keys:
                 # new variable
@@ -1262,12 +1211,6 @@ class ZarrStore(AbstractWritableDataStore):
                     attrs=encoded_attrs,
                 )
 
-            if self._align_chunks:
-                v = ChunksUtilities.align_variable_chunks(
-                    v,
-                    encoding["chunks"],
-                    region,
-                )
             writer.add(v.data, zarr_array, region)
 
     def close(self) -> None:
