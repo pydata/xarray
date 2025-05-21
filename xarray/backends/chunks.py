@@ -221,7 +221,7 @@ def validate_grid_chunks_alignment(
                         dim_i=dim_i,
                         chunk_size=chunk_size,
                         region=interval,
-                        enc_chunks=enc_chunks
+                        enc_chunks=enc_chunks,
                     )
                 )
 
@@ -257,7 +257,7 @@ def validate_grid_chunks_alignment(
                 dim_i=dim_i,
                 chunk_size=chunk_size,
                 region=interval,
-                        enc_chunks=enc_chunks,
+                enc_chunks=enc_chunks,
             )
             if interval_start % chunk_size:
                 # The last chunk which can also be the only one is a partial chunk
