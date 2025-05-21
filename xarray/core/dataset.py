@@ -7104,7 +7104,7 @@ class Dataset(
                 },
             },
             index=index,
-            copy=copy
+            copy=copy,
         )
         for extension_array_column in extension_array_columns_different_index:
             extension_array = self.variables[extension_array_column].data
