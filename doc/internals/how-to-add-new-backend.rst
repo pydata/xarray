@@ -422,7 +422,7 @@ Async support
 
 Backends can also optionally support loading data asynchronously via xarray's asynchronous loading methods
 (e.g. ``~xarray.Dataset.load_async``).
-To support async loading the `BackendArray` subclass must additionally implement the ``BackendArray.async_getitem`` method.
+To support async loading the ``BackendArray`` subclass must additionally implement the ``BackendArray.async_getitem`` method.
 
 Note that implementing this method is only necessary if you want to be able to load data from different xarray objects concurrently.
 Even without this method your ``BackendArray`` implementation is still free to concurrently load chunks of data for a single ``Variable`` itself,
