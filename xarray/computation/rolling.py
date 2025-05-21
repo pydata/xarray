@@ -195,14 +195,13 @@ class Rolling(Generic[T_Xarray]):
         return method
 
     def _mean(self, keep_attrs, **kwargs):
-        result = self.sum(keep_attrs=False, **kwargs) / duck_array_ops.astype(
-            self.count(keep_attrs=False), dtype=int, copy=False
+        result = self.sum(keep_attrs=False, **kwargs)
+        result /= duck_array_ops.astype(
+            self.count(keep_attrs=False), dtype=result.dtype, copy=False
         )
         if keep_attrs:
             result.attrs = self.obj.attrs
 
-        if self.obj.dtype.kind not in "bi":
-            result = result.astype(self.obj.dtype, copy=False)
         return result
 
     _mean.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name="mean")
