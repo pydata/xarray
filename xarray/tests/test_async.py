@@ -11,7 +11,6 @@ import xarray as xr
 import xarray.testing as xrt
 from xarray.tests import has_zarr_v3, requires_zarr_v3
 
-
 if has_zarr_v3:
     import zarr
     from zarr.abc.store import ByteRequest, Store
