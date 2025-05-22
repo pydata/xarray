@@ -196,6 +196,8 @@ class Rolling(Generic[T_Xarray]):
 
     def _mean(self, keep_attrs, **kwargs):
         result = self.sum(keep_attrs=False, **kwargs)
+        # use dtype of result for casting of count
+        # this allows for GH #7062 and GH #8864, fixes GH #10340
         result /= duck_array_ops.astype(
             self.count(keep_attrs=False), dtype=result.dtype, copy=False
         )
