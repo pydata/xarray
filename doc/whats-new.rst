@@ -24,7 +24,11 @@ v2025.05.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Allow an Xarray index that uses multiple dimensions checking equality with another
+  index for only a subset of those dimensions (i.e., ignoring the dimensions
+  that are excluded from alignment).
+  (:issue:`10243`, :pull:`10293`)
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -41,6 +45,7 @@ Bug fixes
 
 - Allow accessing arbitrary attributes on Pandas ExtensionArrays.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Use dtype from intermediate sum instead of source dtype or "int" for casting of count when calculating mean in rolling for correct operations (preserve float dtypes, correct mean of bool arrays) (:issue:`10340`, :pull:`10341`).
 
 
 Documentation
