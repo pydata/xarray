@@ -45,6 +45,7 @@ Bug fixes
 
 - Allow accessing arbitrary attributes on Pandas ExtensionArrays.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Use dtype from intermediate sum instead of source dtype or "int" for casting of count when calculating mean in rolling for correct operations (preserve float dtypes, correct mean of bool arrays) (:issue:`10340`, :pull:`10341`).
 
 
 Documentation
