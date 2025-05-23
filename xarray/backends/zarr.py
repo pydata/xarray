@@ -238,15 +238,15 @@ class ZarrArrayWrapper(BackendArray):
         if isinstance(key, indexing.BasicIndexer):
             method = self._async_getitem
         elif isinstance(key, indexing.VectorizedIndexer):
-            # TODO
-            method = self._vindex
+            # method = self._vindex
+            raise NotImplementedError("async lazy vectorized indexing is not supported")
         elif isinstance(key, indexing.OuterIndexer):
-            # TODO
-            method = self._oindex
+            # method = self._oindex
+            raise NotImplementedError("async lazy orthogonal indexing is not supported")
 
         print("did an async get")
         return await indexing.async_explicit_indexing_adapter(
-            key, array.shape, indexing.IndexingSupport.VECTORIZED, method
+            key, array.shape, indexing.IndexingSupport.BASIC, method
         )
 
 
