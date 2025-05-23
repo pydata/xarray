@@ -44,9 +44,13 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Allow accessing arbitrary attributes on Pandas ExtensionArrays.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Fix coding empty (zero-size) timedelta64 arrays, ``units`` taking precedence when encoding, fallback to default values when decoding.
+- Fix coding empty (zero-size) timedelta64 arrays, ``units`` taking precedence when encoding, 
+  fallback to default values when decoding (:issue:`10310`, :pull:`10313`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-
+- Use dtype from intermediate sum instead of source dtype or "int" for casting of count when 
+  calculating mean in rolling for correct operations (preserve float dtypes, 
+  correct mean of bool arrays) (:issue:`10340`, :pull:`10341`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
