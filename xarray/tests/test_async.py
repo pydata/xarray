@@ -191,6 +191,6 @@ class TestAsyncLoad:
 
         # test vectorized indexing
         # TODO this shouldn't pass! I haven't implemented async vectorized indexing yet...
-        indexer = xr.DataArray([2, 3], dims=['x'])
+        indexer = xr.DataArray([2, 3], dims=["x"])
         result = await ds.foo[indexer].load_async()
         xrt.assert_identical(result, ds.foo[indexer].load())
