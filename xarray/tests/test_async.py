@@ -25,6 +25,9 @@ if has_zarr_v3:
 
         latency: float
 
+        # TODO only have to add this because of dumb behaviour in zarr where it raises with "ValueError: Store is not read-only but mode is 'r'"
+        read_only = True
+
         def __init__(
             self,
             store: T_Store,
@@ -175,7 +178,6 @@ class TestAsyncLoad:
             total_time=timer.total_time, latency=self.LATENCY, n_loads=N_OBJECTS
         )
 
-    @pytest.mark.xfail(reason="not implemented")
     async def test_indexing(self, memorystore) -> None:
         latencystore = LatencyStore(memorystore, latency=self.LATENCY)
         ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
