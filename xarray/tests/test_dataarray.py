@@ -33,8 +33,12 @@ from xarray import (
 from xarray.coders import CFDatetimeCoder
 from xarray.core import dtypes
 from xarray.core.common import full_like
-from xarray.core.coordinates import Coordinates
-from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
+from xarray.core.coordinates import Coordinates, CoordinateValidationError
+from xarray.core.indexes import (
+    Index,
+    PandasIndex,
+    filter_indexes_from_coords,
+)
 from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.testing import _assert_internal_invariants
@@ -418,9 +422,13 @@ class TestDataArray:
         with pytest.raises(TypeError, match=r"is not hashable"):
             DataArray(data, dims=["x", []])  # type: ignore[list-item]
 
-        with pytest.raises(ValueError, match=r"conflicting sizes for dim"):
+        with pytest.raises(
+            CoordinateValidationError, match=r"conflicting sizes for dim"
+        ):
             DataArray([1, 2, 3], coords=[("x", [0, 1])])
-        with pytest.raises(ValueError, match=r"conflicting sizes for dim"):
+        with pytest.raises(
+            CoordinateValidationError, match=r"conflicting sizes for dim"
+        ):
             DataArray([1, 2], coords={"x": [0, 1], "y": ("x", [1])}, dims="x")
 
         with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
@@ -528,6 +536,25 @@ class TestDataArray:
 
         # test coordinate variables copied
         assert da.coords["x"] is not coords.variables["x"]
+
+    def test_constructor_extra_dim_index_coord(self) -> None:
+        class AnyIndex(Index):
+            def should_add_coord_to_array(self, name, var, dims):
+                return True
+
+        idx = AnyIndex()
+        coords = Coordinates(
+            coords={
+                "x": ("x", [1, 2]),
+                "x_bounds": (("x", "x_bnds"), [(0.5, 1.5), (1.5, 2.5)]),
+            },
+            indexes={"x": idx, "x_bounds": idx},
+        )
+
+        actual = DataArray([1.0, 2.0], coords=coords, dims="x")
+
+        assert_identical(actual.coords, coords, check_default_indexes=False)
+        assert "x_bnds" not in actual.dims
 
     def test_equals_and_identical(self) -> None:
         orig = DataArray(np.arange(5.0), {"a": 42}, dims="x")
@@ -724,7 +751,7 @@ class TestDataArray:
 
     def test_setitem(self) -> None:
         # basic indexing should work as numpy's indexing
-        tuples = [
+        tuples: list[tuple[int | list[int] | slice, int | list[int] | slice]] = [
             (0, 0),
             (0, slice(None, None)),
             (slice(None, None), slice(None, None)),
@@ -1602,11 +1629,11 @@ class TestDataArray:
 
         # GH: 2112
         da = xr.DataArray([0, 1, 2], dims="x")
-        with pytest.raises(ValueError):
+        with pytest.raises(CoordinateValidationError):
             da["x"] = [0, 1, 2, 3]  # size conflict
-        with pytest.raises(ValueError):
+        with pytest.raises(CoordinateValidationError):
             da.coords["x"] = [0, 1, 2, 3]  # size conflict
-        with pytest.raises(ValueError):
+        with pytest.raises(CoordinateValidationError):
             da.coords["x"] = ("y", [1, 2, 3])  # no new dimension to a DataArray
 
     def test_assign_coords_existing_multiindex(self) -> None:
@@ -1633,6 +1660,27 @@ class TestDataArray:
         actual = da.assign_coords(coords)
         assert_identical(actual.coords, coords, check_default_indexes=False)
         assert "y" not in actual.xindexes
+
+    def test_assign_coords_extra_dim_index_coord(self) -> None:
+        class AnyIndex(Index):
+            def should_add_coord_to_array(self, name, var, dims):
+                return True
+
+        idx = AnyIndex()
+        coords = Coordinates(
+            coords={
+                "x": ("x", [1, 2]),
+                "x_bounds": (("x", "x_bnds"), [(0.5, 1.5), (1.5, 2.5)]),
+            },
+            indexes={"x": idx, "x_bounds": idx},
+        )
+
+        da = DataArray([1.0, 2.0], dims="x")
+        actual = da.assign_coords(coords)
+        expected = DataArray([1.0, 2.0], coords=coords, dims="x")
+
+        assert_identical(actual, expected, check_default_indexes=False)
+        assert "x_bnds" not in actual.dims
 
     def test_coords_alignment(self) -> None:
         lhs = DataArray([1, 2, 3], [("x", [0, 1, 2])])

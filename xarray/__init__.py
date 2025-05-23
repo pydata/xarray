@@ -28,7 +28,7 @@ from xarray.computation.computation import (
 )
 from xarray.conventions import SerializationWarning, decode_cf
 from xarray.core.common import ALL_DIMS, full_like, ones_like, zeros_like
-from xarray.core.coordinates import Coordinates
+from xarray.core.coordinates import Coordinates, CoordinateValidationError
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
@@ -50,7 +50,7 @@ from xarray.core.treenode import (
 )
 from xarray.core.variable import IndexVariable, Variable, as_variable
 from xarray.namedarray.core import NamedArray
-from xarray.structure.alignment import align, broadcast
+from xarray.structure.alignment import AlignmentError, align, broadcast
 from xarray.structure.chunks import unify_chunks
 from xarray.structure.combine import combine_by_coords, combine_nested
 from xarray.structure.concat import concat
@@ -128,6 +128,8 @@ __all__ = (  # noqa: RUF022
     "NamedArray",
     "Variable",
     # Exceptions
+    "AlignmentError",
+    "CoordinateValidationError",
     "InvalidTreeError",
     "MergeError",
     "NotFoundInTreeError",

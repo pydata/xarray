@@ -520,6 +520,7 @@
    Index.stack
    Index.unstack
    Index.create_variables
+   Index.should_add_coord_to_array
    Index.to_pandas_index
    Index.isel
    Index.sel
@@ -529,6 +530,10 @@
    Index.roll
    Index.rename
    Index.copy
+
+   indexes.RangeIndex.start
+   indexes.RangeIndex.stop
+   indexes.RangeIndex.step
 
    backends.NetCDF4DataStore.close
    backends.NetCDF4DataStore.encode

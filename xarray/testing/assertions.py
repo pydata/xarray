@@ -240,6 +240,9 @@ def assert_allclose(
             a.variables, b.variables, compat=compat_variable
         )
         assert allclose, formatting.diff_dataset_repr(a, b, compat=equiv)
+    elif isinstance(a, Coordinates):
+        allclose = utils.dict_equiv(a.variables, b.variables, compat=compat_variable)
+        assert allclose, formatting.diff_coords_repr(a, b, compat=equiv)
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
@@ -330,10 +333,13 @@ def _assert_indexes_invariants_checks(
         k: type(v) for k, v in indexes.items()
     }
 
-    index_vars = {
-        k for k, v in possible_coord_variables.items() if isinstance(v, IndexVariable)
-    }
-    assert indexes.keys() <= index_vars, (set(indexes), index_vars)
+    if check_default:
+        index_vars = {
+            k
+            for k, v in possible_coord_variables.items()
+            if isinstance(v, IndexVariable)
+        }
+        assert indexes.keys() <= index_vars, (set(indexes), index_vars)
 
     # check pandas index wrappers vs. coordinate data adapters
     for k, index in indexes.items():
@@ -395,13 +401,18 @@ def _assert_dataarray_invariants(da: DataArray, check_default_indexes: bool):
 
     assert isinstance(da._coords, dict), da._coords
     assert all(isinstance(v, Variable) for v in da._coords.values()), da._coords
-    assert all(set(v.dims) <= set(da.dims) for v in da._coords.values()), (
-        da.dims,
-        {k: v.dims for k, v in da._coords.items()},
-    )
-    assert all(
-        isinstance(v, IndexVariable) for (k, v) in da._coords.items() if v.dims == (k,)
-    ), {k: type(v) for k, v in da._coords.items()}
+
+    if check_default_indexes:
+        assert all(set(v.dims) <= set(da.dims) for v in da._coords.values()), (
+            da.dims,
+            {k: v.dims for k, v in da._coords.items()},
+        )
+        assert all(
+            isinstance(v, IndexVariable)
+            for (k, v) in da._coords.items()
+            if v.dims == (k,)
+        ), {k: type(v) for k, v in da._coords.items()}
+
     for k, v in da._coords.items():
         _assert_variable_invariants(v, k)
 
