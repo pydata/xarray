@@ -959,7 +959,7 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
     dates = np.atleast_1d(dates)
 
     # Find all the None position
-    none_position = dates == None
+    none_position = dates == None  # noqa: E711
     filtered_dates = dates[~none_position]
 
     # Since netCDF files do not support storing float128 values, we ensure
