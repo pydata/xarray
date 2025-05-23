@@ -42,11 +42,15 @@ Bug fixes
 ~~~~~~~~~
 - Fix :py:class:`~xarray.groupers.BinGrouper` when ``labels`` is not specified (:issue:`10284`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
 - Allow accessing arbitrary attributes on Pandas ExtensionArrays.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Use dtype from intermediate sum instead of source dtype or "int" for casting of count when calculating mean in rolling for correct operations (preserve float dtypes, correct mean of bool arrays) (:issue:`10340`, :pull:`10341`).
-
+- Fix coding empty (zero-size) timedelta64 arrays, ``units`` taking precedence when encoding,
+  fallback to default values when decoding (:issue:`10310`, :pull:`10313`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Use dtype from intermediate sum instead of source dtype or "int" for casting of count when
+  calculating mean in rolling for correct operations (preserve float dtypes,
+  correct mean of bool arrays) (:issue:`10340`, :pull:`10341`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -67,6 +71,15 @@ Alban Farchi, Andrecho, Benoit Bovy, Deepak Cherian, Dimitri Papadopoulos Orfano
 
 New Features
 ~~~~~~~~~~~~
+- By default xarray now encodes :py:class:`numpy.timedelta64` values by
+  converting to :py:class:`numpy.int64` values and storing ``"dtype"`` and
+  ``"units"`` attributes consistent with the dtype of the in-memory
+  :py:class:`numpy.timedelta64` values, e.g. ``"timedelta64[s]"`` and
+  ``"seconds"`` for second-resolution timedeltas. These values will always be
+  decoded to timedeltas without a warning moving forward. Timedeltas encoded
+  via the previous approach can still be roundtripped exactly, but in the
+  future will not be decoded by default (:issue:`1621`, :issue:`10099`,
+  :pull:`10101`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 - Added `scipy-stubs <https://github.com/scipy/scipy-stubs>`_ to the ``xarray[types]`` dependencies.
   By `Joren Hammudoglu <https://github.com/jorenham>`_.
