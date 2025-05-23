@@ -2060,8 +2060,6 @@ def test_literal_timedelta_decoding_invalid_key_error(invalid_key) -> None:
     ],
     ids=lambda x: f"{x!r}",
 )
-
-
 def test_timedelta_decoding_options(
     decode_via_units, decode_via_dtype, attrs, expect_timedelta64
 ) -> None:
@@ -2141,7 +2139,7 @@ def test_literal_timedelta64_coding_with_mask(
     assert_identical(reencoded, encoded)
     assert reencoded.dtype == encoded.dtype
 
-    
+
 def test_roundtrip_0size_timedelta(time_unit: PDDatetimeUnitOptions) -> None:
     # regression test for GitHub issue #10310
     encoding = {"units": "days", "dtype": np.dtype("int64")}
