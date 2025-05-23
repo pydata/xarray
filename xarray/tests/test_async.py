@@ -178,22 +178,26 @@ class TestAsyncLoad:
             total_time=timer.total_time, latency=self.LATENCY, n_loads=N_OBJECTS
         )
 
-    async def test_indexing(self, memorystore) -> None:
+    @pytest.mark.parametrize(
+        "method,indexer",
+        [
+            ("sel", {"x": 2}),
+            ("sel", {"x": [2, 3]}),
+            (
+                "isel",
+                {
+                    "x": xr.DataArray([2, 3], dims="points"),
+                    "y": xr.DataArray([2, 3], dims="points"),
+                },
+            ),
+        ],
+        ids=["basic", "outer", "vectorized"],
+    )
+    async def test_indexing(self, memorystore, method, indexer) -> None:
         # TODO we don't need a LatencyStore for this test
         latencystore = LatencyStore(memorystore, latency=0.0)
         ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
 
-        # test basic indexing
-        indexer = {"x": 2}
-        result = await ds.sel(indexer).load_async()
-        xrt.assert_identical(result, ds.sel(indexer).load())
-
-        # test orthogonal indexing
-        indexer = {"x": [2, 3]}
-        result = await ds.sel(indexer).load_async()
-        xrt.assert_identical(result, ds.sel(indexer).load())
-
-        # test vectorized indexing
-        indexer = {"x": xr.DataArray([2, 3], dims="points"), "y": xr.DataArray([2, 3], dims="points")}
-        result = await ds.isel(indexer).load_async()
-        xrt.assert_identical(result, ds.isel(indexer).load())
+        result = await getattr(ds, method)(**indexer).load_async()
+        expected = getattr(ds, method)(**indexer).load()
+        xrt.assert_identical(result, expected)
