@@ -179,7 +179,8 @@ class TestAsyncLoad:
         )
 
     async def test_indexing(self, memorystore) -> None:
-        latencystore = LatencyStore(memorystore, latency=self.LATENCY)
+        # TODO we don't need a LatencyStore for this test
+        latencystore = LatencyStore(memorystore, latency=0.0)
         ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
 
         # test basic indexing
@@ -193,7 +194,6 @@ class TestAsyncLoad:
         xrt.assert_identical(result, ds.sel(indexer).load())
 
         # test vectorized indexing
-        # TODO this shouldn't pass! I haven't implemented async vectorized indexing yet...
-        indexer = xr.DataArray([2, 3], dims=["x"])
-        result = await ds.foo[indexer].load_async()
-        xrt.assert_identical(result, ds.foo[indexer].load())
+        indexer = {"x": xr.DataArray([2, 3], dims="points"), "y": xr.DataArray([2, 3], dims="points")}
+        result = await ds.isel(indexer).load_async()
+        xrt.assert_identical(result, ds.isel(indexer).load())
