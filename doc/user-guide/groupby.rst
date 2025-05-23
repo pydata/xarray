@@ -100,7 +100,7 @@ The binning is implemented via :func:`pandas.cut`, whose documentation details h
 the bins are assigned. As seen in the example above, by default, the bins are
 labeled with strings using set notation to precisely identify the bin limits. To
 override this behavior, you can specify the bin labels explicitly. Here we
-choose `float` labels which identify the bin centers:
+choose ``float`` labels which identify the bin centers:
 
 .. ipython:: python
 
@@ -213,7 +213,7 @@ may be desirable:
 
     da.groupby_bins("lon", [0, 45, 50]).sum()
 
-These methods group by `lon` values. It is also possible to groupby each
+These methods group by ``lon`` values. It is also possible to groupby each
 cell in a grid, regardless of value, by stacking multiple dimensions,
 applying your function, and then unstacking the result:
 
@@ -222,7 +222,7 @@ applying your function, and then unstacking the result:
     stacked = da.stack(gridcell=["ny", "nx"])
     stacked.groupby("gridcell").sum(...).unstack("gridcell")
 
-Alternatively, you can groupby both `lat` and `lon` at the :ref:`same time <groupby.multiple>`.
+Alternatively, you can groupby both ``lat`` and ``lon`` at the :ref:`same time <groupby.multiple>`.
 
 .. _groupby.groupers:
 
@@ -294,6 +294,15 @@ is identical to
     ds.resample(time=TimeResampler("ME"))
 
 
+The :py:class:`groupers.UniqueGrouper` accepts an optional ``labels`` kwarg that is not present
+in :py:meth:`DataArray.groupby` or :py:meth:`Dataset.groupby`.
+Specifying ``labels`` is required when grouping by a lazy array type (e.g. dask or cubed).
+The ``labels`` are used to construct the output coordinate (say for a reduction), and aggregations
+will only be run over the specified labels.
+You may use ``labels`` to also specify the ordering of groups to be used during iteration.
+The order will be preserved in the output.
+
+
 .. _groupby.multiple:
 
 Grouping by multiple variables
@@ -321,3 +330,32 @@ Different groupers can be combined to construct sophisticated GroupBy operations
     from xarray.groupers import BinGrouper
 
     ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper()).sum()
+
+
+Time Grouping and Resampling
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. seealso::
+
+   See :ref:`resampling`.
+
+
+Shuffling
+~~~~~~~~~
+
+Shuffling is a generalization of sorting a DataArray or Dataset by another DataArray, named ``label`` for example, that follows from the idea of grouping by ``label``.
+Shuffling reorders the DataArray or the DataArrays in a Dataset such that all members of a group occur sequentially. For example,
+Shuffle the object using either :py:class:`DatasetGroupBy` or :py:class:`DataArrayGroupBy` as appropriate.
+
+.. ipython:: python
+
+    da = xr.DataArray(
+        dims="x",
+        data=[1, 2, 3, 4, 5, 6],
+        coords={"label": ("x", "a b c a b c".split(" "))},
+    )
+    da.groupby("label").shuffle_to_chunks()
+
+
+For chunked array types (e.g. dask or cubed), shuffle may result in a more optimized communication pattern when compared to direct indexing by the appropriate indexer.
+Shuffling also makes GroupBy operations on chunked arrays an embarrassingly parallel problem, and may significantly improve workloads that use :py:meth:`DatasetGroupBy.map` or :py:meth:`DataArrayGroupBy.map`.

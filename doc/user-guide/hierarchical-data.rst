@@ -28,7 +28,7 @@ Examples of data which one might want organise in a grouped or hierarchical mann
 - Observational data about the same system but from multiple different types of sensors,
 - Mixed experimental and theoretical data,
 - A systematic study recording the same experiment but with different parameters,
-- Heterogenous data, such as demographic and metereological data,
+- Heterogeneous data, such as demographic and metereological data,
 
 or even any combination of the above.
 
@@ -177,7 +177,7 @@ Let's use a different example of a tree to discuss more complex relationships be
         "/Bony Skeleton/Four Limbs/Amniotic Egg/Two Fenestrae/Dinosaurs"
     ]
 
-We have used the :py:meth:`~xarray.DataTree.from_dict` constructor method as a prefered way to quickly create a whole tree,
+We have used the :py:meth:`~xarray.DataTree.from_dict` constructor method as a preferred way to quickly create a whole tree,
 and :ref:`filesystem paths` (to be explained shortly) to select two nodes of interest.
 
 .. ipython:: python
@@ -412,7 +412,7 @@ We can use :py:meth:`xarray.DataTree.match` for this:
 We can also subset trees by the contents of the nodes.
 :py:meth:`xarray.DataTree.filter` retains only the nodes of a tree that meet a certain condition.
 For example, we could recreate the Simpson's family tree with the ages of each individual, then filter for only the adults:
-First lets recreate the tree but with an `age` data variable in every node:
+First lets recreate the tree but with an ``age`` data variable in every node:
 
 .. ipython:: python
 
@@ -703,7 +703,7 @@ Data Alignment
 ~~~~~~~~~~~~~~
 
 The data in different datatree nodes are not totally independent. In particular dimensions (and indexes) in child nodes must be exactly aligned with those in their parent nodes.
-Exact aligment means that shared dimensions must be the same length, and indexes along those dimensions must be equal.
+Exact alignment means that shared dimensions must be the same length, and indexes along those dimensions must be equal.
 
 .. note::
     If you were a previous user of the prototype `xarray-contrib/datatree <https://github.com/xarray-contrib/datatree>`_ package, this is different from what you're used to!

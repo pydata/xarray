@@ -295,7 +295,7 @@ class TestFormatting:
 
         byteorder = "<" if sys.byteorder == "little" else ">"
         expected = dedent(
-            """\
+            f"""\
         Left and right DataArray objects are not identical
         Differing dimensions:
             (x: 2, y: 3) != (x: 2)
@@ -306,8 +306,8 @@ class TestFormatting:
         R
             array([1, 2], dtype=int64)
         Differing coordinates:
-        L * x        (x) %cU1 8B 'a' 'b'
-        R * x        (x) %cU1 8B 'a' 'c'
+        L * x        (x) {byteorder}U1 8B 'a' 'b'
+        R * x        (x) {byteorder}U1 8B 'a' 'c'
         Coordinates only on the left object:
           * y        (y) int64 24B 1 2 3
         Coordinates only on the right object:
@@ -317,7 +317,6 @@ class TestFormatting:
         R   units: kg
         Attributes only on the left object:
             description: desc"""
-            % (byteorder, byteorder)
         )
 
         actual = formatting.diff_array_repr(da_a, da_b, "identical")
@@ -496,15 +495,15 @@ class TestFormatting:
 
         byteorder = "<" if sys.byteorder == "little" else ">"
         expected = dedent(
-            """\
+            f"""\
         Left and right Dataset objects are not identical
         Differing dimensions:
             (x: 2, y: 3) != (x: 2)
         Differing coordinates:
-        L * x        (x) %cU1 8B 'a' 'b'
+        L * x        (x) {byteorder}U1 8B 'a' 'b'
             Differing variable attributes:
                 foo: bar
-        R * x        (x) %cU1 8B 'a' 'c'
+        R * x        (x) {byteorder}U1 8B 'a' 'c'
             Differing variable attributes:
                 source: 0
                 foo: baz
@@ -522,7 +521,6 @@ class TestFormatting:
         R   title: newtitle
         Attributes only on the left object:
             description: desc"""
-            % (byteorder, byteorder)
         )
 
         actual = formatting.diff_dataset_repr(ds_a, ds_b, "identical")
@@ -835,7 +833,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     a = np.char.add(long_name, np.arange(0, n_vars).astype(str))
     b = np.char.add("attr_", np.arange(0, n_attr).astype(str))
     c = np.char.add("coord", np.arange(0, n_vars).astype(str))
-    attrs = {k: 2 for k in b}
+    attrs = dict.fromkeys(b, 2)
     coords = {_c: np.array([0, 1], dtype=np.uint64) for _c in c}
     data_vars = dict()
     for v, _c in zip(a, coords.items(), strict=True):
@@ -1022,9 +1020,10 @@ Data variables:
     assert actual == expected
 
     actual = repr(xds["foo"])
-    expected = """
+    array_repr = repr(xds.foo.data).replace("\n     ", "")
+    expected = f"""
 <xarray.DataArray 'foo' (foo: 1200)> Size: 2kB
-array([   0,    1,    2, ..., 1197, 1198, 1199], dtype=int16)
+{array_repr}
 Coordinates:
   * foo      (foo) int16 2kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
 """.strip()
@@ -1142,7 +1141,7 @@ Dimensions without coordinates: x
     actual = repr(ds)
     expected = f"""
 <xarray.DataArray (x: 1)> Size: {array.dtype.itemsize}B
-{repr(array)}
+{array!r}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
@@ -1152,7 +1151,7 @@ Dimensions without coordinates: x
     actual = repr(ds)
     expected = f"""
 <xarray.DataArray (x: 1)> Size: 4B
-{repr(array)}
+{array!r}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
@@ -1162,7 +1161,7 @@ Dimensions without coordinates: x
     actual = repr(ds)
     expected = f"""
 <xarray.DataArray (x: 1)> Size: 8B
-{repr(array)}
+{array!r}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected

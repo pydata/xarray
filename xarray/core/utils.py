@@ -37,7 +37,9 @@
 from __future__ import annotations
 
 import contextlib
+import difflib
 import functools
+import importlib
 import inspect
 import io
 import itertools
@@ -64,8 +66,17 @@ from collections.abc import (
 )
 from enum import Enum
 from pathlib import Path
-from types import EllipsisType
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeGuard, TypeVar, overload
+from types import EllipsisType, ModuleType
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Literal,
+    TypeGuard,
+    TypeVar,
+    cast,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -111,6 +122,47 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
 
     wrapper.__doc__ = alias_message(old_name, obj.__name__)
     return wrapper
+
+
+def did_you_mean(
+    word: Hashable, possibilities: Iterable[Hashable], *, n: int = 10
+) -> str:
+    """
+    Suggest a few correct words based on a list of possibilities
+
+    Parameters
+    ----------
+    word : Hashable
+        Word to compare to a list of possibilities.
+    possibilities : Iterable of Hashable
+        The iterable of Hashable that contains the correct values.
+    n : int, default: 10
+        Maximum number of suggestions to show.
+
+    Examples
+    --------
+    >>> did_you_mean("bluch", ("blech", "gray_r", 1, None, (2, 56)))
+    "Did you mean one of ('blech',)?"
+    >>> did_you_mean("none", ("blech", "gray_r", 1, None, (2, 56)))
+    'Did you mean one of (None,)?'
+
+    See also
+    --------
+    https://en.wikipedia.org/wiki/String_metric
+    """
+    # Convert all values to string, get_close_matches doesn't handle all hashables:
+    possibilities_str: dict[str, Hashable] = {str(k): k for k in possibilities}
+
+    msg = ""
+    if len(
+        best_str := difflib.get_close_matches(
+            str(word), list(possibilities_str.keys()), n=n
+        )
+    ):
+        best = tuple(possibilities_str[k] for k in best_str)
+        msg = f"Did you mean one of {best}?"
+
+    return msg
 
 
 def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
@@ -187,10 +239,7 @@ def equivalent(first: T, second: T) -> bool:
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    for f, s in zip(first, second, strict=True):
-        if not equivalent(f, s):
-            return False
-    return True
+    return all(equivalent(f, s) for f, s in zip(first, second, strict=True))
 
 
 def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
@@ -647,7 +696,7 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
         try:
             with open(path, "rb") as f:
                 return read_magic_number_from_file(f, count)
-        except (FileNotFoundError, TypeError):
+        except (FileNotFoundError, IsADirectoryError, TypeError):
             pass
     return None
 
@@ -711,7 +760,7 @@ def decode_numpy_dict_values(attrs: Mapping[K, V]) -> dict[K, V]:
     attrs = dict(attrs)
     for k, v in attrs.items():
         if isinstance(v, np.ndarray):
-            attrs[k] = v.tolist()
+            attrs[k] = cast(V, v.tolist())
         elif isinstance(v, np.generic):
             attrs[k] = v.item()
     return attrs
@@ -1011,7 +1060,7 @@ def parse_ordered_dims(
 def _check_dims(dim: Set[Hashable], all_dims: Set[Hashable]) -> None:
     wrong_dims = (dim - all_dims) - {...}
     if wrong_dims:
-        wrong_dims_str = ", ".join(f"'{d!s}'" for d in wrong_dims)
+        wrong_dims_str = ", ".join(f"'{d}'" for d in wrong_dims)
         raise ValueError(
             f"Dimension(s) {wrong_dims_str} do not exist. Expected one or more of {all_dims}"
         )
@@ -1065,16 +1114,16 @@ def contains_only_chunked_or_numpy(obj) -> bool:
 
     Expects obj to be Dataset or DataArray"""
     from xarray.core.dataarray import DataArray
+    from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.pycompat import is_chunked_array
 
     if isinstance(obj, DataArray):
         obj = obj._to_temp_dataset()
 
     return all(
-        [
-            isinstance(var.data, np.ndarray) or is_chunked_array(var.data)
-            for var in obj.variables.values()
-        ]
+        isinstance(var._data, ExplicitlyIndexed | np.ndarray)
+        or is_chunked_array(var._data)
+        for var in obj._variables.values()
     )
 
 
@@ -1197,6 +1246,60 @@ def _resolve_doubly_passed_kwarg(
     return kwargs_dict
 
 
+def attempt_import(module: str) -> ModuleType:
+    """Import an optional dependency, and raise an informative error on failure.
+
+    Parameters
+    ----------
+    module : str
+        Module to import. For example, ``'zarr'`` or ``'matplotlib.pyplot'``.
+
+    Returns
+    -------
+    module : ModuleType
+        The Imported module.
+
+    Raises
+    ------
+    ImportError
+        If the module could not be imported.
+
+    Notes
+    -----
+    Static type checkers will not be able to infer the type of the returned module,
+    so it is recommended to precede this function with a direct import of the module,
+    guarded by an ``if TYPE_CHECKING`` block, to preserve type checker functionality.
+    See the examples section below for a demonstration.
+
+    Examples
+    --------
+    >>> from xarray.core.utils import attempt_import
+    >>> if TYPE_CHECKING:
+    ...     import zarr
+    ... else:
+    ...     zarr = attempt_import("zarr")
+    ...
+    """
+    install_mapping = dict(nc_time_axis="nc-time-axis")
+    package_purpose = dict(
+        zarr="for working with Zarr stores",
+        cftime="for working with non-standard calendars",
+        matplotlib="for plotting",
+        hypothesis="for the `xarray.testing.strategies` submodule",
+    )
+    package_name = module.split(".")[0]  # e.g. "zarr" from "zarr.storage"
+    install_name = install_mapping.get(package_name, package_name)
+    reason = package_purpose.get(package_name, "")
+    try:
+        return importlib.import_module(module)
+    except (ImportError, ModuleNotFoundError) as e:
+        raise ImportError(
+            f"The {install_name} package is required {reason}"
+            " but could not be imported."
+            " Please install it with your package manager (e.g. conda or pip)."
+        ) from e
+
+
 _DEFAULT_NAME = ReprObject("<default-name>")
 
 
@@ -1210,3 +1313,28 @@ def result_name(objects: Iterable[Any]) -> Any:
     else:
         name = None
     return name
+
+
+def _get_func_args(func, param_names):
+    """Use `inspect.signature` to try accessing `func` args. Otherwise, ensure
+    they are provided by user.
+    """
+    try:
+        func_args = inspect.signature(func).parameters
+    except ValueError as err:
+        func_args = {}
+        if not param_names:
+            raise ValueError(
+                "Unable to inspect `func` signature, and `param_names` was not provided."
+            ) from err
+    if param_names:
+        params = param_names
+    else:
+        params = list(func_args)[1:]
+        if any(
+            (p.kind in [p.VAR_POSITIONAL, p.VAR_KEYWORD]) for p in func_args.values()
+        ):
+            raise ValueError(
+                "`param_names` must be provided because `func` takes variable length arguments."
+            )
+    return params, func_args

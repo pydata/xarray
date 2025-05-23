@@ -47,7 +47,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.10", "3.12"]
+        python-version: ["3.10", "3.13"]
         env: [""]
         include:
           # Minimum python version:
@@ -59,14 +59,23 @@ jobs:
             os: ubuntu-latest
           # Latest python version:
           - env: "all-but-numba"
-            python-version: "3.12"
+            python-version: "3.13"
             os: ubuntu-latest
           - env: "all-but-dask"
-            # Not 3.12 because of pint
-            python-version: "3.11"
+            python-version: "3.12"
             os: ubuntu-latest
           - env: "flaky"
-            python-version: "3.12"
+            python-version: "3.13"
+            os: ubuntu-latest
+          # The mypy tests must be executed using only 1 process in order to guarantee
+          # predictable mypy output messages for comparison to expectations.
+          - env: "mypy"
+            python-version: "3.10"
+            numprocesses: 1
+            os: ubuntu-latest
+          - env: "mypy"
+            python-version: "3.13"
+            numprocesses: 1
             os: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -78,10 +87,10 @@ jobs:
 
           if [[ ${{ matrix.os }} == windows* ]] ;
           then
-            if [[ ${{ matrix.python-version }} != "3.13" ]]; then
+            if [[ ${{ matrix.python-version }} != "3.14" ]]; then
               echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
             else
-              echo "CONDA_ENV_FILE=ci/requirements/environment-windows-3.13.yml" >> $GITHUB_ENV
+              echo "CONDA_ENV_FILE=ci/requirements/environment-windows-3.14.yml" >> $GITHUB_ENV
             fi
           elif [[ "${{ matrix.env }}" != "" ]] ;
           then
@@ -89,6 +98,10 @@ jobs:
             then
               echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
               echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests -W default" >> $GITHUB_ENV
+            elif [[ "${{ matrix.env }}" == "mypy" ]] ;
+            then
+              echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+              echo "PYTEST_ADDOPTS=-n 1 -m 'mypy' --run-mypy -W default" >> $GITHUB_ENV
             else
               echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
             fi
@@ -98,10 +111,10 @@ jobs:
               echo "PYTEST_ADDOPTS=-W default" >> $GITHUB_ENV
             fi
           else
-            if [[ ${{ matrix.python-version }} != "3.13" ]]; then
+            if [[ ${{ matrix.python-version }} != "3.14" ]]; then
               echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
             else
-              echo "CONDA_ENV_FILE=ci/requirements/environment-3.13.yml" >> $GITHUB_ENV
+              echo "CONDA_ENV_FILE=ci/requirements/environment-3.14.yml" >> $GITHUB_ENV
             fi
           fi
 
@@ -116,7 +129,6 @@ jobs:
           cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{matrix.python-version}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
           create-args: >-
             python=${{matrix.python-version}}
-            conda
 
       # We only want to install this on one run, because otherwise we'll have
       # duplicate annotations.
@@ -131,8 +143,6 @@ jobs:
 
       - name: Version info
         run: |
-          conda info -a
-          conda list
           python xarray/util/print_versions.py
 
       - name: Import xarray
@@ -148,7 +158,7 @@ jobs:
           save-always: true
 
       - name: Run tests
-        run: python -m pytest -n 4
+        run: python -m pytest -n ${{ matrix.numprocesses || 4 }}
           --timeout 180
           --cov=xarray
           --cov-report=xml
@@ -162,7 +172,9 @@ jobs:
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v4.6.0
+        uses: codecov/codecov-action@v5.4.2
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           file: ./coverage.xml
           flags: unittests

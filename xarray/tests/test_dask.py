@@ -11,6 +11,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+import xarray.ufuncs as xu
 from xarray import DataArray, Dataset, Variable
 from xarray.core import duck_array_ops
 from xarray.core.duck_array_ops import lazy_array_equiv
@@ -37,7 +38,7 @@ ON_WINDOWS = sys.platform == "win32"
 
 
 def test_raise_if_dask_computes():
-    data = da.from_array(np.random.RandomState(0).randn(4, 6), chunks=(2, 2))
+    data = da.from_array(np.random.default_rng(0).random((4, 6)), chunks=(2, 2))
     with pytest.raises(RuntimeError, match=r"Too many computes"):
         with raise_if_dask_computes():
             data.compute()
@@ -76,7 +77,7 @@ class TestVariable(DaskTestCase):
 
     @pytest.fixture(autouse=True)
     def setUp(self):
-        self.values = np.random.RandomState(0).randn(4, 6)
+        self.values = np.random.default_rng(0).random((4, 6))
         self.data = da.from_array(self.values, chunks=(2, 2))
 
         self.eager_var = Variable(("x", "y"), self.values)
@@ -104,10 +105,7 @@ class TestVariable(DaskTestCase):
             assert rechunked.chunks == expected
             self.assertLazyAndIdentical(self.eager_var, rechunked)
 
-            expected_chunksizes = {
-                dim: chunks
-                for dim, chunks in zip(self.lazy_var.dims, expected, strict=True)
-            }
+            expected_chunksizes = dict(zip(self.lazy_var.dims, expected, strict=True))
             assert rechunked.chunksizes == expected_chunksizes
 
     def test_indexing(self):
@@ -277,6 +275,17 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(np.maximum(u, 0), np.maximum(v, 0))
         self.assertLazyAndAllClose(np.maximum(u, 0), np.maximum(0, v))
 
+    def test_univariate_xufunc(self):
+        u = self.eager_var
+        v = self.lazy_var
+        self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
+
+    def test_bivariate_xufunc(self):
+        u = self.eager_var
+        v = self.lazy_var
+        self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(v, 0))
+        self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
+
     def test_compute(self):
         u = self.eager_var
         v = self.lazy_var
@@ -355,19 +364,13 @@ class TestDataArrayAndDataset(DaskTestCase):
             assert rechunked.chunks == expected
             self.assertLazyAndIdentical(self.eager_array, rechunked)
 
-            expected_chunksizes = {
-                dim: chunks
-                for dim, chunks in zip(self.lazy_array.dims, expected, strict=True)
-            }
+            expected_chunksizes = dict(zip(self.lazy_array.dims, expected, strict=True))
             assert rechunked.chunksizes == expected_chunksizes
 
             # Test Dataset
             lazy_dataset = self.lazy_array.to_dataset()
             eager_dataset = self.eager_array.to_dataset()
-            expected_chunksizes = {
-                dim: chunks
-                for dim, chunks in zip(lazy_dataset.dims, expected, strict=True)
-            }
+            expected_chunksizes = dict(zip(lazy_dataset.dims, expected, strict=True))
             rechunked = lazy_dataset.chunk(chunks)
 
             # Dataset.chunks has a different return type to DataArray.chunks - see issue #5843
@@ -788,6 +791,7 @@ class TestDataArrayAndDataset(DaskTestCase):
 
 
 class TestToDaskDataFrame:
+    @pytest.mark.xfail(reason="https://github.com/dask/dask/issues/11584")
     def test_to_dask_dataframe(self):
         # Test conversion of Datasets to dask DataFrames
         x = np.random.randn(10)
@@ -1038,16 +1042,10 @@ def test_basic_compute():
             ds.foo.variable.compute()
 
 
-def test_dask_layers_and_dependencies():
+def test_dataset_as_delayed():
     ds = Dataset({"foo": ("x", range(5)), "bar": ("x", range(5))}).chunk()
 
-    x = dask.delayed(ds)
-    assert set(x.__dask_graph__().dependencies).issuperset(
-        ds.__dask_graph__().dependencies
-    )
-    assert set(x.foo.__dask_graph__().dependencies).issuperset(
-        ds.__dask_graph__().dependencies
-    )
+    assert dask.delayed(ds).compute() == ds.compute()
 
 
 def make_da():
@@ -1811,3 +1809,28 @@ def test_minimize_graph_size():
         # all the other dimensions.
         # e.g. previously for 'x',  actual == numchunks['y'] * numchunks['z']
         assert actual == numchunks[var], (actual, numchunks[var])
+
+
+def test_idxmin_chunking():
+    # GH9425
+    x, y, t = 100, 100, 10
+    rang = np.arange(t * x * y)
+    da = xr.DataArray(
+        rang.reshape(t, x, y), coords={"time": range(t), "x": range(x), "y": range(y)}
+    )
+    da = da.chunk(dict(time=-1, x=25, y=25))
+    actual = da.idxmin("time")
+    assert actual.chunksizes == {k: da.chunksizes[k] for k in ["x", "y"]}
+    assert_identical(actual, da.compute().idxmin("time"))
+
+
+def test_conjugate():
+    # Test for https://github.com/pydata/xarray/issues/10302
+    z = 1j * da.arange(100)
+
+    data = xr.DataArray(z, coords={"x": np.arange(100)})
+
+    conj_data = data.conjugate()
+    assert dask.is_dask_collection(conj_data)
+
+    assert_equal(conj_data, data.conj())

@@ -43,12 +43,12 @@ jobs:
     env:
       ZARR_V3_EXPERIMENTAL_API: 1
     if: |
-        always()
-        && (
-            (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-            || needs.detect-ci-trigger.outputs.triggered == 'true'
-            || contains( github.event.pull_request.labels.*.name, 'run-upstream')
-        )
+      always()
+      && (
+          (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+          || needs.detect-ci-trigger.outputs.triggered == 'true'
+          || contains( github.event.pull_request.labels.*.name, 'run-upstream')
+      )
     defaults:
       run:
         shell: bash -l {0}
@@ -68,7 +68,6 @@ jobs:
           create-args: >-
             python=${{ matrix.python-version }}
             pytest-reportlog
-            conda
       - name: Install upstream versions
         run: |
           bash ci/install-upstream-wheels.sh
@@ -77,8 +76,6 @@ jobs:
           python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          conda info -a
-          conda list
           python xarray/util/print_versions.py
       - name: Import xarray
         run: |
@@ -87,7 +84,7 @@ jobs:
         if: success()
         id: status
         run: |
-          python -m pytest --timeout=60 -rf \
+          python -m pytest --timeout=60 -rf -nauto \
             --report-log output-${{ matrix.python-version }}-log.jsonl
       - name: Generate and publish the report
         if: |
@@ -104,10 +101,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect-ci-trigger
     if: |
-        always()
-        && (
-            contains( github.event.pull_request.labels.*.name, 'run-upstream')
-        )
+      always()
+      && (
+          contains( github.event.pull_request.labels.*.name, 'run-upstream')
+      )
     defaults:
       run:
         shell: bash -l {0}
@@ -127,7 +124,6 @@ jobs:
           create-args: >-
             python=${{ matrix.python-version }}
             pytest-reportlog
-            conda
       - name: Install upstream versions
         run: |
           bash ci/install-upstream-wheels.sh
@@ -136,8 +132,6 @@ jobs:
           python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          conda info -a
-          conda list
           python xarray/util/print_versions.py
       - name: Install mypy
         run: |
@@ -146,7 +140,7 @@ jobs:
         run: |
           python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v4.6.0
+        uses: codecov/codecov-action@v5.4.2
         with:
           file: mypy_report/cobertura.xml
           flags: mypy

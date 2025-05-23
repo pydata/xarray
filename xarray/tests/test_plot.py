@@ -33,6 +33,7 @@ from xarray.tests import (
     assert_no_warnings,
     requires_cartopy,
     requires_cftime,
+    requires_dask,
     requires_matplotlib,
     requires_seaborn,
 )
@@ -89,30 +90,27 @@ def text_in_fig() -> set[str]:
     """
     Return the set of all text in the figure
     """
-    return {t.get_text() for t in plt.gcf().findobj(mpl.text.Text)}  # type: ignore[attr-defined] # mpl error?
+    return {t.get_text() for t in plt.gcf().findobj(mpl.text.Text)}
 
 
 def find_possible_colorbars() -> list[mpl.collections.QuadMesh]:
     # nb. this function also matches meshes from pcolormesh
-    return plt.gcf().findobj(mpl.collections.QuadMesh)  # type: ignore[return-value] # mpl error?
+    return plt.gcf().findobj(mpl.collections.QuadMesh)
 
 
 def substring_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
     """
     Return True if a substring is found anywhere in an axes
     """
-    alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}  # type: ignore[attr-defined] # mpl error?
-    for txt in alltxt:
-        if substring in txt:
-            return True
-    return False
+    alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}
+    return any(substring in txt for txt in alltxt)
 
 
 def substring_not_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
     """
     Return True if a substring is not found anywhere in an axes
     """
-    alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}  # type: ignore[attr-defined] # mpl error?
+    alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}
     check = [(substring not in txt) for txt in alltxt]
     return all(check)
 
@@ -124,12 +122,12 @@ def property_in_axes_text(
     Return True if the specified text in an axes
     has the property assigned to property_str
     """
-    alltxt: list[mpl.text.Text] = ax.findobj(mpl.text.Text)  # type: ignore[assignment]
-    check = []
-    for t in alltxt:
-        if t.get_text() == target_txt:
-            check.append(plt.getp(t, property) == property_str)
-    return all(check)
+    alltxt: list[mpl.text.Text] = ax.findobj(mpl.text.Text)
+    return all(
+        plt.getp(t, property) == property_str
+        for t in alltxt
+        if t.get_text() == target_txt
+    )
 
 
 def easy_array(shape: tuple[int, ...], start: float = 0, stop: float = 1) -> np.ndarray:
@@ -1808,8 +1806,9 @@ class TestContour(Common2dMixin, PlotTestCase):
         artist = self.darray.plot.contour(levels=levels, colors=["k", "r", "w", "b"])
         cmap = artist.cmap
         assert isinstance(cmap, mpl.colors.ListedColormap)
-        colors = cmap.colors
-        assert isinstance(colors, list)
+        # non-optimal typing in matplotlib (ArrayLike)
+        # https://github.com/matplotlib/matplotlib/blob/84464dd085210fb57cc2419f0d4c0235391d97e6/lib/matplotlib/colors.pyi#L133
+        colors = cast(np.ndarray, cmap.colors)
 
         assert self._color_as_tuple(colors[1]) == (1.0, 0.0, 0.0)
         assert self._color_as_tuple(colors[2]) == (1.0, 1.0, 1.0)
@@ -2430,6 +2429,26 @@ class TestFacetGrid(PlotTestCase):
             col="z", subplot_kws=dict(projection="polar"), sharex=False, sharey=False
         )
 
+    @pytest.mark.slow
+    def test_units_appear_somewhere(self) -> None:
+        # assign coordinates to all dims so we can test for units
+        darray = self.darray.assign_coords(
+            {"x": np.arange(self.darray.x.size), "y": np.arange(self.darray.y.size)}
+        )
+
+        darray.x.attrs["units"] = "x_unit"
+        darray.y.attrs["units"] = "y_unit"
+
+        g = xplt.FacetGrid(darray, col="z")
+
+        g.map_dataarray(xplt.contourf, "x", "y")
+
+        alltxt = text_in_fig()
+
+        # unit should appear as e.g. 'x [x_unit]'
+        for unit_name in ["x_unit", "y_unit"]:
+            assert unit_name in "".join(alltxt)
+
 
 @pytest.mark.filterwarnings("ignore:tight_layout cannot")
 class TestFacetGrid4d(PlotTestCase):
@@ -2963,7 +2982,6 @@ class TestDatetimePlot(PlotTestCase):
         # mpl.dates.AutoDateLocator passes and no other subclasses:
         assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_datetime_plot2d(self) -> None:
         # Test that matplotlib-native datetime works:
         da = DataArray(
@@ -2996,7 +3014,9 @@ class TestCFDatetimePlot(PlotTestCase):
         """
         # case for 1d array
         data = np.random.rand(4, 12)
-        time = xr.cftime_range(start="2017", periods=12, freq="1ME", calendar="noleap")
+        time = xr.date_range(
+            start="2017", periods=12, freq="1ME", calendar="noleap", use_cftime=True
+        )
         darray = DataArray(data, dims=["x", "time"])
         darray.coords["time"] = time
 
@@ -3024,8 +3044,8 @@ class TestNcAxisNotInstalled(PlotTestCase):
         month = np.arange(1, 13, 1)
         data = np.sin(2 * np.pi * month / 12.0)
         darray = DataArray(data, dims=["time"])
-        darray.coords["time"] = xr.cftime_range(
-            start="2017", periods=12, freq="1ME", calendar="noleap"
+        darray.coords["time"] = xr.date_range(
+            start="2017", periods=12, freq="1ME", calendar="noleap", use_cftime=True
         )
 
         self.darray = darray
@@ -3282,7 +3302,7 @@ def test_maybe_gca() -> None:
         existing_axes = plt.axes()
         ax = _maybe_gca(aspect=1)
 
-        # re-uses the existing axes
+        # reuses the existing axes
         assert existing_axes == ax
         # kwargs are ignored when reusing axes
         assert ax.get_aspect() == "auto"
@@ -3326,6 +3346,24 @@ def test_datarray_scatter(
             add_legend=add_legend,
             add_colorbar=add_colorbar,
         )
+
+
+@requires_dask
+@requires_matplotlib
+@pytest.mark.parametrize(
+    "plotfunc",
+    ["scatter"],
+)
+def test_dataarray_not_loading_inplace(plotfunc: str) -> None:
+    ds = xr.tutorial.scatter_example_dataset()
+    ds = ds.chunk()
+
+    with figure_context():
+        getattr(ds.A.plot, plotfunc)(x="x")
+
+    from dask.array import Array
+
+    assert isinstance(ds.A.data, Array)
 
 
 @requires_matplotlib

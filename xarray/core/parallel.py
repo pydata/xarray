@@ -8,14 +8,14 @@ from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 import numpy as np
 
-from xarray.core.alignment import align
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.indexes import Index
-from xarray.core.merge import merge
 from xarray.core.utils import is_dask_collection
 from xarray.core.variable import Variable
+from xarray.structure.alignment import align
+from xarray.structure.merge import merge
 
 if TYPE_CHECKING:
     from xarray.core.types import T_Xarray
@@ -296,7 +296,7 @@ def map_blocks(
     ...     clim = gb.mean(dim="time")
     ...     return gb - clim
     ...
-    >>> time = xr.cftime_range("1990-01", "1992-01", freq="ME")
+    >>> time = xr.date_range("1990-01", "1992-01", freq="ME", use_cftime=True)
     >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
     >>> np.random.seed(123)
     >>> array = xr.DataArray(
@@ -600,7 +600,7 @@ def map_blocks(
             # unchunked dimensions in the input have one chunk in the result
             # output can have new dimensions with exactly one chunk
             key: tuple[Any, ...] = (gname_l,) + tuple(
-                chunk_index[dim] if dim in chunk_index else 0 for dim in variable.dims
+                chunk_index.get(dim, 0) for dim in variable.dims
             )
 
             # We're adding multiple new layers to the graph:

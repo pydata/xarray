@@ -28,6 +28,10 @@ except ImportError:
         ([np.str_, np.int64], np.object_),
         ([np.str_, np.str_], np.str_),
         ([np.bytes_, np.str_], np.object_),
+        ([np.dtype("<U2"), np.str_], np.dtype("U")),
+        ([np.dtype("<U2"), str], np.dtype("U")),
+        ([np.dtype("S3"), np.bytes_], np.dtype("S")),
+        ([np.dtype("S10"), bytes], np.dtype("S")),
     ],
 )
 def test_result_type(args, expected) -> None:

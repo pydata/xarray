@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from xarray.core._aggregations import (
     DataArrayResampleAggregations,
@@ -14,6 +14,7 @@ from xarray.core.types import Dims, InterpOptions, T_Xarray
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.types import T_Chunks
 
 from xarray.groupers import RESAMPLE_DIM
 
@@ -54,8 +55,70 @@ class Resample(GroupBy[T_Xarray]):
         keep_attrs: bool | None = None,
         **kwargs,
     ) -> T_Xarray:
-        result = super()._flox_reduce(dim=dim, keep_attrs=keep_attrs, **kwargs)
-        result = result.rename({RESAMPLE_DIM: self._group_dim})
+        result: T_Xarray = (
+            super()
+            ._flox_reduce(dim=dim, keep_attrs=keep_attrs, **kwargs)
+            .rename({RESAMPLE_DIM: self._group_dim})  # type: ignore[assignment]
+        )
+        return result
+
+    def shuffle_to_chunks(self, chunks: T_Chunks = None):
+        """
+        Sort or "shuffle" the underlying object.
+
+        "Shuffle" means the object is sorted so that all group members occur sequentially,
+        in the same chunk. Multiple groups may occur in the same chunk.
+        This method is particularly useful for chunked arrays (e.g. dask, cubed).
+        particularly when you need to map a function that requires all members of a group
+        to be present in a single chunk. For chunked array types, the order of appearance
+        is not guaranteed, but will depend on the input chunking.
+
+        Parameters
+        ----------
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or tuple of int, optional
+            How to adjust chunks along dimensions not present in the array being grouped by.
+
+        Returns
+        -------
+        DataArrayGroupBy or DatasetGroupBy
+
+        Examples
+        --------
+        >>> import dask.array
+        >>> da = xr.DataArray(
+        ...     dims="time",
+        ...     data=dask.array.arange(10, chunks=1),
+        ...     coords={"time": xr.date_range("2001-01-01", freq="12h", periods=10)},
+        ...     name="a",
+        ... )
+        >>> shuffled = da.resample(time="2D").shuffle_to_chunks()
+        >>> shuffled
+        <xarray.DataArray 'a' (time: 10)> Size: 80B
+        dask.array<shuffle, shape=(10,), dtype=int64, chunksize=(4,), chunktype=numpy.ndarray>
+        Coordinates:
+          * time     (time) datetime64[ns] 80B 2001-01-01 ... 2001-01-05T12:00:00
+
+        See Also
+        --------
+        dask.dataframe.DataFrame.shuffle
+        dask.array.shuffle
+        """
+        (grouper,) = self.groupers
+        return self._shuffle_obj(chunks).drop_vars(RESAMPLE_DIM)
+
+    def _first_or_last(
+        self, op: Literal["first", "last"], skipna: bool | None, keep_attrs: bool | None
+    ) -> T_Xarray:
+        from xarray.core.dataset import Dataset
+
+        result = super()._first_or_last(op=op, skipna=skipna, keep_attrs=keep_attrs)
+        if isinstance(result, Dataset):
+            # Can't do this in the base class because group_dim is RESAMPLE_DIM
+            # which is not present in the original object
+            for var in result.data_vars:
+                result._variables[var] = result._variables[var].transpose(
+                    *self._obj._variables[var].dims
+                )
         return result
 
     def _drop_coords(self) -> T_Xarray:
@@ -187,8 +250,7 @@ class Resample(GroupBy[T_Xarray]):
         )
 
 
-# https://github.com/python/mypy/issues/9031
-class DataArrayResample(  # type: ignore[misc]
+class DataArrayResample(
     Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations
 ):
     """DataArrayGroupBy object specialized to time resampling operations over a
@@ -330,8 +392,7 @@ class DataArrayResample(  # type: ignore[misc]
         return self.mean(None if self._dim is None else [self._dim])
 
 
-# https://github.com/python/mypy/issues/9031
-class DatasetResample(  # type: ignore[misc]
+class DatasetResample(
     Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations
 ):
     """DatasetGroupBy object specialized to resampling a specified dimension"""

@@ -92,8 +92,8 @@ fast. To do label based indexing, use the :py:attr:`~xarray.DataArray.loc` attri
     da.loc["2000-01-01":"2000-01-02", "IA"]
 
 In this example, the selected is a subpart of the array
-in the range '2000-01-01':'2000-01-02' along the first coordinate `time`
-and with 'IA' value from the second coordinate `space`.
+in the range '2000-01-01':'2000-01-02' along the first coordinate ``time``
+and with 'IA' value from the second coordinate ``space``.
 
 You can perform any of the `label indexing operations supported by pandas`__,
 including indexing with individual, slices and lists/arrays of labels, as well as
@@ -276,7 +276,7 @@ This is particularly useful for ragged indexing of multi-dimensional data,
 e.g., to apply a 2D mask to an image. Note that ``where`` follows all the
 usual xarray broadcasting and alignment rules for binary operations (e.g.,
 ``+``) between the object being indexed and the condition, as described in
-:ref:`comput`:
+:ref:`compute`:
 
 .. ipython:: python
 
@@ -323,7 +323,7 @@ Vectorized Indexing
 -------------------
 
 Like numpy and pandas, xarray supports indexing many array elements at once in a
-`vectorized` manner.
+vectorized manner.
 
 If you only provide integers, slices, or unlabeled arrays (array without
 dimension names, such as ``np.ndarray``, ``list``, but not
@@ -376,7 +376,7 @@ indexing for xarray is based on our
 :ref:`broadcasting rules <compute.broadcasting>`.
 See :ref:`indexing.rules` for the complete specification.
 
-.. _NumPy's advanced indexing: https://numpy.org/doc/stable/reference/arrays.indexing.html
+.. _NumPy's advanced indexing: https://numpy.org/doc/stable/user/basics.indexing.html#advanced-indexing
 
 Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
 
@@ -630,7 +630,7 @@ Xarray's ``reindex``, ``reindex_like`` and ``align`` impose a ``DataArray`` or
 ``Dataset`` onto a new set of coordinates corresponding to dimensions. The
 original values are subset to the index labels still found in the new labels,
 and values corresponding to new labels not found in the original object are
-in-filled with `NaN`.
+in-filled with ``NaN``.
 
 Xarray operations that combine multiple objects generally automatically align
 their arguments to share the same indexes. However, manual alignment can be
@@ -659,7 +659,7 @@ dimension:
     foo.reindex_like(baz)
 
 The opposite operation asks us to reindex to a larger shape, so we fill in
-the missing values with `NaN`:
+the missing values with ``NaN``:
 
 .. ipython:: python
 

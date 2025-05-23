@@ -1,41 +1,17 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Mapping
 from os import PathLike
-from typing import Any, Literal, get_args
+from typing import TYPE_CHECKING, Any, Literal, get_args
 
 from xarray.core.datatree import DataTree
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 
-T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf"]
+T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf", "pydap"]
 T_DataTreeNetcdfTypes = Literal["NETCDF4"]
 
-
-def _get_nc_dataset_class(engine: T_DataTreeNetcdfEngine | None):
-    if engine == "netcdf4":
-        from netCDF4 import Dataset
-    elif engine == "h5netcdf":
-        from h5netcdf.legacyapi import Dataset
-    elif engine is None:
-        try:
-            from netCDF4 import Dataset
-        except ImportError:
-            from h5netcdf.legacyapi import Dataset
-    else:
-        raise ValueError(f"unsupported engine: {engine}")
-    return Dataset
-
-
-def _create_empty_netcdf_group(
-    filename: str | PathLike,
-    group: str,
-    mode: NetcdfWriteModes,
-    engine: T_DataTreeNetcdfEngine | None,
-):
-    ncDataset = _get_nc_dataset_class(engine)
-
-    with ncDataset(filename, mode=mode) as rootgrp:
-        rootgrp.createGroup(group)
+if TYPE_CHECKING:
+    from xarray.core.types import ZarrStoreLike
 
 
 def _datatree_to_netcdf(
@@ -47,9 +23,10 @@ def _datatree_to_netcdf(
     format: T_DataTreeNetcdfTypes | None = None,
     engine: T_DataTreeNetcdfEngine | None = None,
     group: str | None = None,
+    write_inherited_coords: bool = False,
     compute: bool = True,
     **kwargs,
-):
+) -> None:
     """This function creates an appropriate datastore for writing a datatree to
     disk as a netCDF file.
 
@@ -85,42 +62,32 @@ def _datatree_to_netcdf(
         unlimited_dims = {}
 
     for node in dt.subtree:
-        ds = node.to_dataset(inherit=False)
-        group_path = node.path
-        if ds is None:
-            _create_empty_netcdf_group(filepath, group_path, mode, engine)
-        else:
-            ds.to_netcdf(
-                filepath,
-                group=group_path,
-                mode=mode,
-                encoding=encoding.get(node.path),
-                unlimited_dims=unlimited_dims.get(node.path),
-                engine=engine,
-                format=format,
-                compute=compute,
-                **kwargs,
-            )
+        at_root = node is dt
+        ds = node.to_dataset(inherit=write_inherited_coords or at_root)
+        group_path = None if at_root else "/" + node.relative_to(dt)
+        ds.to_netcdf(
+            filepath,
+            group=group_path,
+            mode=mode,
+            encoding=encoding.get(node.path),
+            unlimited_dims=unlimited_dims.get(node.path),
+            engine=engine,
+            format=format,
+            compute=compute,
+            **kwargs,
+        )
         mode = "a"
-
-
-def _create_empty_zarr_group(
-    store: MutableMapping | str | PathLike[str], group: str, mode: ZarrWriteModes
-):
-    import zarr
-
-    root = zarr.open_group(store, mode=mode)
-    root.create_group(group, overwrite=True)
 
 
 def _datatree_to_zarr(
     dt: DataTree,
-    store: MutableMapping | str | PathLike[str],
+    store: ZarrStoreLike,
     mode: ZarrWriteModes = "w-",
     encoding: Mapping[str, Any] | None = None,
     consolidated: bool = True,
     group: str | None = None,
-    compute: Literal[True] = True,
+    write_inherited_coords: bool = False,
+    compute: bool = True,
     **kwargs,
 ):
     """This function creates an appropriate datastore for writing a datatree
@@ -129,15 +96,17 @@ def _datatree_to_zarr(
     See `DataTree.to_zarr` for full API docs.
     """
 
-    from zarr.convenience import consolidate_metadata
+    from zarr import consolidate_metadata
 
     if group is not None:
         raise NotImplementedError(
             "specifying a root group for the tree has not been implemented"
         )
 
-    if not compute:
-        raise NotImplementedError("compute=False has not been implemented yet")
+    if "append_dim" in kwargs:
+        raise NotImplementedError(
+            "specifying ``append_dim`` with ``DataTree.to_zarr`` has not been implemented"
+        )
 
     if encoding is None:
         encoding = {}
@@ -151,19 +120,18 @@ def _datatree_to_zarr(
         )
 
     for node in dt.subtree:
-        ds = node.to_dataset(inherit=False)
-        group_path = node.path
-        if ds is None:
-            _create_empty_zarr_group(store, group_path, mode)
-        else:
-            ds.to_zarr(
-                store,
-                group=group_path,
-                mode=mode,
-                encoding=encoding.get(node.path),
-                consolidated=False,
-                **kwargs,
-            )
+        at_root = node is dt
+        ds = node.to_dataset(inherit=write_inherited_coords or at_root)
+        group_path = None if at_root else "/" + node.relative_to(dt)
+        ds.to_zarr(
+            store,
+            group=group_path,
+            mode=mode,
+            encoding=encoding.get(node.path),
+            consolidated=False,
+            compute=compute,
+            **kwargs,
+        )
         if "w" in mode:
             mode = "a"
 

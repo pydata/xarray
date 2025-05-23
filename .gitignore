@@ -40,6 +40,7 @@ pip-log.txt
 .tox
 nosetests.xml
 .cache
+.prettier_cache
 .dmypy.json
 .mypy_cache
 .ropeproject/
@@ -80,3 +81,8 @@ doc/team-panel.txt
 doc/external-examples-gallery.txt
 doc/notebooks-examples-gallery.txt
 doc/videos-gallery.txt
+
+# Until we support this properly, excluding from gitignore. (adding it to
+# gitignore to make it _easier_ to work with `uv`, not as an indication that I
+# think we shouldn't...)
+uv.lock

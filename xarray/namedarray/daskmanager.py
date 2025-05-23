@@ -4,7 +4,6 @@ from collections.abc import Callable, Iterable, Sequence
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from packaging.version import Version
 
 from xarray.core.indexing import ImplicitToExplicitIndexingAdapter
 from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray
@@ -84,6 +83,11 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         from dask.array import compute
 
         return compute(*data, **kwargs)  # type: ignore[no-untyped-call, no-any-return]
+
+    def persist(self, *data: Any, **kwargs: Any) -> tuple[DaskArray | Any, ...]:
+        from dask import persist
+
+        return persist(*data, **kwargs)  # type: ignore[no-untyped-call, no-any-return]
 
     @property
     def array_api(self) -> Any:
@@ -177,13 +181,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         new_axis: int | Sequence[int] | None = None,
         **kwargs: Any,
     ) -> Any:
-        import dask
         from dask.array import map_blocks
-
-        if drop_axis is None and Version(dask.__version__) < Version("2022.9.1"):
-            # See https://github.com/pydata/xarray/pull/7019#discussion_r1196729489
-            # TODO remove once dask minimum version >= 2022.9.1
-            drop_axis = []
 
         # pass through name, meta, token as kwargs
         return map_blocks(
@@ -251,3 +249,18 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             targets=targets,
             **kwargs,
         )
+
+    def shuffle(
+        self, x: DaskArray, indexer: list[list[int]], axis: int, chunks: T_Chunks
+    ) -> DaskArray:
+        import dask.array
+
+        if not module_available("dask", minversion="2024.08.1"):
+            raise ValueError(
+                "This method is very inefficient on dask<2024.08.1. Please upgrade."
+            )
+        if chunks is None:
+            chunks = "auto"
+        if chunks != "auto":
+            raise NotImplementedError("Only chunks='auto' is supported at present.")
+        return dask.array.shuffle(x, indexer, axis, chunks="auto")

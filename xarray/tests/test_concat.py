@@ -9,9 +9,10 @@ import pandas as pd
 import pytest
 
 from xarray import DataArray, Dataset, Variable, concat
-from xarray.core import dtypes, merge
+from xarray.core import dtypes
 from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import PandasIndex
+from xarray.structure import merge
 from xarray.tests import (
     ConcatenatableArray,
     InaccessibleArray,
@@ -42,7 +43,7 @@ def create_concat_datasets(
                 ["x", "y", "day"],
                 rng.standard_normal(size=(1, 4, 2)),
             )
-            data_vars = {v: data_tuple for v in variables}
+            data_vars = dict.fromkeys(variables, data_tuple)
             result.append(
                 Dataset(
                     data_vars=data_vars,
@@ -58,7 +59,7 @@ def create_concat_datasets(
                 ["x", "y"],
                 rng.standard_normal(size=(1, 4)),
             )
-            data_vars = {v: data_tuple for v in variables}
+            data_vars = dict.fromkeys(variables, data_tuple)
             result.append(
                 Dataset(
                     data_vars=data_vars,
@@ -74,40 +75,38 @@ def create_typed_datasets(
     num_datasets: int = 2, seed: int | None = None
 ) -> list[Dataset]:
     var_strings = ["a", "b", "c", "d", "e", "f", "g", "h"]
-    result = []
     rng = np.random.default_rng(seed)
     lat = rng.standard_normal(size=(1, 4))
     lon = rng.standard_normal(size=(1, 4))
-    for i in range(num_datasets):
-        result.append(
-            Dataset(
-                data_vars={
-                    "float": (["x", "y", "day"], rng.standard_normal(size=(1, 4, 2))),
-                    "float2": (["x", "y", "day"], rng.standard_normal(size=(1, 4, 2))),
-                    "string": (
-                        ["x", "y", "day"],
-                        rng.choice(var_strings, size=(1, 4, 2)),
-                    ),
-                    "int": (["x", "y", "day"], rng.integers(0, 10, size=(1, 4, 2))),
-                    "datetime64": (
-                        ["x", "y", "day"],
-                        np.arange(
-                            np.datetime64("2017-01-01"), np.datetime64("2017-01-09")
-                        ).reshape(1, 4, 2),
-                    ),
-                    "timedelta64": (
-                        ["x", "y", "day"],
-                        np.reshape([pd.Timedelta(days=i) for i in range(8)], [1, 4, 2]),
-                    ),
-                },
-                coords={
-                    "lat": (["x", "y"], lat),
-                    "lon": (["x", "y"], lon),
-                    "day": ["day" + str(i * 2 + 1), "day" + str(i * 2 + 2)],
-                },
-            )
+    return [
+        Dataset(
+            data_vars={
+                "float": (["x", "y", "day"], rng.standard_normal(size=(1, 4, 2))),
+                "float2": (["x", "y", "day"], rng.standard_normal(size=(1, 4, 2))),
+                "string": (
+                    ["x", "y", "day"],
+                    rng.choice(var_strings, size=(1, 4, 2)),
+                ),
+                "int": (["x", "y", "day"], rng.integers(0, 10, size=(1, 4, 2))),
+                "datetime64": (
+                    ["x", "y", "day"],
+                    np.arange(
+                        np.datetime64("2017-01-01"), np.datetime64("2017-01-09")
+                    ).reshape(1, 4, 2),
+                ),
+                "timedelta64": (
+                    ["x", "y", "day"],
+                    np.reshape([pd.Timedelta(days=i) for i in range(8)], [1, 4, 2]),
+                ),
+            },
+            coords={
+                "lat": (["x", "y"], lat),
+                "lon": (["x", "y"], lon),
+                "day": ["day" + str(i * 2 + 1), "day" + str(i * 2 + 2)],
+            },
         )
-    return result
+        for i in range(num_datasets)
+    ]
 
 
 def test_concat_compat() -> None:
@@ -161,10 +160,10 @@ def test_concat_categorical() -> None:
     concatenated = concat([data1, data2], dim="dim1")
     assert (
         concatenated["var4"]
-        == type(data2["var4"].variable.data.array)._concat_same_type(
+        == type(data2["var4"].variable.data)._concat_same_type(
             [
-                data1["var4"].variable.data.array,
-                data2["var4"].variable.data.array,
+                data1["var4"].variable.data,
+                data2["var4"].variable.data,
             ]
         )
     ).all()
@@ -319,7 +318,6 @@ def test_concat_multiple_datasets_with_multiple_missing_variables() -> None:
     assert_identical(actual, expected)
 
 
-@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 def test_concat_type_of_missing_fill() -> None:
     datasets = create_typed_datasets(2, seed=123)
     expected1 = concat(datasets, dim="day", fill_value=dtypes.NA)
@@ -396,7 +394,7 @@ def concat_var_names() -> Callable:
     def get_varnames(var_cnt: int = 10, list_cnt: int = 10) -> list[list[str]]:
         orig = [f"d{i:02d}" for i in range(var_cnt)]
         var_names = []
-        for _i in range(0, list_cnt):
+        for _i in range(list_cnt):
             l1 = orig.copy()
             var_names.append(l1)
         return var_names

@@ -14,9 +14,9 @@ from xarray.core.utils import module_available
 if TYPE_CHECKING:
     import os
     from importlib.metadata import EntryPoint, EntryPoints
-    from io import BufferedIOBase
 
     from xarray.backends.common import AbstractDataStore
+    from xarray.core.types import ReadBuffer
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
@@ -82,7 +82,7 @@ def backends_dict_from_pkg(
 def set_missing_parameters(
     backend_entrypoints: dict[str, type[BackendEntrypoint]],
 ) -> None:
-    for _, backend in backend_entrypoints.items():
+    for backend in backend_entrypoints.values():
         if backend.open_dataset_parameters is None:
             open_dataset = backend.open_dataset
             backend.open_dataset_parameters = detect_parameters(open_dataset)
@@ -93,7 +93,7 @@ def sort_backends(
 ) -> dict[str, type[BackendEntrypoint]]:
     ordered_backends_entrypoints = {}
     for be_name in STANDARD_BACKENDS_ORDER:
-        if backend_entrypoints.get(be_name, None) is not None:
+        if backend_entrypoints.get(be_name) is not None:
             ordered_backends_entrypoints[be_name] = backend_entrypoints.pop(be_name)
     ordered_backends_entrypoints.update(
         {name: backend_entrypoints[name] for name in sorted(backend_entrypoints)}
@@ -138,7 +138,7 @@ def refresh_engines() -> None:
 
 
 def guess_engine(
-    store_spec: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    store_spec: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
 ) -> str | type[BackendEntrypoint]:
     engines = list_engines()
 
@@ -200,7 +200,7 @@ def get_backend(engine: str | type[BackendEntrypoint]) -> BackendEntrypoint:
         engines = list_engines()
         if engine not in engines:
             raise ValueError(
-                f"unrecognized engine {engine} must be one of your download engines: {list(engines)}"
+                f"unrecognized engine '{engine}' must be one of your download engines: {list(engines)}. "
                 "To install additional dependencies, see:\n"
                 "https://docs.xarray.dev/en/stable/user-guide/io.html \n"
                 "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html"

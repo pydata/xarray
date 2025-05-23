@@ -43,7 +43,7 @@ Coordinates:
   * y        (y) float64 ...
 ```
 
-This refactoring would allow creating a geographic index for `lat` and `lon` and two simple indexes for `x` and `y` such that we could select data with either `da.sel(lon=..., lat=...)` or  `da.sel(x=..., y=...)`.
+This refactoring would allow creating a geographic index for `lat` and `lon` and two simple indexes for `x` and `y` such that we could select data with either `da.sel(lon=..., lat=...)` or `da.sel(x=..., y=...)`.
 
 Refactoring the dimension -> index one-to-one relationship into many-to-many would also introduce some issues that we'll need to address, e.g., ambiguous cases like `da.sel(chi=..., drainage_area=...)` where multiple indexes may potentially return inconsistent positional indexers along a dimension.
 
@@ -133,7 +133,7 @@ A possible, more explicit solution to reuse a `pandas.MultiIndex` in a DataArray
 
 New indexes may also be built from existing sets of coordinates or variables in a Dataset/DataArray using the `.set_index()` method.
 
-The [current signature](http://docs.xarray.dev/en/stable/generated/xarray.DataArray.set_index.html#xarray.DataArray.set_index) of `.set_index()` is tailored to `pandas.MultiIndex` and tied to the concept of a dimension-index. It is therefore hardly reusable as-is in the context of flexible indexes proposed here.
+The [current signature](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.set_index.html#xarray.DataArray.set_index) of `.set_index()` is tailored to `pandas.MultiIndex` and tied to the concept of a dimension-index. It is therefore hardly reusable as-is in the context of flexible indexes proposed here.
 
 The new signature may look like one of these:
 
@@ -166,7 +166,7 @@ Besides `pandas.Index`, other indexes currently supported in Xarray like `CFTime
 
 Like for the indexes, explicit coordinate creation should be preferred over implicit coordinate creation. However, there may be some situations where we would like to keep creating coordinates implicitly for backwards compatibility.
 
-For example, it is currently possible to pass a `pandas.MulitIndex` object as a coordinate to the Dataset/DataArray constructor:
+For example, it is currently possible to pass a `pandas.MultiIndex` object as a coordinate to the Dataset/DataArray constructor:
 
 ```python
 >>> midx = pd.MultiIndex.from_arrays([['a', 'b'], [0, 1]], names=['lvl1', 'lvl2'])
@@ -305,16 +305,16 @@ Xarray also provides a number of Dataset/DataArray methods where indexes are use
 - `resample` (`CFTimeIndex` and a `DatetimeIntervalIndex`)
 - `DatetimeAccessor` & `TimedeltaAccessor` properties (`CFTimeIndex` and a `DatetimeIntervalIndex`)
 - `interp` & `interpolate_na`,
-   - with `IntervalIndex`, these become regridding operations. Should we support hooks for these operations?
+  - with `IntervalIndex`, these become regridding operations. Should we support hooks for these operations?
 - `differentiate`, `integrate`, `polyfit`
-   - raise an error if not a "simple" 1D index?
+  - raise an error if not a "simple" 1D index?
 - `pad`
 - `coarsen` has to make choices about output index labels.
 - `sortby`
 - `stack`/`unstack`
 - plotting
-    - `plot.pcolormesh` "infers" interval breaks along axes, which are really inferred `bounds` for the appropriate indexes.
-    - `plot.step` again uses `bounds`. In fact, we may even want `step` to be the default 1D plotting function if the axis has `bounds` attached.
+  - `plot.pcolormesh` "infers" interval breaks along axes, which are really inferred `bounds` for the appropriate indexes.
+  - `plot.step` again uses `bounds`. In fact, we may even want `step` to be the default 1D plotting function if the axis has `bounds` attached.
 
 It would be reasonable to first restrict those methods to the indexes that are currently available in Xarray, and maybe extend the `XarrayIndex` API later upon request when the opportunity arises.
 
@@ -379,7 +379,7 @@ Option A may be more reasonable for now.
 
 ## 6. Coordinate duck arrays
 
-Another opportunity of this refactoring is support for duck arrays as index coordinates. Decoupling coordinates and indexes would *de-facto* enable it.
+Another opportunity of this refactoring is support for duck arrays as index coordinates. Decoupling coordinates and indexes would _de-facto_ enable it.
 
 However, support for duck arrays in index-based operations such as data selection or alignment would probably require some protocol extension, e.g.,
 

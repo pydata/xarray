@@ -7,8 +7,10 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 
 import xarray as xr
+import xarray.ufuncs as xu
 from xarray import DataArray, Variable
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import assert_equal, assert_identical, requires_dask
@@ -293,6 +295,13 @@ class TestSparseVariable:
     def test_bivariate_ufunc(self):
         assert_sparse_equal(np.maximum(self.data, 0), np.maximum(self.var, 0).data)
         assert_sparse_equal(np.maximum(self.data, 0), np.maximum(0, self.var).data)
+
+    def test_univariate_xufunc(self):
+        assert_sparse_equal(xu.sin(self.var).data, np.sin(self.data))
+
+    def test_bivariate_xufunc(self):
+        assert_sparse_equal(xu.multiply(self.var, 0).data, np.multiply(self.data, 0))
+        assert_sparse_equal(xu.multiply(0, self.var).data, np.multiply(0, self.data))
 
     def test_repr(self):
         expected = dedent(
@@ -711,13 +720,17 @@ class TestSparseDataArrayAndDataset:
         ds = xr.Dataset(
             data_vars={"a": ("x", sparse.COO.from_numpy(np.ones(4)))}
         ).chunk()
+        if Version(sparse.__version__) >= Version("0.16.0"):
+            meta = "sparse.numba_backend._coo.core.COO"
+        else:
+            meta = "sparse.COO"
         expected = dedent(
-            """\
+            f"""\
             <xarray.Dataset> Size: 32B
             Dimensions:  (x: 4)
             Dimensions without coordinates: x
             Data variables:
-                a        (x) float64 32B dask.array<chunksize=(4,), meta=sparse.COO>"""
+                a        (x) float64 32B dask.array<chunksize=(4,), meta={meta}>"""
         )
         assert expected == repr(ds)
 

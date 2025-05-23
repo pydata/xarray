@@ -69,7 +69,7 @@ def test_multiindex() -> None:
 class PassThroughBackendEntrypoint(xr.backends.BackendEntrypoint):
     """Access an object passed to the `open_dataset` method."""
 
-    def open_dataset(self, dataset, *, drop_variables=None):  # type: ignore[override]
+    def open_dataset(self, dataset, *, drop_variables=None):
         """Return the first argument."""
         return dataset
 

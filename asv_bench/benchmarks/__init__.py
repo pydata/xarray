@@ -30,13 +30,13 @@ def requires_sparse():
 
 
 def randn(shape, frac_nan=None, chunks=None, seed=0):
-    rng = np.random.RandomState(seed)
+    rng = np.random.default_rng(seed)
     if chunks is None:
         x = rng.standard_normal(shape)
     else:
         import dask.array as da
 
-        rng = da.random.RandomState(seed)
+        rng = da.random.default_rng(seed)
         x = rng.standard_normal(shape, chunks=chunks)
 
     if frac_nan is not None:
@@ -47,8 +47,8 @@ def randn(shape, frac_nan=None, chunks=None, seed=0):
 
 
 def randint(low, high=None, size=None, frac_minus=None, seed=0):
-    rng = np.random.RandomState(seed)
-    x = rng.randint(low, high, size)
+    rng = np.random.default_rng(seed)
+    x = rng.integers(low, high, size)
     if frac_minus is not None:
         inds = rng.choice(range(x.size), int(x.size * frac_minus))
         x.flat[inds] = -1

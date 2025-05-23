@@ -1,7 +1,7 @@
 # https://pre-commit.com/
 ci:
-    autoupdate_schedule: monthly
-    autoupdate_commit_msg: 'Update pre-commit hooks'
+  autoupdate_schedule: monthly
+  autoupdate_commit_msg: "Update pre-commit hooks"
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -11,9 +11,21 @@ repos:
       - id: check-yaml
       - id: debug-statements
       - id: mixed-line-ending
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
+      # - id: python-check-blanket-noqa  # checked by ruff
+      # - id: python-check-blanket-type-ignore  # checked by ruff
+      # - id: python-check-mock-methods  # checked by ruff
+      - id: python-no-log-warn
+      # - id: python-use-type-annotations  # too many false positives
+      - id: rst-backticks
+      - id: rst-directive-colons
+      - id: rst-inline-touching-normal
+      - id: text-unicode-replacement-char
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: 'v0.6.9'
+    rev: v0.11.8
     hooks:
       - id: ruff-format
       - id: ruff
@@ -24,8 +36,13 @@ repos:
       - id: blackdoc
         exclude: "generate_aggregations.py"
         additional_dependencies: ["black==24.8.0"]
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: v3.5.3
+    hooks:
+      - id: prettier
+        args: [--cache-location=.prettier_cache/cache]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.2
+    rev: v1.15.0
     hooks:
       - id: mypy
         # Copied from setup.cfg
@@ -45,4 +62,20 @@ repos:
   - repo: https://github.com/citation-file-format/cff-converter-python
     rev: ebf0b5e44d67f8beaa1cd13a0d0393ea04c6058d
     hooks:
-    - id: validate-cff
+      - id: validate-cff
+  - repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: v0.9.3
+    hooks:
+      - id: taplo-format
+        args: ["--option", "array_auto_collapse=false"]
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: v0.24.1
+    hooks:
+      - id: validate-pyproject
+        additional_dependencies: ["validate-pyproject-schema-store[all]"]
+  - repo: https://github.com/crate-ci/typos
+    rev: v1
+    hooks:
+      - id: typos
+        # https://github.com/crate-ci/typos/issues/347
+        pass_filenames: false

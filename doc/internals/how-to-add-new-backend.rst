@@ -114,7 +114,7 @@ The input of ``open_dataset`` method are one argument
 
 - ``filename_or_obj``: can be any object but usually it is a string containing a path or an instance of
   :py:class:`pathlib.Path`.
-- ``drop_variables``: can be `None` or an iterable containing the variable
+- ``drop_variables``: can be ``None`` or an iterable containing the variable
   names to be dropped when reading the data.
 
 If it makes sense for your backend, your ``open_dataset``  method
@@ -362,7 +362,7 @@ grouped in three types of indexes
 This implies that the implementation of the method ``__getitem__`` can be tricky.
 In order to simplify this task, Xarray provides a helper function,
 :py:func:`~xarray.core.indexing.explicit_indexing_adapter`, that transforms
-all the input  ``indexer`` types (`basic`, `outer`, `vectorized`) in a tuple
+all the input indexer types (basic, outer, vectorized) in a tuple
 which is interpreted correctly by your backend.
 
 This is an example ``BackendArray`` subclass implementation:
@@ -450,7 +450,7 @@ Example:
 **OUTER**
 
 The ``OUTER`` indexing shall support number, slices and in addition it shall
-support also lists of integers. The the outer indexing is equivalent to
+support also lists of integers. The outer indexing is equivalent to
 combining multiple input list with ``itertools.product()``:
 
 .. ipython::
@@ -467,10 +467,10 @@ combining multiple input list with ``itertools.product()``:
 **OUTER_1VECTOR**
 
 The ``OUTER_1VECTOR`` indexing shall supports number, slices and at most one
-list. The behaviour with the list shall be the same of ``OUTER`` indexing.
+list. The behaviour with the list shall be the same as ``OUTER`` indexing.
 
-If you support more complex indexing as `explicit indexing` or
-`numpy indexing`, you can have a look to the implementation of Zarr backend and Scipy backend,
+If you support more complex indexing as explicit indexing or
+numpy indexing, you can have a look to the implementation of Zarr backend and Scipy backend,
 currently available in :py:mod:`~xarray.backends` module.
 
 .. _RST preferred_chunks:

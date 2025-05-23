@@ -11,7 +11,7 @@ from xarray.core.coordinates import Coordinates
 
 @pytest.fixture
 def dataarray() -> xr.DataArray:
-    return xr.DataArray(np.random.RandomState(0).randn(4, 6))
+    return xr.DataArray(np.random.default_rng(0).random((4, 6)))
 
 
 @pytest.fixture
@@ -318,6 +318,52 @@ class Test_summarize_datatree_children:
             f"{second_line}"
             "</div>"
         )
+
+
+class TestDataTreeTruncatesNodes:
+    def test_many_nodes(self) -> None:
+        # construct a datatree with 500 nodes
+        number_of_files = 20
+        number_of_groups = 25
+        tree_dict = {}
+        for f in range(number_of_files):
+            for g in range(number_of_groups):
+                tree_dict[f"file_{f}/group_{g}"] = xr.Dataset({"g": f * g})
+
+        tree = xr.DataTree.from_dict(tree_dict)
+        with xr.set_options(display_style="html"):
+            result = tree._repr_html_()
+
+        assert "6/20" in result
+        for i in range(number_of_files):
+            if i < 3 or i >= (number_of_files - 3):
+                assert f"file_{i}</div>" in result
+            else:
+                assert f"file_{i}</div>" not in result
+
+        assert "6/25" in result
+        for i in range(number_of_groups):
+            if i < 3 or i >= (number_of_groups - 3):
+                assert f"group_{i}</div>" in result
+            else:
+                assert f"group_{i}</div>" not in result
+
+        with xr.set_options(display_style="html", display_max_children=3):
+            result = tree._repr_html_()
+
+        assert "3/20" in result
+        for i in range(number_of_files):
+            if i < 2 or i >= (number_of_files - 1):
+                assert f"file_{i}</div>" in result
+            else:
+                assert f"file_{i}</div>" not in result
+
+        assert "3/25" in result
+        for i in range(number_of_groups):
+            if i < 2 or i >= (number_of_groups - 1):
+                assert f"group_{i}</div>" in result
+            else:
+                assert f"group_{i}</div>" not in result
 
 
 class TestDataTreeInheritance:

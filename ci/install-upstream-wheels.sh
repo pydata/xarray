@@ -45,15 +45,15 @@ python -m pip install \
     --pre \
     --upgrade \
     pyarrow
-# manually install `pint` to pull in new dependencies
-python -m pip install --upgrade pint
+# manually install `pint`, `donfig`, and `crc32c` to pull in new dependencies
+python -m pip install --upgrade pint donfig crc32c
 python -m pip install \
     --no-deps \
     --upgrade \
     git+https://github.com/dask/dask \
     git+https://github.com/dask/dask-expr \
     git+https://github.com/dask/distributed \
-    git+https://github.com/zarr-developers/zarr.git@main \
+    git+https://github.com/zarr-developers/zarr-python \
     git+https://github.com/Unidata/cftime \
     git+https://github.com/pypa/packaging \
     git+https://github.com/hgrecco/pint \

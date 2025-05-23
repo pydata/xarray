@@ -1,6 +1,7 @@
 import re
 import sys
 import typing
+from collections.abc import Callable, Mapping
 from copy import copy, deepcopy
 from textwrap import dedent
 
@@ -13,7 +14,12 @@ from xarray.core.coordinates import DataTreeCoordinates
 from xarray.core.datatree import DataTree
 from xarray.core.treenode import NotFoundInTreeError
 from xarray.testing import assert_equal, assert_identical
-from xarray.tests import assert_array_equal, create_test_data, source_ndarray
+from xarray.tests import (
+    assert_array_equal,
+    create_test_data,
+    requires_dask,
+    source_ndarray,
+)
 
 ON_WINDOWS = sys.platform == "win32"
 
@@ -63,6 +69,19 @@ class TestTreeCreation:
         with pytest.raises(TypeError):
             DataTree(dataset=xr.DataArray(42, name="foo"))  # type: ignore[arg-type]
 
+    def test_child_data_not_copied(self) -> None:
+        # regression test for https://github.com/pydata/xarray/issues/9683
+        class NoDeepCopy:
+            def __deepcopy__(self, memo):
+                raise TypeError("class can't be deepcopied")
+
+        da = xr.DataArray(NoDeepCopy())
+        ds = xr.Dataset({"var": da})
+        dt1 = xr.DataTree(ds)
+        dt2 = xr.DataTree(ds, children={"child": dt1})
+        dt3 = xr.DataTree.from_dict({"/": ds, "child": ds})
+        assert_identical(dt2, dt3)
+
 
 class TestFamilyTree:
     def test_dont_modify_children_inplace(self) -> None:
@@ -100,7 +119,7 @@ class TestFamilyTree:
 class TestNames:
     def test_child_gets_named_on_attach(self) -> None:
         sue = DataTree()
-        mary = DataTree(children={"Sue": sue})  # noqa
+        mary = DataTree(children={"Sue": sue})
         assert mary.children["Sue"].name == "Sue"
 
     def test_dataset_containing_slashes(self) -> None:
@@ -496,7 +515,7 @@ class TestSetItem:
     def test_grafted_subtree_retains_name(self) -> None:
         subtree = DataTree(name="original_subtree_name")
         root = DataTree(name="root")
-        root["new_subtree_name"] = subtree  # noqa
+        root["new_subtree_name"] = subtree
         assert subtree.name == "original_subtree_name"
 
     def test_setitem_new_empty_node(self) -> None:
@@ -858,7 +877,6 @@ class TestTreeFromDict:
         actual = DataTree.from_dict(tree.children["a"].to_dict(relative=True))
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail
     def test_roundtrip_unnamed_root(self, simple_datatree) -> None:
         # See GH81
 
@@ -1000,6 +1018,29 @@ class TestDatasetView:
             return ds.weighted(ds.area).mean(["x", "y"])
 
         weighted_mean(dt.dataset)
+
+    def test_map_keep_attrs(self) -> None:
+        # test DatasetView.map(..., keep_attrs=...)
+        data = xr.DataArray([1, 2, 3], dims="x", attrs={"da": "attrs"})
+        ds = xr.Dataset({"data": data}, attrs={"ds": "attrs"})
+        dt = DataTree(ds)
+
+        def func_keep(ds):
+            # x.mean() removes the attrs of the data_vars
+            return ds.map(lambda x: x.mean(), keep_attrs=True)
+
+        result = xr.map_over_datasets(func_keep, dt)
+        expected = dt.mean(keep_attrs=True)
+        xr.testing.assert_identical(result, expected)
+
+        # per default DatasetView.map does not keep attrs
+        def func(ds):
+            # x.mean() removes the attrs of the data_vars
+            return ds.map(lambda x: x.mean())
+
+        result = xr.map_over_datasets(func, dt)
+        expected = dt.mean()
+        xr.testing.assert_identical(result, expected.mean())
 
 
 class TestAccess:
@@ -1178,6 +1219,76 @@ class TestRepr:
         ).strip()
         assert result == expected
 
+    def test_repr_truncates_nodes(self) -> None:
+        # construct a datatree with 50 nodes
+        number_of_files = 10
+        number_of_groups = 5
+        tree_dict = {}
+        for f in range(number_of_files):
+            for g in range(number_of_groups):
+                tree_dict[f"file_{f}/group_{g}"] = Dataset({"g": f * g})
+
+        tree = DataTree.from_dict(tree_dict)
+        with xr.set_options(display_max_children=3):
+            result = repr(tree)
+
+        expected = dedent(
+            """
+            <xarray.DataTree>
+            Group: /
+            ├── Group: /file_0
+            │   ├── Group: /file_0/group_0
+            │   │       Dimensions:  ()
+            │   │       Data variables:
+            │   │           g        int64 8B 0
+            │   ├── Group: /file_0/group_1
+            │   │       Dimensions:  ()
+            │   │       Data variables:
+            │   │           g        int64 8B 0
+            │   ...
+            │   └── Group: /file_0/group_4
+            │           Dimensions:  ()
+            │           Data variables:
+            │               g        int64 8B 0
+            ├── Group: /file_1
+            │   ├── Group: /file_1/group_0
+            │   │       Dimensions:  ()
+            │   │       Data variables:
+            │   │           g        int64 8B 0
+            │   ├── Group: /file_1/group_1
+            │   │       Dimensions:  ()
+            │   │       Data variables:
+            │   │           g        int64 8B 1
+            │   ...
+            │   └── Group: /file_1/group_4
+            │           Dimensions:  ()
+            │           Data variables:
+            │               g        int64 8B 4
+            ...
+            └── Group: /file_9
+                ├── Group: /file_9/group_0
+                │       Dimensions:  ()
+                │       Data variables:
+                │           g        int64 8B 0
+                ├── Group: /file_9/group_1
+                │       Dimensions:  ()
+                │       Data variables:
+                │           g        int64 8B 9
+                ...
+                └── Group: /file_9/group_4
+                        Dimensions:  ()
+                        Data variables:
+                            g        int64 8B 36
+            """
+        ).strip()
+        assert expected == result
+
+        with xr.set_options(display_max_children=10):
+            result = repr(tree)
+
+        for key in tree_dict:
+            assert key in result
+
     def test_repr_inherited_dims(self) -> None:
         tree = DataTree.from_dict(
             {
@@ -1222,8 +1333,12 @@ class TestRepr:
     )
     def test_doc_example(self) -> None:
         # regression test for https://github.com/pydata/xarray/issues/9499
-        time = xr.DataArray(data=["2022-01", "2023-01"], dims="time")
-        stations = xr.DataArray(data=list("abcdef"), dims="station")
+        time = xr.DataArray(
+            data=np.array(["2022-01", "2023-01"], dtype="<U7"), dims="time"
+        )
+        stations = xr.DataArray(
+            data=np.array(list("abcdef"), dtype="<U1"), dims="station"
+        )
         lon = [-100, -80, -60]
         lat = [10, 20, 30]
         # Set up fake data
@@ -1565,29 +1680,84 @@ class TestRestructuring:
         result = dt.assign({"foo": xr.DataArray(0), "a": DataTree()})
         assert_equal(result, expected)
 
+    def test_filter_like(self) -> None:
+        flower_tree = DataTree.from_dict(
+            {"root": None, "trunk": None, "leaves": None, "flowers": None}
+        )
+        fruit_tree = DataTree.from_dict(
+            {"root": None, "trunk": None, "leaves": None, "fruit": None}
+        )
+        barren_tree = DataTree.from_dict({"root": None, "trunk": None})
+
+        # test filter_like tree
+        filtered_tree = flower_tree.filter_like(barren_tree)
+
+        assert filtered_tree.equals(barren_tree)
+        assert "flowers" not in filtered_tree.children
+
+        # test symmetrical pruning results in isomorphic trees
+        assert flower_tree.filter_like(fruit_tree).isomorphic(
+            fruit_tree.filter_like(flower_tree)
+        )
+
+        # test "deep" pruning
+        dt = DataTree.from_dict(
+            {"/a/A": None, "/a/B": None, "/b/A": None, "/b/B": None}
+        )
+        other = DataTree.from_dict({"/a/A": None, "/b/A": None})
+
+        filtered = dt.filter_like(other)
+        assert filtered.equals(other)
+
 
 class TestPipe:
-    def test_noop(self, create_test_datatree) -> None:
+    def test_noop(self, create_test_datatree: Callable[[], DataTree]) -> None:
         dt = create_test_datatree()
 
         actual = dt.pipe(lambda tree: tree)
         assert actual.identical(dt)
 
-    def test_params(self, create_test_datatree) -> None:
+    def test_args(self, create_test_datatree: Callable[[], DataTree]) -> None:
         dt = create_test_datatree()
 
-        def f(tree, **attrs):
-            return tree.assign(arr_with_attrs=xr.Variable("dim0", [], attrs=attrs))
+        def f(tree: DataTree, x: int, y: int) -> DataTree:
+            return tree.assign(
+                arr_with_attrs=xr.Variable("dim0", [], attrs=dict(x=x, y=y))
+            )
+
+        actual = dt.pipe(f, 1, 2)
+        assert actual["arr_with_attrs"].attrs == dict(x=1, y=2)
+
+    def test_kwargs(self, create_test_datatree: Callable[[], DataTree]) -> None:
+        dt = create_test_datatree()
+
+        def f(tree: DataTree, *, x: int, y: int, z: int) -> DataTree:
+            return tree.assign(
+                arr_with_attrs=xr.Variable("dim0", [], attrs=dict(x=x, y=y, z=z))
+            )
 
         attrs = {"x": 1, "y": 2, "z": 3}
 
         actual = dt.pipe(f, **attrs)
         assert actual["arr_with_attrs"].attrs == attrs
 
-    def test_named_self(self, create_test_datatree) -> None:
+    def test_args_kwargs(self, create_test_datatree: Callable[[], DataTree]) -> None:
         dt = create_test_datatree()
 
-        def f(x, tree, y):
+        def f(tree: DataTree, x: int, *, y: int, z: int) -> DataTree:
+            return tree.assign(
+                arr_with_attrs=xr.Variable("dim0", [], attrs=dict(x=x, y=y, z=z))
+            )
+
+        attrs = {"x": 1, "y": 2, "z": 3}
+
+        actual = dt.pipe(f, attrs["x"], y=attrs["y"], z=attrs["z"])
+        assert actual["arr_with_attrs"].attrs == attrs
+
+    def test_named_self(self, create_test_datatree: Callable[[], DataTree]) -> None:
+        dt = create_test_datatree()
+
+        def f(x: int, tree: DataTree, y: int):
             tree.attrs.update({"x": x, "y": y})
             return tree
 
@@ -1877,6 +2047,26 @@ class TestIndexing:
             name="first",
         )
         assert_identical(actual, expected)
+
+    def test_sel_isel_error_has_node_info(self) -> None:
+        tree = DataTree.from_dict(
+            {
+                "/first": xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"x": [1, 2, 3]}),
+                "/second": xr.Dataset({"b": ("x", [4, 5])}, coords={"x": [2, 3]}),
+            }
+        )
+
+        with pytest.raises(
+            KeyError,
+            match="Raised whilst mapping function over node with path 'second'",
+        ):
+            tree.sel(x=1)
+
+        with pytest.raises(
+            IndexError,
+            match="Raised whilst mapping function over node with path 'first'",
+        ):
+            tree.isel(x=4)
 
 
 class TestAggregations:
@@ -2195,3 +2385,165 @@ class TestClose:
 
     # with tree:
     #     pass
+
+
+@requires_dask
+class TestDask:
+    def test_chunksizes(self):
+        ds1 = xr.Dataset({"a": ("x", np.arange(10))})
+        ds2 = xr.Dataset({"b": ("y", np.arange(5))})
+        ds3 = xr.Dataset({"c": ("z", np.arange(4))})
+        ds4 = xr.Dataset({"d": ("x", np.arange(-5, 5))})
+
+        groups = {
+            "/": ds1.chunk({"x": 5}),
+            "/group1": ds2.chunk({"y": 3}),
+            "/group2": ds3.chunk({"z": 2}),
+            "/group1/subgroup1": ds4.chunk({"x": 5}),
+        }
+
+        tree = xr.DataTree.from_dict(groups)
+
+        expected_chunksizes = {path: node.chunksizes for path, node in groups.items()}
+
+        assert tree.chunksizes == expected_chunksizes
+
+    def test_load(self):
+        ds1 = xr.Dataset({"a": ("x", np.arange(10))})
+        ds2 = xr.Dataset({"b": ("y", np.arange(5))})
+        ds3 = xr.Dataset({"c": ("z", np.arange(4))})
+        ds4 = xr.Dataset({"d": ("x", np.arange(-5, 5))})
+
+        groups = {"/": ds1, "/group1": ds2, "/group2": ds3, "/group1/subgroup1": ds4}
+
+        expected = xr.DataTree.from_dict(groups)
+        tree = xr.DataTree.from_dict(
+            {
+                "/": ds1.chunk({"x": 5}),
+                "/group1": ds2.chunk({"y": 3}),
+                "/group2": ds3.chunk({"z": 2}),
+                "/group1/subgroup1": ds4.chunk({"x": 5}),
+            }
+        )
+        expected_chunksizes: Mapping[str, Mapping]
+        expected_chunksizes = {node.path: {} for node in tree.subtree}
+        actual = tree.load()
+
+        assert_identical(actual, expected)
+        assert tree.chunksizes == expected_chunksizes
+        assert actual.chunksizes == expected_chunksizes
+
+        tree = xr.DataTree.from_dict(groups)
+        actual = tree.load()
+        assert_identical(actual, expected)
+        assert actual.chunksizes == expected_chunksizes
+
+    def test_compute(self):
+        ds1 = xr.Dataset({"a": ("x", np.arange(10))})
+        ds2 = xr.Dataset({"b": ("y", np.arange(5))})
+        ds3 = xr.Dataset({"c": ("z", np.arange(4))})
+        ds4 = xr.Dataset({"d": ("x", np.arange(-5, 5))})
+
+        expected = xr.DataTree.from_dict(
+            {"/": ds1, "/group1": ds2, "/group2": ds3, "/group1/subgroup1": ds4}
+        )
+        tree = xr.DataTree.from_dict(
+            {
+                "/": ds1.chunk({"x": 5}),
+                "/group1": ds2.chunk({"y": 3}),
+                "/group2": ds3.chunk({"z": 2}),
+                "/group1/subgroup1": ds4.chunk({"x": 5}),
+            }
+        )
+        original_chunksizes = tree.chunksizes
+        expected_chunksizes: Mapping[str, Mapping]
+        expected_chunksizes = {node.path: {} for node in tree.subtree}
+        actual = tree.compute()
+
+        assert_identical(actual, expected)
+
+        assert actual.chunksizes == expected_chunksizes, "mismatching chunksizes"
+        assert tree.chunksizes == original_chunksizes, "original tree was modified"
+
+    def test_persist(self):
+        ds1 = xr.Dataset({"a": ("x", np.arange(10))})
+        ds2 = xr.Dataset({"b": ("y", np.arange(5))})
+        ds3 = xr.Dataset({"c": ("z", np.arange(4))})
+        ds4 = xr.Dataset({"d": ("x", np.arange(-5, 5))})
+
+        def fn(x):
+            return 2 * x
+
+        expected = xr.DataTree.from_dict(
+            {
+                "/": fn(ds1).chunk({"x": 5}),
+                "/group1": fn(ds2).chunk({"y": 3}),
+                "/group2": fn(ds3).chunk({"z": 2}),
+                "/group1/subgroup1": fn(ds4).chunk({"x": 5}),
+            }
+        )
+        # Add trivial second layer to the task graph, persist should reduce to one
+        tree = xr.DataTree.from_dict(
+            {
+                "/": fn(ds1.chunk({"x": 5})),
+                "/group1": fn(ds2.chunk({"y": 3})),
+                "/group2": fn(ds3.chunk({"z": 2})),
+                "/group1/subgroup1": fn(ds4.chunk({"x": 5})),
+            }
+        )
+        original_chunksizes = tree.chunksizes
+        original_hlg_depths = {
+            node.path: len(node.dataset.__dask_graph__().layers)
+            for node in tree.subtree
+        }
+
+        actual = tree.persist()
+        actual_hlg_depths = {
+            node.path: len(node.dataset.__dask_graph__().layers)
+            for node in actual.subtree
+        }
+
+        assert_identical(actual, expected)
+
+        assert actual.chunksizes == original_chunksizes, "chunksizes were modified"
+        assert tree.chunksizes == original_chunksizes, (
+            "original chunksizes were modified"
+        )
+        assert all(d == 1 for d in actual_hlg_depths.values()), (
+            "unexpected dask graph depth"
+        )
+        assert all(d == 2 for d in original_hlg_depths.values()), (
+            "original dask graph was modified"
+        )
+
+    def test_chunk(self):
+        ds1 = xr.Dataset({"a": ("x", np.arange(10))})
+        ds2 = xr.Dataset({"b": ("y", np.arange(5))})
+        ds3 = xr.Dataset({"c": ("z", np.arange(4))})
+        ds4 = xr.Dataset({"d": ("x", np.arange(-5, 5))})
+
+        expected = xr.DataTree.from_dict(
+            {
+                "/": ds1.chunk({"x": 5}),
+                "/group1": ds2.chunk({"y": 3}),
+                "/group2": ds3.chunk({"z": 2}),
+                "/group1/subgroup1": ds4.chunk({"x": 5}),
+            }
+        )
+
+        tree = xr.DataTree.from_dict(
+            {"/": ds1, "/group1": ds2, "/group2": ds3, "/group1/subgroup1": ds4}
+        )
+        actual = tree.chunk({"x": 5, "y": 3, "z": 2})
+
+        assert_identical(actual, expected)
+        assert actual.chunksizes == expected.chunksizes
+
+        with pytest.raises(TypeError, match="invalid type"):
+            tree.chunk(None)
+
+        with pytest.raises(TypeError, match="invalid type"):
+            tree.chunk((1, 2))
+
+        with pytest.raises(ValueError, match="not found in data dimensions"):
+            tree.chunk({"u": 2})

@@ -50,7 +50,7 @@ from xarray.coding.cftime_offsets import (
     QuarterEnd,
     Tick,
     YearEnd,
-    cftime_range,
+    date_range,
     normalize_date,
     to_offset,
 )
@@ -219,8 +219,8 @@ def _get_time_bins(
     first, last = _get_range_edges(
         index.min(), index.max(), freq, closed=closed, origin=origin, offset=offset
     )
-    datetime_bins = labels = cftime_range(
-        freq=freq, start=first, end=last, name=index.name
+    datetime_bins = labels = date_range(
+        freq=freq, start=first, end=last, name=index.name, use_cftime=True
     )
 
     datetime_bins, labels = _adjust_bin_edges(
@@ -475,7 +475,7 @@ def exact_cftime_datetime_difference(a: CFTimeDatetime, b: CFTimeDatetime):
     datetime.timedelta
     """
     seconds = b.replace(microsecond=0) - a.replace(microsecond=0)
-    seconds = int(round(seconds.total_seconds()))
+    seconds = round(seconds.total_seconds())
     microseconds = b.microsecond - a.microsecond
     return datetime.timedelta(seconds=seconds, microseconds=microseconds)
 

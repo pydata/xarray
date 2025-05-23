@@ -1,6 +1,6 @@
 # import flox to avoid the cost of first import
 import cftime
-import flox.xarray  # noqa
+import flox.xarray  # noqa: F401
 import numpy as np
 import pandas as pd
 
