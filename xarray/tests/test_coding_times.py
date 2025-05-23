@@ -2060,6 +2060,8 @@ def test_literal_timedelta_decoding_invalid_key_error(invalid_key) -> None:
     ],
     ids=lambda x: f"{x!r}",
 )
+
+
 def test_timedelta_decoding_options(
     decode_via_units, decode_via_dtype, attrs, expect_timedelta64
 ) -> None:
@@ -2138,3 +2140,19 @@ def test_literal_timedelta64_coding_with_mask(
     reencoded = conventions.encode_cf_variable(decoded)
     assert_identical(reencoded, encoded)
     assert reencoded.dtype == encoded.dtype
+
+    
+def test_roundtrip_0size_timedelta(time_unit: PDDatetimeUnitOptions) -> None:
+    # regression test for GitHub issue #10310
+    encoding = {"units": "days", "dtype": np.dtype("int64")}
+    data = np.array([], dtype=f"=m8[{time_unit}]")
+    decoded = Variable(["time"], data, encoding=encoding)
+    encoded = conventions.encode_cf_variable(decoded, name="foo")
+    assert encoded.dtype == encoding["dtype"]
+    assert encoded.attrs["units"] == encoding["units"]
+    decoded = conventions.decode_cf_variable("foo", encoded, decode_timedelta=True)
+    assert decoded.dtype == np.dtype("=m8[ns]")
+    with assert_no_warnings():
+        decoded.load()
+    assert decoded.dtype == np.dtype("=m8[s]")
+    assert decoded.encoding == encoding

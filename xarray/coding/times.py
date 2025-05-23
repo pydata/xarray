@@ -665,22 +665,28 @@ def decode_cf_timedelta(
     num_timedeltas = to_numpy(num_timedeltas)
     unit = _netcdf_to_numpy_timeunit(units)
 
+    # special case empty arrays
+    is_empty_array = num_timedeltas.size == 0
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "All-NaN slice encountered", RuntimeWarning)
-        _check_timedelta_range(np.nanmin(num_timedeltas), unit, time_unit)
-        _check_timedelta_range(np.nanmax(num_timedeltas), unit, time_unit)
+        if not is_empty_array:
+            _check_timedelta_range(np.nanmin(num_timedeltas), unit, time_unit)
+            _check_timedelta_range(np.nanmax(num_timedeltas), unit, time_unit)
 
     timedeltas = _numbers_to_timedelta(
         num_timedeltas, unit, "s", "timedeltas", target_unit=time_unit
     )
     pd_timedeltas = pd.to_timedelta(ravel(timedeltas))
 
-    if np.isnat(timedeltas).all():
+    if not is_empty_array and np.isnat(timedeltas).all():
         empirical_unit = time_unit
     else:
         empirical_unit = pd_timedeltas.unit
 
-    if np.timedelta64(1, time_unit) > np.timedelta64(1, empirical_unit):
+    if is_empty_array or np.timedelta64(1, time_unit) > np.timedelta64(
+        1, empirical_unit
+    ):
         time_unit = empirical_unit
 
     if time_unit not in {"s", "ms", "us", "ns"}:
@@ -1236,6 +1242,9 @@ def _eagerly_encode_cf_timedelta(
     data_units = infer_timedelta_units(timedeltas)
     if units is None:
         units = data_units
+    # units take precedence in the case of zero-size array
+    if timedeltas.size == 0:
+        data_units = units
 
     time_delta = _unit_timedelta_numpy(units)
     time_deltas = pd.TimedeltaIndex(ravel(timedeltas))
