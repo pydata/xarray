@@ -5737,10 +5737,11 @@ class TestDataArrayToZarr:
 
     @requires_dask
     def test_dataarray_to_zarr_align_chunks_true(self, tmp_store) -> None:
-        # TODO: Find a better way to verify if the data is beign corrupted
-        #   when using dask, it is hard to detect if the automatic alignment
-        #   is being applied or not, but for now is fine to at least check
-        #   that the parameter is there.
+        # TODO: Improve data integrity checks when using Dask.
+        #   Detecting automatic alignment issues in Dask can be tricky,
+        #   as unintended misalignment might lead to subtle data corruption.
+        #   For now, ensure that the parameter is present, but explore
+        #   more robust verification methods to confirm data consistency.
 
         skip_if_zarr_format_3(tmp_store)
         arr = DataArray(
@@ -6494,7 +6495,7 @@ class TestZarrRegionAuto:
                 )
 
             # chunking with dask sidesteps the encoding check, so we need a different check
-            with pytest.raises(ValueError, match="Specified zarr chunks"):
+            with pytest.raises(ValueError, match="Specified Zarr chunks"):
                 self.save(
                     target,
                     da2.chunk({"x": 1, "y": 1, "time": 1}),

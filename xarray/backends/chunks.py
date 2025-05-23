@@ -19,20 +19,20 @@ def align_nd_chunks(
         # Validate that they have the same number of elements
         if sum(backend_chunks) != sum(var_chunks):
             raise ValueError(
-                "The number of elements on the backend is different than "
-                "the number of elements on the variable,"
-                "this should never happen at this point."
+                "The number of elements in the backend does not "
+                "match the number of elements in the variable. "
+                "This inconsistency should never occur at this stage."
             )
 
         # Validate if the backend_chunks satisfy the condition that all the values
         # excluding the borders are equal
         if len(set(backend_chunks[1:-1])) > 1:
             raise ValueError(
-                f"For the moment this function only support aligning chunks "
-                f"when the backend chunks are of the same size, excluding the borders. "
-                f"If you see this error please report it, it should never happen, "
-                f"unless there is an incorrect used of it internally. "
-                f"Backend chunks: {backend_chunks}, "
+                f"This function currently supports aligning chunks "
+                f"only when backend chunks are of uniform size, excluding borders. "
+                f"If you encounter this error, please report it—this scenario should never occur "
+                f"unless there is an internal misuse. "
+                f"Backend chunks: {backend_chunks}"
             )
 
         # The algorithm assumes that there are always two borders on the
@@ -189,16 +189,17 @@ def validate_grid_chunks_alignment(
     if nd_var_chunks is None:
         return
     base_error = (
-        "Specified zarr chunks encoding['chunks']={enc_chunks!r} for "
-        "variable named {name!r} would overlap multiple dask chunks. "
-        "Please take a look on the chunk at position {var_chunk_pos} "
-        "whose size is {var_chunk_size} on the dimension {dim_i}, "
-        "it is unaligned with the backend chunks of "
-        "size {chunk_size} on the region {region}. "
-        "Writing this array in parallel with dask could lead to corrupted data. "
-        "Consider either rechunking using `chunk()`, deleting "
-        "or modifying `encoding['chunks']`, specify `safe_chunks=False` "
-        "or `align_chunks=True`."
+        "Specified Zarr chunks encoding['chunks']={enc_chunks!r} for "
+        "variable named {name!r} would overlap multiple Dask chunks. "
+        "Check the chunk at position {var_chunk_pos}, which has a size of "
+        "{var_chunk_size} on dimension {dim_i}. It is unaligned with "
+        "backend chunks of size {chunk_size} in region {region}. "
+        "Writing this array in parallel with Dask could lead to corrupted data. "
+        "To resolve this issue, consider one of the following options: "
+        "- Rechunk the array using `chunk()`. "
+        "- Modify or delete `encoding['chunks']`. "
+        "- Set `safe_chunks=False`. "
+        "- Enable automatic chunks alignment with `align_chunks=True`."
     )
 
     for dim_i, chunk_size, var_chunks, interval, size in zip(
