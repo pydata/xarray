@@ -3,7 +3,7 @@ import numpy as np
 from xarray.core.datatree import Variable
 
 
-def align_chunks(
+def align_nd_chunks(
     nd_var_chunks: tuple[tuple[int, ...], ...],
     nd_backend_chunks: tuple[tuple[int, ...], ...],
 ) -> tuple[tuple[int, ...], ...]:
@@ -30,9 +30,9 @@ def align_chunks(
             raise ValueError(
                 f"For the moment this function only support aligning chunks "
                 f"when the backend chunks are of the same size, excluding the borders. "
-                f"In other words the backend chunks must be satisfy the actual Zarr rules."
-                f"Please check the backend chunks and try again. "
-                f"{backend_chunks}."
+                f"If you see this error please report it, it should never happen, "
+                f"unless there is an incorrect used of it internally. "
+                f"Backend chunks: {backend_chunks}, "
             )
 
         # The algorithm assumes that there are always two borders on the
@@ -170,7 +170,7 @@ def grid_rechunk(
         )
     )
 
-    nd_aligned_chunks = align_chunks(
+    nd_aligned_chunks = align_nd_chunks(
         nd_var_chunks=nd_var_chunks,
         nd_backend_chunks=nd_grid_chunks,
     )

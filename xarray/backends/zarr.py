@@ -1144,8 +1144,11 @@ class ZarrStore(AbstractWritableDataStore):
                         zarr_array.shape[append_axis], None
                     )
 
-                    new_shape = list(zarr_array.shape)
-                    new_shape[append_axis] += v.shape[append_axis]
+                    new_shape = (
+                        zarr_array.shape[:append_axis] +
+                        (zarr_array.shape[append_axis] + v.shape[append_axis], ) +
+                        zarr_array.shape[append_axis + 1 :]
+                    )
                     zarr_array.resize(new_shape)
 
                 zarr_shape = zarr_array.shape

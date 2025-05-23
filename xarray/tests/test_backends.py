@@ -5747,7 +5747,7 @@ class TestDataArrayToZarr:
             np.arange(4), dims=["a"], coords={"a": np.arange(4)}, name="foo"
         ).chunk(a=(2, 1, 1))
 
-        output = arr.to_zarr(
+        arr.to_zarr(
             tmp_store,
             align_chunks=True,
             encoding={"foo": {"chunks": (3,)}},
