@@ -182,7 +182,10 @@ class TestAsyncLoad:
         latencystore = LatencyStore(memorystore, latency=self.LATENCY)
         ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
 
-        # TODO test basic indexing
+        # test basic indexing
+        indexer = {"x": 2}
+        result = await ds.sel(indexer).load_async()
+        xrt.assert_identical(result, ds.sel(indexer).load())
 
         # test orthogonal indexing
         indexer = {"x": [2, 3]}
