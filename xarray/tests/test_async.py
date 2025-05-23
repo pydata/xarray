@@ -11,7 +11,6 @@ import xarray as xr
 import xarray.testing as xrt
 from xarray.tests import has_zarr_v3, requires_zarr_v3
 
-
 if has_zarr_v3:
     import zarr
     from zarr.abc.store import ByteRequest, Store
@@ -77,7 +76,7 @@ else:
 @pytest.fixture
 def memorystore() -> "MemoryStore":
     memorystore = zarr.storage.MemoryStore({})
-    z = zarr.create_array(
+    z1 = zarr.create_array(
         store=memorystore,
         name="foo",
         shape=(10, 10),
@@ -85,17 +84,17 @@ def memorystore() -> "MemoryStore":
         dtype="f4",
         dimension_names=["x", "y"],
     )
-    z[:, :] = np.random.random((10, 10))
+    z1[:, :] = np.random.random((10, 10))
 
-    z = zarr.create_array(
+    z2 = zarr.create_array(
         store=memorystore,
-        name="bar",
+        name="x",
         shape=(10,),
         chunks=(5),
         dtype="f4",
         dimension_names=["x"],
     )
-    z[:] = np.random.random((10,))
+    z2[:] = np.arange(10)
 
     return memorystore
 
@@ -123,7 +122,7 @@ class AsyncTimer:
 class TestAsyncLoad:
     LATENCY: float = 1.0
 
-    @pytest.fixture(params=["ds", "da", "var"])
+    @pytest.fixture(params=["var", "ds", "da"])
     def xr_obj(self, request, memorystore) -> xr.Dataset | xr.DataArray | xr.Variable:
         latencystore = LatencyStore(memorystore, latency=self.LATENCY)
         ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
@@ -175,3 +174,17 @@ class TestAsyncLoad:
         self.assert_time_as_expected(
             total_time=timer.total_time, latency=self.LATENCY, n_loads=N_OBJECTS
         )
+
+    @pytest.mark.xfail(reason="not implemented")
+    async def test_indexing(self, memorystore) -> None:
+        latencystore = LatencyStore(memorystore, latency=self.LATENCY)
+        ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
+
+        # TODO test basic indexing
+
+        # test orthogonal indexing
+        indexer = {"x": [2, 3]}
+        result = await ds.sel(indexer).load_async()
+        xrt.assert_identical(result, ds.sel(indexer).load())
+
+        # TODO test vectorized indexing
