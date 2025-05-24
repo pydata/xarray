@@ -239,8 +239,6 @@ def test_decode_non_standard_calendar_inside_timestamp_range(calendar) -> None:
 def test_decode_dates_outside_timestamp_range(
     calendar, time_unit: PDDatetimeUnitOptions
 ) -> None:
-    from datetime import datetime
-
     import cftime
 
     units = "days since 0001-01-01"
@@ -379,8 +377,6 @@ def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(
 def test_decode_multidim_time_outside_timestamp_range(
     calendar, time_unit: PDDatetimeUnitOptions
 ) -> None:
-    from datetime import datetime
-
     import cftime
 
     units = "days since 0001-01-01"
@@ -1163,27 +1159,26 @@ def test__encode_datetime_with_cftime() -> None:
 
 
 @requires_cftime
-def test_encode_decode_cf_datetime_outofbounds_warnings(
-    time_unit: PDDatetimeUnitOptions,
-) -> None:
-    import cftime
+def test_round_trip_standard_calendar_cftime_datetimes_pre_reform() -> None:
+    from cftime import DatetimeGregorian
 
-    if time_unit == "ns":
-        pytest.skip("does not work work out of bounds datetimes")
-    dates = np.array(["0001-01-01", "2001-01-01"], dtype=f"datetime64[{time_unit}]")
-    cfdates = np.array(
-        [
-            cftime.datetime(t0.year, t0.month, t0.day, calendar="gregorian")
-            for t0 in dates.astype(datetime)
-        ]
-    )
-    with pytest.warns(
-        SerializationWarning, match="Unable to encode numpy.datetime64 objects"
-    ):
-        encoded = encode_cf_datetime(dates, "seconds since 2000-01-01", "standard")
+    dates = np.array([DatetimeGregorian(1, 1, 1), DatetimeGregorian(2000, 1, 1)])
+    encoded = encode_cf_datetime(dates, "seconds since 2000-01-01", "standard")
     with pytest.warns(SerializationWarning, match="Unable to decode time axis"):
         decoded = decode_cf_datetime(*encoded)
-    np.testing.assert_equal(decoded, cfdates)
+    np.testing.assert_equal(decoded, dates)
+
+
+@pytest.mark.parametrize("calendar", ["standard", "gregorian"])
+def test_encode_cf_datetime_gregorian_proleptic_gregorian_mismatch_error(
+    calendar: str,
+    time_unit: PDDatetimeUnitOptions,
+) -> None:
+    if time_unit == "ns":
+        pytest.skip("datetime64[ns] values can only be defined post reform")
+    dates = np.array(["0001-01-01", "2001-01-01"], dtype=f"datetime64[{time_unit}]")
+    with pytest.raises(ValueError, match="proleptic_gregorian"):
+        encode_cf_datetime(dates, "seconds since 2000-01-01", calendar)
 
 
 @pytest.mark.parametrize("calendar", ["gregorian", "Gregorian", "GREGORIAN"])
