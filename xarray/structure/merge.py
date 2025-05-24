@@ -288,7 +288,7 @@ def merge_collected(
                     combine_attrs=combine_attrs,
                 )
                 if variable.attrs or attrs:
-                    # Make a shallow copy to so that assigning merged_vars[name].attrs 
+                    # Make a shallow copy to so that assigning merged_vars[name].attrs
                     # does not affect the original input variable.
                     merged_vars[name] = variable.copy(False)
                     merged_vars[name].attrs = attrs
