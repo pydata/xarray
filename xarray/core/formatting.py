@@ -19,7 +19,11 @@ from pandas.errors import OutOfBoundsDatetime
 
 from xarray.core.datatree_render import RenderDataTree
 from xarray.core.duck_array_ops import array_all, array_any, array_equiv, astype, ravel
-from xarray.core.indexing import MemoryCachedArray
+from xarray.core.indexing import (
+    CoordinateTransformIndexingAdapter,
+    MemoryCachedArray,
+    PandasIndexingAdapter,
+)
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.treenode import group_subtrees
 from xarray.core.utils import is_duck_array
@@ -651,6 +655,12 @@ def short_array_repr(array):
 def short_data_repr(array):
     """Format "data" for DataArray and Variable."""
     internal_data = getattr(array, "variable", array)._data
+
+    if isinstance(
+        internal_data, PandasIndexingAdapter | CoordinateTransformIndexingAdapter
+    ):
+        array = internal_data._get_array_subset()
+
     if isinstance(array, np.ndarray):
         return short_array_repr(array)
     elif is_duck_array(internal_data):

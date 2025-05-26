@@ -9,7 +9,6 @@ from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
-from html import escape
 from typing import TYPE_CHECKING, Any, cast, overload
 
 import numpy as np
@@ -1883,6 +1882,23 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def transpose(self, order) -> pd.Index:
         return self.array  # self.array should be always one-dimensional
 
+    def _get_array_subset(self) -> np.ndarray:
+        # avoid converting a large pd.Index (especially pd.MultiIndex and pd.RangeIndex)
+        # into a numpy array for the array repr
+        threshold = max(100, OPTIONS["display_values_threshold"] + 2)
+        if self.size > threshold:
+            pos = threshold // 2
+            subset_start = (self[OuterIndexer((slice(pos),))],)
+            subset_end = (self[OuterIndexer((slice(-pos, None),))],)
+            return np.concatenate([np.asarray(subset_start), np.asarray(subset_end)])
+        else:
+            return np.asarray(self)
+
+    def _repr_inline_(self, max_width: int) -> str:
+        from xarray.core.formatting import format_array_flat
+
+        return format_array_flat(self._get_array_subset(), max_width)
+
     def __repr__(self) -> str:
         return f"{type(self).__name__}(array={self.array!r}, dtype={self.dtype!r})"
 
@@ -1968,31 +1984,11 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
             )
             return f"{type(self).__name__}{props}"
 
-    def _get_array_subset(self) -> np.ndarray:
-        # used to speed-up the repr for big multi-indexes
-        threshold = max(100, OPTIONS["display_values_threshold"] + 2)
-        if self.size > threshold:
-            pos = threshold // 2
-            indices = np.concatenate([np.arange(0, pos), np.arange(-pos, 0)])
-            subset = self[OuterIndexer((indices,))]
-        else:
-            subset = self
-
-        return np.asarray(subset)
-
     def _repr_inline_(self, max_width: int) -> str:
-        from xarray.core.formatting import format_array_flat
-
         if self.level is None:
             return "MultiIndex"
         else:
-            return format_array_flat(self._get_array_subset(), max_width)
-
-    def _repr_html_(self) -> str:
-        from xarray.core.formatting import short_array_repr
-
-        array_repr = short_array_repr(self._get_array_subset())
-        return f"<pre>{escape(array_repr)}</pre>"
+            return super()._repr_inline_(max_width=max_width)
 
     def copy(self, deep: bool = True) -> Self:
         # see PandasIndexingAdapter.copy
