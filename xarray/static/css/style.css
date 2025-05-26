@@ -29,11 +29,11 @@
   );
   --xr-background-color-row-even: var(
     --jp-layout-color1,
-    hsl(from var(--pst-color-on-background, white) h s calc(l - 10))
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 5))
   );
   --xr-background-color-row-odd: var(
     --jp-layout-color2,
-    hsl(from var(--pst-color-on-background, white) h s calc(l - 30))
+    hsl(from var(--pst-color-on-background, white) h s calc(l - 15))
   );
 }
 
@@ -67,11 +67,11 @@ body.vscode-dark {
   );
   --xr-background-color-row-even: var(
     --jp-layout-color1,
-    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 10))
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 5))
   );
   --xr-background-color-row-odd: var(
     --jp-layout-color2,
-    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 30))
+    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 15))
   );
 }
 
