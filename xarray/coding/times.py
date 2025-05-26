@@ -1065,6 +1065,7 @@ def _eagerly_encode_cf_datetime(
         calendar = infer_calendar_name(dates)
 
     raise_incompatible_units_error = False
+    raise_gregorian_proleptic_gregorian_mismatch_error = False
     try:
         if not _is_standard_calendar(calendar) or dates.dtype.kind == "O":
             # parse with cftime instead
@@ -1073,16 +1074,7 @@ def _eagerly_encode_cf_datetime(
         if calendar in ["standard", "gregorian"] and np.nanmin(dates).astype(
             "=M8[us]"
         ).astype(datetime) < datetime(1582, 10, 15):
-            # if we use standard calendar and for dates before the reform
-            # we need to use cftime instead
-            emit_user_level_warning(
-                f"Unable to encode numpy.datetime64 objects with {calendar} calendar."
-                "Using cftime.datetime objects instead, reason: dates prior "
-                "reform date (1582-10-15). To silence this warning transform "
-                "numpy.datetime64 to corresponding cftime.datetime beforehand.",
-                SerializationWarning,
-            )
-            raise OutOfBoundsDatetime
+            raise_gregorian_proleptic_gregorian_mismatch_error = True
 
         time_unit, ref_date = _unpack_time_unit_and_ref_date(units)
         # calendar equivalence only for days after the reform
@@ -1165,6 +1157,16 @@ def _eagerly_encode_cf_datetime(
             f"Consider setting encoding['dtype'] to a floating point dtype to serialize with "
             f"units {units!r}. Consider setting encoding['units'] to {new_units!r} to "
             f"serialize with an integer dtype."
+        )
+    if raise_gregorian_proleptic_gregorian_mismatch_error:
+        raise ValueError(
+            f"Unable to encode np.datetime64 values with {calendar} "
+            f"calendar, because some or all values are prior to the reform "
+            f"date of 1582-10-15. To encode these times, set "
+            f"encoding['calendar'] to 'proleptic_gregorian' instead, which "
+            f"is the true calendar that np.datetime64 values use. The "
+            f"'standard' or 'gregorian' calendar is only equivalent to the "
+            f"'proleptic_gregorian' calendar after the reform date."
         )
 
     return num, units, calendar

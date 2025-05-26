@@ -33,7 +33,6 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-
 Deprecations
 ~~~~~~~~~~~~
 
@@ -51,6 +50,14 @@ Bug fixes
   calculating mean in rolling for correct operations (preserve float dtypes,
   correct mean of bool arrays) (:issue:`10340`, :pull:`10341`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Raise an error when attempting to encode :py:class:`numpy.datetime64` values
+  prior to the Gregorian calendar reform date of 1582-10-15 with a
+  ``"standard"`` or ``"gregorian"`` calendar. Previously we would warn and
+  encode these as :py:class:`cftime.DatetimeGregorian` objects, but it is not
+  clear that this is the user's intent, since this implicitly converts the
+  calendar of the datetimes from ``"proleptic_gregorian"`` to ``"gregorian"``
+  and prevents round-tripping them as :py:class:`numpy.datetime64` values
+  (:pull:`10352`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
