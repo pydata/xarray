@@ -1890,7 +1890,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             pos = threshold // 2
             subset_start = (self[OuterIndexer((slice(pos),))],)
             subset_end = (self[OuterIndexer((slice(-pos, None),))],)
-            return np.concatenate([np.asarray(subset_start), np.asarray(subset_end)])
+            return np.concatenate(
+                [np.asarray(subset_start), np.asarray(subset_end)], axis=-1
+            )
         else:
             return np.asarray(self)
 
