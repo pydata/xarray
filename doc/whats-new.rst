@@ -59,6 +59,11 @@ Bug fixes
   and prevents round-tripping them as :py:class:`numpy.datetime64` values
   (:pull:`10352`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
+Performance
+~~~~~~~~~~~
+- Speed up encoding of :py:class:`cftime.datetime` objects by roughly a factor
+  of three (:pull:`8324`). By `Antoine Gibek <https://github.com/antscloud>`_.
+
 Documentation
 ~~~~~~~~~~~~~
 
