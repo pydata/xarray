@@ -290,7 +290,7 @@ def merge_collected(
                 if variable.attrs or attrs:
                     # Make a shallow copy to so that assigning merged_vars[name].attrs
                     # does not affect the original input variable.
-                    merged_vars[name] = variable.copy(False)
+                    merged_vars[name] = variable.copy(deep=False)
                     merged_vars[name].attrs = attrs
                 else:
                     merged_vars[name] = variable
