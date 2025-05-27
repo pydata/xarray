@@ -159,6 +159,9 @@ Documentation
 - Switch to `pydata-sphinx-theme <https://github.com/pydata/pydata-sphinx-theme>`_ from `sphinx-book-theme <https://github.com/executablebooks/sphinx-book-theme>`_ (:pull:`8708`).
   By `Scott Henderson <https://github.com/scottyhq>`_.
 
+- Add a dedicated 'Complex Numbers' sections to the User Guide (:issue:`10213`, :pull:`10235`).
+  By `Andre Wendlinger <https://github.com/andrewendlinger>`_.
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Avoid stacking when grouping by a chunked array. This can be a large performance improvement.
