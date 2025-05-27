@@ -32,6 +32,7 @@ examples that describe many common tasks that you can accomplish with Xarray.
    :caption: I/O
 
    io
+   complex-numbers
 
 .. toctree::
    :maxdepth: 2
