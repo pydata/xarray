@@ -59,6 +59,14 @@ Bug fixes
   and prevents round-tripping them as :py:class:`numpy.datetime64` values
   (:pull:`10352`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
+Performance
+~~~~~~~~~~~
+- Lazily indexed arrays now use less memory to store keys by avoiding copies
+  in :py:class:`~xarray.indexing.VectorizedIndexer` and :py:class:`~xarray.indexing.OuterIndexer`
+  (:issue:`10316`).
+  By `Jesse Rusak <https://github.com/jder>`_.
+
+
 Documentation
 ~~~~~~~~~~~~~
 
