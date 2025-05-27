@@ -61,6 +61,10 @@ Bug fixes
 
 Performance
 ~~~~~~~~~~~
+- Lazily indexed arrays now use less memory to store keys by avoiding copies
+  in :py:class:`~xarray.indexing.VectorizedIndexer` and :py:class:`~xarray.indexing.OuterIndexer`
+  (:issue:`10316`).
+  By `Jesse Rusak <https://github.com/jder>`_.
 - Speed up encoding of :py:class:`cftime.datetime` objects by roughly a factor
   of three (:pull:`8324`). By `Antoine Gibek <https://github.com/antscloud>`_.
 
@@ -163,6 +167,9 @@ Documentation
   By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 - Switch to `pydata-sphinx-theme <https://github.com/pydata/pydata-sphinx-theme>`_ from `sphinx-book-theme <https://github.com/executablebooks/sphinx-book-theme>`_ (:pull:`8708`).
   By `Scott Henderson <https://github.com/scottyhq>`_.
+
+- Add a dedicated 'Complex Numbers' sections to the User Guide (:issue:`10213`, :pull:`10235`).
+  By `Andre Wendlinger <https://github.com/andrewendlinger>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

@@ -2206,6 +2206,7 @@ def test_where() -> None:
 def test_where_attrs() -> None:
     cond = xr.DataArray([True, False], coords={"a": [0, 1]}, attrs={"attr": "cond_da"})
     cond["a"].attrs = {"attr": "cond_coord"}
+    input_cond = cond.copy()
     x = xr.DataArray([1, 1], coords={"a": [0, 1]}, attrs={"attr": "x_da"})
     x["a"].attrs = {"attr": "x_coord"}
     y = xr.DataArray([0, 0], coords={"a": [0, 1]}, attrs={"attr": "y_da"})
@@ -2216,6 +2217,22 @@ def test_where_attrs() -> None:
     expected = xr.DataArray([1, 0], coords={"a": [0, 1]}, attrs={"attr": "x_da"})
     expected["a"].attrs = {"attr": "x_coord"}
     assert_identical(expected, actual)
+    # Check also that input coordinate attributes weren't modified by reference
+    assert x["a"].attrs == {"attr": "x_coord"}
+    assert y["a"].attrs == {"attr": "y_coord"}
+    assert cond["a"].attrs == {"attr": "cond_coord"}
+    assert_identical(cond, input_cond)
+
+    # 3 DataArrays, drop attrs
+    actual = xr.where(cond, x, y, keep_attrs=False)
+    expected = xr.DataArray([1, 0], coords={"a": [0, 1]})
+    assert_identical(expected, actual)
+    assert_identical(expected.coords["a"], actual.coords["a"])
+    # Check also that input coordinate attributes weren't modified by reference
+    assert x["a"].attrs == {"attr": "x_coord"}
+    assert y["a"].attrs == {"attr": "y_coord"}
+    assert cond["a"].attrs == {"attr": "cond_coord"}
+    assert_identical(cond, input_cond)
 
     # x as a scalar, takes no attrs
     actual = xr.where(cond, 0, y, keep_attrs=True)
