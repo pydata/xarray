@@ -7,6 +7,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 
 import xarray as xr
 import xarray.ufuncs as xu
@@ -719,13 +720,17 @@ class TestSparseDataArrayAndDataset:
         ds = xr.Dataset(
             data_vars={"a": ("x", sparse.COO.from_numpy(np.ones(4)))}
         ).chunk()
+        if Version(sparse.__version__) >= Version("0.16.0"):
+            meta = "sparse.numba_backend._coo.core.COO"
+        else:
+            meta = "sparse.COO"
         expected = dedent(
-            """\
+            f"""\
             <xarray.Dataset> Size: 32B
             Dimensions:  (x: 4)
             Dimensions without coordinates: x
             Data variables:
-                a        (x) float64 32B dask.array<chunksize=(4,), meta=sparse.COO>"""
+                a        (x) float64 32B dask.array<chunksize=(4,), meta={meta}>"""
         )
         assert expected == repr(ds)
 

@@ -10,7 +10,7 @@ This interoperability comes via a set of flexible abstractions into which the us
 
 - :ref:`Custom file backends <add_a_backend>` via the :py:class:`~xarray.backends.BackendEntrypoint` system,
 - Numpy-like :ref:`"duck" array wrapping <internals.duckarrays>`, which supports the `Python Array API Standard <https://data-apis.org/array-api/latest/>`_,
-- :ref:`Chunked distributed array computation <internals.chunkedarrays>` via the :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint` system,
+- :ref:`Chunked distributed array computation <internals.chunkedarrays>` via the :py:class:`~xarray.namedarray.parallelcompat.ChunkManagerEntrypoint` system,
 - Custom :py:class:`~xarray.Index` objects for :ref:`flexible label-based lookups <internals.custom indexes>`,
 - Extending xarray objects with domain-specific methods via :ref:`custom accessors <internals.accessors>`.
 

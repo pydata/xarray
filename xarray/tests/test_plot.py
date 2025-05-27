@@ -2429,6 +2429,26 @@ class TestFacetGrid(PlotTestCase):
             col="z", subplot_kws=dict(projection="polar"), sharex=False, sharey=False
         )
 
+    @pytest.mark.slow
+    def test_units_appear_somewhere(self) -> None:
+        # assign coordinates to all dims so we can test for units
+        darray = self.darray.assign_coords(
+            {"x": np.arange(self.darray.x.size), "y": np.arange(self.darray.y.size)}
+        )
+
+        darray.x.attrs["units"] = "x_unit"
+        darray.y.attrs["units"] = "y_unit"
+
+        g = xplt.FacetGrid(darray, col="z")
+
+        g.map_dataarray(xplt.contourf, "x", "y")
+
+        alltxt = text_in_fig()
+
+        # unit should appear as e.g. 'x [x_unit]'
+        for unit_name in ["x_unit", "y_unit"]:
+            assert unit_name in "".join(alltxt)
+
 
 @pytest.mark.filterwarnings("ignore:tight_layout cannot")
 class TestFacetGrid4d(PlotTestCase):
@@ -2994,7 +3014,9 @@ class TestCFDatetimePlot(PlotTestCase):
         """
         # case for 1d array
         data = np.random.rand(4, 12)
-        time = xr.cftime_range(start="2017", periods=12, freq="1ME", calendar="noleap")
+        time = xr.date_range(
+            start="2017", periods=12, freq="1ME", calendar="noleap", use_cftime=True
+        )
         darray = DataArray(data, dims=["x", "time"])
         darray.coords["time"] = time
 
@@ -3022,8 +3044,8 @@ class TestNcAxisNotInstalled(PlotTestCase):
         month = np.arange(1, 13, 1)
         data = np.sin(2 * np.pi * month / 12.0)
         darray = DataArray(data, dims=["time"])
-        darray.coords["time"] = xr.cftime_range(
-            start="2017", periods=12, freq="1ME", calendar="noleap"
+        darray.coords["time"] = xr.date_range(
+            start="2017", periods=12, freq="1ME", calendar="noleap", use_cftime=True
         )
 
         self.darray = darray

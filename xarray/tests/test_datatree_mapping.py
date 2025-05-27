@@ -32,7 +32,7 @@ class TestMapOverSubTree:
     def test_no_trees_returned(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
-        expected = xr.DataTree.from_dict({k: None for k in dt1.to_dict()})
+        expected = xr.DataTree.from_dict(dict.fromkeys(dt1.to_dict()))
         actual = map_over_datasets(lambda x, y: None, dt1, dt2)
         assert_equal(expected, actual)
 
@@ -49,6 +49,19 @@ class TestMapOverSubTree:
         assert_equal(result_tree, expected)
 
         result_tree = map_over_datasets(lambda x, y: x * y, 10.0, dt)
+        assert_equal(result_tree, expected)
+
+    def test_single_tree_arg_plus_kwarg(self, create_test_datatree):
+        dt = create_test_datatree()
+        expected = create_test_datatree(modify=lambda ds: (10.0 * ds))
+
+        def multiply_by_kwarg(ds, **kwargs):
+            ds = ds * kwargs.pop("multiplier")
+            return ds
+
+        result_tree = map_over_datasets(
+            multiply_by_kwarg, dt, kwargs=dict(multiplier=10.0)
+        )
         assert_equal(result_tree, expected)
 
     def test_multiple_tree_args(self, create_test_datatree):
@@ -72,7 +85,7 @@ class TestMapOverSubTree:
         with pytest.raises(
             TypeError,
             match=re.escape(
-                "the result of calling func on the node at position is not a "
+                "the result of calling func on the node at position '.' is not a "
                 "Dataset or None or a tuple of such types"
             ),
         ):
@@ -84,7 +97,7 @@ class TestMapOverSubTree:
         with pytest.raises(
             TypeError,
             match=re.escape(
-                "the result of calling func on the node at position is not a "
+                "the result of calling func on the node at position '.' is not a "
                 "Dataset or None or a tuple of such types"
             ),
         ):
@@ -136,6 +149,16 @@ class TestMapOverSubTree:
 
         expected = create_test_datatree(modify=lambda ds: 10.0 * ds)
         result_tree = dt.map_over_datasets(multiply, 10.0)
+        assert_equal(result_tree, expected)
+
+    def test_tree_method_with_kwarg(self, create_test_datatree):
+        dt = create_test_datatree()
+
+        def multiply(ds, **kwargs):
+            return kwargs.pop("times") * ds
+
+        expected = create_test_datatree(modify=lambda ds: 10.0 * ds)
+        result_tree = dt.map_over_datasets(multiply, kwargs=dict(times=10.0))
         assert_equal(result_tree, expected)
 
     def test_discard_ancestry(self, create_test_datatree):

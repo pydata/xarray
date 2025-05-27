@@ -42,9 +42,8 @@
 from __future__ import annotations
 
 import math
-import warnings
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
 import pandas as pd
@@ -58,7 +57,8 @@ from xarray.coding.times import (
 )
 from xarray.core.common import _contains_cftime_datetimes
 from xarray.core.options import OPTIONS
-from xarray.core.utils import attempt_import, is_scalar
+from xarray.core.types import PDDatetimeUnitOptions
+from xarray.core.utils import attempt_import, emit_user_level_warning, is_scalar
 
 if TYPE_CHECKING:
     from xarray.coding.cftime_offsets import BaseCFTimeOffset
@@ -236,8 +236,10 @@ class CFTimeIndex(pd.Index):
 
     See Also
     --------
-    cftime_range
+    date_range
     """
+
+    _data: np.ndarray
 
     year = _field_accessor("year", "The year of the datetime")
     month = _field_accessor("month", "The month of the datetime")
@@ -292,7 +294,7 @@ class CFTimeIndex(pd.Index):
                 offset=offset,
                 first_row_offset=offset,
             )
-            datastr = "\n".join([front_str, f"{' '*offset}...", end_str])
+            datastr = "\n".join([front_str, f"{' ' * offset}...", end_str])
 
         attrs_str = format_attrs(self)
         # oneliner only if smaller than display_width
@@ -300,8 +302,10 @@ class CFTimeIndex(pd.Index):
         if len(full_repr_str) > display_width:
             # if attrs_str too long, one per line
             if len(attrs_str) >= display_width - offset:
-                attrs_str = attrs_str.replace(",", f",\n{' '*(offset-2)}")
-            full_repr_str = f"{klass_name}([{datastr}],\n{' '*(offset-1)}{attrs_str})"
+                attrs_str = attrs_str.replace(",", f",\n{' ' * (offset - 2)}")
+            full_repr_str = (
+                f"{klass_name}([{datastr}],\n{' ' * (offset - 1)}{attrs_str})"
+            )
 
         return full_repr_str
 
@@ -459,7 +463,7 @@ class CFTimeIndex(pd.Index):
     ) -> Self:
         """Shift the CFTimeIndex a multiple of the given frequency.
 
-        See the documentation for :py:func:`~xarray.cftime_range` for a
+        See the documentation for :py:func:`~xarray.date_range` for a
         complete listing of valid frequency strings.
 
         Parameters
@@ -479,7 +483,7 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> index = xr.cftime_range("2000", periods=1, freq="ME")
+        >>> index = xr.date_range("2000", periods=1, freq="ME", use_cftime=True)
         >>> index
         CFTimeIndex([2000-01-31 00:00:00],
                     dtype='object', length=1, calendar='standard', freq=None)
@@ -544,14 +548,18 @@ class CFTimeIndex(pd.Index):
                 "that can be expressed at the nanosecond resolution."
             ) from err
 
-    def to_datetimeindex(self, unsafe=False):
+    def to_datetimeindex(
+        self, unsafe: bool = False, time_unit: Optional[PDDatetimeUnitOptions] = None
+    ) -> pd.DatetimeIndex:
         """If possible, convert this index to a pandas.DatetimeIndex.
 
         Parameters
         ----------
         unsafe : bool
-            Flag to turn off warning when converting from a CFTimeIndex with
-            a non-standard calendar to a DatetimeIndex (default ``False``).
+            Flag to turn off calendar mismatch warnings (default ``False``).
+        time_unit : str
+            Time resolution of resulting DatetimeIndex. Can be one of `"s"`,
+            ``"ms"``, ``"us"``, or ``"ns"`` (default ``"ns"``).
 
         Returns
         -------
@@ -561,45 +569,70 @@ class CFTimeIndex(pd.Index):
         ------
         ValueError
             If the CFTimeIndex contains dates that are not possible in the
-            standard calendar or outside the nanosecond-precision range.
+            standard calendar or outside the range representable by the
+            specified ``time_unit``.
 
         Warns
         -----
         RuntimeWarning
-            If converting from a non-standard calendar to a DatetimeIndex.
+            If converting from a non-standard calendar, or a Gregorian
+            calendar with dates prior to the reform (1582-10-15).
 
         Warnings
         --------
-        Note that for non-standard calendars, this will change the calendar
-        type of the index.  In that case the result of this method should be
-        used with caution.
+        Note that for non-proleptic Gregorian calendars, this will change the
+        calendar type of the index. In that case the result of this method
+        should be used with caution.
 
         Examples
         --------
-        >>> times = xr.cftime_range("2000", periods=2, calendar="gregorian")
+        >>> times = xr.date_range(
+        ...     "2000", periods=2, calendar="gregorian", use_cftime=True
+        ... )
         >>> times
         CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
                     dtype='object', length=2, calendar='standard', freq=None)
-        >>> times.to_datetimeindex()
-        DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[us]', freq=None)
+        >>> times.to_datetimeindex(time_unit="ns")
+        DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
         """
 
         if not self._data.size:
             return pd.DatetimeIndex([])
 
-        # transform to us-resolution is needed for DatetimeIndex
-        nptimes = cftime_to_nptime(self, time_unit="us")
+        if time_unit is None:
+            emit_user_level_warning(
+                "In a future version of xarray to_datetimeindex will default "
+                "to returning a 'us'-resolution DatetimeIndex instead of a "
+                "'ns'-resolution DatetimeIndex. This warning can be silenced "
+                "by explicitly passing the `time_unit` keyword argument.",
+                FutureWarning,
+            )
+            time_unit = "ns"
+
+        nptimes = cftime_to_nptime(self, time_unit=time_unit)
         calendar = infer_calendar_name(self)
         if calendar not in _STANDARD_CALENDARS and not unsafe:
-            warnings.warn(
+            emit_user_level_warning(
                 "Converting a CFTimeIndex with dates from a non-standard "
-                f"calendar, {calendar!r}, to a pandas.DatetimeIndex, which uses dates "
-                "from the standard calendar.  This may lead to subtle errors "
-                "in operations that depend on the length of time between "
-                "dates.",
+                f"calendar, {calendar!r}, to a pandas.DatetimeIndex, which "
+                "uses dates from the standard calendar.  This may lead to "
+                "subtle errors in operations that depend on the length of "
+                "time between dates.",
                 RuntimeWarning,
-                stacklevel=2,
             )
+        if calendar == "standard" and not unsafe:
+            reform_date = self.date_type(1582, 10, 15)
+            if self.min() < reform_date:
+                emit_user_level_warning(
+                    "Converting a CFTimeIndex with dates from a Gregorian "
+                    "calendar that fall before the reform date of 1582-10-15 "
+                    "to a pandas.DatetimeIndex. During this time period the "
+                    "Gregorian calendar and the proleptic Gregorian calendar "
+                    "of the DatetimeIndex do not exactly align. This warning "
+                    "can be silenced by setting unsafe=True.",
+                    RuntimeWarning,
+                )
+
         return pd.DatetimeIndex(nptimes)
 
     def strftime(self, date_format):
@@ -621,8 +654,12 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> rng = xr.cftime_range(
-        ...     start="2000", periods=5, freq="2MS", calendar="noleap"
+        >>> rng = xr.date_range(
+        ...     start="2000",
+        ...     periods=5,
+        ...     freq="2MS",
+        ...     calendar="noleap",
+        ...     use_cftime=True,
         ... )
         >>> rng.strftime("%B %d, %Y, %r")
         Index(['January 01, 2000, 12:00:00 AM', 'March 01, 2000, 12:00:00 AM',

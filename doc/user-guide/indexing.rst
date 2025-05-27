@@ -276,7 +276,7 @@ This is particularly useful for ragged indexing of multi-dimensional data,
 e.g., to apply a 2D mask to an image. Note that ``where`` follows all the
 usual xarray broadcasting and alignment rules for binary operations (e.g.,
 ``+``) between the object being indexed and the condition, as described in
-:ref:`comput`:
+:ref:`compute`:
 
 .. ipython:: python
 
@@ -376,7 +376,7 @@ indexing for xarray is based on our
 :ref:`broadcasting rules <compute.broadcasting>`.
 See :ref:`indexing.rules` for the complete specification.
 
-.. _NumPy's advanced indexing: https://numpy.org/doc/stable/reference/arrays.indexing.html
+.. _NumPy's advanced indexing: https://numpy.org/doc/stable/user/basics.indexing.html#advanced-indexing
 
 Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
 
