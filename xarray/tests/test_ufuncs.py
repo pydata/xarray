@@ -62,6 +62,19 @@ def test_binary_out():
         assert_identical(actual_exponent, arg)
 
 
+def test_binary_coord_attrs():
+    t = xr.Variable("t", np.arange(2, 4), attrs={"units": "s"})
+    x = xr.DataArray(t.values**2, coords={"t": t}, attrs={"units": "s^2"})
+    y = xr.DataArray(t.values**3, coords={"t": t}, attrs={"units": "s^3"})
+    z1 = xr.apply_ufunc(np.add, x, y, keep_attrs=True)
+    assert z1.coords["t"].attrs == {"units": "s"}
+    z2 = xr.apply_ufunc(np.add, x, y, keep_attrs=False)
+    assert z2.coords["t"].attrs == {}
+    # Check also that input array's coordinate attributes weren't affected
+    assert t.attrs == {"units": "s"}
+    assert x.coords["t"].attrs == {"units": "s"}
+
+
 def test_groupby():
     ds = xr.Dataset({"a": ("x", [0, 0, 0])}, {"c": ("x", [0, 0, 1])})
     ds_grouped = ds.groupby("c")
