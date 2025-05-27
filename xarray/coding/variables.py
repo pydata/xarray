@@ -347,7 +347,11 @@ class CFMaskCoder(VariableCoder):
             # XXX: Is this actually needed? Doesn't the backend handle this?
             signed_dtype = np.dtype(f"i{data.itemsize}")
             data = duck_array_ops.astype(
-                duck_array_ops.astype(duck_array_ops.around(data), signed_dtype, copy=False), dtype, copy=False
+                duck_array_ops.astype(
+                    duck_array_ops.around(data), signed_dtype, copy=False
+                ),
+                dtype,
+                copy=False,
             )
             attrs["_FillValue"] = fill_value
 
