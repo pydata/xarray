@@ -17,6 +17,8 @@ else:
     da = pytest.importorskip("dask.array")
     distributed = pytest.importorskip("distributed")
 
+import contextlib
+
 from dask.distributed import Client, Lock
 from distributed.client import futures_of
 from distributed.utils_test import (  # noqa: F401
@@ -238,10 +240,8 @@ def zarr(client):
         # an IO loop. Here we clean up these resources to avoid leaking threads
         # In normal operations, this is done as by an atexit handler when Zarr
         # is shutting down.
-        try:
+        with contextlib.suppress(AttributeError):
             zarr_lib.core.sync.cleanup_resources()
-        except AttributeError:
-            pass
 
 
 @requires_zarr

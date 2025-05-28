@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import re
 import warnings
 from collections.abc import Callable, Hashable
@@ -928,12 +929,10 @@ def _cleanup_netcdf_time_units(units: str) -> str:
     time_units = time_units.lower()
     if not time_units.endswith("s"):
         time_units = f"{time_units}s"
-    try:
+    # don't worry about reifying the units if they're out of bounds or
+    # formatted badly
+    with contextlib.suppress(OutOfBoundsDatetime, ValueError):
         units = f"{time_units} since {format_timestamp(ref_date)}"
-    except (OutOfBoundsDatetime, ValueError):
-        # don't worry about reifying the units if they're out of bounds or
-        # formatted badly
-        pass
     return units
 
 

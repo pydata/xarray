@@ -21,6 +21,8 @@ try:
 except ImportError:
     from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
 
+import contextlib
+
 import xarray as xr
 from xarray import (
     AlignmentError,
@@ -77,10 +79,8 @@ except ImportError:
     from pandas.core.computation.ops import UndefinedVariableError
 
 
-try:
+with contextlib.suppress(ImportError):
     import dask.array as da
-except ImportError:
-    pass
 
 # from numpy version 2.0 trapz is deprecated and renamed to trapezoid
 # remove once numpy 2.0 is the oldest supported version
