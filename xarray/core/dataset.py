@@ -7966,8 +7966,6 @@ class Dataset(
             variables = variables(self)
         if not isinstance(variables, list):
             variables = [variables]
-        else:
-            variables = variables
         arrays = [v if isinstance(v, DataArray) else self[v] for v in variables]
         aligned_vars = align(self, *arrays, join="left")
         aligned_self = cast("Self", aligned_vars[0])
