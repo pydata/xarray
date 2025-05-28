@@ -41,12 +41,12 @@ Deprecations
   Adds an option: ``use_new_combine_kwarg_defaults`` to opt in to new defaults immediately.
 
   New values are::
-  
+
     - ``data_vars``: "minimal"
     - ``coords``: "minimal"
     - ``compat``: "override"
     - ``join``: "exact"
-  
+
   By `Julia Signell <https://github.com/jsignell>`_.
 
 Bug fixes
