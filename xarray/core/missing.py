@@ -364,11 +364,10 @@ def interp_na(
             # Convert to float
             max_gap = timedelta_to_numeric(max_gap)
 
-        if not use_coordinate:
-            if not isinstance(max_gap, Number | np.number):
-                raise TypeError(
-                    f"Expected integer or floating point max_gap since use_coordinate=False. Received {max_type}."
-                )
+        if not use_coordinate and not isinstance(max_gap, Number | np.number):
+            raise TypeError(
+                f"Expected integer or floating point max_gap since use_coordinate=False. Received {max_type}."
+            )
 
     # method
     index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate)

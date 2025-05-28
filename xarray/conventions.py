@@ -276,12 +276,11 @@ def _update_bounds_attributes(variables: T_Variables) -> None:
         attrs = v.attrs
         units = attrs.get("units")
         has_date_units = isinstance(units, str) and "since" in units
-        if has_date_units and "bounds" in attrs:
-            if attrs["bounds"] in variables:
-                bounds_attrs = variables[attrs["bounds"]].attrs
-                bounds_attrs.setdefault("units", attrs["units"])
-                if "calendar" in attrs:
-                    bounds_attrs.setdefault("calendar", attrs["calendar"])
+        if has_date_units and "bounds" in attrs and attrs["bounds"] in variables:
+            bounds_attrs = variables[attrs["bounds"]].attrs
+            bounds_attrs.setdefault("units", attrs["units"])
+            if "calendar" in attrs:
+                bounds_attrs.setdefault("calendar", attrs["calendar"])
 
 
 def _update_bounds_encoding(variables: T_Variables) -> None:
@@ -325,12 +324,11 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
                 f"{name} before writing to a file.",
             )
 
-        if has_date_units and "bounds" in attrs:
-            if attrs["bounds"] in variables:
-                bounds_encoding = variables[attrs["bounds"]].encoding
-                bounds_encoding.setdefault("units", encoding["units"])
-                if "calendar" in encoding:
-                    bounds_encoding.setdefault("calendar", encoding["calendar"])
+        if has_date_units and "bounds" in attrs and attrs["bounds"] in variables:
+            bounds_encoding = variables[attrs["bounds"]].encoding
+            bounds_encoding.setdefault("units", encoding["units"])
+            if "calendar" in encoding:
+                bounds_encoding.setdefault("calendar", encoding["calendar"])
 
 
 T = TypeVar("T")
@@ -805,8 +803,11 @@ def cf_encoder(variables: T_Variables, attributes: T_Attrs):
                 "leap_year",
                 "month_lengths",
             ]:
-                if attr in new_vars[bounds].attrs and attr in var.attrs:
-                    if new_vars[bounds].attrs[attr] == var.attrs[attr]:
-                        new_vars[bounds].attrs.pop(attr)
+                if (
+                    attr in new_vars[bounds].attrs
+                    and attr in var.attrs
+                    and new_vars[bounds].attrs[attr] == var.attrs[attr]
+                ):
+                    new_vars[bounds].attrs.pop(attr)
 
     return new_vars, attributes
