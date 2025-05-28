@@ -220,7 +220,7 @@ def test_dask_distributed_read_netcdf_integration_test(
 # fixture vendored from dask
 # heads-up, this is using quite private zarr API
 # https://github.com/dask/dask/blob/e04734b4d8959ba259801f2e2a490cb4ee8d891f/dask/tests/test_distributed.py#L338-L358
-@pytest.fixture(scope="function")
+@pytest.fixture
 def zarr(client):
     zarr_lib = pytest.importorskip("zarr")
     # Zarr-Python 3 lazily allocates a dedicated thread/IO loop
