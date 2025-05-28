@@ -71,7 +71,7 @@ if TYPE_CHECKING:
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
         T_NetcdfEngine,
-        Literal["pydap", "zarr"],
+        Literal["pydap", "zarr"],  # noqa: PYI051
         type[BackendEntrypoint],
         str,  # no nice typing support for custom backends
         None,
