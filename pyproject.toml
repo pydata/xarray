@@ -249,8 +249,6 @@ extend-exclude = ["doc", "_typed_ops.pyi"]
 
 [tool.ruff.lint]
 extend-select = [
-  "F",    # Pyflakes
-  "E",    # pycodestyle errors
   "W",    # pycodestyle warnings
   "I",    # isort
   "UP",   # pyupgrade
@@ -267,7 +265,6 @@ extend-safe-fixes = [
 ]
 ignore = [
   "E402",    # module level import not at top of file
-  "E501",    # line too long - let the formatter worry about that
   "E731",    # do not assign a lambda expression, use a def
   "UP007",   # use X | Y for type annotations
   "C40",     # unnecessary generator, comprehension, or literal
