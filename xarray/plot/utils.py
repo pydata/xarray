@@ -1253,8 +1253,8 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
             )
 
         if add_guide is None or add_guide is True:
-            add_colorbar = True if hue_style == "continuous" else False
-            add_legend = True if hue_style == "discrete" else False
+            add_colorbar = hue_style == "continuous"
+            add_legend = hue_style == "discrete"
         else:
             add_colorbar = False
             add_legend = False

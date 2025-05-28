@@ -178,7 +178,7 @@ def decode_cf_variable(
         if isinstance(decode_times, CFDatetimeCoder):
             decode_timedelta = CFTimedeltaCoder(time_unit=decode_times.time_unit)
         else:
-            decode_timedelta = True if decode_times else False
+            decode_timedelta = bool(decode_times)
 
     if concat_characters:
         if stack_char_dim:
