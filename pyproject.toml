@@ -285,7 +285,7 @@ ignore = [
 "asv_bench/**" = ["TID252"]
 # looks like ruff bugs
 "xarray/core/_typed_ops.py" = ["PYI034"]
-"xarray/namedarray/_typing.py" = ["PYI018"]
+"xarray/namedarray/_typing.py" = ["PYI018", "PYI046"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["xarray"]
