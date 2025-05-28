@@ -894,7 +894,7 @@ def _diff_mapping_repr(
                     attrs_summary.append(attr_s)
 
                 temp = [
-                    "\n".join([var_s, attr_s]) if attr_s else var_s
+                    f"{var_s}\n{attr_s}" if attr_s else var_s
                     for var_s, attr_s in zip(temp, attrs_summary, strict=True)
                 ]
 

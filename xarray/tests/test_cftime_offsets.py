@@ -274,7 +274,7 @@ def test_to_offset_annual(month_label, month_int, multiple, offset_str):
     freq = offset_str
     offset_type = _ANNUAL_OFFSET_TYPES[offset_str]
     if month_label:
-        freq = "-".join([freq, month_label])
+        freq = f"{freq}-{month_label}"
     if multiple:
         freq = f"{multiple}{freq}"
     result = to_offset(freq)
@@ -303,7 +303,7 @@ def test_to_offset_quarter(month_label, month_int, multiple, offset_str):
     freq = offset_str
     offset_type = _QUARTER_OFFSET_TYPES[offset_str]
     if month_label:
-        freq = "-".join([freq, month_label])
+        freq = f"{freq}-{month_label}"
     if multiple:
         freq = f"{multiple}{freq}"
     result = to_offset(freq)
