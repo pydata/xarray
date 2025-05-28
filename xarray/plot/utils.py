@@ -798,16 +798,16 @@ def _update_axes(
     """
     if xincrease is None:
         pass
-    elif xincrease and ax.xaxis_inverted():
-        ax.invert_xaxis()
-    elif not xincrease and not ax.xaxis_inverted():
+    elif (xincrease and ax.xaxis_inverted()) or (
+        not xincrease and not ax.xaxis_inverted()
+    ):
         ax.invert_xaxis()
 
     if yincrease is None:
         pass
-    elif yincrease and ax.yaxis_inverted():
-        ax.invert_yaxis()
-    elif not yincrease and not ax.yaxis_inverted():
+    elif (yincrease and ax.yaxis_inverted()) or (
+        not yincrease and not ax.yaxis_inverted()
+    ):
         ax.invert_yaxis()
 
     # The default xscale, yscale needs to be None.

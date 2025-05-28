@@ -7034,11 +7034,7 @@ class TestDataset:
                 if utils.is_dict_like(constant_values):
                     if (
                         expected := constant_values.get(data_var_name, None)
-                    ) is not None:
-                        self._test_data_var_interior(
-                            ds[data_var_name], data_var, padded_dim_name, expected
-                        )
-                    elif (
+                    ) is not None or (
                         expected := constant_values.get(padded_dim_name, None)
                     ) is not None:
                         self._test_data_var_interior(
