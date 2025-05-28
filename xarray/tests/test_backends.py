@@ -6215,9 +6215,7 @@ def test_h5netcdf_entrypoint(tmp_path: Path) -> None:
 
 @requires_netCDF4
 @pytest.mark.parametrize("str_type", (str, np.str_))
-def test_write_file_from_np_str(
-    str_type: type[str] | type[np.str_], tmpdir: str
-) -> None:
+def test_write_file_from_np_str(str_type: type[str | np.str_], tmpdir: str) -> None:
     # https://github.com/pydata/xarray/pull/5264
     scenarios = [str_type(v) for v in ["scenario_a", "scenario_b", "scenario_c"]]
     years = range(2015, 2100 + 1)
