@@ -51,6 +51,10 @@ Bug fixes
   calculating mean in rolling for correct operations (preserve float dtypes,
   correct mean of bool arrays) (:issue:`10340`, :pull:`10341`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Improve the html ``repr`` of Xarray objects (dark mode, icons and variable attribute / data
+  dropdown sections).
+  (:pull:`10353`, :pull:`10354`)
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Documentation
 ~~~~~~~~~~~~~
