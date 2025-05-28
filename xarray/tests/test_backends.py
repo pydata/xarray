@@ -1198,7 +1198,7 @@ class CFEncodedBase(DatasetIOBase):
 
     def test_coordinates_encoding(self) -> None:
         def equals_latlon(obj):
-            return obj == "lat lon" or obj == "lon lat"
+            return obj in {"lat lon", "lon lat"}
 
         original = Dataset(
             {"temp": ("x", [0, 1]), "precip": ("x", [0, -1])},

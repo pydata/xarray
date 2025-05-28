@@ -1527,7 +1527,7 @@ class Common2dMixin:
         a.coords["d"] = "foo"
         self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()
-        assert "c = 1, d = foo" == title or "d = foo, c = 1" == title
+        assert title in {"c = 1, d = foo", "d = foo, c = 1"}
 
     def test_colorbar_default_label(self) -> None:
         self.plotmethod(add_colorbar=True)
