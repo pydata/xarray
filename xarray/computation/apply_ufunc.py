@@ -18,13 +18,9 @@ from collections.abc import (
     Sequence,
     Set,
 )
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
-
-_T = TypeVar("_T", bound=Union["Dataset", "DataArray"])
-_U = TypeVar("_U", bound=Union["Dataset", "DataArray"])
-_V = TypeVar("_V", bound=Union["Dataset", "DataArray"])
 
 from xarray.core import duck_array_ops, utils
 from xarray.core.formatting import limit_lines

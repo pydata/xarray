@@ -283,6 +283,8 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # don't enforce absolute imports
 "asv_bench/**" = ["TID252"]
+# looks like ruff bugs
+"xarray/namedarray/_typing.py" = ["PYI018"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["xarray"]
