@@ -254,6 +254,7 @@ extend-select = [
   "UP",   # pyupgrade
   "B",    # flake8-bugbear
   "C4",   # flake8-comprehensions
+  "ISC",  # flake8-implicit-str-concat
   "PIE",  # flake8-pie
   "TID",  # flake8-tidy-imports (absolute imports)
   "PGH",  # pygrep-hooks
