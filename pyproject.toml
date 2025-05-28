@@ -254,6 +254,7 @@ extend-select = [
   "ISC",  # flake8-implicit-str-concat
   "PIE",  # flake8-pie
   "TID",  # flake8-tidy-imports (absolute imports)
+  "PYI",  # flake8-pyi
   "I",    # isort
   "PERF", # Perflint
   "W",    # pycodestyle warnings
@@ -268,6 +269,8 @@ extend-safe-fixes = [
 ignore = [
   "C40",     # unnecessary generator, comprehension, or literal
   "PIE790",  # unnecessary pass statement
+  "PYI019",  # use `Self` instead of custom TypeVar
+  "PYI041",  # use `float` instead of `int | float`
   "PERF203", # try-except within a loop incurs performance overhead
   "E402",    # module level import not at top of file
   "E731",    # do not assign a lambda expression, use a def
