@@ -188,7 +188,7 @@ class Aligner(Generic[T_Alignable]):
         sparse: bool = False,
     ):
         self.objects = tuple(objects)
-        self.objects_matching_indexes = ()
+        self.objects_matching_indexes: tuple[Any, ...] = ()
         self.objects_matching_index_vars = ()
 
         if not isinstance(join, CombineKwargDefault) and join not in get_args(
