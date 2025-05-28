@@ -1410,7 +1410,7 @@ class CFDatetimeCoder(VariableCoder):
 
 
 def has_timedelta64_encoding_dtype(attrs_or_encoding: dict) -> bool:
-    dtype = attrs_or_encoding.get("dtype", None)
+    dtype = attrs_or_encoding.get("dtype")
     return isinstance(dtype, str) and dtype.startswith("timedelta64")
 
 
