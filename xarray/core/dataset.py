@@ -3805,15 +3805,16 @@ class Dataset(
             for k, v in indexers.items()
         }
 
+        # optimization: subset to coordinate range of the target index
+        if method in ["linear", "nearest"]:
+            for k, v in validated_indexers.items():
+                obj, newidx = missing._localize(obj, {k: v})
+                validated_indexers[k] = newidx[k]
+
         has_chunked_array = bool(
             any(is_chunked_array(v._data) for v in obj._variables.values())
         )
         if has_chunked_array:
-            # optimization: subset to coordinate range of the target index
-            if method in ["linear", "nearest"]:
-                for k, v in validated_indexers.items():
-                    obj, newidx = missing._localize(obj, {k: v})
-                    validated_indexers[k] = newidx[k]
             # optimization: create dask coordinate arrays once per Dataset
             # rather than once per Variable when dask.array.unify_chunks is called later
             # GH4739
@@ -3829,7 +3830,7 @@ class Dataset(
                 continue
 
             use_indexers = (
-                dask_indexers if is_duck_dask_array(var.data) else validated_indexers
+                dask_indexers if is_duck_dask_array(var._data) else validated_indexers
             )
 
             dtype_kind = var.dtype.kind

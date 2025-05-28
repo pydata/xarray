@@ -65,6 +65,8 @@ Performance
   in :py:class:`~xarray.indexing.VectorizedIndexer` and :py:class:`~xarray.indexing.OuterIndexer`
   (:issue:`10316`).
   By `Jesse Rusak <https://github.com/jder>`_.
+- Fix performance regression in interp where more data was loaded than was necessary. (:issue:`10287`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Documentation
