@@ -498,7 +498,7 @@ def _get_interpolator(
     # take higher dimensional data but scipy.interp1d can.
     if (
         method == "linear"
-        and not kwargs.get("fill_value") == "extrapolate"
+        and kwargs.get("fill_value") != "extrapolate"
         and not vectorizeable_only
     ):
         kwargs.update(method=method)

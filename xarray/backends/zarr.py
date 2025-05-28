@@ -562,7 +562,7 @@ def _validate_datatypes_for_zarr_append(vname, existing_var, new_var):
         # in the dataset, and with dtypes which are not known to be easy-to-append, necessitate
         # exact dtype equality, as checked below.
         pass
-    elif not new_var.dtype == existing_var.dtype:
+    elif new_var.dtype != existing_var.dtype:
         raise ValueError(
             f"Mismatched dtypes for variable {vname} between Zarr store on disk "
             f"and dataset to append. Store has dtype {existing_var.dtype} but "
