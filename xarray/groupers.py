@@ -716,11 +716,10 @@ def find_independent_seasons(seasons: Sequence[str]) -> Sequence[SeasonsGroup]:
 
         # Loop through remaining groups, and look for overlaps
         for j, second in enumerate(season_inds[i:]):
-            if not (set(chain(*grouped[idx])) & set(second)):
-                if second not in seen:
-                    grouped[idx].append(second)
-                    codes[idx].append(j + i)
-                    seen.add(second)
+            if not (set(chain(*grouped[idx])) & set(second)) and second not in seen:
+                grouped[idx].append(second)
+                codes[idx].append(j + i)
+                seen.add(second)
         if len(seen) == len(seasons):
             break
         # found all non-overlapping groups for this row, increment and start over

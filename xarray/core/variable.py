@@ -168,15 +168,14 @@ def as_variable(
             f"explicit list of dimensions: {obj!r}"
         )
 
-    if auto_convert:
-        if name is not None and name in obj.dims and obj.ndim == 1:
-            # automatically convert the Variable into an Index
-            emit_user_level_warning(
-                f"variable {name!r} with name matching its dimension will not be "
-                "automatically converted into an `IndexVariable` object in the future.",
-                FutureWarning,
-            )
-            obj = obj.to_index_variable()
+    if auto_convert and name is not None and name in obj.dims and obj.ndim == 1:
+        # automatically convert the Variable into an Index
+        emit_user_level_warning(
+            f"variable {name!r} with name matching its dimension will not be "
+            "automatically converted into an `IndexVariable` object in the future.",
+            FutureWarning,
+        )
+        obj = obj.to_index_variable()
 
     return obj
 
@@ -2930,15 +2929,15 @@ def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
 
 
 def _broadcast_compat_data(self, other):
-    if not OPTIONS["arithmetic_broadcast"]:
-        if (isinstance(other, Variable) and self.dims != other.dims) or (
-            is_duck_array(other) and self.ndim != other.ndim
-        ):
-            raise ValueError(
-                "Broadcasting is necessary but automatic broadcasting is disabled via "
-                "global option `'arithmetic_broadcast'`. "
-                "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
-            )
+    if not OPTIONS["arithmetic_broadcast"] and (
+        (isinstance(other, Variable) and self.dims != other.dims)
+        or (is_duck_array(other) and self.ndim != other.ndim)
+    ):
+        raise ValueError(
+            "Broadcasting is necessary but automatic broadcasting is disabled via "
+            "global option `'arithmetic_broadcast'`. "
+            "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
+        )
 
     if all(hasattr(other, attr) for attr in ["dims", "data", "shape", "encoding"]):
         # `other` satisfies the necessary Variable API for broadcast_variables

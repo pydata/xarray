@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from itertools import combinations, permutations, product
 from typing import cast, get_args
 
@@ -29,10 +30,8 @@ from xarray.tests import (
 )
 from xarray.tests.test_dataset import create_test_data
 
-try:
+with contextlib.suppress(ImportError):
     import scipy
-except ImportError:
-    pass
 
 ALL_1D = get_args(Interp1dOptions) + get_args(InterpolantOptions)
 

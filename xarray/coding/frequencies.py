@@ -137,7 +137,7 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
             return self._infer_daily_rule()
         # There is no possible intraday frequency with a non-unique delta
         # Different from pandas: we don't need to manage DST and business offsets in cftime
-        elif not len(self.deltas) == 1:
+        elif len(self.deltas) != 1:
             return None
 
         if _is_multiple(delta, _ONE_HOUR):

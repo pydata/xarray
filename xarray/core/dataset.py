@@ -8141,19 +8141,18 @@ class Dataset(
         for name, var in self.variables.items():
             reduce_dims = [d for d in var.dims if d in dims]
             if reduce_dims or not var.dims:
-                if name not in self.coords:
-                    if (
-                        not numeric_only
-                        or np.issubdtype(var.dtype, np.number)
-                        or var.dtype == np.bool_
-                    ):
-                        variables[name] = var.quantile(
-                            q,
-                            dim=reduce_dims,
-                            method=method,
-                            keep_attrs=keep_attrs,
-                            skipna=skipna,
-                        )
+                if name not in self.coords and (
+                    not numeric_only
+                    or np.issubdtype(var.dtype, np.number)
+                    or var.dtype == np.bool_
+                ):
+                    variables[name] = var.quantile(
+                        q,
+                        dim=reduce_dims,
+                        method=method,
+                        keep_attrs=keep_attrs,
+                        skipna=skipna,
+                    )
 
             else:
                 variables[name] = var
