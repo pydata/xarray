@@ -39,11 +39,14 @@ Deprecations
 - Start deprecation cycle for changing the default keyword arguments to ``concat``, ``merge``, ``combine``, ``open_mfdataset``.
   Emits a ``FutureWarning`` when using old defaults and new defaults would result in different behavior.
   Adds an option: ``use_new_combine_kwarg_defaults`` to opt in to new defaults immediately.
-  New values are:
+
+  New values are::
+  
     - ``data_vars``: "minimal"
     - ``coords``: "minimal"
     - ``compat``: "override"
     - ``join``: "exact"
+  
   By `Julia Signell <https://github.com/jsignell>`_.
 
 Bug fixes
