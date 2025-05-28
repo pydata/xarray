@@ -429,12 +429,11 @@ def _check_date_is_after_shift(
     # if we are outside the well-defined date range
     # proleptic_gregorian and standard/gregorian are only equivalent
     # if reference date and date range is >= 1582-10-15
-    if calendar != "proleptic_gregorian":
-        if date < type(date)(1582, 10, 15):
-            raise OutOfBoundsDatetime(
-                f"Dates before 1582-10-15 cannot be decoded "
-                f"with pandas using {calendar!r} calendar: {date}"
-            )
+    if calendar != "proleptic_gregorian" and date < type(date)(1582, 10, 15):
+        raise OutOfBoundsDatetime(
+            f"Dates before 1582-10-15 cannot be decoded "
+            f"with pandas using {calendar!r} calendar: {date}"
+        )
 
 
 def _check_higher_resolution(

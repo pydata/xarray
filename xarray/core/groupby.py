@@ -979,11 +979,12 @@ class GroupBy(Generic[T_Xarray]):
             index = combined._indexes.get(grouper.name, None)
             if has_missing_groups and index is not None:
                 indexers[grouper.name] = grouper.full_index
-            elif len(self.groupers) > 1:
-                if not isinstance(
-                    grouper.full_index, pd.RangeIndex
-                ) and not index.index.equals(grouper.full_index):
-                    indexers[grouper.name] = grouper.full_index
+            elif (
+                len(self.groupers) > 1
+                and not isinstance(grouper.full_index, pd.RangeIndex)
+                and not index.index.equals(grouper.full_index)
+            ):
+                indexers[grouper.name] = grouper.full_index
         if indexers:
             combined = combined.reindex(**indexers)
         return combined
