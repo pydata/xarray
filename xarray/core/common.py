@@ -2084,7 +2084,7 @@ def is_np_timedelta_like(dtype: DTypeLike) -> bool:
 
 
 def _contains_cftime_datetimes(array: Any) -> bool:
-    """Check if a array inside a Variable contains cftime.datetime objects"""
+    """Check if an array inside a Variable contains cftime.datetime objects"""
     if cftime is None:
         return False
 
