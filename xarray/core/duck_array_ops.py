@@ -17,11 +17,11 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from numpy import (  # noqa: F401
+from numpy import (
     isclose,
     isnat,
     take,
-    unravel_index,
+    unravel_index,  # noqa: F401
 )
 from pandas.api.types import is_extension_array_dtype
 
