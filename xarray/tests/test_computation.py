@@ -2014,9 +2014,8 @@ def test_output_wrong_dim_size() -> None:
 
 @pytest.mark.parametrize("use_dask", [True, False])
 def test_dot(use_dask: bool) -> None:
-    if use_dask:
-        if not has_dask:
-            pytest.skip("test for dask.")
+    if use_dask and not has_dask:
+        pytest.skip("test for dask.")
 
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
@@ -2146,9 +2145,8 @@ def test_dot(use_dask: bool) -> None:
 def test_dot_align_coords(use_dask: bool) -> None:
     # GH 3694
 
-    if use_dask:
-        if not has_dask:
-            pytest.skip("test for dask.")
+    if use_dask and not has_dask:
+        pytest.skip("test for dask.")
 
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)

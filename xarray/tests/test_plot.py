@@ -50,10 +50,8 @@ try:
 except ImportError:
     pass
 
-try:
+with contextlib.suppress(ImportError):
     import cartopy
-except ImportError:
-    pass
 
 
 @contextlib.contextmanager
@@ -2303,10 +2301,8 @@ class TestFacetGrid(PlotTestCase):
         numbers = set()
         alltxt = text_in_fig()
         for txt in alltxt:
-            try:
+            with contextlib.suppress(ValueError):
                 numbers.add(float(txt))
-            except ValueError:
-                pass
         largest = max(abs(x) for x in numbers)
         assert largest < 21
 

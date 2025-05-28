@@ -100,10 +100,8 @@ from xarray.tests.test_dataset import (
     create_test_data,
 )
 
-try:
+with contextlib.suppress(ImportError):
     import netCDF4 as nc4
-except ImportError:
-    pass
 
 try:
     import dask

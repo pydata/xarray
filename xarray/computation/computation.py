@@ -144,9 +144,8 @@ def cov(
             "Only xr.DataArray is supported."
             f"Given {[type(arr) for arr in [da_a, da_b]]}."
         )
-    if weights is not None:
-        if not isinstance(weights, DataArray):
-            raise TypeError(f"Only xr.DataArray is supported. Given {type(weights)}.")
+    if weights is not None and not isinstance(weights, DataArray):
+        raise TypeError(f"Only xr.DataArray is supported. Given {type(weights)}.")
     return _cov_corr(da_a, da_b, weights=weights, dim=dim, ddof=ddof, method="cov")
 
 
@@ -248,9 +247,8 @@ def corr(
             "Only xr.DataArray is supported."
             f"Given {[type(arr) for arr in [da_a, da_b]]}."
         )
-    if weights is not None:
-        if not isinstance(weights, DataArray):
-            raise TypeError(f"Only xr.DataArray is supported. Given {type(weights)}.")
+    if weights is not None and not isinstance(weights, DataArray):
+        raise TypeError(f"Only xr.DataArray is supported. Given {type(weights)}.")
     return _cov_corr(da_a, da_b, weights=weights, dim=dim, method="corr")
 
 

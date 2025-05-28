@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import functools
 import operator
 
@@ -20,10 +21,8 @@ from xarray.tests import (
 from xarray.tests.test_plot import PlotTestCase
 from xarray.tests.test_variable import _PAD_XR_NP_ARGS
 
-try:
+with contextlib.suppress(ImportError):
     import matplotlib.pyplot as plt
-except ImportError:
-    pass
 
 
 pint = pytest.importorskip("pint")
