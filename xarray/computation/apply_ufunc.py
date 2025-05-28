@@ -16,7 +16,9 @@ from collections.abc import (
     Iterator,
     Mapping,
     Sequence,
-    Set,
+)
+from collections.abc import (
+    Set as AbstractSet,
 )
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -196,7 +198,7 @@ def _get_coords_list(args: Iterable[Any]) -> list[Coordinates]:
 def build_output_coords_and_indexes(
     args: Iterable[Any],
     signature: _UFuncSignature,
-    exclude_dims: Set = frozenset(),
+    exclude_dims: AbstractSet = frozenset(),
     combine_attrs: CombineAttrsOptions = "override",
 ) -> tuple[list[dict[Any, Variable]], list[dict[Any, Index]]]:
     """Build output coordinates and indexes for an operation.
@@ -612,7 +614,7 @@ def apply_groupby_func(func, *args):
 
 
 def unified_dim_sizes(
-    variables: Iterable[Variable], exclude_dims: Set = frozenset()
+    variables: Iterable[Variable], exclude_dims: AbstractSet = frozenset()
 ) -> dict[Hashable, int]:
     dim_sizes: dict[Hashable, int] = {}
 
@@ -892,7 +894,7 @@ def apply_ufunc(
     *args: Any,
     input_core_dims: Sequence[Sequence] | None = None,
     output_core_dims: Sequence[Sequence] | None = ((),),
-    exclude_dims: Set = frozenset(),
+    exclude_dims: AbstractSet = frozenset(),
     vectorize: bool = False,
     join: JoinOptions = "exact",
     dataset_join: str = "exact",
