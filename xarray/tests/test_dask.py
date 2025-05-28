@@ -255,14 +255,10 @@ class TestVariable(DaskTestCase):
 
     def test_missing_methods(self):
         v = self.lazy_var
-        try:
+        with pytest.raises(NotImplementedError, match="dask"):
             v.argsort()
-        except NotImplementedError as err:
-            assert "dask" in str(err)
-        try:
+        with pytest.raises(NotImplementedError, match="dask"):
             v[0].item()
-        except NotImplementedError as err:
-            assert "dask" in str(err)
 
     def test_univariate_ufunc(self):
         u = self.eager_var

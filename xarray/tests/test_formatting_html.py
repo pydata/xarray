@@ -231,7 +231,7 @@ class Test_summarize_datatree_children:
         """
         return childfree_tree_factory()
 
-    @pytest.fixture(scope="function")
+    @pytest.fixture
     def mock_datatree_node_repr(self, monkeypatch):
         """
         Apply mocking for datatree_node_repr.
@@ -245,7 +245,7 @@ class Test_summarize_datatree_children:
 
         monkeypatch.setattr(fh, "datatree_node_repr", mock)
 
-    @pytest.fixture(scope="function")
+    @pytest.fixture
     def mock_wrap_datatree_repr(self, monkeypatch):
         """
         Apply mocking for _wrap_datatree_repr.

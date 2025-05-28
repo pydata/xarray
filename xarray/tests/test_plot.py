@@ -66,7 +66,7 @@ def figure_context(*args, **kwargs):
         plt.close("all")
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def test_all_figures_closed():
     """meta-test to ensure all figures are closed at the end of a test
 

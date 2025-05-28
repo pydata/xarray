@@ -400,14 +400,14 @@ def calendar(request):
     return request.param
 
 
-@pytest.fixture()
+@pytest.fixture
 def cftime_date_type(calendar):
     if calendar == "standard":
         calendar = "proleptic_gregorian"
     return _all_cftime_date_types()[calendar]
 
 
-@pytest.fixture()
+@pytest.fixture
 def times(calendar):
     import cftime
 
@@ -419,7 +419,7 @@ def times(calendar):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def data(times):
     data = np.random.rand(10, 10, _NT)
     lons = np.linspace(0, 11, 10)
@@ -429,7 +429,7 @@ def data(times):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def times_3d(times):
     lons = np.linspace(0, 11, 10)
     lats = np.linspace(0, 20, 10)
