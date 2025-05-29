@@ -8,15 +8,18 @@ type hints.
 
 from __future__ import annotations
 
-from collections import namedtuple
 from collections.abc import Iterable, Iterator
 from math import ceil
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 if TYPE_CHECKING:
     from xarray.core.datatree import DataTree
 
-Row = namedtuple("Row", ("pre", "fill", "node"))
+
+class Row(NamedTuple):
+    pre: str
+    fill: str
+    node: DataTree | str
 
 
 class AbstractStyle:

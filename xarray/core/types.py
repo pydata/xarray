@@ -214,7 +214,7 @@ Dims = Union[str, Collection[Hashable], EllipsisType, None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
-T_ChunkDim: TypeAlias = str | int | Literal["auto"] | None | tuple[int, ...]
+T_ChunkDim: TypeAlias = str | int | Literal["auto"] | None | tuple[int, ...]  # noqa: PYI051
 T_ChunkDimFreq: TypeAlias = Union["TimeResampler", T_ChunkDim]
 T_ChunksFreq: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDimFreq]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
@@ -329,7 +329,7 @@ class BaseBuffer(Protocol):
         # for _get_filepath_or_buffer
         ...
 
-    def seek(self, __offset: int, __whence: int = ...) -> int:
+    def seek(self, offset: int, whence: int = ..., /) -> int:
         # with one argument: gzip.GzipFile, bz2.BZ2File
         # with two arguments: zip.ZipFile, read_sas
         ...
@@ -345,7 +345,7 @@ class BaseBuffer(Protocol):
 
 @runtime_checkable
 class ReadBuffer(BaseBuffer, Protocol[AnyStr_co]):
-    def read(self, __n: int = ...) -> AnyStr_co:
+    def read(self, n: int = ..., /) -> AnyStr_co:
         # for BytesIOWrapper, gzip.GzipFile, bz2.BZ2File
         ...
 

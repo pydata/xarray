@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Generic
 
 import numpy as np
 import pandas as pd
+from typing_extensions import Self
 
 from xarray.coding.calendar_ops import _decimal_year
 from xarray.coding.times import infer_calendar_name
@@ -650,7 +651,7 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
 class CombinedDatetimelikeAccessor(
     DatetimeAccessor[T_DataArray], TimedeltaAccessor[T_DataArray]
 ):
-    def __new__(cls, obj: T_DataArray) -> CombinedDatetimelikeAccessor:
+    def __new__(cls, obj: T_DataArray) -> Self:
         # CombinedDatetimelikeAccessor isn't really instantiated. Instead
         # we need to choose which parent (datetime or timedelta) is
         # appropriate. Since we're checking the dtypes anyway, we'll just

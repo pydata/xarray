@@ -39,7 +39,6 @@ class Default(Enum):
 _default = Default.token
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
-_T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
 _dtype = np.dtype
@@ -79,7 +78,7 @@ _Chunks = tuple[_Shape, ...]
 _NormalizedChunks = tuple[tuple[int, ...], ...]
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
-T_ChunkDim: TypeAlias = str | int | Literal["auto"] | None | tuple[int, ...]
+T_ChunkDim: TypeAlias = str | int | Literal["auto"] | None | tuple[int, ...]  # noqa: PYI051
 # We allow the tuple form of this (though arguably we could transition to named dims only)
 T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim]
 
