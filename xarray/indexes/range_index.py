@@ -320,9 +320,7 @@ class RangeIndex(CoordinateTransformIndex):
 
         if isinstance(idxer, slice):
             return RangeIndex(self.transform.slice(idxer))
-        elif isinstance(idxer, Variable) and idxer.ndim > 1:
-            return None
-        elif np.ndim(idxer) == 0:
+        elif (isinstance(idxer, Variable) and idxer.ndim > 1) or np.ndim(idxer) == 0:
             return None
         else:
             values = self.transform.forward({self.dim: np.asarray(idxer)})[

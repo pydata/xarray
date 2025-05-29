@@ -2325,7 +2325,7 @@ class Closer:
         self.closed = True
 
 
-@pytest.fixture()
+@pytest.fixture
 def tree_and_closers():
     tree = DataTree.from_dict({"/child/grandchild": None})
     closers = {
