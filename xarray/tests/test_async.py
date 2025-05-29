@@ -86,6 +86,7 @@ def memorystore() -> "MemoryStore":
         chunks=(5, 5),
         dtype="f4",
         dimension_names=["x", "y"],
+        attributes={"add_offset": 1, "scale_factor": 2},
     )
     z1[:, :] = np.random.random((10, 10))
 
