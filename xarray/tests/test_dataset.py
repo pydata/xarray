@@ -2639,6 +2639,94 @@ class TestDataset:
         assert ds.x.attrs == {"units": "m"}
         assert ds_noattr.x.attrs == {}
 
+    def test_align_scalar_index(self) -> None:
+        # ensure that indexes associated with scalar coordinates are not ignored
+        # during alignment
+        class ScalarIndex(Index):
+            def __init__(self, value: int):
+                self.value = value
+
+            @classmethod
+            def from_variables(cls, variables, *, options):
+                var = next(iter(variables.values()))
+                return cls(int(var.values))
+
+            def equals(self, other, *, exclude=None):
+                return isinstance(other, ScalarIndex) and other.value == self.value
+
+        ds1 = Dataset(coords={"x": 0}).set_xindex("x", ScalarIndex)
+        ds2 = Dataset(coords={"x": 0}).set_xindex("x", ScalarIndex)
+
+        actual = xr.align(ds1, ds2, join="exact")
+        assert_identical(actual[0], ds1, check_default_indexes=False)
+        assert_identical(actual[1], ds2, check_default_indexes=False)
+
+        ds3 = Dataset(coords={"x": 1}).set_xindex("x", ScalarIndex)
+
+        with pytest.raises(AlignmentError, match="cannot align objects"):
+            xr.align(ds1, ds3, join="exact")
+
+    def test_align_multi_dim_index_exclude_dims(self) -> None:
+        class XYIndex(Index):
+            def __init__(self, x: PandasIndex, y: PandasIndex):
+                self.x: PandasIndex = x
+                self.y: PandasIndex = y
+
+            @classmethod
+            def from_variables(cls, variables, *, options):
+                return cls(
+                    x=PandasIndex.from_variables(
+                        {"x": variables["x"]}, options=options
+                    ),
+                    y=PandasIndex.from_variables(
+                        {"y": variables["y"]}, options=options
+                    ),
+                )
+
+            def equals(self, other, exclude=None):
+                x_eq = True if self.x.dim in exclude else self.x.equals(other.x)
+                y_eq = True if self.y.dim in exclude else self.y.equals(other.y)
+                return x_eq and y_eq
+
+        ds1 = (
+            Dataset(coords={"x": [1, 2], "y": [3, 4]})
+            .drop_indexes(["x", "y"])
+            .set_xindex(["x", "y"], XYIndex)
+        )
+        ds2 = (
+            Dataset(coords={"x": [1, 2], "y": [5, 6]})
+            .drop_indexes(["x", "y"])
+            .set_xindex(["x", "y"], XYIndex)
+        )
+
+        for join in ("outer", "exact"):
+            actual = xr.align(ds1, ds2, join=join, exclude="y")
+            assert_identical(actual[0], ds1, check_default_indexes=False)
+            assert_identical(actual[1], ds2, check_default_indexes=False)
+
+        with pytest.raises(
+            AlignmentError, match="cannot align objects.*index.*not equal"
+        ):
+            xr.align(ds1, ds2, join="exact")
+
+        with pytest.raises(AlignmentError, match="cannot exclude dimension"):
+            xr.align(ds1, ds2, join="override", exclude="y")
+
+    def test_align_index_equals_future_warning(self) -> None:
+        # TODO: remove this test once the deprecation cycle is completed
+        class DeprecatedEqualsSignatureIndex(PandasIndex):
+            def equals(self, other: Index) -> bool:  # type: ignore[override]
+                return super().equals(other, exclude=None)
+
+        ds = (
+            Dataset(coords={"x": [1, 2]})
+            .drop_indexes("x")
+            .set_xindex("x", DeprecatedEqualsSignatureIndex)
+        )
+
+        with pytest.warns(FutureWarning, match="signature.*deprecated"):
+            xr.align(ds, ds.copy(), join="exact")
+
     def test_broadcast(self) -> None:
         ds = Dataset(
             {"foo": 0, "bar": ("x", [1]), "baz": ("y", [2, 3])}, {"c": ("x", [4])}

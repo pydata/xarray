@@ -283,11 +283,17 @@ def merge_collected(
                                 "conflicting attribute values on combined "
                                 f"variable {name!r}:\nfirst value: {variable.attrs!r}\nsecond value: {other_variable.attrs!r}"
                             )
-                merged_vars[name] = variable
-                merged_vars[name].attrs = merge_attrs(
+                attrs = merge_attrs(
                     [var.attrs for var, _ in indexed_elements],
                     combine_attrs=combine_attrs,
                 )
+                if variable.attrs or attrs:
+                    # Make a shallow copy to so that assigning merged_vars[name].attrs
+                    # does not affect the original input variable.
+                    merged_vars[name] = variable.copy(deep=False)
+                    merged_vars[name].attrs = attrs
+                else:
+                    merged_vars[name] = variable
                 merged_indexes[name] = index
             else:
                 variables = [variable for variable, _ in elements_list]
