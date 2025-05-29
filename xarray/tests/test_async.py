@@ -184,7 +184,7 @@ class TestAsyncLoad:
             ("sel", {"x": 2}),
             ("sel", {"x": [2, 3]}),
             (
-                "isel",
+                "sel",
                 {
                     "x": xr.DataArray([2, 3], dims="points"),
                     "y": xr.DataArray([2, 3], dims="points"),
@@ -198,6 +198,7 @@ class TestAsyncLoad:
         latencystore = LatencyStore(memorystore, latency=0.0)
         ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
 
+        # TODO we're not actually testing that these indexing methods are not blocking...
         result = await getattr(ds, method)(**indexer).load_async()
         expected = getattr(ds, method)(**indexer).load()
         xrt.assert_identical(result, expected)

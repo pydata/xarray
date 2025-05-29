@@ -525,7 +525,7 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
 
     async def async_get_duck_array(self):
         key = BasicIndexer((slice(None),) * self.ndim)
-        return self[key]
+        return await self.async_getitem(key)
 
     def _oindex_get(self, indexer: OuterIndexer):
         raise NotImplementedError(
@@ -754,6 +754,22 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         # so we need the explicit check for ExplicitlyIndexed
         if isinstance(array, ExplicitlyIndexed):
             array = array.get_duck_array()
+        return _wrap_numpy_scalars(array)
+
+    async def async_get_duck_array(self):
+        print("inside LazilyVectorizedIndexedArray.async_get_duck_array")
+        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
+            array = apply_indexer(self.array, self.key)
+        else:
+            # If the array is not an ExplicitlyIndexedNDArrayMixin,
+            # it may wrap a BackendArray so use its __getitem__
+            array = await self.array.async_getitem(self.key)
+        # self.array[self.key] is now a numpy array when
+        # self.array is a BackendArray subclass
+        # and self.key is BasicIndexer((slice(None, None, None),))
+        # so we need the explicit check for ExplicitlyIndexed
+        if isinstance(array, ExplicitlyIndexed):
+            array = await array.async_get_duck_array()
         return _wrap_numpy_scalars(array)
 
     def _updated_key(self, new_key: ExplicitIndexer):
@@ -1608,6 +1624,16 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         key = indexer.tuple + (Ellipsis,)
         return array[key]
 
+    async def async_getitem(self, indexer: ExplicitIndexer):
+        self._check_and_raise_if_non_basic_indexer(indexer)
+
+        array = self.array
+        # We want 0d slices rather than scalars. This is achieved by
+        # appending an ellipsis (see
+        # https://numpy.org/doc/stable/reference/arrays.indexing.html#detailed-notes).
+        key = indexer.tuple + (Ellipsis,)
+        return array[key]
+
     def _safe_setitem(self, array, key: tuple[Any, ...], value: Any) -> None:
         try:
             array[key] = value
@@ -1849,6 +1875,15 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self) -> np.ndarray | PandasExtensionArray:
         # We return an PandasExtensionArray wrapper type that satisfies
         # duck array protocols. This is what's needed for tests to pass.
+        if pd.api.types.is_extension_array_dtype(self.array):
+            from xarray.core.extension_array import PandasExtensionArray
+
+            return PandasExtensionArray(self.array.array)
+        return np.asarray(self)
+
+    async def async_get_duck_array(self) -> np.ndarray | PandasExtensionArray:
+        # TODO this must surely be wrong - it's not async yet
+        print("in PandasIndexingAdapter")
         if pd.api.types.is_extension_array_dtype(self.array):
             from xarray.core.extension_array import PandasExtensionArray
 

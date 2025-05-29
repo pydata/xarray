@@ -959,7 +959,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return self
 
     async def load_async(self, **kwargs):
-        print("async inside Variable")
         self._data = await async_to_duck_array(self._data, **kwargs)
         return self
 

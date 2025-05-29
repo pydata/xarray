@@ -222,6 +222,10 @@ class ZarrArrayWrapper(BackendArray):
         async_array = self._array._async_array
         return await async_array.oindex.getitem(key)
 
+    async def _async_vindex(self, key):
+        async_array = self._array._async_array
+        return await async_array.vindex.getitem(key)
+
     def __getitem__(self, key):
         array = self._array
         if isinstance(key, indexing.BasicIndexer):
@@ -242,14 +246,11 @@ class ZarrArrayWrapper(BackendArray):
         if isinstance(key, indexing.BasicIndexer):
             method = self._async_getitem
         elif isinstance(key, indexing.VectorizedIndexer):
-            # method = self._vindex
-            raise NotImplementedError("async lazy vectorized indexing is not supported")
+            method = self._async_vindex
         elif isinstance(key, indexing.OuterIndexer):
             method = self._async_oindex
-
-        print("did an async get")
         return await indexing.async_explicit_indexing_adapter(
-            key, array.shape, indexing.IndexingSupport.OUTER, method
+            key, array.shape, indexing.IndexingSupport.VECTORIZED, method
         )
 
 
