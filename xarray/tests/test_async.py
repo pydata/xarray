@@ -182,6 +182,7 @@ class TestAsyncLoad:
         "method,indexer",
         [
             ("sel", {"x": 2}),
+            ("sel", {"x": slice(2, 4)}),
             ("sel", {"x": [2, 3]}),
             (
                 "sel",
@@ -191,7 +192,7 @@ class TestAsyncLoad:
                 },
             ),
         ],
-        ids=["basic", "outer", "vectorized"],
+        ids=["basic-int", "basic-slice", "outer", "vectorized"],
     )
     async def test_indexing(self, memorystore, method, indexer) -> None:
         # TODO we don't need a LatencyStore for this test
