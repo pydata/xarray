@@ -268,11 +268,8 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
             time.sleep(1e-3 * next_delay)
 
 
-class BackendArray(ABC, NdimSizeLenMixin, indexing.ExplicitlyIndexed):
+class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     __slots__ = ()
-
-    @abstractmethod
-    def __getitem__(key: indexing.ExplicitIndexer) -> np.typing.ArrayLike: ...
 
     async def async_getitem(key: indexing.ExplicitIndexer) -> np.typing.ArrayLike:
         raise NotImplementedError("Backend does not not support asynchronous loading")
