@@ -19,6 +19,7 @@ from pandas.errors import OutOfBoundsDatetime
 
 from xarray.core.datatree_render import RenderDataTree
 from xarray.core.duck_array_ops import array_all, array_any, array_equiv, astype, ravel
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.treenode import group_subtrees
@@ -176,6 +177,11 @@ def format_timedelta(t, timedelta_format=None):
 
 def format_item(x, timedelta_format=None, quote_strings=True):
     """Returns a succinct summary of an object as a string"""
+    if isinstance(x, PandasExtensionArray):
+        # We want to bypass PandasExtensionArray's repr here
+        # because its __repr__ is PandasExtensionArray(array=[...])
+        # and this function is only for single elements.
+        return str(x.array[0])
     if isinstance(x, np.datetime64 | datetime):
         return format_timestamp(x)
     if isinstance(x, np.timedelta64 | timedelta):
@@ -194,7 +200,9 @@ def format_items(x):
     """Returns a succinct summaries of all items in a sequence as strings"""
     x = to_duck_array(x)
     timedelta_format = "datetime"
-    if np.issubdtype(x.dtype, np.timedelta64):
+    if not isinstance(x, PandasExtensionArray) and np.issubdtype(
+        x.dtype, np.timedelta64
+    ):
         x = astype(x, dtype="timedelta64[ns]")
         day_part = x[~pd.isnull(x)].astype("timedelta64[D]").astype("timedelta64[ns]")
         time_needed = x[~pd.isnull(x)] != day_part
@@ -1054,9 +1062,8 @@ def diff_datatree_repr(a: DataTree, b: DataTree, compat):
         f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
 
-    if compat == "identical":
-        if diff_name := diff_name_summary(a, b):
-            summary.append(diff_name)
+    if compat == "identical" and (diff_name := diff_name_summary(a, b)):
+        summary.append(diff_name)
 
     treestructure_diff = diff_treestructure(a, b)
 
