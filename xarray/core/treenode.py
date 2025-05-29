@@ -559,11 +559,10 @@ class TreeNode(Generic[Tree]):
                     current_node = current_node.parent
             elif part in ("", "."):
                 pass
+            elif current_node.get(part) is None:
+                raise KeyError(f"Could not find node at {path}")
             else:
-                if current_node.get(part) is None:
-                    raise KeyError(f"Could not find node at {path}")
-                else:
-                    current_node = current_node.get(part)
+                current_node = current_node.get(part)
         return current_node
 
     def _set(self: Tree, key: str, val: Tree) -> None:
@@ -631,16 +630,15 @@ class TreeNode(Generic[Tree]):
                         current_node = current_node.parent
                 elif part in ("", "."):
                     pass
+                elif part in current_node.children:
+                    current_node = current_node.children[part]
+                elif new_nodes_along_path:
+                    # Want child classes (i.e. DataTree) to populate tree with their own types
+                    new_node = type(self)()
+                    current_node._set(part, new_node)
+                    current_node = current_node.children[part]
                 else:
-                    if part in current_node.children:
-                        current_node = current_node.children[part]
-                    elif new_nodes_along_path:
-                        # Want child classes (i.e. DataTree) to populate tree with their own types
-                        new_node = type(self)()
-                        current_node._set(part, new_node)
-                        current_node = current_node.children[part]
-                    else:
-                        raise KeyError(f"Could not reach node at path {path}")
+                    raise KeyError(f"Could not reach node at path {path}")
 
         if name in current_node.children:
             # Deal with anything already existing at this location

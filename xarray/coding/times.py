@@ -579,9 +579,8 @@ def decode_cf_datetime(
                     "'time_unit' or specify 'use_cftime=True'.",
                     SerializationWarning,
                 )
-            else:
-                if _is_standard_calendar(calendar):
-                    dates = cftime_to_nptime(dates, time_unit=time_unit)
+            elif _is_standard_calendar(calendar):
+                dates = cftime_to_nptime(dates, time_unit=time_unit)
     elif use_cftime:
         dates = _decode_datetime_with_cftime(flat_num_dates, units, calendar)
     else:

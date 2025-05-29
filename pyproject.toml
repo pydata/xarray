@@ -258,6 +258,7 @@ extend-select = [
   "PERF", # Perflint
   "W",    # pycodestyle warnings
   "PGH",  # pygrep-hooks
+  "PLE",  # Pylint Errors
   "UP",   # pyupgrade
   "FURB", # refurb
   "RUF",

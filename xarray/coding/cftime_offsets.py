@@ -279,9 +279,8 @@ def _adjust_n_years(other, n, month, reference_day):
     if n > 0:
         if other.month < month or (other.month == month and other.day < reference_day):
             n -= 1
-    else:
-        if other.month > month or (other.month == month and other.day > reference_day):
-            n += 1
+    elif other.month > month or (other.month == month and other.day > reference_day):
+        n += 1
     return n
 
 
@@ -353,12 +352,11 @@ def roll_qtrday(
             # pretend to roll back if on same month but
             # before compare_day
             n -= 1
-    else:
-        if months_since > 0 or (
-            months_since == 0 and other.day > _get_day_of_month(other, day_option)
-        ):
-            # make sure to roll forward, so negate
-            n += 1
+    elif months_since > 0 or (
+        months_since == 0 and other.day > _get_day_of_month(other, day_option)
+    ):
+        # make sure to roll forward, so negate
+        n += 1
     return n
 
 
@@ -815,13 +813,12 @@ def delta_to_tick(delta: timedelta | pd.Timedelta) -> Tick:
                 return Minute(n=seconds // 60)
             else:
                 return Second(n=seconds)
+    # Regardless of the days and seconds this will always be a Millisecond
+    # or Microsecond object
+    elif delta.microseconds % 1_000 == 0:
+        return Millisecond(n=delta.microseconds // 1_000)
     else:
-        # Regardless of the days and seconds this will always be a Millisecond
-        # or Microsecond object
-        if delta.microseconds % 1_000 == 0:
-            return Millisecond(n=delta.microseconds // 1_000)
-        else:
-            return Microsecond(n=delta.microseconds)
+        return Microsecond(n=delta.microseconds)
 
 
 def to_cftime_datetime(date_str_or_date, calendar=None):
@@ -1615,11 +1612,10 @@ def date_range_like(source, calendar, use_cftime=None):
         source_calendar = "standard"
         source_start = default_precision_timestamp(source_start)
         source_end = default_precision_timestamp(source_end)
-    else:
-        if isinstance(source, CFTimeIndex):
-            source_calendar = source.calendar
-        else:  # DataArray
-            source_calendar = source.dt.calendar
+    elif isinstance(source, CFTimeIndex):
+        source_calendar = source.calendar
+    else:  # DataArray
+        source_calendar = source.dt.calendar
 
     if calendar == source_calendar and is_np_datetime_like(source.dtype) ^ use_cftime:
         return source

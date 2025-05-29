@@ -226,17 +226,16 @@ def decode_cf_variable(
                     DeprecationWarning,
                 )
             decode_times = CFDatetimeCoder(use_cftime=use_cftime)
-        else:
-            if use_cftime is not None:
-                raise TypeError(
-                    "Usage of 'use_cftime' as a kwarg is not allowed "
-                    "if a 'CFDatetimeCoder' instance is passed to "
-                    "'decode_times'. Please set 'use_cftime' "
-                    "when initializing 'CFDatetimeCoder' instead.\n"
-                    "Example usage:\n"
-                    "    time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)\n"
-                    "    ds = xr.open_dataset(decode_times=time_coder)\n",
-                )
+        elif use_cftime is not None:
+            raise TypeError(
+                "Usage of 'use_cftime' as a kwarg is not allowed "
+                "if a 'CFDatetimeCoder' instance is passed to "
+                "'decode_times'. Please set 'use_cftime' "
+                "when initializing 'CFDatetimeCoder' instead.\n"
+                "Example usage:\n"
+                "    time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)\n"
+                "    ds = xr.open_dataset(decode_times=time_coder)\n",
+            )
         var = decode_times.decode(var, name=name)
 
     if decode_endianness and not var.dtype.isnative:

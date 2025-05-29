@@ -445,17 +445,16 @@ def apply_dict_of_variables_vfunc(
         core_dim_present = _check_core_dims(signature, variable_args, name)
         if core_dim_present is True:
             result_vars[name] = func(*variable_args)
+        elif on_missing_core_dim == "raise":
+            raise ValueError(core_dim_present)
+        elif on_missing_core_dim == "copy":
+            result_vars[name] = variable_args[0]
+        elif on_missing_core_dim == "drop":
+            pass
         else:
-            if on_missing_core_dim == "raise":
-                raise ValueError(core_dim_present)
-            elif on_missing_core_dim == "copy":
-                result_vars[name] = variable_args[0]
-            elif on_missing_core_dim == "drop":
-                pass
-            else:
-                raise ValueError(
-                    f"Invalid value for `on_missing_core_dim`: {on_missing_core_dim!r}"
-                )
+            raise ValueError(
+                f"Invalid value for `on_missing_core_dim`: {on_missing_core_dim!r}"
+            )
 
     if signature.num_outputs > 1:
         return _unpack_dict_tuples(result_vars, signature.num_outputs)
@@ -809,11 +808,10 @@ def apply_variable_ufunc(
             raise ValueError(
                 f"unknown setting for chunked array handling in apply_ufunc: {dask}"
             )
-    else:
-        if vectorize:
-            func = _vectorize(
-                func, signature, output_dtypes=output_dtypes, exclude_dims=exclude_dims
-            )
+    elif vectorize:
+        func = _vectorize(
+            func, signature, output_dtypes=output_dtypes, exclude_dims=exclude_dims
+        )
 
     result_data = func(*input_data)
 

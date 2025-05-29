@@ -707,9 +707,9 @@ class TestConcatDataset:
         with pytest.raises(ValueError, match=r"cannot align.*exact.*dimensions.*'y'"):
             actual = concat([ds1, ds2], join="exact", dim="x")
 
-        for join in expected:
+        for join, expected_item in expected.items():
             actual = concat([ds1, ds2], join=join, dim="x")
-            assert_equal(actual, expected[join])
+            assert_equal(actual, expected_item)
 
         # regression test for #3681
         actual = concat(
@@ -1219,9 +1219,9 @@ class TestConcatDataArray:
         with pytest.raises(ValueError, match=r"cannot align.*exact.*dimensions.*'y'"):
             actual = concat([ds1, ds2], join="exact", dim="x")
 
-        for join in expected:
+        for join, expected_item in expected.items():
             actual = concat([ds1, ds2], join=join, dim="x")
-            assert_equal(actual, expected[join].to_dataarray())
+            assert_equal(actual, expected_item.to_dataarray())
 
     def test_concat_combine_attrs_kwarg(self) -> None:
         da1 = DataArray([0], coords=[("x", [0])], attrs={"b": 42})
@@ -1243,9 +1243,9 @@ class TestConcatDataArray:
             da3.attrs["b"] = 44
             actual = concat([da1, da3], dim="x", combine_attrs="no_conflicts")
 
-        for combine_attrs in expected:
+        for combine_attrs, expected_item in expected.items():
             actual = concat([da1, da2], dim="x", combine_attrs=combine_attrs)
-            assert_identical(actual, expected[combine_attrs])
+            assert_identical(actual, expected_item)
 
     @pytest.mark.parametrize("dtype", [str, bytes])
     @pytest.mark.parametrize("dim", ["x1", "x2"])

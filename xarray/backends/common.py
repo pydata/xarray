@@ -338,11 +338,10 @@ class ArrayWriter:
             self.sources.append(source)
             self.targets.append(target)
             self.regions.append(region)
+        elif region:
+            target[region] = source
         else:
-            if region:
-                target[region] = source
-            else:
-                target[...] = source
+            target[...] = source
 
     def sync(self, compute=True, chunkmanager_store_kwargs=None):
         if self.sources:

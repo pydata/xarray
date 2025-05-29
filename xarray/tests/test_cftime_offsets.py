@@ -313,18 +313,16 @@ def test_to_offset_quarter(month_label, month_int, multiple, offset_str):
     elif multiple:
         if month_int:
             expected = offset_type(n=multiple)
-        else:
-            if offset_type == QuarterBegin:
-                expected = offset_type(n=multiple, month=1)
-            elif offset_type == QuarterEnd:
-                expected = offset_type(n=multiple, month=12)
+        elif offset_type == QuarterBegin:
+            expected = offset_type(n=multiple, month=1)
+        elif offset_type == QuarterEnd:
+            expected = offset_type(n=multiple, month=12)
     elif month_int:
         expected = offset_type(month=month_int)
-    else:
-        if offset_type == QuarterBegin:
-            expected = offset_type(month=1)
-        elif offset_type == QuarterEnd:
-            expected = offset_type(month=12)
+    elif offset_type == QuarterBegin:
+        expected = offset_type(month=1)
+    elif offset_type == QuarterEnd:
+        expected = offset_type(month=12)
     assert result == expected
 
 

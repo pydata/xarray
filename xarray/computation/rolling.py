@@ -1253,18 +1253,17 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
             for c, v in self.obj.coords.items():
                 if c == self.obj.name:
                     coords[c] = reduced
+                elif any(d in self.windows for d in v.dims):
+                    coords[c] = v.variable.coarsen(
+                        self.windows,
+                        self.coord_func[c],
+                        self.boundary,
+                        self.side,
+                        keep_attrs,
+                        **kwargs,
+                    )
                 else:
-                    if any(d in self.windows for d in v.dims):
-                        coords[c] = v.variable.coarsen(
-                            self.windows,
-                            self.coord_func[c],
-                            self.boundary,
-                            self.side,
-                            keep_attrs,
-                            **kwargs,
-                        )
-                    else:
-                        coords[c] = v
+                    coords[c] = v
             return DataArray(
                 reduced, dims=self.obj.dims, coords=coords, name=self.obj.name
             )

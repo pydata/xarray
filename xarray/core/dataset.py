@@ -2904,9 +2904,8 @@ class Dataset(
             for k, v in query_results.variables.items():
                 if v.dims:
                     no_scalar_variables[k] = v
-                else:
-                    if k in self._coord_names:
-                        query_results.drop_coords.append(k)
+                elif k in self._coord_names:
+                    query_results.drop_coords.append(k)
             query_results.variables = no_scalar_variables
 
         result = self.isel(indexers=query_results.dim_indexers, drop=drop)
@@ -4552,26 +4551,25 @@ class Dataset(
                     for d, c in zip_axis_dim:
                         all_dims.insert(d, c)
                     variables[k] = v.set_dims(dict(all_dims))
-            else:
-                if k not in variables:
-                    if k in coord_names and create_index_for_new_dim:
-                        # If dims includes a label of a non-dimension coordinate,
-                        # it will be promoted to a 1D coordinate with a single value.
-                        index, index_vars = create_default_index_implicit(v.set_dims(k))
-                        indexes[k] = index
-                        variables.update(index_vars)
-                    else:
-                        if create_index_for_new_dim:
-                            warnings.warn(
-                                f"No index created for dimension {k} because variable {k} is not a coordinate. "
-                                f"To create an index for {k}, please first call `.set_coords('{k}')` on this object.",
-                                UserWarning,
-                                stacklevel=2,
-                            )
+            elif k not in variables:
+                if k in coord_names and create_index_for_new_dim:
+                    # If dims includes a label of a non-dimension coordinate,
+                    # it will be promoted to a 1D coordinate with a single value.
+                    index, index_vars = create_default_index_implicit(v.set_dims(k))
+                    indexes[k] = index
+                    variables.update(index_vars)
+                else:
+                    if create_index_for_new_dim:
+                        warnings.warn(
+                            f"No index created for dimension {k} because variable {k} is not a coordinate. "
+                            f"To create an index for {k}, please first call `.set_coords('{k}')` on this object.",
+                            UserWarning,
+                            stacklevel=2,
+                        )
 
-                        # create 1D variable without creating a new index
-                        new_1d_var = v.set_dims(k)
-                        variables.update({k: new_1d_var})
+                    # create 1D variable without creating a new index
+                    new_1d_var = v.set_dims(k)
+                    variables.update({k: new_1d_var})
 
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
@@ -4890,9 +4888,8 @@ class Dataset(
                 index_cls = PandasIndex
             else:
                 index_cls = PandasMultiIndex
-        else:
-            if not issubclass(index_cls, Index):
-                raise TypeError(f"{index_cls} is not a subclass of xarray.Index")
+        elif not issubclass(index_cls, Index):
+            raise TypeError(f"{index_cls} is not a subclass of xarray.Index")
 
         invalid_coords = set(coord_names) - self._coord_names
 
@@ -6744,34 +6741,33 @@ class Dataset(
             if name in self.coords:
                 if not reduce_dims:
                     variables[name] = var
-            else:
-                if (
-                    # Some reduction functions (e.g. std, var) need to run on variables
-                    # that don't have the reduce dims: PR5393
-                    not is_extension_array_dtype(var.dtype)
-                    and (
-                        not reduce_dims
-                        or not numeric_only
-                        or np.issubdtype(var.dtype, np.number)
-                        or (var.dtype == np.bool_)
-                    )
-                ):
-                    # prefer to aggregate over axis=None rather than
-                    # axis=(0, 1) if they will be equivalent, because
-                    # the former is often more efficient
-                    # keep single-element dims as list, to support Hashables
-                    reduce_maybe_single = (
-                        None
-                        if len(reduce_dims) == var.ndim and var.ndim != 1
-                        else reduce_dims
-                    )
-                    variables[name] = var.reduce(
-                        func,
-                        dim=reduce_maybe_single,
-                        keep_attrs=keep_attrs,
-                        keepdims=keepdims,
-                        **kwargs,
-                    )
+            elif (
+                # Some reduction functions (e.g. std, var) need to run on variables
+                # that don't have the reduce dims: PR5393
+                not is_extension_array_dtype(var.dtype)
+                and (
+                    not reduce_dims
+                    or not numeric_only
+                    or np.issubdtype(var.dtype, np.number)
+                    or (var.dtype == np.bool_)
+                )
+            ):
+                # prefer to aggregate over axis=None rather than
+                # axis=(0, 1) if they will be equivalent, because
+                # the former is often more efficient
+                # keep single-element dims as list, to support Hashables
+                reduce_maybe_single = (
+                    None
+                    if len(reduce_dims) == var.ndim and var.ndim != 1
+                    else reduce_dims
+                )
+                variables[name] = var.reduce(
+                    func,
+                    dim=reduce_maybe_single,
+                    keep_attrs=keep_attrs,
+                    keepdims=keepdims,
+                    **kwargs,
+                )
 
         coord_names = {k for k in self.coords if k in variables}
         indexes = {k: v for k, v in self._indexes.items() if k in variables}
@@ -7970,8 +7966,6 @@ class Dataset(
             variables = variables(self)
         if not isinstance(variables, list):
             variables = [variables]
-        else:
-            variables = variables
         arrays = [v if isinstance(v, DataArray) else self[v] for v in variables]
         aligned_vars = align(self, *arrays, join="left")
         aligned_self = cast("Self", aligned_vars[0])
@@ -8395,25 +8389,24 @@ class Dataset(
                 if dim not in v.dims or cumulative:
                     variables[k] = v
                     coord_names.add(k)
-            else:
-                if k in self.data_vars and dim in v.dims:
-                    coord_data = to_like_array(coord_var.data, like=v.data)
-                    if _contains_datetime_like_objects(v):
-                        v = datetime_to_numeric(v, datetime_unit=datetime_unit)
-                    if cumulative:
-                        integ = duck_array_ops.cumulative_trapezoid(
-                            v.data, coord_data, axis=v.get_axis_num(dim)
-                        )
-                        v_dims = v.dims
-                    else:
-                        integ = duck_array_ops.trapz(
-                            v.data, coord_data, axis=v.get_axis_num(dim)
-                        )
-                        v_dims = list(v.dims)
-                        v_dims.remove(dim)
-                    variables[k] = Variable(v_dims, integ)
+            elif k in self.data_vars and dim in v.dims:
+                coord_data = to_like_array(coord_var.data, like=v.data)
+                if _contains_datetime_like_objects(v):
+                    v = datetime_to_numeric(v, datetime_unit=datetime_unit)
+                if cumulative:
+                    integ = duck_array_ops.cumulative_trapezoid(
+                        v.data, coord_data, axis=v.get_axis_num(dim)
+                    )
+                    v_dims = v.dims
                 else:
-                    variables[k] = v
+                    integ = duck_array_ops.trapz(
+                        v.data, coord_data, axis=v.get_axis_num(dim)
+                    )
+                    v_dims = list(v.dims)
+                    v_dims.remove(dim)
+                variables[k] = Variable(v_dims, integ)
+            else:
+                variables[k] = v
         indexes = {k: v for k, v in self._indexes.items() if k in variables}
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
