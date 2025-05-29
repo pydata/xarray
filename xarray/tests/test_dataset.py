@@ -60,6 +60,7 @@ from xarray.tests import (
     create_test_data,
     has_cftime,
     has_dask,
+    has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
@@ -283,26 +284,28 @@ class TestDataset:
         data = create_test_data(seed=123, use_extension_array=True)
         data.attrs["foo"] = "bar"
         # need to insert str dtype at runtime to handle different endianness
+        var5 = (
+            "\n                var5     (dim1) int64[pyarrow] 64B 5 9 7 2 6 2 8 1"
+            if has_pyarrow
+            else ""
+        )
         expected = dedent(
-            """\
+            f"""\
             <xarray.Dataset> Size: 2kB
             Dimensions:  (dim2: 9, dim3: 10, time: 20, dim1: 8)
             Coordinates:
               * dim2     (dim2) float64 72B 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
-              * dim3     (dim3) {} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
-              * time     (time) datetime64[{}] 160B 2000-01-01 2000-01-02 ... 2000-01-20
+              * dim3     (dim3) {data["dim3"].dtype} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+              * time     (time) datetime64[ns] 160B 2000-01-01 2000-01-02 ... 2000-01-20
                 numbers  (dim3) int64 80B 0 1 2 0 0 1 1 2 2 3
             Dimensions without coordinates: dim1
             Data variables:
                 var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
                 var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
                 var3     (dim3, dim1) float64 640B 0.4107 0.9941 0.1665 ... 0.716 1.555
-                var4     (dim1) category 32B 'b' 'c' 'b' 'a' 'c' 'a' 'c' 'a'
+                var4     (dim1) category 32B b c b a c a c a{var5}
             Attributes:
-                foo:      bar""".format(
-                data["dim3"].dtype,
-                "ns",
-            )
+                foo:      bar"""
         )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
 
@@ -5884,20 +5887,21 @@ class TestDataset:
     def test_reduce_non_numeric(self) -> None:
         data1 = create_test_data(seed=44, use_extension_array=True)
         data2 = create_test_data(seed=44)
-        add_vars = {"var5": ["dim1", "dim2"], "var6": ["dim1"]}
+        add_vars = {"var6": ["dim1", "dim2"], "var7": ["dim1"]}
         for v, dims in sorted(add_vars.items()):
             size = tuple(data1.sizes[d] for d in dims)
             data = np.random.randint(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {"foo": "variable"})
-        # var4 is extension array categorical and should be dropped
+        # var4 and var5 are extension arrays and should be dropped
         assert (
             "var4" not in data1.mean()
             and "var5" not in data1.mean()
             and "var6" not in data1.mean()
+            and "var7" not in data1.mean()
         )
         assert_equal(data1.mean(), data2.mean())
         assert_equal(data1.mean(dim="dim1"), data2.mean(dim="dim1"))
-        assert "var5" not in data1.mean(dim="dim2") and "var6" in data1.mean(dim="dim2")
+        assert "var6" not in data1.mean(dim="dim2") and "var7" in data1.mean(dim="dim2")
 
     @pytest.mark.filterwarnings(
         "ignore:Once the behaviour of DataArray:DeprecationWarning"
