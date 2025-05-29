@@ -1062,9 +1062,8 @@ def diff_datatree_repr(a: DataTree, b: DataTree, compat):
         f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
 
-    if compat == "identical":
-        if diff_name := diff_name_summary(a, b):
-            summary.append(diff_name)
+    if compat == "identical" and (diff_name := diff_name_summary(a, b)):
+        summary.append(diff_name)
 
     treestructure_diff = diff_treestructure(a, b)
 

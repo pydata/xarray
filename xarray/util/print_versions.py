@@ -1,5 +1,6 @@
 """Utility functions for printing version information."""
 
+import contextlib
 import importlib
 import locale
 import os
@@ -29,10 +30,8 @@ def get_sys_info():
         else:
             if pipe.returncode == 0:
                 commit = so
-                try:
+                with contextlib.suppress(ValueError):
                     commit = so.decode("utf-8")
-                except ValueError:
-                    pass
                 commit = commit.strip().strip('"')
 
     blob.append(("commit", commit))

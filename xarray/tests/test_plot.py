@@ -50,10 +50,8 @@ try:
 except ImportError:
     pass
 
-try:
+with contextlib.suppress(ImportError):
     import cartopy
-except ImportError:
-    pass
 
 
 @contextlib.contextmanager
@@ -66,7 +64,7 @@ def figure_context(*args, **kwargs):
         plt.close("all")
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def test_all_figures_closed():
     """meta-test to ensure all figures are closed at the end of a test
 
@@ -2303,10 +2301,8 @@ class TestFacetGrid(PlotTestCase):
         numbers = set()
         alltxt = text_in_fig()
         for txt in alltxt:
-            try:
+            with contextlib.suppress(ValueError):
                 numbers.add(float(txt))
-            except ValueError:
-                pass
         largest = max(abs(x) for x in numbers)
         assert largest < 21
 

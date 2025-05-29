@@ -17,11 +17,11 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from numpy import (  # noqa: F401
+from numpy import (
     isclose,
     isnat,
     take,
-    unravel_index,
+    unravel_index,  # noqa: F401
 )
 from pandas.api.types import is_extension_array_dtype
 
@@ -268,7 +268,7 @@ def asarray(data, xp=np, dtype=None):
 
 
 def as_shared_dtype(scalars_or_arrays, xp=None):
-    """Cast a arrays to a shared dtype using xarray's type promotion rules."""
+    """Cast arrays to a shared dtype using xarray's type promotion rules."""
     if any(is_extension_array_dtype(x) for x in scalars_or_arrays):
         extension_array_types = [
             x.dtype for x in scalars_or_arrays if is_extension_array_dtype(x)

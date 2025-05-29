@@ -17,6 +17,8 @@ else:
     da = pytest.importorskip("dask.array")
     distributed = pytest.importorskip("distributed")
 
+import contextlib
+
 from dask.distributed import Client, Lock
 from distributed.client import futures_of
 from distributed.utils_test import (  # noqa: F401
@@ -220,7 +222,7 @@ def test_dask_distributed_read_netcdf_integration_test(
 # fixture vendored from dask
 # heads-up, this is using quite private zarr API
 # https://github.com/dask/dask/blob/e04734b4d8959ba259801f2e2a490cb4ee8d891f/dask/tests/test_distributed.py#L338-L358
-@pytest.fixture(scope="function")
+@pytest.fixture
 def zarr(client):
     zarr_lib = pytest.importorskip("zarr")
     # Zarr-Python 3 lazily allocates a dedicated thread/IO loop
@@ -238,10 +240,8 @@ def zarr(client):
         # an IO loop. Here we clean up these resources to avoid leaking threads
         # In normal operations, this is done as by an atexit handler when Zarr
         # is shutting down.
-        try:
+        with contextlib.suppress(AttributeError):
             zarr_lib.core.sync.cleanup_resources()
-        except AttributeError:
-            pass
 
 
 @requires_zarr
