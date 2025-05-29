@@ -850,23 +850,18 @@ class PandasIndex(Index):
                             "'tolerance' is not supported when indexing using a CategoricalIndex."
                         )
                     indexer = self.index.get_loc(label_value)
+                elif method is not None:
+                    indexer = get_indexer_nd(self.index, label_array, method, tolerance)
+                    if np.any(indexer < 0):
+                        raise KeyError(f"not all values found in index {coord_name!r}")
                 else:
-                    if method is not None:
-                        indexer = get_indexer_nd(
-                            self.index, label_array, method, tolerance
-                        )
-                        if np.any(indexer < 0):
-                            raise KeyError(
-                                f"not all values found in index {coord_name!r}"
-                            )
-                    else:
-                        try:
-                            indexer = self.index.get_loc(label_value)
-                        except KeyError as e:
-                            raise KeyError(
-                                f"not all values found in index {coord_name!r}. "
-                                "Try setting the `method` keyword argument (example: method='nearest')."
-                            ) from e
+                    try:
+                        indexer = self.index.get_loc(label_value)
+                    except KeyError as e:
+                        raise KeyError(
+                            f"not all values found in index {coord_name!r}. "
+                            "Try setting the `method` keyword argument (example: method='nearest')."
+                        ) from e
 
             elif label_array.dtype.kind == "b":
                 indexer = label_array

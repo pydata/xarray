@@ -851,15 +851,14 @@ class DatasetIOBase:
             if hasattr(obj, "array"):
                 if isinstance(obj.array, indexing.ExplicitlyIndexed):
                     find_and_validate_array(obj.array)
+                elif isinstance(obj.array, np.ndarray):
+                    assert isinstance(obj, indexing.NumpyIndexingAdapter)
+                elif isinstance(obj.array, dask_array_type):
+                    assert isinstance(obj, indexing.DaskIndexingAdapter)
+                elif isinstance(obj.array, pd.Index):
+                    assert isinstance(obj, indexing.PandasIndexingAdapter)
                 else:
-                    if isinstance(obj.array, np.ndarray):
-                        assert isinstance(obj, indexing.NumpyIndexingAdapter)
-                    elif isinstance(obj.array, dask_array_type):
-                        assert isinstance(obj, indexing.DaskIndexingAdapter)
-                    elif isinstance(obj.array, pd.Index):
-                        assert isinstance(obj, indexing.PandasIndexingAdapter)
-                    else:
-                        raise TypeError(f"{type(obj.array)} is wrapped by {type(obj)}")
+                    raise TypeError(f"{type(obj.array)} is wrapped by {type(obj)}")
 
         for v in ds.variables.values():
             find_and_validate_array(v._data)
@@ -1198,7 +1197,7 @@ class CFEncodedBase(DatasetIOBase):
 
     def test_coordinates_encoding(self) -> None:
         def equals_latlon(obj):
-            return obj == "lat lon" or obj == "lon lat"
+            return obj in {"lat lon", "lon lat"}
 
         original = Dataset(
             {"temp": ("x", [0, 1]), "precip": ("x", [0, -1])},
@@ -3817,20 +3816,19 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 # that was performed by the roundtrip_dir
                 if (write_empty is False) or (write_empty is None and has_zarr_v3):
                     expected.append("1.1.0")
+                elif not has_zarr_v3:
+                    # TODO: remove zarr3 if once zarr issue is fixed
+                    # https://github.com/zarr-developers/zarr-python/issues/2931
+                    expected.extend(
+                        [
+                            "1.1.0",
+                            "1.0.0",
+                            "1.0.1",
+                            "1.1.1",
+                        ]
+                    )
                 else:
-                    if not has_zarr_v3:
-                        # TODO: remove zarr3 if once zarr issue is fixed
-                        # https://github.com/zarr-developers/zarr-python/issues/2931
-                        expected.extend(
-                            [
-                                "1.1.0",
-                                "1.0.0",
-                                "1.0.1",
-                                "1.1.1",
-                            ]
-                        )
-                    else:
-                        expected.append("1.1.0")
+                    expected.append("1.1.0")
                 if zarr_format_3:
                     expected = [e.replace(".", "/") for e in expected]
                 assert_expected_files(expected, store)

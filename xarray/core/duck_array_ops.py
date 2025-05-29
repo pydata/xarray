@@ -185,16 +185,15 @@ def isnull(data):
         # bool_ is for backwards compat with numpy<2, and cupy
         dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
         return full_like(data, dtype=dtype, fill_value=False)
+    # at this point, array should have dtype=object
+    elif isinstance(data, np.ndarray) or is_extension_array_dtype(data):
+        return pandas_isnull(data)
     else:
-        # at this point, array should have dtype=object
-        if isinstance(data, np.ndarray) or is_extension_array_dtype(data):
-            return pandas_isnull(data)
-        else:
-            # Not reachable yet, but intended for use with other duck array
-            # types. For full consistency with pandas, we should accept None as
-            # a null value as well as NaN, but it isn't clear how to do this
-            # with duck typing.
-            return data != data
+        # Not reachable yet, but intended for use with other duck array
+        # types. For full consistency with pandas, we should accept None as
+        # a null value as well as NaN, but it isn't clear how to do this
+        # with duck typing.
+        return data != data
 
 
 def notnull(data):
