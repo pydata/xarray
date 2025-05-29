@@ -372,7 +372,13 @@ class NetCDF4DataStore(WritableCFDataStore):
     )
 
     def __init__(
-        self, manager, group=None, mode=None, lock=NETCDF4_PYTHON_LOCK, autoclose=False, encoding=None
+        self,
+        manager,
+        group=None,
+        mode=None,
+        lock=NETCDF4_PYTHON_LOCK,
+        autoclose=False,
+        encoding=None,
     ):
         import netCDF4
 
@@ -423,7 +429,7 @@ class NetCDF4DataStore(WritableCFDataStore):
                 "can only read bytes or file-like objects "
                 "with engine='scipy' or 'h5netcdf'"
             )
-        
+
         if encoding is None:
             encoding = sys.getfilesystemencoding()
 
@@ -455,7 +461,14 @@ class NetCDF4DataStore(WritableCFDataStore):
         manager = CachingFileManager(
             netCDF4.Dataset, filename, mode=mode, kwargs=kwargs
         )
-        return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose, encoding=encoding)
+        return cls(
+            manager,
+            group=group,
+            mode=mode,
+            lock=lock,
+            autoclose=autoclose,
+            encoding=encoding,
+        )
 
     def _acquire(self, needs_lock=True):
         with self._manager.acquire_context(needs_lock) as root:
