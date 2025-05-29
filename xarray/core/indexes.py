@@ -1652,7 +1652,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
     """
 
-    _index_type: type[Index] | type[pd.Index]
+    _index_type: type[Index | pd.Index]
     _indexes: dict[Any, T_PandasOrXarrayIndex]
     _variables: dict[Any, Variable]
 
@@ -1670,7 +1670,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         self,
         indexes: Mapping[Any, T_PandasOrXarrayIndex] | None = None,
         variables: Mapping[Any, Variable] | None = None,
-        index_type: type[Index] | type[pd.Index] = Index,
+        index_type: type[Index | pd.Index] = Index,
     ):
         """Constructor not for public consumption.
 

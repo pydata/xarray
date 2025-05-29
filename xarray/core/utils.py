@@ -61,8 +61,10 @@ from collections.abc import (
     MutableMapping,
     MutableSet,
     Sequence,
-    Set,
     ValuesView,
+)
+from collections.abc import (
+    Set as AbstractSet,
 )
 from enum import Enum
 from pathlib import Path
@@ -1055,7 +1057,7 @@ def parse_ordered_dims(
         )
 
 
-def _check_dims(dim: Set[Hashable], all_dims: Set[Hashable]) -> None:
+def _check_dims(dim: AbstractSet[Hashable], all_dims: AbstractSet[Hashable]) -> None:
     wrong_dims = (dim - all_dims) - {...}
     if wrong_dims:
         wrong_dims_str = ", ".join(f"'{d}'" for d in wrong_dims)

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Hashable, Iterable, Mapping, Sequence, Set
+from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Set as AbstractSet
 from typing import TYPE_CHECKING, Any, NamedTuple, Union
 
 import pandas as pd
@@ -396,7 +397,7 @@ def collect_from_coordinates(
 def merge_coordinates_without_align(
     objects: list[Coordinates],
     prioritized: Mapping[Any, MergeElement] | None = None,
-    exclude_dims: Set = frozenset(),
+    exclude_dims: AbstractSet = frozenset(),
     combine_attrs: CombineAttrsOptions = "override",
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
     """Merge variables/indexes from coordinates without automatic alignments.
