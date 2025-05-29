@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import re
 import warnings
 from collections.abc import Callable, Hashable
@@ -429,12 +430,11 @@ def _check_date_is_after_shift(
     # if we are outside the well-defined date range
     # proleptic_gregorian and standard/gregorian are only equivalent
     # if reference date and date range is >= 1582-10-15
-    if calendar != "proleptic_gregorian":
-        if date < type(date)(1582, 10, 15):
-            raise OutOfBoundsDatetime(
-                f"Dates before 1582-10-15 cannot be decoded "
-                f"with pandas using {calendar!r} calendar: {date}"
-            )
+    if calendar != "proleptic_gregorian" and date < type(date)(1582, 10, 15):
+        raise OutOfBoundsDatetime(
+            f"Dates before 1582-10-15 cannot be decoded "
+            f"with pandas using {calendar!r} calendar: {date}"
+        )
 
 
 def _check_higher_resolution(
@@ -579,9 +579,8 @@ def decode_cf_datetime(
                     "'time_unit' or specify 'use_cftime=True'.",
                     SerializationWarning,
                 )
-            else:
-                if _is_standard_calendar(calendar):
-                    dates = cftime_to_nptime(dates, time_unit=time_unit)
+            elif _is_standard_calendar(calendar):
+                dates = cftime_to_nptime(dates, time_unit=time_unit)
     elif use_cftime:
         dates = _decode_datetime_with_cftime(flat_num_dates, units, calendar)
     else:
@@ -929,12 +928,10 @@ def _cleanup_netcdf_time_units(units: str) -> str:
     time_units = time_units.lower()
     if not time_units.endswith("s"):
         time_units = f"{time_units}s"
-    try:
+    # don't worry about reifying the units if they're out of bounds or
+    # formatted badly
+    with contextlib.suppress(OutOfBoundsDatetime, ValueError):
         units = f"{time_units} since {format_timestamp(ref_date)}"
-    except (OutOfBoundsDatetime, ValueError):
-        # don't worry about reifying the units if they're out of bounds or
-        # formatted badly
-        pass
     return units
 
 
@@ -1412,7 +1409,7 @@ class CFDatetimeCoder(VariableCoder):
 
 
 def has_timedelta64_encoding_dtype(attrs_or_encoding: dict) -> bool:
-    dtype = attrs_or_encoding.get("dtype", None)
+    dtype = attrs_or_encoding.get("dtype")
     return isinstance(dtype, str) and dtype.startswith("timedelta64")
 
 

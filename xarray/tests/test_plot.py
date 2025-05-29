@@ -50,10 +50,8 @@ try:
 except ImportError:
     pass
 
-try:
+with contextlib.suppress(ImportError):
     import cartopy
-except ImportError:
-    pass
 
 
 @contextlib.contextmanager
@@ -66,7 +64,7 @@ def figure_context(*args, **kwargs):
         plt.close("all")
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def test_all_figures_closed():
     """meta-test to ensure all figures are closed at the end of a test
 
@@ -1529,7 +1527,7 @@ class Common2dMixin:
         a.coords["d"] = "foo"
         self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()
-        assert "c = 1, d = foo" == title or "d = foo, c = 1" == title
+        assert title in {"c = 1, d = foo", "d = foo, c = 1"}
 
     def test_colorbar_default_label(self) -> None:
         self.plotmethod(add_colorbar=True)
@@ -2303,10 +2301,8 @@ class TestFacetGrid(PlotTestCase):
         numbers = set()
         alltxt = text_in_fig()
         for txt in alltxt:
-            try:
+            with contextlib.suppress(ValueError):
                 numbers.add(float(txt))
-            except ValueError:
-                pass
         largest = max(abs(x) for x in numbers)
         assert largest < 21
 

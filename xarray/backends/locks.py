@@ -118,9 +118,7 @@ def _get_lock_maker(scheduler=None):
     dask.utils.get_scheduler_lock
     """
 
-    if scheduler is None:
-        return _get_threaded_lock
-    elif scheduler == "threaded":
+    if scheduler is None or scheduler == "threaded":
         return _get_threaded_lock
     elif scheduler == "multiprocessing":
         return _get_multiprocessing_lock
