@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import os
+import sys
 from collections.abc import Iterable
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any
@@ -371,7 +372,7 @@ class NetCDF4DataStore(WritableCFDataStore):
     )
 
     def __init__(
-        self, manager, group=None, mode=None, lock=NETCDF4_PYTHON_LOCK, autoclose=False
+        self, manager, group=None, mode=None, lock=NETCDF4_PYTHON_LOCK, autoclose=False, encoding=None
     ):
         import netCDF4
 
@@ -391,7 +392,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         self._group = group
         self._mode = mode
         self.format = self.ds.data_model
-        self._filename = self.ds.filepath()
+        self._filename = self.ds.filepath(encoding=encoding)
         self.is_remote = is_remote_uri(self._filename)
         self.lock = ensure_lock(lock)
         self.autoclose = autoclose
@@ -410,6 +411,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         lock=None,
         lock_maker=None,
         autoclose=False,
+        encoding=None,
     ):
         import netCDF4
 
@@ -421,6 +423,9 @@ class NetCDF4DataStore(WritableCFDataStore):
                 "can only read bytes or file-like objects "
                 "with engine='scipy' or 'h5netcdf'"
             )
+        
+        if encoding is None:
+            encoding = sys.getfilesystemencoding()
 
         if format is None:
             format = "NETCDF4"
@@ -443,13 +448,14 @@ class NetCDF4DataStore(WritableCFDataStore):
             diskless=diskless,
             persist=persist,
             format=format,
+            encoding=encoding,
         )
         if auto_complex is not None:
             kwargs["auto_complex"] = auto_complex
         manager = CachingFileManager(
             netCDF4.Dataset, filename, mode=mode, kwargs=kwargs
         )
-        return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
+        return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose, encoding=encoding)
 
     def _acquire(self, needs_lock=True):
         with self._manager.acquire_context(needs_lock) as root:
@@ -661,6 +667,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         auto_complex=None,
         lock=None,
         autoclose=False,
+        encoding=None,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
@@ -674,6 +681,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             auto_complex=auto_complex,
             lock=lock,
             autoclose=autoclose,
+            encoding=encoding,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
