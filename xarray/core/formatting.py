@@ -178,7 +178,10 @@ def format_timedelta(t, timedelta_format=None):
 def format_item(x, timedelta_format=None, quote_strings=True):
     """Returns a succinct summary of an object as a string"""
     if isinstance(x, PandasExtensionArray):
-        return f"{x.array[0]}"
+        # We want to bypass PandasExtensionArray's repr here
+        # because its __repr__ is PandasExtensionArray(array=[...])
+        # and this function is only for single elements.
+        return str(x.array[0])
     if isinstance(x, np.datetime64 | datetime):
         return format_timestamp(x)
     if isinstance(x, np.timedelta64 | timedelta):
