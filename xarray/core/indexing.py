@@ -876,19 +876,15 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
     def __init__(self, array):
         self.array = _wrap_numpy_scalars(as_indexable(array))
 
-    def _ensure_cached(self):
-        self.array = as_indexable(self.array.get_duck_array())
-
-    async def _async_ensure_cached(self):
-        duck_array = await self.array.async_get_duck_array()
-        self.array = as_indexable(duck_array)
-
     def get_duck_array(self):
-        self._ensure_cached()
+        # first ensure the array object is cached
+        self.array = as_indexable(self.array.get_duck_array())
         return self.array.get_duck_array()
 
     async def async_get_duck_array(self):
-        await self._async_ensure_cached()
+        # first ensure the array object is cached
+        duck_array = await self.array.async_get_duck_array()
+        self.array = as_indexable(duck_array)
         return await self.array.async_get_duck_array()
 
     def _oindex_get(self, indexer: OuterIndexer):
