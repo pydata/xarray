@@ -678,7 +678,9 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         # and self.key is BasicIndexer((slice(None, None, None),))
         # so we need the explicit check for ExplicitlyIndexed
         if isinstance(array, ExplicitlyIndexed):
-            array = await array.async_get_duck_array()
+            # At this point, we have issued completed the possible async load from disk
+            # and array is in-memory. So use the sync get
+            array = array.get_duck_array()
         return _wrap_numpy_scalars(array)
 
     def transpose(self, order):
@@ -769,7 +771,9 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         # and self.key is BasicIndexer((slice(None, None, None),))
         # so we need the explicit check for ExplicitlyIndexed
         if isinstance(array, ExplicitlyIndexed):
-            array = await array.async_get_duck_array()
+            # At this point, we have issued completed the possible async load from disk
+            # and array is in-memory. So use the sync get
+            array = array.get_duck_array()
         return _wrap_numpy_scalars(array)
 
     def _updated_key(self, new_key: ExplicitIndexer):
@@ -877,15 +881,16 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
         self.array = _wrap_numpy_scalars(as_indexable(array))
 
     def get_duck_array(self):
-        # first ensure the array object is cached
-        self.array = as_indexable(self.array.get_duck_array())
-        return self.array.get_duck_array()
+        duck_array = self.array.get_duck_array()
+        # ensure the array object is cached in-memory
+        self.array = as_indexable(duck_array)
+        return duck_array
 
     async def async_get_duck_array(self):
-        # first ensure the array object is cached
         duck_array = await self.array.async_get_duck_array()
+        # ensure the array object is cached in-memory
         self.array = as_indexable(duck_array)
-        return await self.array.async_get_duck_array()
+        return duck_array
 
     def _oindex_get(self, indexer: OuterIndexer):
         return type(self)(_wrap_numpy_scalars(self.array.oindex[indexer]))
@@ -1611,16 +1616,6 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return array[indexer.tuple]
 
     def __getitem__(self, indexer: ExplicitIndexer):
-        self._check_and_raise_if_non_basic_indexer(indexer)
-
-        array = self.array
-        # We want 0d slices rather than scalars. This is achieved by
-        # appending an ellipsis (see
-        # https://numpy.org/doc/stable/reference/arrays.indexing.html#detailed-notes).
-        key = indexer.tuple + (Ellipsis,)
-        return array[key]
-
-    async def async_getitem(self, indexer: ExplicitIndexer):
         self._check_and_raise_if_non_basic_indexer(indexer)
 
         array = self.array
