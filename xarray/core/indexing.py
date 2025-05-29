@@ -516,16 +516,30 @@ class ExplicitlyIndexed:
         return self.array
 
 
-class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
-    __slots__ = ()
+class IndexingAdapter:
+    """Marker class for indexing adapters.
+
+    These classes translate between Xarray's indexing semantics and the underlying array's
+    indexing semantics.
+    """
 
     def get_duck_array(self):
         key = BasicIndexer((slice(None),) * self.ndim)
         return self[key]
 
     async def async_get_duck_array(self):
-        key = BasicIndexer((slice(None),) * self.ndim)
-        return await self.async_getitem(key)
+        """These classes are applied to in-memory arrays, so specific async support isn't needed."""
+        return self.get_duck_array()
+
+
+class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
+    __slots__ = ()
+
+    def get_duck_array(self):
+        raise NotImplementedError
+
+    async def async_get_duck_array(self):
+        raise NotImplementedError
 
     def _oindex_get(self, indexer: OuterIndexer):
         raise NotImplementedError(
@@ -650,37 +664,25 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return self._shape
 
     def get_duck_array(self):
-        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
-            array = apply_indexer(self.array, self.key)
-        else:
-            # If the array is not an ExplicitlyIndexedNDArrayMixin,
-            # it may wrap a BackendArray so use its __getitem__
-            array = self.array[self.key]
+        from xarray.backends.common import BackendArray
 
-        # self.array[self.key] is now a numpy array when
-        # self.array is a BackendArray subclass
-        # and self.key is BasicIndexer((slice(None, None, None),))
-        # so we need the explicit check for ExplicitlyIndexed
-        if isinstance(array, ExplicitlyIndexed):
-            array = array.get_duck_array()
+        if isinstance(self.array, BackendArray):
+            array = self.array[self.key]
+        else:
+            array = apply_indexer(self.array, self.key)
+            if isinstance(array, ExplicitlyIndexed):
+                array = array.get_duck_array()
         return _wrap_numpy_scalars(array)
 
     async def async_get_duck_array(self):
-        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
-            array = apply_indexer(self.array, self.key)
-        else:
-            # If the array is not an ExplicitlyIndexedNDArrayMixin,
-            # it may wrap a BackendArray so use its (async) getitem
-            array = await self.array.async_getitem(self.key)
+        from xarray.backends.common import BackendArray
 
-        # self.array[self.key] is now a numpy array when
-        # self.array is a BackendArray subclass
-        # and self.key is BasicIndexer((slice(None, None, None),))
-        # so we need the explicit check for ExplicitlyIndexed
-        if isinstance(array, ExplicitlyIndexed):
-            # At this point, we have issued completed the possible async load from disk
-            # and array is in-memory. So use the sync get
-            array = array.get_duck_array()
+        if isinstance(self.array, BackendArray):
+            array = await self.array.async_getitem(self.key)
+        else:
+            array = apply_indexer(self.array, self.key)
+            if isinstance(array, ExplicitlyIndexed):
+                array = await array.async_get_duck_array()
         return _wrap_numpy_scalars(array)
 
     def transpose(self, order):
@@ -744,36 +746,26 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return np.broadcast(*self.key.tuple).shape
 
     def get_duck_array(self):
-        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
-            array = apply_indexer(self.array, self.key)
-        else:
-            # If the array is not an ExplicitlyIndexedNDArrayMixin,
-            # it may wrap a BackendArray so use its __getitem__
+        from xarray.backends.common import BackendArray
+
+        if isinstance(self.array, BackendArray):
             array = self.array[self.key]
-        # self.array[self.key] is now a numpy array when
-        # self.array is a BackendArray subclass
-        # and self.key is BasicIndexer((slice(None, None, None),))
-        # so we need the explicit check for ExplicitlyIndexed
-        if isinstance(array, ExplicitlyIndexed):
-            array = array.get_duck_array()
+        else:
+            array = apply_indexer(self.array, self.key)
+            if isinstance(array, ExplicitlyIndexed):
+                array = array.get_duck_array()
         return _wrap_numpy_scalars(array)
 
     async def async_get_duck_array(self):
         print("inside LazilyVectorizedIndexedArray.async_get_duck_array")
-        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
-            array = apply_indexer(self.array, self.key)
-        else:
-            # If the array is not an ExplicitlyIndexedNDArrayMixin,
-            # it may wrap a BackendArray so use its __getitem__
+        from xarray.backends.common import BackendArray
+
+        if isinstance(self.array, BackendArray):
             array = await self.array.async_getitem(self.key)
-        # self.array[self.key] is now a numpy array when
-        # self.array is a BackendArray subclass
-        # and self.key is BasicIndexer((slice(None, None, None),))
-        # so we need the explicit check for ExplicitlyIndexed
-        if isinstance(array, ExplicitlyIndexed):
-            # At this point, we have issued completed the possible async load from disk
-            # and array is in-memory. So use the sync get
-            array = array.get_duck_array()
+        else:
+            array = apply_indexer(self.array, self.key)
+            if isinstance(array, ExplicitlyIndexed):
+                array = await array.async_get_duck_array()
         return _wrap_numpy_scalars(array)
 
     def _updated_key(self, new_key: ExplicitIndexer):
@@ -1589,7 +1581,7 @@ def is_fancy_indexer(indexer: Any) -> bool:
     return True
 
 
-class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
+class NumpyIndexingAdapter(IndexingAdapter, ExplicitlyIndexedNDArrayMixin):
     """Wrap a NumPy array to use explicit indexing."""
 
     __slots__ = ("array",)
@@ -1668,7 +1660,7 @@ class NdArrayLikeIndexingAdapter(NumpyIndexingAdapter):
         self.array = array
 
 
-class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
+class ArrayApiIndexingAdapter(IndexingAdapter, ExplicitlyIndexedNDArrayMixin):
     """Wrap an array API array to use explicit indexing."""
 
     __slots__ = ("array",)
@@ -1733,7 +1725,7 @@ def _assert_not_chunked_indexer(idxr: tuple[Any, ...]) -> None:
         )
 
 
-class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
+class DaskIndexingAdapter(IndexingAdapter, ExplicitlyIndexedNDArrayMixin):
     """Wrap a dask array to support explicit indexing."""
 
     __slots__ = ("array",)
@@ -1809,7 +1801,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return self.array.transpose(order)
 
 
-class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
+class PandasIndexingAdapter(IndexingAdapter, ExplicitlyIndexedNDArrayMixin):
     """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
 
     __slots__ = ("_dtype", "array")
@@ -1866,15 +1858,6 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self) -> np.ndarray | PandasExtensionArray:
         # We return an PandasExtensionArray wrapper type that satisfies
         # duck array protocols. This is what's needed for tests to pass.
-        if pd.api.types.is_extension_array_dtype(self.array):
-            from xarray.core.extension_array import PandasExtensionArray
-
-            return PandasExtensionArray(self.array.array)
-        return np.asarray(self)
-
-    async def async_get_duck_array(self) -> np.ndarray | PandasExtensionArray:
-        # TODO this must surely be wrong - it's not async yet
-        print("in PandasIndexingAdapter")
         if pd.api.types.is_extension_array_dtype(self.array):
             from xarray.core.extension_array import PandasExtensionArray
 
@@ -2135,7 +2118,9 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         return type(self)(array, self._dtype, self.level)
 
 
-class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
+class CoordinateTransformIndexingAdapter(
+    IndexingAdapter, ExplicitlyIndexedNDArrayMixin
+):
     """Wrap a CoordinateTransform as a lazy coordinate array.
 
     Supports explicit indexing (both outer and vectorized).

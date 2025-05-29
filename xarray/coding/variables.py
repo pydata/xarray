@@ -105,6 +105,7 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return np.asarray(self.array[key], dtype=self.dtype)
 
 
+
 def _apply_mask(
     data: np.ndarray,
     encoded_fill_values: list,

@@ -242,6 +242,7 @@ class ZarrArrayWrapper(BackendArray):
         # could possibly have a work-around for 0d data here
 
     async def async_getitem(self, key):
+        print("async getting")
         array = self._array
         if isinstance(key, indexing.BasicIndexer):
             method = self._async_getitem

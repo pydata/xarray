@@ -153,20 +153,15 @@ async def async_to_duck_array(
     from xarray.core.indexing import (
         ExplicitlyIndexed,
         ImplicitToExplicitIndexingAdapter,
+        IndexingAdapter,
     )
-    from xarray.namedarray.parallelcompat import get_chunked_array_type
 
     print(type(data))
-
-    if is_chunked_array(data):
-        chunkmanager = get_chunked_array_type(data)
-        loaded_data, *_ = chunkmanager.compute(data, **kwargs)  # type: ignore[var-annotated]
-        return loaded_data
-
-    if isinstance(data, ExplicitlyIndexed | ImplicitToExplicitIndexingAdapter):
+    if isinstance(data, IndexingAdapter):
+        # These wrap in-memory arrays, and async isn't needed
+        return data.get_duck_array()
+    elif isinstance(data, ExplicitlyIndexed | ImplicitToExplicitIndexingAdapter):
         print("async inside to_duck_array")
         return await data.async_get_duck_array()  # type: ignore[no-untyped-call, no-any-return]
-    elif is_duck_array(data):
-        return data
     else:
-        return np.asarray(data)  # type: ignore[return-value]
+        return to_duck_array(data, **kwargs)
