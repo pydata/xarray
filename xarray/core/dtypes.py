@@ -4,6 +4,7 @@ import functools
 from typing import Any
 
 import numpy as np
+import pandas as pd
 from pandas.api.types import is_extension_array_dtype
 
 from xarray.compat import array_api_compat, npcompat
@@ -63,7 +64,9 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     # N.B. these casting rules should match pandas
     dtype_: np.typing.DTypeLike
     fill_value: Any
-    if HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):
+    if pd.api.types.is_extension_array_dtype(dtype):
+        return dtype, pd.NA
+    elif HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):
         # for now, we always promote string dtypes to object for consistency with existing behavior
         # TODO: refactor this once we have a better way to handle numpy vlen-string dtypes
         dtype_ = object
