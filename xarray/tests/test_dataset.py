@@ -21,6 +21,8 @@ try:
 except ImportError:
     from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
 
+from pandas.errors import UndefinedVariableError
+
 import xarray as xr
 from xarray import (
     AlignmentError,
@@ -70,13 +72,6 @@ from xarray.tests import (
     source_ndarray,
 )
 from xarray.tests.indexes import MultiCoordIndex, ScalarIndex, XYIndex
-
-try:
-    from pandas.errors import UndefinedVariableError
-except ImportError:
-    # TODO: remove once we stop supporting pandas<1.4.3
-    from pandas.core.computation.ops import UndefinedVariableError
-
 
 try:
     import dask.array as da
