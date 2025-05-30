@@ -658,17 +658,11 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
             array = apply_indexer(self.array, self.key)
+            array = array.get_duck_array()
         else:
             # If the array is not an ExplicitlyIndexedNDArrayMixin,
-            # it may wrap a BackendArray so use its __getitem__
+            # it is a BackendArray so use its __getitem__
             array = self.array[self.key]
-
-        # self.array[self.key] is now a numpy array when
-        # self.array is a BackendArray subclass
-        # and self.key is BasicIndexer((slice(None, None, None),))
-        # so we need the explicit check for ExplicitlyIndexed
-        if isinstance(array, ExplicitlyIndexed):
-            array = array.get_duck_array()
         return _wrap_numpy_scalars(array)
 
     def transpose(self, order):
@@ -734,16 +728,11 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
             array = apply_indexer(self.array, self.key)
+            array = array.get_duck_array()
         else:
             # If the array is not an ExplicitlyIndexedNDArrayMixin,
-            # it may wrap a BackendArray so use its __getitem__
+            # it is a BackendArray so use its __getitem__
             array = self.array[self.key]
-        # self.array[self.key] is now a numpy array when
-        # self.array is a BackendArray subclass
-        # and self.key is BasicIndexer((slice(None, None, None),))
-        # so we need the explicit check for ExplicitlyIndexed
-        if isinstance(array, ExplicitlyIndexed):
-            array = array.get_duck_array()
         return _wrap_numpy_scalars(array)
 
     def _updated_key(self, new_key: ExplicitIndexer):
