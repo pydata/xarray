@@ -73,6 +73,7 @@ extensions = [
     "sphinx_design",
     "sphinx_inline_tabs",
     "sphinx_remove_toctrees",
+    "jupyterlite_sphinx",
 ]
 
 
@@ -181,8 +182,12 @@ napoleon_type_aliases = {
     "pd.Index": "~pandas.Index",
     "pd.NaT": "~pandas.NaT",
 }
-
 autodoc_type_aliases = napoleon_type_aliases  # Keep both in sync
+
+# jupyterlite try_examples config
+global_enable_try_examples = True
+try_examples_global_button_text = "Try it in your browser!"
+try_examples_global_warning_text = "Interactive examples are experimental and may not always work as expected."
 
 # mermaid config
 mermaid_version = "11.6.0"
@@ -213,7 +218,7 @@ today_fmt = "%Y-%m-%d"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build", "**.ipynb_checkpoints"]
+exclude_patterns = ["_build", "**.ipynb_checkpoints", "_contents"]
 
 
 # The name of the Pygments (syntax highlighting) style to use.
