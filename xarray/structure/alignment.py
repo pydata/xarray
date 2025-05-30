@@ -120,7 +120,9 @@ def _normalize_indexes(
                 )
             data: T_DuckArray = as_compatible_data(idx)
             pd_idx = safe_cast_to_index(data)
-            pd_idx.name = k
+            if pd_idx.name != k:
+                pd_idx = pd_idx.copy()
+                pd_idx.name = k
             if isinstance(pd_idx, pd.MultiIndex):
                 idx = PandasMultiIndex(pd_idx, k)
             else:

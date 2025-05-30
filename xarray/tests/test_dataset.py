@@ -7894,3 +7894,17 @@ def test_transpose_error() -> None:
         ),
     ):
         ds.transpose(["y", "x"])  # type: ignore[arg-type]
+
+
+def test_reindex_with_multiindex_level() -> None:
+    # test for https://github.com/pydata/xarray/issues/10347
+    mindex = pd.MultiIndex.from_product(
+        [[100, 200, 300], [1, 2, 3, 4]], names=["x", "y"]
+    )
+    y_idx = PandasIndex(mindex.levels[1], "y")
+
+    ds1 = xr.Dataset(coords={"y": [1, 2, 3]})
+    ds2 = xr.Dataset(coords=xr.Coordinates.from_xindex(y_idx))
+
+    actual = ds1.reindex(y=ds2.y)
+    assert_identical(actual, ds2)
