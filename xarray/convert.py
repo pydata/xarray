@@ -138,7 +138,7 @@ def _iris_cell_methods_to_str(cell_methods_obj):
             f"interval: {interval}" for interval in cell_method.intervals
         )
         comments = " ".join(f"comment: {comment}" for comment in cell_method.comments)
-        extra = " ".join([intervals, comments]).strip()
+        extra = f"{intervals} {comments}".strip()
         if extra:
             extra = f" ({extra})"
         cell_methods.append(names + cell_method.method + extra)

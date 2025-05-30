@@ -255,6 +255,7 @@ extend-select = [
   "PIE",  # flake8-pie
   "TID",  # flake8-tidy-imports (absolute imports)
   "PYI",  # flake8-pyi
+  "FLY",  # flynt
   "I",    # isort
   "PERF", # Perflint
   "W",    # pycodestyle warnings
