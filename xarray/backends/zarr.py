@@ -877,9 +877,8 @@ class ZarrStore(AbstractWritableDataStore):
             if zarr_array.fill_value is not None:
                 attributes["_FillValue"] = zarr_array.fill_value
         elif "_FillValue" in attributes:
-            original_zarr_dtype = zarr_array.metadata.data_type
             attributes["_FillValue"] = FillValueCoder.decode(
-                attributes["_FillValue"], original_zarr_dtype.value
+                attributes["_FillValue"], zarr_array.dtype
             )
 
         return Variable(dimensions, data, attributes, encoding)
