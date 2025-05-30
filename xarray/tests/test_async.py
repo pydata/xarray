@@ -3,6 +3,7 @@ import time
 from collections.abc import Iterable
 from contextlib import asynccontextmanager
 from typing import TypeVar
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -196,9 +197,27 @@ class TestAsyncLoad:
     async def test_indexing(self, memorystore, method, indexer) -> None:
         # TODO we don't need a LatencyStore for this test
         latencystore = LatencyStore(memorystore, latency=0.0)
-        ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
 
-        # TODO we're not actually testing that these indexing methods are not blocking...
-        result = await getattr(ds, method)(**indexer).load_async()
+        original_getitem = zarr.AsyncArray.getitem
+
+        async def wrapper(instance, selection):
+            # Call the original method with proper self
+            result = await original_getitem(instance, selection)
+            return result
+
+        with patch.object(
+            zarr.AsyncArray, "getitem", side_effect=wrapper, autospec=True
+        ) as mocked_meth:
+            ds = xr.open_zarr(
+                latencystore, zarr_format=3, consolidated=False, chunks=None
+            )
+
+            # TODO we're not actually testing that these indexing methods are not blocking...
+            result = await getattr(ds, method)(**indexer).load_async()
+
+            assert mocked_meth.call_count > 0
+            mocked_meth.assert_called()
+            mocked_meth.assert_awaited()
+
         expected = getattr(ds, method)(**indexer).load()
         xrt.assert_identical(result, expected)
