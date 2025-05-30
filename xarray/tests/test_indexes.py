@@ -293,6 +293,35 @@ class TestPandasIndex:
         with pytest.raises(ValueError, match=r".*index has duplicate values"):
             index3.reindex_like(index2)
 
+    def test_reindex_pandas_multiframe(self) -> None:
+        # test for GH10347
+        rand1 = np.arange(15)
+        rand2 = np.arange(12)
+
+        data1 = xr.DataArray(
+            rand1.reshape((5, 3)),
+            dims=("x", "y"),
+            coords={"x": [1, 2, 3, 4, 5], "y": [1, 2, 3]},
+        ).to_dataset(name="value")
+
+        base1 = xr.DataArray(
+            rand2.reshape(3, 4),
+            dims=("x", "y"),
+            coords={"x": [100, 200, 300], "y": [1, 2, 3, 4]},
+        ).to_dataset(name="base_value")
+
+        base2 = xr.Dataset.from_dataframe(
+            pd.DataFrame(
+                rand2,
+                columns=["base_value"],
+                index=pd.MultiIndex.from_product(
+                    [[100, 200, 300], [1, 2, 3, 4]], names=["x", "y"]
+                ),
+            )
+        )
+
+        assert data1.reindex(y=base1.y) == data1.reindex(y=base2.y)
+
     def test_rename(self) -> None:
         index = PandasIndex(pd.Index([1, 2, 3], name="a"), "x", coord_dtype=np.int32)
 
