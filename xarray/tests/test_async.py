@@ -179,19 +179,17 @@ class TestAsyncLoad:
             total_time=timer.total_time, latency=self.LATENCY, n_loads=N_OBJECTS
         )
 
+    @pytest.mark.parametrize("method", ["sel", "isel"])
     @pytest.mark.parametrize(
-        "method,indexer",
+        "indexer",
         [
-            ("sel", {"x": 2}),
-            ("sel", {"x": slice(2, 4)}),
-            ("sel", {"x": [2, 3]}),
-            (
-                "sel",
-                {
-                    "x": xr.DataArray([2, 3], dims="points"),
-                    "y": xr.DataArray([2, 3], dims="points"),
-                },
-            ),
+            {"x": 2},
+            {"x": slice(2, 4)},
+            {"x": [2, 3]},
+            {
+                "x": xr.DataArray([2, 3], dims="points"),
+                "y": xr.DataArray([2, 3], dims="points"),
+            },
         ],
         ids=["basic-int", "basic-slice", "outer", "vectorized"],
     )
