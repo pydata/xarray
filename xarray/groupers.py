@@ -716,11 +716,10 @@ def find_independent_seasons(seasons: Sequence[str]) -> Sequence[SeasonsGroup]:
 
         # Loop through remaining groups, and look for overlaps
         for j, second in enumerate(season_inds[i:]):
-            if not (set(chain(*grouped[idx])) & set(second)):
-                if second not in seen:
-                    grouped[idx].append(second)
-                    codes[idx].append(j + i)
-                    seen.add(second)
+            if not (set(chain(*grouped[idx])) & set(second)) and second not in seen:
+                grouped[idx].append(second)
+                codes[idx].append(j + i)
+                seen.add(second)
         if len(seen) == len(seasons):
             break
         # found all non-overlapping groups for this row, increment and start over
@@ -903,7 +902,7 @@ class SeasonResampler(Resampler):
         first_items = agged["first"]
         counts = agged["count"]
 
-        index_class: type[CFTimeIndex] | type[pd.DatetimeIndex]
+        index_class: type[CFTimeIndex | pd.DatetimeIndex]
         if _contains_cftime_datetimes(group.data):
             index_class = CFTimeIndex
             datetime_class = type(first_n_items(group.data, 1).item())

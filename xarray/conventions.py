@@ -178,7 +178,7 @@ def decode_cf_variable(
         if isinstance(decode_times, CFDatetimeCoder):
             decode_timedelta = CFTimedeltaCoder(time_unit=decode_times.time_unit)
         else:
-            decode_timedelta = True if decode_times else False
+            decode_timedelta = bool(decode_times)
 
     if concat_characters:
         if stack_char_dim:
@@ -226,17 +226,16 @@ def decode_cf_variable(
                     DeprecationWarning,
                 )
             decode_times = CFDatetimeCoder(use_cftime=use_cftime)
-        else:
-            if use_cftime is not None:
-                raise TypeError(
-                    "Usage of 'use_cftime' as a kwarg is not allowed "
-                    "if a 'CFDatetimeCoder' instance is passed to "
-                    "'decode_times'. Please set 'use_cftime' "
-                    "when initializing 'CFDatetimeCoder' instead.\n"
-                    "Example usage:\n"
-                    "    time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)\n"
-                    "    ds = xr.open_dataset(decode_times=time_coder)\n",
-                )
+        elif use_cftime is not None:
+            raise TypeError(
+                "Usage of 'use_cftime' as a kwarg is not allowed "
+                "if a 'CFDatetimeCoder' instance is passed to "
+                "'decode_times'. Please set 'use_cftime' "
+                "when initializing 'CFDatetimeCoder' instead.\n"
+                "Example usage:\n"
+                "    time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)\n"
+                "    ds = xr.open_dataset(decode_times=time_coder)\n",
+            )
         var = decode_times.decode(var, name=name)
 
     if decode_endianness and not var.dtype.isnative:
@@ -276,12 +275,11 @@ def _update_bounds_attributes(variables: T_Variables) -> None:
         attrs = v.attrs
         units = attrs.get("units")
         has_date_units = isinstance(units, str) and "since" in units
-        if has_date_units and "bounds" in attrs:
-            if attrs["bounds"] in variables:
-                bounds_attrs = variables[attrs["bounds"]].attrs
-                bounds_attrs.setdefault("units", attrs["units"])
-                if "calendar" in attrs:
-                    bounds_attrs.setdefault("calendar", attrs["calendar"])
+        if has_date_units and "bounds" in attrs and attrs["bounds"] in variables:
+            bounds_attrs = variables[attrs["bounds"]].attrs
+            bounds_attrs.setdefault("units", attrs["units"])
+            if "calendar" in attrs:
+                bounds_attrs.setdefault("calendar", attrs["calendar"])
 
 
 def _update_bounds_encoding(variables: T_Variables) -> None:
@@ -325,12 +323,11 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
                 f"{name} before writing to a file.",
             )
 
-        if has_date_units and "bounds" in attrs:
-            if attrs["bounds"] in variables:
-                bounds_encoding = variables[attrs["bounds"]].encoding
-                bounds_encoding.setdefault("units", encoding["units"])
-                if "calendar" in encoding:
-                    bounds_encoding.setdefault("calendar", encoding["calendar"])
+        if has_date_units and "bounds" in attrs and attrs["bounds"] in variables:
+            bounds_encoding = variables[attrs["bounds"]].encoding
+            bounds_encoding.setdefault("units", encoding["units"])
+            if "calendar" in encoding:
+                bounds_encoding.setdefault("calendar", encoding["calendar"])
 
 
 T = TypeVar("T")
@@ -805,8 +802,11 @@ def cf_encoder(variables: T_Variables, attributes: T_Attrs):
                 "leap_year",
                 "month_lengths",
             ]:
-                if attr in new_vars[bounds].attrs and attr in var.attrs:
-                    if new_vars[bounds].attrs[attr] == var.attrs[attr]:
-                        new_vars[bounds].attrs.pop(attr)
+                if (
+                    attr in new_vars[bounds].attrs
+                    and attr in var.attrs
+                    and new_vars[bounds].attrs[attr] == var.attrs[attr]
+                ):
+                    new_vars[bounds].attrs.pop(attr)
 
     return new_vars, attributes
