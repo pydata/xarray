@@ -329,7 +329,7 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
     # variables checked for equality
     equals = {}
     # skip merging these variables.
-    #   if concatenating over a dimension 'x' that is associated with an indexo ver 2 variables,
+    #   if concatenating over a dimension 'x' that is associated with an index over 2 variables,
     #   'x' and 'y', then we assert join="equals" on `y` and don't need to merge it.
     #   that assertion happens in the align step prior to this function being called
     skip_merge = set()
@@ -347,9 +347,9 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
                 if dim in ds:
                     ds = ds.set_coords(dim)
         concat_over.update(k for k, v in ds.variables.items() if dim in v.dims)
-        for index, idx_coords in ds.xindexes.group_by_index():
-            if dim in idx_coords:
-                skip_merge.update(idx_coords.keys())
+        for _, idx_vars in ds.xindexes.group_by_index():
+            if any(dim in v.dims for v in idx_vars.values()):
+                skip_merge.update(idx_vars.keys())
         concat_dim_lengths.append(ds.sizes.get(dim, 1))
 
     def process_subset_opt(opt, subset):
