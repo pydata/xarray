@@ -15,6 +15,7 @@ import hypothesis.extra.numpy as npst  # isort:skip
 import hypothesis.extra.pandas as pdst  # isort:skip
 import hypothesis.strategies as st  # isort:skip
 from hypothesis import given  # isort:skip
+from xarray.tests import requires_pyarrow
 
 numeric_dtypes = st.one_of(
     npst.unsigned_integer_dtypes(endianness="="),
@@ -138,7 +139,9 @@ def test_roundtrip_pandas_dataframe_datetime(df) -> None:
     "extension_array",
     [
         pd.Categorical(["a", "b", "c"]),
-        pd.array([1, 2, 3], dtype="int64[pyarrow]"),
+        pytest.param(
+            pd.array([1, 2, 3], dtype="int64[pyarrow]"), marks=requires_pyarrow
+        ),
         pd.array(["a", "b", "c"], dtype="string"),
         pd.arrays.IntervalArray(
             [pd.Interval(0, 1), pd.Interval(1, 5), pd.Interval(2, 6)]
