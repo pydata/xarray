@@ -1575,11 +1575,11 @@ def open_mfdataset(
 
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
-    errors : {'raise', 'warn', 'ignore'}, default 'raise'
-        - If 'raise', then invalid dataset will raise an exception.
-        - If 'warn', then a warning will be issued for each invalid dataset.
-        - If 'ignore', then invalid dataset will be ignored.
+    errors : {"raise", "warn", "ignore"}, default: "raise"
 
+        - "raise": invalid dataset will raise an exception.
+        - "warn": a warning will be issued for each invalid dataset.
+        - "ignore": then invalid dataset will be ignored.
    **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`. For an
         overview of some of the possible options, see the documentation of
