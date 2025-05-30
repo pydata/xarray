@@ -342,10 +342,8 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
 
     concat_dim_lengths = []
     for ds in datasets:
-        if concat_over_existing_dim:
-            if dim not in ds.dims:
-                if dim in ds:
-                    ds = ds.set_coords(dim)
+        if concat_over_existing_dim and dim not in ds.dims and dim in ds:
+            ds = ds.set_coords(dim)
         concat_over.update(k for k, v in ds.variables.items() if dim in v.dims)
         for _, idx_vars in ds.xindexes.group_by_index():
             if any(dim in v.dims for v in idx_vars.values()):

@@ -363,12 +363,14 @@ def map_blocks(
 
         # check that index lengths and values are as expected
         for name, index in result._indexes.items():
-            if name in expected["shapes"]:
-                if result.sizes[name] != expected["shapes"][name]:
-                    raise ValueError(
-                        f"Received dimension {name!r} of length {result.sizes[name]}. "
-                        f"Expected length {expected['shapes'][name]}."
-                    )
+            if (
+                name in expected["shapes"]
+                and result.sizes[name] != expected["shapes"][name]
+            ):
+                raise ValueError(
+                    f"Received dimension {name!r} of length {result.sizes[name]}. "
+                    f"Expected length {expected['shapes'][name]}."
+                )
 
             # ChainMap wants MutableMapping, but xindexes is Mapping
             merged_indexes = collections.ChainMap(
