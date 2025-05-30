@@ -17,11 +17,11 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from numpy import (  # noqa: F401
+from numpy import (
     isclose,
     isnat,
     take,
-    unravel_index,
+    unravel_index,  # noqa: F401
 )
 from pandas.api.types import is_extension_array_dtype
 
@@ -185,16 +185,15 @@ def isnull(data):
         # bool_ is for backwards compat with numpy<2, and cupy
         dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
         return full_like(data, dtype=dtype, fill_value=False)
+    # at this point, array should have dtype=object
+    elif isinstance(data, np.ndarray) or is_extension_array_dtype(data):
+        return pandas_isnull(data)
     else:
-        # at this point, array should have dtype=object
-        if isinstance(data, np.ndarray) or is_extension_array_dtype(data):
-            return pandas_isnull(data)
-        else:
-            # Not reachable yet, but intended for use with other duck array
-            # types. For full consistency with pandas, we should accept None as
-            # a null value as well as NaN, but it isn't clear how to do this
-            # with duck typing.
-            return data != data
+        # Not reachable yet, but intended for use with other duck array
+        # types. For full consistency with pandas, we should accept None as
+        # a null value as well as NaN, but it isn't clear how to do this
+        # with duck typing.
+        return data != data
 
 
 def notnull(data):
@@ -268,7 +267,7 @@ def asarray(data, xp=np, dtype=None):
 
 
 def as_shared_dtype(scalars_or_arrays, xp=None):
-    """Cast a arrays to a shared dtype using xarray's type promotion rules."""
+    """Cast arrays to a shared dtype using xarray's type promotion rules."""
     if any(is_extension_array_dtype(x) for x in scalars_or_arrays):
         extension_array_types = [
             x.dtype for x in scalars_or_arrays if is_extension_array_dtype(x)
