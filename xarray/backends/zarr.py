@@ -185,6 +185,8 @@ class ZarrArrayWrapper(BackendArray):
     def __init__(self, zarr_array):
         # some callers attempt to evaluate an array if an `array` property exists on the object.
         # we prefix with _ to avoid this inference.
+
+        # TODO type hint this?
         self._array = zarr_array
         self.shape = self._array.shape
 
@@ -212,6 +214,18 @@ class ZarrArrayWrapper(BackendArray):
     def _getitem(self, key):
         return self._array[key]
 
+    async def _async_getitem(self, key):
+        async_array = self._array._async_array
+        return await async_array.getitem(key)
+
+    async def _async_oindex(self, key):
+        async_array = self._array._async_array
+        return await async_array.oindex.getitem(key)
+
+    async def _async_vindex(self, key):
+        async_array = self._array._async_array
+        return await async_array.vindex.getitem(key)
+
     def __getitem__(self, key):
         array = self._array
         if isinstance(key, indexing.BasicIndexer):
@@ -226,6 +240,19 @@ class ZarrArrayWrapper(BackendArray):
 
         # if self.ndim == 0:
         # could possibly have a work-around for 0d data here
+
+    async def async_getitem(self, key):
+        print("async getting")
+        array = self._array
+        if isinstance(key, indexing.BasicIndexer):
+            method = self._async_getitem
+        elif isinstance(key, indexing.VectorizedIndexer):
+            method = self._async_vindex
+        elif isinstance(key, indexing.OuterIndexer):
+            method = self._async_oindex
+        return await indexing.async_explicit_indexing_adapter(
+            key, array.shape, indexing.IndexingSupport.VECTORIZED, method
+        )
 
 
 def _determine_zarr_chunks(
