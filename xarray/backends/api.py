@@ -50,6 +50,7 @@ from xarray.structure.combine import (
     _nested_combine,
     combine_by_coords,
 )
+from xarray.core.utils import emit_user_level_warning
 
 if TYPE_CHECKING:
     try:
