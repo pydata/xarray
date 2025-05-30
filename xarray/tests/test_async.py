@@ -182,31 +182,29 @@ class TestAsyncLoad:
 
     @pytest.mark.parametrize("method", ["sel", "isel"])
     @pytest.mark.parametrize(
-        "indexer",
+        "indexer, zarr_getitem_method",
         [
-            {"x": 2},
-            {"x": slice(2, 4)},
-            {"x": [2, 3]},
-            {
-                "x": xr.DataArray([2, 3], dims="points"),
-                "y": xr.DataArray([2, 3], dims="points"),
-            },
+            ({"x": 2}, zarr.AsyncArray.getitem),
+            ({"x": slice(2, 4)}, zarr.AsyncArray.getitem),
+            ({"x": [2, 3]}, zarr.core.indexing.AsyncOIndex.getitem),
+            (
+                {
+                    "x": xr.DataArray([2, 3], dims="points"),
+                    "y": xr.DataArray([2, 3], dims="points"),
+                },
+                zarr.core.indexing.AsyncVIndex.getitem,
+            ),
         ],
         ids=["basic-int", "basic-slice", "outer", "vectorized"],
     )
-    async def test_indexing(self, memorystore, method, indexer) -> None:
+    async def test_indexing(
+        self, memorystore, method, indexer, zarr_getitem_method
+    ) -> None:
         # TODO we don't need a LatencyStore for this test
         latencystore = LatencyStore(memorystore, latency=0.0)
 
-        original_getitem = zarr.AsyncArray.getitem
-
-        async def wrapper(instance, selection):
-            # Call the original method with proper self
-            result = await original_getitem(instance, selection)
-            return result
-
         with patch.object(
-            zarr.AsyncArray, "getitem", side_effect=wrapper, autospec=True
+            zarr.AsyncArray, "getitem", wraps=zarr_getitem_method, autospec=True
         ) as mocked_meth:
             ds = xr.open_zarr(
                 latencystore, zarr_format=3, consolidated=False, chunks=None
