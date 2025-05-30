@@ -58,13 +58,16 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return np.dtype(self.array.dtype.kind + str(self.array.dtype.itemsize))
 
     def _oindex_get(self, key):
-        return np.asarray(self.array.oindex[key], dtype=self.dtype)
+        return type(self)(self.array.oindex[key])
 
     def _vindex_get(self, key):
-        return np.asarray(self.array.vindex[key], dtype=self.dtype)
+        return type(self)(self.array.vindex[key])
 
     def __getitem__(self, key) -> np.ndarray:
-        return np.asarray(self.array[key], dtype=self.dtype)
+        return type(self)(self.array[key])
+
+    def get_duck_array(self):
+        return duck_array_ops.astype(self.array.get_duck_array(), dtype=self.dtype)
 
 
 class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
@@ -96,14 +99,16 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return np.dtype("bool")
 
     def _oindex_get(self, key):
-        return np.asarray(self.array.oindex[key], dtype=self.dtype)
+        return type(self)(self.array.oindex[key])
 
     def _vindex_get(self, key):
-        return np.asarray(self.array.vindex[key], dtype=self.dtype)
+        return type(self)(self.array.vindex[key])
 
     def __getitem__(self, key) -> np.ndarray:
-        return np.asarray(self.array[key], dtype=self.dtype)
+        return type(self)(self.array[key])
 
+    def get_duck_array(self):
+        return duck_array_ops.astype(self.array.get_duck_array(), dtype=self.dtype)
 
 
 def _apply_mask(
