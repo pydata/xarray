@@ -1669,20 +1669,18 @@ def open_mfdataset(
         try:
             ds = open_(p, **open_kwargs)
             datasets.append(ds)
-        except Exception:
+        except Exception as e:
             # remove invalid paths
             if combine == "nested":
                 paths = _remove_path(paths, p)
                 remove_paths = True
             if errors == "raise":
                 raise
-            elif errors == "warn":
+            if errors == "warn":
                 warnings.warn(
-                    f"Could not open {p}. Ignoring.", UserWarning, stacklevel=2
+                    f"Could not open {p} due to {e}. Ignoring.", UserWarning, stacklevel=2
                 )
-                continue
-            else:
-                continue
+            continue
 
     closers = [getattr_(ds, "_close") for ds in datasets]
     if preprocess is not None:
