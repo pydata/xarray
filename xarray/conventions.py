@@ -18,7 +18,7 @@ from xarray.core.common import (
 )
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import IndexVariable, Variable
-from xarray.namedarray.utils import is_duck_dask_array
+from xarray.namedarray.utils import is_duck_array
 
 CF_RELATED_DATA = (
     "bounds",
@@ -248,7 +248,20 @@ def decode_cf_variable(
 
     encoding.setdefault("dtype", original_dtype)
 
-    if not is_duck_dask_array(data):
+    if (
+        # we don't need to lazily index duck arrays
+        not is_duck_array(data)
+        # These arrays already support lazy indexing
+        # OR for IndexingAdapters, it makes no sense to wrap them
+        and not isinstance(data, indexing.ExplicitlyIndexedNDArrayMixin)
+    ):
+        # this path applies to bare BackendArray objects.
+        # It is not hit for any internal Xarray backend
+        emit_user_level_warning(
+            "The backend you are using has not explicitly supported lazy indexing with Xarray. "
+            "Please ask the backend developers to support lazy loading by wrapping with LazilyIndexedArray. "
+            "See https://docs.xarray.dev/en/stable/internals/how-to-add-new-backend.html#how-to-support-lazy-loading for more."
+        )
         data = indexing.LazilyIndexedArray(data)
 
     return Variable(dimensions, data, attributes, encoding=encoding, fastpath=True)
