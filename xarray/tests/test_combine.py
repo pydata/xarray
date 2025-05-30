@@ -8,13 +8,13 @@ import pytest
 from xarray import (
     DataArray,
     Dataset,
-    MergeError,
     combine_by_coords,
     combine_nested,
     concat,
     merge,
 )
 from xarray.core import dtypes
+from xarray.errors import MergeError
 from xarray.structure.combine import (
     _check_shape_tile_ids,
     _combine_all_along_first_dim,
