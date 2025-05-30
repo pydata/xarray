@@ -74,7 +74,7 @@ from xarray.tests import (
     requires_sparse,
     source_ndarray,
 )
-from xarray.tests.indexes import MultiCoordIndex, ScalarIndex, XYIndex
+from xarray.tests.indexes import ScalarIndex, XYIndex
 
 with contextlib.suppress(ImportError):
     import dask.array as da
@@ -1599,7 +1599,7 @@ class TestDataset:
         # isel on a multi-coordinate index should return a unique index associated
         # to each coordinate
         coords = xr.Coordinates(coords={"x": [0, 1], "y": [1, 2]}, indexes={})
-        ds = xr.Dataset(coords=coords).set_xindex(["x", "y"], MultiCoordIndex)
+        ds = xr.Dataset(coords=coords).set_xindex(["x", "y"], XYIndex)
 
         ds2 = ds.isel(x=slice(None), y=slice(None))
         assert ds2.xindexes["x"] is ds2.xindexes["y"]

@@ -57,23 +57,7 @@ class XYIndex(Index):
             )
         return cls(x=newx, y=newy)
 
-
-class MultiCoordIndex(Index):
-    def __init__(self, idx1, idx2):
-        self.idx1 = idx1
-        self.idx2 = idx2
-
-    @classmethod
-    def from_variables(cls, variables, *, options=None):
-        idx1 = PandasIndex.from_variables({"x": variables["x"]}, options=options)
-        idx2 = PandasIndex.from_variables({"y": variables["y"]}, options=options)
-
-        return cls(idx1, idx2)
-
-    def create_variables(self, variables=None):
-        return {**self.idx1.create_variables(), **self.idx2.create_variables()}
-
     def isel(self, indexers):
-        idx1 = self.idx1.isel({"x": indexers.get("x", slice(None))})
-        idx2 = self.idx2.isel({"y": indexers.get("y", slice(None))})
-        return MultiCoordIndex(idx1, idx2)
+        newx = self.x.isel({"x": indexers.get("x", slice(None))})
+        newy = self.y.isel({"y": indexers.get("y", slice(None))})
+        return type(self)(newx, newy)
