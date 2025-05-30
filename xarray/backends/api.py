@@ -1672,7 +1672,7 @@ def open_mfdataset(
             if errors == "raise":
                 raise
             elif errors == "warn":
-                emit_user_level_warnings(f"Could not open {p} due to {e}. Ignoring.")
+                emit_user_level_warning(f"Could not open {p} due to {e}. Ignoring.")
             # remove invalid paths
             if combine == "nested":
                 paths = _remove_path(paths, p)
