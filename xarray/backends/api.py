@@ -1561,7 +1561,7 @@ def open_mfdataset(
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
     errors : {"raise", "warn", "ignore"}, default: "raise"
-        String indicating how to handle errors in opeining dataset.
+        String indicating how to handle errors in opening dataset.
 
         - "raise": invalid dataset will raise an exception.
         - "warn": a warning will be issued for each invalid dataset.
