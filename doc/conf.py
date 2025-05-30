@@ -6,7 +6,7 @@ import subprocess
 import sys
 from contextlib import suppress
 from textwrap import dedent, indent
-
+import packaging.version
 import sphinx_autosummary_accessors
 import yaml
 from sphinx.application import Sphinx
@@ -185,7 +185,7 @@ napoleon_type_aliases = {
 autodoc_type_aliases = napoleon_type_aliases  # Keep both in sync
 
 # mermaid config
-mermaid_version = "10.9.1"
+mermaid_version = "11.6.0"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
@@ -201,10 +201,9 @@ language = "en"
 project = "xarray"
 copyright = f"2014-{datetime.datetime.now().year}, xarray Developers"
 
-# The short X.Y version.
-version = xarray.__version__.split("+")[0]
-# The full version, including alpha/beta/rc tags.
-release = xarray.__version__
+# The short Y.M.D version.
+v = packaging.version.parse(xarray.__version__)
+version = ".".join(str(p) for p in v.release)
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -314,6 +313,7 @@ rediraffe_redirects = {
     "installing.rst": "getting-started-guide/installing.rst",
     "quick-overview.rst": "getting-started-guide/quick-overview.rst",
     "contributing.rst": "contribute/contributing.rst",
+    "developers-meeting.rst": "contribute/developers-meeting.rst",
 }
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,

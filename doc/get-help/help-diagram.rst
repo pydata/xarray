@@ -3,53 +3,72 @@ Getting Help
 
 Navigating the wealth of resources available for Xarray can be overwhelming.
 We've created this flow chart to help guide you towards the best way to get help, depending on what you're working towards.
-The links to each resource are provided below the diagram.
 
-Also be sure to check out our "FAQ" and "How do I..." pages in this section for solutions to common questions.
+Also be sure to check out our :ref:`faq`. and :ref:`howdoi` pages for solutions to common questions.
 
-A major strength of Xarray is in the user community. Sometimes you might not have a concrete question by would simply like to connect with other Xarray users. We have a few
+A major strength of Xarray is in the user community. Sometimes you might not yet have a concrete question but would simply like to connect with other Xarray users. We have a few accounts on different social platforms for that! :ref:`socials`.
 
 We look forward to hearing from you!
 
+Help Flowchart
+--------------
+..
+   _comment: mermaid Flowcharg "link" text gets secondary color background, SVG icon fill gets primary color
+
+.. raw:: html
+
+    <style>
+      /* Ensure PST link colors don't override mermaid text colors */
+      .mermaid a {
+        color: white;
+      }
+      .mermaid a:hover {
+        color: magenta;
+        text-decoration-color: magenta;
+      }
+      .mermaid a:visited {
+        color: white;
+        text-decoration-color: white;
+      }
+    </style>
+
 .. mermaid::
+    :config: {"theme":"base","themeVariables":{"fontSize":"20px","primaryColor":"#fff","primaryTextColor":"#fff","primaryBorderColor":"#59c7d6","lineColor":"#e28126","secondaryColor":"#767985"}}
     :alt: Flowchart illustrating the different ways to access help using or contributing to Xarray.
 
     flowchart TD
         intro[Welcome to Xarray! How can we help?]:::quesNodefmt
-        usage(["fa:fa-chalkboard-user Xarray Tutorials
-            fab:fa-readme Xarray Docs
-            fab:fa-google Google/fab:fa-stack-overflow Stack Exchange
-            fa:fa-robot Ask AI/a Language Learning Model (LLM)"]):::ansNodefmt
-        API([fab:fa-readme Xarray Docs
-            fab:fa-readme extension's docs]):::ansNodefmt
-        help([fab:fa-github Xarray Discussions
-            fab:fa-discord Xarray Discord
-            fa:fa-users Xarray Office Hours
-            fa:fa-globe Pangeo Discourse]):::ansNodefmt
-        bug([Report and Propose here:
-            fab:fa-github Xarray Issues]):::ansNodefmt
-        contrib([fa:fa-book-open Xarray Contributor's Guide]):::ansNodefmt
-        pr(["fab:fa-github Pull Request (PR)"]):::ansNodefmt
-        dev([fab:fa-github Comment on your PR
-            fa:fa-users Developer's Meeting]):::ansNodefmt
+        usage([fa:fa-chalkboard-user <a href="https://tutorial.xarray.dev">Xarray Tutorial</a>
+            fab:fa-readme <a href="https://docs.xarray.dev">Xarray Docs</a>
+            fab:fa-stack-overflow <a href="https://stackoverflow.com/questions/tagged/python-xarray">Stack Exchange</a>
+            fab:fa-google <a href="https://www.google.com">Ask Google</a>
+            fa:fa-robot Ask AI ChatBot]):::ansNodefmt
+        extensions([Extension docs:
+            fab:fa-readme <a href="https://docs.dask.org">Dask</a>
+            fab:fa-readme <a href="https://corteva.github.io/rioxarray">Rioxarray</a>]):::ansNodefmt
+        help([fab:fa-github <a href="https://github.com/pydata/xarray/discussions">Xarray Discussions</a>
+            fab:fa-discord <a href="https://discord.com/invite/wEKPCt4PDu">Xarray Discord</a>
+            fa:fa-globe <a href="https://discourse.pangeo.io">Pangeo Discourse</a>]):::ansNodefmt
+        bug([Let us know:
+            fab:fa-github <a href="https://github.com/pydata/xarray/issues">Xarray Issues</a>]):::ansNodefmt
+        contrib([fa:fa-book-open <a href="https://docs.xarray.dev/en/latest/contribute">Xarray Contributor's Guide</a>]):::ansNodefmt
+        pr([fab:fa-github <a href="https://github.com/pydata/xarray/pulls">Pull Request</a>]):::ansNodefmt
+        dev([fab:fa-github Add PR Comment
+            fa:fa-users <a href="https://docs.xarray.dev/en/stable/contribute/developers-meeting.html">Attend Developer's Meeting</a> ]):::ansNodefmt
         report[Thanks for letting us know!]:::quesNodefmt
-        merged[fa:fa-hands-clapping Your PR was merged.
-            Thanks for contributing to Xarray!]:::quesNodefmt
+        merged[fa:fa-hands-clapping Thanks for contributing to Xarray!]:::quesNodefmt
 
 
         intro -->|How do I use Xarray?| usage
-        usage -->|"with extensions (like Dask)"| API
+        usage -->|"With extensions (like Dask, Rioxarray, etc.)"| extensions
 
-        usage -->|I'd like some more help| help
-        intro -->|I found a bug| bug
-        intro -->|I'd like to make a small change| contrib
-        subgraph bugcontrib[Bugs and Contributions]
-            bug
-            contrib
-            bug -->|I just wanted to tell you| report
-            bug<-->|I'd like to fix the bug!| contrib
-            pr -->|my PR was approved| merged
-        end
+        usage -->|I still have questions or could use some guidance | help
+        intro -->|I think I found a bug| bug
+        bug
+        contrib
+        bug -->|I just wanted to tell you| report
+        bug<-->|I'd like to fix the bug!| contrib
+        pr -->|my PR was approved| merged
 
 
         intro -->|I wish Xarray could...| bug
@@ -58,20 +77,16 @@ We look forward to hearing from you!
         pr <-->|my PR is quiet| dev
         contrib -->pr
 
-        classDef quesNodefmt fill:#9DEEF4,stroke:#206C89
+        classDef quesNodefmt font-size:20pt,fill:#0e4666,stroke:#59c7d6,stroke-width:3
+        classDef ansNodefmt font-size:18pt,fill:#4a4a4a,stroke:#17afb4,stroke-width:3
+        linkStyle default font-size:16pt,stroke-width:4
 
-        classDef ansNodefmt fill:#FFAA05,stroke:#E37F17
-
-        classDef boxfmt fill:#FFF5ED,stroke:#E37F17
-        class bugcontrib boxfmt
-
-        linkStyle default font-size:20pt,color:#206C89
 
 Flowchart links
 ---------------
 - `Xarray Tutorials <https://tutorial.xarray.dev/>`__
 - `Xarray Docs <https://docs.xarray.dev>`__
-- `Google/Stack Exchange <https://stackoverflow.com/questions/tagged/python-xarray>`__
+- `Stack Exchange <https://stackoverflow.com/questions/tagged/python-xarray>`__
 - `Xarray Discussions <https://github.com/pydata/xarray/discussions>`__
 - `Xarray Discord <https://discord.com/invite/wEKPCt4PDu>`__
 - `Xarray Office Hours <https://github.com/pydata/xarray/discussions/categories/office-hours>`__
@@ -79,7 +94,6 @@ Flowchart links
 - `Xarray Issues <https://github.com/pydata/xarray/issues>`__
 - :ref:`contributing`
 - :ref:`developers-meeting`
-
 
 .. toctree::
    :maxdepth: 1
