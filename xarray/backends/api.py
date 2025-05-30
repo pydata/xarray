@@ -1392,21 +1392,6 @@ def open_groups(
 
 
 def _remove_path(paths, path_to_remove) -> list:
-    """
-    Recursively removes specific path from a nested or non-nested list.
-
-    Parameters
-    ----------
-    paths: list
-        The path list (nested or not) from which to remove paths.
-    path_to_remove: str or list
-        The path to be removed.
-
-    Returns
-    -------
-    list
-        A new list with specified paths removed.
-    """
     # Initialize an empty list to store the result
     result = []
 
@@ -1576,11 +1561,12 @@ def open_mfdataset(
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
     errors : {"raise", "warn", "ignore"}, default: "raise"
+        String indicating how to handle errors in opeining dataset.
 
         - "raise": invalid dataset will raise an exception.
         - "warn": a warning will be issued for each invalid dataset.
         - "ignore": then invalid dataset will be ignored.
-   **kwargs : optional
+    **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`. For an
         overview of some of the possible options, see the documentation of
         :py:func:`xarray.open_dataset`
