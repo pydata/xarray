@@ -66,7 +66,7 @@ BASIC_INDEXING_TYPES = integer_types + (slice,)
 UNSUPPORTED_EXTENSION_ARRAY_TYPES = (
     pd.arrays.DatetimeArray,
     pd.arrays.TimedeltaArray,
-    pd.arrays.NumpyExtensionArray,
+    pd.arrays.NumpyExtensionArray,  # type: ignore[attr-defined]
 )
 
 if TYPE_CHECKING:
@@ -265,7 +265,7 @@ def as_compatible_data(
         ):
             pandas_data = data.array
         else:
-            pandas_data = data.values
+            pandas_data = data.values  # type: ignore[assignment]
         if isinstance(pandas_data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
             return convert_non_numpy_type(pandas_data)
         else:

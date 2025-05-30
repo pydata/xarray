@@ -164,7 +164,7 @@ def test_roundtrip_1d_pandas_extension_array(extension_array, is_index) -> None:
     df_arr_to_test = df.index if is_index else df["arr"]
     assert (df_arr_to_test == roundtripped).all()
     # `NumpyExtensionArray` types are not roundtripped, including `StringArray` which subtypes.
-    if isinstance(extension_array, pd.arrays.NumpyExtensionArray):
+    if isinstance(extension_array, pd.arrays.NumpyExtensionArray):  # type: ignore[attr-defined]
         assert isinstance(arr.data, np.ndarray)
     else:
         assert (

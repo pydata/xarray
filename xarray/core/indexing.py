@@ -1805,7 +1805,8 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         # duck array protocols.
         # `NumpyExtensionArray` is excluded
         if pd.api.types.is_extension_array_dtype(self.array) and not isinstance(
-            self.array.array, pd.arrays.NumpyExtensionArray
+            self.array.array,
+            pd.arrays.NumpyExtensionArray,  # type: ignore[attr-defined]
         ):
             from xarray.core.extension_array import PandasExtensionArray
 
