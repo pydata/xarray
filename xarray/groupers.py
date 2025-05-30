@@ -186,7 +186,7 @@ class UniqueGrouper(Grouper):
         present in ``labels`` will be ignored.
     """
 
-    _group_as_index: pd.Index | None = field(default=None, repr=False)
+    _group_as_index: pd.Index | None = field(default=None, repr=False, init=False)
     labels: ArrayLike | None = field(default=None)
 
     @property
