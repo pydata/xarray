@@ -1565,7 +1565,7 @@ def open_mfdataset(
 
         - "raise": invalid dataset will raise an exception.
         - "warn": a warning will be issued for each invalid dataset.
-        - "ignore": then invalid dataset will be ignored.
+        - "ignore": invalid dataset will be ignored.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`. For an
         overview of some of the possible options, see the documentation of
