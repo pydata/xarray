@@ -1678,7 +1678,9 @@ def open_mfdataset(
                 raise
             if errors == "warn":
                 warnings.warn(
-                    f"Could not open {p} due to {e}. Ignoring.", UserWarning, stacklevel=2
+                    f"Could not open {p} due to {e}. Ignoring.",
+                    UserWarning,
+                    stacklevel=2,
                 )
             continue
 
