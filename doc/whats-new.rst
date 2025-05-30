@@ -67,7 +67,8 @@ Performance
   By `Jesse Rusak <https://github.com/jder>`_.
 - Fix performance regression in interp where more data was loaded than was necessary. (:issue:`10287`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
+- Speed up encoding of :py:class:`cftime.datetime` objects by roughly a factor
+  of three (:pull:`8324`). By `Antoine Gibek <https://github.com/antscloud>`_.
 
 Documentation
 ~~~~~~~~~~~~~

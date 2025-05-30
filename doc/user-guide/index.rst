@@ -43,7 +43,7 @@ examples that describe many common tasks that you can accomplish with Xarray.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Interoperatbility
+   :caption: Interoperability
 
    pandas
    duckarrays

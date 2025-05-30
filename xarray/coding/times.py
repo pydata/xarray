@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import re
 import warnings
 from collections.abc import Callable, Hashable
@@ -429,12 +430,11 @@ def _check_date_is_after_shift(
     # if we are outside the well-defined date range
     # proleptic_gregorian and standard/gregorian are only equivalent
     # if reference date and date range is >= 1582-10-15
-    if calendar != "proleptic_gregorian":
-        if date < type(date)(1582, 10, 15):
-            raise OutOfBoundsDatetime(
-                f"Dates before 1582-10-15 cannot be decoded "
-                f"with pandas using {calendar!r} calendar: {date}"
-            )
+    if calendar != "proleptic_gregorian" and date < type(date)(1582, 10, 15):
+        raise OutOfBoundsDatetime(
+            f"Dates before 1582-10-15 cannot be decoded "
+            f"with pandas using {calendar!r} calendar: {date}"
+        )
 
 
 def _check_higher_resolution(
@@ -579,9 +579,8 @@ def decode_cf_datetime(
                     "'time_unit' or specify 'use_cftime=True'.",
                     SerializationWarning,
                 )
-            else:
-                if _is_standard_calendar(calendar):
-                    dates = cftime_to_nptime(dates, time_unit=time_unit)
+            elif _is_standard_calendar(calendar):
+                dates = cftime_to_nptime(dates, time_unit=time_unit)
     elif use_cftime:
         dates = _decode_datetime_with_cftime(flat_num_dates, units, calendar)
     else:
@@ -929,12 +928,10 @@ def _cleanup_netcdf_time_units(units: str) -> str:
     time_units = time_units.lower()
     if not time_units.endswith("s"):
         time_units = f"{time_units}s"
-    try:
+    # don't worry about reifying the units if they're out of bounds or
+    # formatted badly
+    with contextlib.suppress(OutOfBoundsDatetime, ValueError):
         units = f"{time_units} since {format_timestamp(ref_date)}"
-    except (OutOfBoundsDatetime, ValueError):
-        # don't worry about reifying the units if they're out of bounds or
-        # formatted badly
-        pass
     return units
 
 
@@ -949,41 +946,38 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
     else:
         cftime = attempt_import("cftime")
 
+    dates = np.asarray(dates)
+    original_shape = dates.shape
+
     if np.issubdtype(dates.dtype, np.datetime64):
         # numpy's broken datetime conversion only works for us precision
         dates = dates.astype("M8[us]").astype(datetime)
 
-    def wrap_dt(dt):
-        # convert to cftime proleptic gregorian in case of datetime.datetime
-        # needed because of https://github.com/Unidata/cftime/issues/354
-        if isinstance(dt, datetime) and not isinstance(dt, cftime.datetime):
-            dt = cftime.datetime(
-                dt.year,
-                dt.month,
-                dt.day,
-                dt.hour,
-                dt.minute,
-                dt.second,
-                dt.microsecond,
-                calendar="proleptic_gregorian",
-            )
-        return dt
+    dates = np.atleast_1d(dates)
 
-    def encode_datetime(d):
-        # Since netCDF files do not support storing float128 values, we ensure
-        # that float64 values are used by setting longdouble=False in num2date.
-        # This try except logic can be removed when xarray's minimum version of
-        # cftime is at least 1.6.2.
-        try:
-            return (
-                np.nan
-                if d is None
-                else cftime.date2num(wrap_dt(d), units, calendar, longdouble=False)
-            )
-        except TypeError:
-            return np.nan if d is None else cftime.date2num(wrap_dt(d), units, calendar)
+    # Find all the None position
+    none_position = dates == None  # noqa: E711
+    filtered_dates = dates[~none_position]
 
-    return reshape(np.array([encode_datetime(d) for d in ravel(dates)]), dates.shape)
+    # Since netCDF files do not support storing float128 values, we ensure
+    # that float64 values are used by setting longdouble=False in num2date.
+    # This try except logic can be removed when xarray's minimum version of
+    # cftime is at least 1.6.2.
+    try:
+        encoded_nums = cftime.date2num(
+            filtered_dates, units, calendar, longdouble=False
+        )
+    except TypeError:
+        encoded_nums = cftime.date2num(filtered_dates, units, calendar)
+
+    if filtered_dates.size == none_position.size:
+        return encoded_nums.reshape(original_shape)
+
+    # Create a full matrix of NaN
+    # And fill the num dates in the not NaN or None position
+    result = np.full(dates.shape, np.nan)
+    result[np.nonzero(~none_position)] = encoded_nums
+    return result.reshape(original_shape)
 
 
 def cast_to_int_if_safe(num) -> np.ndarray:
@@ -1412,7 +1406,7 @@ class CFDatetimeCoder(VariableCoder):
 
 
 def has_timedelta64_encoding_dtype(attrs_or_encoding: dict) -> bool:
-    dtype = attrs_or_encoding.get("dtype", None)
+    dtype = attrs_or_encoding.get("dtype")
     return isinstance(dtype, str) and dtype.startswith("timedelta64")
 
 

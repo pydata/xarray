@@ -44,3 +44,11 @@ html[data-theme="dark"] .sd-card img[src*=".svg"] {
 .bd-content .sd-card .sd-card-body {
   background-color: unset !important;
 }
+
+/* workaround Pydata Sphinx theme using light colors for widget cell outputs in dark-mode */
+/* works for many widgets but not for Xarray html reprs */
+/* https://github.com/pydata/pydata-sphinx-theme/issues/2189 */
+html[data-theme="dark"] div.cell_output .text_html:has(div.xr-wrap) {
+  background-color: var(--pst-color-on-background) !important;
+  color: var(--pst-color-text-base) !important;
+}
