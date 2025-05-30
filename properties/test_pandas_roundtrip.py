@@ -138,22 +138,34 @@ def test_roundtrip_pandas_dataframe_datetime(df) -> None:
     "extension_array",
     [
         pd.Categorical(["a", "b", "c"]),
-        pd.array([1, 2, 3], dtype="int64"),
+        pd.array([1, 2, 3], dtype="int64[pyarrow]"),
         pd.array(["a", "b", "c"], dtype="string"),
         pd.arrays.IntervalArray(
             [pd.Interval(0, 1), pd.Interval(1, 5), pd.Interval(2, 6)]
         ),
+        pd.arrays.TimedeltaArray._from_sequence(pd.TimedeltaIndex(["1h", "2h", "3h"])),
+        pd.arrays.DatetimeArray._from_sequence(
+            pd.DatetimeIndex(["2023-01-01", "2023-01-02", "2023-01-03"], freq="D")
+        ),
         np.array([1, 2, 3], dtype="int64"),
     ],
+    ids=["cat", "pyarrow", "string", "interval", "timedelta", "datetime", "numpy"],
 )
-def test_roundtrip_1d_pandas_extension_array(extension_array) -> None:
+@pytest.mark.parametrize("is_index", [True, False])
+def test_roundtrip_1d_pandas_extension_array(extension_array, is_index) -> None:
     df = pd.DataFrame({"arr": extension_array})
+    if is_index:
+        df = df.set_index("arr")
     arr = xr.Dataset.from_dataframe(df)["arr"]
     roundtripped = arr.to_pandas()
-    assert (df["arr"] == roundtripped).all()
+    df_arr_to_test = df.index if is_index else df["arr"]
+    assert (df_arr_to_test == roundtripped).all()
     # `NumpyExtensionArray` types are not roundtripped, including `StringArray` which subtypes.
     if isinstance(extension_array, pd.arrays.NumpyExtensionArray):
         assert isinstance(arr.data, np.ndarray)
     else:
-        assert df["arr"].dtype == roundtripped.dtype
+        assert (
+            df_arr_to_test.dtype
+            == (roundtripped.index if is_index else roundtripped).dtype
+        )
         xr.testing.assert_identical(arr, roundtripped.to_xarray())
