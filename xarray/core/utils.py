@@ -61,8 +61,10 @@ from collections.abc import (
     MutableMapping,
     MutableSet,
     Sequence,
-    Set,
     ValuesView,
+)
+from collections.abc import (
+    Set as AbstractSet,
 )
 from enum import Enum
 from pathlib import Path
@@ -704,10 +706,8 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
 def try_read_magic_number_from_file_or_path(filename_or_obj, count=8) -> bytes | None:
     magic_number = try_read_magic_number_from_path(filename_or_obj, count)
     if magic_number is None:
-        try:
+        with contextlib.suppress(TypeError):
             magic_number = read_magic_number_from_file(filename_or_obj, count)
-        except TypeError:
-            pass
     return magic_number
 
 
@@ -1057,7 +1057,7 @@ def parse_ordered_dims(
         )
 
 
-def _check_dims(dim: Set[Hashable], all_dims: Set[Hashable]) -> None:
+def _check_dims(dim: AbstractSet[Hashable], all_dims: AbstractSet[Hashable]) -> None:
     wrong_dims = (dim - all_dims) - {...}
     if wrong_dims:
         wrong_dims_str = ", ".join(f"'{d}'" for d in wrong_dims)
