@@ -110,6 +110,7 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         return duck_array_ops.astype(self.array.get_duck_array(), dtype=self.dtype)
 
+
 def _apply_mask(
     data: np.ndarray,
     encoded_fill_values: list,
