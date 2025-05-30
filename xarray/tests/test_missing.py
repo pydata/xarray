@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import itertools
+from unittest import mock
 
 import numpy as np
 import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.core import indexing
 from xarray.core.missing import (
     NumpyInterpolator,
     ScipyInterpolator,
@@ -772,3 +774,29 @@ def test_interpolators_complex_out_of_bounds():
         f = interpolator(xi, yi, method=method)
         actual = f(x)
         assert_array_equal(actual, expected)
+
+
+@requires_scipy
+def test_indexing_localize():
+    # regression test for GH10287
+    ds = xr.Dataset(
+        {
+            "sigma_a": xr.DataArray(
+                data=np.ones((16, 8, 36811)),
+                dims=["p", "t", "w"],
+                coords={"w": np.linspace(0, 30000, 36811)},
+            )
+        }
+    )
+
+    original_func = indexing.NumpyIndexingAdapter.__getitem__
+
+    def wrapper(self, indexer):
+        return original_func(self, indexer)
+
+    with mock.patch.object(
+        indexing.NumpyIndexingAdapter, "__getitem__", side_effect=wrapper, autospec=True
+    ) as mock_func:
+        ds["sigma_a"].interp(w=15000.5)
+    actual_indexer = mock_func.mock_calls[0].args[1]._key
+    assert actual_indexer == (slice(None), slice(None), slice(18404, 18408))

@@ -387,7 +387,7 @@ def _parse_group_and_groupers(
 ) -> tuple[ResolvedGrouper, ...]:
     from xarray.core.dataarray import DataArray
     from xarray.core.variable import Variable
-    from xarray.groupers import UniqueGrouper
+    from xarray.groupers import Grouper, UniqueGrouper
 
     if group is not None and groupers:
         raise ValueError(
@@ -400,6 +400,13 @@ def _parse_group_and_groupers(
     if isinstance(group, np.ndarray | pd.Index):
         raise TypeError(
             f"`group` must be a DataArray. Received {type(group).__name__!r} instead"
+        )
+
+    if isinstance(group, Grouper):
+        raise TypeError(
+            "Cannot group by a Grouper object. "
+            f"Instead use `.groupby(var_name={type(group).__name__}(...))`. "
+            "You may need to assign the variable you're grouping by as a coordinate using `assign_coords`."
         )
 
     if isinstance(group, Mapping):
@@ -977,13 +984,12 @@ class GroupBy(Generic[T_Xarray]):
         indexers = {}
         for grouper in self.groupers:
             index = combined._indexes.get(grouper.name, None)
-            if has_missing_groups and index is not None:
+            if (has_missing_groups and index is not None) or (
+                len(self.groupers) > 1
+                and not isinstance(grouper.full_index, pd.RangeIndex)
+                and not index.index.equals(grouper.full_index)
+            ):
                 indexers[grouper.name] = grouper.full_index
-            elif len(self.groupers) > 1:
-                if not isinstance(
-                    grouper.full_index, pd.RangeIndex
-                ) and not index.index.equals(grouper.full_index):
-                    indexers[grouper.name] = grouper.full_index
         if indexers:
             combined = combined.reindex(**indexers)
         return combined

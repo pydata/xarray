@@ -592,7 +592,7 @@ class TestNestedCombine:
                 combine_attrs="identical",
             )
 
-        for combine_attrs in expected_dict:
+        for combine_attrs, expected in expected_dict.items():
             result = combine_nested(
                 datasets,
                 concat_dim=["dim1", "dim2"],
@@ -600,7 +600,7 @@ class TestNestedCombine:
                 compat="no_conflicts",
                 combine_attrs=combine_attrs,
             )
-            assert_identical(result, expected_dict[combine_attrs])
+            assert_identical(result, expected)
 
     def test_combine_nested_missing_data_new_dim(self):
         # Your data includes "time" and "station" dimensions, and each year's
