@@ -526,27 +526,26 @@ class Aligner(Generic[T_Alignable]):
 
         for key, aligned_idx in self.aligned_indexes.items():
             obj_idx = matching_indexes.get(key)
-            if obj_idx is not None:
-                if self.reindex[key]:
-                    indexers = obj_idx.reindex_like(aligned_idx, **self.reindex_kwargs)
-                    for dim, idxer in indexers.items():
-                        if dim in self.exclude_dims:
-                            raise AlignmentError(
-                                f"cannot reindex or align along dimension {dim!r} because "
-                                "it is explicitly excluded from alignment. This is likely caused by "
-                                "wrong results returned by the `reindex_like` method of this index:\n"
-                                f"{obj_idx!r}"
-                            )
-                        if dim in dim_pos_indexers and not np.array_equal(
-                            idxer, dim_pos_indexers[dim]
-                        ):
-                            raise AlignmentError(
-                                f"cannot reindex or align along dimension {dim!r} because "
-                                "of conflicting re-indexers returned by multiple indexes\n"
-                                f"first index: {obj_idx!r}\nsecond index: {dim_index[dim]!r}\n"
-                            )
-                        dim_pos_indexers[dim] = idxer
-                        dim_index[dim] = obj_idx
+            if obj_idx is not None and self.reindex[key]:
+                indexers = obj_idx.reindex_like(aligned_idx, **self.reindex_kwargs)
+                for dim, idxer in indexers.items():
+                    if dim in self.exclude_dims:
+                        raise AlignmentError(
+                            f"cannot reindex or align along dimension {dim!r} because "
+                            "it is explicitly excluded from alignment. This is likely caused by "
+                            "wrong results returned by the `reindex_like` method of this index:\n"
+                            f"{obj_idx!r}"
+                        )
+                    if dim in dim_pos_indexers and not np.array_equal(
+                        idxer, dim_pos_indexers[dim]
+                    ):
+                        raise AlignmentError(
+                            f"cannot reindex or align along dimension {dim!r} because "
+                            "of conflicting re-indexers returned by multiple indexes\n"
+                            f"first index: {obj_idx!r}\nsecond index: {dim_index[dim]!r}\n"
+                        )
+                    dim_pos_indexers[dim] = idxer
+                    dim_index[dim] = obj_idx
 
         return dim_pos_indexers
 

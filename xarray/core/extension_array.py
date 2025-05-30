@@ -66,6 +66,17 @@ def __extension_duck_array__where(
     return cast(T_ExtensionArray, pd.Series(x).where(condition, pd.Series(y)).array)
 
 
+@implements(np.reshape)
+def __extension_duck_array__reshape(
+    arr: T_ExtensionArray, shape: tuple
+) -> T_ExtensionArray:
+    if (shape[0] == len(arr) and len(shape) == 1) or shape == (-1,):
+        return arr
+    raise NotImplementedError(
+        f"Cannot reshape 1d-only pandas extension array to: {shape}"
+    )
+
+
 @dataclass(frozen=True)
 class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
     """NEP-18 compliant wrapper for pandas extension arrays.
@@ -108,10 +119,10 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
 
         args = tuple(replace_duck_with_extension_array(args))
         if func not in HANDLED_EXTENSION_ARRAY_FUNCTIONS:
-            return func(*args, **kwargs)
+            raise KeyError("Function not registered for pandas extension arrays.")
         res = HANDLED_EXTENSION_ARRAY_FUNCTIONS[func](*args, **kwargs)
         if is_extension_array_dtype(res):
-            return type(self)[type(res)](res)
+            return PandasExtensionArray(res)
         return res
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
