@@ -15,7 +15,7 @@ import hypothesis.extra.numpy as npst  # isort:skip
 import hypothesis.extra.pandas as pdst  # isort:skip
 import hypothesis.strategies as st  # isort:skip
 from hypothesis import given  # isort:skip
-from xarray.tests import requires_pyarrow
+from xarray.tests import has_pyarrow
 
 numeric_dtypes = st.one_of(
     npst.unsigned_integer_dtypes(endianness="="),
@@ -139,9 +139,6 @@ def test_roundtrip_pandas_dataframe_datetime(df) -> None:
     "extension_array",
     [
         pd.Categorical(["a", "b", "c"]),
-        pytest.param(
-            pd.array([1, 2, 3], dtype="int64[pyarrow]"), marks=requires_pyarrow
-        ),
         pd.array(["a", "b", "c"], dtype="string"),
         pd.arrays.IntervalArray(
             [pd.Interval(0, 1), pd.Interval(1, 5), pd.Interval(2, 6)]
@@ -151,8 +148,10 @@ def test_roundtrip_pandas_dataframe_datetime(df) -> None:
             pd.DatetimeIndex(["2023-01-01", "2023-01-02", "2023-01-03"], freq="D")
         ),
         np.array([1, 2, 3], dtype="int64"),
-    ],
-    ids=["cat", "pyarrow", "string", "interval", "timedelta", "datetime", "numpy"],
+    ]
+    + ([pd.array([1, 2, 3], dtype="int64[pyarrow]")] if has_pyarrow else []),
+    ids=["cat", "string", "interval", "timedelta", "datetime", "numpy"]
+    + (["pyarrow"] if has_pyarrow else []),
 )
 @pytest.mark.parametrize("is_index", [True, False])
 def test_roundtrip_1d_pandas_extension_array(extension_array, is_index) -> None:
