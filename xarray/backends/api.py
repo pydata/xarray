@@ -73,7 +73,7 @@ if TYPE_CHECKING:
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
         T_NetcdfEngine,
-        Literal["pydap", "zarr"],
+        Literal["pydap", "zarr"],  # noqa: PYI051
         type[BackendEntrypoint],
         str,  # no nice typing support for custom backends
         None,
@@ -712,8 +712,8 @@ def open_dataset(
 def open_dataarray(
     filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     *,
-    engine: T_Engine | None = None,
-    chunks: T_Chunks | None = None,
+    engine: T_Engine = None,
+    chunks: T_Chunks = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
@@ -1428,7 +1428,7 @@ def open_mfdataset(
     | os.PathLike
     | ReadBuffer
     | NestedSequence[str | os.PathLike | ReadBuffer],
-    chunks: T_Chunks | None = None,
+    chunks: T_Chunks = None,
     concat_dim: (
         str
         | DataArray
@@ -1440,7 +1440,7 @@ def open_mfdataset(
     ) = None,
     compat: CompatOptions = "no_conflicts",
     preprocess: Callable[[Dataset], Dataset] | None = None,
-    engine: T_Engine | None = None,
+    engine: T_Engine = None,
     data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
     coords="different",
     combine: Literal["by_coords", "nested"] = "by_coords",

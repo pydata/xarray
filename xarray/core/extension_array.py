@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any, Generic, cast
@@ -65,6 +66,17 @@ def __extension_duck_array__where(
     return cast(T_ExtensionArray, pd.Series(x).where(condition, pd.Series(y)).array)
 
 
+@implements(np.reshape)
+def __extension_duck_array__reshape(
+    arr: T_ExtensionArray, shape: tuple
+) -> T_ExtensionArray:
+    if (shape[0] == len(arr) and len(shape) == 1) or shape == (-1,):
+        return arr
+    raise NotImplementedError(
+        f"Cannot reshape 1d-only pandas extension array to: {shape}"
+    )
+
+
 @dataclass(frozen=True)
 class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
     """NEP-18 compliant wrapper for pandas extension arrays.
@@ -100,10 +112,10 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
 
         args = tuple(replace_duck_with_extension_array(args))
         if func not in HANDLED_EXTENSION_ARRAY_FUNCTIONS:
-            return func(*args, **kwargs)
+            raise KeyError("Function not registered for pandas extension arrays.")
         res = HANDLED_EXTENSION_ARRAY_FUNCTIONS[func](*args, **kwargs)
         if is_extension_array_dtype(res):
-            return type(self)[type(res)](res)
+            return PandasExtensionArray(res)
         return res
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
@@ -148,4 +160,14 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
         # Thus, if we didn't have `super().__getattribute__("array")` this method would call `self.array` (i.e., `getattr(self, "array")`) again while looking for `__setstate__`
         # (which is apparently the first thing sought in copy.copy from the under-construction copied object),
         # which would cause a recursion error since `array` is not present on the object when it is being constructed during `__{deep}copy__`.
+        # Even though we have defined these two methods now below due to `test_extension_array_copy_arrow_type` (cause unknown)
+        # we leave this here as it more robust than self.array
         return getattr(super().__getattribute__("array"), attr)
+
+    def __copy__(self) -> PandasExtensionArray[T_ExtensionArray]:
+        return PandasExtensionArray(copy.copy(self.array))
+
+    def __deepcopy__(
+        self, memo: dict[int, Any] | None = None
+    ) -> PandasExtensionArray[T_ExtensionArray]:
+        return PandasExtensionArray(copy.deepcopy(self.array, memo=memo))
