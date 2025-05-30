@@ -96,7 +96,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
         # This does not use the UNSUPPORTED_EXTENSION_ARRAY_TYPES whitelist because
         # we do support extension arrays from datetime, for example, that need
         # duck array support internally via this class.
-        if isinstance(self.array, pd.arrays.NumpyExtensionArray):  # type: ignore[attr-defined]
+        if isinstance(self.array, pd.arrays.NumpyExtensionArray):
             raise TypeError(
                 "`NumpyExtensionArray` should be converted to a numpy array in `xarray` internally."
             )
