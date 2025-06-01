@@ -52,8 +52,7 @@ for more details.
 As a concrete example, here we write a tutorial dataset to Zarr and then
 re-open it directly with Zarr:
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
     import os
     import xarray as xr
@@ -67,8 +66,8 @@ re-open it directly with Zarr:
     print(zgroup.tree())
     dict(zgroup["Tair"].attrs)
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import shutil
 

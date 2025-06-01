@@ -221,12 +221,13 @@ performs the inverse transformation.
 
 In the following an example on how to use the coders ``decode`` method:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import xarray as xr
+    import numpy as np
 
-.. ipython:: python
+.. jupyter-execute::
 
     var = xr.Variable(
         dims=("x",), data=np.arange(10.0), attrs={"scale_factor": 10, "add_offset": 2}

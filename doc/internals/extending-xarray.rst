@@ -4,10 +4,11 @@
 Extending xarray using accessors
 ================================
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import xarray as xr
+    import numpy as np
 
 
 Xarray is designed as a general purpose library and hence tries to avoid
@@ -89,12 +90,12 @@ reasons:
 
 Back in an interactive IPython session, we can use these properties:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     exec(open("examples/_code/accessor_example.py").read())
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.Dataset({"longitude": np.linspace(0, 10), "latitude": np.linspace(0, 20)})
     ds.geo.center

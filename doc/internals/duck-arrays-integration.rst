@@ -70,10 +70,11 @@ To avoid duplicated information, this method must omit information about the sha
 :term:`dtype`. For example, the string representation of a ``dask`` array or a
 ``sparse`` matrix would be:
 
-.. ipython:: python
+.. jupyter-execute::
 
     import dask.array as da
     import xarray as xr
+    import numpy as np
     import sparse
 
     a = da.linspace(0, 1, 20, chunks=2)
