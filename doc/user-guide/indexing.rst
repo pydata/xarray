@@ -3,8 +3,8 @@
 Indexing and selecting data
 ===========================
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import numpy as np
     import pandas as pd
@@ -62,7 +62,7 @@ Indexing a :py:class:`~xarray.DataArray` directly works (mostly) just like it
 does for numpy arrays, except that the returned object is always another
 DataArray:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray(
         np.random.rand(4, 3),
@@ -87,7 +87,7 @@ Xarray also supports label-based indexing, just like pandas. Because
 we use a :py:class:`pandas.Index` under the hood, label based indexing is very
 fast. To do label based indexing, use the :py:attr:`~xarray.DataArray.loc` attribute:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.loc["2000-01-01":"2000-01-02", "IA"]
 
@@ -104,7 +104,7 @@ __ https://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-label
 
 Setting values with label based indexing is also supported:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.loc["2000-01-01", ["IL", "IN"]] = -10
     da
@@ -119,7 +119,7 @@ use them explicitly to slice data. There are two ways to do this:
 1. Use the :py:meth:`~xarray.DataArray.sel` and :py:meth:`~xarray.DataArray.isel`
    convenience methods:
 
-    .. ipython:: python
+    .. jupyter-execute::
 
         # index by integer array indices
         da.isel(space=0, time=slice(None, 2))
@@ -130,7 +130,7 @@ use them explicitly to slice data. There are two ways to do this:
 2. Use a dictionary as the argument for array positional or label based array
    indexing:
 
-    .. ipython:: python
+    .. jupyter-execute::
 
         # index by integer array indices
         da[dict(space=0, time=slice(None, 2))]
@@ -163,7 +163,7 @@ support ``method`` and ``tolerance`` keyword argument. The method parameter allo
 enabling nearest neighbor (inexact) lookups by use of the methods ``'pad'``,
 ``'backfill'`` or ``'nearest'``:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray([1, 2, 3], [("x", [0, 1, 2])])
     da.sel(x=[1.1, 1.9], method="nearest")
@@ -172,7 +172,7 @@ enabling nearest neighbor (inexact) lookups by use of the methods ``'pad'``,
 
 Tolerance limits the maximum distance for valid matches with an inexact lookup:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.reindex(x=[1.1, 1.5], method="nearest", tolerance=0.2)
 
@@ -189,14 +189,14 @@ However, you don't need to use ``method`` to do inexact slicing. Slicing
 already returns all values inside the range (inclusive), as long as the index
 labels are monotonic increasing:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.sel(x=slice(0.9, 3.1))
 
 Indexing axes with monotonic decreasing labels also works, as long as the
 ``slice`` or ``.loc`` arguments are also decreasing:
 
-.. ipython:: python
+.. jupyter-execute::
 
     reversed_da = da[::-1]
     reversed_da.loc[3.1:0.9]
@@ -216,7 +216,7 @@ Dataset indexing
 We can also use these methods to index all variables in a dataset
 simultaneously, returning a new dataset:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray(
         np.random.rand(4, 3),
@@ -233,7 +233,7 @@ Positional indexing on a dataset is not supported because the ordering of
 dimensions in a dataset is somewhat ambiguous (it can vary between different
 arrays). However, you can do normal indexing with dimension names:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds[dict(space=[0], time=[0])]
     ds.loc[dict(time="2000-01-01")]
@@ -244,7 +244,7 @@ Dropping labels and dimensions
 The :py:meth:`~xarray.Dataset.drop_sel` method returns a new object with the listed
 index labels along a dimension dropped:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.drop_sel(space=["IN", "IL"])
 
@@ -253,7 +253,7 @@ index labels along a dimension dropped:
 Use :py:meth:`~xarray.Dataset.drop_dims` to drop a full dimension from a Dataset.
 Any variables with these dimensions are also dropped:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.drop_dims("time")
 
@@ -267,7 +267,7 @@ However, it is sometimes useful to select an object with the same shape as the
 original data, but with some elements masked. To do this type of selection in
 xarray, use :py:meth:`~xarray.DataArray.where`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray(np.arange(16).reshape(4, 4), dims=["x", "y"])
     da.where(da.x + da.y < 4)
@@ -278,7 +278,7 @@ usual xarray broadcasting and alignment rules for binary operations (e.g.,
 ``+``) between the object being indexed and the condition, as described in
 :ref:`compute`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.where(da.y < 2)
 
@@ -287,7 +287,7 @@ where the selected data size is much smaller than the original data,
 use of the option ``drop=True`` clips coordinate
 elements that are fully masked:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.where(da.y < 2, drop=True)
 
@@ -300,7 +300,7 @@ To check whether elements of an xarray object contain a single object, you can
 compare with the equality operator ``==`` (e.g., ``arr == 3``). To check
 multiple values, use :py:meth:`~xarray.DataArray.isin`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray([1, 2, 3, 4, 5], dims=["x"])
     da.isin([2, 4])
@@ -309,7 +309,7 @@ multiple values, use :py:meth:`~xarray.DataArray.isin`:
 :py:meth:`~xarray.DataArray.where` to support indexing by arrays that are not
 already labels of an array:
 
-.. ipython:: python
+.. jupyter-execute::
 
     lookup = xr.DataArray([-1, -2, -3, -4, -5], dims=["x"])
     da.where(lookup.isin([-2, -4]), drop=True)
@@ -332,7 +332,7 @@ understood as orthogonally. Each indexer component selects independently along
 the corresponding dimension, similar to how vector indexing works in Fortran or
 MATLAB, or after using the :py:func:`numpy.ix_` helper:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray(
         np.arange(12).reshape((3, 4)),
@@ -347,7 +347,7 @@ as indexers.
 Dimensions on resultant arrays are given by the ordered union of the indexers'
 dimensions:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ind_x = xr.DataArray([0, 1], dims=["x"])
     ind_y = xr.DataArray([0, 1], dims=["y"])
@@ -356,7 +356,7 @@ dimensions:
 Slices or sequences/arrays without named-dimensions are treated as if they have
 the same dimension which is indexed along:
 
-.. ipython:: python
+.. jupyter-execute::
 
     # Because [0, 1] is used to index along dimension 'x',
     # it is assumed to have dimension 'x'
@@ -366,7 +366,7 @@ Furthermore, you can use multi-dimensional :py:meth:`~xarray.DataArray`
 as indexers, where the resultant array dimension is also determined by
 indexers' dimension:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ind = xr.DataArray([[0, 1], [0, 1]], dims=["a", "b"])
     da[ind]
@@ -380,7 +380,7 @@ See :ref:`indexing.rules` for the complete specification.
 
 Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ind = xr.DataArray([[0, 1], [0, 1]], dims=["a", "b"])
     da.isel(y=ind)  # same as da[:, ind]
@@ -390,7 +390,7 @@ Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
 
 These methods may also be applied to ``Dataset`` objects
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = da.to_dataset(name="bar")
     ds.isel(x=xr.DataArray([0, 1, 2], dims=["points"]))
@@ -405,7 +405,7 @@ of the closest latitude and longitude are renamed to an output
 dimension named "points":
 
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.tutorial.open_dataset("air_temperature")
 
@@ -440,7 +440,7 @@ Assigning values with indexing
 To select and assign values to a portion of a :py:meth:`~xarray.DataArray` you
 can use indexing with ``.loc`` :
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.tutorial.open_dataset("air_temperature")
 
@@ -459,7 +459,7 @@ can use indexing with ``.loc`` :
 
 or :py:meth:`~xarray.where`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     # modify one grid point using xr.where()
     ds["empty"] = xr.where(
@@ -479,7 +479,7 @@ or :py:meth:`~xarray.where`:
 
 Vectorized indexing can also be used to assign values to xarray object.
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray(
         np.arange(12).reshape((3, 4)),
@@ -500,7 +500,7 @@ Vectorized indexing can also be used to assign values to xarray object.
 
 Like ``numpy.ndarray``, value assignment sometimes works differently from what one may expect.
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray([0, 1, 2, 3], dims=["x"])
     ind = xr.DataArray([0, 0, 0], dims=["x"])
@@ -539,7 +539,7 @@ __ https://numpy.org/doc/stable/user/basics.indexing.html#assigning-values-to-in
 
   Assigning values with the chained indexing using ``.sel`` or ``.isel`` fails silently.
 
-  .. ipython:: python
+  .. jupyter-execute::
 
       da = xr.DataArray([0, 1, 2, 3], dims=["x"])
       # DO NOT do this
@@ -548,8 +548,8 @@ __ https://numpy.org/doc/stable/user/basics.indexing.html#assigning-values-to-in
 
 You can also assign values to all variables of a :py:class:`Dataset` at once:
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
+
 
     ds_org = xr.tutorial.open_dataset("eraint_uvz").isel(
         latitude=slice(56, 59), longitude=slice(255, 258), level=0
@@ -584,7 +584,7 @@ More advanced indexing
 The use of :py:meth:`~xarray.DataArray` objects as indexers enables very
 flexible indexing. The following is an example of the pointwise indexing:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray(np.arange(56).reshape((7, 8)), dims=["x", "y"])
     da
@@ -597,7 +597,7 @@ and mapped along a new dimension ``z``.
 If you want to add a coordinate to the new dimension ``z``,
 you can supply a :py:class:`~xarray.DataArray` with a coordinate,
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.isel(
         x=xr.DataArray([0, 1, 6], dims="z", coords={"z": ["a", "b", "c"]}),
@@ -607,7 +607,7 @@ you can supply a :py:class:`~xarray.DataArray` with a coordinate,
 Analogously, label-based pointwise-indexing is also possible by the ``.sel``
 method:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray(
         np.random.rand(4, 3),
@@ -638,14 +638,14 @@ useful for greater control and for increased performance.
 
 To reindex a particular dimension, use :py:meth:`~xarray.DataArray.reindex`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.reindex(space=["IA", "CA"])
 
 The :py:meth:`~xarray.DataArray.reindex_like` method is a useful shortcut.
 To demonstrate, we will make a subset DataArray with new values:
 
-.. ipython:: python
+.. jupyter-execute::
 
     foo = da.rename("foo")
     baz = (10 * da[:2, :2]).rename("baz")
@@ -654,21 +654,21 @@ To demonstrate, we will make a subset DataArray with new values:
 Reindexing ``foo`` with ``baz`` selects out the first two values along each
 dimension:
 
-.. ipython:: python
+.. jupyter-execute::
 
     foo.reindex_like(baz)
 
 The opposite operation asks us to reindex to a larger shape, so we fill in
 the missing values with ``NaN``:
 
-.. ipython:: python
+.. jupyter-execute::
 
     baz.reindex_like(foo)
 
 The :py:func:`~xarray.align` function lets us perform more flexible database-like
 ``'inner'``, ``'outer'``, ``'left'`` and ``'right'`` joins:
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.align(foo, baz, join="inner")
     xr.align(foo, baz, join="outer")
@@ -676,7 +676,7 @@ The :py:func:`~xarray.align` function lets us perform more flexible database-lik
 Both ``reindex_like`` and ``align`` work interchangeably between
 :py:class:`~xarray.DataArray` and :py:class:`~xarray.Dataset` objects, and with any number of matching dimension names:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds
     ds.reindex_like(baz)
@@ -693,7 +693,7 @@ Coordinate labels for each dimension are optional (as of xarray v0.9). Label
 based indexing with ``.sel`` and ``.loc`` uses standard positional,
 integer-based indexing as a fallback for dimensions without a coordinate label:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray([1, 2, 3], dims="x")
     da.sel(x=[0, -1])
@@ -715,7 +715,7 @@ Xarray uses the :py:class:`pandas.Index` internally to perform indexing
 operations.  If you need to access the underlying indexes, they are available
 through the :py:attr:`~xarray.DataArray.indexes` attribute.
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray(
         np.random.rand(4, 3),
@@ -732,7 +732,7 @@ Use :py:meth:`~xarray.DataArray.get_index` to get an index for a dimension,
 falling back to a default :py:class:`pandas.RangeIndex` if it has no coordinate
 labels:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray([1, 2, 3], dims="x")
     da
@@ -780,7 +780,7 @@ Just like pandas, advanced indexing on multi-level indexes is possible with
 i.e., a tuple of slices, labels, list of labels, or any selector allowed by
 pandas:
 
-.. ipython:: python
+.. jupyter-execute::
 
     midx = pd.MultiIndex.from_product([list("abc"), [0, 1]], names=("one", "two"))
     mda = xr.DataArray(np.random.rand(6, 3), [("x", midx), ("y", range(3))])
@@ -790,20 +790,20 @@ pandas:
 You can also select multiple elements by providing a list of labels or tuples or
 a slice of tuples:
 
-.. ipython:: python
+.. jupyter-execute::
 
     mda.sel(x=[("a", 0), ("b", 1)])
 
 Additionally, xarray supports dictionaries:
 
-.. ipython:: python
+.. jupyter-execute::
 
     mda.sel(x={"one": "a", "two": 0})
 
 For convenience, ``sel`` also accepts multi-index levels directly
 as keyword arguments:
 
-.. ipython:: python
+.. jupyter-execute::
 
     mda.sel(one="a", two=0)
 
@@ -815,7 +815,7 @@ Like pandas, xarray handles partial selection on multi-index (level drop).
 As shown below, it also renames the dimension / coordinate when the
 multi-index is reduced to a single index.
 
-.. ipython:: python
+.. jupyter-execute::
 
     mda.loc[{"one": "a"}, ...]
 

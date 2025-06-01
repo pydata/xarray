@@ -8,8 +8,8 @@ Xarray supports direct serialization and IO to several file formats, from
 simple :ref:`io.pickle` files to the more flexible :ref:`io.netcdf`
 format (recommended).
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import os
 
@@ -125,7 +125,7 @@ __ https://github.com/Unidata/netcdf4-python
 We can save a Dataset to disk using the
 :py:meth:`Dataset.to_netcdf` method:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 5))},
@@ -153,13 +153,13 @@ the ``format`` and ``engine`` arguments.
 We can load netCDF files to create a new Dataset using
 :py:func:`open_dataset`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds_disk = xr.open_dataset("saved_on_disk.nc")
     ds_disk
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     # Close "saved_on_disk.nc", but retain the file until after closing or deleting other
     # datasets that will refer to it.
@@ -209,7 +209,7 @@ is modified: the original file on disk is never touched.
 Datasets have a :py:meth:`Dataset.close` method to close the associated
 netCDF file. However, it's often cleaner to use a ``with`` statement:
 
-.. ipython:: python
+.. jupyter-execute::
 
     # this automatically closes the dataset after use
     with xr.open_dataset("saved_on_disk.nc") as ds:
@@ -283,7 +283,7 @@ You can view this encoding information (among others) in the
 :py:attr:`DataArray.encoding` and
 :py:attr:`DataArray.encoding` attributes:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds_disk["y"].encoding
     ds_disk.encoding
@@ -295,7 +295,7 @@ In some cases it is useful to intentionally reset a dataset's original encoding 
 This can be done with either the :py:meth:`Dataset.drop_encoding` or
 :py:meth:`DataArray.drop_encoding` methods.
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds_no_encoding = ds_disk.drop_encoding()
     ds_no_encoding.encoding
@@ -594,7 +594,7 @@ with ``conda install h5netcdf``. Once installed we can use xarray to open HDF5 f
 The similarities between HDF5 and netCDF4 mean that HDF5 data can be written with the
 same :py:meth:`Dataset.to_netcdf` method as used for netCDF4 data:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 5))},
@@ -655,13 +655,13 @@ To write a dataset with zarr, we use the :py:meth:`Dataset.to_zarr` method.
 
 To write to a local directory, we pass a path to a directory:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     ! rm -rf path/to/directory.zarr
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
+
 
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 5))},
@@ -697,8 +697,7 @@ To store variable length strings, convert them to object arrays first with
 To read back a zarr dataset that has been created this way, we use the
 :py:func:`open_zarr` method:
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
     ds_zarr = xr.open_zarr("path/to/directory.zarr")
     ds_zarr
@@ -767,13 +766,13 @@ without writing all of its array data. This can be done by first creating a
 ``to_zarr`` with ``compute=False`` to write only metadata (including ``attrs``)
 to Zarr:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     ! rm -rf path/to/directory.zarr
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
+
 
     import dask.array
 
@@ -792,7 +791,7 @@ correct alignment of the new data with the existing dimensions, or as an
 explicit mapping from dimension names to Python ``slice`` objects indicating
 where the data should be written (in index space, not label space), e.g.,
 
-.. ipython:: python
+.. jupyter-execute::
 
     # For convenience, we'll slice a single dataset, but in the real use-case
     # we would create them separately possibly even from separate processes.
@@ -815,24 +814,23 @@ Zarr Compressors and Filters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are many different `options for compression and filtering possible with
-zarr <https://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
+zarr <https://zarr.readthedocs.io/en/stable/user-guide/arrays.html#compressors>`_.
 
 These options can be passed to the ``to_zarr`` method as variable encoding.
 For example:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     ! rm -rf foo.zarr
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
     import zarr
-    from numcodecs.blosc import Blosc
+    from zarr.codecs import BloscCodec
 
-    compressor = Blosc(cname="zstd", clevel=3, shuffle=2)
-    ds.to_zarr("foo.zarr", encoding={"foo": {"compressor": compressor}})
+    compressor = BloscCodec(cname="zstd", clevel=3, shuffle="shuffle")
+    ds.to_zarr("foo.zarr", encoding={"foo": {"compressors": [compressor]}})
 
 .. note::
 
@@ -871,13 +869,13 @@ To resize and then append values along an existing dimension in a store, set
 ``append_dim``. This is a good option if data always arrives in a particular
 order, e.g., for time-stepping a simulation:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     ! rm -rf path/to/directory.zarr
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
+
 
     ds1 = xr.Dataset(
         {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
@@ -932,7 +930,7 @@ For example, let's say we're working with a dataset with dimensions
 ``('time', 'x', 'y')``, a variable ``Tair`` which is chunked in ``x`` and ``y``,
 and two multi-dimensional coordinates ``xc`` and ``yc``:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.tutorial.open_dataset("rasm")
 
@@ -944,8 +942,8 @@ These multi-dimensional coordinates are only two-dimensional and take up very li
 space on disk or in memory, yet when writing to disk the default zarr behavior is to
 split them into chunks:
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
+
 
     ds.to_zarr("path/to/directory.zarr", mode="w")
     ! ls -R path/to/directory.zarr
@@ -953,14 +951,14 @@ split them into chunks:
 
 This may cause unwanted overhead on some systems, such as when reading from a cloud
 storage provider. To disable this chunking, we can specify a chunk size equal to the
-length of each dimension by using the shorthand chunk size ``-1``:
+length of each dimension by using the shorthand chunk size ``None``:
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
+
 
     ds.to_zarr(
         "path/to/directory.zarr",
-        encoding={"xc": {"chunks": (-1, -1)}, "yc": {"chunks": (-1, -1)}},
+        encoding={"xc": {"chunks": None}, "yc": {"chunks": None}},
         mode="w",
     )
     ! ls -R path/to/directory.zarr
@@ -1068,7 +1066,8 @@ You can view the whole dataset with from this combined reference using the above
 
 The following example shows opening a combined references generated from a ``.hdf`` file stored locally.
 
-.. ipython:: python
+.. jupyter-execute::
+    :raises:
 
     storage_options = {
         "target_protocol": "file",
@@ -1104,7 +1103,7 @@ DataArray ``to_iris`` and ``from_iris``
 If iris is installed, xarray can convert a ``DataArray`` into a ``Cube`` using
 :py:meth:`DataArray.to_iris`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray(
         np.random.rand(4, 5),
@@ -1118,7 +1117,7 @@ If iris is installed, xarray can convert a ``DataArray`` into a ``Cube`` using
 Conversely, we can create a new ``DataArray`` object from a ``Cube`` using
 :py:meth:`DataArray.from_iris`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da_cube = xr.DataArray.from_iris(cube)
     da_cube
@@ -1132,16 +1131,14 @@ using actual disk files.
 
 For example:
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
     ds = xr.tutorial.open_dataset("air_temperature_gradient")
     cubes = ncdata.iris_xarray.cubes_from_xarray(ds)
     print(cubes)
     print(cubes[1])
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
     ds = ncdata.iris_xarray.cubes_to_xarray(cubes)
     print(ds)
@@ -1168,17 +1165,6 @@ For example, we can open a connection to GBs of weather data produced by the
 __ https://www.prism.oregonstate.edu/
 __ https://iri.columbia.edu/
 
-.. ipython source code for this section
-   we don't use this to avoid hitting the DAP server on every doc build.
-
-   remote_data = xr.open_dataset(
-       'http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods',
-       decode_times=False)
-   tmax = remote_data.tmax[:500, ::3, ::3]
-   tmax
-
-   @savefig opendap-prism-tmax.png
-   tmax[0].plot()
 
 .. ipython::
     :verbatim:
@@ -1292,7 +1278,7 @@ Pickle
 The simplest way to serialize an xarray object is to use Python's built-in pickle
 module:
 
-.. ipython:: python
+.. jupyter-execute::
 
     import pickle
 
@@ -1327,7 +1313,7 @@ Dictionary
 We can convert a ``Dataset`` (or a ``DataArray``) to a dict using
 :py:meth:`Dataset.to_dict`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.Dataset({"foo": ("x", np.arange(30))})
     ds
@@ -1338,7 +1324,7 @@ We can convert a ``Dataset`` (or a ``DataArray``) to a dict using
 We can create a new xarray object from a dict using
 :py:meth:`Dataset.from_dict`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds_dict = xr.Dataset.from_dict(d)
     ds_dict
@@ -1351,12 +1337,12 @@ be quite large.
 To export just the dataset schema without the data itself, use the
 ``data=False`` option:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.to_dict(data=False)
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     # We're now done with the dataset named `ds`.  Although the `with` statement closed
     # the dataset, displaying the unpickled pickle of `ds` re-opened "saved_on_disk.nc".
@@ -1424,8 +1410,8 @@ GDAL readable raster data using `rasterio`_  such as GeoTIFFs can be opened usin
 
 .. _io.cfgrib:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import shutil
 

@@ -11,8 +11,8 @@ Accordingly, we've copied many of features that make working with time-series
 data in pandas such a joy to xarray. In most cases, we rely on pandas for the
 core functionality.
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import numpy as np
     import pandas as pd
@@ -30,7 +30,7 @@ data, which offer vectorized operations with numpy and smooth integration with p
 To convert to or create regular arrays of :py:class:`numpy.datetime64` data, we recommend
 using :py:func:`pandas.to_datetime`, :py:class:`pandas.DatetimeIndex`, or :py:func:`xarray.date_range`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     pd.to_datetime(["2000-01-01", "2000-02-02"])
     pd.DatetimeIndex(
@@ -51,7 +51,7 @@ using :py:func:`pandas.to_datetime`, :py:class:`pandas.DatetimeIndex`, or :py:fu
 Alternatively, you can supply arrays of Python ``datetime`` objects. These get
 converted automatically when used as arguments in xarray objects (with us-resolution):
 
-.. ipython:: python
+.. jupyter-execute::
 
     import datetime
 
@@ -78,7 +78,7 @@ attribute like ``'days since 2000-01-01'``).
 You can manual decode arrays in this form by passing a dataset to
 :py:func:`decode_cf`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     attrs = {"units": "hours since 2000-01-01"}
     ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
@@ -101,7 +101,7 @@ This allows for several useful and succinct forms of indexing, particularly for
 ``datetime64`` data. For example, we support indexing with strings for single
 items and with the ``slice`` object:
 
-.. ipython:: python
+.. jupyter-execute::
 
     time = pd.date_range("2000-01-01", freq="h", periods=365 * 24)
     ds = xr.Dataset({"foo": ("time", np.arange(365 * 24)), "time": time})
@@ -111,7 +111,7 @@ items and with the ``slice`` object:
 You can also select a particular time by indexing with a
 :py:class:`datetime.time` object:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.sel(time=datetime.time(12))
 
@@ -127,7 +127,7 @@ given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
 
 .. _pandas accessors: https://pandas.pydata.org/pandas-docs/stable/basics.html#basics-dt-accessors
 
-.. ipython:: python
+.. jupyter-execute::
 
     time = pd.date_range("2000-01-01", freq="6h", periods=365 * 4)
     ds = xr.Dataset({"foo": ("time", np.arange(365 * 4)), "time": time})
@@ -144,7 +144,7 @@ and "quarter":
 
 __ https://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds["time.month"]
     ds["time.dayofyear"]
@@ -152,7 +152,7 @@ __ https://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
 For use as a derived coordinate, xarray adds ``'season'`` to the list of
 datetime components supported by pandas:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds["time.season"]
     ds["time"].dt.season
@@ -166,7 +166,7 @@ In addition, xarray supports rounding operations ``floor``, ``ceil``, and ``roun
 
 __ https://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds["time"].dt.floor("D")
 
@@ -175,7 +175,7 @@ for arrays utilising the same formatting as the standard `datetime.strftime`_.
 
 .. _datetime.strftime: https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds["time"].dt.strftime("%a, %b %d %H:%M")
 
@@ -185,13 +185,13 @@ Indexing Using Datetime Components
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 You can use use the ``.dt`` accessor when subsetting your data as well. For example, we can subset for the month of January using the following:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.isel(time=(ds.time.dt.month == 1))
 
 You can also search for multiple months (in this case January through March), using ``isin``:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.isel(time=ds.time.dt.month.isin([1, 2, 3]))
 
@@ -209,7 +209,7 @@ Resampling and grouped operations
 Datetime components couple particularly well with grouped operations for analyzing features that repeat over time.
 Here's how to calculate the mean by time of day:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.groupby("time.hour").mean()
 
@@ -222,7 +222,7 @@ same api as :py:meth:`pandas.DataFrame.resample` `in pandas`_.
 
 For example, we can downsample our dataset from hourly to 6-hourly:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.resample(time="6h")
 
@@ -230,14 +230,14 @@ This will create a specialized :py:class:`~xarray.core.resample.DatasetResample`
 object which saves information necessary for resampling. All of the reduction methods which work with
 :py:class:`Dataset` or :py:class:`DataArray` objects can also be used for resampling:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.resample(time="6h").mean()
 
 You can also supply an arbitrary reduction function to aggregate over each
 resampling group:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.resample(time="6h").reduce(np.mean)
 
@@ -257,7 +257,7 @@ In order to limit the scope of the methods ``ffill``, ``bfill``, ``pad`` and
 ``nearest`` the ``tolerance`` argument can be set in coordinate units.
 Data that has indices outside of the given ``tolerance`` are set to ``NaN``.
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.resample(time="1h").nearest(tolerance="1h")
 
@@ -265,7 +265,7 @@ It is often desirable to center the time values after a resampling operation.
 That can be accomplished by updating the resampled dataset time coordinate values
 using time offset arithmetic via the :py:func:`pandas.tseries.frequencies.to_offset` function.
 
-.. ipython:: python
+.. jupyter-execute::
 
     resampled_ds = ds.resample(time="6h").mean()
     offset = pd.tseries.frequencies.to_offset("6h") / 2
@@ -292,7 +292,7 @@ Quite commonly one wants more flexibility in defining seasons. For these use-cas
 
 .. currentmodule:: xarray.groupers
 
-.. ipython:: python
+.. jupyter-execute::
 
     from xarray.groupers import SeasonGrouper
 
@@ -302,28 +302,28 @@ Quite commonly one wants more flexibility in defining seasons. For these use-cas
 Note how the seasons are in the specified order, unlike ``.groupby("time.season")`` where the
 seasons are sorted alphabetically.
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.groupby("time.season").mean()
 
 
 :py:class:`SeasonGrouper` supports overlapping seasons:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.groupby(time=SeasonGrouper(["DJFM", "MAMJ", "JJAS", "SOND"])).mean()
 
 
 Skipping months is allowed:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.groupby(time=SeasonGrouper(["JJAS"])).mean()
 
 
 Use :py:class:`SeasonResampler` to specify custom seasons.
 
-.. ipython:: python
+.. jupyter-execute::
 
     from xarray.groupers import SeasonResampler
 
@@ -335,7 +335,7 @@ span the end of the year (e.g. DJF). By default :py:class:`SeasonResampler` will
 season that is incomplete (e.g. the first DJF season for a time series that starts in Jan).
 Pass the ``drop_incomplete=False`` kwarg to :py:class:`SeasonResampler` to disable this behaviour.
 
-.. ipython:: python
+.. jupyter-execute::
 
     from xarray.groupers import SeasonResampler
 
@@ -346,6 +346,6 @@ Pass the ``drop_incomplete=False`` kwarg to :py:class:`SeasonResampler` to disab
 
 Seasons need not be of the same length:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.resample(time=SeasonResampler(["JF", "MAM", "JJAS", "OND"])).mean()

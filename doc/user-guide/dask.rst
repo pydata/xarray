@@ -115,8 +115,8 @@ When reading data, Dask divides your dataset into smaller chunks. You can specif
 Loading Dask Arrays
 ~~~~~~~~~~~~~~~~~~~
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import os
 
@@ -148,7 +148,7 @@ There are a few common cases where you may want to convert lazy Dask arrays into
 
 To do this, you can use :py:meth:`Dataset.compute` or :py:meth:`DataArray.compute`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.compute()
 
@@ -171,7 +171,7 @@ You can also access :py:attr:`DataArray.values`, which will always be a NumPy ar
 NumPy ufuncs like :py:func:`numpy.sin` transparently work on all xarray objects, including those
 that store lazy Dask arrays:
 
-.. ipython:: python
+.. jupyter-execute::
 
     import numpy as np
 
@@ -347,7 +347,7 @@ Functions that consume and return Xarray objects can be easily applied in parall
 Your function will receive an Xarray Dataset or DataArray subset to one chunk
 along each chunked dimension.
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.temperature
 
@@ -356,7 +356,7 @@ At compute time, a function applied with :py:func:`map_blocks` will receive a Da
 (time x latitude x longitude) with values loaded. The following snippet illustrates how to check the shape of the object
 received by the applied function.
 
-.. ipython:: python
+.. jupyter-execute::
 
     def func(da):
         print(da.sizes)
@@ -375,7 +375,7 @@ work for your function, provide the ``template`` kwarg (see :ref:`below <templat
 
 In this case, automatic inference has worked so let's check that the result is as expected.
 
-.. ipython:: python
+.. jupyter-execute::
 
     mapped.load(scheduler="single-threaded")
     mapped.identical(ds.time)
@@ -387,8 +387,8 @@ the returned result is identical to ``ds.time`` as expected.
 
 Here is a common example where automated inference will not work.
 
-.. ipython:: python
-    :okexcept:
+.. jupyter-execute::
+    :raises:
 
     def func(da):
         print(da.sizes)
@@ -412,7 +412,7 @@ incur much memory cost.
     ``attrs`` set in ``func`` will be ignored.
 
 
-.. ipython:: python
+.. jupyter-execute::
 
     template = ds.temperature.isel(time=[1, 11, 21])
     mapped = xr.map_blocks(func, ds.temperature, template=template)
@@ -421,7 +421,7 @@ incur much memory cost.
 Notice that the 0-shaped sizes were not printed to screen. Since ``template`` has been provided
 :py:func:`map_blocks` does not need to infer it by running ``func`` on 0-shaped inputs.
 
-.. ipython:: python
+.. jupyter-execute::
 
     mapped.identical(template)
 
@@ -429,7 +429,7 @@ Notice that the 0-shaped sizes were not printed to screen. Since ``template`` ha
 :py:func:`map_blocks` also allows passing ``args`` and ``kwargs`` down to the user function ``func``.
 ``func`` will be executed as ``func(block_xarray, *args, **kwargs)`` so ``args`` must be a list and ``kwargs`` must be a dictionary.
 
-.. ipython:: python
+.. jupyter-execute::
 
     def func(obj, a, b=0):
         return obj + a + b
@@ -439,8 +439,8 @@ Notice that the 0-shaped sizes were not printed to screen. Since ``template`` ha
     expected = ds + 10 + 10
     mapped.identical(expected)
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     ds.close()  # Closes "example-data.nc".
     os.remove("example-data.nc")

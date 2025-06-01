@@ -3,8 +3,8 @@
 Hierarchical data
 =================
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import numpy as np
     import pandas as pd
@@ -54,7 +54,7 @@ Here we go into more detail about how to create a tree node-by-node, using a fam
 
 Let's start by defining nodes representing the two siblings, Bart and Lisa Simpson:
 
-.. ipython:: python
+.. jupyter-execute::
 
     bart = xr.DataTree(name="Bart")
     lisa = xr.DataTree(name="Lisa")
@@ -62,27 +62,27 @@ Let's start by defining nodes representing the two siblings, Bart and Lisa Simps
 Each of these node objects knows their own :py:class:`~xarray.DataTree.name`, but they currently have no relationship to one another.
 We can connect them by creating another node representing a common parent, Homer Simpson:
 
-.. ipython:: python
+.. jupyter-execute::
 
     homer = xr.DataTree(name="Homer", children={"Bart": bart, "Lisa": lisa})
 
 Here we set the children of Homer in the node's constructor.
 We now have a small family tree
 
-.. ipython:: python
+.. jupyter-execute::
 
     homer
 
 where we can see how these individual Simpson family members are related to one another.
 The nodes representing Bart and Lisa are now connected - we can confirm their sibling rivalry by examining the :py:class:`~xarray.DataTree.siblings` property:
 
-.. ipython:: python
+.. jupyter-execute::
 
     list(homer["Bart"].siblings)
 
 But oops, we forgot Homer's third daughter, Maggie! Let's add her by updating Homer's :py:class:`~xarray.DataTree.children` property to include her:
 
-.. ipython:: python
+.. jupyter-execute::
 
     maggie = xr.DataTree(name="Maggie")
     homer.children = {"Bart": bart, "Lisa": lisa, "Maggie": maggie}
@@ -90,7 +90,7 @@ But oops, we forgot Homer's third daughter, Maggie! Let's add her by updating Ho
 
 Let's check that Maggie knows who her Dad is:
 
-.. ipython:: python
+.. jupyter-execute::
 
     maggie.parent.name
 
@@ -103,20 +103,20 @@ That's good - updating the properties of our nodes does not break the internal c
 
 Homer is currently listed as having no parent (the so-called "root node" of this tree), but we can update his :py:class:`~xarray.DataTree.parent` property:
 
-.. ipython:: python
+.. jupyter-execute::
 
     abe = xr.DataTree(name="Abe")
     abe.children = {"Homer": homer}
 
 Abe is now the "root" of this tree, which we can see by examining the :py:class:`~xarray.DataTree.root` property of any node in the tree
 
-.. ipython:: python
+.. jupyter-execute::
 
     maggie.root.name
 
 We can see the whole tree by printing Abe's node or just part of the tree by printing Homer's node:
 
-.. ipython:: python
+.. jupyter-execute::
 
     abe
     abe["Homer"]
@@ -125,7 +125,7 @@ We can see the whole tree by printing Abe's node or just part of the tree by pri
 In episode 28, Abe Simpson reveals that he had another son, Herbert "Herb" Simpson.
 We can add Herbert to the family tree without displacing Homer by :py:meth:`~xarray.DataTree.assign`-ing another child to Abe:
 
-.. ipython:: python
+.. jupyter-execute::
 
     herbert = xr.DataTree(name="Herb")
     abe = abe.assign({"Herbert": herbert})
@@ -145,8 +145,8 @@ Certain manipulations of our tree are forbidden, if they would create an inconsi
 In episode 51 of the show Futurama, Philip J. Fry travels back in time and accidentally becomes his own Grandfather.
 If we try similar time-travelling hijinks with Homer, we get a :py:class:`~xarray.InvalidTreeError` raised:
 
-.. ipython:: python
-    :okexcept:
+.. jupyter-execute::
+    :raises:
 
     abe["Homer"].children = {"Abe": abe}
 
@@ -157,7 +157,7 @@ Ancestry in an Evolutionary Tree
 
 Let's use a different example of a tree to discuss more complex relationships between nodes - the phylogenetic tree, or tree of life.
 
-.. ipython:: python
+.. jupyter-execute::
 
     vertebrates = xr.DataTree.from_dict(
         {
@@ -180,7 +180,7 @@ Let's use a different example of a tree to discuss more complex relationships be
 We have used the :py:meth:`~xarray.DataTree.from_dict` constructor method as a preferred way to quickly create a whole tree,
 and :ref:`filesystem paths` (to be explained shortly) to select two nodes of interest.
 
-.. ipython:: python
+.. jupyter-execute::
 
     vertebrates
 
@@ -191,7 +191,7 @@ Here both the species and the features used to group them are represented by :py
 We can however get a list of only the nodes we used to represent species by using the fact that all those nodes have no children - they are "leaf nodes".
 We can check if a node is a leaf with :py:meth:`~xarray.DataTree.is_leaf`, and get a list of all leaves with the :py:class:`~xarray.DataTree.leaves` property:
 
-.. ipython:: python
+.. jupyter-execute::
 
     primates.is_leaf
     [node.name for node in vertebrates.leaves]
@@ -200,7 +200,7 @@ Pretending that this is a true evolutionary tree for a moment, we can find the f
 the distinguishing feature of the common ancestor of all vertebrate life (the root node),
 and even the distinguishing feature of the common ancestor of any two species (the common ancestor of two nodes):
 
-.. ipython:: python
+.. jupyter-execute::
 
     [node.name for node in reversed(primates.parents)]
     primates.root.name
@@ -210,8 +210,8 @@ We can only find a common ancestor between two nodes that lie in the same tree.
 If we try to find the common evolutionary ancestor between primates and an Alien species that has no relationship to Earth's evolutionary tree,
 an error will be raised.
 
-.. ipython:: python
-    :okexcept:
+.. jupyter-execute::
+    :raises:
 
     alien = xr.DataTree(name="Xenomorph")
     primates.find_common_ancestor(alien)
@@ -229,7 +229,7 @@ Properties
 
 We can navigate trees using the :py:class:`~xarray.DataTree.parent` and :py:class:`~xarray.DataTree.children` properties of each node, for example:
 
-.. ipython:: python
+.. jupyter-execute::
 
     lisa.parent.children["Bart"].name
 
@@ -244,7 +244,7 @@ In general :py:class:`~xarray.DataTree.DataTree` objects support almost the enti
 including :py:meth:`~xarray.DataTree.keys`, :py:class:`~xarray.DataTree.values`, :py:class:`~xarray.DataTree.items`,
 :py:meth:`~xarray.DataTree.__delitem__` and :py:meth:`~xarray.DataTree.update`.
 
-.. ipython:: python
+.. jupyter-execute::
 
     vertebrates["Bony Skeleton"]["Ray-finned Fish"]
 
@@ -252,7 +252,7 @@ Note that the dict-like interface combines access to child :py:class:`~xarray.Da
 so if we have a node that contains both children and data, calling :py:meth:`~xarray.DataTree.keys` will list both names of child nodes and
 names of data variables:
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt = xr.DataTree(
         dataset=xr.Dataset({"foo": 0, "bar": 1}),
@@ -268,7 +268,7 @@ Attribute-like access
 
 You can also select both variables and child nodes through dot indexing
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt.foo
     dt.a
@@ -295,7 +295,7 @@ This is an extension of the conventional dictionary ``__getitem__`` syntax to al
 
 Like with filepaths, paths within the tree can either be relative to the current node, e.g.
 
-.. ipython:: python
+.. jupyter-execute::
 
     abe["Homer/Bart"].name
     abe["./Homer/Bart"].name  # alternative syntax
@@ -306,7 +306,7 @@ A path specified from the root (as opposed to being specified relative to an arb
 or as an "absolute path".
 The root node is referred to by ``"/"``, so the path from the root node to its grand-child would be ``"/child/grandchild"``, e.g.
 
-.. ipython:: python
+.. jupyter-execute::
 
     # access lisa's sibling by a relative path.
     lisa["../Bart"]
@@ -317,14 +317,14 @@ The root node is referred to by ``"/"``, so the path from the root node to its g
 Relative paths between nodes also support the ``"../"`` syntax to mean the parent of the current node.
 We can use this with ``__setitem__`` to add a missing entry to our evolutionary tree, but add it relative to a more familiar node of interest:
 
-.. ipython:: python
+.. jupyter-execute::
 
     primates["../../Two Fenestrae/Crocodiles"] = xr.DataTree()
     print(vertebrates)
 
 Given two nodes in a tree, we can also find their relative path:
 
-.. ipython:: python
+.. jupyter-execute::
 
     bart.relative_to(lisa)
 
@@ -332,7 +332,7 @@ You can use this filepath feature to build a nested tree from a dictionary of fi
 If we have a dictionary where each key is a valid path, and each value is either valid data or ``None``,
 we can construct a complex tree quickly using the alternative constructor :py:meth:`~xarray.DataTree.from_dict()`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     d = {
         "/": xr.Dataset({"foo": "orange"}),
@@ -357,7 +357,7 @@ Iterating over trees
 You can iterate over every node in a tree using the subtree :py:class:`~xarray.DataTree.subtree` property.
 This returns an iterable of nodes, which yields them in depth-first order.
 
-.. ipython:: python
+.. jupyter-execute::
 
     for node in vertebrates.subtree:
         print(node.path)
@@ -372,7 +372,7 @@ For example, we could keep only the nodes containing data by looping over all no
 checking if they contain any data using :py:class:`~xarray.DataTree.has_data`,
 then rebuilding a new tree using only the paths of those nodes:
 
-.. ipython:: python
+.. jupyter-execute::
 
     non_empty_nodes = {
         path: node.dataset for path, node in dt.subtree_with_keys if node.has_data
@@ -396,7 +396,7 @@ We can subset our tree to select only nodes of interest in various ways.
 Similarly to on a real filesystem, matching nodes by common patterns in their paths is often useful.
 We can use :py:meth:`xarray.DataTree.match` for this:
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt = xr.DataTree.from_dict(
         {
@@ -414,7 +414,7 @@ We can also subset trees by the contents of the nodes.
 For example, we could recreate the Simpson's family tree with the ages of each individual, then filter for only the adults:
 First lets recreate the tree but with an ``age`` data variable in every node:
 
-.. ipython:: python
+.. jupyter-execute::
 
     simpsons = xr.DataTree.from_dict(
         {
@@ -431,7 +431,7 @@ First lets recreate the tree but with an ``age`` data variable in every node:
 
 Now let's filter out the minors:
 
-.. ipython:: python
+.. jupyter-execute::
 
     simpsons.filter(lambda node: node["age"] > 18)
 
@@ -454,7 +454,7 @@ You can check if a tree is a hollow tree by using the :py:class:`~xarray.DataTre
 We can see that the Simpson's family is not hollow because the data variable ``"age"`` is present at some nodes which
 have children (i.e. Abe and Homer).
 
-.. ipython:: python
+.. jupyter-execute::
 
     simpsons.is_hollow
 
@@ -471,7 +471,7 @@ Operations and Methods on Trees
 To show how applying operations across a whole tree at once can be useful,
 let's first create a example scientific dataset.
 
-.. ipython:: python
+.. jupyter-execute::
 
     def time_stamps(n_samples, T):
         """Create an array of evenly-spaced time stamps"""
@@ -523,7 +523,7 @@ let's first create a example scientific dataset.
 Most xarray computation methods also exist as methods on datatree objects,
 so you can for example take the mean value of these two timeseries at once:
 
-.. ipython:: python
+.. jupyter-execute::
 
     voltages.mean(dim="time")
 
@@ -532,8 +532,8 @@ tree one-by-one.
 
 The arguments passed to the method are used for every node, so the values of the arguments you pass might be valid for one node and invalid for another
 
-.. ipython:: python
-    :okexcept:
+.. jupyter-execute::
+    :raises:
 
     voltages.isel(time=12)
 
@@ -545,7 +545,7 @@ Arithmetic Methods on Trees
 Arithmetic methods are also implemented, so you can e.g. add a scalar to every dataset in the tree at once.
 For example, we can advance the timeline of the Simpsons by a decade just by
 
-.. ipython:: python
+.. jupyter-execute::
 
     simpsons + 10
 
@@ -565,14 +565,14 @@ and returns one (or more) xarray datasets.
 
 For example, we can define a function to calculate the Root Mean Square of a timeseries
 
-.. ipython:: python
+.. jupyter-execute::
 
     def rms(signal):
         return np.sqrt(np.mean(signal**2))
 
 Then calculate the RMS value of these signals:
 
-.. ipython:: python
+.. jupyter-execute::
 
     voltages.map_over_datasets(rms)
 
@@ -595,7 +595,7 @@ To iterate over the corresponding nodes in multiple trees, use
 :py:class:`~xarray.DataTree.subtree_with_keys`. This combines well with
 :py:meth:`xarray.DataTree.from_dict()` to build a new tree:
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt1 = xr.DataTree.from_dict({"a": xr.Dataset({"x": 1}), "b": xr.Dataset({"x": 2})})
     dt2 = xr.DataTree.from_dict(
@@ -609,7 +609,7 @@ To iterate over the corresponding nodes in multiple trees, use
 Alternatively, you apply a function directly to paired datasets at every node
 using :py:func:`xarray.map_over_datasets`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.map_over_datasets(lambda x, y: x + y, dt1, dt2)
 
@@ -623,8 +623,8 @@ or "isomorphic", if the full paths to all of their descendent nodes are the same
 Applying :py:func:`~xarray.group_subtrees` to trees with different structures
 raises :py:class:`~xarray.TreeIsomorphismError`:
 
-.. ipython:: python
-    :okexcept:
+.. jupyter-execute::
+    :raises:
 
     tree = xr.DataTree.from_dict({"a": None, "a/b": None, "a/c": None})
     simple_tree = xr.DataTree.from_dict({"a": None})
@@ -633,20 +633,20 @@ raises :py:class:`~xarray.TreeIsomorphismError`:
 
 We can explicitly also check if any two trees are isomorphic using the :py:meth:`~xarray.DataTree.isomorphic` method:
 
-.. ipython:: python
+.. jupyter-execute::
 
     tree.isomorphic(simple_tree)
 
 Corresponding tree nodes do not need to have the same data in order to be considered isomorphic:
 
-.. ipython:: python
+.. jupyter-execute::
 
     tree_with_data = xr.DataTree.from_dict({"a": xr.Dataset({"foo": 1})})
     simple_tree.isomorphic(tree_with_data)
 
 They also do not need to define child nodes in the same order:
 
-.. ipython:: python
+.. jupyter-execute::
 
     reordered_tree = xr.DataTree.from_dict({"a": None, "a/c": None, "a/b": None})
     tree.isomorphic(reordered_tree)
@@ -657,7 +657,7 @@ Arithmetic Between Multiple Trees
 Arithmetic operations like multiplication are binary operations, so as long as we have two isomorphic trees,
 we can do arithmetic between them.
 
-.. ipython:: python
+.. jupyter-execute::
 
     currents = xr.DataTree.from_dict(
         {
@@ -687,7 +687,7 @@ we can do arithmetic between them.
 
 We could use this feature to quickly calculate the electrical power in our signal, P=IV.
 
-.. ipython:: python
+.. jupyter-execute::
 
     power = currents * voltages
     power
@@ -712,7 +712,7 @@ Exact alignment means that shared dimensions must be the same length, and indexe
 
 To demonstrate, let's first generate some example datasets which are not aligned with one another:
 
-.. ipython:: python
+.. jupyter-execute::
 
     # (drop the attributes just to make the printed representation shorter)
     ds = xr.tutorial.open_dataset("air_temperature").drop_attrs()
@@ -723,7 +723,7 @@ To demonstrate, let's first generate some example datasets which are not aligned
 
 These datasets have different lengths along the ``time`` dimension, and are therefore not aligned along that dimension.
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds_daily.sizes
     ds_weekly.sizes
@@ -731,16 +731,16 @@ These datasets have different lengths along the ``time`` dimension, and are ther
 
 We cannot store these non-alignable variables on a single :py:class:`~xarray.Dataset` object, because they do not exactly align:
 
-.. ipython:: python
-    :okexcept:
+.. jupyter-execute::
+    :raises:
 
     xr.align(ds_daily, ds_weekly, ds_monthly, join="exact")
 
 But we :ref:`previously said <why>` that multi-resolution data is a good use case for :py:class:`~xarray.DataTree`, so surely we should be able to store these in a single :py:class:`~xarray.DataTree`?
 If we first try to create a :py:class:`~xarray.DataTree` with these different-length time dimensions present in both parents and children, we will still get an alignment error:
 
-.. ipython:: python
-    :okexcept:
+.. jupyter-execute::
+    :raises:
 
     xr.DataTree.from_dict({"daily": ds_daily, "daily/weekly": ds_weekly})
 
@@ -757,7 +757,7 @@ This alignment check is performed up through the tree, all the way to the root, 
 
 To represent our unalignable data in a single :py:class:`~xarray.DataTree`, we must instead place all variables which are a function of these different-length dimensions into nodes that are not direct descendents of one another, e.g. organize them as siblings.
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt = xr.DataTree.from_dict(
         {"daily": ds_daily, "weekly": ds_weekly, "monthly": ds_monthly}
@@ -769,13 +769,13 @@ Now we have a valid :py:class:`~xarray.DataTree` structure which contains all th
 This is a useful way to organise our data because we can still operate on all the groups at once.
 For example we can extract all three timeseries at a specific lat-lon location:
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt.sel(lat=75, lon=300)
 
 or compute the standard deviation of each timeseries to find out how it varies with sampling frequency:
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt.std(dim="time")
 
@@ -786,7 +786,7 @@ Coordinate Inheritance
 
 Notice that in the trees we constructed above there is some redundancy - the ``lat`` and ``lon`` variables appear in each sibling group, but are identical across the groups.
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt
 
@@ -797,7 +797,7 @@ We can use "Coordinate Inheritance" to define them only once in a parent group a
 
 Let's instead place only the time-dependent variables in the child groups, and put the non-time-dependent ``lat`` and ``lon`` variables in the parent (root) group:
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt = xr.DataTree.from_dict(
         {
@@ -814,7 +814,7 @@ Defining the common coordinates just once also ensures that the spatial coordina
 
 We can still access the coordinates defined in the parent groups from any of the child groups as if they were actually present on the child groups:
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt.daily.coords
     dt["daily/lat"]
@@ -823,7 +823,7 @@ As we can still access them, we say that the ``lat`` and ``lon`` coordinates in 
 
 If we print just one of the child nodes, it will still display inherited coordinates, but explicitly mark them as such:
 
-.. ipython:: python
+.. jupyter-execute::
 
     print(dt["/daily"])
 
@@ -831,7 +831,7 @@ This helps to differentiate which variables are defined on the datatree node tha
 
 We can also still perform all the same operations on the whole tree:
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt.sel(lat=[75], lon=[300])
 

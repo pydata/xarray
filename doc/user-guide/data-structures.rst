@@ -3,12 +3,13 @@
 Data Structures
 ===============
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
+    import matplotlib.pyplot as plt
 
     np.random.seed(123456)
     np.set_printoptions(threshold=10)
@@ -62,7 +63,7 @@ The :py:class:`~xarray.DataArray` constructor takes:
 - ``attrs``: a dictionary of attributes to add to the instance
 - ``name``: a string that names the instance
 
-.. ipython:: python
+.. jupyter-execute::
 
     data = np.random.rand(4, 3)
     locs = ["IA", "IL", "IN"]
@@ -73,7 +74,7 @@ The :py:class:`~xarray.DataArray` constructor takes:
 Only ``data`` is required; all of other arguments will be filled
 in with default values:
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.DataArray(data)
 
@@ -111,13 +112,13 @@ Coordinates can be specified in the following ways:
 
 As a list of tuples:
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.DataArray(data, coords=[("time", times), ("space", locs)])
 
 As a dictionary:
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.DataArray(
         data,
@@ -132,7 +133,7 @@ As a dictionary:
 
 As a dictionary with coords across multiple dimensions:
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.DataArray(
         data,
@@ -150,7 +151,7 @@ If you create a ``DataArray`` by supplying a pandas
 ``pandas.Panel``, any non-specified arguments in the
 ``DataArray`` constructor will be filled in from the pandas object:
 
-.. ipython:: python
+.. jupyter-execute::
 
     df = pd.DataFrame({"x": [0, 1], "y": [2, 3]}, index=["a", "b"])
     df.index.name = "abc"
@@ -163,7 +164,7 @@ DataArray properties
 
 Let's take a look at the important properties on our array:
 
-.. ipython:: python
+.. jupyter-execute::
 
     foo.values
     foo.dims
@@ -173,7 +174,7 @@ Let's take a look at the important properties on our array:
 
 You can modify ``values`` inplace:
 
-.. ipython:: python
+.. jupyter-execute::
 
     foo.values = 1.0 * foo.values
 
@@ -186,7 +187,7 @@ You can modify ``values`` inplace:
 
 Now fill in some of that missing metadata:
 
-.. ipython:: python
+.. jupyter-execute::
 
     foo.name = "foo"
     foo.attrs["units"] = "meters"
@@ -195,7 +196,7 @@ Now fill in some of that missing metadata:
 The :py:meth:`~xarray.DataArray.rename` method is another option, returning a
 new data array:
 
-.. ipython:: python
+.. jupyter-execute::
 
     foo.rename("bar")
 
@@ -206,7 +207,7 @@ The ``coords`` property is ``dict`` like. Individual coordinates can be
 accessed from the coordinates by name, or even by indexing the data array
 itself:
 
-.. ipython:: python
+.. jupyter-execute::
 
     foo.coords["time"]
     foo["time"]
@@ -216,7 +217,7 @@ for each dimension.
 
 Coordinates can also be set or removed by using the dictionary like syntax:
 
-.. ipython:: python
+.. jupyter-execute::
 
     foo["ranking"] = ("space", [1, 2, 3])
     foo.coords
@@ -295,7 +296,7 @@ pressure that were made under various conditions:
 * they were made using instruments by three different manufacturers, which we
   will refer to as ``'manufac1'``, ``'manufac2'``, and ``'manufac3'``.
 
-.. ipython:: python
+.. jupyter-execute::
 
     np.random.seed(0)
     temperature = 15 + 8 * np.random.randn(2, 3, 4)
@@ -326,12 +327,12 @@ pressure that were made under various conditions:
 Here we pass :py:class:`xarray.DataArray` objects or a pandas object as values
 in the dictionary:
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.Dataset(dict(bar=foo))
 
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.Dataset(dict(bar=foo.to_pandas()))
 
@@ -352,7 +353,7 @@ Dataset contents
 :py:class:`~xarray.Dataset` implements the Python mapping interface, with
 values given by :py:class:`xarray.DataArray` objects:
 
-.. ipython:: python
+.. jupyter-execute::
 
     "temperature" in ds
     ds["temperature"]
@@ -363,7 +364,7 @@ Data and coordinate variables are also contained separately in the
 :py:attr:`~xarray.Dataset.data_vars` and :py:attr:`~xarray.Dataset.coords`
 dictionary-like attributes:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.data_vars
     ds.coords
@@ -371,7 +372,7 @@ dictionary-like attributes:
 Finally, like data arrays, datasets also store arbitrary metadata in the form
 of ``attributes``:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.attrs
 
@@ -385,7 +386,7 @@ or :py:class:`numpy.ndarray` objects.
 As a useful shortcut, you can use attribute style access for reading (but not
 setting) variables and attributes:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.temperature
 
@@ -400,7 +401,7 @@ Dictionary like methods
 We can update a dataset in-place using Python's standard dictionary syntax. For
 example, to create this example dataset from scratch, we could have written:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.Dataset()
     ds["temperature"] = (("loc", "instrument", "time"), temperature)
@@ -437,7 +438,7 @@ variables by indexing with a list of names or using the
 :py:meth:`~xarray.Dataset.drop_vars` methods to return a new ``Dataset``. These
 operations keep around coordinates:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds[["temperature"]]
     ds[["temperature", "temperature_double"]]
@@ -446,7 +447,7 @@ operations keep around coordinates:
 To remove a dimension, you can use :py:meth:`~xarray.Dataset.drop_dims` method.
 Any variables using that dimension are dropped:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.drop_dims("time")
 
@@ -454,7 +455,7 @@ As an alternate to dictionary-like modifications, you can use
 :py:meth:`~xarray.Dataset.assign` and :py:meth:`~xarray.Dataset.assign_coords`.
 These methods return a new dataset with additional (or replaced) values:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.assign(temperature2=2 * ds.temperature)
 
@@ -464,7 +465,7 @@ simply calling it (e.g., ``func(ds)``). This allows you to write pipelines for
 transforming your data (using "method chaining") instead of writing hard to
 follow nested function calls:
 
-.. ipython:: python
+.. jupyter-execute::
 
     # these lines are equivalent, but with pipe we can make the logic flow
     # entirely from left to right
@@ -486,14 +487,14 @@ Renaming variables
 Another useful option is the :py:meth:`~xarray.Dataset.rename` method to rename
 dataset variables:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.rename({"temperature": "temp", "precipitation": "precip"})
 
 The related :py:meth:`~xarray.Dataset.swap_dims` method allows you do to swap
 dimension and non-dimension variables:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.coords["day"] = ("time", [6, 7, 8, 9])
     ds.swap_dims({"time": "day"})
@@ -565,7 +566,7 @@ The :py:class:`~xarray.DataTree` constructor takes:
 
 Let's make a single datatree node with some example data in it:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds1 = xr.Dataset({"foo": "orange"})
     dt = xr.DataTree(name="root", dataset=ds1)
@@ -573,14 +574,14 @@ Let's make a single datatree node with some example data in it:
 
 At this point we have created a single node datatree with no parent and no children.
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt.parent is None
     dt.children
 
 We can add a second node to this tree, assigning it to the parent node ``dt``:
 
-.. ipython:: python
+.. jupyter-execute::
 
     dataset2 = xr.Dataset({"bar": 0}, coords={"y": ("y", [0, 1, 2])})
     dt2 = xr.DataTree(name="a", dataset=dataset2)
@@ -593,7 +594,7 @@ More idiomatically you can create a tree from a dictionary of ``Datasets`` and
 ``DataTrees``. In this case we add a new node under ``dt["child-node"]`` by
 providing the explicit path under ``"child-node"`` as the dictionary key:
 
-.. ipython:: python
+.. jupyter-execute::
 
     # create a third Dataset
     ds3 = xr.Dataset({"zed": np.nan})
@@ -602,7 +603,7 @@ providing the explicit path under ``"child-node"`` as the dictionary key:
 
 We have created a tree with three nodes in it:
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt
 
@@ -612,8 +613,8 @@ Consistency checks are enforced. For instance, if we try to create a cycle,
 where the root node is also a child of a descendant, the constructor will raise
 an (:py:class:`~xarray.InvalidTreeError`):
 
-.. ipython:: python
-    :okexcept:
+.. jupyter-execute::
+    :raises:
 
     dt["child-node"].children = {"new-child": dt}
 
@@ -636,7 +637,7 @@ Like :py:class:`~xarray.Dataset`, :py:class:`~xarray.DataTree` implements the py
 but with values given by either :py:class:`~xarray.DataArray` objects or other
 :py:class:`~xarray.DataTree` objects.
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt["child-node"]
     dt["foo"]
@@ -645,7 +646,7 @@ Iterating over keys will iterate over both the names of variables and child node
 
 We can also access all the data in a single node, and its inherited coordinates, through a dataset-like view
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt["child-node"].dataset
 
@@ -655,14 +656,14 @@ returns an immutable view, but we can instead extract the node's data contents
 as a new and mutable :py:class:`~xarray.Dataset` object via
 :py:meth:`DataTree.to_dataset() <xarray.DataTree.to_dataset>`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt["child-node"].to_dataset()
 
 Like with :py:class:`~xarray.Dataset`, you can access the data and coordinate variables of a
 node separately via the :py:attr:`~xarray.DataTree.data_vars` and :py:attr:`~xarray.DataTree.coords` attributes:
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt["child-node"].data_vars
     dt["child-node"].coords
@@ -675,7 +676,7 @@ We can update a datatree in-place using Python's standard dictionary syntax,
 similar to how we can for Dataset objects. For example, to create this example
 DataTree from scratch, we could have written:
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt = xr.DataTree(name="root")
     dt["foo"] = "orange"
@@ -720,7 +721,7 @@ size).
 
 Some examples:
 
-.. ipython:: python
+.. jupyter-execute::
 
     # Set up coordinates
     time = xr.DataArray(data=["2022-01", "2023-01"], dims="time")
@@ -780,7 +781,7 @@ that it applies to all descendent nodes. Similarly, ``station`` is in the base
 ``weather`` and in the ``temperature`` sub-tree.  Notice the inherited coordinates are
 explicitly shown in the tree representation under ``Inherited coordinates:``.
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt2["/weather"]
 
@@ -788,14 +789,14 @@ Accessing any of the lower level trees through the :py:func:`.dataset <xarray.Da
 automatically includes coordinates from higher levels (e.g., ``time`` and
 ``station``):
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt2["/weather/temperature"].dataset
 
 Similarly, when you retrieve a Dataset through :py:func:`~xarray.DataTree.to_dataset`  , the inherited coordinates are
 included by default unless you exclude them with the ``inherit`` flag:
 
-.. ipython:: python
+.. jupyter-execute::
 
     dt2["/weather/temperature"].to_dataset()
 
@@ -811,7 +812,7 @@ Coordinates
 Coordinates are ancillary variables stored for ``DataArray`` and ``Dataset``
 objects in the ``coords`` attribute:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.coords
 
@@ -856,7 +857,7 @@ To convert back and forth between data and coordinates, you can use the
 :py:meth:`~xarray.Dataset.set_coords` and
 :py:meth:`~xarray.Dataset.reset_coords` methods:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.reset_coords()
     ds.set_coords(["temperature", "precipitation"])
@@ -874,7 +875,7 @@ Coordinates methods
 ``Coordinates`` objects also have a few useful methods, mostly for converting
 them into dataset objects:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.coords.to_dataset()
 
@@ -882,7 +883,7 @@ The merge method is particularly interesting, because it implements the same
 logic used for merging coordinates in arithmetic operations
 (see :ref:`compute`):
 
-.. ipython:: python
+.. jupyter-execute::
 
     alt = xr.Dataset(coords={"z": [10], "lat": 0, "lon": 0})
     ds.coords.merge(alt.coords)
@@ -898,7 +899,7 @@ Indexes
 To convert a coordinate (or any ``DataArray``) into an actual
 :py:class:`pandas.Index`, use the :py:meth:`~xarray.DataArray.to_index` method:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds["time"].to_index()
 
@@ -906,7 +907,7 @@ A useful shortcut is the ``indexes`` property (on both ``DataArray`` and
 ``Dataset``), which lazily constructs a dictionary whose keys are given by each
 dimension and whose the values are ``Index`` objects:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.indexes
 
@@ -915,7 +916,7 @@ MultiIndex coordinates
 
 Xarray supports labeling coordinate values with a :py:class:`pandas.MultiIndex`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     midx = pd.MultiIndex.from_arrays(
         [["R", "R", "V", "V"], [0.1, 0.2, 0.7, 0.9]], names=("band", "wn")
@@ -926,7 +927,7 @@ Xarray supports labeling coordinate values with a :py:class:`pandas.MultiIndex`:
 For convenience multi-index levels are directly accessible as "virtual" or
 "derived" coordinates (marked by ``-`` when printing a dataset or data array):
 
-.. ipython:: python
+.. jupyter-execute::
 
     mda["band"]
     mda.wn
