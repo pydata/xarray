@@ -375,7 +375,7 @@ error messages have been removed or rewritten. Xarray will now also allow
 non-nanosecond datetimes (with ``'us'``, ``'ms'`` or ``'s'`` resolution) when
 creating DataArray's from scratch, picking the lowest possible resolution:
 
-.. ipython:: python
+.. code:: python
 
     xr.DataArray(data=[np.datetime64("2000-01-01", "D")], dims=("time",))
 
@@ -6245,7 +6245,7 @@ Enhancements
   (:issue:`1617`). This enables using NumPy ufuncs directly on
   ``xarray.Dataset`` objects with recent versions of NumPy (v1.13 and newer):
 
-  .. ipython:: python
+  .. code:: python
 
       ds = xr.Dataset({"a": 1})
       np.sin(ds)
@@ -6337,7 +6337,7 @@ Enhancements
 
 - Reduce methods such as :py:func:`DataArray.sum()` now handles object-type array.
 
-  .. ipython:: python
+  .. code:: python
 
       da = xr.DataArray(np.array([True, False, np.nan], dtype=object), dims="x")
       da.sum()
@@ -7785,8 +7785,7 @@ Enhancements
 - New ``xray.Dataset.shift`` and ``xray.Dataset.roll`` methods
   for shifting/rotating datasets or arrays along a dimension:
 
-  .. ipython:: python
-      :okwarning:
+  .. code:: python
 
       array = xray.DataArray([5, 6, 7, 8], dims="x")
       array.shift(x=2)
@@ -7801,7 +7800,7 @@ Enhancements
 - New function ``xray.broadcast`` for explicitly broadcasting
   ``DataArray`` and ``Dataset`` objects against each other. For example:
 
-  .. ipython:: python
+  .. code:: python
 
       a = xray.DataArray([1, 2, 3], dims="x")
       b = xray.DataArray([5, 6], dims="y")
@@ -7999,12 +7998,10 @@ Enhancements
 - New ``xray.Dataset.where`` method for masking xray objects according
   to some criteria. This works particularly well with multi-dimensional data:
 
-  .. ipython:: python
+  .. code:: python
 
       ds = xray.Dataset(coords={"x": range(100), "y": range(100)})
       ds["distance"] = np.sqrt(ds.x**2 + ds.y**2)
-
-      @savefig where_example.png width=4in height=4in
       ds.distance.where(ds.distance < 100).plot()
 
 - Added new methods ``xray.DataArray.diff`` and ``xray.Dataset.diff``
@@ -8013,7 +8010,7 @@ Enhancements
 - New ``xray.DataArray.to_masked_array`` convenience method for
   returning a numpy.ma.MaskedArray.
 
-  .. ipython:: python
+  .. code:: python
 
       da = xray.DataArray(np.random.random_sample(size=(5, 4)))
       da.where(da < 0.5)
@@ -8163,12 +8160,11 @@ Backwards incompatible changes
 
   Now, the default always concatenates data variables:
 
-  .. ipython:: python
-      :suppress:
+  .. code:: python
 
       ds = xray.Dataset({"x": 0})
 
-  .. ipython:: python
+  .. code:: python
 
       xray.concat([ds, ds], dim="y")
 
@@ -8181,7 +8177,7 @@ Enhancements
   ``xray.DataArray.to_dataset`` methods make it easy to switch back
   and forth between arrays and datasets:
 
-  .. ipython:: python
+  .. code:: python
 
       ds = xray.Dataset(
           {"a": 1, "b": ("x", [1, 2, 3])},
@@ -8194,7 +8190,7 @@ Enhancements
 - New ``xray.Dataset.fillna`` method to fill missing values, modeled
   off the pandas method of the same name:
 
-  .. ipython:: python
+  .. code:: python
 
       array = xray.DataArray([np.nan, 1, np.nan, 3], dims="x")
       array.fillna(0)
@@ -8207,7 +8203,7 @@ Enhancements
   methods patterned off the new :py:meth:`DataFrame.assign <pandas.DataFrame.assign>`
   method in pandas:
 
-  .. ipython:: python
+  .. code:: python
 
       ds = xray.Dataset({"y": ("x", [1, 2, 3])})
       ds.assign(z=lambda ds: ds.y**2)
@@ -8257,7 +8253,7 @@ Enhancements
   It can be used either as a context manager, in which case the default is restored
   outside the context:
 
-  .. ipython:: python
+  .. code:: python
 
       ds = xray.Dataset({"x": np.arange(1000)})
       with xray.set_options(display_width=40):
@@ -8296,8 +8292,7 @@ Enhancements
   a new temporal resolution. The syntax is the `same as pandas`_, except you
   need to supply the time dimension explicitly:
 
-  .. ipython:: python
-      :verbatim:
+  .. code:: python
 
       time = pd.date_range("2000-01-01", freq="6H", periods=10)
       array = xray.DataArray(np.arange(10), [("time", time)])
@@ -8306,31 +8301,27 @@ Enhancements
   You can specify how to do the resampling with the ``how`` argument and other
   options such as ``closed`` and ``label`` let you control labeling:
 
-  .. ipython:: python
-      :verbatim:
+  .. code:: python
 
       array.resample("1D", dim="time", how="sum", label="right")
 
   If the desired temporal resolution is higher than the original data
   (upsampling), xray will insert missing values:
 
-  .. ipython:: python
-      :verbatim:
+  .. code:: python
 
       array.resample("3H", "time")
 
 - ``first`` and ``last`` methods on groupby objects let you take the first or
   last examples from each group along the grouped axis:
 
-  .. ipython:: python
-      :verbatim:
+  .. code:: python
 
       array.groupby("time.day").first()
 
   These methods combine well with ``resample``:
 
-  .. ipython:: python
-      :verbatim:
+  .. code:: python
 
       array.resample("1D", dim="time", how="first")
 
@@ -8338,10 +8329,9 @@ Enhancements
 - ``xray.Dataset.swap_dims`` allows for easily swapping one dimension
   out for another:
 
-  .. ipython:: python
+  .. code:: python
 
       ds = xray.Dataset({"x": range(3), "y": ("x", list("abc"))})
-      ds
       ds.swap_dims({"x": "y"})
 
   This was possible in earlier versions of xray, but required some contortions.
@@ -8386,7 +8376,7 @@ Breaking changes
   :ref:`For arithmetic<math automatic alignment>`, we align
   based on the **intersection** of labels:
 
-  .. ipython:: python
+  .. code:: python
 
       lhs = xray.DataArray([1, 2, 3], [("x", [0, 1, 2])])
       rhs = xray.DataArray([2, 3, 4], [("x", [1, 2, 3])])
@@ -8395,21 +8385,21 @@ Breaking changes
   :ref:`For dataset construction and merging<merge>`, we align based on the
   **union** of labels:
 
-  .. ipython:: python
+  .. code:: python
 
       xray.Dataset({"foo": lhs, "bar": rhs})
 
   :ref:`For update and __setitem__<update>`, we align based on the **original**
   object:
 
-  .. ipython:: python
+  .. code:: python
 
       lhs.coords["rhs"] = rhs
       lhs
 
 - Aggregations like ``mean`` or ``median`` now skip missing values by default:
 
-  .. ipython:: python
+  .. code:: python
 
       xray.DataArray([1, 2, np.nan, 3]).mean()
 
@@ -8425,7 +8415,7 @@ Breaking changes
   persists through arithmetic, even though it has different shapes on each
   DataArray:
 
-  .. ipython:: python
+  .. code:: python
 
       a = xray.DataArray([1, 2], coords={"c": 0}, dims="x")
       b = xray.DataArray([1, 2], coords={"c": ("x", [0, 0])}, dims="x")
@@ -8437,7 +8427,7 @@ Breaking changes
   the name ``'month'``, not ``'time.month'`` (:issue:`345`). This makes it
   easier to index the resulting arrays when they are used with ``groupby``:
 
-  .. ipython:: python
+  .. code:: python
 
       time = xray.DataArray(
           pd.date_range("2000-01-01", periods=365), dims="time", name="time"
@@ -8480,7 +8470,7 @@ Enhancements
 - Support for ``xray.Dataset.reindex`` with a fill method. This
   provides a useful shortcut for upsampling:
 
-  .. ipython:: python
+  .. code:: python
 
       data = xray.DataArray([1, 2, 3], [("x", range(3))])
       data.reindex(x=[0.5, 1, 1.5, 2, 2.5], method="pad")
@@ -8501,8 +8491,7 @@ Enhancements
 - The new ``xray.Dataset.drop`` and ``xray.DataArray.drop`` methods
   makes it easy to drop explicitly listed variables or index labels:
 
-  .. ipython:: python
-      :okwarning:
+  .. code:: python
 
       # drop variables
       ds = xray.Dataset({"x": 0, "y": 1})
@@ -8575,7 +8564,7 @@ Backwards incompatible changes
   ``datetime64[ns]`` arrays when stored in an xray object, using machinery
   borrowed from pandas:
 
-  .. ipython:: python
+  .. code:: python
 
       from datetime import datetime
 
@@ -8593,7 +8582,7 @@ Enhancements
 - Due to popular demand, we have added experimental attribute style access as
   a shortcut for dataset variables, coordinates and attributes:
 
-  .. ipython:: python
+  .. code:: python
 
       ds = xray.Dataset({"tmin": ([], 25, {"units": "celsius"})})
       ds.tmin.units
@@ -8604,7 +8593,7 @@ Enhancements
 - You can now use a dictionary for indexing with labeled dimensions. This
   provides a safe way to do assignment with labeled dimensions:
 
-  .. ipython:: python
+  .. code:: python
 
       array = xray.DataArray(np.zeros(5), dims=["x"])
       array[dict(x=slice(3))] = 1
