@@ -70,7 +70,13 @@ which is a general hypothesis method valid for all strategies.
     import xarray.testing.strategies as xrst
 
     xrst.variables().example()
+
+.. jupyter-execute::
+
     xrst.variables().example()
+
+.. jupyter-execute::
+
     xrst.variables().example()
 
 You can see that calling ``.example()`` multiple times will generate different examples, giving you an idea of the wide
@@ -147,9 +153,13 @@ objects your chained strategy will generate.
     )
     fixed_x_variable_y_maybe_z.example()
 
-    special_variables = xrst.variables(dims=fixed_x_variable_y_maybe_z)
+.. jupyter-execute::
 
+    special_variables = xrst.variables(dims=fixed_x_variable_y_maybe_z)
     special_variables.example()
+
+.. jupyter-execute::
+
     special_variables.example()
 
 Here we have used one of hypothesis' built-in strategies :py:func:`hypothesis.strategies.fixed_dictionaries` to create a
@@ -187,6 +197,9 @@ different type:
     )
 
     sparse_variables.example()
+
+.. jupyter-execute::
+
     sparse_variables.example()
 
 2. Pass a function which returns a strategy which generates the duck-typed arrays directly to the ``array_strategy_fn`` argument of the xarray strategies:
@@ -269,6 +282,9 @@ It works for lists of dimension names
 
     dims = ["x", "y", "z"]
     xrst.unique_subset_of(dims).example()
+
+.. jupyter-execute::
+
     xrst.unique_subset_of(dims).example()
 
 as well as for mappings of dimension names to sizes
@@ -277,6 +293,9 @@ as well as for mappings of dimension names to sizes
 
     dim_sizes = {"x": 2, "y": 3, "z": 4}
     xrst.unique_subset_of(dim_sizes).example()
+
+.. jupyter-execute::
+
     xrst.unique_subset_of(dim_sizes).example()
 
 This is useful because operations like reductions can be performed over any subset of the xarray object's dimensions.

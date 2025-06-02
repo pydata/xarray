@@ -132,6 +132,9 @@ using the same formatting as the standard `datetime.strftime`_ convention .
 .. jupyter-execute::
 
     dates.strftime("%c")
+
+.. jupyter-execute::
+
     da["time"].dt.strftime("%Y%m%d")
 
 Conversion between non-standard calendar and to/from pandas DatetimeIndexes is
@@ -162,6 +165,9 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 .. jupyter-execute::
 
     da.sel(time="0001")
+
+.. jupyter-execute::
+
     da.sel(time=slice("0001-05", "0002-02"))
 
 .. note::
@@ -184,20 +190,44 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 .. jupyter-execute::
 
     da.time.dt.year
+
+.. jupyter-execute::
+
     da.time.dt.month
+
+.. jupyter-execute::
+
     da.time.dt.season
+
+.. jupyter-execute::
+
     da.time.dt.dayofyear
+
+.. jupyter-execute::
+
     da.time.dt.dayofweek
+
+.. jupyter-execute::
+
     da.time.dt.days_in_month
+
+.. jupyter-execute::
+
     da.time.dt.calendar
 
 - Rounding of datetimes to fixed frequencies via the ``dt`` accessor:
 
 .. jupyter-execute::
 
-    da.time.dt.ceil("3D")
-    da.time.dt.floor("5D")
-    da.time.dt.round("2D")
+    da.time.dt.ceil("3D").head()
+
+.. jupyter-execute::
+
+    da.time.dt.floor("5D").head()
+
+.. jupyter-execute::
+
+    da.time.dt.round("2D").head()
 
 - Group-by operations based on datetime accessor attributes (e.g. by month of
   the year):

@@ -33,10 +33,19 @@ using :py:func:`pandas.to_datetime`, :py:class:`pandas.DatetimeIndex`, or :py:fu
 .. jupyter-execute::
 
     pd.to_datetime(["2000-01-01", "2000-02-02"])
+
+.. jupyter-execute::
+
     pd.DatetimeIndex(
         ["2000-01-01 00:00:00", "2000-02-02 00:00:00"], dtype="datetime64[s]"
     )
+
+.. jupyter-execute::
+
     xr.date_range("2000-01-01", periods=365)
+
+.. jupyter-execute::
+
     xr.date_range("2000-01-01", periods=365, unit="s")
 
 
@@ -84,6 +93,9 @@ You can manual decode arrays in this form by passing a dataset to
     ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
     # Default decoding to 'ns'-resolution
     xr.decode_cf(ds)
+
+.. jupyter-execute::
+
     # Decoding to 's'-resolution
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
     xr.decode_cf(ds, decode_times=coder)
@@ -106,6 +118,9 @@ items and with the ``slice`` object:
     time = pd.date_range("2000-01-01", freq="h", periods=365 * 24)
     ds = xr.Dataset({"foo": ("time", np.arange(365 * 24)), "time": time})
     ds.sel(time="2000-01")
+
+.. jupyter-execute::
+
     ds.sel(time=slice("2000-06-01", "2000-06-10"))
 
 You can also select a particular time by indexing with a
@@ -132,6 +147,9 @@ given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
     time = pd.date_range("2000-01-01", freq="6h", periods=365 * 4)
     ds = xr.Dataset({"foo": ("time", np.arange(365 * 4)), "time": time})
     ds.time.dt.hour
+
+.. jupyter-execute::
+
     ds.time.dt.dayofweek
 
 The ``.dt`` accessor works on both coordinate dimensions as well as
@@ -147,6 +165,9 @@ __ https://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
 .. jupyter-execute::
 
     ds["time.month"]
+
+.. jupyter-execute::
+
     ds["time.dayofyear"]
 
 For use as a derived coordinate, xarray adds ``'season'`` to the list of
@@ -155,6 +176,9 @@ datetime components supported by pandas:
 .. jupyter-execute::
 
     ds["time.season"]
+
+.. jupyter-execute::
+
     ds["time"].dt.season
 
 The set of valid seasons consists of 'DJF', 'MAM', 'JJA' and 'SON', labeled by
