@@ -199,7 +199,7 @@ class CombineKwargDefault:
 
         return (
             f"In a future version of xarray the default value for {self._name} will "
-            + f"change from {self._name}={self._old!r} to {self._name}={self._new!r}. "
+            f"change from {self._name}={self._old!r} to {self._name}={self._new!r}. "
             + message
             + recommendation
         )
