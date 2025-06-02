@@ -562,7 +562,7 @@ def _validate_datatypes_for_zarr_append(vname, existing_var, new_var):
         # in the dataset, and with dtypes which are not known to be easy-to-append, necessitate
         # exact dtype equality, as checked below.
         pass
-    elif not new_var.dtype == existing_var.dtype:
+    elif new_var.dtype != existing_var.dtype:
         raise ValueError(
             f"Mismatched dtypes for variable {vname} between Zarr store on disk "
             f"and dataset to append. Store has dtype {existing_var.dtype} but "
@@ -877,9 +877,8 @@ class ZarrStore(AbstractWritableDataStore):
             if zarr_array.fill_value is not None:
                 attributes["_FillValue"] = zarr_array.fill_value
         elif "_FillValue" in attributes:
-            original_zarr_dtype = zarr_array.metadata.data_type
             attributes["_FillValue"] = FillValueCoder.decode(
-                attributes["_FillValue"], original_zarr_dtype.value
+                attributes["_FillValue"], zarr_array.dtype
             )
 
         return Variable(dimensions, data, attributes, encoding)
@@ -1233,7 +1232,7 @@ class ZarrStore(AbstractWritableDataStore):
                 else:
                     encoded_attrs[DIMENSION_KEY] = dims
 
-                encoding["overwrite"] = True if self._mode == "w" else False
+                encoding["overwrite"] = self._mode == "w"
 
                 zarr_array = self._create_new_array(
                     name=name,

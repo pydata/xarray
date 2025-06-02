@@ -50,6 +50,10 @@ Bug fixes
   calculating mean in rolling for correct operations (preserve float dtypes,
   correct mean of bool arrays) (:issue:`10340`, :pull:`10341`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Improve the html ``repr`` of Xarray objects (dark mode, icons and variable attribute / data
+  dropdown sections).
+  (:pull:`10353`, :pull:`10354`)
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 - Raise an error when attempting to encode :py:class:`numpy.datetime64` values
   prior to the Gregorian calendar reform date of 1582-10-15 with a
   ``"standard"`` or ``"gregorian"`` calendar. Previously we would warn and
@@ -58,6 +62,17 @@ Bug fixes
   calendar of the datetimes from ``"proleptic_gregorian"`` to ``"gregorian"``
   and prevents round-tripping them as :py:class:`numpy.datetime64` values
   (:pull:`10352`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+
+Performance
+~~~~~~~~~~~
+- Lazily indexed arrays now use less memory to store keys by avoiding copies
+  in :py:class:`~xarray.indexing.VectorizedIndexer` and :py:class:`~xarray.indexing.OuterIndexer`
+  (:issue:`10316`).
+  By `Jesse Rusak <https://github.com/jder>`_.
+- Fix performance regression in interp where more data was loaded than was necessary. (:issue:`10287`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Speed up encoding of :py:class:`cftime.datetime` objects by roughly a factor
+  of three (:pull:`8324`). By `Antoine Gibek <https://github.com/antscloud>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -158,6 +173,9 @@ Documentation
   By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 - Switch to `pydata-sphinx-theme <https://github.com/pydata/pydata-sphinx-theme>`_ from `sphinx-book-theme <https://github.com/executablebooks/sphinx-book-theme>`_ (:pull:`8708`).
   By `Scott Henderson <https://github.com/scottyhq>`_.
+
+- Add a dedicated 'Complex Numbers' sections to the User Guide (:issue:`10213`, :pull:`10235`).
+  By `Andre Wendlinger <https://github.com/andrewendlinger>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
