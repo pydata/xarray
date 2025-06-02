@@ -286,6 +286,9 @@ You can view this encoding information (among others) in the
 .. jupyter-execute::
 
     ds_disk["y"].encoding
+
+.. jupyter-execute::
+
     ds_disk.encoding
 
 Note that all operations that manipulate variables other than indexing
@@ -876,7 +879,6 @@ order, e.g., for time-stepping a simulation:
 
 .. jupyter-execute::
 
-
     ds1 = xr.Dataset(
         {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
         coords={
@@ -886,6 +888,9 @@ order, e.g., for time-stepping a simulation:
         },
     )
     ds1.to_zarr("path/to/directory.zarr")
+
+.. jupyter-execute::
+
     ds2 = xr.Dataset(
         {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
         coords={
@@ -944,7 +949,6 @@ split them into chunks:
 
 .. jupyter-execute::
 
-
     ds.to_zarr("path/to/directory.zarr", mode="w")
     ! ls -R path/to/directory.zarr
 
@@ -954,7 +958,6 @@ storage provider. To disable this chunking, we can specify a chunk size equal to
 length of each dimension by using the shorthand chunk size ``None``:
 
 .. jupyter-execute::
-
 
     ds.to_zarr(
         "path/to/directory.zarr",
@@ -1166,16 +1169,16 @@ __ https://www.prism.oregonstate.edu/
 __ https://iri.columbia.edu/
 
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [3]: remote_data = xr.open_dataset(
-       ...:     "http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods",
-       ...:     decode_times=False,
-       ...: )
+    remote_data = xr.open_dataset(
+        "http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods",
+        decode_times=False,
+        )
+    remote_data
 
-    In [4]: remote_data
-    Out[4]:
+.. jupyter-output::
+
     <xarray.Dataset>
     Dimensions:  (T: 1422, X: 1405, Y: 621)
     Coordinates:
@@ -1207,13 +1210,13 @@ __ https://iri.columbia.edu/
 We can select and slice this data any number of times, and nothing is loaded
 over the network until we look at particular values:
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [4]: tmax = remote_data["tmax"][:500, ::3, ::3]
+    tmax = remote_data["tmax"][:500, ::3, ::3]
+    tmax
 
-    In [5]: tmax
-    Out[5]:
+.. jupyter-output::
+
     <xarray.DataArray 'tmax' (T: 500, Y: 207, X: 469)>
     [48541500 values with dtype=float64]
     Coordinates:
@@ -1226,8 +1229,10 @@ over the network until we look at particular values:
         units: Celsius_scale
         expires: 1443657600
 
+.. jupyter-input::
+
     # the data is downloaded automatically when we make the plot
-    In [6]: tmax[0].plot()
+    tmax[0].plot()
 
 .. image:: ../_static/opendap-prism-tmax.png
 
@@ -1316,8 +1321,6 @@ We can convert a ``Dataset`` (or a ``DataArray``) to a dict using
 .. jupyter-execute::
 
     ds = xr.Dataset({"foo": ("x", np.arange(30))})
-    ds
-
     d = ds.to_dict()
     d
 
@@ -1365,15 +1368,15 @@ Rasterio
 GDAL readable raster data using `rasterio`_  such as GeoTIFFs can be opened using the `rioxarray`_ extension.
 `rioxarray`_ can also handle geospatial related tasks such as re-projecting and clipping.
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [1]: import rioxarray
+    import rioxarray
 
-    In [2]: rds = rioxarray.open_rasterio("RGB.byte.tif")
+    rds = rioxarray.open_rasterio("RGB.byte.tif")
+    rds
 
-    In [3]: rds
-    Out[3]:
+.. jupyter-output::
+
     <xarray.DataArray (band: 3, y: 718, x: 791)>
     [1703814 values with dtype=uint8]
     Coordinates:
@@ -1392,15 +1395,17 @@ GDAL readable raster data using `rasterio`_  such as GeoTIFFs can be opened usin
         add_offset:          0.0
         grid_mapping:        spatial_ref
 
-    In [4]: rds.rio.crs
-    Out[4]: CRS.from_epsg(32618)
+.. jupyter-input::
 
-    In [5]: rds4326 = rds.rio.reproject("epsg:4326")
+    rds.rio.crs
+    # CRS.from_epsg(32618)
 
-    In [6]: rds4326.rio.crs
-    Out[6]: CRS.from_epsg(4326)
+    rds4326 = rds.rio.reproject("epsg:4326")
 
-    In [7]: rds4326.rio.to_raster("RGB.byte.4326.tif")
+    rds4326.rio.crs
+    # CRS.from_epsg(4326)
+
+    rds4326.rio.to_raster("RGB.byte.4326.tif")
 
 
 .. _rasterio: https://rasterio.readthedocs.io/en/latest/
@@ -1425,10 +1430,9 @@ Xarray supports reading GRIB files via ECMWF cfgrib_ python driver,
 if it is installed. To open a GRIB file supply ``engine='cfgrib'``
 to :py:func:`open_dataset` after installing cfgrib_:
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [1]: ds_grib = xr.open_dataset("example.grib", engine="cfgrib")
+    ds_grib = xr.open_dataset("example.grib", engine="cfgrib")
 
 We recommend installing cfgrib via conda::
 
