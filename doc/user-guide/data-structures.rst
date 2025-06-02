@@ -5,6 +5,7 @@ Data Structures
 
 .. jupyter-execute::
     :hide-code:
+    :hide-output:
 
     import numpy as np
     import pandas as pd
@@ -15,7 +16,6 @@ Data Structures
     np.set_printoptions(threshold=10)
 
     %xmode minimal
-
 
 
 DataArray
@@ -157,6 +157,9 @@ If you create a ``DataArray`` by supplying a pandas
     df.index.name = "abc"
     df.columns.name = "xyz"
     df
+
+.. jupyter-execute::
+
     xr.DataArray(df)
 
 DataArray properties
@@ -167,9 +170,21 @@ Let's take a look at the important properties on our array:
 .. jupyter-execute::
 
     foo.values
+
+.. jupyter-execute::
+
     foo.dims
+
+.. jupyter-execute::
+
     foo.coords
+
+.. jupyter-execute::
+
     foo.attrs
+
+.. jupyter-execute::
+
     print(foo.name)
 
 You can modify ``values`` inplace:
@@ -210,6 +225,9 @@ itself:
 .. jupyter-execute::
 
     foo.coords["time"]
+
+.. jupyter-execute::
+
     foo["time"]
 
 These are also :py:class:`~xarray.DataArray` objects, which contain tick-labels
@@ -221,6 +239,9 @@ Coordinates can also be set or removed by using the dictionary like syntax:
 
     foo["ranking"] = ("space", [1, 2, 3])
     foo.coords
+
+.. jupyter-execute::
+
     del foo["ranking"]
     foo.coords
 
@@ -355,7 +376,7 @@ values given by :py:class:`xarray.DataArray` objects:
 
 .. jupyter-execute::
 
-    "temperature" in ds
+    print("temperature" in ds)
     ds["temperature"]
 
 Valid keys include each listed coordinate and data variable.
@@ -367,6 +388,9 @@ dictionary-like attributes:
 .. jupyter-execute::
 
     ds.data_vars
+
+.. jupyter-execute::
+
     ds.coords
 
 Finally, like data arrays, datasets also store arbitrary metadata in the form
@@ -374,8 +398,7 @@ of ``attributes``:
 
 .. jupyter-execute::
 
-    ds.attrs
-
+    print(ds.attrs)
     ds.attrs["title"] = "example attribute"
     ds
 
@@ -441,7 +464,13 @@ operations keep around coordinates:
 .. jupyter-execute::
 
     ds[["temperature"]]
+
+.. jupyter-execute::
+
     ds[["temperature", "temperature_double"]]
+
+.. jupyter-execute::
+
     ds.drop_vars("temperature")
 
 To remove a dimension, you can use :py:meth:`~xarray.Dataset.drop_dims` method.
@@ -465,7 +494,7 @@ simply calling it (e.g., ``func(ds)``). This allows you to write pipelines for
 transforming your data (using "method chaining") instead of writing hard to
 follow nested function calls:
 
-.. jupyter-execute::
+.. jupyter-input::
 
     # these lines are equivalent, but with pipe we can make the logic flow
     # entirely from left to right
@@ -576,7 +605,7 @@ At this point we have created a single node datatree with no parent and no child
 
 .. jupyter-execute::
 
-    dt.parent is None
+    print(dt.parent is None)
     dt.children
 
 We can add a second node to this tree, assigning it to the parent node ``dt``:
@@ -606,8 +635,6 @@ We have created a tree with three nodes in it:
 .. jupyter-execute::
 
     dt
-
-
 
 Consistency checks are enforced. For instance, if we try to create a cycle,
 where the root node is also a child of a descendant, the constructor will raise
@@ -640,6 +667,9 @@ but with values given by either :py:class:`~xarray.DataArray` objects or other
 .. jupyter-execute::
 
     dt["child-node"]
+
+.. jupyter-execute::
+
     dt["foo"]
 
 Iterating over keys will iterate over both the names of variables and child nodes.
@@ -666,6 +696,9 @@ node separately via the :py:attr:`~xarray.DataTree.data_vars` and :py:attr:`~xar
 .. jupyter-execute::
 
     dt["child-node"].data_vars
+
+.. jupyter-execute::
+
     dt["child-node"].coords
 
 
@@ -800,6 +833,8 @@ included by default unless you exclude them with the ``inherit`` flag:
 
     dt2["/weather/temperature"].to_dataset()
 
+.. jupyter-execute::
+
     dt2["/weather/temperature"].to_dataset(inherit=False)
 
 For more examples and further discussion see :ref:`alignment and coordinate inheritance <hierarchical-data.alignment-and-coordinate-inheritance>`.
@@ -860,7 +895,13 @@ To convert back and forth between data and coordinates, you can use the
 .. jupyter-execute::
 
     ds.reset_coords()
+
+.. jupyter-execute::
+
     ds.set_coords(["temperature", "precipitation"])
+
+.. jupyter-execute::
+
     ds["temperature"].reset_coords(drop=True)
 
 Notice that these operations skip coordinates with names given by dimensions,
@@ -930,6 +971,9 @@ For convenience multi-index levels are directly accessible as "virtual" or
 .. jupyter-execute::
 
     mda["band"]
+
+.. jupyter-execute::
+
     mda.wn
 
 Indexing with multi-index levels is also possible using the ``sel`` method

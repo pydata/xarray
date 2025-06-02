@@ -9,6 +9,12 @@ pandas; so we've put together a glossary of its terms. Here,* ``arr``
 *refers to an xarray* :py:class:`DataArray` *in the examples. For more
 complete examples, please consult the relevant documentation.*
 
+.. jupyter-execute::
+    :hide-code:
+
+    import numpy as np
+    import xarray as xr
+
 .. glossary::
 
     DataArray
@@ -131,12 +137,6 @@ complete examples, please consult the relevant documentation.*
 
         __ https://numpy.org/neps/nep-0022-ndarray-duck-typing-overview.html
 
-        .. jupyter-execute::
-            :hide-code:
-
-            import numpy as np
-            import xarray as xr
-
     Aligning
         Aligning refers to the process of ensuring that two or more DataArrays or Datasets
         have the same dimensions and coordinates, so that they can be combined or compared properly.
@@ -153,8 +153,11 @@ complete examples, please consult the relevant documentation.*
                 dims=("lat", "lon"),
                 coords={"lat": [35.0, 42.0], "lon": [100.0, 120.0]},
             )
-            x
-            y
+            a, b = xr.align(x, y)
+
+            # By default, an "inner join" is performed
+            # so "a" is a copy of "x" where coordinates match "y"
+            a
 
     Broadcasting
         A technique that allows operations to be performed on arrays with different shapes and dimensions.

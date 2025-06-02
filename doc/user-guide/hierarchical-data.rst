@@ -5,6 +5,7 @@ Hierarchical data
 
 .. jupyter-execute::
     :hide-code:
+    :hide-output:
 
     import numpy as np
     import pandas as pd
@@ -71,6 +72,8 @@ We now have a small family tree
 
 .. jupyter-execute::
 
+    # Enable text display instead of 'html' for compactness
+    xr.set_options(display_style="text")
     homer
 
 where we can see how these individual Simpson family members are related to one another.
@@ -119,6 +122,9 @@ We can see the whole tree by printing Abe's node or just part of the tree by pri
 .. jupyter-execute::
 
     abe
+
+.. jupyter-execute::
+
     abe["Homer"]
 
 
@@ -131,8 +137,10 @@ We can add Herbert to the family tree without displacing Homer by :py:meth:`~xar
     abe = abe.assign({"Herbert": herbert})
     abe
 
-    abe["Herbert"].name
-    herbert.name
+.. jupyter-execute::
+
+    print(abe["Herbert"].name)
+    print(herbert.name)
 
 .. note::
    This example shows a subtlety - the returned tree has Homer's brother listed as ``"Herbert"``,
@@ -173,6 +181,7 @@ Let's use a different example of a tree to discuss more complex relationships be
     )
 
     primates = vertebrates["/Bony Skeleton/Four Limbs/Amniotic Egg/Hair/Primates"]
+
     dinosaurs = vertebrates[
         "/Bony Skeleton/Four Limbs/Amniotic Egg/Two Fenestrae/Dinosaurs"
     ]
@@ -193,7 +202,7 @@ We can check if a node is a leaf with :py:meth:`~xarray.DataTree.is_leaf`, and g
 
 .. jupyter-execute::
 
-    primates.is_leaf
+    print(primates.is_leaf)
     [node.name for node in vertebrates.leaves]
 
 Pretending that this is a true evolutionary tree for a moment, we can find the features of the evolutionary ancestors (so-called "ancestor" nodes),
@@ -202,9 +211,9 @@ and even the distinguishing feature of the common ancestor of any two species (t
 
 .. jupyter-execute::
 
-    [node.name for node in reversed(primates.parents)]
-    primates.root.name
-    primates.find_common_ancestor(dinosaurs).name
+    print([node.name for node in reversed(primates.parents)])
+    print(primates.root.name)
+    print(primates.find_common_ancestor(dinosaurs).name)
 
 We can only find a common ancestor between two nodes that lie in the same tree.
 If we try to find the common evolutionary ancestor between primates and an Alien species that has no relationship to Earth's evolutionary tree,
@@ -270,8 +279,8 @@ You can also select both variables and child nodes through dot indexing
 
 .. jupyter-execute::
 
-    dt.foo
-    dt.a
+    print(dt.foo)
+    print(dt.a)
 
 .. _filesystem paths:
 
@@ -297,8 +306,8 @@ Like with filepaths, paths within the tree can either be relative to the current
 
 .. jupyter-execute::
 
-    abe["Homer/Bart"].name
-    abe["./Homer/Bart"].name  # alternative syntax
+    print(abe["Homer/Bart"].name)
+    print(abe["./Homer/Bart"].name)  # alternative syntax
 
 or relative to the root node.
 A path specified from the root (as opposed to being specified relative to an arbitrary node in the tree) is sometimes also referred to as a
@@ -309,9 +318,9 @@ The root node is referred to by ``"/"``, so the path from the root node to its g
 .. jupyter-execute::
 
     # access lisa's sibling by a relative path.
-    lisa["../Bart"]
+    print(lisa["../Bart"])
     # or from absolute path
-    lisa["/Homer/Bart"]
+    print(lisa["/Homer/Bart"])
 
 
 Relative paths between nodes also support the ``"../"`` syntax to mean the parent of the current node.
@@ -683,6 +692,8 @@ we can do arithmetic between them.
     )
     currents
 
+.. jupyter-execute::
+
     currents.isomorphic(voltages)
 
 We could use this feature to quickly calculate the electrical power in our signal, P=IV.
@@ -725,9 +736,9 @@ These datasets have different lengths along the ``time`` dimension, and are ther
 
 .. jupyter-execute::
 
-    ds_daily.sizes
-    ds_weekly.sizes
-    ds_monthly.sizes
+    print(ds_daily.sizes)
+    print(ds_weekly.sizes)
+    print(ds_monthly.sizes)
 
 We cannot store these non-alignable variables on a single :py:class:`~xarray.Dataset` object, because they do not exactly align:
 
@@ -817,6 +828,9 @@ We can still access the coordinates defined in the parent groups from any of the
 .. jupyter-execute::
 
     dt.daily.coords
+
+.. jupyter-execute::
+
     dt["daily/lat"]
 
 As we can still access them, we say that the ``lat`` and ``lon`` coordinates in the child groups have been "inherited" from their common parent group.
@@ -825,7 +839,7 @@ If we print just one of the child nodes, it will still display inherited coordin
 
 .. jupyter-execute::
 
-    print(dt["/daily"])
+    dt["/daily"]
 
 This helps to differentiate which variables are defined on the datatree node that you are currently looking at, and which were defined somewhere above it.
 
@@ -834,5 +848,7 @@ We can also still perform all the same operations on the whole tree:
 .. jupyter-execute::
 
     dt.sel(lat=[75], lon=[300])
+
+.. jupyter-execute::
 
     dt.std(dim="time")
