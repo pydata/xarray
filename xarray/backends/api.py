@@ -1607,6 +1607,9 @@ def open_mfdataset(
 
     paths1d: list[str | ReadBuffer]
     if combine == "nested":
+        if isinstance(concat_dim, str | DataArray) or concat_dim is None:
+            concat_dim = [concat_dim]  # type: ignore[assignment]
+
         # This creates a flat list which is easier to iterate over, whilst
         # encoding the originally-supplied structure as "ids".
         # The "ids" are not used at all if combine='by_coords`.
@@ -1655,7 +1658,7 @@ def open_mfdataset(
             # along each dimension, using structure given by "ids"
             combined = _nested_combine(
                 datasets,
-                concat_dim=concat_dim,
+                concat_dims=concat_dim,
                 compat=compat,
                 data_vars=data_vars,
                 coords=coords,

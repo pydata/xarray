@@ -352,7 +352,7 @@ def _new_tile_id(single_id_ds_pair):
 
 def _nested_combine(
     datasets,
-    concat_dim,
+    concat_dims,
     compat,
     data_vars,
     coords,
@@ -363,9 +363,6 @@ def _nested_combine(
 ):
     if len(datasets) == 0:
         return Dataset()
-
-    if isinstance(concat_dim, str | DataArray) or concat_dim is None:
-        concat_dim = [concat_dim]
 
     # Arrange datasets for concatenation
     # Use information from the shape of the user input
@@ -383,7 +380,7 @@ def _nested_combine(
     # Apply series of concatenate or merge operations along each dimension
     combined = _combine_nd(
         combined_ids,
-        concat_dims=concat_dim,
+        concat_dims=concat_dims,
         compat=compat,
         data_vars=data_vars,
         coords=coords,
@@ -598,10 +595,13 @@ def combine_nested(
     if mixed_datasets_and_arrays:
         raise ValueError("Can't combine datasets with unnamed arrays.")
 
+    if isinstance(concat_dim, str | DataArray) or concat_dim is None:
+        concat_dim = [concat_dim]
+
     # The IDs argument tells _nested_combine that datasets aren't yet sorted
     return _nested_combine(
         datasets,
-        concat_dim=concat_dim,
+        concat_dims=concat_dim,
         compat=compat,
         data_vars=data_vars,
         coords=coords,
