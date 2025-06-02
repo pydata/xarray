@@ -51,8 +51,8 @@ dimension:
 
 .. ipython:: python
 
-    da0 = da.isel(x=0).drop_vars("x")
-    da1 = da.isel(x=1).drop_vars("x")
+    da0 = da.isel(x=0, drop=True)
+    da1 = da.isel(x=1, drop=True)
 
     xr.concat([da0, da1], "new_dim")
 
