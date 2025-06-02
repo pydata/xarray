@@ -456,7 +456,7 @@ class Aligner(Generic[T_Alignable]):
                     ):
                         emit_user_level_warning(
                             self.join.warning_message(
-                                "This change will result in the following ValueError:"
+                                "This change will result in the following ValueError: "
                                 "cannot be aligned with join='exact' because "
                                 "index/labels/sizes are not equal along "
                                 "these coordinates (dimensions): "

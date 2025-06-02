@@ -36,7 +36,7 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
-- Start deprecation cycle for changing the default keyword arguments to ``concat``, ``merge``, ``combine``, ``open_mfdataset``.
+- Start a deprecation cycle for changing the default keyword arguments to ``concat``, ``merge``, ``combine``, ``open_mfdataset``.
   Emits a ``FutureWarning`` when using old defaults and new defaults would result in different behavior.
   Adds an option: ``use_new_combine_kwarg_defaults`` to opt in to new defaults immediately.
 
