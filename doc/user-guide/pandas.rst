@@ -58,6 +58,9 @@ To convert any dataset to a ``DataFrame`` in tidy form, use the
         },
     )
     ds
+
+.. jupyter-execute::
+
     df = ds.to_dataframe()
     df
 
@@ -99,6 +102,9 @@ DataFrames:
 
     s = ds["foo"].to_series()
     s
+
+.. jupyter-execute::
+
     # or equivalently, with Series.to_xarray()
     xr.DataArray.from_series(s)
 
@@ -108,6 +114,9 @@ work even if the hierarchical index is not a full tensor product:
 .. jupyter-execute::
 
     s[::2]
+
+.. jupyter-execute::
+
     s[::2].to_xarray()
 
 Lossless and reversible conversion
@@ -209,11 +218,12 @@ Let's take a look:
 
 With old versions of pandas (prior to 0.25), this could stored in a ``Panel``:
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [1]: pd.Panel(data, items, major_axis, minor_axis)
-    Out[1]:
+    pd.Panel(data, items, major_axis, minor_axis)
+
+.. jupyter-output::
+
     <class 'pandas.core.panel.Panel'>
     Dimensions: 2 (items) x 3 (major_axis) x 4 (minor_axis)
     Items axis: a to b

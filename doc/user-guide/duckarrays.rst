@@ -54,6 +54,9 @@ in a memory-efficient manner. We can create a sparse array object (of the :py:cl
     from sparse import COO
     import xarray as xr
     import numpy as np
+    %xmode minimal
+
+.. jupyter-execute::
 
     x = np.eye(4, dtype=np.uint8)  # create diagonal identity matrix
     s = COO.from_numpy(x)
@@ -68,6 +71,9 @@ Just like :py:class:`numpy.ndarray` objects, :py:class:`sparse.COO` arrays suppo
 .. jupyter-execute::
 
     s[1, 1]  # diagonal elements should be ones
+
+.. jupyter-execute::
+
     s[2, 3]  # off-diagonal elements should be zero
 
 broadcasting,
