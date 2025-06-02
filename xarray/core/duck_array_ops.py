@@ -265,18 +265,6 @@ def view(data, *args, **kwargs):
     return data.view(*args, **kwargs)
 
 
-def asarray(data, xp=np, dtype=None):
-    converted = data if is_duck_array(data) else xp.asarray(data)
-
-    if dtype is None or converted.dtype == dtype:
-        return converted
-
-    if xp is np or not hasattr(xp, "astype"):
-        return converted.astype(dtype)
-    else:
-        return xp.astype(converted, dtype)
-
-
 def as_shared_dtype(scalars_or_arrays, xp=None):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
     if any(is_extension_array_dtype(x) for x in scalars_or_arrays):
