@@ -20,6 +20,11 @@ Importing the library
 
     np.random.seed(123456)
 
+    # Use defaults so we don't get gridlines in generated docs
+    import matplotlib as mpl
+
+    mpl.rcdefaults()
+
 Reordering dimensions
 ---------------------
 
@@ -30,8 +35,10 @@ ellipsis (`...`) can be used to represent all other dimensions:
 .. jupyter-execute::
 
     ds = xr.Dataset({"foo": (("x", "y", "z"), [[[42]]]), "bar": (("y", "z"), [[24]])})
-    ds.transpose("y", "z", "x")
-    ds.transpose(..., "x")  # equivalent
+    ds.transpose("y", "z", "x") # equivalent to ds.transpose(..., "x")
+
+.. jupyter-execute::
+
     ds.transpose()  # reverses all dimensions
 
 Expand and squeeze dimensions
@@ -87,6 +94,8 @@ includes the union of data variable dimensions:
     # the input dataset has 4 elements
     ds2
 
+.. jupyter-execute::
+
     # the resulting array has 6 elements
     ds2.to_dataarray()
 
@@ -114,6 +123,9 @@ implemented :py:meth:`~xarray.DataArray.stack` and
     )
     stacked = array.stack(z=("x", "y"))
     stacked
+
+.. jupyter-execute::
+
     stacked.unstack("z")
 
 As elsewhere in xarray, an ellipsis (`...`) can be used to represent all unlisted dimensions:
@@ -135,6 +147,9 @@ possible levels. Missing levels are filled in with ``NaN`` in the resulting obje
 
     stacked2 = stacked[::2]
     stacked2
+
+.. jupyter-execute::
+
     stacked2.unstack("z")
 
 However, xarray's ``stack`` has an important difference from pandas: unlike
@@ -144,6 +159,9 @@ pandas, it does not automatically drop missing values. Compare:
 
     array = xr.DataArray([[np.nan, 1], [2, 3]], dims=["x", "y"])
     array.stack(z=("x", "y"))
+
+.. jupyter-execute::
+
     array.to_pandas().stack()
 
 We departed from pandas's behavior here because predictable shapes for new
@@ -178,8 +196,14 @@ like this:
         coords={"y": ["u", "v", "w"]},
     )
     data
+
+.. jupyter-execute::
+
     stacked = data.to_stacked_array("z", sample_dims=["x"])
     stacked
+
+.. jupyter-execute::
+
     unstacked = stacked.to_unstacked_dataset("z")
     unstacked
 
@@ -217,6 +241,9 @@ coordinates using :py:meth:`~xarray.DataArray.set_index`:
         dims="x",
     )
     da
+
+.. jupyter-execute::
+
     mda = da.set_index(x=["band", "wavenumber"])
     mda
 
@@ -249,8 +276,14 @@ labels for one or several dimensions:
 
     array = xr.DataArray([1, 2, 3], dims="x")
     array
+
+.. jupyter-execute::
+
     array["c"] = ("x", ["a", "b", "c"])
     array.set_index(x="c")
+
+.. jupyter-execute::
+
     array = array.set_index(x="c")
     array = array.reset_index("x", drop=True)
 
@@ -266,6 +299,9 @@ To adjust coordinate labels, you can use the :py:meth:`~xarray.Dataset.shift` an
 
     array = xr.DataArray([1, 2, 3, 4], dims="x")
     array.shift(x=2)
+
+.. jupyter-execute::
+
     array.roll(x=2, roll_coords=True)
 
 .. _reshape.sort:
@@ -295,7 +331,13 @@ As a shortcut, you can refer to existing coordinates by name:
 .. jupyter-execute::
 
     ds.sortby("x")
+
+.. jupyter-execute::
+
     ds.sortby(["y", "x"])
+
+.. jupyter-execute::
+
     ds.sortby(["y", "x"], ascending=False)
 
 .. _reshape.coarsen:
@@ -310,18 +352,10 @@ it can also be used to reorganise your data without applying a computation via :
 Taking our example tutorial air temperature dataset over the Northern US
 
 .. jupyter-execute::
-    :hide-code:
-
-    # Use defaults so we don't get gridlines in generated docs
-    import matplotlib as mpl
-
-    mpl.rcdefaults()
-
-.. jupyter-execute::
 
     air = xr.tutorial.open_dataset("air_temperature")["air"]
 
-    air.isel(time=0).plot(x="lon", y="lat")
+    air.isel(time=0).plot(x="lon", y="lat");
 
 we can split this up into sub-regions of size ``(9, 18)`` points using :py:meth:`~xarray.computation.rolling.DataArrayCoarsen.construct`:
 
@@ -330,7 +364,8 @@ we can split this up into sub-regions of size ``(9, 18)`` points using :py:meth:
     regions = air.coarsen(lat=9, lon=18, boundary="pad").construct(
         lon=("x_coarse", "x_fine"), lat=("y_coarse", "y_fine")
     )
-    regions
+    with xr.set_options(display_expand_data=False):
+        regions
 
 9 new regions have been created, each of size 9 by 18 points.
 The ``boundary="pad"`` kwarg ensured that all regions are the same size even though the data does not evenly divide into these sizes.
@@ -341,7 +376,7 @@ By plotting these 9 regions together via :ref:`faceting<plotting.faceting>` we c
 
     regions.isel(time=0).plot(
         x="x_fine", y="y_fine", col="x_coarse", row="y_coarse", yincrease=False
-    )
+    );
 
 We are now free to easily apply any custom computation to each coarsened region of our new dataarray.
 This would involve specifying that applied functions should act over the ``"x_fine"`` and ``"y_fine"`` dimensions,

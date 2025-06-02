@@ -34,6 +34,9 @@ numpy) over all array values:
         [("x", ["a", "b"]), ("y", [10, 20, 30])],
     )
     arr - 3
+
+.. jupyter-execute::
+
     abs(arr)
 
 You can also use any of numpy's or scipy's many `ufunc`__ functions directly on
@@ -62,10 +65,18 @@ Data arrays also implement many :py:class:`numpy.ndarray` methods:
 .. jupyter-execute::
 
     arr.round(2)
+
+.. jupyter-execute::
+
     arr.T
+
+.. jupyter-execute::
 
     intarr = xr.DataArray([0, 1, 2, 3, 4, 5])
     intarr << 2  # only supported for int types
+
+.. jupyter-execute::
+
     intarr >> 1
 
 .. _missing_values:
@@ -215,7 +226,13 @@ applied along particular dimension(s):
 .. jupyter-execute::
 
     arr.sum(dim="x")
+
+.. jupyter-execute::
+
     arr.std(["x", "y"])
+
+.. jupyter-execute::
+
     arr.min()
 
 
@@ -264,6 +281,9 @@ object:
 
     r = arr.rolling(y=3)
     r.reduce(np.std)
+
+.. jupyter-execute::
+
     r.mean()
 
 Aggregation results are assigned the coordinate at the end of each window by
@@ -284,6 +304,9 @@ a value when aggregating:
 
     r = arr.rolling(y=3, min_periods=2)
     r.mean()
+
+.. jupyter-execute::
+
     r = arr.rolling(y=3, center=True, min_periods=2)
     r.mean()
 
@@ -335,6 +358,9 @@ windowed rolling, convolution, short-time FFT etc.
     # rolling with 2-point stride
     rolling_da = r.construct(x="x_win", y="y_win", stride=2)
     rolling_da
+
+.. jupyter-execute::
+
     rolling_da.mean(["x_win", "y_win"], skipna=False)
 
 Because the ``DataArray`` given by ``r.construct('window_dim')`` is a view
@@ -513,7 +539,6 @@ central finite differences using their coordinates,
 .. jupyter-execute::
 
     a = xr.DataArray([0, 1, 2, 3], dims=["x"], coords=[[0.1, 0.11, 0.2, 0.3]])
-    a
     a.differentiate("x")
 
 This method can be used also for multidimensional arrays,
@@ -664,6 +689,9 @@ arrays with different sizes aligned along different dimensions:
 
     a = xr.DataArray([1, 2], [("x", ["a", "b"])])
     a
+
+.. jupyter-execute::
+
     b = xr.DataArray([-1, -2, -3], [("y", [10, 20, 30])])
     b
 
@@ -681,6 +709,9 @@ appeared:
 
     c = xr.DataArray(np.arange(6).reshape(3, 2), [b["y"], a["x"]])
     c
+
+.. jupyter-execute::
+
     a + c
 
 This means, for example, that you always subtract an array from its transpose:
@@ -696,6 +727,9 @@ You can explicitly broadcast xarray data structures by using the
 
     a2, b2 = xr.broadcast(a, b)
     a2
+
+.. jupyter-execute::
+
     b2
 
 .. _math automatic alignment:
@@ -759,7 +793,13 @@ indexing turns 1D coordinates into scalar coordinates:
 .. jupyter-execute::
 
     arr[0]
+
+.. jupyter-execute::
+
     arr[1]
+
+.. jupyter-execute::
+
     # notice that the scalar coordinate 'x' is silently dropped
     arr[1] - arr[0]
 
@@ -770,6 +810,9 @@ are no conflicting values:
 
     # only one argument has the 'x' coordinate
     arr[0] + 1
+
+.. jupyter-execute::
+
     # both arguments have the same 'x' coordinate
     arr[0] - arr[0]
 
@@ -795,6 +838,9 @@ Datasets support most of the same methods found on data arrays:
 .. jupyter-execute::
 
     ds.mean(dim="x")
+
+.. jupyter-execute::
+
     abs(ds)
 
 Datasets also support NumPy ufuncs (requires NumPy v1.13 or newer), or
@@ -803,8 +849,7 @@ to each variable in a dataset:
 
 .. jupyter-execute::
 
-    np.sin(ds)
-    ds.map(np.sin)
+    np.sin(ds) # equivalent to ds.map(np.sin)
 
 Datasets also use looping over variables for *broadcasting* in binary
 arithmetic. You can do arithmetic between any ``DataArray`` and a dataset:

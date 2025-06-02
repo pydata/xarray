@@ -170,6 +170,9 @@ coordinates. For example:
 
     alt = arr.groupby("letters").mean(...)
     alt
+
+.. jupyter-execute::
+
     ds.groupby("letters") - alt
 
 This last line is roughly equivalent to the following::
@@ -202,7 +205,13 @@ __ https://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#_two_dime
         dims=["ny", "nx"],
     )
     da
+
+.. jupyter-execute::
+
     da.groupby("lon").sum(...)
+
+.. jupyter-execute::
+
     da.groupby("lon").map(lambda x: x - x.mean(), shortcut=False)
 
 Because multidimensional groups have the ability to generate a very large

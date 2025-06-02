@@ -72,7 +72,13 @@ DataArray:
         ],
     )
     da[:2]
+
+.. jupyter-execute::
+
     da[0, 0]
+
+.. jupyter-execute::
+
     da[:, [2, 1]]
 
 Attributes are persisted in all indexing operations.
@@ -124,6 +130,8 @@ use them explicitly to slice data. There are two ways to do this:
         # index by integer array indices
         da.isel(space=0, time=slice(None, 2))
 
+    .. jupyter-execute::
+
         # index by dimension coordinate labels
         da.sel(time=slice("2000-01-01", "2000-01-02"))
 
@@ -134,6 +142,8 @@ use them explicitly to slice data. There are two ways to do this:
 
         # index by integer array indices
         da[dict(space=0, time=slice(None, 2))]
+
+    .. jupyter-execute::
 
         # index by dimension coordinate labels
         da.loc[dict(time=slice("2000-01-01", "2000-01-02"))]
@@ -167,7 +177,13 @@ enabling nearest neighbor (inexact) lookups by use of the methods ``'pad'``,
 
     da = xr.DataArray([1, 2, 3], [("x", [0, 1, 2])])
     da.sel(x=[1.1, 1.9], method="nearest")
+
+.. jupyter-execute::
+
     da.sel(x=0.1, method="backfill")
+
+.. jupyter-execute::
+
     da.reindex(x=[0.5, 1, 1.5, 2, 2.5], method="pad")
 
 Tolerance limits the maximum distance for valid matches with an inexact lookup:
@@ -179,11 +195,10 @@ Tolerance limits the maximum distance for valid matches with an inexact lookup:
 The method parameter is not yet supported if any of the arguments
 to ``.sel()`` is a ``slice`` object:
 
-.. ipython::
-   :verbatim:
+.. jupyter-execute::
+   :raises:
 
-   In [1]: da.sel(x=slice(1, 3), method="nearest")
-   NotImplementedError
+   da.sel(x=slice(1, 3), method="nearest")
 
 However, you don't need to use ``method`` to do inexact slicing. Slicing
 already returns all values inside the range (inclusive), as long as the index
@@ -227,6 +242,9 @@ simultaneously, returning a new dataset:
     )
     ds = da.to_dataset(name="foo")
     ds.isel(space=[0], time=[0])
+
+.. jupyter-execute::
+
     ds.sel(time="2000-01-01")
 
 Positional indexing on a dataset is not supported because the ordering of
@@ -236,6 +254,9 @@ arrays). However, you can do normal indexing with dimension names:
 .. jupyter-execute::
 
     ds[dict(space=[0], time=[0])]
+
+.. jupyter-execute::
+
     ds.loc[dict(time="2000-01-01")]
 
 Dropping labels and dimensions
@@ -340,6 +361,9 @@ MATLAB, or after using the :py:func:`numpy.ix_` helper:
         coords={"x": [0, 1, 2], "y": ["a", "b", "c", "d"]},
     )
     da
+
+.. jupyter-execute::
+
     da[[0, 2, 2], [1, 3]]
 
 For more flexibility, you can supply :py:meth:`~xarray.DataArray` objects
@@ -384,6 +408,8 @@ Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
 
     ind = xr.DataArray([[0, 1], [0, 1]], dims=["a", "b"])
     da.isel(y=ind)  # same as da[:, ind]
+
+.. jupyter-execute::
 
     ind = xr.DataArray([["a", "b"], ["b", "a"]], dims=["a", "b"])
     da.loc[:, ind]  # same as da.sel(y=ind)
@@ -487,13 +513,20 @@ Vectorized indexing can also be used to assign values to xarray object.
         coords={"x": [0, 1, 2], "y": ["a", "b", "c", "d"]},
     )
     da
+
+.. jupyter-execute::
+
     da[0] = -1  # assignment with broadcasting
     da
+
+.. jupyter-execute::
 
     ind_x = xr.DataArray([0, 1], dims=["x"])
     ind_y = xr.DataArray([0, 1], dims=["y"])
     da[ind_x, ind_y] = -2  # assign -2 to (ix, iy) = (0, 0) and (1, 1)
     da
+
+.. jupyter-execute::
 
     da[ind_x, ind_y] += 100  # increment is also possible
     da
@@ -550,7 +583,6 @@ You can also assign values to all variables of a :py:class:`Dataset` at once:
 
 .. jupyter-execute::
 
-
     ds_org = xr.tutorial.open_dataset("eraint_uvz").isel(
         latitude=slice(56, 59), longitude=slice(255, 258), level=0
     )
@@ -558,18 +590,30 @@ You can also assign values to all variables of a :py:class:`Dataset` at once:
     ds = xr.zeros_like(ds_org)
     ds
 
+.. jupyter-execute::
+
     # by integer
     ds[dict(latitude=2, longitude=2)] = 1
     ds["u"]
+
+.. jupyter-execute::
+
     ds["v"]
+
+.. jupyter-execute::
 
     # by label
     ds.loc[dict(latitude=47.25, longitude=[11.25, 12])] = 100
     ds["u"]
 
+.. jupyter-execute::
+
     # dataset as new values
     new_dat = ds_org.loc[dict(latitude=48, longitude=[11.25, 12])]
     new_dat
+
+.. jupyter-execute::
+
     ds.loc[dict(latitude=47.25, longitude=[11.25, 12])] = new_dat
     ds["u"]
 
@@ -588,6 +632,9 @@ flexible indexing. The following is an example of the pointwise indexing:
 
     da = xr.DataArray(np.arange(56).reshape((7, 8)), dims=["x", "y"])
     da
+
+.. jupyter-execute::
+
     da.isel(x=xr.DataArray([0, 1, 6], dims="z"), y=xr.DataArray([0, 1, 0], dims="z"))
 
 
@@ -671,6 +718,9 @@ The :py:func:`~xarray.align` function lets us perform more flexible database-lik
 .. jupyter-execute::
 
     xr.align(foo, baz, join="inner")
+
+.. jupyter-execute::
+
     xr.align(foo, baz, join="outer")
 
 Both ``reindex_like`` and ``align`` work interchangeably between
@@ -679,7 +729,13 @@ Both ``reindex_like`` and ``align`` work interchangeably between
 .. jupyter-execute::
 
     ds
+
+.. jupyter-execute::
+
     ds.reindex_like(baz)
+
+.. jupyter-execute::
+
     other = xr.DataArray(["a", "b", "c"], dims="other")
     # this is a no-op, because there are no shared dimension names
     ds.reindex_like(other)
@@ -725,7 +781,13 @@ through the :py:attr:`~xarray.DataArray.indexes` attribute.
         ],
     )
     da
+
+.. jupyter-execute::
+
     da.indexes
+
+.. jupyter-execute::
+
     da.indexes["time"]
 
 Use :py:meth:`~xarray.DataArray.get_index` to get an index for a dimension,
@@ -736,6 +798,9 @@ labels:
 
     da = xr.DataArray([1, 2, 3], dims="x")
     da
+
+.. jupyter-execute::
+
     da.get_index("x")
 
 
@@ -785,6 +850,9 @@ pandas:
     midx = pd.MultiIndex.from_product([list("abc"), [0, 1]], names=("one", "two"))
     mda = xr.DataArray(np.random.rand(6, 3), [("x", midx), ("y", range(3))])
     mda
+
+.. jupyter-execute::
+
     mda.sel(x=(list("ab"), [0]))
 
 You can also select multiple elements by providing a list of labels or tuples or

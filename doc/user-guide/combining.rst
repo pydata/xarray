@@ -12,6 +12,8 @@ Combining data
 
     np.random.seed(123456)
 
+    %xmode minimal
+
 * For combining datasets or data arrays along a single dimension, see concatenate_.
 * For combining datasets with different variables, see merge_.
 * For combining datasets or data arrays with different indexes or missing values, see combine_.
@@ -33,8 +35,14 @@ dimension name, and concatenates along that dimension:
         np.arange(6).reshape(2, 3), [("x", ["a", "b"]), ("y", [10, 20, 30])]
     )
     da.isel(y=slice(0, 1))  # same as da[:, :1]
+
+.. jupyter-execute::
+
     # This resembles how you would use np.concatenate:
     xr.concat([da[:, :1], da[:, 1:]], dim="y")
+
+.. jupyter-execute::
+
     # For more friendly pandas-like indexing you can use:
     xr.concat([da.isel(y=slice(0, 1)), da.isel(y=slice(1, None))], dim="y")
 
@@ -44,6 +52,9 @@ new dimension by stacking lower dimensional arrays together:
 .. jupyter-execute::
 
     da.sel(x="a")
+
+.. jupyter-execute::
+
     xr.concat([da.isel(x=0), da.isel(x=1)], "x")
 
 If the second argument to ``concat`` is a new dimension name, the arrays will
@@ -88,6 +99,9 @@ To combine variables and coordinates between multiple ``DataArray`` and/or
 .. jupyter-execute::
 
     xr.merge([ds, ds.rename({"foo": "bar"})])
+
+.. jupyter-execute::
+
     xr.merge([xr.DataArray(n, name="var%d" % n) for n in range(5)])
 
 If you merge another dataset (or a dictionary including data array objects), by
@@ -102,17 +116,11 @@ coordinates:
 This ensures that ``merge`` is non-destructive. ``xarray.MergeError`` is raised
 if you attempt to merge two variables with the same name but different values:
 
-.. ipython::
+.. jupyter-execute::
+    :raises:
 
-    @verbatim
-    In [1]: xr.merge([ds, ds + 1])
-    MergeError: conflicting values for variable 'foo' on objects to be combined:
-    first value: <xarray.Variable (x: 2, y: 3)>
-    array([[ 0.4691123 , -0.28286334, -1.5090585 ],
-           [-1.13563237,  1.21211203, -0.17321465]])
-    second value: <xarray.Variable (x: 2, y: 3)>
-    array([[ 1.4691123 ,  0.71713666, -0.5090585 ],
-           [-0.13563237,  2.21211203,  0.82678535]])
+    xr.merge([ds, ds + 1])
+
 
 The same non-destructive merging between ``DataArray`` index coordinates is
 used in the :py:class:`~xarray.Dataset` constructor:
@@ -137,6 +145,9 @@ are filled with ``NaN``. For example:
     ar0 = xr.DataArray([[0, 0], [0, 0]], [("x", ["a", "b"]), ("y", [-1, 0])])
     ar1 = xr.DataArray([[1, 1], [1, 1]], [("x", ["b", "c"]), ("y", [0, 1])])
     ar0.combine_first(ar1)
+
+.. jupyter-execute::
+
     ar1.combine_first(ar0)
 
 For datasets, ``ds0.combine_first(ds1)`` works similarly to
@@ -270,6 +281,9 @@ datasets into a doubly-nested list, e.g:
         name="temperature", data=np.random.randint(5, size=(2, 2)), dims=["x", "y"]
     )
     arr
+
+.. jupyter-execute::
+
     ds_grid = [[arr, arr], [arr, arr]]
     xr.combine_nested(ds_grid, concat_dim=["x", "y"])
 

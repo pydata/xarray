@@ -36,6 +36,8 @@ indexing of a :py:class:`~xarray.DataArray`,
     # label lookup
     da.sel(time=3)
 
+.. jupyter-execute::
+
     # interpolation
     da.interp(time=2.5)
 
@@ -47,6 +49,8 @@ array-like, which gives the interpolated result as an array.
 
     # label lookup
     da.sel(time=[2, 3])
+
+.. jupyter-execute::
 
     # interpolation
     da.interp(time=[2.5, 3.5])
@@ -90,6 +94,8 @@ is carried out.
     # label lookup
     da.sel(time=2, space=0.1)
 
+.. jupyter-execute::
+
     # interpolation
     da.interp(time=2.5, space=0.15)
 
@@ -99,6 +105,8 @@ Array-like coordinates are also accepted:
 
     # label lookup
     da.sel(time=[2, 3], space=[0.1, 0.2])
+
+.. jupyter-execute::
 
     # interpolation
     da.interp(time=[1.5, 2.5], space=[0.15, 0.25])
@@ -154,7 +162,7 @@ The interpolation method can be specified by the optional ``method`` argument.
     da.plot.line("o", label="original")
     da.interp(x=np.linspace(0, 1, 100)).plot.line(label="linear (default)")
     da.interp(x=np.linspace(0, 1, 100), method="cubic").plot.line(label="cubic")
-    plt.legend()
+    plt.legend();
 
 Additional keyword arguments can be passed to scipy's functions.
 
@@ -162,8 +170,14 @@ Additional keyword arguments can be passed to scipy's functions.
 
     # fill 0 for the outside of the original coordinates.
     da.interp(x=np.linspace(-0.5, 1.5, 10), kwargs={"fill_value": 0.0})
+
+.. jupyter-execute::
+
     # 1-dimensional extrapolation
     da.interp(x=np.linspace(-0.5, 1.5, 10), kwargs={"fill_value": "extrapolate"})
+
+.. jupyter-execute::
+
     # multi-dimensional extrapolation
     da = xr.DataArray(
         np.sin(0.3 * np.arange(12).reshape(4, 3)),
@@ -204,6 +218,8 @@ For example:
     x = xr.DataArray([0, 2, 4], dims="z")
     y = xr.DataArray([0.1, 0.2, 0.3], dims="z")
     da.sel(x=x, y=y)
+
+.. jupyter-execute::
 
     # advanced interpolation, without extrapolation
     x = xr.DataArray([0.5, 1.5, 2.5, 3.5], dims="z")
@@ -246,6 +262,9 @@ while other methods such as ``cubic`` or ``quadratic`` return all NaN arrays.
 
     da = xr.DataArray([0, 2, np.nan, 3, 3.25], dims="x", coords={"x": range(5)})
     da.interp(x=[0.5, 1.5, 2.5])
+
+.. jupyter-execute::
+
     da.interp(x=[0.5, 1.5, 2.5], method="cubic")
 
 To avoid this, you can drop NaN by :py:meth:`~xarray.DataArray.dropna`, and
@@ -255,6 +274,9 @@ then make the interpolation
 
     dropped = da.dropna("x")
     dropped
+
+.. jupyter-execute::
+
     dropped.interp(x=[0.5, 1.5, 2.5], method="cubic")
 
 If NaNs are distributed randomly in your multidimensional array,
@@ -297,7 +319,7 @@ Let's see how :py:meth:`~xarray.DataArray.interp` works on real data.
     new_lat = np.linspace(ds.lat[0].item(), ds.lat[-1].item(), ds.sizes["lat"] * 4)
     dsi = ds.interp(lat=new_lat, lon=new_lon)
     dsi.air.plot(ax=axes[1])
-    axes[1].set_title("Interpolated data")
+    axes[1].set_title("Interpolated data");
 
 Our advanced interpolation can be used to remap the data to the new coordinate.
 Consider the new coordinates x and z on the two dimensional plane.
@@ -327,4 +349,4 @@ The remapping can be done as follows
 
     dsi = ds.interp(lon=lon, lat=lat)
     dsi.air.plot(ax=axes[1])
-    axes[1].set_title("Remapped data")
+    axes[1].set_title("Remapped data");
