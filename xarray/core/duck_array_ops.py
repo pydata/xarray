@@ -255,14 +255,16 @@ def astype(data, dtype, *, xp=None, **kwargs):
     return xp.astype(data, dtype, **kwargs)
 
 
-def view(data, *args, **kwargs):
-    if hasattr(data, "__array_namespace__"):
-        xp = get_array_namespace(data)
-        if xp == np:
-            # numpy currently doesn't have a view:
-            return data.view(*args, **kwargs)
-        return xp.view(data, *args, **kwargs)
-    return data.view(*args, **kwargs)
+def asarray(data, xp=np, dtype=None):
+    converted = data if is_duck_array(data) else xp.asarray(data)
+
+    if dtype is None or converted.dtype == dtype:
+        return converted
+
+    if xp is np or not hasattr(xp, "astype"):
+        return converted.astype(dtype)
+    else:
+        return xp.astype(converted, dtype)
 
 
 def as_shared_dtype(scalars_or_arrays, xp=None):
