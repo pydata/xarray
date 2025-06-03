@@ -53,7 +53,7 @@ CF-compliant coordinate variables
 
 .. _`MetPy`: https://unidata.github.io/MetPy/dev/index.html
 .. _`metpy documentation`:	https://unidata.github.io/MetPy/dev/tutorials/xarray_tutorial.html#coordinates
-.. _`Cartopy`: https://scitools.org.uk/cartopy/docs/latest/crs/projections.html
+.. _`Cartopy`: https://scitools.org.uk/cartopy/docs/latest/reference/crs.html
 
 .. _CFTimeIndex:
 
