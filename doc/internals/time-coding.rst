@@ -32,8 +32,8 @@ When the arguments are numeric (not strings or ``np.datetime64`` values) ``"unit
 
 .. jupyter-execute::
 
-    f"Minimum datetime: {pd.to_datetime(int64_min, unit="ns")}"
-    f"Maximum datetime: {pd.to_datetime(int64_max, unit="ns")}"
+    print(f"Minimum datetime: {pd.to_datetime(int64_min, unit="ns")}")
+    print(f"Maximum datetime: {pd.to_datetime(int64_max, unit="ns")}")
 
 For input values which can't be represented in nanosecond resolution an :py:class:`pandas.OutOfBoundsDatetime` exception is raised:
 
@@ -43,6 +43,9 @@ For input values which can't be represented in nanosecond resolution an :py:clas
         dtime = pd.to_datetime(int64_max, unit="us")
     except Exception as err:
         print(err)
+
+.. jupyter-execute::
+
     try:
         dtime = pd.to_datetime(uint64_max, unit="ns")
         print("Wrong:", dtime)
@@ -62,6 +65,9 @@ and :py:meth:`pandas.DatetimeIndex.as_unit` respectively.
     print("Datetime:", time, np.asarray([time.to_numpy()]).dtype)
     print("Datetime as_unit('ms'):", time.as_unit("ms"))
     print("Datetime to_numpy():", time.as_unit("ms").to_numpy())
+
+.. jupyter-execute::
+
     time = pd.to_datetime(np.array([-1000, 1, 2], dtype="datetime64[Y]"))
     print("DatetimeIndex:", time)
     print("DatetimeIndex as_unit('us'):", time.as_unit("us"))
@@ -131,6 +137,9 @@ For input values which can't be represented in nanosecond resolution an :py:clas
         delta = pd.to_timedelta(int64_max, unit="us")
     except Exception as err:
         print("First:", err)
+
+.. jupyter-execute::
+
     try:
         delta = pd.to_timedelta(uint64_max, unit="ns")
     except Exception as err:
@@ -149,6 +158,9 @@ and :py:meth:`pandas.TimedeltaIndex.as_unit` respectively.
     print("Timedelta:", delta, np.asarray([delta.to_numpy()]).dtype)
     print("Timedelta as_unit('ms'):", delta.as_unit("ms"))
     print("Timedelta to_numpy():", delta.as_unit("ms").to_numpy())
+
+.. jupyter-execute::
+
     delta = pd.to_timedelta([0, 1, 2], unit="D")
     print("TimedeltaIndex:", delta)
     print("TimedeltaIndex as_unit('ms'):", delta.as_unit("ms"))
@@ -415,6 +427,8 @@ For encoding the process is more or less a reversal of the above, but we have to
     print(values)
     np.testing.assert_array_equal(values, orig_values)
 
+.. jupyter-execute::
+
     dates = np.array(
         [
             "-2000-01-01T01:00:00",
@@ -516,11 +530,9 @@ into their native on-disk resolution, if possible:
 
 .. jupyter-execute::
 
-
     xr.open_dataset("test-timedeltas2.nc")
 
 .. jupyter-execute::
-
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
     xr.open_dataset("test-timedeltas2.nc", decode_times=coder)

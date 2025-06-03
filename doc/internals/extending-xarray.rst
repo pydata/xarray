@@ -99,6 +99,9 @@ Back in an interactive IPython session, we can use these properties:
 
     ds = xr.Dataset({"longitude": np.linspace(0, 10), "latitude": np.linspace(0, 20)})
     ds.geo.center
+
+.. jupyter-execute::
+
     ds.geo.plot()
 
 The intent here is that libraries that extend xarray could add such an accessor

@@ -60,10 +60,15 @@ re-open it directly with Zarr:
 
     ds = xr.tutorial.load_dataset("rasm")
     ds.to_zarr("rasm.zarr", mode="w")
+    os.listdir("rasm.zarr")
+
+.. jupyter-execute::
 
     zgroup = zarr.open("rasm.zarr")
-    print(os.listdir("rasm.zarr"))
-    print(zgroup.tree())
+    zgroup.tree()
+
+.. jupyter-execute::
+
     dict(zgroup["Tair"].attrs)
 
 .. jupyter-execute::

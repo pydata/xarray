@@ -77,12 +77,18 @@ To avoid duplicated information, this method must omit information about the sha
     import numpy as np
     import sparse
 
+.. jupyter-execute::
+
     a = da.linspace(0, 1, 20, chunks=2)
     a
+
+.. jupyter-execute::
 
     b = np.eye(10)
     b[[5, 7, 3, 0], [6, 8, 2, 9]] = 2
     b = sparse.COO.from_numpy(b)
     b
+
+.. jupyter-execute::
 
     xr.Dataset(dict(a=("x", a), b=(("y", "z"), b)))
