@@ -402,7 +402,6 @@ Some other important things to know about the docs:
   will be rendered as:
 
   .. jupyter-execute::
-      :hide-code:
 
        x = 2
        x**3

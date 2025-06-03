@@ -5,18 +5,6 @@
 What's New
 ==========
 
-.. jupyter-execute::
-    :hide-code:
-
-    import numpy as np
-    import pandas as pd
-    import xarray as xray
-    import xarray
-    import xarray as xr
-
-    np.random.seed(123456)
-
-
 .. _whats-new.2025.05.0:
 
 v2025.05.0 (unreleased)
