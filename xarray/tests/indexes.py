@@ -1,5 +1,9 @@
-from collections.abc import Hashable, Iterable, Sequence
+from collections.abc import Hashable, Iterable, Mapping, Sequence
+from typing import Any
 
+import numpy as np
+
+from xarray import Variable
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.types import Self
 
@@ -9,11 +13,11 @@ class ScalarIndex(Index):
         self.value = value
 
     @classmethod
-    def from_variables(cls, variables, *, options):
+    def from_variables(cls, variables, *, options) -> Self:
         var = next(iter(variables.values()))
         return cls(int(var.values))
 
-    def equals(self, other, *, exclude=None):
+    def equals(self, other, *, exclude=None) -> bool:
         return isinstance(other, ScalarIndex) and other.value == self.value
 
 
@@ -29,7 +33,9 @@ class XYIndex(Index):
             y=PandasIndex.from_variables({"y": variables["y"]}, options=options),
         )
 
-    def create_variables(self, variables):
+    def create_variables(
+        self, variables: Mapping[Any, Variable] | None = None
+    ) -> dict[Any, Variable]:
         return self.x.create_variables() | self.y.create_variables()
 
     def equals(self, other, exclude=None):
@@ -59,7 +65,9 @@ class XYIndex(Index):
             )
         return cls(x=newx, y=newy)
 
-    def isel(self, indexers):
+    def isel(self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]) -> Self:
         newx = self.x.isel({"x": indexers.get("x", slice(None))})
         newy = self.y.isel({"y": indexers.get("y", slice(None))})
+        assert newx is not None
+        assert newy is not None
         return type(self)(newx, newy)
