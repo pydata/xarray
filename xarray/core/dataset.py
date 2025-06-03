@@ -2214,10 +2214,15 @@ class Dataset(
             not writing in independent regions, for those cases it is better to use
             a synchronizer.
         align_chunks: bool, default False
-            If True, the data will be rechunked before being written to the zarr store to
-            prevent data corruption caused by the overlap of Dask and Zarr chunks.
-            Internally, this option will set the safe_chunks to False and will try
-            to preserve as much as possible the original chunk structure of your data.
+            If True, rechunks the Dask array to align with Zarr chunks before writing.
+            This ensures each Dask chunk maps to one or more contiguous Zarr chunks,
+            which avoids race conditions.
+            Internally, the process sets safe_chunks=False and tries to preserve
+            the original Dask chunking as much as possible.
+            Note: While this alignment avoids write conflicts stemming from chunk
+            boundary misalignment, it does not protect against race conditions
+            if multiple uncoordinated processes write to the same
+            Zarr array concurrently.
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
