@@ -6,7 +6,7 @@
     import xarray as xr
 
     np.random.seed(123456)
-    np.set_printoptions(threshold=20)
+    np.set_printoptions(threshold=10, edgeitems=2)
 
 .. _internal design:
 

@@ -20,6 +20,7 @@ numpy) over all array values:
 
 .. jupyter-execute::
     :hide-code:
+    :hide-output:
 
     import numpy as np
     import pandas as pd

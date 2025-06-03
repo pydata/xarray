@@ -5,6 +5,7 @@ Indexing and selecting data
 
 .. jupyter-execute::
     :hide-code:
+    :hide-output:
 
     import numpy as np
     import pandas as pd
