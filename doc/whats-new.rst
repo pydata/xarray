@@ -62,6 +62,8 @@ Bug fixes
   calendar of the datetimes from ``"proleptic_gregorian"`` to ``"gregorian"``
   and prevents round-tripping them as :py:class:`numpy.datetime64` values
   (:pull:`10352`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Avoid unsafe casts from float to unsigned int in CFMaskCoder (:issue:`9815`, :pull:`9964`).
+  By ` Elliott Sales de Andrade <https://github.com/QuLogic>`_.
 
 Performance
 ~~~~~~~~~~~
