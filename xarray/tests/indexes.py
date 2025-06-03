@@ -33,6 +33,8 @@ class XYIndex(Index):
         return self.x.create_variables() | self.y.create_variables()
 
     def equals(self, other, exclude=None):
+        if exclude is None:
+            exclude = frozenset()
         x_eq = True if self.x.dim in exclude else self.x.equals(other.x)
         y_eq = True if self.y.dim in exclude else self.y.equals(other.y)
         return x_eq and y_eq
