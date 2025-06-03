@@ -418,11 +418,11 @@ For encoding the process is more or less a reversal of the above, but we have to
         dtype="datetime64[s]",
     )
     orig_values = np.array(
-        [-2002 * 365 - 121, -366, 365, 2000 * 365 + 119], dtype="int64"
+        [-2002 * 365 - 121, -366, 365, 2000 * 365 + 119], dtype="float64"
     )
     units = "days since 0001-01-01 00:00:00"
     values, _, _ = xr.coding.times.encode_cf_datetime(
-        dates, units, calendar, dtype=np.dtype("int64")
+        dates, units, calendar, dtype=np.dtype("float64")
     )
     print(values)
     np.testing.assert_array_equal(values, orig_values)
@@ -439,11 +439,11 @@ For encoding the process is more or less a reversal of the above, but we have to
         dtype="datetime64[s]",
     )
     orig_values = np.array(
-        [-2002 * 365 - 121, -366, 365, 2000 * 365 + 119], dtype="int64"
+        [-2002 * 365 - 121, -366, 365, 2000 * 365 + 119], dtype="float64"
     )
     units = "days since 0001-01-01 00:00:00"
     values, units, _ = xr.coding.times.encode_cf_datetime(
-        dates, units, calendar, dtype=np.dtype("int64")
+        dates, units, calendar, dtype=np.dtype("float64")
     )
     print(values, units)
 
@@ -497,7 +497,7 @@ Similar logic applies for decoding timedelta values. The default resolution is
     ds.to_netcdf("test-timedeltas1.nc")
 
 .. jupyter-execute::
-
+    :stderr:
 
     xr.open_dataset("test-timedeltas1.nc")
 
@@ -505,9 +505,8 @@ By default, timedeltas will be decoded to the same resolution as datetimes:
 
 .. jupyter-execute::
 
-
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
-    xr.open_dataset("test-timedeltas1.nc", decode_times=coder)
+    xr.open_dataset("test-timedeltas1.nc", decode_times=coder, decode_timedelta=True)
 
 but if one would like to decode timedeltas to a different resolution, one can
 provide a coder specifically for timedeltas to ``decode_timedelta``:
@@ -530,12 +529,12 @@ into their native on-disk resolution, if possible:
 
 .. jupyter-execute::
 
-    xr.open_dataset("test-timedeltas2.nc")
+    xr.open_dataset("test-timedeltas2.nc", decode_timedelta=True)
 
 .. jupyter-execute::
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
-    xr.open_dataset("test-timedeltas2.nc", decode_times=coder)
+    xr.open_dataset("test-timedeltas2.nc", decode_times=coder, decode_timedelta=True)
 
 To opt-out of timedelta decoding (see issue `Undesired decoding to timedelta64 <https://github.com/pydata/xarray/issues/1621>`_) pass ``False`` to ``decode_timedelta``:
 
