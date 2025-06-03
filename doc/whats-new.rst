@@ -5,8 +5,8 @@
 What's New
 ==========
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import numpy as np
     import pandas as pd
@@ -24,6 +24,8 @@ v2025.05.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Switch docs to jupyter-execute sphinx extension for HTML reprs. (:issue:`3893`, :pull:`10383`)
+  By `Scott Henderson <https://github.com/scottyhq>`_.
 - Allow an Xarray index that uses multiple dimensions checking equality with another
   index for only a subset of those dimensions (i.e., ignoring the dimensions
   that are excluded from alignment).
@@ -6491,23 +6493,15 @@ Breaking changes
 
   Old syntax:
 
-  .. ipython::
-    :verbatim:
+  .. jupyter-input::
 
-    In [1]: ds.resample("24H", dim="time", how="max")
-    Out[1]:
-    <xarray.Dataset>
-    [...]
+    ds.resample("24H", dim="time", how="max")
 
   New syntax:
 
-  .. ipython::
-    :verbatim:
+  .. jupyter-input::
 
-    In [1]: ds.resample(time="24H").max()
-    Out[1]:
-    <xarray.Dataset>
-    [...]
+    ds.resample(time="24H").max()
 
   Note that both versions are currently supported, but using the old syntax will
   produce a warning encouraging users to adopt the new syntax.
@@ -6569,20 +6563,24 @@ Enhancements
 - New function :py:func:`~xarray.where` for conditionally switching between
   values in xarray objects, like :py:func:`numpy.where`:
 
-  .. ipython::
-    :verbatim:
 
-    In [1]: import xarray as xr
+  .. jupyter-input::
 
-    In [2]: arr = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("x", "y"))
+    import xarray as xr
 
-    In [3]: xr.where(arr % 2, "even", "odd")
-    Out[3]:
+    arr = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("x", "y"))
+
+    xr.where(arr % 2, "even", "odd")
+
+
+  .. jupyter-output::
+
     <xarray.DataArray (x: 2, y: 3)>
     array([['even', 'odd', 'even'],
            ['odd', 'even', 'odd']],
           dtype='<U4')
     Dimensions without coordinates: x, y
+
 
   Equivalently, the :py:meth:`~xarray.Dataset.where` method also now supports
   the ``other`` argument, for filling with a value other than ``NaN``
@@ -6625,19 +6623,16 @@ Enhancements
   ``xarray.to_netcdf``, and :py:func:`~xarray.save_mfdataset`
   (:issue:`799`):
 
-  .. ipython::
-    :verbatim:
+  .. jupyter-input::
 
-    In [2]: from pathlib import Path  # In Python 2, use pathlib2!
+    from pathlib import Path  # In Python 2, use pathlib2!
 
-    In [3]: data_dir = Path("data/")
+    data_dir = Path("data/")
 
-    In [4]: one_file = data_dir / "dta_for_month_01.nc"
+    one_file = data_dir / "dta_for_month_01.nc"
 
-    In [5]: xr.open_dataset(one_file)
-    Out[5]:
-    <xarray.Dataset>
-    [...]
+    xr.open_dataset(one_file)
+
 
   By `Willi Rath <https://github.com/willirath>`_.
 
@@ -7094,16 +7089,18 @@ Breaking changes
   by their appearance in list of "Dimensions without coordinates" in the
   ``Dataset`` or ``DataArray`` repr:
 
-  .. ipython::
-    :verbatim:
+  .. jupyter-input::
 
-    In [1]: xr.Dataset({"foo": (("x", "y"), [[1, 2]])})
-    Out[1]:
+    xr.Dataset({"foo": (("x", "y"), [[1, 2]])})
+
+  .. jupyter-output::
+
     <xarray.Dataset>
     Dimensions:  (x: 1, y: 2)
     Dimensions without coordinates: x, y
     Data variables:
         foo      (x, y) int64 1 2
+
 
   This has a number of implications:
 
@@ -7551,16 +7548,16 @@ Enhancements
 - Rolling window operations on DataArray objects are now supported via a new
   :py:meth:`DataArray.rolling` method. For example:
 
-  .. ipython::
-    :verbatim:
+  .. jupyter-input::
 
-    In [1]: import xarray as xr
-       ...: import numpy as np
+    import xarray as xr
+    import numpy as np
 
-    In [2]: arr = xr.DataArray(np.arange(0, 7.5, 0.5).reshape(3, 5), dims=("x", "y"))
+    arr = xr.DataArray(np.arange(0, 7.5, 0.5).reshape(3, 5), dims=("x", "y"))
+    arr
 
-    In [3]: arr
-    Out[3]:
+  .. jupyter-output::
+
     <xarray.DataArray (x: 3, y: 5)>
     array([[ 0. ,  0.5,  1. ,  1.5,  2. ],
            [ 2.5,  3. ,  3.5,  4. ,  4.5],
@@ -7569,8 +7566,12 @@ Enhancements
       * x        (x) int64 0 1 2
       * y        (y) int64 0 1 2 3 4
 
-    In [4]: arr.rolling(y=3, min_periods=2).mean()
-    Out[4]:
+  .. jupyter-input::
+
+    arr.rolling(y=3, min_periods=2).mean()
+
+  .. jupyter-output::
+
     <xarray.DataArray (x: 3, y: 5)>
     array([[  nan,  0.25,  0.5 ,  1.  ,  1.5 ],
            [  nan,  2.75,  3.  ,  3.5 ,  4.  ],
@@ -7693,11 +7694,12 @@ Breaking changes
   corresponding coordinate. You will now need to provide coordinate labels
   explicitly. Here's the old behavior:
 
-  .. ipython::
-    :verbatim:
+  .. jupyter-input::
 
-    In [2]: xray.DataArray([4, 5, 6], dims="x", name="x")
-    Out[2]:
+    xray.DataArray([4, 5, 6], dims="x", name="x")
+
+  .. jupyter-output::
+
     <xray.DataArray 'x' (x: 3)>
     array([4, 5, 6])
     Coordinates:
@@ -7705,11 +7707,12 @@ Breaking changes
 
   and the new behavior (compare the values of the ``x`` coordinate):
 
-  .. ipython::
-    :verbatim:
+  .. jupyter-input::
 
-    In [2]: xray.DataArray([4, 5, 6], dims="x", name="x")
-    Out[2]:
+    xray.DataArray([4, 5, 6], dims="x", name="x")
+
+  .. jupyter-output::
+
     <xray.DataArray 'x' (x: 3)>
     array([4, 5, 6])
     Coordinates:
@@ -7728,30 +7731,39 @@ Enhancements
 - Basic support for :py:class:`~pandas.MultiIndex` coordinates on xray objects, including
   indexing, :py:meth:`~DataArray.stack` and :py:meth:`~DataArray.unstack`:
 
-  .. ipython::
-    :verbatim:
+  .. jupyter-input::
 
-    In [7]: df = pd.DataFrame({"foo": range(3), "x": ["a", "b", "b"], "y": [0, 0, 1]})
+    df = pd.DataFrame({"foo": range(3), "x": ["a", "b", "b"], "y": [0, 0, 1]})
 
-    In [8]: s = df.set_index(["x", "y"])["foo"]
+    s = df.set_index(["x", "y"])["foo"]
 
-    In [12]: arr = xray.DataArray(s, dims="z")
+    arr = xray.DataArray(s, dims="z")
 
-    In [13]: arr
-    Out[13]:
+    arr
+
+  .. jupyter-output::
+
     <xray.DataArray 'foo' (z: 3)>
     array([0, 1, 2])
     Coordinates:
       * z        (z) object ('a', 0) ('b', 0) ('b', 1)
 
-    In [19]: arr.indexes["z"]
-    Out[19]:
+  .. jupyter-input::
+
+    arr.indexes["z"]
+
+  .. jupyter-output::
+
     MultiIndex(levels=[[u'a', u'b'], [0, 1]],
                labels=[[0, 1, 1], [0, 0, 1]],
                names=[u'x', u'y'])
 
-    In [14]: arr.unstack("z")
-    Out[14]:
+  .. jupyter-input::
+
+    arr.unstack("z")
+
+  .. jupyter-output::
+
     <xray.DataArray 'foo' (x: 2, y: 2)>
     array([[  0.,  nan],
            [  1.,   2.]])
@@ -7759,8 +7771,12 @@ Enhancements
       * x        (x) object 'a' 'b'
       * y        (y) int64 0 1
 
-    In [26]: arr.unstack("z").stack(z=("x", "y"))
-    Out[26]:
+  .. jupyter-input::
+
+    arr.unstack("z").stack(z=("x", "y"))
+
+  .. jupyter-output::
+
     <xray.DataArray 'foo' (z: 4)>
     array([  0.,  nan,   1.,   2.])
     Coordinates:
@@ -7870,13 +7886,14 @@ Enhancements
   the ``tolerance`` argument for controlling nearest-neighbor selection
   (:issue:`629`):
 
-  .. ipython::
-    :verbatim:
+  .. jupyter-input::
 
-    In [5]: array = xray.DataArray([1, 2, 3], dims="x")
+    array = xray.DataArray([1, 2, 3], dims="x")
 
-    In [6]: array.reindex(x=[0.9, 1.5], method="nearest", tolerance=0.2)
-    Out[6]:
+    array.reindex(x=[0.9, 1.5], method="nearest", tolerance=0.2)
+
+  .. jupyter-output::
+
     <xray.DataArray (x: 2)>
     array([  2.,  nan])
     Coordinates:
@@ -7952,17 +7969,18 @@ Enhancements
 - Added ``xray.Dataset.isel_points`` and ``xray.Dataset.sel_points``
   to support pointwise indexing of Datasets and DataArrays (:issue:`475`).
 
-  .. ipython::
-    :verbatim:
+  .. jupyter-input::
 
-    In [1]: da = xray.DataArray(
+    da = xray.DataArray(
        ...:     np.arange(56).reshape((7, 8)),
        ...:     coords={"x": list("abcdefg"), "y": 10 * np.arange(8)},
        ...:     dims=["x", "y"],
        ...: )
 
-    In [2]: da
-    Out[2]:
+    da
+
+  .. jupyter-output::
+
     <xray.DataArray (x: 7, y: 8)>
     array([[ 0,  1,  2,  3,  4,  5,  6,  7],
            [ 8,  9, 10, 11, 12, 13, 14, 15],
@@ -7975,9 +7993,13 @@ Enhancements
     * y        (y) int64 0 10 20 30 40 50 60 70
     * x        (x) |S1 'a' 'b' 'c' 'd' 'e' 'f' 'g'
 
+  .. jupyter-input::
+
     # we can index by position along each dimension
-    In [3]: da.isel_points(x=[0, 1, 6], y=[0, 1, 0], dim="points")
-    Out[3]:
+    da.isel_points(x=[0, 1, 6], y=[0, 1, 0], dim="points")
+
+  .. jupyter-output::
+
     <xray.DataArray (points: 3)>
     array([ 0,  9, 48])
     Coordinates:
@@ -7985,9 +8007,13 @@ Enhancements
         x        (points) |S1 'a' 'b' 'g'
       * points   (points) int64 0 1 2
 
+  .. jupyter-input::
+
     # or equivalently by label
-    In [9]: da.sel_points(x=["a", "b", "g"], y=[0, 10, 0], dim="points")
-    Out[9]:
+    da.sel_points(x=["a", "b", "g"], y=[0, 10, 0], dim="points")
+
+  .. jupyter-output::
+
     <xray.DataArray (points: 3)>
     array([ 0,  9, 48])
     Coordinates:
@@ -8069,14 +8095,13 @@ Enhancements
   with dask.array. For example, to save a dataset too big to fit into memory
   to one file per year, we could write:
 
-  .. ipython::
-    :verbatim:
+  .. jupyter-input::
 
-    In [1]: years, datasets = zip(*ds.groupby("time.year"))
+    years, datasets = zip(*ds.groupby("time.year"))
 
-    In [2]: paths = ["%s.nc" % y for y in years]
+    paths = ["%s.nc" % y for y in years]
 
-    In [3]: xray.save_mfdataset(datasets, paths)
+    xray.save_mfdataset(datasets, paths)
 
 Bug fixes
 ~~~~~~~~~
@@ -8144,13 +8169,14 @@ Backwards incompatible changes
   surprising behavior, where the behavior of groupby and concat operations
   could depend on runtime values (:issue:`268`). For example:
 
-  .. ipython::
-    :verbatim:
+  .. jupyter-input::
 
-    In [1]: ds = xray.Dataset({"x": 0})
+    ds = xray.Dataset({"x": 0})
 
-    In [2]: xray.concat([ds, ds], dim="y")
-    Out[2]:
+    xray.concat([ds, ds], dim="y")
+
+  .. jupyter-output::
+
     <xray.Dataset>
     Dimensions:  ()
     Coordinates:
@@ -8217,11 +8243,12 @@ Enhancements
 
   .. use verbatim because I can't seem to install pandas 0.16.1 on RTD :(
 
-  .. ipython::
-      :verbatim:
+  .. jupyter-input::
 
-      In [12]: ds.sel(x=1.1, method="nearest")
-      Out[12]:
+      ds.sel(x=1.1, method="nearest")
+
+  .. jupyter-output::
+
       <xray.Dataset>
       Dimensions:  ()
       Coordinates:
@@ -8229,8 +8256,12 @@ Enhancements
       Data variables:
           y        int64 2
 
-      In [13]: ds.sel(x=[1.1, 2.1], method="pad")
-      Out[13]:
+  .. jupyter-input::
+
+      ds.sel(x=[1.1, 2.1], method="pad")
+
+  .. jupyter-output::
+
       <xray.Dataset>
       Dimensions:  (x: 2)
       Coordinates:
@@ -8261,10 +8292,9 @@ Enhancements
 
   Or to set a global option:
 
-  .. ipython::
-      :verbatim:
+  .. jupyter-input::
 
-      In [1]: xray.set_options(display_width=80)
+      xray.set_options(display_width=80)
 
   The default value for the ``display_width`` option is 80.
 

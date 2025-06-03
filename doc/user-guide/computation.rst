@@ -27,6 +27,8 @@ numpy) over all array values:
 
     np.random.seed(123456)
 
+    %xmode minimal
+
 .. jupyter-execute::
 
     arr = xr.DataArray(
@@ -753,12 +755,10 @@ operations. The default result of a binary operation is by the *intersection*
 If coordinate values for a dimension are missing on either argument, all
 matching dimensions must have the same size:
 
-.. ipython::
-    :verbatim:
+.. jupyter-execute::
+    :raises:
 
-    In [1]: arr + xr.DataArray([1, 2], dims="x")
-    ValueError: arguments without labels along dimension 'x' cannot be aligned because they have different dimension size(s) {2} than the size of the aligned dimension labels: 3
-
+    arr + xr.DataArray([1, 2], dims="x")
 
 However, one can explicitly change this default automatic alignment type ("inner")
 via :py:func:`~xarray.set_options()` in context manager:
