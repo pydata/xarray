@@ -664,7 +664,7 @@ To write to a local directory, we pass a path to a directory:
     ! rm -rf path/to/directory.zarr
 
 .. jupyter-execute::
-
+    :stderr:
 
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 5))},
@@ -674,7 +674,7 @@ To write to a local directory, we pass a path to a directory:
             "z": ("x", list("abcd")),
         },
     )
-    ds.to_zarr("path/to/directory.zarr")
+    ds.to_zarr("path/to/directory.zarr", zarr_format=2, consolidated=False)
 
 (The suffix ``.zarr`` is optional--just a reminder that a zarr store lives
 there.) If the directory does not exist, it will be created. If a zarr
@@ -702,7 +702,7 @@ To read back a zarr dataset that has been created this way, we use the
 
 .. jupyter-execute::
 
-    ds_zarr = xr.open_zarr("path/to/directory.zarr")
+    ds_zarr = xr.open_zarr("path/to/directory.zarr", consolidated=False)
     ds_zarr
 
 Cloud Storage Buckets
@@ -776,7 +776,6 @@ to Zarr:
 
 .. jupyter-execute::
 
-
     import dask.array
 
     # The values of this dask array are entirely irrelevant; only the dtype,
@@ -785,7 +784,7 @@ to Zarr:
     ds = xr.Dataset({"foo": ("x", dummies)}, coords={"x": np.arange(30)})
     path = "path/to/directory.zarr"
     # Now we write the metadata without computing any array values
-    ds.to_zarr(path, compute=False)
+    ds.to_zarr(path, compute=False, consolidated=False)
 
 Now, a Zarr store with the correct variable shapes and attributes exists that
 can be filled out by subsequent calls to ``to_zarr``.
@@ -800,9 +799,9 @@ where the data should be written (in index space, not label space), e.g.,
     # we would create them separately possibly even from separate processes.
     ds = xr.Dataset({"foo": ("x", np.arange(30))}, coords={"x": np.arange(30)})
     # Any of the following region specifications are valid
-    ds.isel(x=slice(0, 10)).to_zarr(path, region="auto")
-    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": "auto"})
-    ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
+    ds.isel(x=slice(0, 10)).to_zarr(path, region="auto", consolidated=False)
+    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": "auto"}, consolidated=False)
+    ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)}, consolidated=False)
 
 Concurrent writes with ``region`` are safe as long as they modify distinct
 chunks in the underlying Zarr arrays (or use an appropriate ``lock``).
@@ -833,7 +832,7 @@ For example:
     from zarr.codecs import BloscCodec
 
     compressor = BloscCodec(cname="zstd", clevel=3, shuffle="shuffle")
-    ds.to_zarr("foo.zarr", encoding={"foo": {"compressors": [compressor]}})
+    ds.to_zarr("foo.zarr", consolidated=False, encoding={"foo": {"compressors": [compressor]}})
 
 .. note::
 
@@ -887,7 +886,7 @@ order, e.g., for time-stepping a simulation:
             "t": pd.date_range("2001-01-01", periods=2),
         },
     )
-    ds1.to_zarr("path/to/directory.zarr")
+    ds1.to_zarr("path/to/directory.zarr", consolidated=False)
 
 .. jupyter-execute::
 
@@ -899,7 +898,7 @@ order, e.g., for time-stepping a simulation:
             "t": pd.date_range("2001-01-03", periods=2),
         },
     )
-    ds2.to_zarr("path/to/directory.zarr", append_dim="t")
+    ds2.to_zarr("path/to/directory.zarr", append_dim="t", consolidated=False)
 
 .. _io.zarr.writing_chunks:
 
@@ -949,7 +948,7 @@ split them into chunks:
 
 .. jupyter-execute::
 
-    ds.to_zarr("path/to/directory.zarr", mode="w")
+    ds.to_zarr("path/to/directory.zarr", mode="w", consolidated=False)
     ! ls -R path/to/directory.zarr
 
 
@@ -962,6 +961,7 @@ length of each dimension by using the shorthand chunk size ``None``:
     ds.to_zarr(
         "path/to/directory.zarr",
         encoding={"xc": {"chunks": None}, "yc": {"chunks": None}},
+        consolidated=False,
         mode="w",
     )
     ! ls -R path/to/directory.zarr
@@ -1003,7 +1003,7 @@ By default Xarray uses a feature called
 *consolidated metadata*, storing all metadata for the entire dataset with a
 single key (by default called ``.zmetadata``). This typically drastically speeds
 up opening the store. (For more information on this feature, consult the
-`zarr docs on consolidating metadata <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
+`zarr docs on consolidating metadata <https://zarr.readthedocs.io/en/latest/user-guide/consolidated_metadata.html>`_.)
 
 By default, xarray writes consolidated metadata and attempts to read stores
 with consolidated metadata, falling back to use non-consolidated metadata for
@@ -1135,6 +1135,7 @@ using actual disk files.
 For example:
 
 .. jupyter-execute::
+    :stderr:
 
     ds = xr.tutorial.open_dataset("air_temperature_gradient")
     cubes = ncdata.iris_xarray.cubes_from_xarray(ds)
@@ -1142,6 +1143,7 @@ For example:
     print(cubes[1])
 
 .. jupyter-execute::
+    :stderr:
 
     ds = ncdata.iris_xarray.cubes_to_xarray(cubes)
     print(ds)

@@ -12,6 +12,8 @@ Indexing and selecting data
 
     np.random.seed(123456)
 
+    %xmode minimal
+
 Xarray offers extremely flexible indexing routines that combine the best
 features of NumPy and pandas for data selection.
 
@@ -582,6 +584,7 @@ __ https://numpy.org/doc/stable/user/basics.indexing.html#assigning-values-to-in
 You can also assign values to all variables of a :py:class:`Dataset` at once:
 
 .. jupyter-execute::
+    :stderr:
 
     ds_org = xr.tutorial.open_dataset("eraint_uvz").isel(
         latitude=slice(56, 59), longitude=slice(255, 258), level=0
@@ -758,11 +761,10 @@ Alignment between xarray objects where one or both do not have coordinate labels
 succeeds only if all dimensions of the same name have the same length.
 Otherwise, it raises an informative error:
 
-.. ipython::
-    :verbatim:
+.. jupyter-execute::
+    :raises:
 
-    In [62]: xr.align(da, da[:2])
-    ValueError: arguments without labels along dimension 'x' cannot be aligned because they have different dimension sizes: {2, 3}
+    xr.align(da, da[:2])
 
 Underlying Indexes
 ------------------
