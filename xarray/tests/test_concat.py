@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 
 from xarray import AlignmentError, DataArray, Dataset, Variable, concat
-from xarray.core import dtypes
+from xarray.core import dtypes, types
 from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import PandasIndex
 from xarray.structure import merge
@@ -1416,7 +1416,8 @@ def test_concat_multi_dim_index() -> None:
         .set_xindex(["x", "y"], XYIndex)
     )
     # note: missing 'override'
-    for join in ["inner", "outer", "exact", "left", "right"]:
+    joins: list[types.JoinOptions] = ["inner", "outer", "exact", "left", "right"]
+    for join in joins:
         actual = concat([ds1, ds2], dim="y", join=join)
         assert_identical(actual, expected, check_default_indexes=False)
 
@@ -1425,5 +1426,6 @@ def test_concat_multi_dim_index() -> None:
 
     # TODO: fix these, or raise better error message
     with pytest.raises(AssertionError):
-        for join in ["left", "right"]:
+        joins_lr: list[types.JoinOptions] = ["left", "right"]
+        for join in joins_lr:
             actual = concat([ds1, ds2], dim="x", join=join)
