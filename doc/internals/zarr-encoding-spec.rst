@@ -59,7 +59,7 @@ re-open it directly with Zarr:
     import zarr
 
     ds = xr.tutorial.load_dataset("rasm")
-    ds.to_zarr("rasm.zarr", mode="w")
+    ds.to_zarr("rasm.zarr", mode="w", consolidated=False)
     os.listdir("rasm.zarr")
 
 .. jupyter-execute::
