@@ -69,14 +69,12 @@ The following imports are necessary for all of the examples.
     import pandas as pd
     import xarray as xr
 
-
 For these examples we'll use the North American air temperature dataset.
 
 .. jupyter-execute::
 
     airtemps = xr.tutorial.open_dataset("air_temperature")
     airtemps
-
 
 .. jupyter-execute::
 
@@ -917,6 +915,7 @@ on a polar projection (:issue:`781`). This is why the default is to not follow
 this convention when plotting on a map:
 
 .. jupyter-execute::
+    :stderr:
 
     ax = plt.subplot(projection=ccrs.PlateCarree())
     da.plot.pcolormesh(x="lon", y="lat", ax=ax)
