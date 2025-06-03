@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 
 from xarray.coding import strings, variables
-from xarray.coding.variables import SerializationWarning
 from xarray.conventions import cf_encoder
 from xarray.core import indexing
 from xarray.core.datatree import DataTree, Variable
@@ -24,6 +23,7 @@ from xarray.core.utils import (
     emit_user_level_warning,
     is_remote_uri,
 )
+from xarray.errors import SerializationWarning
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 from xarray.namedarray.utils import is_duck_dask_array
