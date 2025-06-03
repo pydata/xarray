@@ -790,6 +790,7 @@ To follow this section you'll need to have Cartopy installed and working.
 This script will plot the air temperature on a map.
 
 .. jupyter-execute::
+    :stderr:
 
     air = xr.tutorial.open_dataset("air_temperature").air
 
@@ -806,7 +807,6 @@ function using the ``subplot_kws`` keyword. The axes for the subplots created
 by faceting are accessible in the object returned by ``plot``:
 
 .. jupyter-execute::
-
 
     p = air.isel(time=[0, 4]).plot(
         transform=ccrs.PlateCarree(),
