@@ -418,16 +418,17 @@ For encoding the process is more or less a reversal of the above, but we have to
         dtype="datetime64[s]",
     )
     orig_values = np.array(
-        [-2002 * 365 - 121, -366, 365, 2000 * 365 + 119], dtype="float64"
+        [-2002 * 365 - 121, -366, 365, 2000 * 365 + 119], dtype="int64"
     )
     units = "days since 0001-01-01 00:00:00"
     values, _, _ = xr.coding.times.encode_cf_datetime(
-        dates, units, calendar, dtype=np.dtype("float64")
+        dates, units, calendar, dtype=np.dtype("int64")
     )
-    print(values)
+    print(values, units)
     np.testing.assert_array_equal(values, orig_values)
 
 .. jupyter-execute::
+    :stderr:
 
     dates = np.array(
         [
@@ -439,13 +440,17 @@ For encoding the process is more or less a reversal of the above, but we have to
         dtype="datetime64[s]",
     )
     orig_values = np.array(
-        [-2002 * 365 - 121, -366, 365, 2000 * 365 + 119], dtype="float64"
+        [-2002 * 365 - 121, -366, 365, 2000 * 365 + 119], dtype="int64"
     )
+    orig_values *= 24  # Convert to hours
+    orig_values[0] += 1  # Adjust for the hour offset in dates above
+
     units = "days since 0001-01-01 00:00:00"
     values, units, _ = xr.coding.times.encode_cf_datetime(
-        dates, units, calendar, dtype=np.dtype("float64")
+        dates, units, calendar, dtype=np.dtype("int64")
     )
     print(values, units)
+    np.testing.assert_array_equal(values, orig_values)
 
 .. _internals.default_timeunit:
 
