@@ -970,7 +970,7 @@ split them into chunks:
 .. jupyter-execute::
 
     ds.to_zarr("path/to/directory.zarr", consolidated=False, mode="w")
-    !ls path/to/directory.zarr/*/*/
+    !tree -I zarr.json path/to/directory.zarr
 
 
 This may cause unwanted overhead on some systems, such as when reading from a cloud
@@ -985,7 +985,7 @@ shape of each coordinate array in the ``encoding`` argument:
         consolidated=False,
         mode="w",
     )
-    !ls path/to/directory.zarr/*/*/
+    !tree -I zarr.json path/to/directory.zarr
 
 
 The number of chunks on Tair matches our dask chunks, while there is now only a single
