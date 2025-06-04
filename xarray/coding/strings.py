@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from functools import partial
 
 import numpy as np
@@ -15,7 +16,7 @@ from xarray.coding.variables import (
     unpack_for_encoding,
 )
 from xarray.core import indexing
-from xarray.core.utils import module_available
+from xarray.core.utils import emit_user_level_warning, module_available
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
@@ -122,10 +123,31 @@ class CharacterArrayCoder(VariableCoder):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
         if data.dtype.kind == "S" and encoding.get("dtype") is not str:
             data = bytes_to_char(data)
-            if "char_dim_name" in encoding.keys():
-                char_dim_name = encoding.pop("char_dim_name")
+
+            strlen = data.shape[-1]
+            if (char_dim_name := encoding.pop("char_dim_name", None)) is not None:
+                # 1 - extract all characters up to last number sequence
+                # 2 - extract last number sequence
+                match = re.search(r"^(.*?)(\d+)(?!.*\d)", char_dim_name)
+                if match:
+                    new_dim_name = match.group(1)
+                    if int(match.group(2)) != strlen:
+                        emit_user_level_warning(
+                            f"String dimension naming mismatch on variable {name!r}. {char_dim_name!r} provided by encoding, but data has length of '{strlen}'. Using '{new_dim_name}{strlen}' instead of {char_dim_name!r} to prevent possible naming clash.\n"
+                            "To silence this warning either remove 'char_dim_name' from encoding or provide a fitting name."
+                        )
+                    char_dim_name = f"{new_dim_name}{strlen}"
+                else:
+                    if (
+                        original_shape := encoding.get("original_shape", [-1])[-1]
+                    ) != -1:
+                        emit_user_level_warning(
+                            f"String dimension length mismatch on variable {name!r}. '{original_shape}' provided by encoding, but data has length of '{strlen}'. Using '{char_dim_name}{strlen}' instead of {char_dim_name!r} to prevent possible naming clash.\n"
+                            f"To silence this warning remove 'original_shape' from encoding."
+                        )
+                        char_dim_name = f"{char_dim_name}{strlen}"
             else:
-                char_dim_name = f"string{data.shape[-1]}"
+                char_dim_name = f"string{strlen}"
             dims = dims + (char_dim_name,)
         return Variable(dims, data, attrs, encoding)
 
