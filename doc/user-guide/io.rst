@@ -41,37 +41,58 @@ Following the diagram is detailed information on many popular backends.
 You can learn more about using and developing backends in the
 `Xarray tutorial JupyterBook <https://tutorial.xarray.dev/advanced/backends/backends.html>`_.
 
+..
+   _comment: mermaid Flowcharg "link" text gets secondary color background, SVG icon fill gets primary color
+
+.. raw:: html
+
+    <style>
+      /* Ensure PST link colors don't override mermaid text colors */
+      .mermaid a {
+        color: white;
+      }
+      .mermaid a:hover {
+        color: magenta;
+        text-decoration-color: magenta;
+      }
+      .mermaid a:visited {
+        color: white;
+        text-decoration-color: white;
+      }
+    </style>
+
 .. mermaid::
+    :config: {"theme":"base","themeVariables":{"fontSize":"20px","primaryColor":"#fff","primaryTextColor":"#fff","primaryBorderColor":"#59c7d6","lineColor":"#e28126","secondaryColor":"#767985"}}
     :alt: Flowchart illustrating how to choose the right backend engine to read your data
 
     flowchart LR
-        built-in-eng["""Is your data stored in one of these formats?
-            - netCDF4 (<code>netcdf4</code>)
-            - netCDF3 (<code>scipy</code>)
-            - Zarr (<code>zarr</code>)
-            - DODS/OPeNDAP (<code>pydap</code>)
-            - HDF5 (<code>h5netcdf</code>)
-            """]
+        built-in-eng["`**Is your data stored in one of these formats?**
+            - netCDF4
+            - netCDF3
+            - Zarr
+            - DODS/OPeNDAP
+            - HDF5
+            `"]
 
-        built-in("""You're in luck! Xarray bundles a backend for this format.
+        built-in("`**You're in luck!** Xarray bundles a backend to automatically read these formats.
             Open data using <code>xr.open_dataset()</code>. We recommend
-            always setting the engine you want to use.""")
+            explicitly setting engine='xxxx' for faster loading.`")
 
-        installed-eng["""One of these formats?
-            - <a href='https://github.com/ecmwf/cfgrib'>GRIB (<code>cfgrib</code>)
-            - <a href='https://tiledb-inc.github.io/TileDB-CF-Py/documentation/index.html'>TileDB (<code>tiledb</code>)
-            - <a href='https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, ESRI-hdf (<code>rioxarray</code>, via GDAL)
-            - <a href='https://www.bopen.eu/xarray-sentinel-open-source-library/'>Sentinel-1 SAFE (<code>xarray-sentinel</code>)
+        installed-eng["""<b>One of these formats?</b>
+            - <a href='https://github.com/ecmwf/cfgrib'>GRIB</a>
+            - <a href='https://tiledb-inc.github.io/TileDB-CF-Py/documentation'>TileDB</a>
+            - <a href='https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, etc. (via GDAL)</a>
+            - <a href='https://www.bopen.eu/xarray-sentinel-open-source-library/'>Sentinel-1 SAFE</a>
             """]
 
-        installed("""Install the package indicated in parentheses to your
-            Python environment. Restart the kernel and use
-            <code>xr.open_dataset(files, engine='rioxarray')</code>.""")
+        installed("""Install the linked backend library and use it with
+            <code>xr.open_dataset(file, engine='xxxx')</code>.""")
 
-        other("""Ask around to see if someone in your data community
-            has created an Xarray backend for your data type.
-            If not, you may need to create your own or consider
-            exporting your data to a more common format.""")
+        other["`**Options:**
+            - Look around to see if someone has created an Xarray backend for your format!
+            - <a href='https://docs.xarray.dev/en/stable/internals/how-to-add-new-backend.html'>Create your own backend</a>
+            - Convert your data to a supported format
+            `"]
 
         built-in-eng -->|Yes| built-in
         built-in-eng -->|No| installed-eng
@@ -79,16 +100,16 @@ You can learn more about using and developing backends in the
         installed-eng -->|Yes| installed
         installed-eng -->|No| other
 
-        click built-in-eng "https://docs.xarray.dev/en/stable/getting-started-guide/faq.html#how-do-i-open-format-x-file-as-an-xarray-dataset"
-        click other "https://docs.xarray.dev/en/stable/internals/how-to-add-new-backend.html"
+        click built-in-eng "https://docs.xarray.dev/en/stable/get-help/faq.html#how-do-i-open-format-x-file-as-an-xarray-dataset"
 
-        classDef quesNodefmt fill:#9DEEF4,stroke:#206C89,text-align:left
+
+        classDef quesNodefmt font-size:12pt,fill:#0e4666,stroke:#59c7d6,stroke-width:3
         class built-in-eng,installed-eng quesNodefmt
 
-        classDef ansNodefmt fill:#FFAA05,stroke:#E37F17,text-align:left,white-space:nowrap
+        classDef ansNodefmt font-size:12pt,fill:#4a4a4a,stroke:#17afb4,stroke-width:3
         class built-in,installed,other ansNodefmt
 
-        linkStyle default font-size:20pt,color:#206C89
+        linkStyle default font-size:18pt,stroke-width:4
 
 
 .. _io.netcdf:
@@ -948,23 +969,23 @@ split them into chunks:
 
 .. jupyter-execute::
 
-    ds.to_zarr("path/to/directory.zarr", mode="w", consolidated=False)
-    ! ls -R path/to/directory.zarr
+    ds.to_zarr("path/to/directory.zarr", consolidated=False, mode="w")
+    !ls path/to/directory.zarr/*/*/
 
 
 This may cause unwanted overhead on some systems, such as when reading from a cloud
 storage provider. To disable this chunking, we can specify a chunk size equal to the
-length of each dimension by using the shorthand chunk size ``None``:
+shape of each coordinate array in the ``encoding`` argument:
 
 .. jupyter-execute::
 
     ds.to_zarr(
         "path/to/directory.zarr",
-        encoding={"xc": {"chunks": None}, "yc": {"chunks": None}},
+        encoding={"xc": {"chunks": ds.xc.shape}, "yc": {"chunks": ds.yc.shape}},
         consolidated=False,
         mode="w",
     )
-    ! ls -R path/to/directory.zarr
+    !ls path/to/directory.zarr/*/*/
 
 
 The number of chunks on Tair matches our dask chunks, while there is now only a single
@@ -1043,7 +1064,7 @@ with ``_FillValue`` using the ``use_zarr_fill_value_as_mask`` kwarg to :py:func:
 Kerchunk
 --------
 
-`Kerchunk <https://fsspec.github.io/kerchunk/index.html>`_ is a Python library
+`Kerchunk <https://fsspec.github.io/kerchunk>`_ is a Python library
 that allows you to access chunked and compressed data formats (such as NetCDF3, NetCDF4, HDF5, GRIB2, TIFF & FITS),
 many of which are primary data formats for many data archives, by viewing the
 whole archive as an ephemeral `Zarr`_ dataset which allows for parallel, chunk-specific access.
@@ -1067,24 +1088,19 @@ with ``xarray``, especially when these archives are large in size. A single comb
 reference can refer to thousands of the original data files present in these archives.
 You can view the whole dataset with from this combined reference using the above packages.
 
-The following example shows opening a combined references generated from a ``.hdf`` file stored locally.
+The following example shows opening a single ``json`` reference to the ``saved_on_disk.h5`` file created above.
+If the file were instead stored remotely (e.g. ``s3://saved_on_disk.h5``) you can use ``storage_options``
+that are used to `configure fsspec <https://filesystem-spec.readthedocs.io/en/latest/api.html#fsspec.implementations.reference.ReferenceFileSystem.__init__>`_:
 
 .. jupyter-execute::
-    :raises:
 
-    storage_options = {
-        "target_protocol": "file",
-    }
-
-    # add the `remote_protocol` key in `storage_options` if you're accessing a file remotely
-
-    ds1 = xr.open_dataset(
+    ds_kerchunked = xr.open_dataset(
         "./combined.json",
         engine="kerchunk",
-        storage_options=storage_options,
+        storage_options={},
     )
 
-    ds1
+    ds_kerchunked
 
 .. note::
 
@@ -1115,7 +1131,7 @@ If iris is installed, xarray can convert a ``DataArray`` into a ``Cube`` using
     )
 
     cube = da.to_iris()
-    cube
+    print(cube)
 
 Conversely, we can create a new ``DataArray`` object from a ``Cube`` using
 :py:meth:`DataArray.from_iris`:
@@ -1132,7 +1148,7 @@ datasets.  It uses the file saving and loading functions in both projects to pro
 more "correct" translation between them, but still with very low overhead and not
 using actual disk files.
 
-For example:
+Here we load an xarray dataset and convert it to Iris cubes:
 
 .. jupyter-execute::
     :stderr:
@@ -1140,13 +1156,20 @@ For example:
     ds = xr.tutorial.open_dataset("air_temperature_gradient")
     cubes = ncdata.iris_xarray.cubes_from_xarray(ds)
     print(cubes)
-    print(cubes[1])
 
 .. jupyter-execute::
-    :stderr:
+
+    print(cubes[1])
+
+And we can convert the cubes back to an xarray dataset:
+
+.. jupyter-execute::
+
+    # ensure dataset-level and variable-level attributes loaded correctly
+    iris.FUTURE.save_split_attrs = True
 
     ds = ncdata.iris_xarray.cubes_to_xarray(cubes)
-    print(ds)
+    ds
 
 Ncdata can also adjust file data within load and save operations, to fix data loading
 problems or provide exact save formatting without needing to modify files on disk.
