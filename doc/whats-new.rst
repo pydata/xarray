@@ -64,6 +64,8 @@ Bug fixes
   (:pull:`10352`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Avoid unsafe casts from float to unsigned int in CFMaskCoder (:issue:`9815`, :pull:`9964`).
   By ` Elliott Sales de Andrade <https://github.com/QuLogic>`_.
+- Check and fix character array string dimension names, issue warnings as needed (:issue:`6352`, :pull:`10395`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Performance
 ~~~~~~~~~~~
@@ -82,6 +84,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Forward variable name down to coders for AbstractWritableDataStore.encode_variable and subclasses. (:pull:`10395`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 .. _whats-new.2025.04.0:
 
