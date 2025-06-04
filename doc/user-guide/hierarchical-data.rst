@@ -68,15 +68,21 @@ We can connect them by creating another node representing a common parent, Homer
     homer = xr.DataTree(name="Homer", children={"Bart": bart, "Lisa": lisa})
 
 Here we set the children of Homer in the node's constructor.
-We now have a small family tree
+We now have a small family tree where we can see how these individual Simpson family members are related to one another:
 
 .. jupyter-execute::
 
-    # Enable text display instead of 'html' for compactness
-    xr.set_options(display_style="text")
-    homer
+    print(homer)
 
-where we can see how these individual Simpson family members are related to one another.
+.. note::
+   We use ``print()`` above to show the compact tree hierarchy.
+   :py:class:`~xarray.DataTree` objects also have an interactive HTML representation that is enabled by default in editors such as JupyterLab and VSCode.
+   The HTML representation is especially helpful for larger trees and exploring new datasets, as it allows you to expand and collapse nodes.
+   If you prefer the text representations you can also set ``xr.set_options(display_style="text")``.
+
+..
+   Comment:: may remove note and print()s after upstream theme changes https://github.com/pydata/pydata-sphinx-theme/pull/2187
+
 The nodes representing Bart and Lisa are now connected - we can confirm their sibling rivalry by examining the :py:class:`~xarray.DataTree.siblings` property:
 
 .. jupyter-execute::
@@ -89,7 +95,7 @@ But oops, we forgot Homer's third daughter, Maggie! Let's add her by updating Ho
 
     maggie = xr.DataTree(name="Maggie")
     homer.children = {"Bart": bart, "Lisa": lisa, "Maggie": maggie}
-    homer
+    print(homer)
 
 Let's check that Maggie knows who her Dad is:
 
@@ -121,12 +127,11 @@ We can see the whole tree by printing Abe's node or just part of the tree by pri
 
 .. jupyter-execute::
 
-    abe
+    print(abe)
 
 .. jupyter-execute::
 
-    abe["Homer"]
-
+    print(abe["Homer"])
 
 In episode 28, Abe Simpson reveals that he had another son, Herbert "Herb" Simpson.
 We can add Herbert to the family tree without displacing Homer by :py:meth:`~xarray.DataTree.assign`-ing another child to Abe:
@@ -135,7 +140,7 @@ We can add Herbert to the family tree without displacing Homer by :py:meth:`~xar
 
     herbert = xr.DataTree(name="Herb")
     abe = abe.assign({"Herbert": herbert})
-    abe
+    print(abe)
 
 .. jupyter-execute::
 
@@ -191,7 +196,7 @@ and :ref:`filesystem paths` (to be explained shortly) to select two nodes of int
 
 .. jupyter-execute::
 
-    vertebrates
+    print(vertebrates)
 
 This tree shows various families of species, grouped by their common features (making it technically a `"Cladogram" <https://en.wikipedia.org/wiki/Cladogram>`_,
 rather than an evolutionary tree).
@@ -255,7 +260,7 @@ including :py:meth:`~xarray.DataTree.keys`, :py:class:`~xarray.DataTree.values`,
 
 .. jupyter-execute::
 
-    vertebrates["Bony Skeleton"]["Ray-finned Fish"]
+    print(vertebrates["Bony Skeleton"]["Ray-finned Fish"])
 
 Note that the dict-like interface combines access to child :py:class:`~xarray.DataTree` nodes and stored :py:class:`~xarray.DataArrays`,
 so if we have a node that contains both children and data, calling :py:meth:`~xarray.DataTree.keys` will list both names of child nodes and
@@ -350,7 +355,7 @@ we can construct a complex tree quickly using the alternative constructor :py:me
         "a/c/d": None,
     }
     dt = xr.DataTree.from_dict(d)
-    dt
+    print(dt)
 
 .. note::
 
@@ -386,7 +391,7 @@ then rebuilding a new tree using only the paths of those nodes:
     non_empty_nodes = {
         path: node.dataset for path, node in dt.subtree_with_keys if node.has_data
     }
-    xr.DataTree.from_dict(non_empty_nodes)
+    print(xr.DataTree.from_dict(non_empty_nodes))
 
 You can see this tree is similar to the ``dt`` object above, except that it is missing the empty nodes ``a/c`` and ``a/c/d``.
 
@@ -416,7 +421,7 @@ We can use :py:meth:`xarray.DataTree.match` for this:
         }
     )
     result = dt.match("*/B")
-    result
+    print(result)
 
 We can also subset trees by the contents of the nodes.
 :py:meth:`xarray.DataTree.filter` retains only the nodes of a tree that meet a certain condition.
@@ -436,13 +441,13 @@ First lets recreate the tree but with an ``age`` data variable in every node:
         },
         name="Abe",
     )
-    simpsons
+    print(simpsons)
 
 Now let's filter out the minors:
 
 .. jupyter-execute::
 
-    simpsons.filter(lambda node: node["age"] > 18)
+    print(simpsons.filter(lambda node: node["age"] > 18))
 
 The result is a new tree, containing only the nodes matching the condition.
 
@@ -527,14 +532,14 @@ let's first create a example scientific dataset.
             ),
         }
     )
-    voltages
+    print(voltages)
 
 Most xarray computation methods also exist as methods on datatree objects,
 so you can for example take the mean value of these two timeseries at once:
 
 .. jupyter-execute::
 
-    voltages.mean(dim="time")
+    print(voltages.mean(dim="time"))
 
 This works by mapping the standard :py:meth:`xarray.Dataset.mean()` method over the dataset stored in each node of the
 tree one-by-one.
@@ -556,7 +561,7 @@ For example, we can advance the timeline of the Simpsons by a decade just by
 
 .. jupyter-execute::
 
-    simpsons + 10
+    print(simpsons + 10)
 
 See that the same change (fast-forwarding by adding 10 years to the age of each character) has been applied to every node.
 
@@ -583,7 +588,7 @@ Then calculate the RMS value of these signals:
 
 .. jupyter-execute::
 
-    voltages.map_over_datasets(rms)
+    print(voltages.map_over_datasets(rms))
 
 .. _multiple trees:
 
@@ -613,14 +618,16 @@ To iterate over the corresponding nodes in multiple trees, use
     result = {}
     for path, (node1, node2) in xr.group_subtrees(dt1, dt2):
         result[path] = node1.dataset + node2.dataset
-    xr.DataTree.from_dict(result)
+    dt3 = xr.DataTree.from_dict(result)
+    print(dt3)
 
 Alternatively, you apply a function directly to paired datasets at every node
 using :py:func:`xarray.map_over_datasets`:
 
 .. jupyter-execute::
 
-    xr.map_over_datasets(lambda x, y: x + y, dt1, dt2)
+    dt3 = xr.map_over_datasets(lambda x, y: x + y, dt1, dt2)
+    print(dt3)
 
 Comparing Trees for Isomorphism
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -690,7 +697,7 @@ we can do arithmetic between them.
             ),
         }
     )
-    currents
+    print(currents)
 
 .. jupyter-execute::
 
@@ -701,7 +708,7 @@ We could use this feature to quickly calculate the electrical power in our signa
 .. jupyter-execute::
 
     power = currents * voltages
-    power
+    print(power)
 
 .. _hierarchical-data.alignment-and-coordinate-inheritance:
 
@@ -773,7 +780,7 @@ To represent our unalignable data in a single :py:class:`~xarray.DataTree`, we m
     dt = xr.DataTree.from_dict(
         {"daily": ds_daily, "weekly": ds_weekly, "monthly": ds_monthly}
     )
-    dt
+    print(dt)
 
 Now we have a valid :py:class:`~xarray.DataTree` structure which contains all the data at each different time frequency, stored in a separate group.
 
@@ -782,13 +789,15 @@ For example we can extract all three timeseries at a specific lat-lon location:
 
 .. jupyter-execute::
 
-    dt.sel(lat=75, lon=300)
+    dt_sel = dt.sel(lat=75, lon=300)
+    print(dt_sel)
 
 or compute the standard deviation of each timeseries to find out how it varies with sampling frequency:
 
 .. jupyter-execute::
 
-    dt.std(dim="time")
+    dt_std = dt.std(dim="time")
+    print(dt_std)
 
 .. _coordinate-inheritance:
 
