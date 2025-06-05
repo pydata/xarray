@@ -61,8 +61,6 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
-    "IPython.sphinxext.ipython_directive",
-    "IPython.sphinxext.ipython_console_highlighting",
     "jupyter_sphinx",
     "nbsphinx",
     "sphinx_autosummary_accessors",
@@ -213,7 +211,7 @@ today_fmt = "%Y-%m-%d"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build", "**.ipynb_checkpoints"]
+exclude_patterns = ["_build", "debug.ipynb", "**.ipynb_checkpoints"]
 
 
 # The name of the Pygments (syntax highlighting) style to use.

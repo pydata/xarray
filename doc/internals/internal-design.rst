@@ -1,12 +1,12 @@
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
 
     np.random.seed(123456)
-    np.set_printoptions(threshold=20)
+    np.set_printoptions(threshold=10, edgeitems=2)
 
 .. _internal design:
 
@@ -150,7 +150,7 @@ Lazy Loading
 If we open a ``Variable`` object from disk using :py:func:`~xarray.open_dataset` we can see that the actual values of
 the array wrapped by the data variable are not displayed.
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.tutorial.open_dataset("air_temperature")["air"]
     var = da.variable
@@ -162,7 +162,7 @@ This is because the values have not yet been loaded.
 If we look at the private attribute :py:meth:`~xarray.Variable._data` containing the underlying array object, we see
 something interesting:
 
-.. ipython:: python
+.. jupyter-execute::
 
     var._data
 
@@ -171,13 +171,13 @@ but provide important functionality.
 
 Calling the public :py:attr:`~xarray.Variable.data` property loads the underlying array into memory.
 
-.. ipython:: python
+.. jupyter-execute::
 
     var.data
 
 This array is now cached, which we can see by accessing the private attribute again:
 
-.. ipython:: python
+.. jupyter-execute::
 
     var._data
 
@@ -189,14 +189,14 @@ subsequent analysis, by deferring loading data until after indexing is performed
 
 Let's open the data from disk again.
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.tutorial.open_dataset("air_temperature")["air"]
     var = da.variable
 
 Now, notice how even after subsetting the data has does not get loaded:
 
-.. ipython:: python
+.. jupyter-execute::
 
     var.isel(time=0)
 
@@ -204,7 +204,7 @@ The shape has changed, but the values are still not shown.
 
 Looking at the private attribute again shows how this indexing information was propagated via the hidden lazy indexing classes:
 
-.. ipython:: python
+.. jupyter-execute::
 
     var.isel(time=0)._data
 

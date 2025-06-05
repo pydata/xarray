@@ -5,14 +5,17 @@
 Complex Numbers
 ===============
 
+.. jupyter-execute::
+    :hide-code:
+
+    import numpy as np
+    import xarray as xr
+
 Xarray leverages NumPy to seamlessly handle complex numbers in :py:class:`~xarray.DataArray` and :py:class:`~xarray.Dataset` objects.
 
 In the examples below, we are using a DataArray named ``da`` with complex elements (of :math:`\mathbb{C}`):
 
-.. ipython:: python
-
-    import xarray as xr
-    import numpy as np
+.. jupyter-execute::
 
     data = np.array([[1 + 2j, 3 + 4j], [5 + 6j, 7 + 8j]])
     da = xr.DataArray(
@@ -27,9 +30,12 @@ Operations on Complex Data
 --------------------------
 You can access real and imaginary components using the ``.real`` and ``.imag`` attributes. Most NumPy universal functions (ufuncs) like :py:doc:`numpy.abs <numpy:reference/generated/numpy.absolute>` or :py:doc:`numpy.angle <numpy:reference/generated/numpy.angle>` work directly.
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.real
+
+.. jupyter-execute::
+
     np.abs(da)
 
 .. note::
@@ -46,8 +52,7 @@ Writing complex data to NetCDF files (see :ref:`io.netcdf`) is supported via :py
 
    This requires the `h5netcdf <https://h5netcdf.org>`_ library to be installed.
 
-   .. ipython:: python
-       :okwarning:
+   .. jupyter-execute::
 
        # write the data to disk
        da.to_netcdf("complex_nums_h5.nc", engine="h5netcdf")
@@ -61,8 +66,7 @@ Writing complex data to NetCDF files (see :ref:`io.netcdf`) is supported via :py
 
    Requires the `netcdf4-python (>= 1.7.1) <https://github.com/Unidata/netcdf4-python>`_ library and you have to enable ``auto_complex=True``.
 
-   .. ipython:: python
-       :okwarning:
+   .. jupyter-execute::
 
        # write the data to disk
        da.to_netcdf("complex_nums_nc4.nc", engine="netcdf4", auto_complex=True)
@@ -84,7 +88,7 @@ Alternative: Manual Handling
 If direct writing is not supported (e.g., targeting NetCDF3), you can manually
 split the complex array into separate real and imaginary variables before saving:
 
-.. ipython:: python
+.. jupyter-execute::
 
     # Write data to file
     ds_manual = xr.Dataset(
@@ -106,8 +110,8 @@ Recommendations
 - Use ``h5netcdf`` for HDF5-based storage when interoperability with HDF5 is desired.
 - For maximum legacy support (NetCDF3), manually handle real/imaginary components.
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     # Cleanup
     import os
