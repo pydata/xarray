@@ -5,7 +5,7 @@ import operator
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, cast, get_args, overload
 
 import numpy as np
 import pandas as pd
@@ -19,9 +19,10 @@ from xarray.core.indexes import (
     indexes_all_equal,
     safe_cast_to_index,
 )
-from xarray.core.types import T_Alignable
-from xarray.core.utils import is_dict_like, is_full_slice
+from xarray.core.types import JoinOptions, T_Alignable
+from xarray.core.utils import emit_user_level_warning, is_dict_like, is_full_slice
 from xarray.core.variable import Variable, as_compatible_data, calculate_dimensions
+from xarray.util.deprecation_helpers import CombineKwargDefault
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -152,11 +153,10 @@ class Aligner(Generic[T_Alignable]):
 
     objects: tuple[T_Alignable, ...]
     results: tuple[T_Alignable, ...]
-    objects_matching_indexes: tuple[dict[MatchingIndexKey, Index], ...]
     objects_matching_index_vars: tuple[
         dict[MatchingIndexKey, dict[Hashable, Variable]], ...
     ]
-    join: str
+    join: JoinOptions | CombineKwargDefault
     exclude_dims: frozenset[Hashable]
     exclude_vars: frozenset[Hashable]
     copy: bool
@@ -177,7 +177,7 @@ class Aligner(Generic[T_Alignable]):
     def __init__(
         self,
         objects: Iterable[T_Alignable],
-        join: str = "inner",
+        join: JoinOptions | CombineKwargDefault = "inner",
         indexes: Mapping[Any, Any] | None = None,
         exclude_dims: str | Iterable[Hashable] = frozenset(),
         exclude_vars: Iterable[Hashable] = frozenset(),
@@ -188,10 +188,12 @@ class Aligner(Generic[T_Alignable]):
         sparse: bool = False,
     ):
         self.objects = tuple(objects)
-        self.objects_matching_indexes = ()
+        self.objects_matching_indexes: tuple[Any, ...] = ()
         self.objects_matching_index_vars = ()
 
-        if join not in ["inner", "outer", "override", "exact", "left", "right"]:
+        if not isinstance(join, CombineKwargDefault) and join not in get_args(
+            JoinOptions
+        ):
             raise ValueError(f"invalid value for join: {join}")
         self.join = join
 
@@ -448,12 +450,34 @@ class Aligner(Generic[T_Alignable]):
                 else:
                     need_reindex = False
                 if need_reindex:
+                    if (
+                        isinstance(self.join, CombineKwargDefault)
+                        and self.join != "exact"
+                    ):
+                        emit_user_level_warning(
+                            self.join.warning_message(
+                                "This change will result in the following ValueError: "
+                                "cannot be aligned with join='exact' because "
+                                "index/labels/sizes are not equal along "
+                                "these coordinates (dimensions): "
+                                + ", ".join(
+                                    f"{name!r} {dims!r}" for name, dims in key[0]
+                                ),
+                                recommend_set_options=False,
+                            ),
+                            FutureWarning,
+                        )
                     if self.join == "exact":
                         raise AlignmentError(
                             "cannot align objects with join='exact' where "
                             "index/labels/sizes are not equal along "
                             "these coordinates (dimensions): "
                             + ", ".join(f"{name!r} {dims!r}" for name, dims in key[0])
+                            + (
+                                self.join.error_message()
+                                if isinstance(self.join, CombineKwargDefault)
+                                else ""
+                            )
                         )
                     joiner = self._get_index_joiner(index_cls)
                     joined_index = joiner(matching_indexes)
@@ -651,7 +675,7 @@ def align(
     obj1: T_Obj1,
     /,
     *,
-    join: JoinOptions = "inner",
+    join: JoinOptions | CombineKwargDefault = "inner",
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
@@ -665,7 +689,7 @@ def align(
     obj2: T_Obj2,
     /,
     *,
-    join: JoinOptions = "inner",
+    join: JoinOptions | CombineKwargDefault = "inner",
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
@@ -680,7 +704,7 @@ def align(
     obj3: T_Obj3,
     /,
     *,
-    join: JoinOptions = "inner",
+    join: JoinOptions | CombineKwargDefault = "inner",
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
@@ -696,7 +720,7 @@ def align(
     obj4: T_Obj4,
     /,
     *,
-    join: JoinOptions = "inner",
+    join: JoinOptions | CombineKwargDefault = "inner",
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
@@ -713,7 +737,7 @@ def align(
     obj5: T_Obj5,
     /,
     *,
-    join: JoinOptions = "inner",
+    join: JoinOptions | CombineKwargDefault = "inner",
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
@@ -724,7 +748,7 @@ def align(
 @overload
 def align(
     *objects: T_Alignable,
-    join: JoinOptions = "inner",
+    join: JoinOptions | CombineKwargDefault = "inner",
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
@@ -734,7 +758,7 @@ def align(
 
 def align(
     *objects: T_Alignable,
-    join: JoinOptions = "inner",
+    join: JoinOptions | CombineKwargDefault = "inner",
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
@@ -942,7 +966,7 @@ def align(
 
 def deep_align(
     objects: Iterable[Any],
-    join: JoinOptions = "inner",
+    join: JoinOptions | CombineKwargDefault = "inner",
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
