@@ -12,6 +12,7 @@ from xarray import DataArray, Dataset, Variable, concat
 from xarray.core import dtypes
 from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import PandasIndex
+from xarray.core.indexing import LazilyConcatenatedArray, LazilyIndexedArray
 from xarray.structure import merge
 from xarray.tests import (
     ConcatenatableArray,
@@ -1381,3 +1382,14 @@ def test_concat_index_not_same_dim() -> None:
         match=r"Cannot concatenate along dimension 'x' indexes with dimensions.*",
     ):
         concat([ds1, ds2], dim="x")
+
+
+def test_lazy_concat():
+    arrays_list = [
+        [np.array([[1, 2, 3]]), np.array([[4, 5, 6]])],
+        [np.array([[7, 8, 9]]), np.array([[10, 11, 12]])],
+        [np.array([[7, 8, 9]]), np.array([[10, 11, 12]])],
+    ]
+    larry = LazilyIndexedArray(LazilyConcatenatedArray(arrays_list))
+    nparray = np.block(arrays_list)
+    # assert npt.assert_array_equal here
