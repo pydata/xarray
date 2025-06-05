@@ -2227,7 +2227,9 @@ def concatenate3(arrays):
     result = np.empty(shape=shape, dtype=dtype(deepfirst(arrays)))
 
     for idx, arr in zip(
-        slices_from_chunks(chunks), flatten(arrays, container=(list, tuple)), strict=False
+        slices_from_chunks(chunks),
+        flatten(arrays, container=(list, tuple)),
+        strict=False,
     ):
         if hasattr(arr, "ndim"):
             while arr.ndim < ndim:
@@ -2342,7 +2344,8 @@ class LazilyConcatenatedArray(ExplicitlyIndexedNDArrayMixin):
 
     def _vindex_get(self, key: VectorizedIndexer) -> np.ndarray:
         ichunks = tuple(
-            np.digitize(breaks, idxr) - 1 for breaks, idxr in zip(key, self.breaks, strict=False)
+            np.digitize(breaks, idxr) - 1
+            for breaks, idxr in zip(key, self.breaks, strict=False)
         )
         linear_chunks = np.ravel_multi_index(ichunks)
         unique_linear_chunks = np.unique(linear_chunks)
