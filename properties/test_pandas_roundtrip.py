@@ -15,6 +15,7 @@ import hypothesis.extra.numpy as npst  # isort:skip
 import hypothesis.extra.pandas as pdst  # isort:skip
 import hypothesis.strategies as st  # isort:skip
 from hypothesis import given  # isort:skip
+from xarray.tests import has_pyarrow
 
 numeric_dtypes = st.one_of(
     npst.unsigned_integer_dtypes(endianness="="),
@@ -134,10 +135,39 @@ def test_roundtrip_pandas_dataframe_datetime(df) -> None:
     xr.testing.assert_identical(dataset, roundtripped.to_xarray())
 
 
-def test_roundtrip_1d_pandas_extension_array() -> None:
-    df = pd.DataFrame({"cat": pd.Categorical(["a", "b", "c"])})
-    arr = xr.Dataset.from_dataframe(df)["cat"]
+@pytest.mark.parametrize(
+    "extension_array",
+    [
+        pd.Categorical(["a", "b", "c"]),
+        pd.array(["a", "b", "c"], dtype="string"),
+        pd.arrays.IntervalArray(
+            [pd.Interval(0, 1), pd.Interval(1, 5), pd.Interval(2, 6)]
+        ),
+        pd.arrays.TimedeltaArray._from_sequence(pd.TimedeltaIndex(["1h", "2h", "3h"])),
+        pd.arrays.DatetimeArray._from_sequence(
+            pd.DatetimeIndex(["2023-01-01", "2023-01-02", "2023-01-03"], freq="D")
+        ),
+        np.array([1, 2, 3], dtype="int64"),
+    ]
+    + ([pd.array([1, 2, 3], dtype="int64[pyarrow]")] if has_pyarrow else []),
+    ids=["cat", "string", "interval", "timedelta", "datetime", "numpy"]
+    + (["pyarrow"] if has_pyarrow else []),
+)
+@pytest.mark.parametrize("is_index", [True, False])
+def test_roundtrip_1d_pandas_extension_array(extension_array, is_index) -> None:
+    df = pd.DataFrame({"arr": extension_array})
+    if is_index:
+        df = df.set_index("arr")
+    arr = xr.Dataset.from_dataframe(df)["arr"]
     roundtripped = arr.to_pandas()
-    assert (df["cat"] == roundtripped).all()
-    assert df["cat"].dtype == roundtripped.dtype
-    xr.testing.assert_identical(arr, roundtripped.to_xarray())
+    df_arr_to_test = df.index if is_index else df["arr"]
+    assert (df_arr_to_test == roundtripped).all()
+    # `NumpyExtensionArray` types are not roundtripped, including `StringArray` which subtypes.
+    if isinstance(extension_array, pd.arrays.NumpyExtensionArray):  # type: ignore[attr-defined]
+        assert isinstance(arr.data, np.ndarray)
+    else:
+        assert (
+            df_arr_to_test.dtype
+            == (roundtripped.index if is_index else roundtripped).dtype
+        )
+        xr.testing.assert_identical(arr, roundtripped.to_xarray())
