@@ -38,7 +38,6 @@ from numpy.typing import ArrayLike
 
 if TYPE_CHECKING:
     from xarray.backends.common import BackendEntrypoint
-    from xarray.core.alignment import Aligner
     from xarray.core.common import AbstractArray, DataWithCoords
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
@@ -48,6 +47,7 @@ if TYPE_CHECKING:
     from xarray.core.utils import Frozen
     from xarray.core.variable import IndexVariable, Variable
     from xarray.groupers import Grouper, TimeResampler
+    from xarray.structure.alignment import Aligner
 
     GroupInput: TypeAlias = (
         str
@@ -141,7 +141,7 @@ class Alignable(Protocol):
 
     def _reindex_callback(
         self,
-        aligner: Aligner,
+        aligner: Any,
         dim_pos_indexers: dict[Hashable, Any],
         variables: dict[Hashable, Variable],
         indexes: dict[Hashable, Index],
@@ -167,6 +167,7 @@ class Alignable(Protocol):
 
 
 T_Alignable = TypeVar("T_Alignable", bound="Alignable")
+T_Aligner = TypeVar("T_Aligner", bound="Aligner")
 
 T_Backend = TypeVar("T_Backend", bound="BackendEntrypoint")
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
@@ -213,7 +214,7 @@ Dims = Union[str, Collection[Hashable], EllipsisType, None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
-T_ChunkDim: TypeAlias = str | int | Literal["auto"] | None | tuple[int, ...]
+T_ChunkDim: TypeAlias = str | int | Literal["auto"] | None | tuple[int, ...]  # noqa: PYI051
 T_ChunkDimFreq: TypeAlias = Union["TimeResampler", T_ChunkDim]
 T_ChunksFreq: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDimFreq]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
@@ -253,7 +254,7 @@ InterpnOptions = Literal["linear", "nearest", "slinear", "cubic", "quintic", "pc
 InterpOptions = Union[Interp1dOptions, InterpolantOptions, InterpnOptions]
 
 DatetimeUnitOptions = Literal[
-    "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
+    "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
 ]
 NPDatetimeUnitOptions = Literal["D", "h", "m", "s", "ms", "us", "ns"]
 PDDatetimeUnitOptions = Literal["s", "ms", "us", "ns"]
@@ -328,7 +329,7 @@ class BaseBuffer(Protocol):
         # for _get_filepath_or_buffer
         ...
 
-    def seek(self, __offset: int, __whence: int = ...) -> int:
+    def seek(self, offset: int, whence: int = ..., /) -> int:
         # with one argument: gzip.GzipFile, bz2.BZ2File
         # with two arguments: zip.ZipFile, read_sas
         ...
@@ -344,7 +345,7 @@ class BaseBuffer(Protocol):
 
 @runtime_checkable
 class ReadBuffer(BaseBuffer, Protocol[AnyStr_co]):
-    def read(self, __n: int = ...) -> AnyStr_co:
+    def read(self, n: int = ..., /) -> AnyStr_co:
         # for BytesIOWrapper, gzip.GzipFile, bz2.BZ2File
         ...
 

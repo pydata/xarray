@@ -52,7 +52,6 @@ from unicodedata import normalize
 import numpy as np
 
 from xarray.core import duck_array_ops
-from xarray.core.computation import apply_ufunc
 from xarray.core.types import T_DataArray
 
 if TYPE_CHECKING:
@@ -126,6 +125,8 @@ def _apply_str_ufunc(
     dask_gufunc_kwargs = dict()
     if output_sizes is not None:
         dask_gufunc_kwargs["output_sizes"] = output_sizes
+
+    from xarray.computation.apply_ufunc import apply_ufunc
 
     return apply_ufunc(
         func,
@@ -1943,7 +1944,7 @@ class StringAccessor(Generic[T_DataArray]):
         if regex:
             pat = self._re_compile(pat=pat, flags=flags, case=case)
             func = lambda x, ipat, irepl, i_n: ipat.sub(
-                repl=irepl, string=x, count=i_n if i_n >= 0 else 0
+                repl=irepl, string=x, count=max(i_n, 0)
             )
         else:
             pat = self._stringify(pat)

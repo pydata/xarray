@@ -549,8 +549,7 @@ Code Formatting
 
 xarray uses several tools to ensure a consistent code format throughout the project:
 
-- `ruff <https://github.com/astral-sh/ruff>`_ for formatting, code quality checks and standardized order in imports
-- `absolufy-imports <https://github.com/MarcoGorelli/absolufy-imports>`_ for absolute instead of relative imports from different files,
+- `ruff <https://github.com/astral-sh/ruff>`_ for formatting, code quality checks and standardized order in imports, and
 - `mypy <https://mypy-lang.org/>`_ for static type checking on `type hints
   <https://docs.python.org/3/library/typing.html>`_.
 
@@ -609,7 +608,7 @@ A pull-request will be considered for merging when you have an all 'green' build
 tests are failing, then you will get a red 'X', where you can click through to see the
 individual failed tests. This is an example of a green build.
 
-.. image:: _static/ci.png
+.. image:: ../_static/ci.png
 
 .. note::
 
@@ -1013,7 +1012,7 @@ If you have made updates to the documentation, you can now see a preview of the 
 the ``docs/readthedocs.org`` check near the bottom of the list of checks that run automatically when submitting a PR,
 then clicking on the "View Docs" button on the right (not the big green button, the small black one further down).
 
-.. image:: _static/view-docs.png
+.. image:: ../_static/view-docs.png
 
 
 If you need to make more changes, you can make them in

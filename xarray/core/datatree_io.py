@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal, get_args
 from xarray.core.datatree import DataTree
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 
-T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf"]
+T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf", "pydap"]
 T_DataTreeNetcdfTypes = Literal["NETCDF4"]
 
 if TYPE_CHECKING:
@@ -101,6 +101,11 @@ def _datatree_to_zarr(
     if group is not None:
         raise NotImplementedError(
             "specifying a root group for the tree has not been implemented"
+        )
+
+    if "append_dim" in kwargs:
+        raise NotImplementedError(
+            "specifying ``append_dim`` with ``DataTree.to_zarr`` has not been implemented"
         )
 
     if encoding is None:

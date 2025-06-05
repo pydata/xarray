@@ -1,6 +1,6 @@
 """Define core operations for xarray objects.
 
-TODO(shoyer): rewrite this module, making use of xarray.core.computation,
+TODO(shoyer): rewrite this module, making use of xarray.computation.computation,
 NumPy's __array_ufunc__ and mixin classes instead of the unintuitive "inject"
 functions.
 """
@@ -8,6 +8,7 @@ functions.
 from __future__ import annotations
 
 import operator
+from typing import Literal
 
 import numpy as np
 
@@ -143,7 +144,7 @@ def fillna(data, other, join="left", dataset_join="left"):
         - "left": take only variables from the first object
         - "right": take only variables from the last object
     """
-    from xarray.core.computation import apply_ufunc
+    from xarray.computation.apply_ufunc import apply_ufunc
 
     return apply_ufunc(
         duck_array_ops.fillna,
@@ -157,7 +158,8 @@ def fillna(data, other, join="left", dataset_join="left"):
     )
 
 
-def where_method(self, cond, other=dtypes.NA):
+# Unsure why we get a mypy error here
+def where_method(self, cond, other=dtypes.NA):  # type: ignore[has-type]
     """Return elements from `self` or `other` depending on `cond`.
 
     Parameters
@@ -172,10 +174,10 @@ def where_method(self, cond, other=dtypes.NA):
     -------
     Same type as caller.
     """
-    from xarray.core.computation import apply_ufunc
+    from xarray.computation.apply_ufunc import apply_ufunc
 
     # alignment for three arguments is complicated, so don't support it yet
-    join = "inner" if other is dtypes.NA else "exact"
+    join: Literal["inner", "exact"] = "inner" if other is dtypes.NA else "exact"
     return apply_ufunc(
         duck_array_ops.where_method,
         self,
@@ -281,7 +283,7 @@ def inplace_to_noninplace_op(f):
 # _typed_ops.py uses the following wrapped functions as a kind of unary operator
 argsort = _method_wrapper("argsort")
 conj = _method_wrapper("conj")
-conjugate = _method_wrapper("conjugate")
+conjugate = _method_wrapper("conj")
 round_ = _func_slash_method_wrapper(duck_array_ops.around, name="round")
 
 

@@ -61,13 +61,24 @@ from collections.abc import (
     MutableMapping,
     MutableSet,
     Sequence,
-    Set,
     ValuesView,
+)
+from collections.abc import (
+    Set as AbstractSet,
 )
 from enum import Enum
 from pathlib import Path
 from types import EllipsisType, ModuleType
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeGuard, TypeVar, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Literal,
+    TypeGuard,
+    TypeVar,
+    cast,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -695,10 +706,8 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
 def try_read_magic_number_from_file_or_path(filename_or_obj, count=8) -> bytes | None:
     magic_number = try_read_magic_number_from_path(filename_or_obj, count)
     if magic_number is None:
-        try:
+        with contextlib.suppress(TypeError):
             magic_number = read_magic_number_from_file(filename_or_obj, count)
-        except TypeError:
-            pass
     return magic_number
 
 
@@ -751,7 +760,7 @@ def decode_numpy_dict_values(attrs: Mapping[K, V]) -> dict[K, V]:
     attrs = dict(attrs)
     for k, v in attrs.items():
         if isinstance(v, np.ndarray):
-            attrs[k] = v.tolist()
+            attrs[k] = cast(V, v.tolist())
         elif isinstance(v, np.generic):
             attrs[k] = v.item()
     return attrs
@@ -1048,7 +1057,7 @@ def parse_ordered_dims(
         )
 
 
-def _check_dims(dim: Set[Hashable], all_dims: Set[Hashable]) -> None:
+def _check_dims(dim: AbstractSet[Hashable], all_dims: AbstractSet[Hashable]) -> None:
     wrong_dims = (dim - all_dims) - {...}
     if wrong_dims:
         wrong_dims_str = ", ".join(f"'{d}'" for d in wrong_dims)

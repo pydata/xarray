@@ -10,8 +10,7 @@ import pytest
 from numpy.testing import assert_allclose, assert_array_equal
 
 import xarray as xr
-from xarray.core.alignment import broadcast
-from xarray.core.computation import (
+from xarray.computation.apply_ufunc import (
     _UFuncSignature,
     apply_ufunc,
     broadcast_compat_data,
@@ -19,9 +18,10 @@ from xarray.core.computation import (
     join_dict_keys,
     ordered_set_intersection,
     ordered_set_union,
-    result_name,
     unified_dim_sizes,
 )
+from xarray.core.utils import result_name
+from xarray.structure.alignment import broadcast
 from xarray.tests import (
     has_dask,
     raise_if_dask_computes,
@@ -1852,7 +1852,6 @@ def test_equally_weighted_cov_corr() -> None:
         coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
         dims=("a", "time", "x"),
     )
-    #
     assert_allclose(
         xr.cov(da, db, weights=None), xr.cov(da, db, weights=xr.DataArray(1))
     )
@@ -2014,9 +2013,8 @@ def test_output_wrong_dim_size() -> None:
 
 @pytest.mark.parametrize("use_dask", [True, False])
 def test_dot(use_dask: bool) -> None:
-    if use_dask:
-        if not has_dask:
-            pytest.skip("test for dask.")
+    if use_dask and not has_dask:
+        pytest.skip("test for dask.")
 
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
@@ -2146,9 +2144,8 @@ def test_dot(use_dask: bool) -> None:
 def test_dot_align_coords(use_dask: bool) -> None:
     # GH 3694
 
-    if use_dask:
-        if not has_dask:
-            pytest.skip("test for dask.")
+    if use_dask and not has_dask:
+        pytest.skip("test for dask.")
 
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
@@ -2206,6 +2203,7 @@ def test_where() -> None:
 def test_where_attrs() -> None:
     cond = xr.DataArray([True, False], coords={"a": [0, 1]}, attrs={"attr": "cond_da"})
     cond["a"].attrs = {"attr": "cond_coord"}
+    input_cond = cond.copy()
     x = xr.DataArray([1, 1], coords={"a": [0, 1]}, attrs={"attr": "x_da"})
     x["a"].attrs = {"attr": "x_coord"}
     y = xr.DataArray([0, 0], coords={"a": [0, 1]}, attrs={"attr": "y_da"})
@@ -2216,6 +2214,22 @@ def test_where_attrs() -> None:
     expected = xr.DataArray([1, 0], coords={"a": [0, 1]}, attrs={"attr": "x_da"})
     expected["a"].attrs = {"attr": "x_coord"}
     assert_identical(expected, actual)
+    # Check also that input coordinate attributes weren't modified by reference
+    assert x["a"].attrs == {"attr": "x_coord"}
+    assert y["a"].attrs == {"attr": "y_coord"}
+    assert cond["a"].attrs == {"attr": "cond_coord"}
+    assert_identical(cond, input_cond)
+
+    # 3 DataArrays, drop attrs
+    actual = xr.where(cond, x, y, keep_attrs=False)
+    expected = xr.DataArray([1, 0], coords={"a": [0, 1]})
+    assert_identical(expected, actual)
+    assert_identical(expected.coords["a"], actual.coords["a"])
+    # Check also that input coordinate attributes weren't modified by reference
+    assert x["a"].attrs == {"attr": "x_coord"}
+    assert y["a"].attrs == {"attr": "y_coord"}
+    assert cond["a"].attrs == {"attr": "cond_coord"}
+    assert_identical(cond, input_cond)
 
     # x as a scalar, takes no attrs
     actual = xr.where(cond, 0, y, keep_attrs=True)
@@ -2627,3 +2641,14 @@ def test_complex_number_reduce(compute_backend):
     # Check that xarray doesn't call into numbagg, which doesn't compile for complex
     # numbers at the moment (but will when numba supports dynamic compilation)
     da.min()
+
+
+def test_fix() -> None:
+    val = 3.0
+    val_fixed = np.fix(val)
+
+    da = xr.DataArray([val])
+    expected = xr.DataArray([val_fixed])
+
+    actual = np.fix(da)
+    assert_identical(expected, actual)

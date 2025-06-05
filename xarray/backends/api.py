@@ -35,12 +35,6 @@ from xarray.backends.common import (
 from xarray.backends.locks import _get_scheduler
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import indexing
-from xarray.core.chunk import _get_chunk, _maybe_chunk
-from xarray.core.combine import (
-    _infer_concat_order_from_positions,
-    _nested_combine,
-    combine_by_coords,
-)
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
@@ -50,6 +44,12 @@ from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 from xarray.core.utils import is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
+from xarray.structure.chunks import _get_chunk, _maybe_chunk
+from xarray.structure.combine import (
+    _infer_concat_order_from_positions,
+    _nested_combine,
+    combine_by_coords,
+)
 
 if TYPE_CHECKING:
     try:
@@ -71,7 +71,7 @@ if TYPE_CHECKING:
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
         T_NetcdfEngine,
-        Literal["pydap", "zarr"],
+        Literal["pydap", "zarr"],  # noqa: PYI051
         type[BackendEntrypoint],
         str,  # no nice typing support for custom backends
         None,
@@ -710,8 +710,8 @@ def open_dataset(
 def open_dataarray(
     filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     *,
-    engine: T_Engine | None = None,
-    chunks: T_Chunks | None = None,
+    engine: T_Engine = None,
+    chunks: T_Chunks = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
@@ -1119,7 +1119,7 @@ def open_datatree(
 
     decoders = _resolve_decoders_kwargs(
         decode_cf,
-        open_backend_dataset_parameters=(),
+        open_backend_dataset_parameters=backend.open_dataset_parameters,
         mask_and_scale=mask_and_scale,
         decode_times=decode_times,
         decode_timedelta=decode_timedelta,
@@ -1394,7 +1394,7 @@ def open_mfdataset(
     | os.PathLike
     | ReadBuffer
     | NestedSequence[str | os.PathLike | ReadBuffer],
-    chunks: T_Chunks | None = None,
+    chunks: T_Chunks = None,
     concat_dim: (
         str
         | DataArray
@@ -1406,7 +1406,7 @@ def open_mfdataset(
     ) = None,
     compat: CompatOptions = "no_conflicts",
     preprocess: Callable[[Dataset], Dataset] | None = None,
-    engine: T_Engine | None = None,
+    engine: T_Engine = None,
     data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
     coords="different",
     combine: Literal["by_coords", "nested"] = "by_coords",

@@ -18,12 +18,13 @@ import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
 from xarray.core.datatree_render import RenderDataTree
-from xarray.core.duck_array_ops import array_all, array_any, array_equiv, astype
+from xarray.core.duck_array_ops import array_all, array_any, array_equiv, astype, ravel
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.treenode import group_subtrees
 from xarray.core.utils import is_duck_array
-from xarray.namedarray.pycompat import array_type, to_duck_array, to_numpy
+from xarray.namedarray.pycompat import array_type, to_duck_array
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import AbstractCoordinates
@@ -94,7 +95,7 @@ def first_n_items(array, n_desired):
     # pass Variable._data
     if isinstance(array, Variable):
         array = array._data
-    return np.ravel(to_duck_array(array))[:n_desired]
+    return ravel(to_duck_array(array))[:n_desired]
 
 
 def last_n_items(array, n_desired):
@@ -118,18 +119,13 @@ def last_n_items(array, n_desired):
     # pass Variable._data
     if isinstance(array, Variable):
         array = array._data
-    return np.ravel(to_duck_array(array))[-n_desired:]
+    return ravel(to_duck_array(array))[-n_desired:]
 
 
 def last_item(array):
-    """Returns the last item of an array in a list or an empty list."""
-    if array.size == 0:
-        # work around for https://github.com/numpy/numpy/issues/5195
-        return []
-
+    """Returns the last item of an array."""
     indexer = (slice(-1, None),) * array.ndim
-    # to_numpy since dask doesn't support tolist
-    return np.ravel(to_numpy(array[indexer])).tolist()
+    return ravel(to_duck_array(array[indexer]))
 
 
 def calc_max_rows_first(max_rows: int) -> int:
@@ -181,6 +177,11 @@ def format_timedelta(t, timedelta_format=None):
 
 def format_item(x, timedelta_format=None, quote_strings=True):
     """Returns a succinct summary of an object as a string"""
+    if isinstance(x, PandasExtensionArray):
+        # We want to bypass PandasExtensionArray's repr here
+        # because its __repr__ is PandasExtensionArray(array=[...])
+        # and this function is only for single elements.
+        return str(x.array[0])
     if isinstance(x, np.datetime64 | datetime):
         return format_timestamp(x)
     if isinstance(x, np.timedelta64 | timedelta):
@@ -199,7 +200,9 @@ def format_items(x):
     """Returns a succinct summaries of all items in a sequence as strings"""
     x = to_duck_array(x)
     timedelta_format = "datetime"
-    if np.issubdtype(x.dtype, np.timedelta64):
+    if not isinstance(x, PandasExtensionArray) and np.issubdtype(
+        x.dtype, np.timedelta64
+    ):
         x = astype(x, dtype="timedelta64[ns]")
         day_part = x[~pd.isnull(x)].astype("timedelta64[D]").astype("timedelta64[ns]")
         time_needed = x[~pd.isnull(x)] != day_part
@@ -317,7 +320,7 @@ def inline_variable_array_repr(var, max_width):
 def summarize_variable(
     name: Hashable,
     var: Variable,
-    col_width: int,
+    col_width: int | None = None,
     max_width: int | None = None,
     is_index: bool = False,
 ):
@@ -332,7 +335,9 @@ def summarize_variable(
             max_width = max_width_options
 
     marker = "*" if is_index else " "
-    first_col = pretty_print(f"  {marker} {name} ", col_width)
+    first_col = f"  {marker} {name} "
+    if col_width is not None:
+        first_col = pretty_print(first_col, col_width)
 
     if variable.dims:
         dims_str = "({}) ".format(", ".join(map(str, variable.dims)))
@@ -629,6 +634,8 @@ def short_array_repr(array):
 
     if isinstance(array, AbstractArray):
         array = array.data
+    if isinstance(array, pd.api.extensions.ExtensionArray):
+        return repr(array)
     array = to_duck_array(array)
 
     # default to lower precision so a full (abbreviated) line can fit on
@@ -887,7 +894,7 @@ def _diff_mapping_repr(
                     attrs_summary.append(attr_s)
 
                 temp = [
-                    "\n".join([var_s, attr_s]) if attr_s else var_s
+                    f"{var_s}\n{attr_s}" if attr_s else var_s
                     for var_s, attr_s in zip(temp, attrs_summary, strict=True)
                 ]
 
@@ -1055,9 +1062,8 @@ def diff_datatree_repr(a: DataTree, b: DataTree, compat):
         f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
 
-    if compat == "identical":
-        if diff_name := diff_name_summary(a, b):
-            summary.append(diff_name)
+    if compat == "identical" and (diff_name := diff_name_summary(a, b)):
+        summary.append(diff_name)
 
     treestructure_diff = diff_treestructure(a, b)
 
@@ -1142,14 +1148,21 @@ def _datatree_node_repr(node: DataTree, show_inherited: bool) -> str:
 
 def datatree_repr(dt: DataTree) -> str:
     """A printable representation of the structure of this entire tree."""
-    renderer = RenderDataTree(dt)
+    max_children = OPTIONS["display_max_children"]
+
+    renderer = RenderDataTree(dt, maxchildren=max_children)
 
     name_info = "" if dt.name is None else f" {dt.name!r}"
     header = f"<xarray.DataTree{name_info}>"
 
     lines = [header]
     show_inherited = True
+
     for pre, fill, node in renderer:
+        if isinstance(node, str):
+            lines.append(f"{fill}{node}")
+            continue
+
         node_repr = _datatree_node_repr(node, show_inherited=show_inherited)
         show_inherited = False  # only show inherited coords on the root
 

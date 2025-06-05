@@ -17,16 +17,18 @@ else:
     da = pytest.importorskip("dask.array")
     distributed = pytest.importorskip("distributed")
 
+import contextlib
+
 from dask.distributed import Client, Lock
 from distributed.client import futures_of
-from distributed.utils_test import (  # noqa: F401
-    cleanup,
-    client,
+from distributed.utils_test import (
+    cleanup,  # noqa: F401
+    client,  # noqa: F401
     cluster,
-    cluster_fixture,
+    cluster_fixture,  # noqa: F401
     gen_cluster,
-    loop,
-    loop_in_thread,
+    loop,  # noqa: F401
+    loop_in_thread,  # noqa: F401
 )
 
 import xarray as xr
@@ -46,9 +48,6 @@ from xarray.tests.test_backends import (
     create_tmp_file,
 )
 from xarray.tests.test_dataset import create_test_data
-
-loop = loop  # loop is an imported fixture, which flake8 has issues ack-ing
-client = client  # client is an imported fixture, which flake8 has issues ack-ing
 
 
 @pytest.fixture
@@ -87,7 +86,10 @@ ENGINES_AND_FORMATS = [
 
 @pytest.mark.parametrize("engine,nc_format", ENGINES_AND_FORMATS)
 def test_dask_distributed_netcdf_roundtrip(
-    loop, tmp_netcdf_filename, engine, nc_format
+    loop,  # noqa: F811
+    tmp_netcdf_filename,
+    engine,
+    nc_format,
 ):
     if engine not in ENGINES:
         pytest.skip("engine not available")
@@ -117,7 +119,8 @@ def test_dask_distributed_netcdf_roundtrip(
 
 @requires_netCDF4
 def test_dask_distributed_write_netcdf_with_dimensionless_variables(
-    loop, tmp_netcdf_filename
+    loop,  # noqa: F811
+    tmp_netcdf_filename,
 ):
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
@@ -197,7 +200,10 @@ def test_open_mfdataset_multiple_files_parallel(parallel, tmp_path):
 
 @pytest.mark.parametrize("engine,nc_format", ENGINES_AND_FORMATS)
 def test_dask_distributed_read_netcdf_integration_test(
-    loop, tmp_netcdf_filename, engine, nc_format
+    loop,  # noqa: F811
+    tmp_netcdf_filename,
+    engine,
+    nc_format,
 ):
     if engine not in ENGINES:
         pytest.skip("engine not available")
@@ -220,8 +226,8 @@ def test_dask_distributed_read_netcdf_integration_test(
 # fixture vendored from dask
 # heads-up, this is using quite private zarr API
 # https://github.com/dask/dask/blob/e04734b4d8959ba259801f2e2a490cb4ee8d891f/dask/tests/test_distributed.py#L338-L358
-@pytest.fixture(scope="function")
-def zarr(client):
+@pytest.fixture
+def zarr(client):  # noqa: F811
     zarr_lib = pytest.importorskip("zarr")
     # Zarr-Python 3 lazily allocates a dedicated thread/IO loop
     # for to execute async tasks. To avoid having this thread
@@ -238,17 +244,15 @@ def zarr(client):
         # an IO loop. Here we clean up these resources to avoid leaking threads
         # In normal operations, this is done as by an atexit handler when Zarr
         # is shutting down.
-        try:
+        with contextlib.suppress(AttributeError):
             zarr_lib.core.sync.cleanup_resources()
-        except AttributeError:
-            pass
 
 
 @requires_zarr
 @pytest.mark.parametrize("consolidated", [True, False])
 @pytest.mark.parametrize("compute", [True, False])
 def test_dask_distributed_zarr_integration_test(
-    client,
+    client,  # noqa: F811
     zarr,
     consolidated: bool,
     compute: bool,
@@ -283,7 +287,7 @@ async def test_async(c, s, a, b) -> None:
     assert dask.is_dask_collection(y.var1)
     assert dask.is_dask_collection(y.var2)
 
-    z = y.persist()
+    z = c.persist(y)
     assert str(z)
 
     assert dask.is_dask_collection(z)

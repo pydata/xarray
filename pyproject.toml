@@ -2,7 +2,6 @@
 authors = [{ name = "xarray Developers", email = "xarray@googlegroups.com" }]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
-  "License :: OSI Approved :: Apache Software License",
   "Operating System :: OS Independent",
   "Intended Audience :: Science/Research",
   "Programming Language :: Python",
@@ -15,7 +14,7 @@ classifiers = [
 ]
 description = "N-D labeled arrays and datasets in Python"
 dynamic = ["version"]
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 name = "xarray"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -30,6 +29,39 @@ dependencies = ["numpy>=1.24", "packaging>=23.2", "pandas>=2.1"]
 [project.optional-dependencies]
 accel = ["scipy", "bottleneck", "numbagg", "numba>=0.54", "flox", "opt_einsum"]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
+io = [
+  "netCDF4",
+  "h5netcdf",
+  "scipy",
+  'pydap; python_version<"3.10"',
+  "zarr",
+  "fsspec",
+  "cftime",
+  "pooch",
+]
+etc = ["sparse"]
+parallel = ["dask[complete]"]
+viz = ["cartopy", "matplotlib", "nc-time-axis", "seaborn"]
+types = [
+  "pandas-stubs",
+  "scipy-stubs",
+  "types-PyYAML",
+  "types-Pygments",
+  "types-colorama",
+  "types-decorator",
+  "types-defusedxml",
+  "types-docutils",
+  "types-networkx",
+  "types-pexpect",
+  "types-psutil",
+  "types-pycurl",
+  "types-openpyxl",
+  "types-python-dateutil",
+  "types-pytz",
+  "types-setuptools",
+]
+
+[dependency-groups]
 dev = [
   "hypothesis",
   "jinja2",
@@ -46,35 +78,6 @@ dev = [
   "sphinx_autosummary_accessors",
   "xarray[complete,types]",
 ]
-io = [
-  "netCDF4",
-  "h5netcdf",
-  "scipy",
-  'pydap; python_version<"3.10"',
-  "zarr",
-  "fsspec",
-  "cftime",
-  "pooch",
-]
-etc = ["sparse"]
-parallel = ["dask[complete]"]
-viz = ["cartopy", "matplotlib", "nc-time-axis", "seaborn"]
-types = [
-  "pandas-stubs",
-  "types-PyYAML",
-  "types-Pygments",
-  "types-colorama",
-  "types-decorator",
-  "types-defusedxml",
-  "types-docutils",
-  "types-networkx",
-  "types-pexpect",
-  "types-psutil",
-  "types-pycurl",
-  "types-python-dateutil",
-  "types-pytz",
-  "types-setuptools",
-]
 
 [project.urls]
 Documentation = "https://docs.xarray.dev"
@@ -90,8 +93,8 @@ dask = "xarray.namedarray.daskmanager:DaskManager"
 build-backend = "setuptools.build_meta"
 requires = ["setuptools>=42", "setuptools-scm>=7"]
 
-[tool.setuptools]
-packages = ["xarray"]
+[tool.setuptools.packages.find]
+include = ["xarray*"]
 
 [tool.setuptools_scm]
 fallback_version = "9999"
@@ -99,10 +102,10 @@ fallback_version = "9999"
 [tool.coverage.run]
 omit = [
   "*/xarray/tests/*",
-  "*/xarray/core/dask_array_compat.py",
-  "*/xarray/core/npcompat.py",
-  "*/xarray/core/pdcompat.py",
-  "*/xarray/core/pycompat.py",
+  "*/xarray/compat/dask_array_compat.py",
+  "*/xarray/compat/npcompat.py",
+  "*/xarray/compat/pdcompat.py",
+  "*/xarray/namedarray/pycompat.py",
   "*/xarray/core/types.py",
 ]
 source = ["xarray"]
@@ -166,9 +169,8 @@ check_untyped_defs = true
 module = [
   "xarray.core.accessor_dt",
   "xarray.core.accessor_str",
-  "xarray.core.alignment",
-  "xarray.core.computation",
-  "xarray.core.rolling_exp",
+  "xarray.structure.alignment",
+  "xarray.computation.*",
   "xarray.indexes.*",
   "xarray.tests.*",
 ]
@@ -247,41 +249,48 @@ extend-exclude = ["doc", "_typed_ops.pyi"]
 
 [tool.ruff.lint]
 extend-select = [
-  "F",    # Pyflakes
-  "E",    # pycodestyle errors
-  "W",    # pycodestyle warnings
-  "I",    # isort
-  "UP",   # pyupgrade
   "B",    # flake8-bugbear
   "C4",   # flake8-comprehensions
+  "ISC",  # flake8-implicit-str-concat
   "PIE",  # flake8-pie
   "TID",  # flake8-tidy-imports (absolute imports)
-  "PGH",  # pygrep-hooks
+  "PYI",  # flake8-pyi
+  "FLY",  # flynt
+  "I",    # isort
   "PERF", # Perflint
+  "W",    # pycodestyle warnings
+  "PGH",  # pygrep-hooks
+  "PLE",  # Pylint Errors
+  "UP",   # pyupgrade
+  "FURB", # refurb
   "RUF",
 ]
 extend-safe-fixes = [
   "TID252", # absolute imports
 ]
 ignore = [
-  "E402",    # module level import not at top of file
-  "E501",    # line too long - let the formatter worry about that
-  "E731",    # do not assign a lambda expression, use a def
-  "UP007",   # use X | Y for type annotations
   "C40",     # unnecessary generator, comprehension, or literal
   "PIE790",  # unnecessary pass statement
+  "PYI019",  # use `Self` instead of custom TypeVar
+  "PYI041",  # use `float` instead of `int | float`
   "PERF203", # try-except within a loop incurs performance overhead
+  "E402",    # module level import not at top of file
+  "E731",    # do not assign a lambda expression, use a def
+  "UP007",   # use X | Y for type annotations
+  "FURB105", # unnecessary empty string passed to `print`
   "RUF001",  # string contains ambiguous unicode character
   "RUF002",  # docstring contains ambiguous acute accent unicode character
   "RUF003",  # comment contains ambiguous no-break space unicode character
-  "RUF005",  # consider upacking operator instead of concatenation
+  "RUF005",  # consider unpacking operator instead of concatenation
   "RUF012",  # mutable class attributes
 ]
-
 
 [tool.ruff.lint.per-file-ignores]
 # don't enforce absolute imports
 "asv_bench/**" = ["TID252"]
+# looks like ruff bugs
+"xarray/core/_typed_ops.py" = ["PYI034"]
+"xarray/namedarray/_typing.py" = ["PYI018", "PYI046"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["xarray"]
@@ -344,6 +353,8 @@ filterwarnings = [
   "default:the `pandas.MultiIndex` object:FutureWarning:xarray.tests.test_variable",
   "default:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
   "default:Duplicate dimension names present:UserWarning:xarray.namedarray.core",
+  # Zarr 2 V3 implementation
+  "ignore:Zarr-Python is not in alignment with the final V3 specification",
   # TODO: this is raised for vlen-utf8, consolidated metadata, U1 dtype
   "ignore:is currently not part .* the Zarr version 3 specification.",
   # TODO: remove once we know how to deal with a changed signature in protocols
@@ -359,7 +370,7 @@ markers = [
   "slow_hypothesis: slow hypothesis tests",
 ]
 minversion = "7"
-python_files = "test_*.py"
+python_files = ["test_*.py"]
 testpaths = ["xarray/tests", "properties"]
 
 [tool.aliases]
@@ -389,6 +400,8 @@ extend-ignore-identifiers-re = [
 [tool.typos.default.extend-words]
 # NumPy function names
 arange = "arange"
+ond = "ond"
+aso = "aso"
 
 # Technical terms
 nd = "nd"
