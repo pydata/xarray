@@ -24,6 +24,8 @@ v2025.05.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Added :py:meth:`~xarray.DataTree.subset` to index variables on all nodes of a datatree (:pull:`10400`)
+  By `Mathias Hauser <https://github.com/mathause>`_.
 - Allow an Xarray index that uses multiple dimensions checking equality with another
   index for only a subset of those dimensions (i.e., ignoring the dimensions
   that are excluded from alignment).
