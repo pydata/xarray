@@ -140,7 +140,7 @@ class CharacterArrayCoder(VariableCoder):
                 else:
                     if (
                         original_shape := encoding.get("original_shape", [-1])[-1]
-                    ) != -1:
+                    ) != -1 and original_shape != strlen:
                         emit_user_level_warning(
                             f"String dimension length mismatch on variable {name!r}. '{original_shape}' provided by encoding, but data has length of '{strlen}'. Using '{char_dim_name}{strlen}' instead of {char_dim_name!r} to prevent possible naming clash.\n"
                             f"To silence this warning remove 'original_shape' from encoding."
