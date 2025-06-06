@@ -686,7 +686,7 @@ class XarrayBackendOptions:
 class CoderOptions:
     # mask: Optional[bool] = None
     # scale: Optional[bool] = None
-    mask_and_scale: Optional[bool | Mapping[str, bool]] = (None,)
+    mask_and_scale: Optional[bool | Mapping[str, bool]] = None
     decode_times: Optional[
         bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder]
     ] = None
