@@ -31,6 +31,7 @@ from xarray.backends.common import (
     ArrayWriter,
     _find_absolute_paths,
     _normalize_path,
+    _reset_dataclass_to_false,
 )
 from xarray.backends.locks import _get_scheduler
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
@@ -382,18 +383,21 @@ def _dataset_from_backend_dataset(
     backend_ds,
     filename_or_obj,
     engine,
-    chunks,
-    cache,
-    overwrite_encoded_chunks,
-    inline_array,
-    chunked_array_type,
-    from_array_kwargs,
+    coder_opts,
+    backend_opts,
     **extra_tokens,
 ):
+    backend_kwargs = asdict(backend_opts)
+    chunks = backend_kwargs.get("chunks")
+    cache = backend_kwargs.get("cache")
     if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
         raise ValueError(
             f"chunks must be an int, dict, 'auto', or None. Instead found {chunks}."
         )
+
+    coders_kwargs = asdict(coder_opts)
+    extra_tokens.update(**coders_kwargs)
+    extra_tokens.update(**backend_kwargs)
 
     _protect_dataset_variables_inplace(backend_ds, cache)
     if chunks is None:
@@ -403,11 +407,6 @@ def _dataset_from_backend_dataset(
             backend_ds,
             filename_or_obj,
             engine,
-            chunks,
-            overwrite_encoded_chunks,
-            inline_array,
-            chunked_array_type,
-            from_array_kwargs,
             **extra_tokens,
         )
 
@@ -476,6 +475,23 @@ def _datatree_from_backend_datatree(
     return tree
 
 
+from dataclasses import asdict
+
+Buffer = Union[bytes, bytearray, memoryview]
+
+
+from xarray.backends.common import BackendOptions, CoderOptions, XarrayBackendOptions
+
+# @dataclass(frozen=True)
+# class XarrayBackendOptions:
+#     chunks: Optional[T_Chunks] = None
+#     cache: Optional[bool] = None
+#     inline_array: Optional[bool] = False
+#     chunked_array_type: Optional[str] = None
+#     from_array_kwargs: Optional[dict[str, Any]] = None
+#     overwrite_encoded_chunks: Optional[bool] = False
+
+
 def open_dataset(
     filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     *,
@@ -500,6 +516,10 @@ def open_dataset(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
+    coder_opts: Union[bool, CoderOptions, None] = None,
+    open_opts: Union[bool, BackendOptions, None] = None,
+    backend_opts: Union[bool, BackendOptions, None] = None,
+    store_opts: Union[bool, BackendOptions, None] = None,
     **kwargs,
 ) -> Dataset:
     """Open and decode a dataset from a file or file-like object.
@@ -672,36 +692,69 @@ def open_dataset(
 
     backend = plugins.get_backend(engine)
 
-    decoders = _resolve_decoders_kwargs(
-        decode_cf,
-        open_backend_dataset_parameters=backend.open_dataset_parameters,
-        mask_and_scale=mask_and_scale,
-        decode_times=decode_times,
-        decode_timedelta=decode_timedelta,
-        concat_characters=concat_characters,
-        use_cftime=use_cftime,
-        decode_coords=decode_coords,
-    )
+    print("XX0:", backend)
+    print("XX1:", type(backend))
+    print("XX2:", type(backend.coder_opts))
+    print("XX3:", coder_opts)
+    print("XX4:", backend.coder_opts)
 
-    overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
-    backend_ds = backend.open_dataset(
-        filename_or_obj,
-        drop_variables=drop_variables,
-        **decoders,
-        **kwargs,
-    )
+    # initialize CoderOptions with decoders of not given
+    # Deprecation Fallback
+    if coder_opts is False:
+        coder_opts = _reset_dataclass_to_false(backend.coder_opts)
+    elif coder_opts is True:
+        coder_opts = backend.coder_opts
+    elif coder_opts is None:
+        decoders = _resolve_decoders_kwargs(
+            decode_cf,
+            open_backend_dataset_parameters=backend.open_dataset_parameters,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            decode_timedelta=decode_timedelta,
+            concat_characters=concat_characters,
+            use_cftime=use_cftime,
+            decode_coords=decode_coords,
+        )
+        decoders["drop_variables"] = drop_variables
+        coder_opts = CoderOptions(**decoders)
+
+    if backend_opts is None:
+        backend_opts = XarrayBackendOptions(
+            chunks=chunks,
+            cache=cache,
+            inline_array=inline_array,
+            chunked_array_type=chunked_array_type,
+            from_array_kwargs=from_array_kwargs,
+            overwrite_encoded_chunks=kwargs.pop("overwrite_encoded_chunks", None),
+        )
+
+    # Check if store_opts have been ovrridden in the subclass
+    # That indicates new-style behaviour
+    # We can keep backwards compatibility
+    _store_opts = backend.store_opts
+    if type(_store_opts) is BackendOptions:
+        coder_kwargs = asdict(coder_opts)
+
+        backend_ds = backend.open_dataset(
+            filename_or_obj,
+            **coder_kwargs,
+            **kwargs,
+        )
+    else:
+        backend_ds = backend.open_dataset(
+            filename_or_obj,
+            coder_opts=coder_opts,
+            open_opts=open_opts,
+            store_opts=store_opts,
+            **kwargs,
+        )
+
     ds = _dataset_from_backend_dataset(
         backend_ds,
         filename_or_obj,
         engine,
-        chunks,
-        cache,
-        overwrite_encoded_chunks,
-        inline_array,
-        chunked_array_type,
-        from_array_kwargs,
-        drop_variables=drop_variables,
-        **decoders,
+        coder_opts,
+        backend_opts,
         **kwargs,
     )
     return ds

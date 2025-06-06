@@ -401,17 +401,17 @@ class NetCDF4DataStore(WritableCFDataStore):
         cls,
         filename,
         mode="r",
-        format="NETCDF4",
-        group=None,
-        clobber=True,
-        diskless=False,
-        persist=False,
-        auto_complex=None,
-        lock=None,
-        lock_maker=None,
-        autoclose=False,
+        # group=None,
+        # lock=None,
+        # autoclose=False,
+        open_opts=None,
+        store_opts=None,
+        **kwargs,
     ):
         import netCDF4
+
+        open_kwargs = asdict(open_opts)
+        store_kwargs = asdict(store_opts)
 
         if isinstance(filename, os.PathLike):
             filename = os.fspath(filename)
@@ -422,9 +422,11 @@ class NetCDF4DataStore(WritableCFDataStore):
                 "with engine='scipy' or 'h5netcdf'"
             )
 
+        format = open_kwargs.pop("format")
         if format is None:
             format = "NETCDF4"
 
+        lock = store_kwargs.get("lock", None)
         if lock is None:
             if mode == "r":
                 if is_remote_uri(filename):
@@ -437,19 +439,13 @@ class NetCDF4DataStore(WritableCFDataStore):
                 else:
                     base_lock = NETCDFC_LOCK
                 lock = combine_locks([base_lock, get_write_lock(filename)])
-
-        kwargs = dict(
-            clobber=clobber,
-            diskless=diskless,
-            persist=persist,
-            format=format,
-        )
-        if auto_complex is not None:
-            kwargs["auto_complex"] = auto_complex
+            store_kwargs["lock"] = lock
+        kwargs.update(open_kwargs)
+        print("DD:", kwargs)
         manager = CachingFileManager(
             netCDF4.Dataset, filename, mode=mode, kwargs=kwargs
         )
-        return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
+        return cls(manager, mode=mode, **store_kwargs)
 
     def _acquire(self, needs_lock=True):
         with self._manager.acquire_context(needs_lock) as root:
@@ -597,6 +593,52 @@ class NetCDF4DataStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
+from collections.abc import Mapping
+from dataclasses import asdict, dataclass
+from typing import Literal, Optional, Union
+
+from xarray.backends.locks import SerializableLock
+
+Buffer = Union[bytes, bytearray, memoryview]
+from xarray.backends.common import BackendOptions
+
+
+@dataclass(frozen=True)
+class NetCDF4StoreOptions(BackendOptions):
+    group: Optional[str] = None
+    lock: Optional[SerializableLock] = None
+    autoclose: Optional[bool] = False
+
+
+@dataclass(frozen=True)
+class NetCDF4OpenOptions(BackendOptions):
+    clobber: Optional[bool] = True
+    diskless: Optional[bool] = False
+    persist: Optional[bool] = False
+    keepweakref: Optional[bool] = False
+    memory: Optional[Buffer] = None
+    format: Optional[str] = "NETCDF4"
+    encoding: Optional[str] = None
+    parallel: Optional[bool] = None
+    comm: Optional[mpi4py.MPI.Comm] = None  # noqa: F821
+    info: Optional[mpi4py.MPI.Info] = None  # noqa: F821
+    auto_complex: Optional[bool] = None
+
+
+from xarray.backends.common import CoderOptions
+from xarray.coding.times import CFDatetimeCoder
+
+
+@dataclass(frozen=True)
+class NetCDF4CoderOptions(CoderOptions):
+    mask_and_scale: Optional[bool | Mapping[str, bool]] = True
+    decode_times: Optional[
+        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder]
+    ] = True
+    concat_characters: Optional[bool | Mapping[str, bool]] = True
+    decode_coords: Optional[Literal["coordinates", "all"] | bool] = True
+
+
 class NetCDF4BackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the netCDF4 package.
@@ -604,7 +646,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     It can open ".nc", ".nc4", ".cdf" files and will be chosen
     as default for these files.
 
-    Additionally it can open valid HDF5 files, see
+    Additionally, it can open valid HDF5 files, see
     https://h5netcdf.org/#invalid-netcdf-files for more info.
     It will not be detected as valid backend for such files, so make
     sure to specify ``engine="netcdf4"`` in ``open_dataset``.
@@ -618,6 +660,10 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     backends.H5netcdfBackendEntrypoint
     backends.ScipyBackendEntrypoint
     """
+
+    coder_class = NetCDF4CoderOptions
+    open_class = NetCDF4OpenOptions
+    store_class = NetCDF4StoreOptions
 
     description = (
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using netCDF4 in Xarray"
@@ -645,49 +691,36 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
-        drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
-        group=None,
+        # group=None,
         mode="r",
-        format="NETCDF4",
-        clobber=True,
-        diskless=False,
-        persist=False,
-        auto_complex=None,
-        lock=None,
-        autoclose=False,
+        # lock=None,
+        # autoclose=None,
+        coder_opts: NetCDF4CoderOptions = None,
+        open_opts: NetCDF4OpenOptions = None,
+        store_opts: NetCDF4StoreOptions = None,
+        **kwargs,
     ) -> Dataset:
+        coder_opts = coder_opts if coder_opts is not None else self.coder_opts
+        open_opts = open_opts if open_opts is not None else self.open_opts
+        store_opts = store_opts if store_opts is not None else self.store_opts
+
+        # open_kwargs = asdict(open_opts)
+
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
             filename_or_obj,
             mode=mode,
-            format=format,
-            group=group,
-            clobber=clobber,
-            diskless=diskless,
-            persist=persist,
-            auto_complex=auto_complex,
-            lock=lock,
-            autoclose=autoclose,
+            # group=group,
+            # lock=lock,
+            # autoclose=autoclose,
+            open_opts=open_opts,
+            store_opts=store_opts,
+            **kwargs,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
-            ds = store_entrypoint.open_dataset(
-                store,
-                mask_and_scale=mask_and_scale,
-                decode_times=decode_times,
-                concat_characters=concat_characters,
-                decode_coords=decode_coords,
-                drop_variables=drop_variables,
-                use_cftime=use_cftime,
-                decode_timedelta=decode_timedelta,
-            )
+            ds = store_entrypoint.open_dataset(store, coder_opts=coder_opts)
         return ds
 
     def open_datatree(
