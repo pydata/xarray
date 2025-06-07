@@ -2057,6 +2057,7 @@ class Dataset(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -2080,6 +2081,7 @@ class Dataset(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -2101,6 +2103,7 @@ class Dataset(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -2210,6 +2213,16 @@ class Dataset(
             two or more chunked arrays in the same location in parallel if they are
             not writing in independent regions, for those cases it is better to use
             a synchronizer.
+        align_chunks: bool, default False
+            If True, rechunks the Dask array to align with Zarr chunks before writing.
+            This ensures each Dask chunk maps to one or more contiguous Zarr chunks,
+            which avoids race conditions.
+            Internally, the process sets safe_chunks=False and tries to preserve
+            the original Dask chunking as much as possible.
+            Note: While this alignment avoids write conflicts stemming from chunk
+            boundary misalignment, it does not protect against race conditions
+            if multiple uncoordinated processes write to the same
+            Zarr array concurrently.
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
@@ -3804,15 +3817,16 @@ class Dataset(
             for k, v in indexers.items()
         }
 
+        # optimization: subset to coordinate range of the target index
+        if method in ["linear", "nearest"]:
+            for k, v in validated_indexers.items():
+                obj, newidx = missing._localize(obj, {k: v})
+                validated_indexers[k] = newidx[k]
+
         has_chunked_array = bool(
             any(is_chunked_array(v._data) for v in obj._variables.values())
         )
         if has_chunked_array:
-            # optimization: subset to coordinate range of the target index
-            if method in ["linear", "nearest"]:
-                for k, v in validated_indexers.items():
-                    obj, newidx = missing._localize(obj, {k: v})
-                    validated_indexers[k] = newidx[k]
             # optimization: create dask coordinate arrays once per Dataset
             # rather than once per Variable when dask.array.unify_chunks is called later
             # GH4739
@@ -3828,7 +3842,7 @@ class Dataset(
                 continue
 
             use_indexers = (
-                dask_indexers if is_duck_dask_array(var.data) else validated_indexers
+                dask_indexers if is_duck_dask_array(var._data) else validated_indexers
             )
 
             dtype_kind = var.dtype.kind

@@ -30,6 +30,15 @@ New Features
   (:issue:`10243`, :pull:`10293`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
 
+- Data corruption issues arising from misaligned Dask and Zarr chunks
+  can now be prevented using the new ``align_chunks`` parameter in
+  :py:meth:`~xarray.DataArray.to_zarr`. This option automatically rechunk
+  the Dask array to align it with the Zarr storage chunks. For now, it is
+  disabled by default, but this could change on the future.
+  (:issue:`9914`, :pull:`10336`)
+  By `Joseph Nowak <https://github.com/josephnowak>`_.
+
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
@@ -50,6 +59,10 @@ Bug fixes
   calculating mean in rolling for correct operations (preserve float dtypes,
   correct mean of bool arrays) (:issue:`10340`, :pull:`10341`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Improve the html ``repr`` of Xarray objects (dark mode, icons and variable attribute / data
+  dropdown sections).
+  (:pull:`10353`, :pull:`10354`)
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 - Raise an error when attempting to encode :py:class:`numpy.datetime64` values
   prior to the Gregorian calendar reform date of 1582-10-15 with a
   ``"standard"`` or ``"gregorian"`` calendar. Previously we would warn and
@@ -58,6 +71,8 @@ Bug fixes
   calendar of the datetimes from ``"proleptic_gregorian"`` to ``"gregorian"``
   and prevents round-tripping them as :py:class:`numpy.datetime64` values
   (:pull:`10352`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Avoid unsafe casts from float to unsigned int in CFMaskCoder (:issue:`9815`, :pull:`9964`).
+  By ` Elliott Sales de Andrade <https://github.com/QuLogic>`_.
 
 Performance
 ~~~~~~~~~~~
@@ -65,6 +80,8 @@ Performance
   in :py:class:`~xarray.indexing.VectorizedIndexer` and :py:class:`~xarray.indexing.OuterIndexer`
   (:issue:`10316`).
   By `Jesse Rusak <https://github.com/jder>`_.
+- Fix performance regression in interp where more data was loaded than was necessary. (:issue:`10287`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Speed up encoding of :py:class:`cftime.datetime` objects by roughly a factor
   of three (:pull:`8324`). By `Antoine Gibek <https://github.com/antscloud>`_.
 

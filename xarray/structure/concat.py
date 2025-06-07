@@ -324,9 +324,15 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
     """
     Determine which dataset variables need to be concatenated in the result,
     """
-    # Return values
+    # variables to be concatenated
     concat_over = set()
+    # variables checked for equality
     equals = {}
+    # skip merging these variables.
+    #   if concatenating over a dimension 'x' that is associated with an index over 2 variables,
+    #   'x' and 'y', then we assert join="equals" on `y` and don't need to merge it.
+    #   that assertion happens in the align step prior to this function being called
+    skip_merge = set()
 
     if dim in dim_names:
         concat_over_existing_dim = True
@@ -339,6 +345,9 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
         if concat_over_existing_dim and dim not in ds.dims and dim in ds:
             ds = ds.set_coords(dim)
         concat_over.update(k for k, v in ds.variables.items() if dim in v.dims)
+        for _, idx_vars in ds.xindexes.group_by_index():
+            if any(dim in v.dims for v in idx_vars.values()):
+                skip_merge.update(idx_vars.keys())
         concat_dim_lengths.append(ds.sizes.get(dim, 1))
 
     def process_subset_opt(opt, subset):
@@ -436,7 +445,7 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
 
     process_subset_opt(data_vars, "data_vars")
     process_subset_opt(coords, "coords")
-    return concat_over, equals, concat_dim_lengths
+    return concat_over, equals, concat_dim_lengths, skip_merge
 
 
 # determine dimensional coordinate names and a dict mapping name to DataArray
@@ -540,12 +549,12 @@ def _dataset_concat(
         ]
 
     # determine which variables to concatenate
-    concat_over, equals, concat_dim_lengths = _calc_concat_over(
+    concat_over, equals, concat_dim_lengths, skip_merge = _calc_concat_over(
         datasets, dim_name, dim_names, data_vars, coords, compat
     )
 
     # determine which variables to merge, and then merge them according to compat
-    variables_to_merge = (coord_names | data_names) - concat_over
+    variables_to_merge = (coord_names | data_names) - concat_over - skip_merge
 
     result_vars = {}
     result_indexes = {}

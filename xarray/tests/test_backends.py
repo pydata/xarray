@@ -2612,7 +2612,7 @@ class ZarrBase(CFEncodedBase):
         # but intermediate unaligned chunks are bad
         badenc = ds.chunk({"x": (3, 5, 3, 1)})
         badenc.var1.encoding["chunks"] = (3,)
-        with pytest.raises(ValueError, match=r"would overlap multiple dask chunks"):
+        with pytest.raises(ValueError, match=r"would overlap multiple Dask chunks"):
             with self.roundtrip(badenc) as actual:
                 pass
 
@@ -5731,6 +5731,27 @@ class TestDataArrayToZarr:
         with open_dataarray(tmp_store, engine="zarr") as loaded_da:
             assert_identical(original_da, loaded_da)
 
+    @requires_dask
+    def test_dataarray_to_zarr_align_chunks_true(self, tmp_store) -> None:
+        # TODO: Improve data integrity checks when using Dask.
+        #   Detecting automatic alignment issues in Dask can be tricky,
+        #   as unintended misalignment might lead to subtle data corruption.
+        #   For now, ensure that the parameter is present, but explore
+        #   more robust verification methods to confirm data consistency.
+
+        skip_if_zarr_format_3(tmp_store)
+        arr = DataArray(
+            np.arange(4), dims=["a"], coords={"a": np.arange(4)}, name="foo"
+        ).chunk(a=(2, 1, 1))
+
+        arr.to_zarr(
+            tmp_store,
+            align_chunks=True,
+            encoding={"foo": {"chunks": (3,)}},
+        )
+        with open_dataarray(tmp_store, engine="zarr") as loaded_da:
+            assert_identical(arr, loaded_da)
+
 
 @requires_scipy_or_netCDF4
 def test_no_warning_from_dask_effective_get() -> None:
@@ -6468,7 +6489,7 @@ class TestZarrRegionAuto:
                 )
 
             # chunking with dask sidesteps the encoding check, so we need a different check
-            with pytest.raises(ValueError, match="Specified zarr chunks"):
+            with pytest.raises(ValueError, match="Specified Zarr chunks"):
                 self.save(
                     target,
                     da2.chunk({"x": 1, "y": 1, "time": 1}),
