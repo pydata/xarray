@@ -5,10 +5,11 @@
 Weather and climate data
 ========================
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import xarray as xr
+    import numpy as np
 
 Xarray can leverage metadata that follows the `Climate and Forecast (CF) conventions`_ if present. Examples include :ref:`automatic labelling of plots<plotting>` with descriptive names and units if proper metadata is present and support for non-standard calendars used in climate science through the ``cftime`` module (explained in the :ref:`CFTimeIndex` section). There are also a number of :ref:`geosciences-focused projects that build on xarray<ecosystem>`.
 
@@ -87,7 +88,7 @@ For example, you can create a DataArray indexed by a time
 coordinate with dates from a no-leap calendar and a
 :py:class:`~xarray.CFTimeIndex` will automatically be used:
 
-.. ipython:: python
+.. jupyter-execute::
 
     from itertools import product
     from cftime import DatetimeNoLeap
@@ -105,7 +106,7 @@ instance, we can create the same dates and DataArray we created above using
 :py:class:`~xarray.CFTimeIndex` for non-standard calendars, but can be nice
 to use to be explicit):
 
-.. ipython:: python
+.. jupyter-execute::
 
     dates = xr.date_range(
         start="0001", periods=24, freq="MS", calendar="noleap", use_cftime=True
@@ -117,7 +118,7 @@ infer the sampling frequency of a :py:class:`~xarray.CFTimeIndex` or a 1-D
 :py:class:`~xarray.DataArray` containing cftime objects. It also works transparently with
 ``np.datetime64`` and ``np.timedelta64`` data (with "s", "ms", "us" or "ns" resolution).
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.infer_freq(dates)
 
@@ -128,9 +129,12 @@ using the same formatting as the standard `datetime.strftime`_ convention .
 
 .. _datetime.strftime: https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
 
-.. ipython:: python
+.. jupyter-execute::
 
     dates.strftime("%c")
+
+.. jupyter-execute::
+
     da["time"].dt.strftime("%Y%m%d")
 
 Conversion between non-standard calendar and to/from pandas DatetimeIndexes is
@@ -141,7 +145,7 @@ use ``pandas`` when possible, i.e. when the calendar is ``standard``/``gregorian
 
 .. _1582-10-15: https://en.wikipedia.org/wiki/Gregorian_calendar
 
-.. ipython:: python
+.. jupyter-execute::
 
     dates = xr.date_range(
         start="2001", periods=24, freq="MS", calendar="noleap", use_cftime=True
@@ -158,9 +162,12 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
 - `Partial datetime string indexing`_:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.sel(time="0001")
+
+.. jupyter-execute::
+
     da.sel(time=slice("0001-05", "0002-02"))
 
 .. note::
@@ -180,59 +187,83 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
   "season", "dayofyear", "dayofweek", and "days_in_month") with the addition
   of "calendar", absent from pandas:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.time.dt.year
+
+.. jupyter-execute::
+
     da.time.dt.month
+
+.. jupyter-execute::
+
     da.time.dt.season
+
+.. jupyter-execute::
+
     da.time.dt.dayofyear
+
+.. jupyter-execute::
+
     da.time.dt.dayofweek
+
+.. jupyter-execute::
+
     da.time.dt.days_in_month
+
+.. jupyter-execute::
+
     da.time.dt.calendar
 
 - Rounding of datetimes to fixed frequencies via the ``dt`` accessor:
 
-.. ipython:: python
+.. jupyter-execute::
 
-    da.time.dt.ceil("3D")
-    da.time.dt.floor("5D")
-    da.time.dt.round("2D")
+    da.time.dt.ceil("3D").head()
+
+.. jupyter-execute::
+
+    da.time.dt.floor("5D").head()
+
+.. jupyter-execute::
+
+    da.time.dt.round("2D").head()
 
 - Group-by operations based on datetime accessor attributes (e.g. by month of
   the year):
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.groupby("time.month").sum()
 
 - Interpolation using :py:class:`cftime.datetime` objects:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.interp(time=[DatetimeNoLeap(1, 1, 15), DatetimeNoLeap(1, 2, 15)])
 
 - Interpolation using datetime strings:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.interp(time=["0001-01-15", "0001-02-15"])
 
 - Differentiation:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.differentiate("time")
 
 - Serialization:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.to_netcdf("example-no-leap.nc")
     reopened = xr.open_dataset("example-no-leap.nc")
     reopened
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import os
 
@@ -241,7 +272,7 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
 - And resampling along the time dimension for data indexed by a :py:class:`~xarray.CFTimeIndex`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.resample(time="81min", closed="right", label="right", offset="3min").mean()
 

@@ -11,14 +11,19 @@ These methods are particularly useful for reshaping xarray objects for use in ma
 Importing the library
 ---------------------
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
 
     np.random.seed(123456)
+
+    # Use defaults so we don't get gridlines in generated docs
+    import matplotlib as mpl
+
+    mpl.rcdefaults()
 
 Reordering dimensions
 ---------------------
@@ -27,11 +32,13 @@ To reorder dimensions on a :py:class:`~xarray.DataArray` or across all variables
 on a :py:class:`~xarray.Dataset`, use :py:meth:`~xarray.DataArray.transpose`. An
 ellipsis (`...`) can be used to represent all other dimensions:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.Dataset({"foo": (("x", "y", "z"), [[[42]]]), "bar": (("y", "z"), [[24]])})
-    ds.transpose("y", "z", "x")
-    ds.transpose(..., "x")  # equivalent
+    ds.transpose("y", "z", "x") # equivalent to ds.transpose(..., "x")
+
+.. jupyter-execute::
+
     ds.transpose()  # reverses all dimensions
 
 Expand and squeeze dimensions
@@ -41,7 +48,7 @@ To expand a :py:class:`~xarray.DataArray` or all
 variables on a :py:class:`~xarray.Dataset` along a new dimension,
 use :py:meth:`~xarray.DataArray.expand_dims`
 
-.. ipython:: python
+.. jupyter-execute::
 
     expanded = ds.expand_dims("w")
     expanded
@@ -52,7 +59,7 @@ To remove such a size-1 dimension from the :py:class:`~xarray.DataArray`
 or :py:class:`~xarray.Dataset`,
 use :py:meth:`~xarray.DataArray.squeeze`
 
-.. ipython:: python
+.. jupyter-execute::
 
     expanded.squeeze("w")
 
@@ -61,7 +68,7 @@ Converting between datasets and arrays
 
 To convert from a Dataset to a DataArray, use :py:meth:`~xarray.Dataset.to_dataarray`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     arr = ds.to_dataarray()
     arr
@@ -73,19 +80,21 @@ coordinates.
 To convert back from a DataArray to a Dataset, use
 :py:meth:`~xarray.DataArray.to_dataset`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     arr.to_dataset(dim="variable")
 
 The broadcasting behavior of ``to_dataarray`` means that the resulting array
 includes the union of data variable dimensions:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds2 = xr.Dataset({"a": 0, "b": ("x", [3, 4, 5])})
 
     # the input dataset has 4 elements
     ds2
+
+.. jupyter-execute::
 
     # the resulting array has 6 elements
     ds2.to_dataarray()
@@ -94,7 +103,7 @@ Otherwise, the result could not be represented as an orthogonal array.
 
 If you use ``to_dataset`` without supplying the ``dim`` argument, the DataArray will be converted into a Dataset of one variable:
 
-.. ipython:: python
+.. jupyter-execute::
 
     arr.to_dataset(name="combined")
 
@@ -107,18 +116,21 @@ As part of xarray's nascent support for :py:class:`pandas.MultiIndex`, we have
 implemented :py:meth:`~xarray.DataArray.stack` and
 :py:meth:`~xarray.DataArray.unstack` method, for combining or splitting dimensions:
 
-.. ipython:: python
+.. jupyter-execute::
 
     array = xr.DataArray(
         np.random.randn(2, 3), coords=[("x", ["a", "b"]), ("y", [0, 1, 2])]
     )
     stacked = array.stack(z=("x", "y"))
     stacked
+
+.. jupyter-execute::
+
     stacked.unstack("z")
 
 As elsewhere in xarray, an ellipsis (`...`) can be used to represent all unlisted dimensions:
 
-.. ipython:: python
+.. jupyter-execute::
 
     stacked = array.stack(z=[..., "x"])
     stacked
@@ -131,19 +143,25 @@ Like :py:meth:`DataFrame.unstack<pandas.DataFrame.unstack>`, xarray's ``unstack`
 always succeeds, even if the multi-index being unstacked does not contain all
 possible levels. Missing levels are filled in with ``NaN`` in the resulting object:
 
-.. ipython:: python
+.. jupyter-execute::
 
     stacked2 = stacked[::2]
     stacked2
+
+.. jupyter-execute::
+
     stacked2.unstack("z")
 
 However, xarray's ``stack`` has an important difference from pandas: unlike
 pandas, it does not automatically drop missing values. Compare:
 
-.. ipython:: python
+.. jupyter-execute::
 
     array = xr.DataArray([[np.nan, 1], [2, 3]], dims=["x", "y"])
     array.stack(z=("x", "y"))
+
+.. jupyter-execute::
+
     array.to_pandas().stack()
 
 We departed from pandas's behavior here because predictable shapes for new
@@ -171,15 +189,21 @@ Just as with :py:meth:`xarray.Dataset.stack` the stacked coordinate is
 represented by a :py:class:`pandas.MultiIndex` object. These methods are used
 like this:
 
-.. ipython:: python
+.. jupyter-execute::
 
     data = xr.Dataset(
         data_vars={"a": (("x", "y"), [[0, 1, 2], [3, 4, 5]]), "b": ("x", [6, 7])},
         coords={"y": ["u", "v", "w"]},
     )
     data
+
+.. jupyter-execute::
+
     stacked = data.to_stacked_array("z", sample_dims=["x"])
     stacked
+
+.. jupyter-execute::
+
     unstacked = stacked.to_unstacked_dataset("z")
     unstacked
 
@@ -206,7 +230,7 @@ multi-indexes without modifying the data and its dimensions.
 You can create a multi-index from several 1-dimensional variables and/or
 coordinates using :py:meth:`~xarray.DataArray.set_index`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray(
         np.random.rand(4),
@@ -217,12 +241,15 @@ coordinates using :py:meth:`~xarray.DataArray.set_index`:
         dims="x",
     )
     da
+
+.. jupyter-execute::
+
     mda = da.set_index(x=["band", "wavenumber"])
     mda
 
 These coordinates can now be used for indexing, e.g.,
 
-.. ipython:: python
+.. jupyter-execute::
 
     mda.sel(band="a")
 
@@ -230,14 +257,14 @@ Conversely, you can use :py:meth:`~xarray.DataArray.reset_index`
 to extract multi-index levels as coordinates (this is mainly useful
 for serialization):
 
-.. ipython:: python
+.. jupyter-execute::
 
     mda.reset_index("x")
 
 :py:meth:`~xarray.DataArray.reorder_levels` allows changing the order
 of multi-index levels:
 
-.. ipython:: python
+.. jupyter-execute::
 
     mda.reorder_levels(x=["wavenumber", "band"])
 
@@ -245,12 +272,18 @@ As of xarray v0.9 coordinate labels for each dimension are optional.
 You can also use ``.set_index`` / ``.reset_index`` to add / remove
 labels for one or several dimensions:
 
-.. ipython:: python
+.. jupyter-execute::
 
     array = xr.DataArray([1, 2, 3], dims="x")
     array
+
+.. jupyter-execute::
+
     array["c"] = ("x", ["a", "b", "c"])
     array.set_index(x="c")
+
+.. jupyter-execute::
+
     array = array.set_index(x="c")
     array = array.reset_index("x", drop=True)
 
@@ -262,10 +295,13 @@ Shift and roll
 To adjust coordinate labels, you can use the :py:meth:`~xarray.Dataset.shift` and
 :py:meth:`~xarray.Dataset.roll` methods:
 
-.. ipython:: python
+.. jupyter-execute::
 
     array = xr.DataArray([1, 2, 3, 4], dims="x")
     array.shift(x=2)
+
+.. jupyter-execute::
+
     array.roll(x=2, roll_coords=True)
 
 .. _reshape.sort:
@@ -277,7 +313,7 @@ One may sort a DataArray/Dataset via :py:meth:`~xarray.DataArray.sortby` and
 :py:meth:`~xarray.Dataset.sortby`. The input can be an individual or list of
 1D ``DataArray`` objects:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.Dataset(
         {
@@ -292,10 +328,16 @@ One may sort a DataArray/Dataset via :py:meth:`~xarray.DataArray.sortby` and
 
 As a shortcut, you can refer to existing coordinates by name:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.sortby("x")
+
+.. jupyter-execute::
+
     ds.sortby(["y", "x"])
+
+.. jupyter-execute::
+
     ds.sortby(["y", "x"], ascending=False)
 
 .. _reshape.coarsen:
@@ -309,41 +351,32 @@ it can also be used to reorganise your data without applying a computation via :
 
 Taking our example tutorial air temperature dataset over the Northern US
 
-.. ipython:: python
-    :suppress:
-
-    # Use defaults so we don't get gridlines in generated docs
-    import matplotlib as mpl
-
-    mpl.rcdefaults()
-
-.. ipython:: python
+.. jupyter-execute::
 
     air = xr.tutorial.open_dataset("air_temperature")["air"]
 
-    @savefig pre_coarsening.png
-    air.isel(time=0).plot(x="lon", y="lat")
+    air.isel(time=0).plot(x="lon", y="lat");
 
 we can split this up into sub-regions of size ``(9, 18)`` points using :py:meth:`~xarray.computation.rolling.DataArrayCoarsen.construct`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     regions = air.coarsen(lat=9, lon=18, boundary="pad").construct(
         lon=("x_coarse", "x_fine"), lat=("y_coarse", "y_fine")
     )
-    regions
+    with xr.set_options(display_expand_data=False):
+        regions
 
 9 new regions have been created, each of size 9 by 18 points.
 The ``boundary="pad"`` kwarg ensured that all regions are the same size even though the data does not evenly divide into these sizes.
 
 By plotting these 9 regions together via :ref:`faceting<plotting.faceting>` we can see how they relate to the original data.
 
-.. ipython:: python
+.. jupyter-execute::
 
-    @savefig post_coarsening.png
     regions.isel(time=0).plot(
         x="x_fine", y="y_fine", col="x_coarse", row="y_coarse", yincrease=False
-    )
+    );
 
 We are now free to easily apply any custom computation to each coarsened region of our new dataarray.
 This would involve specifying that applied functions should act over the ``"x_fine"`` and ``"y_fine"`` dimensions,

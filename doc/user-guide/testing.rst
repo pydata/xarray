@@ -3,8 +3,8 @@
 Testing your code
 =================
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import numpy as np
     import pandas as pd
@@ -55,7 +55,7 @@ These strategies are accessible in the :py:mod:`xarray.testing.strategies` modul
 
 These build upon the numpy and array API strategies offered in :py:mod:`hypothesis.extra.numpy` and :py:mod:`hypothesis.extra.array_api`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     import hypothesis.extra.numpy as npst
 
@@ -65,12 +65,18 @@ Generating Examples
 To see an example of what each of these strategies might produce, you can call one followed by the ``.example()`` method,
 which is a general hypothesis method valid for all strategies.
 
-.. ipython:: python
+.. jupyter-execute::
 
     import xarray.testing.strategies as xrst
 
     xrst.variables().example()
+
+.. jupyter-execute::
+
     xrst.variables().example()
+
+.. jupyter-execute::
+
     xrst.variables().example()
 
 You can see that calling ``.example()`` multiple times will generate different examples, giving you an idea of the wide
@@ -79,11 +85,11 @@ range of data that the xarray strategies can generate.
 In your tests however you should not use ``.example()`` - instead you should parameterize your tests with the
 :py:func:`hypothesis.given` decorator:
 
-.. ipython:: python
+.. jupyter-execute::
 
     from hypothesis import given
 
-.. ipython:: python
+.. jupyter-execute::
 
     @given(xrst.variables())
     def test_function_that_acts_on_variables(var):
@@ -96,7 +102,7 @@ Chaining Strategies
 Xarray's strategies can accept other strategies as arguments, allowing you to customise the contents of the generated
 examples.
 
-.. ipython:: python
+.. jupyter-execute::
 
     # generate a Variable containing an array with a complex number dtype, but all other details still arbitrary
     from hypothesis.extra.numpy import complex_number_dtypes
@@ -112,7 +118,7 @@ Fixing Arguments
 If you want to fix one aspect of the data structure, whilst allowing variation in the generated examples
 over all other aspects, then use :py:func:`hypothesis.strategies.just()`.
 
-.. ipython:: python
+.. jupyter-execute::
 
     import hypothesis.strategies as st
 
@@ -125,14 +131,14 @@ special strategy that just contains a single example.)
 To fix the length of dimensions you can instead pass ``dims`` as a mapping of dimension names to lengths
 (i.e. following xarray objects' ``.sizes()`` property), e.g.
 
-.. ipython:: python
+.. jupyter-execute::
 
     # Generates only variables with dimensions ["x", "y"], of lengths 2 & 3 respectively
     xrst.variables(dims=st.just({"x": 2, "y": 3})).example()
 
 You can also use this to specify that you want examples which are missing some part of the data structure, for instance
 
-.. ipython:: python
+.. jupyter-execute::
 
     # Generates a Variable with no attributes
     xrst.variables(attrs=st.just({})).example()
@@ -140,16 +146,20 @@ You can also use this to specify that you want examples which are missing some p
 Through a combination of chaining strategies and fixing arguments, you can specify quite complicated requirements on the
 objects your chained strategy will generate.
 
-.. ipython:: python
+.. jupyter-execute::
 
     fixed_x_variable_y_maybe_z = st.fixed_dictionaries(
         {"x": st.just(2), "y": st.integers(3, 4)}, optional={"z": st.just(2)}
     )
     fixed_x_variable_y_maybe_z.example()
 
-    special_variables = xrst.variables(dims=fixed_x_variable_y_maybe_z)
+.. jupyter-execute::
 
+    special_variables = xrst.variables(dims=fixed_x_variable_y_maybe_z)
     special_variables.example()
+
+.. jupyter-execute::
+
     special_variables.example()
 
 Here we have used one of hypothesis' built-in strategies :py:func:`hypothesis.strategies.fixed_dictionaries` to create a
@@ -171,27 +181,30 @@ Imagine we want to write a strategy which generates arbitrary ``Variable`` objec
 1. Create a xarray object with numpy data and use the hypothesis' ``.map()`` method to convert the underlying array to a
 different type:
 
-.. ipython:: python
+.. jupyter-execute::
 
     import sparse
 
-.. ipython:: python
+.. jupyter-execute::
 
     def convert_to_sparse(var):
         return var.copy(data=sparse.COO.from_numpy(var.to_numpy()))
 
-.. ipython:: python
+.. jupyter-execute::
 
     sparse_variables = xrst.variables(dims=xrst.dimension_names(min_dims=1)).map(
         convert_to_sparse
     )
 
     sparse_variables.example()
+
+.. jupyter-execute::
+
     sparse_variables.example()
 
 2. Pass a function which returns a strategy which generates the duck-typed arrays directly to the ``array_strategy_fn`` argument of the xarray strategies:
 
-.. ipython:: python
+.. jupyter-execute::
 
     def sparse_random_arrays(shape: tuple[int, ...]) -> sparse._coo.core.COO:
         """Strategy which generates random sparse.COO arrays"""
@@ -210,7 +223,7 @@ different type:
         return sparse_random_arrays(shape=shape)
 
 
-.. ipython:: python
+.. jupyter-execute::
 
     sparse_random_variables = xrst.variables(
         array_strategy_fn=sparse_random_arrays_fn, dtype=st.just(np.dtype("float64"))
@@ -238,7 +251,7 @@ If the array type you want to generate has an array API-compliant top-level name
 (e.g. that which is conventionally imported as ``xp`` or similar),
 you can use this neat trick:
 
-.. ipython:: python
+.. jupyter-execute::
 
     import numpy as xp  # compatible in numpy 2.0
 
@@ -265,18 +278,24 @@ is useful.
 
 It works for lists of dimension names
 
-.. ipython:: python
+.. jupyter-execute::
 
     dims = ["x", "y", "z"]
     xrst.unique_subset_of(dims).example()
+
+.. jupyter-execute::
+
     xrst.unique_subset_of(dims).example()
 
 as well as for mappings of dimension names to sizes
 
-.. ipython:: python
+.. jupyter-execute::
 
     dim_sizes = {"x": 2, "y": 3, "z": 4}
     xrst.unique_subset_of(dim_sizes).example()
+
+.. jupyter-execute::
+
     xrst.unique_subset_of(dim_sizes).example()
 
 This is useful because operations like reductions can be performed over any subset of the xarray object's dimensions.
