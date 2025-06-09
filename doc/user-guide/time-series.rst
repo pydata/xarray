@@ -278,6 +278,8 @@ using time offset arithmetic via the :py:func:`pandas.tseries.frequencies.to_off
    For more examples of using grouped operations on a time dimension, see :doc:`../examples/weather-data`.
 
 
+.. _seasonal_grouping:
+
 Handling Seasons
 ~~~~~~~~~~~~~~~~
 
