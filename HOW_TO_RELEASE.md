@@ -48,6 +48,8 @@ upstream        https://github.com/pydata/xarray (push)
       release.
 5.  Open a PR with the release summary and whatsnew changes; in particular the
     release headline should get feedback from the team on what's important to include.
+    Apply the `Release` label to the PR to trigger a test build action, and upload to TestPyPI.
+
 6.  After merging, again ensure your main branch is synced to upstream:
     ```sh
     git pull upstream main
