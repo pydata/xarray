@@ -5,7 +5,35 @@
 What's New
 ==========
 
-.. _whats-new.2025.05.0:
+.. _whats-new.2025.06.1:
+
+v2025.06.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+.. _whats-new.2025.06.0:
 
 v2025.06.0 (Jun 10, 2025)
 -------------------------
