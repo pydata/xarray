@@ -88,8 +88,7 @@ dimension separator in chunk keys.
 
 For example, to specify a custom separator for chunk keys:
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
     import xarray as xr
     import numpy as np
@@ -119,8 +118,8 @@ when working with tools that expect a particular chunk key format.
     When reading Zarr arrays, Xarray automatically detects and uses the appropriate
     chunk key encoding based on the store's format and configuration.
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import shutil
 
