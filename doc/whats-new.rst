@@ -12,8 +12,8 @@ v2025.06.0 (Jun 10, 2025)
 
 This release brings HTML reprs to the documentation, fixes to flexible Xarray indexes, performance optimizations, more ergonomic seasonal grouping and resampling
 with new :py:class:`~xarray.groupers.SeasonGrouper` and :py:class:`~xarray.groupers.SeasonResampler` objects, and bugfixes.
-Thanks to the 32 contributors to this release:
-Andrecho, Antoine Gibek, Benoit Bovy, Christine P. Chai, David Huard, Davis Bennett, Deepak Cherian, Dimitri Papadopoulos Orfanos, Elliott Sales de Andrade, Erik, Erik Månsson, Giacomo Caria, Ilan Gold, Illviljan, Jesse Rusak, Jonathan Neuhauser, Justus Magin, Kai Mühlbauer, Kimoon Han, Konstantin Ntokas, Mark Harfouche, Michael Niklas, Nick Hodgskin, Niko Sirmpilatze, Pascal Bourgault, Scott Henderson, Simon Perkins, Spencer Clark, Tom Vo, Trevor James Smith, joseph nowak and micguerr-bopen
+Thanks to the 33 contributors to this release:
+Andrecho, Antoine Gibek, Benoit Bovy, Brian Michell, Christine P. Chai, David Huard, Davis Bennett, Deepak Cherian, Dimitri Papadopoulos Orfanos, Elliott Sales de Andrade, Erik, Erik Månsson, Giacomo Caria, Ilan Gold, Illviljan, Jesse Rusak, Jonathan Neuhauser, Justus Magin, Kai Mühlbauer, Kimoon Han, Konstantin Ntokas, Mark Harfouche, Michael Niklas, Nick Hodgskin, Niko Sirmpilatze, Pascal Bourgault, Scott Henderson, Simon Perkins, Spencer Clark, Tom Vo, Trevor James Smith, joseph nowak and micguerr-bopen
 
 New Features
 ~~~~~~~~~~~~
