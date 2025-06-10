@@ -72,6 +72,7 @@ from xarray.core.variable import (
     as_compatible_data,
     as_variable,
 )
+from xarray.errors import MergeError
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
 from xarray.structure import alignment
@@ -81,7 +82,7 @@ from xarray.structure.alignment import (
     align,
 )
 from xarray.structure.chunks import unify_chunks
-from xarray.structure.merge import PANDAS_TYPES, MergeError
+from xarray.structure.merge import PANDAS_TYPES
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:

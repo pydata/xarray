@@ -29,6 +29,7 @@ from xarray.core.utils import (
     emit_user_level_warning,
 )
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from xarray.errors import CoordinateValidationError
 from xarray.structure.alignment import Aligner
 from xarray.structure.merge import merge_coordinates_without_align, merge_coords
 
@@ -1144,10 +1145,6 @@ def create_coords_with_default_indexes(
         new_coords = Coordinates._construct_direct(coords=variables, indexes=indexes)
 
     return new_coords
-
-
-class CoordinateValidationError(ValueError):
-    """Error class for Xarray coordinate validation failures."""
 
 
 def validate_dataarray_coords(
