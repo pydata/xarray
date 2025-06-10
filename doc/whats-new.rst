@@ -7,8 +7,13 @@ What's New
 
 .. _whats-new.2025.05.0:
 
-v2025.05.0 (unreleased)
------------------------
+v2025.06.0 (Jun 10, 2025)
+-------------------------
+
+This release brings HTML reprs to the documentation, fixes to flexible Xarray indexes, performance optimizations, more ergonomic seasonal grouping and resampling
+with new :py:class:`~xarray.groupers.SeasonGrouper` and :py:class:`~xarray.groupers.SeasonResampler` objects, and bugfixes.
+Thanks to the 33 contributors to this release:
+Andrecho, Antoine Gibek, Benoit Bovy, Brian Michell, Christine P. Chai, David Huard, Davis Bennett, Deepak Cherian, Dimitri Papadopoulos Orfanos, Elliott Sales de Andrade, Erik, Erik Månsson, Giacomo Caria, Ilan Gold, Illviljan, Jesse Rusak, Jonathan Neuhauser, Justus Magin, Kai Mühlbauer, Kimoon Han, Konstantin Ntokas, Mark Harfouche, Michael Niklas, Nick Hodgskin, Niko Sirmpilatze, Pascal Bourgault, Scott Henderson, Simon Perkins, Spencer Clark, Tom Vo, Trevor James Smith, joseph nowak and micguerr-bopen
 
 New Features
 ~~~~~~~~~~~~
@@ -19,7 +24,9 @@ New Features
   that are excluded from alignment).
   (:issue:`10243`, :pull:`10293`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
-
+- New :py:class:`~xarray.groupers.SeasonGrouper` and :py:class:`~xarray.groupers.SeasonResampler` objects for ergonomic seasonal aggregation.
+  See the docs on :ref:`seasonal_grouping` or `blog post <https://xarray.dev/blog/season-grouping>`_ for more.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Data corruption issues arising from misaligned Dask and Zarr chunks
   can now be prevented using the new ``align_chunks`` parameter in
   :py:meth:`~xarray.DataArray.to_zarr`. This option automatically rechunk
@@ -28,13 +35,9 @@ New Features
   (:issue:`9914`, :pull:`10336`)
   By `Joseph Nowak <https://github.com/josephnowak>`_.
 
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-Deprecations
-~~~~~~~~~~~~
-
+Documentation
+~~~~~~~~~~~~~
+- HTML reprs! By `Scott Henderson <https://github.com/scottyhq>`_.
 
 Bug fixes
 ~~~~~~~~~
