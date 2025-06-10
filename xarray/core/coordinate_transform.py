@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from collections.abc import Hashable, Iterable, Mapping
-from typing import Any
+from typing import Any, overload
 
 import numpy as np
 
@@ -64,8 +66,30 @@ class CoordinateTransform:
         """
         raise NotImplementedError
 
-    def equals(self, other: "CoordinateTransform") -> bool:
-        """Check equality with another CoordinateTransform of the same kind."""
+    @overload
+    def equals(self, other: CoordinateTransform) -> bool: ...
+
+    @overload
+    def equals(
+        self, other: CoordinateTransform, *, exclude: frozenset[Hashable] | None = None
+    ) -> bool: ...
+
+    def equals(self, other: CoordinateTransform, **kwargs) -> bool:
+        """Check equality with another CoordinateTransform of the same kind.
+
+        Parameters
+        ----------
+        other : CoordinateTransform
+            The other Index object to compare with this object.
+        exclude : frozenset of hashable, optional
+            Dimensions excluded from checking. It is None by default, (i.e.,
+            when this method is not called in the context of alignment). For a
+            n-dimensional transform this option allows a CoordinateTransform to
+            optionally ignore any dimension in ``exclude`` when comparing
+            ``self`` with ``other``. For a 1-dimensional transform this kwarg
+            can be safely ignored, as this method is not called when all of the
+            transform's dimensions are also excluded from alignment.
+        """
         raise NotImplementedError
 
     def generate_coords(

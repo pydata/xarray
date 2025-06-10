@@ -236,15 +236,14 @@ def test_variable_method(func, sparse_output):
     if sparse_output:
         assert isinstance(ret_s.data, sparse.SparseArray)
         assert np.allclose(ret_s.data.todense(), ret_d.data, equal_nan=True)
+    elif func.meth != "to_dict":
+        assert np.allclose(ret_s, ret_d)
     else:
-        if func.meth != "to_dict":
-            assert np.allclose(ret_s, ret_d)
-        else:
-            # pop the arrays from the dict
-            arr_s, arr_d = ret_s.pop("data"), ret_d.pop("data")
+        # pop the arrays from the dict
+        arr_s, arr_d = ret_s.pop("data"), ret_d.pop("data")
 
-            assert np.allclose(arr_s, arr_d)
-            assert ret_s == ret_d
+        assert np.allclose(arr_s, arr_d)
+        assert ret_s == ret_d
 
 
 @pytest.mark.parametrize(

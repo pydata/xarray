@@ -52,23 +52,27 @@ for more details.
 As a concrete example, here we write a tutorial dataset to Zarr and then
 re-open it directly with Zarr:
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
     import os
     import xarray as xr
     import zarr
 
     ds = xr.tutorial.load_dataset("rasm")
-    ds.to_zarr("rasm.zarr", mode="w")
+    ds.to_zarr("rasm.zarr", mode="w", consolidated=False)
+    os.listdir("rasm.zarr")
+
+.. jupyter-execute::
 
     zgroup = zarr.open("rasm.zarr")
-    print(os.listdir("rasm.zarr"))
-    print(zgroup.tree())
+    zgroup.tree()
+
+.. jupyter-execute::
+
     dict(zgroup["Tair"].attrs)
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import shutil
 
