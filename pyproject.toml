@@ -19,12 +19,7 @@ name = "xarray"
 readme = "README.md"
 requires-python = ">=3.10"
 
-dependencies = [
-  "numpy>=1.24",
-  "packaging>=23.2",
-  "pandas>=2.1",
-  "typing_extensions>=4.8",
-]
+dependencies = ["numpy>=1.24", "packaging>=23.2", "pandas>=2.1"]
 
 # We don't encode minimum requirements here (though if we can write a script to
 # generate the text from `min_deps_check.py`, that's welcome...). We do add
