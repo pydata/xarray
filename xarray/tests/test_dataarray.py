@@ -34,7 +34,6 @@ from xarray.coders import CFDatetimeCoder
 from xarray.core import dtypes
 from xarray.core.common import full_like
 from xarray.core.coordinates import Coordinates
-from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
 from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
@@ -1793,12 +1792,12 @@ class TestDataArray:
         x = xr.DataArray([], dims=("x",), coords={"x": []}).astype("float32")
         y = x.reindex(x=[1.0, 2.0])
 
-        assert (
-            x.dtype == y.dtype
-        ), "Dtype of reindexed DataArray should match dtype of the original DataArray"
-        assert (
-            y.dtype == np.float32
-        ), "Dtype of reindexed DataArray should remain float32"
+        assert x.dtype == y.dtype, (
+            "Dtype of reindexed DataArray should match dtype of the original DataArray"
+        )
+        assert y.dtype == np.float32, (
+            "Dtype of reindexed DataArray should remain float32"
+        )
 
     def test_reindex_extension_array(self) -> None:
         index1 = np.array([1, 2, 3])
@@ -7288,24 +7287,6 @@ def test_from_series_regression() -> None:
     # see GH:issue:10301
     srs = pd.Series(index=[1, 2, 3], data=pd.array([1, 1, pd.NA]))
     arr = srs.to_xarray()
-
-    # binary operator
-    res = arr * 5
-    assert_array_equal(res, np.array([5, 5, np.nan]))
-    assert res.dtype == pd.Int64Dtype()
-    assert isinstance(res, xr.DataArray)
-
-    # NEP-13 ufunc
-    res = np.add(3, arr)
-    assert_array_equal(np.add(2, arr), np.array([3, 3, np.nan]))
-    assert res.dtype == pd.Int64Dtype()
-    assert isinstance(res, xr.DataArray)
-
-    # NEP-18 array_function
-    res = np.astype(arr.data, pd.Int32Dtype())
-    assert_array_equal(res, arr)
-    assert res.dtype == pd.Int32Dtype()
-    assert isinstance(res, PandasExtensionArray)
 
     # xarray ufunc
     res = arr.fillna(0)

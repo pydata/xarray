@@ -1143,21 +1143,3 @@ def test_extension_array_result_type_mixed(int1, categorical1):
     assert np.dtype("object") == np.result_type(
         PandasExtensionArray(int1), dt.datetime.now()
     )
-
-
-def test_extension_array_astype(int1):
-    res = np.astype(PandasExtensionArray(int1), float)
-    assert res.dtype == np.dtype("float64")
-    assert_array_equal(res, np.array([np.nan, 2, 3, np.nan, np.nan], dtype="float32"))
-
-    res = np.astype(PandasExtensionArray(int1), pd.Float64Dtype())
-    assert res.dtype == pd.Float64Dtype()
-    assert_array_equal(
-        res, pd.array([pd.NA, np.float64(2), np.float64(3), pd.NA, pd.NA])
-    )
-
-    res = np.astype(
-        PandasExtensionArray(pd.array([1, 2], dtype="int8")), pd.Int16Dtype()
-    )
-    assert res.dtype == pd.Int16Dtype()
-    assert_array_equal(res, pd.array([1, 2], dtype=pd.Int16Dtype()))

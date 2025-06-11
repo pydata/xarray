@@ -62,7 +62,7 @@ def __extension_duck_array__astype(
     casting: str = "unsafe",
     subok: bool = True,
     copy: bool = True,
-    device: str = None,
+    device: str | None = None,
 ) -> T_ExtensionArray:
     if (
         not (
@@ -209,55 +209,6 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
             raise TypeError(f"{array} is not an pandas ExtensionArray.")
         self.array = array
 
-        self._add_ops_dunders()
-
-    def _add_ops_dunders(self):
-        """Delegate all operators to pd.Series"""
-
-        def create_dunder(name: str) -> Callable:
-            def binary_dunder(self, other):
-                self, other = replace_duck_with_series((self, other))
-                res = getattr(pd.Series, name)(self, other)
-                if isinstance(res, pd.Series):
-                    res = PandasExtensionArray(res.array)
-                return res
-
-            return binary_dunder
-
-        # see pandas.core.arraylike.OpsMixin
-        binary_operators = [
-            "__eq__",
-            "__ne__",
-            "__lt__",
-            "__le__",
-            "__gt__",
-            "__ge__",
-            "__and__",
-            "__rand__",
-            "__or__",
-            "__ror__",
-            "__xor__",
-            "__rxor__",
-            "__add__",
-            "__radd__",
-            "__sub__",
-            "__rsub__",
-            "__mul__",
-            "__rmul__",
-            "__truediv__",
-            "__rtruediv__",
-            "__floordiv__",
-            "__rfloordiv__",
-            "__mod__",
-            "__rmod__",
-            "__divmod__",
-            "__rdivmod__",
-            "__pow__",
-            "__rpow__",
-        ]
-        for method_name in binary_operators:
-            setattr(self.__class__, method_name, create_dunder(method_name))
-
     def __array_function__(self, func, types, args, kwargs):
         args = replace_duck_with_extension_array(args)
         if func not in HANDLED_EXTENSION_ARRAY_FUNCTIONS:
@@ -268,17 +219,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
         return res
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        if first_ea := next(
-            (x for x in inputs if isinstance(x, PandasExtensionArray)), None
-        ):
-            inputs = replace_duck_with_series(inputs)
-            res = first_ea.__array_ufunc__(ufunc, method, *inputs, **kwargs)
-            if isinstance(res, pd.Series):
-                arr = res.array
-                return type(self)[type(arr)](arr)
-            return res
-
-        return getattr(ufunc, method)(*inputs, **kwargs)
+        return ufunc(*inputs, **kwargs)
 
     def __repr__(self):
         return f"PandasExtensionArray(array={self.array!r})"
@@ -299,3 +240,11 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
 
     def __len__(self):
         return len(self.array)
+
+    def __eq__(self, other):
+        if isinstance(other, PandasExtensionArray):
+            return self.array == other.array
+        return self.array == other
+
+    def __ne__(self, other):
+        return ~(self == other)
