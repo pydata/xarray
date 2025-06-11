@@ -25,7 +25,7 @@ repos:
       - id: text-unicode-replacement-char
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.11.8
+    rev: v0.11.12
     hooks:
       - id: ruff-format
       - id: ruff
@@ -42,7 +42,7 @@ repos:
       - id: prettier
         args: [--cache-location=.prettier_cache/cache]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
+    rev: v1.16.0
     hooks:
       - id: mypy
         # Copied from setup.cfg
