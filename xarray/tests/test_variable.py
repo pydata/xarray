@@ -13,7 +13,6 @@ import pytest
 import pytz
 
 from xarray import DataArray, Dataset, IndexVariable, Variable, set_options
-from xarray.backends.common import BackendArray
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.extension_array import PandasExtensionArray
@@ -2916,16 +2915,8 @@ class TestBackendIndexing:
                 dims=("x", "y"), data=NumpyIndexingAdapter(NumpyIndexingAdapter(self.d))
             )
 
-    def test_extension_array_lazy(self):
-        class CategoricalArray(BackendArray):
-            def __init__(self, array):
-                self.array = array
-                self.shape = self.array.shape
-
-            def __getitem__(self, key):
-                return PandasExtensionArray(self.array[key.tuple[0]])
-
-        lazy = LazilyIndexedArray(CategoricalArray(self.cat))
+    def test_extension_array(self):
+        lazy = LazilyIndexedArray(PandasExtensionArray(self.cat))
         assert (lazy.get_duck_array().array == self.cat).all()
 
     def test_LazilyIndexedArray(self):
