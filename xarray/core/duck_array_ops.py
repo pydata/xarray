@@ -796,6 +796,12 @@ def _nd_cum_func(cum_func, array, axis, **kwargs):
     return out
 
 
+def ndim(array) -> int:
+    # Required part of the duck array
+    # https://docs.xarray.dev/en/latest/internals/duck-arrays-integration.html#duck-array-requirements
+    return array.ndim
+
+
 def cumprod(array, axis=None, **kwargs):
     """N-dimensional version of cumprod."""
     return _nd_cum_func(cumprod_1d, array, axis, **kwargs)
