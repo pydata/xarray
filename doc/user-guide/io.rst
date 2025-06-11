@@ -755,31 +755,50 @@ a URL to be interpreted as a glob string.
 For writing, you may either specify a bucket URL or explicitly set up a
 ``zarr.abc.store.Store`` instance, as follows:
 
-.. code:: python
+.. tab:: URL
 
-    import gcsfs
-    import zarr
-    import obstore
+    .. code:: python
 
-    # write to the bucket via GCS URL
-    ds.to_zarr("gs://<bucket/path/to/data.zarr>")
+        # write to the bucket via GCS URL
+        ds.to_zarr("gs://<bucket/path/to/data.zarr>")
+        # read it back
+        ds_gcs = xr.open_zarr("gs://<bucket/path/to/data.zarr>")
 
-    # manually manage the cloud filesystem connection -- useful, for example,
-    # when you need to manage permissions to cloud resources
-    fs = gcsfs.GCSFileSystem(project="<project-name>", token=None)
-    zstore = zarr.storage.FsspecStore(fs, path="<bucket/path/to/data.zarr>")
+.. tab:: fsspec
 
-    # alternatively, obstore offers a modern, performant interface for
-    # cloud buckets
-    gcsstore = obstore.store.GCSStore(
-        "<bucket>", prefix="<path/to/data.zarr>", skip_signature=True
-    )
-    zstore = zarr.store.ObjectStore(gcsstore)
+    .. code:: python
 
-    # write to the bucket
-    ds.to_zarr(store=zstore)
-    # read it back
-    ds_gcs = xr.open_zarr(zstore)
+        import gcsfs
+        import zarr
+        
+        # manually manage the cloud filesystem connection -- useful, for example,
+        # when you need to manage permissions to cloud resources
+        fs = gcsfs.GCSFileSystem(project="<project-name>", token=None)
+        zstore = zarr.storage.FsspecStore(fs, path="<bucket/path/to/data.zarr>")
+
+        # write to the bucket
+        ds.to_zarr(store=zstore)
+        # read it back
+        ds_gcs = xr.open_zarr(zstore)
+
+.. tab:: obstore 
+
+    .. code:: python
+
+        import obstore
+        import zarr
+
+        # alternatively, obstore offers a modern, performant interface for
+        # cloud buckets
+        gcsstore = obstore.store.GCSStore(
+            "<bucket>", prefix="<path/to/data.zarr>", skip_signature=True
+        )
+        zstore = zarr.store.ObjectStore(gcsstore)
+
+        # write to the bucket
+        ds.to_zarr(store=zstore)
+        # read it back
+        ds_gcs = xr.open_zarr(zstore)
 
 
 .. _fsspec: https://filesystem-spec.readthedocs.io/en/latest/
