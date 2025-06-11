@@ -797,9 +797,9 @@ def _nd_cum_func(cum_func, array, axis, **kwargs):
 
 
 def ndim(array) -> int:
-    # Required part of the duck array
+    # Required part of the duck array and the array-api, but we fall back in case
     # https://docs.xarray.dev/en/latest/internals/duck-arrays-integration.html#duck-array-requirements
-    return array.ndim
+    return array.ndim if hasattr(array, "ndim") else np.ndim(array)
 
 
 def cumprod(array, axis=None, **kwargs):

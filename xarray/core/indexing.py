@@ -769,7 +769,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
 def _wrap_numpy_scalars(array):
     """Wrap NumPy scalars in 0d arrays."""
-    ndim = duck_array_ops.ndim(array) if hasattr(array, "ndim") else np.ndim(array)
+    ndim = duck_array_ops.ndim(array)
     if ndim == 0 and (
         isinstance(array, np.generic)
         or not (is_duck_array(array) or isinstance(array, NDArrayMixin))
