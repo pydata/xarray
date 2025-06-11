@@ -66,6 +66,11 @@ def __extension_duck_array__where(
     return cast(T_ExtensionArray, pd.Series(x).where(condition, pd.Series(y)).array)
 
 
+@implements(np.ndim)
+def __extension_duck_array__ndim(x: PandasExtensionArray) -> int:
+    return x.ndim
+
+
 @implements(np.reshape)
 def __extension_duck_array__reshape(
     arr: T_ExtensionArray, shape: tuple
