@@ -1803,8 +1803,12 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     def get_duck_array(self) -> np.ndarray | PandasExtensionArray:
         # We return an PandasExtensionArray wrapper type that satisfies
-        # duck array protocols. This is what's needed for tests to pass.
-        if pd.api.types.is_extension_array_dtype(self.array):
+        # duck array protocols.
+        # `NumpyExtensionArray` is excluded
+        if pd.api.types.is_extension_array_dtype(self.array) and not isinstance(
+            self.array.array,
+            pd.arrays.NumpyExtensionArray,  # type: ignore[attr-defined]
+        ):
             from xarray.core.extension_array import PandasExtensionArray
 
             return PandasExtensionArray(self.array.array)
