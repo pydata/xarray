@@ -752,23 +752,57 @@ key ```storage_options``, part of ``backend_kwargs``.
 This also works with ``open_mfdataset``, allowing you to pass a list of paths or
 a URL to be interpreted as a glob string.
 
-For writing, you must explicitly set up a ``MutableMapping``
-instance and pass this, as follows:
+For writing, you may either specify a bucket URL or explicitly set up a
+``zarr.abc.store.Store`` instance, as follows:
 
-.. code:: python
+.. tab:: URL
 
-    import gcsfs
+    .. code:: python
 
-    fs = gcsfs.GCSFileSystem(project="<project-name>", token=None)
-    gcsmap = gcsfs.mapping.GCSMap("<bucket-name>", gcs=fs, check=True, create=False)
-    # write to the bucket
-    ds.to_zarr(store=gcsmap)
-    # read it back
-    ds_gcs = xr.open_zarr(gcsmap)
+        # write to the bucket via GCS URL
+        ds.to_zarr("gs://<bucket/path/to/data.zarr>")
+        # read it back
+        ds_gcs = xr.open_zarr("gs://<bucket/path/to/data.zarr>")
 
-(or use the utility function ``fsspec.get_mapper()``).
+.. tab:: fsspec
+
+    .. code:: python
+
+        import gcsfs
+        import zarr
+
+        # manually manage the cloud filesystem connection -- useful, for example,
+        # when you need to manage permissions to cloud resources
+        fs = gcsfs.GCSFileSystem(project="<project-name>", token=None)
+        zstore = zarr.storage.FsspecStore(fs, path="<bucket/path/to/data.zarr>")
+
+        # write to the bucket
+        ds.to_zarr(store=zstore)
+        # read it back
+        ds_gcs = xr.open_zarr(zstore)
+
+.. tab:: obstore
+
+    .. code:: python
+
+        import obstore
+        import zarr
+
+        # alternatively, obstore offers a modern, performant interface for
+        # cloud buckets
+        gcsstore = obstore.store.GCSStore(
+            "<bucket>", prefix="<path/to/data.zarr>", skip_signature=True
+        )
+        zstore = zarr.store.ObjectStore(gcsstore)
+
+        # write to the bucket
+        ds.to_zarr(store=zstore)
+        # read it back
+        ds_gcs = xr.open_zarr(zstore)
+
 
 .. _fsspec: https://filesystem-spec.readthedocs.io/en/latest/
+.. _obstore: https://developmentseed.org/obstore/latest/
 .. _Zarr: https://zarr.readthedocs.io/
 .. _Amazon S3: https://aws.amazon.com/s3/
 .. _Google Cloud Storage: https://cloud.google.com/storage/
