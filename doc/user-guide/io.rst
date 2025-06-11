@@ -770,7 +770,7 @@ For writing, you may either specify a bucket URL or explicitly set up a
 
         import gcsfs
         import zarr
-        
+
         # manually manage the cloud filesystem connection -- useful, for example,
         # when you need to manage permissions to cloud resources
         fs = gcsfs.GCSFileSystem(project="<project-name>", token=None)
@@ -781,7 +781,7 @@ For writing, you may either specify a bucket URL or explicitly set up a
         # read it back
         ds_gcs = xr.open_zarr(zstore)
 
-.. tab:: obstore 
+.. tab:: obstore
 
     .. code:: python
 
