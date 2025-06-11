@@ -15,6 +15,7 @@ import pytz
 from xarray import DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
     BasicIndexer,
     CopyOnWriteArray,
@@ -2894,6 +2895,7 @@ class TestBackendIndexing:
     @pytest.fixture(autouse=True)
     def setUp(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
+        self.cat = PandasExtensionArray(pd.Categorical(["a", "b"] * 5))
 
     def check_orthogonal_indexing(self, v):
         assert np.allclose(v.isel(x=[8, 3], y=[2, 1]), self.d[[8, 3]][:, [2, 1]])
@@ -2912,6 +2914,14 @@ class TestBackendIndexing:
             v = Variable(
                 dims=("x", "y"), data=NumpyIndexingAdapter(NumpyIndexingAdapter(self.d))
             )
+
+    def test_extension_array_duck_array(self):
+        lazy = LazilyIndexedArray(self.cat)
+        assert (lazy.get_duck_array().array == self.cat).all()
+
+    def test_extension_array_duck_indexed(self):
+        lazy = Variable(dims=("x"), data=LazilyIndexedArray(self.cat))
+        assert (lazy[[0, 1, 5]] == ["a", "b", "b"]).all()
 
     def test_LazilyIndexedArray(self):
         v = Variable(dims=("x", "y"), data=LazilyIndexedArray(self.d))
@@ -2951,12 +2961,14 @@ class TestBackendIndexing:
     def test_DaskIndexingAdapter(self):
         import dask.array as da
 
-        da = da.asarray(self.d)
-        v = Variable(dims=("x", "y"), data=DaskIndexingAdapter(da))
+        dask_array = da.asarray(self.d)
+        v = Variable(dims=("x", "y"), data=DaskIndexingAdapter(dask_array))
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
         # doubly wrapping
-        v = Variable(dims=("x", "y"), data=CopyOnWriteArray(DaskIndexingAdapter(da)))
+        v = Variable(
+            dims=("x", "y"), data=CopyOnWriteArray(DaskIndexingAdapter(dask_array))
+        )
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
 

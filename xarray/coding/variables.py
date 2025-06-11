@@ -520,9 +520,9 @@ class CFScaleOffsetCoder(VariableCoder):
 
             scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
             add_offset = pop_to(attrs, encoding, "add_offset", name=name)
-            if np.ndim(scale_factor) > 0:
+            if duck_array_ops.ndim(scale_factor) > 0:
                 scale_factor = np.asarray(scale_factor).item()
-            if np.ndim(add_offset) > 0:
+            if duck_array_ops.ndim(add_offset) > 0:
                 add_offset = np.asarray(add_offset).item()
             # if we have a _FillValue/masked_value in encoding we already have the wanted
             # floating point dtype here (via CFMaskCoder), so no check is necessary
