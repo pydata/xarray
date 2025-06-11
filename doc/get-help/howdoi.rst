@@ -69,7 +69,7 @@ How do I ...
      - ``obj.dt.month`` for example where ``obj`` is a :py:class:`~xarray.DataArray` containing ``datetime64`` or ``cftime`` values. See :ref:`dt_accessor` for more.
    * - round off time values to a specified frequency
      - ``obj.dt.ceil``, ``obj.dt.floor``, ``obj.dt.round``. See :ref:`dt_accessor` for more.
-   * - make a mask that is ``True`` where an object contains any of the values in a array
+   * - make a mask that is ``True`` where an object contains any of the values in an array
      - :py:meth:`Dataset.isin`, :py:meth:`DataArray.isin`
    * - Index using a boolean mask
      - :py:meth:`Dataset.query`, :py:meth:`DataArray.query`, :py:meth:`Dataset.where`, :py:meth:`DataArray.where`
