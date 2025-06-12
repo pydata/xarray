@@ -5466,7 +5466,9 @@ class TestPydap:
             with create_tmp_file() as tmp_file:
                 actual.to_netcdf(tmp_file)
                 with open_dataset(tmp_file) as actual2:
-                    actual2["bears"] = actual2["bears"].astype(str)
+                    if Version(np.__version__) < Version("2.3.0"):
+                        # netcdf converts string to byte not unicode
+                        actual2["bears"] = actual2["bears"].astype(str)
                     assert_equal(actual2, expected)
 
     @requires_dask
