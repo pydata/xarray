@@ -5,6 +5,38 @@
 What's New
 ==========
 
+.. _whats-new.2025.07.0:
+
+v2025.07.0 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+- Check and fix character array string dimension names, issue warnings as needed (:issue:`6352`, :pull:`10395`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Forward variable name down to coders for AbstractWritableDataStore.encode_variable and subclasses. (:pull:`10395`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 .. _whats-new.2025.06.1:
 
 v2025.06.1 (Jun 11, 2025)
@@ -81,8 +113,6 @@ Bug fixes
   (:pull:`10352`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Avoid unsafe casts from float to unsigned int in CFMaskCoder (:issue:`9815`, :pull:`9964`).
   By ` Elliott Sales de Andrade <https://github.com/QuLogic>`_.
-- Check and fix character array string dimension names, issue warnings as needed (:issue:`6352`, :pull:`10395`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Performance
 ~~~~~~~~~~~
@@ -94,16 +124,6 @@ Performance
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Speed up encoding of :py:class:`cftime.datetime` objects by roughly a factor
   of three (:pull:`8324`). By `Antoine Gibek <https://github.com/antscloud>`_.
-
-Documentation
-~~~~~~~~~~~~~
-
-
-Internal Changes
-~~~~~~~~~~~~~~~~
-
-- Forward variable name down to coders for AbstractWritableDataStore.encode_variable and subclasses. (:pull:`10395`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 .. _whats-new.2025.04.0:
 
