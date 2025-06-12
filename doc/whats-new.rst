@@ -7,31 +7,18 @@ What's New
 
 .. _whats-new.2025.06.1:
 
-v2025.06.1 (unreleased)
------------------------
+v2025.06.1 (Jun 11, 2025)
+-------------------------
 
-New Features
-~~~~~~~~~~~~
+This is quick bugfix release to remove an unintended dependency on ``typing_extensions``.
 
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-
-Deprecations
-~~~~~~~~~~~~
-
+Thanks to the 4 contributors to this release:
+Alex Merose, Deepak Cherian, Ilan Gold and Simon Perkins
 
 Bug fixes
 ~~~~~~~~~
 
-
-Documentation
-~~~~~~~~~~~~~
-
-
-Internal Changes
-~~~~~~~~~~~~~~~~
+- Remove dependency on ``typing_extensions`` (:pull:`10413`). By `Simon Perkins <https://github.com/sjperkins>`_.
 
 .. _whats-new.2025.06.0:
 
