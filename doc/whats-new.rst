@@ -12,6 +12,8 @@ v2025.07.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Added :py:meth:`~xarray.DataTree.subset` to index variables on all nodes of a datatree (:pull:`10400`)
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 
 Breaking changes
@@ -60,8 +62,6 @@ Andrecho, Antoine Gibek, Benoit Bovy, Brian Michell, Christine P. Chai, David Hu
 
 New Features
 ~~~~~~~~~~~~
-- Added :py:meth:`~xarray.DataTree.subset` to index variables on all nodes of a datatree (:pull:`10400`)
-  By `Mathias Hauser <https://github.com/mathause>`_.
 - Switch docs to jupyter-execute sphinx extension for HTML reprs. (:issue:`3893`, :pull:`10383`)
   By `Scott Henderson <https://github.com/scottyhq>`_.
 - Allow an Xarray index that uses multiple dimensions checking equality with another
