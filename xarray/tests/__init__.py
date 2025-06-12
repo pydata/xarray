@@ -16,6 +16,7 @@ from pandas.testing import assert_frame_equal  # noqa: F401
 
 import xarray.testing
 from xarray import Dataset
+from xarray.coding.times import _STANDARD_CALENDARS as _STANDARD_CALENDARS_UNSORTED
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.options import set_options
@@ -59,7 +60,9 @@ def assert_writeable(ds):
         name
         for name, var in ds.variables.items()
         if not isinstance(var, IndexVariable)
-        and not isinstance(var.data, PandasExtensionArray)
+        and not isinstance(
+            var.data, PandasExtensionArray | pd.api.extensions.ExtensionArray
+        )
         and not var.data.flags.writeable
     ]
     assert not readonly, readonly
@@ -126,8 +129,7 @@ else:
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
-# TODO: switch to "3" once Zarr V3 is released
-has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "2.99")
+has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "3.0.0")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg")
@@ -164,6 +166,21 @@ has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
 has_flox_0_9_12, requires_flox_0_9_12 = _importorskip("flox", "0.9.12")
 
 has_array_api_strict, requires_array_api_strict = _importorskip("array_api_strict")
+
+parametrize_zarr_format = pytest.mark.parametrize(
+    "zarr_format",
+    [
+        pytest.param(2, id="zarr_format=2"),
+        pytest.param(
+            3,
+            marks=pytest.mark.skipif(
+                not has_zarr_v3,
+                reason="zarr-python v2 cannot understand the zarr v3 format",
+            ),
+            id="zarr_format=3",
+        ),
+    ],
+)
 
 
 def _importorskip_h5netcdf_ros3(has_h5netcdf: bool):
@@ -346,6 +363,14 @@ def create_test_data(
                 )
             ),
         )
+        if has_pyarrow:
+            obj["var5"] = (
+                "dim1",
+                pd.array(
+                    rs.integers(1, 10, size=dim_sizes[0]).tolist(),
+                    dtype="int64[pyarrow]",
+                ),
+            )
     if dim_sizes == _DEFAULT_TEST_DIM_SIZES:
         numbers_values = np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64")
     else:
@@ -356,13 +381,39 @@ def create_test_data(
     return obj
 
 
-_CFTIME_CALENDARS = [
+_STANDARD_CALENDAR_NAMES = sorted(_STANDARD_CALENDARS_UNSORTED)
+_NON_STANDARD_CALENDAR_NAMES = {
+    "noleap",
     "365_day",
     "360_day",
     "julian",
     "all_leap",
     "366_day",
-    "gregorian",
-    "proleptic_gregorian",
-    "standard",
+}
+_NON_STANDARD_CALENDARS = [
+    pytest.param(cal, marks=requires_cftime)
+    for cal in sorted(_NON_STANDARD_CALENDAR_NAMES)
 ]
+_STANDARD_CALENDARS = [
+    pytest.param(cal, marks=requires_cftime if cal != "standard" else ())
+    for cal in _STANDARD_CALENDAR_NAMES
+]
+_ALL_CALENDARS = sorted(_STANDARD_CALENDARS + _NON_STANDARD_CALENDARS)
+_CFTIME_CALENDARS = [
+    pytest.param(*p.values, marks=requires_cftime) for p in _ALL_CALENDARS
+]
+
+
+def _all_cftime_date_types():
+    import cftime
+
+    return {
+        "noleap": cftime.DatetimeNoLeap,
+        "365_day": cftime.DatetimeNoLeap,
+        "360_day": cftime.Datetime360Day,
+        "julian": cftime.DatetimeJulian,
+        "all_leap": cftime.DatetimeAllLeap,
+        "366_day": cftime.DatetimeAllLeap,
+        "gregorian": cftime.DatetimeGregorian,
+        "proleptic_gregorian": cftime.DatetimeProlepticGregorian,
+    }

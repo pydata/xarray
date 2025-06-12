@@ -8,8 +8,8 @@ Xarray supports direct serialization and IO to several file formats, from
 simple :ref:`io.pickle` files to the more flexible :ref:`io.netcdf`
 format (recommended).
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import os
 
@@ -41,37 +41,58 @@ Following the diagram is detailed information on many popular backends.
 You can learn more about using and developing backends in the
 `Xarray tutorial JupyterBook <https://tutorial.xarray.dev/advanced/backends/backends.html>`_.
 
+..
+   _comment: mermaid Flowcharg "link" text gets secondary color background, SVG icon fill gets primary color
+
+.. raw:: html
+
+    <style>
+      /* Ensure PST link colors don't override mermaid text colors */
+      .mermaid a {
+        color: white;
+      }
+      .mermaid a:hover {
+        color: magenta;
+        text-decoration-color: magenta;
+      }
+      .mermaid a:visited {
+        color: white;
+        text-decoration-color: white;
+      }
+    </style>
+
 .. mermaid::
+    :config: {"theme":"base","themeVariables":{"fontSize":"20px","primaryColor":"#fff","primaryTextColor":"#fff","primaryBorderColor":"#59c7d6","lineColor":"#e28126","secondaryColor":"#767985"}}
     :alt: Flowchart illustrating how to choose the right backend engine to read your data
 
     flowchart LR
-        built-in-eng["""Is your data stored in one of these formats?
-            - netCDF4 (<code>netcdf4</code>)
-            - netCDF3 (<code>scipy</code>)
-            - Zarr (<code>zarr</code>)
-            - DODS/OPeNDAP (<code>pydap</code>)
-            - HDF5 (<code>h5netcdf</code>)
-            """]
+        built-in-eng["`**Is your data stored in one of these formats?**
+            - netCDF4
+            - netCDF3
+            - Zarr
+            - DODS/OPeNDAP
+            - HDF5
+            `"]
 
-        built-in("""You're in luck! Xarray bundles a backend for this format.
+        built-in("`**You're in luck!** Xarray bundles a backend to automatically read these formats.
             Open data using <code>xr.open_dataset()</code>. We recommend
-            always setting the engine you want to use.""")
+            explicitly setting engine='xxxx' for faster loading.`")
 
-        installed-eng["""One of these formats?
-            - <a href='https://github.com/ecmwf/cfgrib'>GRIB (<code>cfgrib</code>)
-            - <a href='https://tiledb-inc.github.io/TileDB-CF-Py/documentation/index.html'>TileDB (<code>tiledb</code>)
-            - <a href='https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, ESRI-hdf (<code>rioxarray</code>, via GDAL)
-            - <a href='https://www.bopen.eu/xarray-sentinel-open-source-library/'>Sentinel-1 SAFE (<code>xarray-sentinel</code>)
+        installed-eng["""<b>One of these formats?</b>
+            - <a href='https://github.com/ecmwf/cfgrib'>GRIB</a>
+            - <a href='https://tiledb-inc.github.io/TileDB-CF-Py/documentation'>TileDB</a>
+            - <a href='https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, etc. (via GDAL)</a>
+            - <a href='https://www.bopen.eu/xarray-sentinel-open-source-library/'>Sentinel-1 SAFE</a>
             """]
 
-        installed("""Install the package indicated in parentheses to your
-            Python environment. Restart the kernel and use
-            <code>xr.open_dataset(files, engine='rioxarray')</code>.""")
+        installed("""Install the linked backend library and use it with
+            <code>xr.open_dataset(file, engine='xxxx')</code>.""")
 
-        other("""Ask around to see if someone in your data community
-            has created an Xarray backend for your data type.
-            If not, you may need to create your own or consider
-            exporting your data to a more common format.""")
+        other["`**Options:**
+            - Look around to see if someone has created an Xarray backend for your format!
+            - <a href='https://docs.xarray.dev/en/stable/internals/how-to-add-new-backend.html'>Create your own backend</a>
+            - Convert your data to a supported format
+            `"]
 
         built-in-eng -->|Yes| built-in
         built-in-eng -->|No| installed-eng
@@ -79,16 +100,16 @@ You can learn more about using and developing backends in the
         installed-eng -->|Yes| installed
         installed-eng -->|No| other
 
-        click built-in-eng "https://docs.xarray.dev/en/stable/getting-started-guide/faq.html#how-do-i-open-format-x-file-as-an-xarray-dataset"
-        click other "https://docs.xarray.dev/en/stable/internals/how-to-add-new-backend.html"
+        click built-in-eng "https://docs.xarray.dev/en/stable/get-help/faq.html#how-do-i-open-format-x-file-as-an-xarray-dataset"
 
-        classDef quesNodefmt fill:#9DEEF4,stroke:#206C89,text-align:left
+
+        classDef quesNodefmt font-size:12pt,fill:#0e4666,stroke:#59c7d6,stroke-width:3
         class built-in-eng,installed-eng quesNodefmt
 
-        classDef ansNodefmt fill:#FFAA05,stroke:#E37F17,text-align:left,white-space:nowrap
+        classDef ansNodefmt font-size:12pt,fill:#4a4a4a,stroke:#17afb4,stroke-width:3
         class built-in,installed,other ansNodefmt
 
-        linkStyle default font-size:20pt,color:#206C89
+        linkStyle default font-size:18pt,stroke-width:4
 
 
 .. _io.netcdf:
@@ -125,7 +146,7 @@ __ https://github.com/Unidata/netcdf4-python
 We can save a Dataset to disk using the
 :py:meth:`Dataset.to_netcdf` method:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 5))},
@@ -153,13 +174,13 @@ the ``format`` and ``engine`` arguments.
 We can load netCDF files to create a new Dataset using
 :py:func:`open_dataset`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds_disk = xr.open_dataset("saved_on_disk.nc")
     ds_disk
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     # Close "saved_on_disk.nc", but retain the file until after closing or deleting other
     # datasets that will refer to it.
@@ -209,7 +230,7 @@ is modified: the original file on disk is never touched.
 Datasets have a :py:meth:`Dataset.close` method to close the associated
 netCDF file. However, it's often cleaner to use a ``with`` statement:
 
-.. ipython:: python
+.. jupyter-execute::
 
     # this automatically closes the dataset after use
     with xr.open_dataset("saved_on_disk.nc") as ds:
@@ -283,9 +304,12 @@ You can view this encoding information (among others) in the
 :py:attr:`DataArray.encoding` and
 :py:attr:`DataArray.encoding` attributes:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds_disk["y"].encoding
+
+.. jupyter-execute::
+
     ds_disk.encoding
 
 Note that all operations that manipulate variables other than indexing
@@ -295,7 +319,7 @@ In some cases it is useful to intentionally reset a dataset's original encoding 
 This can be done with either the :py:meth:`Dataset.drop_encoding` or
 :py:meth:`DataArray.drop_encoding` methods.
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds_no_encoding = ds_disk.drop_encoding()
     ds_no_encoding.encoding
@@ -594,7 +618,7 @@ with ``conda install h5netcdf``. Once installed we can use xarray to open HDF5 f
 The similarities between HDF5 and netCDF4 mean that HDF5 data can be written with the
 same :py:meth:`Dataset.to_netcdf` method as used for netCDF4 data:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 5))},
@@ -655,13 +679,13 @@ To write a dataset with zarr, we use the :py:meth:`Dataset.to_zarr` method.
 
 To write to a local directory, we pass a path to a directory:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     ! rm -rf path/to/directory.zarr
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
+    :stderr:
 
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 5))},
@@ -671,7 +695,7 @@ To write to a local directory, we pass a path to a directory:
             "z": ("x", list("abcd")),
         },
     )
-    ds.to_zarr("path/to/directory.zarr")
+    ds.to_zarr("path/to/directory.zarr", zarr_format=2, consolidated=False)
 
 (The suffix ``.zarr`` is optional--just a reminder that a zarr store lives
 there.) If the directory does not exist, it will be created. If a zarr
@@ -697,10 +721,9 @@ To store variable length strings, convert them to object arrays first with
 To read back a zarr dataset that has been created this way, we use the
 :py:func:`open_zarr` method:
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
-    ds_zarr = xr.open_zarr("path/to/directory.zarr")
+    ds_zarr = xr.open_zarr("path/to/directory.zarr", consolidated=False)
     ds_zarr
 
 Cloud Storage Buckets
@@ -729,23 +752,57 @@ key ```storage_options``, part of ``backend_kwargs``.
 This also works with ``open_mfdataset``, allowing you to pass a list of paths or
 a URL to be interpreted as a glob string.
 
-For writing, you must explicitly set up a ``MutableMapping``
-instance and pass this, as follows:
+For writing, you may either specify a bucket URL or explicitly set up a
+``zarr.abc.store.Store`` instance, as follows:
 
-.. code:: python
+.. tab:: URL
 
-    import gcsfs
+    .. code:: python
 
-    fs = gcsfs.GCSFileSystem(project="<project-name>", token=None)
-    gcsmap = gcsfs.mapping.GCSMap("<bucket-name>", gcs=fs, check=True, create=False)
-    # write to the bucket
-    ds.to_zarr(store=gcsmap)
-    # read it back
-    ds_gcs = xr.open_zarr(gcsmap)
+        # write to the bucket via GCS URL
+        ds.to_zarr("gs://<bucket/path/to/data.zarr>")
+        # read it back
+        ds_gcs = xr.open_zarr("gs://<bucket/path/to/data.zarr>")
 
-(or use the utility function ``fsspec.get_mapper()``).
+.. tab:: fsspec
+
+    .. code:: python
+
+        import gcsfs
+        import zarr
+
+        # manually manage the cloud filesystem connection -- useful, for example,
+        # when you need to manage permissions to cloud resources
+        fs = gcsfs.GCSFileSystem(project="<project-name>", token=None)
+        zstore = zarr.storage.FsspecStore(fs, path="<bucket/path/to/data.zarr>")
+
+        # write to the bucket
+        ds.to_zarr(store=zstore)
+        # read it back
+        ds_gcs = xr.open_zarr(zstore)
+
+.. tab:: obstore
+
+    .. code:: python
+
+        import obstore
+        import zarr
+
+        # alternatively, obstore offers a modern, performant interface for
+        # cloud buckets
+        gcsstore = obstore.store.GCSStore(
+            "<bucket>", prefix="<path/to/data.zarr>", skip_signature=True
+        )
+        zstore = zarr.store.ObjectStore(gcsstore)
+
+        # write to the bucket
+        ds.to_zarr(store=zstore)
+        # read it back
+        ds_gcs = xr.open_zarr(zstore)
+
 
 .. _fsspec: https://filesystem-spec.readthedocs.io/en/latest/
+.. _obstore: https://developmentseed.org/obstore/latest/
 .. _Zarr: https://zarr.readthedocs.io/
 .. _Amazon S3: https://aws.amazon.com/s3/
 .. _Google Cloud Storage: https://cloud.google.com/storage/
@@ -767,13 +824,12 @@ without writing all of its array data. This can be done by first creating a
 ``to_zarr`` with ``compute=False`` to write only metadata (including ``attrs``)
 to Zarr:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     ! rm -rf path/to/directory.zarr
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
     import dask.array
 
@@ -783,7 +839,7 @@ to Zarr:
     ds = xr.Dataset({"foo": ("x", dummies)}, coords={"x": np.arange(30)})
     path = "path/to/directory.zarr"
     # Now we write the metadata without computing any array values
-    ds.to_zarr(path, compute=False)
+    ds.to_zarr(path, compute=False, consolidated=False)
 
 Now, a Zarr store with the correct variable shapes and attributes exists that
 can be filled out by subsequent calls to ``to_zarr``.
@@ -792,15 +848,15 @@ correct alignment of the new data with the existing dimensions, or as an
 explicit mapping from dimension names to Python ``slice`` objects indicating
 where the data should be written (in index space, not label space), e.g.,
 
-.. ipython:: python
+.. jupyter-execute::
 
     # For convenience, we'll slice a single dataset, but in the real use-case
     # we would create them separately possibly even from separate processes.
     ds = xr.Dataset({"foo": ("x", np.arange(30))}, coords={"x": np.arange(30)})
     # Any of the following region specifications are valid
-    ds.isel(x=slice(0, 10)).to_zarr(path, region="auto")
-    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": "auto"})
-    ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
+    ds.isel(x=slice(0, 10)).to_zarr(path, region="auto", consolidated=False)
+    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": "auto"}, consolidated=False)
+    ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)}, consolidated=False)
 
 Concurrent writes with ``region`` are safe as long as they modify distinct
 chunks in the underlying Zarr arrays (or use an appropriate ``lock``).
@@ -815,24 +871,23 @@ Zarr Compressors and Filters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are many different `options for compression and filtering possible with
-zarr <https://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
+zarr <https://zarr.readthedocs.io/en/stable/user-guide/arrays.html#compressors>`_.
 
 These options can be passed to the ``to_zarr`` method as variable encoding.
 For example:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     ! rm -rf foo.zarr
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
     import zarr
-    from numcodecs.blosc import Blosc
+    from zarr.codecs import BloscCodec
 
-    compressor = Blosc(cname="zstd", clevel=3, shuffle=2)
-    ds.to_zarr("foo.zarr", encoding={"foo": {"compressor": compressor}})
+    compressor = BloscCodec(cname="zstd", clevel=3, shuffle="shuffle")
+    ds.to_zarr("foo.zarr", consolidated=False, encoding={"foo": {"compressors": [compressor]}})
 
 .. note::
 
@@ -871,13 +926,12 @@ To resize and then append values along an existing dimension in a store, set
 ``append_dim``. This is a good option if data always arrives in a particular
 order, e.g., for time-stepping a simulation:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     ! rm -rf path/to/directory.zarr
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
     ds1 = xr.Dataset(
         {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
@@ -887,7 +941,10 @@ order, e.g., for time-stepping a simulation:
             "t": pd.date_range("2001-01-01", periods=2),
         },
     )
-    ds1.to_zarr("path/to/directory.zarr")
+    ds1.to_zarr("path/to/directory.zarr", consolidated=False)
+
+.. jupyter-execute::
+
     ds2 = xr.Dataset(
         {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
         coords={
@@ -896,7 +953,7 @@ order, e.g., for time-stepping a simulation:
             "t": pd.date_range("2001-01-03", periods=2),
         },
     )
-    ds2.to_zarr("path/to/directory.zarr", append_dim="t")
+    ds2.to_zarr("path/to/directory.zarr", append_dim="t", consolidated=False)
 
 .. _io.zarr.writing_chunks:
 
@@ -932,7 +989,7 @@ For example, let's say we're working with a dataset with dimensions
 ``('time', 'x', 'y')``, a variable ``Tair`` which is chunked in ``x`` and ``y``,
 and two multi-dimensional coordinates ``xc`` and ``yc``:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.tutorial.open_dataset("rasm")
 
@@ -944,26 +1001,25 @@ These multi-dimensional coordinates are only two-dimensional and take up very li
 space on disk or in memory, yet when writing to disk the default zarr behavior is to
 split them into chunks:
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
-    ds.to_zarr("path/to/directory.zarr", mode="w")
-    ! ls -R path/to/directory.zarr
+    ds.to_zarr("path/to/directory.zarr", consolidated=False, mode="w")
+    !tree -I zarr.json path/to/directory.zarr
 
 
 This may cause unwanted overhead on some systems, such as when reading from a cloud
 storage provider. To disable this chunking, we can specify a chunk size equal to the
-length of each dimension by using the shorthand chunk size ``-1``:
+shape of each coordinate array in the ``encoding`` argument:
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
     ds.to_zarr(
         "path/to/directory.zarr",
-        encoding={"xc": {"chunks": (-1, -1)}, "yc": {"chunks": (-1, -1)}},
+        encoding={"xc": {"chunks": ds.xc.shape}, "yc": {"chunks": ds.yc.shape}},
+        consolidated=False,
         mode="w",
     )
-    ! ls -R path/to/directory.zarr
+    !tree -I zarr.json path/to/directory.zarr
 
 
 The number of chunks on Tair matches our dask chunks, while there is now only a single
@@ -1002,7 +1058,7 @@ By default Xarray uses a feature called
 *consolidated metadata*, storing all metadata for the entire dataset with a
 single key (by default called ``.zmetadata``). This typically drastically speeds
 up opening the store. (For more information on this feature, consult the
-`zarr docs on consolidating metadata <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
+`zarr docs on consolidating metadata <https://zarr.readthedocs.io/en/latest/user-guide/consolidated_metadata.html>`_.)
 
 By default, xarray writes consolidated metadata and attempts to read stores
 with consolidated metadata, falling back to use non-consolidated metadata for
@@ -1021,12 +1077,28 @@ reads. Because this fall-back option is so much slower, xarray issues a
        instead of falling back to try reading non-consolidated metadata.
 
 
+Fill Values
+~~~~~~~~~~~
+
+Zarr arrays have a ``fill_value`` that is used for chunks that were never written to disk.
+For the Zarr version 2 format, Xarray will set ``fill_value`` to be equal to the CF/NetCDF ``"_FillValue"``.
+This is ``np.nan`` by default for floats, and unset otherwise. Note that the Zarr library will set a
+default ``fill_value`` if not specified (usually ``0``).
+
+For the Zarr version 3 format, ``_FillValue`` and ```fill_value`` are decoupled.
+So you can set ``fill_value`` in ``encoding`` as usual.
+
+Note that at read-time, you can control whether ``_FillValue`` is masked using the
+``mask_and_scale`` kwarg; and whether Zarr's ``fill_value`` is treated as synonymous
+with ``_FillValue`` using the ``use_zarr_fill_value_as_mask`` kwarg to :py:func:`xarray.open_zarr`.
+
+
 .. _io.kerchunk:
 
 Kerchunk
 --------
 
-`Kerchunk <https://fsspec.github.io/kerchunk/index.html>`_ is a Python library
+`Kerchunk <https://fsspec.github.io/kerchunk>`_ is a Python library
 that allows you to access chunked and compressed data formats (such as NetCDF3, NetCDF4, HDF5, GRIB2, TIFF & FITS),
 many of which are primary data formats for many data archives, by viewing the
 whole archive as an ephemeral `Zarr`_ dataset which allows for parallel, chunk-specific access.
@@ -1050,23 +1122,19 @@ with ``xarray``, especially when these archives are large in size. A single comb
 reference can refer to thousands of the original data files present in these archives.
 You can view the whole dataset with from this combined reference using the above packages.
 
-The following example shows opening a combined references generated from a ``.hdf`` file stored locally.
+The following example shows opening a single ``json`` reference to the ``saved_on_disk.h5`` file created above.
+If the file were instead stored remotely (e.g. ``s3://saved_on_disk.h5``) you can use ``storage_options``
+that are used to `configure fsspec <https://filesystem-spec.readthedocs.io/en/latest/api.html#fsspec.implementations.reference.ReferenceFileSystem.__init__>`_:
 
-.. ipython:: python
+.. jupyter-execute::
 
-    storage_options = {
-        "target_protocol": "file",
-    }
-
-    # add the `remote_protocol` key in `storage_options` if you're accessing a file remotely
-
-    ds1 = xr.open_dataset(
+    ds_kerchunked = xr.open_dataset(
         "./combined.json",
         engine="kerchunk",
-        storage_options=storage_options,
+        storage_options={},
     )
 
-    ds1
+    ds_kerchunked
 
 .. note::
 
@@ -1088,7 +1156,7 @@ DataArray ``to_iris`` and ``from_iris``
 If iris is installed, xarray can convert a ``DataArray`` into a ``Cube`` using
 :py:meth:`DataArray.to_iris`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray(
         np.random.rand(4, 5),
@@ -1097,12 +1165,12 @@ If iris is installed, xarray can convert a ``DataArray`` into a ``Cube`` using
     )
 
     cube = da.to_iris()
-    cube
+    print(cube)
 
 Conversely, we can create a new ``DataArray`` object from a ``Cube`` using
 :py:meth:`DataArray.from_iris`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da_cube = xr.DataArray.from_iris(cube)
     da_cube
@@ -1114,21 +1182,28 @@ datasets.  It uses the file saving and loading functions in both projects to pro
 more "correct" translation between them, but still with very low overhead and not
 using actual disk files.
 
-For example:
+Here we load an xarray dataset and convert it to Iris cubes:
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
+    :stderr:
 
     ds = xr.tutorial.open_dataset("air_temperature_gradient")
     cubes = ncdata.iris_xarray.cubes_from_xarray(ds)
     print(cubes)
+
+.. jupyter-execute::
+
     print(cubes[1])
 
-.. ipython:: python
-    :okwarning:
+And we can convert the cubes back to an xarray dataset:
+
+.. jupyter-execute::
+
+    # ensure dataset-level and variable-level attributes loaded correctly
+    iris.FUTURE.save_split_attrs = True
 
     ds = ncdata.iris_xarray.cubes_to_xarray(cubes)
-    print(ds)
+    ds
 
 Ncdata can also adjust file data within load and save operations, to fix data loading
 problems or provide exact save formatting without needing to modify files on disk.
@@ -1152,28 +1227,17 @@ For example, we can open a connection to GBs of weather data produced by the
 __ https://www.prism.oregonstate.edu/
 __ https://iri.columbia.edu/
 
-.. ipython source code for this section
-   we don't use this to avoid hitting the DAP server on every doc build.
 
-   remote_data = xr.open_dataset(
-       'http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods',
-       decode_times=False)
-   tmax = remote_data.tmax[:500, ::3, ::3]
-   tmax
+.. jupyter-input::
 
-   @savefig opendap-prism-tmax.png
-   tmax[0].plot()
+    remote_data = xr.open_dataset(
+        "http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods",
+        decode_times=False,
+        )
+    remote_data
 
-.. ipython::
-    :verbatim:
+.. jupyter-output::
 
-    In [3]: remote_data = xr.open_dataset(
-       ...:     "http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods",
-       ...:     decode_times=False,
-       ...: )
-
-    In [4]: remote_data
-    Out[4]:
     <xarray.Dataset>
     Dimensions:  (T: 1422, X: 1405, Y: 621)
     Coordinates:
@@ -1205,13 +1269,13 @@ __ https://iri.columbia.edu/
 We can select and slice this data any number of times, and nothing is loaded
 over the network until we look at particular values:
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [4]: tmax = remote_data["tmax"][:500, ::3, ::3]
+    tmax = remote_data["tmax"][:500, ::3, ::3]
+    tmax
 
-    In [5]: tmax
-    Out[5]:
+.. jupyter-output::
+
     <xarray.DataArray 'tmax' (T: 500, Y: 207, X: 469)>
     [48541500 values with dtype=float64]
     Coordinates:
@@ -1224,42 +1288,51 @@ over the network until we look at particular values:
         units: Celsius_scale
         expires: 1443657600
 
+.. jupyter-input::
+
     # the data is downloaded automatically when we make the plot
-    In [6]: tmax[0].plot()
+    tmax[0].plot()
 
 .. image:: ../_static/opendap-prism-tmax.png
 
-Some servers require authentication before we can access the data. For this
-purpose we can explicitly create a :py:class:`backends.PydapDataStore`
-and pass in a `Requests`__ session object. For example for
-HTTP Basic authentication::
+Some servers require authentication before we can access the data. Pydap uses
+a `Requests`__ session object (which the user can pre-define), and this
+session object can recover `authentication`__` credentials from a locally stored
+``.netrc`` file. For example, to connect to a server that requires NASA's
+URS authentication, with the username/password credentials stored on a locally
+accessible ``.netrc``, access to OPeNDAP data should be as simple as this::
 
     import xarray as xr
     import requests
 
-    session = requests.Session()
-    session.auth = ('username', 'password')
+    my_session = requests.Session()
 
-    store = xr.backends.PydapDataStore.open('http://example.com/data',
-                                            session=session)
-    ds = xr.open_dataset(store)
+    ds_url = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
 
-`Pydap's cas module`__ has functions that generate custom sessions for
-servers that use CAS single sign-on. For example, to connect to servers
-that require NASA's URS authentication::
+    ds = xr.open_dataset(ds_url, session=my_session, engine="pydap")
 
-  import xarray as xr
-  from pydata.cas.urs import setup_session
+Moreover, a bearer token header can be included in a `Requests`__ session
+object, allowing for token-based authentication which  OPeNDAP servers can use
+to avoid some redirects.
 
-  ds_url = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
 
-  session = setup_session('username', 'password', check_url=ds_url)
-  store = xr.backends.PydapDataStore.open(ds_url, session=session)
+Lastly, OPeNDAP servers may provide endpoint URLs for different OPeNDAP protocols,
+DAP2 and DAP4. To specify which protocol between the two options to use, you can
+replace the scheme of the url with the name of the protocol. For example::
 
-  ds = xr.open_dataset(store)
+    # dap2 url
+    ds_url = 'dap2://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
+
+    # dap4 url
+    ds_url = 'dap4://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
+
+While most OPeNDAP servers implement DAP2, not all servers implement DAP4. It
+is recommended to check if the URL you are using `supports DAP4`__ by checking the
+URL on a browser.
 
 __ https://docs.python-requests.org
-__ https://www.pydap.org/en/latest/client.html#authentication
+__ https://pydap.github.io/pydap/en/notebooks/Authentication.html
+__ https://pydap.github.io/pydap/en/faqs/dap2_or_dap4_url.html
 
 .. _io.pickle:
 
@@ -1269,7 +1342,7 @@ Pickle
 The simplest way to serialize an xarray object is to use Python's built-in pickle
 module:
 
-.. ipython:: python
+.. jupyter-execute::
 
     import pickle
 
@@ -1304,18 +1377,16 @@ Dictionary
 We can convert a ``Dataset`` (or a ``DataArray``) to a dict using
 :py:meth:`Dataset.to_dict`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.Dataset({"foo": ("x", np.arange(30))})
-    ds
-
     d = ds.to_dict()
     d
 
 We can create a new xarray object from a dict using
 :py:meth:`Dataset.from_dict`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds_dict = xr.Dataset.from_dict(d)
     ds_dict
@@ -1328,19 +1399,22 @@ be quite large.
 To export just the dataset schema without the data itself, use the
 ``data=False`` option:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.to_dict(data=False)
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     # We're now done with the dataset named `ds`.  Although the `with` statement closed
     # the dataset, displaying the unpickled pickle of `ds` re-opened "saved_on_disk.nc".
     # However, `ds` (rather than the unpickled dataset) refers to the open file.  Delete
     # `ds` to close the file.
     del ds
-    os.remove("saved_on_disk.nc")
+
+    for f in ["saved_on_disk.nc", "saved_on_disk.h5"]:
+        if os.path.exists(f):
+            os.remove(f)
 
 This can be useful for generating indices of dataset contents to expose to
 search indices or other automated data discovery tools.
@@ -1353,15 +1427,15 @@ Rasterio
 GDAL readable raster data using `rasterio`_  such as GeoTIFFs can be opened using the `rioxarray`_ extension.
 `rioxarray`_ can also handle geospatial related tasks such as re-projecting and clipping.
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [1]: import rioxarray
+    import rioxarray
 
-    In [2]: rds = rioxarray.open_rasterio("RGB.byte.tif")
+    rds = rioxarray.open_rasterio("RGB.byte.tif")
+    rds
 
-    In [3]: rds
-    Out[3]:
+.. jupyter-output::
+
     <xarray.DataArray (band: 3, y: 718, x: 791)>
     [1703814 values with dtype=uint8]
     Coordinates:
@@ -1380,15 +1454,17 @@ GDAL readable raster data using `rasterio`_  such as GeoTIFFs can be opened usin
         add_offset:          0.0
         grid_mapping:        spatial_ref
 
-    In [4]: rds.rio.crs
-    Out[4]: CRS.from_epsg(32618)
+.. jupyter-input::
 
-    In [5]: rds4326 = rds.rio.reproject("epsg:4326")
+    rds.rio.crs
+    # CRS.from_epsg(32618)
 
-    In [6]: rds4326.rio.crs
-    Out[6]: CRS.from_epsg(4326)
+    rds4326 = rds.rio.reproject("epsg:4326")
 
-    In [7]: rds4326.rio.to_raster("RGB.byte.4326.tif")
+    rds4326.rio.crs
+    # CRS.from_epsg(4326)
+
+    rds4326.rio.to_raster("RGB.byte.4326.tif")
 
 
 .. _rasterio: https://rasterio.readthedocs.io/en/latest/
@@ -1398,8 +1474,8 @@ GDAL readable raster data using `rasterio`_  such as GeoTIFFs can be opened usin
 
 .. _io.cfgrib:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import shutil
 
@@ -1413,10 +1489,9 @@ Xarray supports reading GRIB files via ECMWF cfgrib_ python driver,
 if it is installed. To open a GRIB file supply ``engine='cfgrib'``
 to :py:func:`open_dataset` after installing cfgrib_:
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [1]: ds_grib = xr.open_dataset("example.grib", engine="cfgrib")
+    ds_grib = xr.open_dataset("example.grib", engine="cfgrib")
 
 We recommend installing cfgrib via conda::
 

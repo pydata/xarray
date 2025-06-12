@@ -1,16 +1,30 @@
+"""
+Functions for handling chunked arrays.
+"""
+
+from __future__ import annotations
+
 import itertools
 from collections.abc import Hashable, Mapping
 from functools import lru_cache
 from numbers import Number
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, overload
 
 from xarray.core import utils
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import IndexVariable, Variable
-from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, guess_chunkmanager
+from xarray.namedarray.parallelcompat import (
+    ChunkManagerEntrypoint,
+    get_chunked_array_type,
+    guess_chunkmanager,
+)
 
 if TYPE_CHECKING:
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
     from xarray.core.types import T_ChunkDim
+
+    MissingCoreDimOptions = Literal["raise", "copy", "drop"]
 
 
 @lru_cache(maxsize=512)
@@ -99,7 +113,7 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
 def _maybe_chunk(
     name: Hashable,
     var: Variable,
-    chunks: Mapping[Any, "T_ChunkDim"] | None,
+    chunks: Mapping[Any, T_ChunkDim] | None,
     token=None,
     lock=None,
     name_prefix: str = "xarray-",
@@ -145,3 +159,80 @@ def _maybe_chunk(
         return var
     else:
         return var
+
+
+_T = TypeVar("_T", bound=Union["Dataset", "DataArray"])
+_U = TypeVar("_U", bound=Union["Dataset", "DataArray"])
+_V = TypeVar("_V", bound=Union["Dataset", "DataArray"])
+
+
+@overload
+def unify_chunks(obj: _T, /) -> tuple[_T]: ...
+
+
+@overload
+def unify_chunks(obj1: _T, obj2: _U, /) -> tuple[_T, _U]: ...
+
+
+@overload
+def unify_chunks(obj1: _T, obj2: _U, obj3: _V, /) -> tuple[_T, _U, _V]: ...
+
+
+@overload
+def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]: ...
+
+
+def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]:
+    """
+    Given any number of Dataset and/or DataArray objects, returns
+    new objects with unified chunk size along all chunked dimensions.
+
+    Returns
+    -------
+    unified (DataArray or Dataset) – Tuple of objects with the same type as
+    *objects with consistent chunk sizes for all dask-array variables
+
+    See Also
+    --------
+    dask.array.core.unify_chunks
+    """
+    from xarray.core.dataarray import DataArray
+
+    # Convert all objects to datasets
+    datasets = [
+        obj._to_temp_dataset() if isinstance(obj, DataArray) else obj.copy()
+        for obj in objects
+    ]
+
+    # Get arguments to pass into dask.array.core.unify_chunks
+    unify_chunks_args = []
+    sizes: dict[Hashable, int] = {}
+    for ds in datasets:
+        for v in ds._variables.values():
+            if v.chunks is not None:
+                # Check that sizes match across different datasets
+                for dim, size in v.sizes.items():
+                    try:
+                        if sizes[dim] != size:
+                            raise ValueError(
+                                f"Dimension {dim!r} size mismatch: {sizes[dim]} != {size}"
+                            )
+                    except KeyError:
+                        sizes[dim] = size
+                unify_chunks_args += [v._data, v._dims]
+
+    # No dask arrays: Return inputs
+    if not unify_chunks_args:
+        return objects
+
+    chunkmanager = get_chunked_array_type(*list(unify_chunks_args))
+    _, chunked_data = chunkmanager.unify_chunks(*unify_chunks_args)
+    chunked_data_iter = iter(chunked_data)
+    out: list[Dataset | DataArray] = []
+    for obj, ds in zip(objects, datasets, strict=True):
+        for k, v in ds._variables.items():
+            if v.chunks is not None:
+                ds._variables[k] = v.copy(data=next(chunked_data_iter))
+        out.append(obj._from_temp_dataset(ds) if isinstance(obj, DataArray) else ds)
+
+    return tuple(out)

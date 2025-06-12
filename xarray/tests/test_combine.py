@@ -15,7 +15,7 @@ from xarray import (
     merge,
 )
 from xarray.core import dtypes
-from xarray.core.combine import (
+from xarray.structure.combine import (
     _check_shape_tile_ids,
     _combine_all_along_first_dim,
     _combine_nd,
@@ -556,11 +556,11 @@ class TestNestedCombine:
                 datasets, concat_dim=["dim1", "dim2"], combine_attrs="identical"
             )
 
-        for combine_attrs in expected_dict:
+        for combine_attrs, expected in expected_dict.items():
             result = combine_nested(
                 datasets, concat_dim=["dim1", "dim2"], combine_attrs=combine_attrs
             )
-            assert_identical(result, expected_dict[combine_attrs])
+            assert_identical(result, expected)
 
     def test_combine_nested_missing_data_new_dim(self):
         # Your data includes "time" and "station" dimensions, and each year's

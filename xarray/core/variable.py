@@ -13,12 +13,12 @@ from typing import TYPE_CHECKING, Any, NoReturn, cast
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
-from pandas.api.types import is_extension_array_dtype
 
 import xarray as xr  # only for Dataset and DataArray
-from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
-from xarray.core.arithmetic import VariableArithmetic
-from xarray.core.array_api_compat import to_like_array
+from xarray.compat.array_api_compat import to_like_array
+from xarray.computation import ops
+from xarray.computation.arithmetic import VariableArithmetic
+from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, utils
 from xarray.core.common import AbstractArray
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
@@ -59,9 +59,15 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
     pd.Index,
     pd.api.extensions.ExtensionArray,
+    PandasExtensionArray,
 )
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
+UNSUPPORTED_EXTENSION_ARRAY_TYPES = (
+    pd.arrays.DatetimeArray,
+    pd.arrays.TimedeltaArray,
+    pd.arrays.NumpyExtensionArray,  # type: ignore[attr-defined]
+)
 
 if TYPE_CHECKING:
     from xarray.core.types import (
@@ -167,15 +173,14 @@ def as_variable(
             f"explicit list of dimensions: {obj!r}"
         )
 
-    if auto_convert:
-        if name is not None and name in obj.dims and obj.ndim == 1:
-            # automatically convert the Variable into an Index
-            emit_user_level_warning(
-                f"variable {name!r} with name matching its dimension will not be "
-                "automatically converted into an `IndexVariable` object in the future.",
-                FutureWarning,
-            )
-            obj = obj.to_index_variable()
+    if auto_convert and name is not None and name in obj.dims and obj.ndim == 1:
+        # automatically convert the Variable into an Index
+        emit_user_level_warning(
+            f"variable {name!r} with name matching its dimension will not be "
+            "automatically converted into an `IndexVariable` object in the future.",
+            FutureWarning,
+        )
+        obj = obj.to_index_variable()
 
     return obj
 
@@ -190,8 +195,10 @@ def _maybe_wrap_data(data):
     """
     if isinstance(data, pd.Index):
         return PandasIndexingAdapter(data)
+    if isinstance(data, UNSUPPORTED_EXTENSION_ARRAY_TYPES):
+        return data.to_numpy()
     if isinstance(data, pd.api.extensions.ExtensionArray):
-        return PandasExtensionArray[type(data)](data)
+        return PandasExtensionArray(data)
     return data
 
 
@@ -251,7 +258,14 @@ def as_compatible_data(
 
     # we don't want nested self-described arrays
     if isinstance(data, pd.Series | pd.DataFrame):
-        pandas_data = data.values
+        if (
+            isinstance(data, pd.Series)
+            and pd.api.types.is_extension_array_dtype(data)
+            and not isinstance(data.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES)
+        ):
+            pandas_data = data.array
+        else:
+            pandas_data = data.values  # type: ignore[assignment]
         if isinstance(pandas_data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
             return convert_non_numpy_type(pandas_data)
         else:
@@ -391,7 +405,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     @property
     def _in_memory(self):
         return isinstance(
-            self._data, np.ndarray | np.number | PandasIndexingAdapter
+            self._data,
+            np.ndarray | np.number | PandasIndexingAdapter | PandasExtensionArray,
         ) or (
             isinstance(self._data, indexing.MemoryCachedArray)
             and isinstance(self._data.array, indexing.NumpyIndexingAdapter)
@@ -409,12 +424,20 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         Variable.as_numpy
         Variable.values
         """
-        if is_duck_array(self._data):
-            return self._data
+        if isinstance(self._data, PandasExtensionArray):
+            duck_array = self._data.array
         elif isinstance(self._data, indexing.ExplicitlyIndexed):
-            return self._data.get_duck_array()
+            duck_array = self._data.get_duck_array()
+        elif is_duck_array(self._data):
+            duck_array = self._data
         else:
-            return self.values
+            duck_array = self.values
+        if isinstance(duck_array, PandasExtensionArray):
+            # even though PandasExtensionArray is a duck array,
+            # we should not return the PandasExtensionArray wrapper,
+            # and instead return the underlying data.
+            return duck_array.array
+        return duck_array
 
     @data.setter
     def data(self, data: T_DuckArray | ArrayLike) -> None:
@@ -483,7 +506,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dask.array.Array.astype
         sparse.COO.astype
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
 
         kwargs = dict(order=order, casting=casting, subok=subok, copy=copy)
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
@@ -1042,7 +1065,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         numpy.squeeze
         """
         dims = common.get_squeeze_dims(self, dim)
-        return self.isel({d: 0 for d in dims})
+        return self.isel(dict.fromkeys(dims, 0))
 
     def _shift_one_dim(self, dim, count, fill_value=dtypes.NA):
         axis = self.get_axis_num(dim)
@@ -1346,7 +1369,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             dim = [dim]
 
         if shape is None and is_dict_like(dim):
-            shape = dim.values()
+            shape = tuple(dim.values())
 
         missing_dims = set(self.dims) - set(dim)
         if missing_dims:
@@ -1362,13 +1385,18 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             # don't use broadcast_to unless necessary so the result remains
             # writeable if possible
             expanded_data = self.data
-        elif shape is not None:
-            dims_map = dict(zip(dim, shape, strict=True))
-            tmp_shape = tuple(dims_map[d] for d in expanded_dims)
-            expanded_data = duck_array_ops.broadcast_to(self.data, tmp_shape)
-        else:
+        elif shape is None or all(
+            s == 1 for s, e in zip(shape, dim, strict=True) if e not in self_dims
+        ):
+            # "Trivial" broadcasting, i.e. simply inserting a new dimension
+            # This is typically easier for duck arrays to implement
+            # than the full "broadcast_to" semantics
             indexer = (None,) * (len(expanded_dims) - self.ndim) + (...,)
             expanded_data = self.data[indexer]
+        else:  # elif shape is not None:
+            dims_map = dict(zip(dim, shape, strict=True))
+            tmp_shape = tuple(dims_map[d] for d in expanded_dims)
+            expanded_data = duck_array_ops.broadcast_to(self._data, tmp_shape)
 
         expanded_var = Variable(
             expanded_dims, expanded_data, self._attrs, self._encoding, fastpath=True
@@ -1597,7 +1625,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         numpy.clip : equivalent function
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
 
         xp = duck_array_ops.get_array_namespace(self.data)
         return apply_ufunc(xp.clip, self, min, max, dask="allowed")
@@ -1709,7 +1737,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             Concatenated Variable formed by stacking all the supplied variables
             along the given dimension.
         """
-        from xarray.core.merge import merge_attrs
+        from xarray.structure.merge import merge_attrs
 
         if not isinstance(dim, str):
             (dim,) = dim.dims
@@ -1876,7 +1904,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
            The American Statistician, 50(4), pp. 361-365, 1996
         """
 
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
 
         if interpolation is not None:
             warnings.warn(
@@ -2151,10 +2179,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         Construct a reshaped-array for coarsen
         """
         if not is_dict_like(boundary):
-            boundary = {d: boundary for d in windows.keys()}
+            boundary = dict.fromkeys(windows.keys(), boundary)
 
         if not is_dict_like(side):
-            side = {d: side for d in windows.keys()}
+            side = dict.fromkeys(windows.keys(), side)
 
         # remove unrelated dimensions
         boundary = {k: v for k, v in boundary.items() if k in windows}
@@ -2235,7 +2263,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         <xarray.Variable (x: 3)> Size: 3B
         array([False,  True, False])
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -2269,7 +2297,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         <xarray.Variable (x: 3)> Size: 3B
         array([ True, False,  True])
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -2303,7 +2331,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         return self._new(data=self.data.real)
 
-    def __array_wrap__(self, obj, context=None):
+    def __array_wrap__(self, obj, context=None, return_scalar=False):
         return Variable(self.dims, obj)
 
     def _unary_op(self, f, *args, **kwargs):
@@ -2592,11 +2620,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dask.array.from_array
         """
 
-        if is_extension_array_dtype(self):
-            raise ValueError(
-                f"{self} was found to be a Pandas ExtensionArray.  Please convert to numpy first."
-            )
-
         if from_array_kwargs is None:
             from_array_kwargs = {}
 
@@ -2712,7 +2735,7 @@ class IndexVariable(Variable):
         This exists because we want to avoid converting Index objects to NumPy
         arrays, if possible.
         """
-        from xarray.core.merge import merge_attrs
+        from xarray.structure.merge import merge_attrs
 
         if not isinstance(dim, str):
             (dim,) = dim.dims
@@ -2920,15 +2943,15 @@ def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
 
 
 def _broadcast_compat_data(self, other):
-    if not OPTIONS["arithmetic_broadcast"]:
-        if (isinstance(other, Variable) and self.dims != other.dims) or (
-            is_duck_array(other) and self.ndim != other.ndim
-        ):
-            raise ValueError(
-                "Broadcasting is necessary but automatic broadcasting is disabled via "
-                "global option `'arithmetic_broadcast'`. "
-                "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
-            )
+    if not OPTIONS["arithmetic_broadcast"] and (
+        (isinstance(other, Variable) and self.dims != other.dims)
+        or (is_duck_array(other) and self.ndim != other.ndim)
+    ):
+        raise ValueError(
+            "Broadcasting is necessary but automatic broadcasting is disabled via "
+            "global option `'arithmetic_broadcast'`. "
+            "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
+        )
 
     if all(hasattr(other, attr) for attr in ["dims", "data", "shape", "encoding"]):
         # `other` satisfies the necessary Variable API for broadcast_variables

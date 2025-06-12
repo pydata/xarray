@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import collections.abc
 import copy
+import inspect
 from collections import defaultdict
-from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
 
 from xarray.core import formatting, nputils, utils
 from xarray.core.coordinate_transform import CoordinateTransform
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
     CoordinateTransformIndexingAdapter,
     IndexSelResult,
@@ -195,6 +197,49 @@ class Index:
         else:
             return {}
 
+    def should_add_coord_to_array(
+        self,
+        name: Hashable,
+        var: Variable,
+        dims: set[Hashable],
+    ) -> bool:
+        """Define whether or not an index coordinate variable should be added to
+        a new DataArray.
+
+        This method is called repeatedly for each Variable associated with this
+        index when creating a new DataArray (via its constructor or from a
+        Dataset) or updating an existing one. The variables associated with this
+        index are the ones passed to :py:meth:`Index.from_variables` and/or
+        returned by :py:meth:`Index.create_variables`.
+
+        By default returns ``True`` if the dimensions of the coordinate variable
+        are a subset of the array dimensions and ``False`` otherwise (DataArray
+        model). This default behavior may be overridden in Index subclasses to
+        bypass strict conformance with the DataArray model. This is useful for
+        example to include the (n+1)-dimensional cell boundary coordinate
+        associated with an interval index.
+
+        Returning ``False`` will either:
+
+        - raise a :py:class:`CoordinateValidationError` when passing the
+          coordinate directly to a new or an existing DataArray, e.g., via
+          ``DataArray.__init__()`` or ``DataArray.assign_coords()``
+
+        - drop the coordinate (and therefore drop the index) when a new
+          DataArray is constructed by indexing a Dataset
+
+        Parameters
+        ----------
+        name : Hashable
+            Name of a coordinate variable associated to this index.
+        var : Variable
+            Coordinate variable object.
+        dims: tuple
+            Dimensions of the new DataArray object being created.
+
+        """
+        return all(d in dims for d in var.dims)
+
     def to_pandas_index(self) -> pd.Index:
         """Cast this xarray index to a pandas.Index object or raise a
         ``TypeError`` if this is not supported.
@@ -304,7 +349,15 @@ class Index:
         """
         raise NotImplementedError(f"{self!r} doesn't support re-indexing labels")
 
-    def equals(self, other: Index) -> bool:
+    @overload
+    def equals(self, other: Index) -> bool: ...
+
+    @overload
+    def equals(
+        self, other: Index, *, exclude: frozenset[Hashable] | None = None
+    ) -> bool: ...
+
+    def equals(self, other: Index, **kwargs) -> bool:
         """Compare this index with another index of the same type.
 
         Implementation is optional but required in order to support alignment.
@@ -313,11 +366,22 @@ class Index:
         ----------
         other : Index
             The other Index object to compare with this object.
+        exclude : frozenset of hashable, optional
+            Dimensions excluded from checking. It is None by default, (i.e.,
+            when this method is not called in the context of alignment). For a
+            n-dimensional index this option allows an Index to optionally ignore
+            any dimension in ``exclude`` when comparing ``self`` with ``other``.
+            For a 1-dimensional index this kwarg can be safely ignored, as this
+            method is not called when all of the index's dimensions are also
+            excluded from alignment (note: the index's dimensions correspond to
+            the union of the dimensions of all coordinate variables associated
+            with this index).
 
         Returns
         -------
         is_equal : bool
             ``True`` if the indexes are equal, ``False`` otherwise.
+
         """
         raise NotImplementedError()
 
@@ -444,6 +508,8 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     from xarray.core.variable import Variable
     from xarray.namedarray.pycompat import to_numpy
 
+    if isinstance(array, PandasExtensionArray):
+        array = pd.Index(array.array)
     if isinstance(array, pd.Index):
         index = array
     elif isinstance(array, DataArray | Variable):
@@ -602,7 +668,11 @@ class PandasIndex(Index):
         self.dim = dim
 
         if coord_dtype is None:
-            coord_dtype = get_valid_numpy_dtype(index)
+            if pd.api.types.is_extension_array_dtype(index.dtype):
+                cast(pd.api.extensions.ExtensionDtype, index.dtype)
+                coord_dtype = index.dtype
+            else:
+                coord_dtype = get_valid_numpy_dtype(index)
         self.coord_dtype = coord_dtype
 
     def _replace(self, index, dim=None, coord_dtype=None):
@@ -698,6 +768,8 @@ class PandasIndex(Index):
 
         if not indexes:
             coord_dtype = None
+        elif len(set(idx.coord_dtype for idx in indexes)) == 1:
+            coord_dtype = indexes[0].coord_dtype
         else:
             coord_dtype = np.result_type(*[idx.coord_dtype for idx in indexes])
 
@@ -778,23 +850,18 @@ class PandasIndex(Index):
                             "'tolerance' is not supported when indexing using a CategoricalIndex."
                         )
                     indexer = self.index.get_loc(label_value)
+                elif method is not None:
+                    indexer = get_indexer_nd(self.index, label_array, method, tolerance)
+                    if np.any(indexer < 0):
+                        raise KeyError(f"not all values found in index {coord_name!r}")
                 else:
-                    if method is not None:
-                        indexer = get_indexer_nd(
-                            self.index, label_array, method, tolerance
-                        )
-                        if np.any(indexer < 0):
-                            raise KeyError(
-                                f"not all values found in index {coord_name!r}"
-                            )
-                    else:
-                        try:
-                            indexer = self.index.get_loc(label_value)
-                        except KeyError as e:
-                            raise KeyError(
-                                f"not all values found in index {coord_name!r}. "
-                                "Try setting the `method` keyword argument (example: method='nearest')."
-                            ) from e
+                    try:
+                        indexer = self.index.get_loc(label_value)
+                    except KeyError as e:
+                        raise KeyError(
+                            f"not all values found in index {coord_name!r}. "
+                            "Try setting the `method` keyword argument (example: method='nearest')."
+                        ) from e
 
             elif label_array.dtype.kind == "b":
                 indexer = label_array
@@ -811,7 +878,7 @@ class PandasIndex(Index):
 
         return IndexSelResult({self.dim: indexer})
 
-    def equals(self, other: Index):
+    def equals(self, other: Index, *, exclude: frozenset[Hashable] | None = None):
         if not isinstance(other, PandasIndex):
             return False
         return self.index.equals(other.index) and self.dim == other.dim
@@ -1046,9 +1113,11 @@ class PandasMultiIndex(PandasIndex):
                 *[lev.factorize() for lev in level_indexes], strict=True
             )
             labels_mesh = np.meshgrid(*split_labels, indexing="ij")
-            labels = [x.ravel() for x in labels_mesh]
+            labels = [x.ravel().tolist() for x in labels_mesh]
 
-            index = pd.MultiIndex(levels, labels, sortorder=0, names=variables.keys())
+            index = pd.MultiIndex(
+                levels=levels, codes=labels, sortorder=0, names=variables.keys()
+            )
         level_coords_dtype = {k: var.dtype for k, var in variables.items()}
 
         return cls(index, dim, level_coords_dtype=level_coords_dtype)
@@ -1120,7 +1189,8 @@ class PandasMultiIndex(PandasIndex):
             levels.append(cat.categories)
             level_variables[name] = var
 
-        index = pd.MultiIndex(levels, codes, names=names)
+        codes_as_lists = [list(x) for x in codes]
+        index = pd.MultiIndex(levels=levels, codes=codes_as_lists, names=names)
         level_coords_dtype = {k: var.dtype for k, var in level_variables.items()}
         obj = cls(index, dim, level_coords_dtype=level_coords_dtype)
         index_vars = obj.create_variables(level_variables)
@@ -1326,7 +1396,7 @@ class PandasMultiIndex(PandasIndex):
             # variable(s) attrs and encoding metadata are propagated
             # when replacing the indexes in the resulting xarray object
             new_vars = new_index.create_variables()
-            indexes = cast(dict[Any, Index], {k: new_index for k in new_vars})
+            indexes = cast(dict[Any, Index], dict.fromkeys(new_vars, new_index))
 
             # add scalar variable for each dropped level
             variables = new_vars
@@ -1487,18 +1557,33 @@ class CoordinateTransformIndex(Index):
 
         return IndexSelResult(results)
 
-    def equals(self, other: Index) -> bool:
+    def equals(
+        self, other: Index, *, exclude: frozenset[Hashable] | None = None
+    ) -> bool:
         if not isinstance(other, CoordinateTransformIndex):
             return False
-        return self.transform.equals(other.transform)
+        return self.transform.equals(other.transform, exclude=exclude)
 
     def rename(
         self,
         name_dict: Mapping[Any, Hashable],
         dims_dict: Mapping[Any, Hashable],
     ) -> Self:
-        # TODO: maybe update self.transform coord_names, dim_size and dims attributes
-        return self
+        coord_names = self.transform.coord_names
+        dims = self.transform.dims
+        dim_size = self.transform.dim_size
+
+        if not set(coord_names) & set(name_dict) and not set(dims) & set(dims_dict):
+            return self
+
+        new_transform = copy.deepcopy(self.transform)
+        new_transform.coord_names = tuple(name_dict.get(n, n) for n in coord_names)
+        new_transform.dims = tuple(str(dims_dict.get(d, d)) for d in dims)
+        new_transform.dim_size = {
+            str(dims_dict.get(d, d)): v for d, v in dim_size.items()
+        }
+
+        return type(self)(new_transform)
 
 
 def create_default_index_implicit(
@@ -1515,7 +1600,7 @@ def create_default_index_implicit(
     if all_variables is None:
         all_variables = {}
     if not isinstance(all_variables, Mapping):
-        all_variables = {k: None for k in all_variables}
+        all_variables = dict.fromkeys(all_variables)
 
     name = dim_variable.dims[0]
     array = getattr(dim_variable._data, "array", None)
@@ -1567,7 +1652,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
     """
 
-    _index_type: type[Index] | type[pd.Index]
+    _index_type: type[Index | pd.Index]
     _indexes: dict[Any, T_PandasOrXarrayIndex]
     _variables: dict[Any, Variable]
 
@@ -1585,7 +1670,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         self,
         indexes: Mapping[Any, T_PandasOrXarrayIndex] | None = None,
         variables: Mapping[Any, Variable] | None = None,
-        index_type: type[Index] | type[pd.Index] = Index,
+        index_type: type[Index | pd.Index] = Index,
     ):
         """Constructor not for public consumption.
 
@@ -1806,7 +1891,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
             if convert_new_idx:
                 new_idx = new_idx.index  # type: ignore[attr-defined]
 
-            new_indexes.update({k: new_idx for k in coords})
+            new_indexes.update(dict.fromkeys(coords, new_idx))
             new_index_vars.update(idx_vars)
 
         return new_indexes, new_index_vars
@@ -1852,9 +1937,39 @@ def default_indexes(
         if name in dims and var.ndim == 1:
             index, index_vars = create_default_index_implicit(var, coords)
             if set(index_vars) <= coord_names:
-                indexes.update({k: index for k in index_vars})
+                indexes.update(dict.fromkeys(index_vars, index))
 
     return indexes
+
+
+def _wrap_index_equals(
+    index: Index,
+) -> Callable[[Index, frozenset[Hashable]], bool]:
+    # TODO: remove this Index.equals() wrapper (backward compatibility)
+
+    sig = inspect.signature(index.equals)
+
+    if len(sig.parameters) == 1:
+        index_cls_name = type(index).__module__ + "." + type(index).__qualname__
+        emit_user_level_warning(
+            f"the signature ``{index_cls_name}.equals(self, other)`` is deprecated. "
+            f"Please update it to "
+            f"``{index_cls_name}.equals(self, other, *, exclude=None)`` "
+            "or kindly ask the maintainers of ``{index_cls_name}`` to do it. "
+            "See documentation of xarray.Index.equals() for more info.",
+            FutureWarning,
+        )
+        exclude_kwarg = False
+    else:
+        exclude_kwarg = True
+
+    def equals_wrapper(other: Index, exclude: frozenset[Hashable]) -> bool:
+        if exclude_kwarg:
+            return index.equals(other, exclude=exclude)
+        else:
+            return index.equals(other)
+
+    return equals_wrapper
 
 
 def indexes_equal(
@@ -1898,6 +2013,7 @@ def indexes_equal(
 
 def indexes_all_equal(
     elements: Sequence[tuple[Index, dict[Hashable, Variable]]],
+    exclude_dims: frozenset[Hashable],
 ) -> bool:
     """Check if indexes are all equal.
 
@@ -1922,9 +2038,11 @@ def indexes_all_equal(
 
     same_type = all(type(indexes[0]) is type(other_idx) for other_idx in indexes[1:])
     if same_type:
+        index_equals_func = _wrap_index_equals(indexes[0])
         try:
             not_equal = any(
-                not indexes[0].equals(other_idx) for other_idx in indexes[1:]
+                not index_equals_func(other_idx, exclude_dims)
+                for other_idx in indexes[1:]
             )
         except NotImplementedError:
             not_equal = check_variables()
@@ -1955,7 +2073,7 @@ def _apply_indexes_fast(indexes: Indexes[Index], args: Mapping[Any, Any], func: 
         if index_args:
             new_index = getattr(index, func)(index_args)
             if new_index is not None:
-                new_indexes.update({k: new_index for k in index_vars})
+                new_indexes.update(dict.fromkeys(index_vars, new_index))
                 new_index_vars = new_index.create_variables(index_vars)
                 new_index_variables.update(new_index_vars)
             else:
@@ -1978,7 +2096,7 @@ def _apply_indexes(
         if index_args:
             new_index = getattr(index, func)(index_args)
             if new_index is not None:
-                new_indexes.update({k: new_index for k in index_vars})
+                new_indexes.update(dict.fromkeys(index_vars, new_index))
                 new_index_vars = new_index.create_variables(index_vars)
                 new_index_variables.update(new_index_vars)
             else:

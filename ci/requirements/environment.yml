@@ -20,6 +20,7 @@ dependencies:
   - iris
   - lxml # Optional dep of pydap
   - matplotlib-base
+  - mypy==1.15 # mypy 1.16 breaks CI
   - nc-time-axis
   - netcdf4
   - numba
@@ -29,7 +30,7 @@ dependencies:
   - opt_einsum
   - packaging
   - pandas
-  - pandas-stubs
+  - pandas-stubs<=2.2.3.241126 # https://github.com/pydata/xarray/issues/10110
   # - pint>=0.22
   - pip
   - pooch
@@ -56,6 +57,7 @@ dependencies:
   - types-pytz
   - types-PyYAML
   - types-setuptools
+  - types-openpyxl
   - typing_extensions
   - zarr
   - pip:

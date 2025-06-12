@@ -1,6 +1,6 @@
 .. currentmodule:: xarray
 
-.. _comput:
+.. _compute:
 
 ###########
 Computation
@@ -18,8 +18,9 @@ Basic array math
 Arithmetic operations with a single DataArray automatically vectorize (like
 numpy) over all array values:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
+    :hide-output:
 
     import numpy as np
     import pandas as pd
@@ -27,13 +28,18 @@ numpy) over all array values:
 
     np.random.seed(123456)
 
-.. ipython:: python
+    %xmode minimal
+
+.. jupyter-execute::
 
     arr = xr.DataArray(
         np.random.default_rng(0).random((2, 3)),
         [("x", ["a", "b"]), ("y", [10, 20, 30])],
     )
     arr - 3
+
+.. jupyter-execute::
+
     abs(arr)
 
 You can also use any of numpy's or scipy's many `ufunc`__ functions directly on
@@ -41,31 +47,39 @@ a DataArray:
 
 __ https://numpy.org/doc/stable/reference/ufuncs.html
 
-.. ipython:: python
+.. jupyter-execute::
 
     np.sin(arr)
 
 Use :py:func:`~xarray.where` to conditionally switch between values:
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.where(arr > 0, "positive", "negative")
 
 Use ``@`` to compute the :py:func:`~xarray.dot` product:
 
-.. ipython:: python
+.. jupyter-execute::
 
     arr @ arr
 
 Data arrays also implement many :py:class:`numpy.ndarray` methods:
 
-.. ipython:: python
+.. jupyter-execute::
 
     arr.round(2)
+
+.. jupyter-execute::
+
     arr.T
+
+.. jupyter-execute::
 
     intarr = xr.DataArray([0, 1, 2, 3, 4, 5])
     intarr << 2  # only supported for int types
+
+.. jupyter-execute::
+
     intarr >> 1
 
 .. _missing_values:
@@ -87,7 +101,7 @@ methods for working with missing data from pandas:
 It returns a new xarray object with the same dimensions as the original object, but with boolean values
 indicating where **missing values** are present.
 
-.. ipython:: python
+.. jupyter-execute::
 
     x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
     x.isnull()
@@ -99,7 +113,7 @@ object has 'True' values in the third and fourth positions and 'False' values in
 object. It returns a new xarray object with the same dimensions as the original object, but with boolean
 values indicating where **non-missing values** are present.
 
-.. ipython:: python
+.. jupyter-execute::
 
     x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
     x.notnull()
@@ -113,7 +127,7 @@ non-missing values along one or more dimensions of an xarray object. It returns 
 the same dimensions as the original object, but with each element replaced by the count of non-missing
 values along the specified dimensions.
 
-.. ipython:: python
+.. jupyter-execute::
 
     x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
     x.count()
@@ -126,7 +140,7 @@ the number of non-null elements in x.
 It returns a new xarray object with the same dimensions as the original object, but with missing values
 removed.
 
-.. ipython:: python
+.. jupyter-execute::
 
     x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
     x.dropna(dim="x")
@@ -138,7 +152,7 @@ original order.
 :py:meth:`~xarray.DataArray.fillna` is a method in xarray that can be used to fill missing or null values in an xarray object with a
 specified value or method. It returns a new xarray object with the same dimensions as the original object, but with missing values filled.
 
-.. ipython:: python
+.. jupyter-execute::
 
     x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
     x.fillna(-1)
@@ -151,7 +165,7 @@ returns a new :py:class:`~xarray.DataArray` object with five elements, containin
 xarray object along one or more dimensions. It returns a new xarray object with the same dimensions as the
 original object, but with missing values replaced by the last non-missing value along the specified dimensions.
 
-.. ipython:: python
+.. jupyter-execute::
 
     x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
     x.ffill("x")
@@ -164,7 +178,7 @@ five elements, containing the values [0, 1, 1, 1, 2] in the original order.
 xarray object along one or more dimensions. It returns a new xarray object with the same dimensions as the original object, but
 with missing values replaced by the next non-missing value along the specified dimensions.
 
-.. ipython:: python
+.. jupyter-execute::
 
     x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
     x.bfill("x")
@@ -180,7 +194,7 @@ Xarray objects also have an :py:meth:`~xarray.DataArray.interpolate_na` method
 for filling missing values via 1D interpolation. It returns a new xarray object with the same dimensions
 as the original object, but with missing values interpolated.
 
-.. ipython:: python
+.. jupyter-execute::
 
     x = xr.DataArray(
         [0, 1, np.nan, np.nan, 2],
@@ -212,10 +226,16 @@ Aggregation methods have been updated to take a ``dim`` argument instead of
 ``axis``. This allows for very intuitive syntax for aggregation methods that are
 applied along particular dimension(s):
 
-.. ipython:: python
+.. jupyter-execute::
 
     arr.sum(dim="x")
+
+.. jupyter-execute::
+
     arr.std(["x", "y"])
+
+.. jupyter-execute::
+
     arr.min()
 
 
@@ -223,20 +243,20 @@ If you need to figure out the axis number for a dimension yourself (say,
 for wrapping code designed to work with numpy arrays), you can use the
 :py:meth:`~xarray.DataArray.get_axis_num` method:
 
-.. ipython:: python
+.. jupyter-execute::
 
     arr.get_axis_num("y")
 
 These operations automatically skip missing values, like in pandas:
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.DataArray([1, 2, np.nan, 3]).mean()
 
 If desired, you can disable this behavior by invoking the aggregation method
 with ``skipna=False``.
 
-.. _comput.rolling:
+.. _compute.rolling:
 
 Rolling window operations
 =========================
@@ -244,7 +264,7 @@ Rolling window operations
 ``DataArray`` objects include a :py:meth:`~xarray.DataArray.rolling` method. This
 method supports rolling window aggregation:
 
-.. ipython:: python
+.. jupyter-execute::
 
     arr = xr.DataArray(np.arange(0, 7.5, 0.5).reshape(3, 5), dims=("x", "y"))
     arr
@@ -253,24 +273,27 @@ method supports rolling window aggregation:
 name of the dimension as a key (e.g. ``y``) and the window size as the value
 (e.g. ``3``).  We get back a ``Rolling`` object:
 
-.. ipython:: python
+.. jupyter-execute::
 
     arr.rolling(y=3)
 
 Aggregation and summary methods can be applied directly to the ``Rolling``
 object:
 
-.. ipython:: python
+.. jupyter-execute::
 
     r = arr.rolling(y=3)
     r.reduce(np.std)
+
+.. jupyter-execute::
+
     r.mean()
 
 Aggregation results are assigned the coordinate at the end of each window by
 default, but can be centered by passing ``center=True`` when constructing the
 ``Rolling`` object:
 
-.. ipython:: python
+.. jupyter-execute::
 
     r = arr.rolling(y=3, center=True)
     r.mean()
@@ -280,16 +303,19 @@ array produce ``nan``\s.  Setting ``min_periods`` in the call to ``rolling``
 changes the minimum number of observations within the window required to have
 a value when aggregating:
 
-.. ipython:: python
+.. jupyter-execute::
 
     r = arr.rolling(y=3, min_periods=2)
     r.mean()
+
+.. jupyter-execute::
+
     r = arr.rolling(y=3, center=True, min_periods=2)
     r.mean()
 
 From version 0.17, xarray supports multidimensional rolling,
 
-.. ipython:: python
+.. jupyter-execute::
 
     r = arr.rolling(x=2, y=3, min_periods=2)
     r.mean()
@@ -308,7 +334,7 @@ We can also manually iterate through ``Rolling`` objects:
         # arr_window is a view of x
         ...
 
-.. _comput.rolling_exp:
+.. _compute.rolling_exp:
 
 While ``rolling`` provides a simple moving average, ``DataArray`` also supports
 an exponential moving average with :py:meth:`~xarray.DataArray.rolling_exp`.
@@ -330,18 +356,21 @@ the last position.
 You can use this for more advanced rolling operations such as strided rolling,
 windowed rolling, convolution, short-time FFT etc.
 
-.. ipython:: python
+.. jupyter-execute::
 
     # rolling with 2-point stride
     rolling_da = r.construct(x="x_win", y="y_win", stride=2)
     rolling_da
+
+.. jupyter-execute::
+
     rolling_da.mean(["x_win", "y_win"], skipna=False)
 
 Because the ``DataArray`` given by ``r.construct('window_dim')`` is a view
 of the original array, it is memory efficient.
 You can also use ``construct`` to compute a weighted rolling sum:
 
-.. ipython:: python
+.. jupyter-execute::
 
     weight = xr.DataArray([0.25, 0.5, 0.25], dims=["window"])
     arr.rolling(y=3).construct(y="window").dot(weight)
@@ -354,7 +383,7 @@ You can also use ``construct`` to compute a weighted rolling sum:
   To avoid this, use ``skipna=False`` as the above example.
 
 
-.. _comput.weighted:
+.. _compute.weighted:
 
 Weighted array reductions
 =========================
@@ -363,7 +392,7 @@ Weighted array reductions
 and :py:meth:`Dataset.weighted` array reduction methods. They currently
 support weighted ``sum``, ``mean``, ``std``, ``var`` and ``quantile``.
 
-.. ipython:: python
+.. jupyter-execute::
 
     coords = dict(month=("month", [1, 2, 3]))
 
@@ -372,60 +401,60 @@ support weighted ``sum``, ``mean``, ``std``, ``var`` and ``quantile``.
 
 Create a weighted object:
 
-.. ipython:: python
+.. jupyter-execute::
 
     weighted_prec = prec.weighted(weights)
     weighted_prec
 
 Calculate the weighted sum:
 
-.. ipython:: python
+.. jupyter-execute::
 
     weighted_prec.sum()
 
 Calculate the weighted mean:
 
-.. ipython:: python
+.. jupyter-execute::
 
     weighted_prec.mean(dim="month")
 
 Calculate the weighted quantile:
 
-.. ipython:: python
+.. jupyter-execute::
 
     weighted_prec.quantile(q=0.5, dim="month")
 
 The weighted sum corresponds to:
 
-.. ipython:: python
+.. jupyter-execute::
 
     weighted_sum = (prec * weights).sum()
     weighted_sum
 
 the weighted mean to:
 
-.. ipython:: python
+.. jupyter-execute::
 
     weighted_mean = weighted_sum / weights.sum()
     weighted_mean
 
 the weighted variance to:
 
-.. ipython:: python
+.. jupyter-execute::
 
     weighted_var = weighted_prec.sum_of_squares() / weights.sum()
     weighted_var
 
 and the weighted standard deviation to:
 
-.. ipython:: python
+.. jupyter-execute::
 
     weighted_std = np.sqrt(weighted_var)
     weighted_std
 
 However, the functions also take missing values in the data into account:
 
-.. ipython:: python
+.. jupyter-execute::
 
     data = xr.DataArray([np.nan, 2, 4])
     weights = xr.DataArray([8, 1, 1])
@@ -438,7 +467,7 @@ in 0.6.
 
 If the weights add up to to 0, ``sum`` returns 0:
 
-.. ipython:: python
+.. jupyter-execute::
 
     data = xr.DataArray([1.0, 1.0])
     weights = xr.DataArray([-1.0, 1.0])
@@ -447,7 +476,7 @@ If the weights add up to to 0, ``sum`` returns 0:
 
 and ``mean``, ``std`` and ``var`` return ``nan``:
 
-.. ipython:: python
+.. jupyter-execute::
 
     data.weighted(weights).mean()
 
@@ -465,7 +494,7 @@ Coarsen large arrays
 :py:meth:`~xarray.DataArray.coarsen` and :py:meth:`~xarray.Dataset.coarsen`
 methods. This supports block aggregation along multiple dimensions,
 
-.. ipython:: python
+.. jupyter-execute::
 
     x = np.linspace(0, 10, 300)
     t = pd.date_range("1999-12-15", periods=364)
@@ -479,7 +508,7 @@ methods. This supports block aggregation along multiple dimensions,
 In order to take a block mean for every 7 days along ``time`` dimension and
 every 2 points along ``x`` dimension,
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.coarsen(time=7, x=2).mean()
 
@@ -488,14 +517,14 @@ length is not a multiple of the corresponding window size.
 You can choose ``boundary='trim'`` or ``boundary='pad'`` options for trimming
 the excess entries or padding ``nan`` to insufficient entries,
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.coarsen(time=30, x=2, boundary="trim").mean()
 
 If you want to apply a specific function to coordinate, you can pass the
 function or method name to ``coord_func`` option,
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.coarsen(time=7, x=2, coord_func={"time": "min"}).mean()
 
@@ -510,15 +539,14 @@ Xarray objects have some handy methods for the computation with their
 coordinates. :py:meth:`~xarray.DataArray.differentiate` computes derivatives by
 central finite differences using their coordinates,
 
-.. ipython:: python
+.. jupyter-execute::
 
     a = xr.DataArray([0, 1, 2, 3], dims=["x"], coords=[[0.1, 0.11, 0.2, 0.3]])
-    a
     a.differentiate("x")
 
 This method can be used also for multidimensional arrays,
 
-.. ipython:: python
+.. jupyter-execute::
 
     a = xr.DataArray(
         np.arange(8).reshape(4, 2), dims=["x", "y"], coords={"x": [0.1, 0.11, 0.2, 0.3]}
@@ -528,7 +556,7 @@ This method can be used also for multidimensional arrays,
 :py:meth:`~xarray.DataArray.integrate` computes integration based on
 trapezoidal rule using their coordinates,
 
-.. ipython:: python
+.. jupyter-execute::
 
     a.integrate("x")
 
@@ -546,7 +574,7 @@ Xarray objects provide an interface for performing linear or polynomial regressi
 using the least-squares method. :py:meth:`~xarray.DataArray.polyfit` computes the
 best fitting coefficients along a given dimension and for a given order,
 
-.. ipython:: python
+.. jupyter-execute::
 
     x = xr.DataArray(np.arange(10), dims=["x"], name="x")
     a = xr.DataArray(3 + 4 * x, dims=["x"], coords={"x": x})
@@ -556,7 +584,7 @@ best fitting coefficients along a given dimension and for a given order,
 The method outputs a dataset containing the coefficients (and more if ``full=True``).
 The inverse operation is done with :py:meth:`~xarray.polyval`,
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.polyval(coord=x, coeffs=out.polyfit_coefficients)
 
@@ -576,7 +604,7 @@ user-defined functions and can fit along multiple coordinates.
 For example, we can fit a relationship between two ``DataArray`` objects, maintaining
 a unique fit at each spatial coordinate but aggregating over the time dimension:
 
-.. ipython:: python
+.. jupyter-execute::
 
     def exponential(x, a, xc):
         return np.exp((x - xc) / a)
@@ -606,7 +634,7 @@ We can also fit multi-dimensional functions, and even use a wrapper function to
 simultaneously fit a summation of several functions, such as this field containing
 two gaussian peaks:
 
-.. ipython:: python
+.. jupyter-execute::
 
     def gaussian_2d(coords, a, xc, yc, xalpha, yalpha):
         x, y = coords
@@ -660,42 +688,51 @@ operations to work, as commonly done in numpy with :py:func:`numpy.reshape` or
 This is best illustrated by a few examples. Consider two one-dimensional
 arrays with different sizes aligned along different dimensions:
 
-.. ipython:: python
+.. jupyter-execute::
 
     a = xr.DataArray([1, 2], [("x", ["a", "b"])])
     a
+
+.. jupyter-execute::
+
     b = xr.DataArray([-1, -2, -3], [("y", [10, 20, 30])])
     b
 
 With xarray, we can apply binary mathematical operations to these arrays, and
 their dimensions are expanded automatically:
 
-.. ipython:: python
+.. jupyter-execute::
 
     a * b
 
 Moreover, dimensions are always reordered to the order in which they first
 appeared:
 
-.. ipython:: python
+.. jupyter-execute::
 
     c = xr.DataArray(np.arange(6).reshape(3, 2), [b["y"], a["x"]])
     c
+
+.. jupyter-execute::
+
     a + c
 
 This means, for example, that you always subtract an array from its transpose:
 
-.. ipython:: python
+.. jupyter-execute::
 
     c - c.T
 
 You can explicitly broadcast xarray data structures by using the
 :py:func:`~xarray.broadcast` function:
 
-.. ipython:: python
+.. jupyter-execute::
 
     a2, b2 = xr.broadcast(a, b)
     a2
+
+.. jupyter-execute::
+
     b2
 
 .. _math automatic alignment:
@@ -711,7 +748,7 @@ Similarly to pandas, this alignment is automatic for arithmetic on binary
 operations. The default result of a binary operation is by the *intersection*
 (not the union) of coordinate labels:
 
-.. ipython:: python
+.. jupyter-execute::
 
     arr = xr.DataArray(np.arange(3), [("x", range(3))])
     arr + arr[:-1]
@@ -719,17 +756,15 @@ operations. The default result of a binary operation is by the *intersection*
 If coordinate values for a dimension are missing on either argument, all
 matching dimensions must have the same size:
 
-.. ipython::
-    :verbatim:
+.. jupyter-execute::
+    :raises:
 
-    In [1]: arr + xr.DataArray([1, 2], dims="x")
-    ValueError: arguments without labels along dimension 'x' cannot be aligned because they have different dimension size(s) {2} than the size of the aligned dimension labels: 3
-
+    arr + xr.DataArray([1, 2], dims="x")
 
 However, one can explicitly change this default automatic alignment type ("inner")
 via :py:func:`~xarray.set_options()` in context manager:
 
-.. ipython:: python
+.. jupyter-execute::
 
     with xr.set_options(arithmetic_join="outer"):
         arr + arr[:1]
@@ -756,20 +791,29 @@ Although index coordinates are aligned, other coordinates are not, and if their
 values conflict, they will be dropped. This is necessary, for example, because
 indexing turns 1D coordinates into scalar coordinates:
 
-.. ipython:: python
+.. jupyter-execute::
 
     arr[0]
+
+.. jupyter-execute::
+
     arr[1]
+
+.. jupyter-execute::
+
     # notice that the scalar coordinate 'x' is silently dropped
     arr[1] - arr[0]
 
 Still, xarray will persist other coordinates in arithmetic, as long as there
 are no conflicting values:
 
-.. ipython:: python
+.. jupyter-execute::
 
     # only one argument has the 'x' coordinate
     arr[0] + 1
+
+.. jupyter-execute::
+
     # both arguments have the same 'x' coordinate
     arr[0] - arr[0]
 
@@ -779,7 +823,7 @@ Math with datasets
 Datasets support arithmetic operations by automatically looping over all data
 variables:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.Dataset(
         {
@@ -792,30 +836,32 @@ variables:
 
 Datasets support most of the same methods found on data arrays:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.mean(dim="x")
+
+.. jupyter-execute::
+
     abs(ds)
 
 Datasets also support NumPy ufuncs (requires NumPy v1.13 or newer), or
 alternatively you can use :py:meth:`~xarray.Dataset.map` to map a function
 to each variable in a dataset:
 
-.. ipython:: python
+.. jupyter-execute::
 
-    np.sin(ds)
-    ds.map(np.sin)
+    np.sin(ds) # equivalent to ds.map(np.sin)
 
 Datasets also use looping over variables for *broadcasting* in binary
 arithmetic. You can do arithmetic between any ``DataArray`` and a dataset:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds + arr
 
 Arithmetic between two datasets matches data variables of the same name:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds2 = xr.Dataset({"x_and_y": 0, "x_only": 100})
     ds - ds2
@@ -823,7 +869,7 @@ Arithmetic between two datasets matches data variables of the same name:
 Similarly to index based alignment, the result has the intersection of all
 matching data variables.
 
-.. _comput.wrapping-custom:
+.. _compute.wrapping-custom:
 
 Wrapping custom computation
 ===========================
@@ -858,7 +904,7 @@ functions/methods are written using ``apply_ufunc``.
 Simple functions that act independently on each value should work without
 any additional arguments:
 
-.. ipython:: python
+.. jupyter-execute::
 
     squared_error = lambda x, y: (x - y) ** 2
     arr1 = xr.DataArray([0, 1, 2, 3], dims="x")
@@ -885,15 +931,15 @@ to set ``axis=-1``. As an example, here is how we would wrap
             np.linalg.norm, x, input_core_dims=[[dim]], kwargs={"ord": ord, "axis": -1}
         )
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     def vector_norm(x, dim, ord=None):
         return xr.apply_ufunc(
             np.linalg.norm, x, input_core_dims=[[dim]], kwargs={"ord": ord, "axis": -1}
         )
 
-.. ipython:: python
+.. jupyter-execute::
 
     vector_norm(arr1, dim="x")
 

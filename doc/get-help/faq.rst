@@ -3,8 +3,8 @@
 Frequently Asked Questions
 ==========================
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import numpy as np
     import pandas as pd
@@ -101,7 +101,7 @@ Unfortunately, this means we sometimes have to explicitly cast our results from
 xarray when using them in other libraries. As an illustration, the following
 code fragment
 
-.. ipython:: python
+.. jupyter-execute::
 
     arr = xr.DataArray([1, 2, 3])
     pd.Series({"x": arr[0], "mean": arr.mean(), "std": arr.std()})
@@ -109,14 +109,14 @@ code fragment
 does not yield the pandas DataFrame we expected. We need to specify the type
 conversion ourselves:
 
-.. ipython:: python
+.. jupyter-execute::
 
     pd.Series({"x": arr[0], "mean": arr.mean(), "std": arr.std()}, dtype=float)
 
 Alternatively, we could use the ``item`` method or the ``float`` constructor to
 convert values one at a time
 
-.. ipython:: python
+.. jupyter-execute::
 
     pd.Series({"x": arr[0].item(), "mean": float(arr.mean())})
 
@@ -191,7 +191,7 @@ To open format X file in xarray, you need to know the `format of the data <https
    :header: "File Format", "Open via", " Related Packages"
    :widths: 15, 45, 15
 
-   "NetCDF (.nc, .nc4, .cdf)","``open_dataset()`` OR ``open_mfdataset()``", "`netCDF4 <https://pypi.org/project/netCDF4/>`_, `netcdf <https://pypi.org/project/netcdf/>`_ , `cdms2 <https://cdms.readthedocs.io/en/latest/cdms2.html>`_"
+   "NetCDF (.nc, .nc4, .cdf)","``open_dataset()`` OR ``open_mfdataset()``", "`netCDF4 <https://pypi.org/project/netCDF4/>`_, `cdms2 <https://cdms.readthedocs.io/en/latest/cdms2.html>`_"
    "HDF5 (.h5, .hdf5)","``open_dataset()`` OR ``open_mfdataset()``", "`h5py <https://www.h5py.org/>`_, `pytables <https://www.pytables.org/>`_ "
    "GRIB (.grb, .grib)", "``open_dataset()``", "`cfgrib <https://pypi.org/project/cfgrib/>`_, `pygrib <https://pypi.org/project/pygrib/>`_"
    "CSV (.csv)","``open_dataset()``", "`pandas`_ , `dask <https://www.dask.org/>`_"

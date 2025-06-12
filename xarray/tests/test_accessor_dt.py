@@ -6,6 +6,8 @@ import pytest
 
 import xarray as xr
 from xarray.tests import (
+    _CFTIME_CALENDARS,
+    _all_cftime_date_types,
     assert_allclose,
     assert_array_equal,
     assert_chunks_equal,
@@ -390,15 +392,6 @@ class TestTimedeltaAccessor:
         assert_equal(actual.compute(), expected.compute())
 
 
-_CFTIME_CALENDARS = [
-    "365_day",
-    "360_day",
-    "julian",
-    "all_leap",
-    "366_day",
-    "gregorian",
-    "proleptic_gregorian",
-]
 _NT = 100
 
 
@@ -407,7 +400,14 @@ def calendar(request):
     return request.param
 
 
-@pytest.fixture()
+@pytest.fixture
+def cftime_date_type(calendar):
+    if calendar == "standard":
+        calendar = "proleptic_gregorian"
+    return _all_cftime_date_types()[calendar]
+
+
+@pytest.fixture
 def times(calendar):
     import cftime
 
@@ -419,7 +419,7 @@ def times(calendar):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def data(times):
     data = np.random.rand(10, 10, _NT)
     lons = np.linspace(0, 11, 10)
@@ -429,7 +429,7 @@ def data(times):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def times_3d(times):
     lons = np.linspace(0, 11, 10)
     lats = np.linspace(0, 20, 10)
@@ -571,13 +571,6 @@ def test_dask_field_access(times_3d, data, field) -> None:
     assert isinstance(result.data, da.Array)
     assert result.chunks == times_3d.chunks
     assert_equal(result.compute(), expected)
-
-
-@pytest.fixture()
-def cftime_date_type(calendar):
-    from xarray.tests.test_coding_times import _all_cftime_date_types
-
-    return _all_cftime_date_types()[calendar]
 
 
 @requires_cftime

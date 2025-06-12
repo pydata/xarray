@@ -6,7 +6,8 @@ from collections.abc import Mapping
 from functools import lru_cache, partial
 from html import escape
 from importlib.resources import files
-from typing import TYPE_CHECKING
+from math import ceil
+from typing import TYPE_CHECKING, Literal
 
 from xarray.core.formatting import (
     inherited_vars,
@@ -14,7 +15,7 @@ from xarray.core.formatting import (
     inline_variable_array_repr,
     short_data_repr,
 )
-from xarray.core.options import _get_boolean_with_default
+from xarray.core.options import OPTIONS, _get_boolean_with_default
 
 STATIC_FILES = (
     ("xarray.static.html", "icons-svg-inline.html"),
@@ -192,7 +193,13 @@ def collapsible_section(
 
 
 def _mapping_section(
-    mapping, name, details_func, max_items_collapse, expand_option_name, enabled=True
+    mapping,
+    name,
+    details_func,
+    max_items_collapse,
+    expand_option_name,
+    enabled=True,
+    max_option_name: Literal["display_max_children"] | None = None,
 ) -> str:
     n_items = len(mapping)
     expanded = _get_boolean_with_default(
@@ -200,8 +207,15 @@ def _mapping_section(
     )
     collapsed = not expanded
 
+    inline_details = ""
+    if max_option_name and max_option_name in OPTIONS:
+        max_items = int(OPTIONS[max_option_name])
+        if n_items > max_items:
+            inline_details = f"({max_items}/{n_items})"
+
     return collapsible_section(
         name,
+        inline_details=inline_details,
         details=details_func(mapping),
         n_items=n_items,
         enabled=enabled,
@@ -348,26 +362,23 @@ def dataset_repr(ds) -> str:
 
 
 def summarize_datatree_children(children: Mapping[str, DataTree]) -> str:
-    N_CHILDREN = len(children) - 1
+    MAX_CHILDREN = OPTIONS["display_max_children"]
+    n_children = len(children)
 
-    # Get result from datatree_node_repr and wrap it
-    lines_callback = lambda n, c, end: _wrap_datatree_repr(
-        datatree_node_repr(n, c), end=end
-    )
-
-    children_html = "".join(
-        (
-            lines_callback(n, c, end=False)  # Long lines
-            if i < N_CHILDREN
-            else lines_callback(n, c, end=True)
-        )  # Short lines
-        for i, (n, c) in enumerate(children.items())
-    )
+    children_html = []
+    for i, (n, c) in enumerate(children.items()):
+        if i < ceil(MAX_CHILDREN / 2) or i >= ceil(n_children - MAX_CHILDREN / 2):
+            is_last = i == (n_children - 1)
+            children_html.append(
+                _wrap_datatree_repr(datatree_node_repr(n, c), end=is_last)
+            )
+        elif n_children > MAX_CHILDREN and i == ceil(MAX_CHILDREN / 2):
+            children_html.append("<div>...</div>")
 
     return "".join(
         [
             "<div style='display: inline-grid; grid-template-columns: 100%; grid-column: 1 / -1'>",
-            children_html,
+            "".join(children_html),
             "</div>",
         ]
     )
@@ -378,6 +389,7 @@ children_section = partial(
     name="Groups",
     details_func=summarize_datatree_children,
     max_items_collapse=1,
+    max_option_name="display_max_children",
     expand_option_name="display_expand_groups",
 )
 

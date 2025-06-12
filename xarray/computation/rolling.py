@@ -9,8 +9,9 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 import numpy as np
 
-from xarray.core import dask_array_ops, dtypes, duck_array_ops, utils
-from xarray.core.arithmetic import CoarsenArithmetic
+from xarray.compat import dask_array_ops
+from xarray.computation.arithmetic import CoarsenArithmetic
+from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
 from xarray.core.utils import (
@@ -194,11 +195,15 @@ class Rolling(Generic[T_Xarray]):
         return method
 
     def _mean(self, keep_attrs, **kwargs):
-        result = self.sum(keep_attrs=False, **kwargs) / duck_array_ops.astype(
-            self.count(keep_attrs=False), dtype=self.obj.dtype, copy=False
+        result = self.sum(keep_attrs=False, **kwargs)
+        # use dtype of result for casting of count
+        # this allows for GH #7062 and GH #8864, fixes GH #10340
+        result /= duck_array_ops.astype(
+            self.count(keep_attrs=False), dtype=result.dtype, copy=False
         )
         if keep_attrs:
             result.attrs = self.obj.attrs
+
         return result
 
     _mean.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name="mean")
@@ -644,7 +649,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         # bottleneck doesn't allow min_count to be 0, although it should
         # work the same as if min_count = 1
         # Note bottleneck only works with 1d-rolling.
-        if self.min_periods is not None and self.min_periods == 0:
+        if self.min_periods == 0:
             min_count = 1
         else:
             min_count = self.min_periods
@@ -1086,7 +1091,7 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
         if utils.is_dict_like(coord_func):
             coord_func_map = coord_func
         else:
-            coord_func_map = {d: coord_func for d in self.obj.dims}
+            coord_func_map = dict.fromkeys(self.obj.dims, coord_func)
         for c in self.obj.coords:
             if c not in coord_func_map:
                 coord_func_map[c] = duck_array_ops.mean  # type: ignore[index]
@@ -1248,18 +1253,17 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
             for c, v in self.obj.coords.items():
                 if c == self.obj.name:
                     coords[c] = reduced
+                elif any(d in self.windows for d in v.dims):
+                    coords[c] = v.variable.coarsen(
+                        self.windows,
+                        self.coord_func[c],
+                        self.boundary,
+                        self.side,
+                        keep_attrs,
+                        **kwargs,
+                    )
                 else:
-                    if any(d in self.windows for d in v.dims):
-                        coords[c] = v.variable.coarsen(
-                            self.windows,
-                            self.coord_func[c],
-                            self.boundary,
-                            self.side,
-                            keep_attrs,
-                            **kwargs,
-                        )
-                    else:
-                        coords[c] = v
+                    coords[c] = v
             return DataArray(
                 reduced, dims=self.obj.dims, coords=coords, name=self.obj.name
             )
