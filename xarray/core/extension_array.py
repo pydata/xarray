@@ -66,6 +66,11 @@ def __extension_duck_array__where(
     return cast(T_ExtensionArray, pd.Series(x).where(condition, pd.Series(y)).array)
 
 
+@implements(np.ndim)
+def __extension_duck_array__ndim(x: PandasExtensionArray) -> int:
+    return x.ndim
+
+
 @implements(np.reshape)
 def __extension_duck_array__reshape(
     arr: T_ExtensionArray, shape: tuple
@@ -93,6 +98,13 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
     def __post_init__(self):
         if not isinstance(self.array, pd.api.extensions.ExtensionArray):
             raise TypeError(f"{self.array} is not an pandas ExtensionArray.")
+        # This does not use the UNSUPPORTED_EXTENSION_ARRAY_TYPES whitelist because
+        # we do support extension arrays from datetime, for example, that need
+        # duck array support internally via this class.
+        if isinstance(self.array, pd.arrays.NumpyExtensionArray):
+            raise TypeError(
+                "`NumpyExtensionArray` should be converted to a numpy array in `xarray` internally."
+            )
 
     def __array_function__(self, func, types, args, kwargs):
         def replace_duck_with_extension_array(args) -> list:
