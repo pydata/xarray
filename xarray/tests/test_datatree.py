@@ -333,7 +333,7 @@ class TestGetItem:
         assert_identical(results[{"temp": 1}], data[{"temp": 1}])  # type: ignore[index]
 
 
-def test_subset():
+def test_subset() -> None:
     ds1 = xr.Dataset(data_vars={"var1": ("x", [1, 2]), "var2": ("x", [0, 1])})
     ds2 = xr.Dataset(data_vars={"var1": ("x", [1, 2])})
     dt = xr.DataTree.from_dict({"ds1": ds1, "ds2": ds2})
