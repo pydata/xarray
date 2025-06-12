@@ -5,6 +5,34 @@
 What's New
 ==========
 
+.. _whats-new.2025.07.0:
+
+v2025.07.0 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
 .. _whats-new.2025.06.1:
 
 v2025.06.1 (Jun 11, 2025)
@@ -92,13 +120,6 @@ Performance
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Speed up encoding of :py:class:`cftime.datetime` objects by roughly a factor
   of three (:pull:`8324`). By `Antoine Gibek <https://github.com/antscloud>`_.
-
-Documentation
-~~~~~~~~~~~~~
-
-
-Internal Changes
-~~~~~~~~~~~~~~~~
 
 .. _whats-new.2025.04.0:
 
