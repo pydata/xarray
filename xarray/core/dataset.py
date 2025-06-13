@@ -99,6 +99,7 @@ from xarray.core.utils import (
     parse_dims_as_set,
 )
 from xarray.core.variable import (
+    UNSUPPORTED_EXTENSION_ARRAY_TYPES,
     IndexVariable,
     Variable,
     as_variable,
@@ -7281,7 +7282,7 @@ class Dataset(
         extension_arrays = []
         for k, v in dataframe.items():
             if not is_extension_array_dtype(v) or isinstance(
-                v.array, pd.arrays.DatetimeArray | pd.arrays.TimedeltaArray
+                v.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES
             ):
                 arrays.append((k, np.asarray(v)))
             else:

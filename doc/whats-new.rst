@@ -5,9 +5,9 @@
 What's New
 ==========
 
-.. _whats-new.2025.06.1:
+.. _whats-new.2025.07.0:
 
-v2025.06.1 (unreleased)
+v2025.07.0 (unreleased)
 -----------------------
 
 New Features
@@ -24,6 +24,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Fix Pydap test_cmp_local_file for numpy 2.3.0 changes, 1. do always return arrays for all versions and 2. skip astype(str) for numpy >= 2.3.0 for expected data. (:pull:`10421`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Documentation
@@ -32,6 +34,21 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+.. _whats-new.2025.06.1:
+
+v2025.06.1 (Jun 11, 2025)
+-------------------------
+
+This is quick bugfix release to remove an unintended dependency on ``typing_extensions``.
+
+Thanks to the 4 contributors to this release:
+Alex Merose, Deepak Cherian, Ilan Gold and Simon Perkins
+
+Bug fixes
+~~~~~~~~~
+
+- Remove dependency on ``typing_extensions`` (:pull:`10413`). By `Simon Perkins <https://github.com/sjperkins>`_.
 
 .. _whats-new.2025.06.0:
 
@@ -105,13 +122,6 @@ Performance
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Speed up encoding of :py:class:`cftime.datetime` objects by roughly a factor
   of three (:pull:`8324`). By `Antoine Gibek <https://github.com/antscloud>`_.
-
-Documentation
-~~~~~~~~~~~~~
-
-
-Internal Changes
-~~~~~~~~~~~~~~~~
 
 .. _whats-new.2025.04.0:
 
