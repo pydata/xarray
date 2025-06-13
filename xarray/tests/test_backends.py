@@ -5417,11 +5417,12 @@ class TestPydap:
     @contextlib.contextmanager
     def create_datasets(self, **kwargs):
         with open_example_dataset("bears.nc") as expected:
+            # print("QQ0:", expected["bears"].load())
             pydap_ds = self.convert_to_pydap_dataset(expected)
             actual = open_dataset(PydapDataStore(pydap_ds))
-            # TODO solve this workaround:
-            # netcdf converts string to byte not unicode
-            expected["bears"] = expected["bears"].astype(str)
+            if Version(np.__version__) < Version("2.3.0"):
+                # netcdf converts string to byte not unicode
+                expected["bears"] = expected["bears"].astype(str)
             yield actual, expected
 
     def test_cmp_local_file(self) -> None:
@@ -5441,7 +5442,9 @@ class TestPydap:
             assert_equal(actual[{"l": 2}], expected[{"l": 2}])
 
         with self.create_datasets() as (actual, expected):
-            assert_equal(actual.isel(i=0, j=-1), expected.isel(i=0, j=-1))
+            # always return arrays and not scalars
+            # scalars will be promoted to unicode for numpy >= 2.3.0
+            assert_equal(actual.isel(i=[0], j=[-1]), expected.isel(i=[0], j=[-1]))
 
         with self.create_datasets() as (actual, expected):
             assert_equal(actual.isel(j=slice(1, 2)), expected.isel(j=slice(1, 2)))
@@ -5463,7 +5466,9 @@ class TestPydap:
             with create_tmp_file() as tmp_file:
                 actual.to_netcdf(tmp_file)
                 with open_dataset(tmp_file) as actual2:
-                    actual2["bears"] = actual2["bears"].astype(str)
+                    if Version(np.__version__) < Version("2.3.0"):
+                        # netcdf converts string to byte not unicode
+                        actual2["bears"] = actual2["bears"].astype(str)
                     assert_equal(actual2, expected)
 
     @requires_dask
