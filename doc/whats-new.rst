@@ -24,6 +24,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Fix Pydap test_cmp_local_file for numpy 2.3.0 changes, 1. do always return arrays for all versions and 2. skip astype(str) for numpy >= 2.3.0 for expected data. (:pull:`10421`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Check and fix character array string dimension names, issue warnings as needed (:issue:`6352`, :pull:`10395`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
