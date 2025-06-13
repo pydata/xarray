@@ -410,8 +410,8 @@ class NetCDF4DataStore(WritableCFDataStore):
     ):
         import netCDF4
 
-        open_kwargs = asdict(open_opts)
-        store_kwargs = asdict(store_opts)
+        open_kwargs = asdict(open_opts) if open_opts is not None else {}
+        store_kwargs = asdict(store_opts) if store_opts is not None else {}
 
         if isinstance(filename, os.PathLike):
             filename = os.fspath(filename)
@@ -422,7 +422,7 @@ class NetCDF4DataStore(WritableCFDataStore):
                 "with engine='scipy' or 'h5netcdf'"
             )
 
-        format = open_kwargs.pop("format")
+        format = open_kwargs.pop("format", None)
         if format is None:
             format = "NETCDF4"
 
@@ -441,7 +441,8 @@ class NetCDF4DataStore(WritableCFDataStore):
                 lock = combine_locks([base_lock, get_write_lock(filename)])
             store_kwargs["lock"] = lock
         kwargs.update(open_kwargs)
-        print("DD:", kwargs)
+        print("DD0:", kwargs)
+        print("DD1:", store_kwargs)
         manager = CachingFileManager(
             netCDF4.Dataset, filename, mode=mode, kwargs=kwargs
         )
@@ -601,6 +602,18 @@ from xarray.backends.locks import SerializableLock
 
 Buffer = Union[bytes, bytearray, memoryview]
 from xarray.backends.common import BackendOptions
+
+
+@dataclass(frozen=True)
+class StoreWriteOptions:
+    group: Optional[str] = None
+    lock: Optional[SerializableLock] = None
+    autoclose: Optional[bool] = False
+
+
+@dataclass(frozen=True)
+class StoreWriteOpenOptions:
+    format: Optional[str] = "NETCDF4"
 
 
 @dataclass(frozen=True)

@@ -672,6 +672,22 @@ class BackendOptions:
     pass
 
 
+from xarray.backends.locks import SerializableLock
+
+
+@dataclass(frozen=True)
+class StoreWriteOptions:
+    group: Optional[str] = None
+    lock: Optional[SerializableLock] = None
+    autoclose: Optional[bool] = False
+
+
+@dataclass(frozen=True)
+class StoreWriteOpenOptions:
+    mode: Optional[str] = "r"
+    format: Optional[str] = "NETCDF4"
+
+
 @dataclass(frozen=True)
 class XarrayBackendOptions:
     chunks: Optional[T_Chunks] = None
@@ -742,9 +758,9 @@ class BackendEntrypoint:
 
     def __init__(
         self,
-        coder_opts: Optional[CoderOptions] = None,
-        open_opts: Optional[CoderOptions] = None,
-        store_opts: Optional[CoderOptions] = None,
+        coder_opts: Optional[BackendOptions] = None,
+        open_opts: Optional[BackendOptions] = None,
+        store_opts: Optional[BackendOptions] = None,
     ):
         self.coder_opts = coder_opts if coder_opts is not None else self.coder_class()
         self.open_opts = open_opts if open_opts is not None else self.open_class()

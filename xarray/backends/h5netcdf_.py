@@ -155,10 +155,10 @@ class H5NetCDFStore(WritableCFDataStore):
     ):
         import h5netcdf
 
-        open_kwargs = asdict(open_opts)
-        store_kwargs = asdict(store_opts)
+        open_kwargs = asdict(open_opts) if open_opts is not None else {}
+        store_kwargs = asdict(store_opts) if store_opts is not None else {}
 
-        driver = open_kwargs["driver"]
+        driver = open_kwargs.get("driver", None)
         storage_options = open_kwargs.pop("storage_options", None)
         if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
             mode_ = "rb" if mode == "r" else mode
@@ -177,7 +177,7 @@ class H5NetCDFStore(WritableCFDataStore):
                 raise ValueError(
                     f"{magic_number!r} is not the signature of a valid netCDF4 file"
                 )
-        format = open_kwargs.pop("format")
+        format = open_kwargs.pop("format", None)
         if format not in [None, "NETCDF4"]:
             raise ValueError("invalid format for h5netcdf backend")
 
@@ -189,10 +189,12 @@ class H5NetCDFStore(WritableCFDataStore):
         #     "decode_vlen_strings": decode_vlen_strings,
         #     "driver": driver,
         # }
-        driver_kwds = kwargs.pop("driver_kwds")
+        driver_kwds = kwargs.pop("driver_kwds", None)
         if driver_kwds is not None:
             kwargs.update(driver_kwds)
-        print("XX:", kwargs)
+        kwargs.pop("group", None)
+        print("XX0:", kwargs)
+
         # if phony_dims is not None:
         #    kwargs["phony_dims"] = phony_dims
         lock = store_kwargs.get("lock", None)
@@ -202,6 +204,7 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
             store_kwargs["lock"] = lock
+        print("XX1:", store_kwargs)
         manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
         return cls(manager, mode=mode, **store_kwargs)
 
@@ -479,6 +482,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
+        mode="r",
         # mask_and_scale=True,
         # decode_times=True,
         # concat_characters=True,
@@ -511,6 +515,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
+            mode=mode,
             open_opts=open_opts,
             store_opts=store_opts,
             # format=format,
@@ -539,6 +544,17 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         #    _emit_phony_dims_warning()
 
         return ds
+
+    # def to_netcdf(
+    #         self,
+    #         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+    #         *,
+    #         coder_opts: H5netcdfCoderOptions = None,
+    #         open_opts: H5netcdfOpenOptions = None,
+    #         store_opts: H5netcdfStoreOptions = None,
+    #         **kwargs,
+    #         ):
+    #
 
     def open_datatree(
         self,

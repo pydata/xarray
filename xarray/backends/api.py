@@ -475,7 +475,7 @@ def _datatree_from_backend_datatree(
     return tree
 
 
-from dataclasses import asdict
+from dataclasses import asdict, fields
 
 Buffer = Union[bytes, bytearray, memoryview]
 
@@ -697,17 +697,20 @@ def open_dataset(
     print("XX2:", type(backend.coder_opts))
     print("XX3:", coder_opts)
     print("XX4:", backend.coder_opts)
+    print("XX4-0:", kwargs)
 
     # initialize CoderOptions with decoders of not given
     # Deprecation Fallback
-    if coder_opts is False:
+    if coder_opts is False:  # or decode_cf is False:
         coder_opts = _reset_dataclass_to_false(backend.coder_opts)
     elif coder_opts is True:
         coder_opts = backend.coder_opts
     elif coder_opts is None:
+        print("XX4-1:", decode_cf)
+        field_names = {f.name for f in fields(backend.coder_class)}
         decoders = _resolve_decoders_kwargs(
             decode_cf,
-            open_backend_dataset_parameters=backend.open_dataset_parameters,
+            open_backend_dataset_parameters=field_names,
             mask_and_scale=mask_and_scale,
             decode_times=decode_times,
             decode_timedelta=decode_timedelta,
@@ -716,7 +719,10 @@ def open_dataset(
             decode_coords=decode_coords,
         )
         decoders["drop_variables"] = drop_variables
-        coder_opts = CoderOptions(**decoders)
+        print("XX4-2:", decoders)
+        coder_opts = backend.coder_class(**decoders)
+
+    print("XX5:", coder_opts)
 
     if backend_opts is None:
         backend_opts = XarrayBackendOptions(
@@ -728,19 +734,34 @@ def open_dataset(
             overwrite_encoded_chunks=kwargs.pop("overwrite_encoded_chunks", None),
         )
 
+    print("XX6:", backend_opts)
     # Check if store_opts have been ovrridden in the subclass
     # That indicates new-style behaviour
     # We can keep backwards compatibility
+    print("XX70:", kwargs)
     _store_opts = backend.store_opts
+    print("XX70a:", type(_store_opts))
     if type(_store_opts) is BackendOptions:
         coder_kwargs = asdict(coder_opts)
-
+        print("XX7a:", kwargs)
         backend_ds = backend.open_dataset(
             filename_or_obj,
             **coder_kwargs,
             **kwargs,
         )
     else:
+        if open_opts is None:
+            # check for open kwargs and create open_opts
+            field_names = {f.name for f in fields(backend.open_class)}
+            open_kwargs = {k: v for k, v in kwargs.items() if k in field_names}
+            open_opts = backend.open_class(**open_kwargs)
+        if store_opts is None:
+            # check for open kwargs and create open_opts
+            field_names = {f.name for f in fields(backend.store_class)}
+            store_kwargs = {k: v for k, v in kwargs.items() if k in field_names}
+            store_opts = backend.store_class(**store_kwargs)
+        print("XX7b:", open_opts)
+        print("XX7c:", store_opts)
         backend_ds = backend.open_dataset(
             filename_or_obj,
             coder_opts=coder_opts,
@@ -1891,6 +1912,9 @@ def to_netcdf(
     multifile: bool = False,
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
+    open_opts: Union[bool, BackendOptions, None] = None,
+    # backend_opts: Union[bool, BackendOptions, None] = None,
+    store_opts: Union[bool, BackendOptions, None] = None,
 ) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
@@ -1932,11 +1956,9 @@ def to_netcdf(
 
     try:
         store_open = WRITEABLE_STORES[engine]
+        backend = plugins.get_backend(engine)
     except KeyError as err:
         raise ValueError(f"unrecognized engine for to_netcdf: {engine!r}") from err
-
-    if format is not None:
-        format = format.upper()  # type: ignore[assignment]
 
     # handle scheduler specific logic
     scheduler = _get_scheduler()
@@ -1961,7 +1983,29 @@ def to_netcdf(
     if auto_complex is not None:
         kwargs["auto_complex"] = auto_complex
 
-    store = store_open(target, mode, format, group, **kwargs)
+    if format is not None:
+        format = format.upper()  # type: ignore[assignment]
+    kwargs["format"] = format
+    kwargs["group"] = group
+
+    kwargs_names = list(kwargs)
+    field_names = {f.name for f in fields(backend.open_class)}
+    open_kwargs = {k: kwargs.pop(k) for k in kwargs_names if k in field_names}
+    open_opts = backend.open_class(**open_kwargs)
+
+    field_names = {f.name for f in fields(backend.store_class)}
+    store_kwargs = {k: kwargs.pop(k) for k in kwargs_names if k in field_names}
+    store_opts = backend.store_class(**store_kwargs)
+
+    # open_opts = mplex=autocomplex) if open_opts is None else open_opts
+    # store_opts = backend.store_class(group=group, autoclose=autoclose) if store_opts is None else store_opts
+    print("TN0:", open_opts)
+    print("TN1:", store_opts)
+    print("TN2:", mode)
+    print("TN3:", kwargs)
+    store = store_open(
+        target, mode=mode, open_opts=open_opts, store_opts=store_opts, **kwargs
+    )
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get("unlimited_dims", None)
