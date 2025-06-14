@@ -5,6 +5,7 @@ import os
 import time
 import traceback
 from collections.abc import Hashable, Iterable, Mapping, Sequence
+from dataclasses import dataclass, fields, replace
 from glob import glob
 from typing import (
     TYPE_CHECKING,
@@ -20,6 +21,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+from xarray.backends.locks import SerializableLock
 from xarray.coding import strings, variables
 from xarray.coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding.variables import SerializationWarning
@@ -51,6 +53,7 @@ logger = logging.getLogger(__name__)
 NONE_VAR_NAME = "__values__"
 
 T = TypeVar("T")
+Buffer = Union[bytes, bytearray, memoryview]
 
 
 @overload
@@ -656,11 +659,6 @@ class WritableCFDataStore(AbstractWritableDataStore):
         return variables, attributes
 
 
-from dataclasses import dataclass, fields, replace
-
-Buffer = Union[bytes, bytearray, memoryview]
-
-
 def _reset_dataclass_to_false(instance):
     field_names = [f.name for f in fields(instance)]
     false_values = dict.fromkeys(field_names, False)
@@ -670,9 +668,6 @@ def _reset_dataclass_to_false(instance):
 @dataclass(frozen=True)
 class BackendOptions:
     pass
-
-
-from xarray.backends.locks import SerializableLock
 
 
 @dataclass(frozen=True)
@@ -700,6 +695,7 @@ class XarrayBackendOptions:
 
 @dataclass(frozen=True)
 class CoderOptions:
+    # maybe add these two to disentangle masking from scaling?
     # mask: Optional[bool] = None
     # scale: Optional[bool] = None
     mask_and_scale: Optional[bool | Mapping[str, bool]] = None

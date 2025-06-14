@@ -368,8 +368,6 @@ class DatasetIOBase:
         if open_kwargs is None:
             open_kwargs = {}
         with create_tmp_file(allow_cleanup_failure=allow_cleanup_failure) as path:
-            print("ZZ0:", save_kwargs)
-            print("ZZ1:", open_kwargs)
             self.save(data, path, **save_kwargs)
             with self.open(path, **open_kwargs) as ds:
                 yield ds
@@ -1556,14 +1554,10 @@ class NetCDF4Base(NetCDFBase):
         data1 = create_test_data()
         data2 = data1 * 2
         with create_tmp_file() as tmp_file:
-            print("----------------------------------------")
             self.save(data1, tmp_file, group="data/1")
-            print("----------------------------------------")
             self.save(data2, tmp_file, group="data/2", mode="a")
-            print("----------------------------------------")
             with self.open(tmp_file, group="data/1") as actual1:
                 assert_identical(data1, actual1)
-            print("----------------------------------------")
             with self.open(tmp_file, group="data/2") as actual2:
                 assert_identical(data2, actual2)
 
@@ -5423,7 +5417,6 @@ class TestPydap:
     @contextlib.contextmanager
     def create_datasets(self, **kwargs):
         with open_example_dataset("bears.nc") as expected:
-            # print("QQ0:", expected["bears"].load())
             pydap_ds = self.convert_to_pydap_dataset(expected)
             actual = open_dataset(PydapDataStore(pydap_ds))
             if Version(np.__version__) < Version("2.3.0"):

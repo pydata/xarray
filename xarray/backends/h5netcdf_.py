@@ -4,13 +4,15 @@ import functools
 import io
 import os
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, Union
+from dataclasses import asdict, dataclass
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import numpy as np
 
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendEntrypoint,
+    BackendOptions,
     WritableCFDataStore,
     _normalize_path,
     _open_remote_file,
@@ -18,7 +20,13 @@ from xarray.backends.common import (
     find_root_and_group,
 )
 from xarray.backends.file_manager import CachingFileManager, DummyFileManager
-from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
+from xarray.backends.locks import (
+    HDF5_LOCK,
+    SerializableLock,
+    combine_locks,
+    ensure_lock,
+    get_write_lock,
+)
 from xarray.backends.netCDF4_ import (
     BaseNetCDF4Array,
     _build_and_get_enum,
@@ -28,6 +36,7 @@ from xarray.backends.netCDF4_ import (
     _get_datatype,
     _nc4_require_group,
 )
+from xarray.backends.netCDF4_ import NetCDF4CoderOptions as H5netcdfCoderOptions
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
 from xarray.core.utils import (
@@ -139,16 +148,6 @@ class H5NetCDFStore(WritableCFDataStore):
         cls,
         filename,
         mode="r",
-        # format=None,
-        # group=None,
-        # lock=None,
-        # autoclose=False,
-        # invalid_netcdf=None,
-        # phony_dims=None,
-        # decode_vlen_strings=True,
-        # driver=None,
-        # driver_kwds=None,
-        # storage_options: dict[str, Any] | None = None,
         open_opts=None,
         store_opts=None,
         **kwargs,
@@ -182,21 +181,12 @@ class H5NetCDFStore(WritableCFDataStore):
             raise ValueError("invalid format for h5netcdf backend")
 
         kwargs.update(open_kwargs)
-        # kwargs.update(kwargs.pop("driver_kwds", None))
-        #
-        #     = {
-        #     "invalid_netcdf": invalid_netcdf,
-        #     "decode_vlen_strings": decode_vlen_strings,
-        #     "driver": driver,
-        # }
         driver_kwds = kwargs.pop("driver_kwds", None)
         if driver_kwds is not None:
             kwargs.update(driver_kwds)
+        # check why this is needed in some cases, should not be in kwargs any more
         kwargs.pop("group", None)
-        print("XX0:", kwargs)
 
-        # if phony_dims is not None:
-        #    kwargs["phony_dims"] = phony_dims
         lock = store_kwargs.get("lock", None)
         if lock is None:
             if mode == "r":
@@ -204,7 +194,6 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
             store_kwargs["lock"] = lock
-        print("XX1:", store_kwargs)
         manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
         return cls(manager, mode=mode, **store_kwargs)
 
@@ -404,16 +393,6 @@ def _emit_phony_dims_warning():
     )
 
 
-from dataclasses import asdict, dataclass
-from typing import Optional
-
-from xarray.backends.locks import SerializableLock
-
-Buffer = Union[bytes, bytearray, memoryview]
-from xarray.backends.common import BackendOptions
-from xarray.backends.netCDF4_ import NetCDF4CoderOptions as H5netcdfCoderOptions
-
-
 @dataclass(frozen=True)
 class H5netcdfStoreOptions(BackendOptions):
     group: Optional[str] = None
@@ -483,22 +462,6 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         mode="r",
-        # mask_and_scale=True,
-        # decode_times=True,
-        # concat_characters=True,
-        # decode_coords=True,
-        # drop_variables: str | Iterable[str] | None = None,
-        # use_cftime=None,
-        # decode_timedelta=None,
-        # format=None,
-        # group=None,
-        # lock=None,
-        # invalid_netcdf=None,
-        # phony_dims=None,
-        # decode_vlen_strings=True,
-        # driver=None,
-        # driver_kwds=None,
-        # storage_options: dict[str, Any] | None = None,
         coder_opts: H5netcdfCoderOptions = None,
         open_opts: H5netcdfOpenOptions = None,
         store_opts: H5netcdfStoreOptions = None,
@@ -508,25 +471,12 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         open_opts = open_opts if open_opts is not None else self.open_opts
         store_opts = store_opts if store_opts is not None else self.store_opts
 
-        # Keep this message for some versions
-        # remove and set phony_dims="access" above
-        # emit_phony_dims_warning, phony_dims = _check_phony_dims(phony_dims)
-
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
             mode=mode,
             open_opts=open_opts,
             store_opts=store_opts,
-            # format=format,
-            # group=group,
-            # lock=lock,
-            # invalid_netcdf=invalid_netcdf,
-            # phony_dims=phony_dims,
-            # decode_vlen_strings=decode_vlen_strings,
-            # driver=driver,
-            # driver_kwds=driver_kwds,
-            # storage_options=storage_options,
             **kwargs,
         )
 
@@ -537,24 +487,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             coder_opts=coder_opts,
         )
 
-        # only warn if phony_dims exist in file
-        # remove together with the above check
-        # after some versions
-        # if store.ds._root._phony_dim_count > 0 and emit_phony_dims_warning:
-        #    _emit_phony_dims_warning()
-
         return ds
-
-    # def to_netcdf(
-    #         self,
-    #         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
-    #         *,
-    #         coder_opts: H5netcdfCoderOptions = None,
-    #         open_opts: H5netcdfOpenOptions = None,
-    #         store_opts: H5netcdfStoreOptions = None,
-    #         **kwargs,
-    #         ):
-    #
 
     def open_datatree(
         self,

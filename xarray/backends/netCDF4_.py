@@ -3,9 +3,10 @@ from __future__ import annotations
 import functools
 import operator
 import os
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any
+from dataclasses import asdict, dataclass
+from typing import TYPE_CHECKING, Any, Literal, Optional
 
 import numpy as np
 
@@ -14,6 +15,9 @@ from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
+    BackendOptions,
+    Buffer,
+    CoderOptions,
     WritableCFDataStore,
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
@@ -24,12 +28,14 @@ from xarray.backends.file_manager import CachingFileManager, DummyFileManager
 from xarray.backends.locks import (
     HDF5_LOCK,
     NETCDFC_LOCK,
+    SerializableLock,
     combine_locks,
     ensure_lock,
     get_write_lock,
 )
 from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 from xarray.backends.store import StoreBackendEntrypoint
+from xarray.coding.times import CFDatetimeCoder
 from xarray.coding.variables import pop_to
 from xarray.core import indexing
 from xarray.core.utils import (
@@ -401,9 +407,6 @@ class NetCDF4DataStore(WritableCFDataStore):
         cls,
         filename,
         mode="r",
-        # group=None,
-        # lock=None,
-        # autoclose=False,
         open_opts=None,
         store_opts=None,
         **kwargs,
@@ -441,8 +444,6 @@ class NetCDF4DataStore(WritableCFDataStore):
                 lock = combine_locks([base_lock, get_write_lock(filename)])
             store_kwargs["lock"] = lock
         kwargs.update(open_kwargs)
-        print("DD0:", kwargs)
-        print("DD1:", store_kwargs)
         manager = CachingFileManager(
             netCDF4.Dataset, filename, mode=mode, kwargs=kwargs
         )
@@ -594,28 +595,6 @@ class NetCDF4DataStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
-from collections.abc import Mapping
-from dataclasses import asdict, dataclass
-from typing import Literal, Optional, Union
-
-from xarray.backends.locks import SerializableLock
-
-Buffer = Union[bytes, bytearray, memoryview]
-from xarray.backends.common import BackendOptions
-
-
-@dataclass(frozen=True)
-class StoreWriteOptions:
-    group: Optional[str] = None
-    lock: Optional[SerializableLock] = None
-    autoclose: Optional[bool] = False
-
-
-@dataclass(frozen=True)
-class StoreWriteOpenOptions:
-    format: Optional[str] = "NETCDF4"
-
-
 @dataclass(frozen=True)
 class NetCDF4StoreOptions(BackendOptions):
     group: Optional[str] = None
@@ -636,10 +615,6 @@ class NetCDF4OpenOptions(BackendOptions):
     comm: Optional[mpi4py.MPI.Comm] = None  # noqa: F821
     info: Optional[mpi4py.MPI.Info] = None  # noqa: F821
     auto_complex: Optional[bool] = None
-
-
-from xarray.backends.common import CoderOptions
-from xarray.coding.times import CFDatetimeCoder
 
 
 @dataclass(frozen=True)
@@ -704,10 +679,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        # group=None,
         mode="r",
-        # lock=None,
-        # autoclose=None,
         coder_opts: NetCDF4CoderOptions = None,
         open_opts: NetCDF4OpenOptions = None,
         store_opts: NetCDF4StoreOptions = None,
@@ -717,15 +689,10 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         open_opts = open_opts if open_opts is not None else self.open_opts
         store_opts = store_opts if store_opts is not None else self.store_opts
 
-        # open_kwargs = asdict(open_opts)
-
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
             filename_or_obj,
             mode=mode,
-            # group=group,
-            # lock=lock,
-            # autoclose=autoclose,
             open_opts=open_opts,
             store_opts=store_opts,
             **kwargs,

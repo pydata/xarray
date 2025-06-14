@@ -9,6 +9,7 @@ from collections.abc import (
     MutableMapping,
     Sequence,
 )
+from dataclasses import asdict, fields
 from functools import partial
 from io import BytesIO
 from numbers import Number
@@ -29,6 +30,9 @@ from xarray.backends import plugins
 from xarray.backends.common import (
     AbstractDataStore,
     ArrayWriter,
+    BackendOptions,
+    CoderOptions,
+    XarrayBackendOptions,
     _find_absolute_paths,
     _normalize_path,
     _reset_dataclass_to_false,
@@ -475,13 +479,6 @@ def _datatree_from_backend_datatree(
     return tree
 
 
-from dataclasses import asdict, fields
-
-Buffer = Union[bytes, bytearray, memoryview]
-
-
-from xarray.backends.common import BackendOptions, CoderOptions, XarrayBackendOptions
-
 # @dataclass(frozen=True)
 # class XarrayBackendOptions:
 #     chunks: Optional[T_Chunks] = None
@@ -692,21 +689,13 @@ def open_dataset(
 
     backend = plugins.get_backend(engine)
 
-    print("XX0:", backend)
-    print("XX1:", type(backend))
-    print("XX2:", type(backend.coder_opts))
-    print("XX3:", coder_opts)
-    print("XX4:", backend.coder_opts)
-    print("XX4-0:", kwargs)
-
-    # initialize CoderOptions with decoders of not given
+    # initialize CoderOptions with decoders if not given
     # Deprecation Fallback
-    if coder_opts is False:  # or decode_cf is False:
+    if coder_opts is False:
         coder_opts = _reset_dataclass_to_false(backend.coder_opts)
     elif coder_opts is True:
         coder_opts = backend.coder_opts
     elif coder_opts is None:
-        print("XX4-1:", decode_cf)
         field_names = {f.name for f in fields(backend.coder_class)}
         decoders = _resolve_decoders_kwargs(
             decode_cf,
@@ -719,10 +708,7 @@ def open_dataset(
             decode_coords=decode_coords,
         )
         decoders["drop_variables"] = drop_variables
-        print("XX4-2:", decoders)
         coder_opts = backend.coder_class(**decoders)
-
-    print("XX5:", coder_opts)
 
     if backend_opts is None:
         backend_opts = XarrayBackendOptions(
@@ -734,16 +720,12 @@ def open_dataset(
             overwrite_encoded_chunks=kwargs.pop("overwrite_encoded_chunks", None),
         )
 
-    print("XX6:", backend_opts)
-    # Check if store_opts have been ovrridden in the subclass
-    # That indicates new-style behaviour
-    # We can keep backwards compatibility
-    print("XX70:", kwargs)
+    # Check if store_opts have been overridden in the subclass.
+    # That indicates new-style behaviour.
+    # We can keep backwards compatibility.
     _store_opts = backend.store_opts
-    print("XX70a:", type(_store_opts))
     if type(_store_opts) is BackendOptions:
         coder_kwargs = asdict(coder_opts)
-        print("XX7a:", kwargs)
         backend_ds = backend.open_dataset(
             filename_or_obj,
             **coder_kwargs,
@@ -756,12 +738,10 @@ def open_dataset(
             open_kwargs = {k: v for k, v in kwargs.items() if k in field_names}
             open_opts = backend.open_class(**open_kwargs)
         if store_opts is None:
-            # check for open kwargs and create open_opts
+            # check for store kwargs and create store_opts
             field_names = {f.name for f in fields(backend.store_class)}
             store_kwargs = {k: v for k, v in kwargs.items() if k in field_names}
             store_opts = backend.store_class(**store_kwargs)
-        print("XX7b:", open_opts)
-        print("XX7c:", store_opts)
         backend_ds = backend.open_dataset(
             filename_or_obj,
             coder_opts=coder_opts,
@@ -1988,21 +1968,17 @@ def to_netcdf(
     kwargs["format"] = format
     kwargs["group"] = group
 
+    # fill open_opts according backend
     kwargs_names = list(kwargs)
     field_names = {f.name for f in fields(backend.open_class)}
     open_kwargs = {k: kwargs.pop(k) for k in kwargs_names if k in field_names}
     open_opts = backend.open_class(**open_kwargs)
 
+    # fill store_opts according backend
     field_names = {f.name for f in fields(backend.store_class)}
     store_kwargs = {k: kwargs.pop(k) for k in kwargs_names if k in field_names}
     store_opts = backend.store_class(**store_kwargs)
 
-    # open_opts = mplex=autocomplex) if open_opts is None else open_opts
-    # store_opts = backend.store_class(group=group, autoclose=autoclose) if store_opts is None else store_opts
-    print("TN0:", open_opts)
-    print("TN1:", store_opts)
-    print("TN2:", mode)
-    print("TN3:", kwargs)
     store = store_open(
         target, mode=mode, open_opts=open_opts, store_opts=store_opts, **kwargs
     )
