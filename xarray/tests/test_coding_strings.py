@@ -139,6 +139,45 @@ def test_CharacterArrayCoder_char_dim_name(original, expected_char_dim_name) -> 
     assert roundtripped.dims[-1] == original.dims[-1]
 
 
+@pytest.mark.parametrize(
+    [
+        "original",
+        "expected_char_dim_name",
+        "expected_char_dim_length",
+        "warning_message",
+    ],
+    [
+        (
+            Variable(("x",), [b"ab", b"cde"], encoding={"char_dim_name": "foo4"}),
+            "foo3",
+            3,
+            "String dimension naming mismatch",
+        ),
+        (
+            Variable(
+                ("x",),
+                [b"ab", b"cde"],
+                encoding={"original_shape": (2, 4), "char_dim_name": "foo"},
+            ),
+            "foo3",
+            3,
+            "String dimension length mismatch",
+        ),
+    ],
+)
+def test_CharacterArrayCoder_dim_mismatch_warnings(
+    original, expected_char_dim_name, expected_char_dim_length, warning_message
+) -> None:
+    coder = strings.CharacterArrayCoder()
+    with pytest.warns(UserWarning, match=warning_message):
+        encoded = coder.encode(original)
+    roundtripped = coder.decode(encoded)
+    assert encoded.dims[-1] == expected_char_dim_name
+    assert encoded.sizes[expected_char_dim_name] == expected_char_dim_length
+    assert roundtripped.encoding["char_dim_name"] == expected_char_dim_name
+    assert roundtripped.dims[-1] == original.dims[-1]
+
+
 def test_StackedBytesArray() -> None:
     array = np.array([[b"a", b"b", b"c"], [b"d", b"e", b"f"]], dtype="S")
     actual = strings.StackedBytesArray(array)
