@@ -630,6 +630,8 @@ def streamplot(
     cmap_params = kwargs.pop("cmap_params")
 
     if hue:
+        if xdim is not None and ydim is not None:
+            ds[hue] = ds[hue].transpose(ydim, xdim)
         kwargs["color"] = ds[hue].values
 
         # TODO: Fix this by always returning a norm with vmin, vmax in cmap_params

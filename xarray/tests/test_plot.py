@@ -2698,9 +2698,9 @@ class TestDatasetStreamplotPlots(PlotTestCase):
     def setUp(self) -> None:
         das = [
             DataArray(
-                np.random.randn(3, 3, 2, 2),
+                np.random.randn(3, 4, 2, 2),
                 dims=["x", "y", "row", "col"],
-                coords=[range(k) for k in [3, 3, 2, 2]],
+                coords=[range(k) for k in [3, 4, 2, 2]],
             )
             for _ in [1, 2]
         ]
