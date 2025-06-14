@@ -4,13 +4,15 @@ import functools
 import io
 import os
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from dataclasses import asdict, dataclass
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import numpy as np
 
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendEntrypoint,
+    BackendOptions,
     WritableCFDataStore,
     _normalize_path,
     _open_remote_file,
@@ -18,7 +20,13 @@ from xarray.backends.common import (
     find_root_and_group,
 )
 from xarray.backends.file_manager import CachingFileManager, DummyFileManager
-from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
+from xarray.backends.locks import (
+    HDF5_LOCK,
+    SerializableLock,
+    combine_locks,
+    ensure_lock,
+    get_write_lock,
+)
 from xarray.backends.netCDF4_ import (
     BaseNetCDF4Array,
     _build_and_get_enum,
@@ -28,6 +36,7 @@ from xarray.backends.netCDF4_ import (
     _get_datatype,
     _nc4_require_group,
 )
+from xarray.backends.netCDF4_ import NetCDF4CoderOptions as H5netcdfCoderOptions
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
 from xarray.core.utils import (
@@ -139,19 +148,17 @@ class H5NetCDFStore(WritableCFDataStore):
         cls,
         filename,
         mode="r",
-        format=None,
-        group=None,
-        lock=None,
-        autoclose=False,
-        invalid_netcdf=None,
-        phony_dims=None,
-        decode_vlen_strings=True,
-        driver=None,
-        driver_kwds=None,
-        storage_options: dict[str, Any] | None = None,
+        open_opts=None,
+        store_opts=None,
+        **kwargs,
     ):
         import h5netcdf
 
+        open_kwargs = asdict(open_opts) if open_opts is not None else {}
+        store_kwargs = asdict(store_opts) if store_opts is not None else {}
+
+        driver = open_kwargs.get("driver", None)
+        storage_options = open_kwargs.pop("storage_options", None)
         if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
             mode_ = "rb" if mode == "r" else mode
             filename = _open_remote_file(
@@ -169,28 +176,26 @@ class H5NetCDFStore(WritableCFDataStore):
                 raise ValueError(
                     f"{magic_number!r} is not the signature of a valid netCDF4 file"
                 )
-
+        format = open_kwargs.pop("format", None)
         if format not in [None, "NETCDF4"]:
             raise ValueError("invalid format for h5netcdf backend")
 
-        kwargs = {
-            "invalid_netcdf": invalid_netcdf,
-            "decode_vlen_strings": decode_vlen_strings,
-            "driver": driver,
-        }
+        kwargs.update(open_kwargs)
+        driver_kwds = kwargs.pop("driver_kwds", None)
         if driver_kwds is not None:
             kwargs.update(driver_kwds)
-        if phony_dims is not None:
-            kwargs["phony_dims"] = phony_dims
+        # check why this is needed in some cases, should not be in kwargs any more
+        kwargs.pop("group", None)
 
+        lock = store_kwargs.get("lock", None)
         if lock is None:
             if mode == "r":
                 lock = HDF5_LOCK
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
-
+            store_kwargs["lock"] = lock
         manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
-        return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
+        return cls(manager, mode=mode, **store_kwargs)
 
     def _acquire(self, needs_lock=True):
         with self._manager.acquire_context(needs_lock) as root:
@@ -388,6 +393,25 @@ def _emit_phony_dims_warning():
     )
 
 
+@dataclass(frozen=True)
+class H5netcdfStoreOptions(BackendOptions):
+    group: Optional[str] = None
+    lock: Optional[SerializableLock] = None
+    autoclose: Optional[bool] = False
+
+
+@dataclass(frozen=True)
+class H5netcdfOpenOptions(BackendOptions):
+    format: Optional[str] = "NETCDF4"
+    driver: Optional[str] = None
+    driver_kwds: Optional[dict[str, Any]] = None
+    libver: Optional[Union[str, tuple[str]]] = None
+    invalid_netcdf: Optional[bool] = False
+    phony_dims: Optional[str] = "access"
+    decode_vlen_strings: Optional[bool] = True
+    storage_options: Optional[dict[str, Any]] = None
+
+
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the h5netcdf package.
@@ -395,7 +419,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     It can open ".nc", ".nc4", ".cdf" files but will only be
     selected as the default if the "netcdf4" engine is not available.
 
-    Additionally it can open valid HDF5 files, see
+    Additionally, it can open valid HDF5 files, see
     https://h5netcdf.org/#invalid-netcdf-files for more info.
     It will not be detected as valid backend for such files, so make
     sure to specify ``engine="h5netcdf"`` in ``open_dataset``.
@@ -409,6 +433,10 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     backends.NetCDF4BackendEntrypoint
     backends.ScipyBackendEntrypoint
     """
+
+    coder_class = H5netcdfCoderOptions
+    open_class = H5netcdfOpenOptions
+    store_class = H5netcdfStoreOptions
 
     description = (
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using h5netcdf in Xarray"
@@ -433,59 +461,31 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
-        drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
-        format=None,
-        group=None,
-        lock=None,
-        invalid_netcdf=None,
-        phony_dims=None,
-        decode_vlen_strings=True,
-        driver=None,
-        driver_kwds=None,
-        storage_options: dict[str, Any] | None = None,
+        mode="r",
+        coder_opts: H5netcdfCoderOptions = None,
+        open_opts: H5netcdfOpenOptions = None,
+        store_opts: H5netcdfStoreOptions = None,
+        **kwargs,
     ) -> Dataset:
-        # Keep this message for some versions
-        # remove and set phony_dims="access" above
-        emit_phony_dims_warning, phony_dims = _check_phony_dims(phony_dims)
+        coder_opts = coder_opts if coder_opts is not None else self.coder_opts
+        open_opts = open_opts if open_opts is not None else self.open_opts
+        store_opts = store_opts if store_opts is not None else self.store_opts
 
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
-            format=format,
-            group=group,
-            lock=lock,
-            invalid_netcdf=invalid_netcdf,
-            phony_dims=phony_dims,
-            decode_vlen_strings=decode_vlen_strings,
-            driver=driver,
-            driver_kwds=driver_kwds,
-            storage_options=storage_options,
+            mode=mode,
+            open_opts=open_opts,
+            store_opts=store_opts,
+            **kwargs,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
 
         ds = store_entrypoint.open_dataset(
             store,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
+            coder_opts=coder_opts,
         )
-
-        # only warn if phony_dims exist in file
-        # remove together with the above check
-        # after some versions
-        if store.ds._root._phony_dim_count > 0 and emit_phony_dims_warning:
-            _emit_phony_dims_warning()
 
         return ds
 

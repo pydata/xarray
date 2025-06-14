@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     T_Name = Union[Hashable, None]
     T_Variables = Mapping[Any, Variable]
     T_Attrs = MutableMapping[Any, Any]
-    T_DropVariables = Union[str, Iterable[Hashable], None]
+    T_DropVariables = Union[str, Iterable[Hashable], None, False]
     T_DatasetOrAbstractstore = Union[Dataset, AbstractDataStore]
 
 
@@ -382,7 +382,7 @@ def decode_cf_variables(
 
     if isinstance(drop_variables, str):
         drop_variables = [drop_variables]
-    elif drop_variables is None:
+    elif drop_variables is None or drop_variables is False:
         drop_variables = []
     drop_variables = set(drop_variables)
 
