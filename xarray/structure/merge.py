@@ -17,6 +17,7 @@ from xarray.core.indexes import (
 )
 from xarray.core.utils import Frozen, compat_dict_union, dict_equiv, equivalent
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from xarray.errors import MergeError
 from xarray.structure.alignment import deep_align
 
 if TYPE_CHECKING:
@@ -77,13 +78,6 @@ def broadcast_dimension_size(variables: list[Variable]) -> dict[Hashable, int]:
                 raise ValueError(f"index {dim!r} not aligned")
             dims[dim] = size
     return dims
-
-
-class MergeError(ValueError):
-    """Error class for merge failures due to incompatible arguments."""
-
-    # inherits from ValueError for backward compatibility
-    # TODO: move this to an xarray.exceptions module?
 
 
 def unique_variable(
@@ -949,7 +943,7 @@ def merge(
     >>> xr.merge([x, y, z], join="exact")
     Traceback (most recent call last):
     ...
-    xarray.structure.alignment.AlignmentError: cannot align objects with join='exact' where ...
+    xarray.errors.AlignmentError: cannot align objects with join='exact' where ...
 
     Raises
     ------

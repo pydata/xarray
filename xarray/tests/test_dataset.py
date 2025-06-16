@@ -27,11 +27,9 @@ from pandas.errors import UndefinedVariableError
 
 import xarray as xr
 from xarray import (
-    AlignmentError,
     DataArray,
     Dataset,
     IndexVariable,
-    MergeError,
     Variable,
     align,
     backends,
@@ -46,6 +44,7 @@ from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.types import ArrayLike
 from xarray.core.utils import is_scalar
+from xarray.errors import AlignmentError, MergeError
 from xarray.groupers import TimeResampler
 from xarray.namedarray.pycompat import array_type, integer_types
 from xarray.testing import _assert_internal_invariants

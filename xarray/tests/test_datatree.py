@@ -12,7 +12,7 @@ import xarray as xr
 from xarray import DataArray, Dataset
 from xarray.core.coordinates import DataTreeCoordinates
 from xarray.core.datatree import DataTree
-from xarray.core.treenode import NotFoundInTreeError
+from xarray.errors import NotFoundInTreeError
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
     assert_array_equal,
@@ -2300,7 +2300,7 @@ class TestOps:
         node = dt["/subnode"]
 
         with pytest.raises(
-            xr.TreeIsomorphismError,
+            xr.errors.TreeIsomorphismError,
             match=re.escape(r"children at root node do not match: ['subnode'] vs []"),
         ):
             dt * node

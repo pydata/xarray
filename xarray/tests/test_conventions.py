@@ -9,7 +9,6 @@ import pytest
 
 from xarray import (
     Dataset,
-    SerializationWarning,
     Variable,
     coding,
     conventions,
@@ -20,6 +19,7 @@ from xarray.backends.common import WritableCFDataStore
 from xarray.backends.memory import InMemoryDataStore
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.conventions import decode_cf
+from xarray.errors import SerializationWarning
 from xarray.testing import assert_identical
 from xarray.tests import (
     assert_array_equal,

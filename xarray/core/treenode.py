@@ -13,17 +13,10 @@ from typing import (
 
 from xarray.core.types import Self
 from xarray.core.utils import Frozen, is_dict_like
+from xarray.errors import InvalidTreeError, NotFoundInTreeError, TreeIsomorphismError
 
 if TYPE_CHECKING:
     from xarray.core.types import T_DataArray
-
-
-class InvalidTreeError(Exception):
-    """Raised when user attempts to create an invalid tree in some way."""
-
-
-class NotFoundInTreeError(ValueError):
-    """Raised when operation can't be completed because one node is not part of the expected tree."""
 
 
 class NodePath(PurePosixPath):
@@ -795,10 +788,6 @@ class NamedNode(TreeNode, Generic[Tree]):
         generation_gap = list(parents_paths).index(ancestor.path)
         path_upwards = "../" * generation_gap if generation_gap > 0 else "."
         return NodePath(path_upwards)
-
-
-class TreeIsomorphismError(ValueError):
-    """Error raised if two tree objects do not share the same node structure."""
 
 
 def group_subtrees(

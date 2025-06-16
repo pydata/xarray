@@ -34,11 +34,11 @@ from xarray.coding.times import (
     infer_datetime_units,
     infer_timedelta_units,
 )
-from xarray.coding.variables import SerializationWarning
 from xarray.conventions import _update_bounds_attributes, cf_encoder
 from xarray.core.common import contains_cftime_datetimes
 from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.utils import is_duck_dask_array
+from xarray.errors import SerializationWarning
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
     _ALL_CALENDARS,

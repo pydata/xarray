@@ -221,8 +221,8 @@ class Index:
 
         Returning ``False`` will either:
 
-        - raise a :py:class:`CoordinateValidationError` when passing the
-          coordinate directly to a new or an existing DataArray, e.g., via
+        - raise a :py:class:`~xarray.errors.CoordinateValidationError` when passing
+          the coordinate directly to a new or an existing DataArray, e.g., via
           ``DataArray.__init__()`` or ``DataArray.assign_coords()``
 
         - drop the coordinate (and therefore drop the index) when a new

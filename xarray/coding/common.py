@@ -15,10 +15,6 @@ if TYPE_CHECKING:
     T_Name = Union[Hashable, None]
 
 
-class SerializationWarning(RuntimeWarning):
-    """Warnings about encoding/decoding issues in serialization."""
-
-
 class VariableCoder:
     """Base class for encoding and decoding transformations on variables.
 

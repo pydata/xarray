@@ -1,6 +1,6 @@
 from importlib.metadata import version as _version
 
-from xarray import coders, groupers, testing, tutorial, ufuncs
+from xarray import coders, errors, groupers, testing, tutorial, ufuncs
 from xarray.backends.api import (
     load_dataarray,
     load_dataset,
@@ -26,9 +26,9 @@ from xarray.computation.computation import (
     polyval,
     where,
 )
-from xarray.conventions import SerializationWarning, decode_cf
+from xarray.conventions import decode_cf
 from xarray.core.common import ALL_DIMS, full_like, ones_like, zeros_like
-from xarray.core.coordinates import Coordinates, CoordinateValidationError
+from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
@@ -42,19 +42,25 @@ from xarray.core.indexes import Index
 from xarray.core.indexing import IndexSelResult
 from xarray.core.options import get_options, set_options
 from xarray.core.parallel import map_blocks
-from xarray.core.treenode import (
-    InvalidTreeError,
-    NotFoundInTreeError,
-    TreeIsomorphismError,
-    group_subtrees,
-)
+from xarray.core.treenode import group_subtrees
 from xarray.core.variable import IndexVariable, Variable, as_variable
+
+# import custom error classes in root namespace for backward compatibility
+from xarray.errors import (
+    AlignmentError,
+    CoordinateValidationError,
+    InvalidTreeError,
+    MergeError,
+    NotFoundInTreeError,
+    SerializationWarning,
+    TreeIsomorphismError,
+)
 from xarray.namedarray.core import NamedArray
-from xarray.structure.alignment import AlignmentError, align, broadcast
+from xarray.structure.alignment import align, broadcast
 from xarray.structure.chunks import unify_chunks
 from xarray.structure.combine import combine_by_coords, combine_nested
 from xarray.structure.concat import concat
-from xarray.structure.merge import Context, MergeError, merge
+from xarray.structure.merge import Context, merge
 from xarray.util.print_versions import show_versions
 
 try:
@@ -69,6 +75,7 @@ except Exception:
 __all__ = (  # noqa: RUF022
     # Sub-packages
     "coders",
+    "errors",
     "groupers",
     "testing",
     "tutorial",
