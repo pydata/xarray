@@ -53,6 +53,7 @@ from xarray.tests import (
     assert_no_warnings,
     has_dask,
     has_dask_ge_2025_1_0,
+    has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -61,6 +62,7 @@ from xarray.tests import (
     requires_iris,
     requires_numexpr,
     requires_pint,
+    requires_pyarrow,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -1858,7 +1860,7 @@ class TestDataArray:
         assert x.dtype == y.dtype == pd.Int64Dtype()
         assert x.index.dtype == y.index.dtype == np.dtype("int64")
 
-    def test_reindex_categorical(self) -> None:
+    def test_reindex_categorical_index(self) -> None:
         index1 = pd.Categorical(["a", "b", "c"])
         index2 = pd.Categorical(["a", "b", "d"])
         srs = pd.Series(index=index1, data=1).convert_dtypes()
@@ -1871,6 +1873,70 @@ class TestDataArray:
         assert isinstance(y.index.dtype, pd.CategoricalDtype)
         assert_array_equal(x.index.dtype.categories, np.array(["a", "b", "c"]))
         assert_array_equal(y.index.dtype.categories, np.array(["a", "b", "d"]))
+
+    def test_reindex_categorical(self) -> None:
+        data = pd.Categorical(["a", "b", "c"])
+        srs = pd.Series(index=["e", "f", "g"], data=data).convert_dtypes()
+        x = srs.to_xarray()
+        y = x.reindex(index=["f", "g", "z"])
+        assert_array_equal(x, data)
+        # TODO: remove .array once the branch is updated with main
+        pd.testing.assert_extension_array_equal(
+            y.data, pd.Categorical(["b", "c", pd.NA], dtype=data.dtype)
+        )
+        assert x.dtype == y.dtype == data.dtype
+
+    @pytest.mark.parametrize(
+        "fill_value,extension_array",
+        [
+            pytest.param("a", pd.Categorical([pd.NA, "a", "b"]), id="categorical"),
+        ]
+        + [
+            pytest.param(
+                0,
+                pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
+                id="int64[pyarrow]",
+            )
+        ]
+        if has_pyarrow
+        else [],
+    )
+    def test_fillna_extension_array(self, fill_value, extension_array) -> None:
+        srs: pd.Series = pd.Series(index=np.array([1, 2, 3]), data=extension_array)
+        da = srs.to_xarray()
+        filled = da.fillna(fill_value)
+        assert filled.dtype == srs.dtype
+        assert (filled.values == np.array([fill_value, *(srs.values[1:])])).all()
+
+    @requires_pyarrow
+    def test_fillna_extension_array_bad_val(self) -> None:
+        srs: pd.Series = pd.Series(
+            index=np.array([1, 2, 3]),
+            data=pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
+        )
+        da = srs.to_xarray()
+        with pytest.raises(ValueError):
+            da.fillna("a")
+
+    @pytest.mark.parametrize(
+        "extension_array",
+        [
+            pytest.param(pd.Categorical([pd.NA, "a", "b"]), id="categorical"),
+        ]
+        + [
+            pytest.param(
+                pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"), id="int64[pyarrow]"
+            )
+        ]
+        if has_pyarrow
+        else [],
+    )
+    def test_dropna_extension_array(self, extension_array) -> None:
+        srs: pd.Series = pd.Series(index=np.array([1, 2, 3]), data=extension_array)
+        da = srs.to_xarray()
+        filled = da.dropna("index")
+        assert filled.dtype == srs.dtype
+        assert (filled.values == srs.values[1:]).all()
 
     def test_rename(self) -> None:
         da = xr.DataArray(

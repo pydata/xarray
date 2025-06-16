@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-import functools
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Generic, cast
@@ -12,9 +11,6 @@ from packaging.version import Version
 from pandas.api.extensions import ExtensionArray, ExtensionDtype
 from pandas.api.types import is_extension_array_dtype
 from pandas.api.types import is_scalar as pd_is_scalar
-from pandas.core.dtypes.astype import astype_array_safe
-from pandas.core.dtypes.cast import find_result_type
-from pandas.core.dtypes.concat import concat_compat
 
 from xarray.core.types import DTypeLikeSave, T_ExtensionArray
 from xarray.core.utils import NDArrayMixin
@@ -101,7 +97,7 @@ def as_extension_array(
             [array_or_scalar], dtype=dtype
         )
     else:
-        return astype_array_safe(array_or_scalar, dtype, copy=copy)
+        return array_or_scalar.astype(dtype, copy=copy)
 
 
 @implements(np.result_type)
@@ -117,7 +113,9 @@ def __extension_duck_array__result_type(
     ea_dtypes: list[ExtensionDtype] = [
         getattr(x, "dtype", x) for x in extension_arrays_and_dtypes
     ]
-    scalars: list[Scalar] = [x for x in arrays_and_dtypes if is_scalar(x)]
+    scalars: list[Scalar] = [
+        x for x in arrays_and_dtypes if is_scalar(x) and x not in {pd.NA, np.nan}
+    ]
     # other_stuff could include:
     # - arrays such as pd.ABCSeries, np.ndarray, or other array-api duck arrays
     # - dtypes such as pd.DtypeObj, np.dtype, or other array-api duck dtypes
@@ -126,7 +124,6 @@ def __extension_duck_array__result_type(
         for x in arrays_and_dtypes
         if not is_extension_array_dtype(x) and not is_scalar(x)
     ]
-
     # We implement one special case: when possible, preserve Categoricals (avoid promoting
     # to object) by merging the categories of all given Categoricals + scalars + NA.
     # Ideally this could be upstreamed into pandas find_result_type / find_common_type.
@@ -134,12 +131,13 @@ def __extension_duck_array__result_type(
         isinstance(x, pd.CategoricalDtype) and not x.ordered for x in ea_dtypes
     ):
         return union_unordered_categorical_and_scalar(ea_dtypes, scalars)
-
-    # In all other cases, we defer to pandas find_result_type, which is the only Pandas API
-    # permissive enough to handle scalars + other_stuff.
-    # Note that unlike find_common_type or np.result_type, it operates in pairs, where
-    # the left side must be a DtypeObj.
-    return functools.reduce(find_result_type, arrays_and_dtypes, ea_dtypes[0])
+    if not other_stuff and all(
+        isinstance(x, type(ea_type := ea_dtypes[0])) for x in ea_dtypes
+    ):
+        return ea_type
+    raise ValueError(
+        f"Cannot cast values to shared type, found values: {arrays_and_dtypes}"
+    )
 
 
 def union_unordered_categorical_and_scalar(
@@ -167,7 +165,7 @@ def __extension_duck_array__stack(arr: T_ExtensionArray, axis: int):
 def __extension_duck_array__concatenate(
     arrays: Sequence[T_ExtensionArray], axis: int = 0, out=None
 ) -> T_ExtensionArray:
-    return concat_compat(arrays, ea_compat_axis=True)
+    return type(arrays[0])._concat_same_type(arrays)  # type: ignore[attr-defined]
 
 
 @implements(np.where)
@@ -252,6 +250,10 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
         return ufunc(*inputs, **kwargs)
 
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
+        if (
+            isinstance(key, tuple) and len(key) == 1
+        ):  # pyarrow type arrays can't handle since-length tuples
+            key = key[0]
         item = self.array[key]
         if is_extension_array_dtype(item):
             return PandasExtensionArray(item)

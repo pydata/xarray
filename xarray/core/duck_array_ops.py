@@ -287,7 +287,12 @@ def as_shared_dtype(scalars_or_arrays, xp=None):
         xp = cp
     elif xp is None:
         xp = get_array_namespace(scalars_or_arrays)
-
+    scalars_or_arrays = [
+        PandasExtensionArray(s_or_a)
+        if isinstance(s_or_a, pd.api.extensions.ExtensionArray)
+        else s_or_a
+        for s_or_a in scalars_or_arrays
+    ]
     # Pass arrays directly instead of dtypes to result_type so scalars
     # get handled properly.
     # Note that result_type() safely gets the dtype from dask arrays without

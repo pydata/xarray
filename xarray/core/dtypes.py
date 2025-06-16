@@ -299,7 +299,6 @@ def result_type(
 
     if should_promote_to_object(arrays_and_dtypes, xp):
         return np.dtype(object)
-
     return array_api_compat.result_type(
         *map(maybe_promote_to_variable_width, arrays_and_dtypes), xp=xp
     )
