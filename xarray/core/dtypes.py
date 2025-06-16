@@ -226,8 +226,12 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
 
 def maybe_promote_to_variable_width(
     array_or_dtype: np.typing.ArrayLike | np.typing.DTypeLike,
+    *,
+    should_return_str_or_bytes: bool = False,
 ) -> np.typing.ArrayLike | np.typing.DTypeLike:
     if isinstance(array_or_dtype, str | bytes):
+        if should_return_str_or_bytes:
+            return array_or_dtype
         return type(array_or_dtype)
     elif isinstance(
         dtype := getattr(array_or_dtype, "dtype", array_or_dtype), np.dtype
@@ -300,5 +304,15 @@ def result_type(
     if should_promote_to_object(arrays_and_dtypes, xp):
         return np.dtype(object)
     return array_api_compat.result_type(
-        *map(maybe_promote_to_variable_width, arrays_and_dtypes), xp=xp
+        *map(
+            functools.partial(
+                maybe_promote_to_variable_width,
+                # let extension arrays handle their own str/bytes
+                should_return_str_or_bytes=any(
+                    map(is_extension_array_dtype, arrays_and_dtypes)
+                ),
+            ),
+            arrays_and_dtypes,
+        ),
+        xp=xp,
     )
