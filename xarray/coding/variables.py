@@ -345,7 +345,17 @@ class CFMaskCoder(VariableCoder):
         if fill_value is not None and has_unsigned:
             pop_to(encoding, attrs, "_Unsigned")
             # XXX: Is this actually needed? Doesn't the backend handle this?
-            data = duck_array_ops.astype(duck_array_ops.around(data), dtype)
+            # two-stage casting to prevent undefined cast from float to unsigned int
+            # first float -> int with corresponding itemsize
+            # second int -> int/uint to final itemsize
+            signed_dtype = np.dtype(f"i{data.itemsize}")
+            data = duck_array_ops.astype(
+                duck_array_ops.astype(
+                    duck_array_ops.around(data), signed_dtype, copy=False
+                ),
+                dtype,
+                copy=False,
+            )
             attrs["_FillValue"] = fill_value
 
         return Variable(dims, data, attrs, encoding, fastpath=True)
@@ -510,9 +520,9 @@ class CFScaleOffsetCoder(VariableCoder):
 
             scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
             add_offset = pop_to(attrs, encoding, "add_offset", name=name)
-            if np.ndim(scale_factor) > 0:
+            if duck_array_ops.ndim(scale_factor) > 0:
                 scale_factor = np.asarray(scale_factor).item()
-            if np.ndim(add_offset) > 0:
+            if duck_array_ops.ndim(add_offset) > 0:
                 add_offset = np.asarray(add_offset).item()
             # if we have a _FillValue/masked_value in encoding we already have the wanted
             # floating point dtype here (via CFMaskCoder), so no check is necessary

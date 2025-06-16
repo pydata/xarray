@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray import DataArray, Dataset, Variable, concat
-from xarray.core import dtypes
+from xarray import AlignmentError, DataArray, Dataset, Variable, concat
+from xarray.core import dtypes, types
 from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import PandasIndex
 from xarray.structure import merge
@@ -23,6 +23,7 @@ from xarray.tests import (
     requires_dask,
     requires_pyarrow,
 )
+from xarray.tests.indexes import XYIndex
 from xarray.tests.test_dataset import create_test_data
 
 if TYPE_CHECKING:
@@ -707,9 +708,9 @@ class TestConcatDataset:
         with pytest.raises(ValueError, match=r"cannot align.*exact.*dimensions.*'y'"):
             actual = concat([ds1, ds2], join="exact", dim="x")
 
-        for join in expected:
+        for join, expected_item in expected.items():
             actual = concat([ds1, ds2], join=join, dim="x")
-            assert_equal(actual, expected[join])
+            assert_equal(actual, expected_item)
 
         # regression test for #3681
         actual = concat(
@@ -1219,9 +1220,9 @@ class TestConcatDataArray:
         with pytest.raises(ValueError, match=r"cannot align.*exact.*dimensions.*'y'"):
             actual = concat([ds1, ds2], join="exact", dim="x")
 
-        for join in expected:
+        for join, expected_item in expected.items():
             actual = concat([ds1, ds2], join=join, dim="x")
-            assert_equal(actual, expected[join].to_dataarray())
+            assert_equal(actual, expected_item.to_dataarray())
 
     def test_concat_combine_attrs_kwarg(self) -> None:
         da1 = DataArray([0], coords=[("x", [0])], attrs={"b": 42})
@@ -1243,9 +1244,9 @@ class TestConcatDataArray:
             da3.attrs["b"] = 44
             actual = concat([da1, da3], dim="x", combine_attrs="no_conflicts")
 
-        for combine_attrs in expected:
+        for combine_attrs, expected_item in expected.items():
             actual = concat([da1, da2], dim="x", combine_attrs=combine_attrs)
-            assert_identical(actual, expected[combine_attrs])
+            assert_identical(actual, expected_item)
 
     @pytest.mark.parametrize("dtype", [str, bytes])
     @pytest.mark.parametrize("dim", ["x1", "x2"])
@@ -1381,3 +1382,50 @@ def test_concat_index_not_same_dim() -> None:
         match=r"Cannot concatenate along dimension 'x' indexes with dimensions.*",
     ):
         concat([ds1, ds2], dim="x")
+
+
+def test_concat_multi_dim_index() -> None:
+    ds1 = (
+        Dataset(
+            {"foo": (("x", "y"), np.random.randn(2, 2))},
+            coords={"x": [1, 2], "y": [3, 4]},
+        )
+        .drop_indexes(["x", "y"])
+        .set_xindex(["x", "y"], XYIndex)
+    )
+    ds2 = (
+        Dataset(
+            {"foo": (("x", "y"), np.random.randn(2, 2))},
+            coords={"x": [1, 2], "y": [5, 6]},
+        )
+        .drop_indexes(["x", "y"])
+        .set_xindex(["x", "y"], XYIndex)
+    )
+
+    expected = (
+        Dataset(
+            {
+                "foo": (
+                    ("x", "y"),
+                    np.concatenate([ds1.foo.data, ds2.foo.data], axis=-1),
+                )
+            },
+            coords={"x": [1, 2], "y": [3, 4, 5, 6]},
+        )
+        .drop_indexes(["x", "y"])
+        .set_xindex(["x", "y"], XYIndex)
+    )
+    # note: missing 'override'
+    joins: list[types.JoinOptions] = ["inner", "outer", "exact", "left", "right"]
+    for join in joins:
+        actual = concat([ds1, ds2], dim="y", join=join)
+        assert_identical(actual, expected, check_default_indexes=False)
+
+    with pytest.raises(AlignmentError):
+        actual = concat([ds1, ds2], dim="x", join="exact")
+
+    # TODO: fix these, or raise better error message
+    with pytest.raises(AssertionError):
+        joins_lr: list[types.JoinOptions] = ["left", "right"]
+        for join in joins_lr:
+            actual = concat([ds1, ds2], dim="x", join=join)

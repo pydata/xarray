@@ -178,7 +178,10 @@ def format_timedelta(t, timedelta_format=None):
 def format_item(x, timedelta_format=None, quote_strings=True):
     """Returns a succinct summary of an object as a string"""
     if isinstance(x, PandasExtensionArray):
-        return f"{x.array[0]}"
+        # We want to bypass PandasExtensionArray's repr here
+        # because its __repr__ is PandasExtensionArray(array=[...])
+        # and this function is only for single elements.
+        return str(x.array[0])
     if isinstance(x, np.datetime64 | datetime):
         return format_timestamp(x)
     if isinstance(x, np.timedelta64 | timedelta):
@@ -891,7 +894,7 @@ def _diff_mapping_repr(
                     attrs_summary.append(attr_s)
 
                 temp = [
-                    "\n".join([var_s, attr_s]) if attr_s else var_s
+                    f"{var_s}\n{attr_s}" if attr_s else var_s
                     for var_s, attr_s in zip(temp, attrs_summary, strict=True)
                 ]
 
@@ -1059,9 +1062,8 @@ def diff_datatree_repr(a: DataTree, b: DataTree, compat):
         f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
 
-    if compat == "identical":
-        if diff_name := diff_name_summary(a, b):
-            summary.append(diff_name)
+    if compat == "identical" and (diff_name := diff_name_summary(a, b)):
+        summary.append(diff_name)
 
     treestructure_diff = diff_treestructure(a, b)
 
