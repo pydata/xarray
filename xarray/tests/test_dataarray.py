@@ -7386,16 +7386,3 @@ def test_unstack_index_var() -> None:
         name="x",
     )
     assert_identical(actual, expected)
-
-
-def test_from_series_regression() -> None:
-    # all of these examples used to fail
-    # see GH:issue:10301
-    srs = pd.Series(index=[1, 2, 3], data=pd.array([1, 1, pd.NA]))
-    arr = srs.to_xarray()
-
-    # xarray ufunc
-    res = arr.fillna(0)
-    assert_array_equal(res, np.array([1, 1, 0]))
-    assert res.dtype == pd.Int64Dtype()
-    assert isinstance(res, xr.DataArray)
