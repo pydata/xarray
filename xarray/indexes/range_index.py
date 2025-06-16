@@ -5,6 +5,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from xarray.core import duck_array_ops
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.dataarray import DataArray
 from xarray.core.indexes import CoordinateTransformIndex, Index, PandasIndex
@@ -65,7 +66,9 @@ class RangeCoordinateTransform(CoordinateTransform):
         positions = (labels - self.start) / self.step
         return {self.dim: positions}
 
-    def equals(self, other: CoordinateTransform) -> bool:
+    def equals(
+        self, other: CoordinateTransform, exclude: frozenset[Hashable] | None = None
+    ) -> bool:
         if not isinstance(other, RangeCoordinateTransform):
             return False
 
@@ -318,9 +321,9 @@ class RangeIndex(CoordinateTransformIndex):
 
         if isinstance(idxer, slice):
             return RangeIndex(self.transform.slice(idxer))
-        elif isinstance(idxer, Variable) and idxer.ndim > 1:
-            return None
-        elif np.ndim(idxer) == 0:
+        elif (isinstance(idxer, Variable) and idxer.ndim > 1) or duck_array_ops.ndim(
+            idxer
+        ) == 0:
             return None
         else:
             values = self.transform.forward({self.dim: np.asarray(idxer)})[

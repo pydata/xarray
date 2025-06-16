@@ -15,6 +15,7 @@ import pytz
 from xarray import DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
     BasicIndexer,
     CopyOnWriteArray,
@@ -1653,6 +1654,74 @@ class TestVariable(VariableSubclassobjects):
         expected = Variable(["x"], exp_values)
         assert_identical(actual, expected)
 
+    def test_set_dims_without_broadcast(self):
+        class ArrayWithoutBroadcastTo(NDArrayMixin, indexing.ExplicitlyIndexed):
+            def __init__(self, array):
+                self.array = array
+
+            # Broadcasting with __getitem__ is "easier" to implement
+            # especially for dims of 1
+            def __getitem__(self, key):
+                return self.array[key]
+
+            def __array_function__(self, *args, **kwargs):
+                raise NotImplementedError(
+                    "Not we don't want to use broadcast_to here "
+                    "https://github.com/pydata/xarray/issues/9462"
+                )
+
+        arr = ArrayWithoutBroadcastTo(np.zeros((3, 4)))
+        # We should be able to add a new axis without broadcasting
+        assert arr[np.newaxis, :, :].shape == (1, 3, 4)
+        with pytest.raises(NotImplementedError):
+            np.broadcast_to(arr, (1, 3, 4))
+
+        v = Variable(["x", "y"], arr)
+        v_expanded = v.set_dims(["z", "x", "y"])
+        assert v_expanded.dims == ("z", "x", "y")
+        assert v_expanded.shape == (1, 3, 4)
+
+        v_expanded = v.set_dims(["x", "z", "y"])
+        assert v_expanded.dims == ("x", "z", "y")
+        assert v_expanded.shape == (3, 1, 4)
+
+        v_expanded = v.set_dims(["x", "y", "z"])
+        assert v_expanded.dims == ("x", "y", "z")
+        assert v_expanded.shape == (3, 4, 1)
+
+        # Explicitly asking for a shape of 1 triggers a different
+        # codepath in set_dims
+        # https://github.com/pydata/xarray/issues/9462
+        v_expanded = v.set_dims(["z", "x", "y"], shape=(1, 3, 4))
+        assert v_expanded.dims == ("z", "x", "y")
+        assert v_expanded.shape == (1, 3, 4)
+
+        v_expanded = v.set_dims(["x", "z", "y"], shape=(3, 1, 4))
+        assert v_expanded.dims == ("x", "z", "y")
+        assert v_expanded.shape == (3, 1, 4)
+
+        v_expanded = v.set_dims(["x", "y", "z"], shape=(3, 4, 1))
+        assert v_expanded.dims == ("x", "y", "z")
+        assert v_expanded.shape == (3, 4, 1)
+
+        v_expanded = v.set_dims({"z": 1, "x": 3, "y": 4})
+        assert v_expanded.dims == ("z", "x", "y")
+        assert v_expanded.shape == (1, 3, 4)
+
+        v_expanded = v.set_dims({"x": 3, "z": 1, "y": 4})
+        assert v_expanded.dims == ("x", "z", "y")
+        assert v_expanded.shape == (3, 1, 4)
+
+        v_expanded = v.set_dims({"x": 3, "y": 4, "z": 1})
+        assert v_expanded.dims == ("x", "y", "z")
+        assert v_expanded.shape == (3, 4, 1)
+
+        with pytest.raises(NotImplementedError):
+            v.set_dims({"z": 2, "x": 3, "y": 4})
+
+        with pytest.raises(NotImplementedError):
+            v.set_dims(["z", "x", "y"], shape=(2, 3, 4))
+
     def test_stack(self):
         v = Variable(["x", "y"], [[0, 1], [2, 3]], {"foo": "bar"})
         actual = v.stack(z=("x", "y"))
@@ -2826,6 +2895,7 @@ class TestBackendIndexing:
     @pytest.fixture(autouse=True)
     def setUp(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
+        self.cat = PandasExtensionArray(pd.Categorical(["a", "b"] * 5))
 
     def check_orthogonal_indexing(self, v):
         assert np.allclose(v.isel(x=[8, 3], y=[2, 1]), self.d[[8, 3]][:, [2, 1]])
@@ -2844,6 +2914,14 @@ class TestBackendIndexing:
             v = Variable(
                 dims=("x", "y"), data=NumpyIndexingAdapter(NumpyIndexingAdapter(self.d))
             )
+
+    def test_extension_array_duck_array(self):
+        lazy = LazilyIndexedArray(self.cat)
+        assert (lazy.get_duck_array().array == self.cat).all()
+
+    def test_extension_array_duck_indexed(self):
+        lazy = Variable(dims=("x"), data=LazilyIndexedArray(self.cat))
+        assert (lazy[[0, 1, 5]] == ["a", "b", "b"]).all()
 
     def test_LazilyIndexedArray(self):
         v = Variable(dims=("x", "y"), data=LazilyIndexedArray(self.d))
@@ -2883,12 +2961,14 @@ class TestBackendIndexing:
     def test_DaskIndexingAdapter(self):
         import dask.array as da
 
-        da = da.asarray(self.d)
-        v = Variable(dims=("x", "y"), data=DaskIndexingAdapter(da))
+        dask_array = da.asarray(self.d)
+        v = Variable(dims=("x", "y"), data=DaskIndexingAdapter(dask_array))
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
         # doubly wrapping
-        v = Variable(dims=("x", "y"), data=CopyOnWriteArray(DaskIndexingAdapter(da)))
+        v = Variable(
+            dims=("x", "y"), data=CopyOnWriteArray(DaskIndexingAdapter(dask_array))
+        )
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
 

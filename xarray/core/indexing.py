@@ -19,7 +19,6 @@ from packaging.version import Version
 
 from xarray.core import duck_array_ops
 from xarray.core.coordinate_transform import CoordinateTransform
-from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.nputils import NumpyVIndexAdapter
 from xarray.core.options import OPTIONS
 from xarray.core.types import T_Xarray
@@ -37,6 +36,7 @@ from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import array_type, integer_types, is_chunked_array
 
 if TYPE_CHECKING:
+    from xarray.core.extension_array import PandasExtensionArray
     from xarray.core.indexes import Index
     from xarray.core.types import Self
     from xarray.core.variable import Variable
@@ -444,7 +444,7 @@ class OuterIndexer(ExplicitIndexer):
                         f"invalid indexer array for {type(self).__name__}; must be scalar "
                         f"or have 1 dimension: {k!r}"
                     )
-                k = k.astype(np.int64)  # type: ignore[union-attr]
+                k = duck_array_ops.astype(k, np.int64, copy=False)
             else:
                 raise TypeError(
                     f"unexpected indexer type for {type(self).__name__}: {k!r}"
@@ -488,7 +488,7 @@ class VectorizedIndexer(ExplicitIndexer):
                         "invalid indexer key: ndarray arguments "
                         f"have different numbers of dimensions: {ndims}"
                     )
-                k = k.astype(np.int64)  # type: ignore[union-attr]
+                k = duck_array_ops.astype(k, np.int64, copy=False)
             else:
                 raise TypeError(
                     f"unexpected indexer type for {type(self).__name__}: {k!r}"
@@ -769,7 +769,15 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
 def _wrap_numpy_scalars(array):
     """Wrap NumPy scalars in 0d arrays."""
-    if np.isscalar(array):
+    ndim = duck_array_ops.ndim(array)
+    if ndim == 0 and (
+        isinstance(array, np.generic)
+        or not (is_duck_array(array) or isinstance(array, NDArrayMixin))
+    ):
+        return np.array(array)
+    elif hasattr(array, "dtype"):
+        return array
+    elif ndim == 0:
         return np.array(array)
     else:
         return array
@@ -1795,8 +1803,14 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     def get_duck_array(self) -> np.ndarray | PandasExtensionArray:
         # We return an PandasExtensionArray wrapper type that satisfies
-        # duck array protocols. This is what's needed for tests to pass.
-        if pd.api.types.is_extension_array_dtype(self.array):
+        # duck array protocols.
+        # `NumpyExtensionArray` is excluded
+        if pd.api.types.is_extension_array_dtype(self.array) and not isinstance(
+            self.array.array,
+            pd.arrays.NumpyExtensionArray,  # type: ignore[attr-defined]
+        ):
+            from xarray.core.extension_array import PandasExtensionArray
+
             return PandasExtensionArray(self.array.array)
         return np.asarray(self)
 

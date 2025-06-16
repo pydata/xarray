@@ -13,14 +13,15 @@ import warnings
 from collections.abc import Callable
 from functools import partial
 from importlib import import_module
+from typing import Any
 
 import numpy as np
 import pandas as pd
-from numpy import (  # noqa: F401
+from numpy import (
     isclose,
     isnat,
     take,
-    unravel_index,
+    unravel_index,  # noqa: F401
 )
 from pandas.api.types import is_extension_array_dtype
 
@@ -148,6 +149,21 @@ def round(array):
 around: Callable = round
 
 
+def isna(data: Any) -> bool:
+    """Checks if data is literally np.nan or pd.NA.
+
+    Parameters
+    ----------
+    data
+        Any python object
+
+    Returns
+    -------
+        Whether or not the data is np.nan or pd.NA
+    """
+    return data is pd.NA or data is np.nan
+
+
 def isnull(data):
     data = asarray(data)
 
@@ -173,16 +189,15 @@ def isnull(data):
         # bool_ is for backwards compat with numpy<2, and cupy
         dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
         return full_like(data, dtype=dtype, fill_value=False)
+    # at this point, array should have dtype=object
+    elif isinstance(data, np.ndarray) or is_extension_array_dtype(data):
+        return pandas_isnull(data)
     else:
-        # at this point, array should have dtype=object
-        if isinstance(data, np.ndarray) or is_extension_array_dtype(data):
-            return pandas_isnull(data)
-        else:
-            # Not reachable yet, but intended for use with other duck array
-            # types. For full consistency with pandas, we should accept None as
-            # a null value as well as NaN, but it isn't clear how to do this
-            # with duck typing.
-            return data != data
+        # Not reachable yet, but intended for use with other duck array
+        # types. For full consistency with pandas, we should accept None as
+        # a null value as well as NaN, but it isn't clear how to do this
+        # with duck typing.
+        return data != data
 
 
 def notnull(data):
@@ -775,6 +790,12 @@ def _nd_cum_func(cum_func, array, axis, **kwargs):
     for ax in axis:
         out = cum_func(out, axis=ax, **kwargs)
     return out
+
+
+def ndim(array) -> int:
+    # Required part of the duck array and the array-api, but we fall back in case
+    # https://docs.xarray.dev/en/latest/internals/duck-arrays-integration.html#duck-array-requirements
+    return array.ndim if hasattr(array, "ndim") else np.ndim(array)
 
 
 def cumprod(array, axis=None, **kwargs):

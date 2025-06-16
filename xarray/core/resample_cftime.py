@@ -93,31 +93,30 @@ class CFTimeGrouper:
                 self.label = "right"
             else:
                 self.label = label
-        else:
-            # The backward resample sets ``closed`` to ``'right'`` by default
-            # since the last value should be considered as the edge point for
-            # the last bin. When origin in "end" or "end_day", the value for a
-            # specific ``cftime.datetime`` index stands for the resample result
-            # from the current ``cftime.datetime`` minus ``freq`` to the current
-            # ``cftime.datetime`` with a right close.
-            if self.origin in ["end", "end_day"]:
-                if closed is None:
-                    self.closed = "right"
-                else:
-                    self.closed = closed
-                if label is None:
-                    self.label = "right"
-                else:
-                    self.label = label
+        # The backward resample sets ``closed`` to ``'right'`` by default
+        # since the last value should be considered as the edge point for
+        # the last bin. When origin in "end" or "end_day", the value for a
+        # specific ``cftime.datetime`` index stands for the resample result
+        # from the current ``cftime.datetime`` minus ``freq`` to the current
+        # ``cftime.datetime`` with a right close.
+        elif self.origin in ["end", "end_day"]:
+            if closed is None:
+                self.closed = "right"
             else:
-                if closed is None:
-                    self.closed = "left"
-                else:
-                    self.closed = closed
-                if label is None:
-                    self.label = "left"
-                else:
-                    self.label = label
+                self.closed = closed
+            if label is None:
+                self.label = "right"
+            else:
+                self.label = label
+        else:
+            if closed is None:
+                self.closed = "left"
+            else:
+                self.closed = closed
+            if label is None:
+                self.label = "left"
+            else:
+                self.label = label
 
         if offset is not None:
             try:

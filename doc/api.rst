@@ -1329,6 +1329,8 @@ Grouper Objects
    groupers.BinGrouper
    groupers.UniqueGrouper
    groupers.TimeResampler
+   groupers.SeasonGrouper
+   groupers.SeasonResampler
 
 
 Rolling objects
@@ -1644,6 +1646,8 @@ Exceptions
 .. autosummary::
    :toctree: generated/
 
+   AlignmentError
+   CoordinateValidationError
    MergeError
    SerializationWarning
 

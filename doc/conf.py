@@ -6,7 +6,7 @@ import subprocess
 import sys
 from contextlib import suppress
 from textwrap import dedent, indent
-
+import packaging.version
 import sphinx_autosummary_accessors
 import yaml
 from sphinx.application import Sphinx
@@ -61,8 +61,6 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
-    "IPython.sphinxext.ipython_directive",
-    "IPython.sphinxext.ipython_console_highlighting",
     "jupyter_sphinx",
     "nbsphinx",
     "sphinx_autosummary_accessors",
@@ -182,8 +180,10 @@ napoleon_type_aliases = {
     "pd.NaT": "~pandas.NaT",
 }
 
+autodoc_type_aliases = napoleon_type_aliases  # Keep both in sync
+
 # mermaid config
-mermaid_version = "10.9.1"
+mermaid_version = "11.6.0"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
@@ -199,10 +199,9 @@ language = "en"
 project = "xarray"
 copyright = f"2014-{datetime.datetime.now().year}, xarray Developers"
 
-# The short X.Y version.
-version = xarray.__version__.split("+")[0]
-# The full version, including alpha/beta/rc tags.
-release = xarray.__version__
+# The short Y.M.D version.
+v = packaging.version.parse(xarray.__version__)
+version = ".".join(str(p) for p in v.release)
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -212,7 +211,7 @@ today_fmt = "%Y-%m-%d"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build", "**.ipynb_checkpoints"]
+exclude_patterns = ["_build", "debug.ipynb", "**.ipynb_checkpoints"]
 
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -311,6 +310,8 @@ rediraffe_redirects = {
     "why-xarray.rst": "getting-started-guide/why-xarray.rst",
     "installing.rst": "getting-started-guide/installing.rst",
     "quick-overview.rst": "getting-started-guide/quick-overview.rst",
+    "contributing.rst": "contribute/contributing.rst",
+    "developers-meeting.rst": "contribute/developers-meeting.rst",
 }
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
@@ -338,6 +339,7 @@ intersphinx_mapping = {
     "sparse": ("https://sparse.pydata.org/en/latest/", None),
     "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
     "zarr": ("https://zarr.readthedocs.io/en/stable/", None),
+    "xarray-lmfit": ("https://xarray-lmfit.readthedocs.io/stable", None),
 }
 
 # based on numpy doc/source/conf.py

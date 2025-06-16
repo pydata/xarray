@@ -274,7 +274,7 @@ def test_to_offset_annual(month_label, month_int, multiple, offset_str):
     freq = offset_str
     offset_type = _ANNUAL_OFFSET_TYPES[offset_str]
     if month_label:
-        freq = "-".join([freq, month_label])
+        freq = f"{freq}-{month_label}"
     if multiple:
         freq = f"{multiple}{freq}"
     result = to_offset(freq)
@@ -303,7 +303,7 @@ def test_to_offset_quarter(month_label, month_int, multiple, offset_str):
     freq = offset_str
     offset_type = _QUARTER_OFFSET_TYPES[offset_str]
     if month_label:
-        freq = "-".join([freq, month_label])
+        freq = f"{freq}-{month_label}"
     if multiple:
         freq = f"{multiple}{freq}"
     result = to_offset(freq)
@@ -313,18 +313,16 @@ def test_to_offset_quarter(month_label, month_int, multiple, offset_str):
     elif multiple:
         if month_int:
             expected = offset_type(n=multiple)
-        else:
-            if offset_type == QuarterBegin:
-                expected = offset_type(n=multiple, month=1)
-            elif offset_type == QuarterEnd:
-                expected = offset_type(n=multiple, month=12)
+        elif offset_type == QuarterBegin:
+            expected = offset_type(n=multiple, month=1)
+        elif offset_type == QuarterEnd:
+            expected = offset_type(n=multiple, month=12)
     elif month_int:
         expected = offset_type(month=month_int)
-    else:
-        if offset_type == QuarterBegin:
-            expected = offset_type(month=1)
-        elif offset_type == QuarterEnd:
-            expected = offset_type(month=12)
+    elif offset_type == QuarterBegin:
+        expected = offset_type(month=1)
+    elif offset_type == QuarterEnd:
+        expected = offset_type(month=12)
     assert result == expected
 
 
