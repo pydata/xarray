@@ -1108,23 +1108,6 @@ def test_extension_array_repr(int1):
     assert repr(int1) in repr(int_duck_array)
 
 
-# def test_extension_array_result_type_numeric(int1, int2):
-#     assert pd.Int64Dtype() == np.result_type(
-#         PandasExtensionArray(int1), PandasExtensionArray(int2)
-#     )
-#     assert pd.Int64Dtype() == np.result_type(
-#         100, -100, PandasExtensionArray(int1), pd.NA
-#     )
-#     assert pd.Int64Dtype() == np.result_type(
-#         PandasExtensionArray(pd.array([1, 2, 3], dtype=pd.Int8Dtype())),
-#         np.array([4]),
-#     )
-#     assert pd.Float64Dtype() == np.result_type(
-#         np.array([1.0]),
-#         PandasExtensionArray(int1),
-#     )
-
-
 def test_extension_array_result_type_categorical(categorical1, categorical2):
     res = np.result_type(
         PandasExtensionArray(categorical1), PandasExtensionArray(categorical2)
@@ -1138,18 +1121,6 @@ def test_extension_array_result_type_categorical(categorical1, categorical2):
     assert categorical1.dtype == np.result_type(
         PandasExtensionArray(categorical1), pd.CategoricalDtype.na_value
     )
-
-
-# def test_extension_array_result_type_mixed(int1, categorical1):
-#     assert np.dtype("object") == np.result_type(
-#         PandasExtensionArray(int1), PandasExtensionArray(categorical1)
-#     )
-#     assert np.dtype("object") == np.result_type(
-#         np.array([1, 2, 3]), PandasExtensionArray(categorical1)
-#     )
-#     assert np.dtype("object") == np.result_type(
-#         PandasExtensionArray(int1), dt.datetime.now()
-#     )
 
 
 def test_extension_array_attr():
