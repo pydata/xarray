@@ -1849,42 +1849,34 @@ class TestDataArray:
             "Dtype of reindexed DataArray should remain float32"
         )
 
-    def test_reindex_extension_array(self) -> None:
-        index1 = np.array([1, 2, 3])
-        index2 = np.array([1, 2, 4])
-        srs = pd.Series(index=index1, data=1).convert_dtypes()
-        x = srs.to_xarray()
-        y = x.reindex(index=index2)  # used to fail (GH #10301)
-        assert_array_equal(x, pd.array([1, 1, 1]))
-        assert_array_equal(y, pd.array([1, 1, pd.NA]))
-        assert x.dtype == y.dtype == pd.Int64Dtype()
-        assert x.index.dtype == y.index.dtype == np.dtype("int64")
-
-    def test_reindex_categorical_index(self) -> None:
-        index1 = pd.Categorical(["a", "b", "c"])
-        index2 = pd.Categorical(["a", "b", "d"])
-        srs = pd.Series(index=index1, data=1).convert_dtypes()
-        x = srs.to_xarray()
-        y = x.reindex(index=index2)
-        assert_array_equal(x, pd.array([1, 1, 1]))
-        assert_array_equal(y, pd.array([1, 1, pd.NA]))
-        assert x.dtype == y.dtype == pd.Int64Dtype()
-        assert isinstance(x.index.dtype, pd.CategoricalDtype)
-        assert isinstance(y.index.dtype, pd.CategoricalDtype)
-        assert_array_equal(x.index.dtype.categories, np.array(["a", "b", "c"]))
-        assert_array_equal(y.index.dtype.categories, np.array(["a", "b", "d"]))
-
-    def test_reindex_categorical(self) -> None:
-        data = pd.Categorical(["a", "b", "c"])
-        srs = pd.Series(index=["e", "f", "g"], data=data).convert_dtypes()
+    @pytest.mark.parametrize(
+        "extension_array",
+        [
+            pytest.param(pd.Categorical(["a", "b", "c"]), id="categorical"),
+        ]
+        + [
+            pytest.param(
+                pd.array([1, 2, 3], dtype="int64[pyarrow]"),
+                id="int64[pyarrow]",
+            )
+        ]
+        if has_pyarrow
+        else [],
+    )
+    def test_reindex_extension_array(self, extension_array) -> None:
+        srs = pd.Series(index=["e", "f", "g"], data=extension_array)
         x = srs.to_xarray()
         y = x.reindex(index=["f", "g", "z"])
-        assert_array_equal(x, data)
+        assert_array_equal(x, extension_array)
         # TODO: remove .array once the branch is updated with main
         pd.testing.assert_extension_array_equal(
-            y.data, pd.Categorical(["b", "c", pd.NA], dtype=data.dtype)
+            y.data,
+            extension_array._from_sequence(
+                [extension_array[1], extension_array[2], pd.NA],
+                dtype=extension_array.dtype,
+            ),
         )
-        assert x.dtype == y.dtype == data.dtype
+        assert x.dtype == y.dtype == extension_array.dtype
 
     @pytest.mark.parametrize(
         "fill_value,extension_array",
