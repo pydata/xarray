@@ -464,7 +464,7 @@ def inherited_coords_repr(node: DataTree, col_width=None, max_rows=None):
     )
 
 
-def inline_index_repr(index: pd.Index, max_width=None):
+def inline_index_repr(index: pd.Index, max_width: int) -> str:
     if hasattr(index, "_repr_inline_"):
         repr_ = index._repr_inline_(max_width=max_width)
     else:
