@@ -65,7 +65,7 @@ def __extension_duck_array__astype(
     subok: bool = True,
     copy: bool = True,
     device: str | None = None,
-) -> T_ExtensionArray:
+) -> ExtensionArray:
     if (
         not (
             is_extension_array_dtype(array_or_scalar) or is_extension_array_dtype(dtype)
@@ -82,7 +82,7 @@ def __extension_duck_array__astype(
 @implements(np.asarray)
 def __extension_duck_array__asarray(
     array_or_scalar: np.typing.ArrayLike, dtype: DTypeLikeSave = None
-) -> T_ExtensionArray:
+) -> ExtensionArray:
     if not is_extension_array_dtype(dtype):
         return NotImplemented
 
@@ -91,9 +91,9 @@ def __extension_duck_array__asarray(
 
 def as_extension_array(
     array_or_scalar: np.typing.ArrayLike, dtype: ExtensionDtype, copy: bool = False
-) -> T_ExtensionArray:
+) -> ExtensionArray:
     if is_scalar(array_or_scalar):
-        return dtype.construct_array_type()._from_sequence(
+        return dtype.construct_array_type()._from_sequence(  # type: ignore[attr-defined]
             [array_or_scalar], dtype=dtype
         )
     else:
@@ -104,14 +104,17 @@ def as_extension_array(
 def __extension_duck_array__result_type(
     *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike,
 ) -> DtypeObj:
-    extension_arrays_and_dtypes = [
-        x for x in arrays_and_dtypes if is_extension_array_dtype(x)
+    extension_arrays_and_dtypes: list[ExtensionDtype | ExtensionArray] = [
+        x
+        for x in arrays_and_dtypes
+        if is_extension_array_dtype(x)  # type: ignore[arg-type, misc]
     ]
     if not extension_arrays_and_dtypes:
         return NotImplemented
 
     ea_dtypes: list[ExtensionDtype] = [
-        getattr(x, "dtype", x) for x in extension_arrays_and_dtypes
+        getattr(x, "dtype", cast(ExtensionDtype, x))
+        for x in extension_arrays_and_dtypes
     ]
     scalars: list[Scalar] = [
         x for x in arrays_and_dtypes if is_scalar(x) and x not in {pd.NA, np.nan}
@@ -122,7 +125,7 @@ def __extension_duck_array__result_type(
     other_stuff = [
         x
         for x in arrays_and_dtypes
-        if not is_extension_array_dtype(x) and not is_scalar(x)
+        if not is_extension_array_dtype(x) and not is_scalar(x)  # type: ignore[arg-type, misc]
     ]
     # We implement one special case: when possible, preserve Categoricals (avoid promoting
     # to object) by merging the categories of all given Categoricals + scalars + NA.
@@ -130,7 +133,9 @@ def __extension_duck_array__result_type(
     if not other_stuff and all(
         isinstance(x, pd.CategoricalDtype) and not x.ordered for x in ea_dtypes
     ):
-        return union_unordered_categorical_and_scalar(ea_dtypes, scalars)
+        return union_unordered_categorical_and_scalar(
+            cast(list[pd.CategoricalDtype], ea_dtypes), scalars
+        )
     if not other_stuff and all(
         isinstance(x, type(ea_type := ea_dtypes[0])) for x in ea_dtypes
     ):
@@ -146,7 +151,7 @@ def union_unordered_categorical_and_scalar(
     scalars = [x for x in scalars if x is not pd.CategoricalDtype.na_value]
     all_categories = set().union(*(x.categories for x in categorical_dtypes))
     all_categories = all_categories.union(scalars)
-    return pd.CategoricalDtype(categories=all_categories)
+    return pd.CategoricalDtype(categories=list(all_categories))
 
 
 @implements(np.broadcast_to)
@@ -174,7 +179,7 @@ def __extension_duck_array__where(
     x: T_ExtensionArray,
     y: T_ExtensionArray | np.ArrayLike,
 ) -> T_ExtensionArray:
-    return cast(T_ExtensionArray, pd.Series(x).where(condition, y).array)
+    return cast(T_ExtensionArray, pd.Series(x).where(condition, y).array)  # type: ignore[arg-type]
 
 
 def _replace_duck(args, replacer: Callable[[PandasExtensionArray]]) -> list:

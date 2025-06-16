@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 from pandas.api.types import is_extension_array_dtype
@@ -9,6 +9,11 @@ from pandas.api.types import is_extension_array_dtype
 from xarray.compat import array_api_compat, npcompat
 from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core import utils
+
+if TYPE_CHECKING:
+    from typing import Any
+
+    from pandas.api.extensions import ExtensionDtype
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject("<NA>")
@@ -48,7 +53,7 @@ PROMOTE_TO_OBJECT: tuple[tuple[type[np.generic], type[np.generic]], ...] = (
 )
 
 
-def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
+def maybe_promote(dtype: np.dtype | ExtensionDtype) -> tuple[np.dtype, Any]:
     """Simpler equivalent of pandas.core.common._maybe_promote
 
     Parameters
