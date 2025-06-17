@@ -145,7 +145,7 @@ def summarize_index(coord_names, index) -> str:
     name = "<br>".join([escape(str(n)) for n in coord_names])
 
     index_id = f"index-{uuid.uuid4()}"
-    preview = escape(inline_index_repr(index))
+    preview = escape(inline_index_repr(index, max_width=70))
     details = short_index_repr_html(index)
 
     data_icon = _icon("icon-database")
