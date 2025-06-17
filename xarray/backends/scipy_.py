@@ -190,6 +190,8 @@ class ScipyDataStore(WritableCFDataStore):
     def open_store_variable(self, name, var):
         return Variable(
             var.dimensions,
+            # this backend always loads in to memory, so we don't wrap
+            # with LazilyIndexedArray
             ScipyArrayWrapper(name, self),
             _decode_attrs(var._attributes),
         )

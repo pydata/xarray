@@ -5,6 +5,7 @@ import copy
 import numpy as np
 
 from xarray.backends.common import AbstractWritableDataStore
+from xarray.core import indexing
 from xarray.core.variable import Variable
 
 
@@ -24,7 +25,12 @@ class InMemoryDataStore(AbstractWritableDataStore):
         return self._attributes
 
     def get_variables(self):
-        return self._variables
+        res = {}
+        for k, v in self._variables.items():
+            v = v.copy(deep=True)
+            res[k] = v
+            v._data = indexing.LazilyIndexedArray(v._data)
+        return res
 
     def get_dimensions(self):
         return {d: s for v in self._variables.values() for d, s in v.dims.items()}
