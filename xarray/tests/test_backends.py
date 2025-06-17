@@ -2333,7 +2333,7 @@ class ZarrBase(CFEncodedBase):
     @contextlib.contextmanager
     def open(self, path, **kwargs):
         with xr.open_dataset(
-            path, engine="zarr", mode="r", **kwargs, **self.version_kwargs
+            path, engine="zarr", **kwargs, **self.version_kwargs
         ) as ds:
             yield ds
 
@@ -4356,14 +4356,13 @@ class TestH5NetCDFData(NetCDF4Base):
                     fx = f.create_group(grp)
                     for k, v in var.items():
                         fx.create_dataset(k, data=v)
-            with pytest.warns(UserWarning, match="The 'phony_dims' kwarg"):
-                with xr.open_dataset(tmp_file, engine="h5netcdf", group="bar") as ds:
-                    assert ds.sizes == {
-                        "phony_dim_0": 5,
-                        "phony_dim_1": 5,
-                        "phony_dim_2": 5,
-                        "phony_dim_3": 25,
-                    }
+            with xr.open_dataset(tmp_file, engine="h5netcdf", group="bar") as ds:
+                assert ds.sizes == {
+                    "phony_dim_0": 5,
+                    "phony_dim_1": 5,
+                    "phony_dim_2": 5,
+                    "phony_dim_3": 25,
+                }
 
 
 @requires_h5netcdf

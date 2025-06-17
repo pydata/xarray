@@ -38,21 +38,23 @@ This is what a ``BackendEntrypoint`` subclass should look like:
 
 .. code-block:: python
 
-    from xarray.backends import BackendEntrypoint
+    from xarray.backends import BackendEntrypoint, CoderOptions
 
 
     class MyBackendEntrypoint(BackendEntrypoint):
+        coder_class = CoderOptions
+
         def open_dataset(
             self,
             filename_or_obj,
             *,
-            drop_variables=None,
+            coder_options=None,
             # other backend specific keyword arguments
             # `chunks` and `cache` DO NOT go here, they are handled by xarray
         ):
-            return my_open_dataset(filename_or_obj, drop_variables=drop_variables)
+            return my_open_dataset(filename_or_obj, coder_options=coder_options)
 
-        open_dataset_parameters = ["filename_or_obj", "drop_variables"]
+        open_dataset_parameters = ["filename_or_obj", "coder_options"]
 
         def guess_can_open(self, filename_or_obj):
             try:
@@ -83,19 +85,15 @@ The following is an example of the high level processing steps:
         self,
         filename_or_obj,
         *,
-        drop_variables=None,
-        decode_times=True,
-        decode_timedelta=True,
-        decode_coords=True,
+        coder_options=None,
         my_backend_option=None,
     ):
         vars, attrs, coords = my_reader(
             filename_or_obj,
-            drop_variables=drop_variables,
             my_backend_option=my_backend_option,
         )
         vars, attrs, coords = my_decode_variables(
-            vars, attrs, decode_times, decode_timedelta, decode_coords
+            vars, attrs, **coder_options.to_kwargs()
         )  #  see also conventions.decode_cf_variables
 
         ds = xr.Dataset(vars, attrs=attrs, coords=coords)
@@ -110,16 +108,13 @@ method shall be set by using :py:meth:`~xarray.Dataset.set_close`.
 
 
 The input of ``open_dataset`` method are one argument
-(``filename_or_obj``) and one keyword argument (``drop_variables``):
+(``filename_or_obj``) and one keyword argument (``coder_options``):
 
 - ``filename_or_obj``: can be any object but usually it is a string containing a path or an instance of
   :py:class:`pathlib.Path`.
-- ``drop_variables``: can be ``None`` or an iterable containing the variable
-  names to be dropped when reading the data.
+- ``coder_options``: can be None or :py:class:`~xarray.backends.CoderOptions`
 
-If it makes sense for your backend, your ``open_dataset``  method
-should implement in its interface the following boolean keyword arguments, called
-**decoders**, which default to ``None``:
+If it makes sense for your backend, you can override the ``CoderOptions`` fields, which default to ``None``:
 
 - ``mask_and_scale``
 - ``decode_times``
@@ -127,12 +122,12 @@ should implement in its interface the following boolean keyword arguments, calle
 - ``use_cftime``
 - ``concat_characters``
 - ``decode_coords``
+- ``drop_variables``
 
-Note: all the supported decoders shall be declared explicitly
-in backend ``open_dataset`` signature and adding a ``**kwargs`` is not allowed.
+Note: If ``coder_options`` is None the given kwargs are validated against the default.
 
 These keyword arguments are explicitly defined in Xarray
-:py:func:`~xarray.open_dataset` signature. Xarray will pass them to the
+:py:func:`~xarray.CoderOptions` or subclass. Xarray will pass them to the
 backend only if the User explicitly sets a value different from ``None``.
 For more details on decoders see :ref:`RST decoders`.
 
@@ -140,7 +135,6 @@ Your backend can also take as input a set of backend-specific keyword
 arguments. All these keyword arguments can be passed to
 :py:func:`~xarray.open_dataset` grouped either via the ``backend_kwargs``
 parameter or explicitly using the syntax ``**kwargs``.
-
 
 If you don't want to support the lazy loading, then the
 :py:class:`~xarray.Dataset` shall contain values as a :py:class:`numpy.ndarray`
@@ -260,14 +254,16 @@ time is stored in two attributes dataDate and dataTime as strings. Therefore,
 it is not possible to reuse the Xarray time decoder, and implementing a new
 one is mandatory.
 
-Decoders can be activated or deactivated using the boolean keywords of
-Xarray :py:meth:`~xarray.open_dataset` signature: ``mask_and_scale``,
+Decoders can be activated or deactivated using ``coder_options`` kwarg
+(:py:class:`~xarray.backends.CoderOptions`) or it's boolean keywords equivalent of
+Xarray :py:meth:`~xarray.open_dataset` (``mask_and_scale``,
 ``decode_times``, ``decode_timedelta``, ``use_cftime``,
-``concat_characters``, ``decode_coords``.
+``concat_characters``, ``decode_coords``. ``drop_variables``)
 Such keywords are passed to the backend only if the User sets a value
 different from ``None``.  Note that the backend does not necessarily have to
-implement all the decoders, but it shall declare in its ``open_dataset``
-interface only the boolean keywords related to the supported decoders.
+implement all the decoders, but it shall declare a ``coder_class`` in its
+``BackendEntrypoint`` interface with only the boolean keywords related to
+the supported decoders.
 
 .. _RST backend_registration:
 

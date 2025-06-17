@@ -3,14 +3,14 @@ from __future__ import annotations
 import functools
 import io
 import os
-from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
 
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendEntrypoint,
+    CoderOptions,
     WritableCFDataStore,
     _normalize_path,
     _open_remote_file,
@@ -28,6 +28,7 @@ from xarray.backends.netCDF4_ import (
     _get_datatype,
     _nc4_require_group,
 )
+from xarray.backends.netCDF4_ import NetCDF4CoderOptions as H5netcdfCoderOptions
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
 from xarray.core.utils import (
@@ -371,23 +372,6 @@ class H5NetCDFStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
-def _check_phony_dims(phony_dims):
-    emit_phony_dims_warning = False
-    if phony_dims is None:
-        emit_phony_dims_warning = True
-        phony_dims = "access"
-    return emit_phony_dims_warning, phony_dims
-
-
-def _emit_phony_dims_warning():
-    emit_user_level_warning(
-        "The 'phony_dims' kwarg now defaults to 'access'. "
-        "Previously 'phony_dims=None' would raise an error. "
-        "For full netcdf equivalence please use phony_dims='sort'.",
-        UserWarning,
-    )
-
-
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the h5netcdf package.
@@ -409,6 +393,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     backends.NetCDF4BackendEntrypoint
     backends.ScipyBackendEntrypoint
     """
+
+    coder_class = H5netcdfCoderOptions
 
     description = (
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using h5netcdf in Xarray"
@@ -433,27 +419,21 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
-        drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
         format=None,
         group=None,
         lock=None,
         invalid_netcdf=None,
-        phony_dims=None,
+        phony_dims="access",
         decode_vlen_strings=True,
         driver=None,
         driver_kwds=None,
         storage_options: dict[str, Any] | None = None,
+        coder_options: Optional[CoderOptions] = None,
+        **kwargs,
     ) -> Dataset:
-        # Keep this message for some versions
-        # remove and set phony_dims="access" above
-        emit_phony_dims_warning, phony_dims = _check_phony_dims(phony_dims)
-
+        coder_options = (
+            coder_options if coder_options is not None else self.coder_options
+        )
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
@@ -472,20 +452,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         ds = store_entrypoint.open_dataset(
             store,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
+            coder_options=coder_options,
         )
-
-        # only warn if phony_dims exist in file
-        # remove together with the above check
-        # after some versions
-        if store.ds._root._phony_dim_count > 0 and emit_phony_dims_warning:
-            _emit_phony_dims_warning()
 
         return ds
 
@@ -493,32 +461,19 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
-        drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
         format=None,
         group: str | None = None,
         lock=None,
         invalid_netcdf=None,
-        phony_dims=None,
+        phony_dims="access",
         decode_vlen_strings=True,
         driver=None,
         driver_kwds=None,
+        coder_options: Optional[CoderOptions] = None,
         **kwargs,
     ) -> DataTree:
         groups_dict = self.open_groups_as_dict(
             filename_or_obj,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
             format=format,
             group=group,
             lock=lock,
@@ -527,6 +482,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             decode_vlen_strings=decode_vlen_strings,
             driver=driver,
             driver_kwds=driver_kwds,
+            coder_options=coder_options,
             **kwargs,
         )
 
@@ -536,13 +492,6 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
-        drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
         format=None,
         group: str | None = None,
         lock=None,
@@ -551,15 +500,12 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         decode_vlen_strings=True,
         driver=None,
         driver_kwds=None,
+        coder_options: Optional[CoderOptions] = None,
         **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.backends.common import _iter_nc_groups
         from xarray.core.treenode import NodePath
         from xarray.core.utils import close_on_error
-
-        # Keep this message for some versions
-        # remove and set phony_dims="access" above
-        emit_phony_dims_warning, phony_dims = _check_phony_dims(phony_dims)
 
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
@@ -588,13 +534,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             with close_on_error(group_store):
                 group_ds = store_entrypoint.open_dataset(
                     group_store,
-                    mask_and_scale=mask_and_scale,
-                    decode_times=decode_times,
-                    concat_characters=concat_characters,
-                    decode_coords=decode_coords,
-                    drop_variables=drop_variables,
-                    use_cftime=use_cftime,
-                    decode_timedelta=decode_timedelta,
+                    coder_options=coder_options,
                 )
 
             if group:
@@ -602,12 +542,6 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             else:
                 group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
-
-        # only warn if phony_dims exist in file
-        # remove together with the above check
-        # after some versions
-        if store.ds._phony_dim_count > 0 and emit_phony_dims_warning:
-            _emit_phony_dims_warning()
 
         return groups_dict
 

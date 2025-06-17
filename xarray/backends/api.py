@@ -9,6 +9,7 @@ from collections.abc import (
     MutableMapping,
     Sequence,
 )
+from dataclasses import fields
 from functools import partial
 from io import BytesIO
 from numbers import Number
@@ -29,11 +30,12 @@ from xarray.backends import plugins
 from xarray.backends.common import (
     AbstractDataStore,
     ArrayWriter,
+    CoderOptions,
     _find_absolute_paths,
     _normalize_path,
+    _reset_dataclass_to_false,
 )
 from xarray.backends.locks import _get_scheduler
-from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import indexing
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
@@ -388,12 +390,15 @@ def _dataset_from_backend_dataset(
     inline_array,
     chunked_array_type,
     from_array_kwargs,
+    coder_options,
     **extra_tokens,
 ):
     if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
         raise ValueError(
             f"chunks must be an int, dict, 'auto', or None. Instead found {chunks}."
         )
+
+    extra_tokens.update(**coder_options.to_kwargs())
 
     _protect_dataset_variables_inplace(backend_ds, cache)
     if chunks is None:
@@ -433,12 +438,15 @@ def _datatree_from_backend_datatree(
     inline_array,
     chunked_array_type,
     from_array_kwargs,
+    coder_options,
     **extra_tokens,
 ):
     if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
         raise ValueError(
             f"chunks must be an int, dict, 'auto', or None. Instead found {chunks}."
         )
+
+    extra_tokens.update(**coder_options.to_kwargs())
 
     _protect_datatree_variables_inplace(backend_tree, cache)
     if chunks is None:
@@ -476,30 +484,38 @@ def _datatree_from_backend_datatree(
     return tree
 
 
+def _resolve_decoders_options(coder_options, backend, decoders):
+    # initialize CoderOptions with decoders if not given
+    # Deprecation Fallback
+    if coder_options is False:
+        coder_options = _reset_dataclass_to_false(backend.coder_options)
+    elif coder_options is True:
+        coder_options = backend.coder_options
+    elif coder_options is None:
+        decode_cf = decoders.pop("decode_cf", None)
+        if decode_cf is False:
+            coder_options = _reset_dataclass_to_false(backend.coder_options)
+        else:
+            field_names = {f.name for f in fields(backend.coder_class)}
+            coders = {}
+            for d in list(decoders):
+                if d in field_names:
+                    coders[d] = decoders.pop(d)
+            coder_options = backend.coder_class(**coders)
+    return coder_options
+
+
 def open_dataset(
     filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
     cache: bool | None = None,
-    decode_cf: bool | None = None,
-    mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool
-    | CFDatetimeCoder
-    | Mapping[str, bool | CFDatetimeCoder]
-    | None = None,
-    decode_timedelta: bool
-    | CFTimedeltaCoder
-    | Mapping[str, bool | CFTimedeltaCoder]
-    | None = None,
-    use_cftime: bool | Mapping[str, bool] | None = None,
-    concat_characters: bool | Mapping[str, bool] | None = None,
-    decode_coords: Literal["coordinates", "all"] | bool | None = None,
-    drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
+    coder_options: Union[bool, CoderOptions, None] = None,
     **kwargs,
 ) -> Dataset:
     """Open and decode a dataset from a file or file-like object.
@@ -539,76 +555,91 @@ def open_dataset(
         argument to use dask, in which case it defaults to False. Does not
         change the behavior of coordinates corresponding to dimensions, which
         always load their data from disk into a ``pandas.Index``.
-    decode_cf : bool, optional
-        Whether to decode these variables, assuming they were saved according
-        to CF conventions.
-    mask_and_scale : bool or dict-like, optional
-        If True, replace array values equal to `_FillValue` with NA and scale
-        values according to the formula `original_values * scale_factor +
-        add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
-        taken from variable attributes (if they exist).  If the `_FillValue` or
-        `missing_value` attribute contains multiple values a warning will be
-        issued and all array values matching one of the multiple values will
-        be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
-        This keyword may not be supported by all the backends.
-    decode_times : bool, CFDatetimeCoder or dict-like, optional
-        If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them
-        encoded as numbers.
-        Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
-        This keyword may not be supported by all the backends.
-    decode_timedelta : bool, CFTimedeltaCoder, or dict-like, optional
-        If True, decode variables and coordinates with time units in
-        {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
-        into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of ``decode_times``; if
-        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
-        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
-        matching ``time_unit``.
-        Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
-        This keyword may not be supported by all the backends.
-    use_cftime: bool or dict-like, optional
-        Only relevant if encoded dates come from a standard calendar
-        (e.g. "gregorian", "proleptic_gregorian", "standard", or not
-        specified).  If None (default), attempt to decode times to
-        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
-        ``cftime.datetime`` objects. If True, always decode times to
-        ``cftime.datetime`` objects, regardless of whether or not they can be
-        represented using ``np.datetime64[ns]`` objects.  If False, always
-        decode times to ``np.datetime64[ns]`` objects; if this is not possible
-        raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
-        This keyword may not be supported by all the backends.
+    coder_options : bool or CoderOptions, optional
+        Dataclass containing below keyword arguments to pass to cf decoding. If set,
+        overrides any given keyword arguments:
 
-        .. deprecated:: 2025.01.1
-           Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
+        - 'decode_cf' : bool, optional
+          Whether to decode these variables, assuming they were saved according
+          to CF conventions.
 
-    concat_characters : bool or dict-like, optional
-        If True, concatenate along the last dimension of character arrays to
-        form string arrays. Dimensions will only be concatenated over (and
-        removed) if they have no corresponding variable and if they are only
-        used as the last dimension of character arrays.
-        Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
-        This keyword may not be supported by all the backends.
-    decode_coords : bool or {"coordinates", "all"}, optional
-        Controls which variables are set as coordinate variables:
+        - 'mask_and_scale' : bool or dict-like, optional
+          If True, replace array values equal to `_FillValue` with NA and scale
+          values according to the formula `original_values * scale_factor +
+          add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
+          taken from variable attributes (if they exist).  If the `_FillValue` or
+          `missing_value` attribute contains multiple values a warning will be
+          issued and all array values matching one of the multiple values will
+          be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
 
-        - "coordinates" or True: Set variables referred to in the
-          ``'coordinates'`` attribute of the datasets or individual variables
-          as coordinate variables.
-        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
-          other attributes as coordinate variables.
+        - 'decode_times' : bool, CFDatetimeCoder or dict-like, optional
+          If True, decode times encoded in the standard NetCDF datetime format
+          into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them
+          encoded as numbers.
+          Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
 
-        Only existing variables can be set as coordinates. Missing variables
-        will be silently ignored.
-    drop_variables: str or iterable of str, optional
-        A variable or list of variables to exclude from being parsed from the
-        dataset. This may be useful to drop variables with problems or
-        inconsistent values.
+        - 'decode_timedelta' : bool, CFTimedeltaCoder, or dict-like, optional
+          If True, decode variables and coordinates with time units in
+          {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
+          into timedelta objects. If False, leave them encoded as numbers.
+          If None (default), assume the same value of ``decode_times``; if
+          ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
+          takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
+          matching ``time_unit``.
+          Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+        - 'use_cftime' : bool or dict-like, optional
+          Only relevant if encoded dates come from a standard calendar
+          (e.g. "gregorian", "proleptic_gregorian", "standard", or not
+          specified).  If None (default), attempt to decode times to
+          ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+          ``cftime.datetime`` objects. If True, always decode times to
+          ``cftime.datetime`` objects, regardless of whether or not they can be
+          represented using ``np.datetime64[ns]`` objects.  If False, always
+          decode times to ``np.datetime64[ns]`` objects; if this is not possible
+          raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+          .. deprecated:: 2025.01.1
+             Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
+
+        - 'concat_characters' : bool or dict-like, optional
+          If True, concatenate along the last dimension of character arrays to
+          form string arrays. Dimensions will only be concatenated over (and
+          removed) if they have no corresponding variable and if they are only
+          used as the last dimension of character arrays.
+          Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+        - 'decode_coords' : bool or {"coordinates", "all"}, optional
+          Controls which variables are set as coordinate variables:
+
+          - "coordinates" or True: Set variables referred to in the
+            ``'coordinates'`` attribute of the datasets or individual variables
+            as coordinate variables.
+          - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+            other attributes as coordinate variables.
+
+          Only existing variables can be set as coordinates. Missing variables
+          will be silently ignored.
+
+        - 'drop_variables' : str or iterable of str, optional
+          A variable or list of variables to exclude from being parsed from the
+          dataset. This may be useful to drop variables with problems or
+          inconsistent values.
+
+        .. versionadded:: 2025.06.2
+             The new keyword argument 'coder_options' was added. For backwards
+             compatibility coder_options can be given as keyword arguments, too.
+
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -617,13 +648,16 @@ def open_dataset(
         in the values of the task graph. See :py:func:`dask.array.from_array`.
     chunked_array_type: str, optional
         Which chunked array type to coerce this datasets' arrays to.
-        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Defaults to 'dask' if installed, else whatever is registered via the
+        `ChunkManagerEntryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict
-        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
-        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
-        For example if :py:func:`dask.array.Array` objects are used for chunking, additional kwargs will be passed
-        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+        Additional keyword arguments passed on to the
+        `ChunkManagerEntrypoint.from_array` method used to create chunked arrays,
+        via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+        For example if :py:func:`dask.array.Array` objects are used for chunking,
+        additional kwargs will be passed to :py:func:`dask.array.from_array`.
+        Experimental API that should not be relied upon.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -672,22 +706,13 @@ def open_dataset(
 
     backend = plugins.get_backend(engine)
 
-    decoders = _resolve_decoders_kwargs(
-        decode_cf,
-        open_backend_dataset_parameters=backend.open_dataset_parameters,
-        mask_and_scale=mask_and_scale,
-        decode_times=decode_times,
-        decode_timedelta=decode_timedelta,
-        concat_characters=concat_characters,
-        use_cftime=use_cftime,
-        decode_coords=decode_coords,
-    )
+    # initialize coder_options per kwargs if not given
+    coder_options = _resolve_decoders_options(coder_options, backend, kwargs)
 
     overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
     backend_ds = backend.open_dataset(
         filename_or_obj,
-        drop_variables=drop_variables,
-        **decoders,
+        coder_options=coder_options,
         **kwargs,
     )
     ds = _dataset_from_backend_dataset(
@@ -700,8 +725,7 @@ def open_dataset(
         inline_array,
         chunked_array_type,
         from_array_kwargs,
-        drop_variables=drop_variables,
-        **decoders,
+        coder_options=coder_options,
         **kwargs,
     )
     return ds
@@ -713,21 +737,11 @@ def open_dataarray(
     engine: T_Engine = None,
     chunks: T_Chunks = None,
     cache: bool | None = None,
-    decode_cf: bool | None = None,
-    mask_and_scale: bool | None = None,
-    decode_times: bool
-    | CFDatetimeCoder
-    | Mapping[str, bool | CFDatetimeCoder]
-    | None = None,
-    decode_timedelta: bool | CFTimedeltaCoder | None = None,
-    use_cftime: bool | None = None,
-    concat_characters: bool | None = None,
-    decode_coords: Literal["coordinates", "all"] | bool | None = None,
-    drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
+    coder_options: Union[bool, CoderOptions, None] = None,
     **kwargs,
 ) -> DataArray:
     """Open an DataArray from a file or file-like object containing a single
@@ -770,68 +784,91 @@ def open_dataarray(
         argument to use dask, in which case it defaults to False. Does not
         change the behavior of coordinates corresponding to dimensions, which
         always load their data from disk into a ``pandas.Index``.
-    decode_cf : bool, optional
-        Whether to decode these variables, assuming they were saved according
-        to CF conventions.
-    mask_and_scale : bool, optional
-        If True, replace array values equal to `_FillValue` with NA and scale
-        values according to the formula `original_values * scale_factor +
-        add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
-        taken from variable attributes (if they exist).  If the `_FillValue` or
-        `missing_value` attribute contains multiple values a warning will be
-        issued and all array values matching one of the multiple values will
-        be replaced by NA. This keyword may not be supported by all the backends.
-    decode_times : bool, CFDatetimeCoder or dict-like, optional
-        If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or
-        leave them encoded as numbers.
-        Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
-        This keyword may not be supported by all the backends.
-    decode_timedelta : bool, optional
-        If True, decode variables and coordinates with time units in
-        {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
-        into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of ``decode_times``; if
-        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
-        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
-        matching ``time_unit``.
-        This keyword may not be supported by all the backends.
-    use_cftime: bool, optional
-        Only relevant if encoded dates come from a standard calendar
-        (e.g. "gregorian", "proleptic_gregorian", "standard", or not
-        specified).  If None (default), attempt to decode times to
-        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
-        ``cftime.datetime`` objects. If True, always decode times to
-        ``cftime.datetime`` objects, regardless of whether or not they can be
-        represented using ``np.datetime64[ns]`` objects.  If False, always
-        decode times to ``np.datetime64[ns]`` objects; if this is not possible
-        raise an error. This keyword may not be supported by all the backends.
+    coder_options : bool or CoderOptions, optional
+        Dataclass containing below keyword arguments to pass to cf decoding. If set,
+        overrides any given keyword arguments:
 
-        .. deprecated:: 2025.01.1
-           Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
+        - 'decode_cf' : bool, optional
+          Whether to decode these variables, assuming they were saved according
+          to CF conventions.
 
-    concat_characters : bool, optional
-        If True, concatenate along the last dimension of character arrays to
-        form string arrays. Dimensions will only be concatenated over (and
-        removed) if they have no corresponding variable and if they are only
-        used as the last dimension of character arrays.
-        This keyword may not be supported by all the backends.
-    decode_coords : bool or {"coordinates", "all"}, optional
-        Controls which variables are set as coordinate variables:
+        - 'mask_and_scale' : bool or dict-like, optional
+          If True, replace array values equal to `_FillValue` with NA and scale
+          values according to the formula `original_values * scale_factor +
+          add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
+          taken from variable attributes (if they exist).  If the `_FillValue` or
+          `missing_value` attribute contains multiple values a warning will be
+          issued and all array values matching one of the multiple values will
+          be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
 
-        - "coordinates" or True: Set variables referred to in the
-          ``'coordinates'`` attribute of the datasets or individual variables
-          as coordinate variables.
-        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
-          other attributes as coordinate variables.
+        - 'decode_times' : bool, CFDatetimeCoder or dict-like, optional
+          If True, decode times encoded in the standard NetCDF datetime format
+          into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them
+          encoded as numbers.
+          Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
 
-        Only existing variables can be set as coordinates. Missing variables
-        will be silently ignored.
-    drop_variables: str or iterable of str, optional
-        A variable or list of variables to exclude from being parsed from the
-        dataset. This may be useful to drop variables with problems or
-        inconsistent values.
+        - 'decode_timedelta' : bool, CFTimedeltaCoder, or dict-like, optional
+          If True, decode variables and coordinates with time units in
+          {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
+          into timedelta objects. If False, leave them encoded as numbers.
+          If None (default), assume the same value of ``decode_times``; if
+          ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
+          takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
+          matching ``time_unit``.
+          Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+        - 'use_cftime' : bool or dict-like, optional
+          Only relevant if encoded dates come from a standard calendar
+          (e.g. "gregorian", "proleptic_gregorian", "standard", or not
+          specified).  If None (default), attempt to decode times to
+          ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+          ``cftime.datetime`` objects. If True, always decode times to
+          ``cftime.datetime`` objects, regardless of whether or not they can be
+          represented using ``np.datetime64[ns]`` objects.  If False, always
+          decode times to ``np.datetime64[ns]`` objects; if this is not possible
+          raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+          .. deprecated:: 2025.01.1
+             Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
+
+        - 'concat_characters' : bool or dict-like, optional
+          If True, concatenate along the last dimension of character arrays to
+          form string arrays. Dimensions will only be concatenated over (and
+          removed) if they have no corresponding variable and if they are only
+          used as the last dimension of character arrays.
+          Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+        - 'decode_coords' : bool or {"coordinates", "all"}, optional
+          Controls which variables are set as coordinate variables:
+
+          - "coordinates" or True: Set variables referred to in the
+            ``'coordinates'`` attribute of the datasets or individual variables
+            as coordinate variables.
+          - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+            other attributes as coordinate variables.
+
+          Only existing variables can be set as coordinates. Missing variables
+          will be silently ignored.
+
+        - 'drop_variables' : str or iterable of str, optional
+          A variable or list of variables to exclude from being parsed from the
+          dataset. This may be useful to drop variables with problems or
+          inconsistent values.
+
+        .. versionadded:: 2025.06.2
+             The new keyword argument 'coder_options' was added. For backwards
+             compatibility coder_options can be given as keyword arguments, too.
+
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -880,21 +917,14 @@ def open_dataarray(
 
     dataset = open_dataset(
         filename_or_obj,
-        decode_cf=decode_cf,
-        mask_and_scale=mask_and_scale,
-        decode_times=decode_times,
-        concat_characters=concat_characters,
-        decode_coords=decode_coords,
         engine=engine,
         chunks=chunks,
         cache=cache,
-        drop_variables=drop_variables,
         inline_array=inline_array,
         chunked_array_type=chunked_array_type,
         from_array_kwargs=from_array_kwargs,
         backend_kwargs=backend_kwargs,
-        use_cftime=use_cftime,
-        decode_timedelta=decode_timedelta,
+        coder_options=coder_options,
         **kwargs,
     )
 
@@ -931,24 +961,11 @@ def open_datatree(
     engine: T_Engine = None,
     chunks: T_Chunks = None,
     cache: bool | None = None,
-    decode_cf: bool | None = None,
-    mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool
-    | CFDatetimeCoder
-    | Mapping[str, bool | CFDatetimeCoder]
-    | None = None,
-    decode_timedelta: bool
-    | CFTimedeltaCoder
-    | Mapping[str, bool | CFTimedeltaCoder]
-    | None = None,
-    use_cftime: bool | Mapping[str, bool] | None = None,
-    concat_characters: bool | Mapping[str, bool] | None = None,
-    decode_coords: Literal["coordinates", "all"] | bool | None = None,
-    drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
+    coder_options: Union[bool, CoderOptions, None] = None,
     **kwargs,
 ) -> DataTree:
     """
@@ -984,76 +1001,92 @@ def open_datatree(
         argument to use dask, in which case it defaults to False. Does not
         change the behavior of coordinates corresponding to dimensions, which
         always load their data from disk into a ``pandas.Index``.
-    decode_cf : bool, optional
-        Whether to decode these variables, assuming they were saved according
-        to CF conventions.
-    mask_and_scale : bool or dict-like, optional
-        If True, replace array values equal to `_FillValue` with NA and scale
-        values according to the formula `original_values * scale_factor +
-        add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
-        taken from variable attributes (if they exist).  If the `_FillValue` or
-        `missing_value` attribute contains multiple values a warning will be
-        issued and all array values matching one of the multiple values will
-        be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
-        This keyword may not be supported by all the backends.
-    decode_times : bool, CFDatetimeCoder or dict-like, optional
-        If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or
-        leave them encoded as numbers.
-        Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
-        This keyword may not be supported by all the backends.
-    decode_timedelta : bool or dict-like, optional
-        If True, decode variables and coordinates with time units in
-        {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
-        into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of ``decode_times``; if
-        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
-        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
-        matching ``time_unit``.
-        Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
-        This keyword may not be supported by all the backends.
-    use_cftime: bool or dict-like, optional
-        Only relevant if encoded dates come from a standard calendar
-        (e.g. "gregorian", "proleptic_gregorian", "standard", or not
-        specified).  If None (default), attempt to decode times to
-        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
-        ``cftime.datetime`` objects. If True, always decode times to
-        ``cftime.datetime`` objects, regardless of whether or not they can be
-        represented using ``np.datetime64[ns]`` objects.  If False, always
-        decode times to ``np.datetime64[ns]`` objects; if this is not possible
-        raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
-        This keyword may not be supported by all the backends.
+    coder_options : bool or CoderOptions, optional
+        Dataclass containing below keyword arguments to pass to cf decoding. If set,
+        overrides any given keyword arguments:
 
-        .. deprecated:: 2025.01.1
-           Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
+        - 'decode_cf' : bool, optional
+          Whether to decode these variables, assuming they were saved according
+          to CF conventions.
 
-    concat_characters : bool or dict-like, optional
-        If True, concatenate along the last dimension of character arrays to
-        form string arrays. Dimensions will only be concatenated over (and
-        removed) if they have no corresponding variable and if they are only
-        used as the last dimension of character arrays.
-        Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
-        This keyword may not be supported by all the backends.
-    decode_coords : bool or {"coordinates", "all"}, optional
-        Controls which variables are set as coordinate variables:
+        - 'mask_and_scale' : bool or dict-like, optional
+          If True, replace array values equal to `_FillValue` with NA and scale
+          values according to the formula `original_values * scale_factor +
+          add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
+          taken from variable attributes (if they exist).  If the `_FillValue` or
+          `missing_value` attribute contains multiple values a warning will be
+          issued and all array values matching one of the multiple values will
+          be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
 
-        - "coordinates" or True: Set variables referred to in the
-          ``'coordinates'`` attribute of the datasets or individual variables
-          as coordinate variables.
-        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
-          other attributes as coordinate variables.
+        - 'decode_times' : bool, CFDatetimeCoder or dict-like, optional
+          If True, decode times encoded in the standard NetCDF datetime format
+          into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them
+          encoded as numbers.
+          Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
 
-        Only existing variables can be set as coordinates. Missing variables
-        will be silently ignored.
-    drop_variables: str or iterable of str, optional
-        A variable or list of variables to exclude from being parsed from the
-        dataset. This may be useful to drop variables with problems or
-        inconsistent values.
+        - 'decode_timedelta' : bool, CFTimedeltaCoder, or dict-like, optional
+          If True, decode variables and coordinates with time units in
+          {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
+          into timedelta objects. If False, leave them encoded as numbers.
+          If None (default), assume the same value of ``decode_times``; if
+          ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
+          takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
+          matching ``time_unit``.
+          Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+        - 'use_cftime' : bool or dict-like, optional
+          Only relevant if encoded dates come from a standard calendar
+          (e.g. "gregorian", "proleptic_gregorian", "standard", or not
+          specified).  If None (default), attempt to decode times to
+          ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+          ``cftime.datetime`` objects. If True, always decode times to
+          ``cftime.datetime`` objects, regardless of whether or not they can be
+          represented using ``np.datetime64[ns]`` objects.  If False, always
+          decode times to ``np.datetime64[ns]`` objects; if this is not possible
+          raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+          .. deprecated:: 2025.01.1
+             Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
+
+        - 'concat_characters' : bool or dict-like, optional
+          If True, concatenate along the last dimension of character arrays to
+          form string arrays. Dimensions will only be concatenated over (and
+          removed) if they have no corresponding variable and if they are only
+          used as the last dimension of character arrays.
+          Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+        - 'decode_coords' : bool or {"coordinates", "all"}, optional
+          Controls which variables are set as coordinate variables:
+
+          - "coordinates" or True: Set variables referred to in the
+            ``'coordinates'`` attribute of the datasets or individual variables
+            as coordinate variables.
+          - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+            other attributes as coordinate variables.
+
+          Only existing variables can be set as coordinates. Missing variables
+          will be silently ignored.
+
+        - 'drop_variables' : str or iterable of str, optional
+          A variable or list of variables to exclude from being parsed from the
+          dataset. This may be useful to drop variables with problems or
+          inconsistent values.
+
+        .. versionadded:: 2025.06.2
+             The new keyword argument 'coder_options' was added. For backwards
+             compatibility coder_options can be given as keyword arguments, too.
+
+
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -1117,22 +1150,12 @@ def open_datatree(
 
     backend = plugins.get_backend(engine)
 
-    decoders = _resolve_decoders_kwargs(
-        decode_cf,
-        open_backend_dataset_parameters=backend.open_dataset_parameters,
-        mask_and_scale=mask_and_scale,
-        decode_times=decode_times,
-        decode_timedelta=decode_timedelta,
-        concat_characters=concat_characters,
-        use_cftime=use_cftime,
-        decode_coords=decode_coords,
-    )
+    coder_options = _resolve_decoders_options(coder_options, backend, kwargs)
     overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
 
     backend_tree = backend.open_datatree(
         filename_or_obj,
-        drop_variables=drop_variables,
-        **decoders,
+        coder_options=coder_options,
         **kwargs,
     )
 
@@ -1146,8 +1169,7 @@ def open_datatree(
         inline_array,
         chunked_array_type,
         from_array_kwargs,
-        drop_variables=drop_variables,
-        **decoders,
+        coder_options,
         **kwargs,
     )
 
@@ -1160,24 +1182,11 @@ def open_groups(
     engine: T_Engine = None,
     chunks: T_Chunks = None,
     cache: bool | None = None,
-    decode_cf: bool | None = None,
-    mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool
-    | CFDatetimeCoder
-    | Mapping[str, bool | CFDatetimeCoder]
-    | None = None,
-    decode_timedelta: bool
-    | CFTimedeltaCoder
-    | Mapping[str, bool | CFTimedeltaCoder]
-    | None = None,
-    use_cftime: bool | Mapping[str, bool] | None = None,
-    concat_characters: bool | Mapping[str, bool] | None = None,
-    decode_coords: Literal["coordinates", "all"] | bool | None = None,
-    drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
+    coder_options: Union[bool, CoderOptions, None] = None,
     **kwargs,
 ) -> dict[str, Dataset]:
     """
@@ -1217,74 +1226,91 @@ def open_groups(
         argument to use dask, in which case it defaults to False. Does not
         change the behavior of coordinates corresponding to dimensions, which
         always load their data from disk into a ``pandas.Index``.
-    decode_cf : bool, optional
-        Whether to decode these variables, assuming they were saved according
-        to CF conventions.
-    mask_and_scale : bool or dict-like, optional
-        If True, replace array values equal to `_FillValue` with NA and scale
-        values according to the formula `original_values * scale_factor +
-        add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
-        taken from variable attributes (if they exist).  If the `_FillValue` or
-        `missing_value` attribute contains multiple values a warning will be
-        issued and all array values matching one of the multiple values will
-        be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
-        This keyword may not be supported by all the backends.
-    decode_times : bool, CFDatetimeCoder or dict-like, optional
-        If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or
-        leave them encoded as numbers.
-        Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
-        This keyword may not be supported by all the backends.
-    decode_timedelta : bool or dict-like, optional
-        If True, decode variables and coordinates with time units in
-        {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
-        into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of ``decode_times``; if
-        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
-        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
-        matching ``time_unit``.
-        This keyword may not be supported by all the backends.
-    use_cftime: bool or dict-like, optional
-        Only relevant if encoded dates come from a standard calendar
-        (e.g. "gregorian", "proleptic_gregorian", "standard", or not
-        specified).  If None (default), attempt to decode times to
-        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
-        ``cftime.datetime`` objects. If True, always decode times to
-        ``cftime.datetime`` objects, regardless of whether or not they can be
-        represented using ``np.datetime64[ns]`` objects.  If False, always
-        decode times to ``np.datetime64[ns]`` objects; if this is not possible
-        raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
-        This keyword may not be supported by all the backends.
+    coder_options : bool or CoderOptions, optional
+        Dataclass containing below keyword arguments to pass to cf decoding. If set,
+        overrides any given keyword arguments:
 
-        .. deprecated:: 2025.01.1
-           Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
+        - 'decode_cf' : bool, optional
+          Whether to decode these variables, assuming they were saved according
+          to CF conventions.
 
-    concat_characters : bool or dict-like, optional
-        If True, concatenate along the last dimension of character arrays to
-        form string arrays. Dimensions will only be concatenated over (and
-        removed) if they have no corresponding variable and if they are only
-        used as the last dimension of character arrays.
-        Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
-        This keyword may not be supported by all the backends.
-    decode_coords : bool or {"coordinates", "all"}, optional
-        Controls which variables are set as coordinate variables:
+        - 'mask_and_scale' : bool or dict-like, optional
+          If True, replace array values equal to `_FillValue` with NA and scale
+          values according to the formula `original_values * scale_factor +
+          add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
+          taken from variable attributes (if they exist).  If the `_FillValue` or
+          `missing_value` attribute contains multiple values a warning will be
+          issued and all array values matching one of the multiple values will
+          be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
 
-        - "coordinates" or True: Set variables referred to in the
-          ``'coordinates'`` attribute of the datasets or individual variables
-          as coordinate variables.
-        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
-          other attributes as coordinate variables.
+        - 'decode_times' : bool, CFDatetimeCoder or dict-like, optional
+          If True, decode times encoded in the standard NetCDF datetime format
+          into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them
+          encoded as numbers.
+          Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
 
-        Only existing variables can be set as coordinates. Missing variables
-        will be silently ignored.
-    drop_variables: str or iterable of str, optional
-        A variable or list of variables to exclude from being parsed from the
-        dataset. This may be useful to drop variables with problems or
-        inconsistent values.
+        - 'decode_timedelta' : bool, CFTimedeltaCoder, or dict-like, optional
+          If True, decode variables and coordinates with time units in
+          {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
+          into timedelta objects. If False, leave them encoded as numbers.
+          If None (default), assume the same value of ``decode_times``; if
+          ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
+          takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
+          matching ``time_unit``.
+          Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+        - 'use_cftime' : bool or dict-like, optional
+          Only relevant if encoded dates come from a standard calendar
+          (e.g. "gregorian", "proleptic_gregorian", "standard", or not
+          specified).  If None (default), attempt to decode times to
+          ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+          ``cftime.datetime`` objects. If True, always decode times to
+          ``cftime.datetime`` objects, regardless of whether or not they can be
+          represented using ``np.datetime64[ns]`` objects.  If False, always
+          decode times to ``np.datetime64[ns]`` objects; if this is not possible
+          raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+          .. deprecated:: 2025.01.1
+             Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
+
+        - 'concat_characters' : bool or dict-like, optional
+          If True, concatenate along the last dimension of character arrays to
+          form string arrays. Dimensions will only be concatenated over (and
+          removed) if they have no corresponding variable and if they are only
+          used as the last dimension of character arrays.
+          Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+        - 'decode_coords' : bool or {"coordinates", "all"}, optional
+          Controls which variables are set as coordinate variables:
+
+          - "coordinates" or True: Set variables referred to in the
+            ``'coordinates'`` attribute of the datasets or individual variables
+            as coordinate variables.
+          - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+            other attributes as coordinate variables.
+
+          Only existing variables can be set as coordinates. Missing variables
+          will be silently ignored.
+
+        - 'drop_variables' : str or iterable of str, optional
+          A variable or list of variables to exclude from being parsed from the
+          dataset. This may be useful to drop variables with problems or
+          inconsistent values.
+
+        .. versionadded:: 2025.06.2
+             The new keyword argument 'coder_options' was added. For backwards
+             compatibility coder_options can be given as keyword arguments, too.
+
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -1349,23 +1375,12 @@ def open_groups(
 
     backend = plugins.get_backend(engine)
 
-    decoders = _resolve_decoders_kwargs(
-        decode_cf,
-        open_backend_dataset_parameters=(),
-        mask_and_scale=mask_and_scale,
-        decode_times=decode_times,
-        decode_timedelta=decode_timedelta,
-        concat_characters=concat_characters,
-        use_cftime=use_cftime,
-        decode_coords=decode_coords,
-    )
-    overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
+    coder_options = _resolve_decoders_options(coder_options, backend, kwargs)
 
+    overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
     backend_groups = backend.open_groups_as_dict(
         filename_or_obj,
-        drop_variables=drop_variables,
-        **decoders,
-        **kwargs,
+        coder_options=coder_options,
     )
 
     groups = {
@@ -1379,8 +1394,7 @@ def open_groups(
             inline_array,
             chunked_array_type,
             from_array_kwargs,
-            drop_variables=drop_variables,
-            **decoders,
+            coder_options,
             **kwargs,
         )
         for name, backend_ds in backend_groups.items()

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
 
@@ -10,6 +9,7 @@ from xarray.backends.common import (
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
+    CoderOptions,
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
     robust_getitem,
@@ -216,13 +216,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
-        drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
         group=None,
         application=None,
         session=None,
@@ -230,6 +223,8 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
+        coder_options: Optional[CoderOptions] = None,
+        **kwargs,
     ) -> Dataset:
         store = PydapDataStore.open(
             url=filename_or_obj,
@@ -245,13 +240,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         with close_on_error(store):
             ds = store_entrypoint.open_dataset(
                 store,
-                mask_and_scale=mask_and_scale,
-                decode_times=decode_times,
-                concat_characters=concat_characters,
-                decode_coords=decode_coords,
-                drop_variables=drop_variables,
-                use_cftime=use_cftime,
-                decode_timedelta=decode_timedelta,
+                coder_options=coder_options,
             )
             return ds
 
@@ -259,35 +248,24 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
-        drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
         group: str | None = None,
         application=None,
         session=None,
         timeout=None,
         verify=None,
         user_charset=None,
+        coder_options: Optional[CoderOptions] = None,
+        **kwargs,
     ) -> DataTree:
         groups_dict = self.open_groups_as_dict(
-            filename_or_obj,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
             group=group,
             application=None,
             session=None,
             timeout=None,
             verify=None,
             user_charset=None,
+            coder_options=coder_options,
+            **kwargs,
         )
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
@@ -296,19 +274,14 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
-        drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
         group: str | None = None,
         application=None,
         session=None,
         timeout=None,
         verify=None,
         user_charset=None,
+        coder_options: Optional[CoderOptions] = None,
+        **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.core.treenode import NodePath
 
@@ -374,13 +347,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             with close_on_error(store):
                 group_ds = store_entrypoint.open_dataset(
                     store,
-                    mask_and_scale=mask_and_scale,
-                    decode_times=decode_times,
-                    concat_characters=concat_characters,
-                    decode_coords=decode_coords,
-                    drop_variables=drop_variables,
-                    use_cftime=use_cftime,
-                    decode_timedelta=decode_timedelta,
+                    coder_options=coder_options,
                 )
             if group:
                 group_name = str(NodePath(path_group).relative_to(parent))

@@ -5,7 +5,7 @@ import json
 import os
 import struct
 from collections.abc import Hashable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -17,8 +17,10 @@ from xarray.backends.common import (
     AbstractWritableDataStore,
     BackendArray,
     BackendEntrypoint,
+    CoderOptions,
     _encode_variable_name,
     _normalize_path,
+    _validate_kwargs_for_dataclass,
     datatree_from_dict_with_io_cleanup,
     ensure_dtype_not_object,
 )
@@ -1330,23 +1332,24 @@ def open_zarr(
     group=None,
     synchronizer=None,
     chunks="auto",
-    decode_cf=True,
-    mask_and_scale=True,
-    decode_times=True,
-    concat_characters=True,
-    decode_coords=True,
-    drop_variables=None,
+    # decode_cf=True,
+    # mask_and_scale=True,
+    # decode_times=True,
+    # concat_characters=True,
+    # decode_coords=True,
+    # drop_variables=None,
     consolidated=None,
     overwrite_encoded_chunks=False,
     chunk_store=None,
     storage_options=None,
-    decode_timedelta=None,
-    use_cftime=None,
+    # decode_timedelta=None,
+    # use_cftime=None,
     zarr_version=None,
     zarr_format=None,
     use_zarr_fill_value_as_mask=None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
+    coder_options: Optional[CoderOptions] = None,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -1379,32 +1382,91 @@ def open_zarr(
     overwrite_encoded_chunks : bool, optional
         Whether to drop the zarr chunks encoded for each variable when a
         dataset is loaded with specified chunk sizes (default: False)
-    decode_cf : bool, optional
-        Whether to decode these variables, assuming they were saved according
-        to CF conventions.
-    mask_and_scale : bool, optional
-        If True, replace array values equal to `_FillValue` with NA and scale
-        values according to the formula `original_values * scale_factor +
-        add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
-        taken from variable attributes (if they exist).  If the `_FillValue` or
-        `missing_value` attribute contains multiple values a warning will be
-        issued and all array values matching one of the multiple values will
-        be replaced by NA.
-    decode_times : bool, optional
-        If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, leave them encoded as numbers.
-    concat_characters : bool, optional
-        If True, concatenate along the last dimension of character arrays to
-        form string arrays. Dimensions will only be concatenated over (and
-        removed) if they have no corresponding variable and if they are only
-        used as the last dimension of character arrays.
-    decode_coords : bool, optional
-        If True, decode the 'coordinates' attribute to identify coordinates in
-        the resulting dataset.
-    drop_variables : str or iterable, optional
-        A variable or list of variables to exclude from being parsed from the
-        dataset. This may be useful to drop variables with problems or
-        inconsistent values.
+    coder_options : bool or CoderOptions, optional
+        Dataclass containing below keyword arguments to pass to cf decoding. If set,
+        overrides any given keyword arguments:
+
+        - 'decode_cf' : bool, optional
+          Whether to decode these variables, assuming they were saved according
+          to CF conventions.
+
+        - 'mask_and_scale' : bool or dict-like, optional
+          If True, replace array values equal to `_FillValue` with NA and scale
+          values according to the formula `original_values * scale_factor +
+          add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
+          taken from variable attributes (if they exist).  If the `_FillValue` or
+          `missing_value` attribute contains multiple values a warning will be
+          issued and all array values matching one of the multiple values will
+          be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+        - 'decode_times' : bool, CFDatetimeCoder or dict-like, optional
+          If True, decode times encoded in the standard NetCDF datetime format
+          into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them
+          encoded as numbers.
+          Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+        - 'decode_timedelta' : bool, CFTimedeltaCoder, or dict-like, optional
+          If True, decode variables and coordinates with time units in
+          {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
+          into timedelta objects. If False, leave them encoded as numbers.
+          If None (default), assume the same value of ``decode_times``; if
+          ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
+          takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
+          matching ``time_unit``.
+          Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+        - 'use_cftime' : bool or dict-like, optional
+          Only relevant if encoded dates come from a standard calendar
+          (e.g. "gregorian", "proleptic_gregorian", "standard", or not
+          specified).  If None (default), attempt to decode times to
+          ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+          ``cftime.datetime`` objects. If True, always decode times to
+          ``cftime.datetime`` objects, regardless of whether or not they can be
+          represented using ``np.datetime64[ns]`` objects.  If False, always
+          decode times to ``np.datetime64[ns]`` objects; if this is not possible
+          raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+          .. deprecated:: 2025.01.1
+             Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
+
+        - 'concat_characters' : bool or dict-like, optional
+          If True, concatenate along the last dimension of character arrays to
+          form string arrays. Dimensions will only be concatenated over (and
+          removed) if they have no corresponding variable and if they are only
+          used as the last dimension of character arrays.
+          Pass a mapping, e.g. ``{"my_variable": False}``,
+          to toggle this feature per-variable individually.
+          This keyword may not be supported by all the backends.
+
+        - 'decode_coords' : bool or {"coordinates", "all"}, optional
+          Controls which variables are set as coordinate variables:
+
+          - "coordinates" or True: Set variables referred to in the
+            ``'coordinates'`` attribute of the datasets or individual variables
+            as coordinate variables.
+          - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+            other attributes as coordinate variables.
+
+          Only existing variables can be set as coordinates. Missing variables
+          will be silently ignored.
+
+        - 'drop_variables' : str or iterable of str, optional
+          A variable or list of variables to exclude from being parsed from the
+          dataset. This may be useful to drop variables with problems or
+          inconsistent values.
+
+        .. versionadded:: 2025.06.2
+             The new keyword argument 'coder_options' was added. For backwards
+             compatibility coder_options can be given as keyword arguments, too.
+
     consolidated : bool, optional
         Whether to open the store using zarr's consolidated metadata
         capability. Only works for stores that have already been consolidated.
@@ -1418,21 +1480,6 @@ def open_zarr(
     storage_options : dict, optional
         Any additional parameters for the storage backend (ignored for local
         paths).
-    decode_timedelta : bool, optional
-        If True, decode variables and coordinates with time units in
-        {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
-        into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of decode_time.
-    use_cftime : bool, optional
-        Only relevant if encoded dates come from a standard calendar
-        (e.g. "gregorian", "proleptic_gregorian", "standard", or not
-        specified).  If None (default), attempt to decode times to
-        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
-        ``cftime.datetime`` objects. If True, always decode times to
-        ``cftime.datetime`` objects, regardless of whether or not they can be
-        represented using ``np.datetime64[ns]`` objects.  If False, always
-        decode times to ``np.datetime64[ns]`` objects; if this is not possible
-        raise an error.
     zarr_version : int or None, optional
 
         .. deprecated:: 2024.9.1
@@ -1488,9 +1535,12 @@ def open_zarr(
             chunks = None
 
     if kwargs:
-        raise TypeError(
-            "open_zarr() got unexpected keyword arguments " + ",".join(kwargs.keys())
-        )
+        invalid_kwargs = _validate_kwargs_for_dataclass(CoderOptions, kwargs)
+        if invalid_kwargs:
+            raise TypeError(
+                "open_zarr() got unexpected keyword arguments "
+                + ",".join(invalid_kwargs.keys())
+            )
 
     backend_kwargs = {
         "synchronizer": synchronizer,
@@ -1505,21 +1555,15 @@ def open_zarr(
     ds = open_dataset(
         filename_or_obj=store,
         group=group,
-        decode_cf=decode_cf,
-        mask_and_scale=mask_and_scale,
-        decode_times=decode_times,
-        concat_characters=concat_characters,
-        decode_coords=decode_coords,
         engine="zarr",
         chunks=chunks,
-        drop_variables=drop_variables,
         chunked_array_type=chunked_array_type,
         from_array_kwargs=from_array_kwargs,
         backend_kwargs=backend_kwargs,
-        decode_timedelta=decode_timedelta,
-        use_cftime=use_cftime,
         zarr_version=zarr_version,
         use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
+        coder_options=coder_options,
+        **kwargs,
     )
     return ds
 
@@ -1553,15 +1597,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
-        drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
         group=None,
-        mode="r",
         synchronizer=None,
         consolidated=None,
         chunk_store=None,
@@ -1572,13 +1608,14 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         engine=None,
         use_zarr_fill_value_as_mask=None,
         cache_members: bool = True,
+        coder_options: Optional[CoderOptions] = None,
     ) -> Dataset:
+        # coder_options = coder_options if coder_options is not None else self.coder_options
         filename_or_obj = _normalize_path(filename_or_obj)
         if not store:
             store = ZarrStore.open_group(
                 filename_or_obj,
                 group=group,
-                mode=mode,
                 synchronizer=synchronizer,
                 consolidated=consolidated,
                 consolidate_on_close=False,
@@ -1594,13 +1631,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         with close_on_error(store):
             ds = store_entrypoint.open_dataset(
                 store,
-                mask_and_scale=mask_and_scale,
-                decode_times=decode_times,
-                concat_characters=concat_characters,
-                decode_coords=decode_coords,
-                drop_variables=drop_variables,
-                use_cftime=use_cftime,
-                decode_timedelta=decode_timedelta,
+                coder_options=coder_options,
             )
         return ds
 
@@ -1608,40 +1639,26 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
-        drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
         group: str | None = None,
-        mode="r",
         synchronizer=None,
         consolidated=None,
         chunk_store=None,
         storage_options=None,
         zarr_version=None,
         zarr_format=None,
+        coder_options: Optional[CoderOptions] = None,
     ) -> DataTree:
         filename_or_obj = _normalize_path(filename_or_obj)
         groups_dict = self.open_groups_as_dict(
             filename_or_obj=filename_or_obj,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
             group=group,
-            mode=mode,
             synchronizer=synchronizer,
             consolidated=consolidated,
             chunk_store=chunk_store,
             storage_options=storage_options,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
+            coder_options=coder_options,
         )
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
@@ -1650,21 +1667,14 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
-        drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
         group: str | None = None,
-        mode="r",
         synchronizer=None,
         consolidated=None,
         chunk_store=None,
         storage_options=None,
         zarr_version=None,
         zarr_format=None,
+        coder_options: Optional[CoderOptions] = None,
     ) -> dict[str, Dataset]:
         filename_or_obj = _normalize_path(filename_or_obj)
 
@@ -1677,7 +1687,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         stores = ZarrStore.open_store(
             filename_or_obj,
             group=parent,
-            mode=mode,
             synchronizer=synchronizer,
             consolidated=consolidated,
             consolidate_on_close=False,
@@ -1694,13 +1703,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             with close_on_error(store):
                 group_ds = store_entrypoint.open_dataset(
                     store,
-                    mask_and_scale=mask_and_scale,
-                    decode_times=decode_times,
-                    concat_characters=concat_characters,
-                    decode_coords=decode_coords,
-                    drop_variables=drop_variables,
-                    use_cftime=use_cftime,
-                    decode_timedelta=decode_timedelta,
+                    coder_options=coder_options,
                 )
             if group:
                 group_name = str(NodePath(path_group).relative_to(parent))

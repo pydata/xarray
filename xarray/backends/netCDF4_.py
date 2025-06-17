@@ -3,9 +3,10 @@ from __future__ import annotations
 import functools
 import operator
 import os
-from collections.abc import Iterable
+from collections.abc import Mapping
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Literal, Optional
 
 import numpy as np
 
@@ -14,6 +15,7 @@ from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
+    CoderOptions,
     WritableCFDataStore,
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
@@ -30,6 +32,7 @@ from xarray.backends.locks import (
 )
 from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 from xarray.backends.store import StoreBackendEntrypoint
+from xarray.coding.times import CFDatetimeCoder
 from xarray.coding.variables import pop_to
 from xarray.core import indexing
 from xarray.core.utils import (
@@ -597,6 +600,17 @@ class NetCDF4DataStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
+@dataclass(frozen=True)
+class NetCDF4CoderOptions(CoderOptions):
+    # defaults for netcdf4 based backends
+    mask_and_scale: Optional[bool | Mapping[str, bool]] = True
+    decode_times: Optional[
+        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder]
+    ] = True
+    concat_characters: Optional[bool | Mapping[str, bool]] = True
+    decode_coords: Optional[Literal["coordinates", "all"] | bool] = True
+
+
 class NetCDF4BackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the netCDF4 package.
@@ -618,6 +632,8 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     backends.H5netcdfBackendEntrypoint
     backends.ScipyBackendEntrypoint
     """
+
+    coder_class = NetCDF4CoderOptions
 
     description = (
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using netCDF4 in Xarray"
@@ -645,15 +661,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
-        drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
         group=None,
-        mode="r",
         format="NETCDF4",
         clobber=True,
         diskless=False,
@@ -661,11 +669,14 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         auto_complex=None,
         lock=None,
         autoclose=False,
+        coder_options: Optional[CoderOptions] = None,
     ) -> Dataset:
+        coder_options = (
+            coder_options if coder_options is not None else self.coder_options
+        )
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
             filename_or_obj,
-            mode=mode,
             format=format,
             group=group,
             clobber=clobber,
@@ -680,13 +691,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         with close_on_error(store):
             ds = store_entrypoint.open_dataset(
                 store,
-                mask_and_scale=mask_and_scale,
-                decode_times=decode_times,
-                concat_characters=concat_characters,
-                decode_coords=decode_coords,
-                drop_variables=drop_variables,
-                use_cftime=use_cftime,
-                decode_timedelta=decode_timedelta,
+                coder_options=coder_options,
             )
         return ds
 
@@ -694,13 +699,6 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
-        drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
         group: str | None = None,
         format="NETCDF4",
         clobber=True,
@@ -709,17 +707,11 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         auto_complex=None,
         lock=None,
         autoclose=False,
+        coder_options: Optional[CoderOptions] = None,
         **kwargs,
     ) -> DataTree:
         groups_dict = self.open_groups_as_dict(
             filename_or_obj,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
             group=group,
             format=format,
             clobber=clobber,
@@ -727,6 +719,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             persist=persist,
             lock=lock,
             autoclose=autoclose,
+            coder_options=coder_options,
             **kwargs,
         )
 
@@ -736,13 +729,6 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
-        drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
         group: str | None = None,
         format="NETCDF4",
         clobber=True,
@@ -751,6 +737,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         auto_complex=None,
         lock=None,
         autoclose=False,
+        coder_options: Optional[CoderOptions] = None,
         **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.backends.common import _iter_nc_groups
@@ -767,7 +754,6 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             lock=lock,
             autoclose=autoclose,
         )
-
         # Check for a group and make it a parent if it exists
         if group:
             parent = NodePath("/") / NodePath(group)
@@ -782,13 +768,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             with close_on_error(group_store):
                 group_ds = store_entrypoint.open_dataset(
                     group_store,
-                    mask_and_scale=mask_and_scale,
-                    decode_times=decode_times,
-                    concat_characters=concat_characters,
-                    decode_coords=decode_coords,
-                    drop_variables=drop_variables,
-                    use_cftime=use_cftime,
-                    decode_timedelta=decode_timedelta,
+                    coder_options=coder_options,
                 )
             if group:
                 group_name = str(NodePath(path_group).relative_to(parent))
