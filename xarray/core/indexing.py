@@ -520,7 +520,8 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
     __slots__ = ()
 
     def get_duck_array(self):
-        raise NotImplementedError
+        key = BasicIndexer((slice(None),) * self.ndim)
+        return self[key]
 
     def _oindex_get(self, indexer: OuterIndexer):
         raise NotImplementedError(
@@ -556,17 +557,6 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
     @property
     def vindex(self) -> IndexCallable:
         return IndexCallable(self._vindex_get, self._vindex_set)
-
-
-class IndexingAdapter:
-    """Marker class for indexing adapters.
-    These classes translate between Xarray's indexing semantics and the underlying array's
-    indexing semantics.
-    """
-
-    def get_duck_array(self):
-        key = BasicIndexer((slice(None),) * self.ndim)
-        return self[key]
 
 
 class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
@@ -1537,7 +1527,7 @@ def is_fancy_indexer(indexer: Any) -> bool:
     return True
 
 
-class NumpyIndexingAdapter(IndexingAdapter, ExplicitlyIndexedNDArrayMixin):
+class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a NumPy array to use explicit indexing."""
 
     __slots__ = ("array",)
@@ -1616,7 +1606,7 @@ class NdArrayLikeIndexingAdapter(NumpyIndexingAdapter):
         self.array = array
 
 
-class ArrayApiIndexingAdapter(IndexingAdapter, ExplicitlyIndexedNDArrayMixin):
+class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array API array to use explicit indexing."""
 
     __slots__ = ("array",)
@@ -1681,7 +1671,7 @@ def _assert_not_chunked_indexer(idxr: tuple[Any, ...]) -> None:
         )
 
 
-class DaskIndexingAdapter(IndexingAdapter, ExplicitlyIndexedNDArrayMixin):
+class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a dask array to support explicit indexing."""
 
     __slots__ = ("array",)
@@ -1757,7 +1747,7 @@ class DaskIndexingAdapter(IndexingAdapter, ExplicitlyIndexedNDArrayMixin):
         return self.array.transpose(order)
 
 
-class PandasIndexingAdapter(IndexingAdapter, ExplicitlyIndexedNDArrayMixin):
+class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
 
     __slots__ = ("_dtype", "array")
@@ -2078,9 +2068,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         return type(self)(array, self._dtype, self.level)
 
 
-class CoordinateTransformIndexingAdapter(
-    IndexingAdapter, ExplicitlyIndexedNDArrayMixin
-):
+class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a CoordinateTransform as a lazy coordinate array.
 
     Supports explicit indexing (both outer and vectorized).
