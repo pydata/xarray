@@ -734,7 +734,7 @@ def open_dataset(
     # deprecation fallback
     nkwargs = kwargs.copy()
     if deprecated:
-        nkwargs.update(coder_options.to_kwargs())
+        nkwargs.update(**coder_options.to_kwargs())
     else:
         nkwargs.update(coder_options=coder_options)
     backend_ds = backend.open_dataset(
@@ -1176,13 +1176,21 @@ def open_datatree(
 
     backend = plugins.get_backend(engine)
 
-    coder_options = _resolve_decoders_options(coder_options, backend, kwargs)
+    coder_options, deprecated = _resolve_decoders_options(
+        coder_options, backend, kwargs
+    )
     overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
+
+    # deprecation fallback
+    nkwargs = kwargs.copy()
+    if deprecated:
+        nkwargs.update(**coder_options.to_kwargs())
+    else:
+        nkwargs.update(coder_options=coder_options)
 
     backend_tree = backend.open_datatree(
         filename_or_obj,
-        coder_options=coder_options,
-        **kwargs,
+        **nkwargs,
     )
 
     tree = _datatree_from_backend_datatree(
@@ -1401,12 +1409,21 @@ def open_groups(
 
     backend = plugins.get_backend(engine)
 
-    coder_options = _resolve_decoders_options(coder_options, backend, kwargs)
+    coder_options, deprecated = _resolve_decoders_options(
+        coder_options, backend, kwargs
+    )
 
     overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
+
+    # deprecation fallback
+    nkwargs = kwargs.copy()
+    if deprecated:
+        nkwargs.update(**coder_options.to_kwargs())
+    else:
+        nkwargs.update(coder_options=coder_options)
     backend_groups = backend.open_groups_as_dict(
         filename_or_obj,
-        coder_options=coder_options,
+        **nkwargs,
     )
 
     groups = {

@@ -812,7 +812,7 @@ class BackendEntrypoint:
     open_dataset_parameters: ClassVar[tuple | None] = None
     description: ClassVar[str] = ""
     url: ClassVar[str] = ""
-    coder_class = CoderOptions
+    coder_class = BaseCoderOptions
 
     def __init__(
         self,
