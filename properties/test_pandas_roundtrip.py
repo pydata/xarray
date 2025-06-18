@@ -93,7 +93,7 @@ def test_roundtrip_dataarray(data, arr) -> None:
 def test_roundtrip_dataset(dataset: Dataset) -> None:
     df = dataset.to_dataframe()
     assert isinstance(df, pd.DataFrame)
-    roundtripped = xr.Dataset(df)
+    roundtripped = xr.Dataset.from_dataframe(df)
     xr.testing.assert_identical(dataset, roundtripped)
 
 
@@ -103,7 +103,7 @@ def test_roundtrip_pandas_series(ser, ix_name) -> None:
     ser.index.name = ix_name
     arr = xr.DataArray(ser)
     roundtripped = arr.to_pandas()
-    pd.testing.assert_series_equal(ser, roundtripped)
+    pd.testing.assert_series_equal(ser, roundtripped)  # type: ignore[arg-type]
     xr.testing.assert_identical(arr, roundtripped.to_xarray())
 
 

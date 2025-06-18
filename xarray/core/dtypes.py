@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypeVar, cast
 
 import numpy as np
+from pandas.api.extensions import ExtensionDtype
 from pandas.api.types import is_extension_array_dtype
 
 from xarray.compat import array_api_compat, npcompat
@@ -14,7 +15,6 @@ from xarray.core import utils
 if TYPE_CHECKING:
     from typing import Any
 
-    from pandas.api.extensions import ExtensionDtype
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject("<NA>")
@@ -53,10 +53,10 @@ PROMOTE_TO_OBJECT: tuple[tuple[type[np.generic], type[np.generic]], ...] = (
     (np.bytes_, np.str_),  # numpy promotes to unicode
 )
 
+T_dtype = TypeVar("T_dtype", np.dtype, ExtensionDtype)
 
-def maybe_promote(
-    dtype: np.dtype | ExtensionDtype,
-) -> tuple[np.dtype | ExtensionDtype, Any]:
+
+def maybe_promote(dtype: T_dtype) -> tuple[T_dtype, Any]:
     """Simpler equivalent of pandas.core.common._maybe_promote
 
     Parameters
@@ -72,10 +72,12 @@ def maybe_promote(
     dtype_: np.typing.DTypeLike
     fill_value: Any
     if is_extension_array_dtype(dtype):
-        return dtype, dtype.na_value
-    else:
-        dtype = cast(np.dtype, dtype)
-    if HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):
+        return dtype, cast(ExtensionDtype, dtype).na_value  # type: ignore[redundant-cast]
+    if not isinstance(dtype, np.dtype):
+        raise TypeError(
+            f"dtype {dtype} must be one of an extension array dtype or numpy dtype"
+        )
+    elif HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):
         # for now, we always promote string dtypes to object for consistency with existing behavior
         # TODO: refactor this once we have a better way to handle numpy vlen-string dtypes
         dtype_ = object
@@ -235,10 +237,14 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
 
 
 def maybe_promote_to_variable_width(
-    array_or_dtype: np.typing.ArrayLike | np.typing.DTypeLike,
+    array_or_dtype: np.typing.ArrayLike
+    | np.typing.DTypeLike
+    | ExtensionDtype
+    | str
+    | bytes,
     *,
     should_return_str_or_bytes: bool = False,
-) -> np.typing.ArrayLike | np.typing.DTypeLike:
+) -> np.typing.ArrayLike | np.typing.DTypeLike | ExtensionDtype:
     if isinstance(array_or_dtype, str | bytes):
         if should_return_str_or_bytes:
             return array_or_dtype
@@ -256,7 +262,10 @@ def maybe_promote_to_variable_width(
 
 
 def should_promote_to_object(
-    arrays_and_dtypes: Iterable[np.typing.ArrayLike | np.typing.DTypeLike], xp
+    arrays_and_dtypes: Iterable[
+        np.typing.ArrayLike | np.typing.DTypeLike | ExtensionDtype
+    ],
+    xp,
 ) -> bool:
     """
     Test whether the given arrays_and_dtypes, when evaluated individually, match the
@@ -286,9 +295,7 @@ def should_promote_to_object(
 
 
 def result_type(
-    *arrays_and_dtypes: list[
-        np.typing.ArrayLike | np.typing.DTypeLike | ExtensionDtype
-    ],
+    *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike | ExtensionDtype,
     xp=None,
 ) -> np.dtype:
     """Like np.result_type, but with type promotion rules matching pandas.
