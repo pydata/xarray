@@ -221,7 +221,7 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     values, when accessed, are automatically stacked along the last dimension.
 
     >>> indexer = indexing.BasicIndexer((slice(None),))
-    >>> StackedBytesArray(np.array(["a", "b", "c"], dtype="S1"))[indexer]
+    >>> np.array(StackedBytesArray(np.array(["a", "b", "c"], dtype="S1"))[indexer])
     array(b'abc', dtype='|S3')
     """
 
