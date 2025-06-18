@@ -21,6 +21,8 @@ class StoreBackendEntrypoint(BackendEntrypoint):
     description = "Open AbstractDataStore instances in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.StoreBackendEntrypoint.html"
 
+    coder_class = CoderOptions
+
     def guess_can_open(
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,

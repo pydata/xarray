@@ -286,6 +286,8 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
     backends.H5netcdfBackendEntrypoint
     """
 
+    coder_class = CoderOptions
+
     description = "Open netCDF files (.nc, .nc4, .cdf and .gz) using scipy in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ScipyBackendEntrypoint.html"
 

@@ -35,10 +35,12 @@ def test_custom_engine() -> None:
     )
 
     class CustomBackend(xr.backends.BackendEntrypoint):
+        coder_class = xr.backends.CoderOptions
+
         def open_dataset(
             self,
             filename_or_obj,
-            drop_variables=None,
+            coder_options=None,
             **kwargs,
         ) -> xr.Dataset:
             return expected.copy(deep=True)
@@ -54,10 +56,12 @@ def test_multiindex() -> None:
     dataset = dataset.stack(z=["coord1", "coord2"])
 
     class MultiindexBackend(xr.backends.BackendEntrypoint):
+        coder_class = xr.backends.CoderOptions
+
         def open_dataset(
             self,
             filename_or_obj,
-            drop_variables=None,
+            coder_options=None,
             **kwargs,
         ) -> xr.Dataset:
             return dataset.copy(deep=True)
@@ -68,6 +72,8 @@ def test_multiindex() -> None:
 
 class PassThroughBackendEntrypoint(xr.backends.BackendEntrypoint):
     """Access an object passed to the `open_dataset` method."""
+
+    coder_class = xr.backends.CoderOptions
 
     def open_dataset(self, dataset, *, coder_options=None):
         """Return the first argument."""

@@ -1580,6 +1580,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
     backends.ZarrStore
     """
 
+    coder_class = CoderOptions
     description = "Open zarr files (.zarr) using zarr in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ZarrBackendEntrypoint.html"
 
