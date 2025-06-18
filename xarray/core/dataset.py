@@ -9708,7 +9708,7 @@ class Dataset(
         self,
         calendar: CFCalendar,
         dim: Hashable = "time",
-        align_on: Literal["date", "year", None] = None,
+        align_on: Literal["date", "year"] | None = None,
         missing: Any | None = None,
         use_cftime: bool | None = None,
     ) -> Self:

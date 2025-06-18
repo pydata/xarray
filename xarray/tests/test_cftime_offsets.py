@@ -1277,7 +1277,7 @@ def test_invalid_date_range_cftime_inputs(
     end: str | None,
     periods: int | None,
     freq: str | None,
-    inclusive: Literal["up", None],
+    inclusive: Literal["up"] | None,
 ) -> None:
     with pytest.raises(ValueError):
         date_range(start, end, periods, freq, inclusive=inclusive, use_cftime=True)  # type: ignore[arg-type]
