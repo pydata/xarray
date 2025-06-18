@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 from pandas.api.types import is_extension_array_dtype
@@ -53,7 +54,9 @@ PROMOTE_TO_OBJECT: tuple[tuple[type[np.generic], type[np.generic]], ...] = (
 )
 
 
-def maybe_promote(dtype: np.dtype | ExtensionDtype) -> tuple[np.dtype, Any]:
+def maybe_promote(
+    dtype: np.dtype | ExtensionDtype,
+) -> tuple[np.dtype | ExtensionDtype, Any]:
     """Simpler equivalent of pandas.core.common._maybe_promote
 
     Parameters
@@ -70,7 +73,9 @@ def maybe_promote(dtype: np.dtype | ExtensionDtype) -> tuple[np.dtype, Any]:
     fill_value: Any
     if is_extension_array_dtype(dtype):
         return dtype, dtype.na_value
-    elif HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):
+    else:
+        dtype = cast(np.dtype, dtype)
+    if HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):
         # for now, we always promote string dtypes to object for consistency with existing behavior
         # TODO: refactor this once we have a better way to handle numpy vlen-string dtypes
         dtype_ = object
@@ -251,7 +256,7 @@ def maybe_promote_to_variable_width(
 
 
 def should_promote_to_object(
-    arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike, xp
+    arrays_and_dtypes: Iterable[np.typing.ArrayLike | np.typing.DTypeLike], xp
 ) -> bool:
     """
     Test whether the given arrays_and_dtypes, when evaluated individually, match the
@@ -281,7 +286,9 @@ def should_promote_to_object(
 
 
 def result_type(
-    *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike,
+    *arrays_and_dtypes: list[
+        np.typing.ArrayLike | np.typing.DTypeLike | ExtensionDtype
+    ],
     xp=None,
 ) -> np.dtype:
     """Like np.result_type, but with type promotion rules matching pandas.
@@ -314,7 +321,7 @@ def result_type(
                 maybe_promote_to_variable_width,
                 # let extension arrays handle their own str/bytes
                 should_return_str_or_bytes=any(
-                    map(is_extension_array_dtype, arrays_and_dtypes)
+                    map(is_extension_array_dtype, arrays_and_dtypes)  # type: ignore[arg-type]
                 ),
             ),
             arrays_and_dtypes,

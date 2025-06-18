@@ -58,7 +58,7 @@ def __extension_duck_array__issubdtype(
 
 @implements("astype")  # np.astype was added in 2.1.0, but we only require >=1.24
 def __extension_duck_array__astype(
-    array_or_scalar: np.typing.ArrayLike,
+    array_or_scalar: T_ExtensionArray,
     dtype: DTypeLikeSave,
     order: str = "K",
     casting: str = "unsafe",
@@ -68,7 +68,7 @@ def __extension_duck_array__astype(
 ) -> ExtensionArray:
     if (
         not (
-            is_extension_array_dtype(array_or_scalar) or is_extension_array_dtype(dtype)
+            is_extension_array_dtype(array_or_scalar) or is_extension_array_dtype(dtype)  # type: ignore[arg-dtype]
         )
         or casting != "unsafe"
         or not subok
@@ -81,7 +81,8 @@ def __extension_duck_array__astype(
 
 @implements(np.asarray)
 def __extension_duck_array__asarray(
-    array_or_scalar: np.typing.ArrayLike, dtype: DTypeLikeSave = None
+    array_or_scalar: np.typing.ArrayLike | T_ExtensionArray,
+    dtype: DTypeLikeSave | None = None,
 ) -> ExtensionArray:
     if not is_extension_array_dtype(dtype):
         return NotImplemented
@@ -90,7 +91,9 @@ def __extension_duck_array__asarray(
 
 
 def as_extension_array(
-    array_or_scalar: np.typing.ArrayLike, dtype: ExtensionDtype, copy: bool = False
+    array_or_scalar: np.typing.ArrayLike | T_ExtensionArray,
+    dtype: ExtensionDtype | DTypeLikeSave | None,
+    copy: bool = False,
 ) -> ExtensionArray:
     if is_scalar(array_or_scalar):
         return dtype.construct_array_type()._from_sequence(  # type: ignore[attr-defined]
