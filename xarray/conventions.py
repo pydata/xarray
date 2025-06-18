@@ -257,11 +257,6 @@ def decode_cf_variable(
     ):
         # this path applies to bare BackendArray objects.
         # It is not hit for any internal Xarray backend
-        emit_user_level_warning(
-            "The backend you are using has not explicitly supported lazy indexing with Xarray. "
-            "Please ask the backend developers to support lazy loading by wrapping with LazilyIndexedArray. "
-            "See https://docs.xarray.dev/en/stable/internals/how-to-add-new-backend.html#how-to-support-lazy-loading for more."
-        )
         data = indexing.LazilyIndexedArray(data)
 
     return Variable(dimensions, data, attributes, encoding=encoding, fastpath=True)
