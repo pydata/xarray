@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import numpy as np
 
@@ -280,7 +280,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-        coder_options: Optional[CoderOptions] = None,
+        coder_options: Optional[Union[bool, CoderOptions]] = None,
         **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.core.treenode import NodePath

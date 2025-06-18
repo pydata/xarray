@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from xarray import conventions
 from xarray.backends.common import (
@@ -31,7 +31,7 @@ class StoreBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        coder_options: Optional[CoderOptions] = None,
+        coder_options: Optional[Union[bool, CoderOptions]] = None,
     ) -> Dataset:
         assert isinstance(filename_or_obj, AbstractDataStore)
 

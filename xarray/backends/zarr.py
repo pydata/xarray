@@ -5,7 +5,7 @@ import json
 import os
 import struct
 from collections.abc import Hashable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Literal, Optional, cast
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -1349,7 +1349,7 @@ def open_zarr(
     use_zarr_fill_value_as_mask=None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-    coder_options: Optional[CoderOptions] = None,
+    coder_options: Optional[Union[bool, CoderOptions]] = None,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -1608,7 +1608,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         engine=None,
         use_zarr_fill_value_as_mask=None,
         cache_members: bool = True,
-        coder_options: Optional[CoderOptions] = None,
+        coder_options: Optional[Union[bool, CoderOptions]] = None,
     ) -> Dataset:
         # coder_options = coder_options if coder_options is not None else self.coder_options
         filename_or_obj = _normalize_path(filename_or_obj)
@@ -1646,7 +1646,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         zarr_version=None,
         zarr_format=None,
-        coder_options: Optional[CoderOptions] = None,
+        coder_options: Optional[Union[bool, CoderOptions]] = None,
     ) -> DataTree:
         filename_or_obj = _normalize_path(filename_or_obj)
         groups_dict = self.open_groups_as_dict(
@@ -1674,7 +1674,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         zarr_version=None,
         zarr_format=None,
-        coder_options: Optional[CoderOptions] = None,
+        coder_options: Optional[Union[bool, CoderOptions]] = None,
     ) -> dict[str, Dataset]:
         filename_or_obj = _normalize_path(filename_or_obj)
 

@@ -830,7 +830,7 @@ class BackendEntrypoint:
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        coder_options: Union[bool, CoderOptions, None] = None,
+        coder_options: Optional[Union[bool, CoderOptions]] = None,
     ) -> Dataset:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.

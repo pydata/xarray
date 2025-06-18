@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import io
 import os
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import numpy as np
 
@@ -428,7 +428,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         driver=None,
         driver_kwds=None,
         storage_options: dict[str, Any] | None = None,
-        coder_options: Optional[CoderOptions] = None,
+        coder_options: Optional[Union[bool, CoderOptions]] = None,
         **kwargs,
     ) -> Dataset:
         coder_options = (
@@ -469,7 +469,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         decode_vlen_strings=True,
         driver=None,
         driver_kwds=None,
-        coder_options: Optional[CoderOptions] = None,
+        coder_options: Optional[Union[bool, CoderOptions]] = None,
         **kwargs,
     ) -> DataTree:
         groups_dict = self.open_groups_as_dict(
@@ -500,7 +500,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         decode_vlen_strings=True,
         driver=None,
         driver_kwds=None,
-        coder_options: Optional[CoderOptions] = None,
+        coder_options: Optional[Union[bool, CoderOptions]] = None,
         **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.backends.common import _iter_nc_groups
