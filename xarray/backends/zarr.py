@@ -639,7 +639,7 @@ class ZarrStore(AbstractWritableDataStore):
     def open_group(
         cls,
         store,
-        mode: ZarrWriteModes = "r",
+        mode: ZarrWriteModes | None = None,
         synchronizer=None,
         group=None,
         consolidated=False,
@@ -1561,7 +1561,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         use_cftime=None,
         decode_timedelta=None,
         group=None,
-        mode="r",
+        mode=None,
         synchronizer=None,
         consolidated=None,
         chunk_store=None,
@@ -1746,6 +1746,9 @@ def _get_open_params(
         synchronizer=synchronizer,
         path=group,
     )
+    if mode is None:
+        # Let zarr-python use its default open mode
+        open_kwargs.pop("mode")
     open_kwargs["storage_options"] = storage_options
 
     zarr_format = _handle_zarr_version_or_format(
