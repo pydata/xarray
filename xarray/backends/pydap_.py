@@ -203,6 +203,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     backends.PydapDataStore
     """
 
+    coder_class = CoderOptions
     description = "Open remote datasets via OPeNDAP using pydap in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.PydapBackendEntrypoint.html"
 
@@ -223,7 +224,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-        coder_options: Optional[CoderOptions] = None,
+        coder_options: Optional[Union[bool, CoderOptions]] = None,
         **kwargs,
     ) -> Dataset:
         store = PydapDataStore.open(
@@ -254,7 +255,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-        coder_options: Optional[CoderOptions] = None,
+        coder_options: Optional[Union[bool, CoderOptions]] = None,
         **kwargs,
     ) -> DataTree:
         groups_dict = self.open_groups_as_dict(
