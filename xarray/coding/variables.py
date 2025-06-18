@@ -21,6 +21,7 @@ from xarray.coding.common import (
 )
 from xarray.coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import dtypes, duck_array_ops, indexing
+from xarray.core.types import Self
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
@@ -63,7 +64,7 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def _vindex_get(self, key):
         return type(self)(self.array.vindex[key])
 
-    def __getitem__(self, key) -> np.ndarray:
+    def __getitem__(self, key) -> Self:
         return type(self)(self.array[key])
 
     def get_duck_array(self):
@@ -104,7 +105,7 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def _vindex_get(self, key):
         return type(self)(self.array.vindex[key])
 
-    def __getitem__(self, key) -> np.ndarray:
+    def __getitem__(self, key) -> Self:
         return type(self)(self.array[key])
 
     def get_duck_array(self):
