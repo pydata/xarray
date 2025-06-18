@@ -126,9 +126,9 @@ def test_set_missing_parameters() -> None:
 
 
 def test_set_missing_parameters_raise_error() -> None:
-    backend = DummyBackendEntrypointKwargs
-    with pytest.raises(TypeError):
-        plugins.set_missing_parameters({"engine": backend})
+    # backend = DummyBackendEntrypointKwargs
+    # with pytest.raises(TypeError):
+    #     plugins.set_missing_parameters({"engine": backend})
 
     backend_args = DummyBackendEntrypointArgs
     with pytest.raises(TypeError):

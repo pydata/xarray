@@ -1685,6 +1685,7 @@ Advanced API
    Dataset.set_close
    backends.BackendArray
    backends.BackendEntrypoint
+   backends.CoderOptions
    backends.list_engines
    backends.refresh_engines
 
