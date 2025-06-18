@@ -18,6 +18,7 @@ from typing import (
     Any,
     Final,
     Literal,
+    Optional,
     Union,
     cast,
     overload,
@@ -489,11 +490,7 @@ def _resolve_decoders_options(coder_options, backend, decoders):
     # initialize CoderOptions with decoders if not given
     # Deprecation Fallback
     deprecated = False
-    if coder_options is False:
-        coder_options = _reset_dataclass_to_false(backend.coder_class())
-    elif coder_options is True:
-        coder_options = backend.coder_class()
-    elif coder_options is None:
+    if coder_options is None:
         decode_cf = decoders.pop("decode_cf", None)
 
         # deprecation fallback
@@ -533,7 +530,7 @@ def open_dataset(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
-    coder_options: Union[bool, CoderOptions, None] = None,
+    coder_options: Optional[CoderOptions] = None,
     **kwargs,
 ) -> Dataset:
     """Open and decode a dataset from a file or file-like object.
@@ -767,7 +764,7 @@ def open_dataarray(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
-    coder_options: Union[bool, CoderOptions, None] = None,
+    coder_options: Optional[CoderOptions] = None,
     **kwargs,
 ) -> DataArray:
     """Open an DataArray from a file or file-like object containing a single
@@ -991,7 +988,7 @@ def open_datatree(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
-    coder_options: Union[bool, CoderOptions, None] = None,
+    coder_options: Optional[CoderOptions] = None,
     **kwargs,
 ) -> DataTree:
     """
@@ -1220,7 +1217,7 @@ def open_groups(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
-    coder_options: Union[bool, CoderOptions, None] = None,
+    coder_options: Optional[CoderOptions] = None,
     **kwargs,
 ) -> dict[str, Dataset]:
     """

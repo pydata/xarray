@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
 
@@ -224,7 +224,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-        coder_options: Optional[Union[bool, CoderOptions]] = None,
+        coder_options: Optional[CoderOptions] = None,
         **kwargs,
     ) -> Dataset:
         store = PydapDataStore.open(
@@ -255,7 +255,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-        coder_options: Optional[Union[bool, CoderOptions]] = None,
+        coder_options: Optional[CoderOptions] = None,
         **kwargs,
     ) -> DataTree:
         groups_dict = self.open_groups_as_dict(
@@ -282,7 +282,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-        coder_options: Optional[Union[bool, CoderOptions]] = None,
+        coder_options: Optional[CoderOptions] = None,
         **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.core.treenode import NodePath

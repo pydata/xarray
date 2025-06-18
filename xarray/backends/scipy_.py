@@ -3,7 +3,7 @@ from __future__ import annotations
 import gzip
 import io
 import os
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
 
@@ -316,7 +316,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         group=None,
         mmap=None,
         lock=None,
-        coder_options: Optional[Union[bool, CoderOptions]] = None,
+        coder_options: Optional[CoderOptions] = None,
         **kwargs,
     ) -> Dataset:
         coder_options = (
