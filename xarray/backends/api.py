@@ -1108,19 +1108,18 @@ def open_datatree(
           inconsistent values.
 
         .. versionadded:: 2025.06.2
-             The new keyword argument 'coder_options' was added. For backwards
+             The new keyword argument ``coder_options`` was added. For backwards
              compatibility coder_options can be given as keyword arguments, too.
-
 
     inline_array: bool, default: False
         How to include the array in the dask task graph.
-        By default(``inline_array=False``) the array is included in a task by
+        By default (``inline_array=False``) the array is included in a task by
         itself, and each chunk refers to that task by its key. With
         ``inline_array=True``, Dask will instead inline the array directly
         in the values of the task graph. See :py:func:`dask.array.from_array`.
     chunked_array_type: str, optional
         Which chunked array type to coerce this datasets' arrays to.
-        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
