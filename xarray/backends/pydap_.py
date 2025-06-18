@@ -259,6 +259,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         **kwargs,
     ) -> DataTree:
         groups_dict = self.open_groups_as_dict(
+            filename_or_obj=filename_or_obj,
             group=group,
             application=None,
             session=None,
