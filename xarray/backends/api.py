@@ -486,7 +486,9 @@ def _datatree_from_backend_datatree(
     return tree
 
 
-def _resolve_decoders_options(coder_options, backend, decoders):
+def _resolve_decoders_options(
+    coder_options, backend, decoders
+) -> tuple[CoderOptions, bool]:
     # initialize CoderOptions with decoders if not given
     # Deprecation Fallback
     deprecated = False
