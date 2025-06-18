@@ -1382,7 +1382,7 @@ def open_zarr(
     overwrite_encoded_chunks : bool, optional
         Whether to drop the zarr chunks encoded for each variable when a
         dataset is loaded with specified chunk sizes (default: False)
-    coder_options : bool or CoderOptions, optional
+    coder_options : CoderOptions, optional
         Dataclass containing below keyword arguments to pass to cf decoding. If set,
         overrides any given keyword arguments:
 

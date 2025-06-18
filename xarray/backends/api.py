@@ -572,7 +572,7 @@ def open_dataset(
         argument to use dask, in which case it defaults to False. Does not
         change the behavior of coordinates corresponding to dimensions, which
         always load their data from disk into a ``pandas.Index``.
-    coder_options : bool or CoderOptions, optional
+    coder_options : CoderOptions, optional
         Dataclass containing below keyword arguments to pass to cf decoding. If set,
         overrides any given keyword arguments:
 
@@ -809,7 +809,7 @@ def open_dataarray(
         argument to use dask, in which case it defaults to False. Does not
         change the behavior of coordinates corresponding to dimensions, which
         always load their data from disk into a ``pandas.Index``.
-    coder_options : bool or CoderOptions, optional
+    coder_options : CoderOptions, optional
         Dataclass containing below keyword arguments to pass to cf decoding. If set,
         overrides any given keyword arguments:
 
@@ -1026,7 +1026,7 @@ def open_datatree(
         argument to use dask, in which case it defaults to False. Does not
         change the behavior of coordinates corresponding to dimensions, which
         always load their data from disk into a ``pandas.Index``.
-    coder_options : bool or CoderOptions, optional
+    coder_options : CoderOptions, optional
         Dataclass containing below keyword arguments to pass to cf decoding. If set,
         overrides any given keyword arguments:
 
@@ -1258,7 +1258,7 @@ def open_groups(
         argument to use dask, in which case it defaults to False. Does not
         change the behavior of coordinates corresponding to dimensions, which
         always load their data from disk into a ``pandas.Index``.
-    coder_options : bool or CoderOptions, optional
+    coder_options : CoderOptions, optional
         Dataclass containing below keyword arguments to pass to cf decoding. If set,
         overrides any given keyword arguments:
 
