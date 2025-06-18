@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from itertools import product
+from itertools import product, starmap
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -1220,7 +1220,7 @@ def test_cftime_range(
     start, end, periods, freq, inclusive, normalize, calendar, expected_date_args
 ):
     date_type = get_date_type(calendar)
-    expected_dates = [date_type(*args) for args in expected_date_args]
+    expected_dates = list(starmap(date_type, expected_date_args))
 
     if isinstance(start, tuple):
         start = date_type(*start)

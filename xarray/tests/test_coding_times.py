@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from datetime import datetime, timedelta
-from itertools import product
+from itertools import product, starmap
 from typing import Literal
 
 import numpy as np
@@ -576,7 +576,7 @@ _CFTIME_DATETIME_UNITS_TESTS = [
 @pytest.mark.parametrize(("date_args", "expected"), _CFTIME_DATETIME_UNITS_TESTS)
 def test_infer_cftime_datetime_units(calendar, date_args, expected) -> None:
     date_type = _all_cftime_date_types()[calendar]
-    dates = [date_type(*args) for args in date_args]
+    dates = list(starmap(date_type, date_args))
     assert expected == infer_datetime_units(dates)
 
 
