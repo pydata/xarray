@@ -1329,6 +1329,8 @@ Grouper Objects
    groupers.BinGrouper
    groupers.UniqueGrouper
    groupers.TimeResampler
+   groupers.SeasonGrouper
+   groupers.SeasonResampler
 
 
 Rolling objects
@@ -1573,6 +1575,7 @@ Custom Indexes
    :toctree: generated/
 
    CFTimeIndex
+   indexes.RangeIndex
 
 Creating custom indexes
 -----------------------
@@ -1582,6 +1585,8 @@ Creating custom indexes
    cftime_range
    date_range
    date_range_like
+   indexes.RangeIndex.arange
+   indexes.RangeIndex.linspace
 
 Tutorial
 ========
@@ -1641,6 +1646,8 @@ Exceptions
 .. autosummary::
    :toctree: generated/
 
+   AlignmentError
+   CoordinateValidationError
    MergeError
    SerializationWarning
 
@@ -1652,9 +1659,9 @@ Exceptions raised when manipulating trees.
 .. autosummary::
    :toctree: generated/
 
-   xarray.TreeIsomorphismError
-   xarray.InvalidTreeError
-   xarray.NotFoundInTreeError
+   TreeIsomorphismError
+   InvalidTreeError
+   NotFoundInTreeError
 
 Advanced API
 ============

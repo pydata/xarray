@@ -1,5 +1,5 @@
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import numpy as np
     import pandas as pd
@@ -30,19 +30,22 @@ In normal operation :py:func:`pandas.to_datetime` returns a :py:class:`pandas.Ti
 
 When the arguments are numeric (not strings or ``np.datetime64`` values) ``"unit"`` can be anything from ``'Y'``, ``'W'``, ``'D'``, ``'h'``, ``'m'``, ``'s'``, ``'ms'``, ``'us'`` or ``'ns'``, though the returned resolution will be ``"ns"``.
 
-.. ipython:: python
+.. jupyter-execute::
 
-    f"Minimum datetime: {pd.to_datetime(int64_min, unit="ns")}"
-    f"Maximum datetime: {pd.to_datetime(int64_max, unit="ns")}"
+    print(f"Minimum datetime: {pd.to_datetime(int64_min, unit="ns")}")
+    print(f"Maximum datetime: {pd.to_datetime(int64_max, unit="ns")}")
 
 For input values which can't be represented in nanosecond resolution an :py:class:`pandas.OutOfBoundsDatetime` exception is raised:
 
-.. ipython:: python
+.. jupyter-execute::
 
     try:
         dtime = pd.to_datetime(int64_max, unit="us")
     except Exception as err:
         print(err)
+
+.. jupyter-execute::
+
     try:
         dtime = pd.to_datetime(uint64_max, unit="ns")
         print("Wrong:", dtime)
@@ -56,12 +59,15 @@ and :py:meth:`pandas.DatetimeIndex.as_unit` respectively.
 
 ``as_unit`` takes one of ``'s'``, ``'ms'``, ``'us'``, ``'ns'`` as an argument. That means we are able to represent datetimes with second, millisecond, microsecond or nanosecond resolution.
 
-.. ipython:: python
+.. jupyter-execute::
 
     time = pd.to_datetime(np.datetime64(0, "D"))
     print("Datetime:", time, np.asarray([time.to_numpy()]).dtype)
     print("Datetime as_unit('ms'):", time.as_unit("ms"))
     print("Datetime to_numpy():", time.as_unit("ms").to_numpy())
+
+.. jupyter-execute::
+
     time = pd.to_datetime(np.array([-1000, 1, 2], dtype="datetime64[Y]"))
     print("DatetimeIndex:", time)
     print("DatetimeIndex as_unit('us'):", time.as_unit("us"))
@@ -70,7 +76,7 @@ and :py:meth:`pandas.DatetimeIndex.as_unit` respectively.
 .. warning::
     Input data with resolution higher than ``'ns'`` (eg. ``'ps'``, ``'fs'``, ``'as'``) is truncated (not rounded) at the ``'ns'``-level. This is `currently broken <https://github.com/pandas-dev/pandas/issues/60341>`_ for the ``'ps'`` input, where it is interpreted as ``'ns'``.
 
-    .. ipython:: python
+    .. jupyter-execute::
 
         print("Good:", pd.to_datetime([np.datetime64(1901901901901, "as")]))
         print("Good:", pd.to_datetime([np.datetime64(1901901901901, "fs")]))
@@ -82,7 +88,7 @@ and :py:meth:`pandas.DatetimeIndex.as_unit` respectively.
 .. warning::
     Care has to be taken, as some configurations of input data will raise. The following shows, that we are safe to use :py:func:`pandas.to_datetime` when providing :py:class:`numpy.datetime64` as scalar or numpy array as input.
 
-    .. ipython:: python
+    .. jupyter-execute::
 
         print(
             "Works:",
@@ -119,18 +125,21 @@ The function :py:func:`pandas.to_timedelta` is used within xarray for inferring 
 
 In normal operation :py:func:`pandas.to_timedelta` returns a :py:class:`pandas.Timedelta` (for scalar input) or :py:class:`pandas.TimedeltaIndex` (for array-like input) which are ``np.timedelta64`` values with ``ns`` resolution internally. That has the implication, that the usable timedelta covers only roughly 585 years. To accommodate for that, we are working around that limitation in the encoding and decoding step.
 
-.. ipython:: python
+.. jupyter-execute::
 
     f"Maximum timedelta range: ({pd.to_timedelta(int64_min, unit="ns")}, {pd.to_timedelta(int64_max, unit="ns")})"
 
 For input values which can't be represented in nanosecond resolution an :py:class:`pandas.OutOfBoundsTimedelta` exception is raised:
 
-.. ipython:: python
+.. jupyter-execute::
 
     try:
         delta = pd.to_timedelta(int64_max, unit="us")
     except Exception as err:
         print("First:", err)
+
+.. jupyter-execute::
+
     try:
         delta = pd.to_timedelta(uint64_max, unit="ns")
     except Exception as err:
@@ -143,12 +152,15 @@ and :py:meth:`pandas.TimedeltaIndex.as_unit` respectively.
 
 ``as_unit`` takes one of ``'s'``, ``'ms'``, ``'us'``, ``'ns'`` as an argument. That means we are able to represent timedeltas with second, millisecond, microsecond or nanosecond resolution.
 
-.. ipython:: python
+.. jupyter-execute::
 
     delta = pd.to_timedelta(np.timedelta64(1, "D"))
     print("Timedelta:", delta, np.asarray([delta.to_numpy()]).dtype)
     print("Timedelta as_unit('ms'):", delta.as_unit("ms"))
     print("Timedelta to_numpy():", delta.as_unit("ms").to_numpy())
+
+.. jupyter-execute::
+
     delta = pd.to_timedelta([0, 1, 2], unit="D")
     print("TimedeltaIndex:", delta)
     print("TimedeltaIndex as_unit('ms'):", delta.as_unit("ms"))
@@ -157,7 +169,7 @@ and :py:meth:`pandas.TimedeltaIndex.as_unit` respectively.
 .. warning::
     Care has to be taken, as some configurations of input data will raise. The following shows, that we are safe to use :py:func:`pandas.to_timedelta` when providing :py:class:`numpy.timedelta64` as scalar or numpy array as input.
 
-    .. ipython:: python
+    .. jupyter-execute::
 
         print(
             "Works:",
@@ -198,7 +210,7 @@ In normal operation :py:class:`pandas.Timestamp` holds the timestamp in the prov
 The same conversion rules apply here as for :py:func:`pandas.to_timedelta` (see `to_timedelta`_).
 Depending on the internal resolution Timestamps can be represented in the range:
 
-.. ipython:: python
+.. jupyter-execute::
 
     for unit in ["s", "ms", "us", "ns"]:
         print(
@@ -210,7 +222,7 @@ Since relaxing the resolution, this enhances the range to several hundreds of th
 .. warning::
     When initialized with a datetime string this is only defined from ``-9999-01-01`` to ``9999-12-31``.
 
-    .. ipython:: python
+    .. jupyter-execute::
 
         try:
             print("Works:", pd.Timestamp("-9999-01-01 00:00:00"))
@@ -222,7 +234,7 @@ Since relaxing the resolution, this enhances the range to several hundreds of th
 .. note::
     :py:class:`pandas.Timestamp` is the only current possibility to correctly import time reference strings. It handles non-ISO formatted strings, keeps the resolution of the strings (``'s'``, ``'ms'`` etc.) and imports time zones. When initialized with :py:class:`numpy.datetime64` instead of a string it even overcomes the above limitation of the possible time range.
 
-    .. ipython:: python
+    .. jupyter-execute::
 
         try:
             print("Handles non-ISO:", pd.Timestamp("92-1-8 151542"))
@@ -255,7 +267,7 @@ DatetimeIndex
 :py:class:`pandas.DatetimeIndex` is used to wrap ``np.datetime64`` values or other datetime-likes when encoding. The resolution of the DatetimeIndex depends on the input, but can be only one of ``'s'``, ``'ms'``, ``'us'``, ``'ns'``. Lower resolution input is automatically converted to ``'s'``, higher resolution input is cut to ``'ns'``.
 :py:class:`pandas.DatetimeIndex` will raise :py:class:`pandas.OutOfBoundsDatetime` if the input can't be represented in the given resolution.
 
-.. ipython:: python
+.. jupyter-execute::
 
     try:
         print(
@@ -327,7 +339,7 @@ Decoding of ``values`` with a time unit specification like ``"seconds since 1992
 
 5. Finally, the ``values`` (at this point converted to ``int64`` values) are cast to ``datetime64[unit]`` (using the above retrieved unit) and added to the reference time :py:class:`pandas.Timestamp`.
 
-.. ipython:: python
+.. jupyter-execute::
 
     calendar = "proleptic_gregorian"
     values = np.array([-1000 * 365, 0, 1000 * 365], dtype="int64")
@@ -336,14 +348,14 @@ Decoding of ``values`` with a time unit specification like ``"seconds since 1992
     assert dt.dtype == "datetime64[us]"
     dt
 
-.. ipython:: python
+.. jupyter-execute::
 
     units = "microseconds since 2000-01-01 00:00:00"
     dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
     assert dt.dtype == "datetime64[us]"
     dt
 
-.. ipython:: python
+.. jupyter-execute::
 
     values = np.array([0, 0.25, 0.5, 0.75, 1.0], dtype="float64")
     units = "days since 2000-01-01 00:00:00.001"
@@ -351,7 +363,7 @@ Decoding of ``values`` with a time unit specification like ``"seconds since 1992
     assert dt.dtype == "datetime64[ms]"
     dt
 
-.. ipython:: python
+.. jupyter-execute::
 
     values = np.array([0, 0.25, 0.5, 0.75, 1.0], dtype="float64")
     units = "hours since 2000-01-01"
@@ -359,7 +371,7 @@ Decoding of ``values`` with a time unit specification like ``"seconds since 1992
     assert dt.dtype == "datetime64[s]"
     dt
 
-.. ipython:: python
+.. jupyter-execute::
 
     values = np.array([0, 0.25, 0.5, 0.75, 1.0], dtype="float64")
     units = "hours since 2000-01-01 00:00:00 03:30"
@@ -367,7 +379,7 @@ Decoding of ``values`` with a time unit specification like ``"seconds since 1992
     assert dt.dtype == "datetime64[s]"
     dt
 
-.. ipython:: python
+.. jupyter-execute::
 
     values = np.array([-2002 * 365 - 121, -366, 365, 2000 * 365 + 119], dtype="int64")
     units = "days since 0001-01-01 00:00:00"
@@ -393,8 +405,7 @@ For encoding the process is more or less a reversal of the above, but we have to
 11. Divide ``time_deltas`` by ``delta``, use floor division (integer) or normal division (float)
 12. Return result
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
     calendar = "proleptic_gregorian"
     dates = np.array(
@@ -413,8 +424,11 @@ For encoding the process is more or less a reversal of the above, but we have to
     values, _, _ = xr.coding.times.encode_cf_datetime(
         dates, units, calendar, dtype=np.dtype("int64")
     )
-    print(values)
+    print(values, units)
     np.testing.assert_array_equal(values, orig_values)
+
+.. jupyter-execute::
+    :stderr:
 
     dates = np.array(
         [
@@ -428,11 +442,15 @@ For encoding the process is more or less a reversal of the above, but we have to
     orig_values = np.array(
         [-2002 * 365 - 121, -366, 365, 2000 * 365 + 119], dtype="int64"
     )
+    orig_values *= 24  # Convert to hours
+    orig_values[0] += 1  # Adjust for the hour offset in dates above
+
     units = "days since 0001-01-01 00:00:00"
     values, units, _ = xr.coding.times.encode_cf_datetime(
         dates, units, calendar, dtype=np.dtype("int64")
     )
     print(values, units)
+    np.testing.assert_array_equal(values, orig_values)
 
 .. _internals.default_timeunit:
 
@@ -441,17 +459,17 @@ Default Time Unit
 
 The current default time unit of xarray is ``'ns'``. When setting keyword argument ``time_unit`` unit to ``'s'`` (the lowest resolution pandas allows) datetimes will be converted to at least ``'s'``-resolution, if possible. The same holds true for ``'ms'`` and ``'us'``.
 
-.. ipython:: python
+.. jupyter-execute::
 
     attrs = {"units": "hours since 2000-01-01"}
     ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
     ds.to_netcdf("test-datetimes1.nc")
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.open_dataset("test-datetimes1.nc")
 
-.. ipython:: python
+.. jupyter-execute::
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
     xr.open_dataset("test-datetimes1.nc", decode_times=coder)
@@ -459,17 +477,17 @@ The current default time unit of xarray is ``'ns'``. When setting keyword argume
 If a coarser unit is requested the datetimes are decoded into their native
 on-disk resolution, if possible.
 
-.. ipython:: python
+.. jupyter-execute::
 
     attrs = {"units": "milliseconds since 2000-01-01"}
     ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
     ds.to_netcdf("test-datetimes2.nc")
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.open_dataset("test-datetimes2.nc")
 
-.. ipython:: python
+.. jupyter-execute::
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
     xr.open_dataset("test-datetimes2.nc", decode_times=coder)
@@ -477,29 +495,28 @@ on-disk resolution, if possible.
 Similar logic applies for decoding timedelta values. The default resolution is
 ``"ns"``:
 
-.. ipython:: python
+.. jupyter-execute::
 
     attrs = {"units": "hours"}
     ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
     ds.to_netcdf("test-timedeltas1.nc")
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
+    :stderr:
 
     xr.open_dataset("test-timedeltas1.nc")
 
 By default, timedeltas will be decoded to the same resolution as datetimes:
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
-    xr.open_dataset("test-timedeltas1.nc", decode_times=coder)
+    xr.open_dataset("test-timedeltas1.nc", decode_times=coder, decode_timedelta=True)
 
 but if one would like to decode timedeltas to a different resolution, one can
 provide a coder specifically for timedeltas to ``decode_timedelta``:
 
-.. ipython:: python
+.. jupyter-execute::
 
     timedelta_coder = xr.coders.CFTimedeltaCoder(time_unit="ms")
     xr.open_dataset(
@@ -509,29 +526,44 @@ provide a coder specifically for timedeltas to ``decode_timedelta``:
 As with datetimes, if a coarser unit is requested the timedeltas are decoded
 into their native on-disk resolution, if possible:
 
-.. ipython:: python
+.. jupyter-execute::
 
     attrs = {"units": "milliseconds"}
     ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
     ds.to_netcdf("test-timedeltas2.nc")
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
-    xr.open_dataset("test-timedeltas2.nc")
+    xr.open_dataset("test-timedeltas2.nc", decode_timedelta=True)
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
-    xr.open_dataset("test-timedeltas2.nc", decode_times=coder)
+    xr.open_dataset("test-timedeltas2.nc", decode_times=coder, decode_timedelta=True)
 
 To opt-out of timedelta decoding (see issue `Undesired decoding to timedelta64 <https://github.com/pydata/xarray/issues/1621>`_) pass ``False`` to ``decode_timedelta``:
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.open_dataset("test-timedeltas2.nc", decode_timedelta=False)
 
 .. note::
     Note that in the future the default value of ``decode_timedelta`` will be
     ``False`` rather than ``None``.
+
+
+
+.. jupyter-execute::
+    :hide-code:
+
+    # Cleanup
+    import os
+
+    for f in [
+        "test-datetimes1.nc",
+        "test-datetimes2.nc",
+        "test-timedeltas1.nc",
+        "test-timedeltas2.nc",
+    ]:
+        if os.path.exists(f):
+            os.remove(f)

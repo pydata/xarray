@@ -37,8 +37,8 @@ Split
 
 Let's create a simple example dataset:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import numpy as np
     import pandas as pd
@@ -46,7 +46,7 @@ Let's create a simple example dataset:
 
     np.random.seed(123456)
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 3))},
@@ -58,26 +58,26 @@ Let's create a simple example dataset:
 If we groupby the name of a variable or coordinate in a dataset (we can also
 use a DataArray directly), we get back a ``GroupBy`` object:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.groupby("letters")
 
 This object works very similarly to a pandas GroupBy object. You can view
 the group indices with the ``groups`` attribute:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.groupby("letters").groups
 
 You can also iterate over groups in ``(label, group)`` pairs:
 
-.. ipython:: python
+.. jupyter-execute::
 
     list(ds.groupby("letters"))
 
 You can index out a particular group:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.groupby("letters")["b"]
 
@@ -91,7 +91,7 @@ but instead want to "bin" the data into coarser groups. You could always create
 a customized coordinate, but xarray facilitates this via the
 :py:meth:`Dataset.groupby_bins` method.
 
-.. ipython:: python
+.. jupyter-execute::
 
     x_bins = [0, 25, 50]
     ds.groupby_bins("x", x_bins).groups
@@ -102,7 +102,7 @@ labeled with strings using set notation to precisely identify the bin limits. To
 override this behavior, you can specify the bin labels explicitly. Here we
 choose ``float`` labels which identify the bin centers:
 
-.. ipython:: python
+.. jupyter-execute::
 
     x_bin_labels = [12.5, 37.5]
     ds.groupby_bins("x", x_bins, labels=x_bin_labels).groups
@@ -115,7 +115,7 @@ To apply a function to each group, you can use the flexible
 :py:meth:`core.groupby.DatasetGroupBy.map` method. The resulting objects are automatically
 concatenated back together along the group axis:
 
-.. ipython:: python
+.. jupyter-execute::
 
     def standardize(x):
         return (x - x.mean()) / x.std()
@@ -127,14 +127,14 @@ GroupBy objects also have a :py:meth:`core.groupby.DatasetGroupBy.reduce` method
 methods like :py:meth:`core.groupby.DatasetGroupBy.mean` as shortcuts for applying an
 aggregation function:
 
-.. ipython:: python
+.. jupyter-execute::
 
     arr.groupby("letters").mean(dim="x")
 
 Using a groupby is thus also a convenient shortcut for aggregating over all
 dimensions *other than* the provided one:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.groupby("x").std(...)
 
@@ -151,7 +151,7 @@ There are two special aggregation operations that are currently only found on
 groupby objects: first and last. These provide the first or last example of
 values for group along the grouped dimension:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.groupby("letters").first(...)
 
@@ -166,10 +166,13 @@ for ``(GroupBy, Dataset)`` and ``(GroupBy, DataArray)`` pairs, as long as the
 dataset or data array uses the unique grouped values as one of its index
 coordinates. For example:
 
-.. ipython:: python
+.. jupyter-execute::
 
     alt = arr.groupby("letters").mean(...)
     alt
+
+.. jupyter-execute::
+
     ds.groupby("letters") - alt
 
 This last line is roughly equivalent to the following::
@@ -191,7 +194,7 @@ operations over multidimensional coordinate variables:
 
 __ https://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#_two_dimensional_latitude_longitude_coordinate_variables
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray(
         [[0, 1], [2, 3]],
@@ -202,14 +205,20 @@ __ https://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#_two_dime
         dims=["ny", "nx"],
     )
     da
+
+.. jupyter-execute::
+
     da.groupby("lon").sum(...)
+
+.. jupyter-execute::
+
     da.groupby("lon").map(lambda x: x - x.mean(), shortcut=False)
 
 Because multidimensional groups have the ability to generate a very large
 number of bins, coarse-binning via :py:meth:`Dataset.groupby_bins`
 may be desirable:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.groupby_bins("lon", [0, 45, 50]).sum()
 
@@ -217,7 +226,7 @@ These methods group by ``lon`` values. It is also possible to groupby each
 cell in a grid, regardless of value, by stacking multiple dimensions,
 applying your function, and then unstacking the result:
 
-.. ipython:: python
+.. jupyter-execute::
 
     stacked = da.stack(gridcell=["ny", "nx"])
     stacked.groupby("gridcell").sum(...).unstack("gridcell")
@@ -310,7 +319,7 @@ Grouping by multiple variables
 
 Use grouper objects to group by multiple dimensions:
 
-.. ipython:: python
+.. jupyter-execute::
 
     from xarray.groupers import UniqueGrouper
 
@@ -318,18 +327,26 @@ Use grouper objects to group by multiple dimensions:
 
 The above is sugar for using ``UniqueGrouper`` objects directly:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.groupby(lat=UniqueGrouper(), lon=UniqueGrouper()).sum()
 
 
 Different groupers can be combined to construct sophisticated GroupBy operations.
 
-.. ipython:: python
+.. jupyter-execute::
 
     from xarray.groupers import BinGrouper
 
     ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper()).sum()
+
+
+Time Grouping and Resampling
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. seealso::
+
+   See :ref:`resampling`.
 
 
 Shuffling
@@ -339,7 +356,7 @@ Shuffling is a generalization of sorting a DataArray or Dataset by another DataA
 Shuffling reorders the DataArray or the DataArrays in a Dataset such that all members of a group occur sequentially. For example,
 Shuffle the object using either :py:class:`DatasetGroupBy` or :py:class:`DataArrayGroupBy` as appropriate.
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray(
         dims="x",
