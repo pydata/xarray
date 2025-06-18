@@ -15,7 +15,7 @@ except ImportError:
         int32 = None  # type: ignore[unused-ignore,var-annotated]
         float64 = None  # type: ignore[unused-ignore,var-annotated]
 
-    array_api_strict = DummyArrayAPINamespace  # type: ignore[assignment]
+    array_api_strict = DummyArrayAPINamespace
 
 
 @pytest.mark.parametrize(
