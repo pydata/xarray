@@ -814,15 +814,6 @@ class BackendEntrypoint:
     url: ClassVar[str] = ""
     coder_class = BaseCoderOptions
 
-    def __init__(
-        self,
-        coder_options: Optional[CoderOptions] = None,
-    ):
-        # Instantiate default coder_options
-        self.coder_options = (
-            coder_options if coder_options is not None else self.coder_class()
-        )
-
     def __repr__(self) -> str:
         txt = f"<{type(self).__name__}>"
         if self.description:

@@ -490,14 +490,14 @@ def _resolve_decoders_options(coder_options, backend, decoders):
     # Deprecation Fallback
     deprecated = False
     if coder_options is False:
-        coder_options = _reset_dataclass_to_false(backend.coder_options)
+        coder_options = _reset_dataclass_to_false(backend.coder_class())
     elif coder_options is True:
-        coder_options = backend.coder_options
+        coder_options = backend.coder_class()
     elif coder_options is None:
         decode_cf = decoders.pop("decode_cf", None)
 
         # deprecation fallback
-        _coder_options = backend.coder_options
+        _coder_options = backend.coder_class()
         if type(_coder_options) is BaseCoderOptions:
             coder_options = CoderOptions()
             coder_class = CoderOptions
@@ -508,7 +508,7 @@ def _resolve_decoders_options(coder_options, backend, decoders):
             )
             deprecated = True
         else:
-            coder_options = backend.coder_options
+            coder_options = backend.coder_class()
             coder_class = backend.coder_class
         if decode_cf is False:
             coder_options = _reset_dataclass_to_false(coder_options)

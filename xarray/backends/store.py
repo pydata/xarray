@@ -41,7 +41,7 @@ class StoreBackendEntrypoint(BackendEntrypoint):
         encoding = filename_or_obj.get_encoding()
 
         coder_options = (
-            coder_options if coder_options is not None else self.coder_options
+            coder_options if coder_options is not None else self.coder_class()
         )
         vars, attrs, coord_names = conventions.decode_cf_variables(
             vars, attrs, **coder_options.to_kwargs()

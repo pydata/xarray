@@ -320,7 +320,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         **kwargs,
     ) -> Dataset:
         coder_options = (
-            coder_options if coder_options is not None else self.coder_options
+            coder_options if coder_options is not None else self.coder_class()
         )
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ScipyDataStore(
