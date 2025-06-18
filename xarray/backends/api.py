@@ -30,6 +30,7 @@ from xarray.backends import plugins
 from xarray.backends.common import (
     AbstractDataStore,
     ArrayWriter,
+    BaseCoderOptions,
     CoderOptions,
     _find_absolute_paths,
     _normalize_path,
@@ -43,7 +44,7 @@ from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
-from xarray.core.utils import is_remote_uri
+from xarray.core.utils import emit_user_level_warning, is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
 from xarray.structure.chunks import _get_chunk, _maybe_chunk
@@ -487,22 +488,39 @@ def _datatree_from_backend_datatree(
 def _resolve_decoders_options(coder_options, backend, decoders):
     # initialize CoderOptions with decoders if not given
     # Deprecation Fallback
+    deprecated = False
     if coder_options is False:
         coder_options = _reset_dataclass_to_false(backend.coder_options)
     elif coder_options is True:
         coder_options = backend.coder_options
     elif coder_options is None:
         decode_cf = decoders.pop("decode_cf", None)
-        if decode_cf is False:
-            coder_options = _reset_dataclass_to_false(backend.coder_options)
+
+        # deprecation fallback
+        _coder_options = backend.coder_options
+        if type(_coder_options) is BaseCoderOptions:
+            coder_options = CoderOptions()
+            coder_class = CoderOptions
+            emit_user_level_warning(
+                "'coder_options' keyword argument introduced, grouping together "
+                f"all decoder keyword arguments. Please update {backend} accordingly.",
+                FutureWarning,
+            )
+            deprecated = True
         else:
-            field_names = {f.name for f in fields(backend.coder_class)}
+            coder_options = backend.coder_options
+            coder_class = backend.coder_class
+        if decode_cf is False:
+            coder_options = _reset_dataclass_to_false(coder_options)
+        else:
+            field_names = {f.name for f in fields(coder_class)}
             coders = {}
             for d in list(decoders):
                 if d in field_names:
                     coders[d] = decoders.pop(d)
-            coder_options = backend.coder_class(**coders)
-    return coder_options
+            coder_options = coder_class(**coders)
+
+    return coder_options, deprecated
 
 
 def open_dataset(
@@ -707,13 +725,21 @@ def open_dataset(
     backend = plugins.get_backend(engine)
 
     # initialize coder_options per kwargs if not given
-    coder_options = _resolve_decoders_options(coder_options, backend, kwargs)
+    coder_options, deprecated = _resolve_decoders_options(
+        coder_options, backend, kwargs
+    )
 
     overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
+
+    # deprecation fallback
+    nkwargs = kwargs.copy()
+    if deprecated:
+        nkwargs.update(coder_options.to_kwargs())
+    else:
+        nkwargs.update(coder_options=coder_options)
     backend_ds = backend.open_dataset(
         filename_or_obj,
-        coder_options=coder_options,
-        **kwargs,
+        **nkwargs,
     )
     ds = _dataset_from_backend_dataset(
         backend_ds,

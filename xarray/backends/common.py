@@ -671,7 +671,12 @@ def _validate_kwargs_for_dataclass(cls, kwargs):
 
 
 @dataclass(frozen=True, kw_only=True)
-class CoderOptions:
+class BaseCoderOptions:
+    pass
+
+
+@dataclass(frozen=True, kw_only=True)
+class CoderOptions(BaseCoderOptions):
     """
     CF Coding Options.
 
