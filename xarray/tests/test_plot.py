@@ -828,7 +828,7 @@ class TestPlot1D(PlotTestCase):
         darray = self.darray.expand_dims({"d": np.array([10.009])})
         darray.plot.line(x="period")
         title = plt.gca().get_title()
-        assert "d = 10.01" == title
+        assert "d = [10.009]" == title
 
 
 class TestPlotStep(PlotTestCase):
