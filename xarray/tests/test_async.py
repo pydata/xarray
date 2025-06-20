@@ -205,7 +205,7 @@ class TestAsyncLoad:
 
         target_class, method_name = zarr_class_and_method
         original_method = getattr(target_class, method_name)
-        
+
         with patch.object(
             target_class, method_name, wraps=original_method, autospec=True
         ) as mocked_meth:
