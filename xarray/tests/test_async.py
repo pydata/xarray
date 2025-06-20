@@ -182,29 +182,32 @@ class TestAsyncLoad:
 
     @pytest.mark.parametrize("method", ["sel", "isel"])
     @pytest.mark.parametrize(
-        "indexer, zarr_getitem_method",
+        "indexer, zarr_class_and_method",
         [
-            ({"x": 2}, zarr.AsyncArray.getitem),
-            ({"x": slice(2, 4)}, zarr.AsyncArray.getitem),
-            ({"x": [2, 3]}, zarr.core.indexing.AsyncOIndex.getitem),
+            ({"x": 2}, (zarr.AsyncArray, "getitem")),
+            ({"x": slice(2, 4)}, (zarr.AsyncArray, "getitem")),
+            ({"x": [2, 3]}, (zarr.core.indexing.AsyncOIndex, "getitem")),
             (
                 {
                     "x": xr.DataArray([2, 3], dims="points"),
                     "y": xr.DataArray([2, 3], dims="points"),
                 },
-                zarr.core.indexing.AsyncVIndex.getitem,
+                (zarr.core.indexing.AsyncVIndex, "getitem"),
             ),
         ],
         ids=["basic-int", "basic-slice", "outer", "vectorized"],
     )
     async def test_indexing(
-        self, memorystore, method, indexer, zarr_getitem_method
+        self, memorystore, method, indexer, zarr_class_and_method
     ) -> None:
         # TODO we don't need a LatencyStore for this test
         latencystore = LatencyStore(memorystore, latency=0.0)
 
+        target_class, method_name = zarr_class_and_method
+        original_method = getattr(target_class, method_name)
+        
         with patch.object(
-            zarr.AsyncArray, "getitem", wraps=zarr_getitem_method, autospec=True
+            target_class, method_name, wraps=original_method, autospec=True
         ) as mocked_meth:
             ds = xr.open_zarr(
                 latencystore, zarr_format=3, consolidated=False, chunks=None
@@ -213,9 +216,9 @@ class TestAsyncLoad:
             # TODO we're not actually testing that these indexing methods are not blocking...
             result = await getattr(ds, method)(**indexer).load_async()
 
-            assert mocked_meth.call_count > 0
             mocked_meth.assert_called()
             mocked_meth.assert_awaited()
+            assert mocked_meth.call_count > 0
 
         expected = getattr(ds, method)(**indexer).load()
         xrt.assert_identical(result, expected)
