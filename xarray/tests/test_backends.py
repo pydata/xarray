@@ -1427,6 +1427,25 @@ class CFEncodedBase(DatasetIOBase):
             with self.roundtrip(original) as actual:
                 assert_identical(original, actual)
 
+    @pytest.mark.parametrize(
+        "indexer",
+        (
+            {"y": [1]},
+            {"y": slice(2)},
+            {"y": 1},
+            {"x": [1], "y": [1]},
+            {"x": ("x0", [0, 1]), "y": ("x0", [0, 1])},
+        ),
+    )
+    def test_indexing_roundtrip(self, indexer) -> None:
+        # regression test for GH8909
+        ds = xr.Dataset()
+        ds["A"] = xr.DataArray([[1, "a"], [2, "b"]], dims=["x", "y"])
+        with self.roundtrip(ds) as ds2:
+            expected = ds2.sel(indexer)
+            with self.roundtrip(expected) as actual:
+                assert_identical(actual, expected)
+
 
 class NetCDFBase(CFEncodedBase):
     """Tests for all netCDF3 and netCDF4 backends."""
