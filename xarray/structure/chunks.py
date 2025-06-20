@@ -74,7 +74,7 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
     # Determine the explicit requested chunks.
     preferred_chunks = var.encoding.get("preferred_chunks", {})
     preferred_chunk_shape = tuple(
-        preferred_chunks.get(dim, size) for dim, size in zip(dims, shape, strict=True)
+        itertools.starmap(preferred_chunks.get, zip(dims, shape, strict=True))
     )
     if isinstance(chunks, Number) or (chunks == "auto"):
         chunks = dict.fromkeys(dims, chunks)

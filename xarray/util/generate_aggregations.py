@@ -692,8 +692,7 @@ def write_methods(filepath, generators, preamble):
         f.write(preamble)
         for gen in generators:
             for lines in gen.generate_methods():
-                for line in lines:
-                    f.write(line + "\n")
+                f.writelines(line + "\n" for line in lines)
 
 
 if __name__ == "__main__":

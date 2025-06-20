@@ -43,7 +43,7 @@ from __future__ import annotations
 
 import math
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -549,7 +549,7 @@ class CFTimeIndex(pd.Index):
             ) from err
 
     def to_datetimeindex(
-        self, unsafe: bool = False, time_unit: Optional[PDDatetimeUnitOptions] = None
+        self, unsafe: bool = False, time_unit: PDDatetimeUnitOptions | None = None
     ) -> pd.DatetimeIndex:
         """If possible, convert this index to a pandas.DatetimeIndex.
 

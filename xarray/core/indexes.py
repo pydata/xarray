@@ -1955,7 +1955,7 @@ def _wrap_index_equals(
             f"the signature ``{index_cls_name}.equals(self, other)`` is deprecated. "
             f"Please update it to "
             f"``{index_cls_name}.equals(self, other, *, exclude=None)`` "
-            "or kindly ask the maintainers of ``{index_cls_name}`` to do it. "
+            f"or kindly ask the maintainers of ``{index_cls_name}`` to do it. "
             "See documentation of xarray.Index.equals() for more info.",
             FutureWarning,
         )

@@ -241,7 +241,7 @@ def equivalent(first: T, second: T) -> bool:
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    return all(equivalent(f, s) for f, s in zip(first, second, strict=True))
+    return all(itertools.starmap(equivalent, zip(first, second, strict=True)))
 
 
 def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:

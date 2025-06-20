@@ -258,7 +258,7 @@ def _cov_corr(
     weights: T_DataArray | None = None,
     dim: Dims = None,
     ddof: int = 0,
-    method: Literal["cov", "corr", None] = None,
+    method: Literal["cov", "corr"] | None = None,
 ) -> T_DataArray:
     """
     Internal method for xr.cov() and xr.corr() so only have to

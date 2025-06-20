@@ -253,16 +253,16 @@ InterpolantOptions = Literal[
 InterpnOptions = Literal["linear", "nearest", "slinear", "cubic", "quintic", "pchip"]
 InterpOptions = Union[Interp1dOptions, InterpolantOptions, InterpnOptions]
 
-DatetimeUnitOptions = Literal[
-    "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
-]
+DatetimeUnitOptions = (
+    Literal["W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as"] | None
+)
 NPDatetimeUnitOptions = Literal["D", "h", "m", "s", "ms", "us", "ns"]
 PDDatetimeUnitOptions = Literal["s", "ms", "us", "ns"]
 
-QueryEngineOptions = Literal["python", "numexpr", None]
+QueryEngineOptions = Literal["python", "numexpr"] | None
 QueryParserOptions = Literal["pandas", "python"]
 
-ReindexMethodOptions = Literal["nearest", "pad", "ffill", "backfill", "bfill", None]
+ReindexMethodOptions = Literal["nearest", "pad", "ffill", "backfill", "bfill"] | None
 
 PadModeOptions = Literal[
     "constant",
@@ -281,7 +281,7 @@ T_VarPadConstantValues = T_PadConstantValues | Mapping[Any, T_PadConstantValues]
 T_DatasetPadConstantValues = (
     T_VarPadConstantValues | Mapping[Any, T_VarPadConstantValues]
 )
-PadReflectOptions = Literal["even", "odd", None]
+PadReflectOptions = Literal["even", "odd"] | None
 
 CFCalendar = Literal[
     "standard",
@@ -299,10 +299,10 @@ CoarsenBoundaryOptions = Literal["exact", "trim", "pad"]
 SideOptions = Literal["left", "right"]
 InclusiveOptions = Literal["both", "neither", "left", "right"]
 
-ScaleOptions = Literal["linear", "symlog", "log", "logit", None]
-HueStyleOptions = Literal["continuous", "discrete", None]
+ScaleOptions = Literal["linear", "symlog", "log", "logit"] | None
+HueStyleOptions = Literal["continuous", "discrete"] | None
 AspectOptions = Union[Literal["auto", "equal"], float, None]
-ExtendOptions = Literal["neither", "both", "min", "max", None]
+ExtendOptions = Literal["neither", "both", "min", "max"] | None
 
 
 _T_co = TypeVar("_T_co", covariant=True)

@@ -529,8 +529,10 @@ def apply_dataset_vfunc(
     out: Dataset | tuple[Dataset, ...]
     if signature.num_outputs > 1:
         out = tuple(
-            _fast_dataset(*args)
-            for args in zip(result_vars, list_of_coords, list_of_indexes, strict=True)
+            itertools.starmap(
+                _fast_dataset,
+                zip(result_vars, list_of_coords, list_of_indexes, strict=True),
+            )
         )
     else:
         (coord_vars,) = list_of_coords
@@ -600,9 +602,7 @@ def apply_groupby_func(func, *args):
             iterator = itertools.repeat(arg)
         iterators.append(iterator)
 
-    applied: Iterator = (
-        func(*zipped_args) for zipped_args in zip(*iterators, strict=False)
-    )
+    applied: Iterator = itertools.starmap(func, zip(*iterators, strict=False))
     applied_example, applied = peek_at(applied)
     combine = first_groupby._combine  # type: ignore[attr-defined]
     if isinstance(applied_example, tuple):
