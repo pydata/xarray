@@ -220,6 +220,6 @@ def test_range_index_repr() -> None:
 
 def test_range_index_repr_inline() -> None:
     index = RangeIndex.arange(0.0, 1.0, 0.1, dim="x")
-    actual = index._repr_inline_(max_width=None)
+    actual = index._repr_inline_(max_width=70)
     expected = "RangeIndex (start=0, stop=1, step=0.1)"
     assert actual == expected
