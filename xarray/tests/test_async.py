@@ -184,6 +184,7 @@ class TestAsyncLoad:
     @pytest.mark.parametrize(
         "indexer, zarr_class_and_method",
         [
+            ({}, (zarr.AsyncArray, "getitem")),
             ({"x": 2}, (zarr.AsyncArray, "getitem")),
             ({"x": slice(2, 4)}, (zarr.AsyncArray, "getitem")),
             ({"x": [2, 3]}, (zarr.core.indexing.AsyncOIndex, "getitem")),
@@ -195,7 +196,7 @@ class TestAsyncLoad:
                 (zarr.core.indexing.AsyncVIndex, "getitem"),
             ),
         ],
-        ids=["basic-int", "basic-slice", "outer", "vectorized"],
+        ids=["no-indexing", "basic-int", "basic-slice", "outer", "vectorized"],
     )
     async def test_indexing(
         self, memorystore, method, indexer, zarr_class_and_method
@@ -203,6 +204,7 @@ class TestAsyncLoad:
         # TODO we don't need a LatencyStore for this test
         latencystore = LatencyStore(memorystore, latency=0.0)
 
+        # each type of indexing ends up calling a different zarr indexing method
         target_class, method_name = zarr_class_and_method
         original_method = getattr(target_class, method_name)
 
