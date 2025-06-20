@@ -156,8 +156,8 @@ class TestAsyncLoad:
             ({"x": [2, 3]}, (zarr.core.indexing.AsyncOIndex, "getitem")),
             (
                 {
-                    "x": xr.DataArray([2, 3], dims="points"),
-                    "y": xr.DataArray([2, 3], dims="points"),
+                    "x": xr.Variable(data=[2, 3], dims="points"),
+                    "y": xr.Variable(data=[2, 3], dims="points"),
                 },
                 (zarr.core.indexing.AsyncVIndex, "getitem"),
             ),
