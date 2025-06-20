@@ -249,7 +249,7 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     values, when accessed, are automatically stacked along the last dimension.
 
     >>> indexer = indexing.BasicIndexer((slice(None),))
-    >>> StackedBytesArray(np.array(["a", "b", "c"], dtype="S1"))[indexer]
+    >>> np.array(StackedBytesArray(np.array(["a", "b", "c"], dtype="S1"))[indexer])
     array(b'abc', dtype='|S3')
     """
 
@@ -278,14 +278,17 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return f"{type(self).__name__}({self.array!r})"
 
     def _vindex_get(self, key):
-        return _numpy_char_to_bytes(self.array.vindex[key])
+        return type(self)(self.array.vindex[key])
 
     def _oindex_get(self, key):
-        return _numpy_char_to_bytes(self.array.oindex[key])
+        return type(self)(self.array.oindex[key])
 
     def __getitem__(self, key):
         # require slicing the last dimension completely
         key = type(key)(indexing.expanded_indexer(key.tuple, self.array.ndim))
         if key.tuple[-1] != slice(None):
             raise IndexError("too many indices")
-        return _numpy_char_to_bytes(self.array[key])
+        return type(self)(self.array[key])
+
+    def get_duck_array(self):
+        return _numpy_char_to_bytes(self.array.get_duck_array())

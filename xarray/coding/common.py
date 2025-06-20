@@ -63,6 +63,10 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def dtype(self) -> np.dtype:
         return np.dtype(self._dtype)
 
+    def transpose(self, order):
+        # For elementwise functions, we can compose transpose and function application
+        return type(self)(self.array.transpose(order), self.func, self.dtype)
+
     def _oindex_get(self, key):
         return type(self)(self.array.oindex[key], self.func, self.dtype)
 
