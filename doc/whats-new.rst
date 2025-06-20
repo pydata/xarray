@@ -28,6 +28,9 @@ Bug fixes
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Fix the SciPy backend for netCDF3 files . (:issue:`8909`, :pull:`10376`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Check and fix character array string dimension names, issue warnings as needed (:issue:`6352`, :pull:`10395`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 
 Documentation
@@ -36,6 +39,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Forward variable name down to coders for AbstractWritableDataStore.encode_variable and subclasses. (:pull:`10395`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 .. _whats-new.2025.06.1:
 
