@@ -1,7 +1,4 @@
 import asyncio
-import time
-from collections.abc import Iterable
-from contextlib import asynccontextmanager
 from typing import Literal, TypeVar
 from unittest.mock import patch
 
@@ -21,37 +18,20 @@ if has_zarr_v3:
 
     T_Store = TypeVar("T_Store", bound=Store)
 
-    class LatencyStore(WrapperStore[T_Store]):
-        """Works the same way as the zarr LoggingStore"""
+    class ReadOnlyStore(WrapperStore[T_Store]):
+        """
+        We shouldn't need this - but we currently do just as a way around https://github.com/zarr-developers/zarr-python/issues/3105#issuecomment-2990367167
 
-        latency: float
+        Works the same way as the zarr LoggingStore.
+        """
 
-        # TODO only have to add this because of dumb behaviour in zarr where it raises with "ValueError: Store is not read-only but mode is 'r'"
         read_only = True
 
         def __init__(
             self,
             store: T_Store,
-            latency: float = 0.0,
         ) -> None:
-            """
-            Store wrapper that adds artificial latency to each get call.
-
-            Parameters
-            ----------
-            store : Store
-                Store to wrap
-            latency : float
-                Amount of artificial latency to add to each get call, in seconds.
-            """
             super().__init__(store)
-            self.latency = latency
-
-        def __str__(self) -> str:
-            return f"latency-{self._store}"
-
-        def __repr__(self) -> str:
-            return f"LatencyStore({self._store.__class__.__name__}, '{self._store}', latency={self.latency})"
 
         async def get(
             self,
@@ -59,22 +39,12 @@ if has_zarr_v3:
             prototype: BufferPrototype,
             byte_range: ByteRequest | None = None,
         ) -> Buffer | None:
-            await asyncio.sleep(self.latency)
             return await self._store.get(
                 key=key, prototype=prototype, byte_range=byte_range
             )
 
-        async def get_partial_values(
-            self,
-            prototype: BufferPrototype,
-            key_ranges: Iterable[tuple[str, ByteRequest | None]],
-        ) -> list[Buffer | None]:
-            await asyncio.sleep(self.latency)
-            return await self._store.get_partial_values(
-                prototype=prototype, key_ranges=key_ranges
-            )
 else:
-    LatencyStore = {}
+    ReadOnlyStore = {}
 
 
 @pytest.fixture
@@ -106,8 +76,8 @@ def memorystore() -> "MemoryStore":
 
 @pytest.fixture
 def store(memorystore) -> "zarr.abc.store.Store":
-    # TODO we shouldn't need a LatencyStore at all for the patched tests, but we currently use it just as a way around https://github.com/zarr-developers/zarr-python/issues/3105#issuecomment-2990367167
-    return LatencyStore(memorystore, latency=0.0)
+    # TODO we shouldn't this Store at all for the patched tests, but we currently use it just as a way around https://github.com/zarr-developers/zarr-python/issues/3105#issuecomment-2990367167
+    return ReadOnlyStore(memorystore)
 
 
 def get_xr_obj(
