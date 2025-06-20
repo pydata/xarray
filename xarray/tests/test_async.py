@@ -2,7 +2,7 @@ import asyncio
 import time
 from collections.abc import Iterable
 from contextlib import asynccontextmanager
-from typing import TypeVar
+from typing import Literal, TypeVar
 from unittest.mock import patch
 
 import numpy as np
@@ -105,7 +105,7 @@ def memorystore() -> "MemoryStore":
 
 
 @pytest.fixture
-def store(memorystore) -> "zarr.abc.Store":
+def store(memorystore) -> "zarr.abc.store.Store":
     # TODO we shouldn't need a LatencyStore at all for the patched tests, but we currently use it just as a way around https://github.com/zarr-developers/zarr-python/issues/3105#issuecomment-2990367167
     return LatencyStore(memorystore, latency=0.0)
 
@@ -126,6 +126,20 @@ class AsyncTimer:
         finally:
             self.end_time = time.time()
             self.total_time = self.end_time - self.start_time
+
+
+def get_xr_obj(
+    store: "zarr.abc.store.Store", cls_name: Literal["Variable", "DataArray", "Dataset"]
+):
+    ds = xr.open_zarr(store, zarr_format=3, consolidated=False, chunks=None)
+
+    match cls_name:
+        case "Variable":
+            return ds["foo"].variable
+        case "DataArray":
+            return ds["foo"]
+        case "Dataset":
+            return ds
 
 
 @requires_zarr_v3
@@ -172,19 +186,30 @@ class TestAsyncLoad:
             total_time=timer.total_time, latency=self.LATENCY, n_loads=2
         )
 
-    async def test_concurrent_load_multiple_objects(self, xr_obj) -> None:
+    # TODO apply this parametrization to the other test too?
+    @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
+    async def test_concurrent_load_multiple_objects(self, store, cls_name) -> None:
         N_OBJECTS = 5
 
-        async with AsyncTimer().measure() as timer:
+        target_class = zarr.AsyncArray
+        method_name = "getitem"
+        original_method = getattr(target_class, method_name)
+
+        with patch.object(
+            target_class, method_name, wraps=original_method, autospec=True
+        ) as mocked_meth:
+            xr_obj = get_xr_obj(store, cls_name)
+
+            # TODO we're not actually testing that these indexing methods are not blocking...
             coros = [xr_obj.load_async() for _ in range(N_OBJECTS)]
             results = await asyncio.gather(*coros)
 
+            mocked_meth.assert_called()
+            assert mocked_meth.call_count >= N_OBJECTS
+            mocked_meth.assert_awaited()
+
         for result in results:
             xrt.assert_identical(result, xr_obj.load())
-
-        self.assert_time_as_expected(
-            total_time=timer.total_time, latency=self.LATENCY, n_loads=N_OBJECTS
-        )
 
     @pytest.mark.parametrize("method", ["sel", "isel"])
     @pytest.mark.parametrize(
