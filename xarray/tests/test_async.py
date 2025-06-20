@@ -110,24 +110,6 @@ def store(memorystore) -> "zarr.abc.store.Store":
     return LatencyStore(memorystore, latency=0.0)
 
 
-class AsyncTimer:
-    """Context manager for timing async operations and making assertions about their execution time."""
-
-    start_time: float
-    end_time: float
-    total_time: float
-
-    @asynccontextmanager
-    async def measure(self):
-        """Measure the execution time of the async code within this context."""
-        self.start_time = time.time()
-        try:
-            yield self
-        finally:
-            self.end_time = time.time()
-            self.total_time = self.end_time - self.start_time
-
-
 def get_xr_obj(
     store: "zarr.abc.store.Store", cls_name: Literal["Variable", "DataArray", "Dataset"]
 ):
@@ -145,52 +127,36 @@ def get_xr_obj(
 @requires_zarr_v3
 @pytest.mark.asyncio
 class TestAsyncLoad:
-    LATENCY: float = 1.0
-
-    @pytest.fixture(params=["var", "ds", "da"])
-    def xr_obj(self, request, memorystore) -> xr.Dataset | xr.DataArray | xr.Variable:
-        latencystore = LatencyStore(memorystore, latency=self.LATENCY)
-        ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
-
-        match request.param:
-            case "var":
-                return ds["foo"].variable
-            case "da":
-                return ds["foo"]
-            case "ds":
-                return ds
-
-    def assert_time_as_expected(
-        self, total_time: float, latency: float, n_loads: int
-    ) -> None:
-        assert total_time > latency  # Cannot possibly be quicker than this
-        assert (
-            total_time < latency * n_loads
-        )  # If this isn't true we're gaining nothing from async
-        assert (
-            abs(total_time - latency) < 2.0
-        )  # Should take approximately `latency` seconds, but allow some buffer
-
-    async def test_concurrent_load_multiple_variables(self, memorystore) -> None:
-        latencystore = LatencyStore(memorystore, latency=self.LATENCY)
-        ds = xr.open_zarr(latencystore, zarr_format=3, consolidated=False, chunks=None)
+    async def test_concurrent_load_multiple_variables(self, store) -> None:
+        target_class = zarr.AsyncArray
+        method_name = "getitem"
+        original_method = getattr(target_class, method_name)
 
         # TODO up the number of variables in the dataset?
-        async with AsyncTimer().measure() as timer:
+        # the coordinate variable is not lazy
+        N_LAZY_VARS = 1
+
+        with patch.object(
+            target_class, method_name, wraps=original_method, autospec=True
+        ) as mocked_meth:
+            # blocks upon loading the coordinate variables here
+            ds = xr.open_zarr(store, zarr_format=3, consolidated=False, chunks=None)
+
+            # TODO we're not actually testing that these indexing methods are not blocking...
             result_ds = await ds.load_async()
 
-        xrt.assert_identical(result_ds, ds.load())
+            mocked_meth.assert_called()
+            assert mocked_meth.call_count >= N_LAZY_VARS
+            mocked_meth.assert_awaited()
 
-        # 2 because there are 2 lazy variables in the dataset
-        self.assert_time_as_expected(
-            total_time=timer.total_time, latency=self.LATENCY, n_loads=2
-        )
+        xrt.assert_identical(result_ds, ds.load())
 
     # TODO apply this parametrization to the other test too?
     @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
     async def test_concurrent_load_multiple_objects(self, store, cls_name) -> None:
         N_OBJECTS = 5
 
+        # factor this mocking out of all tests as a fixture?
         target_class = zarr.AsyncArray
         method_name = "getitem"
         original_method = getattr(target_class, method_name)
