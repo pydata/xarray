@@ -101,6 +101,9 @@ class TestFormatting:
             (np.float16(1.1234), "1.123"),
             (np.float32(1.0111111), "1.011"),
             (np.float64(22.222222), "22.22"),
+            (np.zeros((1, 1)), "[[0.]]"),
+            (np.zeros(2), "[0. 0.]"),
+            (np.zeros((2, 2)), "[[0. 0.]\n [0. 0.]]"),
         ]
         for item, expected in cases:
             actual = formatting.format_item(item)
