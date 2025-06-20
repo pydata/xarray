@@ -51,12 +51,12 @@ def detect_parameters(open_dataset: Callable) -> tuple[str, ...]:
     parameters_list = []
     for name, param in parameters.items():
         if param.kind in (
-            inspect.Parameter.VAR_KEYWORD,
+            # inspect.Parameter.VAR_KEYWORD,
             inspect.Parameter.VAR_POSITIONAL,
         ):
             raise TypeError(
-                f"All the parameters in {open_dataset!r} signature should be explicit. "
-                "*args and **kwargs is not supported"
+                f"All arguments in {open_dataset!r} signature should be explicit. "
+                "*args are not supported"
             )
         if name != "self":
             parameters_list.append(name)

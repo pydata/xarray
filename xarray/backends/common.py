@@ -5,18 +5,30 @@ import os
 import time
 import traceback
 from collections.abc import Hashable, Iterable, Mapping, Sequence
+from dataclasses import dataclass, fields, replace
 from glob import glob
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Literal,
+    Optional,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
 
+from xarray.backends.locks import SerializableLock
 from xarray.coding import strings, variables
+from xarray.coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import cf_encoder
 from xarray.core import indexing
 from xarray.core.datatree import DataTree, Variable
-from xarray.core.types import ReadBuffer
+from xarray.core.types import ReadBuffer, T_Chunks
 from xarray.core.utils import (
     FrozenDict,
     NdimSizeLenMixin,
@@ -41,6 +53,7 @@ logger = logging.getLogger(__name__)
 NONE_VAR_NAME = "__values__"
 
 T = TypeVar("T")
+Buffer = Union[bytes, bytearray, memoryview]
 
 
 @overload
@@ -646,6 +659,58 @@ class WritableCFDataStore(AbstractWritableDataStore):
         return variables, attributes
 
 
+def _reset_dataclass_to_false(instance):
+    field_names = [f.name for f in fields(instance)]
+    false_values = dict.fromkeys(field_names, False)
+    return replace(instance, **false_values)
+
+
+@dataclass(frozen=True)
+class BackendOptions:
+    pass
+
+
+@dataclass(frozen=True)
+class StoreWriteOptions:
+    group: Optional[str] = None
+    lock: Optional[SerializableLock] = None
+    autoclose: Optional[bool] = False
+
+
+@dataclass(frozen=True)
+class StoreWriteOpenOptions:
+    mode: Optional[str] = "r"
+    format: Optional[str] = "NETCDF4"
+
+
+@dataclass(frozen=True)
+class XarrayBackendOptions:
+    chunks: Optional[T_Chunks] = None
+    cache: Optional[bool] = None
+    inline_array: Optional[bool] = False
+    chunked_array_type: Optional[str] = None
+    from_array_kwargs: Optional[dict[str, Any]] = None
+    overwrite_encoded_chunks: Optional[bool] = False
+
+
+@dataclass(frozen=True)
+class CoderOptions:
+    # maybe add these two to disentangle masking from scaling?
+    # mask: Optional[bool] = None
+    # scale: Optional[bool] = None
+    mask_and_scale: Optional[bool | Mapping[str, bool]] = None
+    decode_times: Optional[
+        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder]
+    ] = None
+    decode_timedelta: Optional[
+        bool | CFTimedeltaCoder | Mapping[str, bool | CFTimedeltaCoder]
+    ] = None
+    use_cftime: Optional[bool | Mapping[str, bool]] = None
+    concat_characters: Optional[bool | Mapping[str, bool]] = None
+    decode_coords: Optional[Literal["coordinates", "all"] | bool] = None
+    drop_variables: Optional[str | Iterable[str]] = None
+
+
 class BackendEntrypoint:
     """
     ``BackendEntrypoint`` is a class container and it is the main interface
@@ -683,6 +748,19 @@ class BackendEntrypoint:
     open_dataset_parameters: ClassVar[tuple | None] = None
     description: ClassVar[str] = ""
     url: ClassVar[str] = ""
+    coder_class = CoderOptions
+    open_class = BackendOptions
+    store_class = BackendOptions
+
+    def __init__(
+        self,
+        coder_opts: Optional[BackendOptions] = None,
+        open_opts: Optional[BackendOptions] = None,
+        store_opts: Optional[BackendOptions] = None,
+    ):
+        self.coder_opts = coder_opts if coder_opts is not None else self.coder_class()
+        self.open_opts = open_opts if open_opts is not None else self.open_class()
+        self.store_opts = store_opts if store_opts is not None else self.store_class()
 
     def __repr__(self) -> str:
         txt = f"<{type(self).__name__}>"
@@ -696,6 +774,10 @@ class BackendEntrypoint:
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
+        coder_opts: Union[bool, CoderOptions, None] = None,
+        backend_opts: Union[bool, BackendOptions, None] = None,
+        open_opts: Union[bool, BackendOptions, None] = None,
+        store_opts: Union[bool, BackendOptions, None] = None,
         drop_variables: str | Iterable[str] | None = None,
     ) -> Dataset:
         """
