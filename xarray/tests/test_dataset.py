@@ -21,6 +21,10 @@ try:
 except ImportError:
     from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
 
+import contextlib
+
+from pandas.errors import UndefinedVariableError
+
 import xarray as xr
 from xarray import (
     AlignmentError,
@@ -58,6 +62,7 @@ from xarray.tests import (
     create_test_data,
     has_cftime,
     has_dask,
+    has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
@@ -69,18 +74,10 @@ from xarray.tests import (
     requires_sparse,
     source_ndarray,
 )
+from xarray.tests.indexes import ScalarIndex, XYIndex
 
-try:
-    from pandas.errors import UndefinedVariableError
-except ImportError:
-    # TODO: remove once we stop supporting pandas<1.4.3
-    from pandas.core.computation.ops import UndefinedVariableError
-
-
-try:
+with contextlib.suppress(ImportError):
     import dask.array as da
-except ImportError:
-    pass
 
 # from numpy version 2.0 trapz is deprecated and renamed to trapezoid
 # remove once numpy 2.0 is the oldest supported version
@@ -283,26 +280,28 @@ class TestDataset:
         data = create_test_data(seed=123, use_extension_array=True)
         data.attrs["foo"] = "bar"
         # need to insert str dtype at runtime to handle different endianness
+        var5 = (
+            "\n                var5     (dim1) int64[pyarrow] 64B 5 9 7 2 6 2 8 1"
+            if has_pyarrow
+            else ""
+        )
         expected = dedent(
-            """\
+            f"""\
             <xarray.Dataset> Size: 2kB
             Dimensions:  (dim2: 9, dim3: 10, time: 20, dim1: 8)
             Coordinates:
               * dim2     (dim2) float64 72B 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
-              * dim3     (dim3) {} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
-              * time     (time) datetime64[{}] 160B 2000-01-01 2000-01-02 ... 2000-01-20
+              * dim3     (dim3) {data["dim3"].dtype} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+              * time     (time) datetime64[ns] 160B 2000-01-01 2000-01-02 ... 2000-01-20
                 numbers  (dim3) int64 80B 0 1 2 0 0 1 1 2 2 3
             Dimensions without coordinates: dim1
             Data variables:
                 var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
                 var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
                 var3     (dim3, dim1) float64 640B 0.4107 0.9941 0.1665 ... 0.716 1.555
-                var4     (dim1) category 32B 'b' 'c' 'b' 'a' 'c' 'a' 'c' 'a'
+                var4     (dim1) category 32B b c b a c a c a{var5}
             Attributes:
-                foo:      bar""".format(
-                data["dim3"].dtype,
-                "ns",
-            )
+                foo:      bar"""
         )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
 
@@ -1599,32 +1598,8 @@ class TestDataset:
         # regression test https://github.com/pydata/xarray/issues/10063
         # isel on a multi-coordinate index should return a unique index associated
         # to each coordinate
-        class MultiCoordIndex(xr.Index):
-            def __init__(self, idx1, idx2):
-                self.idx1 = idx1
-                self.idx2 = idx2
-
-            @classmethod
-            def from_variables(cls, variables, *, options=None):
-                idx1 = PandasIndex.from_variables(
-                    {"x": variables["x"]}, options=options
-                )
-                idx2 = PandasIndex.from_variables(
-                    {"y": variables["y"]}, options=options
-                )
-
-                return cls(idx1, idx2)
-
-            def create_variables(self, variables=None):
-                return {**self.idx1.create_variables(), **self.idx2.create_variables()}
-
-            def isel(self, indexers):
-                idx1 = self.idx1.isel({"x": indexers.get("x", slice(None))})
-                idx2 = self.idx2.isel({"y": indexers.get("y", slice(None))})
-                return MultiCoordIndex(idx1, idx2)
-
         coords = xr.Coordinates(coords={"x": [0, 1], "y": [1, 2]}, indexes={})
-        ds = xr.Dataset(coords=coords).set_xindex(["x", "y"], MultiCoordIndex)
+        ds = xr.Dataset(coords=coords).set_xindex(["x", "y"], XYIndex)
 
         ds2 = ds.isel(x=slice(None), y=slice(None))
         assert ds2.xindexes["x"] is ds2.xindexes["y"]
@@ -2639,18 +2614,6 @@ class TestDataset:
     def test_align_scalar_index(self) -> None:
         # ensure that indexes associated with scalar coordinates are not ignored
         # during alignment
-        class ScalarIndex(Index):
-            def __init__(self, value: int):
-                self.value = value
-
-            @classmethod
-            def from_variables(cls, variables, *, options):
-                var = next(iter(variables.values()))
-                return cls(int(var.values))
-
-            def equals(self, other, *, exclude=None):
-                return isinstance(other, ScalarIndex) and other.value == self.value
-
         ds1 = Dataset(coords={"x": 0}).set_xindex("x", ScalarIndex)
         ds2 = Dataset(coords={"x": 0}).set_xindex("x", ScalarIndex)
 
@@ -2664,27 +2627,6 @@ class TestDataset:
             xr.align(ds1, ds3, join="exact")
 
     def test_align_multi_dim_index_exclude_dims(self) -> None:
-        class XYIndex(Index):
-            def __init__(self, x: PandasIndex, y: PandasIndex):
-                self.x: PandasIndex = x
-                self.y: PandasIndex = y
-
-            @classmethod
-            def from_variables(cls, variables, *, options):
-                return cls(
-                    x=PandasIndex.from_variables(
-                        {"x": variables["x"]}, options=options
-                    ),
-                    y=PandasIndex.from_variables(
-                        {"y": variables["y"]}, options=options
-                    ),
-                )
-
-            def equals(self, other, exclude=None):
-                x_eq = True if self.x.dim in exclude else self.x.equals(other.x)
-                y_eq = True if self.y.dim in exclude else self.y.equals(other.y)
-                return x_eq and y_eq
-
         ds1 = (
             Dataset(coords={"x": [1, 2], "y": [3, 4]})
             .drop_indexes(["x", "y"])
@@ -5884,20 +5826,21 @@ class TestDataset:
     def test_reduce_non_numeric(self) -> None:
         data1 = create_test_data(seed=44, use_extension_array=True)
         data2 = create_test_data(seed=44)
-        add_vars = {"var5": ["dim1", "dim2"], "var6": ["dim1"]}
+        add_vars = {"var6": ["dim1", "dim2"], "var7": ["dim1"]}
         for v, dims in sorted(add_vars.items()):
             size = tuple(data1.sizes[d] for d in dims)
             data = np.random.randint(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {"foo": "variable"})
-        # var4 is extension array categorical and should be dropped
+        # var4 and var5 are extension arrays and should be dropped
         assert (
             "var4" not in data1.mean()
             and "var5" not in data1.mean()
             and "var6" not in data1.mean()
+            and "var7" not in data1.mean()
         )
         assert_equal(data1.mean(), data2.mean())
         assert_equal(data1.mean(dim="dim1"), data2.mean(dim="dim1"))
-        assert "var5" not in data1.mean(dim="dim2") and "var6" in data1.mean(dim="dim2")
+        assert "var6" not in data1.mean(dim="dim2") and "var7" in data1.mean(dim="dim2")
 
     @pytest.mark.filterwarnings(
         "ignore:Once the behaviour of DataArray:DeprecationWarning"
@@ -7034,11 +6977,7 @@ class TestDataset:
                 if utils.is_dict_like(constant_values):
                     if (
                         expected := constant_values.get(data_var_name, None)
-                    ) is not None:
-                        self._test_data_var_interior(
-                            ds[data_var_name], data_var, padded_dim_name, expected
-                        )
-                    elif (
+                    ) is not None or (
                         expected := constant_values.get(padded_dim_name, None)
                     ) is not None:
                         self._test_data_var_interior(

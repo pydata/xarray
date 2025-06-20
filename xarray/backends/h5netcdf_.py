@@ -68,17 +68,16 @@ def _read_attributes(h5netcdf_var):
     # bytes attributes to strings
     attrs = {}
     for k, v in h5netcdf_var.attrs.items():
-        if k not in ["_FillValue", "missing_value"]:
-            if isinstance(v, bytes):
-                try:
-                    v = v.decode("utf-8")
-                except UnicodeDecodeError:
-                    emit_user_level_warning(
-                        f"'utf-8' codec can't decode bytes for attribute "
-                        f"{k!r} of h5netcdf object {h5netcdf_var.name!r}, "
-                        f"returning bytes undecoded.",
-                        UnicodeWarning,
-                    )
+        if k not in ["_FillValue", "missing_value"] and isinstance(v, bytes):
+            try:
+                v = v.decode("utf-8")
+            except UnicodeDecodeError:
+                emit_user_level_warning(
+                    f"'utf-8' codec can't decode bytes for attribute "
+                    f"{k!r} of h5netcdf object {h5netcdf_var.name!r}, "
+                    f"returning bytes undecoded.",
+                    UnicodeWarning,
+                )
         attrs[k] = v
     return attrs
 
@@ -287,8 +286,8 @@ class H5NetCDFStore(WritableCFDataStore):
     def set_attribute(self, key, value):
         self.ds.attrs[key] = value
 
-    def encode_variable(self, variable):
-        return _encode_nc4_variable(variable)
+    def encode_variable(self, variable, name=None):
+        return _encode_nc4_variable(variable, name=name)
 
     def prepare_variable(
         self, name, variable, check_encoding=False, unlimited_dims=None
