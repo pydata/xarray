@@ -121,12 +121,10 @@ class TestAsyncLoad:
 
         xrt.assert_identical(result_ds, ds.load())
 
-    # TODO apply this parametrization to the other test too?
     @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
     async def test_concurrent_load_multiple_objects(self, store, cls_name) -> None:
         N_OBJECTS = 5
 
-        # factor this mocking out of all tests as a fixture?
         target_class = zarr.AsyncArray
         method_name = "getitem"
         original_method = getattr(target_class, method_name)
@@ -147,6 +145,7 @@ class TestAsyncLoad:
         for result in results:
             xrt.assert_identical(result, xr_obj.load())
 
+    @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
     @pytest.mark.parametrize("method", ["sel", "isel"])
     @pytest.mark.parametrize(
         "indexer, zarr_class_and_method",
@@ -166,8 +165,16 @@ class TestAsyncLoad:
         ids=["no-indexing", "basic-int", "basic-slice", "outer", "vectorized"],
     )
     async def test_indexing(
-        self, store, method, indexer, zarr_class_and_method
+        self,
+        store,
+        cls_name,
+        method,
+        indexer,
+        zarr_class_and_method,
     ) -> None:
+        if cls_name == "Variable" and method == "sel":
+            pytest.skip("Variable doesn't have a .sel method")
+
         # each type of indexing ends up calling a different zarr indexing method
         target_class, method_name = zarr_class_and_method
         original_method = getattr(target_class, method_name)
@@ -175,19 +182,14 @@ class TestAsyncLoad:
         with patch.object(
             target_class, method_name, wraps=original_method, autospec=True
         ) as mocked_meth:
-            ds = xr.open_zarr(
-                store,
-                zarr_format=3,
-                consolidated=False,
-                chunks=None,
-            )
+            xr_obj = get_xr_obj(store, cls_name)
 
             # TODO we're not actually testing that these indexing methods are not blocking...
-            result = await getattr(ds, method)(**indexer).load_async()
+            result = await getattr(xr_obj, method)(**indexer).load_async()
 
             mocked_meth.assert_called()
             mocked_meth.assert_awaited()
             assert mocked_meth.call_count > 0
 
-        expected = getattr(ds, method)(**indexer).load()
+        expected = getattr(xr_obj, method)(**indexer).load()
         xrt.assert_identical(result, expected)
