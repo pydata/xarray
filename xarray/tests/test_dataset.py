@@ -2369,6 +2369,19 @@ class TestDataset:
         assert_identical(expected, actual)
         assert actual.x.dtype == expected.x.dtype
 
+    def test_reindex_with_multiindex_level(self) -> None:
+        # test for https://github.com/pydata/xarray/issues/10347
+        mindex = pd.MultiIndex.from_product(
+            [[100, 200, 300], [1, 2, 3, 4]], names=["x", "y"]
+        )
+        y_idx = PandasIndex(mindex.levels[1], "y")
+
+        ds1 = xr.Dataset(coords={"y": [1, 2, 3]})
+        ds2 = xr.Dataset(coords=xr.Coordinates.from_xindex(y_idx))
+
+        actual = ds1.reindex(y=ds2.y)
+        assert_identical(actual, ds2)
+
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": 2, "bar": 1}])
     def test_align_fill_value(self, fill_value) -> None:
         x = Dataset({"foo": DataArray([1, 2], dims=["x"], coords={"x": [1, 2]})})
