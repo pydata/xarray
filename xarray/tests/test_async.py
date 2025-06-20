@@ -104,6 +104,12 @@ def memorystore() -> "MemoryStore":
     return memorystore
 
 
+@pytest.fixture
+def store(memorystore) -> "zarr.abc.Store":
+    # TODO we shouldn't need a LatencyStore at all for the patched tests, but we currently use it just as a way around https://github.com/zarr-developers/zarr-python/issues/3105#issuecomment-2990367167
+    return LatencyStore(memorystore, latency=0.0)
+
+
 class AsyncTimer:
     """Context manager for timing async operations and making assertions about their execution time."""
 
@@ -199,11 +205,8 @@ class TestAsyncLoad:
         ids=["no-indexing", "basic-int", "basic-slice", "outer", "vectorized"],
     )
     async def test_indexing(
-        self, memorystore, method, indexer, zarr_class_and_method
+        self, store, method, indexer, zarr_class_and_method
     ) -> None:
-        # TODO we don't need a LatencyStore for this test
-        latencystore = LatencyStore(memorystore, latency=0.0)
-
         # each type of indexing ends up calling a different zarr indexing method
         target_class, method_name = zarr_class_and_method
         original_method = getattr(target_class, method_name)
@@ -212,7 +215,10 @@ class TestAsyncLoad:
             target_class, method_name, wraps=original_method, autospec=True
         ) as mocked_meth:
             ds = xr.open_zarr(
-                latencystore, zarr_format=3, consolidated=False, chunks=None
+                store,
+                zarr_format=3,
+                consolidated=False,
+                chunks=None,
             )
 
             # TODO we're not actually testing that these indexing methods are not blocking...
