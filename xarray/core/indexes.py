@@ -479,7 +479,7 @@ class Index:
     def __getitem__(self, indexer: Any) -> Self:
         raise NotImplementedError()
 
-    def _repr_inline_(self, max_width):
+    def _repr_inline_(self, max_width: int) -> str:
         return self.__class__.__name__
 
 
@@ -717,7 +717,7 @@ class PandasIndex(Index):
 
         # preserve wrapped pd.Index (if any)
         # accessing `.data` can load data from disk, so we only access if needed
-        data = var._data.array if hasattr(var._data, "array") else var.data
+        data = var._data if isinstance(var._data, PandasIndexingAdapter) else var.data  # type: ignore[redundant-expr]
         # multi-index level variable: get level index
         if isinstance(var._data, PandasMultiIndexingAdapter):
             level = var._data.level
@@ -850,23 +850,18 @@ class PandasIndex(Index):
                             "'tolerance' is not supported when indexing using a CategoricalIndex."
                         )
                     indexer = self.index.get_loc(label_value)
+                elif method is not None:
+                    indexer = get_indexer_nd(self.index, label_array, method, tolerance)
+                    if np.any(indexer < 0):
+                        raise KeyError(f"not all values found in index {coord_name!r}")
                 else:
-                    if method is not None:
-                        indexer = get_indexer_nd(
-                            self.index, label_array, method, tolerance
-                        )
-                        if np.any(indexer < 0):
-                            raise KeyError(
-                                f"not all values found in index {coord_name!r}"
-                            )
-                    else:
-                        try:
-                            indexer = self.index.get_loc(label_value)
-                        except KeyError as e:
-                            raise KeyError(
-                                f"not all values found in index {coord_name!r}. "
-                                "Try setting the `method` keyword argument (example: method='nearest')."
-                            ) from e
+                    try:
+                        indexer = self.index.get_loc(label_value)
+                    except KeyError as e:
+                        raise KeyError(
+                            f"not all values found in index {coord_name!r}. "
+                            "Try setting the `method` keyword argument (example: method='nearest')."
+                        ) from e
 
             elif label_array.dtype.kind == "b":
                 indexer = label_array
@@ -1657,7 +1652,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
     """
 
-    _index_type: type[Index] | type[pd.Index]
+    _index_type: type[Index | pd.Index]
     _indexes: dict[Any, T_PandasOrXarrayIndex]
     _variables: dict[Any, Variable]
 
@@ -1675,7 +1670,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         self,
         indexes: Mapping[Any, T_PandasOrXarrayIndex] | None = None,
         variables: Mapping[Any, Variable] | None = None,
-        index_type: type[Index] | type[pd.Index] = Index,
+        index_type: type[Index | pd.Index] = Index,
     ):
         """Constructor not for public consumption.
 

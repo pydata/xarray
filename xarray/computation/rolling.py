@@ -195,14 +195,15 @@ class Rolling(Generic[T_Xarray]):
         return method
 
     def _mean(self, keep_attrs, **kwargs):
-        result = self.sum(keep_attrs=False, **kwargs) / duck_array_ops.astype(
-            self.count(keep_attrs=False), dtype=int, copy=False
+        result = self.sum(keep_attrs=False, **kwargs)
+        # use dtype of result for casting of count
+        # this allows for GH #7062 and GH #8864, fixes GH #10340
+        result /= duck_array_ops.astype(
+            self.count(keep_attrs=False), dtype=result.dtype, copy=False
         )
         if keep_attrs:
             result.attrs = self.obj.attrs
 
-        if self.obj.dtype.kind not in "bi":
-            result = result.astype(self.obj.dtype, copy=False)
         return result
 
     _mean.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name="mean")
@@ -1252,18 +1253,17 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
             for c, v in self.obj.coords.items():
                 if c == self.obj.name:
                     coords[c] = reduced
+                elif any(d in self.windows for d in v.dims):
+                    coords[c] = v.variable.coarsen(
+                        self.windows,
+                        self.coord_func[c],
+                        self.boundary,
+                        self.side,
+                        keep_attrs,
+                        **kwargs,
+                    )
                 else:
-                    if any(d in self.windows for d in v.dims):
-                        coords[c] = v.variable.coarsen(
-                            self.windows,
-                            self.coord_func[c],
-                            self.boundary,
-                            self.side,
-                            keep_attrs,
-                            **kwargs,
-                        )
-                    else:
-                        coords[c] = v
+                    coords[c] = v
             return DataArray(
                 reduced, dims=self.obj.dims, coords=coords, name=self.obj.name
             )

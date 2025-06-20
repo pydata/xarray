@@ -255,14 +255,10 @@ class TestVariable(DaskTestCase):
 
     def test_missing_methods(self):
         v = self.lazy_var
-        try:
+        with pytest.raises(NotImplementedError, match="dask"):
             v.argsort()
-        except NotImplementedError as err:
-            assert "dask" in str(err)
-        try:
+        with pytest.raises(NotImplementedError, match="dask"):
             v[0].item()
-        except NotImplementedError as err:
-            assert "dask" in str(err)
 
     def test_univariate_ufunc(self):
         u = self.eager_var
@@ -1822,3 +1818,15 @@ def test_idxmin_chunking():
     actual = da.idxmin("time")
     assert actual.chunksizes == {k: da.chunksizes[k] for k in ["x", "y"]}
     assert_identical(actual, da.compute().idxmin("time"))
+
+
+def test_conjugate():
+    # Test for https://github.com/pydata/xarray/issues/10302
+    z = 1j * da.arange(100)
+
+    data = xr.DataArray(z, coords={"x": np.arange(100)})
+
+    conj_data = data.conjugate()
+    assert dask.is_dask_collection(conj_data)
+
+    assert_equal(conj_data, data.conj())
