@@ -11,6 +11,7 @@ from collections.abc import (
 )
 from functools import partial
 from io import BytesIO
+from itertools import starmap
 from numbers import Number
 from typing import (
     TYPE_CHECKING,
@@ -2109,10 +2110,9 @@ def save_mfdataset(
         import dask
 
         return dask.delayed(
-            [
-                dask.delayed(_finalize_store)(w, s)
-                for w, s in zip(writes, stores, strict=True)
-            ]
+            list(
+                starmap(dask.delayed(_finalize_store), zip(writes, stores, strict=True))
+            )
         )
 
 

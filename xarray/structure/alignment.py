@@ -5,6 +5,7 @@ import operator
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
+from itertools import starmap
 from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, cast, overload
 
 import numpy as np
@@ -612,12 +613,14 @@ class Aligner(Generic[T_Alignable]):
 
     def reindex_all(self) -> None:
         self.results = tuple(
-            self._reindex_one(obj, matching_indexes, matching_index_vars)
-            for obj, matching_indexes, matching_index_vars in zip(
-                self.objects,
-                self.objects_matching_indexes,
-                self.objects_matching_index_vars,
-                strict=True,
+            starmap(
+                self._reindex_one,
+                zip(
+                    self.objects,
+                    self.objects_matching_indexes,
+                    self.objects_matching_index_vars,
+                    strict=True,
+                ),
             )
         )
 

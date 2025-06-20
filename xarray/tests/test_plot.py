@@ -2789,7 +2789,7 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_add_guide(
         self,
         add_guide: bool | None,
-        hue_style: Literal["continuous", "discrete", None],
+        hue_style: Literal["continuous", "discrete"] | None,
         legend: bool,
         colorbar: bool,
     ) -> None:
