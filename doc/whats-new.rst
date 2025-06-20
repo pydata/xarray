@@ -13,6 +13,13 @@ v2025.07.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added new asynchronous loading methods :py:meth:`~xarray.Dataset.load_async`, :py:meth:`~xarray.DataArray.load_async`, :py:meth:`~xarray.Variable.load_async`.
+  (:issue:`10326`, :pull:`10327`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Allow an Xarray index that uses multiple dimensions checking equality with another
+  index for only a subset of those dimensions (i.e., ignoring the dimensions
+  that are excluded from alignment).
+  (:issue:`10243`, :pull:`10293`)
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -27,6 +34,8 @@ Bug fixes
 - Fix Pydap test_cmp_local_file for numpy 2.3.0 changes, 1. do always return arrays for all versions and 2. skip astype(str) for numpy >= 2.3.0 for expected data. (:pull:`10421`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Fix the SciPy backend for netCDF3 files . (:issue:`8909`, :pull:`10376`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Allow accessing arbitrary attributes on Pandas ExtensionArrays.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Check and fix character array string dimension names, issue warnings as needed (:issue:`6352`, :pull:`10395`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
