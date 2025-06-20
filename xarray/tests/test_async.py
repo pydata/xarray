@@ -2,12 +2,12 @@ import asyncio
 from typing import Literal, TypeVar
 from unittest.mock import patch
 
-import numpy as np
 import pytest
 
 import xarray as xr
 import xarray.testing as xrt
 from xarray.tests import has_zarr_v3, requires_zarr_v3
+from xarray.tests.test_dataset import create_test_data
 
 if has_zarr_v3:
     import zarr
@@ -50,26 +50,9 @@ else:
 @pytest.fixture
 def memorystore() -> "MemoryStore":
     memorystore = zarr.storage.MemoryStore({})
-    z1 = zarr.create_array(
-        store=memorystore,
-        name="foo",
-        shape=(10, 10),
-        chunks=(5, 5),
-        dtype="f4",
-        dimension_names=["x", "y"],
-        attributes={"add_offset": 1, "scale_factor": 2},
-    )
-    z1[:, :] = np.random.random((10, 10))
 
-    z2 = zarr.create_array(
-        store=memorystore,
-        name="x",
-        shape=(10,),
-        chunks=(5),
-        dtype="f4",
-        dimension_names=["x"],
-    )
-    z2[:] = np.arange(10)
+    ds = create_test_data()
+    ds.to_zarr(memorystore, zarr_format=3, consolidated=False)
 
     return memorystore
 
@@ -87,9 +70,9 @@ def get_xr_obj(
 
     match cls_name:
         case "Variable":
-            return ds["foo"].variable
+            return ds["var1"].variable
         case "DataArray":
-            return ds["foo"]
+            return ds["var1"]
         case "Dataset":
             return ds
 
@@ -146,23 +129,46 @@ class TestAsyncLoad:
             xrt.assert_identical(result, xr_obj.load())
 
     @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
-    @pytest.mark.parametrize("method", ["sel", "isel"])
     @pytest.mark.parametrize(
-        "indexer, zarr_class_and_method",
+        "indexer, method, zarr_class_and_method",
         [
-            ({}, (zarr.AsyncArray, "getitem")),
-            ({"x": 2}, (zarr.AsyncArray, "getitem")),
-            ({"x": slice(2, 4)}, (zarr.AsyncArray, "getitem")),
-            ({"x": [2, 3]}, (zarr.core.indexing.AsyncOIndex, "getitem")),
+            ({}, "sel", (zarr.AsyncArray, "getitem")),
+            ({}, "isel", (zarr.AsyncArray, "getitem")),
+            ({"dim2": 1.0}, "sel", (zarr.AsyncArray, "getitem")),
+            ({"dim2": 2}, "isel", (zarr.AsyncArray, "getitem")),
+            ({"dim2": slice(1.0, 3.0)}, "sel", (zarr.AsyncArray, "getitem")),
+            ({"dim2": slice(1, 3)}, "isel", (zarr.AsyncArray, "getitem")),
+            ({"dim2": [1.0, 3.0]}, "sel", (zarr.core.indexing.AsyncOIndex, "getitem")),
+            ({"dim2": [1, 3]}, "isel", (zarr.core.indexing.AsyncOIndex, "getitem")),
             (
                 {
-                    "x": xr.Variable(data=[2, 3], dims="points"),
-                    "y": xr.Variable(data=[2, 3], dims="points"),
+                    "dim1": xr.Variable(data=[2, 3], dims="points"),
+                    "dim2": xr.Variable(data=[1.0, 2.0], dims="points"),
                 },
+                "sel",
+                (zarr.core.indexing.AsyncVIndex, "getitem"),
+            ),
+            (
+                {
+                    "dim1": xr.Variable(data=[2, 3], dims="points"),
+                    "dim2": xr.Variable(data=[1, 3], dims="points"),
+                },
+                "isel",
                 (zarr.core.indexing.AsyncVIndex, "getitem"),
             ),
         ],
-        ids=["no-indexing", "basic-int", "basic-slice", "outer", "vectorized"],
+        ids=[
+            "no-indexing-sel",
+            "no-indexing-isel",
+            "basic-int-sel",
+            "basic-int-isel",
+            "basic-slice-sel",
+            "basic-slice-isel",
+            "outer-sel",
+            "outer-isel",
+            "vectorized-sel",
+            "vectorized-isel",
+        ],
     )
     async def test_indexing(
         self,
