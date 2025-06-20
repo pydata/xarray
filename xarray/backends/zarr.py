@@ -401,6 +401,7 @@ def extract_zarr_variable_encoding(
         "serializer",
         "cache_metadata",
         "write_empty_chunks",
+        "chunk_key_encoding",
     }
     if zarr_format == 3:
         valid_encodings.add("fill_value")
@@ -860,8 +861,8 @@ class ZarrStore(AbstractWritableDataStore):
     def set_attributes(self, attributes):
         _put_attrs(self.zarr_group, attributes)
 
-    def encode_variable(self, variable):
-        variable = encode_zarr_variable(variable)
+    def encode_variable(self, variable, name=None):
+        variable = encode_zarr_variable(variable, name=name)
         return variable
 
     def encode_attribute(self, a):
