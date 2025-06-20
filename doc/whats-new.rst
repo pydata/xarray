@@ -12,6 +12,8 @@ v2025.07.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
+  under the ``xarray.indexes`` namespace. By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Breaking changes
