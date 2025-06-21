@@ -741,25 +741,30 @@ class SeasonGrouper(Grouper):
     seasons: sequence of str
         List of strings representing seasons. E.g. ``"JF"`` or ``"JJA"`` etc.
         Overlapping seasons are allowed (e.g. ``["DJFM", "MAMJ", "JJAS", "SOND"]``)
+    drop_incomplete: bool, default: False
+        Whether to drop seasons that are not completely included in the data.
+        For example, if a time series starts in Jan-2001, and seasons includes `"DJF"`
+        then observations from Jan-2001, and Feb-2001 are ignored in the grouping
+        since Dec-2000 isn't present. This check is performed for each year.
 
     Examples
     --------
     >>> SeasonGrouper(["JF", "MAM", "JJAS", "OND"])
-    SeasonGrouper(seasons=['JF', 'MAM', 'JJAS', 'OND'])
+    SeasonGrouper(seasons=['JF', 'MAM', 'JJAS', 'OND'], drop_incomplete=False)
 
     The ordering is preserved
 
     >>> SeasonGrouper(["MAM", "JJAS", "OND", "JF"])
-    SeasonGrouper(seasons=['MAM', 'JJAS', 'OND', 'JF'])
+    SeasonGrouper(seasons=['MAM', 'JJAS', 'OND', 'JF'], drop_incomplete=False)
 
     Overlapping seasons are allowed
 
     >>> SeasonGrouper(["DJFM", "MAMJ", "JJAS", "SOND"])
-    SeasonGrouper(seasons=['DJFM', 'MAMJ', 'JJAS', 'SOND'])
+    SeasonGrouper(seasons=['DJFM', 'MAMJ', 'JJAS', 'SOND'], drop_incomplete=False)
     """
 
     seasons: Sequence[str]
-    # drop_incomplete: bool = field(default=True) # TODO
+    drop_incomplete: bool = field(default=False, kw_only=True)
 
     def factorize(self, group: T_Group) -> EncodedGroups:
         if TYPE_CHECKING:
@@ -771,15 +776,44 @@ class SeasonGrouper(Grouper):
         months = group.dt.month.data
         seasons_groups = find_independent_seasons(self.seasons)
         codes_ = np.full((len(seasons_groups),) + group.shape, -1, dtype=np.int8)
-        group_indices: list[list[int]] = [[]] * len(self.seasons)
+        group_indices: list[list[int]] = [[] for _ in range(len(self.seasons))]
+
+        if self.drop_incomplete:
+            year = group.dt.year.data
+
         for axis_index, seasgroup in enumerate(seasons_groups):
             for season_tuple, code in zip(
                 seasgroup.inds, seasgroup.codes, strict=False
             ):
                 mask = np.isin(months, season_tuple)
-                codes_[axis_index, mask] = code
-                (indices,) = mask.nonzero()
-                group_indices[code] = indices.tolist()
+                if not self.drop_incomplete:
+                    codes_[axis_index, mask] = code
+                    (indices,) = mask.nonzero()
+                    group_indices[code] = indices.tolist()
+                else:
+                    year_adjusted = year.copy()
+                    # handle seasons like DJF
+                    if 12 in season_tuple and 1 in season_tuple:
+                        jan_or_later = [m for m in season_tuple if m < 12]
+                        year_adjusted[np.isin(months, jan_or_later)] -= 1
+
+                    # find unique years for this season
+                    if not np.any(mask):
+                        continue
+                    unique_years = np.unique(year_adjusted[mask])
+
+                    for yr in unique_years:
+                        year_mask = year_adjusted == yr
+
+                        # elements for this season in this year
+                        year_season_mask = mask & year_mask
+
+                        # check for completeness
+                        present_months = np.unique(months[year_season_mask])
+                        if len(present_months) == len(season_tuple):
+                            codes_[axis_index, year_season_mask] = code
+                            (indices,) = year_season_mask.nonzero()
+                            group_indices[code].extend(indices.tolist())
 
         if np.all(codes_ == -1):
             raise ValueError(
@@ -802,7 +836,7 @@ class SeasonGrouper(Grouper):
         )
 
     def reset(self) -> Self:
-        return type(self)(self.seasons)
+        return type(self)(seasons=self.seasons, drop_incomplete=self.drop_incomplete)
 
 
 @dataclass
