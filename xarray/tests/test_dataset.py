@@ -7825,6 +7825,40 @@ class TestNumpyCoercion:
         assert_identical(result, expected)
 
 
+def test_as_array_type_is_array_type() -> None:
+    ds = xr.Dataset(
+        {"a": ("x", [1, 2, 3])}, coords={"lat": ("x", [4, 5, 6]), "x": [7, 8, 9]}
+    )
+    # lat is a PandasIndex here
+    assert ds.drop_vars("lat").is_array_type(np.ndarray)
+
+    result = ds.as_array_type(lambda x: DuckArrayWrapper(x))
+
+    assert isinstance(result.a.data, DuckArrayWrapper)
+    assert isinstance(result.lat.data, DuckArrayWrapper)
+    assert isinstance(result.x.data, np.ndarray)
+    assert result.is_array_type(DuckArrayWrapper)
+
+
+@requires_dask
+def test_as_array_type_dask() -> None:
+    import dask.array
+
+    ds = xr.Dataset(
+        {"a": ("x", [1, 2, 3])}, coords={"lat": ("x", [4, 5, 6]), "x": [7, 8, 9]}
+    ).chunk()
+
+    assert ds.is_array_type(dask.array.Array)
+
+    result = ds.as_array_type(lambda x: DuckArrayWrapper(x))
+
+    assert isinstance(result.a.data, dask.array.Array)
+    assert isinstance(result.a.data._meta, DuckArrayWrapper)
+    assert isinstance(result.lat.data, dask.array.Array)
+    assert isinstance(result.lat.data._meta, DuckArrayWrapper)
+    assert isinstance(result.x.data, np.ndarray)
+
+
 def test_string_keys_typing() -> None:
     """Tests that string keys to `variables` are permitted by mypy"""
 

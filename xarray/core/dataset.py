@@ -1103,6 +1103,54 @@ class Dataset(
         numpy_variables = {k: v.as_numpy() for k, v in self.variables.items()}
         return self._replace(variables=numpy_variables)
 
+    def as_array_type(self, asarray: Callable, **kwargs) -> Self:
+        """
+        Converts wrapped data into a specific array type.
+
+        If the data is a chunked array, the conversion is applied to each block.
+
+        `asarray` should output an object that supports the Array API Standard.
+        This method does not convert index coordinates, which can't generally be
+        represented as arbitrary array types.
+
+        Parameters
+        ----------
+        asarray : Callable
+            Function that converts an array-like object to the desired array type.
+            For example, `cupy.asarray`, `jax.numpy.asarray`, `sparse.COO.from_numpy`,
+            or any `from_dlpack` method.
+        **kwargs : dict
+            Additional keyword arguments passed to the `asarray` function.
+
+        Returns
+        -------
+        Dataset
+        """
+        array_variables = {
+            k: v.as_array_type(asarray, **kwargs) if k not in self._indexes else v
+            for k, v in self.variables.items()
+        }
+        return self._replace(variables=array_variables)
+
+    def is_array_type(self, array_type: type) -> bool:
+        """
+        Check if all data variables and non-index coordinates are of a specific array type.
+
+        Parameters
+        ----------
+        array_type : type
+            The array type to check for.
+
+        Returns
+        -------
+        bool
+        """
+        return all(
+            v.is_array_type(array_type)
+            for k, v in self.variables.items()
+            if k not in self._indexes
+        )
+
     def _copy_listed(self, names: Iterable[Hashable]) -> Self:
         """Create a new Dataset with the listed variables from this dataset and
         the all relevant coordinates. Skips all validation.
