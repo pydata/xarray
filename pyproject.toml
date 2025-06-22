@@ -17,9 +17,9 @@ dynamic = ["version"]
 license = "Apache-2.0"
 name = "xarray"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
-dependencies = ["numpy>=1.24", "packaging>=23.2", "pandas>=2.1"]
+dependencies = ["numpy>=1.26", "packaging>=24.0", "pandas>=2.2"]
 
 # We don't encode minimum requirements here (though if we can write a script to
 # generate the text from `min_deps_check.py`, that's welcome...). We do add
@@ -27,21 +27,20 @@ dependencies = ["numpy>=1.24", "packaging>=23.2", "pandas>=2.1"]
 # note that it's not a direct dependency of xarray.
 
 [project.optional-dependencies]
-accel = ["scipy", "bottleneck", "numbagg", "numba>=0.54", "flox", "opt_einsum"]
+accel = ["scipy>=1.13", "bottleneck", "numbagg>=0.8", "numba>=0.59", "flox>=0.9", "opt_einsum"]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
-  "netCDF4",
+  "netCDF4>=1.6.0",
   "h5netcdf",
-  "scipy",
-  'pydap; python_version<"3.10"',
-  "zarr",
+  "scipy>=1.13",
+  "zarr>=2.18",
   "fsspec",
   "cftime",
   "pooch",
 ]
-etc = ["sparse"]
+etc = ["sparse>=0.15"]
 parallel = ["dask[complete]"]
-viz = ["cartopy", "matplotlib", "nc-time-axis", "seaborn"]
+viz = ["cartopy>=0.23", "matplotlib", "nc-time-axis", "seaborn"]
 types = [
   "pandas-stubs",
   "scipy-stubs",
