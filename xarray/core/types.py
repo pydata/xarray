@@ -23,9 +23,7 @@ try:
     if sys.version_info >= (3, 11):
         from typing import Self, TypeAlias
     else:
-        from typing import TypeAlias
-
-        from typing_extensions import Self
+        from typing import Self, TypeAlias
 except ImportError:
     if TYPE_CHECKING:
         raise

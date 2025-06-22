@@ -89,7 +89,7 @@ if TYPE_CHECKING:
     if sys.version_info >= (3, 11):
         from typing import Self
     else:
-        from typing_extensions import Self
+        from typing import Self
 
     T_NamedArray = TypeVar("T_NamedArray", bound="_NamedArray[Any]")
     T_NamedArrayInteger = TypeVar(

@@ -27,7 +27,14 @@ dependencies = ["numpy>=1.26", "packaging>=24.0", "pandas>=2.2"]
 # note that it's not a direct dependency of xarray.
 
 [project.optional-dependencies]
-accel = ["scipy>=1.13", "bottleneck", "numbagg>=0.8", "numba>=0.59", "flox>=0.9", "opt_einsum"]
+accel = [
+  "scipy>=1.13",
+  "bottleneck",
+  "numbagg>=0.8",
+  "numba>=0.59",
+  "flox>=0.9",
+  "opt_einsum",
+]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
   "netCDF4>=1.6.0",
