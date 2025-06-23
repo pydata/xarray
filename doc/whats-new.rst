@@ -35,15 +35,18 @@ By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
    * - boto3
      - 1.29
      - 1.34
+   * - bottleneck
+     - 1.3
+     - 1.4
    * - cartopy
      - 0.22
      - 0.23
    * - dask-core
      - 2023.11
-     - 2024.5.0
+     - 2024.6
    * - distributed
      - 2023.11
-     - 2024.5.0
+     - 2024.6
    * - flox
      - 0.7
      - 0.9
@@ -59,9 +62,12 @@ By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
    * - lxml
      - 4.9
      - 5.1
+   * - matplotlib-base
+     - 3.7
+     - 3.8
    * - numba
      - 0.57
-     - 0.59
+     - 0.60
    * - numbagg
      - 0.6
      - 0.8
@@ -70,7 +76,7 @@ By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
      - 1.26
    * - packaging
      - 23.2
-     - 24.0
+     - 24.1
    * - pandas
      - 2.1
      - 2.2
