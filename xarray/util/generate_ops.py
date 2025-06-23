@@ -133,7 +133,7 @@ unhashable = """
 # We require a "hack" to tell type checkers that e.g. Variable + DataArray = DataArray
 # In reality this returns NotImplemented, but this is not a valid type in python 3.9.
 # Therefore, we return DataArray. In reality this would call DataArray.__add__(Variable)
-# TODO: change once python 3.10 is the minimum.
+# TODO: change once python 3.11 is the minimum.
 #
 # Mypy seems to require that __iadd__ and __add__ have the same signature.
 # This requires some extra type: ignores[misc] in the inplace methods :/
