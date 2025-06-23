@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import copy
 import math
-import sys
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from itertools import starmap
@@ -86,10 +85,7 @@ if TYPE_CHECKING:
         PostComputeCallable: Any  # type: ignore[no-redef]
         PostPersistCallable: Any  # type: ignore[no-redef]
 
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing import Self
+    from typing import Self
 
     T_NamedArray = TypeVar("T_NamedArray", bound="_NamedArray[Any]")
     T_NamedArrayInteger = TypeVar(

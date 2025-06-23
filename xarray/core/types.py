@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import sys
 from collections.abc import Callable, Collection, Hashable, Iterator, Mapping, Sequence
 from types import EllipsisType
 from typing import (
@@ -9,7 +8,9 @@ from typing import (
     Any,
     Literal,
     Protocol,
+    Self,
     SupportsIndex,
+    TypeAlias,
     TypeVar,
     Union,
     overload,
@@ -18,19 +19,6 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-
-try:
-    if sys.version_info >= (3, 11):
-        from typing import Self, TypeAlias
-    else:
-        from typing import Self, TypeAlias
-except ImportError:
-    if TYPE_CHECKING:
-        raise
-    else:
-        Self: Any = None
-
-
 from numpy._typing import _SupportsDType
 from numpy.typing import ArrayLike
 
