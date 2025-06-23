@@ -721,7 +721,7 @@ class TestFormatting:
         actual = formatting.diff_datatree_repr(dt_1, dt_2, "identical")
         assert actual == expected
 
-    def test_diff_datatree_repr_equals(self):
+    def test_diff_datatree_repr_equals(self) -> None:
         ds1 = xr.Dataset(data_vars={"data": ("y", [5, 2])})
         ds2 = xr.Dataset(data_vars={"data": (("x", "y"), [[5, 2]])})
         dt1 = xr.DataTree.from_dict({"node": ds1})
