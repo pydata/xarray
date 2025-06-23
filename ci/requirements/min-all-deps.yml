@@ -8,7 +8,7 @@ dependencies:
   # When upgrading python, numpy, or pandas, must also change
   # doc/user-guide/installing.rst, doc/user-guide/plotting.rst and setup.py.
   - python=3.11
-  - array-api-strict=1.0 # dependency for testing the array api compat
+  - array-api-strict=1.1 # dependency for testing the array api compat
   - boto3=1.34
   - bottleneck=1.3
   - cartopy=0.23
@@ -25,18 +25,18 @@ dependencies:
   - hdf5=1.14
   - hypothesis
   - iris=3.9
-  - lxml=5.2 # Optional dep of pydap
+  - lxml=5.1 # Optional dep of pydap
   - matplotlib-base=3.9
   - nc-time-axis=1.4
   # netcdf follows a 1.major.minor[.patch] convention
   # (see https://github.com/Unidata/netcdf4-python/issues/1090)
   - netcdf4=1.6.5
   - numba=0.59
-  - numbagg=0.7
+  - numbagg=0.8
   - numpy=1.26
   - packaging=24.0
   - pandas=2.2
-  - pint=0.23
+  - pint=0.24
   - pip
   - pydap=3.5
   - pytest
