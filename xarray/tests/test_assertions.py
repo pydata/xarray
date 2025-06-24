@@ -88,6 +88,19 @@ def test_assert_allclose_equal_transpose(func) -> None:
     getattr(xr.testing, func)(ds1, ds2, check_dim_order=False)
 
 
+def test_assert_equal_transpose_datatree():
+    """Ensure `check_dim_order=False` works for transposed DataTree"""
+    ds = xr.Dataset(data_vars={"data": (("x", "y"), [[1, 2]])})
+
+    a = xr.DataTree.from_dict({"node": ds})
+    b = xr.DataTree.from_dict({"node": ds.transpose("y", "x")})
+
+    with pytest.raises(AssertionError):
+        xr.testing.assert_equal(a, b)
+
+    xr.testing.assert_equal(a, b, check_dim_order=False)
+
+
 @pytest.mark.filterwarnings("error")
 @pytest.mark.parametrize(
     "duckarray",
