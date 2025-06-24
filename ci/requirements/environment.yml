@@ -4,7 +4,7 @@ channels:
   - nodefaults
 dependencies:
   - aiobotocore
-  - array-api-strict
+  - array-api-strict<2.4
   - boto3
   - bottleneck
   - cartopy

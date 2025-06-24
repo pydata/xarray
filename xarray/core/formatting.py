@@ -190,7 +190,7 @@ def format_item(x, timedelta_format=None, quote_strings=True):
         if hasattr(x, "dtype"):
             x = x.item()
         return repr(x) if quote_strings else x
-    elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating):
+    elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating) and x.shape == ():
         return f"{x.item():.4}"
     else:
         return str(x)
@@ -464,7 +464,7 @@ def inherited_coords_repr(node: DataTree, col_width=None, max_rows=None):
     )
 
 
-def inline_index_repr(index: pd.Index, max_width=None):
+def inline_index_repr(index: pd.Index, max_width: int) -> str:
     if hasattr(index, "_repr_inline_"):
         repr_ = index._repr_inline_(max_width=max_width)
     else:

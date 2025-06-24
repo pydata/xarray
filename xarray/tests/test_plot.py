@@ -828,7 +828,7 @@ class TestPlot1D(PlotTestCase):
         darray = self.darray.expand_dims({"d": np.array([10.009])})
         darray.plot.line(x="period")
         title = plt.gca().get_title()
-        assert "d = 10.01" == title
+        assert "d = [10.009]" == title
 
 
 class TestPlotStep(PlotTestCase):
@@ -2698,9 +2698,9 @@ class TestDatasetStreamplotPlots(PlotTestCase):
     def setUp(self) -> None:
         das = [
             DataArray(
-                np.random.randn(3, 3, 2, 2),
+                np.random.randn(3, 4, 2, 2),
                 dims=["x", "y", "row", "col"],
-                coords=[range(k) for k in [3, 3, 2, 2]],
+                coords=[range(k) for k in [3, 4, 2, 2]],
             )
             for _ in [1, 2]
         ]
@@ -2789,7 +2789,7 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_add_guide(
         self,
         add_guide: bool | None,
-        hue_style: Literal["continuous", "discrete", None],
+        hue_style: Literal["continuous", "discrete"] | None,
         legend: bool,
         colorbar: bool,
     ) -> None:
