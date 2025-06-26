@@ -121,10 +121,8 @@ def __extension_duck_array__result_type(
         getattr(x, "dtype", cast(ExtensionDtype, x))
         for x in extension_arrays_and_dtypes
     ]
-    scalars: list[Scalar] = [
-        cast(Scalar, x)
-        for x in arrays_and_dtypes
-        if is_scalar(x) and x not in {pd.NA, np.nan}
+    scalars = [
+        x for x in arrays_and_dtypes if is_scalar(x) and x not in {pd.NA, np.nan}
     ]
     # other_stuff could include:
     # - arrays such as pd.ABCSeries, np.ndarray, or other array-api duck arrays
@@ -141,7 +139,8 @@ def __extension_duck_array__result_type(
         isinstance(x, pd.CategoricalDtype) and not x.ordered for x in ea_dtypes
     ):
         return union_unordered_categorical_and_scalar(
-            cast(list[pd.CategoricalDtype], ea_dtypes), scalars
+            cast(list[pd.CategoricalDtype], ea_dtypes),
+            scalars,  # type: ignore[arg-type]
         )
     if not other_stuff and all(
         isinstance(x, type(ea_type := ea_dtypes[0])) for x in ea_dtypes
