@@ -118,12 +118,12 @@ def _maybe_prepare_times(var):
     return data
 
 
-def encode_nc3_variable(var):
+def encode_nc3_variable(var, name=None):
     for coder in [
         coding.strings.EncodedStringCoder(allows_unicode=False),
         coding.strings.CharacterArrayCoder(),
     ]:
-        var = coder.encode(var)
+        var = coder.encode(var, name=name)
     data = _maybe_prepare_times(var)
     data = coerce_nc3_dtype(data)
     attrs = encode_nc3_attrs(var.attrs)

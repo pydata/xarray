@@ -190,7 +190,7 @@ def format_item(x, timedelta_format=None, quote_strings=True):
         if hasattr(x, "dtype"):
             x = x.item()
         return repr(x) if quote_strings else x
-    elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating):
+    elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating) and x.shape == ():
         return f"{x.item():.4}"
     else:
         return str(x)
