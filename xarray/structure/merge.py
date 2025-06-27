@@ -718,7 +718,7 @@ def merge_core(
         coord_names.intersection_update(variables)
     if explicit_coords is not None:
         coord_names.update(explicit_coords)
-    for dim in dims.keys():
+    for dim in dims:
         if dim in variables:
             coord_names.add(dim)
     ambiguous_coords = coord_names.intersection(noncoord_names)
