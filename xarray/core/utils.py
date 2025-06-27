@@ -1292,7 +1292,7 @@ def attempt_import(module: str) -> ModuleType:
     reason = package_purpose.get(package_name, "")
     try:
         return importlib.import_module(module)
-    except (ImportError, ModuleNotFoundError) as e:
+    except ImportError as e:
         raise ImportError(
             f"The {install_name} package is required {reason}"
             " but could not be imported."
