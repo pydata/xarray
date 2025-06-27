@@ -3803,13 +3803,11 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                     ]
                 )
 
-            assert set(expected) == set(
-                [
-                    file.lstrip("c/")
-                    for file in ls
-                    if (file not in (".zattrs", ".zarray", "zarr.json"))
-                ]
-            )
+            assert set(expected) == {
+                file.lstrip("c/")
+                for file in ls
+                if (file not in (".zattrs", ".zarray", "zarr.json"))
+            }
 
         # The zarr format is set by the `default_zarr_format`
         # pytest fixture that acts on a superclass
