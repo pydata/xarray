@@ -783,13 +783,18 @@ class ZarrStore(AbstractWritableDataStore):
         return self.zarr_group
 
     def open_store_variable(self, name):
+        print(f"DEBUG OPEN: Reading variable '{name}'")
         zarr_array = self.members[name]
+        print(
+            f"DEBUG OPEN: zarr_array.dtype={zarr_array.dtype}, fill_value={zarr_array.fill_value}"
+        )
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(zarr_array))
         try_nczarr = self._mode == "r"
         dimensions, attributes = _get_zarr_dims_and_attrs(
             zarr_array, DIMENSION_KEY, try_nczarr
         )
         attributes = dict(attributes)
+        print(f"DEBUG OPEN: Original attributes: {attributes}")
 
         encoding = {
             "chunks": zarr_array.chunks,
@@ -814,31 +819,60 @@ class ZarrStore(AbstractWritableDataStore):
                 }
             )
 
+        print(
+            f"DEBUG OPEN: _use_zarr_fill_value_as_mask={self._use_zarr_fill_value_as_mask}"
+        )
+        print(f"DEBUG OPEN: '_FillValue' in attributes: {'_FillValue' in attributes}")
+
         if self._use_zarr_fill_value_as_mask:
             # Setting this attribute triggers CF decoding for missing values
             # by interpreting Zarr's fill_value to mean the same as netCDF's _FillValue
+            print(f"DEBUG OPEN: Using zarr fill_value as mask for '{name}'")
+            print("===========")
+            print(f"DEBUG DTYPE: zarr array fill value: {zarr_array.fill_value.dtype}")
             if zarr_array.fill_value is not None:
                 attributes["_FillValue"] = zarr_array.fill_value
+                print(
+                    f"\t DEBUG OPEN: Set _FillValue to {zarr_array.fill_value} for '{name}'"
+                )
+            print("===========")
         elif "_FillValue" in attributes:
             # TODO update version check for the released version with dtypes
             #  probably be 3.1
             import zarr
 
-            #
+            print(f"DEBUG: Processing _FillValue for {name}")
+            print(f"DEBUG: Original _FillValue: {attributes['_FillValue']}")
+            print(
+                f"DEBUG: zarr_array.metadata.data_type: {zarr_array.metadata.data_type}"
+            )
+
             if Version(zarr.__version__) >= Version("3.0.6"):
+                native_dtype = zarr_array.metadata.data_type.to_native_dtype()
+                print(f"DEBUG: native_dtype: {native_dtype}")
                 attributes["_FillValue"] = (
                     # Use the new dtype infrastructure instead of doing xarray
                     # specific fill value decoding
                     FillValueCoder.decode(
                         attributes["_FillValue"],
-                        zarr_array.metadata.data_type.to_native_dtype(),
+                        native_dtype,
                     )
                 )
             else:
+                dtype_value = zarr_array.metadata.data_type.value
+                print(f"DEBUG: dtype_value: {dtype_value}")
                 attributes["_FillValue"] = FillValueCoder.decode(
-                    attributes["_FillValue"], zarr_array.metadata.data_type.value
+                    attributes["_FillValue"], dtype_value
                 )
-        return Variable(dimensions, data, attributes, encoding)
+
+            print(f"DEBUG: Decoded _FillValue: {attributes['_FillValue']}")
+            print(f"DEBUG: Decoded _FillValue type: {type(attributes['_FillValue'])}")
+
+        print(f"DEBUG OPEN: Final attributes for '{name}': {attributes}")
+        variable = Variable(dimensions, data, attributes, encoding)
+        print(f"DEBUG OPEN: Created variable '{name}' with dtype: {variable.dtype}")
+
+        return variable
 
     def get_variables(self):
         return FrozenDict((k, self.open_store_variable(k)) for k in self.array_keys())
@@ -953,7 +987,7 @@ class ZarrStore(AbstractWritableDataStore):
         variables_encoded, attributes = self.encode(
             {vn: variables[vn] for vn in new_variable_names}, attributes
         )
-        print(f"{variables_encoded=}")
+        print("HERE")
 
         if existing_variable_names:
             # We make sure that values to be appended are encoded *exactly*
@@ -961,13 +995,27 @@ class ZarrStore(AbstractWritableDataStore):
             # To do so, we decode variables directly to access the proper encoding,
             # without going via xarray.Dataset to avoid needing to load
             # index variables into memory.
+            print(
+                f"DEBUG APPEND: Processing existing variables: {existing_variable_names}"
+            )
+            store_vars = {
+                k: self.open_store_variable(name=k) for k in existing_variable_names
+            }
+            print(
+                f"DEBUG APPEND: Store vars dtypes: {[(name, var.dtype) for name, var in store_vars.items()]}"
+            )
+
             existing_vars, _, _ = conventions.decode_cf_variables(
-                variables={
-                    k: self.open_store_variable(name=k) for k in existing_variable_names
-                },
+                variables=store_vars,
                 # attributes = {} since we don't care about parsing the global
                 # "coordinates" attribute
                 attributes={},
+            )
+            print(
+                f"DEBUG APPEND: After CF decode dtypes: {[(name, var.dtype) for name, var in existing_vars.items()]}"
+            )
+            print(
+                f"DEBUG APPEND: Variables to append dtypes: {[(name, var.dtype) for name, var in variables_encoded.items() if name in existing_variable_names]}"
             )
             # Modified variables must use the same encoding as the store.
             vars_with_encoding = {}
@@ -1006,7 +1054,6 @@ class ZarrStore(AbstractWritableDataStore):
         else:
             variables_to_set = variables_encoded
 
-        print(f"{variables_to_set=}")
         self.set_variables(
             variables_to_set, check_encoding_set, writer, unlimited_dims=unlimited_dims
         )
@@ -1015,7 +1062,6 @@ class ZarrStore(AbstractWritableDataStore):
             if _zarr_v3():
                 kwargs["zarr_format"] = self.zarr_group.metadata.zarr_format
             zarr.consolidate_metadata(self.zarr_group.store, **kwargs)
-        print("DONE STORE.STORE")
 
     def sync(self):
         pass
@@ -1089,8 +1135,6 @@ class ZarrStore(AbstractWritableDataStore):
                 if c in encoding:
                     encoding["config"][c] = encoding.pop(c)
 
-        print("create")
-        print(dtype)
         zarr_array = self.zarr_group.create(
             name,
             shape=shape,
@@ -1229,8 +1273,6 @@ class ZarrStore(AbstractWritableDataStore):
 
                 encoding["overwrite"] = self._mode == "w"
 
-                print(dtype)
-                print(";sdf")
                 zarr_array = self._create_new_array(
                     name=name,
                     dtype=dtype,
@@ -1239,8 +1281,6 @@ class ZarrStore(AbstractWritableDataStore):
                     encoding=encoding,
                     attrs=encoded_attrs,
                 )
-                print(zarr_array)
-                print(type(zarr_array))
 
             writer.add(v.data, zarr_array, region)
 
