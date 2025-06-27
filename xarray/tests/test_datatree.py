@@ -1433,7 +1433,6 @@ class TestRepr:
 
 def _exact_match(message: str) -> str:
     return re.escape(dedent(message).strip())
-    return "^" + re.escape(dedent(message.rstrip())) + "$"
 
 
 class TestInheritance:
