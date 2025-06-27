@@ -115,7 +115,9 @@ if has_zarr:
     import zarr.codecs
 
     if has_zarr_v3:
+        from zarr.abc.store import Store
         from zarr.storage import MemoryStore as KVStore
+        from zarr.storage import WrapperStore
 
         ZARR_FORMATS = [2, 3]
     else:
@@ -3742,6 +3744,29 @@ class TestZarrDictStore(ZarrBase):
                 assert_identical(original, actual)
                 # Verify chunks are preserved
                 assert actual["var1"].encoding["chunks"] == (2, 2)
+
+
+class NoConsolidatedMetadataSupportStore(WrapperStore[Store]):
+    """
+    Store that explicitly does not support consolidated metadata.
+
+    Useful as a proxy for stores like Icechunk, see https://github.com/zarr-developers/zarr-python/pull/3119.
+    """
+
+    supports_consolidated_metadata = False
+
+
+@requires_zarr
+class TestZarrNoConsolidatedMetadataSupport(ZarrBase):
+    @contextlib.contextmanager
+    def create_zarr_target(self):
+        # TODO the zarr version would need to be >3.08 for the supports_consolidated_metadata property to have any effect
+        if has_zarr_v3:
+            yield NoConsolidatedMetadataSupportStore(
+                zarr.storage.MemoryStore({}, read_only=False)
+            )
+        else:
+            pytest.skip("requires zarr v3")
 
 
 @requires_zarr
