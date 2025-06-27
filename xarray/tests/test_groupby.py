@@ -3669,9 +3669,12 @@ class TestSeasonGrouperAndResampler:
         # With complete data, both should give same number of seasons
         assert len(result_keep) == len(result_drop)
 
-        # Now test with incomplete data - start from Feb (missing Dec-Jan of first DJF)
+        # Now test with incomplete data - start from Feb (missing Dec 2000 and Jan 2001)
         time_incomplete = date_range(
-            "2001-02-01", "2002-12-31", freq="MS", calendar=calendar
+            "2001-02-01",
+            "2001-12-31",
+            freq="MS",
+            calendar=calendar,  # Stop before next year
         )
         data_incomplete = np.arange(len(time_incomplete))
         da_incomplete = DataArray(
@@ -3686,6 +3689,7 @@ class TestSeasonGrouperAndResampler:
         ).mean()
 
         # drop_incomplete should exclude the incomplete first DJF season
+        # Data starts in Feb 2001, so 2000-2001 DJF is incomplete (missing Dec 2000, Jan 2001)
         assert len(result_drop_inc) < len(result_keep_inc)
 
     @pytest.mark.parametrize("calendar", ["standard"])
@@ -3724,18 +3728,18 @@ class TestSeasonGrouperAndResampler:
         months = np.array([12, 1, 2, 12, 1, 2])
 
         # Test DJF season (December, January, February)
-        adjusted = _adjust_years_for_season(years, months, (12, 1, 2))
+        adjusted = _adjust_years_for_season(years, months, (12, 1, 2), "DJF")
         expected = np.array(
             [2001, 2000, 2000, 2002, 2001, 2001]
         )  # Jan/Feb get previous year
         np.testing.assert_array_equal(adjusted, expected)
 
         # Test MAM season (no cross-year adjustment needed)
-        adjusted_mam = _adjust_years_for_season(years, months, (3, 4, 5))
+        adjusted_mam = _adjust_years_for_season(years, months, (3, 4, 5), "MAM")
         np.testing.assert_array_equal(adjusted_mam, years)  # Should be unchanged
 
         # Test single month season
-        adjusted_jan = _adjust_years_for_season(years, months, (1,))
+        adjusted_jan = _adjust_years_for_season(years, months, (1,), "J")
         np.testing.assert_array_equal(adjusted_jan, years)  # Should be unchanged
 
 

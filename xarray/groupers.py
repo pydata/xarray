@@ -52,6 +52,8 @@ __all__ = [
     "EncodedGroups",
     "Grouper",
     "Resampler",
+    "SeasonGrouper",
+    "SeasonResampler",
     "TimeResampler",
     "UniqueGrouper",
 ]
@@ -237,7 +239,7 @@ class UniqueGrouper(Grouper):
         )
         return EncodedGroups(
             codes=codes,
-            full_index=pd.Index(self.labels),  # type: ignore[arg-type]
+            full_index=pd.Index(self.labels),
             unique_coord=Variable(
                 dims=codes.name,
                 data=self.labels,
@@ -612,7 +614,10 @@ def unique_value_groups(
 
 
 def _adjust_years_for_season(
-    years: np.ndarray, months: np.ndarray, season_tuple: tuple[int, ...]
+    years: np.ndarray,
+    months: np.ndarray,
+    season_tuple: tuple[int, ...],
+    season_str: str,
 ) -> np.ndarray:
     """
     Adjust years for seasons that span December and January (e.g., DJF).
@@ -628,6 +633,8 @@ def _adjust_years_for_season(
         Array of months corresponding to each timestamp
     season_tuple : tuple of int
         Tuple of month numbers that make up the season
+    season_str : str
+        String representation of the season (e.g., "DJF")
 
     Returns
     -------
@@ -635,10 +642,15 @@ def _adjust_years_for_season(
         Adjusted years array
     """
     year_adjusted = years.copy()
-    # Handle seasons like DJF where December is in one year but Jan/Feb are in the next
-    if 12 in season_tuple and 1 in season_tuple:
-        jan_or_later = [m for m in season_tuple if m < 12]
-        year_adjusted[np.isin(months, jan_or_later)] -= 1
+    # Handle seasons that contain December followed by other months
+    if "D" in season_str and 12 in season_tuple:
+        # Find the position of "D" (December) in the season string
+        d_index = season_str.index("D")
+        # Get all months that come after December in the season
+        months_after_dec = season_tuple[d_index + 1 :]
+        # Reduce year by 1 for months that come after December
+        for month_num in months_after_dec:
+            year_adjusted[months == month_num] -= 1
     return year_adjusted
 
 
@@ -822,7 +834,10 @@ class SeasonGrouper(Grouper):
                     (indices,) = mask.nonzero()
                     group_indices[code] = indices.tolist()
                 else:
-                    year_adjusted = _adjust_years_for_season(year, months, season_tuple)
+                    season_str = self.seasons[code]
+                    year_adjusted = _adjust_years_for_season(
+                        year, months, season_tuple, season_str
+                    )
 
                     # find unique years for this season
                     if not np.any(mask):
@@ -945,9 +960,10 @@ class SeasonResampler(Resampler):
         # Apply year adjustment for cross-year seasons
         year_adjusted = year.copy()
         for season_str, season_ind in zip(seasons, season_inds, strict=True):
-            if "DJ" in season_str:
-                year_adjusted = _adjust_years_for_season(
-                    year_adjusted, month.data, season_ind
+            if "D" in season_str and 12 in season_ind:
+                # Use helper function for year adjustment
+                year_adjusted[:] = _adjust_years_for_season(
+                    year_adjusted.values, month.values, tuple(season_ind), season_str
                 )
 
         # Allow users to skip one or more months?
