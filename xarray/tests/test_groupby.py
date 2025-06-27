@@ -3604,6 +3604,140 @@ class TestSeasonGrouperAndResampler:
         gb = da.groupby(time=resampler).sum()
         assert_identical(rs, gb)
 
+    @pytest.mark.parametrize("calendar", ["standard"])
+    def test_season_grouper_drop_incomplete_default_false(self, calendar):
+        """Test that drop_incomplete=False is the default and includes partial seasons."""
+        # Create data that starts mid-winter (missing Dec 2000)
+        time = date_range("2001-01-01", "2001-12-31", freq="MS", calendar=calendar)
+        data = np.arange(len(time))
+        da = DataArray(data, dims="time", coords={"time": time})
+
+        # Default behavior should include incomplete seasons
+        result_default = da.groupby(
+            time=SeasonGrouper(["DJF", "MAM", "JJA", "SON"])
+        ).mean()
+        result_explicit = da.groupby(
+            time=SeasonGrouper(["DJF", "MAM", "JJA", "SON"], drop_incomplete=False)
+        ).mean()
+
+        assert_identical(result_default, result_explicit)
+
+        # Should include 4 seasons (including incomplete DJF with just Jan-Feb)
+        assert len(result_default) == 4
+        assert list(result_default.season.values) == ["DJF", "MAM", "JJA", "SON"]
+
+    @pytest.mark.parametrize("calendar", ["standard"])
+    def test_season_grouper_drop_incomplete_true(self, calendar):
+        """Test that drop_incomplete=True excludes partial seasons."""
+        # Create data that starts mid-winter (missing Dec 2000) and ends mid-autumn (missing Nov-Dec 2002)
+        time = date_range("2001-01-01", "2002-10-31", freq="MS", calendar=calendar)
+        data = np.arange(len(time))
+        da = DataArray(data, dims="time", coords={"time": time})
+
+        # With drop_incomplete=True, should exclude incomplete seasons
+        result_drop = da.groupby(
+            time=SeasonGrouper(["DJF", "MAM", "JJA", "SON"], drop_incomplete=True)
+        ).mean()
+
+        # Should only include complete seasons
+        # 2001: DJF is incomplete (missing Dec 2000), MAM/JJA/SON are complete
+        # 2002: DJF/MAM/JJA are complete, SON is incomplete (missing Nov-Dec)
+        assert len(result_drop) <= 6  # At most 6 complete seasons
+
+        # Compare with default behavior
+        result_default = da.groupby(
+            time=SeasonGrouper(["DJF", "MAM", "JJA", "SON"], drop_incomplete=False)
+        ).mean()
+        assert len(result_drop) <= len(result_default)
+
+    @pytest.mark.parametrize("calendar", ["standard"])
+    def test_season_grouper_drop_incomplete_cross_year_seasons(self, calendar):
+        """Test drop_incomplete with seasons that span calendar years like DJF."""
+        # Create 2 complete years of data
+        time = date_range("2001-01-01", "2002-12-31", freq="MS", calendar=calendar)
+        data = np.arange(len(time))
+        da = DataArray(data, dims="time", coords={"time": time})
+
+        # Test with DJF season (spans calendar year)
+        result_keep = da.groupby(
+            time=SeasonGrouper(["DJF", "MAM", "JJA", "SON"], drop_incomplete=False)
+        ).mean()
+        result_drop = da.groupby(
+            time=SeasonGrouper(["DJF", "MAM", "JJA", "SON"], drop_incomplete=True)
+        ).mean()
+
+        # With complete data, both should give same number of seasons
+        assert len(result_keep) == len(result_drop)
+
+        # Now test with incomplete data - start from Feb (missing Dec-Jan of first DJF)
+        time_incomplete = date_range(
+            "2001-02-01", "2002-12-31", freq="MS", calendar=calendar
+        )
+        data_incomplete = np.arange(len(time_incomplete))
+        da_incomplete = DataArray(
+            data_incomplete, dims="time", coords={"time": time_incomplete}
+        )
+
+        result_keep_inc = da_incomplete.groupby(
+            time=SeasonGrouper(["DJF", "MAM", "JJA", "SON"], drop_incomplete=False)
+        ).mean()
+        result_drop_inc = da_incomplete.groupby(
+            time=SeasonGrouper(["DJF", "MAM", "JJA", "SON"], drop_incomplete=True)
+        ).mean()
+
+        # drop_incomplete should exclude the incomplete first DJF season
+        assert len(result_drop_inc) < len(result_keep_inc)
+
+    @pytest.mark.parametrize("calendar", ["standard"])
+    def test_season_grouper_drop_incomplete_all_incomplete(self, calendar):
+        """Test that drop_incomplete handles the case where all seasons are incomplete."""
+        # Create data with only January (incomplete for any multi-month season)
+        time = date_range("2001-01-01", "2001-01-31", freq="D", calendar=calendar)
+        data = np.arange(len(time))
+        da = DataArray(data, dims="time", coords={"time": time})
+
+        # Should raise error when all seasons are incomplete and drop_incomplete=True
+        with pytest.raises(ValueError, match="Failed to group data"):
+            da.groupby(
+                time=SeasonGrouper(["DJF", "MAM", "JJA", "SON"], drop_incomplete=True)
+            ).mean()
+
+    def test_season_grouper_reset_preserves_drop_incomplete(self):
+        """Test that the reset method preserves the drop_incomplete setting."""
+        grouper1 = SeasonGrouper(["DJF", "MAM", "JJA", "SON"], drop_incomplete=True)
+        grouper2 = grouper1.reset()
+
+        assert grouper2.drop_incomplete == grouper1.drop_incomplete
+        assert grouper2.seasons == grouper1.seasons
+
+        grouper3 = SeasonGrouper(["DJF", "MAM", "JJA", "SON"], drop_incomplete=False)
+        grouper4 = grouper3.reset()
+
+        assert grouper4.drop_incomplete == grouper3.drop_incomplete
+        assert grouper4.seasons == grouper3.seasons
+
+    def test_adjust_years_for_season_helper(self):
+        """Test the helper function _adjust_years_for_season."""
+        from xarray.groupers import _adjust_years_for_season
+
+        years = np.array([2001, 2001, 2001, 2002, 2002, 2002])
+        months = np.array([12, 1, 2, 12, 1, 2])
+
+        # Test DJF season (December, January, February)
+        adjusted = _adjust_years_for_season(years, months, (12, 1, 2))
+        expected = np.array(
+            [2001, 2000, 2000, 2002, 2001, 2001]
+        )  # Jan/Feb get previous year
+        np.testing.assert_array_equal(adjusted, expected)
+
+        # Test MAM season (no cross-year adjustment needed)
+        adjusted_mam = _adjust_years_for_season(years, months, (3, 4, 5))
+        np.testing.assert_array_equal(adjusted_mam, years)  # Should be unchanged
+
+        # Test single month season
+        adjusted_jan = _adjust_years_for_season(years, months, (1,))
+        np.testing.assert_array_equal(adjusted_jan, years)  # Should be unchanged
+
 
 # TODO: Possible property tests to add to this module
 # 1. lambda x: x

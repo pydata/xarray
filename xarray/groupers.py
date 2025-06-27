@@ -611,6 +611,37 @@ def unique_value_groups(
     return values, inverse
 
 
+def _adjust_years_for_season(
+    years: np.ndarray, months: np.ndarray, season_tuple: tuple[int, ...]
+) -> np.ndarray:
+    """
+    Adjust years for seasons that span December and January (e.g., DJF).
+
+    For seasons like DJF, January and February should be considered part of the
+    winter that started in the previous December.
+
+    Parameters
+    ----------
+    years : np.ndarray
+        Array of years corresponding to each timestamp
+    months : np.ndarray
+        Array of months corresponding to each timestamp
+    season_tuple : tuple of int
+        Tuple of month numbers that make up the season
+
+    Returns
+    -------
+    np.ndarray
+        Adjusted years array
+    """
+    year_adjusted = years.copy()
+    # Handle seasons like DJF where December is in one year but Jan/Feb are in the next
+    if 12 in season_tuple and 1 in season_tuple:
+        jan_or_later = [m for m in season_tuple if m < 12]
+        year_adjusted[np.isin(months, jan_or_later)] -= 1
+    return year_adjusted
+
+
 def season_to_month_tuple(seasons: Sequence[str]) -> tuple[tuple[int, ...], ...]:
     """
     >>> season_to_month_tuple(["DJF", "MAM", "JJA", "SON"])
@@ -791,11 +822,7 @@ class SeasonGrouper(Grouper):
                     (indices,) = mask.nonzero()
                     group_indices[code] = indices.tolist()
                 else:
-                    year_adjusted = year.copy()
-                    # handle seasons like DJF
-                    if 12 in season_tuple and 1 in season_tuple:
-                        jan_or_later = [m for m in season_tuple if m < 12]
-                        year_adjusted[np.isin(months, jan_or_later)] -= 1
+                    year_adjusted = _adjust_years_for_season(year, months, season_tuple)
 
                     # find unique years for this season
                     if not np.any(mask):
@@ -826,8 +853,16 @@ class SeasonGrouper(Grouper):
             attrs=group.attrs,
             name="season",
         )
-        unique_coord = Variable("season", self.seasons, attrs=group.attrs)
-        full_index = pd.Index(self.seasons)
+
+        # Always filter coordinates to match actual data present
+        # This avoids dimension mismatches regardless of drop_incomplete setting
+        present_codes = np.unique(codes.data.ravel())
+        present_codes = present_codes[present_codes >= 0]  # Remove -1 (missing data)
+        present_seasons = [self.seasons[code] for code in present_codes]
+
+        unique_coord = Variable("season", present_seasons, attrs=group.attrs)
+        full_index = pd.Index(present_seasons)
+
         return EncodedGroups(
             codes=codes,
             group_indices=tuple(group_indices),
@@ -906,10 +941,14 @@ class SeasonResampler(Resampler):
         # offset years for seasons with December and January
         for season_str, season_ind in zip(seasons, season_inds, strict=True):
             season_label[month.isin(season_ind)] = season_str
+
+        # Apply year adjustment for cross-year seasons
+        year_adjusted = year.copy()
+        for season_str, season_ind in zip(seasons, season_inds, strict=True):
             if "DJ" in season_str:
-                after_dec = season_ind[season_str.index("D") + 1 :]
-                # important: this is assuming non-overlapping seasons
-                year[month.isin(after_dec)] -= 1
+                year_adjusted = _adjust_years_for_season(
+                    year_adjusted, month.data, season_ind
+                )
 
         # Allow users to skip one or more months?
         # present_seasons is a mask that is True for months that are requested in the output
@@ -923,7 +962,7 @@ class SeasonResampler(Resampler):
                 "month": month[present_seasons],
             },
             index=pd.MultiIndex.from_arrays(
-                [year.data[present_seasons], season_label[present_seasons]],
+                [year_adjusted.data[present_seasons], season_label[present_seasons]],
                 names=["year", "season"],
             ),
         )
@@ -962,7 +1001,7 @@ class SeasonResampler(Resampler):
                 [
                     datetime_class(year=y, month=m, day=1)
                     for y, m in itertools.product(
-                        range(year[0].item(), year[-1].item() + 1),
+                        range(year_adjusted[0].item(), year_adjusted[-1].item() + 1),
                         [s[0] for s in season_inds],
                     )
                 ]
@@ -977,7 +1016,7 @@ class SeasonResampler(Resampler):
         unique_codes = np.arange(len(unique_coord))
         valid_season_mask = season_label != ""
         first_valid_season, last_valid_season = season_label[valid_season_mask][[0, -1]]
-        first_year, last_year = year.data[[0, -1]]
+        first_year, last_year = year_adjusted.data[[0, -1]]
         if self.drop_incomplete:
             if month.data[valid_season_mask][0] != season_tuples[first_valid_season][0]:
                 if "DJ" in first_valid_season:
