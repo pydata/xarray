@@ -88,7 +88,7 @@ def test_assert_allclose_equal_transpose(func) -> None:
     getattr(xr.testing, func)(ds1, ds2, check_dim_order=False)
 
 
-def test_assert_equal_transpose_datatree():
+def test_assert_equal_transpose_datatree() -> None:
     """Ensure `check_dim_order=False` works for transposed DataTree"""
     ds = xr.Dataset(data_vars={"data": (("x", "y"), [[1, 2]])})
 
