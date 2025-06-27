@@ -1,3 +1,7 @@
+"""
+This module contains various lazy array classes which can be wrapped and manipulated by xarray objects but will raise on data access.
+"""
+
 from collections.abc import Callable, Iterable
 from typing import Any
 
@@ -5,10 +9,6 @@ import numpy as np
 
 from xarray.core import utils
 from xarray.core.indexing import ExplicitlyIndexed
-
-"""
-This module contains various lazy array classes which can be wrapped and manipulated by xarray objects but will raise on data access.
-"""
 
 
 class UnexpectedDataAccess(Exception):
