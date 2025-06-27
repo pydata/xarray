@@ -1657,7 +1657,7 @@ class TestRestructuring:
 
         # test drop multiple nodes
         dropped = sue.drop_nodes(names=["Mary", "Kate"])
-        assert not set(["Mary", "Kate"]).intersection(set(dropped.children))
+        assert not {"Mary", "Kate"}.intersection(set(dropped.children))
         assert "Ashley" in dropped.children
 
         # test raise

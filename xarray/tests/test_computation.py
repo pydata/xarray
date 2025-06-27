@@ -1397,7 +1397,7 @@ def test_apply_dask_new_output_sizes_not_supplied_same_dim_names() -> None:
             da,
             input_core_dims=[["i", "j"]],
             output_core_dims=[["i", "j"]],
-            exclude_dims=set(("i", "j")),
+            exclude_dims={"i", "j"},
             dask="parallelized",
         )
 
