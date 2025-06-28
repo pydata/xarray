@@ -255,6 +255,7 @@ extend-select = [
   "PIE",  # flake8-pie
   "TID",  # flake8-tidy-imports (absolute imports)
   "PYI",  # flake8-pyi
+  "SIM",  # flake8-simplify
   "FLY",  # flynt
   "I",    # isort
   "PERF", # Perflint
@@ -276,6 +277,9 @@ ignore = [
   "PIE790",  # unnecessary pass statement
   "PYI019",  # use `Self` instead of custom TypeVar
   "PYI041",  # use `float` instead of `int | float`
+  "SIM108",  # use ternary operator instead of `if`-`else`-block
+  "SIM117",  # use a single `with` statement instead of nested `with` statements
+  "SIM300",  # yoda condition detected
   "PERF203", # try-except within a loop incurs performance overhead
   "E402",    # module level import not at top of file
   "E731",    # do not assign a lambda expression, use a def
