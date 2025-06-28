@@ -989,9 +989,10 @@ def diff_array_repr(a, b, compat):
         ):
             summary.append(coords_diff)
 
-    if compat == "identical":
-        if attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat):
-            summary.append(attrs_diff)
+    if compat == "identical" and (
+        attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat)
+    ):
+        summary.append(attrs_diff)
 
     return "\n".join(summary)
 
@@ -1029,9 +1030,10 @@ def diff_dataset_repr(a, b, compat):
     ):
         summary.append(data_diff)
 
-    if compat == "identical":
-        if attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat):
-            summary.append(attrs_diff)
+    if compat == "identical" and (
+        attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat)
+    ):
+        summary.append(attrs_diff)
 
     return "\n".join(summary)
 
