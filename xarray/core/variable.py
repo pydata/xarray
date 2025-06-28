@@ -63,6 +63,11 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 )
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
+UNSUPPORTED_EXTENSION_ARRAY_TYPES = (
+    pd.arrays.DatetimeArray,
+    pd.arrays.TimedeltaArray,
+    pd.arrays.NumpyExtensionArray,  # type: ignore[attr-defined]
+)
 
 if TYPE_CHECKING:
     from xarray.core.types import (
@@ -168,15 +173,14 @@ def as_variable(
             f"explicit list of dimensions: {obj!r}"
         )
 
-    if auto_convert:
-        if name is not None and name in obj.dims and obj.ndim == 1:
-            # automatically convert the Variable into an Index
-            emit_user_level_warning(
-                f"variable {name!r} with name matching its dimension will not be "
-                "automatically converted into an `IndexVariable` object in the future.",
-                FutureWarning,
-            )
-            obj = obj.to_index_variable()
+    if auto_convert and name is not None and name in obj.dims and obj.ndim == 1:
+        # automatically convert the Variable into an Index
+        emit_user_level_warning(
+            f"variable {name!r} with name matching its dimension will not be "
+            "automatically converted into an `IndexVariable` object in the future.",
+            FutureWarning,
+        )
+        obj = obj.to_index_variable()
 
     return obj
 
@@ -191,6 +195,8 @@ def _maybe_wrap_data(data):
     """
     if isinstance(data, pd.Index):
         return PandasIndexingAdapter(data)
+    if isinstance(data, UNSUPPORTED_EXTENSION_ARRAY_TYPES):
+        return data.to_numpy()
     if isinstance(data, pd.api.extensions.ExtensionArray):
         return PandasExtensionArray(data)
     return data
@@ -252,7 +258,14 @@ def as_compatible_data(
 
     # we don't want nested self-described arrays
     if isinstance(data, pd.Series | pd.DataFrame):
-        pandas_data = data.values
+        if (
+            isinstance(data, pd.Series)
+            and pd.api.types.is_extension_array_dtype(data)
+            and not isinstance(data.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES)
+        ):
+            pandas_data = data.array
+        else:
+            pandas_data = data.values  # type: ignore[assignment]
         if isinstance(pandas_data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
             return convert_non_numpy_type(pandas_data)
         else:
@@ -2219,8 +2232,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         for i, d in enumerate(variable.dims):
             if d in windows:
                 size = variable.shape[i]
-                shape.append(int(size / windows[d]))
-                shape.append(windows[d])
+                shape.extend((int(size / windows[d]), windows[d]))
                 axis_count += 1
                 axes.append(i + axis_count)
             else:
@@ -2930,15 +2942,15 @@ def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
 
 
 def _broadcast_compat_data(self, other):
-    if not OPTIONS["arithmetic_broadcast"]:
-        if (isinstance(other, Variable) and self.dims != other.dims) or (
-            is_duck_array(other) and self.ndim != other.ndim
-        ):
-            raise ValueError(
-                "Broadcasting is necessary but automatic broadcasting is disabled via "
-                "global option `'arithmetic_broadcast'`. "
-                "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
-            )
+    if not OPTIONS["arithmetic_broadcast"] and (
+        (isinstance(other, Variable) and self.dims != other.dims)
+        or (is_duck_array(other) and self.ndim != other.ndim)
+    ):
+        raise ValueError(
+            "Broadcasting is necessary but automatic broadcasting is disabled via "
+            "global option `'arithmetic_broadcast'`. "
+            "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
+        )
 
     if all(hasattr(other, attr) for attr in ["dims", "data", "shape", "encoding"]):
         # `other` satisfies the necessary Variable API for broadcast_variables

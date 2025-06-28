@@ -54,6 +54,9 @@ jobs:
           - env: "bare-minimum"
             python-version: "3.10"
             os: ubuntu-latest
+          - env: "bare-min-and-scipy"
+            python-version: "3.10"
+            os: ubuntu-latest
           - env: "min-all-deps"
             python-version: "3.10"
             os: ubuntu-latest
@@ -172,7 +175,7 @@ jobs:
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v5.4.2
+        uses: codecov/codecov-action@v5.4.3
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:

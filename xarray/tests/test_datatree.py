@@ -1433,7 +1433,6 @@ class TestRepr:
 
 def _exact_match(message: str) -> str:
     return re.escape(dedent(message).strip())
-    return "^" + re.escape(dedent(message.rstrip())) + "$"
 
 
 class TestInheritance:
@@ -1657,7 +1656,7 @@ class TestRestructuring:
 
         # test drop multiple nodes
         dropped = sue.drop_nodes(names=["Mary", "Kate"])
-        assert not set(["Mary", "Kate"]).intersection(set(dropped.children))
+        assert not {"Mary", "Kate"}.intersection(set(dropped.children))
         assert "Ashley" in dropped.children
 
         # test raise
@@ -2325,7 +2324,7 @@ class Closer:
         self.closed = True
 
 
-@pytest.fixture()
+@pytest.fixture
 def tree_and_closers():
     tree = DataTree.from_dict({"/child/grandchild": None})
     closers = {

@@ -99,6 +99,7 @@ from xarray.core.utils import (
     parse_dims_as_set,
 )
 from xarray.core.variable import (
+    UNSUPPORTED_EXTENSION_ARRAY_TYPES,
     IndexVariable,
     Variable,
     as_variable,
@@ -2057,6 +2058,7 @@ class Dataset(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -2080,6 +2082,7 @@ class Dataset(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -2101,6 +2104,7 @@ class Dataset(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -2210,6 +2214,16 @@ class Dataset(
             two or more chunked arrays in the same location in parallel if they are
             not writing in independent regions, for those cases it is better to use
             a synchronizer.
+        align_chunks: bool, default False
+            If True, rechunks the Dask array to align with Zarr chunks before writing.
+            This ensures each Dask chunk maps to one or more contiguous Zarr chunks,
+            which avoids race conditions.
+            Internally, the process sets safe_chunks=False and tries to preserve
+            the original Dask chunking as much as possible.
+            Note: While this alignment avoids write conflicts stemming from chunk
+            boundary misalignment, it does not protect against race conditions
+            if multiple uncoordinated processes write to the same
+            Zarr array concurrently.
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
@@ -2320,9 +2334,10 @@ class Dataset(
         if buf is None:  # pragma: no cover
             buf = sys.stdout
 
-        lines = []
-        lines.append("xarray.Dataset {")
-        lines.append("dimensions:")
+        lines = [
+            "xarray.Dataset {",
+            "dimensions:",
+        ]
         for name, size in self.sizes.items():
             lines.append(f"\t{name} = {size} ;")
         lines.append("\nvariables:")
@@ -2904,9 +2919,8 @@ class Dataset(
             for k, v in query_results.variables.items():
                 if v.dims:
                     no_scalar_variables[k] = v
-                else:
-                    if k in self._coord_names:
-                        query_results.drop_coords.append(k)
+                elif k in self._coord_names:
+                    query_results.drop_coords.append(k)
             query_results.variables = no_scalar_variables
 
         result = self.isel(indexers=query_results.dim_indexers, drop=drop)
@@ -3805,15 +3819,16 @@ class Dataset(
             for k, v in indexers.items()
         }
 
+        # optimization: subset to coordinate range of the target index
+        if method in ["linear", "nearest"]:
+            for k, v in validated_indexers.items():
+                obj, newidx = missing._localize(obj, {k: v})
+                validated_indexers[k] = newidx[k]
+
         has_chunked_array = bool(
             any(is_chunked_array(v._data) for v in obj._variables.values())
         )
         if has_chunked_array:
-            # optimization: subset to coordinate range of the target index
-            if method in ["linear", "nearest"]:
-                for k, v in validated_indexers.items():
-                    obj, newidx = missing._localize(obj, {k: v})
-                    validated_indexers[k] = newidx[k]
             # optimization: create dask coordinate arrays once per Dataset
             # rather than once per Variable when dask.array.unify_chunks is called later
             # GH4739
@@ -3829,7 +3844,7 @@ class Dataset(
                 continue
 
             use_indexers = (
-                dask_indexers if is_duck_dask_array(var.data) else validated_indexers
+                dask_indexers if is_duck_dask_array(var._data) else validated_indexers
             )
 
             dtype_kind = var.dtype.kind
@@ -4552,26 +4567,25 @@ class Dataset(
                     for d, c in zip_axis_dim:
                         all_dims.insert(d, c)
                     variables[k] = v.set_dims(dict(all_dims))
-            else:
-                if k not in variables:
-                    if k in coord_names and create_index_for_new_dim:
-                        # If dims includes a label of a non-dimension coordinate,
-                        # it will be promoted to a 1D coordinate with a single value.
-                        index, index_vars = create_default_index_implicit(v.set_dims(k))
-                        indexes[k] = index
-                        variables.update(index_vars)
-                    else:
-                        if create_index_for_new_dim:
-                            warnings.warn(
-                                f"No index created for dimension {k} because variable {k} is not a coordinate. "
-                                f"To create an index for {k}, please first call `.set_coords('{k}')` on this object.",
-                                UserWarning,
-                                stacklevel=2,
-                            )
+            elif k not in variables:
+                if k in coord_names and create_index_for_new_dim:
+                    # If dims includes a label of a non-dimension coordinate,
+                    # it will be promoted to a 1D coordinate with a single value.
+                    index, index_vars = create_default_index_implicit(v.set_dims(k))
+                    indexes[k] = index
+                    variables.update(index_vars)
+                else:
+                    if create_index_for_new_dim:
+                        warnings.warn(
+                            f"No index created for dimension {k} because variable {k} is not a coordinate. "
+                            f"To create an index for {k}, please first call `.set_coords('{k}')` on this object.",
+                            UserWarning,
+                            stacklevel=2,
+                        )
 
-                        # create 1D variable without creating a new index
-                        new_1d_var = v.set_dims(k)
-                        variables.update({k: new_1d_var})
+                    # create 1D variable without creating a new index
+                    new_1d_var = v.set_dims(k)
+                    variables.update({k: new_1d_var})
 
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
@@ -4890,9 +4904,8 @@ class Dataset(
                 index_cls = PandasIndex
             else:
                 index_cls = PandasMultiIndex
-        else:
-            if not issubclass(index_cls, Index):
-                raise TypeError(f"{index_cls} is not a subclass of xarray.Index")
+        elif not issubclass(index_cls, Index):
+            raise TypeError(f"{index_cls} is not a subclass of xarray.Index")
 
         invalid_coords = set(coord_names) - self._coord_names
 
@@ -6744,34 +6757,33 @@ class Dataset(
             if name in self.coords:
                 if not reduce_dims:
                     variables[name] = var
-            else:
-                if (
-                    # Some reduction functions (e.g. std, var) need to run on variables
-                    # that don't have the reduce dims: PR5393
-                    not is_extension_array_dtype(var.dtype)
-                    and (
-                        not reduce_dims
-                        or not numeric_only
-                        or np.issubdtype(var.dtype, np.number)
-                        or (var.dtype == np.bool_)
-                    )
-                ):
-                    # prefer to aggregate over axis=None rather than
-                    # axis=(0, 1) if they will be equivalent, because
-                    # the former is often more efficient
-                    # keep single-element dims as list, to support Hashables
-                    reduce_maybe_single = (
-                        None
-                        if len(reduce_dims) == var.ndim and var.ndim != 1
-                        else reduce_dims
-                    )
-                    variables[name] = var.reduce(
-                        func,
-                        dim=reduce_maybe_single,
-                        keep_attrs=keep_attrs,
-                        keepdims=keepdims,
-                        **kwargs,
-                    )
+            elif (
+                # Some reduction functions (e.g. std, var) need to run on variables
+                # that don't have the reduce dims: PR5393
+                not is_extension_array_dtype(var.dtype)
+                and (
+                    not reduce_dims
+                    or not numeric_only
+                    or np.issubdtype(var.dtype, np.number)
+                    or (var.dtype == np.bool_)
+                )
+            ):
+                # prefer to aggregate over axis=None rather than
+                # axis=(0, 1) if they will be equivalent, because
+                # the former is often more efficient
+                # keep single-element dims as list, to support Hashables
+                reduce_maybe_single = (
+                    None
+                    if len(reduce_dims) == var.ndim and var.ndim != 1
+                    else reduce_dims
+                )
+                variables[name] = var.reduce(
+                    func,
+                    dim=reduce_maybe_single,
+                    keep_attrs=keep_attrs,
+                    keepdims=keepdims,
+                    **kwargs,
+                )
 
         coord_names = {k for k in self.coords if k in variables}
         indexes = {k: v for k, v in self._indexes.items() if k in variables}
@@ -7271,7 +7283,7 @@ class Dataset(
         extension_arrays = []
         for k, v in dataframe.items():
             if not is_extension_array_dtype(v) or isinstance(
-                v.array, pd.arrays.DatetimeArray | pd.arrays.TimedeltaArray
+                v.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES
             ):
                 arrays.append((k, np.asarray(v)))
             else:
@@ -7970,8 +7982,6 @@ class Dataset(
             variables = variables(self)
         if not isinstance(variables, list):
             variables = [variables]
-        else:
-            variables = variables
         arrays = [v if isinstance(v, DataArray) else self[v] for v in variables]
         aligned_vars = align(self, *arrays, join="left")
         aligned_self = cast("Self", aligned_vars[0])
@@ -8141,19 +8151,18 @@ class Dataset(
         for name, var in self.variables.items():
             reduce_dims = [d for d in var.dims if d in dims]
             if reduce_dims or not var.dims:
-                if name not in self.coords:
-                    if (
-                        not numeric_only
-                        or np.issubdtype(var.dtype, np.number)
-                        or var.dtype == np.bool_
-                    ):
-                        variables[name] = var.quantile(
-                            q,
-                            dim=reduce_dims,
-                            method=method,
-                            keep_attrs=keep_attrs,
-                            skipna=skipna,
-                        )
+                if name not in self.coords and (
+                    not numeric_only
+                    or np.issubdtype(var.dtype, np.number)
+                    or var.dtype == np.bool_
+                ):
+                    variables[name] = var.quantile(
+                        q,
+                        dim=reduce_dims,
+                        method=method,
+                        keep_attrs=keep_attrs,
+                        skipna=skipna,
+                    )
 
             else:
                 variables[name] = var
@@ -8247,7 +8256,7 @@ class Dataset(
             The coordinate to be used to compute the gradient.
         edge_order : {1, 2}, default: 1
             N-th order accurate differences at the boundaries.
-        datetime_unit : None or {"Y", "M", "W", "D", "h", "m", "s", "ms", \
+        datetime_unit : None or {"W", "D", "h", "m", "s", "ms", \
             "us", "ns", "ps", "fs", "as", None}, default: None
             Unit to compute gradient. Only valid for datetime coordinate.
 
@@ -8315,7 +8324,7 @@ class Dataset(
         ----------
         coord : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
-        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+        datetime_unit : {'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as', None}, optional
             Specify the unit if datetime coordinate is used.
 
@@ -8396,25 +8405,24 @@ class Dataset(
                 if dim not in v.dims or cumulative:
                     variables[k] = v
                     coord_names.add(k)
-            else:
-                if k in self.data_vars and dim in v.dims:
-                    coord_data = to_like_array(coord_var.data, like=v.data)
-                    if _contains_datetime_like_objects(v):
-                        v = datetime_to_numeric(v, datetime_unit=datetime_unit)
-                    if cumulative:
-                        integ = duck_array_ops.cumulative_trapezoid(
-                            v.data, coord_data, axis=v.get_axis_num(dim)
-                        )
-                        v_dims = v.dims
-                    else:
-                        integ = duck_array_ops.trapz(
-                            v.data, coord_data, axis=v.get_axis_num(dim)
-                        )
-                        v_dims = list(v.dims)
-                        v_dims.remove(dim)
-                    variables[k] = Variable(v_dims, integ)
+            elif k in self.data_vars and dim in v.dims:
+                coord_data = to_like_array(coord_var.data, like=v.data)
+                if _contains_datetime_like_objects(v):
+                    v = datetime_to_numeric(v, datetime_unit=datetime_unit)
+                if cumulative:
+                    integ = duck_array_ops.cumulative_trapezoid(
+                        v.data, coord_data, axis=v.get_axis_num(dim)
+                    )
+                    v_dims = v.dims
                 else:
-                    variables[k] = v
+                    integ = duck_array_ops.trapz(
+                        v.data, coord_data, axis=v.get_axis_num(dim)
+                    )
+                    v_dims = list(v.dims)
+                    v_dims.remove(dim)
+                variables[k] = Variable(v_dims, integ)
+            else:
+                variables[k] = v
         indexes = {k: v for k, v in self._indexes.items() if k in variables}
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
@@ -8439,7 +8447,7 @@ class Dataset(
         ----------
         coord : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
-        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+        datetime_unit : {'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as', None}, optional
             Specify the unit if datetime coordinate is used.
 
@@ -9701,7 +9709,7 @@ class Dataset(
         self,
         calendar: CFCalendar,
         dim: Hashable = "time",
-        align_on: Literal["date", "year", None] = None,
+        align_on: Literal["date", "year"] | None = None,
         missing: Any | None = None,
         use_cftime: bool | None = None,
     ) -> Self:

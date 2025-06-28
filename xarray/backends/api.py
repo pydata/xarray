@@ -11,6 +11,7 @@ from collections.abc import (
 )
 from functools import partial
 from io import BytesIO
+from itertools import starmap
 from numbers import Number
 from typing import (
     TYPE_CHECKING,
@@ -71,7 +72,7 @@ if TYPE_CHECKING:
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
         T_NetcdfEngine,
-        Literal["pydap", "zarr"],
+        Literal["pydap", "zarr"],  # noqa: PYI051
         type[BackendEntrypoint],
         str,  # no nice typing support for custom backends
         None,
@@ -710,8 +711,8 @@ def open_dataset(
 def open_dataarray(
     filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     *,
-    engine: T_Engine | None = None,
-    chunks: T_Chunks | None = None,
+    engine: T_Engine = None,
+    chunks: T_Chunks = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
@@ -1394,7 +1395,7 @@ def open_mfdataset(
     | os.PathLike
     | ReadBuffer
     | NestedSequence[str | os.PathLike | ReadBuffer],
-    chunks: T_Chunks | None = None,
+    chunks: T_Chunks = None,
     concat_dim: (
         str
         | DataArray
@@ -1406,7 +1407,7 @@ def open_mfdataset(
     ) = None,
     compat: CompatOptions = "no_conflicts",
     preprocess: Callable[[Dataset], Dataset] | None = None,
-    engine: T_Engine | None = None,
+    engine: T_Engine = None,
     data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
     coords="different",
     combine: Literal["by_coords", "nested"] = "by_coords",
@@ -2109,10 +2110,9 @@ def save_mfdataset(
         import dask
 
         return dask.delayed(
-            [
-                dask.delayed(_finalize_store)(w, s)
-                for w, s in zip(writes, stores, strict=True)
-            ]
+            list(
+                starmap(dask.delayed(_finalize_store), zip(writes, stores, strict=True))
+            )
         )
 
 
@@ -2132,6 +2132,7 @@ def to_zarr(
     append_dim: Hashable | None = None,
     region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
+    align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
@@ -2155,6 +2156,7 @@ def to_zarr(
     append_dim: Hashable | None = None,
     region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
+    align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
@@ -2176,6 +2178,7 @@ def to_zarr(
     append_dim: Hashable | None = None,
     region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
+    align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
     zarr_format: int | None = None,
@@ -2225,13 +2228,16 @@ def to_zarr(
         append_dim=append_dim,
         write_region=region,
         safe_chunks=safe_chunks,
+        align_chunks=align_chunks,
         zarr_version=zarr_version,
         zarr_format=zarr_format,
         write_empty=write_empty_chunks,
         **kwargs,
     )
 
-    dataset = zstore._validate_and_autodetect_region(dataset)
+    dataset = zstore._validate_and_autodetect_region(
+        dataset,
+    )
     zstore._validate_encoding(encoding)
 
     writer = ArrayWriter()

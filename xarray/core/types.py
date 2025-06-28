@@ -195,7 +195,7 @@ T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 
 # Temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more:
-T_DuckArray = TypeVar("T_DuckArray", bound=Any, covariant=True)
+T_DuckArray = TypeVar("T_DuckArray", bound=Any, covariant=True)  # noqa: PLC0105
 
 # For typing pandas extension arrays.
 T_ExtensionArray = TypeVar("T_ExtensionArray", bound=pd.api.extensions.ExtensionArray)
@@ -214,7 +214,7 @@ Dims = Union[str, Collection[Hashable], EllipsisType, None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
-T_ChunkDim: TypeAlias = str | int | Literal["auto"] | None | tuple[int, ...]
+T_ChunkDim: TypeAlias = str | int | Literal["auto"] | None | tuple[int, ...]  # noqa: PYI051
 T_ChunkDimFreq: TypeAlias = Union["TimeResampler", T_ChunkDim]
 T_ChunksFreq: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDimFreq]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
@@ -253,16 +253,16 @@ InterpolantOptions = Literal[
 InterpnOptions = Literal["linear", "nearest", "slinear", "cubic", "quintic", "pchip"]
 InterpOptions = Union[Interp1dOptions, InterpolantOptions, InterpnOptions]
 
-DatetimeUnitOptions = Literal[
-    "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
-]
+DatetimeUnitOptions = (
+    Literal["W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as"] | None
+)
 NPDatetimeUnitOptions = Literal["D", "h", "m", "s", "ms", "us", "ns"]
 PDDatetimeUnitOptions = Literal["s", "ms", "us", "ns"]
 
-QueryEngineOptions = Literal["python", "numexpr", None]
+QueryEngineOptions = Literal["python", "numexpr"] | None
 QueryParserOptions = Literal["pandas", "python"]
 
-ReindexMethodOptions = Literal["nearest", "pad", "ffill", "backfill", "bfill", None]
+ReindexMethodOptions = Literal["nearest", "pad", "ffill", "backfill", "bfill"] | None
 
 PadModeOptions = Literal[
     "constant",
@@ -281,7 +281,7 @@ T_VarPadConstantValues = T_PadConstantValues | Mapping[Any, T_PadConstantValues]
 T_DatasetPadConstantValues = (
     T_VarPadConstantValues | Mapping[Any, T_VarPadConstantValues]
 )
-PadReflectOptions = Literal["even", "odd", None]
+PadReflectOptions = Literal["even", "odd"] | None
 
 CFCalendar = Literal[
     "standard",
@@ -299,10 +299,10 @@ CoarsenBoundaryOptions = Literal["exact", "trim", "pad"]
 SideOptions = Literal["left", "right"]
 InclusiveOptions = Literal["both", "neither", "left", "right"]
 
-ScaleOptions = Literal["linear", "symlog", "log", "logit", None]
-HueStyleOptions = Literal["continuous", "discrete", None]
+ScaleOptions = Literal["linear", "symlog", "log", "logit"] | None
+HueStyleOptions = Literal["continuous", "discrete"] | None
 AspectOptions = Union[Literal["auto", "equal"], float, None]
-ExtendOptions = Literal["neither", "both", "min", "max", None]
+ExtendOptions = Literal["neither", "both", "min", "max"] | None
 
 
 _T_co = TypeVar("_T_co", covariant=True)
@@ -329,7 +329,7 @@ class BaseBuffer(Protocol):
         # for _get_filepath_or_buffer
         ...
 
-    def seek(self, __offset: int, __whence: int = ...) -> int:
+    def seek(self, offset: int, whence: int = ..., /) -> int:
         # with one argument: gzip.GzipFile, bz2.BZ2File
         # with two arguments: zip.ZipFile, read_sas
         ...
@@ -345,7 +345,7 @@ class BaseBuffer(Protocol):
 
 @runtime_checkable
 class ReadBuffer(BaseBuffer, Protocol[AnyStr_co]):
-    def read(self, __n: int = ...) -> AnyStr_co:
+    def read(self, n: int = ..., /) -> AnyStr_co:
         # for BytesIOWrapper, gzip.GzipFile, bz2.BZ2File
         ...
 

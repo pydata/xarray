@@ -248,9 +248,7 @@ def _determine_cmap_params(
             isinstance(levels, Iterable) and levels[0] * levels[-1] < 0
         )
         # kwargs not specific about divergent or not: infer defaults from data
-        divergent = (
-            ((vmin < 0) and (vmax > 0)) or not center_is_none or levels_are_divergent
-        )
+        divergent = (vmin < 0 < vmax) or not center_is_none or levels_are_divergent
     else:
         divergent = False
 
@@ -798,16 +796,16 @@ def _update_axes(
     """
     if xincrease is None:
         pass
-    elif xincrease and ax.xaxis_inverted():
-        ax.invert_xaxis()
-    elif not xincrease and not ax.xaxis_inverted():
+    elif (xincrease and ax.xaxis_inverted()) or (
+        not xincrease and not ax.xaxis_inverted()
+    ):
         ax.invert_xaxis()
 
     if yincrease is None:
         pass
-    elif yincrease and ax.yaxis_inverted():
-        ax.invert_yaxis()
-    elif not yincrease and not ax.yaxis_inverted():
+    elif (yincrease and ax.yaxis_inverted()) or (
+        not yincrease and not ax.yaxis_inverted()
+    ):
         ax.invert_yaxis()
 
     # The default xscale, yscale needs to be None.
@@ -1253,8 +1251,8 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
             )
 
         if add_guide is None or add_guide is True:
-            add_colorbar = True if hue_style == "continuous" else False
-            add_legend = True if hue_style == "discrete" else False
+            add_colorbar = hue_style == "continuous"
+            add_legend = hue_style == "discrete"
         else:
             add_colorbar = False
             add_legend = False
@@ -1278,16 +1276,15 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     else:
         add_quiverkey = False
 
-    if (add_guide or add_guide is None) and funcname == "streamplot":
-        if hue:
-            add_colorbar = True
-            if not hue_style:
-                hue_style = "continuous"
-            elif hue_style != "continuous":
-                raise ValueError(
-                    "hue_style must be 'continuous' or None for .plot.quiver or "
-                    ".plot.streamplot"
-                )
+    if (add_guide or add_guide is None) and funcname == "streamplot" and hue:
+        add_colorbar = True
+        if not hue_style:
+            hue_style = "continuous"
+        elif hue_style != "continuous":
+            raise ValueError(
+                "hue_style must be 'continuous' or None for .plot.quiver or "
+                ".plot.streamplot"
+            )
 
     if hue_style is not None and hue_style not in ["discrete", "continuous"]:
         raise ValueError("hue_style must be either None, 'discrete' or 'continuous'.")

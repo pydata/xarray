@@ -757,6 +757,12 @@ def test_groupby_grouping_errors() -> None:
     with pytest.raises(ValueError, match=r"Failed to group data."):
         dataset.to_dataarray().groupby(dataset.foo * np.nan)
 
+    with pytest.raises(TypeError, match=r"Cannot group by a Grouper object"):
+        dataset.groupby(UniqueGrouper(labels=[1, 2, 3]))  # type: ignore[arg-type]
+
+    with pytest.raises(TypeError, match=r"got multiple values for argument"):
+        UniqueGrouper(dataset.x, labels=[1, 2, 3])  # type: ignore[misc]
+
 
 def test_groupby_reduce_dimension_error(array) -> None:
     grouped = array.groupby("y")
@@ -1315,8 +1321,7 @@ class TestDataArrayGroupBy:
         grouped = self.da.groupby("abc")
         expected_groups = {"a": range(9), "c": [9], "b": range(10, 20)}
         assert expected_groups.keys() == grouped.groups.keys()
-        for key in expected_groups:
-            expected_group = expected_groups[key]
+        for key, expected_group in expected_groups.items():
             actual_group = grouped.groups[key]
 
             # TODO: array_api doesn't allow slice:

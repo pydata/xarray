@@ -885,7 +885,7 @@ class DatasetCoordinates(Coordinates):
         # check for inconsistent state *before* modifying anything in-place
         dims = calculate_dimensions(variables)
         new_coord_names = set(coords)
-        for dim in dims.keys():
+        for dim in dims:
             if dim in variables:
                 new_coord_names.add(dim)
 

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Hashable, Iterable, Mapping, Sequence, Set
+from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Set as AbstractSet
 from typing import TYPE_CHECKING, Any, NamedTuple, Union
 
 import pandas as pd
@@ -283,11 +284,17 @@ def merge_collected(
                                 "conflicting attribute values on combined "
                                 f"variable {name!r}:\nfirst value: {variable.attrs!r}\nsecond value: {other_variable.attrs!r}"
                             )
-                merged_vars[name] = variable
-                merged_vars[name].attrs = merge_attrs(
+                attrs = merge_attrs(
                     [var.attrs for var, _ in indexed_elements],
                     combine_attrs=combine_attrs,
                 )
+                if variable.attrs or attrs:
+                    # Make a shallow copy to so that assigning merged_vars[name].attrs
+                    # does not affect the original input variable.
+                    merged_vars[name] = variable.copy(deep=False)
+                    merged_vars[name].attrs = attrs
+                else:
+                    merged_vars[name] = variable
                 merged_indexes[name] = index
             else:
                 variables = [variable for variable, _ in elements_list]
@@ -390,7 +397,7 @@ def collect_from_coordinates(
 def merge_coordinates_without_align(
     objects: list[Coordinates],
     prioritized: Mapping[Any, MergeElement] | None = None,
-    exclude_dims: Set = frozenset(),
+    exclude_dims: AbstractSet = frozenset(),
     combine_attrs: CombineAttrsOptions = "override",
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
     """Merge variables/indexes from coordinates without automatic alignments.
@@ -711,7 +718,7 @@ def merge_core(
         coord_names.intersection_update(variables)
     if explicit_coords is not None:
         coord_names.update(explicit_coords)
-    for dim in dims.keys():
+    for dim in dims:
         if dim in variables:
             coord_names.add(dim)
     ambiguous_coords = coord_names.intersection(noncoord_names)

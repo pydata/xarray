@@ -338,11 +338,10 @@ class ArrayWriter:
             self.sources.append(source)
             self.targets.append(target)
             self.regions.append(region)
+        elif region:
+            target[region] = source
         else:
-            if region:
-                target[region] = source
-            else:
-                target[...] = source
+            target[...] = source
 
     def sync(self, compute=True, chunkmanager_store_kwargs=None):
         if self.sources:
@@ -390,11 +389,11 @@ class AbstractWritableDataStore(AbstractDataStore):
         attributes : dict-like
 
         """
-        variables = {k: self.encode_variable(v) for k, v in variables.items()}
+        variables = {k: self.encode_variable(v, name=k) for k, v in variables.items()}
         attributes = {k: self.encode_attribute(v) for k, v in attributes.items()}
         return variables, attributes
 
-    def encode_variable(self, v):
+    def encode_variable(self, v, name=None):
         """encode one variable"""
         return v
 
@@ -402,7 +401,10 @@ class AbstractWritableDataStore(AbstractDataStore):
         """encode one attribute"""
         return a
 
-    def set_dimension(self, dim, length):  # pragma: no cover
+    def prepare_variable(self, name, variable, check_encoding, unlimited_dims):
+        raise NotImplementedError()
+
+    def set_dimension(self, dim, length, is_unlimited):  # pragma: no cover
         raise NotImplementedError()
 
     def set_attribute(self, k, v):  # pragma: no cover
@@ -639,7 +641,7 @@ class WritableCFDataStore(AbstractWritableDataStore):
         variables = {
             k: ensure_dtype_not_object(v, name=k) for k, v in variables.items()
         }
-        variables = {k: self.encode_variable(v) for k, v in variables.items()}
+        variables = {k: self.encode_variable(v, name=k) for k, v in variables.items()}
         attributes = {k: self.encode_attribute(v) for k, v in attributes.items()}
         return variables, attributes
 

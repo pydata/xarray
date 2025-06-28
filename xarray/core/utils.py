@@ -61,8 +61,10 @@ from collections.abc import (
     MutableMapping,
     MutableSet,
     Sequence,
-    Set,
     ValuesView,
+)
+from collections.abc import (
+    Set as AbstractSet,
 )
 from enum import Enum
 from pathlib import Path
@@ -239,7 +241,7 @@ def equivalent(first: T, second: T) -> bool:
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    return all(equivalent(f, s) for f, s in zip(first, second, strict=True))
+    return all(itertools.starmap(equivalent, zip(first, second, strict=True)))
 
 
 def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
@@ -704,10 +706,8 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
 def try_read_magic_number_from_file_or_path(filename_or_obj, count=8) -> bytes | None:
     magic_number = try_read_magic_number_from_path(filename_or_obj, count)
     if magic_number is None:
-        try:
+        with contextlib.suppress(TypeError):
             magic_number = read_magic_number_from_file(filename_or_obj, count)
-        except TypeError:
-            pass
     return magic_number
 
 
@@ -1057,7 +1057,7 @@ def parse_ordered_dims(
         )
 
 
-def _check_dims(dim: Set[Hashable], all_dims: Set[Hashable]) -> None:
+def _check_dims(dim: AbstractSet[Hashable], all_dims: AbstractSet[Hashable]) -> None:
     wrong_dims = (dim - all_dims) - {...}
     if wrong_dims:
         wrong_dims_str = ", ".join(f"'{d}'" for d in wrong_dims)
@@ -1292,7 +1292,7 @@ def attempt_import(module: str) -> ModuleType:
     reason = package_purpose.get(package_name, "")
     try:
         return importlib.import_module(module)
-    except (ImportError, ModuleNotFoundError) as e:
+    except ImportError as e:
         raise ImportError(
             f"The {install_name} package is required {reason}"
             " but could not be imported."
