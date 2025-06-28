@@ -129,7 +129,7 @@ if has_zarr:
             )
         except ImportError:
             KVStore = None  # type: ignore[assignment,misc,unused-ignore]
-        
+
         WrapperStore = None  # type: ignore[assignment,misc,unused-ignore]
 else:
     KVStore = None  # type: ignore[assignment,misc,unused-ignore]
@@ -3749,14 +3749,10 @@ class TestZarrDictStore(ZarrBase):
                 assert actual["var1"].encoding["chunks"] == (2, 2)
 
 
-
-
-
 @requires_zarr_v3
 class TestZarrNoConsolidatedMetadataSupport(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
-        
         class NoConsolidatedMetadataSupportStore(WrapperStore[Store]):
             """
             Store that explicitly does not support consolidated metadata.
@@ -3765,7 +3761,7 @@ class TestZarrNoConsolidatedMetadataSupport(ZarrBase):
             """
 
             supports_consolidated_metadata = False
-        
+
         # TODO the zarr version would need to be >3.08 for the supports_consolidated_metadata property to have any effect
         yield NoConsolidatedMetadataSupportStore(
             zarr.storage.MemoryStore({}, read_only=False)
