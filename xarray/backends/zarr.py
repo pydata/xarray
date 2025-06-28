@@ -1769,7 +1769,8 @@ def _get_open_params(
         missing_exc = zarr.errors.GroupNotFoundError
 
     if _zarr_v3():
-        if not store.supports_consolidated_metadata:
+        # zarr 3.0.8 and earlier did not support this property - it was effectively assumed true
+        if not getattr(store, "supports_consolidated_metadata", True):
             consolidated = consolidate_on_close = False
 
     if consolidated in [None, True]:
