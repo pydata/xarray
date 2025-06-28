@@ -418,7 +418,7 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
             elif opt == "all":
                 concat_over.update(
                     set().union(
-                        *list(set(getattr(d, subset)) - set(d.dims) for d in datasets)
+                        *[set(getattr(d, subset)) - set(d.dims) for d in datasets]
                     )
                 )
             elif opt == "minimal":
