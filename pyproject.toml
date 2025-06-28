@@ -260,6 +260,7 @@ extend-select = [
   "PERF", # Perflint
   "W",    # pycodestyle warnings
   "PGH",  # pygrep-hooks
+  "PLC",  # Pylint Convention
   "PLE",  # Pylint Errors
   "PLR",  # Pylint Refactor
   "PLW",  # Pylint Warnings
@@ -278,6 +279,8 @@ ignore = [
   "PERF203", # try-except within a loop incurs performance overhead
   "E402",    # module level import not at top of file
   "E731",    # do not assign a lambda expression, use a def
+  "PLC0415", # `import` should be at the top-level of a file
+  "PLC0206", # extracting value from dictionary without calling `.items()`
   "PLR091",  # too many arguments / branches / statements
   "PLR2004", # magic value used in comparison
   "PLW0603", # using the global statement to update is discouraged
