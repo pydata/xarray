@@ -293,6 +293,8 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # don't enforce absolute imports
 "asv_bench/**" = ["TID252"]
+# comparison with itself in tests
+"xarray/tests/**" = ["PLR0124"]
 # looks like ruff bugs
 "xarray/core/_typed_ops.py" = ["PYI034"]
 "xarray/namedarray/_typing.py" = ["PYI018", "PYI046"]
