@@ -3235,7 +3235,7 @@ def test_shuffle_simple() -> None:
     da = xr.DataArray(
         dims="x",
         data=dask.array.from_array([1, 2, 3, 4, 5, 6], chunks=2),
-        coords={"label": ("x", "a b c a b c".split(" "))},
+        coords={"label": ("x", ["a", "b", "c", "a", "b", "c"])},
     )
     actual = da.groupby(label=UniqueGrouper()).shuffle_to_chunks()
     expected = da.isel(x=[0, 3, 1, 4, 2, 5])
