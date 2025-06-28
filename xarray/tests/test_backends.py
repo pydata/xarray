@@ -88,6 +88,7 @@ from xarray.tests import (
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
+    requires_zarr_v3,
 )
 from xarray.tests.test_coding_times import (
     _ALL_CALENDARS,
@@ -129,7 +130,7 @@ if has_zarr:
         except ImportError:
             KVStore = None  # type: ignore[assignment,misc,unused-ignore]
         
-        WrapperStore = None
+        WrapperStore = None  # type: ignore[assignment,misc,unused-ignore]
 else:
     KVStore = None  # type: ignore[assignment,misc,unused-ignore]
     ZARR_FORMATS = []
@@ -3751,10 +3752,7 @@ class TestZarrDictStore(ZarrBase):
 
 
 
-@requires_zarr
-@pytest.mark.skipif(
-    WrapperStore is None, reason="requires zarr v3"
-)
+@requires_zarr_v3
 class TestZarrNoConsolidatedMetadataSupport(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
