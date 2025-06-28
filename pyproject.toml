@@ -261,6 +261,7 @@ extend-select = [
   "W",    # pycodestyle warnings
   "PGH",  # pygrep-hooks
   "PLE",  # Pylint Errors
+  "PLW",  # Pylint Warnings
   "UP",   # pyupgrade
   "FURB", # refurb
   "RUF",
@@ -276,6 +277,10 @@ ignore = [
   "PERF203", # try-except within a loop incurs performance overhead
   "E402",    # module level import not at top of file
   "E731",    # do not assign a lambda expression, use a def
+  "PLW0603", # using the global statement to update is discouraged
+  "PLW0642", # reassigned `self` variable in instance method
+  "PLW1641", # object does not implement `__hash__` method
+  "PLW2901", # `for` loop variable overwritten by assignment target
   "UP007",   # use X | Y for type annotations
   "FURB105", # unnecessary empty string passed to `print`
   "RUF001",  # string contains ambiguous unicode character
