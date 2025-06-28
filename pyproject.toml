@@ -261,6 +261,7 @@ extend-select = [
   "W",    # pycodestyle warnings
   "PGH",  # pygrep-hooks
   "PLE",  # Pylint Errors
+  "PLR",  # Pylint Refactor
   "PLW",  # Pylint Warnings
   "UP",   # pyupgrade
   "FURB", # refurb
@@ -277,6 +278,8 @@ ignore = [
   "PERF203", # try-except within a loop incurs performance overhead
   "E402",    # module level import not at top of file
   "E731",    # do not assign a lambda expression, use a def
+  "PLR091",  # too many arguments / branches / statements
+  "PLR2004", # magic value used in comparison
   "PLW0603", # using the global statement to update is discouraged
   "PLW0642", # reassigned `self` variable in instance method
   "PLW1641", # object does not implement `__hash__` method
