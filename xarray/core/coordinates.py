@@ -781,7 +781,7 @@ class Coordinates(AbstractCoordinates):
         dims_dict : dict-like, optional
             Dictionary whose keys are current dimension names and
             whose values are the desired names. The desired names must
-            not be the name of an existing dimension or Variable in the Dataset.
+            not be the name of an existing dimension or Variable in the Coordinates.
         **dims : optional
             Keyword form of ``dims_dict``.
             One of dims_dict or dims must be provided.
@@ -798,7 +798,7 @@ class Coordinates(AbstractCoordinates):
         name_dict: Mapping[Any, Hashable] | None = None,
         **names: Hashable,
     ) -> Self:
-        """Returns a new object with renamed variables including coordinates
+        """Returns a new object with renamed variables.
 
         Parameters
         ----------
@@ -811,8 +811,8 @@ class Coordinates(AbstractCoordinates):
 
         Returns
         -------
-        renamed : Dataset
-            Dataset with renamed variables including coordinates
+        renamed : Coordinates
+            Coordinates object with renamed variables
         """
         return self.to_dataset().rename_vars(name_dict, **names)
 
