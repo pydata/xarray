@@ -4088,7 +4088,7 @@ class Dataset(
         is raised at the right stack level.
         """
         name_dict = either_dict_or_kwargs(name_dict, names, "rename")
-        for k in name_dict.keys():
+        for k, new_k in name_dict.items():
             if k not in self and k not in self.dims:
                 raise ValueError(
                     f"cannot rename {k!r} because it is not a "
@@ -4096,13 +4096,12 @@ class Dataset(
                 )
 
             create_dim_coord = False
-            new_k = name_dict[k]
 
             if k == new_k:
                 continue  # Same name, nothing to do
 
             if k in self.dims and new_k in self._coord_names:
-                coord_dims = self._variables[name_dict[k]].dims
+                coord_dims = self._variables[new_k].dims
                 if coord_dims == (k,):
                     create_dim_coord = True
             elif k in self._coord_names and new_k in self.dims:
@@ -4112,7 +4111,7 @@ class Dataset(
 
             if create_dim_coord:
                 warnings.warn(
-                    f"rename {k!r} to {name_dict[k]!r} does not create an index "
+                    f"rename {k!r} to {new_k!r} does not create an index "
                     "anymore. Try using swap_dims instead or use set_index "
                     "after rename to create an indexed coordinate.",
                     UserWarning,
@@ -8980,16 +8979,18 @@ class Dataset(
                 variables[name] = var
             elif name in self.data_vars:
                 if utils.is_dict_like(constant_values):
-                    if name in constant_values.keys():
+                    if name in constant_values:
                         filtered_constant_values = constant_values[name]
                     elif not set(var.dims).isdisjoint(constant_values.keys()):
                         filtered_constant_values = {
-                            k: v for k, v in constant_values.items() if k in var.dims
+                            k: v  # type: ignore[misc]
+                            for k, v in constant_values.items()
+                            if k in var.dims
                         }
                     else:
                         filtered_constant_values = 0  # TODO: https://github.com/pydata/xarray/pull/9353#discussion_r1724018352
                 else:
-                    filtered_constant_values = constant_values
+                    filtered_constant_values = constant_values  # type: ignore[assignment]
                 variables[name] = var.pad(
                     pad_width=var_pad_width,
                     mode=mode,

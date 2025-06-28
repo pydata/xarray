@@ -3052,7 +3052,7 @@ class TestDataArray:
         other_units = extract_units(other)
 
         equal_arrays = all(
-            is_compatible(units[name], other_units[name]) for name in units.keys()
+            is_compatible(units[name], other_units[name]) for name in units
         ) and (
             strip_units(data_array).equals(
                 strip_units(convert_units(other, extract_units(data_array)))

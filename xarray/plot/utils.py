@@ -1825,7 +1825,7 @@ def _guess_coords_to_plot(
     """
     coords_to_plot_exist = {k: v for k, v in coords_to_plot.items() if v is not None}
     available_coords = tuple(
-        k for k in darray.coords.keys() if k not in coords_to_plot_exist.values()
+        k for k in darray.coords if k not in coords_to_plot_exist.values()
     )
 
     # If dims_plot[k] isn't defined then fill with one of the available dims, unless

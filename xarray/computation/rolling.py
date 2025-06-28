@@ -1081,7 +1081,7 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
         self.side = side
         self.boundary = boundary
 
-        missing_dims = tuple(dim for dim in windows.keys() if dim not in self.obj.dims)
+        missing_dims = tuple(dim for dim in windows if dim not in self.obj.dims)
         if missing_dims:
             raise ValueError(
                 f"Window dimensions {missing_dims} not found in {self.obj.__class__.__name__} "
