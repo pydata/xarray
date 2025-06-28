@@ -51,7 +51,7 @@ def align_nd_chunks(
 
         # The ideal size of the chunks is the maximum of the two; this would avoid
         # that we use more memory than expected
-        max_chunk = max(fixed_chunk, max(var_chunks))
+        max_chunk = max(fixed_chunk, *var_chunks)
 
         # The algorithm assumes that the chunks on this array are aligned except the last one
         # because it can be considered a partial one
