@@ -6,6 +6,9 @@ import pytest
 
 import xarray as xr
 from xarray.tests import (
+    _CFTIME_CALENDARS,
+    _all_cftime_date_types,
+    assert_allclose,
     assert_array_equal,
     assert_chunks_equal,
     assert_equal,
@@ -23,7 +26,7 @@ class TestDatetimeAccessor:
         data = np.random.rand(10, 10, nt)
         lons = np.linspace(0, 11, 10)
         lats = np.linspace(0, 20, 10)
-        self.times = pd.date_range(start="2000/01/01", freq="H", periods=nt)
+        self.times = pd.date_range(start="2000/01/01", freq="h", periods=nt)
 
         self.data = xr.DataArray(
             data,
@@ -96,9 +99,23 @@ class TestDatetimeAccessor:
                 actual = getattr(self.data.time.dt, field)
         else:
             actual = getattr(self.data.time.dt, field)
+        assert not isinstance(actual.variable, xr.IndexVariable)
 
         assert expected.dtype == actual.dtype
         assert_identical(expected, actual)
+
+    def test_total_seconds(self) -> None:
+        # Subtract a value in the middle of the range to ensure that some values
+        # are negative
+        delta = self.data.time - np.datetime64("2000-01-03")
+        actual = delta.dt.total_seconds()
+        expected = xr.DataArray(
+            np.arange(-48, 52, dtype=np.float64) * 3600,
+            name="total_seconds",
+            coords=[self.data.time],
+        )
+        # This works with assert_identical when pandas is >=1.5.0.
+        assert_allclose(expected, actual)
 
     @pytest.mark.parametrize(
         "field, pandas_field",
@@ -127,12 +144,23 @@ class TestDatetimeAccessor:
             "2000-01-01 01:00:00" == self.data.time.dt.strftime("%Y-%m-%d %H:%M:%S")[1]
         )
 
+    @requires_cftime
+    @pytest.mark.parametrize(
+        "calendar,expected",
+        [("standard", 366), ("noleap", 365), ("360_day", 360), ("all_leap", 366)],
+    )
+    def test_days_in_year(self, calendar, expected) -> None:
+        assert (
+            self.data.convert_calendar(calendar, align_on="year").time.dt.days_in_year
+            == expected
+        ).all()
+
     def test_not_datetime_type(self) -> None:
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype("int8")
         nontime_data = nontime_data.assign_coords(time=int_data)
-        with pytest.raises(TypeError, match=r"dt"):
-            nontime_data.time.dt
+        with pytest.raises(AttributeError, match=r"dt"):
+            _ = nontime_data.time.dt
 
     @pytest.mark.filterwarnings("ignore:dt.weekofyear and dt.week have been deprecated")
     @requires_dask
@@ -162,6 +190,7 @@ class TestDatetimeAccessor:
             "is_year_start",
             "is_year_end",
             "is_leap_year",
+            "days_in_year",
         ],
     )
     def test_dask_field_access(self, field) -> None:
@@ -234,7 +263,9 @@ class TestDatetimeAccessor:
         assert_equal(actual.compute(), expected.compute())
 
     def test_seasons(self) -> None:
-        dates = pd.date_range(start="2000/01/01", freq="M", periods=12)
+        dates = xr.date_range(
+            start="2000/01/01", freq="ME", periods=12, use_cftime=False
+        )
         dates = dates.append(pd.Index([np.datetime64("NaT")]))
         dates = xr.DataArray(dates)
         seasons = xr.DataArray(
@@ -261,7 +292,7 @@ class TestDatetimeAccessor:
         "method, parameters", [("floor", "D"), ("ceil", "D"), ("round", "D")]
     )
     def test_accessor_method(self, method, parameters) -> None:
-        dates = pd.date_range("2014-01-01", "2014-05-01", freq="H")
+        dates = pd.date_range("2014-01-01", "2014-05-01", freq="h")
         xdates = xr.DataArray(dates, dims=["time"])
         expected = getattr(dates, method)(parameters)
         actual = getattr(xdates.dt, method)(parameters)
@@ -275,7 +306,7 @@ class TestTimedeltaAccessor:
         data = np.random.rand(10, 10, nt)
         lons = np.linspace(0, 11, 10)
         lats = np.linspace(0, 20, 10)
-        self.times = pd.timedelta_range(start="1 day", freq="6H", periods=nt)
+        self.times = pd.timedelta_range(start="1 day", freq="6h", periods=nt)
 
         self.data = xr.DataArray(
             data,
@@ -296,8 +327,8 @@ class TestTimedeltaAccessor:
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype("int8")
         nontime_data = nontime_data.assign_coords(time=int_data)
-        with pytest.raises(TypeError, match=r"dt"):
-            nontime_data.time.dt
+        with pytest.raises(AttributeError, match=r"dt"):
+            _ = nontime_data.time.dt
 
     @pytest.mark.parametrize(
         "field", ["days", "seconds", "microseconds", "nanoseconds"]
@@ -313,7 +344,7 @@ class TestTimedeltaAccessor:
         "method, parameters", [("floor", "D"), ("ceil", "D"), ("round", "D")]
     )
     def test_accessor_methods(self, method, parameters) -> None:
-        dates = pd.timedelta_range(start="1 day", end="30 days", freq="6H")
+        dates = pd.timedelta_range(start="1 day", end="30 days", freq="6h")
         xdates = xr.DataArray(dates, dims=["time"])
         expected = getattr(dates, method)(parameters)
         actual = getattr(xdates.dt, method)(parameters)
@@ -361,15 +392,6 @@ class TestTimedeltaAccessor:
         assert_equal(actual.compute(), expected.compute())
 
 
-_CFTIME_CALENDARS = [
-    "365_day",
-    "360_day",
-    "julian",
-    "all_leap",
-    "366_day",
-    "gregorian",
-    "proleptic_gregorian",
-]
 _NT = 100
 
 
@@ -378,7 +400,14 @@ def calendar(request):
     return request.param
 
 
-@pytest.fixture()
+@pytest.fixture
+def cftime_date_type(calendar):
+    if calendar == "standard":
+        calendar = "proleptic_gregorian"
+    return _all_cftime_date_types()[calendar]
+
+
+@pytest.fixture
 def times(calendar):
     import cftime
 
@@ -390,7 +419,7 @@ def times(calendar):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def data(times):
     data = np.random.rand(10, 10, _NT)
     lons = np.linspace(0, 11, 10)
@@ -400,7 +429,7 @@ def data(times):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def times_3d(times):
     lons = np.linspace(0, 11, 10)
     lats = np.linspace(0, 20, 10)
@@ -490,7 +519,9 @@ def test_cftime_strftime_access(data) -> None:
     date_format = "%Y%m%d%H"
     result = data.time.dt.strftime(date_format)
     datetime_array = xr.DataArray(
-        xr.coding.cftimeindex.CFTimeIndex(data.time.values).to_datetimeindex(),
+        xr.coding.cftimeindex.CFTimeIndex(data.time.values).to_datetimeindex(
+            time_unit="ns"
+        ),
         name="stftime",
         coords=data.time.coords,
         dims=data.time.dims,
@@ -540,13 +571,6 @@ def test_dask_field_access(times_3d, data, field) -> None:
     assert isinstance(result.data, da.Array)
     assert result.chunks == times_3d.chunks
     assert_equal(result.compute(), expected)
-
-
-@pytest.fixture()
-def cftime_date_type(calendar):
-    from xarray.tests.test_coding_times import _all_cftime_date_types
-
-    return _all_cftime_date_types()[calendar]
 
 
 @requires_cftime
@@ -681,3 +705,46 @@ def test_cftime_round_accessor(
         result = cftime_rounding_dataarray.dt.round(freq)
 
     assert_identical(result, expected)
+
+
+@pytest.mark.parametrize(
+    "use_cftime",
+    [False, pytest.param(True, marks=requires_cftime)],
+    ids=lambda x: f"use_cftime={x}",
+)
+@pytest.mark.parametrize(
+    "use_dask",
+    [False, pytest.param(True, marks=requires_dask)],
+    ids=lambda x: f"use_dask={x}",
+)
+def test_decimal_year(use_cftime, use_dask) -> None:
+    year = 2000
+    periods = 10
+    freq = "h"
+
+    shape = (2, 5)
+    dims = ["x", "y"]
+    hours_in_year = 24 * 366
+
+    times = xr.date_range(f"{year}", periods=periods, freq=freq, use_cftime=use_cftime)
+
+    da = xr.DataArray(times.values.reshape(shape), dims=dims)
+
+    if use_dask:
+        da = da.chunk({"y": 2})
+        # Computing the decimal year for a cftime datetime array requires a
+        # number of small computes (6):
+        # - 4x one compute per .dt accessor call (requires inspecting one
+        #   object-dtype array element to see if it is time-like)
+        # - 2x one compute per calendar inference (requires inspecting one
+        #   array element to read off the calendar)
+        max_computes = 6 * use_cftime
+        with raise_if_dask_computes(max_computes=max_computes):
+            result = da.dt.decimal_year
+    else:
+        result = da.dt.decimal_year
+
+    expected = xr.DataArray(
+        year + np.arange(periods).reshape(shape) / hours_in_year, dims=dims
+    )
+    xr.testing.assert_equal(result, expected)

@@ -9,6 +9,12 @@ pandas; so we've put together a glossary of its terms. Here,* ``arr``
 *refers to an xarray* :py:class:`DataArray` *in the examples. For more
 complete examples, please consult the relevant documentation.*
 
+.. jupyter-execute::
+    :hide-code:
+
+    import numpy as np
+    import xarray as xr
+
 .. glossary::
 
     DataArray
@@ -47,9 +53,9 @@ complete examples, please consult the relevant documentation.*
         all but one of these degrees of freedom is fixed. We can think of each
         dimension axis as having a name, for example the "x dimension".  In
         xarray, a ``DataArray`` object's *dimensions* are its named dimension
-        axes, and the name of the ``i``-th dimension is ``arr.dims[i]``. If an
-        array is created without dimension names, the default dimension names are
-        ``dim_0``, ``dim_1``, and so forth.
+        axes ``da.dims``, and the name of the ``i``-th dimension is ``da.dims[i]``.
+        If an array is created without specifying dimension names, the default dimension
+        names will be ``dim_0``, ``dim_1``, and so forth.
 
     Coordinate
         An array that labels a dimension or set of dimensions of another
@@ -60,9 +66,8 @@ complete examples, please consult the relevant documentation.*
         coordinate`. A coordinate named ``x`` can be retrieved from
         ``arr.coords[x]``. A ``DataArray`` can have more coordinates than
         dimensions because a single dimension can be labeled by multiple
-        coordinate arrays. However, only one coordinate array can be a assigned
-        as a particular dimension's dimension coordinate array. As a
-        consequence, ``len(arr.dims) <= len(arr.coords)`` in general.
+        coordinate arrays. However, only one coordinate array can be assigned
+        as a particular dimension's dimension coordinate array.
 
     Dimension coordinate
         A one-dimensional coordinate array assigned to ``arr`` with both a name
@@ -90,7 +95,7 @@ complete examples, please consult the relevant documentation.*
         dimensions although in most cases it is also a :term:`Dimension
         coordinate`. It may or may not be grouped with other indexed coordinates
         depending on whether they share the same index. Indexed coordinates are
-        marked by ``*`` when printing a ``DataArray`` or ``Dataset``.
+        marked by an asterisk ``*`` when printing a ``DataArray`` or ``Dataset``.
 
     Non-indexed coordinate
         A coordinate which has no associated :term:`Index`. It may still
@@ -132,17 +137,11 @@ complete examples, please consult the relevant documentation.*
 
         __ https://numpy.org/neps/nep-0022-ndarray-duck-typing-overview.html
 
-        .. ipython:: python
-            :suppress:
-
-            import numpy as np
-            import xarray as xr
-
     Aligning
         Aligning refers to the process of ensuring that two or more DataArrays or Datasets
         have the same dimensions and coordinates, so that they can be combined or compared properly.
 
-        .. ipython:: python
+        .. jupyter-execute::
 
             x = xr.DataArray(
                 [[25, 35], [10, 24]],
@@ -154,15 +153,18 @@ complete examples, please consult the relevant documentation.*
                 dims=("lat", "lon"),
                 coords={"lat": [35.0, 42.0], "lon": [100.0, 120.0]},
             )
-            x
-            y
+            a, b = xr.align(x, y)
+
+            # By default, an "inner join" is performed
+            # so "a" is a copy of "x" where coordinates match "y"
+            a
 
     Broadcasting
         A technique that allows operations to be performed on arrays with different shapes and dimensions.
         When performing operations on arrays with different shapes and dimensions, xarray will automatically attempt to broadcast the
         arrays to a common shape before the operation is applied.
 
-        .. ipython:: python
+        .. jupyter-execute::
 
             # 'a' has shape (3,) and 'b' has shape (4,)
             a = xr.DataArray(np.array([1, 2, 3]), dims=["x"])
@@ -176,7 +178,7 @@ complete examples, please consult the relevant documentation.*
         the same dimensions. When merging, xarray aligns the variables and coordinates of the different datasets along
         the specified dimensions and creates a new ``Dataset`` containing all the variables and coordinates.
 
-        .. ipython:: python
+        .. jupyter-execute::
 
             # create two 1D arrays with names
             arr1 = xr.DataArray(
@@ -195,7 +197,7 @@ complete examples, please consult the relevant documentation.*
         xarray arranges the datasets or dataarrays along a new dimension, and the resulting ``Dataset`` or ``Dataarray``
         will have the same variables and coordinates along the other dimensions.
 
-        .. ipython:: python
+        .. jupyter-execute::
 
             a = xr.DataArray([[1, 2], [3, 4]], dims=("x", "y"))
             b = xr.DataArray([[5, 6], [7, 8]], dims=("x", "y"))
@@ -206,7 +208,7 @@ complete examples, please consult the relevant documentation.*
         Combining is the process of arranging two or more DataArrays or Datasets into a single ``DataArray`` or
         ``Dataset`` using some combination of merging and concatenation operations.
 
-        .. ipython:: python
+        .. jupyter-execute::
 
             ds1 = xr.Dataset(
                 {"data": xr.DataArray([[1, 2], [3, 4]], dims=("x", "y"))},
@@ -222,11 +224,11 @@ complete examples, please consult the relevant documentation.*
             combined_ds
 
     lazy
-        Lazily-evaluated operations do not load data into memory until necessary.Instead of doing calculations
+        Lazily-evaluated operations do not load data into memory until necessary. Instead of doing calculations
         right away, xarray lets you plan what calculations you want to do, like finding the
-        average temperature in a dataset.This planning is called "lazy evaluation." Later, when
+        average temperature in a dataset. This planning is called "lazy evaluation." Later, when
         you're ready to see the final result, you tell xarray, "Okay, go ahead and do those calculations now!"
-        That's when xarray starts working through the steps you planned and gives you the answer you wanted.This
+        That's when xarray starts working through the steps you planned and gives you the answer you wanted. This
         lazy approach helps save time and memory because xarray only does the work when you actually need the
         results.
 
@@ -256,3 +258,29 @@ complete examples, please consult the relevant documentation.*
 
         - Slicing: You can take a "slice" of your data, like you might want all temperatures from July 1st
           to July 10th. xarray supports slicing for both positional and label-based indexing.
+
+    DataTree
+        A tree-like collection of ``Dataset`` objects. A *tree* is made up of one or more *nodes*,
+        each of which can store the same information as a single ``Dataset`` (accessed via ``.dataset``).
+        This data is stored in the same way as in a ``Dataset``, i.e. in the form of data
+        :term:`variables<Variable>`, :term:`dimensions<Dimension>`, :term:`coordinates<Coordinate>`,
+        and attributes.
+
+       The nodes in a tree are linked to one another, and each node is its own instance of
+        ``DataTree`` object. Each node can have zero or more *children* (stored in a dictionary-like
+        manner under their corresponding *names*), and those child nodes can themselves have
+        children. If a node is a child of another node that other node is said to be its *parent*.
+        Nodes can have a maximum of one parent, and if a node has no parent it is said to be the
+        *root* node of that *tree*.
+
+    Subtree
+        A section of a *tree*, consisting of a *node* along with all the child nodes below it
+        (and the child nodes below them, i.e. all so-called *descendant* nodes).
+        Excludes the parent node and all nodes above.
+
+    Group
+        Another word for a subtree, reflecting how the hierarchical structure of a ``DataTree``
+        allows for grouping related data together.
+        Analogous to a single
+        `netCDF group <https://www.unidata.ucar.edu/software/netcdf/workshops/2011/groups-types/GroupsIntro.html>`_
+        or `Zarr group <https://zarr.readthedocs.io/en/stable/tutorial.html#groups>`_.

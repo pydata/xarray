@@ -6,6 +6,7 @@ import pytest
 
 import xarray as xr
 from xarray import DataArray, Dataset, set_options
+from xarray.core import duck_array_ops
 from xarray.tests import (
     assert_allclose,
     assert_equal,
@@ -67,10 +68,10 @@ def test_coarsen_coords(ds, dask):
 
 @requires_cftime
 def test_coarsen_coords_cftime():
-    times = xr.cftime_range("2000", periods=6)
+    times = xr.date_range("2000", periods=6, use_cftime=True)
     da = xr.DataArray(range(6), [("time", times)])
     actual = da.coarsen(time=3).mean()
-    expected_times = xr.cftime_range("2000-01-02", freq="3D", periods=2)
+    expected_times = xr.date_range("2000-01-02", freq="3D", periods=2, use_cftime=True)
     np.testing.assert_array_equal(actual.time, expected_times)
 
 
@@ -202,14 +203,15 @@ def test_coarsen_da_keep_attrs(funcname, argument) -> None:
     func = getattr(da.coarsen(dim={"coord": 5}), funcname)
     result = func(*argument)
     assert result.attrs == attrs_da
-    da.coord.attrs == attrs_coords
+    assert da.coord.attrs == attrs_coords
     assert result.name == "name"
 
     # discard attrs
     func = getattr(da.coarsen(dim={"coord": 5}), funcname)
     result = func(*argument, keep_attrs=False)
     assert result.attrs == {}
-    da.coord.attrs == {}
+    # XXX: no assert?
+    _ = da.coord.attrs == {}
     assert result.name == "name"
 
     # test discard attrs using global option
@@ -217,7 +219,8 @@ def test_coarsen_da_keep_attrs(funcname, argument) -> None:
     with set_options(keep_attrs=False):
         result = func(*argument)
     assert result.attrs == {}
-    da.coord.attrs == {}
+    # XXX: no assert?
+    _ = da.coord.attrs == {}
     assert result.name == "name"
 
     # keyword takes precedence over global option
@@ -225,14 +228,16 @@ def test_coarsen_da_keep_attrs(funcname, argument) -> None:
     with set_options(keep_attrs=False):
         result = func(*argument, keep_attrs=True)
     assert result.attrs == attrs_da
-    da.coord.attrs == {}
+    # XXX: no assert?
+    _ = da.coord.attrs == {}
     assert result.name == "name"
 
     func = getattr(da.coarsen(dim={"coord": 5}), funcname)
     with set_options(keep_attrs=True):
         result = func(*argument, keep_attrs=False)
     assert result.attrs == {}
-    da.coord.attrs == {}
+    # XXX: no assert?
+    _ = da.coord.attrs == {}
     assert result.name == "name"
 
 
@@ -272,21 +277,24 @@ class TestCoarsenConstruct:
         expected = xr.Dataset(attrs={"foo": "bar"})
         expected["vart"] = (
             ("year", "month"),
-            ds.vart.data.reshape((-1, 12)),
+            duck_array_ops.reshape(ds.vart.data, (-1, 12)),
             {"a": "b"},
         )
         expected["varx"] = (
             ("x", "x_reshaped"),
-            ds.varx.data.reshape((-1, 5)),
+            duck_array_ops.reshape(ds.varx.data, (-1, 5)),
             {"a": "b"},
         )
         expected["vartx"] = (
             ("x", "x_reshaped", "year", "month"),
-            ds.vartx.data.reshape(2, 5, 4, 12),
+            duck_array_ops.reshape(ds.vartx.data, (2, 5, 4, 12)),
             {"a": "b"},
         )
         expected["vary"] = ds.vary
-        expected.coords["time"] = (("year", "month"), ds.time.data.reshape((-1, 12)))
+        expected.coords["time"] = (
+            ("year", "month"),
+            duck_array_ops.reshape(ds.time.data, (-1, 12)),
+        )
 
         with raise_if_dask_computes():
             actual = ds.coarsen(time=12, x=5).construct(

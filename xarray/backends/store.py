@@ -13,7 +13,8 @@ from xarray.core.dataset import Dataset
 
 if TYPE_CHECKING:
     import os
-    from io import BufferedIOBase
+
+    from xarray.core.types import ReadBuffer
 
 
 class StoreBackendEntrypoint(BackendEntrypoint):
@@ -22,13 +23,13 @@ class StoreBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     ) -> bool:
         return isinstance(filename_or_obj, AbstractDataStore)
 
-    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
+    def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,

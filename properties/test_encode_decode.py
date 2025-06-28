@@ -4,6 +4,9 @@ Property-based tests for encoding/decoding methods.
 These ones pass, just as you'd hope!
 
 """
+
+import warnings
+
 import pytest
 
 pytest.importorskip("hypothesis")
@@ -11,41 +14,47 @@ pytest.importorskip("hypothesis")
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
+import numpy as np
 from hypothesis import given
 
 import xarray as xr
-
-an_array = npst.arrays(
-    dtype=st.one_of(
-        npst.unsigned_integer_dtypes(), npst.integer_dtypes(), npst.floating_dtypes()
-    ),
-    shape=npst.array_shapes(max_side=3),  # max_side specified for performance
-)
+from xarray.coding.times import _parse_iso8601
+from xarray.testing.strategies import CFTimeStrategyISO8601, variables
+from xarray.tests import requires_cftime
 
 
 @pytest.mark.slow
-@given(st.data(), an_array)
-def test_CFMask_coder_roundtrip(data, arr) -> None:
-    names = data.draw(
-        st.lists(st.text(), min_size=arr.ndim, max_size=arr.ndim, unique=True).map(
-            tuple
-        )
-    )
-    original = xr.Variable(names, arr)
+@given(original=variables())
+def test_CFMask_coder_roundtrip(original) -> None:
     coder = xr.coding.variables.CFMaskCoder()
     roundtripped = coder.decode(coder.encode(original))
     xr.testing.assert_identical(original, roundtripped)
 
 
+@pytest.mark.xfail
 @pytest.mark.slow
-@given(st.data(), an_array)
-def test_CFScaleOffset_coder_roundtrip(data, arr) -> None:
-    names = data.draw(
-        st.lists(st.text(), min_size=arr.ndim, max_size=arr.ndim, unique=True).map(
-            tuple
-        )
-    )
-    original = xr.Variable(names, arr)
+@given(var=variables(dtype=npst.floating_dtypes()))
+def test_CFMask_coder_decode(var) -> None:
+    var[0] = -99
+    var.attrs["_FillValue"] = -99
+    coder = xr.coding.variables.CFMaskCoder()
+    decoded = coder.decode(var)
+    assert np.isnan(decoded[0])
+
+
+@pytest.mark.slow
+@given(original=variables())
+def test_CFScaleOffset_coder_roundtrip(original) -> None:
     coder = xr.coding.variables.CFScaleOffsetCoder()
     roundtripped = coder.decode(coder.encode(original))
     xr.testing.assert_identical(original, roundtripped)
+
+
+@requires_cftime
+@given(dt=st.datetimes() | CFTimeStrategyISO8601())
+def test_iso8601_decode(dt):
+    iso = dt.isoformat()
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*date/calendar/year zero.*")
+        parsed, _ = _parse_iso8601(type(dt), iso)
+        assert dt == parsed

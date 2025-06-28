@@ -4,10 +4,11 @@
 Extending xarray using accessors
 ================================
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import xarray as xr
+    import numpy as np
 
 
 Xarray is designed as a general purpose library and hence tries to avoid
@@ -40,8 +41,9 @@ Writing Custom Accessors
 ------------------------
 
 To resolve this issue for more complex cases, xarray has the
-:py:func:`~xarray.register_dataset_accessor` and
-:py:func:`~xarray.register_dataarray_accessor` decorators for adding custom
+:py:func:`~xarray.register_dataset_accessor`,
+:py:func:`~xarray.register_dataarray_accessor` and
+:py:func:`~xarray.register_datatree_accessor` decorators for adding custom
 "accessors" on xarray objects, thereby "extending" the functionality of your xarray object.
 
 Here's how you might use these decorators to
@@ -88,22 +90,25 @@ reasons:
 
 Back in an interactive IPython session, we can use these properties:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     exec(open("examples/_code/accessor_example.py").read())
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.Dataset({"longitude": np.linspace(0, 10), "latitude": np.linspace(0, 20)})
     ds.geo.center
+
+.. jupyter-execute::
+
     ds.geo.plot()
 
 The intent here is that libraries that extend xarray could add such an accessor
 to implement subclass specific functionality rather than using actual subclasses
 or patching in a large number of domain specific methods. For further reading
 on ways to write new accessors and the philosophy behind the approach, see
-:issue:`1080`.
+https://github.com/pydata/xarray/issues/1080.
 
 To help users keep things straight, please `let us know
 <https://github.com/pydata/xarray/issues>`_ if you plan to write a new accessor

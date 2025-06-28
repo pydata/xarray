@@ -1,4 +1,5 @@
-""" isort:skip_file """
+"""isort:skip_file"""
+
 from __future__ import annotations
 
 import pickle
@@ -16,18 +17,22 @@ else:
     da = pytest.importorskip("dask.array")
     distributed = pytest.importorskip("distributed")
 
+import contextlib
+
 from dask.distributed import Client, Lock
 from distributed.client import futures_of
-from distributed.utils_test import (  # noqa: F401
-    cleanup,
+from distributed.utils_test import (
+    cleanup,  # noqa: F401
+    client,  # noqa: F401
     cluster,
+    cluster_fixture,  # noqa: F401
     gen_cluster,
-    loop,
-    loop_in_thread,
+    loop,  # noqa: F401
+    loop_in_thread,  # noqa: F401
 )
 
 import xarray as xr
-from xarray.backends.locks import HDF5_LOCK, CombinedLock
+from xarray.backends.locks import HDF5_LOCK, CombinedLock, SerializableLock
 from xarray.tests import (
     assert_allclose,
     assert_identical,
@@ -43,8 +48,6 @@ from xarray.tests.test_backends import (
     create_tmp_file,
 )
 from xarray.tests.test_dataset import create_test_data
-
-loop = loop  # loop is an imported fixture, which flake8 has issues ack-ing
 
 
 @pytest.fixture
@@ -83,7 +86,10 @@ ENGINES_AND_FORMATS = [
 
 @pytest.mark.parametrize("engine,nc_format", ENGINES_AND_FORMATS)
 def test_dask_distributed_netcdf_roundtrip(
-    loop, tmp_netcdf_filename, engine, nc_format
+    loop,  # noqa: F811
+    tmp_netcdf_filename,
+    engine,
+    nc_format,
 ):
     if engine not in ENGINES:
         pytest.skip("engine not available")
@@ -113,7 +119,8 @@ def test_dask_distributed_netcdf_roundtrip(
 
 @requires_netCDF4
 def test_dask_distributed_write_netcdf_with_dimensionless_variables(
-    loop, tmp_netcdf_filename
+    loop,  # noqa: F811
+    tmp_netcdf_filename,
 ):
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
@@ -126,8 +133,9 @@ def test_dask_distributed_write_netcdf_with_dimensionless_variables(
 
 @requires_cftime
 @requires_netCDF4
-def test_open_mfdataset_can_open_files_with_cftime_index(tmp_path):
-    T = xr.cftime_range("20010101", "20010501", calendar="360_day")
+@pytest.mark.parametrize("parallel", (True, False))
+def test_open_mfdataset_can_open_files_with_cftime_index(parallel, tmp_path):
+    T = xr.date_range("20010101", "20010501", calendar="360_day", use_cftime=True)
     Lon = np.arange(100)
     data = np.random.random((T.size, Lon.size))
     da = xr.DataArray(data, coords={"time": T, "Lon": Lon}, name="test")
@@ -135,14 +143,67 @@ def test_open_mfdataset_can_open_files_with_cftime_index(tmp_path):
     da.to_netcdf(file_path)
     with cluster() as (s, [a, b]):
         with Client(s["address"]):
-            for parallel in (False, True):
-                with xr.open_mfdataset(file_path, parallel=parallel) as tf:
-                    assert_identical(tf["test"], da)
+            with xr.open_mfdataset(file_path, parallel=parallel) as tf:
+                assert_identical(tf["test"], da)
+
+
+@requires_cftime
+@requires_netCDF4
+@pytest.mark.parametrize("parallel", (True, False))
+def test_open_mfdataset_multiple_files_parallel_distributed(parallel, tmp_path):
+    lon = np.arange(100)
+    time = xr.date_range("20010101", periods=100, calendar="360_day", use_cftime=True)
+    data = np.random.random((time.size, lon.size))
+    da = xr.DataArray(data, coords={"time": time, "lon": lon}, name="test")
+
+    fnames = []
+    for i in range(0, 100, 10):
+        fname = tmp_path / f"test_{i}.nc"
+        da.isel(time=slice(i, i + 10)).to_netcdf(fname)
+        fnames.append(fname)
+
+    with cluster() as (s, [a, b]):
+        with Client(s["address"]):
+            with xr.open_mfdataset(
+                fnames, parallel=parallel, concat_dim="time", combine="nested"
+            ) as tf:
+                assert_identical(tf["test"], da)
+
+
+# TODO: move this to test_backends.py
+@requires_cftime
+@requires_netCDF4
+@pytest.mark.parametrize("parallel", (True, False))
+def test_open_mfdataset_multiple_files_parallel(parallel, tmp_path):
+    if parallel:
+        pytest.skip(
+            "Flaky in CI. Would be a welcome contribution to make a similar test reliable."
+        )
+    lon = np.arange(100)
+    time = xr.date_range("20010101", periods=100, calendar="360_day", use_cftime=True)
+    data = np.random.random((time.size, lon.size))
+    da = xr.DataArray(data, coords={"time": time, "lon": lon}, name="test")
+
+    fnames = []
+    for i in range(0, 100, 10):
+        fname = tmp_path / f"test_{i}.nc"
+        da.isel(time=slice(i, i + 10)).to_netcdf(fname)
+        fnames.append(fname)
+
+    for get in [dask.threaded.get, dask.multiprocessing.get, dask.local.get_sync, None]:
+        with dask.config.set(scheduler=get):
+            with xr.open_mfdataset(
+                fnames, parallel=parallel, concat_dim="time", combine="nested"
+            ) as tf:
+                assert_identical(tf["test"], da)
 
 
 @pytest.mark.parametrize("engine,nc_format", ENGINES_AND_FORMATS)
 def test_dask_distributed_read_netcdf_integration_test(
-    loop, tmp_netcdf_filename, engine, nc_format
+    loop,  # noqa: F811
+    tmp_netcdf_filename,
+    engine,
+    nc_format,
 ):
     if engine not in ENGINES:
         pytest.skip("engine not available")
@@ -162,11 +223,39 @@ def test_dask_distributed_read_netcdf_integration_test(
                 assert_allclose(original, computed)
 
 
+# fixture vendored from dask
+# heads-up, this is using quite private zarr API
+# https://github.com/dask/dask/blob/e04734b4d8959ba259801f2e2a490cb4ee8d891f/dask/tests/test_distributed.py#L338-L358
+@pytest.fixture
+def zarr(client):  # noqa: F811
+    zarr_lib = pytest.importorskip("zarr")
+    # Zarr-Python 3 lazily allocates a dedicated thread/IO loop
+    # for to execute async tasks. To avoid having this thread
+    # be picked up as a "leaked thread", we manually trigger it's
+    # creation before using zarr
+    try:
+        _ = zarr_lib.core.sync._get_loop()
+        _ = zarr_lib.core.sync._get_executor()
+        yield zarr_lib
+    except AttributeError:
+        yield zarr_lib
+    finally:
+        # Zarr-Python 3 lazily allocates a IO thread, a thread pool executor, and
+        # an IO loop. Here we clean up these resources to avoid leaking threads
+        # In normal operations, this is done as by an atexit handler when Zarr
+        # is shutting down.
+        with contextlib.suppress(AttributeError):
+            zarr_lib.core.sync.cleanup_resources()
+
+
 @requires_zarr
 @pytest.mark.parametrize("consolidated", [True, False])
 @pytest.mark.parametrize("compute", [True, False])
 def test_dask_distributed_zarr_integration_test(
-    loop, consolidated: bool, compute: bool
+    client,  # noqa: F811
+    zarr,
+    consolidated: bool,
+    compute: bool,
 ) -> None:
     if consolidated:
         write_kwargs: dict[str, Any] = {"consolidated": True}
@@ -174,23 +263,19 @@ def test_dask_distributed_zarr_integration_test(
     else:
         write_kwargs = read_kwargs = {}
     chunks = {"dim1": 4, "dim2": 3, "dim3": 5}
-    with cluster() as (s, [a, b]):
-        with Client(s["address"], loop=loop):
-            original = create_test_data().chunk(chunks)
-            with create_tmp_file(
-                allow_cleanup_failure=ON_WINDOWS, suffix=".zarrc"
-            ) as filename:
-                maybe_futures = original.to_zarr(  # type: ignore[call-overload]  #mypy bug?
-                    filename, compute=compute, **write_kwargs
-                )
-                if not compute:
-                    maybe_futures.compute()
-                with xr.open_dataset(
-                    filename, chunks="auto", engine="zarr", **read_kwargs
-                ) as restored:
-                    assert isinstance(restored.var1.data, da.Array)
-                    computed = restored.compute()
-                    assert_allclose(original, computed)
+    original = create_test_data().chunk(chunks)
+    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS, suffix=".zarrc") as filename:
+        maybe_futures = original.to_zarr(  # type: ignore[call-overload]  #mypy bug?
+            filename, compute=compute, **write_kwargs
+        )
+        if not compute:
+            maybe_futures.compute()
+        with xr.open_dataset(
+            filename, chunks="auto", engine="zarr", **read_kwargs
+        ) as restored:
+            assert isinstance(restored.var1.data, da.Array)
+            computed = restored.compute()
+            assert_allclose(original, computed)
 
 
 @gen_cluster(client=True)
@@ -202,7 +287,7 @@ async def test_async(c, s, a, b) -> None:
     assert dask.is_dask_collection(y.var1)
     assert dask.is_dask_collection(y.var2)
 
-    z = y.persist()
+    z = c.persist(y)
     assert str(z)
 
     assert dask.is_dask_collection(z)
@@ -222,7 +307,7 @@ async def test_async(c, s, a, b) -> None:
 
 
 def test_hdf5_lock() -> None:
-    assert isinstance(HDF5_LOCK, dask.utils.SerializableLock)
+    assert isinstance(HDF5_LOCK, SerializableLock)
 
 
 @gen_cluster(client=True)
@@ -243,4 +328,4 @@ async def test_serializable_locks(c, s, a, b) -> None:
         await c.gather(futures)
 
         lock2 = pickle.loads(pickle.dumps(lock))
-        assert type(lock) == type(lock2)
+        assert type(lock) is type(lock2)

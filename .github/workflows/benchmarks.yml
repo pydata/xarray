@@ -5,11 +5,14 @@ on:
     types: [opened, reopened, synchronize, labeled]
   workflow_dispatch:
 
+env:
+  PR_HEAD_LABEL: ${{ github.event.pull_request.head.label }}
+
 jobs:
   benchmark:
     if: ${{ contains( github.event.pull_request.labels.*.name, 'run-benchmark') && github.event_name == 'pull_request' || contains( github.event.pull_request.labels.*.name, 'topic-performance') && github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
     name: Linux
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     env:
       ASV_DIR: "./asv_bench"
       CONDA_ENV_FILE: ci/requirements/environment.yml
@@ -22,15 +25,18 @@ jobs:
           fetch-depth: 0
 
       - name: Set up conda environment
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
+          micromamba-version: "1.5.10-0"
           environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
           cache-environment: true
           cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}-benchmark"
+          # add "build" because of https://github.com/airspeed-velocity/asv/issues/1385
           create-args: >-
             asv
-
+            python-build
+            mamba<=1.5.10
 
       - name: Run benchmarks
         shell: bash -l {0}
@@ -46,10 +52,7 @@ jobs:
           # ID this runner
           asv machine --yes
           echo "Baseline:  ${{ github.event.pull_request.base.sha }} (${{ github.event.pull_request.base.label }})"
-          echo "Contender: ${GITHUB_SHA} (${{ github.event.pull_request.head.label }})"
-          # Use mamba for env creation
-          # export CONDA_EXE=$(which mamba)
-          export CONDA_EXE=$(which conda)
+          echo "Contender: ${GITHUB_SHA} ($PR_HEAD_LABEL)"
           # Run benchmarks for current commit against base
           ASV_OPTIONS="--split --show-stderr --factor $ASV_FACTOR"
           asv continuous $ASV_OPTIONS ${{ github.event.pull_request.base.sha }} ${GITHUB_SHA} \
@@ -67,7 +70,7 @@ jobs:
           cp benchmarks/README_CI.md benchmarks.log .asv/results/
         working-directory: ${{ env.ASV_DIR }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: asv-benchmark-results-${{ runner.os }}

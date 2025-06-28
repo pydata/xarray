@@ -148,7 +148,7 @@ implementations, e.g.:
 -  Other ndarray objects, e.g., sparse, xnd, xtensor.
 
 Our strategy has been to pursue upstream improvements in NumPy (see
-`NEP-22 <http://www.numpy.org/neps/nep-0022-ndarray-duck-typing-overview.html>`__)
+`NEP-22 <https://numpy.org/neps/nep-0022-ndarray-duck-typing-overview.html>`__)
 for supporting a complete duck-typing interface using with NumPy's
 higher level array API. Improvements in NumPy's support for custom data
 types would also be highly useful for xarray users.
@@ -156,7 +156,7 @@ types would also be highly useful for xarray users.
 By pursuing these improvements in NumPy we hope to extend the benefits
 to the full scientific Python community, and avoid tight coupling
 between xarray and specific third-party libraries (e.g., for
-implementing untis). This will allow xarray to maintain its domain
+implementing units). This will allow xarray to maintain its domain
 agnostic strengths.
 
 We expect that we may eventually add some minimal interfaces in xarray
@@ -202,11 +202,13 @@ Tree-like data structure
 ++++++++++++++++++++++++
 
 .. note::
-   Work on developing a hierarchical data structure in xarray is just
-   beginning. See `Datatree <https://github.com/TomNicholas/datatree>`__
-   for an early prototype.
 
-Xarray’s highest-level object is currently an ``xarray.Dataset``, whose data
+   After some time, the community DataTree project has now been updated and
+   merged into xarray exposing :py:class:`xarray.DataTree`. This is just
+   released and a bit experimental, but please try it out and let us know what
+   you think. Take a look at our :ref:`quick-overview-datatrees` quickstart.
+
+Xarray’s highest-level object was previously an ``xarray.Dataset``, whose data
 model echoes that of a single netCDF group. However real-world datasets are
 often better represented by a collection of related Datasets. Particular common
 examples include:
@@ -220,14 +222,16 @@ examples include:
 -  Whole netCDF files containing multiple groups.
 -  Comparison of output from many similar models (such as in the IPCC's Coupled Model Intercomparison Projects)
 
-A new tree-like data structure which is essentially a structured hierarchical
-collection of Datasets could represent these cases, and would instead map to
-multiple netCDF groups (see :issue:`4118`).
+A new tree-like data structure, ``xarray.DataTree``, which is essentially a
+structured hierarchical collection of Datasets, represents these cases and
+instead maps to multiple netCDF groups (see :issue:`4118`).
 
-Currently there are several libraries which have wrapped xarray in order to build
-domain-specific data structures (e.g. `xarray-multiscale <https://github.com/JaneliaSciComp/xarray-multiscale>`__.),
-but a general ``xarray.DataTree`` object would obviate the need for these and]
-consolidate effort in a single domain-agnostic tool, much as xarray has already achieved.
+Currently there are several libraries which have wrapped xarray in order to
+build domain-specific data structures (e.g. `xarray-multiscale
+<https://github.com/JaneliaSciComp/xarray-multiscale>`__.), but the general
+``xarray.DataTree`` object obviates the need for these and consolidates effort
+in a single domain-agnostic tool, much as xarray has already achieved.
+
 
 Labeled array without coordinates
 +++++++++++++++++++++++++++++++++

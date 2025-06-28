@@ -1,13 +1,11 @@
 from __future__ import annotations
 
+import contextlib
 import functools
 import operator
-import sys
 
 import numpy as np
-import pandas as pd
 import pytest
-from packaging import version
 
 import xarray as xr
 from xarray.core import dtypes, duck_array_ops
@@ -18,14 +16,13 @@ from xarray.tests import (
     assert_identical,
     requires_dask,
     requires_matplotlib,
+    requires_numbagg,
 )
 from xarray.tests.test_plot import PlotTestCase
 from xarray.tests.test_variable import _PAD_XR_NP_ARGS
 
-try:
+with contextlib.suppress(ImportError):
     import matplotlib.pyplot as plt
-except ImportError:
-    pass
 
 
 pint = pytest.importorskip("pint")
@@ -36,6 +33,7 @@ DimensionalityError = pint.errors.DimensionalityError
 # always be treated like ndarrays
 unit_registry = pint.UnitRegistry(force_ndarray_like=True)
 Quantity = unit_registry.Quantity
+no_unit_values = ("none", None)
 
 
 pytestmark = [
@@ -45,7 +43,7 @@ pytestmark = [
 
 def is_compatible(unit1, unit2):
     def dimensionality(obj):
-        if isinstance(obj, (unit_registry.Quantity, unit_registry.Unit)):
+        if isinstance(obj, unit_registry.Quantity | unit_registry.Unit):
             unit_like = obj
         else:
             unit_like = unit_registry.dimensionless
@@ -76,7 +74,7 @@ def zip_mappings(*mappings):
 
 
 def array_extract_units(obj):
-    if isinstance(obj, (xr.Variable, xr.DataArray, xr.Dataset)):
+    if isinstance(obj, xr.Variable | xr.DataArray | xr.Dataset):
         obj = obj.data
 
     try:
@@ -93,17 +91,13 @@ def array_strip_units(array):
 
 
 def array_attach_units(data, unit):
-    if isinstance(data, Quantity):
+    if isinstance(data, Quantity) and data.units != unit:
         raise ValueError(f"cannot attach unit {unit} to quantity {data}")
 
-    try:
-        quantity = data * unit
-    except np.core._exceptions.UFuncTypeError:
-        if isinstance(unit, unit_registry.Unit):
-            raise
+    if unit in no_unit_values or (isinstance(unit, int) and unit == 1):
+        return data
 
-        quantity = data
-
+    quantity = unit_registry.Quantity(data, unit)
     return quantity
 
 
@@ -168,7 +162,7 @@ def strip_units(obj):
         new_obj = obj.copy(data=data)
     elif isinstance(obj, unit_registry.Quantity):
         new_obj = obj.magnitude
-    elif isinstance(obj, (list, tuple)):
+    elif isinstance(obj, list | tuple):
         return type(obj)(strip_units(elem) for elem in obj)
     else:
         new_obj = obj
@@ -177,7 +171,7 @@ def strip_units(obj):
 
 
 def attach_units(obj, units):
-    if not isinstance(obj, (xr.DataArray, xr.Dataset, xr.Variable)):
+    if not isinstance(obj, xr.DataArray | xr.Dataset | xr.Variable):
         units = units.get("data", None) or units.get(None, None) or 1
         return array_attach_units(obj, units)
 
@@ -304,11 +298,13 @@ class method:
         all_args = merge_args(self.args, args)
         all_kwargs = {**self.kwargs, **kwargs}
 
+        from xarray.core.groupby import GroupBy
+
         xarray_classes = (
             xr.Variable,
             xr.DataArray,
             xr.Dataset,
-            xr.core.groupby.GroupBy,
+            GroupBy,
         )
 
         if not isinstance(obj, xarray_classes):
@@ -1388,7 +1384,7 @@ def test_replication_full_like_dataset(variant, dtype):
 
     units = {
         **extract_units(ds),
-        **{name: unit_registry.degK for name in ds.data_vars},
+        **dict.fromkeys(ds.data_vars, unit_registry.degK),
     }
     expected = attach_units(
         xr.full_like(strip_units(ds), fill_value=strip_units(fill_value)), units
@@ -1499,20 +1495,17 @@ def test_dot_dataarray(dtype):
     data_array = xr.DataArray(data=array1, dims=("x", "y"))
     other = xr.DataArray(data=array2, dims=("y", "z"))
 
-    expected = attach_units(
-        xr.dot(strip_units(data_array), strip_units(other)), {None: unit_registry.m}
-    )
-    actual = xr.dot(data_array, other)
+    with xr.set_options(use_opt_einsum=False):
+        expected = attach_units(
+            xr.dot(strip_units(data_array), strip_units(other)), {None: unit_registry.m}
+        )
+        actual = xr.dot(data_array, other)
 
     assert_units_equal(expected, actual)
     assert_identical(expected, actual)
 
 
 class TestVariable:
-    @pytest.mark.skipif(
-        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
-        reason="fails for some reason on win and 3.11, GH7971",
-    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -1535,13 +1528,6 @@ class TestVariable:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if (
-            func.name == "prod"
-            and dtype.kind == "f"
-            and version.parse(pint.__version__) < version.parse("0.19")
-        ):
-            pytest.xfail(reason="nanprod is not by older `pint` versions")
-
         array = np.linspace(0, 1, 10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
         )
@@ -1593,11 +1579,11 @@ class TestVariable:
         variable = xr.Variable("x", array)
 
         args = [
-            item * unit if isinstance(item, (int, float, list)) else item
+            item * unit if isinstance(item, int | float | list) else item
             for item in func.args
         ]
         kwargs = {
-            key: value * unit if isinstance(value, (int, float, list)) else value
+            key: value * unit if isinstance(value, int | float | list) else value
             for key, value in func.kwargs.items()
         }
 
@@ -1644,15 +1630,19 @@ class TestVariable:
         variable = xr.Variable("x", array)
 
         args = [
-            item * unit
-            if isinstance(item, (int, float, list)) and func.name != "item"
-            else item
+            (
+                item * unit
+                if isinstance(item, int | float | list) and func.name != "item"
+                else item
+            )
             for item in func.args
         ]
         kwargs = {
-            key: value * unit
-            if isinstance(value, (int, float, list)) and func.name != "item"
-            else value
+            key: (
+                value * unit
+                if isinstance(value, int | float | list) and func.name != "item"
+                else value
+            )
             for key, value in func.kwargs.items()
         }
 
@@ -1663,15 +1653,19 @@ class TestVariable:
             return
 
         converted_args = [
-            strip_units(convert_units(item, {None: unit_registry.m}))
-            if func.name != "item"
-            else item
+            (
+                strip_units(convert_units(item, {None: unit_registry.m}))
+                if func.name != "item"
+                else item
+            )
             for item in args
         ]
         converted_kwargs = {
-            key: strip_units(convert_units(value, {None: unit_registry.m}))
-            if func.name != "item"
-            else value
+            key: (
+                strip_units(convert_units(value, {None: unit_registry.m}))
+                if func.name != "item"
+                else value
+            )
             for key, value in kwargs.items()
         }
 
@@ -1876,7 +1870,7 @@ class TestVariable:
     )
     def test_isel(self, variable, indexers, dask, dtype):
         if dask:
-            variable = variable.chunk({dim: 2 for dim in variable.dims})
+            variable = variable.chunk(dict.fromkeys(variable.dims, 2))
         quantified = xr.Variable(
             variable.dims, variable.data.astype(dtype) * unit_registry.s
         )
@@ -1983,9 +1977,11 @@ class TestVariable:
                 strip_units(
                     convert_units(
                         other,
-                        {None: base_unit}
-                        if is_compatible(base_unit, unit)
-                        else {None: None},
+                        (
+                            {None: base_unit}
+                            if is_compatible(base_unit, unit)
+                            else {None: None}
+                        ),
                     )
                 ),
             ),
@@ -2000,7 +1996,7 @@ class TestVariable:
     def test_squeeze(self, dim, dtype):
         shape = (2, 1, 3, 1, 1, 2)
         names = list("abcdef")
-        dim_lengths = dict(zip(names, shape))
+        dim_lengths = dict(zip(names, shape, strict=True))
         array = np.ones(shape=shape) * unit_registry.m
         variable = xr.Variable(names, array)
 
@@ -2013,6 +2009,7 @@ class TestVariable:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize(
         "func",
         (
@@ -2034,7 +2031,7 @@ class TestVariable:
         ),
         ids=repr,
     )
-    def test_computation(self, func, dtype):
+    def test_computation(self, func, dtype, compute_backend):
         base_unit = unit_registry.m
         array = np.linspace(0, 5, 5 * 10).reshape(5, 10).astype(dtype) * base_unit
         variable = xr.Variable(("x", "y"), array)
@@ -2344,10 +2341,6 @@ class TestDataArray:
         # warnings or errors, but does not check the result
         func(data_array)
 
-    @pytest.mark.skipif(
-        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
-        reason="fails for some reason on win and 3.11, GH7971",
-    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -2400,13 +2393,6 @@ class TestDataArray:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if (
-            func.name == "prod"
-            and dtype.kind == "f"
-            and version.parse(pint.__version__) < version.parse("0.19")
-        ):
-            pytest.xfail(reason="nanprod is not by older `pint` versions")
-
         array = np.arange(10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
         )
@@ -2425,10 +2411,6 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_allclose(expected, actual)
 
-    @pytest.mark.skipif(
-        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
-        reason="fails for some reason on win and 3.11, GH7971",
-    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -2462,8 +2444,9 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         units = extract_units(func(array))
-        expected = attach_units(func(strip_units(data_array)), units)
-        actual = func(data_array)
+        with xr.set_options(use_opt_einsum=False):
+            expected = attach_units(func(strip_units(data_array)), units)
+            actual = func(data_array)
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
@@ -2548,7 +2531,6 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="needs the type register system for __array_ufunc__")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -3325,7 +3307,7 @@ class TestDataArray:
         values = raw_values * unit
 
         if error is not None and not (
-            isinstance(raw_values, (int, float)) and x.check(unit)
+            isinstance(raw_values, int | float) and x.check(unit)
         ):
             with pytest.raises(error):
                 data_array.sel(x=values)
@@ -3370,7 +3352,7 @@ class TestDataArray:
         values = raw_values * unit
 
         if error is not None and not (
-            isinstance(raw_values, (int, float)) and x.check(unit)
+            isinstance(raw_values, int | float) and x.check(unit)
         ):
             with pytest.raises(error):
                 data_array.loc[{"x": values}]
@@ -3415,7 +3397,7 @@ class TestDataArray:
         values = raw_values * unit
 
         if error is not None and not (
-            isinstance(raw_values, (int, float)) and x.check(unit)
+            isinstance(raw_values, int | float) and x.check(unit)
         ):
             with pytest.raises(error):
                 data_array.drop_sel(x=values)
@@ -3446,7 +3428,7 @@ class TestDataArray:
     )
     def test_squeeze(self, shape, dim, dtype):
         names = "xyzt"
-        dim_lengths = dict(zip(names, shape))
+        dim_lengths = dict(zip(names, shape, strict=False))
         names = "xyzt"
         array = np.arange(10 * 20).astype(dtype).reshape(shape) * unit_registry.J
         data_array = xr.DataArray(data=array, dims=tuple(names[: len(shape)]))
@@ -3676,7 +3658,10 @@ class TestDataArray:
 
         expected = attach_units(
             func(strip_units(data_array)),
-            {"y": y.units, **dict(zip(x.magnitude, [array.units] * len(y)))},
+            {
+                "y": y.units,
+                **dict(zip(x.magnitude, [array.units] * len(y), strict=True)),
+            },
         ).rename({elem.magnitude: elem for elem in x})
         actual = func(data_array)
 
@@ -3781,6 +3766,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize(
         "variant",
         (
@@ -3801,7 +3787,7 @@ class TestDataArray:
         ),
         ids=repr,
     )
-    def test_computation(self, func, variant, dtype):
+    def test_computation(self, func, variant, dtype, compute_backend):
         unit = unit_registry.m
 
         variants = {
@@ -3824,11 +3810,12 @@ class TestDataArray:
 
         # we want to make sure the output unit is correct
         units = extract_units(data_array)
-        if not isinstance(func, (function, method)):
+        if not isinstance(func, function | method):
             units.update(extract_units(func(array.reshape(-1))))
 
-        expected = attach_units(func(strip_units(data_array)), units)
-        actual = func(data_array)
+        with xr.set_options(use_opt_einsum=False):
+            expected = attach_units(func(strip_units(data_array)), units)
+            actual = func(data_array)
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
@@ -3849,23 +3836,21 @@ class TestDataArray:
             method("groupby", "x"),
             method("groupby_bins", "y", bins=4),
             method("coarsen", y=2),
-            pytest.param(
-                method("rolling", y=3),
-                marks=pytest.mark.xfail(
-                    reason="numpy.lib.stride_tricks.as_strided converts to ndarray"
-                ),
-            ),
-            pytest.param(
-                method("rolling_exp", y=3),
-                marks=pytest.mark.xfail(
-                    reason="numbagg functions are not supported by pint"
-                ),
-            ),
+            method("rolling", y=3),
+            pytest.param(method("rolling_exp", y=3), marks=requires_numbagg),
             method("weighted", xr.DataArray(data=np.linspace(0, 1, 10), dims="y")),
         ),
         ids=repr,
     )
     def test_computation_objects(self, func, variant, dtype):
+        if variant == "data":
+            if func.name == "rolling_exp":
+                pytest.xfail(reason="numbagg functions are not supported by pint")
+            elif func.name == "rolling":
+                pytest.xfail(
+                    reason="numpy.lib.stride_tricks.as_strided converts to ndarray"
+                )
+
         unit = unit_registry.m
 
         variants = {
@@ -3896,11 +3881,11 @@ class TestDataArray:
     def test_resample(self, dtype):
         array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
 
-        time = pd.date_range("10-09-2010", periods=len(array), freq="1y")
+        time = xr.date_range("10-09-2010", periods=len(array), freq="YE")
         data_array = xr.DataArray(data=array, coords={"time": time}, dims="time")
         units = extract_units(data_array)
 
-        func = method("resample", time="6m")
+        func = method("resample", time="6ME")
 
         expected = attach_units(func(strip_units(data_array)).mean(), units)
         actual = func(data_array).mean()
@@ -3908,6 +3893,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize(
         "variant",
         (
@@ -3928,7 +3914,7 @@ class TestDataArray:
         ),
         ids=repr,
     )
-    def test_grouped_operations(self, func, variant, dtype):
+    def test_grouped_operations(self, func, variant, dtype, compute_backend):
         unit = unit_registry.m
 
         variants = {
@@ -3947,7 +3933,7 @@ class TestDataArray:
         data_array = xr.DataArray(
             data=array, coords={"x": x, "y": y, "u": ("x", u)}, dims=("x", "y")
         )
-        units = {**extract_units(data_array), **{"z": unit_registry.s, "q": None}}
+        units = {**extract_units(data_array), "z": unit_registry.s, "q": None}
 
         stripped_kwargs = {
             key: (
@@ -3958,9 +3944,12 @@ class TestDataArray:
             for key, value in func.kwargs.items()
         }
         expected = attach_units(
-            func(strip_units(data_array).groupby("y"), **stripped_kwargs), units
+            func(
+                strip_units(data_array).groupby("y", squeeze=False), **stripped_kwargs
+            ),
+            units,
         )
-        actual = func(data_array.groupby("y"))
+        actual = func(data_array.groupby("y", squeeze=False))
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
@@ -4082,10 +4071,6 @@ class TestDataset:
         # warnings or errors, but does not check the result
         func(ds)
 
-    @pytest.mark.skipif(
-        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
-        reason="fails for some reason on win and 3.11, GH7971",
-    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -4107,13 +4092,6 @@ class TestDataset:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if (
-            func.name == "prod"
-            and dtype.kind == "f"
-            and version.parse(pint.__version__) < version.parse("0.19")
-        ):
-            pytest.xfail(reason="nanprod is not by older `pint` versions")
-
         unit_a, unit_b = (
             (unit_registry.Pa, unit_registry.degK)
             if func.name != "cumprod"
@@ -5096,7 +5074,7 @@ class TestDataset:
     )
     def test_squeeze(self, shape, dim, dtype):
         names = "xyzt"
-        dim_lengths = dict(zip(names, shape))
+        dim_lengths = dict(zip(names, shape, strict=False))
         array1 = (
             np.linspace(0, 1, 10 * 20).astype(dtype).reshape(shape) * unit_registry.degK
         )
@@ -5273,6 +5251,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize(
         "func",
         (
@@ -5295,7 +5274,7 @@ class TestDataset:
             "coords",
         ),
     )
-    def test_computation(self, func, variant, dtype):
+    def test_computation(self, func, variant, dtype, compute_backend):
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
             "dims": ((1, 1), unit_registry.m, 1),
@@ -5407,7 +5386,7 @@ class TestDataset:
         array1 = np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype) * unit1
         array2 = np.linspace(10, 20, 10 * 8).reshape(10, 8).astype(dtype) * unit2
 
-        t = pd.date_range("10-09-2010", periods=array1.shape[0], freq="1y")
+        t = xr.date_range("10-09-2010", periods=array1.shape[0], freq="YE")
         y = np.arange(5) * dim_unit
         z = np.arange(8) * dim_unit
 
@@ -5419,7 +5398,7 @@ class TestDataset:
         )
         units = extract_units(ds)
 
-        func = method("resample", time="6m")
+        func = method("resample", time="6ME")
 
         expected = attach_units(func(strip_units(ds)).mean(), units)
         actual = func(ds).mean()
@@ -5427,6 +5406,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize(
         "func",
         (
@@ -5448,7 +5428,7 @@ class TestDataset:
             "coords",
         ),
     )
-    def test_grouped_operations(self, func, variant, dtype):
+    def test_grouped_operations(self, func, variant, dtype, compute_backend):
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
             "dims": ((1, 1), unit_registry.m, 1),
@@ -5476,9 +5456,9 @@ class TestDataset:
             name: strip_units(value) for name, value in func.kwargs.items()
         }
         expected = attach_units(
-            func(strip_units(ds).groupby("y"), **stripped_kwargs), units
+            func(strip_units(ds).groupby("y", squeeze=False), **stripped_kwargs), units
         )
-        actual = func(ds.groupby("y"))
+        actual = func(ds.groupby("y", squeeze=False))
 
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
@@ -5644,10 +5624,6 @@ class TestDataset:
 
 @requires_dask
 class TestPintWrappingDask:
-    @pytest.mark.skipif(
-        version.parse(pint.__version__) <= version.parse("0.21"),
-        reason="pint didn't support dask properly before 0.21",
-    )
     def test_duck_array_ops(self):
         import dask.array
 
@@ -5661,7 +5637,7 @@ class TestPintWrappingDask:
 
         assert_units_equal(expected, actual)
         # Don't use isinstance b/c we don't want to allow subclasses through
-        assert type(expected.data) == type(actual.data)  # noqa
+        assert type(expected.data) == type(actual.data)  # noqa: E721
 
 
 @requires_matplotlib

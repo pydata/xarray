@@ -1,4 +1,6 @@
 """Utility functions for printing version information."""
+
+import contextlib
 import importlib
 import locale
 import os
@@ -28,10 +30,8 @@ def get_sys_info():
         else:
             if pipe.returncode == 0:
                 commit = so
-                try:
+                with contextlib.suppress(ValueError):
                     commit = so.decode("utf-8")
-                except ValueError:
-                    pass
                 commit = commit.strip().strip('"')
 
     blob.append(("commit", commit))
@@ -48,8 +48,8 @@ def get_sys_info():
                 ("machine", f"{machine}"),
                 ("processor", f"{processor}"),
                 ("byteorder", f"{sys.byteorder}"),
-                ("LC_ALL", f'{os.environ.get("LC_ALL", "None")}'),
-                ("LANG", f'{os.environ.get("LANG", "None")}'),
+                ("LC_ALL", f"{os.environ.get('LC_ALL', 'None')}"),
+                ("LANG", f"{os.environ.get('LANG', 'None')}"),
                 ("LOCALE", f"{locale.getlocale()}"),
             ]
         )
@@ -103,11 +103,9 @@ def show_versions(file=sys.stdout):
         ("pydap", lambda mod: mod.__version__),
         ("h5netcdf", lambda mod: mod.__version__),
         ("h5py", lambda mod: mod.__version__),
-        ("Nio", lambda mod: mod.__version__),
         ("zarr", lambda mod: mod.__version__),
         ("cftime", lambda mod: mod.__version__),
         ("nc_time_axis", lambda mod: mod.__version__),
-        ("PseudoNetCDF", lambda mod: mod.__version__),
         ("iris", lambda mod: mod.__version__),
         ("bottleneck", lambda mod: mod.__version__),
         ("dask", lambda mod: mod.__version__),

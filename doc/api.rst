@@ -10,7 +10,7 @@ This page provides an auto-generated summary of xarray's API. For more details
 and examples, refer to the relevant chapters in the main part of the
 documentation.
 
-See also: :ref:`public api`
+See also: :ref:`public-api` and :ref:`api-stability`.
 
 Top-level functions
 ===================
@@ -67,6 +67,7 @@ Attributes
    Dataset.attrs
    Dataset.encoding
    Dataset.indexes
+   Dataset.xindexes
    Dataset.chunks
    Dataset.chunksizes
    Dataset.nbytes
@@ -110,9 +111,10 @@ Dataset contents
    Dataset.drop_indexes
    Dataset.drop_duplicates
    Dataset.drop_dims
+   Dataset.drop_encoding
+   Dataset.drop_attrs
    Dataset.set_coords
    Dataset.reset_coords
-   Dataset.reset_encoding
    Dataset.convert_calendar
    Dataset.interp_calendar
    Dataset.get_index
@@ -182,6 +184,7 @@ Computation
    Dataset.groupby_bins
    Dataset.rolling
    Dataset.rolling_exp
+   Dataset.cumulative
    Dataset.weighted
    Dataset.coarsen
    Dataset.resample
@@ -192,6 +195,7 @@ Computation
    Dataset.map_blocks
    Dataset.polyfit
    Dataset.curvefit
+   Dataset.eval
 
 Aggregation
 -----------
@@ -272,6 +276,7 @@ Attributes
    DataArray.attrs
    DataArray.encoding
    DataArray.indexes
+   DataArray.xindexes
    DataArray.chunksizes
 
 ndarray attributes
@@ -303,8 +308,9 @@ DataArray contents
    DataArray.drop_vars
    DataArray.drop_indexes
    DataArray.drop_duplicates
+   DataArray.drop_encoding
+   DataArray.drop_attrs
    DataArray.reset_coords
-   DataArray.reset_encoding
    DataArray.copy
    DataArray.convert_calendar
    DataArray.interp_calendar
@@ -378,6 +384,7 @@ Computation
    DataArray.groupby_bins
    DataArray.rolling
    DataArray.rolling_exp
+   DataArray.cumulative
    DataArray.weighted
    DataArray.coarsen
    DataArray.resample
@@ -520,14 +527,15 @@ Datetimelike properties
    DataArray.dt.nanosecond
    DataArray.dt.dayofweek
    DataArray.dt.weekday
-   DataArray.dt.weekday_name
    DataArray.dt.dayofyear
    DataArray.dt.quarter
    DataArray.dt.days_in_month
    DataArray.dt.daysinmonth
+   DataArray.dt.days_in_year
    DataArray.dt.season
    DataArray.dt.time
    DataArray.dt.date
+   DataArray.dt.decimal_year
    DataArray.dt.calendar
    DataArray.dt.is_month_start
    DataArray.dt.is_month_end
@@ -557,6 +565,7 @@ Datetimelike properties
    DataArray.dt.seconds
    DataArray.dt.microseconds
    DataArray.dt.nanoseconds
+   DataArray.dt.total_seconds
 
 **Timedelta methods**:
 
@@ -585,6 +594,504 @@ Reshaping and reorganizing
    DataArray.sortby
    DataArray.broadcast_like
 
+DataTree
+========
+
+Creating a DataTree
+-------------------
+
+Methods of creating a ``DataTree``.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree
+   DataTree.from_dict
+
+Tree Attributes
+---------------
+
+Attributes relating to the recursive tree-like structure of a ``DataTree``.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.parent
+   DataTree.children
+   DataTree.name
+   DataTree.path
+   DataTree.root
+   DataTree.is_root
+   DataTree.is_leaf
+   DataTree.leaves
+   DataTree.level
+   DataTree.depth
+   DataTree.width
+   DataTree.subtree
+   DataTree.subtree_with_keys
+   DataTree.descendants
+   DataTree.siblings
+   DataTree.lineage
+   DataTree.parents
+   DataTree.ancestors
+   DataTree.groups
+   DataTree.xindexes
+
+Data Contents
+-------------
+
+Interface to the data objects (optionally) stored inside a single ``DataTree`` node.
+This interface echoes that of ``xarray.Dataset``.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.dims
+   DataTree.sizes
+   DataTree.data_vars
+   DataTree.ds
+   DataTree.coords
+   DataTree.attrs
+   DataTree.encoding
+   DataTree.indexes
+   DataTree.nbytes
+   DataTree.dataset
+   DataTree.to_dataset
+   DataTree.has_data
+   DataTree.has_attrs
+   DataTree.is_empty
+   DataTree.is_hollow
+   DataTree.chunksizes
+
+Dictionary Interface
+--------------------
+
+``DataTree`` objects also have a dict-like interface mapping keys to either ``xarray.DataArray``\s or to child ``DataTree`` nodes.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.__getitem__
+   DataTree.__setitem__
+   DataTree.__delitem__
+   DataTree.update
+   DataTree.get
+   DataTree.items
+   DataTree.keys
+   DataTree.values
+
+Tree Manipulation
+-----------------
+
+For manipulating, traversing, navigating, or mapping over the tree structure.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.orphan
+   DataTree.same_tree
+   DataTree.relative_to
+   DataTree.iter_lineage
+   DataTree.find_common_ancestor
+   DataTree.map_over_datasets
+   DataTree.pipe
+   DataTree.match
+   DataTree.filter
+   DataTree.filter_like
+
+Pathlib-like Interface
+----------------------
+
+``DataTree`` objects deliberately echo some of the API of :py:class:`pathlib.PurePath`.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.name
+   DataTree.parent
+   DataTree.parents
+   DataTree.relative_to
+
+.. Missing:
+
+.. ..
+
+..    ``DataTree.glob``
+..    ``DataTree.joinpath``
+..    ``DataTree.with_name``
+..    ``DataTree.walk``
+..    ``DataTree.rename``
+..    ``DataTree.replace``
+
+DataTree Contents
+-----------------
+
+Manipulate the contents of all nodes in a ``DataTree`` simultaneously.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.copy
+
+   .. DataTree.assign_coords
+   .. DataTree.merge
+   .. DataTree.rename
+   .. DataTree.rename_vars
+   .. DataTree.rename_dims
+   .. DataTree.swap_dims
+   .. DataTree.expand_dims
+   .. DataTree.drop_vars
+   .. DataTree.drop_dims
+   .. DataTree.set_coords
+   .. DataTree.reset_coords
+
+DataTree Node Contents
+----------------------
+
+Manipulate the contents of a single ``DataTree`` node.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.assign
+   DataTree.drop_nodes
+
+DataTree Operations
+-------------------
+
+Apply operations over multiple ``DataTree`` objects.
+
+.. autosummary::
+   :toctree: generated/
+
+   map_over_datasets
+   group_subtrees
+
+Comparisons
+-----------
+
+Compare one ``DataTree`` object to another.
+
+.. autosummary::
+   :toctree: generated/
+
+    DataTree.isomorphic
+    DataTree.equals
+    DataTree.identical
+
+Indexing
+--------
+
+Index into all nodes in the subtree simultaneously.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.isel
+   DataTree.sel
+
+..    DataTree.drop_sel
+..    DataTree.drop_isel
+..    DataTree.head
+..    DataTree.tail
+..    DataTree.thin
+..    DataTree.squeeze
+..    DataTree.interp
+..    DataTree.interp_like
+..    DataTree.reindex
+..    DataTree.reindex_like
+..    DataTree.set_index
+..    DataTree.reset_index
+..    DataTree.reorder_levels
+..    DataTree.query
+
+.. ..
+
+..    Missing:
+..    ``DataTree.loc``
+
+
+.. Missing Value Handling
+.. ----------------------
+
+.. .. autosummary::
+..    :toctree: generated/
+
+..    DataTree.isnull
+..    DataTree.notnull
+..    DataTree.combine_first
+..    DataTree.dropna
+..    DataTree.fillna
+..    DataTree.ffill
+..    DataTree.bfill
+..    DataTree.interpolate_na
+..    DataTree.where
+..    DataTree.isin
+
+.. Computation
+.. -----------
+
+.. Apply a computation to the data in all nodes in the subtree simultaneously.
+
+.. .. autosummary::
+..    :toctree: generated/
+
+..    DataTree.map
+..    DataTree.reduce
+..    DataTree.diff
+..    DataTree.quantile
+..    DataTree.differentiate
+..    DataTree.integrate
+..    DataTree.map_blocks
+..    DataTree.polyfit
+..    DataTree.curvefit
+
+Aggregation
+-----------
+
+Aggregate data in all nodes in the subtree simultaneously.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.all
+   DataTree.any
+   DataTree.max
+   DataTree.min
+   DataTree.mean
+   DataTree.median
+   DataTree.prod
+   DataTree.sum
+   DataTree.std
+   DataTree.var
+   DataTree.cumsum
+   DataTree.cumprod
+
+ndarray methods
+---------------
+
+Methods copied from :py:class:`numpy.ndarray` objects, here applying to the data in all nodes in the subtree.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.argsort
+   DataTree.conj
+   DataTree.conjugate
+   DataTree.round
+..    DataTree.astype
+..    DataTree.clip
+..    DataTree.rank
+
+.. Reshaping and reorganising
+.. --------------------------
+
+.. Reshape or reorganise the data in all nodes in the subtree.
+
+.. .. autosummary::
+..    :toctree: generated/
+
+..    DataTree.transpose
+..    DataTree.stack
+..    DataTree.unstack
+..    DataTree.shift
+..    DataTree.roll
+..    DataTree.pad
+..    DataTree.sortby
+..    DataTree.broadcast_like
+
+Coordinates
+===========
+
+Creating coordinates
+--------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   Coordinates
+   Coordinates.from_xindex
+   Coordinates.from_pandas_multiindex
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree: generated/
+
+   Coordinates.dims
+   Coordinates.sizes
+   Coordinates.dtypes
+   Coordinates.variables
+   Coordinates.indexes
+   Coordinates.xindexes
+
+Dictionary Interface
+--------------------
+
+Coordinates implement the mapping interface with keys given by variable names
+and values given by ``DataArray`` objects.
+
+.. autosummary::
+   :toctree: generated/
+
+   Coordinates.__getitem__
+   Coordinates.__setitem__
+   Coordinates.__delitem__
+   Coordinates.update
+   Coordinates.get
+   Coordinates.items
+   Coordinates.keys
+   Coordinates.values
+
+Coordinates contents
+--------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   Coordinates.to_dataset
+   Coordinates.to_index
+   Coordinates.assign
+   Coordinates.merge
+   Coordinates.copy
+
+Comparisons
+-----------
+
+.. autosummary::
+   :toctree: generated/
+
+   Coordinates.equals
+   Coordinates.identical
+
+Proxies
+-------
+
+Coordinates that are accessed from the ``coords`` property of Dataset, DataArray
+and DataTree objects, respectively.
+
+.. autosummary::
+   :toctree: generated/
+
+   core.coordinates.DatasetCoordinates
+   core.coordinates.DataArrayCoordinates
+   core.coordinates.DataTreeCoordinates
+
+Universal functions
+===================
+
+These functions are equivalent to their NumPy versions, but for xarray
+objects backed by non-NumPy array types (e.g. ``cupy``, ``sparse``, or ``jax``),
+they will ensure that the computation is dispatched to the appropriate
+backend. You can find them in the ``xarray.ufuncs`` module:
+
+.. autosummary::
+   :toctree: generated/
+
+   ufuncs.abs
+   ufuncs.absolute
+   ufuncs.acos
+   ufuncs.acosh
+   ufuncs.arccos
+   ufuncs.arccosh
+   ufuncs.arcsin
+   ufuncs.arcsinh
+   ufuncs.arctan
+   ufuncs.arctanh
+   ufuncs.asin
+   ufuncs.asinh
+   ufuncs.atan
+   ufuncs.atanh
+   ufuncs.bitwise_count
+   ufuncs.bitwise_invert
+   ufuncs.bitwise_not
+   ufuncs.cbrt
+   ufuncs.ceil
+   ufuncs.conj
+   ufuncs.conjugate
+   ufuncs.cos
+   ufuncs.cosh
+   ufuncs.deg2rad
+   ufuncs.degrees
+   ufuncs.exp
+   ufuncs.exp2
+   ufuncs.expm1
+   ufuncs.fabs
+   ufuncs.floor
+   ufuncs.invert
+   ufuncs.isfinite
+   ufuncs.isinf
+   ufuncs.isnan
+   ufuncs.isnat
+   ufuncs.log
+   ufuncs.log10
+   ufuncs.log1p
+   ufuncs.log2
+   ufuncs.logical_not
+   ufuncs.negative
+   ufuncs.positive
+   ufuncs.rad2deg
+   ufuncs.radians
+   ufuncs.reciprocal
+   ufuncs.rint
+   ufuncs.sign
+   ufuncs.signbit
+   ufuncs.sin
+   ufuncs.sinh
+   ufuncs.spacing
+   ufuncs.sqrt
+   ufuncs.square
+   ufuncs.tan
+   ufuncs.tanh
+   ufuncs.trunc
+   ufuncs.add
+   ufuncs.arctan2
+   ufuncs.atan2
+   ufuncs.bitwise_and
+   ufuncs.bitwise_left_shift
+   ufuncs.bitwise_or
+   ufuncs.bitwise_right_shift
+   ufuncs.bitwise_xor
+   ufuncs.copysign
+   ufuncs.divide
+   ufuncs.equal
+   ufuncs.float_power
+   ufuncs.floor_divide
+   ufuncs.fmax
+   ufuncs.fmin
+   ufuncs.fmod
+   ufuncs.gcd
+   ufuncs.greater
+   ufuncs.greater_equal
+   ufuncs.heaviside
+   ufuncs.hypot
+   ufuncs.lcm
+   ufuncs.ldexp
+   ufuncs.left_shift
+   ufuncs.less
+   ufuncs.less_equal
+   ufuncs.logaddexp
+   ufuncs.logaddexp2
+   ufuncs.logical_and
+   ufuncs.logical_or
+   ufuncs.logical_xor
+   ufuncs.maximum
+   ufuncs.minimum
+   ufuncs.mod
+   ufuncs.multiply
+   ufuncs.nextafter
+   ufuncs.not_equal
+   ufuncs.pow
+   ufuncs.power
+   ufuncs.remainder
+   ufuncs.right_shift
+   ufuncs.subtract
+   ufuncs.true_divide
+   ufuncs.angle
+   ufuncs.isreal
+   ufuncs.iscomplex
+
 IO / Conversion
 ===============
 
@@ -602,7 +1109,7 @@ Dataset methods
    Dataset.as_numpy
    Dataset.from_dataframe
    Dataset.from_dict
-   Dataset.to_array
+   Dataset.to_dataarray
    Dataset.to_dataframe
    Dataset.to_dask_dataframe
    Dataset.to_dict
@@ -627,11 +1134,9 @@ DataArray methods
    load_dataarray
    open_dataarray
    DataArray.as_numpy
-   DataArray.from_cdms2
    DataArray.from_dict
    DataArray.from_iris
    DataArray.from_series
-   DataArray.to_cdms2
    DataArray.to_dask_dataframe
    DataArray.to_dataframe
    DataArray.to_dataset
@@ -651,26 +1156,37 @@ DataArray methods
    DataArray.load
    DataArray.unify_chunks
 
-Coordinates objects
-===================
-
-Dataset
--------
+DataTree methods
+----------------
 
 .. autosummary::
    :toctree: generated/
 
-   core.coordinates.DatasetCoordinates
-   core.coordinates.DatasetCoordinates.dtypes
+   open_datatree
+   open_groups
+   DataTree.to_dict
+   DataTree.to_netcdf
+   DataTree.to_zarr
+   DataTree.chunk
+   DataTree.load
+   DataTree.compute
+   DataTree.persist
 
-DataArray
----------
+.. ..
+
+..    Missing:
+..    ``open_mfdatatree``
+
+Encoding/Decoding
+=================
+
+Coder objects
+-------------
 
 .. autosummary::
    :toctree: generated/
 
-   core.coordinates.DataArrayCoordinates
-   core.coordinates.DataArrayCoordinates.dtypes
+   coders.CFDatetimeCoder
 
 Plotting
 ========
@@ -768,6 +1284,7 @@ Dataset
    DatasetGroupBy.var
    DatasetGroupBy.dims
    DatasetGroupBy.groups
+   DatasetGroupBy.shuffle_to_chunks
 
 DataArray
 ---------
@@ -799,12 +1316,27 @@ DataArray
    DataArrayGroupBy.var
    DataArrayGroupBy.dims
    DataArrayGroupBy.groups
+   DataArrayGroupBy.shuffle_to_chunks
+
+Grouper Objects
+---------------
+
+.. currentmodule:: xarray
+
+.. autosummary::
+   :toctree: generated/
+
+   groupers.BinGrouper
+   groupers.UniqueGrouper
+   groupers.TimeResampler
+   groupers.SeasonGrouper
+   groupers.SeasonResampler
 
 
 Rolling objects
 ===============
 
-.. currentmodule:: xarray.core.rolling
+.. currentmodule:: xarray.computation.rolling
 
 Dataset
 -------
@@ -897,7 +1429,7 @@ DataArray
 Exponential rolling objects
 ===========================
 
-.. currentmodule:: xarray.core.rolling_exp
+.. currentmodule:: xarray.computation.rolling_exp
 
 .. autosummary::
    :toctree: generated/
@@ -909,7 +1441,7 @@ Exponential rolling objects
 Weighted objects
 ================
 
-.. currentmodule:: xarray.core.weighted
+.. currentmodule:: xarray.computation.weighted
 
 Dataset
 -------
@@ -1025,21 +1557,26 @@ DataArray
 Accessors
 =========
 
+.. currentmodule:: xarray.core
+
+.. autosummary::
+   :toctree: generated/
+
+   accessor_dt.DatetimeAccessor
+   accessor_dt.TimedeltaAccessor
+   accessor_str.StringAccessor
+
+
+Custom Indexes
+==============
 .. currentmodule:: xarray
 
 .. autosummary::
    :toctree: generated/
 
-   core.accessor_dt.DatetimeAccessor
-   core.accessor_dt.TimedeltaAccessor
-   core.accessor_str.StringAccessor
-
-Custom Indexes
-==============
-.. autosummary::
-   :toctree: generated/
-
    CFTimeIndex
+   indexes.RangeIndex
+   indexes.CoordinateTransformIndex
 
 Creating custom indexes
 -----------------------
@@ -1049,6 +1586,15 @@ Creating custom indexes
    cftime_range
    date_range
    date_range_like
+   indexes.RangeIndex.arange
+   indexes.RangeIndex.linspace
+
+Building custom indexes
+-----------------------
+.. autosummary::
+   :toctree: generated/
+
+   indexes.CoordinateTransform
 
 Tutorial
 ========
@@ -1058,6 +1604,8 @@ Tutorial
 
    tutorial.open_dataset
    tutorial.load_dataset
+   tutorial.open_datatree
+   tutorial.load_datatree
 
 Testing
 =======
@@ -1070,14 +1618,58 @@ Testing
    testing.assert_allclose
    testing.assert_chunks_equal
 
+Test that two ``DataTree`` objects are similar.
+
+.. autosummary::
+   :toctree: generated/
+
+   testing.assert_isomorphic
+   testing.assert_equal
+   testing.assert_identical
+
+Hypothesis Testing Strategies
+=============================
+
+.. currentmodule:: xarray
+
+See the :ref:`documentation page on testing <testing.hypothesis>` for a guide on how to use these strategies.
+
+.. warning::
+    These strategies should be considered highly experimental, and liable to change at any time.
+
+.. autosummary::
+   :toctree: generated/
+
+   testing.strategies.supported_dtypes
+   testing.strategies.names
+   testing.strategies.dimension_names
+   testing.strategies.dimension_sizes
+   testing.strategies.attrs
+   testing.strategies.variables
+   testing.strategies.unique_subset_of
+
 Exceptions
 ==========
 
 .. autosummary::
    :toctree: generated/
 
+   AlignmentError
+   CoordinateValidationError
    MergeError
    SerializationWarning
+
+DataTree
+--------
+
+Exceptions raised when manipulating trees.
+
+.. autosummary::
+   :toctree: generated/
+
+   TreeIsomorphismError
+   InvalidTreeError
+   NotFoundInTreeError
 
 Advanced API
 ============
@@ -1088,6 +1680,7 @@ Advanced API
    Coordinates
    Dataset.variables
    DataArray.variable
+   DataTree.variables
    Variable
    IndexVariable
    as_variable
@@ -1096,11 +1689,17 @@ Advanced API
    Context
    register_dataset_accessor
    register_dataarray_accessor
+   register_datatree_accessor
    Dataset.set_close
    backends.BackendArray
    backends.BackendEntrypoint
    backends.list_engines
    backends.refresh_engines
+
+.. ..
+
+..    Missing:
+..    ``DataTree.set_close``
 
 Default, pandas-backed indexes built-in Xarray:
 
@@ -1116,7 +1715,6 @@ arguments for the ``load_store`` and ``dump_to_store`` Dataset methods:
 
    backends.NetCDF4DataStore
    backends.H5NetCDFStore
-   backends.PseudoNetCDFDataStore
    backends.PydapDataStore
    backends.ScipyDataStore
    backends.ZarrStore
@@ -1132,7 +1730,6 @@ used filetypes in the xarray universe.
 
    backends.NetCDF4BackendEntrypoint
    backends.H5netcdfBackendEntrypoint
-   backends.PseudoNetCDFBackendEntrypoint
    backends.PydapBackendEntrypoint
    backends.ScipyBackendEntrypoint
    backends.StoreBackendEntrypoint
