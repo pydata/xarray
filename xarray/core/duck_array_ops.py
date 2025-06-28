@@ -157,7 +157,7 @@ def isna(data: Any) -> bool:
     -------
         Whether or not the data is np.nan or pd.NA
     """
-    return data is pd.NA or data is np.nan
+    return data is pd.NA or data is np.nan  # noqa: PLW0177
 
 
 def isnull(data):
