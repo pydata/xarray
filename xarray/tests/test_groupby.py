@@ -1321,8 +1321,7 @@ class TestDataArrayGroupBy:
         grouped = self.da.groupby("abc")
         expected_groups = {"a": range(9), "c": [9], "b": range(10, 20)}
         assert expected_groups.keys() == grouped.groups.keys()
-        for key in expected_groups:
-            expected_group = expected_groups[key]
+        for key, expected_group in expected_groups.items():
             actual_group = grouped.groups[key]
 
             # TODO: array_api doesn't allow slice:

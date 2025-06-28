@@ -1372,7 +1372,7 @@ def test_map_blocks_da_ds_with_template(obj):
 
     # Check that indexes are written into the graph directly
     dsk = dict(actual.__dask_graph__())
-    assert len({k for k in dsk if "x-coordinate" in k})
+    assert {k for k in dsk if "x-coordinate" in k}
     assert all(
         isinstance(v, PandasIndex) for k, v in dsk.items() if "x-coordinate" in k
     )

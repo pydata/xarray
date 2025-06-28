@@ -39,7 +39,7 @@ def get_array_namespace(*args):
         names = [module.__name__ for module in xps]
         raise ValueError(f"Mixed array types {names} are not supported.")
 
-    return next(iter(xps)) if len(xps) else np
+    return next(iter(xps)) if xps else np
 
 
 class _ufunc_wrapper(ABC):
