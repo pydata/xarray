@@ -128,6 +128,8 @@ if has_zarr:
             )
         except ImportError:
             KVStore = None  # type: ignore[assignment,misc,unused-ignore]
+        
+        WrapperStore = None
 else:
     KVStore = None  # type: ignore[assignment,misc,unused-ignore]
     ZARR_FORMATS = []
@@ -3746,27 +3748,30 @@ class TestZarrDictStore(ZarrBase):
                 assert actual["var1"].encoding["chunks"] == (2, 2)
 
 
-class NoConsolidatedMetadataSupportStore(WrapperStore[Store]):
-    """
-    Store that explicitly does not support consolidated metadata.
 
-    Useful as a proxy for stores like Icechunk, see https://github.com/zarr-developers/zarr-python/pull/3119.
-    """
-
-    supports_consolidated_metadata = False
 
 
 @requires_zarr
+@pytest.mark.skipif(
+    WrapperStore is None, reason="requires zarr v3"
+)
 class TestZarrNoConsolidatedMetadataSupport(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
+        
+        class NoConsolidatedMetadataSupportStore(WrapperStore[Store]):
+            """
+            Store that explicitly does not support consolidated metadata.
+
+            Useful as a proxy for stores like Icechunk, see https://github.com/zarr-developers/zarr-python/pull/3119.
+            """
+
+            supports_consolidated_metadata = False
+        
         # TODO the zarr version would need to be >3.08 for the supports_consolidated_metadata property to have any effect
-        if has_zarr_v3:
-            yield NoConsolidatedMetadataSupportStore(
-                zarr.storage.MemoryStore({}, read_only=False)
-            )
-        else:
-            pytest.skip("requires zarr v3")
+        yield NoConsolidatedMetadataSupportStore(
+            zarr.storage.MemoryStore({}, read_only=False)
+        )
 
 
 @requires_zarr
