@@ -129,15 +129,14 @@ def validate_char_dim_name(strlen, encoding, name) -> str:
                     "To silence this warning either remove 'char_dim_name' from encoding or provide a fitting name."
                 )
             char_dim_name = f"{new_dim_name}{strlen}"
-        else:
-            if (
-                original_shape := encoding.get("original_shape", [-1])[-1]
-            ) != -1 and original_shape != strlen:
-                emit_user_level_warning(
-                    f"String dimension length mismatch on variable {name!r}. '{original_shape}' provided by encoding, but data has length of '{strlen}'. Using '{char_dim_name}{strlen}' instead of {char_dim_name!r} to prevent possible naming clash.\n"
-                    f"To silence this warning remove 'original_shape' from encoding."
-                )
-                char_dim_name = f"{char_dim_name}{strlen}"
+        elif (
+            original_shape := encoding.get("original_shape", [-1])[-1]
+        ) != -1 and original_shape != strlen:
+            emit_user_level_warning(
+                f"String dimension length mismatch on variable {name!r}. '{original_shape}' provided by encoding, but data has length of '{strlen}'. Using '{char_dim_name}{strlen}' instead of {char_dim_name!r} to prevent possible naming clash.\n"
+                f"To silence this warning remove 'original_shape' from encoding."
+            )
+            char_dim_name = f"{char_dim_name}{strlen}"
     else:
         char_dim_name = f"string{strlen}"
 
