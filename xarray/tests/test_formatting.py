@@ -101,6 +101,9 @@ class TestFormatting:
             (np.float16(1.1234), "1.123"),
             (np.float32(1.0111111), "1.011"),
             (np.float64(22.222222), "22.22"),
+            (np.zeros((1, 1)), "[[0.]]"),
+            (np.zeros(2), "[0. 0.]"),
+            (np.zeros((2, 2)), "[[0. 0.]\n [0. 0.]]"),
         ]
         for item, expected in cases:
             actual = formatting.format_item(item)
@@ -716,6 +719,27 @@ class TestFormatting:
                 R   w        int64 8B 6"""
         )
         actual = formatting.diff_datatree_repr(dt_1, dt_2, "identical")
+        assert actual == expected
+
+    def test_diff_datatree_repr_equals(self) -> None:
+        ds1 = xr.Dataset(data_vars={"data": ("y", [5, 2])})
+        ds2 = xr.Dataset(data_vars={"data": (("x", "y"), [[5, 2]])})
+        dt1 = xr.DataTree.from_dict({"node": ds1})
+        dt2 = xr.DataTree.from_dict({"node": ds2})
+
+        expected = dedent(
+            """\
+            Left and right DataTree objects are not equal
+
+            Data at node 'node' does not match:
+                Differing dimensions:
+                    (y: 2) != (x: 1, y: 2)
+                Differing data variables:
+                L   data     (y) int64 16B 5 2
+                R   data     (x, y) int64 16B 5 2"""
+        )
+
+        actual = formatting.diff_datatree_repr(dt1, dt2, "equals")
         assert actual == expected
 
 

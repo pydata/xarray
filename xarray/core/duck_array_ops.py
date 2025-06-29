@@ -157,7 +157,7 @@ def isna(data: Any) -> bool:
     -------
         Whether or not the data is np.nan or pd.NA
     """
-    return data is pd.NA or data is np.nan
+    return data is pd.NA or data is np.nan  # noqa: PLW0177
 
 
 def isnull(data):
@@ -193,7 +193,7 @@ def isnull(data):
         # types. For full consistency with pandas, we should accept None as
         # a null value as well as NaN, but it isn't clear how to do this
         # with duck typing.
-        return data != data
+        return data != data  # noqa: PLR0124
 
 
 def notnull(data):

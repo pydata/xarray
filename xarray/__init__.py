@@ -1,6 +1,6 @@
 from importlib.metadata import version as _version
 
-from xarray import coders, groupers, testing, tutorial, ufuncs
+from xarray import coders, groupers, indexes, testing, tutorial, ufuncs
 from xarray.backends.api import (
     load_dataarray,
     load_dataset,
@@ -70,6 +70,7 @@ __all__ = (  # noqa: RUF022
     # Sub-packages
     "coders",
     "groupers",
+    "indexes",
     "testing",
     "tutorial",
     "ufuncs",

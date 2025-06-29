@@ -553,7 +553,7 @@ class TimeResampler(Resampler):
         full_index, first_items, codes_ = self._get_index_and_items()
         sbins = first_items.values.astype(np.int64)
         group_indices: GroupIndices = tuple(
-            [slice(i, j) for i, j in pairwise(sbins)] + [slice(sbins[-1], None)]
+            list(itertools.starmap(slice, pairwise(sbins))) + [slice(sbins[-1], None)]
         )
 
         unique_coord = Variable(

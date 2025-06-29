@@ -12,6 +12,8 @@ v2025.07.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
+  under the ``xarray.indexes`` namespace. By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Breaking changes
@@ -26,6 +28,12 @@ Bug fixes
 ~~~~~~~~~
 - Fix Pydap test_cmp_local_file for numpy 2.3.0 changes, 1. do always return arrays for all versions and 2. skip astype(str) for numpy >= 2.3.0 for expected data. (:pull:`10421`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix the SciPy backend for netCDF3 files . (:issue:`8909`, :pull:`10376`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Check and fix character array string dimension names, issue warnings as needed (:issue:`6352`, :pull:`10395`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix the error message of :py:func:`testing.assert_equal` when two different :py:class:`DataTree` objects
+  are passed (:pull:`10440`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 
 Documentation
@@ -34,6 +42,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Forward variable name down to coders for AbstractWritableDataStore.encode_variable and subclasses. (:pull:`10395`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 .. _whats-new.2025.06.1:
 
@@ -1000,7 +1010,7 @@ New Features
   for example, will retain the object.  However, one cannot do operations that are not possible on the ``ExtensionArray``
   then, such as broadcasting. (:issue:`5287`, :issue:`8463`, :pull:`8723`)
   By `Ilan Gold <https://github.com/ilan-gold>`_.
-- :py:func:`testing.assert_allclose`/:py:func:`testing.assert_equal` now accept a new argument ``check_dims="transpose"``, controlling whether a transposed array is considered equal. (:issue:`5733`, :pull:`8991`)
+- :py:func:`testing.assert_allclose` / :py:func:`testing.assert_equal` now accept a new argument ``check_dims="transpose"``, controlling whether a transposed array is considered equal. (:issue:`5733`, :pull:`8991`)
   By `Ignacio Martinez Vazquez <https://github.com/ignamv>`_.
 - Added the option to avoid automatically creating 1D pandas indexes in :py:meth:`Dataset.expand_dims()`, by passing the new kwarg
   ``create_index_for_new_dim=False``. (:pull:`8960`)
