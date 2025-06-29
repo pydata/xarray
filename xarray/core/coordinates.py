@@ -819,7 +819,7 @@ class Coordinates(AbstractCoordinates):
         renamed : Coordinates
             Coordinates object with renamed variables
         """
-        return self.to_dataset().rename_vars(name_dict, **names)
+        return self.to_dataset().rename_vars(name_dict, **names).coords
 
 
 class DatasetCoordinates(Coordinates):

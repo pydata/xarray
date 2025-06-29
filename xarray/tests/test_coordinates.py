@@ -220,9 +220,11 @@ class TestCoordinates:
         )
 
         actual = coords.drop_vars("x")
+        assert isinstance(actual, Coordinates)
         assert set(actual.variables) == {"a", "y"}
 
         actual = coords.drop_vars(["x", "y"])
+        assert isinstance(actual, Coordinates)
         assert set(actual.variables) == {"a"}
 
     def test_rename_dims(self):
@@ -236,10 +238,12 @@ class TestCoordinates:
         )
 
         actual = coords.rename_dims({"x": "X"})
+        assert isinstance(actual, Coordinates)
         assert set(actual.dims) == {"X", "y"}
         assert set(actual.variables) == {"a", "x", "y"}
 
         actual = coords.rename_dims({"x": "u", "y": "v"})
+        assert isinstance(actual, Coordinates)
         assert set(actual.dims) == {"u", "v"}
         assert set(actual.variables) == {"a", "x", "y"}
 
@@ -254,10 +258,12 @@ class TestCoordinates:
         )
 
         actual = coords.rename_vars({"x": "X"})
+        assert isinstance(actual, Coordinates)
         assert set(actual.dims) == {"x", "y"}
         assert set(actual.variables) == {"a", "X", "y"}
 
         actual = coords.rename_vars({"x": "u", "y": "v"})
+        assert isinstance(actual, Coordinates)
         assert set(actual.dims) == {"x", "y"}
         assert set(actual.variables) == {"a", "u", "v"}
 
