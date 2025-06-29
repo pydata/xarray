@@ -21,7 +21,6 @@ from xarray.core.indexes import (
     assert_no_index_corrupted,
     create_default_index_implicit,
 )
-from xarray.core.merge import merge_coordinates_without_align, merge_coords
 from xarray.core.types import DataVars, ErrorOptions, Self, T_DataArray, T_Xarray
 from xarray.core.utils import (
     Frozen,
