@@ -561,7 +561,7 @@ class Coordinates(AbstractCoordinates):
             variables=coords, coord_names=coord_names, indexes=indexes
         )
 
-    def __or__(self, other: Self) -> Self:
+    def __or__(self, other: Mapping[Any, Any] | None) -> Coordinates:
         """Merge two sets of coordinates to create a new Coordinates object
 
         The method implements the logic used for joining coordinates in the
@@ -746,7 +746,12 @@ class Coordinates(AbstractCoordinates):
 
     def drop_vars(
         self,
-        names: str | Iterable[Hashable] | Callable[[Self], str | Iterable[Hashable]],
+        names: str
+        | Iterable[Hashable]
+        | Callable[
+            [Coordinates | Dataset | DataArray | DataTree],
+            str | Iterable[Hashable],
+        ],
         *,
         errors: ErrorOptions = "raise",
     ) -> Self:
@@ -767,13 +772,13 @@ class Coordinates(AbstractCoordinates):
             - ``'ignore'``: any given names that are in the dataset are dropped and no
               error is raised.
         """
-        return self.to_dataset().drop_vars(names, errors=errors).coords
+        return cast(Self, self.to_dataset().drop_vars(names, errors=errors).coords)
 
     def rename_dims(
         self,
         dims_dict: Mapping[Any, Hashable] | None = None,
         **dims: Hashable,
-    ) -> Self:
+    ) -> Coordinates:
         """Returns a new object with renamed dimensions only.
 
         Parameters
@@ -797,7 +802,7 @@ class Coordinates(AbstractCoordinates):
         self,
         name_dict: Mapping[Any, Hashable] | None = None,
         **names: Hashable,
-    ) -> Self:
+    ) -> Coordinates:
         """Returns a new object with renamed variables.
 
         Parameters
