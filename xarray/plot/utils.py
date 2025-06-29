@@ -955,7 +955,7 @@ def _process_cmap_cbar_kwargs(
     cmap_kwargs = {
         "plot_data": data,
         "levels": levels,
-        "cmap": colors if colors else cmap,
+        "cmap": colors or cmap,
         "filled": func.__name__ != "contour",
     }
 
