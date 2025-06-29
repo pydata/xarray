@@ -1287,7 +1287,7 @@ def attempt_import(module: str) -> ModuleType:
         matplotlib="for plotting",
         hypothesis="for the `xarray.testing.strategies` submodule",
     )
-    package_name = module.split(".")[0]  # e.g. "zarr" from "zarr.storage"
+    package_name = module.split(".", maxsplit=1)[0]  # e.g. "zarr" from "zarr.storage"
     install_name = install_mapping.get(package_name, package_name)
     reason = package_purpose.get(package_name, "")
     try:
