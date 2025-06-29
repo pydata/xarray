@@ -300,7 +300,7 @@ def test_parse_dims_set() -> None:
 @pytest.mark.parametrize(
     "dim", [pytest.param(None, id="None"), pytest.param(..., id="ellipsis")]
 )
-def test_parse_dims_replace_none(dim: None | EllipsisType) -> None:
+def test_parse_dims_replace_none(dim: EllipsisType | None) -> None:
     all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
     actual = utils.parse_dims_as_tuple(dim, all_dims, replace_none=True)
     assert actual == all_dims
