@@ -1545,7 +1545,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
     ) -> bool:
         if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
-            return ext in {".zarr"}
+            return ext == ".zarr"
 
         return False
 
