@@ -11,7 +11,7 @@ How to create a custom index
    introduced in v2022.06.0 and is still incomplete. API is subject to change
    without deprecation notice. However we encourage you to experiment and report issues that arise.
 
-Xarray's built-in support for label-based indexing (e.g. `ds.sel(latitude=40, method="nearest")`) and alignment operations
+Xarray's built-in support for label-based indexing (e.g. ``ds.sel(latitude=40, method="nearest")``) and alignment operations
 relies on :py:class:`pandas.Index` objects. Pandas Indexes are powerful and suitable for many
 applications but also have some limitations:
 
@@ -53,8 +53,8 @@ number, order and dimensions of the coordinates are all arbitrary), it is the
 responsibility of the index to check the consistency and validity of those input
 coordinates.
 
-For example, :py:class:`~xarray.core.indexes.PandasIndex` accepts only one coordinate and
-:py:class:`~xarray.core.indexes.PandasMultiIndex` accepts one or more 1-dimensional coordinates that must all
+For example, :py:class:`~xarray.indexes.PandasIndex` accepts only one coordinate and
+:py:class:`~xarray.indexes.PandasMultiIndex` accepts one or more 1-dimensional coordinates that must all
 share the same dimension. Other, custom indexes need not have the same
 constraints, e.g.,
 
@@ -67,7 +67,7 @@ Optional requirements
 ---------------------
 
 Pretty much everything else is optional. Depending on the method, in the absence
-of a (re)implementation, an index will either raise a `NotImplementedError`
+of a (re)implementation, an index will either raise a ``NotImplementedError``
 or won't do anything specific (just drop, pass or copy itself
 from/to the resulting Dataset or DataArray).
 

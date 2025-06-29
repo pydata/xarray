@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable, Hashable, Iterable, Sequence
+from typing import TYPE_CHECKING, Any, Literal
 
 from xarray.core._aggregations import (
     DataArrayResampleAggregations,
@@ -14,8 +14,9 @@ from xarray.core.types import Dims, InterpOptions, T_Xarray
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.types import T_Chunks
 
-RESAMPLE_DIM = "__resample_dim__"
+from xarray.groupers import RESAMPLE_DIM
 
 
 class Resample(GroupBy[T_Xarray]):
@@ -54,8 +55,70 @@ class Resample(GroupBy[T_Xarray]):
         keep_attrs: bool | None = None,
         **kwargs,
     ) -> T_Xarray:
-        result = super()._flox_reduce(dim=dim, keep_attrs=keep_attrs, **kwargs)
-        result = result.rename({RESAMPLE_DIM: self._group_dim})
+        result: T_Xarray = (
+            super()
+            ._flox_reduce(dim=dim, keep_attrs=keep_attrs, **kwargs)
+            .rename({RESAMPLE_DIM: self._group_dim})  # type: ignore[assignment]
+        )
+        return result
+
+    def shuffle_to_chunks(self, chunks: T_Chunks = None):
+        """
+        Sort or "shuffle" the underlying object.
+
+        "Shuffle" means the object is sorted so that all group members occur sequentially,
+        in the same chunk. Multiple groups may occur in the same chunk.
+        This method is particularly useful for chunked arrays (e.g. dask, cubed).
+        particularly when you need to map a function that requires all members of a group
+        to be present in a single chunk. For chunked array types, the order of appearance
+        is not guaranteed, but will depend on the input chunking.
+
+        Parameters
+        ----------
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or tuple of int, optional
+            How to adjust chunks along dimensions not present in the array being grouped by.
+
+        Returns
+        -------
+        DataArrayGroupBy or DatasetGroupBy
+
+        Examples
+        --------
+        >>> import dask.array
+        >>> da = xr.DataArray(
+        ...     dims="time",
+        ...     data=dask.array.arange(10, chunks=1),
+        ...     coords={"time": xr.date_range("2001-01-01", freq="12h", periods=10)},
+        ...     name="a",
+        ... )
+        >>> shuffled = da.resample(time="2D").shuffle_to_chunks()
+        >>> shuffled
+        <xarray.DataArray 'a' (time: 10)> Size: 80B
+        dask.array<shuffle, shape=(10,), dtype=int64, chunksize=(4,), chunktype=numpy.ndarray>
+        Coordinates:
+          * time     (time) datetime64[ns] 80B 2001-01-01 ... 2001-01-05T12:00:00
+
+        See Also
+        --------
+        dask.dataframe.DataFrame.shuffle
+        dask.array.shuffle
+        """
+        (grouper,) = self.groupers
+        return self._shuffle_obj(chunks).drop_vars(RESAMPLE_DIM)
+
+    def _first_or_last(
+        self, op: Literal["first", "last"], skipna: bool | None, keep_attrs: bool | None
+    ) -> T_Xarray:
+        from xarray.core.dataset import Dataset
+
+        result = super()._first_or_last(op=op, skipna=skipna, keep_attrs=keep_attrs)
+        if isinstance(result, Dataset):
+            # Can't do this in the base class because group_dim is RESAMPLE_DIM
+            # which is not present in the original object
+            for var in result.data_vars:
+                result._variables[var] = result._variables[var].transpose(
+                    *self._obj._variables[var].dims
+                )
         return result
 
     def _drop_coords(self) -> T_Xarray:
@@ -66,12 +129,12 @@ class Resample(GroupBy[T_Xarray]):
                 obj = obj.drop_vars([k])
         return obj
 
-    def pad(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
+    def pad(self, tolerance: float | Iterable[float] | str | None = None) -> T_Xarray:
         """Forward fill new values at up-sampled frequency.
 
         Parameters
         ----------
-        tolerance : float | Iterable[float] | None, default: None
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels to limit
             the up-sampling method.
             Up-sampled data with indices that satisfy the equation
@@ -91,12 +154,14 @@ class Resample(GroupBy[T_Xarray]):
 
     ffill = pad
 
-    def backfill(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
+    def backfill(
+        self, tolerance: float | Iterable[float] | str | None = None
+    ) -> T_Xarray:
         """Backward fill new values at up-sampled frequency.
 
         Parameters
         ----------
-        tolerance : float | Iterable[float] | None, default: None
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels to limit
             the up-sampling method.
             Up-sampled data with indices that satisfy the equation
@@ -116,13 +181,15 @@ class Resample(GroupBy[T_Xarray]):
 
     bfill = backfill
 
-    def nearest(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
+    def nearest(
+        self, tolerance: float | Iterable[float] | str | None = None
+    ) -> T_Xarray:
         """Take new values from nearest original coordinate to up-sampled
         frequency coordinates.
 
         Parameters
         ----------
-        tolerance : float | Iterable[float] | None, default: None
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels to limit
             the up-sampling method.
             Up-sampled data with indices that satisfy the equation
@@ -140,7 +207,7 @@ class Resample(GroupBy[T_Xarray]):
             {self._dim: grouper.full_index}, method="nearest", tolerance=tolerance
         )
 
-    def interpolate(self, kind: InterpOptions = "linear") -> T_Xarray:
+    def interpolate(self, kind: InterpOptions = "linear", **kwargs) -> T_Xarray:
         """Interpolate up-sampled data using the original data as knots.
 
         Parameters
@@ -168,22 +235,24 @@ class Resample(GroupBy[T_Xarray]):
         scipy.interpolate.interp1d
 
         """
-        return self._interpolate(kind=kind)
+        return self._interpolate(kind=kind, **kwargs)
 
-    def _interpolate(self, kind="linear") -> T_Xarray:
+    def _interpolate(self, kind="linear", **kwargs) -> T_Xarray:
         """Apply scipy.interpolate.interp1d along resampling dimension."""
         obj = self._drop_coords()
         (grouper,) = self.groupers
+        kwargs.setdefault("bounds_error", False)
         return obj.interp(
             coords={self._dim: grouper.full_index},
             assume_sorted=True,
             method=kind,
-            kwargs={"bounds_error": False},
+            kwargs=kwargs,
         )
 
 
-# https://github.com/python/mypy/issues/9031
-class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations):  # type: ignore[misc]
+class DataArrayResample(
+    Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations
+):
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
@@ -281,21 +350,9 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
         applied : DataArray
             The result of splitting, applying and combining this array.
         """
-        return self._map_maybe_warn(func, args, shortcut, warn_squeeze=True, **kwargs)
-
-    def _map_maybe_warn(
-        self,
-        func: Callable[..., Any],
-        args: tuple[Any, ...] = (),
-        shortcut: bool | None = False,
-        warn_squeeze: bool = True,
-        **kwargs: Any,
-    ) -> DataArray:
         # TODO: the argument order for Resample doesn't match that for its parent,
         # GroupBy
-        combined = super()._map_maybe_warn(
-            func, shortcut=shortcut, args=args, warn_squeeze=warn_squeeze, **kwargs
-        )
+        combined = super().map(func, shortcut=shortcut, args=args, **kwargs)
 
         # If the aggregation function didn't drop the original resampling
         # dimension, then we need to do so before we can rename the proxy
@@ -335,8 +392,9 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
         return self.mean(None if self._dim is None else [self._dim])
 
 
-# https://github.com/python/mypy/issues/9031
-class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations):  # type: ignore[misc]
+class DatasetResample(
+    Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations
+):
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def map(
@@ -375,18 +433,8 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAg
         applied : Dataset
             The result of splitting, applying and combining this dataset.
         """
-        return self._map_maybe_warn(func, args, shortcut, warn_squeeze=True, **kwargs)
-
-    def _map_maybe_warn(
-        self,
-        func: Callable[..., Any],
-        args: tuple[Any, ...] = (),
-        shortcut: bool | None = None,
-        warn_squeeze: bool = True,
-        **kwargs: Any,
-    ) -> Dataset:
         # ignore shortcut if set (for now)
-        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped(warn_squeeze))
+        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         combined = self._combine(applied)
 
         # If the aggregation function didn't drop the original resampling
@@ -452,27 +500,6 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAg
             removed.
         """
         return super().reduce(
-            func=func,
-            dim=dim,
-            axis=axis,
-            keep_attrs=keep_attrs,
-            keepdims=keepdims,
-            shortcut=shortcut,
-            **kwargs,
-        )
-
-    def _reduce_without_squeeze_warn(
-        self,
-        func: Callable[..., Any],
-        dim: Dims = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
-        keepdims: bool = False,
-        shortcut: bool = True,
-        **kwargs: Any,
-    ) -> Dataset:
-        return super()._reduce_without_squeeze_warn(
             func=func,
             dim=dim,
             axis=axis,

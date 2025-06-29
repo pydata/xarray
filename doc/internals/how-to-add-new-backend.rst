@@ -4,7 +4,7 @@ How to add a new backend
 ------------------------
 
 Adding a new backend for read support to Xarray does not require
-to integrate any code in Xarray; all you need to do is:
+one to integrate any code in Xarray; all you need to do is:
 
 - Create a class that inherits from Xarray :py:class:`~xarray.backends.BackendEntrypoint`
   and implements the method ``open_dataset`` see :ref:`RST backend_entrypoint`
@@ -114,7 +114,7 @@ The input of ``open_dataset`` method are one argument
 
 - ``filename_or_obj``: can be any object but usually it is a string containing a path or an instance of
   :py:class:`pathlib.Path`.
-- ``drop_variables``: can be `None` or an iterable containing the variable
+- ``drop_variables``: can be ``None`` or an iterable containing the variable
   names to be dropped when reading the data.
 
 If it makes sense for your backend, your ``open_dataset``  method
@@ -221,21 +221,27 @@ performs the inverse transformation.
 
 In the following an example on how to use the coders ``decode`` method:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import xarray as xr
+    import numpy as np
 
-.. ipython:: python
+.. jupyter-execute::
 
     var = xr.Variable(
         dims=("x",), data=np.arange(10.0), attrs={"scale_factor": 10, "add_offset": 2}
     )
     var
 
+.. jupyter-execute::
+
     coder = xr.coding.variables.CFScaleOffsetCoder()
     decoded_var = coder.decode(var)
     decoded_var
+
+.. jupyter-execute::
+
     decoded_var.encoding
 
 Some of the transformations can be common to more backends, so before
@@ -362,7 +368,7 @@ grouped in three types of indexes
 This implies that the implementation of the method ``__getitem__`` can be tricky.
 In order to simplify this task, Xarray provides a helper function,
 :py:func:`~xarray.core.indexing.explicit_indexing_adapter`, that transforms
-all the input  ``indexer`` types (`basic`, `outer`, `vectorized`) in a tuple
+all the input indexer types (basic, outer, vectorized) in a tuple
 which is interpreted correctly by your backend.
 
 This is an example ``BackendArray`` subclass implementation:
@@ -432,45 +438,64 @@ In the ``BASIC`` indexing support, numbers and slices are supported.
 
 Example:
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [1]: # () shall return the full array
-       ...: backend_array._raw_indexing_method(())
-    Out[1]: array([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
+    # () shall return the full array
+    backend_array._raw_indexing_method(())
 
-    In [2]: # shall support integers
-       ...: backend_array._raw_indexing_method(1, 1)
-    Out[2]: 5
+.. jupyter-output::
 
-    In [3]: # shall support slices
-       ...: backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
-    Out[3]: array([[2, 3], [6, 7], [10, 11]])
+    array([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
+
+.. jupyter-input::
+
+    # shall support integers
+    backend_array._raw_indexing_method(1, 1)
+
+.. jupyter-output::
+
+    5
+
+.. jupyter-input::
+
+   # shall support slices
+   backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
+
+.. jupyter-output::
+
+    array([[2, 3], [6, 7], [10, 11]])
 
 **OUTER**
 
 The ``OUTER`` indexing shall support number, slices and in addition it shall
-support also lists of integers. The the outer indexing is equivalent to
+support also lists of integers. The outer indexing is equivalent to
 combining multiple input list with ``itertools.product()``:
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [1]: backend_array._raw_indexing_method([0, 1], [0, 1, 2])
-    Out[1]: array([[0, 1, 2], [4, 5, 6]])
+    backend_array._raw_indexing_method([0, 1], [0, 1, 2])
+
+.. jupyter-output::
+
+    array([[0, 1, 2], [4, 5, 6]])
+
+.. jupyter-input::
 
     # shall support integers
-    In [2]: backend_array._raw_indexing_method(1, 1)
-    Out[2]: 5
+    backend_array._raw_indexing_method(1, 1)
+
+.. jupyter-output::
+
+    5
 
 
 **OUTER_1VECTOR**
 
 The ``OUTER_1VECTOR`` indexing shall supports number, slices and at most one
-list. The behaviour with the list shall be the same of ``OUTER`` indexing.
+list. The behaviour with the list shall be the same as ``OUTER`` indexing.
 
-If you support more complex indexing as `explicit indexing` or
-`numpy indexing`, you can have a look to the implementation of Zarr backend and Scipy backend,
+If you support more complex indexing as explicit indexing or
+numpy indexing, you can have a look to the implementation of Zarr backend and Scipy backend,
 currently available in :py:mod:`~xarray.backends` module.
 
 .. _RST preferred_chunks:

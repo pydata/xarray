@@ -4,8 +4,9 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.core import dtypes, merge
-from xarray.core.merge import MergeError
+from xarray.core import dtypes
+from xarray.structure import merge
+from xarray.structure.merge import MergeError
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests.test_dataset import create_test_data
 
@@ -37,7 +38,7 @@ class TestMergeFunction:
         assert_identical(actual, expected)
 
     def test_merge_datasets(self):
-        data = create_test_data(add_attrs=False)
+        data = create_test_data(add_attrs=False, use_extension_array=True)
 
         actual = xr.merge([data[["var1"]], data[["var2"]]])
         expected = data[["var1", "var2"]]
@@ -182,9 +183,11 @@ class TestMergeFunction:
         self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
     ):
         """check that combine_attrs is used on data variables and coords"""
+        input_attrs1 = attrs1.copy()
         data1 = xr.Dataset(
             {"var1": ("dim1", [], attrs1)}, coords={"dim1": ("dim1", [], attrs1)}
         )
+        input_attrs2 = attrs2.copy()
         data2 = xr.Dataset(
             {"var1": ("dim1", [], attrs2)}, coords={"dim1": ("dim1", [], attrs2)}
         )
@@ -200,6 +203,12 @@ class TestMergeFunction:
             )
 
             assert_identical(actual, expected)
+
+            # Check also that input attributes weren't modified
+            assert data1["var1"].attrs == input_attrs1
+            assert data1.coords["dim1"].attrs == input_attrs1
+            assert data2["var1"].attrs == input_attrs2
+            assert data2.coords["dim1"].attrs == input_attrs2
 
     def test_merge_attrs_override_copy(self):
         ds1 = xr.Dataset(attrs={"x": 0})
@@ -342,6 +351,18 @@ class TestMergeMethod:
             data.reset_coords().merge(data)
         with pytest.raises(ValueError, match=r"should be coordinates or not"):
             data.merge(data.reset_coords())
+
+    def test_merge_drop_attrs(self):
+        data = create_test_data()
+        ds1 = data[["var1"]]
+        ds2 = data[["var3"]]
+        ds1.coords["dim2"].attrs["keep me"] = "example"
+        ds2.coords["numbers"].attrs["foo"] = "bar"
+        actual = ds1.merge(ds2, combine_attrs="drop")
+        assert actual.coords["dim2"].attrs == {}
+        assert actual.coords["numbers"].attrs == {}
+        assert ds1.coords["dim2"].attrs["keep me"] == "example"
+        assert ds2.coords["numbers"].attrs["foo"] == "bar"
 
     def test_merge_broadcast_equals(self):
         ds1 = xr.Dataset({"x": 0})

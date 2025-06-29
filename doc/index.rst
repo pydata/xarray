@@ -1,3 +1,5 @@
+:html_theme.sidebar_secondary.remove: true
+
 .. module:: xarray
 
 Xarray documentation
@@ -6,84 +8,67 @@ Xarray documentation
 Xarray makes working with labelled multi-dimensional arrays in Python simple,
 efficient, and fun!
 
+**Version**: |version| - :ref:`whats-new`
+
 **Useful links**:
 `Home <https://xarray.dev>`__ |
 `Code Repository <https://github.com/pydata/xarray>`__ |
 `Issues <https://github.com/pydata/xarray/issues>`__ |
 `Discussions <https://github.com/pydata/xarray/discussions>`__ |
 `Releases <https://github.com/pydata/xarray/releases>`__ |
+`Tutorial <https://tutorial.xarray.dev>`__ |
 `Stack Overflow <https://stackoverflow.com/questions/tagged/python-xarray>`__ |
-`Mailing List <https://groups.google.com/g/xarray>`__ |
-`Blog <https://xarray.dev/blog>`__
-
+`Blog <https://xarray.dev/blog>`__ |
 
 .. grid:: 1 1 2 2
     :gutter: 2
 
-    .. grid-item-card:: Getting started
+    .. grid-item-card:: Get started!
         :img-top: _static/index_getting_started.svg
+        :class-card: intro-card
         :link: getting-started-guide/index
         :link-type: doc
 
-        New to *xarray*? Check out the getting started guides. They contain an
-        introduction to *Xarray's* main concepts and links to additional tutorials.
+        *New to Xarray?*
+        Start here with our installation instructions and a brief overview of Xarray.
 
     .. grid-item-card::  User guide
         :img-top: _static/index_user_guide.svg
+        :class-card: intro-card
         :link: user-guide/index
         :link-type: doc
 
-        The user guide provides in-depth information on the
-        key concepts of Xarray with useful background information and explanation.
+        *Ready to deepen your understanding of Xarray?*
+        Visit the user guide for detailed explanations of the data model, common computational patterns, and more.
 
     .. grid-item-card::  API reference
         :img-top: _static/index_api.svg
+        :class-card: intro-card
         :link: api
         :link-type: doc
 
-        The reference guide contains a detailed description of the Xarray API.
-        The reference describes how the methods work and which parameters can
-        be used. It assumes that you have an understanding of the key concepts.
+        *Need to learn more about a specific Xarray function?*
+        Go here to review the documentation of all public functions and classes in Xarray.
 
-    .. grid-item-card::  Developer guide
+    .. grid-item-card::  Contribute
         :img-top: _static/index_contribute.svg
-        :link: contributing
+        :class-card: intro-card
+        :link: contribute/contributing
         :link-type: doc
 
-        Saw a typo in the documentation? Want to improve existing functionalities?
-        The contributing guidelines will guide you through the process of improving
-        Xarray.
+        *Saw a typo in the documentation? Want to improve existing functionalities?*
+        Please review our guide on improving Xarray.
 
 .. toctree::
    :maxdepth: 2
    :hidden:
    :caption: For users
 
-   Getting Started <getting-started-guide/index>
+   Get Started <getting-started-guide/index>
    User Guide <user-guide/index>
+   Tutorial <https://tutorial.xarray.dev>
    Gallery <gallery>
-   Tutorials & Videos <tutorials-and-videos>
    API Reference <api>
-   How do I ... <howdoi>
-   Ecosystem <ecosystem>
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: For developers/contributors
-
-   Contributing Guide <contributing>
-   Xarray Internals <internals/index>
-   Development Roadmap <roadmap>
-   Team <https://xarray.dev/team>
-   Developers Meeting <developers-meeting>
-   What’s New <whats-new>
-   GitHub repository <https://github.com/pydata/xarray>
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-   :caption: Community
-
-   GitHub discussions <https://github.com/pydata/xarray/discussions>
-   StackOverflow <https://stackoverflow.com/questions/tagged/python-xarray>
+   Get Help <get-help/help-diagram>
+   Contribute <contribute/index>
+   Release Notes <whats-new>

@@ -40,9 +40,9 @@ class SerializableLock:
     The creation of locks is itself not threadsafe.
     """
 
-    _locks: ClassVar[
-        WeakValueDictionary[Hashable, threading.Lock]
-    ] = WeakValueDictionary()
+    _locks: ClassVar[WeakValueDictionary[Hashable, threading.Lock]] = (
+        WeakValueDictionary()
+    )
     token: Hashable
     lock: threading.Lock
 
@@ -118,9 +118,7 @@ def _get_lock_maker(scheduler=None):
     dask.utils.get_scheduler_lock
     """
 
-    if scheduler is None:
-        return _get_threaded_lock
-    elif scheduler == "threaded":
+    if scheduler is None or scheduler == "threaded":
         return _get_threaded_lock
     elif scheduler == "multiprocessing":
         return _get_multiprocessing_lock
@@ -149,7 +147,7 @@ def _get_scheduler(get=None, collection=None) -> str | None:
         # Fix for bug caused by dask installation that doesn't involve the toolz library
         # Issue: 4164
         import dask
-        from dask.base import get_scheduler  # noqa: F401
+        from dask.base import get_scheduler
 
         actual_get = get_scheduler(get, collection)
     except ImportError:

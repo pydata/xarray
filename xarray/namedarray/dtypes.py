@@ -1,13 +1,7 @@
 from __future__ import annotations
 
 import functools
-import sys
-from typing import Any, Literal
-
-if sys.version_info >= (3, 10):
-    from typing import TypeGuard
-else:
-    from typing_extensions import TypeGuard
+from typing import Any, Literal, TypeGuard
 
 import numpy as np
 
@@ -19,19 +13,19 @@ NA = utils.ReprObject("<NA>")
 
 @functools.total_ordering
 class AlwaysGreaterThan:
-    def __gt__(self, other: Any) -> Literal[True]:
+    def __gt__(self, other: object) -> Literal[True]:
         return True
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, type(self))
 
 
 @functools.total_ordering
 class AlwaysLessThan:
-    def __lt__(self, other: Any) -> Literal[True]:
+    def __lt__(self, other: object) -> Literal[True]:
         return True
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, type(self))
 
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from xarray.core.utils import FrozenDict
 
@@ -10,8 +10,10 @@ if TYPE_CHECKING:
 
     Options = Literal[
         "arithmetic_join",
+        "chunk_manager",
         "cmap_divergent",
         "cmap_sequential",
+        "display_max_children",
         "display_max_rows",
         "display_values_threshold",
         "display_style",
@@ -20,6 +22,7 @@ if TYPE_CHECKING:
         "display_expand_coords",
         "display_expand_data_vars",
         "display_expand_data",
+        "display_expand_groups",
         "display_expand_indexes",
         "display_default_indexes",
         "enable_cftimeindex",
@@ -33,22 +36,26 @@ if TYPE_CHECKING:
     ]
 
     class T_Options(TypedDict):
+        arithmetic_broadcast: bool
         arithmetic_join: Literal["inner", "outer", "left", "right", "exact"]
+        chunk_manager: str
         cmap_divergent: str | Colormap
         cmap_sequential: str | Colormap
+        display_max_children: int
         display_max_rows: int
         display_values_threshold: int
         display_style: Literal["text", "html"]
         display_width: int
-        display_expand_attrs: Literal["default", True, False]
-        display_expand_coords: Literal["default", True, False]
-        display_expand_data_vars: Literal["default", True, False]
-        display_expand_data: Literal["default", True, False]
-        display_expand_indexes: Literal["default", True, False]
-        display_default_indexes: Literal["default", True, False]
+        display_expand_attrs: Literal["default"] | bool
+        display_expand_coords: Literal["default"] | bool
+        display_expand_data_vars: Literal["default"] | bool
+        display_expand_data: Literal["default"] | bool
+        display_expand_groups: Literal["default"] | bool
+        display_expand_indexes: Literal["default"] | bool
+        display_default_indexes: Literal["default"] | bool
         enable_cftimeindex: bool
         file_cache_maxsize: int
-        keep_attrs: Literal["default", True, False]
+        keep_attrs: Literal["default"] | bool
         warn_for_unclosed_files: bool
         use_bottleneck: bool
         use_flox: bool
@@ -57,9 +64,12 @@ if TYPE_CHECKING:
 
 
 OPTIONS: T_Options = {
+    "arithmetic_broadcast": True,
     "arithmetic_join": "inner",
+    "chunk_manager": "dask",
     "cmap_divergent": "RdBu_r",
     "cmap_sequential": "viridis",
+    "display_max_children": 6,
     "display_max_rows": 12,
     "display_values_threshold": 200,
     "display_style": "html",
@@ -68,6 +78,7 @@ OPTIONS: T_Options = {
     "display_expand_coords": "default",
     "display_expand_data_vars": "default",
     "display_expand_data": "default",
+    "display_expand_groups": "default",
     "display_expand_indexes": "default",
     "display_default_indexes": False,
     "enable_cftimeindex": True,
@@ -84,12 +95,14 @@ _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
 _DISPLAY_OPTIONS = frozenset(["text", "html"])
 
 
-def _positive_integer(value: int) -> bool:
+def _positive_integer(value: Any) -> bool:
     return isinstance(value, int) and value > 0
 
 
 _VALIDATORS = {
+    "arithmetic_broadcast": lambda value: isinstance(value, bool),
     "arithmetic_join": _JOIN_OPTIONS.__contains__,
+    "display_max_children": _positive_integer,
     "display_max_rows": _positive_integer,
     "display_values_threshold": _positive_integer,
     "display_style": _DISPLAY_OPTIONS.__contains__,
@@ -122,6 +135,7 @@ def _warn_on_setting_enable_cftimeindex(enable_cftimeindex):
         "The enable_cftimeindex option is now a no-op "
         "and will be removed in a future version of xarray.",
         FutureWarning,
+        stacklevel=2,
     )
 
 
@@ -166,7 +180,9 @@ class set_options:
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-
+    chunk_manager : str, default: "dask"
+        Chunk manager to use for chunked array computations when multiple
+        options are installed.
     cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
         Colormap to use for divergent data plots. If string, must be
         matplotlib built-in colormap. Can also be a Colormap object
@@ -210,6 +226,8 @@ class set_options:
         * ``True`` : to always expand indexes
         * ``False`` : to always collapse indexes
         * ``default`` : to expand unless over a pre-defined limit (always collapse for html style)
+    display_max_children : int, default: 6
+        Maximum number of children to display for each node in a DataTree.
     display_max_rows : int, default: 12
         Maximum display rows.
     display_values_threshold : int, default: 200
@@ -255,10 +273,10 @@ class set_options:
     >>> with xr.set_options(display_width=40):
     ...     print(ds)
     ...
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 8kB
     Dimensions:  (x: 1000)
     Coordinates:
-      * x        (x) int64 0 1 2 ... 998 999
+      * x        (x) int64 8kB 0 1 ... 999
     Data variables:
         *empty*
 

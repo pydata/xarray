@@ -1,10 +1,11 @@
 """Mixin classes with reduction operations."""
+
 # This file was generated using xarray.util.generate_aggregations. Do not edit manually.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, Any
 
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
@@ -16,6 +17,1314 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
 
 flox_available = module_available("flox")
+
+
+class DataTreeAggregations:
+    __slots__ = ()
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> Self:
+        raise NotImplementedError()
+
+    def count(
+        self,
+        dim: Dims = None,
+        *,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this DataTree's data by applying ``count`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``count`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataTree
+            New DataTree with ``count`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        pandas.DataFrame.count
+        dask.dataframe.DataFrame.count
+        Dataset.count
+        DataArray.count
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Examples
+        --------
+        >>> dt = xr.DataTree(
+        ...     xr.Dataset(
+        ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
+        ...         coords=dict(
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
+        ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...         ),
+        ...     ),
+        ... )
+        >>> dt
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Coordinates:
+              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+            Data variables:
+                foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
+
+        >>> dt.count()
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      int64 8B 5
+        """
+        return self.reduce(
+            duck_array_ops.count,
+            dim=dim,
+            numeric_only=False,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def all(
+        self,
+        dim: Dims = None,
+        *,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this DataTree's data by applying ``all`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``all`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataTree
+            New DataTree with ``all`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.all
+        dask.array.all
+        Dataset.all
+        DataArray.all
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Examples
+        --------
+        >>> dt = xr.DataTree(
+        ...     xr.Dataset(
+        ...         data_vars=dict(
+        ...             foo=(
+        ...                 "time",
+        ...                 np.array([True, True, True, True, True, False], dtype=bool),
+        ...             )
+        ...         ),
+        ...         coords=dict(
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
+        ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...         ),
+        ...     ),
+        ... )
+        >>> dt
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Coordinates:
+              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+            Data variables:
+                foo      (time) bool 6B True True True True True False
+
+        >>> dt.all()
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      bool 1B False
+        """
+        return self.reduce(
+            duck_array_ops.array_all,
+            dim=dim,
+            numeric_only=False,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def any(
+        self,
+        dim: Dims = None,
+        *,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this DataTree's data by applying ``any`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``any`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataTree
+            New DataTree with ``any`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.any
+        dask.array.any
+        Dataset.any
+        DataArray.any
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Examples
+        --------
+        >>> dt = xr.DataTree(
+        ...     xr.Dataset(
+        ...         data_vars=dict(
+        ...             foo=(
+        ...                 "time",
+        ...                 np.array([True, True, True, True, True, False], dtype=bool),
+        ...             )
+        ...         ),
+        ...         coords=dict(
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
+        ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...         ),
+        ...     ),
+        ... )
+        >>> dt
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Coordinates:
+              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+            Data variables:
+                foo      (time) bool 6B True True True True True False
+
+        >>> dt.any()
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      bool 1B True
+        """
+        return self.reduce(
+            duck_array_ops.array_any,
+            dim=dim,
+            numeric_only=False,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def max(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this DataTree's data by applying ``max`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``max`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataTree
+            New DataTree with ``max`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.max
+        dask.array.max
+        Dataset.max
+        DataArray.max
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Examples
+        --------
+        >>> dt = xr.DataTree(
+        ...     xr.Dataset(
+        ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
+        ...         coords=dict(
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
+        ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...         ),
+        ...     ),
+        ... )
+        >>> dt
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Coordinates:
+              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+            Data variables:
+                foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
+
+        >>> dt.max()
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B 3.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> dt.max(skipna=False)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B nan
+        """
+        return self.reduce(
+            duck_array_ops.max,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=False,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def min(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this DataTree's data by applying ``min`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``min`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataTree
+            New DataTree with ``min`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.min
+        dask.array.min
+        Dataset.min
+        DataArray.min
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Examples
+        --------
+        >>> dt = xr.DataTree(
+        ...     xr.Dataset(
+        ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
+        ...         coords=dict(
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
+        ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...         ),
+        ...     ),
+        ... )
+        >>> dt
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Coordinates:
+              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+            Data variables:
+                foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
+
+        >>> dt.min()
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B 0.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> dt.min(skipna=False)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B nan
+        """
+        return self.reduce(
+            duck_array_ops.min,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=False,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def mean(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this DataTree's data by applying ``mean`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``mean`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataTree
+            New DataTree with ``mean`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.mean
+        dask.array.mean
+        Dataset.mean
+        DataArray.mean
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
+        Examples
+        --------
+        >>> dt = xr.DataTree(
+        ...     xr.Dataset(
+        ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
+        ...         coords=dict(
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
+        ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...         ),
+        ...     ),
+        ... )
+        >>> dt
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Coordinates:
+              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+            Data variables:
+                foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
+
+        >>> dt.mean()
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B 1.6
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> dt.mean(skipna=False)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B nan
+        """
+        return self.reduce(
+            duck_array_ops.mean,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def prod(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        min_count: int | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this DataTree's data by applying ``prod`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        min_count : int or None, optional
+            The required number of valid values to perform the operation. If
+            fewer than min_count non-NA values are present the result will be
+            NA. Only used if skipna is set to True or defaults to True for the
+            array's dtype. Changed in version 0.17.0: if specified on an integer
+            array and skipna=True, the result will be a float array.
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``prod`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataTree
+            New DataTree with ``prod`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.prod
+        dask.array.prod
+        Dataset.prod
+        DataArray.prod
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
+        Examples
+        --------
+        >>> dt = xr.DataTree(
+        ...     xr.Dataset(
+        ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
+        ...         coords=dict(
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
+        ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...         ),
+        ...     ),
+        ... )
+        >>> dt
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Coordinates:
+              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+            Data variables:
+                foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
+
+        >>> dt.prod()
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B 0.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> dt.prod(skipna=False)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B nan
+
+        Specify ``min_count`` for finer control over when NaNs are ignored.
+
+        >>> dt.prod(skipna=True, min_count=2)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B 0.0
+        """
+        return self.reduce(
+            duck_array_ops.prod,
+            dim=dim,
+            skipna=skipna,
+            min_count=min_count,
+            numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def sum(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        min_count: int | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this DataTree's data by applying ``sum`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        min_count : int or None, optional
+            The required number of valid values to perform the operation. If
+            fewer than min_count non-NA values are present the result will be
+            NA. Only used if skipna is set to True or defaults to True for the
+            array's dtype. Changed in version 0.17.0: if specified on an integer
+            array and skipna=True, the result will be a float array.
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``sum`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataTree
+            New DataTree with ``sum`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.sum
+        dask.array.sum
+        Dataset.sum
+        DataArray.sum
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
+        Examples
+        --------
+        >>> dt = xr.DataTree(
+        ...     xr.Dataset(
+        ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
+        ...         coords=dict(
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
+        ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...         ),
+        ...     ),
+        ... )
+        >>> dt
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Coordinates:
+              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+            Data variables:
+                foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
+
+        >>> dt.sum()
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B 8.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> dt.sum(skipna=False)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B nan
+
+        Specify ``min_count`` for finer control over when NaNs are ignored.
+
+        >>> dt.sum(skipna=True, min_count=2)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B 8.0
+        """
+        return self.reduce(
+            duck_array_ops.sum,
+            dim=dim,
+            skipna=skipna,
+            min_count=min_count,
+            numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def std(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        ddof: int = 0,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this DataTree's data by applying ``std`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        ddof : int, default: 0
+            “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
+            where ``N`` represents the number of elements.
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``std`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataTree
+            New DataTree with ``std`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.std
+        dask.array.std
+        Dataset.std
+        DataArray.std
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
+        Examples
+        --------
+        >>> dt = xr.DataTree(
+        ...     xr.Dataset(
+        ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
+        ...         coords=dict(
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
+        ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...         ),
+        ...     ),
+        ... )
+        >>> dt
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Coordinates:
+              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+            Data variables:
+                foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
+
+        >>> dt.std()
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B 1.02
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> dt.std(skipna=False)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B nan
+
+        Specify ``ddof=1`` for an unbiased estimate.
+
+        >>> dt.std(skipna=True, ddof=1)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B 1.14
+        """
+        return self.reduce(
+            duck_array_ops.std,
+            dim=dim,
+            skipna=skipna,
+            ddof=ddof,
+            numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def var(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        ddof: int = 0,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this DataTree's data by applying ``var`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        ddof : int, default: 0
+            “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
+            where ``N`` represents the number of elements.
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``var`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataTree
+            New DataTree with ``var`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.var
+        dask.array.var
+        Dataset.var
+        DataArray.var
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
+        Examples
+        --------
+        >>> dt = xr.DataTree(
+        ...     xr.Dataset(
+        ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
+        ...         coords=dict(
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
+        ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...         ),
+        ...     ),
+        ... )
+        >>> dt
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Coordinates:
+              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+            Data variables:
+                foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
+
+        >>> dt.var()
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B 1.04
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> dt.var(skipna=False)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B nan
+
+        Specify ``ddof=1`` for an unbiased estimate.
+
+        >>> dt.var(skipna=True, ddof=1)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B 1.3
+        """
+        return self.reduce(
+            duck_array_ops.var,
+            dim=dim,
+            skipna=skipna,
+            ddof=ddof,
+            numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def median(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this DataTree's data by applying ``median`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``median`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataTree
+            New DataTree with ``median`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.median
+        dask.array.median
+        Dataset.median
+        DataArray.median
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
+        Examples
+        --------
+        >>> dt = xr.DataTree(
+        ...     xr.Dataset(
+        ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
+        ...         coords=dict(
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
+        ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...         ),
+        ...     ),
+        ... )
+        >>> dt
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Coordinates:
+              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+            Data variables:
+                foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
+
+        >>> dt.median()
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B 2.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> dt.median(skipna=False)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B nan
+        """
+        return self.reduce(
+            duck_array_ops.median,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def cumsum(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this DataTree's data by applying ``cumsum`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``cumsum``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``cumsum`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataTree
+            New DataTree with ``cumsum`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.cumsum
+        dask.array.cumsum
+        Dataset.cumsum
+        DataArray.cumsum
+        DataTree.cumulative
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
+
+        Examples
+        --------
+        >>> dt = xr.DataTree(
+        ...     xr.Dataset(
+        ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
+        ...         coords=dict(
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
+        ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...         ),
+        ...     ),
+        ... )
+        >>> dt
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Coordinates:
+              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+            Data variables:
+                foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
+
+        >>> dt.cumsum()
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Dimensions without coordinates: time
+            Data variables:
+                foo      (time) float64 48B 1.0 3.0 6.0 6.0 8.0 8.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> dt.cumsum(skipna=False)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Dimensions without coordinates: time
+            Data variables:
+                foo      (time) float64 48B 1.0 3.0 6.0 6.0 8.0 nan
+        """
+        return self.reduce(
+            duck_array_ops.cumsum,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def cumprod(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this DataTree's data by applying ``cumprod`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``cumprod``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``cumprod`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataTree
+            New DataTree with ``cumprod`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.cumprod
+        dask.array.cumprod
+        Dataset.cumprod
+        DataArray.cumprod
+        DataTree.cumulative
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
+
+        Examples
+        --------
+        >>> dt = xr.DataTree(
+        ...     xr.Dataset(
+        ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
+        ...         coords=dict(
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
+        ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...         ),
+        ...     ),
+        ... )
+        >>> dt
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Coordinates:
+              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+            Data variables:
+                foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
+
+        >>> dt.cumprod()
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Dimensions without coordinates: time
+            Data variables:
+                foo      (time) float64 48B 1.0 2.0 6.0 0.0 0.0 0.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> dt.cumprod(skipna=False)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Dimensions without coordinates: time
+            Data variables:
+                foo      (time) float64 48B 1.0 2.0 6.0 0.0 0.0 nan
+        """
+        return self.reduce(
+            duck_array_ops.cumprod,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
 
 
 class DatasetAggregations:
@@ -83,19 +1392,19 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.count()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       int64 5
+            da       int64 8B 5
         """
         return self.reduce(
             duck_array_ops.count,
@@ -155,19 +1464,19 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 78B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) bool True True True True True False
+            da       (time) bool 6B True True True True True False
 
         >>> ds.all()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 1B
         Dimensions:  ()
         Data variables:
-            da       bool False
+            da       bool 1B False
         """
         return self.reduce(
             duck_array_ops.array_all,
@@ -227,19 +1536,19 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 78B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) bool True True True True True False
+            da       (time) bool 6B True True True True True False
 
         >>> ds.any()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 1B
         Dimensions:  ()
         Data variables:
-            da       bool True
+            da       bool 1B True
         """
         return self.reduce(
             duck_array_ops.array_any,
@@ -305,27 +1614,27 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.max()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 3.0
+            da       float64 8B 3.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.max(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 nan
+            da       float64 8B nan
         """
         return self.reduce(
             duck_array_ops.max,
@@ -392,27 +1701,27 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.min()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 0.0
+            da       float64 8B 0.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.min(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 nan
+            da       float64 8B nan
         """
         return self.reduce(
             duck_array_ops.min,
@@ -483,27 +1792,27 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.mean()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 1.6
+            da       float64 8B 1.6
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.mean(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 nan
+            da       float64 8B nan
         """
         return self.reduce(
             duck_array_ops.mean,
@@ -581,35 +1890,35 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.prod()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 0.0
+            da       float64 8B 0.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.prod(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 nan
+            da       float64 8B nan
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.prod(skipna=True, min_count=2)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 0.0
+            da       float64 8B 0.0
         """
         return self.reduce(
             duck_array_ops.prod,
@@ -688,35 +1997,35 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.sum()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 8.0
+            da       float64 8B 8.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.sum(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 nan
+            da       float64 8B nan
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.sum(skipna=True, min_count=2)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 8.0
+            da       float64 8B 8.0
         """
         return self.reduce(
             duck_array_ops.sum,
@@ -792,35 +2101,35 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.std()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 1.02
+            da       float64 8B 1.02
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.std(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 nan
+            da       float64 8B nan
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.std(skipna=True, ddof=1)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 1.14
+            da       float64 8B 1.14
         """
         return self.reduce(
             duck_array_ops.std,
@@ -896,35 +2205,35 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.var()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 1.04
+            da       float64 8B 1.04
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.var(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 nan
+            da       float64 8B nan
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.var(skipna=True, ddof=1)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 1.3
+            da       float64 8B 1.3
         """
         return self.reduce(
             duck_array_ops.var,
@@ -996,27 +2305,27 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.median()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 2.0
+            da       float64 8B 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.median(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       float64 nan
+            da       float64 8B nan
         """
         return self.reduce(
             duck_array_ops.median,
@@ -1068,12 +2377,17 @@ class DatasetAggregations:
         numpy.cumsum
         dask.array.cumsum
         DataArray.cumsum
+        Dataset.cumulative
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
         Notes
         -----
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -1087,29 +2401,29 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.cumsum()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
-            da       (time) float64 1.0 3.0 6.0 6.0 8.0 8.0
+            da       (time) float64 48B 1.0 3.0 6.0 6.0 8.0 8.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.cumsum(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
-            da       (time) float64 1.0 3.0 6.0 6.0 8.0 nan
+            da       (time) float64 48B 1.0 3.0 6.0 6.0 8.0 nan
         """
         return self.reduce(
             duck_array_ops.cumsum,
@@ -1161,12 +2475,17 @@ class DatasetAggregations:
         numpy.cumprod
         dask.array.cumprod
         DataArray.cumprod
+        Dataset.cumulative
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
         Notes
         -----
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -1180,29 +2499,29 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.cumprod()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
-            da       (time) float64 1.0 2.0 6.0 0.0 0.0 0.0
+            da       (time) float64 48B 1.0 2.0 6.0 0.0 0.0 0.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.cumprod(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
-            da       (time) float64 1.0 2.0 6.0 0.0 0.0 nan
+            da       (time) float64 48B 1.0 2.0 6.0 0.0 0.0 nan
         """
         return self.reduce(
             duck_array_ops.cumprod,
@@ -1278,14 +2597,14 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.count()
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(5)
         """
         return self.reduce(
@@ -1344,14 +2663,14 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.all()
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 1B
         array(False)
         """
         return self.reduce(
@@ -1410,14 +2729,14 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.any()
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 1B
         array(True)
         """
         return self.reduce(
@@ -1482,20 +2801,20 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.max()
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(3.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.max(skipna=False)
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(nan)
         """
         return self.reduce(
@@ -1561,20 +2880,20 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.min()
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(0.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.min(skipna=False)
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(nan)
         """
         return self.reduce(
@@ -1644,20 +2963,20 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.mean()
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(1.6)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.mean(skipna=False)
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(nan)
         """
         return self.reduce(
@@ -1734,26 +3053,26 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.prod()
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(0.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.prod(skipna=False)
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(nan)
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.prod(skipna=True, min_count=2)
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(0.)
         """
         return self.reduce(
@@ -1831,26 +3150,26 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.sum()
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(8.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.sum(skipna=False)
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(nan)
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.sum(skipna=True, min_count=2)
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(8.)
         """
         return self.reduce(
@@ -1925,26 +3244,26 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.std()
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(1.0198039)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.std(skipna=False)
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(nan)
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.std(skipna=True, ddof=1)
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(1.14017543)
         """
         return self.reduce(
@@ -2019,26 +3338,26 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.var()
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(1.04)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.var(skipna=False)
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(nan)
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.var(skipna=True, ddof=1)
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(1.3)
         """
         return self.reduce(
@@ -2109,20 +3428,20 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.median()
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(2.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.median(skipna=False)
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(nan)
         """
         return self.reduce(
@@ -2174,12 +3493,17 @@ class DataArrayAggregations:
         numpy.cumsum
         dask.array.cumsum
         Dataset.cumsum
+        DataArray.cumulative
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
         Notes
         -----
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -2192,27 +3516,27 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.cumsum()
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([1., 3., 6., 6., 8., 8.])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.cumsum(skipna=False)
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  3.,  6.,  6.,  8., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         """
         return self.reduce(
             duck_array_ops.cumsum,
@@ -2263,12 +3587,17 @@ class DataArrayAggregations:
         numpy.cumprod
         dask.array.cumprod
         Dataset.cumprod
+        DataArray.cumulative
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
         Notes
         -----
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -2281,27 +3610,27 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.cumprod()
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([1., 2., 6., 0., 0., 0.])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.cumprod(skipna=False)
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  6.,  0.,  0., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         """
         return self.reduce(
             duck_array_ops.cumprod,
@@ -2315,19 +3644,6 @@ class DataArrayAggregations:
 class DatasetGroupByAggregations:
     _obj: Dataset
 
-    def _reduce_without_squeeze_warn(
-        self,
-        func: Callable[..., Any],
-        dim: Dims = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
-        keepdims: bool = False,
-        shortcut: bool = True,
-        **kwargs: Any,
-    ) -> Dataset:
-        raise NotImplementedError()
-
     def reduce(
         self,
         func: Callable[..., Any],
@@ -2391,8 +3707,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -2407,21 +3721,21 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").count()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) int64 1 2 2
+            da       (labels) int64 24B 1 2 2
         """
         if (
             flox_available
@@ -2437,7 +3751,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.count,
                 dim=dim,
                 numeric_only=False,
@@ -2489,8 +3803,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -2505,21 +3817,21 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 78B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) bool True True True True True False
+            da       (time) bool 6B True True True True True False
 
         >>> ds.groupby("labels").all()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 27B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) bool False True True
+            da       (labels) bool 3B False True True
         """
         if (
             flox_available
@@ -2535,7 +3847,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.array_all,
                 dim=dim,
                 numeric_only=False,
@@ -2587,8 +3899,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -2603,21 +3913,21 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 78B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) bool True True True True True False
+            da       (time) bool 6B True True True True True False
 
         >>> ds.groupby("labels").any()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 27B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) bool True True True
+            da       (labels) bool 3B True True True
         """
         if (
             flox_available
@@ -2633,7 +3943,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.array_any,
                 dim=dim,
                 numeric_only=False,
@@ -2691,8 +4001,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -2707,31 +4015,31 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").max()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 2.0 3.0
+            da       (labels) float64 24B 1.0 2.0 3.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").max(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 2.0 3.0
+            da       (labels) float64 24B nan 2.0 3.0
         """
         if (
             flox_available
@@ -2748,7 +4056,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
@@ -2807,8 +4115,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -2823,31 +4129,31 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").min()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 2.0 0.0
+            da       (labels) float64 24B 1.0 2.0 0.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").min(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 2.0 0.0
+            da       (labels) float64 24B nan 2.0 0.0
         """
         if (
             flox_available
@@ -2864,7 +4170,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
@@ -2923,8 +4229,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -2941,31 +4245,31 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").mean()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 2.0 1.5
+            da       (labels) float64 24B 1.0 2.0 1.5
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").mean(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 2.0 1.5
+            da       (labels) float64 24B nan 2.0 1.5
         """
         if (
             flox_available
@@ -2982,7 +4286,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
@@ -3048,8 +4352,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -3066,41 +4368,41 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").prod()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 4.0 0.0
+            da       (labels) float64 24B 1.0 4.0 0.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").prod(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 4.0 0.0
+            da       (labels) float64 24B nan 4.0 0.0
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.groupby("labels").prod(skipna=True, min_count=2)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 4.0 0.0
+            da       (labels) float64 24B nan 4.0 0.0
         """
         if (
             flox_available
@@ -3118,7 +4420,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -3185,8 +4487,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -3203,41 +4503,41 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").sum()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 4.0 3.0
+            da       (labels) float64 24B 1.0 4.0 3.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").sum(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 4.0 3.0
+            da       (labels) float64 24B nan 4.0 3.0
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.groupby("labels").sum(skipna=True, min_count=2)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 4.0 3.0
+            da       (labels) float64 24B nan 4.0 3.0
         """
         if (
             flox_available
@@ -3255,7 +4555,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -3319,8 +4619,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -3337,41 +4635,41 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").std()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 0.0 0.0 1.5
+            da       (labels) float64 24B 0.0 0.0 1.5
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").std(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 0.0 1.5
+            da       (labels) float64 24B nan 0.0 1.5
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.groupby("labels").std(skipna=True, ddof=1)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 0.0 2.121
+            da       (labels) float64 24B nan 0.0 2.121
         """
         if (
             flox_available
@@ -3389,7 +4687,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -3453,8 +4751,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -3471,41 +4767,41 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").var()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 0.0 0.0 2.25
+            da       (labels) float64 24B 0.0 0.0 2.25
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").var(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 0.0 2.25
+            da       (labels) float64 24B nan 0.0 2.25
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.groupby("labels").var(skipna=True, ddof=1)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 0.0 4.5
+            da       (labels) float64 24B nan 0.0 4.5
         """
         if (
             flox_available
@@ -3523,7 +4819,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -3583,8 +4879,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -3601,33 +4895,33 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").median()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 2.0 1.5
+            da       (labels) float64 24B 1.0 2.0 1.5
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").median(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 2.0 1.5
+            da       (labels) float64 24B nan 2.0 1.5
         """
-        return self._reduce_without_squeeze_warn(
+        return self.reduce(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
@@ -3678,6 +4972,7 @@ class DatasetGroupByAggregations:
         numpy.cumsum
         dask.array.cumsum
         Dataset.cumsum
+        Dataset.cumulative
         :ref:`groupby`
             User guide on groupby operations.
 
@@ -3686,11 +4981,13 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -3704,31 +5001,31 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").cumsum()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 3.0 4.0 1.0
+            da       (time) float64 48B 1.0 2.0 3.0 3.0 4.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").cumsum(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 3.0 4.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 3.0 4.0 nan
         """
-        return self._reduce_without_squeeze_warn(
+        return self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
@@ -3779,6 +5076,7 @@ class DatasetGroupByAggregations:
         numpy.cumprod
         dask.array.cumprod
         Dataset.cumprod
+        Dataset.cumulative
         :ref:`groupby`
             User guide on groupby operations.
 
@@ -3787,11 +5085,13 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -3805,31 +5105,31 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").cumprod()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 4.0 1.0
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 4.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").cumprod(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 4.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 4.0 nan
         """
-        return self._reduce_without_squeeze_warn(
+        return self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
@@ -3842,19 +5142,6 @@ class DatasetGroupByAggregations:
 class DatasetResampleAggregations:
     _obj: Dataset
 
-    def _reduce_without_squeeze_warn(
-        self,
-        func: Callable[..., Any],
-        dim: Dims = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
-        keepdims: bool = False,
-        shortcut: bool = True,
-        **kwargs: Any,
-    ) -> Dataset:
-        raise NotImplementedError()
-
     def reduce(
         self,
         func: Callable[..., Any],
@@ -3918,8 +5205,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -3934,21 +5219,21 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").count()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) int64 1 3 1
+            da       (time) int64 24B 1 3 1
         """
         if (
             flox_available
@@ -3964,7 +5249,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.count,
                 dim=dim,
                 numeric_only=False,
@@ -4016,8 +5301,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -4032,21 +5315,21 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 78B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) bool True True True True True False
+            da       (time) bool 6B True True True True True False
 
         >>> ds.resample(time="3ME").all()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 27B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) bool True True False
+            da       (time) bool 3B True True False
         """
         if (
             flox_available
@@ -4062,7 +5345,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.array_all,
                 dim=dim,
                 numeric_only=False,
@@ -4114,8 +5397,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -4130,21 +5411,21 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 78B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) bool True True True True True False
+            da       (time) bool 6B True True True True True False
 
         >>> ds.resample(time="3ME").any()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 27B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) bool True True True
+            da       (time) bool 3B True True True
         """
         if (
             flox_available
@@ -4160,7 +5441,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.array_any,
                 dim=dim,
                 numeric_only=False,
@@ -4218,8 +5499,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -4234,31 +5513,31 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").max()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 3.0 2.0
+            da       (time) float64 24B 1.0 3.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").max(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 3.0 nan
+            da       (time) float64 24B 1.0 3.0 nan
         """
         if (
             flox_available
@@ -4275,7 +5554,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
@@ -4334,8 +5613,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -4350,31 +5627,31 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").min()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 0.0 2.0
+            da       (time) float64 24B 1.0 0.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").min(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 0.0 nan
+            da       (time) float64 24B 1.0 0.0 nan
         """
         if (
             flox_available
@@ -4391,7 +5668,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
@@ -4450,8 +5727,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -4468,31 +5743,31 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").mean()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 1.667 2.0
+            da       (time) float64 24B 1.0 1.667 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").mean(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 1.667 nan
+            da       (time) float64 24B 1.0 1.667 nan
         """
         if (
             flox_available
@@ -4509,7 +5784,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
@@ -4575,8 +5850,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -4593,41 +5866,41 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").prod()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 0.0 2.0
+            da       (time) float64 24B 1.0 0.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").prod(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 0.0 nan
+            da       (time) float64 24B 1.0 0.0 nan
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.resample(time="3ME").prod(skipna=True, min_count=2)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 nan 0.0 nan
+            da       (time) float64 24B nan 0.0 nan
         """
         if (
             flox_available
@@ -4645,7 +5918,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -4712,8 +5985,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -4730,41 +6001,41 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").sum()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 5.0 2.0
+            da       (time) float64 24B 1.0 5.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").sum(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 5.0 nan
+            da       (time) float64 24B 1.0 5.0 nan
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.resample(time="3ME").sum(skipna=True, min_count=2)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 nan 5.0 nan
+            da       (time) float64 24B nan 5.0 nan
         """
         if (
             flox_available
@@ -4782,7 +6053,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -4846,8 +6117,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -4864,41 +6133,41 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").std()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 0.0 1.247 0.0
+            da       (time) float64 24B 0.0 1.247 0.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").std(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 0.0 1.247 nan
+            da       (time) float64 24B 0.0 1.247 nan
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.resample(time="3ME").std(skipna=True, ddof=1)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 nan 1.528 nan
+            da       (time) float64 24B nan 1.528 nan
         """
         if (
             flox_available
@@ -4916,7 +6185,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -4980,8 +6249,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -4998,41 +6265,41 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").var()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 0.0 1.556 0.0
+            da       (time) float64 24B 0.0 1.556 0.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").var(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 0.0 1.556 nan
+            da       (time) float64 24B 0.0 1.556 nan
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.resample(time="3ME").var(skipna=True, ddof=1)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 nan 2.333 nan
+            da       (time) float64 24B nan 2.333 nan
         """
         if (
             flox_available
@@ -5050,7 +6317,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -5110,8 +6377,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -5128,33 +6393,33 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").median()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 2.0 2.0
+            da       (time) float64 24B 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").median(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 2.0 nan
+            da       (time) float64 24B 1.0 2.0 nan
         """
-        return self._reduce_without_squeeze_warn(
+        return self.reduce(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
@@ -5205,6 +6470,7 @@ class DatasetResampleAggregations:
         numpy.cumsum
         dask.array.cumsum
         Dataset.cumsum
+        Dataset.cumulative
         :ref:`resampling`
             User guide on resampling operations.
 
@@ -5213,11 +6479,13 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -5231,31 +6499,31 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").cumsum()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
-            da       (time) float64 1.0 2.0 5.0 5.0 2.0 2.0
+            da       (time) float64 48B 1.0 2.0 5.0 5.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").cumsum(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
-            da       (time) float64 1.0 2.0 5.0 5.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 5.0 5.0 2.0 nan
         """
-        return self._reduce_without_squeeze_warn(
+        return self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
@@ -5306,6 +6574,7 @@ class DatasetResampleAggregations:
         numpy.cumprod
         dask.array.cumprod
         Dataset.cumprod
+        Dataset.cumulative
         :ref:`resampling`
             User guide on resampling operations.
 
@@ -5314,11 +6583,13 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -5332,31 +6603,31 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
-            da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").cumprod()
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
-            da       (time) float64 1.0 2.0 6.0 0.0 2.0 2.0
+            da       (time) float64 48B 1.0 2.0 6.0 0.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").cumprod(skipna=False)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
-            da       (time) float64 1.0 2.0 6.0 0.0 2.0 nan
+            da       (time) float64 48B 1.0 2.0 6.0 0.0 2.0 nan
         """
-        return self._reduce_without_squeeze_warn(
+        return self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
@@ -5369,19 +6640,6 @@ class DatasetResampleAggregations:
 class DataArrayGroupByAggregations:
     _obj: DataArray
 
-    def _reduce_without_squeeze_warn(
-        self,
-        func: Callable[..., Any],
-        dim: Dims = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
-        keepdims: bool = False,
-        shortcut: bool = True,
-        **kwargs: Any,
-    ) -> DataArray:
-        raise NotImplementedError()
-
     def reduce(
         self,
         func: Callable[..., Any],
@@ -5445,8 +6703,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -5460,17 +6716,17 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").count()
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([1, 2, 2])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -5485,7 +6741,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.count,
                 dim=dim,
                 keep_attrs=keep_attrs,
@@ -5536,8 +6792,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -5551,17 +6805,17 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").all()
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 3B
         array([False,  True,  True])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -5576,7 +6830,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.array_all,
                 dim=dim,
                 keep_attrs=keep_attrs,
@@ -5627,8 +6881,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -5642,17 +6894,17 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").any()
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 3B
         array([ True,  True,  True])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -5667,7 +6919,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.array_any,
                 dim=dim,
                 keep_attrs=keep_attrs,
@@ -5724,8 +6976,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -5739,25 +6989,25 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").max()
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([1., 2., 3.])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").max(skipna=False)
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([nan,  2.,  3.])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -5773,7 +7023,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
@@ -5831,8 +7081,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -5846,25 +7094,25 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").min()
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([1., 2., 0.])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").min(skipna=False)
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([nan,  2.,  0.])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -5880,7 +7128,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
@@ -5938,8 +7186,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -5955,25 +7201,25 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").mean()
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([1. , 2. , 1.5])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").mean(skipna=False)
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([nan, 2. , 1.5])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -5989,7 +7235,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
@@ -6054,8 +7300,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -6071,33 +7315,33 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").prod()
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([1., 4., 0.])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").prod(skipna=False)
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([nan,  4.,  0.])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.groupby("labels").prod(skipna=True, min_count=2)
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([nan,  4.,  0.])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -6114,7 +7358,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -6180,8 +7424,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -6197,33 +7439,33 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").sum()
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([1., 4., 3.])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").sum(skipna=False)
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([nan,  4.,  3.])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.groupby("labels").sum(skipna=True, min_count=2)
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([nan,  4.,  3.])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -6240,7 +7482,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -6303,8 +7545,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -6320,33 +7560,33 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").std()
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([0. , 0. , 1.5])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").std(skipna=False)
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([nan, 0. , 1.5])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.groupby("labels").std(skipna=True, ddof=1)
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([       nan, 0.        , 2.12132034])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -6363,7 +7603,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -6426,8 +7666,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -6443,33 +7681,33 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").var()
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([0.  , 0.  , 2.25])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").var(skipna=False)
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([ nan, 0.  , 2.25])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.groupby("labels").var(skipna=True, ddof=1)
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([nan, 0. , 4.5])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         """
         if (
             flox_available
@@ -6486,7 +7724,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -6545,8 +7783,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -6562,27 +7798,27 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").median()
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([1. , 2. , 1.5])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").median(skipna=False)
-        <xarray.DataArray (labels: 3)>
+        <xarray.DataArray (labels: 3)> Size: 24B
         array([nan, 2. , 1.5])
         Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
+          * labels   (labels) object 24B 'a' 'b' 'c'
         """
-        return self._reduce_without_squeeze_warn(
+        return self.reduce(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
@@ -6632,6 +7868,7 @@ class DataArrayGroupByAggregations:
         numpy.cumsum
         dask.array.cumsum
         DataArray.cumsum
+        DataArray.cumulative
         :ref:`groupby`
             User guide on groupby operations.
 
@@ -6640,11 +7877,13 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -6657,29 +7896,29 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").cumsum()
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([1., 2., 3., 3., 4., 1.])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").cumsum(skipna=False)
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  3.,  4., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         """
-        return self._reduce_without_squeeze_warn(
+        return self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
@@ -6729,6 +7968,7 @@ class DataArrayGroupByAggregations:
         numpy.cumprod
         dask.array.cumprod
         DataArray.cumprod
+        DataArray.cumulative
         :ref:`groupby`
             User guide on groupby operations.
 
@@ -6737,11 +7977,13 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -6754,29 +7996,29 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").cumprod()
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([1., 2., 3., 0., 4., 1.])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").cumprod(skipna=False)
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  4., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         """
-        return self._reduce_without_squeeze_warn(
+        return self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
@@ -6788,19 +8030,6 @@ class DataArrayGroupByAggregations:
 class DataArrayResampleAggregations:
     _obj: DataArray
 
-    def _reduce_without_squeeze_warn(
-        self,
-        func: Callable[..., Any],
-        dim: Dims = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
-        keepdims: bool = False,
-        shortcut: bool = True,
-        **kwargs: Any,
-    ) -> DataArray:
-        raise NotImplementedError()
-
     def reduce(
         self,
         func: Callable[..., Any],
@@ -6864,8 +8093,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -6879,17 +8106,17 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").count()
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([1, 3, 1])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -6904,7 +8131,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.count,
                 dim=dim,
                 keep_attrs=keep_attrs,
@@ -6955,8 +8182,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -6970,17 +8195,17 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").all()
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 3B
         array([ True,  True, False])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -6995,7 +8220,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.array_all,
                 dim=dim,
                 keep_attrs=keep_attrs,
@@ -7046,8 +8271,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -7061,17 +8284,17 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").any()
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 3B
         array([ True,  True,  True])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -7086,7 +8309,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.array_any,
                 dim=dim,
                 keep_attrs=keep_attrs,
@@ -7143,8 +8366,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -7158,25 +8379,25 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").max()
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([1., 3., 2.])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").max(skipna=False)
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([ 1.,  3., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -7192,7 +8413,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
@@ -7250,8 +8471,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -7265,25 +8484,25 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").min()
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([1., 0., 2.])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").min(skipna=False)
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([ 1.,  0., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -7299,7 +8518,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
@@ -7357,8 +8576,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -7374,25 +8591,25 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").mean()
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([1.        , 1.66666667, 2.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").mean(skipna=False)
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([1.        , 1.66666667,        nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -7408,7 +8625,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
@@ -7473,8 +8690,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -7490,33 +8705,33 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").prod()
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([1., 0., 2.])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").prod(skipna=False)
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([ 1.,  0., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.resample(time="3ME").prod(skipna=True, min_count=2)
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([nan,  0., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -7533,7 +8748,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -7599,8 +8814,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -7616,33 +8829,33 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").sum()
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([1., 5., 2.])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").sum(skipna=False)
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([ 1.,  5., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.resample(time="3ME").sum(skipna=True, min_count=2)
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([nan,  5., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -7659,7 +8872,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -7722,8 +8935,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -7739,33 +8950,33 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").std()
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([0.        , 1.24721913, 0.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").std(skipna=False)
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([0.        , 1.24721913,        nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.resample(time="3ME").std(skipna=True, ddof=1)
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([       nan, 1.52752523,        nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -7782,7 +8993,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -7845,8 +9056,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -7862,33 +9071,33 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").var()
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([0.        , 1.55555556, 0.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").var(skipna=False)
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([0.        , 1.55555556,        nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.resample(time="3ME").var(skipna=True, ddof=1)
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([       nan, 2.33333333,        nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -7905,7 +9114,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self._reduce_without_squeeze_warn(
+            return self.reduce(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -7964,8 +9173,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -7981,27 +9188,27 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").median()
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([1., 2., 2.])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").median(skipna=False)
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (time: 3)> Size: 24B
         array([ 1.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         """
-        return self._reduce_without_squeeze_warn(
+        return self.reduce(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
@@ -8051,6 +9258,7 @@ class DataArrayResampleAggregations:
         numpy.cumsum
         dask.array.cumsum
         DataArray.cumsum
+        DataArray.cumulative
         :ref:`resampling`
             User guide on resampling operations.
 
@@ -8059,11 +9267,13 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -8076,29 +9286,29 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").cumsum()
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([1., 2., 5., 5., 2., 2.])
         Coordinates:
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Dimensions without coordinates: time
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").cumsum(skipna=False)
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  5.,  5.,  2., nan])
         Coordinates:
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Dimensions without coordinates: time
         """
-        return self._reduce_without_squeeze_warn(
+        return self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
@@ -8148,6 +9358,7 @@ class DataArrayResampleAggregations:
         numpy.cumprod
         dask.array.cumprod
         DataArray.cumprod
+        DataArray.cumulative
         :ref:`resampling`
             User guide on resampling operations.
 
@@ -8156,11 +9367,13 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -8173,29 +9386,29 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").cumprod()
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([1., 2., 6., 0., 2., 2.])
         Coordinates:
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Dimensions without coordinates: time
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").cumprod(skipna=False)
-        <xarray.DataArray (time: 6)>
+        <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  6.,  0.,  2., nan])
         Coordinates:
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Dimensions without coordinates: time
         """
-        return self._reduce_without_squeeze_warn(
+        return self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,

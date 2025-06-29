@@ -16,7 +16,7 @@ dependencies:
   - h5py
   - hdf5
   - iris
-  - lxml    # Optional dep of pydap
+  - lxml # Optional dep of pydap
   - matplotlib
   - nc-time-axis
   - netcdf4
@@ -28,7 +28,6 @@ dependencies:
   - pip
   - pooch
   - pydap
-  - pynio
   - rasterio
   - scipy
   - seaborn

@@ -1,15 +1,16 @@
-"""Functions for converting to and from xarray objects
-"""
+"""Functions for converting to and from xarray objects"""
+
 from collections import Counter
 
 import numpy as np
 
-from xarray.coding.times import CFDatetimeCoder, CFTimedeltaCoder
+from xarray.coders import CFDatetimeCoder
+from xarray.coding.times import CFTimedeltaCoder
 from xarray.conventions import decode_cf
 from xarray.core import duck_array_ops
 from xarray.core.dataarray import DataArray
 from xarray.core.dtypes import get_fill_value
-from xarray.core.pycompat import array_type
+from xarray.namedarray.pycompat import array_type
 
 iris_forbidden_keys = {
     "standard_name",
@@ -137,7 +138,7 @@ def _iris_cell_methods_to_str(cell_methods_obj):
             f"interval: {interval}" for interval in cell_method.intervals
         )
         comments = " ".join(f"comment: {comment}" for comment in cell_method.comments)
-        extra = " ".join([intervals, comments]).strip()
+        extra = f"{intervals} {comments}".strip()
         if extra:
             extra = f" ({extra})"
         cell_methods.append(names + cell_method.method + extra)

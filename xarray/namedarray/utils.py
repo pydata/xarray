@@ -1,30 +1,29 @@
 from __future__ import annotations
 
-import sys
+import importlib
 import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import numpy as np
+from packaging.version import Version
 
 from xarray.namedarray._typing import ErrorOptionsWithWarn, _DimsLike
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 10):
-        from typing import TypeGuard
-    else:
-        from typing_extensions import TypeGuard
+    from typing import TypeGuard
 
     from numpy.typing import NDArray
-
-    from xarray.namedarray._typing import _Dim, duckarray
 
     try:
         from dask.array.core import Array as DaskArray
         from dask.typing import DaskCollection
     except ImportError:
-        DaskArray = NDArray  # type: ignore
-        DaskCollection: Any = NDArray  # type: ignore
+        DaskArray = NDArray  # type: ignore[assignment, misc]
+        DaskCollection: Any = NDArray  # type: ignore[no-redef]
+
+    from xarray.namedarray._typing import _Dim, duckarray
 
 
 K = TypeVar("K")
@@ -32,7 +31,8 @@ V = TypeVar("V")
 T = TypeVar("T")
 
 
-def module_available(module: str) -> bool:
+@lru_cache
+def module_available(module: str, minversion: str | None = None) -> bool:
     """Checks whether a module is installed without importing it.
 
     Use this for a lightweight check and lazy imports.
@@ -41,27 +41,53 @@ def module_available(module: str) -> bool:
     ----------
     module : str
         Name of the module.
+    minversion : str, optional
+        Minimum version of the module
 
     Returns
     -------
     available : bool
         Whether the module is installed.
     """
-    from importlib.util import find_spec
+    if importlib.util.find_spec(module) is None:
+        return False
 
-    return find_spec(module) is not None
+    if minversion is not None:
+        version = importlib.metadata.version(module)
+
+        return Version(version) >= Version(minversion)
+
+    return True
 
 
 def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
     if module_available("dask"):
-        from dask.typing import DaskCollection
+        from dask.base import is_dask_collection
 
-        return isinstance(x, DaskCollection)
+        # use is_dask_collection function instead of dask.typing.DaskCollection
+        # see https://github.com/pydata/xarray/pull/8241#discussion_r1476276023
+        return is_dask_collection(x)
     return False
 
 
+def is_duck_array(value: Any) -> TypeGuard[duckarray[Any, Any]]:
+    # TODO: replace is_duck_array with runtime checks via _arrayfunction_or_api protocol on
+    # python 3.12 and higher (see https://github.com/pydata/xarray/issues/8696#issuecomment-1924588981)
+    if isinstance(value, np.ndarray):
+        return True
+    return (
+        hasattr(value, "ndim")
+        and hasattr(value, "shape")
+        and hasattr(value, "dtype")
+        and (
+            (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
+            or hasattr(value, "__array_namespace__")
+        )
+    )
+
+
 def is_duck_dask_array(x: duckarray[Any, Any]) -> TypeGuard[DaskArray]:
-    return is_dask_collection(x)
+    return is_duck_array(x) and is_dask_collection(x)
 
 
 def to_0d_object_array(
@@ -104,7 +130,8 @@ def drop_missing_dims(
     elif missing_dims == "warn":
         if invalid := set(supplied_dims) - set(dims):
             warnings.warn(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}",
+                stacklevel=2,
             )
 
         return [val for val in supplied_dims if val in dims or val is ...]
@@ -188,7 +215,7 @@ class ReprObject:
     def __hash__(self) -> int:
         return hash((type(self), self._value))
 
-    def __dask_tokenize__(self) -> Hashable:
+    def __dask_tokenize__(self) -> object:
         from dask.base import normalize_token
 
-        return normalize_token((type(self), self._value))  # type: ignore[no-any-return]
+        return normalize_token((type(self), self._value))

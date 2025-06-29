@@ -39,7 +39,7 @@
 from __future__ import annotations
 
 import re
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -291,9 +291,7 @@ def test_case_str() -> None:
     exp_norm_nfc = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(np.str_)
     exp_norm_nfkc = xr.DataArray(["SOme wOrd DŽ ß ᾛ ΣΣ ffi5Å Ç I"]).astype(np.str_)
     exp_norm_nfd = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(np.str_)
-    exp_norm_nfkd = xr.DataArray(["SOme wOrd DŽ ß ᾛ ΣΣ ffi5Å Ç I"]).astype(
-        np.str_
-    )
+    exp_norm_nfkd = xr.DataArray(["SOme wOrd DŽ ß ᾛ ΣΣ ffi5Å Ç I"]).astype(np.str_)
 
     res_capitalized = value.str.capitalize()
     res_casefolded = value.str.casefold()
@@ -908,7 +906,7 @@ def test_extractall_single_single_nocase(dtype) -> None:
     pat_re: str | bytes = (
         pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
-    pat_compiled = re.compile(pat_re, flags=re.I)
+    pat_compiled = re.compile(pat_re, flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [["a_Xy_0", "ab_xY_10", "abc_Xy_01"], ["abcd_Xy_", "", "abcdef_Xy_101"]],
@@ -983,7 +981,7 @@ def test_extractall_single_multi_nocase(dtype) -> None:
     pat_re: str | bytes = (
         pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
-    pat_compiled = re.compile(pat_re, flags=re.I)
+    pat_compiled = re.compile(pat_re, flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [
@@ -1065,7 +1063,7 @@ def test_extractall_multi_single_nocase(dtype) -> None:
     pat_re: str | bytes = (
         pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
-    pat_compiled = re.compile(pat_re, flags=re.I)
+    pat_compiled = re.compile(pat_re, flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [["a_Xy_0", "ab_xY_10", "abc_Xy_01"], ["abcd_Xy_", "", "abcdef_Xy_101"]],
@@ -1147,7 +1145,7 @@ def test_extractall_multi_multi_nocase(dtype) -> None:
     pat_re: str | bytes = (
         pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
-    pat_compiled = re.compile(pat_re, flags=re.I)
+    pat_compiled = re.compile(pat_re, flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [
@@ -1247,7 +1245,7 @@ def test_findall_single_single_case(dtype) -> None:
 
 def test_findall_single_single_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_\d*"
-    pat_re = re.compile(dtype(pat_str), flags=re.I)
+    pat_re = re.compile(dtype(pat_str), flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [["a_Xy_0", "ab_xY_10", "abc_Xy_01"], ["abcd_Xy_", "", "abcdef_Xy_101"]],
@@ -1315,7 +1313,7 @@ def test_findall_single_multi_case(dtype) -> None:
 
 def test_findall_single_multi_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_\d*"
-    pat_re = re.compile(dtype(pat_str), flags=re.I)
+    pat_re = re.compile(dtype(pat_str), flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [
@@ -1389,7 +1387,7 @@ def test_findall_multi_single_case(dtype) -> None:
 
 def test_findall_multi_single_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
-    pat_re = re.compile(dtype(pat_str), flags=re.I)
+    pat_re = re.compile(dtype(pat_str), flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [["a_Xy_0", "ab_xY_10", "abc_Xy_01"], ["abcd_Xy_", "", "abcdef_Xy_101"]],
@@ -1465,7 +1463,7 @@ def test_findall_multi_multi_case(dtype) -> None:
 
 def test_findall_multi_multi_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
-    pat_re = re.compile(dtype(pat_str), flags=re.I)
+    pat_re = re.compile(dtype(pat_str), flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [
