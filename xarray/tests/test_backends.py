@@ -2671,13 +2671,13 @@ class ZarrBase(CFEncodedBase):
             # check that a variable hidden attribute is present and correct
             # JSON only has a single array type, which maps to list in Python.
             # In contrast, dims in xarray is always a tuple.
-            for var in expected.variables.keys():
+            for var in expected.variables:
                 dims = zarr_group[var].attrs[self.DIMENSION_KEY]
                 assert dims == list(expected[var].dims)
 
             with xr.decode_cf(store):
                 # make sure it is hidden
-                for var in expected.variables.keys():
+                for var in expected.variables:
                     assert self.DIMENSION_KEY not in expected[var].attrs
 
             # put it back and try removing from a variable
@@ -3731,7 +3731,7 @@ class TestZarrDictStore(ZarrBase):
 
             # Verify the chunk keys in store use the slash separator
             if not has_zarr_v3:
-                chunk_keys = [k for k in store.keys() if k.startswith("var1/")]
+                chunk_keys = [k for k in store if k.startswith("var1/")]
                 assert len(chunk_keys) > 0
                 for key in chunk_keys:
                     assert "/" in key
