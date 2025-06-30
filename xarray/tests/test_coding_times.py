@@ -2006,10 +2006,9 @@ def test_literal_timedelta_coding_non_pandas_fine_resolution_warning() -> None:
     assert decoded.dtype == np.dtype("timedelta64[ns]")
 
 
-@pytest.mark.parametrize("attribute", ["dtype", "units"])
-def test_literal_timedelta_decode_invalid_encoding(attribute) -> None:
+def test_literal_timedelta_decode_invalid_encoding() -> None:
     attrs = {"dtype": "timedelta64[s]", "units": "seconds"}
-    encoding = {attribute: "foo"}
+    encoding = {"units": "foo"}
     encoded = Variable(["time"], [0, 1, 2], attrs=attrs, encoding=encoding)
     with pytest.raises(ValueError, match="failed to prevent"):
         conventions.decode_cf_variable("timedeltas", encoded)

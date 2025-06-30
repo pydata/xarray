@@ -1509,8 +1509,11 @@ class CFTimedeltaCoder(VariableCoder):
                         f"present in encoding. Check the encoding parameters "
                         f"of variable {name!r}."
                     )
-                dtype = pop_to(attrs, encoding, "dtype", name=name)
-                dtype = np.dtype(dtype)
+                # Overwrite the on-disk dtype encoding, which is numeric, with
+                # the dtype attribute stored on disk, which corresponds to
+                # a timedelta64 dtype.
+                encoding["dtype"] = attrs.pop("dtype")
+                dtype = np.dtype(encoding["dtype"])
                 resolution, _ = np.datetime_data(dtype)
                 resolution = cast(NPDatetimeUnitOptions, resolution)
                 if np.timedelta64(1, resolution) > np.timedelta64(1, "s"):
