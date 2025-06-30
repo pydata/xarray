@@ -380,6 +380,18 @@ def _chunk_ds(
     return backend_ds._replace(variables)
 
 
+def _create_default_indexes(ds, create_default_indexes):
+    if not create_default_indexes:
+        return ds
+
+    to_index = {
+        name: coord.variable
+        for name, coord in ds.coords.items()
+        if coord.dims == (name,) and name not in ds.xindexes
+    }
+    return ds.assign_coords(Coordinates(to_index))
+
+
 def _dataset_from_backend_dataset(
     backend_ds,
     filename_or_obj,
@@ -400,15 +412,7 @@ def _dataset_from_backend_dataset(
 
     _protect_dataset_variables_inplace(backend_ds, cache)
 
-    if create_default_indexes:
-        to_index = {
-            name: coord.variable
-            for name, coord in backend_ds.coords.items()
-            if coord.dims == (name,) and name not in backend_ds.xindexes
-        }
-        indexed = backend_ds.assign_coords(Coordinates(to_index))
-    else:
-        indexed = backend_ds
+    indexed = _create_default_indexes(backend_ds, create_default_indexes)
 
     if chunks is None:
         ds = indexed
@@ -447,6 +451,7 @@ def _datatree_from_backend_datatree(
     inline_array,
     chunked_array_type,
     from_array_kwargs,
+    create_default_indexes,
     **extra_tokens,
 ):
     if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
@@ -461,7 +466,7 @@ def _datatree_from_backend_datatree(
         tree = DataTree.from_dict(
             {
                 path: _chunk_ds(
-                    node.dataset,
+                    node.dataset.pipe(_create_default_indexes, create_default_indexes),
                     filename_or_obj,
                     engine,
                     chunks,
@@ -977,6 +982,7 @@ def open_datatree(
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
+    create_default_indexes: bool = True,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
@@ -1086,6 +1092,13 @@ def open_datatree(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    create_default_indexes : bool, default: True
+        If True, create pandas indexes for :term:`dimension coordinates <dimension coordinate>`,
+        which loads the coordinate data into memory. Set it to False if you want to avoid loading
+        data into memory.
+
+        Note that backends can still choose to create other indexes. If you want to control that,
+        please refer to the backend's documentation.
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -1179,6 +1192,7 @@ def open_datatree(
         chunked_array_type,
         from_array_kwargs,
         drop_variables=drop_variables,
+        create_default_indexes=create_default_indexes,
         **decoders,
         **kwargs,
     )
