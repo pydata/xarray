@@ -624,7 +624,7 @@ def map_blocks(
         {**hlg.layers, **new_layers},
         dependencies={
             **hlg.dependencies,
-            **{name: {gname} for name in new_layers.keys()},
+            **{name: {gname} for name in new_layers},
         },
     )
 

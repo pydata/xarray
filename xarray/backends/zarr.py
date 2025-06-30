@@ -1184,7 +1184,7 @@ class ZarrStore(AbstractWritableDataStore):
                 #   with chunk boundaries, then no synchronization is required."
                 # TODO: incorporate synchronizer to allow writes from multiple dask
                 # threads
-                shape = zarr_shape if zarr_shape else v.shape
+                shape = zarr_shape or v.shape
                 validate_grid_chunks_alignment(
                     nd_var_chunks=v.chunks,
                     enc_chunks=encoding["chunks"],
@@ -1554,7 +1554,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
     ) -> bool:
         if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
-            return ext in {".zarr"}
+            return ext == ".zarr"
 
         return False
 

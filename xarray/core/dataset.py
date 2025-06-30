@@ -791,9 +791,9 @@ class Dataset(
         variables: dict[Hashable, Variable] | None = None,
         coord_names: set[Hashable] | None = None,
         dims: dict[Any, int] | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         indexes: dict[Hashable, Index] | None = None,
-        encoding: dict | None | Default = _default,
+        encoding: dict | Default | None = _default,
         inplace: bool = False,
     ) -> Self:
         """Fastpath constructor for internal use.
@@ -840,7 +840,7 @@ class Dataset(
         self,
         variables: dict[Hashable, Variable],
         coord_names: set | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         indexes: dict[Hashable, Index] | None = None,
         inplace: bool = False,
     ) -> Self:
@@ -855,7 +855,7 @@ class Dataset(
         variables: dict[Hashable, Variable],
         coord_names: set | None = None,
         dims: dict[Hashable, int] | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         inplace: bool = False,
     ) -> Self:
         """Deprecated version of _replace_with_new_dims().
@@ -1359,7 +1359,6 @@ class Dataset(
         to avoid leaving the dataset in a partially updated state when an error occurs.
         """
         from xarray.core.dataarray import DataArray
-        from xarray.structure.alignment import align
 
         if isinstance(value, Dataset):
             missing_vars = [
@@ -2551,7 +2550,6 @@ class Dataset(
         + string indexers are cast to the appropriate date type if the
           associated index is a DatetimeIndex or CFTimeIndex
         """
-        from xarray.coding.cftimeindex import CFTimeIndex
         from xarray.core.dataarray import DataArray
 
         indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
@@ -4088,7 +4086,7 @@ class Dataset(
         is raised at the right stack level.
         """
         name_dict = either_dict_or_kwargs(name_dict, names, "rename")
-        for k in name_dict.keys():
+        for k, new_k in name_dict.items():
             if k not in self and k not in self.dims:
                 raise ValueError(
                     f"cannot rename {k!r} because it is not a "
@@ -4096,13 +4094,12 @@ class Dataset(
                 )
 
             create_dim_coord = False
-            new_k = name_dict[k]
 
             if k == new_k:
                 continue  # Same name, nothing to do
 
             if k in self.dims and new_k in self._coord_names:
-                coord_dims = self._variables[name_dict[k]].dims
+                coord_dims = self._variables[new_k].dims
                 if coord_dims == (k,):
                     create_dim_coord = True
             elif k in self._coord_names and new_k in self.dims:
@@ -4112,7 +4109,7 @@ class Dataset(
 
             if create_dim_coord:
                 warnings.warn(
-                    f"rename {k!r} to {name_dict[k]!r} does not create an index "
+                    f"rename {k!r} to {new_k!r} does not create an index "
                     "anymore. Try using swap_dims instead or use set_index "
                     "after rename to create an indexed coordinate.",
                     UserWarning,
@@ -4350,8 +4347,8 @@ class Dataset(
 
     def expand_dims(
         self,
-        dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
-        axis: None | int | Sequence[int] = None,
+        dim: Hashable | Sequence[Hashable] | Mapping[Any, Any] | None = None,
+        axis: int | Sequence[int] | None = None,
         create_index_for_new_dim: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
@@ -8268,8 +8265,6 @@ class Dataset(
         --------
         numpy.gradient: corresponding numpy function
         """
-        from xarray.core.variable import Variable
-
         if coord not in self.variables and coord not in self.dims:
             variables_and_dims = tuple(set(self.variables.keys()).union(self.dims))
             raise ValueError(
@@ -8980,16 +8975,18 @@ class Dataset(
                 variables[name] = var
             elif name in self.data_vars:
                 if utils.is_dict_like(constant_values):
-                    if name in constant_values.keys():
+                    if name in constant_values:
                         filtered_constant_values = constant_values[name]
                     elif not set(var.dims).isdisjoint(constant_values.keys()):
                         filtered_constant_values = {
-                            k: v for k, v in constant_values.items() if k in var.dims
+                            k: v  # type: ignore[misc]
+                            for k, v in constant_values.items()
+                            if k in var.dims
                         }
                     else:
                         filtered_constant_values = 0  # TODO: https://github.com/pydata/xarray/pull/9353#discussion_r1724018352
                 else:
-                    filtered_constant_values = constant_values
+                    filtered_constant_values = constant_values  # type: ignore[assignment]
                 variables[name] = var.pad(
                     pad_width=var_pad_width,
                     mode=mode,

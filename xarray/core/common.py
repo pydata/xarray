@@ -1247,9 +1247,7 @@ class DataWithCoords(AttrAccessMixin):
                 _dataarray_indexer if isinstance(cond, DataArray) else _dataset_indexer
             )
 
-            indexers = {}
-            for dim in cond.sizes.keys():
-                indexers[dim] = _get_indexer(dim)
+            indexers = {dim: _get_indexer(dim) for dim in cond.sizes}
 
             self = self.isel(**indexers)
             cond = cond.isel(**indexers)
@@ -1782,7 +1780,7 @@ def _full_like_variable(
             other.shape,
             fill_value,
             dtype=dtype,
-            chunks=chunks if chunks else other.data.chunks,
+            chunks=chunks or other.data.chunks,
             **from_array_kwargs,
         )
     else:

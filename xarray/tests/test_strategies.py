@@ -68,7 +68,7 @@ class TestDimensionSizesStrategy:
     def test_restrict_names(self, data):
         capitalized_names = st.text(st.characters(), min_size=1).map(str.upper)
         dim_sizes = data.draw(dimension_sizes(dim_names=capitalized_names))
-        for dim in dim_sizes.keys():
+        for dim in dim_sizes:
             assert dim.upper() == dim
 
 
