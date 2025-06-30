@@ -689,8 +689,6 @@ class CFTimeIndex(pd.Index):
     @property
     def calendar(self):
         """The calendar used by the datetimes in the index."""
-        from xarray.coding.times import infer_calendar_name
-
         if not self._data.size:
             return None
 

@@ -49,8 +49,6 @@ dask_available = module_available("dask")
 
 
 def einsum(*args, **kwargs):
-    from xarray.core.options import OPTIONS
-
     if OPTIONS["use_opt_einsum"] and module_available("opt_einsum"):
         import opt_einsum
 
@@ -681,9 +679,7 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
         The output data type.
 
     """
-    import datetime as dt
-
-    if isinstance(value, dt.timedelta):
+    if isinstance(value, datetime.timedelta):
         out = py_timedelta_to_float(value, datetime_unit)
     elif isinstance(value, np.timedelta64):
         out = np_timedelta64_to_float(value, datetime_unit)

@@ -837,7 +837,7 @@ class TestTreeFromDict:
 
     def test_full(self, simple_datatree) -> None:
         dt = simple_datatree
-        paths = list(node.path for node in dt.subtree)
+        paths = [node.path for node in dt.subtree]
         assert paths == [
             "/",
             "/set1",

@@ -261,8 +261,6 @@ DatasetTest = DatasetStateMachine.TestCase
 
 @pytest.mark.skip(reason="failure detected by hypothesis")
 def test_unstack_object():
-    import xarray as xr
-
     ds = xr.Dataset()
     ds["0"] = np.array(["", "\x000"], dtype=object)
     ds.stack({"1": ["0"]}).unstack()
@@ -270,8 +268,6 @@ def test_unstack_object():
 
 @pytest.mark.skip(reason="failure detected by hypothesis")
 def test_unstack_timedelta_index():
-    import xarray as xr
-
     ds = xr.Dataset()
     ds["0"] = np.array([0, 1, 2, 3], dtype="timedelta64[ns]")
     ds.stack({"1": ["0"]}).unstack()

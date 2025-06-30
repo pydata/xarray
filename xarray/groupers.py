@@ -484,8 +484,6 @@ class TimeResampler(Resampler):
         )
 
     def _init_properties(self, group: T_Group) -> None:
-        from xarray import CFTimeIndex
-
         group_as_index = safe_cast_to_index(group)
         offset = self.offset
 
@@ -494,8 +492,6 @@ class TimeResampler(Resampler):
             raise ValueError("Index must be monotonic for resampling")
 
         if isinstance(group_as_index, CFTimeIndex):
-            from xarray.core.resample_cftime import CFTimeGrouper
-
             self.index_grouper = CFTimeGrouper(
                 freq=self.freq,
                 closed=self.closed,

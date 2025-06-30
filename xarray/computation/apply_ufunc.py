@@ -569,7 +569,6 @@ def apply_groupby_func(func, *args):
     DataArray, Variable and/or ndarray objects.
     """
     from xarray.core.groupby import GroupBy, peek_at
-    from xarray.core.variable import Variable
 
     groupbys = [arg for arg in args if isinstance(arg, GroupBy)]
     assert groupbys, "must have at least one groupby to iterate over"

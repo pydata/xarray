@@ -457,8 +457,6 @@ def get_axis(
     ax: Axes | None = None,
     **subplot_kws: Any,
 ) -> Axes:
-    from xarray.core.utils import attempt_import
-
     if TYPE_CHECKING:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
@@ -1048,8 +1046,6 @@ def legend_elements(
     labels : list of str
         The string labels for elements of the legend.
     """
-    import warnings
-
     import matplotlib as mpl
 
     mlines = mpl.lines
