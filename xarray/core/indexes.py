@@ -1247,7 +1247,7 @@ class PandasMultiIndex(PandasIndex):
                 level = name
                 dtype = self.level_coords_dtype[name]  # type: ignore[index]  # TODO: are Hashables ok?
 
-            var = variables.get(name)
+            var = variables.get(name, None)
             if var is not None:
                 attrs = var.attrs
                 encoding = var.encoding

@@ -549,7 +549,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         )
 
         if add_legend:
-            use_legend_elements = func.__name__ != "hist"
+            use_legend_elements = not func.__name__ == "hist"
             if use_legend_elements:
                 self.add_legend(
                     use_legend_elements=use_legend_elements,

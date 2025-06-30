@@ -1636,7 +1636,7 @@ def test_normalize_token_with_backend(map_ds):
     with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp_file:
         map_ds.to_netcdf(tmp_file)
         read = xr.open_dataset(tmp_file)
-        assert dask.base.tokenize(map_ds) != dask.base.tokenize(read)
+        assert not dask.base.tokenize(map_ds) == dask.base.tokenize(read)
         read.close()
 
 

@@ -20,7 +20,7 @@ def get_sys_info():
     if os.path.isdir(".git") and os.path.isdir("xarray"):
         try:
             pipe = subprocess.Popen(
-                ("git", "log", '--format="%H"', "-n", "1"),
+                'git log --format="%H" -n 1'.split(" "),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )

@@ -300,7 +300,7 @@ def merge_collected(
                 variables = [variable for variable, _ in elements_list]
                 try:
                     merged_vars[name] = unique_variable(
-                        name, variables, compat, equals.get(name)
+                        name, variables, compat, equals.get(name, None)
                     )
                 except MergeError:
                     if compat != "minimal":
