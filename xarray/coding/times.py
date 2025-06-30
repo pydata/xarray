@@ -733,7 +733,7 @@ def infer_calendar_name(dates) -> CFCalendar:
     """Given an array of datetimes, infer the CF calendar name"""
     if is_np_datetime_like(dates.dtype):
         return "proleptic_gregorian"
-    elif dates.dtype == np.dtype("O") and dates.size > 0:  # noqa: SIM102
+    elif dates.dtype == np.dtype("O") and dates.size > 0:
         # Logic copied from core.common.contains_cftime_datetimes.
         if cftime is not None:
             sample = np.asarray(dates).flat[0]
