@@ -105,8 +105,6 @@ def nansum(a, axis=None, dtype=None, out=None, min_count=None):
 
 def _nanmean_ddof_object(ddof, value, axis=None, dtype=None, **kwargs):
     """In house nanmean. ddof argument will be used in _nanvar method"""
-    from xarray.core.duck_array_ops import count, fillna, where_method
-
     valid_count = count(value, axis=axis)
     value = fillna(value, 0)
     # As dtype inference is impossible for object dtype, we assume float

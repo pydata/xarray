@@ -3256,8 +3256,6 @@ def test_shuffle_simple() -> None:
 def test_shuffle_by(chunks, expected_chunks):
     import dask.array
 
-    from xarray.groupers import UniqueGrouper
-
     da = xr.DataArray(
         dims="x",
         data=dask.array.arange(10, chunks=chunks),

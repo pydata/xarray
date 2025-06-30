@@ -786,12 +786,12 @@ class NamedNode(TreeNode, Generic[Tree]):
             raise NotFoundInTreeError(
                 "Cannot find relative path to ancestor because nodes do not lie within the same tree"
             )
-        if ancestor.path not in list(a.path for a in (self, *self.parents)):
+        if ancestor.path not in [a.path for a in (self, *self.parents)]:
             raise NotFoundInTreeError(
                 "Cannot find relative path to ancestor because given node is not an ancestor of this node"
             )
 
-        parents_paths = list(parent.path for parent in (self, *self.parents))
+        parents_paths = [parent.path for parent in (self, *self.parents)]
         generation_gap = list(parents_paths).index(ancestor.path)
         path_upwards = "../" * generation_gap if generation_gap > 0 else "."
         return NodePath(path_upwards)
