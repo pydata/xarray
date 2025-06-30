@@ -66,7 +66,7 @@ def assert_chunks_equal(
             and node1.variables[name].chunksizes == node2.variables[name].chunksizes
         )
         for path, (node1, node2) in xr.group_subtrees(actual, expected)
-        for name in node1.variables.keys()
+        for name in node1.variables
     }
 
     assert all(comparison.values()), diff_chunks(comparison, actual, expected)
@@ -312,9 +312,9 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         unaligned_dict_of_datasets = open_groups(unaligned_datatree_nc)
 
         # Check that group names are keys in the dictionary of `xr.Datasets`
-        assert "/" in unaligned_dict_of_datasets.keys()
-        assert "/Group1" in unaligned_dict_of_datasets.keys()
-        assert "/Group1/subgroup1" in unaligned_dict_of_datasets.keys()
+        assert "/" in unaligned_dict_of_datasets
+        assert "/Group1" in unaligned_dict_of_datasets
+        assert "/Group1/subgroup1" in unaligned_dict_of_datasets
         # Check that group name returns the correct datasets
         with xr.open_dataset(unaligned_datatree_nc, group="/") as expected:
             assert_identical(unaligned_dict_of_datasets["/"], expected)
@@ -453,9 +453,9 @@ class TestPyDAPDatatreeIO:
         unaligned_dict_of_datasets = open_groups(url, engine=self.engine)
 
         # Check that group names are keys in the dictionary of `xr.Datasets`
-        assert "/" in unaligned_dict_of_datasets.keys()
-        assert "/Group1" in unaligned_dict_of_datasets.keys()
-        assert "/Group1/subgroup1" in unaligned_dict_of_datasets.keys()
+        assert "/" in unaligned_dict_of_datasets
+        assert "/Group1" in unaligned_dict_of_datasets
+        assert "/Group1/subgroup1" in unaligned_dict_of_datasets
         # Check that group name returns the correct datasets
         with xr.open_dataset(url, engine=self.engine, group="/") as expected:
             assert_identical(unaligned_dict_of_datasets["/"], expected)
@@ -782,10 +782,10 @@ class TestZarrDatatreeIO:
         storepath = unaligned_datatree_zarr_factory(zarr_format=zarr_format)
         unaligned_dict_of_datasets = open_groups(storepath, engine="zarr")
 
-        assert "/" in unaligned_dict_of_datasets.keys()
-        assert "/Group1" in unaligned_dict_of_datasets.keys()
-        assert "/Group1/subgroup1" in unaligned_dict_of_datasets.keys()
-        assert "/Group2" in unaligned_dict_of_datasets.keys()
+        assert "/" in unaligned_dict_of_datasets
+        assert "/Group1" in unaligned_dict_of_datasets
+        assert "/Group1/subgroup1" in unaligned_dict_of_datasets
+        assert "/Group2" in unaligned_dict_of_datasets
         # Check that group name returns the correct datasets
         with xr.open_dataset(storepath, group="/", engine="zarr") as expected:
             assert_identical(unaligned_dict_of_datasets["/"], expected)

@@ -419,9 +419,10 @@ def _infer_xy_labels(
         _assert_valid_xy(darray, x, "x")
         _assert_valid_xy(darray, y, "y")
 
-        if darray._indexes.get(x, 1) is darray._indexes.get(y, 2):
-            if isinstance(darray._indexes[x], PandasMultiIndex):
-                raise ValueError("x and y cannot be levels of the same MultiIndex")
+        if darray._indexes.get(x, 1) is darray._indexes.get(y, 2) and isinstance(
+            darray._indexes[x], PandasMultiIndex
+        ):
+            raise ValueError("x and y cannot be levels of the same MultiIndex")
 
     return x, y
 
@@ -1820,7 +1821,7 @@ def _guess_coords_to_plot(
     """
     coords_to_plot_exist = {k: v for k, v in coords_to_plot.items() if v is not None}
     available_coords = tuple(
-        k for k in darray.coords.keys() if k not in coords_to_plot_exist.values()
+        k for k in darray.coords if k not in coords_to_plot_exist.values()
     )
 
     # If dims_plot[k] isn't defined then fill with one of the available dims, unless
