@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from enum import Enum
 from types import EllipsisType, ModuleType
@@ -20,10 +19,7 @@ from typing import (
 import numpy as np
 
 try:
-    if sys.version_info >= (3, 11):
-        from typing import TypeAlias
-    else:
-        from typing import TypeAlias
+    from typing import TypeAlias
 except ImportError:
     if TYPE_CHECKING:
         raise
