@@ -25,6 +25,7 @@ from typing import (
 
 from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
+from xarray.core._datatree_methods import TreeMethodsMixin
 from xarray.core._typed_ops import DataTreeOpsMixin
 from xarray.core.common import TreeAttrAccessMixin, get_chunksizes
 from xarray.core.coordinates import Coordinates, DataTreeCoordinates
@@ -441,6 +442,7 @@ class DataTree(
     DataTreeAggregations,
     DataTreeOpsMixin,
     TreeAttrAccessMixin,
+    TreeMethodsMixin,
     Mapping[str, "DataArray | DataTree"],
 ):
     """
