@@ -341,7 +341,7 @@ class TestDataArrayRolling:
         assert_allclose(actual, expected)
         assert actual.sizes == expected.sizes
 
-        if name in ["mean"]:
+        if name == "mean":
             # test our reimplementation of nanmean using np.nanmean
             expected = getattr(rolling_obj.construct({"time": "tw", "x": "xw"}), name)(
                 ["tw", "xw"]

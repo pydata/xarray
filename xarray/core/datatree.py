@@ -347,9 +347,9 @@ class DatasetView(Dataset):
         variables: dict[Hashable, Variable] | None = None,
         coord_names: set[Hashable] | None = None,
         dims: dict[Any, int] | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         indexes: dict[Hashable, Index] | None = None,
-        encoding: dict | None | Default = _default,
+        encoding: dict | Default | None = _default,
         inplace: bool = False,
     ) -> Dataset:
         """

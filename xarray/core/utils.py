@@ -897,7 +897,7 @@ def parse_dims_as_tuple(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | EllipsisType: ...
+) -> tuple[Hashable, ...] | EllipsisType | None: ...
 
 
 def parse_dims_as_tuple(
@@ -906,7 +906,7 @@ def parse_dims_as_tuple(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | EllipsisType:
+) -> tuple[Hashable, ...] | EllipsisType | None:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -958,7 +958,7 @@ def parse_dims_as_set(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> set[Hashable] | None | EllipsisType: ...
+) -> set[Hashable] | EllipsisType | None: ...
 
 
 def parse_dims_as_set(
@@ -967,7 +967,7 @@ def parse_dims_as_set(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> set[Hashable] | None | EllipsisType:
+) -> set[Hashable] | EllipsisType | None:
     """Like parse_dims_as_tuple, but returning a set instead of a tuple."""
     # TODO: Consider removing parse_dims_as_tuple?
     if dim is None or dim is ...:
@@ -999,7 +999,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | EllipsisType: ...
+) -> tuple[Hashable, ...] | EllipsisType | None: ...
 
 
 def parse_ordered_dims(
@@ -1008,7 +1008,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | EllipsisType:
+) -> tuple[Hashable, ...] | EllipsisType | None:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -1086,7 +1086,7 @@ class UncachedAccessor(Generic[_Accessor]):
     @overload
     def __get__(self, obj: object, cls) -> _Accessor: ...
 
-    def __get__(self, obj: None | object, cls) -> type[_Accessor] | _Accessor:
+    def __get__(self, obj: object | None, cls) -> type[_Accessor] | _Accessor:
         if obj is None:
             return self._accessor
 
@@ -1287,7 +1287,7 @@ def attempt_import(module: str) -> ModuleType:
         matplotlib="for plotting",
         hypothesis="for the `xarray.testing.strategies` submodule",
     )
-    package_name = module.split(".")[0]  # e.g. "zarr" from "zarr.storage"
+    package_name = module.split(".", maxsplit=1)[0]  # e.g. "zarr" from "zarr.storage"
     install_name = install_mapping.get(package_name, package_name)
     reason = package_purpose.get(package_name, "")
     try:

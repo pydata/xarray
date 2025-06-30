@@ -791,9 +791,9 @@ class Dataset(
         variables: dict[Hashable, Variable] | None = None,
         coord_names: set[Hashable] | None = None,
         dims: dict[Any, int] | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         indexes: dict[Hashable, Index] | None = None,
-        encoding: dict | None | Default = _default,
+        encoding: dict | Default | None = _default,
         inplace: bool = False,
     ) -> Self:
         """Fastpath constructor for internal use.
@@ -840,7 +840,7 @@ class Dataset(
         self,
         variables: dict[Hashable, Variable],
         coord_names: set | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         indexes: dict[Hashable, Index] | None = None,
         inplace: bool = False,
     ) -> Self:
@@ -855,7 +855,7 @@ class Dataset(
         variables: dict[Hashable, Variable],
         coord_names: set | None = None,
         dims: dict[Hashable, int] | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         inplace: bool = False,
     ) -> Self:
         """Deprecated version of _replace_with_new_dims().
@@ -4348,8 +4348,8 @@ class Dataset(
 
     def expand_dims(
         self,
-        dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
-        axis: None | int | Sequence[int] = None,
+        dim: Hashable | Sequence[Hashable] | Mapping[Any, Any] | None = None,
+        axis: int | Sequence[int] | None = None,
         create_index_for_new_dim: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
