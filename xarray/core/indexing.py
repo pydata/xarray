@@ -2151,7 +2151,7 @@ class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         )
 
     def transpose(self, order: Iterable[int]) -> Self:
-        new_dims = tuple([self._dims[i] for i in order])
+        new_dims = tuple(self._dims[i] for i in order)
         return type(self)(self._transform, self._coord_name, new_dims)
 
     def __repr__(self: Any) -> str:

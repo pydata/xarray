@@ -574,7 +574,6 @@ def dot(
     array(235)
     """
     from xarray.core.dataarray import DataArray
-    from xarray.core.variable import Variable
 
     if any(not isinstance(arr, Variable | DataArray) for arr in arrays):
         raise TypeError(

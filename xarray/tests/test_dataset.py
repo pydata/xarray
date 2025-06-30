@@ -1215,7 +1215,7 @@ class TestDataset:
         import dask.array
 
         N = 365 * 2
-        ΔN = 28
+        ΔN = 28  # noqa: PLC2401
         time = xr.date_range(
             "2001-01-01", periods=N + ΔN, freq="D", calendar=calendar
         ).to_numpy(copy=True)
