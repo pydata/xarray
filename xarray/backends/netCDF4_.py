@@ -6,7 +6,7 @@ import os
 from collections.abc import Mapping
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 
@@ -31,13 +31,13 @@ from xarray.backends.locks import (
 )
 from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 from xarray.backends.store import StoreBackendEntrypoint
-from xarray.coding.times import CFDatetimeCoder
 from xarray.coding.strings import (
     CharacterArrayCoder,
     EncodedStringCoder,
     create_vlen_dtype,
     is_unicode_dtype,
 )
+from xarray.coding.times import CFDatetimeCoder
 from xarray.coding.variables import pop_to
 from xarray.core import indexing
 from xarray.core.utils import (
@@ -608,12 +608,10 @@ class NetCDF4DataStore(WritableCFDataStore):
 @dataclass(frozen=True)
 class NetCDF4CoderOptions(CoderOptions):
     # defaults for netcdf4 based backends
-    mask_and_scale: Optional[bool | Mapping[str, bool]] = True
-    decode_times: Optional[
-        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder]
-    ] = True
-    concat_characters: Optional[bool | Mapping[str, bool]] = True
-    decode_coords: Optional[Literal["coordinates", "all"] | bool] = True
+    mask_and_scale: bool | Mapping[str, bool] | None = True
+    decode_times: bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None = True
+    concat_characters: bool | Mapping[str, bool] | None = True
+    decode_coords: Literal["coordinates", "all"] | bool | None = True
 
 
 class NetCDF4BackendEntrypoint(BackendEntrypoint):
@@ -674,7 +672,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         auto_complex=None,
         lock=None,
         autoclose=False,
-        coder_options: Optional[CoderOptions] = None,
+        coder_options: CoderOptions | None = None,
     ) -> Dataset:
         coder_options = (
             coder_options if coder_options is not None else self.coder_class()
@@ -712,7 +710,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         auto_complex=None,
         lock=None,
         autoclose=False,
-        coder_options: Optional[CoderOptions] = None,
+        coder_options: CoderOptions | None = None,
         **kwargs,
     ) -> DataTree:
         groups_dict = self.open_groups_as_dict(
@@ -742,7 +740,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         auto_complex=None,
         lock=None,
         autoclose=False,
-        coder_options: Optional[CoderOptions] = None,
+        coder_options: CoderOptions | None = None,
         **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.backends.common import _iter_nc_groups

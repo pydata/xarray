@@ -12,7 +12,6 @@ from typing import (
     Any,
     ClassVar,
     Literal,
-    Optional,
     TypeVar,
     Union,
     overload,
@@ -759,17 +758,13 @@ class CoderOptions(BaseCoderOptions):
     # Todo: maybe add these two to disentangle masking from scaling?
     # mask: Optional[bool] = None
     # scale: Optional[bool] = None
-    mask_and_scale: Optional[bool | Mapping[str, bool]] = None
-    decode_times: Optional[
-        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder]
-    ] = None
-    decode_timedelta: Optional[
-        bool | CFTimedeltaCoder | Mapping[str, bool | CFTimedeltaCoder]
-    ] = None
-    use_cftime: Optional[bool | Mapping[str, bool]] = None
-    concat_characters: Optional[bool | Mapping[str, bool]] = None
-    decode_coords: Optional[Literal["coordinates", "all"] | bool] = None
-    drop_variables: Optional[str | Iterable[str]] = None
+    mask_and_scale: bool | Mapping[str, bool] | None = None
+    decode_times: bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None = None
+    decode_timedelta: bool | CFTimedeltaCoder | Mapping[str, bool | CFTimedeltaCoder] | None = None
+    use_cftime: bool | Mapping[str, bool] | None = None
+    concat_characters: bool | Mapping[str, bool] | None = None
+    decode_coords: Literal["coordinates", "all"] | bool | None = None
+    drop_variables: str | Iterable[str] | None = None
 
     def to_kwargs(self):
         return {k: v for k, v in vars(self).items() if v is not None}
@@ -826,7 +821,7 @@ class BackendEntrypoint:
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        coder_options: Optional[CoderOptions] = None,
+        coder_options: CoderOptions | None = None,
     ) -> Dataset:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
@@ -848,7 +843,7 @@ class BackendEntrypoint:
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        coder_options: Optional[CoderOptions] = None,
+        coder_options: CoderOptions | None = None,
     ) -> DataTree:
         """
         Backend open_datatree method used by Xarray in :py:func:`~xarray.open_datatree`.
@@ -860,7 +855,7 @@ class BackendEntrypoint:
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        coder_options: Optional[CoderOptions] = None,
+        coder_options: CoderOptions | None = None,
     ) -> dict[str, Dataset]:
         """
         Opens a dictionary mapping from group names to Datasets.

@@ -19,7 +19,6 @@ from typing import (
     Any,
     Final,
     Literal,
-    Optional,
     Union,
     cast,
     overload,
@@ -533,7 +532,7 @@ def open_dataset(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
-    coder_options: Optional[CoderOptions] = None,
+    coder_options: CoderOptions | None = None,
     **kwargs,
 ) -> Dataset:
     """Open and decode a dataset from a file or file-like object.
@@ -767,7 +766,7 @@ def open_dataarray(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
-    coder_options: Optional[CoderOptions] = None,
+    coder_options: CoderOptions | None = None,
     **kwargs,
 ) -> DataArray:
     """Open an DataArray from a file or file-like object containing a single
@@ -991,7 +990,7 @@ def open_datatree(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
-    coder_options: Optional[CoderOptions] = None,
+    coder_options: CoderOptions | None = None,
     **kwargs,
 ) -> DataTree:
     """
@@ -1219,7 +1218,7 @@ def open_groups(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
-    coder_options: Optional[CoderOptions] = None,
+    coder_options: CoderOptions | None = None,
     **kwargs,
 ) -> dict[str, Dataset]:
     """
