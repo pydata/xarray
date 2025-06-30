@@ -1743,7 +1743,7 @@ class DataTree(
         store,
         mode: ZarrWriteModes = "w-",
         encoding=None,
-        consolidated: bool = True,
+        consolidated: bool | None = None,
         group: str | None = None,
         write_inherited_coords: bool = False,
         compute: bool = True,
