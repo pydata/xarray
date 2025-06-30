@@ -195,7 +195,7 @@ T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 
 # Temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more:
-T_DuckArray = TypeVar("T_DuckArray", bound=Any, covariant=True)
+T_DuckArray = TypeVar("T_DuckArray", bound=Any, covariant=True)  # noqa: PLC0105
 
 # For typing pandas extension arrays.
 T_ExtensionArray = TypeVar("T_ExtensionArray", bound=pd.api.extensions.ExtensionArray)

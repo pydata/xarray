@@ -1629,7 +1629,6 @@ class DataTree(
         return self.map_over_datasets(functools.partial(f, **kwargs), *args)  # type: ignore[return-value]
 
     def _binary_op(self, other, f, reflexive=False, join=None) -> DataTree:
-        from xarray.core.dataset import Dataset
         from xarray.core.groupby import GroupBy
 
         if isinstance(other, GroupBy):

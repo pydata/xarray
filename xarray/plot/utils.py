@@ -248,9 +248,7 @@ def _determine_cmap_params(
             isinstance(levels, Iterable) and levels[0] * levels[-1] < 0
         )
         # kwargs not specific about divergent or not: infer defaults from data
-        divergent = (
-            ((vmin < 0) and (vmax > 0)) or not center_is_none or levels_are_divergent
-        )
+        divergent = (vmin < 0 < vmax) or not center_is_none or levels_are_divergent
     else:
         divergent = False
 
@@ -459,8 +457,6 @@ def get_axis(
     ax: Axes | None = None,
     **subplot_kws: Any,
 ) -> Axes:
-    from xarray.core.utils import attempt_import
-
     if TYPE_CHECKING:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
@@ -1050,8 +1046,6 @@ def legend_elements(
     labels : list of str
         The string labels for elements of the legend.
     """
-    import warnings
-
     import matplotlib as mpl
 
     mlines = mpl.lines
