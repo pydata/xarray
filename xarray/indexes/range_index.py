@@ -84,9 +84,9 @@ class RangeCoordinateTransform(CoordinateTransform):
         # TODO: support reverse transform (i.e., start > stop)?
         assert sl.start < sl.stop
 
-        new_size = (sl.stop - sl.start) // sl.step
+        new_size = (sl.stop - sl.start - 1) // sl.step + 1
         new_start = self.start + sl.start * self.step
-        new_stop = new_start + new_size * sl.step * self.step
+        new_stop = min(new_start + new_size * sl.step * self.step, self.stop)
 
         return type(self)(
             new_start, new_stop, new_size, self.coord_name, self.dim, dtype=self.dtype

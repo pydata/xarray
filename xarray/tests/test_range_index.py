@@ -121,6 +121,12 @@ def test_range_index_isel() -> None:
     expected = create_dataset_arange(0.0, 1.0, 0.2)
     assert_identical(actual, expected, check_default_indexes=False)
 
+    # https://github.com/pydata/xarray/issues/10441
+    ds2 = create_dataset_arange(0.0, 3.0, 0.1)
+    actual = ds2.isel(x=slice(4, None, 3))
+    expected = create_dataset_arange(0.4, 3.0, 0.3)
+    assert_identical(actual, expected, check_default_indexes=False)
+
     # scalar
     actual = ds.isel(x=0)
     expected = xr.Dataset(coords={"x": 0.0})
