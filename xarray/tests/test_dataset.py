@@ -3164,7 +3164,7 @@ class TestDataset:
         vencoding = {"scale_factor": 10}
         orig.encoding = {"foo": "bar"}
 
-        for k in orig.variables.keys():
+        for k in orig.variables:
             orig[k].encoding = vencoding
 
         actual = orig.drop_encoding()

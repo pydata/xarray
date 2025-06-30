@@ -234,9 +234,7 @@ def convert_units(obj, to):
     elif isinstance(obj, xr.DataArray):
         name = obj.name
 
-        new_units = (
-            to.get(name, None) or to.get("data", None) or to.get(None, None) or None
-        )
+        new_units = to.get(name) or to.get("data") or to.get(None) or None
         data = convert_units(obj.variable, {None: new_units})
 
         coords = {
@@ -3052,7 +3050,7 @@ class TestDataArray:
         other_units = extract_units(other)
 
         equal_arrays = all(
-            is_compatible(units[name], other_units[name]) for name in units.keys()
+            is_compatible(units[name], other_units[name]) for name in units
         ) and (
             strip_units(data_array).equals(
                 strip_units(convert_units(other, extract_units(data_array)))
