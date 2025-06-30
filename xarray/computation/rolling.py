@@ -131,13 +131,11 @@ class Rolling(Generic[T_Xarray]):
     def __repr__(self) -> str:
         """provide a nice str repr of our rolling object"""
 
-        attrs = [
+        attrs = ",".join(
             "{k}->{v}{c}".format(k=k, v=w, c="(center)" if c else "")
             for k, w, c in zip(self.dim, self.window, self.center, strict=True)
-        ]
-        return "{klass} [{attrs}]".format(
-            klass=self.__class__.__name__, attrs=",".join(attrs)
         )
+        return f"{self.__class__.__name__} [{attrs}]"
 
     def __len__(self) -> int:
         return math.prod(self.obj.sizes[d] for d in self.dim)
@@ -1106,14 +1104,12 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
     def __repr__(self) -> str:
         """provide a nice str repr of our coarsen object"""
 
-        attrs = [
+        attrs = ",".join(
             f"{k}->{getattr(self, k)}"
             for k in self._attributes
             if getattr(self, k, None) is not None
-        ]
-        return "{klass} [{attrs}]".format(
-            klass=self.__class__.__name__, attrs=",".join(attrs)
         )
+        return f"{self.__class__.__name__} [{attrs}]"
 
     def construct(
         self,
