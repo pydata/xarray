@@ -287,8 +287,8 @@ class H5NetCDFStore(WritableCFDataStore):
     def set_attribute(self, key, value):
         self.ds.attrs[key] = value
 
-    def encode_variable(self, variable):
-        return _encode_nc4_variable(variable)
+    def encode_variable(self, variable, name=None):
+        return _encode_nc4_variable(variable, name=name)
 
     def prepare_variable(
         self, name, variable, check_encoding=False, unlimited_dims=None

@@ -1359,7 +1359,6 @@ class Dataset(
         to avoid leaving the dataset in a partially updated state when an error occurs.
         """
         from xarray.core.dataarray import DataArray
-        from xarray.structure.alignment import align
 
         if isinstance(value, Dataset):
             missing_vars = [
@@ -2334,9 +2333,10 @@ class Dataset(
         if buf is None:  # pragma: no cover
             buf = sys.stdout
 
-        lines = []
-        lines.append("xarray.Dataset {")
-        lines.append("dimensions:")
+        lines = [
+            "xarray.Dataset {",
+            "dimensions:",
+        ]
         for name, size in self.sizes.items():
             lines.append(f"\t{name} = {size} ;")
         lines.append("\nvariables:")
@@ -2550,7 +2550,6 @@ class Dataset(
         + string indexers are cast to the appropriate date type if the
           associated index is a DatetimeIndex or CFTimeIndex
         """
-        from xarray.coding.cftimeindex import CFTimeIndex
         from xarray.core.dataarray import DataArray
 
         indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
@@ -8267,8 +8266,6 @@ class Dataset(
         --------
         numpy.gradient: corresponding numpy function
         """
-        from xarray.core.variable import Variable
-
         if coord not in self.variables and coord not in self.dims:
             variables_and_dims = tuple(set(self.variables.keys()).union(self.dims))
             raise ValueError(
@@ -9708,7 +9705,7 @@ class Dataset(
         self,
         calendar: CFCalendar,
         dim: Hashable = "time",
-        align_on: Literal["date", "year", None] = None,
+        align_on: Literal["date", "year"] | None = None,
         missing: Any | None = None,
         use_cftime: bool | None = None,
     ) -> Self:

@@ -2232,8 +2232,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         for i, d in enumerate(variable.dims):
             if d in windows:
                 size = variable.shape[i]
-                shape.append(int(size / windows[d]))
-                shape.append(windows[d])
+                shape.extend((int(size / windows[d]), windows[d]))
                 axis_count += 1
                 axes.append(i + axis_count)
             else:
