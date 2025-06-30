@@ -910,14 +910,14 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
                 # Only label the ones with data
                 if d is not None:
                     coord, value = list(d.items()).pop()
-                    title = nicetitle(coord, value, maxchar=maxchar)
+                    title = nicetitle(coord, value)
                     ax.set_title(title, size=size, **kwargs)
         else:
             # The row titles on the right edge of the grid
             for index, (ax, row_name, handle) in enumerate(
                 zip(self.axs[:, -1], self.row_names, self.row_labels, strict=True)
             ):
-                title = nicetitle(coord=self._row_var, value=row_name, maxchar=maxchar)
+                title = nicetitle(coord=self._row_var, value=row_name)
                 if not handle:
                     self.row_labels[index] = ax.annotate(
                         title,
@@ -936,7 +936,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             for index, (ax, col_name, handle) in enumerate(
                 zip(self.axs[0, :], self.col_names, self.col_labels, strict=True)
             ):
-                title = nicetitle(coord=self._col_var, value=col_name, maxchar=maxchar)
+                title = nicetitle(coord=self._col_var, value=col_name)
                 if not handle:
                     self.col_labels[index] = ax.set_title(title, size=size, **kwargs)
                 else:
