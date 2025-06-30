@@ -14,6 +14,8 @@ New Features
 ~~~~~~~~~~~~
 - Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
   under the ``xarray.indexes`` namespace. By `Deepak Cherian <https://github.com/dcherian>`_.
+- Add convenience methods to :py:class:`~xarray.Coordinates` (:pull:`10318`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 Breaking changes
