@@ -587,7 +587,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
     if dask and not has_dask:
         pytest.skip("requires dask")
 
-    if dask and skipna is False and dtype in [np.bool_]:
+    if dask and skipna is False and dtype == np.bool_:
         pytest.skip("dask does not compute object-typed array")
 
     rtol = 1e-04 if dtype == np.float32 else 1e-05

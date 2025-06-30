@@ -2309,7 +2309,7 @@ class TestUFuncs:
     @pytest.mark.xfail(reason="__array_ufunc__ not implemented yet")
     def test_tree(self, create_test_datatree):
         dt = create_test_datatree()
-        expected = create_test_datatree(modify=lambda ds: np.sin(ds))
+        expected = create_test_datatree(modify=np.sin)
         result_tree = np.sin(dt)
         assert_equal(result_tree, expected)
 

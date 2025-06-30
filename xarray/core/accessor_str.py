@@ -349,7 +349,7 @@ class StringAccessor(Generic[T_DataArray]):
             islice = slice(-1, None) if iind == -1 else slice(iind, iind + 1)
             item = x[islice]
 
-            return item if item else default
+            return item or default
 
         return self._apply(func=f, func_args=(i,))
 

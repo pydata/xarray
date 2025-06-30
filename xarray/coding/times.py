@@ -246,7 +246,7 @@ def build_pattern(
     ]
     pattern_list = []
     for sep, name, sub_pattern in pieces:
-        pattern_list.append((sep if sep else "") + named(name, sub_pattern))
+        pattern_list.append((sep or "") + named(name, sub_pattern))
         # TODO: allow timezone offsets?
     return "^" + trailing_optional(pattern_list) + "$"
 

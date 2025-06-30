@@ -235,7 +235,7 @@ class TestPlot(PlotTestCase):
         z = np.arange(10)
         da = DataArray(np.cos(z), dims=["z"], coords=[z], name="f")
 
-        xy: list[list[None | str]] = [[None, None], [None, "z"], ["z", None]]
+        xy: list[list[str | None]] = [[None, None], [None, "z"], ["z", None]]
 
         f, axs = plt.subplots(3, 1, squeeze=False)
         for aa, (x, y) in enumerate(xy):
