@@ -1477,6 +1477,8 @@ def open_zarr(
     if from_array_kwargs is None:
         from_array_kwargs = {}
 
+    inline_array = from_array_kwargs.pop("inline_array", False)
+
     if chunks == "auto":
         try:
             guess_chunkmanager(
@@ -1513,6 +1515,7 @@ def open_zarr(
         engine="zarr",
         chunks=chunks,
         drop_variables=drop_variables,
+        inline_array=inline_array,
         chunked_array_type=chunked_array_type,
         from_array_kwargs=from_array_kwargs,
         backend_kwargs=backend_kwargs,
