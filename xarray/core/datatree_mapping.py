@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Any, cast, overload
 
@@ -162,11 +161,7 @@ def _handle_errors_with_path_context(path: str):
 
 
 def add_note(err: BaseException, msg: str) -> None:
-    # TODO: remove once python 3.10 can be dropped
-    if sys.version_info < (3, 11):
-        err.__notes__ = getattr(err, "__notes__", []) + [msg]  # type: ignore[attr-defined]
-    else:
-        err.add_note(msg)
+    err.add_note(msg)
 
 
 def _check_single_set_return_values(path_to_node: str, obj: Any) -> int | None:

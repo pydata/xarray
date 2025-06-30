@@ -20,18 +20,13 @@ from xarray.core.variable import IndexVariable, Variable
 from xarray.namedarray.utils import is_duck_dask_array
 
 if TYPE_CHECKING:
-    import sys
+    from typing import Self
 
     from numpy.typing import DTypeLike
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.types import CFCalendar
-
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
 
 
 def _season_from_months(months):
