@@ -34,7 +34,7 @@ io = [
   "h5netcdf",
   "scipy",
   'pydap; python_version<"3.10"',
-  "zarr",
+  "zarr @ git+https://github.com/d-v-b/zarr-python.git@feat/fixed-length-strings",
   "fsspec",
   "cftime",
   "pooch",
