@@ -349,14 +349,14 @@ class PydapBackendEntrypoint(BackendEntrypoint):
                 if not g_fqn:
                     g_fqn = {}
                 groups = [
-                    var.id for var in store.values() if isinstance(var, GroupType)
+                    store[key].id
+                    for key in store.keys()
+                    if isinstance(store[key], GroupType)
                 ]
                 for g in groups:
                     g_fqn.update({g: path})
                     subgroups = [
-                        key
-                        for key, var in store[g].items()
-                        if isinstance(var, GroupType)
+                        var for var in store[g] if isinstance(store[g][var], GroupType)
                     ]
                     if len(subgroups) > 0:
                         npath = path + g

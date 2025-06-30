@@ -1247,7 +1247,9 @@ class DataWithCoords(AttrAccessMixin):
                 _dataarray_indexer if isinstance(cond, DataArray) else _dataset_indexer
             )
 
-            indexers = {dim: _get_indexer(dim) for dim in cond.sizes}
+            indexers = {}
+            for dim in cond.sizes.keys():
+                indexers[dim] = _get_indexer(dim)
 
             self = self.isel(**indexers)
             cond = cond.isel(**indexers)
