@@ -1780,7 +1780,7 @@ def _full_like_variable(
             other.shape,
             fill_value,
             dtype=dtype,
-            chunks=chunks if chunks else other.data.chunks,
+            chunks=chunks or other.data.chunks,
             **from_array_kwargs,
         )
     else:

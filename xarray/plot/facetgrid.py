@@ -796,7 +796,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             # Find the plot with the largest xlim values:
             lower, upper = lims_largest[axis]
             for ax in self.axs.flat:
-                get_lim: None | Callable[[], tuple[float, float]] = getattr(
+                get_lim: Callable[[], tuple[float, float]] | None = getattr(
                     ax, f"get_{axis}lim", None
                 )
                 if get_lim:
@@ -862,15 +862,15 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         for ax in axes:
             getattr(ax, f"set_{axis}label")(label, **kwargs)
 
-    def set_xlabels(self, label: None | str = None, **kwargs: Any) -> None:
+    def set_xlabels(self, label: str | None = None, **kwargs: Any) -> None:
         """Label the x axis on the bottom row of the grid."""
         self._set_labels("x", self._bottom_axes, label, **kwargs)
 
-    def set_ylabels(self, label: None | str = None, **kwargs: Any) -> None:
+    def set_ylabels(self, label: str | None = None, **kwargs: Any) -> None:
         """Label the y axis on the left column of the grid."""
         self._set_labels("y", self._left_axes, label, **kwargs)
 
-    def set_zlabels(self, label: None | str = None, **kwargs: Any) -> None:
+    def set_zlabels(self, label: str | None = None, **kwargs: Any) -> None:
         """Label the z axis."""
         self._set_labels("z", self._left_axes, label, **kwargs)
 

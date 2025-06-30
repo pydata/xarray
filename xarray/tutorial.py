@@ -85,7 +85,7 @@ def _check_netcdf_engine_installed(name):
 def open_dataset(
     name: str,
     cache: bool = True,
-    cache_dir: None | str | os.PathLike = None,
+    cache_dir: str | os.PathLike | None = None,
     *,
     engine: T_Engine = None,
     **kws,
@@ -216,7 +216,7 @@ def load_dataset(*args, **kwargs) -> Dataset:
         return ds.load()
 
 
-def scatter_example_dataset(*, seed: None | int = None) -> Dataset:
+def scatter_example_dataset(*, seed: int | None = None) -> Dataset:
     """
     Create an example dataset.
 
@@ -255,7 +255,7 @@ def scatter_example_dataset(*, seed: None | int = None) -> Dataset:
 def open_datatree(
     name: str,
     cache: bool = True,
-    cache_dir: None | str | os.PathLike = None,
+    cache_dir: str | os.PathLike | None = None,
     *,
     engine: T_Engine = None,
     **kws,
