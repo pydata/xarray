@@ -36,6 +36,7 @@ from xarray.backends.common import (
 from xarray.backends.locks import _get_scheduler
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import indexing
+from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
@@ -389,6 +390,7 @@ def _dataset_from_backend_dataset(
     inline_array,
     chunked_array_type,
     from_array_kwargs,
+    create_default_indexes,
     **extra_tokens,
 ):
     if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
@@ -397,11 +399,22 @@ def _dataset_from_backend_dataset(
         )
 
     _protect_dataset_variables_inplace(backend_ds, cache)
+
+    if create_default_indexes:
+        to_index = {
+            name: coord.variable
+            for name, coord in backend_ds.coords.items()
+            if coord.dims == (name,) and name not in backend_ds.xindexes
+        }
+        indexed = backend_ds.assign_coords(Coordinates(to_index))
+    else:
+        indexed = backend_ds
+
     if chunks is None:
-        ds = backend_ds
+        ds = indexed
     else:
         ds = _chunk_ds(
-            backend_ds,
+            indexed,
             filename_or_obj,
             engine,
             chunks,
@@ -497,7 +510,7 @@ def open_dataset(
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
-    set_indexes: bool = True,
+    create_default_indexes: bool = True,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
@@ -611,12 +624,13 @@ def open_dataset(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
-    set_indexes : bool, optional
-        If True (default), create new indexes from coordinates. Both the number and
-        the type(s) of those indexes depend on the backend used to open the dataset.
-        For most common backends this creates a pandas index for each
-        :term:`Dimension coordinate`, which loads the coordinate data fully in memory.
-        Set it to False if you want to avoid loading data into memory.
+    create_default_indexes : bool, default: True
+        If True, create pandas indexes for :term:`dimension coordinates <dimension coordinate>`,
+        which loads the coordinate data into memory. Set it to False if you want to avoid loading
+        data into memory.
+
+        Note that backends can still choose to create other indexes. If you want to control that,
+        please refer to the backend's documentation.
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -695,7 +709,6 @@ def open_dataset(
     backend_ds = backend.open_dataset(
         filename_or_obj,
         drop_variables=drop_variables,
-        set_indexes=set_indexes,
         **decoders,
         **kwargs,
     )
@@ -710,6 +723,7 @@ def open_dataset(
         chunked_array_type,
         from_array_kwargs,
         drop_variables=drop_variables,
+        create_default_indexes=create_default_indexes,
         **decoders,
         **kwargs,
     )
@@ -733,7 +747,7 @@ def open_dataarray(
     concat_characters: bool | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
-    set_indexes: bool = True,
+    create_default_indexes: bool = True,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
@@ -842,12 +856,13 @@ def open_dataarray(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
-    set_indexes : bool, optional
-        If True (default), create new indexes from coordinates. Both the number and
-        the type(s) of those indexes depend on the backend used to open the dataset.
-        For most common backends this creates a pandas index for each
-        :term:`Dimension coordinate`, which loads the coordinate data fully in memory.
-        Set it to False if you want to avoid loading data into memory.
+    create_default_indexes : bool, default: True
+        If True, create pandas indexes for :term:`dimension coordinates <dimension coordinate>`,
+        which loads the coordinate data into memory. Set it to False if you want to avoid loading
+        data into memory.
+
+        Note that backends can still choose to create other indexes. If you want to control that,
+        please refer to the backend's documentation.
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -905,7 +920,7 @@ def open_dataarray(
         chunks=chunks,
         cache=cache,
         drop_variables=drop_variables,
-        set_indexes=set_indexes,
+        create_default_indexes=create_default_indexes,
         inline_array=inline_array,
         chunked_array_type=chunked_array_type,
         from_array_kwargs=from_array_kwargs,

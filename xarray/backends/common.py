@@ -697,8 +697,6 @@ class BackendEntrypoint:
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
-        set_indexes: bool = True,
-        **kwargs: Any,
     ) -> Dataset:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
