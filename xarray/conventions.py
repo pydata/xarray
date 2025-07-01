@@ -90,6 +90,9 @@ def encode_cf_variable(
     ensure_not_multiindex(var, name=name)
 
     for coder in [
+        # IntervalCoder must be before CFDatetimeCoder,
+        # so we can first encode the interval, then datetimes if necessary
+        variables.IntervalCoder(),
         CFDatetimeCoder(),
         CFTimedeltaCoder(),
         variables.CFScaleOffsetCoder(),
@@ -237,6 +240,8 @@ def decode_cf_variable(
                 "    ds = xr.open_dataset(decode_times=time_coder)\n",
             )
         var = decode_times.decode(var, name=name)
+
+    var = variables.IntervalCoder().decode(var)
 
     if decode_endianness and not var.dtype.isnative:
         var = variables.EndianCoder().decode(var)

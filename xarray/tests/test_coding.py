@@ -147,3 +147,31 @@ def test_decode_signed_from_unsigned(bits) -> None:
     decoded = coder.decode(encoded)
     assert decoded.dtype == signed_dtype
     assert decoded.values == original_values
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        [1, 2, 3, 4],
+        np.array([1, 2, 3, 4], dtype=float),
+        pd.date_range("2001-01-01", "2002-01-01", freq="MS"),
+    ],
+)
+@pytest.mark.parametrize("closed", ["left", "right", "both", "neither"])
+def test_roundtrip_pandas_interval(data, closed) -> None:
+    v = xr.Variable("time", pd.IntervalIndex.from_breaks(data, closed=closed))
+    coder = variables.IntervalCoder()
+    encoded = coder.encode(v)
+    expected = xr.Variable(
+        dims=("__xarray_bounds__", "time"),
+        data=np.stack([data[:-1], data[1:]], axis=0),
+        attrs={
+            "dtype": "pandas_interval",
+            "bounds_dim": "__xarray_bounds__",
+            "closed": closed,
+        },
+    )
+    assert_identical(encoded, expected)
+
+    decoded = coder.decode(encoded)
+    assert_identical(decoded, v)

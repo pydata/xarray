@@ -675,3 +675,23 @@ def test_decode_cf_variables_decode_timedelta_warning() -> None:
 
     with pytest.warns(FutureWarning, match="decode_timedelta"):
         conventions.decode_cf_variables(variables, {})
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        [1, 2, 3, 4],
+        np.array([1, 2, 3, 4], dtype=float),
+        pd.date_range("2001-01-01", "2002-01-01", freq="MS"),
+    ],
+)
+@pytest.mark.parametrize("closed", ["left", "right", "both", "neither"])
+def test_roundtrip_pandas_interval(data, closed) -> None:
+    v = Variable("time", pd.IntervalIndex.from_breaks(data, closed=closed))
+    encoded = conventions.encode_cf_variable(v)
+    if isinstance(data, pd.DatetimeIndex):
+        # make sure we've encoded datetimes.
+        assert "units" in encoded.attrs
+        assert "calendar" in encoded.attrs
+    roundtripped = conventions.decode_cf_variable("foo", encoded)
+    assert_identical(roundtripped, v)
