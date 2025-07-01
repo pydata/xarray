@@ -258,7 +258,7 @@ def _cov_corr(
     weights: T_DataArray | None = None,
     dim: Dims = None,
     ddof: int = 0,
-    method: Literal["cov", "corr", None] = None,
+    method: Literal["cov", "corr"] | None = None,
 ) -> T_DataArray:
     """
     Internal method for xr.cov() and xr.corr() so only have to
@@ -574,7 +574,6 @@ def dot(
     array(235)
     """
     from xarray.core.dataarray import DataArray
-    from xarray.core.variable import Variable
 
     if any(not isinstance(arr, Variable | DataArray) for arr in arrays):
         raise TypeError(

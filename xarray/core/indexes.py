@@ -479,7 +479,7 @@ class Index:
     def __getitem__(self, indexer: Any) -> Self:
         raise NotImplementedError()
 
-    def _repr_inline_(self, max_width):
+    def _repr_inline_(self, max_width: int) -> str:
         return self.__class__.__name__
 
 
@@ -717,7 +717,7 @@ class PandasIndex(Index):
 
         # preserve wrapped pd.Index (if any)
         # accessing `.data` can load data from disk, so we only access if needed
-        data = var._data.array if hasattr(var._data, "array") else var.data
+        data = var._data if isinstance(var._data, PandasIndexingAdapter) else var.data  # type: ignore[redundant-expr]
         # multi-index level variable: get level index
         if isinstance(var._data, PandasMultiIndexingAdapter):
             level = var._data.level
@@ -1955,7 +1955,7 @@ def _wrap_index_equals(
             f"the signature ``{index_cls_name}.equals(self, other)`` is deprecated. "
             f"Please update it to "
             f"``{index_cls_name}.equals(self, other, *, exclude=None)`` "
-            "or kindly ask the maintainers of ``{index_cls_name}`` to do it. "
+            f"or kindly ask the maintainers of ``{index_cls_name}`` to do it. "
             "See documentation of xarray.Index.equals() for more info.",
             FutureWarning,
         )

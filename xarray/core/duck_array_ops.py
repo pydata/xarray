@@ -49,8 +49,6 @@ dask_available = module_available("dask")
 
 
 def einsum(*args, **kwargs):
-    from xarray.core.options import OPTIONS
-
     if OPTIONS["use_opt_einsum"] and module_available("opt_einsum"):
         import opt_einsum
 
@@ -157,7 +155,7 @@ def isna(data: Any) -> bool:
     -------
         Whether or not the data is np.nan or pd.NA
     """
-    return data is pd.NA or data is np.nan
+    return data is pd.NA or data is np.nan  # noqa: PLW0177
 
 
 def isnull(data):
@@ -193,7 +191,7 @@ def isnull(data):
         # types. For full consistency with pandas, we should accept None as
         # a null value as well as NaN, but it isn't clear how to do this
         # with duck typing.
-        return data != data
+        return data != data  # noqa: PLR0124
 
 
 def notnull(data):
@@ -681,9 +679,7 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
         The output data type.
 
     """
-    import datetime as dt
-
-    if isinstance(value, dt.timedelta):
+    if isinstance(value, datetime.timedelta):
         out = py_timedelta_to_float(value, datetime_unit)
     elif isinstance(value, np.timedelta64):
         out = np_timedelta64_to_float(value, datetime_unit)
@@ -794,6 +790,12 @@ def _nd_cum_func(cum_func, array, axis, **kwargs):
     for ax in axis:
         out = cum_func(out, axis=ax, **kwargs)
     return out
+
+
+def ndim(array) -> int:
+    # Required part of the duck array and the array-api, but we fall back in case
+    # https://docs.xarray.dev/en/latest/internals/duck-arrays-integration.html#duck-array-requirements
+    return array.ndim if hasattr(array, "ndim") else np.ndim(array)
 
 
 def cumprod(array, axis=None, **kwargs):

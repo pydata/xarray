@@ -289,20 +289,18 @@ def _shift_month(date, months, day_option: DayOption = "start"):
     _ = attempt_import("cftime")
 
     has_year_zero = date.has_year_zero
-    delta_year = (date.month + months) // 12
+    year = date.year + (date.month + months) // 12
     month = (date.month + months) % 12
 
     if month == 0:
         month = 12
-        delta_year = delta_year - 1
+        year -= 1
 
     if not has_year_zero:
-        if date.year < 0 and date.year + delta_year >= 0:
-            delta_year = delta_year + 1
-        elif date.year > 0 and date.year + delta_year <= 0:
-            delta_year = delta_year - 1
-
-    year = date.year + delta_year
+        if date.year < 0 <= year:
+            year += 1
+        elif year <= 0 < date.year:
+            year -= 1
 
     # Silence warnings associated with generating dates with years < 1.
     with warnings.catch_warnings():
@@ -1421,8 +1419,6 @@ def date_range(
     cftime_range
     date_range_like
     """
-    from xarray.coding.times import _is_standard_calendar
-
     if tz is not None:
         use_cftime = False
 

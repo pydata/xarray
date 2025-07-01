@@ -99,6 +99,7 @@ from xarray.core.utils import (
     parse_dims_as_set,
 )
 from xarray.core.variable import (
+    UNSUPPORTED_EXTENSION_ARRAY_TYPES,
     IndexVariable,
     Variable,
     as_variable,
@@ -790,9 +791,9 @@ class Dataset(
         variables: dict[Hashable, Variable] | None = None,
         coord_names: set[Hashable] | None = None,
         dims: dict[Any, int] | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         indexes: dict[Hashable, Index] | None = None,
-        encoding: dict | None | Default = _default,
+        encoding: dict | Default | None = _default,
         inplace: bool = False,
     ) -> Self:
         """Fastpath constructor for internal use.
@@ -839,7 +840,7 @@ class Dataset(
         self,
         variables: dict[Hashable, Variable],
         coord_names: set | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         indexes: dict[Hashable, Index] | None = None,
         inplace: bool = False,
     ) -> Self:
@@ -854,7 +855,7 @@ class Dataset(
         variables: dict[Hashable, Variable],
         coord_names: set | None = None,
         dims: dict[Hashable, int] | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         inplace: bool = False,
     ) -> Self:
         """Deprecated version of _replace_with_new_dims().
@@ -1358,7 +1359,6 @@ class Dataset(
         to avoid leaving the dataset in a partially updated state when an error occurs.
         """
         from xarray.core.dataarray import DataArray
-        from xarray.structure.alignment import align
 
         if isinstance(value, Dataset):
             missing_vars = [
@@ -2057,6 +2057,7 @@ class Dataset(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -2080,6 +2081,7 @@ class Dataset(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -2101,6 +2103,7 @@ class Dataset(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -2210,6 +2213,16 @@ class Dataset(
             two or more chunked arrays in the same location in parallel if they are
             not writing in independent regions, for those cases it is better to use
             a synchronizer.
+        align_chunks: bool, default False
+            If True, rechunks the Dask array to align with Zarr chunks before writing.
+            This ensures each Dask chunk maps to one or more contiguous Zarr chunks,
+            which avoids race conditions.
+            Internally, the process sets safe_chunks=False and tries to preserve
+            the original Dask chunking as much as possible.
+            Note: While this alignment avoids write conflicts stemming from chunk
+            boundary misalignment, it does not protect against race conditions
+            if multiple uncoordinated processes write to the same
+            Zarr array concurrently.
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
@@ -2320,9 +2333,10 @@ class Dataset(
         if buf is None:  # pragma: no cover
             buf = sys.stdout
 
-        lines = []
-        lines.append("xarray.Dataset {")
-        lines.append("dimensions:")
+        lines = [
+            "xarray.Dataset {",
+            "dimensions:",
+        ]
         for name, size in self.sizes.items():
             lines.append(f"\t{name} = {size} ;")
         lines.append("\nvariables:")
@@ -2536,7 +2550,6 @@ class Dataset(
         + string indexers are cast to the appropriate date type if the
           associated index is a DatetimeIndex or CFTimeIndex
         """
-        from xarray.coding.cftimeindex import CFTimeIndex
         from xarray.core.dataarray import DataArray
 
         indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
@@ -3804,15 +3817,16 @@ class Dataset(
             for k, v in indexers.items()
         }
 
+        # optimization: subset to coordinate range of the target index
+        if method in ["linear", "nearest"]:
+            for k, v in validated_indexers.items():
+                obj, newidx = missing._localize(obj, {k: v})
+                validated_indexers[k] = newidx[k]
+
         has_chunked_array = bool(
             any(is_chunked_array(v._data) for v in obj._variables.values())
         )
         if has_chunked_array:
-            # optimization: subset to coordinate range of the target index
-            if method in ["linear", "nearest"]:
-                for k, v in validated_indexers.items():
-                    obj, newidx = missing._localize(obj, {k: v})
-                    validated_indexers[k] = newidx[k]
             # optimization: create dask coordinate arrays once per Dataset
             # rather than once per Variable when dask.array.unify_chunks is called later
             # GH4739
@@ -3828,7 +3842,7 @@ class Dataset(
                 continue
 
             use_indexers = (
-                dask_indexers if is_duck_dask_array(var.data) else validated_indexers
+                dask_indexers if is_duck_dask_array(var._data) else validated_indexers
             )
 
             dtype_kind = var.dtype.kind
@@ -4334,8 +4348,8 @@ class Dataset(
 
     def expand_dims(
         self,
-        dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
-        axis: None | int | Sequence[int] = None,
+        dim: Hashable | Sequence[Hashable] | Mapping[Any, Any] | None = None,
+        axis: int | Sequence[int] | None = None,
         create_index_for_new_dim: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
@@ -7267,7 +7281,7 @@ class Dataset(
         extension_arrays = []
         for k, v in dataframe.items():
             if not is_extension_array_dtype(v) or isinstance(
-                v.array, pd.arrays.DatetimeArray | pd.arrays.TimedeltaArray
+                v.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES
             ):
                 arrays.append((k, np.asarray(v)))
             else:
@@ -8252,8 +8266,6 @@ class Dataset(
         --------
         numpy.gradient: corresponding numpy function
         """
-        from xarray.core.variable import Variable
-
         if coord not in self.variables and coord not in self.dims:
             variables_and_dims = tuple(set(self.variables.keys()).union(self.dims))
             raise ValueError(
@@ -9693,7 +9705,7 @@ class Dataset(
         self,
         calendar: CFCalendar,
         dim: Hashable = "time",
-        align_on: Literal["date", "year", None] = None,
+        align_on: Literal["date", "year"] | None = None,
         missing: Any | None = None,
         use_cftime: bool | None = None,
     ) -> Self:
