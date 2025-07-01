@@ -218,7 +218,7 @@ class TestPreferredChunks:
         if create_default_indexes:
             assert all(name in final.xindexes for name in ["x", "y"])
         else:
-            assert not final.xindexes
+            assert len(final.xindexes) == 0
 
     @pytest.mark.parametrize("create_default_indexes", [True, False])
     def test_default_indexes_passthrough(self, create_default_indexes):
