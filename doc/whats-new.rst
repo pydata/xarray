@@ -34,6 +34,8 @@ Bug fixes
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Fix the error message of :py:func:`testing.assert_equal` when two different :py:class:`DataTree` objects
   are passed (:pull:`10440`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Fix :py:func:`testing.assert_equal` with ``check_dim_order=False`` for :py:class:`DataTree` objects
+  (:pull:`10442`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 
 Documentation

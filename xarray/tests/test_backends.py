@@ -3612,7 +3612,7 @@ class TestInstrumentedZarrStore:
 
     @requires_dask
     @pytest.mark.skipif(
-        sys.version_info.major == 3 and sys.version_info.minor < 11,
+        sys.version_info < (3, 11),
         reason="zarr too old",
     )
     def test_region_write(self) -> None:
