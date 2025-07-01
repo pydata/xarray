@@ -1915,7 +1915,9 @@ _DECODE_TIMEDELTA_VIA_DTYPE_TESTS = {
     list(_DECODE_TIMEDELTA_VIA_DTYPE_TESTS.values()),
     ids=list(_DECODE_TIMEDELTA_VIA_DTYPE_TESTS.keys()),
 )
-def test_decode_timedelta_via_dtype(decode_times, decode_timedelta, expected_dtype) -> None:
+def test_decode_timedelta_via_dtype(
+    decode_times, decode_timedelta, expected_dtype
+) -> None:
     timedeltas = pd.timedelta_range(0, freq="D", periods=3)
     encoding = {"units": "days"}
     var = Variable(["time"], timedeltas, encoding=encoding)
