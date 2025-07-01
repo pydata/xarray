@@ -1825,6 +1825,7 @@ def test_encode_cf_timedelta_small_dtype_missing_value(use_dask) -> None:
 
 _DECODE_TIMEDELTA_VIA_UNITS_TESTS = {
     "default": (True, None, np.dtype("timedelta64[ns]"), True),
+    "decode_timedelta=True": (True, True, np.dtype("timedelta64[ns]"), False),
     "decode_timedelta=False": (True, False, np.dtype("int64"), False),
     "inherit-time_unit-from-decode_times": (
         CFDatetimeCoder(time_unit="s"),
@@ -1887,6 +1888,7 @@ def test_decode_timedelta_via_units(
 _DECODE_TIMEDELTA_VIA_DTYPE_TESTS = {
     "default": (True, None, np.dtype("timedelta64[ns]")),
     "decode_timedelta=False": (True, False, np.dtype("int64")),
+    "decode_timedelta=True": (True, True, np.dtype("timedelta64[ns]")),
     "inherit-time_unit-from-decode_times": (
         CFDatetimeCoder(time_unit="s"),
         None,
