@@ -11,6 +11,7 @@ from xarray.core.indexes import (
     PandasMultiIndex,
 )
 from xarray.indexes.range_index import RangeIndex
+from xarray.indexes.tree_index import TreeIndex
 
 __all__ = [
     "CoordinateTransform",
@@ -19,4 +20,5 @@ __all__ = [
     "PandasIndex",
     "PandasMultiIndex",
     "RangeIndex",
+    "TreeIndex",
 ]
