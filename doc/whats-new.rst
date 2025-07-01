@@ -36,7 +36,7 @@ Bug fixes
   are passed (:pull:`10440`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fix :py:func:`testing.assert_equal` with ``check_dim_order=False`` for :py:class:`DataTree` objects
   (:pull:`10442`). By `Mathias Hauser <https://github.com/mathause>`_.
-- Fix Pydap backend testing. Now test forces string arrays to dtype "|S" (pydap converts them to unicode type by default). Removes conditional to numpy version. (:issue:`10261`, :pull:`10482`)
+- Fix Pydap backend testing. Now test forces string arrays to dtype "S" (pydap converts them to unicode type by default). Removes conditional to numpy version. (:issue:`10261`, :pull:`10482`)
   By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 
 
