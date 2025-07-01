@@ -68,7 +68,7 @@ class StoreBackendEntrypoint(BackendEntrypoint):
                 data_vars[name] = var
 
         # explicit Coordinates object with no index passed
-        coords = Coordinates(coord_vars)
+        coords = Coordinates(coord_vars, indexes={})
 
         ds = Dataset(data_vars, coords=coords, attrs=attrs)
         ds.set_close(filename_or_obj.close)
