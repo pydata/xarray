@@ -953,7 +953,7 @@ def _process_cmap_cbar_kwargs(
     cmap_kwargs = {
         "plot_data": data,
         "levels": levels,
-        "cmap": colors if colors else cmap,
+        "cmap": colors or cmap,
         "filled": func.__name__ != "contour",
     }
 
@@ -1322,7 +1322,7 @@ def _parse_size(
 def _parse_size(
     data: DataArray | None,
     norm: tuple[float | None, float | None, bool] | Normalize | None,
-) -> None | pd.Series:
+) -> pd.Series | None:
     import matplotlib as mpl
 
     if data is None:
@@ -1587,7 +1587,7 @@ class _Normalize(Sequence):
         >>> _Normalize(a).ticks
         array([1, 3, 5])
         """
-        val: None | np.ndarray
+        val: np.ndarray | None
         if self.data_is_numeric:
             val = None
         else:
@@ -1646,13 +1646,13 @@ class _Normalize(Sequence):
         """
         import matplotlib.pyplot as plt
 
-        def _func(x: Any, pos: None | Any = None):
+        def _func(x: Any, pos: Any | None = None):
             return f"{self._lookup_arr([x])[0]}"
 
         return plt.FuncFormatter(_func)
 
     @property
-    def func(self) -> Callable[[Any, None | Any], Any]:
+    def func(self) -> Callable[[Any, Any | None], Any]:
         """
         Return a lambda function that maps self.values elements back to
         the original value as a numpy array. Useful with ax.legend_elements.
@@ -1671,7 +1671,7 @@ class _Normalize(Sequence):
         array([0.5, 3. ])
         """
 
-        def _func(x: Any, pos: None | Any = None):
+        def _func(x: Any, pos: Any | None = None):
             return self._lookup_arr(x)
 
         return _func
@@ -1680,8 +1680,8 @@ class _Normalize(Sequence):
 def _determine_guide(
     hueplt_norm: _Normalize,
     sizeplt_norm: _Normalize,
-    add_colorbar: None | bool = None,
-    add_legend: None | bool = None,
+    add_colorbar: bool | None = None,
+    add_legend: bool | None = None,
     plotfunc_name: str | None = None,
 ) -> tuple[bool, bool]:
     if plotfunc_name == "hist":

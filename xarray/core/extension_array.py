@@ -225,7 +225,7 @@ def __extension_duck_array__reshape(
 
 
 @dataclass(frozen=True)
-class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
+class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
     """NEP-18 compliant wrapper for pandas extension arrays.
 
     Parameters
