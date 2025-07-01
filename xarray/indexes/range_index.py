@@ -9,7 +9,7 @@ from xarray.core import duck_array_ops
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.dataarray import DataArray
 from xarray.core.indexes import CoordinateTransformIndex, Index, PandasIndex
-from xarray.core.indexing import IndexSelResult, normalize_slice
+from xarray.core.indexing import IndexSelResult
 from xarray.core.variable import Variable
 
 
@@ -79,14 +79,10 @@ class RangeCoordinateTransform(CoordinateTransform):
         )
 
     def slice(self, sl: slice) -> "RangeCoordinateTransform":
-        sl = normalize_slice(sl, self.size)
-
-        # TODO: support reverse transform (i.e., start > stop)?
-        assert sl.start < sl.stop
-
-        new_size = (sl.stop - sl.start - 1) // sl.step + 1
-        new_start = self.start + sl.start * self.step
-        new_stop = min(new_start + new_size * sl.step * self.step, self.stop)
+        new_range = range(self.size)[sl]
+        new_size = len(new_range)
+        new_start = self.start + new_range.start * self.step
+        new_stop = self.start + new_range.stop * self.step
 
         return type(self)(
             new_start, new_stop, new_size, self.coord_name, self.dim, dtype=self.dtype
