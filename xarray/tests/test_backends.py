@@ -56,6 +56,7 @@ from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.options import set_options
+from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.utils import module_available
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
@@ -351,16 +352,6 @@ class NetCDF3Only:
                 with pytest.raises(ValueError, match="could not safely cast"):
                     ds.to_netcdf(path, format=format)
 
-    def test_literal_timedelta_fill_value_coercion_error(self) -> None:
-        for format in self.netcdf3_formats:
-            timedeltas = np.array(
-                [0, np.iinfo(np.int32).min, np.iinfo(np.int64).min]
-            ).astype("timedelta64[s]")
-            ds = Dataset({"timedeltas": ("timedeltas", timedeltas)})
-            with create_tmp_file(allow_cleanup_failure=False) as path:
-                with pytest.raises(ValueError, match="_FillValue"):
-                    ds.to_netcdf(path, format=format)
-
 
 class DatasetIOBase:
     engine: T_NetcdfEngine | None = None
@@ -652,8 +643,10 @@ class DatasetIOBase:
         ) as actual:
             assert_identical(expected, actual)
 
-    def test_roundtrip_literal_timedelta_data(self) -> None:
-        time_deltas = pd.to_timedelta(["1h", "2h", "NaT"]).as_unit("s")  # type: ignore[arg-type, unused-ignore]
+    def test_roundtrip_timedelta_data_via_dtype(
+        self, time_unit: PDDatetimeUnitOptions
+    ) -> None:
+        time_deltas = pd.to_timedelta(["1h", "2h", "NaT"]).as_unit(time_unit)  # type: ignore[arg-type, unused-ignore]
         expected = Dataset(
             {"td": ("td", time_deltas), "td0": time_deltas[0].to_numpy()}
         )
