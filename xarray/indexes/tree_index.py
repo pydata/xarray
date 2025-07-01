@@ -81,7 +81,7 @@ class ScipyKDTreeAdapter(TreeAdapter):
         return self._kdtree.query(points)
 
     def equals(self, other: ScipyKDTreeAdapter) -> bool:
-        return np.all(self._kdtree.data, other._kdtree.data)
+        return np.array_equal(self._kdtree.data, other._kdtree.data)
 
 
 def get_points(coords: Iterable[Variable | Any]) -> np.ndarray:
@@ -209,16 +209,14 @@ class TreeIndex(Index, Generic[T_TreeAdapter]):
         self, labels: dict[Any, Any], method=None, tolerance=None
     ) -> IndexSelResult:
         if method != "nearest":
-            raise ValueError(
-                "CoordinateTransformIndex only supports selection with method='nearest'"
-            )
+            raise ValueError("TreeIndex only supports selection with method='nearest'")
 
         missing_labels = set(self._coord_names) - set(labels)
         if missing_labels:
             missing_labels_str = ",".join([f"{name}" for name in missing_labels])
             raise ValueError(f"missing labels for coordinate(s): {missing_labels_str}.")
 
-        if any(not isinstance(lbl, Variable | DataArray) for lbl in labels):
+        if any(not isinstance(lbl, Variable | DataArray) for lbl in labels.values()):
             raise TypeError(
                 "TreeIndex only supports advanced (point-wise) indexing "
                 "with either xarray.DataArray or xarray.Variable objects."
