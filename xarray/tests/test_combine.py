@@ -29,8 +29,8 @@ from xarray.tests.test_dataset import create_test_data
 
 def assert_combined_tile_ids_equal(dict1, dict2):
     assert len(dict1) == len(dict2)
-    for k in dict1:
-        assert k in dict2
+    for k in dict1.keys():
+        assert k in dict2.keys()
         assert_equal(dict1[k], dict2[k])
 
 

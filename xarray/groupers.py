@@ -701,23 +701,25 @@ def find_independent_seasons(seasons: Sequence[str]) -> Sequence[SeasonsGroup]:
     grouped = defaultdict(list)
     codes = defaultdict(list)
     seen: set[tuple[int, ...]] = set()
+    idx = 0
     # This is quadratic, but the number of seasons is at most 12
     for i, current in enumerate(season_inds):
         # Start with a group
         if current not in seen:
-            grouped[i].append(current)
-            codes[i].append(i)
+            grouped[idx].append(current)
+            codes[idx].append(i)
             seen.add(current)
 
         # Loop through remaining groups, and look for overlaps
         for j, second in enumerate(season_inds[i:]):
-            if not (set(chain(*grouped[i])) & set(second)) and second not in seen:
-                grouped[i].append(second)
-                codes[i].append(j + i)
+            if not (set(chain(*grouped[idx])) & set(second)) and second not in seen:
+                grouped[idx].append(second)
+                codes[idx].append(j + i)
                 seen.add(second)
         if len(seen) == len(seasons):
             break
-        # found all non-overlapping groups for this row start over
+        # found all non-overlapping groups for this row, increment and start over
+        idx += 1
 
     grouped_ints = tuple(tuple(idx) for idx in grouped.values() if idx)
     return [

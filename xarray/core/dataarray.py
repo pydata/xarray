@@ -212,7 +212,7 @@ def _check_data_shape(
                 data_shape = tuple(
                     (
                         as_variable(coords[k], k, auto_convert=False).size
-                        if k in coords
+                        if k in coords.keys()
                         else 1
                     )
                     for k in dims
