@@ -5,6 +5,8 @@ import xarray as xr
 from xarray.indexes import TreeIndex
 from xarray.tests import assert_identical
 
+pytest.importorskip("scipy")
+
 
 def test_tree_index_init() -> None:
     from xarray.indexes.tree_index import ScipyKDTreeAdapter
