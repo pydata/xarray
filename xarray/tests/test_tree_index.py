@@ -43,7 +43,7 @@ def test_tree_index_sel() -> None:
         ("xx", "yy"), TreeIndex
     )
 
-    # 1-dimensiona labels
+    # 1-dimensional labels
     actual = ds.sel(
         xx=xr.Variable("u", [1.1, 1.1, 1.1]),
         yy=xr.Variable("u", [3.1, 3.1, 3.1]),
