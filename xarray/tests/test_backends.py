@@ -3528,6 +3528,8 @@ class TestInstrumentedZarrStore:
 
     def check_requests(self, expected, patches):
         summary = self.summarize(patches)
+        print(patches)
+        print(expected)
         for k in summary:
             assert summary[k] <= expected[k], (k, summary)
 
