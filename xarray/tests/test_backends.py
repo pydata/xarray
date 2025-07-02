@@ -3564,7 +3564,7 @@ class TestInstrumentedZarrStore:
             # 6057128b: {'iter': 5, 'contains': 2, 'setitem': 5, 'getitem': 10, "listdir": 5, "list_prefix": 0}
             if has_zarr_v3:
                 expected = {
-                    "set": 4,
+                    "set": 11, # TODO: fixme upstream (should be 4), see https://github.com/zarr-developers/zarr-python/issues/3199
                     "get": 23,  # TODO: fixme upstream (should be 8), see https://github.com/zarr-developers/zarr-python/issues/3199
                     "list_dir": 2,  # TODO: fixme upstream (should be 2)
                     "list_prefix": 0,
