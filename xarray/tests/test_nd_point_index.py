@@ -2,26 +2,26 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.indexes import TreeIndex
+from xarray.indexes import NDPointIndex
 from xarray.tests import assert_identical
 
 pytest.importorskip("scipy")
 
 
 def test_tree_index_init() -> None:
-    from xarray.indexes.tree_index import ScipyKDTreeAdapter
+    from xarray.indexes.nd_point_index import ScipyKDTreeAdapter
 
     xx, yy = np.meshgrid([1.0, 2.0], [3.0, 4.0])
     ds = xr.Dataset(coords={"xx": (("y", "x"), xx), "yy": (("y", "x"), yy)})
 
-    ds_indexed1 = ds.set_xindex(("xx", "yy"), TreeIndex)
+    ds_indexed1 = ds.set_xindex(("xx", "yy"), NDPointIndex)
     assert "xx" in ds_indexed1.xindexes
     assert "yy" in ds_indexed1.xindexes
-    assert isinstance(ds_indexed1.xindexes["xx"], TreeIndex)
+    assert isinstance(ds_indexed1.xindexes["xx"], NDPointIndex)
     assert ds_indexed1.xindexes["xx"] is ds_indexed1.xindexes["yy"]
 
     ds_indexed2 = ds.set_xindex(
-        ("xx", "yy"), TreeIndex, tree_adapter_cls=ScipyKDTreeAdapter
+        ("xx", "yy"), NDPointIndex, tree_adapter_cls=ScipyKDTreeAdapter
     )
     assert ds_indexed1.xindexes["xx"].equals(ds_indexed2.xindexes["yy"])
 
@@ -31,18 +31,18 @@ def test_tree_index_init_errors() -> None:
     ds = xr.Dataset(coords={"xx": (("y", "x"), xx), "yy": (("y", "x"), yy)})
 
     with pytest.raises(ValueError, match="number of variables"):
-        ds.set_xindex("xx", TreeIndex)
+        ds.set_xindex("xx", NDPointIndex)
 
     ds2 = ds.assign_coords(yy=(("u", "v"), [[3.0, 3.0], [4.0, 4.0]]))
 
     with pytest.raises(ValueError, match="same dimensions"):
-        ds2.set_xindex(("xx", "yy"), TreeIndex)
+        ds2.set_xindex(("xx", "yy"), NDPointIndex)
 
 
 def test_tree_index_sel() -> None:
     xx, yy = np.meshgrid([1.0, 2.0], [3.0, 4.0])
     ds = xr.Dataset(coords={"xx": (("y", "x"), xx), "yy": (("y", "x"), yy)}).set_xindex(
-        ("xx", "yy"), TreeIndex
+        ("xx", "yy"), NDPointIndex
     )
 
     # 1-dimensional labels
@@ -101,7 +101,7 @@ def test_tree_index_sel() -> None:
 def test_tree_index_sel_errors() -> None:
     xx, yy = np.meshgrid([1.0, 2.0], [3.0, 4.0])
     ds = xr.Dataset(coords={"xx": (("y", "x"), xx), "yy": (("y", "x"), yy)}).set_xindex(
-        ("xx", "yy"), TreeIndex
+        ("xx", "yy"), NDPointIndex
     )
 
     with pytest.raises(ValueError, match="method='nearest'"):
@@ -133,17 +133,17 @@ def test_tree_index_equals() -> None:
     xx1, yy1 = np.meshgrid([1.0, 2.0], [3.0, 4.0])
     ds1 = xr.Dataset(
         coords={"xx": (("y", "x"), xx1), "yy": (("y", "x"), yy1)}
-    ).set_xindex(("xx", "yy"), TreeIndex)
+    ).set_xindex(("xx", "yy"), NDPointIndex)
 
     xx2, yy2 = np.meshgrid([1.0, 2.0], [3.0, 4.0])
     ds2 = xr.Dataset(
         coords={"xx": (("y", "x"), xx2), "yy": (("y", "x"), yy2)}
-    ).set_xindex(("xx", "yy"), TreeIndex)
+    ).set_xindex(("xx", "yy"), NDPointIndex)
 
     xx3, yy3 = np.meshgrid([10.0, 20.0], [30.0, 40.0])
     ds3 = xr.Dataset(
         coords={"xx": (("y", "x"), xx3), "yy": (("y", "x"), yy3)}
-    ).set_xindex(("xx", "yy"), TreeIndex)
+    ).set_xindex(("xx", "yy"), NDPointIndex)
 
     assert ds1.xindexes["xx"].equals(ds2.xindexes["xx"])
     assert not ds1.xindexes["xx"].equals(ds3.xindexes["xx"])
@@ -152,12 +152,12 @@ def test_tree_index_equals() -> None:
 def test_tree_index_rename() -> None:
     xx, yy = np.meshgrid([1.0, 2.0], [3.0, 4.0])
     ds = xr.Dataset(coords={"xx": (("y", "x"), xx), "yy": (("y", "x"), yy)}).set_xindex(
-        ("xx", "yy"), TreeIndex
+        ("xx", "yy"), NDPointIndex
     )
 
     ds_renamed = ds.rename_dims(y="u").rename_vars(yy="uu")
     assert "uu" in ds_renamed.xindexes
-    assert isinstance(ds_renamed.xindexes["uu"], TreeIndex)
+    assert isinstance(ds_renamed.xindexes["uu"], NDPointIndex)
     assert ds_renamed.xindexes["xx"] is ds_renamed.xindexes["uu"]
 
     # check via sel() that uses coord names and dims under the hood

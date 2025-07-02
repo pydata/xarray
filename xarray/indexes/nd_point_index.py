@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 class TreeAdapter(abc.ABC):
     """Lightweight adapter abstract class for plugging in 3rd-party structures
     like :py:class:`scipy.spatial.KDTree` or :py:class:`sklearn.neighbors.KDTree`
-    into :py:class:`~xarray.indexes.TreeIndex`.
+    into :py:class:`~xarray.indexes.NDPointIndex`.
 
     """
 
@@ -69,7 +69,7 @@ class TreeAdapter(abc.ABC):
 
 
 class ScipyKDTreeAdapter(TreeAdapter):
-    """:py:class:`scipy.spatial.KDTree` adapter for :py:class:`~xarray.indexes.TreeIndex`."""
+    """:py:class:`scipy.spatial.KDTree` adapter for :py:class:`~xarray.indexes.NDPointIndex`."""
 
     _kdtree: KDTree
 
@@ -97,7 +97,7 @@ def get_points(coords: Iterable[Variable | Any]) -> np.ndarray:
 T_TreeAdapter = TypeVar("T_TreeAdapter", bound=TreeAdapter)
 
 
-class TreeIndex(Index, Generic[T_TreeAdapter]):
+class NDPointIndex(Index, Generic[T_TreeAdapter]):
     """Xarray index for irregular, n-dimensional data.
 
     This index may be associated with a set of coordinate variables representing
@@ -111,7 +111,7 @@ class TreeIndex(Index, Generic[T_TreeAdapter]):
     By default, this index relies on :py:class:`scipy.spatial.KDTree` for fast
     lookup.
 
-    Do not use :py:meth:`~xarray.indexes.TreeIndex.__init__` directly. Instead
+    Do not use :py:meth:`~xarray.indexes.NDPointIndex.__init__` directly. Instead
     use :py:meth:`~xarray.Dataset.set_xindex` or
     :py:meth:`~xarray.DataArray.set_xindex` to create and set the index from
     existing coordinates (see the example below).
@@ -134,9 +134,9 @@ class TreeIndex(Index, Generic[T_TreeAdapter]):
     Data variables:
         *empty*
 
-    Create a TreeIndex from the "xx" and "yy" coordinate variables:
+    Create a NDPointIndex from the "xx" and "yy" coordinate variables:
 
-    >>> ds = ds.set_xindex(("xx", "yy"), xr.indexes.TreeIndex)
+    >>> ds = ds.set_xindex(("xx", "yy"), xr.indexes.NDPointIndex)
     >>> ds
     <xarray.Dataset> Size: 64B
     Dimensions:  (y: 2, x: 2)
@@ -147,7 +147,7 @@ class TreeIndex(Index, Generic[T_TreeAdapter]):
     Data variables:
         *empty*
     Indexes:
-      ┌ xx       TreeIndex
+      ┌ xx       NDPointIndex
       └ yy
 
     Point-wise (nearest-neighbor) data selection using Xarray's advanced
@@ -268,7 +268,7 @@ class TreeIndex(Index, Generic[T_TreeAdapter]):
         if variables is not None:
             for var in variables.values():
                 # might need to update variable dimensions from the index object
-                # returned from TreeIndex.rename()
+                # returned from NDPointIndex.rename()
                 if var.dims != self._dims:
                     var.dims = self._dims
             return dict(**variables)
@@ -278,7 +278,7 @@ class TreeIndex(Index, Generic[T_TreeAdapter]):
     def equals(
         self, other: Index, *, exclude: frozenset[Hashable] | None = None
     ) -> bool:
-        if not isinstance(other, TreeIndex):
+        if not isinstance(other, NDPointIndex):
             return False
         if type(self._tree_obj) is not type(other._tree_obj):
             return False
@@ -311,7 +311,9 @@ class TreeIndex(Index, Generic[T_TreeAdapter]):
         self, labels: dict[Any, Any], method=None, tolerance=None
     ) -> IndexSelResult:
         if method != "nearest":
-            raise ValueError("TreeIndex only supports selection with method='nearest'")
+            raise ValueError(
+                "NDPointIndex only supports selection with method='nearest'"
+            )
 
         missing_labels = set(self._coord_names) - set(labels)
         if missing_labels:
@@ -330,7 +332,7 @@ class TreeIndex(Index, Generic[T_TreeAdapter]):
                 xr_labels[name] = Variable(self._dims, lbl)
             else:
                 raise ValueError(
-                    "invalid label value. TreeIndex only supports advanced (point-wise) indexing "
+                    "invalid label value. NDPointIndex only supports advanced (point-wise) indexing "
                     "with the following label value kinds:\n"
                     "- xarray.DataArray or xarray.Variable objects\n"
                     "- scalar values\n"
