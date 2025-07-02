@@ -117,7 +117,6 @@ if has_zarr:
     import zarr.codecs
 
     if has_zarr_v3:
-        from zarr.abc.store import Store
         from zarr.storage import MemoryStore as KVStore
         from zarr.storage import WrapperStore
 
