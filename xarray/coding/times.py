@@ -246,7 +246,7 @@ def build_pattern(
     ]
     pattern_list = []
     for sep, name, sub_pattern in pieces:
-        pattern_list.append((sep if sep else "") + named(name, sub_pattern))
+        pattern_list.append((sep or "") + named(name, sub_pattern))
         # TODO: allow timezone offsets?
     return "^" + trailing_optional(pattern_list) + "$"
 
@@ -1410,6 +1410,43 @@ def has_timedelta64_encoding_dtype(attrs_or_encoding: dict) -> bool:
     return isinstance(dtype, str) and dtype.startswith("timedelta64")
 
 
+def resolve_time_unit_from_attrs_dtype(
+    attrs_dtype: str, name: T_Name
+) -> PDDatetimeUnitOptions:
+    dtype = np.dtype(attrs_dtype)
+    resolution, _ = np.datetime_data(dtype)
+    resolution = cast(NPDatetimeUnitOptions, resolution)
+    if np.timedelta64(1, resolution) > np.timedelta64(1, "s"):
+        time_unit = cast(PDDatetimeUnitOptions, "s")
+        message = (
+            f"Following pandas, xarray only supports decoding to timedelta64 "
+            f"values with a resolution of 's', 'ms', 'us', or 'ns'. Encoded "
+            f"values for variable {name!r} have a resolution of "
+            f"{resolution!r}. Attempting to decode to a resolution of 's'. "
+            f"Note, depending on the encoded values, this may lead to an "
+            f"OverflowError. Additionally, data will not be identically round "
+            f"tripped; xarray will choose an encoding dtype of "
+            f"'timedelta64[s]' when re-encoding."
+        )
+        emit_user_level_warning(message)
+    elif np.timedelta64(1, resolution) < np.timedelta64(1, "ns"):
+        time_unit = cast(PDDatetimeUnitOptions, "ns")
+        message = (
+            f"Following pandas, xarray only supports decoding to timedelta64 "
+            f"values with a resolution of 's', 'ms', 'us', or 'ns'. Encoded "
+            f"values for variable {name!r} have a resolution of "
+            f"{resolution!r}. Attempting to decode to a resolution of 'ns'. "
+            f"Note, depending on the encoded values, this may lead to loss of "
+            f"precision. Additionally, data will not be identically round "
+            f"tripped; xarray will choose an encoding dtype of "
+            f"'timedelta64[ns]' when re-encoding."
+        )
+        emit_user_level_warning(message)
+    else:
+        time_unit = cast(PDDatetimeUnitOptions, resolution)
+    return time_unit
+
+
 class CFTimedeltaCoder(VariableCoder):
     """Coder for CF Timedelta coding.
 
@@ -1430,7 +1467,7 @@ class CFTimedeltaCoder(VariableCoder):
 
     def __init__(
         self,
-        time_unit: PDDatetimeUnitOptions = "ns",
+        time_unit: PDDatetimeUnitOptions | None = None,
         decode_via_units: bool = True,
         decode_via_dtype: bool = True,
     ) -> None:
@@ -1442,45 +1479,18 @@ class CFTimedeltaCoder(VariableCoder):
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.data.dtype, np.timedelta64):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
-            has_timedelta_dtype = has_timedelta64_encoding_dtype(encoding)
-            if ("units" in encoding or "dtype" in encoding) and not has_timedelta_dtype:
-                dtype = encoding.get("dtype", None)
-                units = encoding.pop("units", None)
+            dtype = encoding.get("dtype", None)
+            units = encoding.pop("units", None)
 
-                # in the case of packed data we need to encode into
-                # float first, the correct dtype will be established
-                # via CFScaleOffsetCoder/CFMaskCoder
-                if "add_offset" in encoding or "scale_factor" in encoding:
-                    dtype = data.dtype if data.dtype.kind == "f" else "float64"
+            # in the case of packed data we need to encode into
+            # float first, the correct dtype will be established
+            # via CFScaleOffsetCoder/CFMaskCoder
+            if "add_offset" in encoding or "scale_factor" in encoding:
+                dtype = data.dtype if data.dtype.kind == "f" else "float64"
 
-            else:
-                resolution, _ = np.datetime_data(variable.dtype)
-                dtype = np.int64
-                attrs_dtype = f"timedelta64[{resolution}]"
-                units = _numpy_dtype_to_netcdf_timeunit(variable.dtype)
-                safe_setitem(attrs, "dtype", attrs_dtype, name=name)
-                # Remove dtype encoding if it exists to prevent it from
-                # interfering downstream in NonStringCoder.
-                encoding.pop("dtype", None)
-
-                if any(
-                    k in encoding for k in _INVALID_LITERAL_TIMEDELTA64_ENCODING_KEYS
-                ):
-                    raise ValueError(
-                        f"Specifying 'add_offset' or 'scale_factor' is not "
-                        f"supported when encoding the timedelta64 values of "
-                        f"variable {name!r} with xarray's new default "
-                        f"timedelta64 encoding approach. To encode {name!r} "
-                        f"with xarray's previous timedelta64 encoding "
-                        f"approach, which supports the 'add_offset' and "
-                        f"'scale_factor' parameters, additionally set "
-                        f"encoding['units'] to a unit of time, e.g. "
-                        f"'seconds'. To proceed with encoding of {name!r} "
-                        f"via xarray's new approach, remove any encoding "
-                        f"entries for 'add_offset' or 'scale_factor'."
-                    )
-                if "_FillValue" not in encoding and "missing_value" not in encoding:
-                    encoding["_FillValue"] = np.iinfo(np.int64).min
+            resolution, _ = np.datetime_data(variable.dtype)
+            attrs_dtype = f"timedelta64[{resolution}]"
+            safe_setitem(attrs, "dtype", attrs_dtype, name=name)
 
             data, units = encode_cf_timedelta(data, units, dtype)
             safe_setitem(attrs, "units", units, name=name)
@@ -1499,54 +1509,13 @@ class CFTimedeltaCoder(VariableCoder):
         ):
             dims, data, attrs, encoding = unpack_for_decoding(variable)
             units = pop_to(attrs, encoding, "units")
-            if is_dtype_decodable and self.decode_via_dtype:
-                if any(
-                    k in encoding for k in _INVALID_LITERAL_TIMEDELTA64_ENCODING_KEYS
-                ):
-                    raise ValueError(
-                        f"Decoding timedelta64 values via dtype is not "
-                        f"supported when 'add_offset', or 'scale_factor' are "
-                        f"present in encoding. Check the encoding parameters "
-                        f"of variable {name!r}."
-                    )
-                dtype = pop_to(attrs, encoding, "dtype", name=name)
-                dtype = np.dtype(dtype)
-                resolution, _ = np.datetime_data(dtype)
-                resolution = cast(NPDatetimeUnitOptions, resolution)
-                if np.timedelta64(1, resolution) > np.timedelta64(1, "s"):
-                    time_unit = cast(PDDatetimeUnitOptions, "s")
-                    dtype = np.dtype("timedelta64[s]")
-                    message = (
-                        f"Following pandas, xarray only supports decoding to "
-                        f"timedelta64 values with a resolution of 's', 'ms', "
-                        f"'us', or 'ns'. Encoded values for variable {name!r} "
-                        f"have a resolution of {resolution!r}. Attempting to "
-                        f"decode to a resolution of 's'. Note, depending on "
-                        f"the encoded values, this may lead to an "
-                        f"OverflowError. Additionally, data will not be "
-                        f"identically round tripped; xarray will choose an "
-                        f"encoding dtype of 'timedelta64[s]' when re-encoding."
-                    )
-                    emit_user_level_warning(message)
-                elif np.timedelta64(1, resolution) < np.timedelta64(1, "ns"):
-                    time_unit = cast(PDDatetimeUnitOptions, "ns")
-                    dtype = np.dtype("timedelta64[ns]")
-                    message = (
-                        f"Following pandas, xarray only supports decoding to "
-                        f"timedelta64 values with a resolution of 's', 'ms', "
-                        f"'us', or 'ns'. Encoded values for variable {name!r} "
-                        f"have a resolution of {resolution!r}. Attempting to "
-                        f"decode to a resolution of 'ns'. Note, depending on "
-                        f"the encoded values, this may lead to loss of "
-                        f"precision. Additionally, data will not be "
-                        f"identically round tripped; xarray will choose an "
-                        f"encoding dtype of 'timedelta64[ns]' "
-                        f"when re-encoding."
-                    )
-                    emit_user_level_warning(message)
+            if is_dtype_decodable:
+                attrs_dtype = attrs.pop("dtype")
+                if self.time_unit is None:
+                    time_unit = resolve_time_unit_from_attrs_dtype(attrs_dtype, name)
                 else:
-                    time_unit = cast(PDDatetimeUnitOptions, resolution)
-            elif self.decode_via_units:
+                    time_unit = self.time_unit
+            else:
                 if self._emit_decode_timedelta_future_warning:
                     emit_user_level_warning(
                         "In a future version, xarray will not decode "
@@ -1564,8 +1533,19 @@ class CFTimedeltaCoder(VariableCoder):
                         "'CFTimedeltaCoder' instance.",
                         FutureWarning,
                     )
-                dtype = np.dtype(f"timedelta64[{self.time_unit}]")
-                time_unit = self.time_unit
+                if self.time_unit is None:
+                    time_unit = cast(PDDatetimeUnitOptions, "ns")
+                else:
+                    time_unit = self.time_unit
+
+                # Handle edge case that decode_via_dtype=False and
+                # decode_via_units=True, and timedeltas were encoded with a
+                # dtype attribute. We need to remove the dtype attribute
+                # to prevent an error during round tripping.
+                if has_timedelta_dtype:
+                    attrs.pop("dtype")
+
+            dtype = np.dtype(f"timedelta64[{time_unit}]")
             transform = partial(decode_cf_timedelta, units=units, time_unit=time_unit)
             data = lazy_elemwise_func(data, transform, dtype=dtype)
             return Variable(dims, data, attrs, encoding, fastpath=True)

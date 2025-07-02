@@ -56,6 +56,7 @@ from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.options import set_options
+from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.utils import module_available
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
@@ -645,6 +646,16 @@ class DatasetIOBase:
         with self.roundtrip(
             expected, open_kwargs={"decode_timedelta": CFTimedeltaCoder(time_unit="ns")}
         ) as actual:
+            assert_identical(expected, actual)
+
+    def test_roundtrip_timedelta_data_via_dtype(
+        self, time_unit: PDDatetimeUnitOptions
+    ) -> None:
+        time_deltas = pd.to_timedelta(["1h", "2h", "NaT"]).as_unit(time_unit)  # type: ignore[arg-type, unused-ignore]
+        expected = Dataset(
+            {"td": ("td", time_deltas), "td0": time_deltas[0].to_numpy()}
+        )
+        with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
     def test_roundtrip_float64_data(self) -> None:
@@ -2403,7 +2414,8 @@ class ZarrBase(CFEncodedBase):
 
     def test_non_existent_store(self) -> None:
         with pytest.raises(
-            FileNotFoundError, match="(No such file or directory|Unable to find group)"
+            FileNotFoundError,
+            match="(No such file or directory|Unable to find group|No group found)",
         ):
             xr.open_zarr(f"{uuid.uuid4()}")
 
@@ -3606,7 +3618,7 @@ class TestInstrumentedZarrStore:
 
     @requires_dask
     @pytest.mark.skipif(
-        sys.version_info.major == 3 and sys.version_info.minor < 11,
+        sys.version_info < (3, 11),
         reason="zarr too old",
     )
     def test_region_write(self) -> None:
@@ -5465,7 +5477,9 @@ class TestPydap:
 
         ds = DatasetType("bears", **original.attrs)
         for key, var in original.data_vars.items():
-            ds[key] = BaseType(key, var.values, dims=var.dims, **var.attrs)
+            ds[key] = BaseType(
+                key, var.values, dtype=var.values.dtype.kind, dims=var.dims, **var.attrs
+            )
         # check all dims are stored in ds
         for d in original.coords:
             ds[d] = BaseType(d, original[d].values, dims=(d,), **original[d].attrs)
@@ -5477,9 +5491,9 @@ class TestPydap:
             # print("QQ0:", expected["bears"].load())
             pydap_ds = self.convert_to_pydap_dataset(expected)
             actual = open_dataset(PydapDataStore(pydap_ds))
-            if Version(np.__version__) < Version("2.3.0"):
-                # netcdf converts string to byte not unicode
-                expected["bears"] = expected["bears"].astype(str)
+            # netcdf converts string to byte not unicode
+            # fixed in pydap 3.5.6. https://github.com/pydap/pydap/issues/510
+            actual["bears"].values = actual["bears"].values.astype("S")
             yield actual, expected
 
     def test_cmp_local_file(self) -> None:
@@ -5523,9 +5537,6 @@ class TestPydap:
             with create_tmp_file() as tmp_file:
                 actual.to_netcdf(tmp_file)
                 with open_dataset(tmp_file) as actual2:
-                    if Version(np.__version__) < Version("2.3.0"):
-                        # netcdf converts string to byte not unicode
-                        actual2["bears"] = actual2["bears"].astype(str)
                     assert_equal(actual2, expected)
 
     @requires_dask
@@ -5543,9 +5554,11 @@ class TestPydapOnline(TestPydap):
         # in pydap 3.5.0, urls defaults to dap2.
         url = "http://test.opendap.org/opendap/data/nc/bears.nc"
         actual = open_dataset(url, engine="pydap", **kwargs)
+        # pydap <3.5.6 converts to unicode dtype=|U. Not what
+        # xarray expects. Thus force to bytes dtype. pydap >=3.5.6
+        # does not convert to unicode. https://github.com/pydap/pydap/issues/510
+        actual["bears"].values = actual["bears"].values.astype("S")
         with open_example_dataset("bears.nc") as expected:
-            # workaround to restore string which is converted to byte
-            expected["bears"] = expected["bears"].astype(str)
             yield actual, expected
 
     def output_grid_deprecation_warning_dap2dataset(self):
@@ -5558,7 +5571,8 @@ class TestPydapOnline(TestPydap):
         actual = open_dataset(url, engine="pydap", **kwargs)
         with open_example_dataset("bears.nc") as expected:
             # workaround to restore string which is converted to byte
-            expected["bears"] = expected["bears"].astype(str)
+            # only needed for pydap <3.5.6 https://github.com/pydap/pydap/issues/510
+            expected["bears"].values = expected["bears"].values.astype("S")
             yield actual, expected
 
     def test_session(self) -> None:
