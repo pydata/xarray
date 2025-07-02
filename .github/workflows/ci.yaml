@@ -47,18 +47,18 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.10", "3.13"]
+        python-version: ["3.11", "3.13"]
         env: [""]
         include:
           # Minimum python version:
           - env: "bare-minimum"
-            python-version: "3.10"
+            python-version: "3.11"
             os: ubuntu-latest
           - env: "bare-min-and-scipy"
-            python-version: "3.10"
+            python-version: "3.11"
             os: ubuntu-latest
           - env: "min-all-deps"
-            python-version: "3.10"
+            python-version: "3.11"
             os: ubuntu-latest
           # Latest python version:
           - env: "all-but-numba"
@@ -73,7 +73,7 @@ jobs:
           # The mypy tests must be executed using only 1 process in order to guarantee
           # predictable mypy output messages for comparison to expectations.
           - env: "mypy"
-            python-version: "3.10"
+            python-version: "3.11"
             numprocesses: 1
             os: ubuntu-latest
           - env: "mypy"

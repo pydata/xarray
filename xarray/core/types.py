@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import sys
 from collections.abc import Callable, Collection, Hashable, Iterator, Mapping, Sequence
 from types import EllipsisType
 from typing import (
@@ -9,7 +8,9 @@ from typing import (
     Any,
     Literal,
     Protocol,
+    Self,
     SupportsIndex,
+    TypeAlias,
     TypeVar,
     Union,
     overload,
@@ -18,21 +19,6 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-
-try:
-    if sys.version_info >= (3, 11):
-        from typing import Self, TypeAlias
-    else:
-        from typing import TypeAlias
-
-        from typing_extensions import Self
-except ImportError:
-    if TYPE_CHECKING:
-        raise
-    else:
-        Self: Any = None
-
-
 from numpy._typing import _SupportsDType
 from numpy.typing import ArrayLike
 
@@ -214,7 +200,7 @@ Dims = Union[str, Collection[Hashable], EllipsisType, None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
-T_ChunkDim: TypeAlias = str | int | Literal["auto"] | None | tuple[int, ...]  # noqa: PYI051
+T_ChunkDim: TypeAlias = str | int | Literal["auto"] | tuple[int, ...] | None  # noqa: PYI051
 T_ChunkDimFreq: TypeAlias = Union["TimeResampler", T_ChunkDim]
 T_ChunksFreq: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDimFreq]
 # We allow the tuple form of this (though arguably we could transition to named dims only)

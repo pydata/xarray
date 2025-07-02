@@ -582,6 +582,7 @@ class TestZarrDatatreeIO:
                     filepath, encoding=enc, engine="zarr", zarr_format=zarr_format
                 )
 
+    @pytest.mark.xfail(reason="upstream zarr read-only changes have broken this test")
     def test_to_zarr_zip_store(self, tmpdir, simple_datatree, zarr_format):
         from zarr.storage import ZipStore
 
