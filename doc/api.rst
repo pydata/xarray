@@ -954,7 +954,11 @@ Coordinates contents
    Coordinates.to_index
    Coordinates.assign
    Coordinates.merge
+   Coordinates.__or__
    Coordinates.copy
+   Coordinates.drop_vars
+   Coordinates.rename_dims
+   Coordinates.rename_vars
 
 Comparisons
 -----------
