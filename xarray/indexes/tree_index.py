@@ -9,6 +9,7 @@ import numpy as np
 from xarray.core.dataarray import DataArray
 from xarray.core.indexes import Index
 from xarray.core.indexing import IndexSelResult
+from xarray.core.utils import is_scalar
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
@@ -216,24 +217,59 @@ class TreeIndex(Index, Generic[T_TreeAdapter]):
             missing_labels_str = ",".join([f"{name}" for name in missing_labels])
             raise ValueError(f"missing labels for coordinate(s): {missing_labels_str}.")
 
-        if any(not isinstance(lbl, Variable | DataArray) for lbl in labels.values()):
-            raise TypeError(
-                "TreeIndex only supports advanced (point-wise) indexing "
-                "with either xarray.DataArray or xarray.Variable objects."
-            )
+        # maybe convert labels into xarray Variable objects
+        xr_labels: dict[Any, Variable | DataArray] = {}
 
-        if len(set([var.dims for var in labels.values()])) > 1:
-            raise ValueError(
-                "TreeIndex only supports advanced (point-wise) indexing "
-                "with xarray.DataArray or xarray.Variable objects of matching dimensions."
-            )
+        for name, lbl in labels.items():
+            if isinstance(lbl, Variable | DataArray):
+                xr_labels[name] = lbl
+            elif is_scalar(lbl):
+                xr_labels[name] = Variable((), lbl)
+            elif np.asarray(lbl).ndim == len(self._dims):
+                xr_labels[name] = Variable(self._dims, lbl)
+            else:
+                raise TypeError(
+                    "invalid label type. TreeIndex only supports advanced (point-wise) indexing "
+                    "with the following label value types:\n"
+                    "- xarray.DataArray or xarray.Variable objects\n"
+                    "- scalar types\n"
+                    "- unlabelled array-like objects with the same number of dimensions "
+                    f"than the {self._coord_names} coordinate variables ({len(self._dims)})"
+                )
 
-        label0: DataArray | Variable = next(iter(labels.values()))
+        # determine xarray label shape and dimensions
+        label_dims: tuple[Hashable, ...] = ()
+        label_shape: tuple[int, ...] = ()
 
-        points = get_points(labels[name] for name in self._coord_names)
+        for name, lbl in xr_labels.items():
+            if lbl.ndim > 0:
+                if label_dims and lbl.dims != label_dims:
+                    raise ValueError(
+                        f"label {name} has dimensions {lbl.dims} that conflict with "
+                        f"other label dimensions {label_dims}"
+                    )
+                else:
+                    label_dims = lbl.dims
+                if label_shape and lbl.shape != label_shape:
+                    raise ValueError(
+                        f"label {name} has shape {lbl.shape} that conflicts with "
+                        f"other label shape {label_shape}"
+                    )
+                else:
+                    label_shape = lbl.shape
+
+        # maybe broadcast scalar xarray labels
+        if label_dims:
+            for name, lbl in xr_labels.items():
+                if not lbl.dims:
+                    xr_labels[name] = Variable(
+                        label_dims, np.broadcast_to(lbl.values, label_shape)
+                    )
+
+        points = get_points(xr_labels[name] for name in self._coord_names)
         _, indices = self._tree_obj.query(points)
 
-        dim_indexers = self._get_dim_indexers(indices, label0.dims, label0.shape)
+        dim_indexers = self._get_dim_indexers(indices, label_dims, label_shape)
 
         return IndexSelResult(dim_indexers=dim_indexers)
 
