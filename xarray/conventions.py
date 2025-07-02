@@ -792,7 +792,13 @@ def cf_encoder(variables: T_Variables, attributes: T_Attrs):
     # add encoding for time bounds variables if present.
     _update_bounds_encoding(variables)
 
-    new_vars = {k: encode_cf_variable(v, name=k) for k, v in variables.items()}
+    new_vars = {}
+    for k, v in variables.items():
+        try:
+            new_vars[k] = encode_cf_variable(v, name=k)
+        except Exception as e:
+            e.add_note(f"Raised while encoding variable {k!r} with value {v!r}")
+            raise
 
     # Remove attrs from bounds variables (issue #2921)
     for var in new_vars.values():
