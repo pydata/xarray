@@ -3762,35 +3762,36 @@ class TestZarrDictStore(ZarrBase):
                 assert actual["var1"].encoding["chunks"] == (2, 2)
 
 
+class NoConsolidatedMetadataSupportStore(WrapperStore[Store]):
+    """
+    Store that explicitly does not support consolidated metadata.
+
+    Useful as a proxy for stores like Icechunk, see https://github.com/zarr-developers/zarr-python/pull/3119.
+    """
+
+    supports_consolidated_metadata = False
+
+    def __init__(
+        self,
+        store: Store,
+        *,
+        read_only: bool = False,
+    ) -> None:
+        self._store = store.with_read_only(read_only=read_only)
+
+    def with_read_only(
+        self, read_only: bool = False
+    ) -> NoConsolidatedMetadataSupportStore:
+        return type(self)(
+            store=self._store,
+            read_only=read_only,
+        )
+
+
 @requires_zarr_v3
 class TestZarrNoConsolidatedMetadataSupport(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
-        class NoConsolidatedMetadataSupportStore(WrapperStore[Store]):
-            """
-            Store that explicitly does not support consolidated metadata.
-
-            Useful as a proxy for stores like Icechunk, see https://github.com/zarr-developers/zarr-python/pull/3119.
-            """
-
-            supports_consolidated_metadata = False
-
-            def __init__(
-                self,
-                store: Store,
-                *,
-                read_only: bool = False,
-            ) -> None:
-                self._store = store.with_read_only(read_only=read_only)
-
-            def with_read_only(
-                self, read_only: bool = False
-            ) -> NoConsolidatedMetadataSupportStore:
-                return type(self)(
-                    store=self._store,
-                    read_only=read_only,
-                )
-
         # TODO the zarr version would need to be >3.08 for the supports_consolidated_metadata property to have any effect
         yield NoConsolidatedMetadataSupportStore(
             zarr.storage.MemoryStore({}, read_only=False)
