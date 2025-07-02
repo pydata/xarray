@@ -204,6 +204,15 @@ Bug fixes
   (:pull:`10352`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Avoid unsafe casts from float to unsigned int in CFMaskCoder (:issue:`9815`, :pull:`9964`).
   By ` Elliott Sales de Andrade <https://github.com/QuLogic>`_.
+- Fix attribute overwriting bug when decoding encoded
+  :py:class:`numpy.timedelta64` values from disk with a dtype attribute
+  (:issue:`10468`, :pull:`10469`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Fix default ``"_FillValue"`` dtype coercion bug when encoding
+  :py:class:`numpy.timedelta64` values to an on-disk format that only supports
+  32-bit integers (:issue:`10466`, :pull:`10469`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+
 
 Performance
 ~~~~~~~~~~~
