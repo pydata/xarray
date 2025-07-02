@@ -109,7 +109,6 @@ class TestDataArray:
             Coordinates:
               * x        (x) uint64 24B 0 1 2
                 other    uint64 8B 0
-            Dimensions without coordinates: time
             Attributes:
                 foo:      bar"""
         )

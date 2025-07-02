@@ -345,7 +345,6 @@ def cross(
     >>> xr.cross(a, b, dim="dim_0")
     <xarray.DataArray (dim_0: 3)> Size: 24B
     array([-3,  6, -3])
-    Dimensions without coordinates: dim_0
 
     Vector cross-product with 3 dimensions but zeros at the last axis
     yields the same results as with 2 dimensions:
@@ -355,7 +354,6 @@ def cross(
     >>> xr.cross(a, b, dim="dim_0")
     <xarray.DataArray (dim_0: 3)> Size: 24B
     array([ 0,  0, -3])
-    Dimensions without coordinates: dim_0
 
     Multiple vector cross-products. Note that the direction of the
     cross product vector is defined by the right-hand rule:
@@ -397,7 +395,6 @@ def cross(
     >>> c.to_dataset(dim="cartesian")
     <xarray.Dataset> Size: 24B
     Dimensions:  (dim_0: 1)
-    Dimensions without coordinates: dim_0
     Data variables:
         x        (dim_0) int64 8B -3
         y        (dim_0) int64 8B 6
@@ -526,7 +523,6 @@ def dot(
     array([[0, 1],
            [2, 3],
            [4, 5]])
-    Dimensions without coordinates: a, b
 
     >>> da_b
     <xarray.DataArray (a: 3, b: 2, c: 2)> Size: 96B
@@ -538,36 +534,30 @@ def dot(
     <BLANKLINE>
            [[ 8,  9],
             [10, 11]]])
-    Dimensions without coordinates: a, b, c
 
     >>> da_c
     <xarray.DataArray (c: 2, d: 3)> Size: 48B
     array([[0, 1, 2],
            [3, 4, 5]])
-    Dimensions without coordinates: c, d
 
     >>> xr.dot(da_a, da_b, dim=["a", "b"])
     <xarray.DataArray (c: 2)> Size: 16B
     array([110, 125])
-    Dimensions without coordinates: c
 
     >>> xr.dot(da_a, da_b, dim=["a"])
     <xarray.DataArray (b: 2, c: 2)> Size: 32B
     array([[40, 46],
            [70, 79]])
-    Dimensions without coordinates: b, c
 
     >>> xr.dot(da_a, da_b, da_c, dim=["b", "c"])
     <xarray.DataArray (a: 3, d: 3)> Size: 72B
     array([[  9,  14,  19],
            [ 93, 150, 207],
            [273, 446, 619]])
-    Dimensions without coordinates: a, d
 
     >>> xr.dot(da_a, da_b)
     <xarray.DataArray (c: 2)> Size: 16B
     array([110, 125])
-    Dimensions without coordinates: c
 
     >>> xr.dot(da_a, da_b, dim=...)
     <xarray.DataArray ()> Size: 8B
@@ -715,7 +705,6 @@ def where(cond, x, y, keep_attrs=None):
     <xarray.DataArray (x: 2, y: 2)> Size: 32B
     array([[1, 2],
            [0, 0]])
-    Dimensions without coordinates: x, y
 
     See Also
     --------

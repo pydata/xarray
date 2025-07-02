@@ -316,7 +316,6 @@ class Dataset(
       * instrument      (instrument) <U8 96B 'manufac1' 'manufac2' 'manufac3'
       * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
         reference_time  datetime64[ns] 8B 2014-09-05
-    Dimensions without coordinates: loc
     Data variables:
         temperature     (loc, instrument, time) float64 192B 29.11 18.2 ... 9.063
         precipitation   (loc, instrument, time) float64 192B 4.562 5.684 ... 1.613
@@ -985,7 +984,6 @@ class Dataset(
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
           * x        (x) <U3 24B 'one' 'two'
-        Dimensions without coordinates: dim_0, dim_1
         Data variables:
             foo      (dim_0, dim_1) float64 48B 1.764 0.4002 0.9787 2.241 1.868 -0.9773
             bar      (x) int64 16B -1 2
@@ -997,7 +995,6 @@ class Dataset(
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
           * x        (x) <U3 24B 'one' 'two'
-        Dimensions without coordinates: dim_0, dim_1
         Data variables:
             foo      (dim_0, dim_1) float64 48B 7.0 0.4002 0.9787 2.241 1.868 -0.9773
             bar      (x) int64 16B -1 2
@@ -1007,7 +1004,6 @@ class Dataset(
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
           * x        (x) <U3 24B 'one' 'two'
-        Dimensions without coordinates: dim_0, dim_1
         Data variables:
             foo      (dim_0, dim_1) float64 48B 7.0 0.4002 0.9787 2.241 1.868 -0.9773
             bar      (x) int64 16B -1 2
@@ -1021,7 +1017,6 @@ class Dataset(
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
           * x        (x) <U3 24B 'one' 'two'
-        Dimensions without coordinates: dim_0, dim_1
         Data variables:
             foo      (dim_0, dim_1) int64 48B 0 1 2 3 4 5
             bar      (x) <U1 8B 'a' 'b'
@@ -1031,7 +1026,6 @@ class Dataset(
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
           * x        (x) <U3 24B 'one' 'two'
-        Dimensions without coordinates: dim_0, dim_1
         Data variables:
             foo      (dim_0, dim_1) float64 48B 7.0 0.4002 0.9787 2.241 1.868 -0.9773
             bar      (x) int64 16B -1 2
@@ -4290,7 +4284,6 @@ class Dataset(
         Coordinates:
             x        (z) <U1 8B 'a' 'b'
             y        (z) int64 16B 0 1
-        Dimensions without coordinates: z
         Data variables:
             a        (z) int64 16B 5 7
             b        (z) float64 16B 0.1 2.4
@@ -4405,7 +4398,6 @@ class Dataset(
         >>> dataset.expand_dims(dim="time")
         <xarray.Dataset> Size: 8B
         Dimensions:      (time: 1)
-        Dimensions without coordinates: time
         Data variables:
             temperature  (time) float64 8B 25.0
 
@@ -4416,7 +4408,6 @@ class Dataset(
         >>> dataset_1d
         <xarray.Dataset> Size: 24B
         Dimensions:      (x: 3)
-        Dimensions without coordinates: x
         Data variables:
             temperature  (x) float64 24B 25.0 26.5 24.8
 
@@ -4425,7 +4416,6 @@ class Dataset(
         >>> dataset_1d.expand_dims(dim="time", axis=0)
         <xarray.Dataset> Size: 24B
         Dimensions:      (time: 1, x: 3)
-        Dimensions without coordinates: time, x
         Data variables:
             temperature  (time, x) float64 24B 25.0 26.5 24.8
 
@@ -4436,7 +4426,6 @@ class Dataset(
         >>> dataset_2d
         <xarray.Dataset> Size: 96B
         Dimensions:      (y: 3, x: 4)
-        Dimensions without coordinates: y, x
         Data variables:
             temperature  (y, x) float64 96B 0.5488 0.7152 0.6028 ... 0.7917 0.5289
 
@@ -4445,7 +4434,6 @@ class Dataset(
         >>> dataset_2d.expand_dims(dim="time", axis=2)
         <xarray.Dataset> Size: 96B
         Dimensions:      (y: 3, x: 4, time: 1)
-        Dimensions without coordinates: y, x, time
         Data variables:
             temperature  (y, x, time) float64 96B 0.5488 0.7152 0.6028 ... 0.7917 0.5289
 
@@ -5247,7 +5235,6 @@ class Dataset(
         Dimensions:  (x: 2, y: 3)
         Coordinates:
           * y        (y) <U1 12B 'u' 'v' 'w'
-        Dimensions without coordinates: x
         Data variables:
             a        (x, y) int64 48B 0 1 2 3 4 5
             b        (x) int64 16B 6 7
@@ -5260,7 +5247,6 @@ class Dataset(
           * z         (z) object 32B MultiIndex
           * variable  (z) <U1 16B 'a' 'a' 'a' 'b'
           * y         (z) object 32B 'u' 'v' 'w' nan
-        Dimensions without coordinates: x
 
         """
         from xarray.structure.concat import concat
@@ -5733,7 +5719,6 @@ class Dataset(
         >>> dataset.drop_vars(lambda x: x.indexes)
         <xarray.Dataset> Size: 96B
         Dimensions:      (time: 1, latitude: 2, longitude: 2)
-        Dimensions without coordinates: time, latitude, longitude
         Data variables:
             temperature  (time, latitude, longitude) float64 32B 25.5 26.3 27.1 28.0
             humidity     (time, latitude, longitude) float64 32B 65.0 63.8 58.2 59.6
@@ -5952,7 +5937,6 @@ class Dataset(
         Dimensions:  (x: 2, y: 3)
         Coordinates:
           * y        (y) <U1 12B 'a' 'b' 'c'
-        Dimensions without coordinates: x
         Data variables:
             A        (x, y) int64 48B 0 1 2 3 4 5
         >>> ds.drop_sel(y=["a", "c"])
@@ -5960,7 +5944,6 @@ class Dataset(
         Dimensions:  (x: 2, y: 1)
         Coordinates:
           * y        (y) <U1 4B 'b'
-        Dimensions without coordinates: x
         Data variables:
             A        (x, y) int64 16B 1 4
         >>> ds.drop_sel(y="b")
@@ -5968,7 +5951,6 @@ class Dataset(
         Dimensions:  (x: 2, y: 2)
         Coordinates:
           * y        (y) <U1 8B 'a' 'c'
-        Dimensions without coordinates: x
         Data variables:
             A        (x, y) int64 32B 0 2 3 5
         """
@@ -6022,7 +6004,6 @@ class Dataset(
         Dimensions:  (x: 2, y: 3)
         Coordinates:
           * y        (y) <U1 12B 'a' 'b' 'c'
-        Dimensions without coordinates: x
         Data variables:
             A        (x, y) int64 48B 0 1 2 3 4 5
         >>> ds.drop_isel(y=[0, 2])
@@ -6030,7 +6011,6 @@ class Dataset(
         Dimensions:  (x: 2, y: 1)
         Coordinates:
           * y        (y) <U1 4B 'b'
-        Dimensions without coordinates: x
         Data variables:
             A        (x, y) int64 16B 1 4
         >>> ds.drop_isel(y=1)
@@ -6038,7 +6018,6 @@ class Dataset(
         Dimensions:  (x: 2, y: 2)
         Coordinates:
           * y        (y) <U1 8B 'a' 'c'
-        Dimensions without coordinates: x
         Data variables:
             A        (x, y) int64 32B 0 2 3 5
         """
@@ -6826,14 +6805,12 @@ class Dataset(
         >>> ds
         <xarray.Dataset> Size: 64B
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
-        Dimensions without coordinates: dim_0, dim_1, x
         Data variables:
             foo      (dim_0, dim_1) float64 48B 1.764 0.4002 0.9787 2.241 1.868 -0.9773
             bar      (x) int64 16B -1 2
         >>> ds.map(np.fabs)
         <xarray.Dataset> Size: 64B
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
-        Dimensions without coordinates: dim_0, dim_1, x
         Data variables:
             foo      (dim_0, dim_1) float64 48B 1.764 0.4002 0.9787 2.241 1.868 0.9773
             bar      (x) float64 16B 1.0 2.0
@@ -7688,13 +7665,11 @@ class Dataset(
         >>> ds.diff("x")
         <xarray.Dataset> Size: 24B
         Dimensions:  (x: 3)
-        Dimensions without coordinates: x
         Data variables:
             foo      (x) int64 24B 0 1 0
         >>> ds.diff("x", 2)
         <xarray.Dataset> Size: 16B
         Dimensions:  (x: 2)
-        Dimensions without coordinates: x
         Data variables:
             foo      (x) int64 16B 1 -1
 
@@ -7784,7 +7759,6 @@ class Dataset(
         >>> ds.shift(x=2)
         <xarray.Dataset> Size: 40B
         Dimensions:  (x: 5)
-        Dimensions without coordinates: x
         Data variables:
             foo      (x) object 40B nan nan 'a' 'b' 'c'
         """
@@ -8583,7 +8557,6 @@ class Dataset(
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
           * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
             reference_time  datetime64[ns] 8B 2014-09-05
-        Dimensions without coordinates: x, y
         Data variables:
             precipitation   (x, y, time) float64 96B 5.68 9.256 0.7104 ... 4.615 7.805
 
@@ -8598,7 +8571,6 @@ class Dataset(
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
           * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
             reference_time  datetime64[ns] 8B 2014-09-05
-        Dimensions without coordinates: x, y
         Data variables:
             temperature     (x, y, time) float64 96B 29.11 18.2 22.83 ... 16.15 26.63
             precipitation   (x, y, time) float64 96B 5.68 9.256 0.7104 ... 4.615 7.805
@@ -8938,7 +8910,6 @@ class Dataset(
         >>> ds.pad(x=(1, 2))
         <xarray.Dataset> Size: 64B
         Dimensions:  (x: 8)
-        Dimensions without coordinates: x
         Data variables:
             foo      (x) float64 64B nan 0.0 1.0 2.0 3.0 4.0 nan nan
         """
@@ -9437,7 +9408,6 @@ class Dataset(
         >>> ds
         <xarray.Dataset> Size: 80B
         Dimensions:  (x: 5)
-        Dimensions without coordinates: x
         Data variables:
             a        (x) int64 40B 0 1 2 3 4
             b        (x) float64 40B 0.0 0.25 0.5 0.75 1.0
@@ -9445,12 +9415,10 @@ class Dataset(
         >>> ds.eval("a + b")
         <xarray.DataArray (x: 5)> Size: 40B
         array([0.  , 1.25, 2.5 , 3.75, 5.  ])
-        Dimensions without coordinates: x
 
         >>> ds.eval("c = a + b")
         <xarray.Dataset> Size: 120B
         Dimensions:  (x: 5)
-        Dimensions without coordinates: x
         Data variables:
             a        (x) int64 40B 0 1 2 3 4
             b        (x) float64 40B 0.0 0.25 0.5 0.75 1.0
@@ -9532,14 +9500,12 @@ class Dataset(
         >>> ds
         <xarray.Dataset> Size: 80B
         Dimensions:  (x: 5)
-        Dimensions without coordinates: x
         Data variables:
             a        (x) int64 40B 0 1 2 3 4
             b        (x) float64 40B 0.0 0.25 0.5 0.75 1.0
         >>> ds.query(x="a > 2")
         <xarray.Dataset> Size: 32B
         Dimensions:  (x: 2)
-        Dimensions without coordinates: x
         Data variables:
             a        (x) int64 16B 3 4
             b        (x) float64 16B 0.75 1.0
@@ -9911,7 +9877,6 @@ class Dataset(
         Dimensions:  (letters: 2, y: 3)
         Coordinates:
           * letters  (letters) object 16B 'a' 'b'
-        Dimensions without coordinates: y
         Data variables:
             foo      (letters, y) int64 48B 9 11 13 9 11 13
 
@@ -9932,7 +9897,6 @@ class Dataset(
         Coordinates:
           * x_bins   (x_bins) interval[int64, right] 32B (5, 15] (15, 25]
           * letters  (letters) object 16B 'a' 'b'
-        Dimensions without coordinates: y
         Data variables:
             foo      (y, x_bins, letters) float64 96B 0.0 nan nan 3.0 ... nan nan 5.0
 

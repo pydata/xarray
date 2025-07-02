@@ -1116,7 +1116,6 @@ class TestRepr:
             │       e        (x) float64 16B 1.0 2.0
             └── Group: /b
                 │   Dimensions:  (y: 1)
-                │   Dimensions without coordinates: y
                 │   Data variables:
                 │       f        (y) float64 8B 3.0
                 ├── Group: /b/c
@@ -1136,7 +1135,6 @@ class TestRepr:
             │   Dimensions:  (x: 2, y: 1)
             │   Inherited coordinates:
             │     * x        (x) float64 16B 2.0 3.0
-            │   Dimensions without coordinates: y
             │   Data variables:
             │       f        (y) float64 8B 3.0
             ├── Group: /b/c
@@ -1156,7 +1154,6 @@ class TestRepr:
                 Dimensions:  (x: 2, y: 1)
                 Inherited coordinates:
                   * x        (x) float64 16B 2.0 3.0
-                Dimensions without coordinates: y
                 Data variables:
                     g        float64 8B 4.0
             """
@@ -1303,12 +1300,10 @@ class TestRepr:
             <xarray.DataTree>
             Group: /
             │   Dimensions:  (x: 1)
-            │   Dimensions without coordinates: x
             │   Data variables:
             │       foo      (x) float64 8B 1.0
             └── Group: /child
                     Dimensions:  (y: 1)
-                    Dimensions without coordinates: y
                     Data variables:
                         bar      (y) float64 8B 2.0
             """
@@ -1321,7 +1316,6 @@ class TestRepr:
             <xarray.DataTree 'child'>
             Group: /child
                 Dimensions:  (x: 1, y: 1)
-                Dimensions without coordinates: x, y
                 Data variables:
                     bar      (y) float64 8B 2.0
             """
@@ -1517,12 +1511,10 @@ class TestInheritance:
             group '/b' is not aligned with its parents:
             Group:
                 Dimensions:  (x: 1)
-                Dimensions without coordinates: x
                 Data variables:
                     c        (x) float64 8B 3.0
             From parents:
                 Dimensions:  (x: 2)
-                Dimensions without coordinates: x
             """
         )
 
@@ -1623,12 +1615,10 @@ class TestInheritance:
             group '/b/c' is not aligned with its parents:
             Group:
                 Dimensions:  (x: 1)
-                Dimensions without coordinates: x
                 Data variables:
                     d        (x) float64 8B 3.0
             From parents:
                 Dimensions:  (x: 2)
-                Dimensions without coordinates: x
             """
         )
 
