@@ -290,7 +290,7 @@ We'll now kick off a two-step process:
 .. code-block:: sh
 
    # Create and activate the build environment
-   conda create -c conda-forge -n xarray-tests python=3.10
+   conda create -c conda-forge -n xarray-tests python=3.11
 
    # This is for Linux and MacOS
    conda env update -f ci/requirements/environment.yml

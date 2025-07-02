@@ -2,7 +2,7 @@ name: xarray-examples
 channels:
   - conda-forge
 dependencies:
-  - python=3.10
+  - python=3.11
   - boto3
   - bottleneck
   - cartopy
