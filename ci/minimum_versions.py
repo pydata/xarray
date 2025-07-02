@@ -30,6 +30,7 @@ ignored_packages = [
     "coveralls",
     "pip",
     "pytest",
+    "pytest-asyncio",
     "pytest-cov",
     "pytest-env",
     "pytest-mypy-plugins",
