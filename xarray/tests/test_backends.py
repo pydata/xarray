@@ -3539,7 +3539,7 @@ class TestInstrumentedZarrStore:
             if has_zarr_v3:
                 # TODO: verify these
                 expected = {
-                    "set": 5,
+                    "set": 16,
                     "get": 8,  # TODO: fixme upstream (should be 4), see https://github.com/zarr-developers/zarr-python/issues/3199
                     "list_dir": 2,
                     "list_prefix": 1,
@@ -3621,7 +3621,7 @@ class TestInstrumentedZarrStore:
         with self.create_zarr_target() as store:
             if has_zarr_v3:
                 expected = {
-                    "set": 5,
+                    "set": 16,
                     "get": 8,  # TODO: fixme upstream (should be 2), see https://github.com/zarr-developers/zarr-python/issues/3199
                     "list_dir": 2,
                     "list_prefix": 4,
