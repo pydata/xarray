@@ -2405,12 +2405,13 @@ class ZarrBase(CFEncodedBase):
             self.save(
                 expected, store_target=store, consolidated=False, **self.version_kwargs
             )
-            with pytest.warns(
-                RuntimeWarning,
-                match="Failed to open Zarr store with consolidated",
-            ):
-                with xr.open_zarr(store, **self.version_kwargs) as ds:
-                    assert_identical(ds, expected)
+            if getattr(store, "supports_consolidated_metadata", True):
+                with pytest.warns(
+                    RuntimeWarning,
+                    match="Failed to open Zarr store with consolidated",
+                ):
+                    with xr.open_zarr(store, **self.version_kwargs) as ds:
+                        assert_identical(ds, expected)
 
     def test_non_existent_store(self) -> None:
         with pytest.raises(
