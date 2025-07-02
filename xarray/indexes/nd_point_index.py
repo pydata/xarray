@@ -147,7 +147,7 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
     Data variables:
         *empty*
     Indexes:
-      ┌ xx       NDPointIndex
+      ┌ xx       NDPointIndex (ScipyKDTreeAdapter)
       └ yy
 
     Point-wise (nearest-neighbor) data selection using Xarray's advanced
