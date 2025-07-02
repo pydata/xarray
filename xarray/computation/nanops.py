@@ -105,14 +105,12 @@ def nansum(a, axis=None, dtype=None, out=None, min_count=None):
 
 def _nanmean_ddof_object(ddof, value, axis=None, dtype=None, **kwargs):
     """In house nanmean. ddof argument will be used in _nanvar method"""
-    from xarray.core.duck_array_ops import count, fillna, where_method
-
     valid_count = count(value, axis=axis)
     value = fillna(value, 0)
     # As dtype inference is impossible for object dtype, we assume float
     # https://github.com/dask/dask/issues/3162
     if dtype is None and value.dtype.kind == "O":
-        dtype = value.dtype if value.dtype.kind in ["cf"] else float
+        dtype = float
 
     data = np.sum(value, axis=axis, dtype=dtype, **kwargs)
     data = data / (valid_count - ddof)

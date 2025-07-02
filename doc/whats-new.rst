@@ -20,6 +20,88 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+The minimum versions of some dependencies were changed (:issue:`10417`, :pull:`10438`):
+By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 20 20
+
+   * - Dependency
+     - Old Version
+     - New Version
+   * - Python
+     - 3.10
+     - 3.11
+   * - array-api-strict
+     - 1.0
+     - 1.1
+   * - boto3
+     - 1.29
+     - 1.34
+   * - bottleneck
+     - 1.3
+     - 1.4
+   * - cartopy
+     - 0.22
+     - 0.23
+   * - dask-core
+     - 2023.11
+     - 2024.6
+   * - distributed
+     - 2023.11
+     - 2024.6
+   * - flox
+     - 0.7
+     - 0.9
+   * - h5py
+     - 3.8
+     - 3.11
+   * - hdf5
+     - 1.12
+     - 1.14
+   * - iris
+     - 3.7
+     - 3.9
+   * - lxml
+     - 4.9
+     - 5.1
+   * - matplotlib-base
+     - 3.7
+     - 3.8
+   * - numba
+     - 0.57
+     - 0.60
+   * - numbagg
+     - 0.6
+     - 0.8
+   * - numpy
+     - 1.24
+     - 1.26
+   * - packaging
+     - 23.2
+     - 24.1
+   * - pandas
+     - 2.1
+     - 2.2
+   * - pint
+     - 0.22
+     - 0.24
+   * - pydap
+     - N/A
+     - 3.5
+   * - scipy
+     - 1.11
+     - 1.13
+   * - sparse
+     - 0.14
+     - 0.15
+   * - typing_extensions
+     - 4.8
+     - Removed
+   * - zarr
+     - 2.16
+     - 2.18
 
 Deprecations
 ~~~~~~~~~~~~
@@ -35,6 +117,8 @@ Bug fixes
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Fix the error message of :py:func:`testing.assert_equal` when two different :py:class:`DataTree` objects
   are passed (:pull:`10440`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Fix :py:func:`testing.assert_equal` with ``check_dim_order=False`` for :py:class:`DataTree` objects
+  (:pull:`10442`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 
 Documentation
