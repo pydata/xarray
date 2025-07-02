@@ -14,6 +14,10 @@ New Features
 ~~~~~~~~~~~~
 - Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
   under the ``xarray.indexes`` namespace. By `Deepak Cherian <https://github.com/dcherian>`_.
+- Added new argument in `xarray.open_mfdataset` to better handle the invalid files 
+  {'raise', 'warn', 'ignore'}, default 'raise'. If 'raise', then invalid dataset will raise an exception.
+  If 'ignore', then invalid dataset will be ignored. If 'warn', then a warning will be issued for each invalid dataset.
+  By `Pratiman Patel <https://github.com/pratiman-91>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
