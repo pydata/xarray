@@ -3588,7 +3588,7 @@ class TestInstrumentedZarrStore:
             if has_zarr_v3:
                 expected = {
                     "set": 4,
-                    "get": 9,  # TODO: fixme upstream (should be 8)
+                    "get": 23,  # TODO: fixme upstream (should be 8), see https://github.com/zarr-developers/zarr-python/issues/3199
                     "list_dir": 2,  # TODO: fixme upstream (should be 2)
                     "list_prefix": 0,
                 }
