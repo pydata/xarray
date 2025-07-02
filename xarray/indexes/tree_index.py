@@ -113,7 +113,90 @@ class TreeIndex(Index, Generic[T_TreeAdapter]):
 
     Examples
     --------
-    TODO
+    An example using a dataset with 2-dimensional coordinates representing
+    irregularly spaced data points.
+
+    >>> xx = [[1.0, 2.0], [3.0, 0.0]]
+    >>> yy = [[11.0, 21.0], [29.0, 9.0]]
+    >>> ds = xr.Dataset(coords={"xx": (("y", "x"), xx), "yy": (("y", "x"), yy)})
+    >>> ds
+    <xarray.Dataset> Size: 64B
+    Dimensions:  (y: 2, x: 2)
+    Coordinates:
+        xx       (y, x) float64 32B 1.0 2.0 3.0 0.0
+        yy       (y, x) float64 32B 11.0 21.0 29.0 9.0
+    Dimensions without coordinates: y, x
+    Data variables:
+        *empty*
+
+    Create a TreeIndex from the "xx" and "yy" coordinate variables:
+
+    >>> ds = ds.set_xindex(("xx", "yy"), xr.indexes.TreeIndex)
+    >>> ds
+    <xarray.Dataset> Size: 64B
+    Dimensions:  (y: 2, x: 2)
+    Coordinates:
+      * xx       (y, x) float64 32B 1.0 2.0 3.0 0.0
+      * yy       (y, x) float64 32B 11.0 21.0 29.0 9.0
+    Dimensions without coordinates: y, x
+    Data variables:
+        *empty*
+    Indexes:
+      ┌ xx       TreeIndex
+      └ yy
+
+    Point-wise (nearest-neighbor) data selection using Xarray's advanced
+    indexing, i.e., using arbitrary dimension(s) for the Variable objects passed
+    as labels:
+
+    >>> ds.sel(
+    ...     xx=xr.Variable("points", [1.9, 0.1]),
+    ...     yy=xr.Variable("points", [13.0, 8.0]),
+    ...     method="nearest",
+    ... )
+    <xarray.Dataset> Size: 32B
+    Dimensions:  (points: 2)
+    Coordinates:
+        xx       (points) float64 16B 1.0 0.0
+        yy       (points) float64 16B 11.0 9.0
+    Dimensions without coordinates: points
+    Data variables:
+        *empty*
+
+    Data selection with scalar labels:
+
+    >>> ds.sel(xx=1.9, yy=13.0, method="nearest")
+    <xarray.Dataset> Size: 16B
+    Dimensions:  ()
+    Coordinates:
+        xx       float64 8B 1.0
+        yy       float64 8B 11.0
+    Data variables:
+        *empty*
+
+    Data selection with broadcasted scalar labels:
+
+    >>> ds.sel(xx=1.9, yy=xr.Variable("points", [13.0, 8.0]), method="nearest")
+    <xarray.Dataset> Size: 32B
+    Dimensions:  (points: 2)
+    Coordinates:
+        xx       (points) float64 16B 1.0 0.0
+        yy       (points) float64 16B 11.0 9.0
+    Dimensions without coordinates: points
+    Data variables:
+        *empty*
+
+    Data selection with array-like labels (implicit dimensions):
+
+    >>> ds.sel(xx=[[1.9], [0.1]], yy=[[13.0], [8.0]], method="nearest")
+    <xarray.Dataset> Size: 32B
+    Dimensions:  (y: 2, x: 1)
+    Coordinates:
+        xx       (y, x) float64 16B 1.0 0.0
+        yy       (y, x) float64 16B 11.0 9.0
+    Dimensions without coordinates: y, x
+    Data variables:
+        *empty*
 
     """
 
