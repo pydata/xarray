@@ -393,3 +393,7 @@ class TreeIndex(Index, Generic[T_TreeAdapter]):
             dims=new_dims,
             shape=self._shape,
         )
+
+    def _repr_inline_(self, max_width: int) -> str:
+        tree_obj_type = self._tree_obj.__class__.__name__
+        return f"{self.__class__.__name__} ({tree_obj_type})"
