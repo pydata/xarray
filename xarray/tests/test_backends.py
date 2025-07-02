@@ -131,7 +131,6 @@ if has_zarr:
         except ImportError:
             KVStore = None  # type: ignore[assignment,misc,unused-ignore]
 
-        Store = None  # type: ignore[assignment,misc,unused-ignore]
         WrapperStore = None  # type: ignore[assignment,misc,unused-ignore]
 else:
     KVStore = None  # type: ignore[assignment,misc,unused-ignore]
@@ -3763,7 +3762,7 @@ class TestZarrDictStore(ZarrBase):
                 assert actual["var1"].encoding["chunks"] == (2, 2)
 
 
-class NoConsolidatedMetadataSupportStore(WrapperStore[Store]):
+class NoConsolidatedMetadataSupportStore(WrapperStore):
     """
     Store that explicitly does not support consolidated metadata.
 
@@ -3774,7 +3773,7 @@ class NoConsolidatedMetadataSupportStore(WrapperStore[Store]):
 
     def __init__(
         self,
-        store: Store,
+        store,
         *,
         read_only: bool = False,
     ) -> None:
