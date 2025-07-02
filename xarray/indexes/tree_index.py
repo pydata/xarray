@@ -111,6 +111,11 @@ class TreeIndex(Index, Generic[T_TreeAdapter]):
     By default, this index relies on :py:class:`scipy.spatial.KDTree` for fast
     lookup.
 
+    Do not use :py:meth:`~xarray.indexes.TreeIndex.__init__` directly. Instead
+    use :py:meth:`~xarray.Dataset.set_xindex` or
+    :py:meth:`~xarray.DataArray.set_xindex` to create and set the index from
+    existing coordinates (see the example below).
+
     Examples
     --------
     An example using a dataset with 2-dimensional coordinates representing
