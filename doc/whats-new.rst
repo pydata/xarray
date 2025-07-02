@@ -14,7 +14,7 @@ New Features
 ~~~~~~~~~~~~
 - Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
   under the ``xarray.indexes`` namespace. By `Deepak Cherian <https://github.com/dcherian>`_.
-- Support zarr-python's new `.supports_consolidated_metadata` store property (:pull:`10457``), by Tom Nicholas <https://github.com/TomNicholas>`_.
+- Support zarr-python's new ``.supports_consolidated_metadata`` store property (:pull:`10457``), by Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
