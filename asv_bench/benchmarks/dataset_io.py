@@ -678,13 +678,7 @@ class IOReadCustomEngine:
                 lock: xr.backends.locks.SerializableLock | None = None,
                 autoclose: bool = False,
             ):
-                if lock is None:
-                    if mode == "r":
-                        locker = xr.backends.locks.SerializableLock()
-                    else:
-                        locker = xr.backends.locks.SerializableLock()
-                else:
-                    locker = lock
+                locker = lock or xr.backends.locks.SerializableLock()
 
                 manager = xr.backends.CachingFileManager(
                     xr.backends.DummyFileManager,
