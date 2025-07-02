@@ -609,7 +609,9 @@ class NetCDF4DataStore(WritableCFDataStore):
 class NetCDF4CoderOptions(CoderOptions):
     # defaults for netcdf4 based backends
     mask_and_scale: bool | Mapping[str, bool] | None = True
-    decode_times: bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None = True
+    decode_times: (
+        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None
+    ) = True
     concat_characters: bool | Mapping[str, bool] | None = True
     decode_coords: Literal["coordinates", "all"] | bool | None = True
 

@@ -759,8 +759,12 @@ class CoderOptions(BaseCoderOptions):
     # mask: Optional[bool] = None
     # scale: Optional[bool] = None
     mask_and_scale: bool | Mapping[str, bool] | None = None
-    decode_times: bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None = None
-    decode_timedelta: bool | CFTimedeltaCoder | Mapping[str, bool | CFTimedeltaCoder] | None = None
+    decode_times: (
+        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None
+    ) = None
+    decode_timedelta: (
+        bool | CFTimedeltaCoder | Mapping[str, bool | CFTimedeltaCoder] | None
+    ) = None
     use_cftime: bool | Mapping[str, bool] | None = None
     concat_characters: bool | Mapping[str, bool] | None = None
     decode_coords: Literal["coordinates", "all"] | bool | None = None
