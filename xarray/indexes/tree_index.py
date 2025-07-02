@@ -174,6 +174,19 @@ class TreeIndex(Index, Generic[T_TreeAdapter]):
             shape=var0.shape,
         )
 
+    def create_variables(
+        self, variables: Mapping[Any, Variable] | None = None
+    ) -> dict[Any, Variable]:
+        if variables is not None:
+            for var in variables.values():
+                # might need to update variable dimensions from the index object
+                # returned from TreeIndex.rename()
+                if var.dims != self._dims:
+                    var.dims = self._dims
+            return dict(**variables)
+        else:
+            return {}
+
     def equals(
         self, other: Index, *, exclude: frozenset[Hashable] | None = None
     ) -> bool:
@@ -228,11 +241,11 @@ class TreeIndex(Index, Generic[T_TreeAdapter]):
             elif np.asarray(lbl).ndim == len(self._dims):
                 xr_labels[name] = Variable(self._dims, lbl)
             else:
-                raise TypeError(
-                    "invalid label type. TreeIndex only supports advanced (point-wise) indexing "
-                    "with the following label value types:\n"
+                raise ValueError(
+                    "invalid label value. TreeIndex only supports advanced (point-wise) indexing "
+                    "with the following label value kinds:\n"
                     "- xarray.DataArray or xarray.Variable objects\n"
-                    "- scalar types\n"
+                    "- scalar values\n"
                     "- unlabelled array-like objects with the same number of dimensions "
                     f"than the {self._coord_names} coordinate variables ({len(self._dims)})"
                 )
