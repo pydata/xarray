@@ -15,10 +15,91 @@ New Features
 - Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
   under the ``xarray.indexes`` namespace. By `Deepak Cherian <https://github.com/dcherian>`_.
 
-
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+The minimum versions of some dependencies were changed (:issue:`10417`, :pull:`10438`):
+By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 20 20
+
+   * - Dependency
+     - Old Version
+     - New Version
+   * - Python
+     - 3.10
+     - 3.11
+   * - array-api-strict
+     - 1.0
+     - 1.1
+   * - boto3
+     - 1.29
+     - 1.34
+   * - bottleneck
+     - 1.3
+     - 1.4
+   * - cartopy
+     - 0.22
+     - 0.23
+   * - dask-core
+     - 2023.11
+     - 2024.6
+   * - distributed
+     - 2023.11
+     - 2024.6
+   * - flox
+     - 0.7
+     - 0.9
+   * - h5py
+     - 3.8
+     - 3.11
+   * - hdf5
+     - 1.12
+     - 1.14
+   * - iris
+     - 3.7
+     - 3.9
+   * - lxml
+     - 4.9
+     - 5.1
+   * - matplotlib-base
+     - 3.7
+     - 3.8
+   * - numba
+     - 0.57
+     - 0.60
+   * - numbagg
+     - 0.6
+     - 0.8
+   * - numpy
+     - 1.24
+     - 1.26
+   * - packaging
+     - 23.2
+     - 24.1
+   * - pandas
+     - 2.1
+     - 2.2
+   * - pint
+     - 0.22
+     - 0.24
+   * - pydap
+     - N/A
+     - 3.5
+   * - scipy
+     - 1.11
+     - 1.13
+   * - sparse
+     - 0.14
+     - 0.15
+   * - typing_extensions
+     - 4.8
+     - Removed
+   * - zarr
+     - 2.16
+     - 2.18
 
 Deprecations
 ~~~~~~~~~~~~
@@ -36,6 +117,8 @@ Bug fixes
   are passed (:pull:`10440`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fix :py:func:`testing.assert_equal` with ``check_dim_order=False`` for :py:class:`DataTree` objects
   (:pull:`10442`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Fix Pydap backend testing. Now test forces string arrays to dtype "S" (pydap converts them to unicode type by default). Removes conditional to numpy version. (:issue:`10261`, :pull:`10482`)
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 
 
 Documentation
@@ -123,6 +206,15 @@ Bug fixes
   (:pull:`10352`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Avoid unsafe casts from float to unsigned int in CFMaskCoder (:issue:`9815`, :pull:`9964`).
   By ` Elliott Sales de Andrade <https://github.com/QuLogic>`_.
+- Fix attribute overwriting bug when decoding encoded
+  :py:class:`numpy.timedelta64` values from disk with a dtype attribute
+  (:issue:`10468`, :pull:`10469`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Fix default ``"_FillValue"`` dtype coercion bug when encoding
+  :py:class:`numpy.timedelta64` values to an on-disk format that only supports
+  32-bit integers (:issue:`10466`, :pull:`10469`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+
 
 Performance
 ~~~~~~~~~~~
