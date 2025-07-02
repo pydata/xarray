@@ -131,6 +131,7 @@ if has_zarr:
         except ImportError:
             KVStore = None  # type: ignore[assignment,misc,unused-ignore]
 
+        Store = None  # type: ignore[assignment,misc,unused-ignore]
         WrapperStore = None  # type: ignore[assignment,misc,unused-ignore]
 else:
     KVStore = None  # type: ignore[assignment,misc,unused-ignore]
