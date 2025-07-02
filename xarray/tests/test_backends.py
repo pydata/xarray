@@ -2398,7 +2398,8 @@ class ZarrBase(CFEncodedBase):
 
     def test_non_existent_store(self) -> None:
         with pytest.raises(
-            FileNotFoundError, match="(No such file or directory|Unable to find group)"
+            FileNotFoundError,
+            match="(No such file or directory|Unable to find group|No group found)",
         ):
             xr.open_zarr(f"{uuid.uuid4()}")
 
@@ -3601,7 +3602,7 @@ class TestInstrumentedZarrStore:
 
     @requires_dask
     @pytest.mark.skipif(
-        sys.version_info.major == 3 and sys.version_info.minor < 11,
+        sys.version_info < (3, 11),
         reason="zarr too old",
     )
     def test_region_write(self) -> None:
@@ -3803,13 +3804,11 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                     ]
                 )
 
-            assert set(expected) == set(
-                [
-                    file.lstrip("c/")
-                    for file in ls
-                    if (file not in (".zattrs", ".zarray", "zarr.json"))
-                ]
-            )
+            assert set(expected) == {
+                file.lstrip("c/")
+                for file in ls
+                if (file not in (".zattrs", ".zarray", "zarr.json"))
+            }
 
         # The zarr format is set by the `default_zarr_format`
         # pytest fixture that acts on a superclass

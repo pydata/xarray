@@ -138,7 +138,7 @@ def _maybe_chunk(
             # by providing chunks as an input to tokenize.
             # subtle bugs result otherwise. see GH3350
             # we use str() for speed, and use the name for the final array name on the next line
-            token2 = tokenize(token if token else var._data, str(chunks))
+            token2 = tokenize(token or var._data, str(chunks))
             name2 = f"{name_prefix}{name}-{token2}"
 
             from_array_kwargs = utils.consolidate_dask_from_array_kwargs(

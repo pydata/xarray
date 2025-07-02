@@ -255,6 +255,7 @@ extend-exclude = ["doc", "_typed_ops.pyi"]
 
 [tool.ruff.lint]
 extend-select = [
+  "YTT",  # flake8-2020
   "B",    # flake8-bugbear
   "C4",   # flake8-comprehensions
   "ISC",  # flake8-implicit-str-concat
@@ -266,7 +267,10 @@ extend-select = [
   "PERF", # Perflint
   "W",    # pycodestyle warnings
   "PGH",  # pygrep-hooks
+  "PLC",  # Pylint Convention
   "PLE",  # Pylint Errors
+  "PLR",  # Pylint Refactor
+  "PLW",  # Pylint Warnings
   "UP",   # pyupgrade
   "FURB", # refurb
   "RUF",
@@ -282,6 +286,14 @@ ignore = [
   "PERF203", # try-except within a loop incurs performance overhead
   "E402",    # module level import not at top of file
   "E731",    # do not assign a lambda expression, use a def
+  "PLC0415", # `import` should be at the top-level of a file
+  "PLC0206", # extracting value from dictionary without calling `.items()`
+  "PLR091",  # too many arguments / branches / statements
+  "PLR2004", # magic value used in comparison
+  "PLW0603", # using the global statement to update is discouraged
+  "PLW0642", # reassigned `self` variable in instance method
+  "PLW1641", # object does not implement `__hash__` method
+  "PLW2901", # `for` loop variable overwritten by assignment target
   "UP007",   # use X | Y for type annotations
   "FURB105", # unnecessary empty string passed to `print`
   "RUF001",  # string contains ambiguous unicode character
@@ -294,6 +306,8 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # don't enforce absolute imports
 "asv_bench/**" = ["TID252"]
+# comparison with itself in tests
+"xarray/tests/**" = ["PLR0124"]
 # looks like ruff bugs
 "xarray/core/_typed_ops.py" = ["PYI034"]
 "xarray/namedarray/_typing.py" = ["PYI018", "PYI046"]

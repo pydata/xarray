@@ -41,7 +41,7 @@ def map_over_datasets(
 
 
 def map_over_datasets(
-    func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
+    func: Callable[..., Dataset | tuple[Dataset | None, ...] | None],
     *args: Any,
     kwargs: Mapping[str, Any] | None = None,
 ) -> DataTree | tuple[DataTree, ...]:
@@ -105,7 +105,7 @@ def map_over_datasets(
     # Walk all trees simultaneously, applying func to all nodes that lie in same position in different trees
     # We don't know which arguments are DataTrees so we zip all arguments together as iterables
     # Store tuples of results in a dict because we don't yet know how many trees we need to rebuild to return
-    out_data_objects: dict[str, Dataset | None | tuple[Dataset | None, ...]] = {}
+    out_data_objects: dict[str, Dataset | tuple[Dataset | None, ...] | None] = {}
 
     tree_args = [arg for arg in args if isinstance(arg, DataTree)]
     name = result_name(tree_args)
@@ -166,7 +166,7 @@ def add_note(err: BaseException, msg: str) -> None:
 
 def _check_single_set_return_values(path_to_node: str, obj: Any) -> int | None:
     """Check types returned from single evaluation of func, and return number of return values received from func."""
-    if isinstance(obj, None | Dataset):
+    if isinstance(obj, Dataset | None):
         return None  # no need to pack results
 
     if not isinstance(obj, tuple) or not all(

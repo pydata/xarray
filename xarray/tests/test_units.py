@@ -2650,7 +2650,7 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         scalar_types = (int, float)
-        args = list(value * unit for value in func.args)
+        args = [value * unit for value in func.args]
         kwargs = {
             key: (value * unit if isinstance(value, scalar_types) else value)
             for key, value in func.kwargs.items()
@@ -2708,7 +2708,7 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         scalar_types = (int, float)
-        args = list(value * unit for value in func.args)
+        args = [value * unit for value in func.args]
         kwargs = {
             key: (value * unit if isinstance(value, scalar_types) else value)
             for key, value in func.kwargs.items()

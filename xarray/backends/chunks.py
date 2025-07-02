@@ -51,7 +51,7 @@ def align_nd_chunks(
 
         # The ideal size of the chunks is the maximum of the two; this would avoid
         # that we use more memory than expected
-        max_chunk = max(fixed_chunk, max(var_chunks))
+        max_chunk = max(fixed_chunk, *var_chunks)
 
         # The algorithm assumes that the chunks on this array are aligned except the last one
         # because it can be considered a partial one
@@ -141,7 +141,7 @@ def build_grid_chunks(
     if region is None:
         region = slice(0, size)
 
-    region_start = region.start if region.start else 0
+    region_start = region.start or 0
     # Generate the zarr chunks inside the region of this dim
     chunks_on_region = [chunk_size - (region_start % chunk_size)]
     chunks_on_region.extend([chunk_size] * ((size - chunks_on_region[0]) // chunk_size))
@@ -224,7 +224,7 @@ def validate_grid_chunks_alignment(
                     )
                 )
 
-        interval_start = interval.start if interval.start else 0
+        interval_start = interval.start or 0
 
         if len(var_chunks) > 1:
             # The first border size is the amount of data that needs to be updated on the
@@ -247,7 +247,7 @@ def validate_grid_chunks_alignment(
                 )
 
         if not allow_partial_chunks:
-            region_stop = interval.stop if interval.stop else size
+            region_stop = interval.stop or size
 
             error_on_last_chunk = base_error.format(
                 var_chunk_pos=len(var_chunks) - 1,

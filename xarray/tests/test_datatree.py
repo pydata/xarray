@@ -837,7 +837,7 @@ class TestTreeFromDict:
 
     def test_full(self, simple_datatree) -> None:
         dt = simple_datatree
-        paths = list(node.path for node in dt.subtree)
+        paths = [node.path for node in dt.subtree]
         assert paths == [
             "/",
             "/set1",
@@ -1433,7 +1433,6 @@ class TestRepr:
 
 def _exact_match(message: str) -> str:
     return re.escape(dedent(message).strip())
-    return "^" + re.escape(dedent(message.rstrip())) + "$"
 
 
 class TestInheritance:
@@ -1657,7 +1656,7 @@ class TestRestructuring:
 
         # test drop multiple nodes
         dropped = sue.drop_nodes(names=["Mary", "Kate"])
-        assert not set(["Mary", "Kate"]).intersection(set(dropped.children))
+        assert not {"Mary", "Kate"}.intersection(set(dropped.children))
         assert "Ashley" in dropped.children
 
         # test raise
@@ -2310,7 +2309,7 @@ class TestUFuncs:
     @pytest.mark.xfail(reason="__array_ufunc__ not implemented yet")
     def test_tree(self, create_test_datatree):
         dt = create_test_datatree()
-        expected = create_test_datatree(modify=lambda ds: np.sin(ds))
+        expected = create_test_datatree(modify=np.sin)
         result_tree = np.sin(dt)
         assert_equal(result_tree, expected)
 
