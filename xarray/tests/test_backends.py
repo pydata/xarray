@@ -56,6 +56,7 @@ from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.options import set_options
+from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.utils import module_available
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
@@ -640,6 +641,16 @@ class DatasetIOBase:
         with self.roundtrip(
             expected, open_kwargs={"decode_timedelta": CFTimedeltaCoder(time_unit="ns")}
         ) as actual:
+            assert_identical(expected, actual)
+
+    def test_roundtrip_timedelta_data_via_dtype(
+        self, time_unit: PDDatetimeUnitOptions
+    ) -> None:
+        time_deltas = pd.to_timedelta(["1h", "2h", "NaT"]).as_unit(time_unit)  # type: ignore[arg-type, unused-ignore]
+        expected = Dataset(
+            {"td": ("td", time_deltas), "td0": time_deltas[0].to_numpy()}
+        )
+        with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
     def test_roundtrip_float64_data(self) -> None:
