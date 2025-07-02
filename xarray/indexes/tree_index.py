@@ -55,7 +55,7 @@ class TreeAdapter(abc.ABC):
         """
         ...
 
-    def equals(self, other: TreeAdapter) -> bool:
+    def equals(self, other: Self) -> bool:
         """Check equality with another TreeAdapter of the same kind.
 
         Parameters
@@ -80,7 +80,7 @@ class ScipyKDTreeAdapter(TreeAdapter):
     def query(self, points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         return self._kdtree.query(points)
 
-    def equals(self, other: ScipyKDTreeAdapter) -> bool:
+    def equals(self, other: Self) -> bool:
         return np.array_equal(self._kdtree.data, other._kdtree.data)
 
 
@@ -187,7 +187,7 @@ class TreeIndex(Index, Generic[T_TreeAdapter]):
         indices: np.ndarray,
         label_dims: tuple[Hashable, ...],
         label_shape: tuple[int, ...],
-    ) -> dict[Hashable, np.ndarray]:
+    ) -> dict[Hashable, Variable]:
         """Returns dimension indexers based on the query results (indices) and
         the original label dimensions and shape.
 
