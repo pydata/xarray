@@ -134,21 +134,15 @@ has_zarr_v3_dtypes, requires_zarr_v3_dtypes = _importorskip("zarr", "3.0.10")
 if has_zarr_v3:
     import zarr
 
+    # manual update by checking attrs for now
+    # TODO: use version specifier
+    # installing from git main is giving me a lower version than the
+    # most recently released zarr
     has_zarr_v3_dtypes = hasattr(zarr.core, "dtype")
 
-    # has_zarr_v3_dtypes = hasattr(zarr.Array.metadata.data_type, "to_native_dtype")
     requires_zarr_v3_dtypes = pytest.mark.skipif(
         not has_zarr_v3_dtypes, reason="requires zarr>3.0.10 (including dev versions)"
     )
-
-# Additional check for zarr dtype support (dev versions > 3.0.9)
-# if has_zarr:
-#     import zarr
-#
-#     # Dev versions like "3.0.10.dev47+g9da38f75" are > "3.0.10"
-#     has_zarr_v3_dtypes = has_zarr_v3_dtypes or (
-#         Version(zarr.__version__) > Version("3.0.10")
-#     )
 
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
