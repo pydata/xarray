@@ -13,7 +13,6 @@ from xarray.core.indexes import (
 from xarray.indexes.cf_interval_index import CFIntervalIndex
 from xarray.indexes.range_index import RangeIndex
 
-
 __all__ = [
     "CFIntervalIndex",
     "CoordinateTransform",
