@@ -84,7 +84,7 @@ def test_tree_index_sel() -> None:
     )
     assert_identical(actual, expected)
 
-    # unlabelled array-like labels with dimensions matching index coordinate dimensions
+    # implicit dimension array-like labels
     actual = ds.sel(
         xx=[[1.1, 1.1, 1.1], [1.9, 1.9, 1.9]],
         yy=[[3.1, 3.1, 3.1], [3.9, 3.9, 3.9]],
@@ -160,7 +160,8 @@ def test_tree_index_rename() -> None:
     assert isinstance(ds_renamed.xindexes["uu"], NDPointIndex)
     assert ds_renamed.xindexes["xx"] is ds_renamed.xindexes["uu"]
 
-    # check via sel() that uses coord names and dims under the hood
+    # test via sel() with implicit dimension array-like labels, which relies on
+    # NDPointIndex._coord_names and NDPointIndex._dims internal attrs
     actual = ds_renamed.sel(
         xx=[[1.1, 1.1, 1.1], [1.9, 1.9, 1.9]],
         uu=[[3.1, 3.1, 3.1], [3.9, 3.9, 3.9]],

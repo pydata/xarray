@@ -101,9 +101,10 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
     """Xarray index for irregular, n-dimensional data.
 
     This index may be associated with a set of coordinate variables representing
-    the location of the data points in an n-dimensional space. All coordinates
-    must have the same shape and dimensions. The number of associated coordinate
-    variables must correspond to the number of dimensions of the space.
+    the arbitrary location of data points in an n-dimensional space. All
+    coordinates must have the same shape and dimensions. The number of
+    associated coordinate variables must correspond to the number of dimensions
+    of the space.
 
     This index supports label-based selection (nearest neighbor lookup). It also
     has limited support for alignment.
@@ -112,14 +113,13 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
     lookup.
 
     Do not use :py:meth:`~xarray.indexes.NDPointIndex.__init__` directly. Instead
-    use :py:meth:`~xarray.Dataset.set_xindex` or
-    :py:meth:`~xarray.DataArray.set_xindex` to create and set the index from
+    use :py:meth:`xarray.Dataset.set_xindex` or
+    :py:meth:`xarray.DataArray.set_xindex` to create and set the index from
     existing coordinates (see the example below).
 
     Examples
     --------
-    An example using a dataset with 2-dimensional coordinates representing
-    irregularly spaced data points.
+    An example using a dataset with 2-dimensional coordinates.
 
     >>> xx = [[1.0, 2.0], [3.0, 0.0]]
     >>> yy = [[11.0, 21.0], [29.0, 9.0]]
@@ -134,7 +134,7 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
     Data variables:
         *empty*
 
-    Create a NDPointIndex from the "xx" and "yy" coordinate variables:
+    Creation of a NDPointIndex from the "xx" and "yy" coordinate variables:
 
     >>> ds = ds.set_xindex(("xx", "yy"), xr.indexes.NDPointIndex)
     >>> ds
@@ -244,7 +244,8 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
 
         if len(variables) != len(var0.dims):
             raise ValueError(
-                f"the number of variables {len(variables)} doesn't match the number of dimensions {len(var0.dims)}"
+                f"the number of variables {len(variables)} doesn't match "
+                f"the number of dimensions {len(var0.dims)}"
             )
 
         opts = dict(options)
@@ -267,8 +268,8 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
     ) -> dict[Any, Variable]:
         if variables is not None:
             for var in variables.values():
-                # might need to update variable dimensions from the index object
-                # returned from NDPointIndex.rename()
+                # maybe re-sync variable dimensions with the index object
+                # returned by NDPointIndex.rename()
                 if var.dims != self._dims:
                     var.dims = self._dims
             return dict(**variables)
