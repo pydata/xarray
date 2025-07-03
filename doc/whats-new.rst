@@ -10,7 +10,7 @@ What's New
 v2025.07.0 (unreleased)
 -----------------------
 
-
+This release extends xarray's support for custom index classes, updates minimum dependencies, and fixes a number of bugs.
 
 Thanks to the 18 contributors to this release:
 Bas Nijholt, Benoit Bovy, DHRUVA KUMAR KAUSHAL, Deepak Cherian, Dhruva Kumar Kaushal, Dimitri Papadopoulos Orfanos, Ian Hunt-Isaak, Kai Mühlbauer, Mathias Hauser, Maximilian Roos, Miguel Jimenez, Nick Hodgskin, Scott Henderson, Shuhao Cao, Spencer Clark, Stephan Hoyer, Tom Nicholas and Zsolt Cserna
