@@ -39,8 +39,16 @@ jobs:
   upstream-dev:
     name: upstream-dev
     runs-on: ubuntu-latest
+    needs: detect-ci-trigger
     env:
       ZARR_V3_EXPERIMENTAL_API: 1
+    if: |
+      always()
+      && (
+          (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+          || needs.detect-ci-trigger.outputs.triggered == 'true'
+          || contains( github.event.pull_request.labels.*.name, 'run-upstream')
+      )
     defaults:
       run:
         shell: bash -l {0}
