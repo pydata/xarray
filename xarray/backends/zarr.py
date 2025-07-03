@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 
 from xarray import coding, conventions
 from xarray.backends.chunks import grid_rechunk, validate_grid_chunks_alignment
@@ -819,9 +818,9 @@ class ZarrStore(AbstractWritableDataStore):
         elif "_FillValue" in attributes:
             # TODO update version check for the released version with dtypes
             #  probably be 3.1
-            import zarr
 
-            if Version(zarr.__version__) > Version("3.0.9"):
+            # if Version(zarr.__version__) > Version("3.0.10"):
+            if hasattr(zarr_array.metadata.data_type, "to_native_dtype"):
                 native_dtype = zarr_array.metadata.data_type.to_native_dtype()
                 attributes["_FillValue"] = (
                     # Use the new dtype infrastructure instead of doing xarray
@@ -961,12 +960,11 @@ class ZarrStore(AbstractWritableDataStore):
             # To do so, we decode variables directly to access the proper encoding,
             # without going via xarray.Dataset to avoid needing to load
             # index variables into memory.
-            store_vars = {
-                k: self.open_store_variable(name=k) for k in existing_variable_names
-            }
 
             existing_vars, _, _ = conventions.decode_cf_variables(
-                variables=store_vars,
+                variables={
+                    k: self.open_store_variable(name=k) for k in existing_variable_names
+                },
                 # attributes = {} since we don't care about parsing the global
                 # "coordinates" attribute
                 attributes={},
