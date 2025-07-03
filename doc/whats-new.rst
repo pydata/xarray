@@ -21,7 +21,7 @@ New Features
 - Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
   under the ``xarray.indexes`` namespace. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Support zarr-python's new ``.supports_consolidated_metadata`` store property (:pull:`10457``).
-  by Tom Nicholas <https://github.com/TomNicholas>`_.
+  by `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Better error messages when encoding data to be written to disk fails (:pull:`10464`).
   By `Stephan Hoyer <https://github.com/shoyer>`_
 
