@@ -70,5 +70,5 @@ efficient, and fun!
    Gallery <gallery>
    API Reference <api>
    Get Help <get-help/help-diagram>
-   Contribute <contribute/index>
+   Development <contribute/index>
    Release Notes <whats-new>
