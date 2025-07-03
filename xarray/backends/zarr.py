@@ -855,8 +855,8 @@ class ZarrStore(AbstractWritableDataStore):
     def set_attributes(self, attributes):
         _put_attrs(self.zarr_group, attributes)
 
-    def encode_variable(self, variable):
-        variable = encode_zarr_variable(variable)
+    def encode_variable(self, variable, name=None):
+        variable = encode_zarr_variable(variable, name=name)
         return variable
 
     def encode_attribute(self, a):
@@ -1184,7 +1184,7 @@ class ZarrStore(AbstractWritableDataStore):
                 #   with chunk boundaries, then no synchronization is required."
                 # TODO: incorporate synchronizer to allow writes from multiple dask
                 # threads
-                shape = zarr_shape if zarr_shape else v.shape
+                shape = zarr_shape or v.shape
                 validate_grid_chunks_alignment(
                     nd_var_chunks=v.chunks,
                     enc_chunks=encoding["chunks"],
@@ -1545,7 +1545,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
     ) -> bool:
         if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
-            return ext in {".zarr"}
+            return ext == ".zarr"
 
         return False
 
@@ -1768,6 +1768,11 @@ def _get_open_params(
     else:
         missing_exc = zarr.errors.GroupNotFoundError
 
+    if _zarr_v3():
+        # zarr 3.0.8 and earlier did not support this property - it was effectively assumed true
+        if not getattr(store, "supports_consolidated_metadata", True):
+            consolidated = consolidate_on_close = False
+
     if consolidated in [None, True]:
         # open the root of the store, in case there is metadata consolidated there
         group = open_kwargs.pop("path")
@@ -1825,6 +1830,7 @@ def _get_open_params(
         else:
             # this was the default for v2 and should apply to most existing Zarr data
             use_zarr_fill_value_as_mask = True
+
     return (
         zarr_group,
         consolidate_on_close,

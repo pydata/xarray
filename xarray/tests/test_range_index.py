@@ -121,6 +121,28 @@ def test_range_index_isel() -> None:
     expected = create_dataset_arange(0.0, 1.0, 0.2)
     assert_identical(actual, expected, check_default_indexes=False)
 
+    actual = ds.isel(x=slice(None, None, -1))
+    expected = create_dataset_arange(0.9, -0.1, -0.1)
+    assert_identical(actual, expected, check_default_indexes=False)
+
+    actual = ds.isel(x=slice(None, 4, -1))
+    expected = create_dataset_arange(0.9, 0.4, -0.1)
+    assert_identical(actual, expected, check_default_indexes=False)
+
+    actual = ds.isel(x=slice(8, 4, -1))
+    expected = create_dataset_arange(0.8, 0.4, -0.1)
+    assert_identical(actual, expected, check_default_indexes=False)
+
+    actual = ds.isel(x=slice(8, None, -1))
+    expected = create_dataset_arange(0.8, -0.1, -0.1)
+    assert_identical(actual, expected, check_default_indexes=False)
+
+    # https://github.com/pydata/xarray/issues/10441
+    ds2 = create_dataset_arange(0.0, 3.0, 0.1)
+    actual = ds2.isel(x=slice(4, None, 3))
+    expected = create_dataset_arange(0.4, 3.0, 0.3)
+    assert_identical(actual, expected, check_default_indexes=False)
+
     # scalar
     actual = ds.isel(x=0)
     expected = xr.Dataset(coords={"x": 0.0})
@@ -220,6 +242,6 @@ def test_range_index_repr() -> None:
 
 def test_range_index_repr_inline() -> None:
     index = RangeIndex.arange(0.0, 1.0, 0.1, dim="x")
-    actual = index._repr_inline_(max_width=None)
+    actual = index._repr_inline_(max_width=70)
     expected = "RangeIndex (start=0, stop=1, step=0.1)"
     assert actual == expected

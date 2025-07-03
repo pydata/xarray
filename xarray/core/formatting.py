@@ -190,7 +190,7 @@ def format_item(x, timedelta_format=None, quote_strings=True):
         if hasattr(x, "dtype"):
             x = x.item()
         return repr(x) if quote_strings else x
-    elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating):
+    elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating) and x.shape == ():
         return f"{x.item():.4}"
     else:
         return str(x)
@@ -464,7 +464,7 @@ def inherited_coords_repr(node: DataTree, col_width=None, max_rows=None):
     )
 
 
-def inline_index_repr(index: pd.Index, max_width=None):
+def inline_index_repr(index: pd.Index, max_width: int) -> str:
     if hasattr(index, "_repr_inline_"):
         repr_ = index._repr_inline_(max_width=max_width)
     else:
@@ -1039,15 +1039,13 @@ def diff_dataset_repr(a, b, compat):
 def diff_nodewise_summary(a: DataTree, b: DataTree, compat):
     """Iterates over all corresponding nodes, recording differences between data at each location."""
 
-    compat_str = _compat_to_str(compat)
-
     summary = []
     for path, (node_a, node_b) in group_subtrees(a, b):
         a_ds, b_ds = node_a.dataset, node_b.dataset
 
         if not a_ds._all_compat(b_ds, compat):
             path_str = "root node" if path == "." else f"node {path!r}"
-            dataset_diff = diff_dataset_repr(a_ds, b_ds, compat_str)
+            dataset_diff = diff_dataset_repr(a_ds, b_ds, compat)
             data_diff = indent(
                 "\n".join(dataset_diff.split("\n", 1)[1:]), prefix="    "
             )

@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from xarray import coding
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
@@ -30,6 +29,12 @@ from xarray.backends.locks import (
 )
 from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 from xarray.backends.store import StoreBackendEntrypoint
+from xarray.coding.strings import (
+    CharacterArrayCoder,
+    EncodedStringCoder,
+    create_vlen_dtype,
+    is_unicode_dtype,
+)
 from xarray.coding.variables import pop_to
 from xarray.core import indexing
 from xarray.core.utils import (
@@ -73,7 +78,7 @@ class BaseNetCDF4Array(BackendArray):
             # check vlen string dtype in further steps
             # it also prevents automatic string concatenation via
             # conventions.decode_cf_variable
-            dtype = coding.strings.create_vlen_dtype(str)
+            dtype = create_vlen_dtype(str)
         self.dtype = dtype
 
     def __setitem__(self, key, value):
@@ -127,12 +132,12 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
         return array
 
 
-def _encode_nc4_variable(var):
+def _encode_nc4_variable(var, name=None):
     for coder in [
-        coding.strings.EncodedStringCoder(allows_unicode=True),
-        coding.strings.CharacterArrayCoder(),
+        EncodedStringCoder(allows_unicode=True),
+        CharacterArrayCoder(),
     ]:
-        var = coder.encode(var)
+        var = coder.encode(var, name=name)
     return var
 
 
@@ -164,7 +169,7 @@ def _nc4_dtype(var):
     if "dtype" in var.encoding:
         dtype = var.encoding.pop("dtype")
         _check_encoding_dtype_is_vlen_string(dtype)
-    elif coding.strings.is_unicode_dtype(var.dtype):
+    elif is_unicode_dtype(var.dtype):
         dtype = str
     elif var.dtype.kind in ["i", "u", "f", "c", "S"]:
         dtype = var.dtype
@@ -535,12 +540,12 @@ class NetCDF4DataStore(WritableCFDataStore):
         else:
             self.ds.setncattr(key, value)
 
-    def encode_variable(self, variable):
+    def encode_variable(self, variable, name=None):
         variable = _force_native_endianness(variable)
         if self.format == "NETCDF4":
-            variable = _encode_nc4_variable(variable)
+            variable = _encode_nc4_variable(variable, name=name)
         else:
-            variable = encode_nc3_variable(variable)
+            variable = encode_nc3_variable(variable, name=name)
         return variable
 
     def prepare_variable(
