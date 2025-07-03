@@ -821,7 +821,7 @@ class ZarrStore(AbstractWritableDataStore):
             #  probably be 3.1
             import zarr
 
-            if Version(zarr.__version__) >= Version("3.0.6"):
+            if Version(zarr.__version__) > Version("3.0.9"):
                 native_dtype = zarr_array.metadata.data_type.to_native_dtype()
                 attributes["_FillValue"] = (
                     # Use the new dtype infrastructure instead of doing xarray
