@@ -232,6 +232,6 @@ def simple_datatree(create_test_datatree):
     return create_test_datatree()
 
 
-@pytest.fixture(scope="module", params=["s", "ms", "us", "ns"])
+@pytest.fixture(params=["s", "ms", "us", "ns"])
 def time_unit(request):
     return request.param

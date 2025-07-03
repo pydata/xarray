@@ -14,6 +14,10 @@ New Features
 ~~~~~~~~~~~~
 - Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
   under the ``xarray.indexes`` namespace. By `Deepak Cherian <https://github.com/dcherian>`_.
+- Support zarr-python's new ``.supports_consolidated_metadata`` store property (:pull:`10457``).
+  by Tom Nicholas <https://github.com/TomNicholas>`_.
+- Better error messages when encoding data to be written to disk fails (:pull:`10464`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -117,6 +121,8 @@ Bug fixes
   are passed (:pull:`10440`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fix :py:func:`testing.assert_equal` with ``check_dim_order=False`` for :py:class:`DataTree` objects
   (:pull:`10442`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Fix Pydap backend testing. Now test forces string arrays to dtype "S" (pydap converts them to unicode type by default). Removes conditional to numpy version. (:issue:`10261`, :pull:`10482`)
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 
 
 Documentation

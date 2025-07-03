@@ -38,7 +38,7 @@ dependencies:
   - pandas=2.2
   - pint=0.24
   - pip
-  - pydap=3.5
+  - pydap=3.5.0
   - pytest
   - pytest-cov
   - pytest-env
