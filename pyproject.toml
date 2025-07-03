@@ -45,6 +45,7 @@ io = [
   "cftime",
   "pooch",
 ]
+# "zarr @ git+https://github.com/zarr-developers/zarr-python.git",
 etc = ["sparse>=0.15"]
 parallel = ["dask[complete]"]
 viz = ["cartopy>=0.23", "matplotlib", "nc-time-axis", "seaborn"]
