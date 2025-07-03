@@ -158,11 +158,12 @@ class PydapDataStore(AbstractDataStore):
         except AttributeError:
             from pydap.model import GroupType
 
-            _vars = list(self.ds.keys())
-            # check the key is a BaseType or GridType
-            for var in _vars:
-                if isinstance(self.ds[var], GroupType):
-                    _vars.remove(var)
+            _vars = [
+                var
+                for var in self.ds.keys()
+                # check the key is not a BaseType or GridType
+                if not isinstance(self.ds[var], GroupType)
+            ]
         return FrozenDict((k, self.open_store_variable(self.ds[k])) for k in _vars)
 
     def get_attrs(self):
