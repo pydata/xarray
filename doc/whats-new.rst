@@ -17,6 +17,7 @@ Bas Nijholt, Benoit Bovy, DHRUVA KUMAR KAUSHAL, Deepak Cherian, Dhruva Kumar Kau
 
 New Features
 ~~~~~~~~~~~~
+
 - Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
   under the ``xarray.indexes`` namespace. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Support zarr-python's new ``.supports_consolidated_metadata`` store property (:pull:`10457``).
@@ -110,10 +111,6 @@ By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
      - 2.16
      - 2.18
 
-Deprecations
-~~~~~~~~~~~~
-
-
 Bug fixes
 ~~~~~~~~~
 
@@ -138,13 +135,9 @@ Bug fixes
   32-bit integers (:issue:`10466`, :pull:`10469`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
 
-
-Documentation
-~~~~~~~~~~~~~
-
-
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
 - Forward variable name down to coders for AbstractWritableDataStore.encode_variable and subclasses. (:pull:`10395`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
