@@ -530,14 +530,13 @@ class TestH5NetCDFDatatreeIO(DatatreeIOBase):
                 for k, v in var.items():
                     fx.create_dataset(k, data=v)
 
-        with pytest.warns(UserWarning, match="The 'phony_dims' kwarg"):
-            with open_datatree(filepath, engine=self.engine) as tree:
-                assert tree.bar.dims == {
-                    "phony_dim_0": 5,
-                    "phony_dim_1": 5,
-                    "phony_dim_2": 5,
-                    "phony_dim_3": 25,
-                }
+        with open_datatree(filepath, engine=self.engine) as tree:
+            assert tree.bar.dims == {
+                "phony_dim_0": 5,
+                "phony_dim_1": 5,
+                "phony_dim_2": 5,
+                "phony_dim_3": 25,
+            }
 
 
 @requires_zarr

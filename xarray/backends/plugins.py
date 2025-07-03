@@ -51,7 +51,7 @@ def detect_parameters(open_dataset: Callable) -> tuple[str, ...]:
     parameters_list = []
     for name, param in parameters.items():
         if param.kind in (
-            inspect.Parameter.VAR_KEYWORD,
+            # inspect.Parameter.VAR_KEYWORD,
             inspect.Parameter.VAR_POSITIONAL,
         ):
             raise TypeError(

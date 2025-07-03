@@ -3,7 +3,6 @@ from __future__ import annotations
 import gzip
 import io
 import os
-from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -12,6 +11,7 @@ from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
+    CoderOptions,
     WritableCFDataStore,
     _normalize_path,
 )
@@ -286,6 +286,8 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
     backends.H5netcdfBackendEntrypoint
     """
 
+    coder_class = CoderOptions
+
     description = "Open netCDF files (.nc, .nc4, .cdf and .gz) using scipy in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ScipyBackendEntrypoint.html"
 
@@ -310,35 +312,26 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
-        drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
-        mode="r",
         format=None,
         group=None,
         mmap=None,
         lock=None,
+        coder_options: CoderOptions | None = None,
+        **kwargs,
     ) -> Dataset:
+        coder_options = (
+            coder_options if coder_options is not None else self.coder_class()
+        )
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ScipyDataStore(
-            filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
+            filename_or_obj, format=format, group=group, mmap=mmap, lock=lock
         )
 
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
             ds = store_entrypoint.open_dataset(
                 store,
-                mask_and_scale=mask_and_scale,
-                decode_times=decode_times,
-                concat_characters=concat_characters,
-                decode_coords=decode_coords,
-                drop_variables=drop_variables,
-                use_cftime=use_cftime,
-                decode_timedelta=decode_timedelta,
+                coder_options=coder_options,
             )
         return ds
 

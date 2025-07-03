@@ -680,6 +680,8 @@
    backends.BackendArray
    backends.BackendEntrypoint.guess_can_open
    backends.BackendEntrypoint.open_dataset
+   backends.CoderOptions
+   backends.CoderOptions.to_kwargs
 
    core.indexing.IndexingSupport
    core.indexing.explicit_indexing_adapter
