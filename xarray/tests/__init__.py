@@ -130,6 +130,20 @@ has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
 has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "3.0.0")
+has_zarr_v3_dtypes, requires_zarr_v3_dtypes = _importorskip("zarr", "3.0.9")
+
+# Additional check for zarr dtype support (dev versions > 3.0.9)
+if has_zarr:
+    import zarr
+
+    # Dev versions like "3.0.9.dev47+g9da38f75" are > "3.0.9"
+    has_zarr_v3_dtypes = has_zarr_v3_dtypes or (
+        Version(zarr.__version__) > Version("3.0.9")
+    )
+    requires_zarr_v3_dtypes = pytest.mark.skipif(
+        not has_zarr_v3_dtypes, reason="requires zarr>3.0.9 (including dev versions)"
+    )
+
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg")

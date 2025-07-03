@@ -72,6 +72,7 @@ from xarray.tests import (
     has_scipy,
     has_zarr,
     has_zarr_v3,
+    has_zarr_v3_dtypes,
     mock,
     network,
     requires_cftime,
@@ -369,14 +370,11 @@ class DatasetIOBase:
     def roundtrip(
         self, data, save_kwargs=None, open_kwargs=None, allow_cleanup_failure=False
     ):
-        print("INT ROUNDTRIP")
         if save_kwargs is None:
             save_kwargs = {}
         if open_kwargs is None:
             open_kwargs = {}
         with create_tmp_file(allow_cleanup_failure=allow_cleanup_failure) as path:
-            print(path)
-            print(save_kwargs)
             self.save(data, path, **save_kwargs)
             with self.open(path, **open_kwargs) as ds:
                 yield ds
@@ -851,16 +849,8 @@ class DatasetIOBase:
             {"z": (("t", "p", "y", "x"), np.ones((1, 1, 31, 40)))},
         )
 
-        print("jsda;lkjasdlfk")
-        print(f"Test class: {self.__class__.__name__}")
-        print(f"Dataset: {ds}")
         with self.roundtrip(ds) as on_disk:
-            print(f"on_disk type: {type(on_disk)}")
-            print(f"on_disk.z type: {type(on_disk.z)}")
             subset = on_disk.isel(t=[0], p=0).z[:, ::10, ::10][:, ::-1, :]
-            print(f"subset sizes: {subset.sizes}")
-            loaded = subset.load()
-            print(f"loaded sizes: {loaded.sizes}")
             assert subset.sizes == subset.load().sizes
 
     def test_isel_dataarray(self) -> None:
@@ -2918,6 +2908,9 @@ class ZarrBase(CFEncodedBase):
 
     @pytest.mark.parametrize("dtype", ["U", "S"])
     def test_append_string_length_mismatch_raises(self, dtype) -> None:
+        if has_zarr_v3() and not has_zarr_v3_dtypes:
+            pytest.skip("This works on pre dtype updated zarr python")
+
         ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w", **self.version_kwargs)
