@@ -65,7 +65,7 @@ jobs:
           bash ci/install-upstream-wheels.sh
       - name: Install xarray
         run: |
-          python -m pip install git+https://github.com/pydata/xarray
+          python -m pip install --no-deps -e .
       - name: Version info
         run: |
           python xarray/util/print_versions.py
