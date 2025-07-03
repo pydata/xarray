@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, Any, cast
 import numpy as np
 import pandas as pd
 
-from xarray import Variable
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.indexing import IndexSelResult, PandasIntervalIndexingAdapter
 from xarray.core.utils import is_full_slice
+from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
     from xarray.core.types import Self
