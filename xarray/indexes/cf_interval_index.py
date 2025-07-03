@@ -22,10 +22,11 @@ def check_mid_in_interval(mid_index: pd.Index, bounds_index: pd.IntervalIndex):
         raise ValueError("not all central values are in their corresponding interval")
 
 
-class IntervalIndex(Index):
-    """Xarray index of 1-dimensional intervals.
+class CFIntervalIndex(Index):
+    """Xarray index of CF-like 1-dimensional intervals.
 
-    This index is associated with two coordinate variables:
+    This index is associated with two coordinate variables like in the Climate
+    and Forecast (CF) conventions:
 
     - a 1-dimensional coordinate where each label represents an interval that is
       materialized by a central value (commonly the average of its left and right
@@ -81,7 +82,7 @@ class IntervalIndex(Index):
 
             if mid_var is None or bounds_var is None:
                 raise ValueError(
-                    "invalid coordinates given to IntervalIndex. When two coordinates are given, "
+                    "invalid coordinates given to CFIntervalIndex. When two coordinates are given, "
                     "one must be 1-dimensional (central values) and the other must be "
                     "2-dimensional (boundaries). Actual coordinate variables:\n"
                     + "\n".join(str(var) for var in variables.values())
@@ -96,12 +97,12 @@ class IntervalIndex(Index):
                     "dimension names mismatch between "
                     f"the central coordinate {mid_name!r} {mid_var.dims!r} and "
                     f"the boundary coordinate {bounds_name!r} {bounds_var.dims!r} "
-                    "given to IntervalIndex"
+                    "given to CFIntervalIndex"
                 )
 
             if bounds_var.sizes[bounds_dim] != 2:
                 raise ValueError(
-                    "invalid shape for the boundary coordinate given to IntervalIndex "
+                    "invalid shape for the boundary coordinate given to CFIntervalIndex "
                     f"(expected dimension {bounds_dim!r} of size 2)"
                 )
 
@@ -125,20 +126,20 @@ class IntervalIndex(Index):
             # - look after the CF `bounds` attribute
             # - guess bounds like cf_xarray's add_bounds
             raise ValueError(
-                "Setting an IntervalIndex from one coordinate is not yet supported"
+                "Setting a CFIntervalIndex from one coordinate is not yet supported"
             )
         else:
-            raise ValueError("Too many coordinate variables given to IntervalIndex")
+            raise ValueError("Too many coordinate variables given to CFIntervalIndex")
 
         return cls(mid_index, bounds_index, bounds_dim=str(bounds_dim))
 
     @classmethod
     def concat(
         cls,
-        indexes: Sequence[IntervalIndex],
+        indexes: Sequence[CFIntervalIndex],
         dim: Hashable,
         positions: Iterable[Iterable[int]] | None = None,
-    ) -> IntervalIndex:
+    ) -> CFIntervalIndex:
         new_mid_index = PandasIndex.concat(
             [idx.mid_index for idx in indexes], dim, positions=positions
         )
@@ -216,7 +217,7 @@ class IntervalIndex(Index):
         return self.dim in dims
 
     def equals(self, other: Index) -> bool:
-        if not isinstance(other, IntervalIndex):
+        if not isinstance(other, CFIntervalIndex):
             return False
 
         return self.mid_index.equals(other.mid_index) and self.bounds_index.equals(
@@ -255,7 +256,7 @@ class IntervalIndex(Index):
         bounds_coord_name = self.bounds_index.index.name
         if bounds_coord_name in labels:
             raise ValueError(
-                "IntervalIndex doesn't support label-based selection "
+                "CFIntervalIndex doesn't support label-based selection "
                 f"using the boundary coordinate {bounds_coord_name!r}"
             )
 
@@ -303,7 +304,7 @@ class IntervalIndex(Index):
         return type(self)(new_mid_index, new_bounds_index, str(bounds_dim))
 
     def __repr__(self) -> str:
-        text = "IntervalIndex\n"
+        text = "CFIntervalIndex\n"
         text += f"- central values:\n{self.mid_index!r}\n"
         text += f"- boundaries:\n{self.bounds_index!r}\n"
         return text
