@@ -1777,6 +1777,11 @@ def _get_open_params(
     else:
         missing_exc = zarr.errors.GroupNotFoundError
 
+    if _zarr_v3():
+        # zarr 3.0.8 and earlier did not support this property - it was effectively assumed true
+        if not getattr(store, "supports_consolidated_metadata", True):
+            consolidated = consolidate_on_close = False
+
     if consolidated in [None, True]:
         # open the root of the store, in case there is metadata consolidated there
         group = open_kwargs.pop("path")
@@ -1834,6 +1839,7 @@ def _get_open_params(
         else:
             # this was the default for v2 and should apply to most existing Zarr data
             use_zarr_fill_value_as_mask = True
+
     return (
         zarr_group,
         consolidate_on_close,
