@@ -6234,7 +6234,7 @@ class DataArray(
         array([3, 5, 3])
         >>> array.argmax(dim=["x", "z"])
         {'x': <xarray.DataArray (y: 3)> Size: 24B
-        array([0, 1, 0])
+        array([0, 1, 0]), 'z': <xarray.DataArray (y: 3)> Size: 24B
         array([0, 1, 2])}
         >>> array.isel(array.argmax(dim=["x", "z"]))
         <xarray.DataArray (y: 3)> Size: 24B
