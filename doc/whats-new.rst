@@ -10,6 +10,11 @@ What's New
 v2025.07.0 (unreleased)
 -----------------------
 
+
+
+Thanks to the 18 contributors to this release:
+Bas Nijholt, Benoit Bovy, DHRUVA KUMAR KAUSHAL, Deepak Cherian, Dhruva Kumar Kaushal, Dimitri Papadopoulos Orfanos, Ian Hunt-Isaak, Kai Mühlbauer, Mathias Hauser, Maximilian Roos, Miguel Jimenez, Nick Hodgskin, Scott Henderson, Shuhao Cao, Spencer Clark, Stephan Hoyer, Tom Nicholas and Zsolt Cserna
+
 New Features
 ~~~~~~~~~~~~
 - Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
@@ -111,6 +116,7 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+
 - Fix Pydap test_cmp_local_file for numpy 2.3.0 changes, 1. do always return arrays for all versions and 2. skip astype(str) for numpy >= 2.3.0 for expected data. (:pull:`10421`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Fix the SciPy backend for netCDF3 files . (:issue:`8909`, :pull:`10376`)
@@ -123,6 +129,14 @@ Bug fixes
   (:pull:`10442`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fix Pydap backend testing. Now test forces string arrays to dtype "S" (pydap converts them to unicode type by default). Removes conditional to numpy version. (:issue:`10261`, :pull:`10482`)
   By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+- Fix attribute overwriting bug when decoding encoded
+  :py:class:`numpy.timedelta64` values from disk with a dtype attribute
+  (:issue:`10468`, :pull:`10469`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Fix default ``"_FillValue"`` dtype coercion bug when encoding
+  :py:class:`numpy.timedelta64` values to an on-disk format that only supports
+  32-bit integers (:issue:`10466`, :pull:`10469`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 
 Documentation
@@ -210,15 +224,6 @@ Bug fixes
   (:pull:`10352`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Avoid unsafe casts from float to unsigned int in CFMaskCoder (:issue:`9815`, :pull:`9964`).
   By ` Elliott Sales de Andrade <https://github.com/QuLogic>`_.
-- Fix attribute overwriting bug when decoding encoded
-  :py:class:`numpy.timedelta64` values from disk with a dtype attribute
-  (:issue:`10468`, :pull:`10469`). By `Spencer Clark
-  <https://github.com/spencerkclark>`_.
-- Fix default ``"_FillValue"`` dtype coercion bug when encoding
-  :py:class:`numpy.timedelta64` values to an on-disk format that only supports
-  32-bit integers (:issue:`10466`, :pull:`10469`). By `Spencer Clark
-  <https://github.com/spencerkclark>`_.
-
 
 Performance
 ~~~~~~~~~~~
