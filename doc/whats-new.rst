@@ -18,6 +18,10 @@ New Features
   {'raise', 'warn', 'ignore'}, default 'raise'. If 'raise', then invalid dataset will raise an exception.
   If 'ignore', then invalid dataset will be ignored. If 'warn', then a warning will be issued for each invalid dataset.
   By `Pratiman Patel <https://github.com/pratiman-91>`_.
+- Support zarr-python's new ``.supports_consolidated_metadata`` store property (:pull:`10457``).
+  by Tom Nicholas <https://github.com/TomNicholas>`_.
+- Better error messages when encoding data to be written to disk fails (:pull:`10464`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -121,6 +125,8 @@ Bug fixes
   are passed (:pull:`10440`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fix :py:func:`testing.assert_equal` with ``check_dim_order=False`` for :py:class:`DataTree` objects
   (:pull:`10442`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Fix Pydap backend testing. Now test forces string arrays to dtype "S" (pydap converts them to unicode type by default). Removes conditional to numpy version. (:issue:`10261`, :pull:`10482`)
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 
 
 Documentation
@@ -208,6 +214,15 @@ Bug fixes
   (:pull:`10352`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Avoid unsafe casts from float to unsigned int in CFMaskCoder (:issue:`9815`, :pull:`9964`).
   By ` Elliott Sales de Andrade <https://github.com/QuLogic>`_.
+- Fix attribute overwriting bug when decoding encoded
+  :py:class:`numpy.timedelta64` values from disk with a dtype attribute
+  (:issue:`10468`, :pull:`10469`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Fix default ``"_FillValue"`` dtype coercion bug when encoding
+  :py:class:`numpy.timedelta64` values to an on-disk format that only supports
+  32-bit integers (:issue:`10466`, :pull:`10469`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+
 
 Performance
 ~~~~~~~~~~~
