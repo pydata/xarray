@@ -12,6 +12,9 @@ v2025.07.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+
+- Added :py:meth:`~xarray.DataTree.subset` to index variables on all nodes of a datatree (:pull:`10400`)
+  By `Mathias Hauser <https://github.com/mathause>`_.
 - Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
   under the ``xarray.indexes`` namespace. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Support zarr-python's new ``.supports_consolidated_metadata`` store property (:pull:`10457``).
