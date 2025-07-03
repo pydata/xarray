@@ -107,10 +107,7 @@ def _choose_default_mode(
 
 
 def _zarr_v3() -> bool:
-    # hack for this test only
-    # version being pickd up as 3.0.0b which is apparently not greater than 3
-    # return True
-    return module_available("zarr", minversion="3.0.0a0")
+    return module_available("zarr", minversion="3")
 
 
 # need some special secret attributes to tell us the dimensions
@@ -1068,7 +1065,6 @@ class ZarrStore(AbstractWritableDataStore):
     def _create_new_array(
         self, *, name, shape, dtype, fill_value, encoding, attrs
     ) -> ZarrArray:
-        # STRING ERROR FOR OBJECT HERE
         if coding.strings.check_vlen_dtype(dtype) is str:
             dtype = str
 
