@@ -2908,9 +2908,6 @@ class ZarrBase(CFEncodedBase):
 
     @pytest.mark.parametrize("dtype", ["U", "S"])
     def test_append_string_length_mismatch_raises(self, dtype) -> None:
-        print("start")
-        print(has_zarr_v3)
-        print(has_zarr_v3_dtypes)
         if has_zarr_v3 and not has_zarr_v3_dtypes:
             skip_if_zarr_format_3("This actually works fine with Zarr format 3")
 
