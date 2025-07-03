@@ -248,9 +248,7 @@ def _determine_cmap_params(
             isinstance(levels, Iterable) and levels[0] * levels[-1] < 0
         )
         # kwargs not specific about divergent or not: infer defaults from data
-        divergent = (
-            ((vmin < 0) and (vmax > 0)) or not center_is_none or levels_are_divergent
-        )
+        divergent = (vmin < 0 < vmax) or not center_is_none or levels_are_divergent
     else:
         divergent = False
 
@@ -459,8 +457,6 @@ def get_axis(
     ax: Axes | None = None,
     **subplot_kws: Any,
 ) -> Axes:
-    from xarray.core.utils import attempt_import
-
     if TYPE_CHECKING:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
@@ -798,16 +794,16 @@ def _update_axes(
     """
     if xincrease is None:
         pass
-    elif xincrease and ax.xaxis_inverted():
-        ax.invert_xaxis()
-    elif not xincrease and not ax.xaxis_inverted():
+    elif (xincrease and ax.xaxis_inverted()) or (
+        not xincrease and not ax.xaxis_inverted()
+    ):
         ax.invert_xaxis()
 
     if yincrease is None:
         pass
-    elif yincrease and ax.yaxis_inverted():
-        ax.invert_yaxis()
-    elif not yincrease and not ax.yaxis_inverted():
+    elif (yincrease and ax.yaxis_inverted()) or (
+        not yincrease and not ax.yaxis_inverted()
+    ):
         ax.invert_yaxis()
 
     # The default xscale, yscale needs to be None.
@@ -957,7 +953,7 @@ def _process_cmap_cbar_kwargs(
     cmap_kwargs = {
         "plot_data": data,
         "levels": levels,
-        "cmap": colors if colors else cmap,
+        "cmap": colors or cmap,
         "filled": func.__name__ != "contour",
     }
 
@@ -1050,8 +1046,6 @@ def legend_elements(
     labels : list of str
         The string labels for elements of the legend.
     """
-    import warnings
-
     import matplotlib as mpl
 
     mlines = mpl.lines
@@ -1253,8 +1247,8 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
             )
 
         if add_guide is None or add_guide is True:
-            add_colorbar = True if hue_style == "continuous" else False
-            add_legend = True if hue_style == "discrete" else False
+            add_colorbar = hue_style == "continuous"
+            add_legend = hue_style == "discrete"
         else:
             add_colorbar = False
             add_legend = False
@@ -1278,16 +1272,15 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     else:
         add_quiverkey = False
 
-    if (add_guide or add_guide is None) and funcname == "streamplot":
-        if hue:
-            add_colorbar = True
-            if not hue_style:
-                hue_style = "continuous"
-            elif hue_style != "continuous":
-                raise ValueError(
-                    "hue_style must be 'continuous' or None for .plot.quiver or "
-                    ".plot.streamplot"
-                )
+    if (add_guide or add_guide is None) and funcname == "streamplot" and hue:
+        add_colorbar = True
+        if not hue_style:
+            hue_style = "continuous"
+        elif hue_style != "continuous":
+            raise ValueError(
+                "hue_style must be 'continuous' or None for .plot.quiver or "
+                ".plot.streamplot"
+            )
 
     if hue_style is not None and hue_style not in ["discrete", "continuous"]:
         raise ValueError("hue_style must be either None, 'discrete' or 'continuous'.")
@@ -1329,7 +1322,7 @@ def _parse_size(
 def _parse_size(
     data: DataArray | None,
     norm: tuple[float | None, float | None, bool] | Normalize | None,
-) -> None | pd.Series:
+) -> pd.Series | None:
     import matplotlib as mpl
 
     if data is None:
@@ -1594,7 +1587,7 @@ class _Normalize(Sequence):
         >>> _Normalize(a).ticks
         array([1, 3, 5])
         """
-        val: None | np.ndarray
+        val: np.ndarray | None
         if self.data_is_numeric:
             val = None
         else:
@@ -1653,13 +1646,13 @@ class _Normalize(Sequence):
         """
         import matplotlib.pyplot as plt
 
-        def _func(x: Any, pos: None | Any = None):
+        def _func(x: Any, pos: Any | None = None):
             return f"{self._lookup_arr([x])[0]}"
 
         return plt.FuncFormatter(_func)
 
     @property
-    def func(self) -> Callable[[Any, None | Any], Any]:
+    def func(self) -> Callable[[Any, Any | None], Any]:
         """
         Return a lambda function that maps self.values elements back to
         the original value as a numpy array. Useful with ax.legend_elements.
@@ -1678,7 +1671,7 @@ class _Normalize(Sequence):
         array([0.5, 3. ])
         """
 
-        def _func(x: Any, pos: None | Any = None):
+        def _func(x: Any, pos: Any | None = None):
             return self._lookup_arr(x)
 
         return _func
@@ -1687,8 +1680,8 @@ class _Normalize(Sequence):
 def _determine_guide(
     hueplt_norm: _Normalize,
     sizeplt_norm: _Normalize,
-    add_colorbar: None | bool = None,
-    add_legend: None | bool = None,
+    add_colorbar: bool | None = None,
+    add_legend: bool | None = None,
     plotfunc_name: str | None = None,
 ) -> tuple[bool, bool]:
     if plotfunc_name == "hist":

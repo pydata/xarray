@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from itertools import combinations, permutations, product
 from typing import cast, get_args
 
@@ -29,10 +30,8 @@ from xarray.tests import (
 )
 from xarray.tests.test_dataset import create_test_data
 
-try:
+with contextlib.suppress(ImportError):
     import scipy
-except ImportError:
-    pass
 
 ALL_1D = get_args(Interp1dOptions) + get_args(InterpolantOptions)
 
@@ -125,7 +124,7 @@ def test_interpolate_1d(method: InterpOptions, dim: str, case: int) -> None:
     if not has_scipy:
         pytest.skip("scipy is not installed.")
 
-    if not has_dask and case in [1]:
+    if not has_dask and case == 1:
         pytest.skip("dask is not installed in the environment.")
 
     da = get_example_data(case)
@@ -434,7 +433,7 @@ def test_interpolate_nd_with_nan() -> None:
     "case", [pytest.param(0, id="no_chunk"), pytest.param(1, id="chunk_y")]
 )
 def test_interpolate_scalar(method: InterpOptions, case: int) -> None:
-    if not has_dask and case in [1]:
+    if not has_dask and case == 1:
         pytest.skip("dask is not installed in the environment.")
 
     da = get_example_data(case)
@@ -464,7 +463,7 @@ def test_interpolate_scalar(method: InterpOptions, case: int) -> None:
     "case", [pytest.param(3, id="no_chunk"), pytest.param(4, id="chunked")]
 )
 def test_interpolate_nd_scalar(method: InterpOptions, case: int) -> None:
-    if not has_dask and case in [4]:
+    if not has_dask and case == 4:
         pytest.skip("dask is not installed in the environment.")
 
     da = get_example_data(case)

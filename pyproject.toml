@@ -2,12 +2,10 @@
 authors = [{ name = "xarray Developers", email = "xarray@googlegroups.com" }]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
-  "License :: OSI Approved :: Apache Software License",
   "Operating System :: OS Independent",
   "Intended Audience :: Science/Research",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -15,12 +13,12 @@ classifiers = [
 ]
 description = "N-D labeled arrays and datasets in Python"
 dynamic = ["version"]
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 name = "xarray"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
-dependencies = ["numpy>=1.24", "packaging>=23.2", "pandas>=2.1"]
+dependencies = ["numpy>=1.26", "packaging>=24.1", "pandas>=2.2"]
 
 # We don't encode minimum requirements here (though if we can write a script to
 # generate the text from `min_deps_check.py`, that's welcome...). We do add
@@ -28,21 +26,28 @@ dependencies = ["numpy>=1.24", "packaging>=23.2", "pandas>=2.1"]
 # note that it's not a direct dependency of xarray.
 
 [project.optional-dependencies]
-accel = ["scipy", "bottleneck", "numbagg", "numba>=0.54", "flox", "opt_einsum"]
+accel = [
+  "scipy>=1.13",
+  "bottleneck",
+  "numbagg>=0.8",
+  "numba>=0.59",
+  "flox>=0.9",
+  "opt_einsum",
+]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
-  "netCDF4",
+  "netCDF4>=1.6.0",
   "h5netcdf",
-  "scipy",
-  'pydap; python_version<"3.10"',
-  "zarr",
+  "pydap",
+  "scipy>=1.13",
+  "zarr>=2.18",
   "fsspec",
   "cftime",
   "pooch",
 ]
-etc = ["sparse"]
+etc = ["sparse>=0.15"]
 parallel = ["dask[complete]"]
-viz = ["cartopy", "matplotlib", "nc-time-axis", "seaborn"]
+viz = ["cartopy>=0.23", "matplotlib", "nc-time-axis", "seaborn"]
 types = [
   "pandas-stubs",
   "scipy-stubs",
@@ -94,8 +99,8 @@ dask = "xarray.namedarray.daskmanager:DaskManager"
 build-backend = "setuptools.build_meta"
 requires = ["setuptools>=42", "setuptools-scm>=7"]
 
-[tool.setuptools]
-packages = ["xarray"]
+[tool.setuptools.packages.find]
+include = ["xarray*"]
 
 [tool.setuptools_scm]
 fallback_version = "9999"
@@ -250,30 +255,47 @@ extend-exclude = ["doc", "_typed_ops.pyi"]
 
 [tool.ruff.lint]
 extend-select = [
-  "F",    # Pyflakes
-  "E",    # pycodestyle errors
-  "W",    # pycodestyle warnings
-  "I",    # isort
-  "UP",   # pyupgrade
+  "YTT",  # flake8-2020
   "B",    # flake8-bugbear
   "C4",   # flake8-comprehensions
+  "ISC",  # flake8-implicit-str-concat
   "PIE",  # flake8-pie
   "TID",  # flake8-tidy-imports (absolute imports)
-  "PGH",  # pygrep-hooks
+  "PYI",  # flake8-pyi
+  "FLY",  # flynt
+  "I",    # isort
   "PERF", # Perflint
+  "W",    # pycodestyle warnings
+  "PGH",  # pygrep-hooks
+  "PLC",  # Pylint Convention
+  "PLE",  # Pylint Errors
+  "PLR",  # Pylint Refactor
+  "PLW",  # Pylint Warnings
+  "UP",   # pyupgrade
+  "FURB", # refurb
   "RUF",
 ]
 extend-safe-fixes = [
   "TID252", # absolute imports
 ]
 ignore = [
-  "E402",    # module level import not at top of file
-  "E501",    # line too long - let the formatter worry about that
-  "E731",    # do not assign a lambda expression, use a def
-  "UP007",   # use X | Y for type annotations
   "C40",     # unnecessary generator, comprehension, or literal
   "PIE790",  # unnecessary pass statement
+  "PYI019",  # use `Self` instead of custom TypeVar
+  "PYI041",  # use `float` instead of `int | float`
   "PERF203", # try-except within a loop incurs performance overhead
+  "E402",    # module level import not at top of file
+  "E731",    # do not assign a lambda expression, use a def
+  "PLC0415", # `import` should be at the top-level of a file
+  "PLC0206", # extracting value from dictionary without calling `.items()`
+  "PLR091",  # too many arguments / branches / statements
+  "PLR2004", # magic value used in comparison
+  "PLW0603", # using the global statement to update is discouraged
+  "PLW0642", # reassigned `self` variable in instance method
+  "PLW1641", # object does not implement `__hash__` method
+  "PLW2901", # `for` loop variable overwritten by assignment target
+  "UP007",   # use X | Y for type annotations
+  "FURB105", # unnecessary empty string passed to `print`
   "RUF001",  # string contains ambiguous unicode character
   "RUF002",  # docstring contains ambiguous acute accent unicode character
   "RUF003",  # comment contains ambiguous no-break space unicode character
@@ -284,6 +306,11 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # don't enforce absolute imports
 "asv_bench/**" = ["TID252"]
+# comparison with itself in tests
+"xarray/tests/**" = ["PLR0124"]
+# looks like ruff bugs
+"xarray/core/_typed_ops.py" = ["PYI034"]
+"xarray/namedarray/_typing.py" = ["PYI018", "PYI046"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["xarray"]
@@ -393,6 +420,8 @@ extend-ignore-identifiers-re = [
 [tool.typos.default.extend-words]
 # NumPy function names
 arange = "arange"
+ond = "ond"
+aso = "aso"
 
 # Technical terms
 nd = "nd"

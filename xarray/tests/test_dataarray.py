@@ -2920,7 +2920,7 @@ class TestDataArray:
         expected = DataArray(
             orig.data.mean(keepdims=True),
             dims=orig.dims,
-            coords={k: v for k, v in coords.items() if k in ["c"]},
+            coords={k: v for k, v in coords.items() if k == "c"},
         )
         assert_equal(actual, expected)
 
@@ -3637,7 +3637,7 @@ class TestDataArray:
 
         s = pd.Series(np.arange(5), index=pd.CategoricalIndex(list("aabbc")))
         arr = DataArray(s)
-        assert "'a'" in repr(arr)  # should not error
+        assert "a a b b" in repr(arr)  # should not error
 
     @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.parametrize("data", ["list", "array", True])
@@ -3925,7 +3925,7 @@ class TestDataArray:
         assert "" == array._title_for_slice()
         assert "c = 0" == array.isel(c=0)._title_for_slice()
         title = array.isel(b=1, c=0)._title_for_slice()
-        assert "b = 1, c = 0" == title or "c = 0, b = 1" == title
+        assert title in {"b = 1, c = 0", "c = 0, b = 1"}
 
         a2 = DataArray(np.ones((4, 1)), dims=["a", "b"])
         assert "" == a2._title_for_slice()

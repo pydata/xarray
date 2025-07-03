@@ -349,7 +349,7 @@ class StringAccessor(Generic[T_DataArray]):
             islice = slice(-1, None) if iind == -1 else slice(iind, iind + 1)
             item = x[islice]
 
-            return item if item else default
+            return item or default
 
         return self._apply(func=f, func_args=(i,))
 
@@ -1944,7 +1944,7 @@ class StringAccessor(Generic[T_DataArray]):
         if regex:
             pat = self._re_compile(pat=pat, flags=flags, case=case)
             func = lambda x, ipat, irepl, i_n: ipat.sub(
-                repl=irepl, string=x, count=i_n if i_n >= 0 else 0
+                repl=irepl, string=x, count=max(i_n, 0)
             )
         else:
             pat = self._stringify(pat)

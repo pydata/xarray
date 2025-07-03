@@ -1329,6 +1329,8 @@ Grouper Objects
    groupers.BinGrouper
    groupers.UniqueGrouper
    groupers.TimeResampler
+   groupers.SeasonGrouper
+   groupers.SeasonResampler
 
 
 Rolling objects
@@ -1574,6 +1576,7 @@ Custom Indexes
 
    CFTimeIndex
    indexes.RangeIndex
+   indexes.CoordinateTransformIndex
 
 Creating custom indexes
 -----------------------
@@ -1585,6 +1588,13 @@ Creating custom indexes
    date_range_like
    indexes.RangeIndex.arange
    indexes.RangeIndex.linspace
+
+Building custom indexes
+-----------------------
+.. autosummary::
+   :toctree: generated/
+
+   indexes.CoordinateTransform
 
 Tutorial
 ========

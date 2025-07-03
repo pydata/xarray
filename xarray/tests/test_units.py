@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import functools
 import operator
 
@@ -20,10 +21,8 @@ from xarray.tests import (
 from xarray.tests.test_plot import PlotTestCase
 from xarray.tests.test_variable import _PAD_XR_NP_ARGS
 
-try:
+with contextlib.suppress(ImportError):
     import matplotlib.pyplot as plt
-except ImportError:
-    pass
 
 
 pint = pytest.importorskip("pint")
@@ -2651,7 +2650,7 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         scalar_types = (int, float)
-        args = list(value * unit for value in func.args)
+        args = [value * unit for value in func.args]
         kwargs = {
             key: (value * unit if isinstance(value, scalar_types) else value)
             for key, value in func.kwargs.items()
@@ -2709,7 +2708,7 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         scalar_types = (int, float)
-        args = list(value * unit for value in func.args)
+        args = [value * unit for value in func.args]
         kwargs = {
             key: (value * unit if isinstance(value, scalar_types) else value)
             for key, value in func.kwargs.items()

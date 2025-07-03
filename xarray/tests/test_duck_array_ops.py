@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import copy
 import datetime as dt
+import pickle
 import warnings
 
 import numpy as np
@@ -198,6 +200,16 @@ class TestOps:
         )
         assert concatenated[2].array[0]["x"] == 3
         assert concatenated[3].array[0]["y"]
+
+    @requires_pyarrow
+    def test_extension_array_copy_arrow_type(self):
+        arr = pd.array([pd.NA, 1, 2], dtype="int64[pyarrow]")
+        # Relying on the `__getattr__` of `PandasExtensionArray` to do the deep copy
+        # recursively only fails for `int64[pyarrow]` and similar types so this
+        # test ensures that copying still works there.
+        assert isinstance(
+            copy.deepcopy(PandasExtensionArray(arr), memo=None).array, type(arr)
+        )
 
     def test___getitem__extension_duck_array(self, categorical1):
         extension_duck_array = PandasExtensionArray(categorical1)
@@ -575,7 +587,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
     if dask and not has_dask:
         pytest.skip("requires dask")
 
-    if dask and skipna is False and dtype in [np.bool_]:
+    if dask and skipna is False and dtype == np.bool_:
         pytest.skip("dask does not compute object-typed array")
 
     rtol = 1e-04 if dtype == np.float32 else 1e-05
@@ -1094,3 +1106,19 @@ def test_extension_array_singleton_equality(categorical1):
 def test_extension_array_repr(int1):
     int_duck_array = PandasExtensionArray(int1)
     assert repr(int1) in repr(int_duck_array)
+
+
+def test_extension_array_attr():
+    array = pd.Categorical(["cat2", "cat1", "cat2", "cat3", "cat1"])
+    wrapped = PandasExtensionArray(array)
+    assert_array_equal(array.categories, wrapped.categories)
+    assert array.nbytes == wrapped.nbytes
+
+    roundtripped = pickle.loads(pickle.dumps(wrapped))
+    assert isinstance(roundtripped, PandasExtensionArray)
+    assert (roundtripped == wrapped).all()
+
+    interval_array = pd.arrays.IntervalArray.from_breaks([0, 1, 2, 3], closed="right")
+    wrapped = PandasExtensionArray(interval_array)
+    assert_array_equal(wrapped.left, interval_array.left, strict=True)
+    assert wrapped.closed == interval_array.closed

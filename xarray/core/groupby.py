@@ -263,6 +263,8 @@ def _ensure_1d(
     from xarray.core.dataarray import DataArray
 
     if isinstance(group, DataArray):
+        for dim in set(group.dims) - set(obj.dims):
+            obj = obj.expand_dims(dim)
         # try to stack the dims of the group into a single dim
         orig_dims = group.dims
         stacked_dim = "stacked_" + "_".join(map(str, orig_dims))
@@ -385,7 +387,7 @@ def _parse_group_and_groupers(
 ) -> tuple[ResolvedGrouper, ...]:
     from xarray.core.dataarray import DataArray
     from xarray.core.variable import Variable
-    from xarray.groupers import UniqueGrouper
+    from xarray.groupers import Grouper, UniqueGrouper
 
     if group is not None and groupers:
         raise ValueError(
@@ -398,6 +400,13 @@ def _parse_group_and_groupers(
     if isinstance(group, np.ndarray | pd.Index):
         raise TypeError(
             f"`group` must be a DataArray. Received {type(group).__name__!r} instead"
+        )
+
+    if isinstance(group, Grouper):
+        raise TypeError(
+            "Cannot group by a Grouper object. "
+            f"Instead use `.groupby(var_name={type(group).__name__}(...))`. "
+            "You may need to assign the variable you're grouping by as a coordinate using `assign_coords`."
         )
 
     if isinstance(group, Mapping):
@@ -531,7 +540,7 @@ class ComposedGrouper:
         _flatcodes = where(mask.data, -1, _flatcodes)
 
         full_index = pd.MultiIndex.from_product(
-            list(grouper.full_index.values for grouper in groupers),
+            [grouper.full_index.values for grouper in groupers],
             names=tuple(grouper.name for grouper in groupers),
         )
         if not full_index.is_unique:
@@ -843,7 +852,10 @@ class GroupBy(Generic[T_Xarray]):
         for grouper in self.groupers:
             coord = grouper.unique_coord
             labels = ", ".join(format_array_flat(coord, 30).split())
-            text += f"\n    {grouper.name!r}: {coord.size}/{grouper.full_index.size} groups present with labels {labels}"
+            text += (
+                f"\n    {grouper.name!r}: {type(grouper.grouper).__name__}({grouper.group.name!r}), "
+                f"{coord.size}/{grouper.full_index.size} groups with labels {labels}"
+            )
         return text + ">"
 
     def _iter_grouped(self) -> Iterator[T_Xarray]:
@@ -972,13 +984,12 @@ class GroupBy(Generic[T_Xarray]):
         indexers = {}
         for grouper in self.groupers:
             index = combined._indexes.get(grouper.name, None)
-            if has_missing_groups and index is not None:
+            if (has_missing_groups and index is not None) or (
+                len(self.groupers) > 1
+                and not isinstance(grouper.full_index, pd.RangeIndex)
+                and not index.index.equals(grouper.full_index)
+            ):
                 indexers[grouper.name] = grouper.full_index
-            elif len(self.groupers) > 1:
-                if not isinstance(
-                    grouper.full_index, pd.RangeIndex
-                ) and not index.index.equals(grouper.full_index):
-                    indexers[grouper.name] = grouper.full_index
         if indexers:
             combined = combined.reindex(**indexers)
         return combined
@@ -1081,7 +1092,7 @@ class GroupBy(Generic[T_Xarray]):
             parsed_dim_list = list()
             # preserve order
             for dim_ in itertools.chain(
-                *(grouper.group.dims for grouper in self.groupers)
+                *(grouper.codes.dims for grouper in self.groupers)
             ):
                 if dim_ not in parsed_dim_list:
                     parsed_dim_list.append(dim_)
@@ -1095,7 +1106,7 @@ class GroupBy(Generic[T_Xarray]):
         # Better to control it here than in flox.
         for grouper in self.groupers:
             if any(
-                d not in grouper.group.dims and d not in obj.dims for d in parsed_dim
+                d not in grouper.codes.dims and d not in obj.dims for d in parsed_dim
             ):
                 raise ValueError(f"cannot reduce over dimensions {dim}.")
 
@@ -1360,7 +1371,7 @@ class GroupBy(Generic[T_Xarray]):
                 self._obj.__class__.quantile,
                 shortcut=False,
                 q=q,
-                dim=dim,
+                dim=dim or self._group_dim,
                 method=method,
                 keep_attrs=keep_attrs,
                 skipna=skipna,

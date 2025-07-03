@@ -4,9 +4,9 @@ channels:
   - nodefaults
 dependencies:
   # Pin a "very new numpy" (updated Sept 24, 2024)
-  - numpy>=2.1.1
+  - numpy>=2.2
   - aiobotocore
-  - array-api-strict
+  - array-api-strict<2.4
   - boto3
   - bottleneck
   - cartopy

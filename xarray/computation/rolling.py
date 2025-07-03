@@ -131,13 +131,11 @@ class Rolling(Generic[T_Xarray]):
     def __repr__(self) -> str:
         """provide a nice str repr of our rolling object"""
 
-        attrs = [
+        attrs = ",".join(
             "{k}->{v}{c}".format(k=k, v=w, c="(center)" if c else "")
             for k, w, c in zip(self.dim, self.window, self.center, strict=True)
-        ]
-        return "{klass} [{attrs}]".format(
-            klass=self.__class__.__name__, attrs=",".join(attrs)
         )
+        return f"{self.__class__.__name__} [{attrs}]"
 
     def __len__(self) -> int:
         return math.prod(self.obj.sizes[d] for d in self.dim)
@@ -195,11 +193,15 @@ class Rolling(Generic[T_Xarray]):
         return method
 
     def _mean(self, keep_attrs, **kwargs):
-        result = self.sum(keep_attrs=False, **kwargs) / duck_array_ops.astype(
-            self.count(keep_attrs=False), dtype=self.obj.dtype, copy=False
+        result = self.sum(keep_attrs=False, **kwargs)
+        # use dtype of result for casting of count
+        # this allows for GH #7062 and GH #8864, fixes GH #10340
+        result /= duck_array_ops.astype(
+            self.count(keep_attrs=False), dtype=result.dtype, copy=False
         )
         if keep_attrs:
             result.attrs = self.obj.attrs
+
         return result
 
     _mean.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name="mean")
@@ -1102,14 +1104,12 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
     def __repr__(self) -> str:
         """provide a nice str repr of our coarsen object"""
 
-        attrs = [
+        attrs = ",".join(
             f"{k}->{getattr(self, k)}"
             for k in self._attributes
             if getattr(self, k, None) is not None
-        ]
-        return "{klass} [{attrs}]".format(
-            klass=self.__class__.__name__, attrs=",".join(attrs)
         )
+        return f"{self.__class__.__name__} [{attrs}]"
 
     def construct(
         self,
@@ -1249,18 +1249,17 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
             for c, v in self.obj.coords.items():
                 if c == self.obj.name:
                     coords[c] = reduced
+                elif any(d in self.windows for d in v.dims):
+                    coords[c] = v.variable.coarsen(
+                        self.windows,
+                        self.coord_func[c],
+                        self.boundary,
+                        self.side,
+                        keep_attrs,
+                        **kwargs,
+                    )
                 else:
-                    if any(d in self.windows for d in v.dims):
-                        coords[c] = v.variable.coarsen(
-                            self.windows,
-                            self.coord_func[c],
-                            self.boundary,
-                            self.side,
-                            keep_attrs,
-                            **kwargs,
-                        )
-                    else:
-                        coords[c] = v
+                    coords[c] = v
             return DataArray(
                 reduced, dims=self.obj.dims, coords=coords, name=self.obj.name
             )

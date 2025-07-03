@@ -56,6 +56,7 @@ from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.options import set_options
+from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.utils import module_available
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
@@ -88,6 +89,7 @@ from xarray.tests import (
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
+    requires_zarr_v3,
 )
 from xarray.tests.test_coding_times import (
     _ALL_CALENDARS,
@@ -100,10 +102,8 @@ from xarray.tests.test_dataset import (
     create_test_data,
 )
 
-try:
+with contextlib.suppress(ImportError):
     import netCDF4 as nc4
-except ImportError:
-    pass
 
 try:
     import dask
@@ -118,6 +118,7 @@ if has_zarr:
 
     if has_zarr_v3:
         from zarr.storage import MemoryStore as KVStore
+        from zarr.storage import WrapperStore
 
         ZARR_FORMATS = [2, 3]
     else:
@@ -128,8 +129,11 @@ if has_zarr:
             )
         except ImportError:
             KVStore = None  # type: ignore[assignment,misc,unused-ignore]
+
+        WrapperStore = object  # type: ignore[assignment,misc,unused-ignore]
 else:
     KVStore = None  # type: ignore[assignment,misc,unused-ignore]
+    WrapperStore = object  # type: ignore[assignment,misc,unused-ignore]
     ZARR_FORMATS = []
 
 
@@ -635,10 +639,23 @@ class DatasetIOBase:
         #  though we cannot test that until we fix the timedelta decoding
         #  to support large ranges
         time_deltas = pd.to_timedelta(["1h", "2h", "NaT"]).as_unit("s")  # type: ignore[arg-type, unused-ignore]
+        encoding = {"units": "seconds"}
         expected = Dataset({"td": ("td", time_deltas), "td0": time_deltas[0]})
+        expected["td"].encoding = encoding
+        expected["td0"].encoding = encoding
         with self.roundtrip(
             expected, open_kwargs={"decode_timedelta": CFTimedeltaCoder(time_unit="ns")}
         ) as actual:
+            assert_identical(expected, actual)
+
+    def test_roundtrip_timedelta_data_via_dtype(
+        self, time_unit: PDDatetimeUnitOptions
+    ) -> None:
+        time_deltas = pd.to_timedelta(["1h", "2h", "NaT"]).as_unit(time_unit)  # type: ignore[arg-type, unused-ignore]
+        expected = Dataset(
+            {"td": ("td", time_deltas), "td0": time_deltas[0].to_numpy()}
+        )
+        with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
     def test_roundtrip_float64_data(self) -> None:
@@ -850,15 +867,14 @@ class DatasetIOBase:
             if hasattr(obj, "array"):
                 if isinstance(obj.array, indexing.ExplicitlyIndexed):
                     find_and_validate_array(obj.array)
+                elif isinstance(obj.array, np.ndarray):
+                    assert isinstance(obj, indexing.NumpyIndexingAdapter)
+                elif isinstance(obj.array, dask_array_type):
+                    assert isinstance(obj, indexing.DaskIndexingAdapter)
+                elif isinstance(obj.array, pd.Index):
+                    assert isinstance(obj, indexing.PandasIndexingAdapter)
                 else:
-                    if isinstance(obj.array, np.ndarray):
-                        assert isinstance(obj, indexing.NumpyIndexingAdapter)
-                    elif isinstance(obj.array, dask_array_type):
-                        assert isinstance(obj, indexing.DaskIndexingAdapter)
-                    elif isinstance(obj.array, pd.Index):
-                        assert isinstance(obj, indexing.PandasIndexingAdapter)
-                    else:
-                        raise TypeError(f"{type(obj.array)} is wrapped by {type(obj)}")
+                    raise TypeError(f"{type(obj.array)} is wrapped by {type(obj)}")
 
         for v in ds.variables.values():
             find_and_validate_array(v._data)
@@ -1197,7 +1213,7 @@ class CFEncodedBase(DatasetIOBase):
 
     def test_coordinates_encoding(self) -> None:
         def equals_latlon(obj):
-            return obj == "lat lon" or obj == "lon lat"
+            return obj in {"lat lon", "lon lat"}
 
         original = Dataset(
             {"temp": ("x", [0, 1]), "precip": ("x", [0, -1])},
@@ -1426,6 +1442,25 @@ class CFEncodedBase(DatasetIOBase):
         with pytest.warns(SerializationWarning, match="dask array with dtype=object"):
             with self.roundtrip(original) as actual:
                 assert_identical(original, actual)
+
+    @pytest.mark.parametrize(
+        "indexer",
+        (
+            {"y": [1]},
+            {"y": slice(2)},
+            {"y": 1},
+            {"x": [1], "y": [1]},
+            {"x": ("x0", [0, 1]), "y": ("x0", [0, 1])},
+        ),
+    )
+    def test_indexing_roundtrip(self, indexer) -> None:
+        # regression test for GH8909
+        ds = xr.Dataset()
+        ds["A"] = xr.DataArray([[1, "a"], [2, "b"]], dims=["x", "y"])
+        with self.roundtrip(ds) as ds2:
+            expected = ds2.sel(indexer)
+            with self.roundtrip(expected) as actual:
+                assert_identical(actual, expected)
 
 
 class NetCDFBase(CFEncodedBase):
@@ -2370,16 +2405,18 @@ class ZarrBase(CFEncodedBase):
             self.save(
                 expected, store_target=store, consolidated=False, **self.version_kwargs
             )
-            with pytest.warns(
-                RuntimeWarning,
-                match="Failed to open Zarr store with consolidated",
-            ):
-                with xr.open_zarr(store, **self.version_kwargs) as ds:
-                    assert_identical(ds, expected)
+            if getattr(store, "supports_consolidated_metadata", True):
+                with pytest.warns(
+                    RuntimeWarning,
+                    match="Failed to open Zarr store with consolidated",
+                ):
+                    with xr.open_zarr(store, **self.version_kwargs) as ds:
+                        assert_identical(ds, expected)
 
     def test_non_existent_store(self) -> None:
         with pytest.raises(
-            FileNotFoundError, match="(No such file or directory|Unable to find group)"
+            FileNotFoundError,
+            match="(No such file or directory|Unable to find group|No group found)",
         ):
             xr.open_zarr(f"{uuid.uuid4()}")
 
@@ -2612,7 +2649,7 @@ class ZarrBase(CFEncodedBase):
         # but intermediate unaligned chunks are bad
         badenc = ds.chunk({"x": (3, 5, 3, 1)})
         badenc.var1.encoding["chunks"] = (3,)
-        with pytest.raises(ValueError, match=r"would overlap multiple dask chunks"):
+        with pytest.raises(ValueError, match=r"would overlap multiple Dask chunks"):
             with self.roundtrip(badenc) as actual:
                 pass
 
@@ -3582,7 +3619,7 @@ class TestInstrumentedZarrStore:
 
     @requires_dask
     @pytest.mark.skipif(
-        sys.version_info.major == 3 and sys.version_info.minor < 11,
+        sys.version_info < (3, 11),
         reason="zarr too old",
     )
     def test_region_write(self) -> None:
@@ -3691,6 +3728,75 @@ class TestZarrDictStore(ZarrBase):
         else:
             yield {}
 
+    def test_chunk_key_encoding_v2(self) -> None:
+        encoding = {"name": "v2", "configuration": {"separator": "/"}}
+
+        # Create a dataset with a variable name containing a period
+        data = np.ones((4, 4))
+        original = Dataset({"var1": (("x", "y"), data)})
+
+        # Set up chunk key encoding with slash separator
+        encoding = {
+            "var1": {
+                "chunk_key_encoding": encoding,
+                "chunks": (2, 2),
+            }
+        }
+
+        # Write to store with custom encoding
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, encoding=encoding)
+
+            # Verify the chunk keys in store use the slash separator
+            if not has_zarr_v3:
+                chunk_keys = [k for k in store.keys() if k.startswith("var1/")]
+                assert len(chunk_keys) > 0
+                for key in chunk_keys:
+                    assert "/" in key
+                    assert "." not in key.split("/")[1:]  # No dots in chunk coordinates
+
+            # Read back and verify data
+            with xr.open_zarr(store) as actual:
+                assert_identical(original, actual)
+                # Verify chunks are preserved
+                assert actual["var1"].encoding["chunks"] == (2, 2)
+
+
+class NoConsolidatedMetadataSupportStore(WrapperStore):
+    """
+    Store that explicitly does not support consolidated metadata.
+
+    Useful as a proxy for stores like Icechunk, see https://github.com/zarr-developers/zarr-python/pull/3119.
+    """
+
+    supports_consolidated_metadata = False
+
+    def __init__(
+        self,
+        store,
+        *,
+        read_only: bool = False,
+    ) -> None:
+        self._store = store.with_read_only(read_only=read_only)
+
+    def with_read_only(
+        self, read_only: bool = False
+    ) -> NoConsolidatedMetadataSupportStore:
+        return type(self)(
+            store=self._store,
+            read_only=read_only,
+        )
+
+
+@requires_zarr_v3
+class TestZarrNoConsolidatedMetadataSupport(ZarrBase):
+    @contextlib.contextmanager
+    def create_zarr_target(self):
+        # TODO the zarr version would need to be >3.08 for the supports_consolidated_metadata property to have any effect
+        yield NoConsolidatedMetadataSupportStore(
+            zarr.storage.MemoryStore({}, read_only=False)
+        )
+
 
 @requires_zarr
 @pytest.mark.skipif(
@@ -3751,13 +3857,11 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                     ]
                 )
 
-            assert set(expected) == set(
-                [
-                    file.lstrip("c/")
-                    for file in ls
-                    if (file not in (".zattrs", ".zarray", "zarr.json"))
-                ]
-            )
+            assert set(expected) == {
+                file.lstrip("c/")
+                for file in ls
+                if (file not in (".zattrs", ".zarray", "zarr.json"))
+            }
 
         # The zarr format is set by the `default_zarr_format`
         # pytest fixture that acts on a superclass
@@ -3816,20 +3920,19 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 # that was performed by the roundtrip_dir
                 if (write_empty is False) or (write_empty is None and has_zarr_v3):
                     expected.append("1.1.0")
+                elif not has_zarr_v3:
+                    # TODO: remove zarr3 if once zarr issue is fixed
+                    # https://github.com/zarr-developers/zarr-python/issues/2931
+                    expected.extend(
+                        [
+                            "1.1.0",
+                            "1.0.0",
+                            "1.0.1",
+                            "1.1.1",
+                        ]
+                    )
                 else:
-                    if not has_zarr_v3:
-                        # TODO: remove zarr3 if once zarr issue is fixed
-                        # https://github.com/zarr-developers/zarr-python/issues/2931
-                        expected.extend(
-                            [
-                                "1.1.0",
-                                "1.0.0",
-                                "1.0.1",
-                                "1.1.1",
-                            ]
-                        )
-                    else:
-                        expected.append("1.1.0")
+                    expected.append("1.1.0")
                 if zarr_format_3:
                     expected = [e.replace(".", "/") for e in expected]
                 assert_expected_files(expected, store)
@@ -5376,7 +5479,9 @@ class TestPydap:
 
         ds = DatasetType("bears", **original.attrs)
         for key, var in original.data_vars.items():
-            ds[key] = BaseType(key, var.values, dims=var.dims, **var.attrs)
+            ds[key] = BaseType(
+                key, var.values, dtype=var.values.dtype.kind, dims=var.dims, **var.attrs
+            )
         # check all dims are stored in ds
         for d in original.coords:
             ds[d] = BaseType(d, original[d].values, dims=(d,), **original[d].attrs)
@@ -5385,11 +5490,12 @@ class TestPydap:
     @contextlib.contextmanager
     def create_datasets(self, **kwargs):
         with open_example_dataset("bears.nc") as expected:
+            # print("QQ0:", expected["bears"].load())
             pydap_ds = self.convert_to_pydap_dataset(expected)
             actual = open_dataset(PydapDataStore(pydap_ds))
-            # TODO solve this workaround:
             # netcdf converts string to byte not unicode
-            expected["bears"] = expected["bears"].astype(str)
+            # fixed in pydap 3.5.6. https://github.com/pydap/pydap/issues/510
+            actual["bears"].values = actual["bears"].values.astype("S")
             yield actual, expected
 
     def test_cmp_local_file(self) -> None:
@@ -5409,7 +5515,9 @@ class TestPydap:
             assert_equal(actual[{"l": 2}], expected[{"l": 2}])
 
         with self.create_datasets() as (actual, expected):
-            assert_equal(actual.isel(i=0, j=-1), expected.isel(i=0, j=-1))
+            # always return arrays and not scalars
+            # scalars will be promoted to unicode for numpy >= 2.3.0
+            assert_equal(actual.isel(i=[0], j=[-1]), expected.isel(i=[0], j=[-1]))
 
         with self.create_datasets() as (actual, expected):
             assert_equal(actual.isel(j=slice(1, 2)), expected.isel(j=slice(1, 2)))
@@ -5431,7 +5539,6 @@ class TestPydap:
             with create_tmp_file() as tmp_file:
                 actual.to_netcdf(tmp_file)
                 with open_dataset(tmp_file) as actual2:
-                    actual2["bears"] = actual2["bears"].astype(str)
                     assert_equal(actual2, expected)
 
     @requires_dask
@@ -5449,9 +5556,11 @@ class TestPydapOnline(TestPydap):
         # in pydap 3.5.0, urls defaults to dap2.
         url = "http://test.opendap.org/opendap/data/nc/bears.nc"
         actual = open_dataset(url, engine="pydap", **kwargs)
+        # pydap <3.5.6 converts to unicode dtype=|U. Not what
+        # xarray expects. Thus force to bytes dtype. pydap >=3.5.6
+        # does not convert to unicode. https://github.com/pydap/pydap/issues/510
+        actual["bears"].values = actual["bears"].values.astype("S")
         with open_example_dataset("bears.nc") as expected:
-            # workaround to restore string which is converted to byte
-            expected["bears"] = expected["bears"].astype(str)
             yield actual, expected
 
     def output_grid_deprecation_warning_dap2dataset(self):
@@ -5464,7 +5573,8 @@ class TestPydapOnline(TestPydap):
         actual = open_dataset(url, engine="pydap", **kwargs)
         with open_example_dataset("bears.nc") as expected:
             # workaround to restore string which is converted to byte
-            expected["bears"] = expected["bears"].astype(str)
+            # only needed for pydap <3.5.6 https://github.com/pydap/pydap/issues/510
+            expected["bears"].values = expected["bears"].values.astype("S")
             yield actual, expected
 
     def test_session(self) -> None:
@@ -5731,6 +5841,27 @@ class TestDataArrayToZarr:
         output.compute()
         with open_dataarray(tmp_store, engine="zarr") as loaded_da:
             assert_identical(original_da, loaded_da)
+
+    @requires_dask
+    def test_dataarray_to_zarr_align_chunks_true(self, tmp_store) -> None:
+        # TODO: Improve data integrity checks when using Dask.
+        #   Detecting automatic alignment issues in Dask can be tricky,
+        #   as unintended misalignment might lead to subtle data corruption.
+        #   For now, ensure that the parameter is present, but explore
+        #   more robust verification methods to confirm data consistency.
+
+        skip_if_zarr_format_3(tmp_store)
+        arr = DataArray(
+            np.arange(4), dims=["a"], coords={"a": np.arange(4)}, name="foo"
+        ).chunk(a=(2, 1, 1))
+
+        arr.to_zarr(
+            tmp_store,
+            align_chunks=True,
+            encoding={"foo": {"chunks": (3,)}},
+        )
+        with open_dataarray(tmp_store, engine="zarr") as loaded_da:
+            assert_identical(arr, loaded_da)
 
 
 @requires_scipy_or_netCDF4
@@ -6214,9 +6345,7 @@ def test_h5netcdf_entrypoint(tmp_path: Path) -> None:
 
 @requires_netCDF4
 @pytest.mark.parametrize("str_type", (str, np.str_))
-def test_write_file_from_np_str(
-    str_type: type[str] | type[np.str_], tmpdir: str
-) -> None:
+def test_write_file_from_np_str(str_type: type[str | np.str_], tmpdir: str) -> None:
     # https://github.com/pydata/xarray/pull/5264
     scenarios = [str_type(v) for v in ["scenario_a", "scenario_b", "scenario_c"]]
     years = range(2015, 2100 + 1)
@@ -6471,7 +6600,7 @@ class TestZarrRegionAuto:
                 )
 
             # chunking with dask sidesteps the encoding check, so we need a different check
-            with pytest.raises(ValueError, match="Specified zarr chunks"):
+            with pytest.raises(ValueError, match="Specified Zarr chunks"):
                 self.save(
                     target,
                     da2.chunk({"x": 1, "y": 1, "time": 1}),
