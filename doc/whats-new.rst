@@ -7,8 +7,8 @@ What's New
 
 .. _whats-new.2025.07.0:
 
-v2025.07.0 (unreleased)
------------------------
+v2025.07.0 (Jul 3, 2025)
+------------------------
 
 This release extends xarray's support for custom index classes, updates minimum dependencies, and fixes a number of bugs.
 
