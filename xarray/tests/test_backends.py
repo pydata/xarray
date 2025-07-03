@@ -2927,7 +2927,7 @@ class ZarrBase(CFEncodedBase):
         skip_if_zarr_format_2("This doesn't work with Zarr format 2")
         # ...but it probably would if we used object dtype
         if has_zarr_v3_dtypes:
-            pytest.skip("This works on pre dtype updated zarr python")
+            pytest.skip("This works on pre ZDtype Zarr-Python, but fails after.")
 
         ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
         expected = xr.concat([ds, ds_to_append], dim="time")

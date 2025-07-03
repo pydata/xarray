@@ -960,7 +960,6 @@ class ZarrStore(AbstractWritableDataStore):
             # To do so, we decode variables directly to access the proper encoding,
             # without going via xarray.Dataset to avoid needing to load
             # index variables into memory.
-
             existing_vars, _, _ = conventions.decode_cf_variables(
                 variables={
                     k: self.open_store_variable(name=k) for k in existing_variable_names
