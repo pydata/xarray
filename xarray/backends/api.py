@@ -380,10 +380,7 @@ def _chunk_ds(
     return backend_ds._replace(variables)
 
 
-def _maybe_create_default_indexes(ds, create_default_indexes):
-    if not create_default_indexes:
-        return ds
-
+def _maybe_create_default_indexes(ds):
     to_index = {
         name: coord.variable
         for name, coord in ds.coords.items()
@@ -412,13 +409,14 @@ def _dataset_from_backend_dataset(
 
     _protect_dataset_variables_inplace(backend_ds, cache)
 
-    indexed = _maybe_create_default_indexes(backend_ds, create_default_indexes)
+    if create_default_indexes:
+        backend_ds = _maybe_create_default_indexes(backend_ds)
 
     if chunks is None:
-        ds = indexed
+        ds = backend_ds
     else:
         ds = _chunk_ds(
-            indexed,
+            backend_ds,
             filename_or_obj,
             engine,
             chunks,
@@ -466,8 +464,10 @@ def _datatree_from_backend_datatree(
         tree = DataTree.from_dict(
             {
                 path: _chunk_ds(
-                    node.dataset.pipe(
-                        _maybe_create_default_indexes, create_default_indexes
+                    (
+                        _maybe_create_default_indexes(node.dataset)
+                        if create_default_indexes
+                        else node.dataset
                     ),
                     filename_or_obj,
                     engine,
