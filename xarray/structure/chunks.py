@@ -74,7 +74,7 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
     # Determine the explicit requested chunks.
     preferred_chunks = var.encoding.get("preferred_chunks", {})
     preferred_chunk_shape = tuple(
-        preferred_chunks.get(dim, size) for dim, size in zip(dims, shape, strict=True)
+        itertools.starmap(preferred_chunks.get, zip(dims, shape, strict=True))
     )
     if isinstance(chunks, Number) or (chunks == "auto"):
         chunks = dict.fromkeys(dims, chunks)
@@ -138,7 +138,7 @@ def _maybe_chunk(
             # by providing chunks as an input to tokenize.
             # subtle bugs result otherwise. see GH3350
             # we use str() for speed, and use the name for the final array name on the next line
-            token2 = tokenize(token if token else var._data, str(chunks))
+            token2 = tokenize(token or var._data, str(chunks))
             name2 = f"{name_prefix}{name}-{token2}"
 
             from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
@@ -167,15 +167,15 @@ _V = TypeVar("_V", bound=Union["Dataset", "DataArray"])
 
 
 @overload
-def unify_chunks(__obj: _T) -> tuple[_T]: ...
+def unify_chunks(obj: _T, /) -> tuple[_T]: ...
 
 
 @overload
-def unify_chunks(__obj1: _T, __obj2: _U) -> tuple[_T, _U]: ...
+def unify_chunks(obj1: _T, obj2: _U, /) -> tuple[_T, _U]: ...
 
 
 @overload
-def unify_chunks(__obj1: _T, __obj2: _U, __obj3: _V) -> tuple[_T, _U, _V]: ...
+def unify_chunks(obj1: _T, obj2: _U, obj3: _V, /) -> tuple[_T, _U, _V]: ...
 
 
 @overload

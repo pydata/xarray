@@ -61,8 +61,10 @@ from collections.abc import (
     MutableMapping,
     MutableSet,
     Sequence,
-    Set,
     ValuesView,
+)
+from collections.abc import (
+    Set as AbstractSet,
 )
 from enum import Enum
 from pathlib import Path
@@ -239,7 +241,7 @@ def equivalent(first: T, second: T) -> bool:
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    return all(equivalent(f, s) for f, s in zip(first, second, strict=True))
+    return all(itertools.starmap(equivalent, zip(first, second, strict=True)))
 
 
 def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
@@ -704,10 +706,8 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
 def try_read_magic_number_from_file_or_path(filename_or_obj, count=8) -> bytes | None:
     magic_number = try_read_magic_number_from_path(filename_or_obj, count)
     if magic_number is None:
-        try:
+        with contextlib.suppress(TypeError):
             magic_number = read_magic_number_from_file(filename_or_obj, count)
-        except TypeError:
-            pass
     return magic_number
 
 
@@ -897,7 +897,7 @@ def parse_dims_as_tuple(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | EllipsisType: ...
+) -> tuple[Hashable, ...] | EllipsisType | None: ...
 
 
 def parse_dims_as_tuple(
@@ -906,7 +906,7 @@ def parse_dims_as_tuple(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | EllipsisType:
+) -> tuple[Hashable, ...] | EllipsisType | None:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -958,7 +958,7 @@ def parse_dims_as_set(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> set[Hashable] | None | EllipsisType: ...
+) -> set[Hashable] | EllipsisType | None: ...
 
 
 def parse_dims_as_set(
@@ -967,7 +967,7 @@ def parse_dims_as_set(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> set[Hashable] | None | EllipsisType:
+) -> set[Hashable] | EllipsisType | None:
     """Like parse_dims_as_tuple, but returning a set instead of a tuple."""
     # TODO: Consider removing parse_dims_as_tuple?
     if dim is None or dim is ...:
@@ -999,7 +999,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | EllipsisType: ...
+) -> tuple[Hashable, ...] | EllipsisType | None: ...
 
 
 def parse_ordered_dims(
@@ -1008,7 +1008,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | EllipsisType:
+) -> tuple[Hashable, ...] | EllipsisType | None:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -1057,7 +1057,7 @@ def parse_ordered_dims(
         )
 
 
-def _check_dims(dim: Set[Hashable], all_dims: Set[Hashable]) -> None:
+def _check_dims(dim: AbstractSet[Hashable], all_dims: AbstractSet[Hashable]) -> None:
     wrong_dims = (dim - all_dims) - {...}
     if wrong_dims:
         wrong_dims_str = ", ".join(f"'{d}'" for d in wrong_dims)
@@ -1086,7 +1086,7 @@ class UncachedAccessor(Generic[_Accessor]):
     @overload
     def __get__(self, obj: object, cls) -> _Accessor: ...
 
-    def __get__(self, obj: None | object, cls) -> type[_Accessor] | _Accessor:
+    def __get__(self, obj: object | None, cls) -> type[_Accessor] | _Accessor:
         if obj is None:
             return self._accessor
 
@@ -1287,12 +1287,12 @@ def attempt_import(module: str) -> ModuleType:
         matplotlib="for plotting",
         hypothesis="for the `xarray.testing.strategies` submodule",
     )
-    package_name = module.split(".")[0]  # e.g. "zarr" from "zarr.storage"
+    package_name = module.split(".", maxsplit=1)[0]  # e.g. "zarr" from "zarr.storage"
     install_name = install_mapping.get(package_name, package_name)
     reason = package_purpose.get(package_name, "")
     try:
         return importlib.import_module(module)
-    except (ImportError, ModuleNotFoundError) as e:
+    except ImportError as e:
         raise ImportError(
             f"The {install_name} package is required {reason}"
             " but could not be imported."

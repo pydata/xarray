@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import re
 from collections.abc import Callable, Generator, Hashable
 from pathlib import Path
@@ -26,10 +27,8 @@ from xarray.tests import (
 if TYPE_CHECKING:
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine
 
-try:
+with contextlib.suppress(ImportError):
     import netCDF4 as nc4
-except ImportError:
-    pass
 
 
 def diff_chunks(
@@ -584,6 +583,7 @@ class TestZarrDatatreeIO:
                     filepath, encoding=enc, engine="zarr", zarr_format=zarr_format
                 )
 
+    @pytest.mark.xfail(reason="upstream zarr read-only changes have broken this test")
     def test_to_zarr_zip_store(self, tmpdir, simple_datatree, zarr_format):
         from zarr.storage import ZipStore
 

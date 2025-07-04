@@ -186,7 +186,7 @@ class UniqueGrouper(Grouper):
         present in ``labels`` will be ignored.
     """
 
-    _group_as_index: pd.Index | None = field(default=None, repr=False)
+    _group_as_index: pd.Index | None = field(default=None, repr=False, init=False)
     labels: ArrayLike | None = field(default=None)
 
     @property
@@ -484,8 +484,6 @@ class TimeResampler(Resampler):
         )
 
     def _init_properties(self, group: T_Group) -> None:
-        from xarray import CFTimeIndex
-
         group_as_index = safe_cast_to_index(group)
         offset = self.offset
 
@@ -494,8 +492,6 @@ class TimeResampler(Resampler):
             raise ValueError("Index must be monotonic for resampling")
 
         if isinstance(group_as_index, CFTimeIndex):
-            from xarray.core.resample_cftime import CFTimeGrouper
-
             self.index_grouper = CFTimeGrouper(
                 freq=self.freq,
                 closed=self.closed,
@@ -553,7 +549,7 @@ class TimeResampler(Resampler):
         full_index, first_items, codes_ = self._get_index_and_items()
         sbins = first_items.values.astype(np.int64)
         group_indices: GroupIndices = tuple(
-            [slice(i, j) for i, j in pairwise(sbins)] + [slice(sbins[-1], None)]
+            list(itertools.starmap(slice, pairwise(sbins))) + [slice(sbins[-1], None)]
         )
 
         unique_coord = Variable(
@@ -705,26 +701,23 @@ def find_independent_seasons(seasons: Sequence[str]) -> Sequence[SeasonsGroup]:
     grouped = defaultdict(list)
     codes = defaultdict(list)
     seen: set[tuple[int, ...]] = set()
-    idx = 0
     # This is quadratic, but the number of seasons is at most 12
     for i, current in enumerate(season_inds):
         # Start with a group
         if current not in seen:
-            grouped[idx].append(current)
-            codes[idx].append(i)
+            grouped[i].append(current)
+            codes[i].append(i)
             seen.add(current)
 
         # Loop through remaining groups, and look for overlaps
         for j, second in enumerate(season_inds[i:]):
-            if not (set(chain(*grouped[idx])) & set(second)):
-                if second not in seen:
-                    grouped[idx].append(second)
-                    codes[idx].append(j + i)
-                    seen.add(second)
+            if not (set(chain(*grouped[i])) & set(second)) and second not in seen:
+                grouped[i].append(second)
+                codes[i].append(j + i)
+                seen.add(second)
         if len(seen) == len(seasons):
             break
-        # found all non-overlapping groups for this row, increment and start over
-        idx += 1
+        # found all non-overlapping groups for this row start over
 
     grouped_ints = tuple(tuple(idx) for idx in grouped.values() if idx)
     return [
@@ -903,7 +896,7 @@ class SeasonResampler(Resampler):
         first_items = agged["first"]
         counts = agged["count"]
 
-        index_class: type[CFTimeIndex] | type[pd.DatetimeIndex]
+        index_class: type[CFTimeIndex | pd.DatetimeIndex]
         if _contains_cftime_datetimes(group.data):
             index_class = CFTimeIndex
             datetime_class = type(first_n_items(group.data, 1).item())

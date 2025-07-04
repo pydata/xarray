@@ -255,14 +255,10 @@ class TestVariable(DaskTestCase):
 
     def test_missing_methods(self):
         v = self.lazy_var
-        try:
+        with pytest.raises(NotImplementedError, match="dask"):
             v.argsort()
-        except NotImplementedError as err:
-            assert "dask" in str(err)
-        try:
+        with pytest.raises(NotImplementedError, match="dask"):
             v[0].item()
-        except NotImplementedError as err:
-            assert "dask" in str(err)
 
     def test_univariate_ufunc(self):
         u = self.eager_var
@@ -1376,7 +1372,7 @@ def test_map_blocks_da_ds_with_template(obj):
 
     # Check that indexes are written into the graph directly
     dsk = dict(actual.__dask_graph__())
-    assert len({k for k in dsk if "x-coordinate" in k})
+    assert {k for k in dsk if "x-coordinate" in k}
     assert all(
         isinstance(v, PandasIndex) for k, v in dsk.items() if "x-coordinate" in k
     )
@@ -1640,7 +1636,7 @@ def test_normalize_token_with_backend(map_ds):
     with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp_file:
         map_ds.to_netcdf(tmp_file)
         read = xr.open_dataset(tmp_file)
-        assert not dask.base.tokenize(map_ds) == dask.base.tokenize(read)
+        assert dask.base.tokenize(map_ds) != dask.base.tokenize(read)
         read.close()
 
 

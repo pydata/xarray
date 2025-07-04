@@ -5,10 +5,11 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from xarray.core import duck_array_ops
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.dataarray import DataArray
 from xarray.core.indexes import CoordinateTransformIndex, Index, PandasIndex
-from xarray.core.indexing import IndexSelResult, normalize_slice
+from xarray.core.indexing import IndexSelResult
 from xarray.core.variable import Variable
 
 
@@ -78,14 +79,10 @@ class RangeCoordinateTransform(CoordinateTransform):
         )
 
     def slice(self, sl: slice) -> "RangeCoordinateTransform":
-        sl = normalize_slice(sl, self.size)
-
-        # TODO: support reverse transform (i.e., start > stop)?
-        assert sl.start < sl.stop
-
-        new_size = (sl.stop - sl.start) // sl.step
-        new_start = self.start + sl.start * self.step
-        new_stop = new_start + new_size * sl.step * self.step
+        new_range = range(self.size)[sl]
+        new_size = len(new_range)
+        new_start = self.start + new_range.start * self.step
+        new_stop = self.start + new_range.stop * self.step
 
         return type(self)(
             new_start, new_stop, new_size, self.coord_name, self.dim, dtype=self.dtype
@@ -320,9 +317,9 @@ class RangeIndex(CoordinateTransformIndex):
 
         if isinstance(idxer, slice):
             return RangeIndex(self.transform.slice(idxer))
-        elif isinstance(idxer, Variable) and idxer.ndim > 1:
-            return None
-        elif np.ndim(idxer) == 0:
+        elif (isinstance(idxer, Variable) and idxer.ndim > 1) or duck_array_ops.ndim(
+            idxer
+        ) == 0:
             return None
         else:
             values = self.transform.forward({self.dim: np.asarray(idxer)})[

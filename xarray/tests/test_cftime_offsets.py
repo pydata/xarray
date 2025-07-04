@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from itertools import product
+from itertools import product, starmap
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -274,7 +274,7 @@ def test_to_offset_annual(month_label, month_int, multiple, offset_str):
     freq = offset_str
     offset_type = _ANNUAL_OFFSET_TYPES[offset_str]
     if month_label:
-        freq = "-".join([freq, month_label])
+        freq = f"{freq}-{month_label}"
     if multiple:
         freq = f"{multiple}{freq}"
     result = to_offset(freq)
@@ -303,7 +303,7 @@ def test_to_offset_quarter(month_label, month_int, multiple, offset_str):
     freq = offset_str
     offset_type = _QUARTER_OFFSET_TYPES[offset_str]
     if month_label:
-        freq = "-".join([freq, month_label])
+        freq = f"{freq}-{month_label}"
     if multiple:
         freq = f"{multiple}{freq}"
     result = to_offset(freq)
@@ -313,18 +313,16 @@ def test_to_offset_quarter(month_label, month_int, multiple, offset_str):
     elif multiple:
         if month_int:
             expected = offset_type(n=multiple)
-        else:
-            if offset_type == QuarterBegin:
-                expected = offset_type(n=multiple, month=1)
-            elif offset_type == QuarterEnd:
-                expected = offset_type(n=multiple, month=12)
+        elif offset_type == QuarterBegin:
+            expected = offset_type(n=multiple, month=1)
+        elif offset_type == QuarterEnd:
+            expected = offset_type(n=multiple, month=12)
     elif month_int:
         expected = offset_type(month=month_int)
-    else:
-        if offset_type == QuarterBegin:
-            expected = offset_type(month=1)
-        elif offset_type == QuarterEnd:
-            expected = offset_type(month=12)
+    elif offset_type == QuarterBegin:
+        expected = offset_type(month=1)
+    elif offset_type == QuarterEnd:
+        expected = offset_type(month=12)
     assert result == expected
 
 
@@ -1222,7 +1220,7 @@ def test_cftime_range(
     start, end, periods, freq, inclusive, normalize, calendar, expected_date_args
 ):
     date_type = get_date_type(calendar)
-    expected_dates = [date_type(*args) for args in expected_date_args]
+    expected_dates = list(starmap(date_type, expected_date_args))
 
     if isinstance(start, tuple):
         start = date_type(*start)
@@ -1279,7 +1277,7 @@ def test_invalid_date_range_cftime_inputs(
     end: str | None,
     periods: int | None,
     freq: str | None,
-    inclusive: Literal["up", None],
+    inclusive: Literal["up"] | None,
 ) -> None:
     with pytest.raises(ValueError):
         date_range(start, end, periods, freq, inclusive=inclusive, use_cftime=True)  # type: ignore[arg-type]

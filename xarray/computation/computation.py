@@ -144,9 +144,8 @@ def cov(
             "Only xr.DataArray is supported."
             f"Given {[type(arr) for arr in [da_a, da_b]]}."
         )
-    if weights is not None:
-        if not isinstance(weights, DataArray):
-            raise TypeError(f"Only xr.DataArray is supported. Given {type(weights)}.")
+    if weights is not None and not isinstance(weights, DataArray):
+        raise TypeError(f"Only xr.DataArray is supported. Given {type(weights)}.")
     return _cov_corr(da_a, da_b, weights=weights, dim=dim, ddof=ddof, method="cov")
 
 
@@ -248,9 +247,8 @@ def corr(
             "Only xr.DataArray is supported."
             f"Given {[type(arr) for arr in [da_a, da_b]]}."
         )
-    if weights is not None:
-        if not isinstance(weights, DataArray):
-            raise TypeError(f"Only xr.DataArray is supported. Given {type(weights)}.")
+    if weights is not None and not isinstance(weights, DataArray):
+        raise TypeError(f"Only xr.DataArray is supported. Given {type(weights)}.")
     return _cov_corr(da_a, da_b, weights=weights, dim=dim, method="corr")
 
 
@@ -260,7 +258,7 @@ def _cov_corr(
     weights: T_DataArray | None = None,
     dim: Dims = None,
     ddof: int = 0,
-    method: Literal["cov", "corr", None] = None,
+    method: Literal["cov", "corr"] | None = None,
 ) -> T_DataArray:
     """
     Internal method for xr.cov() and xr.corr() so only have to
@@ -576,7 +574,6 @@ def dot(
     array(235)
     """
     from xarray.core.dataarray import DataArray
-    from xarray.core.variable import Variable
 
     if any(not isinstance(arr, Variable | DataArray) for arr in arrays):
         raise TypeError(
