@@ -5,20 +5,55 @@
 What's New
 ==========
 
-.. _whats-new.2025.07.0:
+.. _whats-new.2025.07.1:
 
-v2025.07.0 (unreleased)
+v2025.07.1 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2025.07.0:
+
+v2025.07.0 (Jul 3, 2025)
+------------------------
+
+This release extends xarray's support for custom index classes, restores support for reading netCDF3 files with SciPy, updates minimum dependencies, and fixes a number of bugs.
+
+Thanks to the 17 contributors to this release:
+Bas Nijholt, Benoit Bovy, Deepak Cherian, Dhruva Kumar Kaushal, Dimitri Papadopoulos Orfanos, Ian Hunt-Isaak, Kai Mühlbauer, Mathias Hauser, Maximilian Roos, Miguel Jimenez, Nick Hodgskin, Scott Henderson, Shuhao Cao, Spencer Clark, Stephan Hoyer, Tom Nicholas and Zsolt Cserna
+
+New Features
+~~~~~~~~~~~~
+
 - Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
   under the ``xarray.indexes`` namespace. By `Deepak Cherian <https://github.com/dcherian>`_.
 - New :py:class:`xarray.indexes.NDPointIndex`, which by default uses :py:class:`scipy.spatial.KDTree` under the hood for
   the selection of irregular, n-dimensional data (:pull:`10478`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
 - Support zarr-python's new ``.supports_consolidated_metadata`` store property (:pull:`10457``).
-  by Tom Nicholas <https://github.com/TomNicholas>`_.
+  by `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Better error messages when encoding data to be written to disk fails (:pull:`10464`).
   By `Stephan Hoyer <https://github.com/shoyer>`_
 
@@ -108,12 +143,9 @@ By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
      - 2.16
      - 2.18
 
-Deprecations
-~~~~~~~~~~~~
-
-
 Bug fixes
 ~~~~~~~~~
+
 - Fix Pydap test_cmp_local_file for numpy 2.3.0 changes, 1. do always return arrays for all versions and 2. skip astype(str) for numpy >= 2.3.0 for expected data. (:pull:`10421`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Fix the SciPy backend for netCDF3 files . (:issue:`8909`, :pull:`10376`)
@@ -126,14 +158,18 @@ Bug fixes
   (:pull:`10442`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fix Pydap backend testing. Now test forces string arrays to dtype "S" (pydap converts them to unicode type by default). Removes conditional to numpy version. (:issue:`10261`, :pull:`10482`)
   By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
-
-
-Documentation
-~~~~~~~~~~~~~
-
+- Fix attribute overwriting bug when decoding encoded
+  :py:class:`numpy.timedelta64` values from disk with a dtype attribute
+  (:issue:`10468`, :pull:`10469`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Fix default ``"_FillValue"`` dtype coercion bug when encoding
+  :py:class:`numpy.timedelta64` values to an on-disk format that only supports
+  32-bit integers (:issue:`10466`, :pull:`10469`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
 - Forward variable name down to coders for AbstractWritableDataStore.encode_variable and subclasses. (:pull:`10395`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
@@ -213,15 +249,6 @@ Bug fixes
   (:pull:`10352`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Avoid unsafe casts from float to unsigned int in CFMaskCoder (:issue:`9815`, :pull:`9964`).
   By ` Elliott Sales de Andrade <https://github.com/QuLogic>`_.
-- Fix attribute overwriting bug when decoding encoded
-  :py:class:`numpy.timedelta64` values from disk with a dtype attribute
-  (:issue:`10468`, :pull:`10469`). By `Spencer Clark
-  <https://github.com/spencerkclark>`_.
-- Fix default ``"_FillValue"`` dtype coercion bug when encoding
-  :py:class:`numpy.timedelta64` values to an on-disk format that only supports
-  32-bit integers (:issue:`10466`, :pull:`10469`). By `Spencer Clark
-  <https://github.com/spencerkclark>`_.
-
 
 Performance
 ~~~~~~~~~~~
