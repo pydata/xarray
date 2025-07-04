@@ -11,6 +11,7 @@ from xarray.core.indexes import Index
 from xarray.core.indexing import IndexSelResult
 from xarray.core.utils import is_scalar
 from xarray.core.variable import Variable
+from xarray.structure.alignment import broadcast
 
 if TYPE_CHECKING:
     from scipy.spatial import KDTree
@@ -179,7 +180,7 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
     Data variables:
         *empty*
 
-    Data selection with broadcasted scalar labels:
+    Data selection with broadcasting the input labels:
 
     >>> ds.sel(xx=1.9, yy=xr.Variable("points", [13.0, 8.0]), method="nearest")
     <xarray.Dataset> Size: 32B
@@ -188,6 +189,21 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
         xx       (points) float64 16B 1.0 0.0
         yy       (points) float64 16B 11.0 9.0
     Dimensions without coordinates: points
+    Data variables:
+        *empty*
+
+    >>> da = xr.DataArray(
+    ...     [[45.1, 53.3], [65.4, 78.2]],
+    ...     coords={"u": [1.9, 0.1], "v": [13.0, 8.0]},
+    ...     dims=("u", "v"),
+    ... )
+    >>> ds.sel(xx=da.u, yy=da.v, method="nearest")
+    <xarray.Dataset> Size: 64B
+    Dimensions:  (u: 2, v: 2)
+    Coordinates:
+        xx       (u, v) float64 32B 1.0 0.0 1.0 0.0
+        yy       (u, v) float64 32B 11.0 9.0 11.0 9.0
+    Dimensions without coordinates: u, v
     Data variables:
         *empty*
 
@@ -321,16 +337,18 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
             missing_labels_str = ",".join([f"{name}" for name in missing_labels])
             raise ValueError(f"missing labels for coordinate(s): {missing_labels_str}.")
 
-        # maybe convert labels into xarray Variable objects
-        xr_labels: dict[Any, Variable | DataArray] = {}
+        # maybe convert labels into xarray DataArray objects
+        xr_labels: dict[Any, DataArray] = {}
 
         for name, lbl in labels.items():
-            if isinstance(lbl, Variable | DataArray):
+            if isinstance(lbl, DataArray):
                 xr_labels[name] = lbl
+            elif isinstance(lbl, Variable):
+                xr_labels[name] = DataArray(lbl)
             elif is_scalar(lbl):
-                xr_labels[name] = Variable((), lbl)
+                xr_labels[name] = DataArray(lbl, dims=())
             elif np.asarray(lbl).ndim == len(self._dims):
-                xr_labels[name] = Variable(self._dims, lbl)
+                xr_labels[name] = DataArray(lbl, dims=self._dims)
             else:
                 raise ValueError(
                     "invalid label value. NDPointIndex only supports advanced (point-wise) indexing "
@@ -341,35 +359,13 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
                     f"than the {self._coord_names} coordinate variables ({len(self._dims)})"
                 )
 
-        # determine xarray label shape and dimensions
-        label_dims: tuple[Hashable, ...] = ()
-        label_shape: tuple[int, ...] = ()
+        # broadcast xarray labels against one another and determine labels shape and dimensions
+        broadcasted = broadcast(*xr_labels.values())
+        label_dims = broadcasted[0].dims
+        label_shape = broadcasted[0].shape
+        xr_labels = dict(zip(xr_labels, broadcasted, strict=True))
 
-        for name, lbl in xr_labels.items():
-            if lbl.ndim > 0:
-                if label_dims and lbl.dims != label_dims:
-                    raise ValueError(
-                        f"label {name} has dimensions {lbl.dims} that conflict with "
-                        f"other label dimensions {label_dims}"
-                    )
-                else:
-                    label_dims = lbl.dims
-                if label_shape and lbl.shape != label_shape:
-                    raise ValueError(
-                        f"label {name} has shape {lbl.shape} that conflicts with "
-                        f"other label shape {label_shape}"
-                    )
-                else:
-                    label_shape = lbl.shape
-
-        # maybe broadcast scalar xarray labels
-        if label_dims:
-            for name, lbl in xr_labels.items():
-                if not lbl.dims:
-                    xr_labels[name] = Variable(
-                        label_dims, np.broadcast_to(lbl.values, label_shape)
-                    )
-
+        # get and return dimension indexers
         points = get_points(xr_labels[name] for name in self._coord_names)
         _, indices = self._tree_obj.query(points)
 

@@ -84,6 +84,20 @@ def test_tree_index_sel() -> None:
     )
     assert_identical(actual, expected)
 
+    # broadcast orthogonal 1-dimensional labels
+    actual = ds.sel(
+        xx=xr.Variable("u", [1.1, 1.1]),
+        yy=xr.Variable("v", [3.1, 3.1]),
+        method="nearest",
+    )
+    expected = xr.Dataset(
+        coords={
+            "xx": (("u", "v"), [[1.0, 1.0], [1.0, 1.0]]),
+            "yy": (("u", "v"), [[3.0, 3.0], [3.0, 3.0]]),
+        },
+    )
+    assert_identical(actual, expected)
+
     # implicit dimension array-like labels
     actual = ds.sel(
         xx=[[1.1, 1.1, 1.1], [1.9, 1.9, 1.9]],
@@ -114,14 +128,8 @@ def test_tree_index_sel_errors() -> None:
         # invalid array-like dimensions
         ds.sel(xx=[1.1, 1.9], yy=[3.1, 3.9], method="nearest")
 
-    with pytest.raises(ValueError, match=".*dimensions.*conflict"):
-        ds.sel(
-            xx=xr.Variable("u", [1.1, 1.1, 1.1]),
-            yy=xr.Variable("v", [3.1, 3.1, 3.1]),
-            method="nearest",
-        )
-
-    with pytest.raises(ValueError, match=".*shape.*conflict"):
+    # error while trying to broadcast labels
+    with pytest.raises(xr.AlignmentError, match=".*conflicting dimension sizes"):
         ds.sel(
             xx=xr.Variable("u", [1.1, 1.1, 1.1]),
             yy=xr.Variable("u", [3.1, 3.1]),
