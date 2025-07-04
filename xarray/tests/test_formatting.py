@@ -1189,3 +1189,46 @@ Dimensions without coordinates: x
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
+
+
+def test_repr_pandas_range_index() -> None:
+    # lazy data repr but values shown in inline repr
+    xidx = xr.indexes.PandasIndex(pd.RangeIndex(10), "x")
+    ds = xr.Dataset(coords=xr.Coordinates.from_xindex(xidx))
+    actual = repr(ds.x)
+    expected = """
+<xarray.DataArray 'x' (x: 10)> Size: 80B
+[10 values with dtype=int64]
+Coordinates:
+  * x        (x) int64 80B 0 1 2 3 4 5 6 7 8 9
+    """.strip()
+    assert actual == expected
+
+
+def test_repr_pandas_multi_index() -> None:
+    # lazy data repr but values shown in inline repr
+    midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=["foo", "bar"])
+    coords = xr.Coordinates.from_pandas_multiindex(midx, "x")
+    ds = xr.Dataset(coords=coords)
+
+    actual = repr(ds.x)
+    expected = """
+<xarray.DataArray 'x' (x: 4)> Size: 32B
+[4 values with dtype=object]
+Coordinates:
+  * x        (x) object 32B MultiIndex
+  * foo      (x) object 32B 'a' 'a' 'b' 'b'
+  * bar      (x) int64 32B 1 2 1 2
+    """.strip()
+    assert actual == expected
+
+    actual = repr(ds.foo)
+    expected = """
+<xarray.DataArray 'foo' (x: 4)> Size: 32B
+[4 values with dtype=object]
+Coordinates:
+  * x        (x) object 32B MultiIndex
+  * foo      (x) object 32B 'a' 'a' 'b' 'b'
+  * bar      (x) int64 32B 1 2 1 2
+    """.strip()
+    assert actual == expected
