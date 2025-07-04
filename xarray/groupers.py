@@ -237,12 +237,14 @@ class UniqueGrouper(Grouper):
             output_dtypes=[np.int64],
             keep_attrs=True,
         )
+        # Convert labels to a sequence that pandas Index can handle
+        labels_array = np.asarray(self.labels)
         return EncodedGroups(
             codes=codes,
-            full_index=pd.Index(self.labels),
+            full_index=pd.Index(labels_array),
             unique_coord=Variable(
                 dims=codes.name,
-                data=self.labels,
+                data=labels_array,
                 attrs=self.group.attrs,
             ),
         )
