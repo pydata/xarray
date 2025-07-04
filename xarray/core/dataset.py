@@ -4957,7 +4957,7 @@ class Dataset(
             # Add ALL variables returned by create_variables()
             for name, var in new_coord_vars.items():
                 variables[name] = var
-            
+
             # Set index only for the original coordinate name
             coord_name = list(coord_names).pop()
             indexes[coord_name] = index
@@ -4977,7 +4977,7 @@ class Dataset(
             # Add ALL variables returned by create_variables()
             for name, var in new_coord_vars.items():
                 variables[name] = var
-            
+
             # Set index for all original coordinate names
             for name in coord_names:
                 indexes[name] = index
