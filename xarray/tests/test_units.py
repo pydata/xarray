@@ -234,9 +234,7 @@ def convert_units(obj, to):
     elif isinstance(obj, xr.DataArray):
         name = obj.name
 
-        new_units = (
-            to.get(name, None) or to.get("data", None) or to.get(None, None) or None
-        )
+        new_units = to.get(name) or to.get("data") or to.get(None) or None
         data = convert_units(obj.variable, {None: new_units})
 
         coords = {
