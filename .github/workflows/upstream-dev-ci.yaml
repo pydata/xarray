@@ -23,8 +23,7 @@ jobs:
     name: detect upstream-dev ci trigger
     runs-on: ubuntu-latest
     if: |
-      github.repository == 'pydata/xarray'
-      && (github.event_name == 'push' || github.event_name == 'pull_request')
+      github.event_name == 'push' || github.event_name == 'pull_request'
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
