@@ -13,6 +13,10 @@ v2025.07.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Custom indexes can now create additional variables beyond the original coordinate names
+  in :py:meth:`~xarray.Dataset.set_xindex`. Previously, extra variables returned by
+  :py:meth:`~xarray.Index.create_variables` were silently ignored (:issue:`10499`).
+  By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
