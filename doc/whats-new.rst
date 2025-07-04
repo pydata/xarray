@@ -12,6 +12,10 @@ v2025.07.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Added new argument in ``xarray.open_mfdataset`` to better handle the invalid files
+  {'raise', 'warn', 'ignore'}, default 'raise'. If 'raise', then invalid dataset will raise an exception.
+  If 'ignore', then invalid dataset will be ignored. If 'warn', then a warning will be issued for each invalid dataset.
+  By `Pratiman Patel <https://github.com/pratiman-91>`_.
 
 
 Breaking changes
@@ -49,10 +53,6 @@ New Features
 
 - Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
   under the ``xarray.indexes`` namespace. By `Deepak Cherian <https://github.com/dcherian>`_.
-- Added new argument in ``xarray.open_mfdataset`` to better handle the invalid files
-  {'raise', 'warn', 'ignore'}, default 'raise'. If 'raise', then invalid dataset will raise an exception.
-  If 'ignore', then invalid dataset will be ignored. If 'warn', then a warning will be issued for each invalid dataset.
-  By `Pratiman Patel <https://github.com/pratiman-91>`_.
 - Support zarr-python's new ``.supports_consolidated_metadata`` store property (:pull:`10457``).
   by `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Better error messages when encoding data to be written to disk fails (:pull:`10464`).
