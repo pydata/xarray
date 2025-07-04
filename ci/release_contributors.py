@@ -10,7 +10,7 @@ co_author_re = re.compile(r"Co-authored-by: (?P<name>[^<]+?) <(?P<email>.+)>")
 def main():
     repo = git.Repo(".")
 
-    most_recent_release = last(repo.tags)
+    most_recent_release = last(list(repo.tags))
 
     # extract information from commits
     contributors = {}

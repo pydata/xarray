@@ -12,6 +12,7 @@ from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
+from xarray.core.datatree_mapping import map_over_datasets
 from xarray.core.formatting import diff_datatree_repr
 from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex, default_indexes
 from xarray.core.variable import IndexVariable, Variable
@@ -85,14 +86,25 @@ def assert_isomorphic(a: DataTree, b: DataTree):
 
 def maybe_transpose_dims(a, b, check_dim_order: bool):
     """Helper for assert_equal/allclose/identical"""
+
     __tracebackhide__ = True
-    if not isinstance(a, Variable | DataArray | Dataset):
+
+    def _maybe_transpose_dims(a, b):
+        if not isinstance(a, Variable | DataArray | Dataset):
+            return b
+        if set(a.dims) == set(b.dims):
+            # Ensure transpose won't fail if a dimension is missing
+            # If this is the case, the difference will be caught by the caller
+            return b.transpose(*a.dims)
         return b
-    if not check_dim_order and set(a.dims) == set(b.dims):
-        # Ensure transpose won't fail if a dimension is missing
-        # If this is the case, the difference will be caught by the caller
-        return b.transpose(*a.dims)
-    return b
+
+    if check_dim_order:
+        return b
+
+    if isinstance(a, DataTree):
+        return map_over_datasets(_maybe_transpose_dims, a, b)
+
+    return _maybe_transpose_dims(a, b)
 
 
 @ensure_warnings

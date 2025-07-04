@@ -721,6 +721,27 @@ class TestFormatting:
         actual = formatting.diff_datatree_repr(dt_1, dt_2, "identical")
         assert actual == expected
 
+    def test_diff_datatree_repr_equals(self) -> None:
+        ds1 = xr.Dataset(data_vars={"data": ("y", [5, 2])})
+        ds2 = xr.Dataset(data_vars={"data": (("x", "y"), [[5, 2]])})
+        dt1 = xr.DataTree.from_dict({"node": ds1})
+        dt2 = xr.DataTree.from_dict({"node": ds2})
+
+        expected = dedent(
+            """\
+            Left and right DataTree objects are not equal
+
+            Data at node 'node' does not match:
+                Differing dimensions:
+                    (y: 2) != (x: 1, y: 2)
+                Differing data variables:
+                L   data     (y) int64 16B 5 2
+                R   data     (x, y) int64 16B 5 2"""
+        )
+
+        actual = formatting.diff_datatree_repr(dt1, dt2, "equals")
+        assert actual == expected
+
 
 def test_inline_variable_array_repr_custom_repr() -> None:
     class CustomArray:
