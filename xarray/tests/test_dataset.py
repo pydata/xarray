@@ -294,7 +294,6 @@ class TestDataset:
               * dim3     (dim3) {data["dim3"].dtype} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
               * time     (time) datetime64[ns] 160B 2000-01-01 2000-01-02 ... 2000-01-20
                 numbers  (dim3) int64 80B 0 1 2 0 0 1 1 2 2 3
-            Dimensions without coordinates: dim1
             Data variables:
                 var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
                 var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
@@ -426,7 +425,6 @@ class TestDataset:
             """\
             <xarray.Dataset> Size: 16B
             Dimensions:  (x: 2)
-            Dimensions without coordinates: x
             Data variables:
                 foo      (x) float64 16B Custom Array"""
         )

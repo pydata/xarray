@@ -673,8 +673,7 @@ class TestDataArrayAndDataset(DaskTestCase):
             <xarray.DataArray 'data' (x: 1)> Size: 8B
             {data!r}
             Coordinates:
-                y        (x) int64 8B dask.array<chunksize=(1,), meta=np.ndarray>
-            Dimensions without coordinates: x"""
+                y        (x) int64 8B dask.array<chunksize=(1,), meta=np.ndarray>"""
         )
         assert expected == repr(a)
         assert kernel_call_count == 0  # should not evaluate dask array
@@ -689,7 +688,6 @@ class TestDataArrayAndDataset(DaskTestCase):
             Dimensions:  (x: 1)
             Coordinates:
                 y        (x) int64 8B dask.array<chunksize=(1,), meta=np.ndarray>
-            Dimensions without coordinates: x
             Data variables:
                 a        (x) int64 8B dask.array<chunksize=(1,), meta=np.ndarray>"""
         )
