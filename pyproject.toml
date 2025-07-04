@@ -284,6 +284,7 @@ ignore = [
   "PIE790",  # unnecessary pass statement
   "PYI019",  # use `Self` instead of custom TypeVar
   "PYI041",  # use `float` instead of `int | float`
+  "SIM102",  # use a single `if` statement instead of nested `if` statements
   "SIM108",  # use ternary operator instead of `if`-`else`-block
   "SIM117",  # use a single `with` statement instead of nested `with` statements
   "SIM118",  # use `key in dict` instead of `key in dict.keys()`
