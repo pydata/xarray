@@ -5635,7 +5635,7 @@ class TestPintWrappingDask:
 
         assert_units_equal(expected, actual)
         # Don't use isinstance b/c we don't want to allow subclasses through
-        assert type(expected.data) == type(actual.data)  # noqa: E721
+        assert type(expected.data) is type(actual.data)
 
 
 @requires_matplotlib
