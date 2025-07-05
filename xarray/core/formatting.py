@@ -340,17 +340,17 @@ def summarize_variable(
         first_col = pretty_print(first_col, col_width)
 
     if variable.dims:
-        dims_str = "({}) ".format(", ".join(map(str, variable.dims)))
+        dims_str = ", ".join(map(str, variable.dims))
+        dims_str = f"({dims_str}) "
     else:
         dims_str = ""
 
-    nbytes_str = f" {render_human_readable_nbytes(variable.nbytes)}"
-    front_str = f"{first_col}{dims_str}{variable.dtype}{nbytes_str} "
+    front_str = f"{first_col}{dims_str}{variable.dtype} {render_human_readable_nbytes(variable.nbytes)} "
 
     values_width = max_width - len(front_str)
     values_str = inline_variable_array_repr(variable, values_width)
 
-    return front_str + values_str
+    return f"{front_str}{values_str}"
 
 
 def summarize_attr(key, value, col_width=None):

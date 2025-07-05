@@ -132,7 +132,7 @@ class Rolling(Generic[T_Xarray]):
         """provide a nice str repr of our rolling object"""
 
         attrs = ",".join(
-            "{k}->{v}{c}".format(k=k, v=w, c="(center)" if c else "")
+            f"{k}->{w}{'(center)' if c else ''}"
             for k, w, c in zip(self.dim, self.window, self.center, strict=True)
         )
         return f"{self.__class__.__name__} [{attrs}]"
