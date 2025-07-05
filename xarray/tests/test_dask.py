@@ -1129,7 +1129,8 @@ def test_unify_chunks(map_ds):
 def test_unify_chunks_shallow_copy(obj, transform):
     obj = transform(obj)
     unified = obj.unify_chunks()
-    assert_identical(obj, unified) and obj is not obj.unify_chunks()
+    assert_identical(obj, unified)
+    assert obj is not obj.unify_chunks()
 
 
 @pytest.mark.parametrize("obj", [make_da()])
