@@ -4875,6 +4875,10 @@ class Dataset(
         """Set a new, Xarray-compatible index from one or more existing
         coordinate(s).
 
+        All variables returned by the index's ``create_variables()`` method
+        will be added to the dataset, including any additional variables
+        beyond the original coordinate names.
+
         Parameters
         ----------
         coord_names : str or list
@@ -4891,6 +4895,9 @@ class Dataset(
         -------
         obj : Dataset
             Another dataset, with this dataset's data and with a new index.
+            The index will be associated with the coordinates specified in
+            ``coord_names``. Any additional variables returned by the index's
+            ``create_variables()`` method will also be added to the dataset.
 
         """
         # the Sequence check is required for mypy
@@ -4947,10 +4954,13 @@ class Dataset(
             variables = self._variables.copy()
             indexes = self._indexes.copy()
 
-            name = list(coord_names).pop()
-            if name in new_coord_vars:
-                variables[name] = new_coord_vars[name]
-            indexes[name] = index
+            # Add ALL variables returned by create_variables()
+            for name, var in new_coord_vars.items():
+                variables[name] = var
+
+            # Set index only for the original coordinate name
+            coord_name = list(coord_names).pop()
+            indexes[coord_name] = index
         else:
             # reorder variables and indexes so that coordinates having the same
             # index are next to each other
@@ -4964,11 +4974,12 @@ class Dataset(
                 if name not in coord_names:
                     indexes[name] = idx
 
+            # Add ALL variables returned by create_variables()
+            for name, var in new_coord_vars.items():
+                variables[name] = var
+
+            # Set index for all original coordinate names
             for name in coord_names:
-                try:
-                    variables[name] = new_coord_vars[name]
-                except KeyError:
-                    variables[name] = self._variables[name]
                 indexes[name] = index
 
         return self._replace(
