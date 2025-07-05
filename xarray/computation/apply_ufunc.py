@@ -141,8 +141,13 @@ class _UFuncSignature:
         return f"{type(self).__name__}({list(self.input_core_dims)!r}, {list(self.output_core_dims)!r})"
 
     def __str__(self):
-        lhs = ",".join("({})".format(",".join(dims)) for dims in self.input_core_dims)
-        rhs = ",".join("({})".format(",".join(dims)) for dims in self.output_core_dims)
+        comma_separated = ",".join
+        lhs = comma_separated(
+            f"({comma_separated(dims)})" for dims in self.input_core_dims
+        )
+        rhs = comma_separated(
+            f"({comma_separated(dims)})" for dims in self.output_core_dims
+        )
         return f"{lhs}->{rhs}"
 
     def to_gufunc_string(self, exclude_dims=frozenset()):
