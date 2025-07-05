@@ -12,6 +12,10 @@ v2025.07.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Added new argument in ``xarray.open_mfdataset`` to better handle the invalid files
+  {'raise', 'warn', 'ignore'}, default 'raise'. If 'raise', then invalid dataset will raise an exception.
+  If 'ignore', then invalid dataset will be ignored. If 'warn', then a warning will be issued for each invalid dataset.
+  By `Pratiman Patel <https://github.com/pratiman-91>`_.
 
 
 Breaking changes
