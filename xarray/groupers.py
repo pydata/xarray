@@ -617,10 +617,10 @@ def season_to_month_tuple(seasons: Sequence[str]) -> tuple[tuple[int, ...], ...]
     ((12, 1, 2, 3), (9, 10, 11, 12))
     """
     initials = "JFMAMJJASOND"
-    starts = dict(
-        ("".join(s), i + 1)
+    starts = {
+        "".join(s): i + 1
         for s, i in zip(sliding_window(2, initials + "J"), range(12), strict=True)
-    )
+    }
     result: list[tuple[int, ...]] = []
     for i, season in enumerate(seasons):
         if len(season) == 1:
