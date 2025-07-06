@@ -662,10 +662,11 @@ class StringAccessor(Generic[T_DataArray]):
         """
         args = tuple(self._stringify(x) for x in args)
         kwargs = {key: self._stringify(val) for key, val in kwargs.items()}
-        func = lambda x, *args, **kwargs: self._obj.dtype.type.format(
-            x, *args, **kwargs
+        return self._apply(
+            func=self._obj.dtype.type.format,
+            func_args=args,
+            func_kwargs={"kwargs": kwargs},
         )
-        return self._apply(func=func, func_args=args, func_kwargs={"kwargs": kwargs})
 
     def capitalize(self) -> T_DataArray:
         """
