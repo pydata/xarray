@@ -8,6 +8,7 @@ dependencies:
   - dask-core
   - distributed
   - flox
+  - netcdf4
   - numba
   - numbagg
   - numexpr
@@ -17,5 +18,6 @@ dependencies:
   - pandas
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - sparse
+  - scipy
   - toolz
   - zarr
