@@ -17,6 +17,7 @@ dependencies:
   - packaging
   - pandas
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
+  - pip
   - sparse
   - scipy
   - toolz
