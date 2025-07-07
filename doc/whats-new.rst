@@ -33,6 +33,13 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Refactored the ``PandasIndexingAdapter`` and
+  ``CoordinateTransformIndexingAdapter`` internal indexing classes. Coordinate
+  variables that wrap a :py:class:`pandas.RangeIndex`, a
+  :py:class:`pandas.MultiIndex` or a
+  :py:class:`xarray.indexes.CoordinateTransform` are now displayed as lazy variables
+  in the Xarray data reprs (:pull:`10355`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 .. _whats-new.2025.07.0:
 
