@@ -26,9 +26,9 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.12.1
     hooks:
-      - id: ruff-format
-      - id: ruff
+      - id: ruff-check
         args: ["--fix", "--show-fixes"]
+      - id: ruff-format
   - repo: https://github.com/keewis/blackdoc
     rev: v0.3.9
     hooks:
