@@ -1517,20 +1517,20 @@ class CFTimedeltaCoder(VariableCoder):
                     time_unit = self.time_unit
             else:
                 if self._emit_decode_timedelta_future_warning:
+                    var_string = f"the variable {name!r}" if name else ""
                     emit_user_level_warning(
                         "In a future version, xarray will not decode "
-                        "timedelta values based on the presence of a "
-                        "timedelta-like units attribute by default. Instead "
-                        "it will rely on the presence of a timedelta64 dtype "
-                        "attribute, which is now xarray's default way of "
-                        "encoding timedelta64 values. To continue decoding "
-                        "timedeltas based on the presence of a timedelta-like "
-                        "units attribute, users will need to explicitly "
-                        "opt-in by passing True or "
-                        "CFTimedeltaCoder(decode_via_units=True) to "
-                        "decode_timedelta. To silence this warning, set "
-                        "decode_timedelta to True, False, or a "
-                        "'CFTimedeltaCoder' instance.",
+                        f"{var_string} into a timedelta64 dtype based on the "
+                        "presence of a timedelta-like 'units' attribute by "
+                        "default. Instead it will rely on the presence of a "
+                        "timedelta64 'dtype' attribute, which is now xarray's "
+                        "default way of encoding timedelta64 values.\n"
+                        "To continue decoding into a timedelta64 dtype, either "
+                        "set `decode_timedelta=True` when opening this "
+                        "dataset, or add the attribute "
+                        "`dtype='timedelta64[ns]'` to this variable on disk.\n"
+                        "To opt-in to future behavior, set "
+                        "`decode_timedelta=False`.",
                         FutureWarning,
                     )
                 if self.time_unit is None:
