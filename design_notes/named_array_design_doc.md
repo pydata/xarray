@@ -75,7 +75,6 @@ The named-array package is designed to be interoperable with other scientific Py
      - Delete the ExplicitIndexer objects (`BasicIndexer`, `VectorizedIndexer`, `OuterIndexer`)
      - Remove explicit support for `pd.Index`. When provided with a `pd.Index` object, Variable will coerce to an array using `np.array(pd.Index)`. For Xarray's purposes, Xarray can use `as_variable` to explicitly wrap these in PandasIndexingAdapter and pass them to `Variable.__init__`.
 3. Define a minimal variable interface that the rest of Xarray can use:
-
    1. `dims`: tuple of dimension names
    2. `data`: numpy/dask/duck arrays`
    3. `attrs``: dictionary of attributes
@@ -369,7 +368,6 @@ class VariableArithmetic(
 - The Variable constructor will need to be rewritten to no longer accept tuples, encodings, etc. These details should be handled at the Xarray data structure level.
 - What happens to `duck_array_ops?`
 - What about Variable.chunk and "chunk managers"?
-
   - Could this functionality be left in Xarray proper for now? Alternative array types like JAX also have some notion of "chunks" for parallel arrays, but the details differ in a number of ways from the Dask/Cubed.
   - Perhaps variable.chunk/load methods should become functions defined in xarray that convert Variable objects. This is easy so long as xarray can reach in and replace .data
 
