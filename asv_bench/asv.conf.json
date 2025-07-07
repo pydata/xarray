@@ -60,7 +60,7 @@
   // },
   "matrix": {
     "setuptools_scm": [""], // GH6609
-    "numpy": [""],
+    "numpy": ["2.2"],
     "pandas": [""],
     "netcdf4": [""],
     "scipy": [""],

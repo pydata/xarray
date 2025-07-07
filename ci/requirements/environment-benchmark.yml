@@ -1,0 +1,23 @@
+name: xarray-benchmark
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - bottleneck
+  - cftime
+  - dask-core
+  - distributed
+  - flox
+  - netcdf4
+  - numba
+  - numbagg
+  - numexpr
+  - numpy>=2.2,<2.3 # https://github.com/numba/numba/issues/10105
+  - opt_einsum
+  - packaging
+  - pandas
+  - pyarrow # pandas raises a deprecation warning without this, breaking doctests
+  - sparse
+  - scipy
+  - toolz
+  - zarr

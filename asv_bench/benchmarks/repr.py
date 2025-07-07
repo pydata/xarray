@@ -57,3 +57,31 @@ class ReprMultiIndex:
 
     def time_repr_html(self):
         self.da._repr_html_()
+
+
+class ReprPandasRangeIndex:
+    # display a memory-saving pandas.RangeIndex shouldn't trigger memory
+    # expensive conversion into a numpy array
+    def setup(self):
+        index = xr.indexes.PandasIndex(pd.RangeIndex(1_000_000), "x")
+        self.ds = xr.Dataset(coords=xr.Coordinates.from_xindex(index))
+
+    def time_repr(self):
+        repr(self.ds.x)
+
+    def time_repr_html(self):
+        self.ds.x._repr_html_()
+
+
+class ReprXarrayRangeIndex:
+    # display an Xarray RangeIndex shouldn't trigger memory expensive conversion
+    # of its lazy coordinate into a numpy array
+    def setup(self):
+        index = xr.indexes.RangeIndex.arange(1_000_000, dim="x")
+        self.ds = xr.Dataset(coords=xr.Coordinates.from_xindex(index))
+
+    def time_repr(self):
+        repr(self.ds.x)
+
+    def time_repr_html(self):
+        self.ds.x._repr_html_()
