@@ -250,7 +250,7 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
         *,
         options: Mapping[str, Any],
     ) -> Self:
-        if len(set([var.dims for var in variables.values()])) > 1:
+        if len({var.dims for var in variables.values()}) > 1:
             var_names = ",".join(vn for vn in variables)
             raise ValueError(
                 f"variables {var_names} must all have the same dimensions and the same shape"
