@@ -110,7 +110,6 @@ upstream        https://github.com/pydata/xarray (push)
     (Note that repo branch restrictions prevent pushing to `main`, so you have to just-self-merge this.)
 
 13. Update the version available on pyodide:
-
     - Open the PyPI page for [Xarray downloads](https://pypi.org/project/xarray/#files)
     - Edit [`pyodide/packages/xarray/meta.yaml`](https://github.com/pyodide/pyodide/blob/main/packages/xarray/meta.yaml) to update the
       - version number
@@ -121,7 +120,6 @@ upstream        https://github.com/pydata/xarray (push)
 14. Issue the release announcement to mailing lists & Twitter (X). For bug fix releases, I
     usually only email xarray@googlegroups.com. For major/feature releases, I will email a broader
     list (no more than once every 3-6 months):
-
     - pydata@googlegroups.com
     - xarray@googlegroups.com
     - numpy-discussion@scipy.org

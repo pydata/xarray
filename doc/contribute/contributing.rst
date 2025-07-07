@@ -72,6 +72,7 @@ If you are reporting a bug, please use the provided template which includes the 
 
       ```python
       import xarray as xr
+
       ds = xr.Dataset(...)
 
       ...
@@ -82,6 +83,7 @@ If you are reporting a bug, please use the provided template which includes the 
 
       ```python
       import xarray as xr
+
       xr.show_versions()
 
       ...
