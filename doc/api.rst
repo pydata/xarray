@@ -1577,6 +1577,7 @@ Custom Indexes
    CFTimeIndex
    indexes.RangeIndex
    indexes.CoordinateTransformIndex
+   indexes.NDPointIndex
 
 Creating custom indexes
 -----------------------

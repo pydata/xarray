@@ -56,6 +56,9 @@ New Features
 
 - Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
   under the ``xarray.indexes`` namespace. By `Deepak Cherian <https://github.com/dcherian>`_.
+- New :py:class:`xarray.indexes.NDPointIndex`, which by default uses :py:class:`scipy.spatial.KDTree` under the hood for
+  the selection of irregular, n-dimensional data (:pull:`10478`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 - Support zarr-python's new ``.supports_consolidated_metadata`` store property (:pull:`10457``).
   by `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Better error messages when encoding data to be written to disk fails (:pull:`10464`).
