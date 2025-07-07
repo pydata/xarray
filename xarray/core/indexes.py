@@ -768,10 +768,12 @@ class PandasIndex(Index):
 
         if not indexes:
             coord_dtype = None
-        elif len(set(idx.coord_dtype for idx in indexes)) == 1:
-            coord_dtype = indexes[0].coord_dtype
         else:
-            coord_dtype = np.result_type(*[idx.coord_dtype for idx in indexes])
+            indexes_coord_dtypes = {idx.coord_dtype for idx in indexes}
+            if len(indexes_coord_dtypes) == 1:
+                coord_dtype = next(iter(indexes_coord_dtypes))
+            else:
+                coord_dtype = np.result_type(*indexes_coord_dtypes)
 
         return cls(new_pd_index, dim=dim, coord_dtype=coord_dtype)
 
@@ -1247,7 +1249,7 @@ class PandasMultiIndex(PandasIndex):
                 level = name
                 dtype = self.level_coords_dtype[name]  # type: ignore[index]  # TODO: are Hashables ok?
 
-            var = variables.get(name, None)
+            var = variables.get(name)
             if var is not None:
                 attrs = var.attrs
                 encoding = var.encoding
