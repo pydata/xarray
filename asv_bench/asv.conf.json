@@ -59,6 +59,8 @@
   //     "pip+emcee": [""],   // emcee is only available for install with pip.
   // },
   "matrix": {
+    "setuptools": ["78"],
+    "setuptools_scm": [""], // GH6609
     "numpy": ["2.2"],
     "pandas": [""],
     "netcdf4": [""],
@@ -75,7 +77,7 @@
   // https://github.com/airspeed-velocity/asv/issues/1389#issuecomment-2076131185
   "build_command": [
     "python -m build",
-    "python -m pip wheel --no-deps --no-index -w {build_cache_dir} {build_dir}"
+    "python -m pip wheel --no-deps --no-build-isolation --no-index -w {build_cache_dir} {build_dir}"
   ],
   // Combinations of libraries/python versions can be excluded/included
   // from the set to test. Each entry is a dictionary containing additional
