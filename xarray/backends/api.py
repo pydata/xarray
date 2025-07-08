@@ -458,20 +458,15 @@ def _datatree_from_backend_datatree(
         )
 
     _protect_datatree_variables_inplace(backend_tree, cache)
-    if chunks is None:
-        if create_default_indexes:
-            tree = backend_tree.map_over_datasets(_maybe_create_default_indexes)
-        else:
-            tree = backend_tree
+    if create_default_indexes:
+        tree = backend_tree.map_over_datasets(_maybe_create_default_indexes)
     else:
+        tree = backend_tree
+    if chunks is not None:
         tree = DataTree.from_dict(
             {
                 path: _chunk_ds(
-                    (
-                        _maybe_create_default_indexes(node.dataset)
-                        if create_default_indexes
-                        else node.dataset
-                    ),
+                    node.dataset,
                     filename_or_obj,
                     engine,
                     chunks,
@@ -482,9 +477,9 @@ def _datatree_from_backend_datatree(
                     node=path,
                     **extra_tokens,
                 )
-                for path, [node] in group_subtrees(backend_tree)
+                for path, [node] in group_subtrees(tree)
             },
-            name=backend_tree.name,
+            name=tree.name,
         )
 
     if create_default_indexes or chunks is not None:
