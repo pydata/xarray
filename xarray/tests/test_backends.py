@@ -6868,6 +6868,21 @@ class TestZarrRegionAuto:
             chunk = chunk.chunk()
             self.save(store, chunk.chunk(), region=region)
 
+    @requires_dask
+    def test_dataset_to_zarr_align_chunks_true(self, tmp_store) -> None:
+        skip_if_zarr_format_3(tmp_store)
+        dataset = DataArray(
+            np.arange(4), dims=["a"], coords={"a": np.arange(4)}
+        ).chunk(a=(2, 1, 1)).to_dataset(name="foo")
+
+        dataset.to_zarr(
+            tmp_store,
+            align_chunks=True,
+            encoding={"foo": {"chunks": (3,)}},
+        )
+        with open_dataset(tmp_store, engine="zarr") as loaded_ds:
+            assert_identical(dataset, loaded_ds)
+
 
 @requires_h5netcdf
 @requires_fsspec
