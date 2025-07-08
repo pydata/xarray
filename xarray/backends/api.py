@@ -411,6 +411,8 @@ def _dataset_from_backend_dataset(
 
     if create_default_indexes:
         ds = _maybe_create_default_indexes(backend_ds)
+    else:
+        ds = backend_ds
 
     if chunks is not None:
         ds = _chunk_ds(
