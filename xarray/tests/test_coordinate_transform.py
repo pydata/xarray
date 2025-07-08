@@ -123,6 +123,17 @@ def test_coordinate_transform_variable_repr_inline() -> None:
     )
 
 
+def test_coordinate_transform_variable_repr() -> None:
+    var = create_coords(scale=2.0, shape=(2, 2))["x"].variable
+
+    actual = repr(var)
+    expected = """
+<xarray.Variable (y: 2, x: 2)> Size: 32B
+[4 values with dtype=float64]
+    """.strip()
+    assert actual == expected
+
+
 def test_coordinate_transform_variable_basic_outer_indexing() -> None:
     var = create_coords(scale=2.0, shape=(4, 4))["x"].variable
 

@@ -560,11 +560,10 @@ def _infer_dtype(array, name=None):
 
     native_dtypes = set(np.vectorize(type, otypes=[object])(array.ravel()))
     if len(native_dtypes) > 1 and native_dtypes != {bytes, str}:
+        native_dtype_names = ", ".join(x.__name__ for x in native_dtypes)
         raise ValueError(
-            "unable to infer dtype on variable {!r}; object array "
-            "contains mixed native types: {}".format(
-                name, ", ".join(x.__name__ for x in native_dtypes)
-            )
+            f"unable to infer dtype on variable {name!r}; object array "
+            f"contains mixed native types: {native_dtype_names}"
         )
 
     element = array[(0,) * array.ndim]

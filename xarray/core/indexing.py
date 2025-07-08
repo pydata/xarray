@@ -9,7 +9,6 @@ from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
-from html import escape
 from typing import TYPE_CHECKING, Any, cast, overload
 
 import numpy as np
@@ -20,7 +19,6 @@ from packaging.version import Version
 from xarray.core import duck_array_ops
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.nputils import NumpyVIndexAdapter
-from xarray.core.options import OPTIONS
 from xarray.core.types import T_Xarray
 from xarray.core.utils import (
     NDArrayMixin,
@@ -1777,6 +1775,12 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             self._dtype = np.dtype(cast(DTypeLike, dtype))
 
     @property
+    def _in_memory(self) -> bool:
+        # prevent costly conversion of a memory-saving pd.RangeIndex into a
+        # large numpy array.
+        return not isinstance(self.array, pd.RangeIndex)
+
+    @property
     def dtype(self) -> np.dtype | pd.api.extensions.ExtensionDtype:  # type: ignore[override]
         return self._dtype
 
@@ -1889,6 +1893,14 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def transpose(self, order) -> Self | pd.Index:
         return self.array  # self.array should be always one-dimensional
 
+    def _repr_inline_(self, max_width: int) -> str:
+        # we want to display values in the inline repr for lazy coordinates too
+        # (pd.RangeIndex and pd.MultiIndex). `format_array_flat` prevents loading
+        # the whole array in memory.
+        from xarray.core.formatting import format_array_flat
+
+        return format_array_flat(self, max_width)
+
     def __repr__(self) -> str:
         return f"{type(self).__name__}(array={self.array!r}, dtype={self.dtype!r})"
 
@@ -1974,31 +1986,11 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
             )
             return f"{type(self).__name__}{props}"
 
-    def _get_array_subset(self) -> np.ndarray:
-        # used to speed-up the repr for big multi-indexes
-        threshold = max(100, OPTIONS["display_values_threshold"] + 2)
-        if self.size > threshold:
-            pos = threshold // 2
-            indices = np.concatenate([np.arange(0, pos), np.arange(-pos, 0)])
-            subset = self[OuterIndexer((indices,))]
-        else:
-            subset = self
-
-        return np.asarray(subset)
-
     def _repr_inline_(self, max_width: int) -> str:
-        from xarray.core.formatting import format_array_flat
-
         if self.level is None:
             return "MultiIndex"
         else:
-            return format_array_flat(self._get_array_subset(), max_width)
-
-    def _repr_html_(self) -> str:
-        from xarray.core.formatting import short_array_repr
-
-        array_repr = short_array_repr(self._get_array_subset())
-        return f"<pre>{escape(array_repr)}</pre>"
+            return super()._repr_inline_(max_width=max_width)
 
     def copy(self, deep: bool = True) -> Self:
         # see PandasIndexingAdapter.copy
@@ -2121,6 +2113,10 @@ class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def shape(self) -> tuple[int, ...]:
         return tuple(self._transform.dim_size.values())
 
+    @property
+    def _in_memory(self) -> bool:
+        return False
+
     def get_duck_array(self) -> np.ndarray:
         all_coords = self._transform.generate_coords(dims=self._dims)
         return np.asarray(all_coords[self._coord_name])
@@ -2181,23 +2177,9 @@ class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def __repr__(self: Any) -> str:
         return f"{type(self).__name__}(transform={self._transform!r})"
 
-    def _get_array_subset(self) -> np.ndarray:
-        threshold = max(100, OPTIONS["display_values_threshold"] + 2)
-        if self.size > threshold:
-            pos = threshold // 2
-            flat_indices = np.concatenate(
-                [np.arange(0, pos), np.arange(self.size - pos, self.size)]
-            )
-            subset = self.vindex[
-                VectorizedIndexer(np.unravel_index(flat_indices, self.shape))
-            ]
-        else:
-            subset = self
-
-        return np.asarray(subset)
-
     def _repr_inline_(self, max_width: int) -> str:
-        """Good to see some labels even for a lazy coordinate."""
+        # we want to display values in the inline repr for this lazy coordinate
+        # `format_array_flat` prevents loading the whole array in memory.
         from xarray.core.formatting import format_array_flat
 
-        return format_array_flat(self._get_array_subset(), max_width)
+        return format_array_flat(self, max_width)
