@@ -729,3 +729,60 @@ def test_restore_dtype_on_multiindexes(dtype: str) -> None:
     foo = xr.Dataset(coords={"bar": ("bar", np.array([0, 1], dtype=dtype))})
     foo = foo.stack(baz=("bar",))
     assert str(foo["bar"].values.dtype) == dtype
+
+
+class IndexWithExtraVariables(Index):
+    @classmethod
+    def from_variables(cls, variables, *, options=None):
+        return cls()
+
+    def create_variables(self, variables=None):
+        if variables is None:
+            return {}
+
+        result = dict(variables)
+        if "time" in variables:
+            result["valid_time"] = Variable(
+                dims=("time",),
+                data=variables["time"].data + 1,
+                attrs={"description": "time + 1"},
+            )
+        return result
+
+
+def test_set_xindex_with_extra_variables() -> None:
+    """Test that set_xindex raises an error when custom index creates extra variables."""
+    import xarray as xr
+
+    ds = xr.Dataset(coords={"time": [1, 2, 3]}).reset_index("time")
+
+    # Test that set_xindex raises error for extra variables
+    with pytest.raises(ValueError, match="extra variables") as excinfo:
+        ds.set_xindex("time", IndexWithExtraVariables)
+
+    error_msg = str(excinfo.value)
+
+    assert "extra variables" in error_msg
+    assert "'valid_time'" in error_msg
+    assert "factory method pattern" in error_msg
+    assert "from_variables" in error_msg
+    assert "Coordinates.from_xindex" in error_msg
+    assert "assign_coords" in error_msg
+
+
+def test_set_xindex_factory_method_pattern() -> None:
+    import xarray as xr
+
+    ds = xr.Dataset(coords={"time": [1, 2, 3]}).reset_index("time")
+
+    # For the factory pattern, we need to create the variables directly
+    # since Coordinates.from_xindex() calls create_variables() without arguments
+    coord_vars = {"time": ds._variables["time"]}
+    index = IndexWithExtraVariables.from_variables(coord_vars)
+    new_vars = index.create_variables(coord_vars)
+
+    result = ds.assign_coords(new_vars)
+
+    assert "time" in result.variables
+    assert "valid_time" in result.variables
+    assert_array_equal(result.valid_time.data, [2, 3, 4])  # time + 1
