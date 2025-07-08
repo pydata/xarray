@@ -1963,6 +1963,14 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         else:
             return super().__array__(dtype, copy=copy)
 
+    @property
+    def _in_memory(self) -> bool:
+        # The pd.MultiIndex's data is fully in memory, but it has a different
+        # layout than the level and dimension coordinate arrays. Marking this
+        # adapter class as a "lazy" array will prevent costly conversion when,
+        # e.g., formatting the Xarray reprs.
+        return False
+
     def _convert_scalar(self, item: Any):
         if isinstance(item, tuple) and self.level is not None:
             idx = tuple(self.array.names).index(self.level)
