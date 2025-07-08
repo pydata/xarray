@@ -12,7 +12,8 @@ v2025.07.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Allow skipping the creation of default indexes when opening datasets (:pull:`8051`).
+  By `Benoit Bovy <https://github.com/benbovy>`_ and `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
