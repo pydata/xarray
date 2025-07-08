@@ -461,8 +461,6 @@ def _datatree_from_backend_datatree(
     if chunks is None:
         if create_default_indexes:
             tree = backend_tree.map_over_datasets(_maybe_create_default_indexes)
-            for path, [node] in group_subtrees(backend_tree):
-                tree[path].set_close(node._close)
         else:
             tree = backend_tree
     else:
@@ -489,6 +487,7 @@ def _datatree_from_backend_datatree(
             name=backend_tree.name,
         )
 
+    if create_default_indexes or chunks is not None:
         for path, [node] in group_subtrees(backend_tree):
             tree[path].set_close(node._close)
 
