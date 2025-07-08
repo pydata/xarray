@@ -1704,6 +1704,9 @@ Advanced API
 
 Default, pandas-backed indexes built-in Xarray:
 
+.. autosummary::
+   :toctree: generated/
+
    indexes.PandasIndex
    indexes.PandasMultiIndex
 
