@@ -459,7 +459,10 @@ def _datatree_from_backend_datatree(
 
     _protect_datatree_variables_inplace(backend_tree, cache)
     if chunks is None:
-        tree = backend_tree
+        if create_default_indexes:
+            tree = backend_tree.map_over_datasets(_maybe_create_default_indexes)
+        else:
+            tree = backend_tree
     else:
         tree = DataTree.from_dict(
             {
