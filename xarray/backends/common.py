@@ -5,13 +5,23 @@ import os
 import time
 import traceback
 from collections.abc import Hashable, Iterable, Mapping, Sequence
+from dataclasses import dataclass, fields, replace
 from glob import glob
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Literal,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
 
 from xarray.coding import strings, variables
+from xarray.coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import cf_encoder
 from xarray.core import indexing
@@ -657,6 +667,124 @@ class WritableCFDataStore(AbstractWritableDataStore):
         return super().encode(variables, attributes)
 
 
+def _reset_dataclass_to_false(instance):
+    # Returns instance with all elements set to False
+    field_names = [f.name for f in fields(instance)]
+    false_values = dict.fromkeys(field_names, False)
+    return replace(instance, **false_values)
+
+
+def _validate_kwargs_for_dataclass(cls, kwargs):
+    valid_fields = {f.name for f in fields(cls)}
+    invalid = {k: v for k, v in kwargs.items() if k not in valid_fields}
+    return invalid
+
+
+@dataclass(frozen=True, kw_only=True)
+class BaseCoderOptions:
+    pass
+
+
+@dataclass(frozen=True, kw_only=True)
+class CoderOptions(BaseCoderOptions):
+    """
+    CF Coding Options.
+
+    Parameters
+    ----------
+    mask_and_scale : bool or dict-like, optional
+      If True, replace array values equal to `_FillValue` with NA and scale
+      values according to the formula `original_values * scale_factor +
+      add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
+      taken from variable attributes (if they exist).  If the `_FillValue` or
+      `missing_value` attribute contains multiple values a warning will be
+      issued and all array values matching one of the multiple values will
+      be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
+      to toggle this feature per-variable individually.
+      This keyword may not be supported by all the backends.
+
+    decode_times : bool, CFDatetimeCoder or dict-like, optional
+      If True, decode times encoded in the standard NetCDF datetime format
+      into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them
+      encoded as numbers.
+      Pass a mapping, e.g. ``{"my_variable": False}``,
+      to toggle this feature per-variable individually.
+      This keyword may not be supported by all the backends.
+
+    decode_timedelta : bool, CFTimedeltaCoder, or dict-like, optional
+      If True, decode variables and coordinates with time units in
+      {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
+      into timedelta objects. If False, leave them encoded as numbers.
+      If None (default), assume the same value of ``decode_times``; if
+      ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
+      takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
+      matching ``time_unit``.
+      Pass a mapping, e.g. ``{"my_variable": False}``,
+      to toggle this feature per-variable individually.
+      This keyword may not be supported by all the backends.
+
+    use_cftime : bool or dict-like, optional
+      Only relevant if encoded dates come from a standard calendar
+      (e.g. "gregorian", "proleptic_gregorian", "standard", or not
+      specified).  If None (default), attempt to decode times to
+      ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+      ``cftime.datetime`` objects. If True, always decode times to
+      ``cftime.datetime`` objects, regardless of whether or not they can be
+      represented using ``np.datetime64[ns]`` objects.  If False, always
+      decode times to ``np.datetime64[ns]`` objects; if this is not possible
+      raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
+      to toggle this feature per-variable individually.
+      This keyword may not be supported by all the backends.
+
+      .. deprecated:: 2025.01.1
+         Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
+
+    concat_characters : bool or dict-like, optional
+      If True, concatenate along the last dimension of character arrays to
+      form string arrays. Dimensions will only be concatenated over (and
+      removed) if they have no corresponding variable and if they are only
+      used as the last dimension of character arrays.
+      Pass a mapping, e.g. ``{"my_variable": False}``,
+      to toggle this feature per-variable individually.
+      This keyword may not be supported by all the backends.
+
+    decode_coords : bool or {"coordinates", "all"}, optional
+      Controls which variables are set as coordinate variables:
+
+      - "coordinates" or True: Set variables referred to in the
+        ``'coordinates'`` attribute of the datasets or individual variables
+        as coordinate variables.
+      - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+        other attributes as coordinate variables.
+
+      Only existing variables can be set as coordinates. Missing variables
+      will be silently ignored.
+
+    drop_variables : str or iterable of str, optional
+      A variable or list of variables to exclude from being parsed from the
+      dataset. This may be useful to drop variables with problems or
+      inconsistent values.
+    """
+
+    # Todo: maybe add these two to disentangle masking from scaling?
+    # mask: Optional[bool] = None
+    # scale: Optional[bool] = None
+    mask_and_scale: bool | Mapping[str, bool] | None = None
+    decode_times: (
+        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None
+    ) = None
+    decode_timedelta: (
+        bool | CFTimedeltaCoder | Mapping[str, bool | CFTimedeltaCoder] | None
+    ) = None
+    use_cftime: bool | Mapping[str, bool] | None = None
+    concat_characters: bool | Mapping[str, bool] | None = None
+    decode_coords: Literal["coordinates", "all"] | bool | None = None
+    drop_variables: str | Iterable[str] | None = None
+
+    def to_kwargs(self):
+        return {k: v for k, v in vars(self).items() if v is not None}
+
+
 class BackendEntrypoint:
     """
     ``BackendEntrypoint`` is a class container and it is the main interface
@@ -694,6 +822,7 @@ class BackendEntrypoint:
     open_dataset_parameters: ClassVar[tuple | None] = None
     description: ClassVar[str] = ""
     url: ClassVar[str] = ""
+    coder_class = BaseCoderOptions
 
     def __repr__(self) -> str:
         txt = f"<{type(self).__name__}>"
@@ -707,7 +836,7 @@ class BackendEntrypoint:
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        drop_variables: str | Iterable[str] | None = None,
+        coder_options: CoderOptions | None = None,
     ) -> Dataset:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
@@ -729,7 +858,7 @@ class BackendEntrypoint:
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        drop_variables: str | Iterable[str] | None = None,
+        coder_options: CoderOptions | None = None,
     ) -> DataTree:
         """
         Backend open_datatree method used by Xarray in :py:func:`~xarray.open_datatree`.
@@ -741,7 +870,7 @@ class BackendEntrypoint:
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
-        drop_variables: str | Iterable[str] | None = None,
+        coder_options: CoderOptions | None = None,
     ) -> dict[str, Dataset]:
         """
         Opens a dictionary mapping from group names to Datasets.

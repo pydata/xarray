@@ -1127,6 +1127,7 @@ If the file were instead stored remotely (e.g. ``s3://saved_on_disk.h5``) you ca
 that are used to `configure fsspec <https://filesystem-spec.readthedocs.io/en/latest/api.html#fsspec.implementations.reference.ReferenceFileSystem.__init__>`_:
 
 .. jupyter-execute::
+    :stderr:
 
     ds_kerchunked = xr.open_dataset(
         "./combined.json",

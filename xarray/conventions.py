@@ -390,7 +390,7 @@ def decode_cf_variables(
 
     if isinstance(drop_variables, str):
         drop_variables = [drop_variables]
-    elif drop_variables is None:
+    elif drop_variables is None or drop_variables is False:
         drop_variables = []
     drop_variables = set(drop_variables)
 
