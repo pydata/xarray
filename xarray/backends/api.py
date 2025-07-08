@@ -410,13 +410,11 @@ def _dataset_from_backend_dataset(
     _protect_dataset_variables_inplace(backend_ds, cache)
 
     if create_default_indexes:
-        backend_ds = _maybe_create_default_indexes(backend_ds)
+        ds = _maybe_create_default_indexes(backend_ds)
 
-    if chunks is None:
-        ds = backend_ds
-    else:
+    if chunks is not None:
         ds = _chunk_ds(
-            backend_ds,
+            ds,
             filename_or_obj,
             engine,
             chunks,
