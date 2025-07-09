@@ -820,9 +820,7 @@ class ZarrStore(AbstractWritableDataStore):
                 attributes["_FillValue"], zarr_array.dtype
             )
 
-        variable = Variable(dimensions, data, attributes, encoding)
-
-        return variable
+        return Variable(dimensions, data, attributes, encoding)
 
     def get_variables(self):
         return FrozenDict((k, self.open_store_variable(k)) for k in self.array_keys())
