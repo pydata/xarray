@@ -12,9 +12,10 @@ v2025.07.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Allow skipping the creation of default indexes when opening datasets (:pull:`8051`).
+  By `Benoit Bovy <https://github.com/benbovy>`_ and `Justus Magin <https://github.com/keewis>`_.
 - Added exception handling for invalid files in ``xarray.open_mfdataset`` 
   By `Pratiman Patel <https://github.com/pratiman-91>`_.
-
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -27,6 +28,12 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- :py:meth:`Dataset.set_xindex` now raises a helpful error when a custom index
+  creates extra variables that don't match the provided coordinate names, instead
+  of silently ignoring them. The error message suggests using the factory method
+  pattern with :py:meth:`xarray.Coordinates.from_xindex` and
+  :py:meth:`Dataset.assign_coords` for advanced use cases (:issue:`10499`).
+  By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -35,6 +42,13 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Refactored the ``PandasIndexingAdapter`` and
+  ``CoordinateTransformIndexingAdapter`` internal indexing classes. Coordinate
+  variables that wrap a :py:class:`pandas.RangeIndex`, a
+  :py:class:`pandas.MultiIndex` or a
+  :py:class:`xarray.indexes.CoordinateTransform` are now displayed as lazy variables
+  in the Xarray data reprs (:pull:`10355`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 .. _whats-new.2025.07.0:
 
@@ -51,6 +65,9 @@ New Features
 
 - Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
   under the ``xarray.indexes`` namespace. By `Deepak Cherian <https://github.com/dcherian>`_.
+- New :py:class:`xarray.indexes.NDPointIndex`, which by default uses :py:class:`scipy.spatial.KDTree` under the hood for
+  the selection of irregular, n-dimensional data (:pull:`10478`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 - Support zarr-python's new ``.supports_consolidated_metadata`` store property (:pull:`10457``).
   by `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Better error messages when encoding data to be written to disk fails (:pull:`10464`).

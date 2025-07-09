@@ -1577,6 +1577,7 @@ Custom Indexes
    CFTimeIndex
    indexes.RangeIndex
    indexes.CoordinateTransformIndex
+   indexes.NDPointIndex
 
 Creating custom indexes
 -----------------------
@@ -1702,6 +1703,9 @@ Advanced API
 ..    ``DataTree.set_close``
 
 Default, pandas-backed indexes built-in Xarray:
+
+.. autosummary::
+   :toctree: generated/
 
    indexes.PandasIndex
    indexes.PandasMultiIndex
