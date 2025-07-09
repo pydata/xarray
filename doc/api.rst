@@ -978,6 +978,40 @@ and DataTree objects, respectively.
    core.coordinates.DataArrayCoordinates
    core.coordinates.DataTreeCoordinates
 
+Indexes
+=======
+
+Default, pandas-backed indexes built-in to Xarray:
+
+.. autosummary::
+   :toctree: generated/
+
+   indexes.PandasIndex
+   indexes.PandasMultiIndex
+
+
+More complex indexes built-in to Xarray:
+
+.. autosummary::
+   :toctree: generated/
+
+   CFTimeIndex
+   indexes.RangeIndex
+   indexes.NDPointIndex
+
+
+Creating indexes
+----------------
+.. autosummary::
+   :toctree: generated/
+
+   cftime_range
+   date_range
+   date_range_like
+   indexes.RangeIndex.arange
+   indexes.RangeIndex.linspace
+
+
 Universal functions
 ===================
 
@@ -1571,34 +1605,17 @@ Custom Indexes
 ==============
 .. currentmodule:: xarray
 
-Default, pandas-backed indexes built-in to Xarray:
-
-.. autosummary::
-   :toctree: generated/
-
-   indexes.PandasIndex
-   indexes.PandasMultiIndex
-
-
-More complex indexes built-in to Xarray:
-
-.. autosummary::
-   :toctree: generated/
-
-   CFTimeIndex
-   indexes.RangeIndex
-   indexes.NDPointIndex
-
-Creating custom indexes
+Building custom indexes
 -----------------------
+
+These classes are building blocks for more complex Indexes:
+
 .. autosummary::
    :toctree: generated/
 
-   cftime_range
-   date_range
-   date_range_like
-   indexes.RangeIndex.arange
-   indexes.RangeIndex.linspace
+   indexes.CoordinateTransform
+   indexes.CoordinateTransformIndex
+   indexes.NDPointIndex
 
 The Index base class for building custom indexes:
 
@@ -1621,17 +1638,6 @@ The Index base class for building custom indexes:
    Index.rename
    Index.copy
 
-Building custom indexes
------------------------
-
-These classes are building blocks for more complex Indexes:
-
-.. autosummary::
-   :toctree: generated/
-
-   indexes.CoordinateTransform
-   indexes.CoordinateTransformIndex
-   indexes.NDPointIndex
 
 Tutorial
 ========
