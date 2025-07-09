@@ -1129,7 +1129,8 @@ def test_unify_chunks(map_ds):
 def test_unify_chunks_shallow_copy(obj, transform):
     obj = transform(obj)
     unified = obj.unify_chunks()
-    assert_identical(obj, unified) and obj is not obj.unify_chunks()
+    assert_identical(obj, unified)
+    # assert obj is not unified
 
 
 @pytest.mark.parametrize("obj", [make_da()])
@@ -1636,7 +1637,7 @@ def test_normalize_token_with_backend(map_ds):
     with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp_file:
         map_ds.to_netcdf(tmp_file)
         read = xr.open_dataset(tmp_file)
-        assert not dask.base.tokenize(map_ds) == dask.base.tokenize(read)
+        assert dask.base.tokenize(map_ds) != dask.base.tokenize(read)
         read.close()
 
 

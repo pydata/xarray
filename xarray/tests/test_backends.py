@@ -55,6 +55,7 @@ from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
+from xarray.core.indexes import PandasIndex
 from xarray.core.options import set_options
 from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.utils import module_available
@@ -2067,6 +2068,26 @@ class NetCDF4Base(NetCDFBase):
                         with self.roundtrip(original):
                             pass
 
+    @pytest.mark.parametrize("create_default_indexes", [True, False])
+    def test_create_default_indexes(self, tmp_path, create_default_indexes) -> None:
+        store_path = tmp_path / "tmp.nc"
+        original_ds = xr.Dataset(
+            {"data": ("x", np.arange(3))}, coords={"x": [-1, 0, 1]}
+        )
+        original_ds.to_netcdf(store_path, engine=self.engine, mode="w")
+
+        with open_dataset(
+            store_path,
+            engine=self.engine,
+            create_default_indexes=create_default_indexes,
+        ) as loaded_ds:
+            if create_default_indexes:
+                assert list(loaded_ds.xindexes) == ["x"] and isinstance(
+                    loaded_ds.xindexes["x"], PandasIndex
+                )
+            else:
+                assert len(loaded_ds.xindexes) == 0
+
 
 @requires_netCDF4
 class TestNetCDF4Data(NetCDF4Base):
@@ -4070,6 +4091,26 @@ class TestScipyFileObject(CFEncodedBase, NetCDF3Only):
     @pytest.mark.skip(reason="cannot pickle file objects")
     def test_pickle_dataarray(self) -> None:
         pass
+
+    @pytest.mark.parametrize("create_default_indexes", [True, False])
+    def test_create_default_indexes(self, tmp_path, create_default_indexes) -> None:
+        store_path = tmp_path / "tmp.nc"
+        original_ds = xr.Dataset(
+            {"data": ("x", np.arange(3))}, coords={"x": [-1, 0, 1]}
+        )
+        original_ds.to_netcdf(store_path, engine=self.engine, mode="w")
+
+        with open_dataset(
+            store_path,
+            engine=self.engine,
+            create_default_indexes=create_default_indexes,
+        ) as loaded_ds:
+            if create_default_indexes:
+                assert list(loaded_ds.xindexes) == ["x"] and isinstance(
+                    loaded_ds.xindexes["x"], PandasIndex
+                )
+            else:
+                assert len(loaded_ds.xindexes) == 0
 
 
 @requires_scipy
@@ -6440,6 +6481,26 @@ def test_zarr_closing_internal_zip_store():
 
     with open_dataarray(store_name, engine="zarr") as loaded_da:
         assert_identical(original_da, loaded_da)
+
+
+@requires_zarr
+@pytest.mark.parametrize("create_default_indexes", [True, False])
+def test_zarr_create_default_indexes(tmp_path, create_default_indexes) -> None:
+    from xarray.core.indexes import PandasIndex
+
+    store_path = tmp_path / "tmp.zarr"
+    original_ds = xr.Dataset({"data": ("x", np.arange(3))}, coords={"x": [-1, 0, 1]})
+    original_ds.to_zarr(store_path, mode="w")
+
+    with open_dataset(
+        store_path, engine="zarr", create_default_indexes=create_default_indexes
+    ) as loaded_ds:
+        if create_default_indexes:
+            assert list(loaded_ds.xindexes) == ["x"] and isinstance(
+                loaded_ds.xindexes["x"], PandasIndex
+            )
+        else:
+            assert len(loaded_ds.xindexes) == 0
 
 
 @requires_zarr

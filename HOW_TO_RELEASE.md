@@ -52,6 +52,7 @@ upstream        https://github.com/pydata/xarray (push)
 
 6.  After merging, again ensure your main branch is synced to upstream:
     ```sh
+    git switch main
     git pull upstream main
     ```
 7.  If you have any doubts, run the full test suite one final time!
@@ -98,17 +99,17 @@ upstream        https://github.com/pydata/xarray (push)
 
     ```
 
-12. Commit your changes and push to main again:
+12. Make a PR with these changes and merge it:
 
     ```sh
-    git commit -am 'New whatsnew section'
-    git push upstream main
+    git checkout -b empty-whatsnew-YYYY.MM.X+1
+    git commit -am "empty whatsnew"
+    git push
     ```
 
-    You're done pushing to main!
+    (Note that repo branch restrictions prevent pushing to `main`, so you have to just-self-merge this.)
 
 13. Update the version available on pyodide:
-
     - Open the PyPI page for [Xarray downloads](https://pypi.org/project/xarray/#files)
     - Edit [`pyodide/packages/xarray/meta.yaml`](https://github.com/pyodide/pyodide/blob/main/packages/xarray/meta.yaml) to update the
       - version number
@@ -119,7 +120,6 @@ upstream        https://github.com/pydata/xarray (push)
 14. Issue the release announcement to mailing lists & Twitter (X). For bug fix releases, I
     usually only email xarray@googlegroups.com. For major/feature releases, I will email a broader
     list (no more than once every 3-6 months):
-
     - pydata@googlegroups.com
     - xarray@googlegroups.com
     - numpy-discussion@scipy.org

@@ -419,9 +419,10 @@ def _infer_xy_labels(
         _assert_valid_xy(darray, x, "x")
         _assert_valid_xy(darray, y, "y")
 
-        if darray._indexes.get(x, 1) is darray._indexes.get(y, 2):
-            if isinstance(darray._indexes[x], PandasMultiIndex):
-                raise ValueError("x and y cannot be levels of the same MultiIndex")
+        if darray._indexes.get(x, 1) is darray._indexes.get(y, 2) and isinstance(
+            darray._indexes[x], PandasMultiIndex
+        ):
+            raise ValueError("x and y cannot be levels of the same MultiIndex")
 
     return x, y
 
@@ -1142,7 +1143,7 @@ def legend_elements(
         # Labels are not numerical so modifying label_values is not
         # possible, instead filter the array with nicely distributed
         # indexes:
-        if type(num) == int:  # noqa: E721
+        if type(num) is int:
             loc = mpl.ticker.LinearLocator(num)
         else:
             raise ValueError("`num` only supports integers for non-numeric labels.")
