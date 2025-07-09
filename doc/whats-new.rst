@@ -14,7 +14,7 @@ New Features
 ~~~~~~~~~~~~
 - Allow skipping the creation of default indexes when opening datasets (:pull:`8051`).
   By `Benoit Bovy <https://github.com/benbovy>`_ and `Justus Magin <https://github.com/keewis>`_.
-- Support chunking by :py:class:`~xarray.groupers.SeasonResampler` for seasonal data analysis (:issue:`10425`, :pull:`10517`).
+- Support chunking by :py:class:`~xarray.groupers.SeasonResampler` for seasonal data analysis (:issue:`10425`, :pull:`10519`).
   By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
 
 Breaking changes
