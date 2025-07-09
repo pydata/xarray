@@ -1454,7 +1454,7 @@ def _remove_path(
     paths: NestedSequence[_FLike], paths_to_remove: set[_FLike]
 ) -> NestedSequence[_FLike]:
     # Initialize an empty list to store the result
-    result = []
+    result: List[Union[_FLike, NestedSequence[_FLike]]] = []
 
     for item in paths:
         if isinstance(item, list):
