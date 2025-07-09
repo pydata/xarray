@@ -18,10 +18,10 @@ from typing import (
     Any,
     Final,
     Literal,
+    TypeVar,
     Union,
     cast,
     overload,
-    TypeVar,
 )
 
 import numpy as np
