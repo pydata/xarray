@@ -1219,6 +1219,7 @@ class TestDataset:
             == rechunked_drop_false.chunksizes["time"]
         )
 
+    @requires_dask
     def test_chunk_by_season_resampler_errors(self):
         """Test error handling for SeasonResampler chunking."""
         ds = Dataset({"foo": ("x", [1, 2, 3])})

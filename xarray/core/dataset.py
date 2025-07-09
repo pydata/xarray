@@ -2483,6 +2483,10 @@ class Dataset(
 
         def _resolve_frequency(name: Hashable, resampler: Resampler) -> tuple[int, ...]:
             variable = self._variables.get(name, None)
+            if variable is None:
+                raise ValueError(
+                    f"Cannot chunk by resampler {resampler!r} for virtual variables."
+                )
             return resampler.resolve_chunks(name, variable)
 
         chunks_mapping_ints: Mapping[Any, T_ChunkDim] = {

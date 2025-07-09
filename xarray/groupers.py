@@ -12,7 +12,7 @@ import itertools
 import operator
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Hashable, Mapping, Sequence
 from dataclasses import dataclass, field
 from itertools import chain, pairwise
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -170,7 +170,7 @@ class Resampler(Grouper):
     Currently only used for TimeResampler, but could be used for SpaceResampler in the future.
     """
 
-    def resolve_chunks(self, name: str, variable: Variable) -> tuple[int, ...]:
+    def resolve_chunks(self, name: Hashable, variable: Variable) -> tuple[int, ...]:
         """
         Resolve chunk sizes for this resampler.
 
@@ -179,7 +179,7 @@ class Resampler(Grouper):
 
         Parameters
         ----------
-        name : str
+        name : Hashable
             The name of the dimension being chunked.
         variable : Variable
             The variable being chunked.
@@ -189,12 +189,9 @@ class Resampler(Grouper):
         tuple[int, ...]
             A tuple of chunk sizes for the dimension.
         """
+        from xarray.core.dataarray import DataArray
 
-        if variable is None:
-            raise ValueError(
-                f"Cannot chunk by resampler {self!r} for virtual variables."
-            )
-        elif not _contains_datetime_like_objects(variable):
+        if not _contains_datetime_like_objects(variable):
             raise ValueError(
                 f"chunks={self!r} only supported for datetime variables. "
                 f"Received variable {name!r} with dtype {variable.dtype!r} instead."
