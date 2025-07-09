@@ -22,6 +22,7 @@ from typing import (
     Union,
     cast,
     overload,
+    List
 )
 
 import numpy as np
@@ -1447,7 +1448,7 @@ def open_groups(
     return groups
 
 
-_FLike = TypeVar("_FLike", bound=Union[str, os.PathLike, ReadBuffer])
+_FLike = TypeVar("_FLike", bound=Union[str, ReadBuffer])
 
 
 def _remove_path(
