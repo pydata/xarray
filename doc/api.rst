@@ -978,6 +978,40 @@ and DataTree objects, respectively.
    core.coordinates.DataArrayCoordinates
    core.coordinates.DataTreeCoordinates
 
+Indexes
+=======
+
+Default, pandas-backed indexes built-in to Xarray:
+
+.. autosummary::
+   :toctree: generated/
+
+   indexes.PandasIndex
+   indexes.PandasMultiIndex
+
+
+More complex indexes built-in to Xarray:
+
+.. autosummary::
+   :toctree: generated/
+
+   CFTimeIndex
+   indexes.RangeIndex
+   indexes.NDPointIndex
+
+
+Creating indexes
+----------------
+.. autosummary::
+   :toctree: generated/
+
+   cftime_range
+   date_range
+   date_range_like
+   indexes.RangeIndex.arange
+   indexes.RangeIndex.linspace
+
+
 Universal functions
 ===================
 
@@ -1571,31 +1605,39 @@ Custom Indexes
 ==============
 .. currentmodule:: xarray
 
-.. autosummary::
-   :toctree: generated/
-
-   CFTimeIndex
-   indexes.RangeIndex
-   indexes.CoordinateTransformIndex
-   indexes.NDPointIndex
-
-Creating custom indexes
------------------------
-.. autosummary::
-   :toctree: generated/
-
-   cftime_range
-   date_range
-   date_range_like
-   indexes.RangeIndex.arange
-   indexes.RangeIndex.linspace
-
 Building custom indexes
 -----------------------
+
+These classes are building blocks for more complex Indexes:
+
 .. autosummary::
    :toctree: generated/
 
    indexes.CoordinateTransform
+   indexes.CoordinateTransformIndex
+   indexes.NDPointIndex
+
+The Index base class for building custom indexes:
+
+.. autosummary::
+   :toctree: generated/
+
+   Index.from_variables
+   Index.concat
+   Index.stack
+   Index.unstack
+   Index.create_variables
+   Index.should_add_coord_to_array
+   Index.to_pandas_index
+   Index.isel
+   Index.sel
+   Index.join
+   Index.reindex_like
+   Index.equals
+   Index.roll
+   Index.rename
+   Index.copy
+
 
 Tutorial
 ========
@@ -1701,14 +1743,6 @@ Advanced API
 
 ..    Missing:
 ..    ``DataTree.set_close``
-
-Default, pandas-backed indexes built-in Xarray:
-
-.. autosummary::
-   :toctree: generated/
-
-   indexes.PandasIndex
-   indexes.PandasMultiIndex
 
 These backends provide a low-level interface for lazily loading data from
 external file-formats or protocols, and can be manually invoked to create

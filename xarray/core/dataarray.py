@@ -6915,7 +6915,7 @@ class DataArray(
         :ref:`groupby`
             Users guide explanation of how to group and bin data.
 
-        :doc:`xarray-tutorial:intermediate/01-high-level-computation-patterns`
+        :doc:`xarray-tutorial:intermediate/computation/01-high-level-computation-patterns`
             Tutorial on :py:func:`~xarray.DataArray.Groupby` for windowed computation
 
         :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
