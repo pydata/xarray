@@ -14,6 +14,8 @@ New Features
 ~~~~~~~~~~~~
 - Allow skipping the creation of default indexes when opening datasets (:pull:`8051`).
   By `Benoit Bovy <https://github.com/benbovy>`_ and `Justus Magin <https://github.com/keewis>`_.
+- Support chunking by :py:class:`~xarray.groupers.SeasonResampler` for seasonal data analysis (:issue:`10425`, :pull:`10517`).
+  By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -30,7 +32,7 @@ Bug fixes
   creates extra variables that don't match the provided coordinate names, instead
   of silently ignoring them. The error message suggests using the factory method
   pattern with :py:meth:`xarray.Coordinates.from_xindex` and
-  :py:meth:`Dataset.assign_coords` for advanced use cases (:issue:`10499`).
+  :py:meth:`Dataset.assign_coords` for advanced use cases (:issue:`10499`, , :pull:`10503`).
   By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
 
 Documentation

@@ -46,7 +46,7 @@ from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.types import ArrayLike
 from xarray.core.utils import is_scalar
-from xarray.groupers import TimeResampler
+from xarray.groupers import SeasonResampler, TimeResampler
 from xarray.namedarray.pycompat import array_type, integer_types
 from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
@@ -1137,6 +1137,106 @@ class TestDataset:
 
     @requires_dask
     def test_chunk(self) -> None:
+        data = create_test_data()
+        for chunks in [1, 2, 3, 4, 5]:
+            rechunked = data.chunk({"dim1": chunks})
+            assert rechunked.chunks["dim1"] == (chunks,) * (8 // chunks) + (
+                (8 % chunks,) if 8 % chunks else ()
+            )
+
+            rechunked = data.chunk({"dim2": chunks})
+            assert rechunked.chunks["dim2"] == (chunks,) * (9 // chunks) + (
+                (9 % chunks,) if 9 % chunks else ()
+            )
+
+            rechunked = data.chunk({"dim1": chunks, "dim2": chunks})
+            assert rechunked.chunks["dim1"] == (chunks,) * (8 // chunks) + (
+                (8 % chunks,) if 8 % chunks else ()
+            )
+            assert rechunked.chunks["dim2"] == (chunks,) * (9 // chunks) + (
+                (9 % chunks,) if 9 % chunks else ()
+            )
+
+    @requires_dask
+    def test_chunk_by_season_resampler(self) -> None:
+        """Test chunking using SeasonResampler."""
+        import dask.array
+
+        N = 365 * 2  # 2 years
+        time = xr.date_range("2001-01-01", periods=N, freq="D")
+        ds = Dataset(
+            {
+                "pr": ("time", dask.array.random.random((N), chunks=(20))),
+                "pr2d": (("x", "time"), dask.array.random.random((10, N), chunks=(20))),
+                "ones": ("time", np.ones((N,))),
+            },
+            coords={"time": time},
+        )
+
+        # Test standard seasons
+        rechunked = ds.chunk(x=2, time=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
+        expected = tuple(
+            ds.ones.resample(
+                time=SeasonResampler(
+                    ["DJF", "MAM", "JJA", "SON"], drop_incomplete=False
+                )
+            )
+            .sum()
+            .dropna("time")
+            .astype(int)
+            .data.tolist()
+        )
+        assert rechunked.chunksizes["time"] == expected
+        assert rechunked.chunksizes["x"] == (2,) * 5
+
+        # Test custom seasons
+        rechunked = ds.chunk(
+            {"x": 2, "time": SeasonResampler(["DJFM", "AM", "JJA", "SON"])}
+        )
+        expected = tuple(
+            ds.ones.resample(
+                time=SeasonResampler(
+                    ["DJFM", "AM", "JJA", "SON"], drop_incomplete=False
+                )
+            )
+            .sum()
+            .dropna("time")
+            .astype(int)
+            .data.tolist()
+        )
+        assert rechunked.chunksizes["time"] == expected
+        assert rechunked.chunksizes["x"] == (2,) * 5
+
+        # Test that drop_incomplete doesn't affect chunking
+        rechunked_drop_true = ds.chunk(
+            time=SeasonResampler(["DJF", "MAM", "JJA", "SON"], drop_incomplete=True)
+        )
+        rechunked_drop_false = ds.chunk(
+            time=SeasonResampler(["DJF", "MAM", "JJA", "SON"], drop_incomplete=False)
+        )
+        assert (
+            rechunked_drop_true.chunksizes["time"]
+            == rechunked_drop_false.chunksizes["time"]
+        )
+
+    def test_chunk_by_season_resampler_errors(self):
+        """Test error handling for SeasonResampler chunking."""
+        ds = Dataset({"foo": ("x", [1, 2, 3])})
+
+        # Test error on virtual variable
+        with pytest.raises(ValueError, match="virtual variable"):
+            ds.chunk(x=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
+
+        # Test error on non-datetime variable
+        ds["x"] = ("x", [1, 2, 3])
+        with pytest.raises(ValueError, match="datetime variables"):
+            ds.chunk(x=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
+
+        # Test successful case with 1D datetime variable
+        ds["x"] = ("x", xr.date_range("2001-01-01", periods=3, freq="D"))
+        # This should work
+        result = ds.chunk(x=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
+        assert result.chunks is not None
         data = create_test_data()
         for v in data.variables.values():
             assert isinstance(v.data, np.ndarray)
