@@ -1390,8 +1390,8 @@ def open_groups(
 
     return groups
 
-
-def _remove_path(paths, path_to_remove) -> list:
+FLike = TypeVar("FLike", bound=Union[str, ReadBuffer])  
+def _remove_path(paths: NestedSequence[FLike], path_ro_remove: set[FLike]) -> NestedSequence[FLike]
     # Initialize an empty list to store the result
     result = []
 
@@ -1664,7 +1664,7 @@ def open_mfdataset(
         )
 
     datasets = []
-    remove_paths = False
+    invalid_paths = set()
     for p in paths1d:
         try:
             ds = open_(p, **open_kwargs)
@@ -1676,8 +1676,14 @@ def open_mfdataset(
                 emit_user_level_warning(f"Could not open {p} due to {e}. Ignoring.")
             # remove invalid paths
             if combine == "nested":
-                paths = _remove_path(paths, p)
-                remove_paths = True
+                invalid_paths.add(p)
+            
+    if invalid_paths and combine == "nested":
+        paths = _remove_path(paths, p)
+        
+        # Create new ids and paths based on removed items
+        combined_ids_paths = _infer_concat_order_from_positions(paths)
+        ids = list(combined_ids_paths.keys())
 
     closers = [getattr_(ds, "_close") for ds in datasets]
     if preprocess is not None:
@@ -1691,11 +1697,6 @@ def open_mfdataset(
     # Combine all datasets, closing them in case of a ValueError
     try:
         if combine == "nested":
-            # Create new ids and paths based on removed items
-            if remove_paths:
-                combined_ids_paths = _infer_concat_order_from_positions(paths)
-                ids = list(combined_ids_paths.keys())
-
             # Combined nested list by successive concat and merge operations
             # along each dimension, using structure given by "ids"
             combined = _nested_combine(
