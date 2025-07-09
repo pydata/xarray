@@ -769,7 +769,6 @@ def test_set_xindex_with_extra_variables() -> None:
 
 
 def test_set_xindex_factory_method_pattern() -> None:
-
     ds = xr.Dataset(coords={"time": [1, 2, 3]}).reset_index("time")
 
     # Test the recommended factory method pattern
