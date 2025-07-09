@@ -15,6 +15,8 @@ to ease building of new indexes with custom coordinate transforms (:py:class:`in
 and tree-like index structures (:py:class:`indexes.NDPointIndex`).
 See a new `gallery <https://xarray-indexes.readthedocs.io>`_ showing off the possibilities enabled by flexible indexes.
 
+Thanks to the 7 contributors to this release:
+Benoit Bovy, Deepak Cherian, Dhruva Kumar Kaushal, Dimitri Papadopoulos Orfanos, Illviljan, Justus Magin and Tom Nicholas
 
 New Features
 ~~~~~~~~~~~~
@@ -36,7 +38,7 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-- New `gallery <https://xarray-indexes.readthedocs.io>`_ showing off the possibilities enabled by flexible indexes.
+- `New gallery <https://xarray-indexes.readthedocs.io>`_ showing off the possibilities enabled by flexible indexes.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
