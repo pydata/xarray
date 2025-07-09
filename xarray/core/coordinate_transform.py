@@ -9,8 +9,9 @@ import numpy as np
 class CoordinateTransform:
     """Abstract coordinate transform with dimension & coordinate names.
 
-    EXPERIMENTAL (not ready for public use yet).
-
+    .. caution::
+        This API is experimental and subject to change. Please report any bugs or surprising
+        behaviour you encounter.
     """
 
     coord_names: tuple[Hashable, ...]
