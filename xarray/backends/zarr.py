@@ -816,25 +816,9 @@ class ZarrStore(AbstractWritableDataStore):
             if zarr_array.fill_value is not None:
                 attributes["_FillValue"] = zarr_array.fill_value
         elif "_FillValue" in attributes:
-            # TODO update version check for the released version with dtypes
-            #  probably be 3.1
-
-            # if Version(zarr.__version__) > Version("3.0.10"):
-            if hasattr(zarr_array.metadata.data_type, "to_native_dtype"):
-                native_dtype = zarr_array.metadata.data_type.to_native_dtype()
-                attributes["_FillValue"] = (
-                    # Use the new dtype infrastructure instead of doing xarray
-                    # specific fill value decoding
-                    FillValueCoder.decode(
-                        attributes["_FillValue"],
-                        native_dtype,
-                    )
-                )
-            else:
-                dtype_value = zarr_array.metadata.data_type.value
-                attributes["_FillValue"] = FillValueCoder.decode(
-                    attributes["_FillValue"], dtype_value
-                )
+            attributes["_FillValue"] = FillValueCoder.decode(
+                attributes["_FillValue"], zarr_array.dtype
+            )
 
         variable = Variable(dimensions, data, attributes, encoding)
 
