@@ -786,8 +786,16 @@ class PandasIndex(Index):
         attrs: Mapping[Hashable, Any] | None
         encoding: Mapping[Hashable, Any] | None
 
-        if variables is not None and name in variables:
-            var = variables[name]
+        if variables is not None:
+            if name in variables:
+                var = variables[name]
+            else:
+                # temp fix for PandasIndex subclasses that
+                # do not update self.index.name in the
+                # (overridden) PandasIndex.from_variables()
+                assert len(variables) == 1
+                name, var = next(iter(variables.items()))
+                self.index.name = name
             attrs = var.attrs
             encoding = var.encoding
         else:
