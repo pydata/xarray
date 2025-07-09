@@ -6880,7 +6880,7 @@ class TestZarrRegionAuto:
                     coords={
                         "a": np.arange(2),
                         "b": np.arange(2),
-                    }
+                    },
                 )
                 .chunk(a=(1, 1), b=(1, 1))
                 .to_dataset(name="foo")
@@ -6890,7 +6890,7 @@ class TestZarrRegionAuto:
                 store,
                 ds,
                 align_chunks=True,
-                encoding={"foo": {"chunks": (3,3)}},
+                encoding={"foo": {"chunks": (3, 3)}},
                 mode="w",
             )
             assert_identical(ds, xr.open_zarr(store))
@@ -6902,7 +6902,7 @@ class TestZarrRegionAuto:
                     coords={
                         "a": np.arange(2),
                         "b": np.arange(2),
-                    }
+                    },
                 )
                 .chunk(a=(1, 1), b=(1, 1))
                 .to_dataset(name="foo")

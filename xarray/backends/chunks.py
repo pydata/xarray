@@ -160,9 +160,7 @@ def grid_rechunk(
     # variable chunks, which happens when the user specifies the enc_chunks manually.
     enc_chunks = tuple(
         min(enc_chunk, sum(v_chunk))
-        for enc_chunk, v_chunk in zip(
-            enc_chunks, v.chunks, strict=True
-        )
+        for enc_chunk, v_chunk in zip(enc_chunks, v.chunks, strict=True)
     )
 
     nd_grid_chunks = tuple(
