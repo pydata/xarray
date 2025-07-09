@@ -14,7 +14,7 @@ New Features
 ~~~~~~~~~~~~
 - Allow skipping the creation of default indexes when opening datasets (:pull:`8051`).
   By `Benoit Bovy <https://github.com/benbovy>`_ and `Justus Magin <https://github.com/keewis>`_.
-- Added exception handling for invalid files in ``xarray.open_mfdataset`` 
+- Added exception handling for invalid files in ``xarray.open_mfdataset``
   By `Pratiman Patel <https://github.com/pratiman-91>`_.
 
 Breaking changes

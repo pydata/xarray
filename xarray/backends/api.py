@@ -42,7 +42,7 @@ from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees
-from xarray.core.types import NetcdfWriteModes, ZarrWriteModes, ReadBuffer
+from xarray.core.types import NetcdfWriteModes, ReadBuffer, ZarrWriteModes
 from xarray.core.utils import emit_user_level_warning, is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
@@ -1445,8 +1445,13 @@ def open_groups(
 
     return groups
 
-_FLike = TypeVar("FLike", bound=Union[str, os.PathLike, ReadBuffer])  
-def _remove_path(paths: NestedSequence[_FLike], paths_to_remove: set[_FLike]) -> NestedSequence[_FLike]:
+
+_FLike = TypeVar("FLike", bound=Union[str, os.PathLike, ReadBuffer])
+
+
+def _remove_path(
+    paths: NestedSequence[_FLike], paths_to_remove: set[_FLike]
+) -> NestedSequence[_FLike]:
     # Initialize an empty list to store the result
     result = []
 
@@ -1731,7 +1736,7 @@ def open_mfdataset(
                 emit_user_level_warning(f"Could not open {p} due to {e}. Ignoring.")
             # remove invalid paths
             invalid_paths.add(p)
-            
+
     if invalid_paths:
         paths = _remove_path(paths, invalid_paths)
         if combine == "nested":
