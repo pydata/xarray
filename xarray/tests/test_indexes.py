@@ -729,3 +729,54 @@ def test_restore_dtype_on_multiindexes(dtype: str) -> None:
     foo = xr.Dataset(coords={"bar": ("bar", np.array([0, 1], dtype=dtype))})
     foo = foo.stack(baz=("bar",))
     assert str(foo["bar"].values.dtype) == dtype
+
+
+class IndexWithExtraVariables(Index):
+    @classmethod
+    def from_variables(cls, variables, *, options=None):
+        return cls()
+
+    def create_variables(self, variables=None):
+        if variables is None:
+            # For Coordinates.from_xindex(), return all variables the index can create
+            return {
+                "time": Variable(dims=("time",), data=[1, 2, 3]),
+                "valid_time": Variable(
+                    dims=("time",),
+                    data=[2, 3, 4],  # time + 1
+                    attrs={"description": "time + 1"},
+                ),
+            }
+
+        result = dict(variables)
+        if "time" in variables:
+            result["valid_time"] = Variable(
+                dims=("time",),
+                data=variables["time"].data + 1,
+                attrs={"description": "time + 1"},
+            )
+        return result
+
+
+def test_set_xindex_with_extra_variables() -> None:
+    """Test that set_xindex raises an error when custom index creates extra variables."""
+
+    ds = xr.Dataset(coords={"time": [1, 2, 3]}).reset_index("time")
+
+    # Test that set_xindex raises error for extra variables
+    with pytest.raises(ValueError, match="extra variables 'valid_time'"):
+        ds.set_xindex("time", IndexWithExtraVariables)
+
+
+def test_set_xindex_factory_method_pattern() -> None:
+    ds = xr.Dataset(coords={"time": [1, 2, 3]}).reset_index("time")
+
+    # Test the recommended factory method pattern
+    coord_vars = {"time": ds._variables["time"]}
+    index = IndexWithExtraVariables.from_variables(coord_vars)
+    coords = xr.Coordinates.from_xindex(index)
+    result = ds.assign_coords(coords)
+
+    assert "time" in result.variables
+    assert "valid_time" in result.variables
+    assert_array_equal(result.valid_time.data, result.time.data + 1)
