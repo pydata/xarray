@@ -21,6 +21,7 @@ from typing import (
     Union,
     cast,
     overload,
+    TypeVar,
 )
 
 import numpy as np
