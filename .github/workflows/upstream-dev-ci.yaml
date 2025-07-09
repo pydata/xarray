@@ -23,7 +23,6 @@ jobs:
     name: detect upstream-dev ci trigger
     runs-on: ubuntu-latest
     if: |
-      github.event_name == 'push' || github.event_name == 'pull_request'
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
