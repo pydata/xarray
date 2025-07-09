@@ -1447,7 +1447,7 @@ def open_groups(
     return groups
 
 
-_FLike = TypeVar("FLike", bound=Union[str, os.PathLike, ReadBuffer])
+_FLike = TypeVar("_FLike", bound=Union[str, os.PathLike, ReadBuffer])
 
 
 def _remove_path(
