@@ -41,7 +41,7 @@ from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees
-from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
+from xarray.core.types import NetcdfWriteModes, ZarrWriteModes, ReadBuffer
 from xarray.core.utils import emit_user_level_warning, is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
@@ -1390,18 +1390,18 @@ def open_groups(
 
     return groups
 
-FLike = TypeVar("FLike", bound=Union[str, ReadBuffer])  
-def _remove_path(paths: NestedSequence[FLike], path_ro_remove: set[FLike]) -> NestedSequence[FLike]
+_FLike = TypeVar("FLike", bound=Union[str, os.PathLike, ReadBuffer])  
+def _remove_path(paths: NestedSequence[_FLike], paths_to_remove: set[_FLike]) -> NestedSequence[_FLike]:
     # Initialize an empty list to store the result
     result = []
 
     for item in paths:
         if isinstance(item, list):
             # If the current item is a list, recursively call remove_elements on it
-            nested_result = _remove_path(item, path_to_remove)
+            nested_result = _remove_path(item, paths_to_remove)
             if nested_result:  # Only add non-empty lists to avoid adding empty lists
                 result.append(nested_result)
-        elif item not in path_to_remove:
+        elif item not in paths_to_remove:
             # Add the item to the result if it is not in the set of elements to remove
             result.append(item)
 
@@ -1675,15 +1675,14 @@ def open_mfdataset(
             elif errors == "warn":
                 emit_user_level_warning(f"Could not open {p} due to {e}. Ignoring.")
             # remove invalid paths
-            if combine == "nested":
-                invalid_paths.add(p)
+            invalid_paths.add(p)
             
-    if invalid_paths and combine == "nested":
-        paths = _remove_path(paths, p)
-        
-        # Create new ids and paths based on removed items
-        combined_ids_paths = _infer_concat_order_from_positions(paths)
-        ids = list(combined_ids_paths.keys())
+    if invalid_paths:
+        paths = _remove_path(paths, invalid_paths)
+        if combine == "nested":
+            # Create new ids and paths based on removed items
+            combined_ids_paths = _infer_concat_order_from_positions(paths)
+            ids = list(combined_ids_paths.keys())
 
     closers = [getattr_(ds, "_close") for ds in datasets]
     if preprocess is not None:
