@@ -6874,8 +6874,15 @@ class TestZarrRegionAuto:
         # but for datasets
         with self.create_zarr_target() as store:
             ds = (
-                DataArray(np.arange(4), dims=["a"], coords={"a": np.arange(4)})
-                .chunk(a=(2, 1, 1))
+                DataArray(
+                    np.arange(4).reshape((2, 2)),
+                    dims=["a", "b"],
+                    coords={
+                        "a": np.arange(2),
+                        "b": np.arange(2),
+                    }
+                )
+                .chunk(a=(1, 1), b=(1, 1))
                 .to_dataset(name="foo")
             )
 
@@ -6883,9 +6890,31 @@ class TestZarrRegionAuto:
                 store,
                 ds,
                 align_chunks=True,
-                encoding={"foo": {"chunks": (3,)}},
+                encoding={"foo": {"chunks": (3,3)}},
                 mode="w",
             )
+            assert_identical(ds, xr.open_zarr(store))
+
+            ds = (
+                DataArray(
+                    np.arange(4, 8).reshape((2, 2)),
+                    dims=["a", "b"],
+                    coords={
+                        "a": np.arange(2),
+                        "b": np.arange(2),
+                    }
+                )
+                .chunk(a=(1, 1), b=(1, 1))
+                .to_dataset(name="foo")
+            )
+
+            self.save(
+                store,
+                ds,
+                align_chunks=True,
+                region="auto",
+            )
+            assert_identical(ds, xr.open_zarr(store))
 
 
 @requires_h5netcdf
