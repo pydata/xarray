@@ -138,6 +138,9 @@ def build_grid_chunks(
     chunk_size: int,
     region: slice | None = None,
 ) -> tuple[int, ...]:
+    if region is None:
+        region = slice(0, size)
+
     region_start = region.start or 0
     # Generate the zarr chunks inside the region of this dim
     chunks_on_region = [chunk_size - (region_start % chunk_size)]
