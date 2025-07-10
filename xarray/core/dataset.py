@@ -4941,6 +4941,20 @@ class Dataset(
         if isinstance(index, PandasMultiIndex):
             coord_names = [index.dim] + list(coord_names)
 
+        # Check for extra variables that don't match the coordinate names
+        extra_vars = set(new_coord_vars) - set(coord_names)
+        if extra_vars:
+            extra_vars_str = ", ".join(f"'{name}'" for name in extra_vars)
+            coord_names_str = ", ".join(f"'{name}'" for name in coord_names)
+            raise ValueError(
+                f"The index created extra variables {extra_vars_str} that are not "
+                f"in the list of coordinates {coord_names_str}. "
+                f"Use a factory method pattern instead:\n"
+                f"  index = {index_cls.__name__}.from_variables(ds, {list(coord_names)!r})\n"
+                f"  coords = xr.Coordinates.from_xindex(index)\n"
+                f"  ds = ds.assign_coords(coords)"
+            )
+
         variables: dict[Hashable, Variable]
         indexes: dict[Hashable, Index]
 
@@ -9942,7 +9956,7 @@ class Dataset(
         :ref:`groupby`
             Users guide explanation of how to group and bin data.
 
-        :doc:`xarray-tutorial:intermediate/01-high-level-computation-patterns`
+        :doc:`xarray-tutorial:intermediate/computation/01-high-level-computation-patterns`
             Tutorial on :py:func:`~xarray.Dataset.Groupby` for windowed computation.
 
         :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
