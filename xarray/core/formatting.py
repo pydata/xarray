@@ -20,7 +20,11 @@ from pandas.errors import OutOfBoundsDatetime
 from xarray.core.datatree_render import RenderDataTree
 from xarray.core.duck_array_ops import array_all, array_any, array_equiv, astype, ravel
 from xarray.core.extension_array import PandasExtensionArray
-from xarray.core.indexing import MemoryCachedArray
+from xarray.core.indexing import (
+    BasicIndexer,
+    ExplicitlyIndexed,
+    MemoryCachedArray,
+)
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.treenode import group_subtrees
 from xarray.core.utils import is_duck_array
@@ -87,6 +91,8 @@ def first_n_items(array, n_desired):
 
     if n_desired < array.size:
         indexer = _get_indexer_at_least_n_items(array.shape, n_desired, from_end=False)
+        if isinstance(array, ExplicitlyIndexed):
+            indexer = BasicIndexer(indexer)
         array = array[indexer]
 
     # We pass variable objects in to handle indexing
@@ -111,6 +117,8 @@ def last_n_items(array, n_desired):
 
     if n_desired < array.size:
         indexer = _get_indexer_at_least_n_items(array.shape, n_desired, from_end=True)
+        if isinstance(array, ExplicitlyIndexed):
+            indexer = BasicIndexer(indexer)
         array = array[indexer]
 
     # We pass variable objects in to handle indexing
@@ -659,6 +667,7 @@ def short_array_repr(array):
 def short_data_repr(array):
     """Format "data" for DataArray and Variable."""
     internal_data = getattr(array, "variable", array)._data
+
     if isinstance(array, np.ndarray):
         return short_array_repr(array)
     elif is_duck_array(internal_data):

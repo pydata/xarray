@@ -5,9 +5,9 @@
 What's New
 ==========
 
-.. _whats-new.2025.07.1:
+.. _whats-new.2025.07.2:
 
-v2025.07.1 (unreleased)
+v2025.07.2 (unreleased)
 -----------------------
 
 New Features
@@ -33,6 +33,52 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+
+.. _whats-new.2025.07.1:
+
+v2025.07.1 (July 09, 2025)
+--------------------------
+
+This release brings a lot of improvements to flexible indexes functionality, including new classes
+to ease building of new indexes with custom coordinate transforms (:py:class:`indexes.CoordinateTransformIndex`)
+and tree-like index structures (:py:class:`indexes.NDPointIndex`).
+See a `new gallery <https://xarray-indexes.readthedocs.io>`_ showing off the possibilities enabled by flexible indexes.
+
+Thanks to the 7 contributors to this release:
+Benoit Bovy, Deepak Cherian, Dhruva Kumar Kaushal, Dimitri Papadopoulos Orfanos, Illviljan, Justus Magin and Tom Nicholas
+
+New Features
+~~~~~~~~~~~~
+- New :py:class:`xarray.indexes.NDPointIndex`, which by default uses :py:class:`scipy.spatial.KDTree` under the hood for
+  the selection of irregular, n-dimensional data (:pull:`10478`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+- Allow skipping the creation of default indexes when opening datasets (:pull:`8051`).
+  By `Benoit Bovy <https://github.com/benbovy>`_ and `Justus Magin <https://github.com/keewis>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- :py:meth:`Dataset.set_xindex` now raises a helpful error when a custom index
+  creates extra variables that don't match the provided coordinate names, instead
+  of silently ignoring them. The error message suggests using the factory method
+  pattern with :py:meth:`xarray.Coordinates.from_xindex` and
+  :py:meth:`Dataset.assign_coords` for advanced use cases (:issue:`10499`).
+  By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
+
+Documentation
+~~~~~~~~~~~~~
+- A `new gallery <https://xarray-indexes.readthedocs.io>`_ showing off the possibilities enabled by flexible indexes.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Refactored the ``PandasIndexingAdapter`` and
+  ``CoordinateTransformIndexingAdapter`` internal indexing classes. Coordinate
+  variables that wrap a :py:class:`pandas.RangeIndex`, a
+  :py:class:`pandas.MultiIndex` or a
+  :py:class:`xarray.indexes.CoordinateTransform` are now displayed as lazy variables
+  in the Xarray data reprs (:pull:`10355`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 .. _whats-new.2025.07.0:
 
