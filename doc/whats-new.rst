@@ -7,7 +7,7 @@ What's New
 
 .. _whats-new.2025.07.1:
 
-v2025.07.1 (July 10, 2025)
+v2025.07.1 (July 09, 2025)
 --------------------------
 
 This release brings a lot of improvements to flexible indexes functionality, including new classes
