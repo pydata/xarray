@@ -1934,7 +1934,7 @@ _DECODE_TIMEDELTA_VIA_DTYPE_TESTS = {
 def test_decode_timedelta_via_dtype(
     decode_times, decode_timedelta, original_unit, expected_dtype
 ) -> None:
-    timedeltas = pd.timedelta_range(0, freq="D", periods=3, unit=original_unit)
+    timedeltas = pd.timedelta_range(0, freq="D", periods=3, unit=original_unit)  # type: ignore[call-arg]
     encoding = {"units": "days"}
     var = Variable(["time"], timedeltas, encoding=encoding)
     encoded = conventions.encode_cf_variable(var)
