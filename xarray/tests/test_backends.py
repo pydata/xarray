@@ -73,6 +73,7 @@ from xarray.tests import (
     has_scipy,
     has_zarr,
     has_zarr_v3,
+    has_zarr_v3_dtypes,
     mock,
     network,
     requires_cftime,
@@ -2437,7 +2438,7 @@ class ZarrBase(CFEncodedBase):
     def test_non_existent_store(self) -> None:
         with pytest.raises(
             FileNotFoundError,
-            match="(No such file or directory|Unable to find group|No group found)",
+            match="(No such file or directory|Unable to find group|No group found in store)",
         ):
             xr.open_zarr(f"{uuid.uuid4()}")
 
@@ -2519,6 +2520,7 @@ class ZarrBase(CFEncodedBase):
                 assert_identical(actual.load(), auto.load())
 
     @requires_dask
+    @pytest.mark.filterwarnings("ignore:.*does not have a Zarr V3 specification.*")
     def test_warning_on_bad_chunks(self) -> None:
         original = create_test_data().chunk({"dim1": 4, "dim2": 3, "dim3": 3})
 
@@ -2927,7 +2929,9 @@ class ZarrBase(CFEncodedBase):
 
     @pytest.mark.parametrize("dtype", ["U", "S"])
     def test_append_string_length_mismatch_raises(self, dtype) -> None:
-        skip_if_zarr_format_3("This actually works fine with Zarr format 3")
+        if has_zarr_v3 and not has_zarr_v3_dtypes:
+            skip_if_zarr_format_3("This actually works fine with Zarr format 3")
+
         ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w", **self.version_kwargs)
@@ -2940,8 +2944,12 @@ class ZarrBase(CFEncodedBase):
     def test_append_string_length_mismatch_works(self, dtype) -> None:
         skip_if_zarr_format_2("This doesn't work with Zarr format 2")
         # ...but it probably would if we used object dtype
+        if has_zarr_v3_dtypes:
+            pytest.skip("This works on pre ZDtype Zarr-Python, but fails after.")
+
         ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
         expected = xr.concat([ds, ds_to_append], dim="time")
+
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w", **self.version_kwargs)
             ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
