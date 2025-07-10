@@ -162,8 +162,8 @@ def grid_rechunk(
     # This is useful for the scenarios where the enc_chunks are bigger than the
     # variable chunks, which happens when the user specifies the enc_chunks manually.
     enc_chunks = tuple(
-        min(enc_chunk, sum(v_chunk))
-        for enc_chunk, v_chunk in zip(enc_chunks, v.chunks, strict=True)
+        min(enc_chunk, sum(var_chunk))
+        for enc_chunk, var_chunk in zip(enc_chunks, nd_var_chunks, strict=True)
     )
 
     nd_grid_chunks = tuple(
