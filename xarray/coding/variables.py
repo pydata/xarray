@@ -164,10 +164,8 @@ def _check_fill_values(attrs, name, dtype):
     Issue SerializationWarning if appropriate.
     """
     raw_fill_dict = {}
-    [
+    for attr in ("missing_value", "_FillValue"):
         pop_to(attrs, raw_fill_dict, attr, name=name)
-        for attr in ("missing_value", "_FillValue")
-    ]
     encoded_fill_values = set()
     for k in list(raw_fill_dict):
         v = raw_fill_dict[k]
@@ -376,11 +374,9 @@ class CFMaskCoder(VariableCoder):
 
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        # Even if _Unsigned is use, retain on-disk _FillValue
-        [
+        # Even if _Unsigned is used, retain on-disk _FillValue
+        for attr, value in raw_fill_dict.items():
             safe_setitem(encoding, attr, value, name=name)
-            for attr, value in raw_fill_dict.items()
-        ]
 
         if "_Unsigned" in attrs:
             unsigned = pop_to(attrs, encoding, "_Unsigned")
