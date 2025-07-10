@@ -1727,6 +1727,7 @@ Advanced API
    Variable
    IndexVariable
    as_variable
+   NamedArray
    Index
    IndexSelResult
    Context
