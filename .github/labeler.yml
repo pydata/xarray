@@ -48,7 +48,6 @@ topic-documentation:
   - changed-files:
       - any-glob-to-any-file:
           - doc/*
-          - "!doc/whats-new.rst"
           - doc/**/*
 
 topic-groupby:
