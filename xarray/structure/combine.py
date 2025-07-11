@@ -497,7 +497,6 @@ def combine_nested(
     >>> x1y1
     <xarray.Dataset> Size: 64B
     Dimensions:        (x: 2, y: 2)
-    Dimensions without coordinates: x, y
     Data variables:
         temperature    (x, y) float64 32B 1.764 0.4002 0.9787 2.241
         precipitation  (x, y) float64 32B 1.868 -0.9773 0.9501 -0.1514
@@ -526,7 +525,6 @@ def combine_nested(
     >>> combined
     <xarray.Dataset> Size: 256B
     Dimensions:        (x: 4, y: 4)
-    Dimensions without coordinates: x, y
     Data variables:
         temperature    (x, y) float64 128B 1.764 0.4002 -0.1032 ... 0.04576 -0.1872
         precipitation  (x, y) float64 128B 1.868 -0.9773 0.761 ... 0.1549 0.3782
@@ -541,7 +539,6 @@ def combine_nested(
     >>> t1temp
     <xarray.Dataset> Size: 40B
     Dimensions:      (t: 5)
-    Dimensions without coordinates: t
     Data variables:
         temperature  (t) float64 40B -0.8878 -1.981 -0.3479 0.1563 1.23
 
@@ -549,7 +546,6 @@ def combine_nested(
     >>> t1precip
     <xarray.Dataset> Size: 40B
     Dimensions:        (t: 5)
-    Dimensions without coordinates: t
     Data variables:
         precipitation  (t) float64 40B 1.202 -0.3873 -0.3023 -1.049 -1.42
 
@@ -562,7 +558,6 @@ def combine_nested(
     >>> combined
     <xarray.Dataset> Size: 160B
     Dimensions:        (t: 10)
-    Dimensions without coordinates: t
     Data variables:
         temperature    (t) float64 80B -0.8878 -1.981 -0.3479 ... -0.4381 -1.253
         precipitation  (t) float64 80B 1.202 -0.3873 -0.3023 ... -0.8955 0.3869
