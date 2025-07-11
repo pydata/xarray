@@ -43,6 +43,7 @@ from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
+    DuckArrayWrapper,
     InaccessibleArray,
     ReturnItem,
     assert_allclose,
@@ -7233,6 +7234,32 @@ class TestNumpyCoercion:
         expected = xr.DataArray(arr, dims="x", coords={"lat": ("x", arr * 2)})
         assert_identical(result, expected)
         np.testing.assert_equal(da.to_numpy(), arr)
+
+
+def test_as_array_type_is_array_type() -> None:
+    da = xr.DataArray([1, 2, 3], dims=["x"], coords={"x": [4, 5, 6]})
+
+    assert da.is_array_type(np.ndarray)
+
+    result = da.as_array_type(lambda x: DuckArrayWrapper(x))
+
+    assert isinstance(result.data, DuckArrayWrapper)
+    assert isinstance(result.x.data, np.ndarray)
+    assert result.is_array_type(DuckArrayWrapper)
+
+
+@requires_dask
+def test_as_array_type_dask() -> None:
+    import dask.array
+
+    da = xr.DataArray([1, 2, 3], dims=["x"], coords={"x": [4, 5, 6]}).chunk()
+
+    result = da.as_array_type(lambda x: DuckArrayWrapper(x))
+
+    assert isinstance(result.data, dask.array.Array)
+    assert isinstance(result.data._meta, DuckArrayWrapper)
+    assert isinstance(result.x.data, np.ndarray)
+    assert result.is_array_type(dask.array.Array)
 
 
 class TestStackEllipsis:
