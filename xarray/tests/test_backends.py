@@ -3647,10 +3647,6 @@ class TestInstrumentedZarrStore:
                 )
 
     @requires_dask
-    @pytest.mark.skipif(
-        sys.version_info < (3, 11),
-        reason="zarr too old",
-    )
     def test_region_write(self) -> None:
         ds = Dataset({"foo": ("x", [1, 2, 3])}, coords={"x": [1, 2, 3]}).chunk()
         with self.create_zarr_target() as store:
