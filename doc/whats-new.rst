@@ -25,6 +25,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix the ``align_chunks`` parameter on the :py:meth:`~xarray.Dataset.to_zarr` method, it was not being
+  passed to the underlying :py:meth:`~xarray.backends.api` method (:issue:`10501`, :pull:`10516`).
 
 Documentation
 ~~~~~~~~~~~~~
@@ -64,9 +66,6 @@ Bug fixes
   pattern with :py:meth:`xarray.Coordinates.from_xindex` and
   :py:meth:`Dataset.assign_coords` for advanced use cases (:issue:`10499`).
   By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
-
-- Fix the ``align_chunks`` parameter on the :py:meth:`~xarray.Dataset.to_zarr` method, it was not being
-  passed to the underlying :py:meth:`~xarray.backends.api` method (:issue:`10501`, :pull:`10516`).
 
 Documentation
 ~~~~~~~~~~~~~
