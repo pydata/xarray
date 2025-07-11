@@ -24,7 +24,10 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix for :py:meth:`DataSet.diff` and consequently :py:meth:`DataArray.diff` to
+  raise a KeyError when `diff` is parameterized with a dimension that does not
+  exist in callee's DataSet/DataArray. (:issue:`7748`)
+  By `Nathan Redmond <https://github.com/nathanredmond>`_.
 
 Documentation
 ~~~~~~~~~~~~~
