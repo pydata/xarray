@@ -25,6 +25,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix Pydap Datatree backend testing. Testing now compares elements of (unordered) two sets (before, lists) (:pull:`10525`).
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
