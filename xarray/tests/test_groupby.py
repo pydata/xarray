@@ -2690,12 +2690,14 @@ def test_groupby_math_auto_chunk() -> None:
         dims=("y", "x"),
         coords={"label": ("x", [2, 2, 1])},
     )
+    # da.groupby("label").min(...)
     sub = xr.DataArray(
         InaccessibleArray(np.array([1, 2])), dims="label", coords={"label": [1, 2]}
     )
     chunked = da.chunk(x=1, y=2)
     chunked.label.load()
-    actual = chunked.groupby("label") - sub
+    with raise_if_dask_computes():
+        actual = chunked.groupby("label") - sub
     assert actual.chunksizes == {"x": (1, 1, 1), "y": (2, 1)}
 
 
