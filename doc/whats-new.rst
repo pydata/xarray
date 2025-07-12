@@ -37,10 +37,10 @@ Documentation
 ~~~~~~~~~~~~~
 
 - Split large documentation pages for better discoverability:
-  
+
   - "Reading and Writing Files" page split into: netCDF/HDF5, Zarr, and Other Formats
   - "Plotting" page split into: Line Plots, 2D Plots, Faceting, and Scatter/Quiver/Streamplot
-  
+
   The original pages now serve as navigation hubs with improved organization.
   By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
 
