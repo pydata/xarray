@@ -5,13 +5,14 @@
 What's New
 ==========
 
-.. _whats-new.2025.07.1:
+.. _whats-new.2025.07.2:
 
-v2025.07.1 (unreleased)
+v2025.07.2 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
+
 - Allow skipping the creation of default indexes when opening datasets (:pull:`8051`).
   By `Benoit Bovy <https://github.com/benbovy>`_ and `Justus Magin <https://github.com/keewis>`_.
 - Support chunking by :py:class:`~xarray.groupers.SeasonResampler` for seasonal data analysis (:issue:`10425`, :pull:`10519`).
@@ -28,6 +29,42 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix Pydap Datatree backend testing. Testing now compares elements of (unordered) two sets (before, lists) (:pull:`10525`).
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2025.07.1:
+
+v2025.07.1 (July 09, 2025)
+--------------------------
+
+This release brings a lot of improvements to flexible indexes functionality, including new classes
+to ease building of new indexes with custom coordinate transforms (:py:class:`indexes.CoordinateTransformIndex`)
+and tree-like index structures (:py:class:`indexes.NDPointIndex`).
+See a `new gallery <https://xarray-indexes.readthedocs.io>`_ showing off the possibilities enabled by flexible indexes.
+
+Thanks to the 7 contributors to this release:
+Benoit Bovy, Deepak Cherian, Dhruva Kumar Kaushal, Dimitri Papadopoulos Orfanos, Illviljan, Justus Magin and Tom Nicholas
+
+New Features
+~~~~~~~~~~~~
+- New :py:class:`xarray.indexes.NDPointIndex`, which by default uses :py:class:`scipy.spatial.KDTree` under the hood for
+  the selection of irregular, n-dimensional data (:pull:`10478`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+- Allow skipping the creation of default indexes when opening datasets (:pull:`8051`).
+  By `Benoit Bovy <https://github.com/benbovy>`_ and `Justus Magin <https://github.com/keewis>`_.
+
+Bug fixes
+~~~~~~~~~
+
 - :py:meth:`Dataset.set_xindex` now raises a helpful error when a custom index
   creates extra variables that don't match the provided coordinate names, instead
   of silently ignoring them. The error message suggests using the factory method
@@ -37,7 +74,7 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- A `new gallery <https://xarray-indexes.readthedocs.io>`_ showing off the possibilities enabled by flexible indexes.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -65,9 +102,6 @@ New Features
 
 - Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
   under the ``xarray.indexes`` namespace. By `Deepak Cherian <https://github.com/dcherian>`_.
-- New :py:class:`xarray.indexes.NDPointIndex`, which by default uses :py:class:`scipy.spatial.KDTree` under the hood for
-  the selection of irregular, n-dimensional data (:pull:`10478`).
-  By `Benoit Bovy <https://github.com/benbovy>`_.
 - Support zarr-python's new ``.supports_consolidated_metadata`` store property (:pull:`10457``).
   by `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Better error messages when encoding data to be written to disk fails (:pull:`10464`).
