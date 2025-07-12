@@ -11,6 +11,17 @@ Xarray has limited support for plotting Dataset variables against each other.
 Consider this dataset
 
 .. jupyter-execute::
+    :hide-code:
+
+    # Use defaults so we don't get gridlines in generated docs
+    import matplotlib as mpl
+    mpl.rcdefaults()
+
+    # Ensure 3D plotting is available
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
+
+.. jupyter-execute::
 
     import matplotlib.pyplot as plt
     import numpy as np
@@ -20,9 +31,6 @@ Consider this dataset
     ds = xr.tutorial.scatter_example_dataset(seed=42)
     ds
 
-    import matplotlib as mpl
-
-    mpl.rcdefaults()
 
 Scatter
 ~~~~~~~
