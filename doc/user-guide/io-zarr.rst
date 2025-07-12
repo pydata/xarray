@@ -4,6 +4,19 @@
 Zarr
 ====
 
+.. jupyter-execute::
+    :hide-code:
+
+    import os
+
+    import iris
+    import ncdata.iris_xarray
+    import numpy as np
+    import pandas as pd
+    import xarray as xr
+
+    np.random.seed(123456)
+
 `Zarr`_ is a Python package that provides an implementation of chunked, compressed,
 N-dimensional arrays.
 Zarr has the ability to store arrays in a range of ways, including in memory,

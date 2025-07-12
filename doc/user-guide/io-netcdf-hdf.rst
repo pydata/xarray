@@ -4,6 +4,19 @@
 netCDF and HDF5
 ================
 
+.. jupyter-execute::
+    :hide-code:
+
+    import os
+
+    import iris
+    import ncdata.iris_xarray
+    import numpy as np
+    import pandas as pd
+    import xarray as xr
+
+    np.random.seed(123456)
+
 netCDF
 ------
 
