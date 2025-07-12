@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, Hashable, Mapping, TypeVar
+from collections.abc import Hashable, Mapping
+from typing import Any, TypeVar
 
 import numpy as np
 
-from ..core.indexes import Index, IndexVars, PandasIndex
-from ..core.indexing import IndexSelResult, merge_sel_results
-from ..core.utils import Frozen
-from ..core.variable import Variable
+from xarray.core.indexes import Index, IndexVars, PandasIndex
+from xarray.core.indexing import IndexSelResult, merge_sel_results
+from xarray.core.utils import Frozen
+from xarray.core.variable import Variable
 
 T_MultiPandasIndex = TypeVar("T_MultiPandasIndex", bound="MultiPandasIndex")
 
@@ -18,14 +19,14 @@ class MultiPandasIndex(Index):
 
     Each pandas index must relate to a separate dimension.
 
-    This class shoudn't be instantiated directly.
+    This class shouldn't be instantiated directly.
 
     """
 
     indexes: Frozen[Hashable, PandasIndex]
     dims: Frozen[Hashable, int]
 
-    __slots__ = ("indexes", "dims")
+    __slots__ = ("dims", "indexes")
 
     def __init__(self, indexes: Mapping[Hashable, PandasIndex]):
         dims = {idx.dim: idx.index.size for idx in indexes.values()}
@@ -61,7 +62,6 @@ class MultiPandasIndex(Index):
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
-
         idx_variables = {}
 
         for idx in self.indexes.values():
@@ -90,7 +90,7 @@ class MultiPandasIndex(Index):
         # - return either a MultiPandasIndex or a PandasIndex?
         #
 
-        if not len(new_indexes):
+        if not new_indexes:
             return None
         elif len(new_indexes) == 1:
             return next(iter(new_indexes.values()))

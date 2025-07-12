@@ -2,7 +2,6 @@
 DataArray objects.
 
 """
-from .multipandasindex import MultiPandasIndex
 
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.indexes import (
@@ -11,6 +10,7 @@ from xarray.core.indexes import (
     PandasIndex,
     PandasMultiIndex,
 )
+from xarray.indexes.multipandasindex import MultiPandasIndex
 from xarray.indexes.nd_point_index import NDPointIndex, TreeAdapter
 from xarray.indexes.range_index import RangeIndex
 
@@ -18,10 +18,10 @@ __all__ = [
     "CoordinateTransform",
     "CoordinateTransformIndex",
     "Index",
+    "MultiPandasIndex",
     "NDPointIndex",
     "PandasIndex",
     "PandasMultiIndex",
     "RangeIndex",
     "TreeAdapter",
-  "MultiPandasIndex",
 ]
