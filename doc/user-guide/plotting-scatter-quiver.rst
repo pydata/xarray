@@ -19,7 +19,10 @@ Consider this dataset
 
     ds = xr.tutorial.scatter_example_dataset(seed=42)
     ds
+    
+    import matplotlib as mpl
 
+    mpl.rcdefaults()
 
 Scatter
 ~~~~~~~
