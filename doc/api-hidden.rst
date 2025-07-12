@@ -12,31 +12,38 @@
    core.coordinates.DatasetCoordinates.get
    core.coordinates.DatasetCoordinates.items
    core.coordinates.DatasetCoordinates.keys
-   core.coordinates.DatasetCoordinates.merge
+   core.coordinates.DatasetCoordinates.values
+   core.coordinates.DatasetCoordinates.dims
+   core.coordinates.DatasetCoordinates.sizes
+   core.coordinates.DatasetCoordinates.dtypes
+   core.coordinates.DatasetCoordinates.variables
+   core.coordinates.DatasetCoordinates.xindexes
+   core.coordinates.DatasetCoordinates.indexes
    core.coordinates.DatasetCoordinates.to_dataset
    core.coordinates.DatasetCoordinates.to_index
    core.coordinates.DatasetCoordinates.update
-   core.coordinates.DatasetCoordinates.values
-   core.coordinates.DatasetCoordinates.dims
-   core.coordinates.DatasetCoordinates.indexes
-   core.coordinates.DatasetCoordinates.variables
+   core.coordinates.DatasetCoordinates.assign
+   core.coordinates.DatasetCoordinates.merge
+   core.coordinates.DatasetCoordinates.copy
+   core.coordinates.DatasetCoordinates.equals
+   core.coordinates.DatasetCoordinates.identical
 
-   core.rolling.DatasetCoarsen.boundary
-   core.rolling.DatasetCoarsen.coord_func
-   core.rolling.DatasetCoarsen.obj
-   core.rolling.DatasetCoarsen.side
-   core.rolling.DatasetCoarsen.trim_excess
-   core.rolling.DatasetCoarsen.windows
+   computation.rolling.DatasetCoarsen.boundary
+   computation.rolling.DatasetCoarsen.coord_func
+   computation.rolling.DatasetCoarsen.obj
+   computation.rolling.DatasetCoarsen.side
+   computation.rolling.DatasetCoarsen.trim_excess
+   computation.rolling.DatasetCoarsen.windows
 
-   core.rolling.DatasetRolling.center
-   core.rolling.DatasetRolling.dim
-   core.rolling.DatasetRolling.min_periods
-   core.rolling.DatasetRolling.obj
-   core.rolling.DatasetRolling.rollings
-   core.rolling.DatasetRolling.window
+   computation.rolling.DatasetRolling.center
+   computation.rolling.DatasetRolling.dim
+   computation.rolling.DatasetRolling.min_periods
+   computation.rolling.DatasetRolling.obj
+   computation.rolling.DatasetRolling.rollings
+   computation.rolling.DatasetRolling.window
 
-   core.weighted.DatasetWeighted.obj
-   core.weighted.DatasetWeighted.weights
+   computation.weighted.DatasetWeighted.obj
+   computation.weighted.DatasetWeighted.weights
 
    Dataset.load_store
    Dataset.dump_to_store
@@ -47,31 +54,57 @@
    core.coordinates.DataArrayCoordinates.get
    core.coordinates.DataArrayCoordinates.items
    core.coordinates.DataArrayCoordinates.keys
-   core.coordinates.DataArrayCoordinates.merge
+   core.coordinates.DataArrayCoordinates.values
+   core.coordinates.DataArrayCoordinates.dims
+   core.coordinates.DataArrayCoordinates.sizes
+   core.coordinates.DataArrayCoordinates.dtypes
+   core.coordinates.DataArrayCoordinates.variables
+   core.coordinates.DataArrayCoordinates.xindexes
+   core.coordinates.DataArrayCoordinates.indexes
    core.coordinates.DataArrayCoordinates.to_dataset
    core.coordinates.DataArrayCoordinates.to_index
    core.coordinates.DataArrayCoordinates.update
-   core.coordinates.DataArrayCoordinates.values
-   core.coordinates.DataArrayCoordinates.dims
-   core.coordinates.DataArrayCoordinates.indexes
-   core.coordinates.DataArrayCoordinates.variables
+   core.coordinates.DataArrayCoordinates.assign
+   core.coordinates.DataArrayCoordinates.merge
+   core.coordinates.DataArrayCoordinates.copy
+   core.coordinates.DataArrayCoordinates.equals
+   core.coordinates.DataArrayCoordinates.identical
 
-   core.rolling.DataArrayCoarsen.boundary
-   core.rolling.DataArrayCoarsen.coord_func
-   core.rolling.DataArrayCoarsen.obj
-   core.rolling.DataArrayCoarsen.side
-   core.rolling.DataArrayCoarsen.trim_excess
-   core.rolling.DataArrayCoarsen.windows
+   computation.rolling.DataArrayCoarsen.boundary
+   computation.rolling.DataArrayCoarsen.coord_func
+   computation.rolling.DataArrayCoarsen.obj
+   computation.rolling.DataArrayCoarsen.side
+   computation.rolling.DataArrayCoarsen.trim_excess
+   computation.rolling.DataArrayCoarsen.windows
 
-   core.rolling.DataArrayRolling.center
-   core.rolling.DataArrayRolling.dim
-   core.rolling.DataArrayRolling.min_periods
-   core.rolling.DataArrayRolling.obj
-   core.rolling.DataArrayRolling.window
-   core.rolling.DataArrayRolling.window_labels
+   computation.rolling.DataArrayRolling.center
+   computation.rolling.DataArrayRolling.dim
+   computation.rolling.DataArrayRolling.min_periods
+   computation.rolling.DataArrayRolling.obj
+   computation.rolling.DataArrayRolling.window
+   computation.rolling.DataArrayRolling.window_labels
 
-   core.weighted.DataArrayWeighted.obj
-   core.weighted.DataArrayWeighted.weights
+   computation.weighted.DataArrayWeighted.obj
+   computation.weighted.DataArrayWeighted.weights
+
+   core.coordinates.DataTreeCoordinates.get
+   core.coordinates.DataTreeCoordinates.items
+   core.coordinates.DataTreeCoordinates.keys
+   core.coordinates.DataTreeCoordinates.values
+   core.coordinates.DataTreeCoordinates.dims
+   core.coordinates.DataTreeCoordinates.sizes
+   core.coordinates.DataTreeCoordinates.dtypes
+   core.coordinates.DataTreeCoordinates.variables
+   core.coordinates.DataTreeCoordinates.xindexes
+   core.coordinates.DataTreeCoordinates.indexes
+   core.coordinates.DataTreeCoordinates.to_dataset
+   core.coordinates.DataTreeCoordinates.to_index
+   core.coordinates.DataTreeCoordinates.update
+   core.coordinates.DataTreeCoordinates.assign
+   core.coordinates.DataTreeCoordinates.merge
+   core.coordinates.DataTreeCoordinates.copy
+   core.coordinates.DataTreeCoordinates.equals
+   core.coordinates.DataTreeCoordinates.identical
 
    core.accessor_dt.DatetimeAccessor.ceil
    core.accessor_dt.DatetimeAccessor.floor
@@ -103,7 +136,6 @@
    core.accessor_dt.DatetimeAccessor.time
    core.accessor_dt.DatetimeAccessor.week
    core.accessor_dt.DatetimeAccessor.weekday
-   core.accessor_dt.DatetimeAccessor.weekday_name
    core.accessor_dt.DatetimeAccessor.weekofyear
    core.accessor_dt.DatetimeAccessor.year
 
@@ -234,6 +266,7 @@
    Variable.dims
    Variable.dtype
    Variable.encoding
+   Variable.drop_encoding
    Variable.imag
    Variable.nbytes
    Variable.ndim
@@ -319,6 +352,38 @@
    IndexVariable.sizes
    IndexVariable.values
 
+
+   NamedArray.all
+   NamedArray.any
+   NamedArray.attrs
+   NamedArray.broadcast_to
+   NamedArray.chunks
+   NamedArray.chunksizes
+   NamedArray.copy
+   NamedArray.count
+   NamedArray.cumprod
+   NamedArray.cumsum
+   NamedArray.data
+   NamedArray.dims
+   NamedArray.dtype
+   NamedArray.expand_dims
+   NamedArray.get_axis_num
+   NamedArray.max
+   NamedArray.mean
+   NamedArray.median
+   NamedArray.min
+   NamedArray.nbytes
+   NamedArray.ndim
+   NamedArray.prod
+   NamedArray.reduce
+   NamedArray.shape
+   NamedArray.size
+   NamedArray.sizes
+   NamedArray.std
+   NamedArray.sum
+   NamedArray.var
+
+
    plot.plot
    plot.line
    plot.step
@@ -374,10 +439,8 @@
    CFTimeIndex.is_floating
    CFTimeIndex.is_integer
    CFTimeIndex.is_interval
-   CFTimeIndex.is_mixed
    CFTimeIndex.is_numeric
    CFTimeIndex.is_object
-   CFTimeIndex.is_type_compatible
    CFTimeIndex.isin
    CFTimeIndex.isna
    CFTimeIndex.isnull
@@ -398,7 +461,6 @@
    CFTimeIndex.round
    CFTimeIndex.searchsorted
    CFTimeIndex.set_names
-   CFTimeIndex.set_value
    CFTimeIndex.shift
    CFTimeIndex.slice_indexer
    CFTimeIndex.slice_locs
@@ -412,7 +474,6 @@
    CFTimeIndex.to_flat_index
    CFTimeIndex.to_frame
    CFTimeIndex.to_list
-   CFTimeIndex.to_native_types
    CFTimeIndex.to_numpy
    CFTimeIndex.to_series
    CFTimeIndex.tolist
@@ -437,8 +498,6 @@
    CFTimeIndex.hasnans
    CFTimeIndex.hour
    CFTimeIndex.inferred_type
-   CFTimeIndex.is_all_dates
-   CFTimeIndex.is_monotonic
    CFTimeIndex.is_monotonic_increasing
    CFTimeIndex.is_monotonic_decreasing
    CFTimeIndex.is_unique
@@ -455,6 +514,10 @@
    CFTimeIndex.size
    CFTimeIndex.values
    CFTimeIndex.year
+
+   indexes.RangeIndex.start
+   indexes.RangeIndex.stop
+   indexes.RangeIndex.step
 
    backends.NetCDF4DataStore.close
    backends.NetCDF4DataStore.encode
@@ -483,6 +546,11 @@
    backends.NetCDF4DataStore.is_remote
    backends.NetCDF4DataStore.lock
 
+   backends.NetCDF4BackendEntrypoint.description
+   backends.NetCDF4BackendEntrypoint.url
+   backends.NetCDF4BackendEntrypoint.guess_can_open
+   backends.NetCDF4BackendEntrypoint.open_dataset
+
    backends.H5NetCDFStore.autoclose
    backends.H5NetCDFStore.close
    backends.H5NetCDFStore.encode
@@ -510,6 +578,11 @@
    backends.H5NetCDFStore.sync
    backends.H5NetCDFStore.ds
 
+   backends.H5netcdfBackendEntrypoint.description
+   backends.H5netcdfBackendEntrypoint.url
+   backends.H5netcdfBackendEntrypoint.guess_can_open
+   backends.H5netcdfBackendEntrypoint.open_dataset
+
    backends.PydapDataStore.close
    backends.PydapDataStore.get_attrs
    backends.PydapDataStore.get_dimensions
@@ -518,6 +591,11 @@
    backends.PydapDataStore.load
    backends.PydapDataStore.open
    backends.PydapDataStore.open_store_variable
+
+   backends.PydapBackendEntrypoint.description
+   backends.PydapBackendEntrypoint.url
+   backends.PydapBackendEntrypoint.guess_can_open
+   backends.PydapBackendEntrypoint.open_dataset
 
    backends.ScipyDataStore.close
    backends.ScipyDataStore.encode
@@ -540,6 +618,36 @@
    backends.ScipyDataStore.store_dataset
    backends.ScipyDataStore.sync
    backends.ScipyDataStore.ds
+
+   backends.ScipyBackendEntrypoint.description
+   backends.ScipyBackendEntrypoint.url
+   backends.ScipyBackendEntrypoint.guess_can_open
+   backends.ScipyBackendEntrypoint.open_dataset
+
+   backends.ZarrStore.close
+   backends.ZarrStore.encode_attribute
+   backends.ZarrStore.encode_variable
+   backends.ZarrStore.get_attrs
+   backends.ZarrStore.get_dimensions
+   backends.ZarrStore.get_variables
+   backends.ZarrStore.open_group
+   backends.ZarrStore.open_store_variable
+   backends.ZarrStore.set_attributes
+   backends.ZarrStore.set_dimensions
+   backends.ZarrStore.set_variables
+   backends.ZarrStore.store
+   backends.ZarrStore.sync
+   backends.ZarrStore.ds
+
+   backends.ZarrBackendEntrypoint.description
+   backends.ZarrBackendEntrypoint.url
+   backends.ZarrBackendEntrypoint.guess_can_open
+   backends.ZarrBackendEntrypoint.open_dataset
+
+   backends.StoreBackendEntrypoint.description
+   backends.StoreBackendEntrypoint.url
+   backends.StoreBackendEntrypoint.guess_can_open
+   backends.StoreBackendEntrypoint.open_dataset
 
    backends.FileManager.acquire
    backends.FileManager.acquire_context
@@ -567,7 +675,6 @@
 
    conventions.decode_cf_variables
 
-   coding.variables.UnsignedIntegerCoder
    coding.variables.CFMaskCoder
    coding.variables.CFScaleOffsetCoder
 
@@ -576,3 +683,7 @@
 
    coding.times.CFTimedeltaCoder
    coding.times.CFDatetimeCoder
+
+   groupers.Grouper
+   groupers.Resampler
+   groupers.EncodedGroups

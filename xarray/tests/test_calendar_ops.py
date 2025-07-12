@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
 
-from xarray import DataArray, infer_freq
+from xarray import CFTimeIndex, DataArray, Dataset, infer_freq
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftime_offsets import date_range
 from xarray.testing import assert_identical
-
-from . import requires_cftime
+from xarray.tests import requires_cftime
 
 cftime = pytest.importorskip("cftime")
 
@@ -19,7 +19,7 @@ cftime = pytest.importorskip("cftime")
         ("standard", "noleap", None, "D"),
         ("noleap", "proleptic_gregorian", True, "D"),
         ("noleap", "all_leap", None, "D"),
-        ("all_leap", "proleptic_gregorian", False, "4H"),
+        ("all_leap", "proleptic_gregorian", False, "4h"),
     ],
 )
 def test_convert_calendar(source, target, use_cftime, freq):
@@ -63,12 +63,30 @@ def test_convert_calendar(source, target, use_cftime, freq):
     np.testing.assert_array_equal(conv.time, expected_times)
 
 
+def test_convert_calendar_dataset():
+    # Check that variables without a time dimension are not modified
+    src = DataArray(
+        date_range("2004-01-01", "2004-12-31", freq="D", calendar="standard"),
+        dims=("time",),
+        name="time",
+    )
+    da_src = DataArray(
+        np.linspace(0, 1, src.size), dims=("time",), coords={"time": src}
+    ).expand_dims(lat=[0, 1])
+    ds_src = Dataset({"hastime": da_src, "notime": (("lat",), [0, 1])})
+
+    conv = convert_calendar(ds_src, "360_day", align_on="date")
+
+    assert conv.time.dt.calendar == "360_day"
+    assert_identical(ds_src.notime, conv.notime)
+
+
 @pytest.mark.parametrize(
     "source,target,freq",
     [
         ("standard", "360_day", "D"),
         ("360_day", "proleptic_gregorian", "D"),
-        ("proleptic_gregorian", "360_day", "4H"),
+        ("proleptic_gregorian", "360_day", "4h"),
     ],
 )
 @pytest.mark.parametrize("align_on", ["date", "year"])
@@ -88,17 +106,17 @@ def test_convert_calendar_360_days(source, target, freq, align_on):
 
     if align_on == "date":
         np.testing.assert_array_equal(
-            conv.time.resample(time="M").last().dt.day,
+            conv.time.resample(time="ME").last().dt.day,
             [30, 29, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
         )
     elif target == "360_day":
         np.testing.assert_array_equal(
-            conv.time.resample(time="M").last().dt.day,
+            conv.time.resample(time="ME").last().dt.day,
             [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 29],
         )
     else:
         np.testing.assert_array_equal(
-            conv.time.resample(time="M").last().dt.day,
+            conv.time.resample(time="ME").last().dt.day,
             [30, 29, 30, 30, 31, 30, 30, 31, 30, 31, 29, 31],
         )
     if source == "360_day" and align_on == "year":
@@ -107,13 +125,52 @@ def test_convert_calendar_360_days(source, target, freq, align_on):
         assert conv.size == 359 if freq == "D" else 359 * 4
 
 
+def test_convert_calendar_360_days_random():
+    da_std = DataArray(
+        np.linspace(0, 1, 366),
+        dims=("time",),
+        coords={
+            "time": date_range(
+                "2004-01-01",
+                "2004-12-31",
+                freq="D",
+                calendar="standard",
+                use_cftime=False,
+            )
+        },
+    )
+    da_360 = DataArray(
+        np.linspace(0, 1, 360),
+        dims=("time",),
+        coords={
+            "time": date_range("2004-01-01", "2004-12-30", freq="D", calendar="360_day")
+        },
+    )
+
+    conv = convert_calendar(da_std, "360_day", align_on="random")
+    conv2 = convert_calendar(da_std, "360_day", align_on="random")
+    assert (conv != conv2).any()
+
+    conv = convert_calendar(da_360, "standard", use_cftime=False, align_on="random")
+    assert np.datetime64("2004-02-29") not in conv.time
+    conv2 = convert_calendar(da_360, "standard", use_cftime=False, align_on="random")
+    assert (conv2 != conv).any()
+
+    # Ensure that added days are evenly distributed in the 5 fifths of each year
+    conv = convert_calendar(da_360, "noleap", align_on="random", missing=np.nan)
+    conv = conv.where(conv.isnull(), drop=True)
+    nandoys = conv.time.dt.dayofyear[:366]
+    assert all(nandoys < np.array([74, 147, 220, 293, 366]))
+    assert all(nandoys > np.array([0, 73, 146, 219, 292]))
+
+
 @requires_cftime
 @pytest.mark.parametrize(
     "source,target,freq",
     [
         ("standard", "noleap", "D"),
-        ("noleap", "proleptic_gregorian", "4H"),
-        ("noleap", "all_leap", "M"),
+        ("noleap", "proleptic_gregorian", "4h"),
+        ("noleap", "all_leap", "ME"),
         ("360_day", "noleap", "D"),
         ("noleap", "360_day", "D"),
     ],
@@ -133,7 +190,9 @@ def test_convert_calendar_missing(source, target, freq):
         np.linspace(0, 1, src.size), dims=("time",), coords={"time": src}
     )
     out = convert_calendar(da_src, target, missing=np.nan, align_on="date")
-    assert infer_freq(out.time) == freq
+
+    expected_freq = freq
+    assert infer_freq(out.time) == expected_freq
 
     expected = date_range(
         "2004-01-01",
@@ -143,7 +202,7 @@ def test_convert_calendar_missing(source, target, freq):
     )
     np.testing.assert_array_equal(out.time, expected)
 
-    if freq != "M":
+    if freq != "ME":
         out_without_missing = convert_calendar(da_src, target, align_on="date")
         expected_nan = out.isel(time=~out.time.isin(out_without_missing.time))
         assert expected_nan.isnull().all()
@@ -182,7 +241,7 @@ def test_convert_calendar_errors():
 
 def test_convert_calendar_same_calendar():
     src = DataArray(
-        date_range("2000-01-01", periods=12, freq="6H", use_cftime=False),
+        date_range("2000-01-01", periods=12, freq="6h", use_cftime=False),
         dims=("time",),
         name="time",
     )
@@ -246,3 +305,25 @@ def test_interp_calendar_errors():
         ValueError, match="Both 'source.x' and 'target' must contain datetime objects."
     ):
         interp_calendar(da1, da2, dim="x")
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    ("source_calendar", "target_calendar", "expected_index"),
+    [("standard", "noleap", CFTimeIndex), ("all_leap", "standard", pd.DatetimeIndex)],
+)
+def test_convert_calendar_produces_time_index(
+    source_calendar, target_calendar, expected_index
+):
+    # https://github.com/pydata/xarray/issues/9138
+    time = date_range("2000-01-01", "2002-01-01", freq="D", calendar=source_calendar)
+    temperature = np.ones(len(time))
+    da = DataArray(
+        data=temperature,
+        dims=["time"],
+        coords=dict(
+            time=time,
+        ),
+    )
+    converted = da.convert_calendar(target_calendar)
+    assert isinstance(converted.indexes["time"], expected_index)

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import warnings
 
-from .dataarray import DataArray
-from .dataset import Dataset
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
+from xarray.core.datatree import DataTree
 
 
 class AccessorRegistrationWarning(Warning):
@@ -36,11 +37,11 @@ class _CachedAccessor:
 
         try:
             accessor_obj = self._accessor(obj)
-        except AttributeError:
+        except AttributeError as err:
             # __getattr__ on data object will swallow any AttributeErrors
             # raised when initializing the accessor, so we need to raise as
             # something else (GH933):
-            raise RuntimeError(f"error initializing {self._name!r} accessor.")
+            raise RuntimeError(f"error initializing {self._name!r} accessor.") from err
 
         cache[self._name] = accessor_obj
         return accessor_obj
@@ -105,6 +106,7 @@ def register_dataset_accessor(name):
     ...     def plot(self):
     ...         # plot this array's data on a map, e.g., using Cartopy
     ...         pass
+    ...
 
     Back in an interactive IPython session:
 
@@ -120,3 +122,20 @@ def register_dataset_accessor(name):
     register_dataarray_accessor
     """
     return _register_accessor(name, Dataset)
+
+
+def register_datatree_accessor(name):
+    """Register a custom accessor on DataTree objects.
+
+    Parameters
+    ----------
+    name : str
+        Name under which the accessor should be registered. A warning is issued
+        if this name conflicts with a preexisting attribute.
+
+    See Also
+    --------
+    xarray.register_dataarray_accessor
+    xarray.register_dataset_accessor
+    """
+    return _register_accessor(name, DataTree)

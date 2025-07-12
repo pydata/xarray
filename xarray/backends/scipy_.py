@@ -3,35 +3,43 @@ from __future__ import annotations
 import gzip
 import io
 import os
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from ..core.indexing import NumpyIndexingAdapter
-from ..core.utils import (
-    Frozen,
-    FrozenDict,
-    close_on_error,
-    try_read_magic_number_from_file_or_path,
-)
-from ..core.variable import Variable
-from .common import (
+from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
 )
-from .file_manager import CachingFileManager, DummyFileManager
-from .locks import ensure_lock, get_write_lock
-from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name
-from .store import StoreBackendEntrypoint
+from xarray.backends.file_manager import CachingFileManager, DummyFileManager
+from xarray.backends.locks import ensure_lock, get_write_lock
+from xarray.backends.netcdf3 import (
+    encode_nc3_attr_value,
+    encode_nc3_variable,
+    is_valid_nc3_name,
+)
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.core import indexing
+from xarray.core.utils import (
+    Frozen,
+    FrozenDict,
+    close_on_error,
+    module_available,
+    try_read_magic_number_from_file_or_path,
+)
+from xarray.core.variable import Variable
 
-try:
-    import scipy.io
+if TYPE_CHECKING:
+    from xarray.backends.common import AbstractDataStore
+    from xarray.core.dataset import Dataset
+    from xarray.core.types import ReadBuffer
 
-    has_scipy = True
-except ModuleNotFoundError:
-    has_scipy = False
+
+HAS_NUMPY_2_0 = module_available("numpy", minversion="2.0.0.dev0")
 
 
 def _decode_string(s):
@@ -58,12 +66,25 @@ class ScipyArrayWrapper(BackendArray):
         ds = self.datastore._manager.acquire(needs_lock)
         return ds.variables[self.variable_name]
 
+    def _getitem(self, key):
+        with self.datastore.lock:
+            data = self.get_variable(needs_lock=False).data
+            return data[key]
+
     def __getitem__(self, key):
-        data = NumpyIndexingAdapter(self.get_variable().data)[key]
+        data = indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
+        )
         # Copy data if the source file is mmapped. This makes things consistent
         # with the netCDF4 library by ensuring we can safely read arrays even
         # after closing associated files.
         copy = self.datastore.ds.use_mmap
+
+        # adapt handling of copy-kwarg to numpy 2.0
+        # see https://github.com/numpy/numpy/issues/25916
+        # and https://github.com/numpy/numpy/pull/25922
+        copy = None if HAS_NUMPY_2_0 and copy is False else copy
+
         return np.array(data, dtype=self.dtype, copy=copy)
 
     def __setitem__(self, key, value):
@@ -80,6 +101,8 @@ class ScipyArrayWrapper(BackendArray):
 
 
 def _open_scipy_netcdf(filename, mode, mmap, version):
+    import scipy.io
+
     # if the string ends with .gz, then gunzip and open as netcdf file
     if isinstance(filename, str) and filename.endswith(".gz"):
         try:
@@ -90,7 +113,9 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
             # TODO: gzipped loading only works with NetCDF3 files.
             errmsg = e.args[0]
             if "is not a valid NetCDF 3 file" in errmsg:
-                raise ValueError("gzipped file loading only supports NetCDF 3 files.")
+                raise ValueError(
+                    "gzipped file loading only supports NetCDF 3 files."
+                ) from e
             else:
                 raise
 
@@ -110,7 +135,7 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
             $ pip install netcdf4
             """
             errmsg += msg
-            raise TypeError(errmsg)
+            raise TypeError(errmsg) from e
         else:
             raise
 
@@ -165,7 +190,7 @@ class ScipyDataStore(WritableCFDataStore):
     def open_store_variable(self, name, var):
         return Variable(
             var.dimensions,
-            ScipyArrayWrapper(name, self),
+            indexing.LazilyIndexedArray(ScipyArrayWrapper(name, self)),
             _decode_attrs(var._attributes),
         )
 
@@ -202,8 +227,8 @@ class ScipyDataStore(WritableCFDataStore):
         value = encode_nc3_attr_value(value)
         setattr(self.ds, key, value)
 
-    def encode_variable(self, variable):
-        variable = encode_nc3_variable(variable)
+    def encode_variable(self, variable, name=None):
+        variable = encode_nc3_variable(variable, name=name)
         return variable
 
     def prepare_variable(
@@ -241,31 +266,55 @@ class ScipyDataStore(WritableCFDataStore):
 
 
 class ScipyBackendEntrypoint(BackendEntrypoint):
-    available = has_scipy
+    """
+    Backend for netCDF files based on the scipy package.
 
-    def guess_can_open(self, filename_or_obj):
+    It can open ".nc", ".nc4", ".cdf" and ".gz" files but will only be
+    selected as the default if the "netcdf4" and "h5netcdf" engines are
+    not available. It has the advantage that is is a lightweight engine
+    that has no system requirements (unlike netcdf4 and h5netcdf).
 
+    Additionally it can open gizp compressed (".gz") files.
+
+    For more information about the underlying library, visit:
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.io.netcdf_file.html
+
+    See Also
+    --------
+    backends.ScipyDataStore
+    backends.NetCDF4BackendEntrypoint
+    backends.H5netcdfBackendEntrypoint
+    """
+
+    description = "Open netCDF files (.nc, .nc4, .cdf and .gz) using scipy in Xarray"
+    url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ScipyBackendEntrypoint.html"
+
+    def guess_can_open(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+    ) -> bool:
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None and magic_number.startswith(b"\x1f\x8b"):
-            with gzip.open(filename_or_obj) as f:
+            with gzip.open(filename_or_obj) as f:  # type: ignore[arg-type]
                 magic_number = try_read_magic_number_from_file_or_path(f)
         if magic_number is not None:
             return magic_number.startswith(b"CDF")
 
-        try:
+        if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
-        except TypeError:
-            return False
-        return ext in {".nc", ".nc4", ".cdf", ".gz"}
+            return ext in {".nc", ".nc4", ".cdf", ".gz"}
+
+        return False
 
     def open_dataset(
         self,
-        filename_or_obj,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        *,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
         decode_coords=True,
-        drop_variables=None,
+        drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
         mode="r",
@@ -273,8 +322,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         group=None,
         mmap=None,
         lock=None,
-    ):
-
+    ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ScipyDataStore(
             filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
@@ -295,4 +343,4 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         return ds
 
 
-BACKEND_ENTRYPOINTS["scipy"] = ScipyBackendEntrypoint
+BACKEND_ENTRYPOINTS["scipy"] = ("scipy", ScipyBackendEntrypoint)

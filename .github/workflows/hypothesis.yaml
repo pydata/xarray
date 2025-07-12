@@ -1,0 +1,117 @@
+name: Slow Hypothesis CI
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    branches:
+      - "main"
+    types: [opened, reopened, synchronize, labeled]
+  schedule:
+    - cron: "0 0 * * *" # Daily “At 00:00” UTC
+  workflow_dispatch: # allows you to trigger manually
+
+env:
+  FORCE_COLOR: 3
+
+jobs:
+  detect-ci-trigger:
+    name: detect ci trigger
+    runs-on: ubuntu-latest
+    if: |
+      github.repository == 'pydata/xarray'
+      && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'schedule')
+    outputs:
+      triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: xarray-contrib/ci-trigger@v1
+        id: detect-trigger
+        with:
+          keyword: "[skip-ci]"
+
+  hypothesis:
+    name: Slow Hypothesis Tests
+    runs-on: "ubuntu-latest"
+    needs: detect-ci-trigger
+    if: |
+      always()
+      && (
+          needs.detect-ci-trigger.outputs.triggered == 'false'
+          && ( (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+              || contains( github.event.pull_request.labels.*.name, 'run-slow-hypothesis'))
+      )
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    env:
+      CONDA_ENV_FILE: ci/requirements/environment.yml
+      PYTHON_VERSION: "3.12"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for all branches and tags.
+
+      - name: set environment variables
+        run: |
+          echo "TODAY=$(date  +'%Y-%m-%d')" >> $GITHUB_ENV
+
+      - name: Setup micromamba
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: ci/requirements/environment.yml
+          environment-name: xarray-tests
+          create-args: >-
+            python=${{env.PYTHON_VERSION}}
+            pytest-reportlog
+          cache-environment: true
+          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
+
+      - name: Install xarray
+        run: |
+          python -m pip install --no-deps -e .
+      - name: Version info
+        run: |
+          python xarray/util/print_versions.py
+
+      # https://github.com/actions/cache/blob/main/tips-and-workarounds.md#update-a-cache
+      - name: Restore cached hypothesis directory
+        id: restore-hypothesis-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .hypothesis/
+          key: cache-hypothesis-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            cache-hypothesis-
+
+      - name: Run slow Hypothesis tests
+        if: success()
+        id: status
+        run: |
+          python -m pytest --hypothesis-show-statistics --run-slow-hypothesis properties/*.py \
+            --report-log output-${{ matrix.python-version }}-log.jsonl
+
+      # explicitly save the cache so it gets updated, also do this even if it fails.
+      - name: Save cached hypothesis directory
+        id: save-hypothesis-cache
+        if: always() && steps.status.outcome != 'skipped'
+        uses: actions/cache/save@v4
+        with:
+          path: .hypothesis/
+          key: cache-hypothesis-${{ runner.os }}-${{ github.run_id }}
+
+      - name: Generate and publish the report
+        if: |
+          failure()
+          && steps.status.outcome == 'failure'
+          && github.event_name == 'schedule'
+          && github.repository_owner == 'pydata'
+        uses: xarray-contrib/issue-from-pytest-log@v1
+        with:
+          log-path: output-${{ matrix.python-version }}-log.jsonl
+          issue-title: "Nightly Hypothesis tests failed"
+          issue-label: "topic-hypothesis"

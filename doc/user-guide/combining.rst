@@ -3,14 +3,17 @@
 Combining data
 --------------
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
+    :hide-output:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
 
     np.random.seed(123456)
+
+    %xmode minimal
 
 * For combining datasets or data arrays along a single dimension, see concatenate_.
 * For combining datasets with different variables, see merge_.
@@ -22,35 +25,44 @@ Combining data
 Concatenate
 ~~~~~~~~~~~
 
-To combine :py:class:`~xarray.Dataset`s / :py:class:`~xarray.DataArray`s along an existing or new dimension
+To combine :py:class:`~xarray.Dataset` / :py:class:`~xarray.DataArray` objects along an existing or new dimension
 into a larger object, you can use :py:func:`~xarray.concat`. ``concat``
 takes an iterable of ``DataArray`` or ``Dataset`` objects, as well as a
 dimension name, and concatenates along that dimension:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.DataArray(
         np.arange(6).reshape(2, 3), [("x", ["a", "b"]), ("y", [10, 20, 30])]
     )
     da.isel(y=slice(0, 1))  # same as da[:, :1]
+
+.. jupyter-execute::
+
     # This resembles how you would use np.concatenate:
     xr.concat([da[:, :1], da[:, 1:]], dim="y")
+
+.. jupyter-execute::
+
     # For more friendly pandas-like indexing you can use:
     xr.concat([da.isel(y=slice(0, 1)), da.isel(y=slice(1, None))], dim="y")
 
 In addition to combining along an existing dimension, ``concat`` can create a
 new dimension by stacking lower dimensional arrays together:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.sel(x="a")
+
+.. jupyter-execute::
+
     xr.concat([da.isel(x=0), da.isel(x=1)], "x")
 
 If the second argument to ``concat`` is a new dimension name, the arrays will
 be concatenated along that new dimension, which is always inserted as the first
 dimension:
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.concat([da.isel(x=0), da.isel(x=1)], "new_dim")
 
@@ -58,13 +70,13 @@ The second argument to ``concat`` can also be an :py:class:`~pandas.Index` or
 :py:class:`~xarray.DataArray` object as well as a string, in which case it is
 used to label the values along the new dimension:
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.concat([da.isel(x=0), da.isel(x=1)], pd.Index([-90, -100], name="new_dim"))
 
 Of course, ``concat`` also works on ``Dataset`` objects:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = da.to_dataset(name="foo")
     xr.concat([ds.sel(x="a"), ds.sel(x="b")], "x")
@@ -85,16 +97,19 @@ To combine variables and coordinates between multiple ``DataArray`` and/or
 ``Dataset``, ``DataArray`` or dictionaries of objects convertible to
 ``DataArray`` objects:
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.merge([ds, ds.rename({"foo": "bar"})])
+
+.. jupyter-execute::
+
     xr.merge([xr.DataArray(n, name="var%d" % n) for n in range(5)])
 
 If you merge another dataset (or a dictionary including data array objects), by
 default the resulting dataset will be aligned on the **union** of all index
 coordinates:
 
-.. ipython:: python
+.. jupyter-execute::
 
     other = xr.Dataset({"bar": ("x", [1, 2, 3, 4]), "x": list("abcd")})
     xr.merge([ds, other])
@@ -102,22 +117,16 @@ coordinates:
 This ensures that ``merge`` is non-destructive. ``xarray.MergeError`` is raised
 if you attempt to merge two variables with the same name but different values:
 
-.. ipython::
+.. jupyter-execute::
+    :raises:
 
-    @verbatim
-    In [1]: xr.merge([ds, ds + 1])
-    MergeError: conflicting values for variable 'foo' on objects to be combined:
-    first value: <xarray.Variable (x: 2, y: 3)>
-    array([[ 0.4691123 , -0.28286334, -1.5090585 ],
-           [-1.13563237,  1.21211203, -0.17321465]])
-    second value: <xarray.Variable (x: 2, y: 3)>
-    array([[ 1.4691123 ,  0.71713666, -0.5090585 ],
-           [-0.13563237,  2.21211203,  0.82678535]])
+    xr.merge([ds, ds + 1])
+
 
 The same non-destructive merging between ``DataArray`` index coordinates is
 used in the :py:class:`~xarray.Dataset` constructor:
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.Dataset({"a": da.isel(x=slice(0, 1)), "b": da.isel(x=slice(1, 2))})
 
@@ -132,11 +141,14 @@ using values from the called object to fill holes.  The resulting coordinates
 are the union of coordinate labels. Vacant cells as a result of the outer-join
 are filled with ``NaN``. For example:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ar0 = xr.DataArray([[0, 0], [0, 0]], [("x", ["a", "b"]), ("y", [-1, 0])])
     ar1 = xr.DataArray([[1, 1], [1, 1]], [("x", ["b", "c"]), ("y", [0, 1])])
     ar0.combine_first(ar1)
+
+.. jupyter-execute::
+
     ar1.combine_first(ar0)
 
 For datasets, ``ds0.combine_first(ds1)`` works similarly to
@@ -153,7 +165,7 @@ In contrast to ``merge``, :py:meth:`~xarray.Dataset.update` modifies a dataset
 in-place without checking for conflicts, and will overwrite any existing
 variables with new values:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.update({"space": ("space", [10.2, 9.4, 3.9])})
 
@@ -164,14 +176,14 @@ replace all dataset variables that use it.
 ``update`` also performs automatic alignment if necessary. Unlike ``merge``, it
 maintains the alignment of the original array instead of merging indexes:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.update(other)
 
 The exact same alignment logic when setting a variable with ``__setitem__``
 syntax:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds["baz"] = xr.DataArray([9, 9, 9, 9, 9], coords=[("x", list("abcde"))])
     ds.baz
@@ -187,14 +199,14 @@ the optional ``compat`` argument on ``concat`` and ``merge``.
 :py:attr:`~xarray.Dataset.equals` checks dimension names, indexes and array
 values:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.equals(da.copy())
 
 :py:attr:`~xarray.Dataset.identical` also checks attributes, and the name of each
 object:
 
-.. ipython:: python
+.. jupyter-execute::
 
     da.identical(da.rename("bar"))
 
@@ -202,7 +214,7 @@ object:
 check that allows variables to have different dimensions, as long as values
 are constant along those new dimensions:
 
-.. ipython:: python
+.. jupyter-execute::
 
     left = xr.Dataset(coords={"x": 0})
     right = xr.Dataset({"x": [0, 0, 0]})
@@ -214,7 +226,7 @@ missing values marked by ``NaN`` in the same locations.
 In contrast, the ``==`` operation performs element-wise comparison (like
 numpy):
 
-.. ipython:: python
+.. jupyter-execute::
 
     da == da.copy()
 
@@ -232,7 +244,7 @@ methods it allows the merging of xarray objects with locations where *either*
 have ``NaN`` values. This can be used to combine data with overlapping
 coordinates as long as any non-missing values agree or are disjoint:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds1 = xr.Dataset({"a": ("x", [10, 20, 30, np.nan])}, {"x": [1, 2, 3, 4]})
     ds2 = xr.Dataset({"a": ("x", [np.nan, 30, 40, 50])}, {"x": [2, 3, 4, 5]})
@@ -264,12 +276,15 @@ each processor wrote out data to a separate file. A domain which was decomposed
 into 4 parts, 2 each along both the x and y axes, requires organising the
 datasets into a doubly-nested list, e.g:
 
-.. ipython:: python
+.. jupyter-execute::
 
     arr = xr.DataArray(
         name="temperature", data=np.random.randint(5, size=(2, 2)), dims=["x", "y"]
     )
     arr
+
+.. jupyter-execute::
+
     ds_grid = [[arr, arr], [arr, arr]]
     xr.combine_nested(ds_grid, concat_dim=["x", "y"])
 
@@ -279,7 +294,7 @@ along two times, and contain two different variables, we can pass ``None``
 to ``'concat_dim'`` to specify the dimension of the nested list over which
 we wish to use ``merge`` instead of ``concat``:
 
-.. ipython:: python
+.. jupyter-execute::
 
     temp = xr.DataArray(name="temperature", data=np.random.randn(2), dims=["t"])
     precip = xr.DataArray(name="precipitation", data=np.random.randn(2), dims=["t"])
@@ -294,8 +309,8 @@ Here we combine two datasets using their common dimension coordinates. Notice
 they are concatenated in order based on the values in their dimension
 coordinates, not on their position in the list passed to ``combine_by_coords``.
 
-.. ipython:: python
-    :okwarning:
+.. jupyter-execute::
+
 
     x1 = xr.DataArray(name="foo", data=np.random.randn(3), coords=[("x", [0, 1, 2])])
     x2 = xr.DataArray(name="foo", data=np.random.randn(3), coords=[("x", [3, 4, 5])])

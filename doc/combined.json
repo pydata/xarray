@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "refs": {
+    ".zgroup": "{\"zarr_format\":2}",
+    "foo/.zarray": "{\"chunks\":[4,5],\"compressor\":null,\"dtype\":\"<f8\",\"fill_value\":\"NaN\",\"filters\":null,\"order\":\"C\",\"shape\":[4,5],\"zarr_format\":2}",
+    "foo/.zattrs": "{\"_ARRAY_DIMENSIONS\":[\"x\",\"y\"],\"coordinates\":\"z\"}",
+    "foo/0.0": ["saved_on_disk.h5", 8192, 160],
+    "x/.zarray": "{\"chunks\":[4],\"compressor\":null,\"dtype\":\"<i8\",\"fill_value\":null,\"filters\":null,\"order\":\"C\",\"shape\":[4],\"zarr_format\":2}",
+    "x/.zattrs": "{\"_ARRAY_DIMENSIONS\":[\"x\"]}",
+    "x/0": ["saved_on_disk.h5", 8352, 32],
+    "y/.zarray": "{\"chunks\":[5],\"compressor\":null,\"dtype\":\"<i8\",\"fill_value\":null,\"filters\":null,\"order\":\"C\",\"shape\":[5],\"zarr_format\":2}",
+    "y/.zattrs": "{\"_ARRAY_DIMENSIONS\":[\"y\"],\"calendar\":\"proleptic_gregorian\",\"units\":\"days since 2000-01-01 00:00:00\"}",
+    "y/0": ["saved_on_disk.h5", 8384, 40],
+    "z/.zarray": "{\"chunks\":[4],\"compressor\":null,\"dtype\":\"|O\",\"fill_value\":null,\"filters\":[{\"allow_nan\":true,\"check_circular\":true,\"encoding\":\"utf-8\",\"ensure_ascii\":true,\"id\":\"json2\",\"indent\":null,\"separators\":[\",\",\":\"],\"skipkeys\":false,\"sort_keys\":true,\"strict\":true}],\"order\":\"C\",\"shape\":[4],\"zarr_format\":2}",
+    "z/0": "[\"a\",\"b\",\"c\",\"d\",\"|O\",[4]]",
+    "z/.zattrs": "{\"_ARRAY_DIMENSIONS\":[\"x\"]}"
+  }
+}

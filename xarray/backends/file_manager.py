@@ -1,22 +1,24 @@
 from __future__ import annotations
 
+import atexit
 import contextlib
 import io
 import threading
+import uuid
 import warnings
+from collections.abc import Hashable
 from typing import Any
 
-from ..core import utils
-from ..core.options import OPTIONS
-from .locks import acquire
-from .lru_cache import LRUCache
+from xarray.backends.locks import acquire
+from xarray.backends.lru_cache import LRUCache
+from xarray.core import utils
+from xarray.core.options import OPTIONS
 
 # Global cache for storing open files.
-FILE_CACHE: LRUCache[str, io.IOBase] = LRUCache(
+FILE_CACHE: LRUCache[Any, io.IOBase] = LRUCache(
     maxsize=OPTIONS["file_cache_maxsize"], on_evict=lambda k, v: v.close()
 )
 assert FILE_CACHE.maxsize, "file cache must be at least size one"
-
 
 REF_COUNTS: dict[Any, int] = {}
 
@@ -61,15 +63,15 @@ class CachingFileManager(FileManager):
     FileManager.close(), which ensures that closed files are removed from the
     cache as well.
 
-    Example usage:
+    Example usage::
 
-        manager = FileManager(open, 'example.txt', mode='w')
+        manager = FileManager(open, "example.txt", mode="w")
         f = manager.acquire()
         f.write(...)
         manager.close()  # ensures file is closed
 
     Note that as long as previous files are still cached, acquiring a file
-    multiple times from the same FileManager is essentially free:
+    multiple times from the same FileManager is essentially free::
 
         f1 = manager.acquire()
         f2 = manager.acquire()
@@ -85,12 +87,13 @@ class CachingFileManager(FileManager):
         kwargs=None,
         lock=None,
         cache=None,
+        manager_id: Hashable | None = None,
         ref_counts=None,
     ):
-        """Initialize a FileManager.
+        """Initialize a CachingFileManager.
 
-        The cache and ref_counts arguments exist solely to facilitate
-        dependency injection, and should only be set for tests.
+        The cache, manager_id and ref_counts arguments exist solely to
+        facilitate dependency injection, and should only be set for tests.
 
         Parameters
         ----------
@@ -120,6 +123,8 @@ class CachingFileManager(FileManager):
             global variable and contains non-picklable file objects, an
             unpickled FileManager objects will be restored with the default
             cache.
+        manager_id : hashable, optional
+            Identifier for this CachingFileManager.
         ref_counts : dict, optional
             Optional dict to use for keeping track the number of references to
             the same file.
@@ -129,13 +134,17 @@ class CachingFileManager(FileManager):
         self._mode = mode
         self._kwargs = {} if kwargs is None else dict(kwargs)
 
-        self._default_lock = lock is None or lock is False
-        self._lock = threading.Lock() if self._default_lock else lock
+        self._use_default_lock = lock is None or lock is False
+        self._lock = threading.Lock() if self._use_default_lock else lock
 
         # cache[self._key] stores the file associated with this object.
         if cache is None:
             cache = FILE_CACHE
         self._cache = cache
+        if manager_id is None:
+            # Each call to CachingFileManager should separately open files.
+            manager_id = str(uuid.uuid4())
+        self._manager_id = manager_id
         self._key = self._make_key()
 
         # ref_counts[self._key] stores the number of CachingFileManager objects
@@ -153,6 +162,7 @@ class CachingFileManager(FileManager):
             self._args,
             "a" if self._mode == "w" else self._mode,
             tuple(sorted(self._kwargs.items())),
+            self._manager_id,
         )
         return _HashedSequence(value)
 
@@ -223,20 +233,14 @@ class CachingFileManager(FileManager):
             if file is not None:
                 file.close()
 
-    def __del__(self):
-        # If we're the only CachingFileManger referencing a unclosed file, we
-        # should remove it from the cache upon garbage collection.
+    def __del__(self) -> None:
+        # If we're the only CachingFileManger referencing a unclosed file,
+        # remove it from the cache upon garbage collection.
         #
-        # Keeping our own count of file references might seem like overkill,
-        # but it's actually pretty common to reopen files with the same
-        # variable name in a notebook or command line environment, e.g., to
-        # fix the parameters used when opening a file:
-        #    >>> ds = xarray.open_dataset('myfile.nc')
-        #    >>> ds = xarray.open_dataset('myfile.nc', decode_times=False)
-        # This second assignment to "ds" drops CPython's ref-count on the first
-        # "ds" argument to zero, which can trigger garbage collections. So if
-        # we didn't check whether another object is referencing 'myfile.nc',
-        # the newly opened file would actually be immediately closed!
+        # We keep track of our own reference count because we don't want to
+        # close files if another identical file manager needs it. This can
+        # happen if a CachingFileManager is pickled and unpickled without
+        # closing the original file.
         ref_count = self._ref_counter.decrement(self._key)
 
         if not ref_count and self._key in self._cache:
@@ -249,31 +253,48 @@ class CachingFileManager(FileManager):
 
             if OPTIONS["warn_for_unclosed_files"]:
                 warnings.warn(
-                    "deallocating {}, but file is not already closed. "
-                    "This may indicate a bug.".format(self),
+                    f"deallocating {self}, but file is not already closed. "
+                    "This may indicate a bug.",
                     RuntimeWarning,
                     stacklevel=2,
                 )
 
     def __getstate__(self):
         """State for pickling."""
-        # cache and ref_counts are intentionally omitted: we don't want to try
-        # to serialize these global objects.
-        lock = None if self._default_lock else self._lock
-        return (self._opener, self._args, self._mode, self._kwargs, lock)
+        # cache is intentionally omitted: we don't want to try to serialize
+        # these global objects.
+        lock = None if self._use_default_lock else self._lock
+        return (
+            self._opener,
+            self._args,
+            self._mode,
+            self._kwargs,
+            lock,
+            self._manager_id,
+        )
 
-    def __setstate__(self, state):
+    def __setstate__(self, state) -> None:
         """Restore from a pickle."""
-        opener, args, mode, kwargs, lock = state
-        self.__init__(opener, *args, mode=mode, kwargs=kwargs, lock=lock)
+        opener, args, mode, kwargs, lock, manager_id = state
+        self.__init__(  # type: ignore[misc]
+            opener, *args, mode=mode, kwargs=kwargs, lock=lock, manager_id=manager_id
+        )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         args_string = ", ".join(map(repr, self._args))
         if self._mode is not _DEFAULT_MODE:
             args_string += f", mode={self._mode!r}"
-        return "{}({!r}, {}, kwargs={})".format(
-            type(self).__name__, self._opener, args_string, self._kwargs
+        return (
+            f"{type(self).__name__}({self._opener!r}, {args_string}, "
+            f"kwargs={self._kwargs}, manager_id={self._manager_id!r})"
         )
+
+
+@atexit.register
+def _remove_del_method():
+    # We don't need to close unclosed files at program exit, and may not be able
+    # to, because Python is cleaning up imports / globals.
+    del CachingFileManager.__del__
 
 
 class _RefCounter:

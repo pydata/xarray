@@ -4,8 +4,9 @@ import copy
 
 import numpy as np
 
-from ..core.variable import Variable
-from .common import AbstractWritableDataStore
+from xarray.backends.common import AbstractWritableDataStore
+from xarray.core import indexing
+from xarray.core.variable import Variable
 
 
 class InMemoryDataStore(AbstractWritableDataStore):
@@ -24,14 +25,15 @@ class InMemoryDataStore(AbstractWritableDataStore):
         return self._attributes
 
     def get_variables(self):
-        return self._variables
+        res = {}
+        for k, v in self._variables.items():
+            v = v.copy(deep=True)
+            res[k] = v
+            v._data = indexing.LazilyIndexedArray(v._data)
+        return res
 
     def get_dimensions(self):
-        dims = {}
-        for v in self._variables.values():
-            for d, s in v.dims.items():
-                dims[d] = s
-        return dims
+        return {d: s for v in self._variables.values() for d, s in v.dims.items()}
 
     def prepare_variable(self, k, v, *args, **kwargs):
         new_var = Variable(v.dims, np.empty_like(v), v.attrs)

@@ -20,9 +20,8 @@ from xarray.core.indexes import (
     safe_cast_to_index,
 )
 from xarray.core.variable import IndexVariable, Variable
-
-from . import assert_array_equal, assert_identical, requires_cftime
-from .test_coding_times import _all_cftime_date_types
+from xarray.tests import assert_array_equal, assert_identical, requires_cftime
+from xarray.tests.test_coding_times import _all_cftime_date_types
 
 
 def test_asarray_tuplesafe() -> None:
@@ -147,6 +146,11 @@ class TestPandasIndex:
             PandasIndex.from_variables({"x": var, "foo": var2}, options={})
 
         with pytest.raises(
+            ValueError, match=r".*cannot set a PandasIndex.*scalar variable.*"
+        ):
+            PandasIndex.from_variables({"foo": xr.Variable((), 1)}, options={})
+
+        with pytest.raises(
             ValueError, match=r".*only accepts a 1-dimensional variable.*"
         ):
             PandasIndex.from_variables({"foo": var2}, options={})
@@ -175,7 +179,6 @@ class TestPandasIndex:
 
     @pytest.mark.parametrize("dtype", [str, bytes])
     def test_concat_str_dtype(self, dtype) -> None:
-
         a = PandasIndex(np.array(["a"], dtype=dtype), "x", coord_dtype=dtype)
         b = PandasIndex(np.array(["b"], dtype=dtype), "x", coord_dtype=dtype)
         expected = PandasIndex(
@@ -349,7 +352,7 @@ class TestPandasMultiIndex:
         # default level names
         pd_idx = pd.MultiIndex.from_arrays([foo_data, bar_data])
         index = PandasMultiIndex(pd_idx, "x")
-        assert index.index.names == ("x_level_0", "x_level_1")
+        assert list(index.index.names) == ["x_level_0", "x_level_1"]
 
     def test_from_variables(self) -> None:
         v_level1 = xr.Variable(
@@ -367,7 +370,7 @@ class TestPandasMultiIndex:
         assert index.dim == "x"
         assert index.index.equals(expected_idx)
         assert index.index.name == "x"
-        assert index.index.names == ["level1", "level2"]
+        assert list(index.index.names) == ["level1", "level2"]
 
         var = xr.Variable(("x", "y"), [[1, 2, 3], [4, 5, 6]])
         with pytest.raises(
@@ -407,12 +410,15 @@ class TestPandasMultiIndex:
             "y": xr.Variable("y", pd.Index([1, 3, 2])),
         }
 
-        index = PandasMultiIndex.stack(prod_vars, "z")
+        index_xr = PandasMultiIndex.stack(prod_vars, "z")
 
-        assert index.dim == "z"
-        assert index.index.names == ["x", "y"]
+        assert index_xr.dim == "z"
+        index_pd = index_xr.index
+        assert isinstance(index_pd, pd.MultiIndex)
+        # TODO: change to tuple when pandas 3 is minimum
+        assert list(index_pd.names) == ["x", "y"]
         np.testing.assert_array_equal(
-            index.index.codes, [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]]
+            index_pd.codes, [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]]
         )
 
         with pytest.raises(
@@ -429,13 +435,15 @@ class TestPandasMultiIndex:
             "y": xr.Variable("y", pd.Index([1, 1, 2])),
         }
 
-        index = PandasMultiIndex.stack(prod_vars, "z")
+        index_xr = PandasMultiIndex.stack(prod_vars, "z")
+        index_pd = index_xr.index
+        assert isinstance(index_pd, pd.MultiIndex)
 
         np.testing.assert_array_equal(
-            index.index.codes, [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]]
+            index_pd.codes, [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]]
         )
-        np.testing.assert_array_equal(index.index.levels[0], ["b", "a"])
-        np.testing.assert_array_equal(index.index.levels[1], [1, 2])
+        np.testing.assert_array_equal(index_pd.levels[0], ["b", "a"])
+        np.testing.assert_array_equal(index_pd.levels[1], [1, 2])
 
     def test_unstack(self) -> None:
         pd_midx = pd.MultiIndex.from_product(
@@ -448,6 +456,15 @@ class TestPandasMultiIndex:
         assert new_indexes["one"].equals(PandasIndex(["a", "b"], "one"))
         assert new_indexes["two"].equals(PandasIndex([1, 2, 3], "two"))
         assert new_pd_idx.equals(pd_midx)
+
+    def test_unstack_requires_unique(self) -> None:
+        pd_midx = pd.MultiIndex.from_product([["a", "a"], [1, 2]], names=["one", "two"])
+        index = PandasMultiIndex(pd_midx, "x")
+
+        with pytest.raises(
+            ValueError, match="Cannot unstack MultiIndex containing duplicates"
+        ):
+            index.unstack()
 
     def test_create_variables(self) -> None:
         foo_data = np.array([0, 0, 1], dtype="int64")
@@ -484,7 +501,10 @@ class TestPandasMultiIndex:
             index.sel({"x": 0})
         with pytest.raises(ValueError, match=r"cannot provide labels for both.*"):
             index.sel({"one": 0, "x": "a"})
-        with pytest.raises(ValueError, match=r"invalid multi-index level names"):
+        with pytest.raises(
+            ValueError,
+            match=r"multi-index level names \('three',\) not found in indexes",
+        ):
             index.sel({"x": {"three": 0}})
         with pytest.raises(IndexError):
             index.sel({"x": (slice(None), 1, "no_level")})
@@ -516,12 +536,12 @@ class TestPandasMultiIndex:
         assert new_index is index
 
         new_index = index.rename({"two": "three"}, {})
-        assert new_index.index.names == ["one", "three"]
+        assert list(new_index.index.names) == ["one", "three"]
         assert new_index.dim == "x"
         assert new_index.level_coords_dtype == {"one": "<U1", "three": np.int32}
 
         new_index = index.rename({}, {"x": "y"})
-        assert new_index.index.names == ["one", "two"]
+        assert list(new_index.index.names) == ["one", "two"]
         assert new_index.dim == "y"
         assert new_index.level_coords_dtype == level_coords_dtype
 
@@ -584,7 +604,9 @@ class TestIndexes:
 
         _, variables = indexes_and_vars
 
-        return Indexes(indexes, variables)
+        index_type = Index if isinstance(x_idx, Index) else pd.Index
+
+        return Indexes(indexes, variables, index_type=index_type)
 
     def test_interface(self, unique_indexes, indexes) -> None:
         x_idx = unique_indexes[0]
@@ -645,20 +667,22 @@ class TestIndexes:
     def test_to_pandas_indexes(self, indexes) -> None:
         pd_indexes = indexes.to_pandas_indexes()
         assert isinstance(pd_indexes, Indexes)
-        assert all([isinstance(idx, pd.Index) for idx in pd_indexes.values()])
+        assert all(isinstance(idx, pd.Index) for idx in pd_indexes.values())
         assert indexes.variables == pd_indexes.variables
 
     def test_copy_indexes(self, indexes) -> None:
         copied, index_vars = indexes.copy_indexes()
 
         assert copied.keys() == indexes.keys()
-        for new, original in zip(copied.values(), indexes.values()):
+        for new, original in zip(copied.values(), indexes.values(), strict=True):
             assert new.equals(original)
         # check unique index objects preserved
         assert copied["z"] is copied["one"] is copied["two"]
 
         assert index_vars.keys() == indexes.variables.keys()
-        for new, original in zip(index_vars.values(), indexes.variables.values()):
+        for new, original in zip(
+            index_vars.values(), indexes.variables.values(), strict=True
+        ):
             assert_identical(new, original)
 
 
@@ -698,3 +722,61 @@ def test_safe_cast_to_index_datetime_datetime():
     actual = safe_cast_to_index(np.array(dates))
     assert_array_equal(expected, actual)
     assert isinstance(actual, pd.Index)
+
+
+@pytest.mark.parametrize("dtype", ["int32", "float32"])
+def test_restore_dtype_on_multiindexes(dtype: str) -> None:
+    foo = xr.Dataset(coords={"bar": ("bar", np.array([0, 1], dtype=dtype))})
+    foo = foo.stack(baz=("bar",))
+    assert str(foo["bar"].values.dtype) == dtype
+
+
+class IndexWithExtraVariables(Index):
+    @classmethod
+    def from_variables(cls, variables, *, options=None):
+        return cls()
+
+    def create_variables(self, variables=None):
+        if variables is None:
+            # For Coordinates.from_xindex(), return all variables the index can create
+            return {
+                "time": Variable(dims=("time",), data=[1, 2, 3]),
+                "valid_time": Variable(
+                    dims=("time",),
+                    data=[2, 3, 4],  # time + 1
+                    attrs={"description": "time + 1"},
+                ),
+            }
+
+        result = dict(variables)
+        if "time" in variables:
+            result["valid_time"] = Variable(
+                dims=("time",),
+                data=variables["time"].data + 1,
+                attrs={"description": "time + 1"},
+            )
+        return result
+
+
+def test_set_xindex_with_extra_variables() -> None:
+    """Test that set_xindex raises an error when custom index creates extra variables."""
+
+    ds = xr.Dataset(coords={"time": [1, 2, 3]}).reset_index("time")
+
+    # Test that set_xindex raises error for extra variables
+    with pytest.raises(ValueError, match="extra variables 'valid_time'"):
+        ds.set_xindex("time", IndexWithExtraVariables)
+
+
+def test_set_xindex_factory_method_pattern() -> None:
+    ds = xr.Dataset(coords={"time": [1, 2, 3]}).reset_index("time")
+
+    # Test the recommended factory method pattern
+    coord_vars = {"time": ds._variables["time"]}
+    index = IndexWithExtraVariables.from_variables(coord_vars)
+    coords = xr.Coordinates.from_xindex(index)
+    result = ds.assign_coords(coords)
+
+    assert "time" in result.variables
+    assert "valid_time" in result.variables
+    assert_array_equal(result.valid_time.data, result.time.data + 1)

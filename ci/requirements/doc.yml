@@ -4,39 +4,50 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.9
+  - python
   - bottleneck
   - cartopy
-  - cfgrib>=0.9
-  - dask-core>=2.30
-  - h5netcdf>=0.7.4
+  - cfgrib
+  - kerchunk
+  - dask-core
+  - hypothesis
+  - h5netcdf
   - ipykernel
+  - ipywidgets # silence nbsphinx warning
   - ipython
-  - iris>=2.3
+  - iris
   - jupyter_client
+  - jupyter_sphinx
   - matplotlib-base
   - nbsphinx
-  - netcdf4>=1.5
+  - ncdata
+  - netcdf4
   - numba
-  - numpy>=1.20
-  - packaging>=21.0
-  - pandas>=1.3
+  - numpy>=2.2
+  - packaging
+  - pandas
   - pooch
   - pip
-  - pydata-sphinx-theme>=0.4.3
+  - pre-commit
+  - pyarrow
+  - pydata-sphinx-theme
   - pyproj
-  - rasterio>=1.1
+  - rich # for Zarr tree()
+  - scipy
   - seaborn
   - setuptools
   - sparse
   - sphinx-autosummary-accessors
-  - sphinx-book-theme >= 0.0.38
   - sphinx-copybutton
   - sphinx-design
-  - sphinx!=4.4.0
-  - zarr>=2.4
+  - sphinx-inline-tabs
+  - sphinx>=6,<8
+  - sphinxcontrib-mermaid
+  - sphinxcontrib-srclinks
+  - sphinx-remove-toctrees
+  - sphinxext-opengraph
+  - sphinxext-rediraffe
+  - zarr
   - pip:
-      - sphinxext-rediraffe
-      - sphinxext-opengraph
       # relative to this file. Needs to be editable to be accepted.
       - -e ../..

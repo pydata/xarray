@@ -39,14 +39,13 @@
 from __future__ import annotations
 
 import re
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import pytest
 
 import xarray as xr
-
-from . import assert_equal, assert_identical, requires_dask
+from xarray.tests import assert_equal, assert_identical, requires_dask
 
 
 @pytest.fixture(
@@ -280,23 +279,19 @@ def test_case_bytes() -> None:
 def test_case_str() -> None:
     # This string includes some unicode characters
     # that are common case management corner cases
-    value = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(np.unicode_)
+    value = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(np.str_)
 
-    exp_capitalized = xr.DataArray(["Some word ǆ ß ᾓ σς ﬃ⁵å ç ⅰ"]).astype(np.unicode_)
-    exp_lowered = xr.DataArray(["some word ǆ ß ᾓ σς ﬃ⁵å ç ⅰ"]).astype(np.unicode_)
-    exp_swapped = xr.DataArray(["soME WoRD ǆ SS ᾛ σς FFI⁵å ç ⅰ"]).astype(np.unicode_)
-    exp_titled = xr.DataArray(["Some Word ǅ Ss ᾛ Σς Ffi⁵Å Ç Ⅰ"]).astype(np.unicode_)
-    exp_uppered = xr.DataArray(["SOME WORD Ǆ SS ἫΙ ΣΣ FFI⁵Å Ç Ⅰ"]).astype(np.unicode_)
-    exp_casefolded = xr.DataArray(["some word ǆ ss ἣι σσ ffi⁵å ç ⅰ"]).astype(
-        np.unicode_
-    )
+    exp_capitalized = xr.DataArray(["Some word ǆ ß ᾓ σς ﬃ⁵å ç ⅰ"]).astype(np.str_)
+    exp_lowered = xr.DataArray(["some word ǆ ß ᾓ σς ﬃ⁵å ç ⅰ"]).astype(np.str_)
+    exp_swapped = xr.DataArray(["soME WoRD ǆ SS ᾛ σς FFI⁵å ç ⅰ"]).astype(np.str_)
+    exp_titled = xr.DataArray(["Some Word ǅ Ss ᾛ Σς Ffi⁵Å Ç Ⅰ"]).astype(np.str_)
+    exp_uppered = xr.DataArray(["SOME WORD Ǆ SS ἫΙ ΣΣ FFI⁵Å Ç Ⅰ"]).astype(np.str_)
+    exp_casefolded = xr.DataArray(["some word ǆ ss ἣι σσ ffi⁵å ç ⅰ"]).astype(np.str_)
 
-    exp_norm_nfc = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(np.unicode_)
-    exp_norm_nfkc = xr.DataArray(["SOme wOrd DŽ ß ᾛ ΣΣ ffi5Å Ç I"]).astype(np.unicode_)
-    exp_norm_nfd = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(np.unicode_)
-    exp_norm_nfkd = xr.DataArray(["SOme wOrd DŽ ß ᾛ ΣΣ ffi5Å Ç I"]).astype(
-        np.unicode_
-    )
+    exp_norm_nfc = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(np.str_)
+    exp_norm_nfkc = xr.DataArray(["SOme wOrd DŽ ß ᾛ ΣΣ ffi5Å Ç I"]).astype(np.str_)
+    exp_norm_nfd = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(np.str_)
+    exp_norm_nfkd = xr.DataArray(["SOme wOrd DŽ ß ᾛ ΣΣ ffi5Å Ç I"]).astype(np.str_)
 
     res_capitalized = value.str.capitalize()
     res_casefolded = value.str.casefold()
@@ -681,7 +676,7 @@ def test_extract_extractall_name_collision_raises(dtype) -> None:
 def test_extract_single_case(dtype) -> None:
     pat_str = r"(\w+)_Xy_\d*"
     pat_re: str | bytes = (
-        pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
     pat_compiled = re.compile(pat_re)
 
@@ -729,7 +724,7 @@ def test_extract_single_case(dtype) -> None:
 def test_extract_single_nocase(dtype) -> None:
     pat_str = r"(\w+)?_Xy_\d*"
     pat_re: str | bytes = (
-        pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
     pat_compiled = re.compile(pat_re, flags=re.IGNORECASE)
 
@@ -771,7 +766,7 @@ def test_extract_single_nocase(dtype) -> None:
 def test_extract_multi_case(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
     pat_re: str | bytes = (
-        pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
     pat_compiled = re.compile(pat_re)
 
@@ -811,7 +806,7 @@ def test_extract_multi_case(dtype) -> None:
 def test_extract_multi_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
     pat_re: str | bytes = (
-        pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
     pat_compiled = re.compile(pat_re, flags=re.IGNORECASE)
 
@@ -877,7 +872,7 @@ def test_extract_broadcast(dtype) -> None:
 def test_extractall_single_single_case(dtype) -> None:
     pat_str = r"(\w+)_Xy_\d*"
     pat_re: str | bytes = (
-        pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
     pat_compiled = re.compile(pat_re)
 
@@ -909,9 +904,9 @@ def test_extractall_single_single_case(dtype) -> None:
 def test_extractall_single_single_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_\d*"
     pat_re: str | bytes = (
-        pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
-    pat_compiled = re.compile(pat_re, flags=re.I)
+    pat_compiled = re.compile(pat_re, flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [["a_Xy_0", "ab_xY_10", "abc_Xy_01"], ["abcd_Xy_", "", "abcdef_Xy_101"]],
@@ -938,7 +933,7 @@ def test_extractall_single_single_nocase(dtype) -> None:
 def test_extractall_single_multi_case(dtype) -> None:
     pat_str = r"(\w+)_Xy_\d*"
     pat_re: str | bytes = (
-        pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
     pat_compiled = re.compile(pat_re)
 
@@ -984,9 +979,9 @@ def test_extractall_single_multi_case(dtype) -> None:
 def test_extractall_single_multi_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_\d*"
     pat_re: str | bytes = (
-        pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
-    pat_compiled = re.compile(pat_re, flags=re.I)
+    pat_compiled = re.compile(pat_re, flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [
@@ -1031,7 +1026,7 @@ def test_extractall_single_multi_nocase(dtype) -> None:
 def test_extractall_multi_single_case(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
     pat_re: str | bytes = (
-        pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
     pat_compiled = re.compile(pat_re)
 
@@ -1066,9 +1061,9 @@ def test_extractall_multi_single_case(dtype) -> None:
 def test_extractall_multi_single_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
     pat_re: str | bytes = (
-        pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
-    pat_compiled = re.compile(pat_re, flags=re.I)
+    pat_compiled = re.compile(pat_re, flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [["a_Xy_0", "ab_xY_10", "abc_Xy_01"], ["abcd_Xy_", "", "abcdef_Xy_101"]],
@@ -1098,7 +1093,7 @@ def test_extractall_multi_single_nocase(dtype) -> None:
 def test_extractall_multi_multi_case(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
     pat_re: str | bytes = (
-        pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
     pat_compiled = re.compile(pat_re)
 
@@ -1148,9 +1143,9 @@ def test_extractall_multi_multi_case(dtype) -> None:
 def test_extractall_multi_multi_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
     pat_re: str | bytes = (
-        pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
-    pat_compiled = re.compile(pat_re, flags=re.I)
+    pat_compiled = re.compile(pat_re, flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [
@@ -1250,7 +1245,7 @@ def test_findall_single_single_case(dtype) -> None:
 
 def test_findall_single_single_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_\d*"
-    pat_re = re.compile(dtype(pat_str), flags=re.I)
+    pat_re = re.compile(dtype(pat_str), flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [["a_Xy_0", "ab_xY_10", "abc_Xy_01"], ["abcd_Xy_", "", "abcdef_Xy_101"]],
@@ -1318,7 +1313,7 @@ def test_findall_single_multi_case(dtype) -> None:
 
 def test_findall_single_multi_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_\d*"
-    pat_re = re.compile(dtype(pat_str), flags=re.I)
+    pat_re = re.compile(dtype(pat_str), flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [
@@ -1392,7 +1387,7 @@ def test_findall_multi_single_case(dtype) -> None:
 
 def test_findall_multi_single_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
-    pat_re = re.compile(dtype(pat_str), flags=re.I)
+    pat_re = re.compile(dtype(pat_str), flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [["a_Xy_0", "ab_xY_10", "abc_Xy_01"], ["abcd_Xy_", "", "abcdef_Xy_101"]],
@@ -1468,7 +1463,7 @@ def test_findall_multi_multi_case(dtype) -> None:
 
 def test_findall_multi_multi_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
-    pat_re = re.compile(dtype(pat_str), flags=re.I)
+    pat_re = re.compile(dtype(pat_str), flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [
@@ -3420,12 +3415,12 @@ def test_cat_multi() -> None:
 
     values_4 = ""
 
-    values_5 = np.array("", dtype=np.unicode_)
+    values_5 = np.array("", dtype=np.str_)
 
     sep = xr.DataArray(
         [" ", ", "],
         dims=["ZZ"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     expected = xr.DataArray(
         [
@@ -3441,7 +3436,7 @@ def test_cat_multi() -> None:
             ],
         ],
         dims=["X", "Y", "ZZ"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     res = values_1.str.cat(values_2, values_3, values_4, values_5, sep=sep)
 
@@ -3562,7 +3557,7 @@ def test_format_scalar() -> None:
     values = xr.DataArray(
         ["{}.{Y}.{ZZ}", "{},{},{X},{X}", "{X}-{Y}-{ZZ}"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     pos0 = 1
     pos1 = 1.2
@@ -3575,7 +3570,7 @@ def test_format_scalar() -> None:
     expected = xr.DataArray(
         ["1.X.None", "1,1.2,'test','test'", "'test'-X-None"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     res = values.str.format(pos0, pos1, pos2, X=X, Y=Y, ZZ=ZZ, W=W)
 
@@ -3587,7 +3582,7 @@ def test_format_broadcast() -> None:
     values = xr.DataArray(
         ["{}.{Y}.{ZZ}", "{},{},{X},{X}", "{X}-{Y}-{ZZ}"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     pos0 = 1
     pos1 = 1.2
@@ -3609,7 +3604,7 @@ def test_format_broadcast() -> None:
             ["'test'-X-None", "'test'-X-None"],
         ],
         dims=["X", "YY"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     res = values.str.format(pos0, pos1, pos2, X=X, Y=Y, ZZ=ZZ, W=W)
 
@@ -3621,7 +3616,7 @@ def test_mod_scalar() -> None:
     values = xr.DataArray(
         ["%s.%s.%s", "%s,%s,%s", "%s-%s-%s"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     pos0 = 1
     pos1 = 1.2
@@ -3630,7 +3625,7 @@ def test_mod_scalar() -> None:
     expected = xr.DataArray(
         ["1.1.2.2.3", "1,1.2,2.3", "1-1.2-2.3"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     res = values.str % (pos0, pos1, pos2)
 
@@ -3642,7 +3637,7 @@ def test_mod_dict() -> None:
     values = xr.DataArray(
         ["%(a)s.%(a)s.%(b)s", "%(b)s,%(c)s,%(b)s", "%(c)s-%(b)s-%(a)s"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     a = 1
     b = 1.2
@@ -3651,7 +3646,7 @@ def test_mod_dict() -> None:
     expected = xr.DataArray(
         ["1.1.1.2", "1.2,2.3,1.2", "2.3-1.2-1"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     res = values.str % {"a": a, "b": b, "c": c}
 
@@ -3663,7 +3658,7 @@ def test_mod_broadcast_single() -> None:
     values = xr.DataArray(
         ["%s_1", "%s_2", "%s_3"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     pos = xr.DataArray(
         ["2.3", "3.44444"],
@@ -3673,7 +3668,7 @@ def test_mod_broadcast_single() -> None:
     expected = xr.DataArray(
         [["2.3_1", "3.44444_1"], ["2.3_2", "3.44444_2"], ["2.3_3", "3.44444_3"]],
         dims=["X", "YY"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     res = values.str % pos
 
@@ -3685,7 +3680,7 @@ def test_mod_broadcast_multi() -> None:
     values = xr.DataArray(
         ["%s.%s.%s", "%s,%s,%s", "%s-%s-%s"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     pos0 = 1
     pos1 = 1.2
@@ -3702,7 +3697,7 @@ def test_mod_broadcast_multi() -> None:
             ["1-1.2-2.3", "1-1.2-3.44444"],
         ],
         dims=["X", "YY"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     res = values.str % (pos0, pos1, pos2)
 

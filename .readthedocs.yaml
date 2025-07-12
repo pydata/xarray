@@ -1,14 +1,21 @@
 version: 2
 
+sphinx:
+  configuration: doc/conf.py
+  fail_on_warning: true
+
 build:
-  os: ubuntu-20.04
+  os: ubuntu-lts-latest
   tools:
-    python: mambaforge-4.10
+    python: mambaforge-latest
+  jobs:
+    post_checkout:
+      - (git --no-pager log --pretty="tformat:%s" -1 | grep -vqF "[skip-rtd]") || exit 183
+      - git fetch --unshallow || true
+    pre_install:
+      - git update-index --assume-unchanged doc/conf.py ci/requirements/doc.yml
 
 conda:
   environment: ci/requirements/doc.yml
-
-sphinx:
-  fail_on_warning: true
 
 formats: []

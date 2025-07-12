@@ -1,30 +1,50 @@
 from __future__ import annotations
 
-from .. import conventions
-from ..core.dataset import Dataset
-from .common import BACKEND_ENTRYPOINTS, AbstractDataStore, BackendEntrypoint
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
+
+from xarray import conventions
+from xarray.backends.common import (
+    BACKEND_ENTRYPOINTS,
+    AbstractDataStore,
+    BackendEntrypoint,
+)
+from xarray.core.coordinates import Coordinates
+from xarray.core.dataset import Dataset
+
+if TYPE_CHECKING:
+    import os
+
+    from xarray.core.types import ReadBuffer
 
 
 class StoreBackendEntrypoint(BackendEntrypoint):
-    available = True
+    description = "Open AbstractDataStore instances in Xarray"
+    url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.StoreBackendEntrypoint.html"
 
-    def guess_can_open(self, filename_or_obj):
+    def guess_can_open(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+    ) -> bool:
         return isinstance(filename_or_obj, AbstractDataStore)
 
     def open_dataset(
         self,
-        store,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
         decode_coords=True,
-        drop_variables=None,
+        drop_variables: str | Iterable[str] | None = None,
+        set_indexes: bool = True,
         use_cftime=None,
         decode_timedelta=None,
-    ):
-        vars, attrs = store.load()
-        encoding = store.get_encoding()
+    ) -> Dataset:
+        assert isinstance(filename_or_obj, AbstractDataStore)
+
+        vars, attrs = filename_or_obj.load()
+        encoding = filename_or_obj.get_encoding()
 
         vars, attrs, coord_names = conventions.decode_cf_variables(
             vars,
@@ -38,12 +58,23 @@ class StoreBackendEntrypoint(BackendEntrypoint):
             decode_timedelta=decode_timedelta,
         )
 
-        ds = Dataset(vars, attrs=attrs)
-        ds = ds.set_coords(coord_names.intersection(vars))
-        ds.set_close(store.close)
+        # split data and coordinate variables (promote dimension coordinates)
+        data_vars = {}
+        coord_vars = {}
+        for name, var in vars.items():
+            if name in coord_names or var.dims == (name,):
+                coord_vars[name] = var
+            else:
+                data_vars[name] = var
+
+        # explicit Coordinates object with no index passed
+        coords = Coordinates(coord_vars, indexes={})
+
+        ds = Dataset(data_vars, coords=coords, attrs=attrs)
+        ds.set_close(filename_or_obj.close)
         ds.encoding = encoding
 
         return ds
 
 
-BACKEND_ENTRYPOINTS["store"] = StoreBackendEntrypoint
+BACKEND_ENTRYPOINTS["store"] = (None, StoreBackendEntrypoint)

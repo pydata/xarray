@@ -9,8 +9,7 @@ import pytest
 import xarray as xr
 from xarray.coding import variables
 from xarray.conventions import decode_cf_variable, encode_cf_variable
-
-from . import assert_allclose, assert_equal, assert_identical, requires_dask
+from xarray.tests import assert_allclose, assert_equal, assert_identical, requires_dask
 
 with suppress(ImportError):
     import dask.array as da
@@ -52,9 +51,8 @@ def test_CFMaskCoder_encode_missing_fill_values_conflict(data, encoding) -> None
     assert encoded.dtype == encoded.attrs["missing_value"].dtype
     assert encoded.dtype == encoded.attrs["_FillValue"].dtype
 
-    with pytest.warns(variables.SerializationWarning):
-        roundtripped = decode_cf_variable("foo", encoded)
-        assert_identical(roundtripped, original)
+    roundtripped = decode_cf_variable("foo", encoded)
+    assert_identical(roundtripped, original)
 
 
 def test_CFMaskCoder_missing_value() -> None:
@@ -66,13 +64,13 @@ def test_CFMaskCoder_missing_value() -> None:
     expected.attrs["missing_value"] = -9999
 
     decoded = xr.decode_cf(expected.to_dataset())
-    encoded, _ = xr.conventions.cf_encoder(decoded, decoded.attrs)
+    encoded, _ = xr.conventions.cf_encoder(decoded.variables, decoded.attrs)
 
     assert_equal(encoded["tmpk"], expected.variable)
 
     decoded.tmpk.encoding["_FillValue"] = -9940
     with pytest.raises(ValueError):
-        encoded, _ = xr.conventions.cf_encoder(decoded, decoded.attrs)
+        encoded, _ = xr.conventions.cf_encoder(decoded.variables, decoded.attrs)
 
 
 @requires_dask
@@ -96,17 +94,19 @@ def test_coder_roundtrip() -> None:
     assert_identical(original, roundtripped)
 
 
-@pytest.mark.parametrize("dtype", "u1 u2 i1 i2 f2 f4".split())
-def test_scaling_converts_to_float32(dtype) -> None:
+@pytest.mark.parametrize("dtype", ["u1", "u2", "i1", "i2", "f2", "f4"])
+@pytest.mark.parametrize("dtype2", ["f4", "f8"])
+def test_scaling_converts_to_float(dtype: str, dtype2: str) -> None:
+    dt = np.dtype(dtype2)
     original = xr.Variable(
-        ("x",), np.arange(10, dtype=dtype), encoding=dict(scale_factor=10)
+        ("x",), np.arange(10, dtype=dtype), encoding=dict(scale_factor=dt.type(10))
     )
     coder = variables.CFScaleOffsetCoder()
     encoded = coder.encode(original)
-    assert encoded.dtype == np.float32
+    assert encoded.dtype == dt
     roundtripped = coder.decode(encoded)
     assert_identical(original, roundtripped)
-    assert roundtripped.dtype == np.float32
+    assert roundtripped.dtype == dt
 
 
 @pytest.mark.parametrize("scale_factor", (10, [10]))
@@ -129,7 +129,7 @@ def test_decode_unsigned_from_signed(bits) -> None:
     encoded = xr.Variable(
         ("x",), original_values.astype(signed_dtype), attrs={"_Unsigned": "true"}
     )
-    coder = variables.UnsignedIntegerCoder()
+    coder = variables.CFMaskCoder()
     decoded = coder.decode(encoded)
     assert decoded.dtype == unsigned_dtype
     assert decoded.values == original_values
@@ -143,7 +143,7 @@ def test_decode_signed_from_unsigned(bits) -> None:
     encoded = xr.Variable(
         ("x",), original_values.astype(unsigned_dtype), attrs={"_Unsigned": "false"}
     )
-    coder = variables.UnsignedIntegerCoder()
+    coder = variables.CFMaskCoder()
     decoded = coder.decode(encoded)
     assert decoded.dtype == signed_dtype
     assert decoded.values == original_values

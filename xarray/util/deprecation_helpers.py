@@ -33,7 +33,13 @@
 
 import inspect
 import warnings
+from collections.abc import Callable
 from functools import wraps
+from typing import TypeVar
+
+from xarray.core.utils import emit_user_level_warning
+
+T = TypeVar("T", bound=Callable)
 
 POSITIONAL_OR_KEYWORD = inspect.Parameter.POSITIONAL_OR_KEYWORD
 KEYWORD_ONLY = inspect.Parameter.KEYWORD_ONLY
@@ -41,7 +47,7 @@ POSITIONAL_ONLY = inspect.Parameter.POSITIONAL_ONLY
 EMPTY = inspect.Parameter.empty
 
 
-def _deprecate_positional_args(version):
+def _deprecate_positional_args(version) -> Callable[[T], T]:
     """Decorator for methods that issues warnings for positional arguments
 
     Using the keyword-only argument syntax in pep 3102, arguments after the
@@ -72,7 +78,6 @@ def _deprecate_positional_args(version):
     """
 
     def _decorator(func):
-
         signature = inspect.signature(func)
 
         pos_or_kw_args = []
@@ -89,11 +94,9 @@ def _deprecate_positional_args(version):
 
         @wraps(func)
         def inner(*args, **kwargs):
-
             name = func.__name__
             n_extra_args = len(args) - len(pos_or_kw_args)
             if n_extra_args > 0:
-
                 extra_args = ", ".join(kwonly_args[:n_extra_args])
 
                 warnings.warn(
@@ -105,8 +108,10 @@ def _deprecate_positional_args(version):
                     stacklevel=2,
                 )
 
-                zip_args = zip(kwonly_args[:n_extra_args], args[-n_extra_args:])
-                kwargs.update({name: arg for name, arg in zip_args})
+                zip_args = zip(
+                    kwonly_args[:n_extra_args], args[-n_extra_args:], strict=True
+                )
+                kwargs.update(zip_args)
 
                 return func(*args[:-n_extra_args], **kwargs)
 
@@ -115,3 +120,28 @@ def _deprecate_positional_args(version):
         return inner
 
     return _decorator
+
+
+def deprecate_dims(func: T, old_name="dims") -> T:
+    """
+    For functions that previously took `dims` as a kwarg, and have now transitioned to
+    `dim`. This decorator will issue a warning if `dims` is passed while forwarding it
+    to `dim`.
+    """
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if old_name in kwargs:
+            emit_user_level_warning(
+                f"The `{old_name}` argument has been renamed to `dim`, and will be removed "
+                "in the future. This renaming is taking place throughout xarray over the "
+                "next few releases.",
+                # Upgrade to `DeprecationWarning` in the future, when the renaming is complete.
+                PendingDeprecationWarning,
+            )
+            kwargs["dim"] = kwargs.pop(old_name)
+        return func(*args, **kwargs)
+
+    # We're quite confident we're just returning `T` from this function, so it's fine to ignore typing
+    # within the function.
+    return wrapper  # type: ignore[return-value]

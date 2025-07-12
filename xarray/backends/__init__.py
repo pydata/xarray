@@ -3,34 +3,41 @@
 DataStores provide a uniform interface for saving and loading data in different
 formats. They should not be used directly, but rather through Dataset objects.
 """
-from .cfgrib_ import CfGribDataStore
-from .common import AbstractDataStore, BackendArray, BackendEntrypoint
-from .file_manager import CachingFileManager, DummyFileManager, FileManager
-from .h5netcdf_ import H5NetCDFStore
-from .memory import InMemoryDataStore
-from .netCDF4_ import NetCDF4DataStore
-from .plugins import list_engines
-from .pseudonetcdf_ import PseudoNetCDFDataStore
-from .pydap_ import PydapDataStore
-from .pynio_ import NioDataStore
-from .scipy_ import ScipyDataStore
-from .zarr import ZarrStore
+
+from xarray.backends.common import AbstractDataStore, BackendArray, BackendEntrypoint
+from xarray.backends.file_manager import (
+    CachingFileManager,
+    DummyFileManager,
+    FileManager,
+)
+from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint, H5NetCDFStore
+from xarray.backends.memory import InMemoryDataStore
+from xarray.backends.netCDF4_ import NetCDF4BackendEntrypoint, NetCDF4DataStore
+from xarray.backends.plugins import list_engines, refresh_engines
+from xarray.backends.pydap_ import PydapBackendEntrypoint, PydapDataStore
+from xarray.backends.scipy_ import ScipyBackendEntrypoint, ScipyDataStore
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.backends.zarr import ZarrBackendEntrypoint, ZarrStore
 
 __all__ = [
     "AbstractDataStore",
     "BackendArray",
     "BackendEntrypoint",
-    "FileManager",
     "CachingFileManager",
-    "CfGribDataStore",
     "DummyFileManager",
-    "InMemoryDataStore",
-    "NetCDF4DataStore",
-    "PydapDataStore",
-    "NioDataStore",
-    "ScipyDataStore",
+    "FileManager",
     "H5NetCDFStore",
+    "H5netcdfBackendEntrypoint",
+    "InMemoryDataStore",
+    "NetCDF4BackendEntrypoint",
+    "NetCDF4DataStore",
+    "PydapBackendEntrypoint",
+    "PydapDataStore",
+    "ScipyBackendEntrypoint",
+    "ScipyDataStore",
+    "StoreBackendEntrypoint",
+    "ZarrBackendEntrypoint",
     "ZarrStore",
-    "PseudoNetCDFDataStore",
     "list_engines",
+    "refresh_engines",
 ]

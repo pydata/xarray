@@ -7,8 +7,7 @@ import pytest
 
 import xarray as xr
 from xarray.backends.api import _get_default_engine
-
-from . import (
+from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     requires_dask,
@@ -80,12 +79,14 @@ def explicit_chunks(chunks, shape):
     # Emulate `dask.array.core.normalize_chunks` but for simpler inputs.
     return tuple(
         (
-            (size // chunk) * (chunk,)
-            + ((size % chunk,) if size % chunk or size == 0 else ())
+            (
+                (size // chunk) * (chunk,)
+                + ((size % chunk,) if size % chunk or size == 0 else ())
+            )
+            if isinstance(chunk, Number)
+            else chunk
         )
-        if isinstance(chunk, Number)
-        else chunk
-        for chunk, size in zip(chunks, shape)
+        for chunk, size in zip(chunks, shape, strict=True)
     )
 
 
@@ -103,7 +104,9 @@ class TestPreferredChunks:
                 self.var_name: xr.Variable(
                     dims,
                     np.empty(shape, dtype=np.dtype("V1")),
-                    encoding={"preferred_chunks": dict(zip(dims, pref_chunks))},
+                    encoding={
+                        "preferred_chunks": dict(zip(dims, pref_chunks, strict=True))
+                    },
                 )
             }
         )
@@ -163,7 +166,7 @@ class TestPreferredChunks:
             final = xr.open_dataset(
                 initial,
                 engine=PassThroughBackendEntrypoint,
-                chunks=dict(zip(initial[self.var_name].dims, req_chunks)),
+                chunks=dict(zip(initial[self.var_name].dims, req_chunks, strict=True)),
             )
         self.check_dataset(initial, final, explicit_chunks(req_chunks, shape))
 
@@ -195,6 +198,42 @@ class TestPreferredChunks:
             final = xr.open_dataset(
                 initial,
                 engine=PassThroughBackendEntrypoint,
-                chunks=dict(zip(initial[self.var_name].dims, req_chunks)),
+                chunks=dict(zip(initial[self.var_name].dims, req_chunks, strict=True)),
             )
         self.check_dataset(initial, final, explicit_chunks(req_chunks, shape))
+
+    @pytest.mark.parametrize("create_default_indexes", [True, False])
+    def test_default_indexes(self, create_default_indexes):
+        """Create default indexes if the backend does not create them."""
+        coords = xr.Coordinates({"x": ("x", [0, 1]), "y": list("abc")}, indexes={})
+        initial = xr.Dataset({"a": ("x", [1, 2])}, coords=coords)
+
+        with assert_no_warnings():
+            final = xr.open_dataset(
+                initial,
+                engine=PassThroughBackendEntrypoint,
+                create_default_indexes=create_default_indexes,
+            )
+
+        if create_default_indexes:
+            assert all(name in final.xindexes for name in ["x", "y"])
+        else:
+            assert len(final.xindexes) == 0
+
+    @pytest.mark.parametrize("create_default_indexes", [True, False])
+    def test_default_indexes_passthrough(self, create_default_indexes):
+        """Allow creating indexes in the backend."""
+
+        initial = xr.Dataset(
+            {"a": (["x", "y"], [[1, 2, 3], [4, 5, 6]])},
+            coords={"x": ("x", [0, 1]), "y": ("y", list("abc"))},
+        ).stack(z=["x", "y"])
+
+        with assert_no_warnings():
+            final = xr.open_dataset(
+                initial,
+                engine=PassThroughBackendEntrypoint,
+                create_default_indexes=create_default_indexes,
+            )
+
+        assert initial.coords.equals(final.coords)

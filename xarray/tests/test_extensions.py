@@ -5,10 +5,11 @@ import pickle
 import pytest
 
 import xarray as xr
+from xarray.core.extensions import register_datatree_accessor
+from xarray.tests import assert_identical
 
-from . import assert_identical
 
-
+@register_datatree_accessor("example_accessor")
 @xr.register_dataset_accessor("example_accessor")
 @xr.register_dataarray_accessor("example_accessor")
 class ExampleAccessor:
@@ -20,6 +21,7 @@ class ExampleAccessor:
 
 class TestAccessor:
     def test_register(self) -> None:
+        @register_datatree_accessor("demo")
         @xr.register_dataset_accessor("demo")
         @xr.register_dataarray_accessor("demo")
         class DemoAccessor:
@@ -32,24 +34,26 @@ class TestAccessor:
             def foo(self):
                 return "bar"
 
+        dt: xr.DataTree = xr.DataTree()
+        assert dt.demo.foo == "bar"
+
         ds = xr.Dataset()
         assert ds.demo.foo == "bar"
 
         da = xr.DataArray(0)
         assert da.demo.foo == "bar"
-
         # accessor is cached
         assert ds.demo is ds.demo
 
         # check descriptor
         assert ds.demo.__doc__ == "Demo accessor."
         # TODO: typing doesn't seem to work with accessors
-        assert xr.Dataset.demo.__doc__ == "Demo accessor."  # type: ignore
-        assert isinstance(ds.demo, DemoAccessor)  # type: ignore
-        assert xr.Dataset.demo is DemoAccessor  # type: ignore
+        assert xr.Dataset.demo.__doc__ == "Demo accessor."  # type: ignore[attr-defined]
+        assert isinstance(ds.demo, DemoAccessor)
+        assert xr.Dataset.demo is DemoAccessor  # type: ignore[attr-defined]
 
         # ensure we can remove it
-        del xr.Dataset.demo  # type: ignore
+        del xr.Dataset.demo  # type: ignore[attr-defined]
         assert not hasattr(xr.Dataset, "demo")
 
         with pytest.warns(Warning, match="overriding a preexisting attribute"):
@@ -88,4 +92,4 @@ class TestAccessor:
                 raise AttributeError("broken")
 
         with pytest.raises(RuntimeError, match=r"error initializing"):
-            xr.Dataset().stupid_accessor
+            _ = xr.Dataset().stupid_accessor
