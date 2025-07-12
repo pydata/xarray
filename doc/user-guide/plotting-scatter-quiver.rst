@@ -17,6 +17,9 @@ Consider this dataset
     import matplotlib as mpl
     mpl.rcdefaults()
 
+    # Import 3D plotting toolkit to enable 3D scatter plots
+    from mpl_toolkits.mplot3d import Axes3D
+
 .. jupyter-execute::
 
     import cartopy.crs as ccrs
