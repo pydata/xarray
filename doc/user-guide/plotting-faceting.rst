@@ -14,7 +14,15 @@ multiples to display the same relationship conditioned on one or more other
 variables is often called a "trellis plot".
 
 .. jupyter-execute::
+    :hide-code:
 
+    # Use defaults so we don't get gridlines in generated docs
+    import matplotlib as mpl
+    mpl.rcdefaults()
+
+.. jupyter-execute::
+
+    import cartopy.crs as ccrs
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd

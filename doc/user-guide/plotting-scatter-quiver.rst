@@ -17,16 +17,23 @@ Consider this dataset
     import matplotlib as mpl
     mpl.rcdefaults()
 
-    # Ensure 3D plotting is available
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
-
 .. jupyter-execute::
 
+    import cartopy.crs as ccrs
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
     import xarray as xr
+
+    # Load air temperature dataset (needed for complete context)
+    airtemps = xr.tutorial.open_dataset("air_temperature")
+
+    # Convert to celsius
+    air = airtemps.air - 273.15
+
+    # copy attributes to get nice figure labels and change Kelvin to Celsius
+    air.attrs = airtemps.air.attrs
+    air.attrs["units"] = "deg C"
 
     ds = xr.tutorial.scatter_example_dataset(seed=42)
     ds
