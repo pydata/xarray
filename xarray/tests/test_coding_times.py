@@ -1867,7 +1867,10 @@ def test_decode_timedelta_via_units(
     var = Variable(["time"], timedeltas, encoding=attrs)
     encoded = Variable(["time"], np.array([0, 1, 2]), attrs=attrs)
     if warns:
-        with pytest.warns(FutureWarning, match="decode_timedelta"):
+        with pytest.warns(
+            FutureWarning,
+            match="xarray will not decode the variable 'foo' into a timedelta64 dtype",
+        ):
             decoded = conventions.decode_cf_variable(
                 "foo",
                 encoded,
@@ -1886,45 +1889,56 @@ def test_decode_timedelta_via_units(
 
 
 _DECODE_TIMEDELTA_VIA_DTYPE_TESTS = {
-    "default": (True, None, np.dtype("timedelta64[ns]")),
-    "decode_timedelta=False": (True, False, np.dtype("int64")),
-    "decode_timedelta=True": (True, True, np.dtype("timedelta64[ns]")),
+    "default": (True, None, "ns", np.dtype("timedelta64[ns]")),
+    "decode_timedelta=False": (True, False, "ns", np.dtype("int64")),
+    "decode_timedelta=True": (True, True, "ns", np.dtype("timedelta64[ns]")),
+    "use-original-units": (True, True, "s", np.dtype("timedelta64[s]")),
     "inherit-time_unit-from-decode_times": (
         CFDatetimeCoder(time_unit="s"),
         None,
+        "ns",
         np.dtype("timedelta64[s]"),
     ),
     "set-time_unit-via-CFTimedeltaCoder-decode_times=True": (
         True,
         CFTimedeltaCoder(time_unit="s"),
+        "ns",
         np.dtype("timedelta64[s]"),
     ),
     "set-time_unit-via-CFTimedeltaCoder-decode_times=False": (
         False,
         CFTimedeltaCoder(time_unit="s"),
+        "ns",
         np.dtype("timedelta64[s]"),
     ),
     "override-time_unit-from-decode_times": (
         CFDatetimeCoder(time_unit="ns"),
         CFTimedeltaCoder(time_unit="s"),
+        "ns",
         np.dtype("timedelta64[s]"),
+    ),
+    "decode-different-units": (
+        True,
+        CFTimedeltaCoder(time_unit="us"),
+        "s",
+        np.dtype("timedelta64[us]"),
     ),
 }
 
 
 @pytest.mark.parametrize(
-    ("decode_times", "decode_timedelta", "expected_dtype"),
+    ("decode_times", "decode_timedelta", "original_unit", "expected_dtype"),
     list(_DECODE_TIMEDELTA_VIA_DTYPE_TESTS.values()),
     ids=list(_DECODE_TIMEDELTA_VIA_DTYPE_TESTS.keys()),
 )
 def test_decode_timedelta_via_dtype(
-    decode_times, decode_timedelta, expected_dtype
+    decode_times, decode_timedelta, original_unit, expected_dtype
 ) -> None:
-    timedeltas = pd.timedelta_range(0, freq="D", periods=3)
+    timedeltas = pd.timedelta_range(0, freq="D", periods=3, unit=original_unit)  # type: ignore[call-arg]
     encoding = {"units": "days"}
     var = Variable(["time"], timedeltas, encoding=encoding)
     encoded = conventions.encode_cf_variable(var)
-    assert encoded.attrs["dtype"] == "timedelta64[ns]"
+    assert encoded.attrs["dtype"] == f"timedelta64[{original_unit}]"
     assert encoded.attrs["units"] == encoding["units"]
     decoded = conventions.decode_cf_variable(
         "foo", encoded, decode_times=decode_times, decode_timedelta=decode_timedelta
