@@ -300,8 +300,8 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         if _contains_cftime_datetimes(data):
             # Preprocess chunks if they're cftime
             cftime_nbytes_approx = 64
-            from dask.utils import parse_bytes
             from dask import config as dask_config
+            from dask.utils import parse_bytes
 
             target_chunksize = parse_bytes(dask_config.get("array.chunk-size"))
 
