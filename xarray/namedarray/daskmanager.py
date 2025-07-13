@@ -4,8 +4,10 @@ from collections.abc import Callable, Iterable, Sequence
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+import dask
 
 from xarray.core.indexing import ImplicitToExplicitIndexingAdapter
+from xarray.core.common import _contains_cftime_datetimes
 from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray
 from xarray.namedarray.utils import is_duck_dask_array, module_available
 
@@ -16,6 +18,7 @@ if TYPE_CHECKING:
         _NormalizedChunks,
         duckarray,
     )
+    from xarray.namedarray.parallelcompat import _Chunks
 
     try:
         from dask.array import Array as DaskArray
@@ -264,3 +267,54 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         if chunks != "auto":
             raise NotImplementedError("Only chunks='auto' is supported at present.")
         return dask.array.shuffle(x, indexer, axis, chunks="auto")
+
+    def rechunk( # type: ignore[override]
+        self, 
+        data: T_ChunkedArray, 
+        chunks: _NormalizedChunks | tuple[int, ...] | _Chunks, 
+        **kwargs: Any, 
+    ) -> Any: 
+        """
+        Changes the chunking pattern of the given array.
+
+        Called when the .chunk method is called on an xarray object that is already chunked.
+
+        Parameters
+        ----------
+        data : dask array
+            Array to be rechunked.
+        chunks :  int, tuple, dict or str, optional
+            The new block dimensions to create. -1 indicates the full size of the
+            corresponding dimension. Default is "auto" which automatically
+            determines chunk sizes.
+
+        Returns
+        -------
+        chunked array
+
+        See Also
+        --------
+        dask.array.Array.rechunk
+        cubed.Array.rechunk
+        """
+
+        if _contains_cftime_datetimes(data):
+            # Preprocess chunks if they're cftime
+            cftime_nbytes_approx = 64
+            from dask.utils import parse_bytes
+            target_chunksize = parse_bytes(dask.config.get("array.chunk-size"))
+            
+            # Calculate total elements per chunk
+            elements_per_chunk = target_chunksize // cftime_nbytes_approx
+        
+            # Distribute elements across dimensions
+            # Simple approach: try to make chunks roughly cubic
+            ndim = data.ndim # type:ignore
+            shape = data.shape # type:ignore
+            if ndim > 0:
+                chunk_size_per_dim = int(elements_per_chunk ** (1.0 / ndim))
+                chunks = tuple(min(chunk_size_per_dim, dim_size) for dim_size in shape)
+            else:
+                chunks = ()
+
+        return data.rechunk(chunks, **kwargs)
