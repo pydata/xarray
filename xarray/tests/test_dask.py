@@ -1059,8 +1059,9 @@ def make_da():
 
     return da
 
+
 def make_da_cftime():
-    yrs = np.arange(2000,2120)
+    yrs = np.arange(2000, 2120)
     cftime_dates = xr.date_range(
         start=f"{yrs[0]}-01-01",
         end=f"{yrs[-1]}-12-31",
@@ -1078,8 +1079,9 @@ def make_da_cftime():
     da.attrs["test"] = "test"
     da.coords["c2"] = 0.5
     da.coords["ndcoord"] = da.x * 2
-    
+
     return da
+
 
 def make_ds():
     map_ds = xr.Dataset()
@@ -1160,6 +1162,7 @@ def test_auto_chunk_da(obj):
     expected = obj.data.rechunk("auto")
     np.testing.assert_array_equal(actual, expected)
     assert actual.chunks == expected.chunks
+
 
 @pytest.mark.parametrize("obj", [make_da_cftime()])
 def test_auto_chunk_da_cftime(obj):
