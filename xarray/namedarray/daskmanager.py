@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Sequence
 from typing import TYPE_CHECKING, Any
 
-import dask
 import numpy as np
 
 from xarray.core.common import _contains_cftime_datetimes
@@ -302,8 +301,9 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             # Preprocess chunks if they're cftime
             cftime_nbytes_approx = 64
             from dask.utils import parse_bytes
+            from dask import config as dask_config
 
-            target_chunksize = parse_bytes(dask.config.get("array.chunk-size"))
+            target_chunksize = parse_bytes(dask_config.get("array.chunk-size"))
 
             # Calculate total elements per chunk
             elements_per_chunk = target_chunksize // cftime_nbytes_approx
