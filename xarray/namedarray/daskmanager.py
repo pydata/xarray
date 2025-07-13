@@ -300,18 +300,16 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         if _contains_cftime_datetimes(data):
             # Preprocess chunks if they're cftime
             cftime_nbytes_approx = 64
-            from dask.utils import parse_bytes
             from dask import config as dask_config
+            from dask.utils import parse_bytes
 
             target_chunksize = parse_bytes(dask_config.get("array.chunk-size"))
 
-            # Calculate total elements per chunk
             elements_per_chunk = target_chunksize // cftime_nbytes_approx
 
-            # Distribute elements across dimensions
-            # Simple approach: try to make chunks roughly cubic
-            ndim = data.ndim  # type:ignore
-            shape = data.shape  # type:ignore
+            # Try to make chunks roughly cubic
+            ndim = data.ndim  # type:ignore[attr-defined]
+            shape = data.shape  # type:ignore[attr-defined]
             if ndim > 0:
                 chunk_size_per_dim = int(elements_per_chunk ** (1.0 / ndim))
                 chunks = tuple(min(chunk_size_per_dim, dim_size) for dim_size in shape)
