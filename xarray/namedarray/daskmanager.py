@@ -307,7 +307,12 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
             elements_per_chunk = target_chunksize // cftime_nbytes_approx
 
-            # Try to make chunks roughly cubic
+            """
+            Try to make chunks roughly cubic. This needs to be a bit smarter, it 
+            really ought to account for xr.structure.chunks._getchunk and try to 
+            use the default encoding to set the chunk size.
+            """
+
             ndim = data.ndim  # type:ignore[attr-defined]
             shape = data.shape  # type:ignore[attr-defined]
             if ndim > 0:
