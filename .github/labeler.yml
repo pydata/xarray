@@ -45,11 +45,10 @@ topic-DataTree:
           - xarray/core/datatree*
 
 topic-documentation:
-  - changed-files:
-      - any-glob-to-any-file:
-          - doc/*
-          - "!doc/whats-new.rst"
-          - doc/**/*
+  - all:
+      - changed-files:
+          - any-glob-to-any-file: "doc/**/*"
+          - all-globs-to-all-files: "!doc/whats-new.rst"
 
 topic-groupby:
   - changed-files:
