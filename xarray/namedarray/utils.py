@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import sys
 import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
 from functools import lru_cache
@@ -15,6 +16,8 @@ if TYPE_CHECKING:
     from typing import TypeGuard
 
     from numpy.typing import NDArray
+
+    from xarray.namedarray.parallelcompat import T_ChunkedArray
 
     try:
         from dask.array.core import Array as DaskArray
@@ -193,6 +196,30 @@ def either_dict_or_kwargs(
             f"cannot specify both keyword and positional arguments to .{func_name}"
         )
     return pos_kwargs
+
+
+def build_chunkspec(
+    data: T_ChunkedArray,
+    target_chunksize: int,
+) -> tuple[int, ...]:
+    """
+    Try to make chunks roughly cubic. This needs to be a bit smarter, it
+    really ought to account for xr.structure.chunks._getchunk and try to
+    use the default encoding to set the chunk size.
+    """
+    from xarray.core.formatting import first_n_items
+
+    cftime_nbytes_approx: int = sys.getsizeof(first_n_items(data, 1))  # type: ignore[no-untyped-call]
+    elements_per_chunk = target_chunksize // cftime_nbytes_approx
+    ndim = data.ndim  # type:ignore[attr-defined]
+    shape = data.shape  # type:ignore[attr-defined]
+    if ndim > 0:
+        chunk_size_per_dim = int(elements_per_chunk ** (1.0 / ndim))
+        chunks = tuple(min(chunk_size_per_dim, dim_size) for dim_size in shape)
+    else:
+        chunks = ()
+
+    return chunks
 
 
 class ReprObject:
