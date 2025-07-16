@@ -477,7 +477,7 @@ Why does groupby change my time dimension?
 
 When you use ``groupby`` operations, xarray replaces the original dimension with the grouping dimension. This is expected behavior:
 
-.. jupyter-execute::
+.. code-block:: python
 
     import xarray as xr
     import pandas as pd
@@ -490,6 +490,8 @@ When you use ``groupby`` operations, xarray replaces the original dimension with
     monthly_mean = data.groupby('time.month').mean()
     print(f"Original dimensions: {data.dims}")
     print(f"After groupby dimensions: {monthly_mean.dims}")
+    # Output: Original dimensions: ('time',)
+    # Output: After groupby dimensions: ('month',)
 
 If you need to preserve the original time dimension, you can:
 
