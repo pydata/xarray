@@ -446,3 +446,100 @@ methods/properties to construct them (e.g., ``.plot()``, ``.groupby()``,
 internal classes used to implemented them (i.e.,
 ``xarray.plot.plotting._PlotMethods``, ``xarray.core.groupby.DataArrayGroupBy``,
 ``xarray.core.accessor_str.StringAccessor``) are not.
+
+How can I improve performance when working with large datasets?
+---------------------------------------------------------------
+
+Working with large datasets efficiently is a common challenge. Here are some best practices:
+
+**Memory Management:**
+
+- Use ``dask`` for out-of-core computation: ``xr.open_dataset('file.nc', chunks={'time': 100})``
+- When concatenating many files, prefer ``xr.concat()`` over ``open_mfdataset()`` for better performance
+- Use ``chunks`` parameter when opening datasets to control memory usage
+
+**Opening Multiple Files:**
+
+- For thousands of files, consider using ``parallel=True`` with ``open_mfdataset()``
+- Initialize a ``dask.distributed.Client`` before opening large datasets
+- Use ``engine='h5netcdf'`` for faster NetCDF reading when available
+
+**Computation Optimization:**
+
+- Use ``.compute()`` strategically - avoid calling it too frequently
+- Consider using ``.load()`` for small datasets that fit in memory
+- Use ``.persist()`` to keep intermediate results in memory across operations
+
+See the :ref:`dask` documentation for more details on working with large datasets.
+
+Why does groupby change my time dimension?
+-------------------------------------------
+
+When you use ``groupby`` operations, xarray replaces the original dimension with the grouping dimension. This is expected behavior:
+
+.. jupyter-execute::
+
+    import xarray as xr
+    import pandas as pd
+    
+    # Create sample data with time dimension
+    time = pd.date_range('2020-01-01', periods=12, freq='M')
+    data = xr.DataArray(range(12), dims=['time'], coords={'time': time})
+    
+    # Group by month - time dimension becomes month dimension
+    monthly_mean = data.groupby('time.month').mean()
+    print(f"Original dimensions: {data.dims}")
+    print(f"After groupby dimensions: {monthly_mean.dims}")
+
+If you need to preserve the original time dimension, you can:
+
+- Use ``resample()`` instead of ``groupby()`` for time-based operations
+- Manually reconstruct the time coordinate after groupby operations
+- Use ``groupby().map()`` for more complex transformations
+
+What should I do if I get import errors with xarray?
+-----------------------------------------------------
+
+Common import issues and solutions:
+
+**"not subscriptable" errors:**
+- Update to Python 3.9+ for better typing support
+- Ensure all dependencies are compatible versions
+- Try: ``conda update xarray numpy pandas``
+
+**Missing optional dependencies:**
+- Install missing packages: ``conda install -c conda-forge netcdf4 h5netcdf dask``
+- Check available engines: ``xr.backends.list_engines()``
+
+**Environment conflicts:**
+- Create a fresh environment: ``conda create -n xarray-env xarray``
+- Use ``conda`` instead of ``pip`` when possible for scientific packages
+
+**Version compatibility:**
+- Check your Python version: ``python --version``
+- Verify xarray version: ``xr.__version__``
+- See :ref:`installing` for detailed installation instructions
+
+How can I control plotting and visualization output?
+-----------------------------------------------------
+
+Common visualization challenges and solutions:
+
+**Colorbar control:**
+- Suppress colorbar: ``da.plot(add_colorbar=False)``
+- Customize colorbar: ``da.plot(cbar_kwargs={'label': 'Temperature (°C)'})``
+- Share colorbar across subplots: Use ``add_colorbar=False`` on individual plots
+
+**Figure size and layout:**
+- Control size: ``da.plot(figsize=(10, 6))``
+- Use ``col`` and ``row`` for faceted plots: ``da.plot(col='time', col_wrap=3)``
+
+**Missing values in plots:**
+- xarray automatically handles NaN values by leaving blank spaces
+- Customize with: ``da.plot(vmin=0, vmax=100)`` to control value range
+
+**Performance with large datasets:**
+- Use ``robust=True`` for automatic percentile-based color scaling
+- Consider downsampling before plotting: ``da.coarsen(x=10, y=10).mean().plot()``
+
+See the :ref:`plotting` documentation for comprehensive visualization examples.

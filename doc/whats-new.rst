@@ -32,6 +32,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Added new FAQ entries addressing common user questions about performance optimization, groupby behavior, import errors, and plotting controls (:issue:`1285`).
+  By `Your Name <https://github.com/fallah>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
