@@ -1347,6 +1347,7 @@ def open_zarr(
     use_zarr_fill_value_as_mask=None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
+    create_default_indexes=True,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -1457,6 +1458,13 @@ def open_zarr(
         chunked arrays, via whichever chunk manager is specified through the ``chunked_array_type`` kwarg.
         Defaults to ``{'manager': 'dask'}``, meaning additional kwargs will be passed eventually to
         :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+    create_default_indexes : bool, default: True
+        If True, create pandas indexes for :term:`dimension coordinates <dimension coordinate>`,
+        which loads the coordinate data into memory. Set it to False if you want to avoid loading
+        data into memory.
+
+        Note that backends can still choose to create other indexes. If you want to control that,
+        please refer to the backend's documentation.
 
     Returns
     -------
@@ -1513,6 +1521,7 @@ def open_zarr(
         engine="zarr",
         chunks=chunks,
         drop_variables=drop_variables,
+        create_default_indexes=create_default_indexes,
         chunked_array_type=chunked_array_type,
         from_array_kwargs=from_array_kwargs,
         backend_kwargs=backend_kwargs,
@@ -1768,6 +1777,11 @@ def _get_open_params(
     else:
         missing_exc = zarr.errors.GroupNotFoundError
 
+    if _zarr_v3():
+        # zarr 3.0.8 and earlier did not support this property - it was effectively assumed true
+        if not getattr(store, "supports_consolidated_metadata", True):
+            consolidated = consolidate_on_close = False
+
     if consolidated in [None, True]:
         # open the root of the store, in case there is metadata consolidated there
         group = open_kwargs.pop("path")
@@ -1825,6 +1839,7 @@ def _get_open_params(
         else:
             # this was the default for v2 and should apply to most existing Zarr data
             use_zarr_fill_value_as_mask = True
+
     return (
         zarr_group,
         consolidate_on_close,

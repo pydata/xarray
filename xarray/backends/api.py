@@ -36,6 +36,7 @@ from xarray.backends.common import (
 from xarray.backends.locks import _get_scheduler
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import indexing
+from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
@@ -379,6 +380,15 @@ def _chunk_ds(
     return backend_ds._replace(variables)
 
 
+def _maybe_create_default_indexes(ds):
+    to_index = {
+        name: coord.variable
+        for name, coord in ds.coords.items()
+        if coord.dims == (name,) and name not in ds.xindexes
+    }
+    return ds.assign_coords(Coordinates(to_index))
+
+
 def _dataset_from_backend_dataset(
     backend_ds,
     filename_or_obj,
@@ -389,6 +399,7 @@ def _dataset_from_backend_dataset(
     inline_array,
     chunked_array_type,
     from_array_kwargs,
+    create_default_indexes,
     **extra_tokens,
 ):
     if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
@@ -397,11 +408,15 @@ def _dataset_from_backend_dataset(
         )
 
     _protect_dataset_variables_inplace(backend_ds, cache)
-    if chunks is None:
-        ds = backend_ds
+
+    if create_default_indexes:
+        ds = _maybe_create_default_indexes(backend_ds)
     else:
+        ds = backend_ds
+
+    if chunks is not None:
         ds = _chunk_ds(
-            backend_ds,
+            ds,
             filename_or_obj,
             engine,
             chunks,
@@ -434,6 +449,7 @@ def _datatree_from_backend_datatree(
     inline_array,
     chunked_array_type,
     from_array_kwargs,
+    create_default_indexes,
     **extra_tokens,
 ):
     if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
@@ -442,9 +458,11 @@ def _datatree_from_backend_datatree(
         )
 
     _protect_datatree_variables_inplace(backend_tree, cache)
-    if chunks is None:
-        tree = backend_tree
+    if create_default_indexes:
+        tree = backend_tree.map_over_datasets(_maybe_create_default_indexes)
     else:
+        tree = backend_tree
+    if chunks is not None:
         tree = DataTree.from_dict(
             {
                 path: _chunk_ds(
@@ -459,11 +477,12 @@ def _datatree_from_backend_datatree(
                     node=path,
                     **extra_tokens,
                 )
-                for path, [node] in group_subtrees(backend_tree)
+                for path, [node] in group_subtrees(tree)
             },
-            name=backend_tree.name,
+            name=tree.name,
         )
 
+    if create_default_indexes or chunks is not None:
         for path, [node] in group_subtrees(backend_tree):
             tree[path].set_close(node._close)
 
@@ -497,6 +516,7 @@ def open_dataset(
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
+    create_default_indexes: bool = True,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
@@ -610,6 +630,13 @@ def open_dataset(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    create_default_indexes : bool, default: True
+        If True, create pandas indexes for :term:`dimension coordinates <dimension coordinate>`,
+        which loads the coordinate data into memory. Set it to False if you want to avoid loading
+        data into memory.
+
+        Note that backends can still choose to create other indexes. If you want to control that,
+        please refer to the backend's documentation.
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -702,6 +729,7 @@ def open_dataset(
         chunked_array_type,
         from_array_kwargs,
         drop_variables=drop_variables,
+        create_default_indexes=create_default_indexes,
         **decoders,
         **kwargs,
     )
@@ -725,6 +753,7 @@ def open_dataarray(
     concat_characters: bool | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
+    create_default_indexes: bool = True,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
@@ -833,6 +862,13 @@ def open_dataarray(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    create_default_indexes : bool, default: True
+        If True, create pandas indexes for :term:`dimension coordinates <dimension coordinate>`,
+        which loads the coordinate data into memory. Set it to False if you want to avoid loading
+        data into memory.
+
+        Note that backends can still choose to create other indexes. If you want to control that,
+        please refer to the backend's documentation.
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -890,6 +926,7 @@ def open_dataarray(
         chunks=chunks,
         cache=cache,
         drop_variables=drop_variables,
+        create_default_indexes=create_default_indexes,
         inline_array=inline_array,
         chunked_array_type=chunked_array_type,
         from_array_kwargs=from_array_kwargs,
@@ -946,6 +983,7 @@ def open_datatree(
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
+    create_default_indexes: bool = True,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
@@ -1055,6 +1093,13 @@ def open_datatree(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    create_default_indexes : bool, default: True
+        If True, create pandas indexes for :term:`dimension coordinates <dimension coordinate>`,
+        which loads the coordinate data into memory. Set it to False if you want to avoid loading
+        data into memory.
+
+        Note that backends can still choose to create other indexes. If you want to control that,
+        please refer to the backend's documentation.
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -1148,6 +1193,7 @@ def open_datatree(
         chunked_array_type,
         from_array_kwargs,
         drop_variables=drop_variables,
+        create_default_indexes=create_default_indexes,
         **decoders,
         **kwargs,
     )
@@ -1175,6 +1221,7 @@ def open_groups(
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
+    create_default_indexes: bool = True,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
@@ -1286,6 +1333,13 @@ def open_groups(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    create_default_indexes : bool, default: True
+        If True, create pandas indexes for :term:`dimension coordinates <dimension coordinate>`,
+        which loads the coordinate data into memory. Set it to False if you want to avoid loading
+        data into memory.
+
+        Note that backends can still choose to create other indexes. If you want to control that,
+        please refer to the backend's documentation.
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -1381,6 +1435,7 @@ def open_groups(
             chunked_array_type,
             from_array_kwargs,
             drop_variables=drop_variables,
+            create_default_indexes=create_default_indexes,
             **decoders,
             **kwargs,
         )
