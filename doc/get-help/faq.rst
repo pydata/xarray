@@ -483,11 +483,11 @@ When you use ``groupby`` operations, xarray replaces the original dimension with
     import pandas as pd
 
     # Create sample data with time dimension
-    time = pd.date_range('2020-01-01', periods=12, freq='M')
-    data = xr.DataArray(range(12), dims=['time'], coords={'time': time})
+    time = pd.date_range("2020-01-01", periods=12, freq="M")
+    data = xr.DataArray(range(12), dims=["time"], coords={"time": time})
 
     # Group by month - time dimension becomes month dimension
-    monthly_mean = data.groupby('time.month').mean()
+    monthly_mean = data.groupby("time.month").mean()
     print(f"Original dimensions: {data.dims}")
     print(f"After groupby dimensions: {monthly_mean.dims}")
     # Output: Original dimensions: ('time',)
