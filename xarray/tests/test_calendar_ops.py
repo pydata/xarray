@@ -239,6 +239,18 @@ def test_convert_calendar_errors():
         convert_calendar(da, "standard", dim="x")
 
 
+def test_convert_calendar_dimension_name():
+    src = DataArray(
+        date_range("2004-01-01", "2004-01-31", freq="D", calendar="noleap"),
+        dims=("date",),
+        name="date",
+    )
+
+    out = convert_calendar(src, "proleptic_gregorian", dim="date")
+
+    np.testing.assert_array_equal(src, out)
+
+
 def test_convert_calendar_same_calendar():
     src = DataArray(
         date_range("2000-01-01", periods=12, freq="6h", use_cftime=False),
