@@ -9,7 +9,7 @@ Dataset
 -------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DatasetGroupBy
    DatasetGroupBy.map
@@ -42,7 +42,7 @@ DataArray
 ---------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataArrayGroupBy
    DataArrayGroupBy.map
@@ -76,7 +76,7 @@ Grouper Objects
 .. currentmodule:: xarray
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    groupers.BinGrouper
    groupers.UniqueGrouper

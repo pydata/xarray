@@ -7,7 +7,7 @@ Dataset
 -------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
    :template: autosummary/accessor_method.rst
 
    Dataset.plot.scatter
@@ -18,13 +18,13 @@ DataArray
 ---------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
    :template: autosummary/accessor_callable.rst
 
    DataArray.plot
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
    :template: autosummary/accessor_method.rst
 
    DataArray.plot.contourf
@@ -41,7 +41,7 @@ DataArray
 Faceting
 --------
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    plot.FacetGrid
    plot.FacetGrid.add_colorbar

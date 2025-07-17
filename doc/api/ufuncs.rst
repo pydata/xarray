@@ -9,7 +9,7 @@ they will ensure that the computation is dispatched to the appropriate
 backend. You can find them in the ``xarray.ufuncs`` module:
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    ufuncs.abs
    ufuncs.absolute

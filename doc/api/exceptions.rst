@@ -4,7 +4,7 @@ Exceptions
 ==========
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    AlignmentError
    CoordinateValidationError
@@ -17,7 +17,7 @@ DataTree
 Exceptions raised when manipulating trees.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    TreeIsomorphismError
    InvalidTreeError

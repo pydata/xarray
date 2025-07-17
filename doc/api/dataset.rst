@@ -7,7 +7,7 @@ Creating a dataset
 ------------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Dataset
    decode_cf
@@ -16,7 +16,7 @@ Attributes
 ----------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Dataset.dims
    Dataset.sizes
@@ -38,7 +38,7 @@ Datasets implement the mapping interface with keys given by variable names
 and values given by ``DataArray`` objects.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Dataset.__getitem__
    Dataset.__setitem__
@@ -53,7 +53,7 @@ Dataset contents
 ----------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Dataset.copy
    Dataset.assign
@@ -82,7 +82,7 @@ Comparisons
 -----------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Dataset.equals
    Dataset.identical
@@ -92,7 +92,7 @@ Indexing
 --------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Dataset.loc
    Dataset.isel
@@ -117,7 +117,7 @@ Missing value handling
 ----------------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Dataset.isnull
    Dataset.notnull
@@ -135,7 +135,7 @@ Computation
 -----------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Dataset.map
    Dataset.reduce
@@ -160,7 +160,7 @@ Aggregation
 -----------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Dataset.all
    Dataset.any
@@ -184,7 +184,7 @@ ndarray methods
 ---------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Dataset.argsort
    Dataset.astype
@@ -200,7 +200,7 @@ Reshaping and reorganizing
 --------------------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Dataset.transpose
    Dataset.stack

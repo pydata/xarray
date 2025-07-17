@@ -4,7 +4,7 @@ DataArray
 =========
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataArray
 
@@ -12,7 +12,7 @@ Attributes
 ----------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataArray.values
    DataArray.data
@@ -30,7 +30,7 @@ ndarray attributes
 ------------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataArray.ndim
    DataArray.nbytes
@@ -44,7 +44,7 @@ DataArray contents
 ------------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataArray.assign_coords
    DataArray.assign_attrs
@@ -69,7 +69,7 @@ Indexing
 --------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataArray.__getitem__
    DataArray.__setitem__
@@ -96,7 +96,7 @@ Missing value handling
 ----------------------
 
 .. autosummary::
-  :toctree: generated/
+  :toctree: ../generated/
 
   DataArray.isnull
   DataArray.notnull
@@ -114,7 +114,7 @@ Comparisons
 -----------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataArray.equals
    DataArray.identical
@@ -124,7 +124,7 @@ Computation
 -----------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataArray.reduce
    DataArray.groupby
@@ -149,7 +149,7 @@ Aggregation
 -----------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataArray.all
    DataArray.any
@@ -173,7 +173,7 @@ ndarray methods
 ---------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataArray.argsort
    DataArray.clip
@@ -191,13 +191,13 @@ String manipulation
 -------------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
    :template: autosummary/accessor.rst
 
    DataArray.str
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
    :template: autosummary/accessor_method.rst
 
    DataArray.str.capitalize
@@ -261,7 +261,7 @@ Datetimelike properties
 **Datetime properties**:
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
    :template: autosummary/accessor_attribute.rst
 
    DataArray.dt.year
@@ -293,7 +293,7 @@ Datetimelike properties
 **Datetime methods**:
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
    :template: autosummary/accessor_method.rst
 
    DataArray.dt.floor
@@ -305,7 +305,7 @@ Datetimelike properties
 **Timedelta properties**:
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
    :template: autosummary/accessor_attribute.rst
 
    DataArray.dt.days
@@ -317,7 +317,7 @@ Datetimelike properties
 **Timedelta methods**:
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
    :template: autosummary/accessor_method.rst
 
    DataArray.dt.floor
@@ -329,7 +329,7 @@ Reshaping and reorganizing
 --------------------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataArray.transpose
    DataArray.stack

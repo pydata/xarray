@@ -4,7 +4,7 @@ Testing
 =======
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    testing.assert_equal
    testing.assert_identical
@@ -14,7 +14,7 @@ Testing
 Test that two ``DataTree`` objects are similar.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    testing.assert_isomorphic
    testing.assert_equal
@@ -31,7 +31,7 @@ See the :ref:`documentation page on testing <testing.hypothesis>` for a guide on
     These strategies should be considered highly experimental, and liable to change at any time.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    testing.strategies.supported_dtypes
    testing.strategies.names

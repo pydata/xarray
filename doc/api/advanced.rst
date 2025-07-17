@@ -4,7 +4,7 @@ Advanced API
 ============
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Coordinates
    Dataset.variables
@@ -35,7 +35,7 @@ external file-formats or protocols, and can be manually invoked to create
 arguments for the ``load_store`` and ``dump_to_store`` Dataset methods:
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    backends.NetCDF4DataStore
    backends.H5NetCDFStore
@@ -50,7 +50,7 @@ These BackendEntrypoints provide a basic interface to the most commonly
 used filetypes in the xarray universe.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    backends.NetCDF4BackendEntrypoint
    backends.H5netcdfBackendEntrypoint

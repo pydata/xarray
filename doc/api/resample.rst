@@ -9,7 +9,7 @@ Dataset
 -------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DatasetResample
    DatasetResample.asfreq
@@ -48,7 +48,7 @@ DataArray
 ---------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataArrayResample
    DataArrayResample.asfreq

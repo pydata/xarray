@@ -10,7 +10,7 @@ Building custom indexes
 These classes are building blocks for more complex Indexes:
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    indexes.CoordinateTransform
    indexes.CoordinateTransformIndex
@@ -20,7 +20,7 @@ These classes are building blocks for more complex Indexes:
 The Index base class for building custom indexes:
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Index.from_variables
    Index.concat

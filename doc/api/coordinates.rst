@@ -7,7 +7,7 @@ Creating coordinates
 --------------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Coordinates
    Coordinates.from_xindex
@@ -17,7 +17,7 @@ Attributes
 ----------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Coordinates.dims
    Coordinates.sizes
@@ -33,7 +33,7 @@ Coordinates implement the mapping interface with keys given by variable names
 and values given by ``DataArray`` objects.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Coordinates.__getitem__
    Coordinates.__setitem__
@@ -48,7 +48,7 @@ Coordinates contents
 --------------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Coordinates.to_dataset
    Coordinates.to_index
@@ -60,7 +60,7 @@ Comparisons
 -----------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Coordinates.equals
    Coordinates.identical
@@ -72,7 +72,7 @@ Coordinates that are accessed from the ``coords`` property of Dataset, DataArray
 and DataTree objects, respectively.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    core.coordinates.DatasetCoordinates
    core.coordinates.DataArrayCoordinates

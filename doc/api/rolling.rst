@@ -9,7 +9,7 @@ Dataset
 -------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DatasetRolling
    DatasetRolling.construct
@@ -30,7 +30,7 @@ DataArray
 ---------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataArrayRolling
    DataArrayRolling.__iter__

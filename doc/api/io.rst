@@ -7,7 +7,7 @@ Dataset methods
 ---------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    load_dataset
    open_dataset
@@ -37,7 +37,7 @@ DataArray methods
 -----------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    load_dataarray
    open_dataarray
@@ -68,7 +68,7 @@ DataTree methods
 ----------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    open_datatree
    open_groups

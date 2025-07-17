@@ -4,7 +4,7 @@ Deprecated / Pending Deprecation
 ================================
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    Dataset.drop
    DataArray.drop
@@ -13,7 +13,7 @@ Deprecated / Pending Deprecation
    core.groupby.DatasetGroupBy.apply
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
    :template: autosummary/accessor_attribute.rst
 
    DataArray.dt.weekofyear

@@ -4,7 +4,7 @@ Tutorial
 ========
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    tutorial.open_dataset
    tutorial.load_dataset

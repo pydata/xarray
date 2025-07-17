@@ -9,7 +9,7 @@ Creating a DataTree
 Methods of creating a ``DataTree``.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataTree
    DataTree.from_dict
@@ -20,7 +20,7 @@ Tree Attributes
 Attributes relating to the recursive tree-like structure of a ``DataTree``.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataTree.parent
    DataTree.children
@@ -50,7 +50,7 @@ Interface to the data objects (optionally) stored inside a single ``DataTree`` n
 This interface echoes that of ``xarray.Dataset``.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataTree.dims
    DataTree.sizes
@@ -75,7 +75,7 @@ Dictionary Interface
 ``DataTree`` objects also have a dict-like interface mapping keys to either ``xarray.DataArray``\s or to child ``DataTree`` nodes.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataTree.__getitem__
    DataTree.__setitem__
@@ -92,7 +92,7 @@ Tree Manipulation
 For manipulating, traversing, navigating, or mapping over the tree structure.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataTree.orphan
    DataTree.same_tree
@@ -111,7 +111,7 @@ Pathlib-like Interface
 ``DataTree`` objects deliberately echo some of the API of :py:class:`pathlib.PurePath`.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataTree.name
    DataTree.parent
@@ -135,7 +135,7 @@ DataTree Contents
 Manipulate the contents of all nodes in a ``DataTree`` simultaneously.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataTree.copy
 
@@ -157,7 +157,7 @@ DataTree Node Contents
 Manipulate the contents of a single ``DataTree`` node.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataTree.assign
    DataTree.drop_nodes
@@ -168,7 +168,7 @@ DataTree Operations
 Apply operations over multiple ``DataTree`` objects.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    map_over_datasets
    group_subtrees
@@ -179,7 +179,7 @@ Comparisons
 Compare one ``DataTree`` object to another.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
     DataTree.isomorphic
     DataTree.equals
@@ -191,7 +191,7 @@ Indexing
 Index into all nodes in the subtree simultaneously.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataTree.isel
    DataTree.sel
@@ -221,7 +221,7 @@ Index into all nodes in the subtree simultaneously.
 .. ----------------------
 
 .. .. autosummary::
-..    :toctree: generated/
+..    :toctree: ../generated/
 
 ..    DataTree.isnull
 ..    DataTree.notnull
@@ -240,7 +240,7 @@ Index into all nodes in the subtree simultaneously.
 .. Apply a computation to the data in all nodes in the subtree simultaneously.
 
 .. .. autosummary::
-..    :toctree: generated/
+..    :toctree: ../generated/
 
 ..    DataTree.map
 ..    DataTree.reduce
@@ -258,7 +258,7 @@ Aggregation
 Aggregate data in all nodes in the subtree simultaneously.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataTree.all
    DataTree.any
@@ -279,7 +279,7 @@ ndarray methods
 Methods copied from :py:class:`numpy.ndarray` objects, here applying to the data in all nodes in the subtree.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataTree.argsort
    DataTree.conj
@@ -295,7 +295,7 @@ Methods copied from :py:class:`numpy.ndarray` objects, here applying to the data
 .. Reshape or reorganise the data in all nodes in the subtree.
 
 .. .. autosummary::
-..    :toctree: generated/
+..    :toctree: ../generated/
 
 ..    DataTree.transpose
 ..    DataTree.stack

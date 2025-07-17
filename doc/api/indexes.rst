@@ -6,7 +6,7 @@ Indexes
 Default, pandas-backed indexes built-in to Xarray:
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    indexes.PandasIndex
    indexes.PandasMultiIndex
@@ -15,7 +15,7 @@ Default, pandas-backed indexes built-in to Xarray:
 More complex indexes built-in to Xarray:
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    CFTimeIndex
    indexes.RangeIndex
@@ -25,7 +25,7 @@ More complex indexes built-in to Xarray:
 Creating indexes
 ----------------
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    cftime_range
    date_range

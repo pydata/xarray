@@ -9,7 +9,7 @@ Dataset
 -------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DatasetCoarsen
    DatasetCoarsen.all
@@ -30,7 +30,7 @@ DataArray
 ---------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataArrayCoarsen
    DataArrayCoarsen.all

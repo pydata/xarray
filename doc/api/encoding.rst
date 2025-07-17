@@ -4,7 +4,7 @@ Encoding/Decoding
 =================
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    decode_cf
 
@@ -12,6 +12,6 @@ Coder objects
 -------------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    coders.CFDatetimeCoder

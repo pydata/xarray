@@ -6,7 +6,7 @@ Accessors
 .. currentmodule:: xarray.core
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    accessor_dt.DatetimeAccessor
    accessor_dt.TimedeltaAccessor

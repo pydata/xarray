@@ -4,7 +4,7 @@ Top-level functions
 ===================
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    apply_ufunc
    align

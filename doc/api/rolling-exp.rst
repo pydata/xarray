@@ -6,7 +6,7 @@ Exponential rolling objects
 .. currentmodule:: xarray.computation.rolling_exp
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    RollingExp
    RollingExp.mean

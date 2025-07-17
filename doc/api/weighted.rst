@@ -9,7 +9,7 @@ Dataset
 -------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DatasetWeighted
    DatasetWeighted.mean
@@ -24,7 +24,7 @@ DataArray
 ---------
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ../generated/
 
    DataArrayWeighted
    DataArrayWeighted.mean
