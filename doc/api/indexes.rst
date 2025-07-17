@@ -4,6 +4,10 @@ Indexes
 =======
 
 
+.. seealso::
+    See the Xarray gallery on `custom indexes <https://xarray-indexes.readthedocs.io/>`_ for more examples.
+
+
 Creating indexes
 ----------------
 .. autosummary::
