@@ -51,10 +51,10 @@ class TestNativeEndiannessArray:
         assert a.dtype == expected[:].dtype
         assert_array_equal(a, expected)
 
-        x = np.arange(6, dtype=">i8").reshape((2, 3))
-        a = coding.variables.NativeEndiannessArray(x)
+        y = np.arange(6, dtype=">i8").reshape((2, 3))
+        b = coding.variables.NativeEndiannessArray(y)
         expected = np.arange(6, dtype="int64").reshape((2, 3))
-        assert_array_equal(a.transpose((1, 0)), expected.transpose((1, 0)))
+        assert_array_equal(b.transpose((1, 0)), expected.transpose((1, 0)))
 
 
 def test_decode_cf_with_conflicting_fill_missing_value() -> None:
