@@ -3,14 +3,10 @@
 Dataset
 =======
 
-Creating a dataset
-------------------
-
 .. autosummary::
    :toctree: ../generated/
 
    Dataset
-   decode_cf
 
 Attributes
 ----------

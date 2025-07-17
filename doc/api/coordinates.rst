@@ -68,12 +68,14 @@ Comparisons
 Proxies
 -------
 
+.. currentmodule:: xarray.core.coordinates
+
 Coordinates that are accessed from the ``coords`` property of Dataset, DataArray
 and DataTree objects, respectively.
 
 .. autosummary::
    :toctree: ../generated/
 
-   core.coordinates.DatasetCoordinates
-   core.coordinates.DataArrayCoordinates
-   core.coordinates.DataTreeCoordinates
+   DatasetCoordinates
+   DataArrayCoordinates
+   DataTreeCoordinates

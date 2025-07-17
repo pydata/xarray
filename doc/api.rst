@@ -32,9 +32,9 @@ See also: :ref:`public-api` and :ref:`api-stability`.
    api/weighted
    api/resample
    api/accessors
-   api/custom-indexes
    api/tutorial
    api/testing
+   api/backends
    api/exceptions
    api/advanced
    api/deprecated
