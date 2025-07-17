@@ -70,7 +70,11 @@ asv_bench/pkgs
 # xarray specific
 doc/_build
 doc/generated/
+doc/api/generated/
 xarray/tests/data/*.grib.*.idx
+
+# Claude Code
+.claude/
 
 # Sync tools
 Icon*
