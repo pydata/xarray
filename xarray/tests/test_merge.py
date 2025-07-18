@@ -47,7 +47,7 @@ class TestMergeFunction:
             expected = data[["var1", "var2"]]
             assert_identical(actual, expected)
 
-            actual = xr.merge([data, data], compat="no_conflicts")
+            actual = xr.merge([data, data])
             assert_identical(actual, data)
 
     def test_merge_dataarray_unnamed(self):
@@ -197,13 +197,9 @@ class TestMergeFunction:
 
         if expect_exception:
             with pytest.raises(MergeError, match="combine_attrs"):
-                actual = xr.merge(
-                    [data1, data2], compat="no_conflicts", combine_attrs=combine_attrs
-                )
+                actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
         else:
-            actual = xr.merge(
-                [data1, data2], compat="no_conflicts", combine_attrs=combine_attrs
-            )
+            actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
             expected = xr.Dataset(
                 {"var1": ("dim1", [], expected_attrs)},
                 coords={"dim1": ("dim1", [], expected_attrs)},
@@ -323,19 +319,17 @@ class TestMergeFunction:
 
     def test_merge_no_conflicts_preserve_attrs(self):
         data = xr.Dataset({"x": ([], 0, {"foo": "bar"})})
-        actual = xr.merge(
-            [data, data], compat="no_conflicts", combine_attrs="no_conflicts"
-        )
+        actual = xr.merge([data, data], combine_attrs="no_conflicts")
         assert_identical(data, actual)
 
     def test_merge_no_conflicts_broadcast(self):
         datasets = [xr.Dataset({"x": ("y", [0])}), xr.Dataset({"x": np.nan})]
-        actual = xr.merge(datasets, compat="no_conflicts")
+        actual = xr.merge(datasets)
         expected = xr.Dataset({"x": ("y", [0])})
         assert_identical(expected, actual)
 
         datasets = [xr.Dataset({"x": ("y", [np.nan])}), xr.Dataset({"x": 0})]
-        actual = xr.merge(datasets, compat="no_conflicts")
+        actual = xr.merge(datasets)
         assert_identical(expected, actual)
 
 
@@ -350,20 +344,20 @@ class TestMergeMethod:
 
         actual = ds2.merge(ds1)
         assert_identical(expected, actual)
-        with pytest.warns(FutureWarning):  # this is a false alarm
-            actual = data.merge(data)
+
+        actual = data.merge(data)
         assert_identical(data, actual)
-        actual = data.reset_coords(drop=True).merge(data, compat="no_conflicts")
+        actual = data.reset_coords(drop=True).merge(data)
         assert_identical(data, actual)
-        actual = data.merge(data.reset_coords(drop=True), compat="no_conflicts")
+        actual = data.merge(data.reset_coords(drop=True))
         assert_identical(data, actual)
 
         with pytest.raises(ValueError, match="conflicting values for variable"):
             ds1.merge(ds2.rename({"var3": "var1"}))
         with pytest.raises(ValueError, match=r"should be coordinates or not"):
-            data.reset_coords().merge(data, compat="no_conflicts")
+            data.reset_coords().merge(data)
         with pytest.raises(ValueError, match=r"should be coordinates or not"):
-            data.merge(data.reset_coords(), compat="no_conflicts")
+            data.merge(data.reset_coords())
 
     def test_merge_drop_attrs(self):
         data = create_test_data()
@@ -417,6 +411,7 @@ class TestMergeMethod:
         assert ds1.identical(ds1.merge(ds2, compat="override"))
 
     def test_merge_compat_minimal(self) -> None:
+        """Test that we drop the conflicting bar coordinate."""
         # https://github.com/pydata/xarray/issues/7405
         # https://github.com/pydata/xarray/issues/7588
         ds1 = xr.Dataset(coords={"foo": [1, 2, 3], "bar": 4})
@@ -426,7 +421,7 @@ class TestMergeMethod:
         expected = xr.Dataset(coords={"foo": [1, 2, 3]})
         assert_identical(actual, expected)
 
-    def test_merge_join(self):
+    def test_merge_join_outer(self):
         ds1 = xr.Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
         ds2 = xr.Dataset({"b": ("x", [3, 4]), "x": [1, 2]})
         expected = xr.Dataset(
@@ -533,11 +528,7 @@ class TestNewDefaults:
         data = create_test_data(add_attrs=False, use_extension_array=True)
 
         with set_options(use_new_combine_kwarg_defaults=False):
-            with pytest.warns(
-                FutureWarning,
-                match="will change from compat='no_conflicts' to compat='override'",
-            ):
-                old = xr.merge([data, data])
+            old = xr.merge([data, data])
 
         with set_options(use_new_combine_kwarg_defaults=True):
             new = xr.merge([data, data])
@@ -571,11 +562,7 @@ class TestNewDefaults:
         ds2 = xr.Dataset({"x": ("y", [0, 0])})
 
         with set_options(use_new_combine_kwarg_defaults=False):
-            with pytest.warns(
-                FutureWarning,
-                match="will change from compat='no_conflicts' to compat='override'",
-            ):
-                old = ds1.merge(ds2)
+            old = ds1.merge(ds2)
 
         with set_options(use_new_combine_kwarg_defaults=True):
             new = ds1.merge(ds2)

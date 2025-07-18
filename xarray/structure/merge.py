@@ -102,7 +102,7 @@ def unique_variable(
     variables: list[Variable],
     compat: CompatOptions | CombineKwargDefault = "broadcast_equals",
     equals: bool | None = None,
-) -> Variable:
+) -> tuple[bool | None, Variable]:
     """Return the unique variable from a list of variables or raise MergeError.
 
     Parameters
@@ -128,7 +128,7 @@ def unique_variable(
     out = variables[0]
 
     if len(variables) == 1 or compat == "override":
-        return out
+        return equals, out
 
     combine_method = None
 
@@ -142,6 +142,8 @@ def unique_variable(
     if compat == "no_conflicts":
         combine_method = "fillna"
 
+    # we return the lazy equals, so we can warn about behaviour changes
+    lazy_equals = equals
     if equals is None:
         compat_str = (
             compat._value if isinstance(compat, CombineKwargDefault) else compat
@@ -152,6 +154,7 @@ def unique_variable(
             if equals is not True:
                 break
 
+        lazy_equals = equals
         if equals is None:
             # now compare values with minimum number of computes
             out = out.compute()
@@ -170,7 +173,7 @@ def unique_variable(
         for var in variables[1:]:
             out = getattr(out, combine_method)(var)
 
-    return out
+    return lazy_equals, out
 
 
 def _assert_compat_valid(compat):
@@ -313,7 +316,7 @@ def merge_collected(
             else:
                 variables = [variable for variable, _ in elements_list]
                 try:
-                    merged_vars[name] = unique_variable(
+                    equals_this_var, merged_vars[name] = unique_variable(
                         name, variables, compat, equals.get(name)
                     )
                     # This is very likely to result in false positives, but there is no way
@@ -322,6 +325,7 @@ def merge_collected(
                         isinstance(compat, CombineKwargDefault)
                         and compat == "no_conflicts"
                         and len(variables) > 1
+                        and not equals_this_var
                     ):
                         emit_user_level_warning(
                             compat.warning_message(
