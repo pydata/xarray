@@ -280,8 +280,10 @@ class TestNewTileIDs:
 
 
 class TestCombineND:
-    @pytest.mark.parametrize("concat_dim", ["dim1", "new_dim"])
-    def test_concat_once(self, create_combined_ids, concat_dim):
+    @pytest.mark.parametrize(
+        "concat_dim, kwargs", [("dim1", {}), ("new_dim", {"data_vars": "all"})]
+    )
+    def test_concat_once(self, create_combined_ids, concat_dim, kwargs):
         shape = (2,)
         combined_ids = create_combined_ids(shape)
         ds = create_test_data
@@ -296,7 +298,7 @@ class TestCombineND:
             combine_attrs="drop",
         )
 
-        expected_ds = concat([ds(0), ds(1)], data_vars="all", dim=concat_dim)
+        expected_ds = concat([ds(0), ds(1)], dim=concat_dim, **kwargs)
         assert_combined_tile_ids_equal(result, {(): expected_ds})
 
     def test_concat_only_first_dim(self, create_combined_ids):
@@ -322,8 +324,10 @@ class TestCombineND:
 
         assert_combined_tile_ids_equal(result, expected)
 
-    @pytest.mark.parametrize("concat_dim", ["dim1", "new_dim"])
-    def test_concat_twice(self, create_combined_ids, concat_dim):
+    @pytest.mark.parametrize(
+        "concat_dim, kwargs", [("dim1", {}), ("new_dim", {"data_vars": "all"})]
+    )
+    def test_concat_twice(self, create_combined_ids, concat_dim, kwargs):
         shape = (2, 3)
         combined_ids = create_combined_ids(shape)
         result = _combine_nd(
@@ -341,9 +345,7 @@ class TestCombineND:
         partway1 = concat([ds(0), ds(3)], dim="dim1")
         partway2 = concat([ds(1), ds(4)], dim="dim1")
         partway3 = concat([ds(2), ds(5)], dim="dim1")
-        expected = concat(
-            [partway1, partway2, partway3], data_vars="all", dim=concat_dim
-        )
+        expected = concat([partway1, partway2, partway3], **kwargs, dim=concat_dim)
 
         assert_equal(result, expected)
 
@@ -448,15 +450,19 @@ class TestNestedCombine:
 
     def test_nested_merge_with_self(self):
         data = Dataset({"x": 0})
-        actual = combine_nested(
-            [data, data, data], compat="no_conflicts", concat_dim=None
-        )
+        actual = combine_nested([data, data, data], concat_dim=None)
         assert_identical(data, actual)
 
     def test_nested_merge_with_overlapping_values(self):
         ds1 = Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
         ds2 = Dataset({"a": ("x", [2, 3]), "x": [1, 2]})
         expected = Dataset({"a": ("x", [1, 2, 3]), "x": [0, 1, 2]})
+        with pytest.warns(
+            FutureWarning,
+            match="will change from compat='no_conflicts' to compat='override'",
+        ):
+            actual = combine_nested([ds1, ds2], join="outer", concat_dim=None)
+        assert_identical(expected, actual)
         actual = combine_nested(
             [ds1, ds2], join="outer", compat="no_conflicts", concat_dim=None
         )
@@ -466,11 +472,16 @@ class TestNestedCombine:
         )
         assert_identical(expected, actual)
 
-    def test_nested_merge_with_nan(self):
+    def test_nested_merge_with_nan_no_conflicts(self):
         tmp1 = Dataset({"x": 0})
         tmp2 = Dataset({"x": np.nan})
         actual = combine_nested([tmp1, tmp2], compat="no_conflicts", concat_dim=None)
         assert_identical(tmp1, actual)
+        with pytest.warns(
+            FutureWarning,
+            match="will change from compat='no_conflicts' to compat='override'",
+        ):
+            combine_nested([tmp1, tmp2], concat_dim=None)
         actual = combine_nested([tmp1, tmp2], compat="no_conflicts", concat_dim=[None])
         assert_identical(tmp1, actual)
 
@@ -543,7 +554,6 @@ class TestNestedCombine:
         result = combine_nested(
             datasets,
             data_vars="all",
-            compat="no_conflicts",
             concat_dim=["dim1", "dim2"],
         )
         assert_equal(result, expected)
@@ -588,7 +598,6 @@ class TestNestedCombine:
                 datasets,
                 concat_dim=["dim1", "dim2"],
                 data_vars="all",
-                compat="no_conflicts",
                 combine_attrs="identical",
             )
 
@@ -597,7 +606,6 @@ class TestNestedCombine:
                 datasets,
                 concat_dim=["dim1", "dim2"],
                 data_vars="all",
-                compat="no_conflicts",
                 combine_attrs=combine_attrs,
             )
             assert_identical(result, expected)
@@ -995,9 +1003,7 @@ class TestCombineDatasetsbyCoords:
             with pytest.raises(MergeError, match="combine_attrs"):
                 combine_by_coords([data1, data2], combine_attrs=combine_attrs)
         else:
-            actual = combine_by_coords(
-                [data1, data2], data_vars="all", combine_attrs=combine_attrs
-            )
+            actual = combine_by_coords([data1, data2], combine_attrs=combine_attrs)
             expected = Dataset(
                 {
                     "x": ("a", [0, 1], expected_attrs),
@@ -1011,9 +1017,13 @@ class TestCombineDatasetsbyCoords:
     def test_infer_order_from_coords(self):
         data = create_test_data()
         objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]
-        actual = combine_by_coords(objs, data_vars="all", compat="no_conflicts")
+        actual = combine_by_coords(objs, data_vars="all")
         expected = data
         assert expected.broadcast_equals(actual)
+
+        with set_options(use_new_combine_kwarg_defaults=True):
+            actual = combine_by_coords(objs)
+        assert_identical(actual, expected)
 
     def test_combine_leaving_bystander_dimensions(self):
         # Check non-monotonic bystander dimension coord doesn't raise
@@ -1178,9 +1188,7 @@ class TestCombineMixedObjectsbyCoords:
         named_da1 = DataArray(name="a", data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
         named_da2 = DataArray(name="a", data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x")
 
-        actual = combine_by_coords(
-            [named_da1, named_da2], compat="no_conflicts", join="outer"
-        )
+        actual = combine_by_coords([named_da1, named_da2], join="outer")
         expected = merge([named_da1, named_da2], compat="no_conflicts", join="outer")
         assert_identical(expected, actual)
 
