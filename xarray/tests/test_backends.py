@@ -308,7 +308,15 @@ def create_encoded_unsigned_false_masked_scaled_data(dtype: np.dtype) -> Dataset
 
 def create_boolean_data() -> Dataset:
     attributes = {"units": "-"}
-    return Dataset({"x": ("t", [True, False, False, True], attributes)})
+    return Dataset(
+        {
+            "x": (
+                ("t", "x"),
+                [[False, True, False, True], [True, False, False, True]],
+                attributes,
+            )
+        }
+    )
 
 
 class TestCommon:
@@ -726,6 +734,9 @@ class DatasetIOBase:
             with self.roundtrip(actual) as actual2:
                 assert_identical(original, actual2)
                 assert actual2["x"].dtype == "bool"
+            with self.roundtrip(actual) as actual3:
+                # GH10536
+                assert_identical(original.transpose(), actual3.transpose())
 
     def test_orthogonal_indexing(self) -> None:
         in_memory = create_test_data()
