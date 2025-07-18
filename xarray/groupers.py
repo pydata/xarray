@@ -171,7 +171,26 @@ class Resampler(Grouper):
     Currently only used for TimeResampler, but could be used for SpaceResampler in the future.
     """
 
-    pass
+    def compute_chunks(self, name: Hashable, variable: Variable) -> tuple[int, ...]:
+        """
+        Compute chunk sizes for this resampler.
+
+        This method should be implemented by subclasses to provide appropriate
+        chunking behavior for their specific resampling strategy.
+
+        Parameters
+        ----------
+        name : Hashable
+            The name of the dimension being chunked.
+        variable : Variable
+            The variable being chunked.
+
+        Returns
+        -------
+        tuple[int, ...]
+            A tuple of chunk sizes for the dimension.
+        """
+        raise NotImplementedError("Subclasses must implement compute_chunks method")
 
 
 @dataclass
