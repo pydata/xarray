@@ -273,10 +273,13 @@ def test_concat_multiple_datasets_missing_vars(include_day: bool) -> None:
         "cloud_cover",
     ]
 
+    # must specify if concat_dim='day' is not part of the vars
+    kwargs = {"data_vars": "all"} if not include_day else {}
+
     datasets = create_concat_datasets(
         len(vars_to_drop), seed=123, include_day=include_day
     )
-    expected = concat(datasets, dim="day", data_vars="all")
+    expected = concat(datasets, dim="day", **kwargs)
 
     for i, name in enumerate(vars_to_drop):
         if include_day:
@@ -290,7 +293,7 @@ def test_concat_multiple_datasets_missing_vars(include_day: bool) -> None:
         for ds, varname in zip(datasets, vars_to_drop, strict=True)
     ]
 
-    actual = concat(datasets, dim="day", data_vars="all")
+    actual = concat(datasets, dim="day", **kwargs)
 
     assert list(actual.data_vars.keys()) == [
         "pressure",
@@ -500,7 +503,7 @@ class TestConcatDataset:
         "dim,data", [["dim1", True], ["dim2", False]], indirect=["data"]
     )
     def test_concat_simple(self, data: Dataset, dim, coords) -> None:
-        datasets = [g for _, g in data.groupby(dim, squeeze=False)]
+        datasets = [g for _, g in data.groupby(dim)]
         assert_identical(data, concat(datasets, dim, coords=coords, compat="equals"))
 
     def test_concat_merge_variables_present_in_some_datasets(
@@ -544,7 +547,7 @@ class TestConcatDataset:
         data = data.copy(deep=True)
         # make sure the coords argument behaves as expected
         data.coords["extra"] = ("dim4", np.arange(3))
-        datasets = [g.squeeze() for _, g in data.groupby(dim, squeeze=False)]
+        datasets = [g.squeeze() for _, g in data.groupby(dim)]
 
         actual = concat(
             datasets, data[dim], coords=coords, data_vars="all", compat="equals"
@@ -900,6 +903,8 @@ class TestConcatDataset:
         actual = concat(objs, "x", coords="different", compat="equals")
         expected = Dataset({"x": [0, 1, 2]}, {"y": ("x", [-1, -2, -2])})
         assert_identical(actual, expected)
+        actual = concat(objs, "x", coords="all")
+        assert_identical(actual, expected)
 
     def test_concat_promote_shape_broadcast_1d_x_1d_goes_to_2d(self) -> None:
         objs = [
@@ -995,8 +1000,8 @@ class TestConcatDataset:
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"a": 2, "b": 1}])
     def test_concat_fill_value(self, fill_value) -> None:
         datasets = [
-            Dataset({"a": ("x", [2, 3]), "b": ("x", [-2, 1]), "x": [1, 2]}),
-            Dataset({"a": ("x", [1, 2]), "b": ("x", [3, -1]), "x": [0, 1]}),
+            Dataset({"a": ("x", [2, 3]), "b": ("x", [-2, 1])}, {"x": [1, 2]}),
+            Dataset({"a": ("x", [1, 2]), "b": ("x", [3, -1])}, {"x": [0, 1]}),
         ]
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
@@ -1128,13 +1133,15 @@ class TestConcatDataArray:
         stacked = concat(grouped, pd.Index(ds["x"], name="x"))
         assert_identical(foo, stacked)
 
-        actual2 = concat([foo[0], foo[1]], pd.Index([0, 1]), coords="all").reset_coords(
-            drop=True
-        )
+        actual2 = concat(
+            [foo.isel(x=0), foo.isel(x=1)], pd.Index([0, 1]), coords="all"
+        ).reset_coords(drop=True)
         expected = foo[:2].rename({"x": "concat_dim"})
         assert_identical(expected, actual2)
 
-        actual3 = concat([foo[0], foo[1]], [0, 1], coords="all").reset_coords(drop=True)
+        actual3 = concat(
+            [foo.isel(x=0), foo.isel(x=1)], [0, 1], coords="all"
+        ).reset_coords(drop=True)
         expected = foo[:2].rename({"x": "concat_dim"})
         assert_identical(expected, actual3)
 
@@ -1196,7 +1203,7 @@ class TestConcatDataArray:
         assert combined.indexes == {}
 
         # should not raise on stack
-        combined = concat(arrays, dim="z", coords="different", compat="equals")
+        combined = concat(arrays, dim="z")
         assert combined.shape == (2, 3, 3)
         assert combined.dims == ("z", "x", "y")
 

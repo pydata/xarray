@@ -278,9 +278,6 @@ New Features
   (:issue:`9914`, :pull:`10336`)
   By `Joseph Nowak <https://github.com/josephnowak>`_.
 
-Breaking changes
-~~~~~~~~~~~~~~~~
-
 Documentation
 ~~~~~~~~~~~~~
 - HTML reprs! By `Scott Henderson <https://github.com/scottyhq>`_.
@@ -8429,8 +8426,6 @@ Backwards incompatible changes
 
   Now, the default always concatenates data variables:
 
-  .. ipython:: python
-    :verbatim:
   .. code:: python
 
     In [1]: ds = xray.Dataset({"x": 0})

@@ -1453,10 +1453,11 @@ class TestDataArray:
 
         with pytest.warns(FutureWarning):
             original = xr.concat([da, db], dim="x")
+            assert original.y.size == 4
         with set_options(use_new_combine_kwarg_defaults=True):
+            # default compat="minimal" will pick the first one
             new = xr.concat([da, db], dim="x")
-
-        assert original.y.shape != new.y.shape
+            assert new.y.size == 1
 
     def test_virtual_default_coords(self) -> None:
         array = DataArray(np.zeros((5,)), dims="x")

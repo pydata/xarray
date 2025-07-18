@@ -481,6 +481,7 @@ def map_blocks(
 
         coordinates = merge(
             (preserved_coords, template.coords.to_dataset()[new_coord_vars]),
+            # FIXME: this should be join="exact", but breaks a test
             join="outer",
             compat="override",
         ).coords

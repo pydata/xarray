@@ -3,7 +3,7 @@ This module contains various lazy array classes which can be wrapped and manipul
 """
 
 from collections.abc import Callable, Iterable
-from typing import Any
+from typing import Any, Self
 
 import numpy as np
 
@@ -126,6 +126,23 @@ def broadcast_to(
     return ConcatenatableArray(result)
 
 
+@implements(np.full_like)
+def full_like(
+    x: "ConcatenatableArray", /, fill_value, **kwargs
+) -> "ConcatenatableArray":
+    """
+    Broadcasts an array to a specified shape, by either manipulating chunk keys or copying chunk manifest entries.
+    """
+    if not isinstance(x, ConcatenatableArray):
+        raise TypeError
+    return ConcatenatableArray(np.full(x.shape, fill_value=fill_value, **kwargs))
+
+
+@implements(np.all)
+def numpy_all(x: "ConcatenatableArray", **kwargs) -> "ConcatenatableArray":
+    return type(x)(np.all(x._array, **kwargs))
+
+
 class ConcatenatableArray:
     """Disallows loading or coercing to an index but does support concatenation / stacking."""
 
@@ -169,6 +186,9 @@ class ConcatenatableArray:
                 raise UnexpectedDataAccess("Tried accessing data.")
         return ConcatenatableArray(arr)
 
+    def __eq__(self, other: "ConcatenatableArray") -> "ConcatenatableArray":
+        return ConcatenatableArray(self._array == other._array)
+
     def __array_function__(self, func, types, args, kwargs) -> Any:
         if func not in CONCATENATABLEARRAY_HANDLED_ARRAY_FUNCTIONS:
             return NotImplemented
@@ -190,3 +210,9 @@ class ConcatenatableArray:
             raise NotImplementedError()
         else:
             return self
+
+    def __and__(self, other: Self) -> "ConcatenatableArray":
+        return type(self)(self._array & other._array)
+
+    def __or__(self, other: Self) -> "ConcatenatableArray":
+        return type(self)(self._array | other._array)

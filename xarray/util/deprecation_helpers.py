@@ -206,9 +206,9 @@ class CombineKwargDefault:
 
     def error_message(self) -> str:
         return (
-            f" Error might be related to new default ({self._name}={self._new!r}). "
-            f"Previously the default was {self._name}={self._old!r}. "
-            f"The recommendation is to set {self._name} explicitly for this case."
+            f" Error might be related to new default (`{self._name}={self._new!r}`). "
+            f"Previously the default was `{self._name}={self._old!r}`. "
+            f"The recommendation is to set {self._name!r} explicitly for this case."
         )
 
 
