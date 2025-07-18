@@ -52,6 +52,7 @@ __all__ = [
     "EncodedGroups",
     "Grouper",
     "Resampler",
+    "SeasonGrouper",
     "SeasonResampler",
     "TimeResampler",
     "UniqueGrouper",
@@ -170,60 +171,7 @@ class Resampler(Grouper):
     Currently only used for TimeResampler, but could be used for SpaceResampler in the future.
     """
 
-    def resolve_chunks(self, name: Hashable, variable: Variable) -> tuple[int, ...]:
-        """
-        Resolve chunk sizes for this resampler.
-
-        This method is used during chunking operations to determine appropriate
-        chunk sizes for the given variable when using this resampler.
-
-        Parameters
-        ----------
-        name : Hashable
-            The name of the dimension being chunked.
-        variable : Variable
-            The variable being chunked.
-
-        Returns
-        -------
-        tuple[int, ...]
-            A tuple of chunk sizes for the dimension.
-        """
-        from xarray.core.dataarray import DataArray
-
-        if not _contains_datetime_like_objects(variable):
-            raise ValueError(
-                f"chunks={self!r} only supported for datetime variables. "
-                f"Received variable {name!r} with dtype {variable.dtype!r} instead."
-            )
-
-        if variable.ndim != 1:
-            raise ValueError(
-                f"chunks={self!r} only supported for 1D variables. "
-                f"Received variable {name!r} with {variable.ndim} dimensions instead."
-            )
-
-        # Create a temporary resampler that ignores drop_incomplete for chunking
-        # This prevents data from being silently dropped during chunking
-        resampler_for_chunking = (
-            self._for_chunking() if hasattr(self, "_for_chunking") else self
-        )
-
-        chunks = (
-            DataArray(
-                np.ones(variable.shape, dtype=int),
-                dims=(name,),
-                coords={name: variable},
-            )
-            .resample({name: resampler_for_chunking})
-            .sum()
-        )
-        # When bins (binning) or time periods are missing (resampling)
-        # we can end up with NaNs. Drop them.
-        if chunks.dtype.kind == "f":
-            chunks = chunks.dropna(name).astype(int)
-        chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
-        return chunks_tuple
+    pass
 
 
 @dataclass
@@ -618,6 +566,49 @@ class TimeResampler(Resampler):
             unique_coord=unique_coord,
             coords=coordinates_from_variable(unique_coord),
         )
+
+    def compute_chunks(self, name: Hashable, variable: Variable) -> tuple[int, ...]:
+        """
+        Compute chunk sizes for this time resampler.
+
+        This method is used during chunking operations to determine appropriate
+        chunk sizes for the given variable when using this resampler.
+
+        Parameters
+        ----------
+        name : Hashable
+            The name of the dimension being chunked.
+        variable : Variable
+            The variable being chunked.
+
+        Returns
+        -------
+        tuple[int, ...]
+            A tuple of chunk sizes for the dimension.
+        """
+        from xarray.core.dataarray import DataArray
+
+        if not _contains_datetime_like_objects(variable):
+            raise ValueError(
+                f"chunks={self!r} only supported for datetime variables. "
+                f"Received variable {name!r} with dtype {variable.dtype!r} instead."
+            )
+
+        chunks = (
+            DataArray(
+                np.ones(variable.shape, dtype=int),
+                dims=(name,),
+                coords={name: variable},
+            )
+            .resample({name: self})
+            .sum()
+        )
+        # When bins (binning) or time periods are missing (resampling)
+        # we can end up with NaNs. Drop them.
+        if chunks.dtype.kind == "f":
+            chunks = chunks.dropna(name).astype(int)
+        chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
+        return chunks_tuple
 
 
 def _factorize_given_labels(data: np.ndarray, labels: np.ndarray) -> np.ndarray:
@@ -1030,6 +1021,53 @@ class SeasonResampler(Resampler):
         to prevent data from being silently dropped during chunking operations.
         """
         return type(self)(seasons=self.seasons, drop_incomplete=False)
+
+    def compute_chunks(self, name: Hashable, variable: Variable) -> tuple[int, ...]:
+        """
+        Compute chunk sizes for this season resampler.
+
+        This method is used during chunking operations to determine appropriate
+        chunk sizes for the given variable when using this resampler.
+
+        Parameters
+        ----------
+        name : Hashable
+            The name of the dimension being chunked.
+        variable : Variable
+            The variable being chunked.
+
+        Returns
+        -------
+        tuple[int, ...]
+            A tuple of chunk sizes for the dimension.
+        """
+        from xarray.core.dataarray import DataArray
+
+        if not _contains_datetime_like_objects(variable):
+            raise ValueError(
+                f"chunks={self!r} only supported for datetime variables. "
+                f"Received variable {name!r} with dtype {variable.dtype!r} instead."
+            )
+
+        # Create a temporary resampler that ignores drop_incomplete for chunking
+        # This prevents data from being silently dropped during chunking
+        resampler_for_chunking = self._for_chunking()
+
+        chunks = (
+            DataArray(
+                np.ones(variable.shape, dtype=int),
+                dims=(name,),
+                coords={name: variable},
+            )
+            .resample({name: resampler_for_chunking})
+            .sum()
+        )
+        # When bins (binning) or time periods are missing (resampling)
+        # we can end up with NaNs. Drop them.
+        if chunks.dtype.kind == "f":
+            chunks = chunks.dropna(name).astype(int)
+        chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
+        return chunks_tuple
 
     def reset(self) -> Self:
         return type(self)(seasons=self.seasons, drop_incomplete=self.drop_incomplete)

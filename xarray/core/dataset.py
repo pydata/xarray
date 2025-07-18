@@ -2487,7 +2487,12 @@ class Dataset(
                 raise ValueError(
                     f"Cannot chunk by resampler {resampler!r} for virtual variables."
                 )
-            return resampler.resolve_chunks(name, variable)
+            if variable.ndim != 1:
+                raise ValueError(
+                    f"chunks={resampler!r} only supported for 1D variables. "
+                    f"Received variable {name!r} with {variable.ndim} dimensions instead."
+                )
+            return resampler.compute_chunks(name, variable)
 
         chunks_mapping_ints: Mapping[Any, T_ChunkDim] = {
             name: (
