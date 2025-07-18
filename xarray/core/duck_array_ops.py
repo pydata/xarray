@@ -270,17 +270,34 @@ def as_shared_dtype(scalars_or_arrays, xp=None):
         extension_array_types = [
             x.dtype for x in scalars_or_arrays if is_extension_array_dtype(x)
         ]
-        non_nans = [x for x in scalars_or_arrays if not isna(x)]
-        if len(extension_array_types) == len(non_nans) and all(
+        non_nans_or_scalar = [
+            x for x in scalars_or_arrays if not (isna(x) or np.isscalar(x))
+        ]
+        if len(extension_array_types) == len(non_nans_or_scalar) and all(
             isinstance(x, type(extension_array_types[0])) for x in extension_array_types
         ):
-            return [
+            # Get the extension array class of the first element, guaranteed to be the same
+            # as the others thanks to the anove check.
+            extension_array_class = type(
+                non_nans_or_scalar[0].array
+                if isinstance(non_nans_or_scalar[0], PandasExtensionArray)
+                else non_nans_or_scalar[0]
+            )
+            # Cast scalars/nans to extension array class
+            arrays_with_nan_to_sequence = [
                 x
-                if not isna(x)
-                else PandasExtensionArray(
-                    type(non_nans[0].array)._from_sequence([x], dtype=non_nans[0].dtype)
+                if not (isna(x) or np.isscalar(x))
+                else extension_array_class._from_sequence(
+                    [x], dtype=non_nans_or_scalar[0].dtype
                 )
                 for x in scalars_or_arrays
+            ]
+            # Wrap the output if necessary
+            return [
+                PandasExtensionArray(x)
+                if not isinstance(x, PandasExtensionArray)
+                else x
+                for x in arrays_with_nan_to_sequence
             ]
         raise ValueError(
             f"Cannot cast values to shared type, found values: {scalars_or_arrays}"
@@ -404,7 +421,6 @@ def where(condition, x, y):
         condition = asarray(condition, dtype=dtype, xp=xp)
     else:
         condition = astype(condition, dtype=dtype, xp=xp)
-
     return xp.where(condition, *as_shared_dtype([x, y], xp=xp))
 
 
