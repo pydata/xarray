@@ -5789,11 +5789,10 @@ class Dataset(
                 other_names.update(idx_other_names)
         if other_names:
             names_set |= set(other_names)
-            warnings.warn(
+            emit_user_level_warning(
                 f"Deleting a single level of a MultiIndex is deprecated. Previously, this deleted all levels of a MultiIndex. "
                 f"Please also drop the following variables: {other_names!r} to avoid an error in the future.",
                 DeprecationWarning,
-                stacklevel=2,
             )
 
         assert_no_index_corrupted(self.xindexes, names_set)
