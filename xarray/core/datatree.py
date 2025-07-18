@@ -1060,6 +1060,7 @@ class DataTree(
             self.to_dataset(inherit=False), new_variables
         )
         data = Dataset._construct_direct(**vars_merge_result._asdict())
+        data.encoding = self.encoding
 
         # TODO are there any subtleties with preserving order of children like this?
         merged_children = {**self.children, **new_children}
