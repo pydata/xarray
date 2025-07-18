@@ -5,6 +5,7 @@ import operator
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
+from itertools import starmap
 from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, cast, get_args, overload
 
 import numpy as np
@@ -121,7 +122,9 @@ def _normalize_indexes(
                 )
             data: T_DuckArray = as_compatible_data(idx)
             pd_idx = safe_cast_to_index(data)
-            pd_idx.name = k
+            if pd_idx.name != k:
+                pd_idx = pd_idx.copy()
+                pd_idx.name = k
             if isinstance(pd_idx, pd.MultiIndex):
                 idx = PandasMultiIndex(pd_idx, k)
             else:
@@ -634,12 +637,14 @@ class Aligner(Generic[T_Alignable]):
 
     def reindex_all(self) -> None:
         self.results = tuple(
-            self._reindex_one(obj, matching_indexes, matching_index_vars)
-            for obj, matching_indexes, matching_index_vars in zip(
-                self.objects,
-                self.objects_matching_indexes,
-                self.objects_matching_index_vars,
-                strict=True,
+            starmap(
+                self._reindex_one,
+                zip(
+                    self.objects,
+                    self.objects_matching_indexes,
+                    self.objects_matching_index_vars,
+                    strict=True,
+                ),
             )
         )
 

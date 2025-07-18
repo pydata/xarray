@@ -72,6 +72,7 @@ If you are reporting a bug, please use the provided template which includes the 
 
       ```python
       import xarray as xr
+
       ds = xr.Dataset(...)
 
       ...
@@ -82,6 +83,7 @@ If you are reporting a bug, please use the provided template which includes the 
 
       ```python
       import xarray as xr
+
       xr.show_versions()
 
       ...
@@ -290,7 +292,7 @@ We'll now kick off a two-step process:
 .. code-block:: sh
 
    # Create and activate the build environment
-   conda create -c conda-forge -n xarray-tests python=3.10
+   conda create -c conda-forge -n xarray-tests python=3.11
 
    # This is for Linux and MacOS
    conda env update -f ci/requirements/environment.yml
@@ -387,24 +389,24 @@ Some other important things to know about the docs:
   for a detailed explanation, or look at some of the existing functions to
   extend it in a similar manner.
 
-- The tutorials make heavy use of the `ipython directive
-  <https://matplotlib.org/sampledoc/ipython_directive.html>`_ sphinx extension.
-  This directive lets you put code in the documentation which will be run
+- The documentation makes heavy use of the `jupyter-sphinx extension
+  <https://jupyter-sphinx.readthedocs.io>`_.
+  The ``jupyter-execute`` directive lets you put code in the documentation which will be run
   during the doc build. For example:
 
   .. code:: rst
 
-      .. ipython:: python
+      .. jupyter-execute::
 
           x = 2
           x**3
 
-  will be rendered as::
+  will be rendered as:
 
-      In [1]: x = 2
+  .. jupyter-execute::
 
-      In [2]: x**3
-      Out[2]: 8
+       x = 2
+       x**3
 
   Almost all code examples in the docs are run (and the output saved) during the
   doc build. This approach means that code examples will always be up to date,

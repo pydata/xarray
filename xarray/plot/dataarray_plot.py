@@ -1485,7 +1485,7 @@ artist :
         if subplot_kws is None:
             subplot_kws = dict()
 
-        if plotfunc.__name__ == "surface" and not kwargs.get("_is_facetgrid", False):
+        if plotfunc.__name__ == "surface" and not kwargs.get("_is_facetgrid"):
             if ax is None:
                 # TODO: Importing Axes3D is no longer necessary in matplotlib >= 3.2.
                 # Remove when minimum requirement of matplotlib is 3.2:
@@ -1517,7 +1517,7 @@ artist :
 
         if (
             plotfunc.__name__ == "surface"
-            and not kwargs.get("_is_facetgrid", False)
+            and not kwargs.get("_is_facetgrid")
             and ax is not None
         ):
             import mpl_toolkits

@@ -99,6 +99,7 @@ from xarray.core.utils import (
     parse_dims_as_set,
 )
 from xarray.core.variable import (
+    UNSUPPORTED_EXTENSION_ARRAY_TYPES,
     IndexVariable,
     Variable,
     as_variable,
@@ -796,9 +797,9 @@ class Dataset(
         variables: dict[Hashable, Variable] | None = None,
         coord_names: set[Hashable] | None = None,
         dims: dict[Any, int] | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         indexes: dict[Hashable, Index] | None = None,
-        encoding: dict | None | Default = _default,
+        encoding: dict | Default | None = _default,
         inplace: bool = False,
     ) -> Self:
         """Fastpath constructor for internal use.
@@ -845,7 +846,7 @@ class Dataset(
         self,
         variables: dict[Hashable, Variable],
         coord_names: set | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         indexes: dict[Hashable, Index] | None = None,
         inplace: bool = False,
     ) -> Self:
@@ -860,7 +861,7 @@ class Dataset(
         variables: dict[Hashable, Variable],
         coord_names: set | None = None,
         dims: dict[Hashable, int] | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         inplace: bool = False,
     ) -> Self:
         """Deprecated version of _replace_with_new_dims().
@@ -1364,7 +1365,6 @@ class Dataset(
         to avoid leaving the dataset in a partially updated state when an error occurs.
         """
         from xarray.core.dataarray import DataArray
-        from xarray.structure.alignment import align
 
         if isinstance(value, Dataset):
             missing_vars = [
@@ -2063,6 +2063,7 @@ class Dataset(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -2086,6 +2087,7 @@ class Dataset(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -2107,6 +2109,7 @@ class Dataset(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -2216,6 +2219,16 @@ class Dataset(
             two or more chunked arrays in the same location in parallel if they are
             not writing in independent regions, for those cases it is better to use
             a synchronizer.
+        align_chunks: bool, default False
+            If True, rechunks the Dask array to align with Zarr chunks before writing.
+            This ensures each Dask chunk maps to one or more contiguous Zarr chunks,
+            which avoids race conditions.
+            Internally, the process sets safe_chunks=False and tries to preserve
+            the original Dask chunking as much as possible.
+            Note: While this alignment avoids write conflicts stemming from chunk
+            boundary misalignment, it does not protect against race conditions
+            if multiple uncoordinated processes write to the same
+            Zarr array concurrently.
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
@@ -2326,9 +2339,10 @@ class Dataset(
         if buf is None:  # pragma: no cover
             buf = sys.stdout
 
-        lines = []
-        lines.append("xarray.Dataset {")
-        lines.append("dimensions:")
+        lines = [
+            "xarray.Dataset {",
+            "dimensions:",
+        ]
         for name, size in self.sizes.items():
             lines.append(f"\t{name} = {size} ;")
         lines.append("\nvariables:")
@@ -2542,7 +2556,6 @@ class Dataset(
         + string indexers are cast to the appropriate date type if the
           associated index is a DatetimeIndex or CFTimeIndex
         """
-        from xarray.coding.cftimeindex import CFTimeIndex
         from xarray.core.dataarray import DataArray
 
         indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
@@ -4341,8 +4354,8 @@ class Dataset(
 
     def expand_dims(
         self,
-        dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
-        axis: None | int | Sequence[int] = None,
+        dim: Hashable | Sequence[Hashable] | Mapping[Any, Any] | None = None,
+        axis: int | Sequence[int] | None = None,
         create_index_for_new_dim: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
@@ -4932,6 +4945,20 @@ class Dataset(
         # elements) coordinate
         if isinstance(index, PandasMultiIndex):
             coord_names = [index.dim] + list(coord_names)
+
+        # Check for extra variables that don't match the coordinate names
+        extra_vars = set(new_coord_vars) - set(coord_names)
+        if extra_vars:
+            extra_vars_str = ", ".join(f"'{name}'" for name in extra_vars)
+            coord_names_str = ", ".join(f"'{name}'" for name in coord_names)
+            raise ValueError(
+                f"The index created extra variables {extra_vars_str} that are not "
+                f"in the list of coordinates {coord_names_str}. "
+                f"Use a factory method pattern instead:\n"
+                f"  index = {index_cls.__name__}.from_variables(ds, {list(coord_names)!r})\n"
+                f"  coords = xr.Coordinates.from_xindex(index)\n"
+                f"  ds = ds.assign_coords(coords)"
+            )
 
         variables: dict[Hashable, Variable]
         indexes: dict[Hashable, Index]
@@ -5793,11 +5820,10 @@ class Dataset(
                 other_names.update(idx_other_names)
         if other_names:
             names_set |= set(other_names)
-            warnings.warn(
+            emit_user_level_warning(
                 f"Deleting a single level of a MultiIndex is deprecated. Previously, this deleted all levels of a MultiIndex. "
                 f"Please also drop the following variables: {other_names!r} to avoid an error in the future.",
                 DeprecationWarning,
-                stacklevel=2,
             )
 
         assert_no_index_corrupted(self.xindexes, names_set)
@@ -7281,7 +7307,7 @@ class Dataset(
         extension_arrays = []
         for k, v in dataframe.items():
             if not is_extension_array_dtype(v) or isinstance(
-                v.array, pd.arrays.DatetimeArray | pd.arrays.TimedeltaArray
+                v.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES
             ):
                 arrays.append((k, np.asarray(v)))
             else:
@@ -8266,8 +8292,6 @@ class Dataset(
         --------
         numpy.gradient: corresponding numpy function
         """
-        from xarray.core.variable import Variable
-
         if coord not in self.variables and coord not in self.dims:
             variables_and_dims = tuple(set(self.variables.keys()).union(self.dims))
             raise ValueError(
@@ -9707,7 +9731,7 @@ class Dataset(
         self,
         calendar: CFCalendar,
         dim: Hashable = "time",
-        align_on: Literal["date", "year", None] = None,
+        align_on: Literal["date", "year"] | None = None,
         missing: Any | None = None,
         use_cftime: bool | None = None,
     ) -> Self:
@@ -9943,7 +9967,7 @@ class Dataset(
         :ref:`groupby`
             Users guide explanation of how to group and bin data.
 
-        :doc:`xarray-tutorial:intermediate/01-high-level-computation-patterns`
+        :doc:`xarray-tutorial:intermediate/computation/01-high-level-computation-patterns`
             Tutorial on :py:func:`~xarray.Dataset.Groupby` for windowed computation.
 
         :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`

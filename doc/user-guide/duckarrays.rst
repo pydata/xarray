@@ -49,9 +49,14 @@ numpy-like functionality such as indexing, broadcasting, and computation methods
 For example, the `sparse <https://sparse.pydata.org/en/stable/>`_ library provides a sparse array type which is useful for representing nD array objects like sparse matrices
 in a memory-efficient manner. We can create a sparse array object (of the :py:class:`sparse.COO` type) from a numpy array like this:
 
-.. ipython:: python
+.. jupyter-execute::
 
     from sparse import COO
+    import xarray as xr
+    import numpy as np
+    %xmode minimal
+
+.. jupyter-execute::
 
     x = np.eye(4, dtype=np.uint8)  # create diagonal identity matrix
     s = COO.from_numpy(x)
@@ -63,14 +68,17 @@ Sparse array objects can be converted back to a "dense" numpy array by calling :
 
 Just like :py:class:`numpy.ndarray` objects, :py:class:`sparse.COO` arrays support indexing
 
-.. ipython:: python
+.. jupyter-execute::
 
     s[1, 1]  # diagonal elements should be ones
+
+.. jupyter-execute::
+
     s[2, 3]  # off-diagonal elements should be zero
 
 broadcasting,
 
-.. ipython:: python
+.. jupyter-execute::
 
     x2 = np.zeros(
         (4, 1), dtype=np.uint8
@@ -80,14 +88,14 @@ broadcasting,
 
 and various computation methods
 
-.. ipython:: python
+.. jupyter-execute::
 
     s.sum(axis=1)
 
 This numpy-like array also supports calling so-called `numpy ufuncs <https://numpy.org/doc/stable/reference/ufuncs.html#available-ufuncs>`_
 ("universal functions") on it directly:
 
-.. ipython:: python
+.. jupyter-execute::
 
     np.sum(s, axis=1)
 
@@ -113,7 +121,7 @@ both accept data in various forms through their ``data`` argument, but in fact t
 
 For example, we can wrap the sparse array we created earlier inside a new DataArray object:
 
-.. ipython:: python
+.. jupyter-execute::
 
     s_da = xr.DataArray(s, dims=["i", "j"])
     s_da
@@ -123,7 +131,7 @@ representation of the underlying wrapped array.
 
 Of course our sparse array object is still there underneath - it's stored under the ``.data`` attribute of the dataarray:
 
-.. ipython:: python
+.. jupyter-execute::
 
     s_da.data
 
@@ -132,7 +140,7 @@ Array methods
 
 We saw above that numpy-like arrays provide numpy methods. Xarray automatically uses these when you call the corresponding xarray method:
 
-.. ipython:: python
+.. jupyter-execute::
 
     s_da.sum(dim="j")
 
@@ -141,7 +149,7 @@ Converting wrapped types
 
 If you want to change the type inside your xarray object you can use :py:meth:`DataArray.as_numpy`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     s_da.as_numpy()
 
@@ -152,12 +160,12 @@ If instead you want to convert to numpy and return that numpy array you can use 
 always uses :py:func:`numpy.asarray` which will fail for some array types (e.g. ``cupy``), whereas :py:meth:`~DataArray.to_numpy`
 uses the correct method depending on the array type.
 
-.. ipython:: python
+.. jupyter-execute::
 
     s_da.to_numpy()
 
-.. ipython:: python
-    :okexcept:
+.. jupyter-execute::
+    :raises:
 
     s_da.values
 

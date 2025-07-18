@@ -9,6 +9,12 @@ pandas; so we've put together a glossary of its terms. Here,* ``arr``
 *refers to an xarray* :py:class:`DataArray` *in the examples. For more
 complete examples, please consult the relevant documentation.*
 
+.. jupyter-execute::
+    :hide-code:
+
+    import numpy as np
+    import xarray as xr
+
 .. glossary::
 
     DataArray
@@ -131,17 +137,11 @@ complete examples, please consult the relevant documentation.*
 
         __ https://numpy.org/neps/nep-0022-ndarray-duck-typing-overview.html
 
-        .. ipython:: python
-            :suppress:
-
-            import numpy as np
-            import xarray as xr
-
     Aligning
         Aligning refers to the process of ensuring that two or more DataArrays or Datasets
         have the same dimensions and coordinates, so that they can be combined or compared properly.
 
-        .. ipython:: python
+        .. jupyter-execute::
 
             x = xr.DataArray(
                 [[25, 35], [10, 24]],
@@ -153,15 +153,18 @@ complete examples, please consult the relevant documentation.*
                 dims=("lat", "lon"),
                 coords={"lat": [35.0, 42.0], "lon": [100.0, 120.0]},
             )
-            x
-            y
+            a, b = xr.align(x, y)
+
+            # By default, an "inner join" is performed
+            # so "a" is a copy of "x" where coordinates match "y"
+            a
 
     Broadcasting
         A technique that allows operations to be performed on arrays with different shapes and dimensions.
         When performing operations on arrays with different shapes and dimensions, xarray will automatically attempt to broadcast the
         arrays to a common shape before the operation is applied.
 
-        .. ipython:: python
+        .. jupyter-execute::
 
             # 'a' has shape (3,) and 'b' has shape (4,)
             a = xr.DataArray(np.array([1, 2, 3]), dims=["x"])
@@ -175,7 +178,7 @@ complete examples, please consult the relevant documentation.*
         the same dimensions. When merging, xarray aligns the variables and coordinates of the different datasets along
         the specified dimensions and creates a new ``Dataset`` containing all the variables and coordinates.
 
-        .. ipython:: python
+        .. jupyter-execute::
 
             # create two 1D arrays with names
             arr1 = xr.DataArray(
@@ -194,7 +197,7 @@ complete examples, please consult the relevant documentation.*
         xarray arranges the datasets or dataarrays along a new dimension, and the resulting ``Dataset`` or ``Dataarray``
         will have the same variables and coordinates along the other dimensions.
 
-        .. ipython:: python
+        .. jupyter-execute::
 
             a = xr.DataArray([[1, 2], [3, 4]], dims=("x", "y"))
             b = xr.DataArray([[5, 6], [7, 8]], dims=("x", "y"))
@@ -205,7 +208,7 @@ complete examples, please consult the relevant documentation.*
         Combining is the process of arranging two or more DataArrays or Datasets into a single ``DataArray`` or
         ``Dataset`` using some combination of merging and concatenation operations.
 
-        .. ipython:: python
+        .. jupyter-execute::
 
             ds1 = xr.Dataset(
                 {"data": xr.DataArray([[1, 2], [3, 4]], dims=("x", "y"))},

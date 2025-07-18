@@ -9,8 +9,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray import DataArray, Dataset, Variable, concat, set_options
-from xarray.core import dtypes
+from xarray import AlignmentError, DataArray, Dataset, Variable, concat, set_options
+from xarray.core import dtypes, types
 from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import PandasIndex
 from xarray.structure import merge
@@ -24,6 +24,7 @@ from xarray.tests import (
     requires_dask,
     requires_pyarrow,
 )
+from xarray.tests.indexes import XYIndex
 from xarray.tests.test_dataset import create_test_data
 
 if TYPE_CHECKING:
@@ -1527,3 +1528,50 @@ class TestNewDefaults:
 
             new = concat(objs, "x", coords="different", compat="equals")
             assert_identical(old, new)
+
+
+def test_concat_multi_dim_index() -> None:
+    ds1 = (
+        Dataset(
+            {"foo": (("x", "y"), np.random.randn(2, 2))},
+            coords={"x": [1, 2], "y": [3, 4]},
+        )
+        .drop_indexes(["x", "y"])
+        .set_xindex(["x", "y"], XYIndex)
+    )
+    ds2 = (
+        Dataset(
+            {"foo": (("x", "y"), np.random.randn(2, 2))},
+            coords={"x": [1, 2], "y": [5, 6]},
+        )
+        .drop_indexes(["x", "y"])
+        .set_xindex(["x", "y"], XYIndex)
+    )
+
+    expected = (
+        Dataset(
+            {
+                "foo": (
+                    ("x", "y"),
+                    np.concatenate([ds1.foo.data, ds2.foo.data], axis=-1),
+                )
+            },
+            coords={"x": [1, 2], "y": [3, 4, 5, 6]},
+        )
+        .drop_indexes(["x", "y"])
+        .set_xindex(["x", "y"], XYIndex)
+    )
+    # note: missing 'override'
+    joins: list[types.JoinOptions] = ["inner", "outer", "exact", "left", "right"]
+    for join in joins:
+        actual = concat([ds1, ds2], dim="y", join=join)
+        assert_identical(actual, expected, check_default_indexes=False)
+
+    with pytest.raises(AlignmentError):
+        actual = concat([ds1, ds2], dim="x", join="exact")
+
+    # TODO: fix these, or raise better error message
+    with pytest.raises(AssertionError):
+        joins_lr: list[types.JoinOptions] = ["left", "right"]
+        for join in joins_lr:
+            actual = concat([ds1, ds2], dim="x", join=join)

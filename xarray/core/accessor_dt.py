@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Generic
 
 import numpy as np
 import pandas as pd
-from typing_extensions import Self
 
 from xarray.coding.calendar_ops import _decimal_year
 from xarray.coding.times import infer_calendar_name
@@ -21,6 +20,8 @@ from xarray.core.variable import IndexVariable, Variable
 from xarray.namedarray.utils import is_duck_dask_array
 
 if TYPE_CHECKING:
+    from typing import Self
+
     from numpy.typing import DTypeLike
 
     from xarray.core.dataarray import DataArray

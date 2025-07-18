@@ -314,7 +314,7 @@ def merge_collected(
                 variables = [variable for variable, _ in elements_list]
                 try:
                     merged_vars[name] = unique_variable(
-                        name, variables, compat, equals.get(name, None)
+                        name, variables, compat, equals.get(name)
                     )
                     # This is very likely to result in false positives, but there is no way
                     # to tell if the output will change without computing.
@@ -753,7 +753,7 @@ def merge_core(
         coord_names.intersection_update(variables)
     if explicit_coords is not None:
         coord_names.update(explicit_coords)
-    for dim in dims.keys():
+    for dim in dims:
         if dim in variables:
             coord_names.add(dim)
     ambiguous_coords = coord_names.intersection(noncoord_names)
