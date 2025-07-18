@@ -159,6 +159,13 @@ def grid_rechunk(
     if not nd_var_chunks:
         return v
 
+    # This is useful for the scenarios where the enc_chunks are bigger than the
+    # variable chunks, which happens when the user specifies the enc_chunks manually.
+    enc_chunks = tuple(
+        min(enc_chunk, sum(var_chunk))
+        for enc_chunk, var_chunk in zip(enc_chunks, nd_var_chunks, strict=True)
+    )
+
     nd_grid_chunks = tuple(
         build_grid_chunks(
             sum(var_chunks),
@@ -191,9 +198,9 @@ def validate_grid_chunks_alignment(
     base_error = (
         "Specified Zarr chunks encoding['chunks']={enc_chunks!r} for "
         "variable named {name!r} would overlap multiple Dask chunks. "
-        "Check the chunk at position {var_chunk_pos}, which has a size of "
-        "{var_chunk_size} on dimension {dim_i}. It is unaligned with "
-        "backend chunks of size {chunk_size} in region {region}. "
+        "Please check the Dask chunks at position {var_chunk_pos} and "
+        "{var_chunk_pos_next}, on axis {axis}, they are overlapped "
+        "on the same Zarr chunk in the region {region}. "
         "Writing this array in parallel with Dask could lead to corrupted data. "
         "To resolve this issue, consider one of the following options: "
         "- Rechunk the array using `chunk()`. "
@@ -202,7 +209,7 @@ def validate_grid_chunks_alignment(
         "- Enable automatic chunks alignment with `align_chunks=True`."
     )
 
-    for dim_i, chunk_size, var_chunks, interval, size in zip(
+    for axis, chunk_size, var_chunks, interval, size in zip(
         range(len(enc_chunks)),
         enc_chunks,
         nd_var_chunks,
@@ -215,9 +222,10 @@ def validate_grid_chunks_alignment(
                 raise ValueError(
                     base_error.format(
                         var_chunk_pos=i + 1,
+                        var_chunk_pos_next=i + 2,
                         var_chunk_size=chunk,
+                        axis=axis,
                         name=name,
-                        dim_i=dim_i,
                         chunk_size=chunk_size,
                         region=interval,
                         enc_chunks=enc_chunks,
@@ -237,9 +245,10 @@ def validate_grid_chunks_alignment(
                 raise ValueError(
                     base_error.format(
                         var_chunk_pos=0,
+                        var_chunk_pos_next=0,
                         var_chunk_size=var_chunks[0],
+                        axis=axis,
                         name=name,
-                        dim_i=dim_i,
                         chunk_size=chunk_size,
                         region=interval,
                         enc_chunks=enc_chunks,
@@ -251,9 +260,10 @@ def validate_grid_chunks_alignment(
 
             error_on_last_chunk = base_error.format(
                 var_chunk_pos=len(var_chunks) - 1,
+                var_chunk_pos_next=len(var_chunks) - 1,
                 var_chunk_size=var_chunks[-1],
+                axis=axis,
                 name=name,
-                dim_i=dim_i,
                 chunk_size=chunk_size,
                 region=interval,
                 enc_chunks=enc_chunks,
