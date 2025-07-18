@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
+from xarray.core.common import _contains_cftime_datetimes
 from xarray.core.indexing import ImplicitToExplicitIndexingAdapter
 from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray
 from xarray.namedarray.utils import is_duck_dask_array, module_available
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
         _NormalizedChunks,
         duckarray,
     )
+    from xarray.namedarray.parallelcompat import _Chunks
 
     try:
         from dask.array import Array as DaskArray
@@ -264,3 +266,50 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         if chunks != "auto":
             raise NotImplementedError("Only chunks='auto' is supported at present.")
         return dask.array.shuffle(x, indexer, axis, chunks="auto")
+
+    def rechunk(  # type: ignore[override]
+        self,
+        data: T_ChunkedArray,
+        chunks: _NormalizedChunks | tuple[int, ...] | _Chunks,
+        **kwargs: Any,
+    ) -> Any:
+        """
+        Changes the chunking pattern of the given array.
+
+        Called when the .chunk method is called on an xarray object that is already chunked.
+
+        Parameters
+        ----------
+        data : dask array
+            Array to be rechunked.
+        chunks :  int, tuple, dict or str, optional
+            The new block dimensions to create. -1 indicates the full size of the
+            corresponding dimension. Default is "auto" which automatically
+            determines chunk sizes.
+
+        Returns
+        -------
+        chunked array
+
+        See Also
+        --------
+        dask.array.Array.rechunk
+        cubed.Array.rechunk
+        """
+
+        if _contains_cftime_datetimes(data):
+            # Preprocess chunks if they're cftime
+
+            from dask import config as dask_config
+            from dask.utils import parse_bytes
+
+            from xarray.namedarray.utils import build_chunkspec
+
+            target_chunksize = parse_bytes(dask_config.get("array.chunk-size"))
+
+            chunks = build_chunkspec(
+                data,
+                target_chunksize=target_chunksize,
+            )
+
+        return data.rechunk(chunks, **kwargs)
