@@ -329,7 +329,8 @@ ban-relative-imports = "all"
 addopts = [
   "--strict-config",
   "--strict-markers",
-
+  "--mypy-only-local-stub",
+  "--mypy-pyproject-toml-file=pyproject.toml",
 ]
 
 # We want to forbid warnings from within xarray in our tests — instead we should
