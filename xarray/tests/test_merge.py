@@ -197,9 +197,15 @@ class TestMergeFunction:
 
         if expect_exception:
             with pytest.raises(MergeError, match="combine_attrs"):
-                actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
+                with pytest.warns(
+                    FutureWarning,
+                    match="will change from compat='no_conflicts' to compat='override'",
+                ):
+                    actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
         else:
-            actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
+            actual = xr.merge(
+                [data1, data2], compat="no_conflicts", combine_attrs=combine_attrs
+            )
             expected = xr.Dataset(
                 {"var1": ("dim1", [], expected_attrs)},
                 coords={"dim1": ("dim1", [], expected_attrs)},
@@ -324,12 +330,12 @@ class TestMergeFunction:
 
     def test_merge_no_conflicts_broadcast(self):
         datasets = [xr.Dataset({"x": ("y", [0])}), xr.Dataset({"x": np.nan})]
-        actual = xr.merge(datasets)
+        actual = xr.merge(datasets, compat="no_conflicts")
         expected = xr.Dataset({"x": ("y", [0])})
         assert_identical(expected, actual)
 
         datasets = [xr.Dataset({"x": ("y", [np.nan])}), xr.Dataset({"x": 0})]
-        actual = xr.merge(datasets)
+        actual = xr.merge(datasets, compat="no_conflicts")
         assert_identical(expected, actual)
 
 
@@ -562,7 +568,11 @@ class TestNewDefaults:
         ds2 = xr.Dataset({"x": ("y", [0, 0])})
 
         with set_options(use_new_combine_kwarg_defaults=False):
-            old = ds1.merge(ds2)
+            with pytest.warns(
+                FutureWarning,
+                match="will change from compat='no_conflicts' to compat='override'",
+            ):
+                old = ds1.merge(ds2)
 
         with set_options(use_new_combine_kwarg_defaults=True):
             new = ds1.merge(ds2)
