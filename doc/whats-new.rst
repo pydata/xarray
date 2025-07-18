@@ -30,6 +30,8 @@ Bug fixes
 
 - Fix Pydap Datatree backend testing. Testing now compares elements of (unordered) two sets (before, lists) (:pull:`10525`).
   By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+- Fix ``KeyError`` when passing a ``dim`` argument different from the default to ``convert_calendar`` (:pull:`10544`).
+  By `Eric Jansen <https://github.com/ej81>`_.
 
 
 Documentation
