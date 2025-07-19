@@ -1146,13 +1146,8 @@ class TestDataset:
 
     @requires_dask
     @pytest.mark.parametrize(
-        "use_cftime,calendar", 
-        [
-            (True, "standard"), 
-            (False, "standard"),
-            (True, "noleap"), 
-            (True, "360_day")
-        ]
+        "use_cftime,calendar",
+        [(True, "standard"), (False, "standard"), (True, "noleap"), (True, "360_day")],
     )
     def test_chunk_by_season_resampler(self, use_cftime: bool, calendar: str) -> None:
         """Test chunking using SeasonResampler."""
@@ -1190,7 +1185,7 @@ class TestDataset:
             {"x": 2, "time": SeasonResampler(["DJFM", "AM", "JJA", "SON"])}
         )
         # Custom seasons also produce boundary chunks
-        assert len(rechunked.chunksizes["time"]) == 9  
+        assert len(rechunked.chunksizes["time"]) == 9
         assert rechunked.chunksizes["x"] == (2,) * 5
 
         # Test error on missing season (should fail with incomplete seasons)
