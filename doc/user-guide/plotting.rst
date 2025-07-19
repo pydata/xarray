@@ -141,10 +141,7 @@ instead of the default ones:
 
     da.plot.pcolormesh(x="lon", y="lat");
 
-Note that in this case, xarray still follows the pixel centered convention.
-This might be undesirable in some cases, for example when your data is defined
-on a polar projection (:issue:`781`). This is why the default is to not follow
-this convention when plotting on a map:
+Note that in this case, xarray still follows the pixel centered convention:
 
 .. jupyter-execute::
     :stderr:
@@ -155,23 +152,12 @@ this convention when plotting on a map:
     ax.coastlines()
     ax.gridlines(draw_labels=True);
 
-You can however decide to infer the cell boundaries and use the
-``infer_intervals`` keyword:
-
-.. jupyter-execute::
-
-    ax = plt.subplot(projection=ccrs.PlateCarree())
-    da.plot.pcolormesh(x="lon", y="lat", ax=ax, infer_intervals=True)
-    ax.scatter(lon, lat, transform=ccrs.PlateCarree())
-    ax.coastlines()
-    ax.gridlines(draw_labels=True);
-
 .. note::
     The data model of xarray does not support datasets with `cell boundaries`_
     yet. If you want to use these coordinates, you'll have to make the plots
     outside the xarray framework.
 
-.. _cell boundaries: https://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#cell-boundaries
+.. _cell boundaries: https://cfconventions.org/Data/cf-conventions/cf-conventions-1.12/cf-conventions.html#cell-boundaries
 
 One can also make line plots with multidimensional coordinates. In this case, ``hue`` must be a dimension name, not a coordinate name.
 
