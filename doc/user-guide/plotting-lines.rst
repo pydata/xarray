@@ -4,66 +4,10 @@
 Line Plots (1D)
 ================
 
-Introduction
-------------
-
-Labeled data enables expressive computations. These same
-labels can also be used to easily create informative plots.
-
-Xarray's plotting capabilities are centered around
-:py:class:`DataArray` objects.
-To plot :py:class:`Dataset` objects
-simply access the relevant DataArrays, i.e. ``dset['var1']``.
-Dataset specific plotting routines are also available (see :ref:`plot-dataset`).
-Here we focus mostly on arrays 2d or larger. If your data fits
-nicely into a pandas DataFrame then you're better off using one of the more
-developed tools there.
-
-Xarray plotting functionality is a thin wrapper around the popular
-`matplotlib <https://matplotlib.org/>`_ library.
-Matplotlib syntax and function names were copied as much as possible, which
-makes for an easy transition between the two.
-Matplotlib must be installed before xarray can plot.
-
-To use xarray's plotting capabilities with time coordinates containing
-``cftime.datetime`` objects
-`nc-time-axis <https://github.com/SciTools/nc-time-axis>`_ v1.3.0 or later
-needs to be installed.
-
-For more extensive plotting applications consider the following projects:
-
-- `Seaborn <https://seaborn.pydata.org/>`_: "provides
-  a high-level interface for drawing attractive statistical graphics."
-  Integrates well with pandas.
-
-- `HoloViews <https://holoviews.org/>`_
-  and `GeoViews <https://geoviews.org/>`_: "Composable, declarative
-  data structures for building even complex visualizations easily." Includes
-  native support for xarray objects.
-
-- `hvplot <https://hvplot.pyviz.org/>`_: ``hvplot`` makes it very easy to produce
-  dynamic plots (backed by ``Holoviews`` or ``Geoviews``) by adding a ``hvplot``
-  accessor to DataArrays.
-
-- `Cartopy <https://scitools.org.uk/cartopy/docs/latest/>`_: Provides cartographic
-  tools.
-
-Imports
-~~~~~~~
-
-.. jupyter-execute::
-    :hide-code:
-
-    # Use defaults so we don't get gridlines in generated docs
-    import matplotlib as mpl
-
-    mpl.rcdefaults()
-
 The following imports are necessary for all of the examples.
 
 .. jupyter-execute::
 
-    import cartopy.crs as ccrs
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
@@ -89,15 +33,8 @@ For these examples we'll use the North American air temperature dataset.
    Until :issue:`1614` is solved, you might need to copy over the metadata in ``attrs`` to get informative figure labels (as was done above).
 
 
-DataArrays
-----------
-
-One Dimension
-~~~~~~~~~~~~~
-
-================
- Simple Example
-================
+Simple Example
+---------------
 
 The simplest way to make a plot is to call the :py:func:`DataArray.plot()` method.
 
@@ -118,9 +55,8 @@ The y-axis label in the above plot was constructed from the ``long_name`` and ``
 
     air1d.attrs
 
-======================
- Additional Arguments
-======================
+Additional Arguments
+--------------------
 
 Additional arguments are passed directly to the matplotlib function which
 does the work.
@@ -146,9 +82,9 @@ Keyword arguments work the same way, and are more explicit.
 
     air1d[:200].plot.line(color="purple", marker="o");
 
-=========================
- Adding to Existing Axis
-=========================
+
+Adding to Existing Axis
+--------------------
 
 To add the plot to an existing axis pass in the axis as a keyword argument
 ``ax``. This works for all xarray plotting methods.
@@ -168,9 +104,9 @@ On the right is a histogram created by :py:func:`xarray.plot.hist`.
 
 .. _plotting.figsize:
 
-=============================
- Controlling the figure size
-=============================
+
+Controlling the figure size
+--------------------
 
 You can pass a ``figsize`` argument to all xarray's plotting methods to
 control the figure size. For convenience, xarray's plotting methods also
@@ -201,9 +137,9 @@ entire figure (as for matplotlib's ``figsize`` argument).
 
 .. _plotting.multiplelines:
 
-=========================
- Determine x-axis values
-=========================
+
+Determine x-axis values
+--------------------
 
 Per default dimension coordinates are used for the x-axis (here the time coordinates).
 However, you can also use non-dimension coordinates, MultiIndex levels, and dimensions
@@ -239,9 +175,8 @@ Finally, if a dataset does not have any coordinates it enumerates all data point
 
 The same applies to 2D plots below.
 
-====================================================
- Multiple lines showing variation along a dimension
-====================================================
+Multiple lines showing variation along a dimension
+--------------------
 
 It is possible to make line plots of two-dimensional data by calling :py:func:`xarray.plot.line`
 with appropriate arguments. Consider the 3D variable ``air`` defined above. We can use line
@@ -261,9 +196,9 @@ If required, the automatic legend can be turned off using ``add_legend=False``. 
 ``hue`` can be passed directly to :py:func:`xarray.plot.line` as ``air.isel(lon=10, lat=[19,21,22]).plot.line(hue='lat')``.
 
 
-========================
- Dimension along y-axis
-========================
+
+Dimension along y-axis
+--------------------
 
 It is also possible to make line plots such that the data are on the x-axis and a dimension is on the y-axis. This can be done by specifying the appropriate ``y`` keyword argument.
 
@@ -271,9 +206,9 @@ It is also possible to make line plots such that the data are on the x-axis and 
 
     air.isel(time=10, lon=[10, 11]).plot(y="lat", hue="lon");
 
-============
- Step plots
-============
+
+Step plots
+--------------------
 
 As an alternative, also a step plot similar to matplotlib's ``plt.step`` can be
 made using 1D data.
@@ -302,7 +237,7 @@ is ignored.
 
 
 Other axes kwargs
-~~~~~~~~~~~~~~~~~
+--------------------
 
 
 The keyword arguments ``xincrease`` and ``yincrease`` let you control the axes direction.

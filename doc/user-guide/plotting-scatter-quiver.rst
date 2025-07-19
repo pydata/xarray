@@ -4,6 +4,8 @@
 Scatter, Quiver, & Streamplot
 ==============================
 
+.. _plot-dataset:
+
 Datasets
 ---------
 
@@ -11,22 +13,13 @@ Xarray has limited support for plotting Dataset variables against each other.
 Consider this dataset
 
 .. jupyter-execute::
-    :hide-code:
 
-    # Use defaults so we don't get gridlines in generated docs
-    import matplotlib as mpl
-    mpl.rcdefaults()
-
-    # Import 3D plotting toolkit to enable 3D scatter plots
-    from mpl_toolkits.mplot3d import Axes3D
-
-.. jupyter-execute::
-
-    import cartopy.crs as ccrs
     import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
     import numpy as np
     import pandas as pd
     import xarray as xr
+    %matplotlib inline
 
     # Load air temperature dataset (needed for complete context)
     airtemps = xr.tutorial.open_dataset("air_temperature")
@@ -95,7 +88,6 @@ The ``z`` kwarg lets you plot the data along the z-axis as well.
 
 .. jupyter-execute::
 
-    plt.figure()
     ds.plot.scatter(x="A", y="B", z="z", hue="y", markersize="x");
 
 Faceting is also possible
@@ -108,7 +100,6 @@ And adding the z-axis
 
 .. jupyter-execute::
 
-    plt.figure()
     ds.plot.scatter(x="A", y="B", z="z", hue="y", markersize="x", row="x", col="w");
 
 For more advanced scatter plots, we recommend converting the relevant data variables
@@ -121,7 +112,6 @@ Visualizing vector fields is supported with quiver plots:
 
 .. jupyter-execute::
 
-    plt.figure()
     ds.isel(w=1, z=1).plot.quiver(x="x", y="y", u="A", v="B");
 
 

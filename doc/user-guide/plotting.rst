@@ -4,9 +4,6 @@
 Plotting
 ========
 
-Introduction
-------------
-
 Labeled data enables expressive computations. These same
 labels can also be used to easily create informative plots.
 
@@ -48,11 +45,8 @@ For more extensive plotting applications consider the following projects:
 - `Cartopy <https://scitools.org.uk/cartopy/docs/latest/>`_: Provides cartographic
   tools.
 
-Details
--------
-
-Ways to Use
-~~~~~~~~~~~
+Syntax Overview
+---------------
 
 There are three ways to use the xarray plotting functionality:
 
@@ -94,8 +88,8 @@ Dimensions      Plotting function
 Anything else   :py:func:`xarray.plot.hist`
 =============== ===========================
 
-Coordinates
-~~~~~~~~~~~
+Coordinate Handling
+-------------------
 
 If you'd like to find out what's really going on in the coordinate system,
 read on.
@@ -126,7 +120,7 @@ axis labels and ranges correspond to the values of the
 coordinates.
 
 Multidimensional coordinates
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------
 
 See also: :ref:`/examples/multidimensional-coords.ipynb`.
 
@@ -187,13 +181,14 @@ One can also make line plots with multidimensional coordinates. In this case, ``
     da.plot.line(x="lon", hue="y", ax=ax[0])
     da.plot.line(x="lon", hue="x", ax=ax[1]);
 
-.. toctree:::
+Subsections
+-----------
+
+.. toctree::
    :maxdepth: 2
 
    plotting-lines
    plotting-2d
    plotting-faceting
    plotting-scatter-quiver
-
-.. note::
-   This guide covers the core plotting functionality. For additional features like maps, see the individual plotting sections.
+   plotting-maps

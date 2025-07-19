@@ -14,15 +14,7 @@ multiples to display the same relationship conditioned on one or more other
 variables is often called a "trellis plot".
 
 .. jupyter-execute::
-    :hide-code:
 
-    # Use defaults so we don't get gridlines in generated docs
-    import matplotlib as mpl
-    mpl.rcdefaults()
-
-.. jupyter-execute::
-
-    import cartopy.crs as ccrs
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
@@ -162,6 +154,3 @@ axis labels, axis ticks and plot titles. See :py:meth:`~xarray.plot.FacetGrid.se
 :py:meth:`~xarray.plot.FacetGrid.set_ticks` for more information.
 Plotting functions can be applied to each subset of the data by calling
 :py:meth:`~xarray.plot.FacetGrid.map_dataarray` or to each subplot by calling :py:meth:`~xarray.plot.FacetGrid.map`.
-
-TODO: add an example of using the ``map`` method to plot dataset variables
-(e.g., with ``plt.quiver``).
