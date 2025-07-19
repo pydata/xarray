@@ -80,7 +80,7 @@ Documentation
   - "Plotting" page split into: Line Plots, 2D Plots, Faceting, and Scatter/Quiver/Streamplot
 
   The original pages now serve as navigation hubs with improved organization.
-  By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
+  By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_, `Scott Henderson <https://github.com/scottyhq>`_, and `Deepak Cherian <https://github.com/dcherian>`_.
 
 - A `new gallery <https://xarray-indexes.readthedocs.io>`_ showing off the possibilities enabled by flexible indexes.
 

@@ -39,6 +39,85 @@ and ``xincrease``.
     If speed is important to you and you are plotting a regular mesh, consider
     using ``imshow``.
 
+Coordinate Handling
+-------------------
+
+If you'd like to find out what's really going on in the coordinate system,
+read on.
+
+.. jupyter-execute::
+
+    import cartopy.crs as ccrs
+
+    a0 = xr.DataArray(np.zeros((4, 3, 2)), dims=("y", "x", "z"), name="temperature")
+    a0[0, 0, 0] = 1
+    a = a0.isel(z=0)
+    a
+
+The plot will produce an image corresponding to the values of the array.
+Hence the top left pixel will be a different color than the others.
+Before reading on, you may want to look at the coordinates and
+think carefully about what the limits, labels, and orientation for
+each of the axes should be.
+
+.. jupyter-execute::
+
+    a.plot();
+
+It may seem strange that
+the values on the y axis are decreasing with -0.5 on the top. This is because
+the pixels are centered over their coordinates, and the
+axis labels and ranges correspond to the values of the
+coordinates.
+
+Multidimensional coordinates
+----------------------------
+
+See also: :ref:`/examples/multidimensional-coords.ipynb`.
+
+You can plot irregular grids defined by multidimensional coordinates with
+xarray, but you'll have to tell the plot function to use these coordinates
+instead of the default ones:
+
+.. jupyter-execute::
+
+    lon, lat = np.meshgrid(np.linspace(-20, 20, 5), np.linspace(0, 30, 4))
+    lon += lat / 10
+    lat += lon / 10
+    da = xr.DataArray(
+        np.arange(20).reshape(4, 5),
+        dims=["y", "x"],
+        coords={"lat": (("y", "x"), lat), "lon": (("y", "x"), lon)},
+    )
+
+    da.plot.pcolormesh(x="lon", y="lat");
+
+Note that in this case, xarray still follows the pixel centered convention:
+
+.. jupyter-execute::
+    :stderr:
+
+    ax = plt.subplot(projection=ccrs.PlateCarree())
+    da.plot.pcolormesh(x="lon", y="lat", ax=ax)
+    ax.scatter(lon, lat, transform=ccrs.PlateCarree())
+    ax.coastlines()
+    ax.gridlines(draw_labels=True);
+
+.. note::
+    The data model of xarray does not support datasets with `cell boundaries`_
+    yet. If you want to use these coordinates, you'll have to make the plots
+    outside the xarray framework.
+
+.. _cell boundaries: https://cfconventions.org/Data/cf-conventions/cf-conventions-1.12/cf-conventions.html#cell-boundaries
+
+One can also make line plots with multidimensional coordinates. In this case, ``hue`` must be a dimension name, not a coordinate name.
+
+.. jupyter-execute::
+
+    f, ax = plt.subplots(2, 1)
+    da.plot.line(x="lon", hue="y", ax=ax[0])
+    da.plot.line(x="lon", hue="x", ax=ax[1]);
+
 ================
  Missing Values
 ================

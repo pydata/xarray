@@ -33,6 +33,46 @@ For these examples we'll use the North American air temperature dataset.
    Until :issue:`1614` is solved, you might need to copy over the metadata in ``attrs`` to get informative figure labels (as was done above).
 
 
+Syntax Overview
+---------------
+
+There are three ways to use the xarray plotting functionality:
+
+1. Use ``plot`` as a convenience method for a DataArray.
+
+2. Access a specific plotting method from the ``plot`` attribute of a
+   DataArray.
+
+3. Directly from the xarray plot submodule.
+
+These are provided for user convenience; they all call the same code.
+
+.. jupyter-execute::
+
+    da = xr.DataArray(range(5))
+    fig, axs = plt.subplots(ncols=2, nrows=2)
+    da.plot(ax=axs[0, 0])
+    da.plot.line(ax=axs[0, 1])
+    xr.plot.plot(da, ax=axs[1, 0])
+    xr.plot.line(da, ax=axs[1, 1]);
+
+Here the output is the same. Since the data is 1 dimensional the line plot
+was used.
+
+The convenience method :py:meth:`xarray.DataArray.plot` dispatches to an appropriate
+plotting function based on the dimensions of the ``DataArray`` and whether
+the coordinates are sorted and uniformly spaced. This table
+describes what gets plotted:
+
+=============== ===========================
+Dimensions      Plotting function
+--------------- ---------------------------
+1               :py:func:`xarray.plot.line`
+2               :py:func:`xarray.plot.pcolormesh`
+Anything else   :py:func:`xarray.plot.hist`
+=============== ===========================
+
+
 Simple Example
 --------------
 
