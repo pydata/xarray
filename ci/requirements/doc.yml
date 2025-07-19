@@ -46,6 +46,7 @@ dependencies:
   - sphinx-remove-toctrees
   - sphinxext-opengraph
   - sphinxext-rediraffe
+  - tree # for zarr docs
   - zarr
   - pip:
       # relative to this file. Needs to be editable to be accepted.
