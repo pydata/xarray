@@ -1032,15 +1032,6 @@ class SeasonResampler(Resampler):
 
         return EncodedGroups(codes=codes, full_index=full_index)
 
-    def _for_chunking(self) -> Self:
-        """
-        Return a version of this resampler suitable for chunking.
-
-        For SeasonResampler, this returns a version with drop_incomplete=False
-        to prevent data from being silently dropped during chunking operations.
-        """
-        return type(self)(seasons=self.seasons, drop_incomplete=False)
-
     def compute_chunks(self, name: Hashable, variable: Variable) -> tuple[int, ...]:
         """
         Compute chunk sizes for this season resampler.
@@ -1070,7 +1061,7 @@ class SeasonResampler(Resampler):
 
         # Create a temporary resampler that ignores drop_incomplete for chunking
         # This prevents data from being silently dropped during chunking
-        resampler_for_chunking = self._for_chunking()
+        resampler_for_chunking = type(self)(seasons=self.seasons, drop_incomplete=False)
 
         chunks = (
             DataArray(

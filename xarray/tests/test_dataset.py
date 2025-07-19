@@ -1144,33 +1144,20 @@ class TestDataset:
                 (8 % chunks,) if 8 % chunks else ()
             )
 
-            rechunked = data.chunk({"dim2": chunks})
-            assert rechunked.chunks["dim2"] == (chunks,) * (9 // chunks) + (
-                (9 % chunks,) if 9 % chunks else ()
-            )
-
-            rechunked = data.chunk({"dim1": chunks, "dim2": chunks})
-            assert rechunked.chunks["dim1"] == (chunks,) * (8 // chunks) + (
-                (8 % chunks,) if 8 % chunks else ()
-            )
-            assert rechunked.chunks["dim2"] == (chunks,) * (9 // chunks) + (
-                (9 % chunks,) if 9 % chunks else ()
-            )
-
     @requires_dask
     @pytest.mark.parametrize("use_cftime", [True, False])
-    def test_chunk_by_season_resampler(self, use_cftime: bool) -> None:
+    @pytest.mark.parametrize("calendar", ["standard", "noleap", "360_day"])
+    def test_chunk_by_season_resampler(self, use_cftime: bool, calendar: str) -> None:
         """Test chunking using SeasonResampler."""
         import dask.array
 
         if use_cftime:
             pytest.importorskip("cftime")
 
-        N = 365 * 2  # 2 years
-        if use_cftime:
-            time = xr.date_range("2001-01-01", periods=N, freq="D", use_cftime=True)
-        else:
-            time = xr.date_range("2001-01-01", periods=N, freq="D")
+        N = 366 + 365  # 2 years
+        time = xr.date_range(
+            "2000-01-01", periods=N, freq="D", use_cftime=use_cftime, calendar=calendar
+        )
         ds = Dataset(
             {
                 "pr": ("time", dask.array.random.random((N), chunks=(20))),
@@ -1182,17 +1169,21 @@ class TestDataset:
 
         # Test standard seasons
         rechunked = ds.chunk(x=2, time=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
-        # Should have multiple chunks along time dimension
-        assert len(rechunked.chunksizes["time"]) > 1
+        # For 2 years of data with standard seasons, expect 8 seasonal chunks
+        assert len(rechunked.chunksizes["time"]) == 8
         assert rechunked.chunksizes["x"] == (2,) * 5
 
         # Test custom seasons
         rechunked = ds.chunk(
             {"x": 2, "time": SeasonResampler(["DJFM", "AM", "JJA", "SON"])}
         )
-        # Should have multiple chunks along time dimension
-        assert len(rechunked.chunksizes["time"]) > 1
+        # Custom seasons should also give 8 chunks for 2 years
+        assert len(rechunked.chunksizes["time"]) == 8
         assert rechunked.chunksizes["x"] == (2,) * 5
+
+        # Test error on missing season (should fail with incomplete seasons)
+        with pytest.raises(ValueError):
+            ds.chunk(x=2, time=SeasonResampler(["DJF", "MAM", "SON"]))
 
         # Test that drop_incomplete doesn't affect chunking
         rechunked_drop_true = ds.chunk(

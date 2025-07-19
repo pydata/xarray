@@ -2492,7 +2492,12 @@ class Dataset(
                     f"chunks={resampler!r} only supported for 1D variables. "
                     f"Received variable {name!r} with {variable.ndim} dimensions instead."
                 )
-            return resampler.compute_chunks(name, variable)
+            newchunks = resampler.compute_chunks(name, variable)
+            if sum(newchunks) != variable.shape[0]:
+                raise ValueError(
+                    f"Logic bug in rechunking using {resampler!r}. New chunks tuple does not match size of data. Please open an issue."
+                )
+            return newchunks
 
         chunks_mapping_ints: Mapping[Any, T_ChunkDim] = {
             name: (
