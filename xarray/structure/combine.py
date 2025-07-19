@@ -10,6 +10,7 @@ from xarray.core import dtypes
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.utils import iterate_nested
+from xarray.structure.alignment import AlignmentError
 from xarray.structure.concat import concat
 from xarray.structure.merge import merge
 from xarray.util.deprecation_helpers import (
@@ -334,13 +335,20 @@ def _combine_1d(
             else:
                 raise
     else:
-        combined = merge(
-            datasets,
-            compat=compat,
-            fill_value=fill_value,
-            join=join,
-            combine_attrs=combine_attrs,
-        )
+        try:
+            combined = merge(
+                datasets,
+                compat=compat,
+                fill_value=fill_value,
+                join=join,
+                combine_attrs=combine_attrs,
+            )
+        except AlignmentError as e:
+            e.add_note(
+                "If you are intending to concatenate datasets, please specify the concatenation dimension explicitly. "
+                "Using merge to concatenate is quite inefficient."
+            )
+            raise e
 
     return combined
 
