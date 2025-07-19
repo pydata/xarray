@@ -173,7 +173,7 @@ class ConcatenatableArray:
     ) -> np.ndarray:
         raise UnexpectedDataAccess("Tried accessing data")
 
-    def __getitem__(self, key) -> "ConcatenatableArray":
+    def __getitem__(self, key) -> Self:
         """Some cases of concat require supporting expanding dims by dimensions of size 1"""
         # see https://data-apis.org/array-api/2022.12/API_specification/indexing.html#multi-axis-indexing
         arr = self._array
@@ -186,7 +186,7 @@ class ConcatenatableArray:
                 raise UnexpectedDataAccess("Tried accessing data.")
         return ConcatenatableArray(arr)
 
-    def __eq__(self, other: "ConcatenatableArray") -> "ConcatenatableArray":
+    def __eq__(self, other: Self) -> Self:  # type: ignore[override]
         return ConcatenatableArray(self._array == other._array)
 
     def __array_function__(self, func, types, args, kwargs) -> Any:
@@ -204,15 +204,15 @@ class ConcatenatableArray:
         """We have to define this in order to convince xarray that this class is a duckarray, even though we will never support ufuncs."""
         return NotImplemented
 
-    def astype(self, dtype: np.dtype, /, *, copy: bool = True) -> "ConcatenatableArray":
+    def astype(self, dtype: np.dtype, /, *, copy: bool = True) -> Self:
         """Needed because xarray will call this even when it's a no-op"""
         if dtype != self.dtype:
             raise NotImplementedError()
         else:
             return self
 
-    def __and__(self, other: Self) -> "ConcatenatableArray":
+    def __and__(self, other: Self) -> Self:
         return type(self)(self._array & other._array)
 
-    def __or__(self, other: Self) -> "ConcatenatableArray":
+    def __or__(self, other: Self) -> Self:
         return type(self)(self._array | other._array)

@@ -279,7 +279,7 @@ def test_concat_multiple_datasets_missing_vars(include_day: bool) -> None:
     datasets = create_concat_datasets(
         len(vars_to_drop), seed=123, include_day=include_day
     )
-    expected = concat(datasets, dim="day", **kwargs)
+    expected = concat(datasets, dim="day", **kwargs)  # type: ignore[call-overload]
 
     for i, name in enumerate(vars_to_drop):
         if include_day:
@@ -292,8 +292,7 @@ def test_concat_multiple_datasets_missing_vars(include_day: bool) -> None:
         ds.drop_vars(varname)
         for ds, varname in zip(datasets, vars_to_drop, strict=True)
     ]
-
-    actual = concat(datasets, dim="day", **kwargs)
+    actual = concat(datasets, dim="day", **kwargs)  # type: ignore[call-overload]
 
     assert list(actual.data_vars.keys()) == [
         "pressure",
