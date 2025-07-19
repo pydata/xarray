@@ -1145,14 +1145,25 @@ class TestDataset:
             )
 
     @requires_dask
-    @pytest.mark.parametrize("use_cftime", [True, False])
-    @pytest.mark.parametrize("calendar", ["standard", "noleap", "360_day"])
+    @pytest.mark.parametrize(
+        "use_cftime,calendar", 
+        [
+            (True, "standard"), 
+            (False, "standard"),
+            (True, "noleap"), 
+            (True, "360_day")
+        ]
+    )
     def test_chunk_by_season_resampler(self, use_cftime: bool, calendar: str) -> None:
         """Test chunking using SeasonResampler."""
         import dask.array
 
         if use_cftime:
             pytest.importorskip("cftime")
+
+        # Skip non-standard calendars with use_cftime=False as they're incompatible
+        if not use_cftime and calendar != "standard":
+            pytest.skip(f"Calendar '{calendar}' requires use_cftime=True")
 
         N = 366 + 365  # 2 years
         time = xr.date_range(
@@ -1169,16 +1180,17 @@ class TestDataset:
 
         # Test standard seasons
         rechunked = ds.chunk(x=2, time=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
-        # For 2 years of data with standard seasons, expect 8 seasonal chunks
-        assert len(rechunked.chunksizes["time"]) == 8
+        # With 2 years of data starting Jan 1, we get 9 seasonal chunks:
+        # partial DJF (Jan-Feb), MAM, JJA, SON, DJF, MAM, JJA, SON, partial DJF (Dec)
+        assert len(rechunked.chunksizes["time"]) == 9
         assert rechunked.chunksizes["x"] == (2,) * 5
 
         # Test custom seasons
         rechunked = ds.chunk(
             {"x": 2, "time": SeasonResampler(["DJFM", "AM", "JJA", "SON"])}
         )
-        # Custom seasons should also give 8 chunks for 2 years
-        assert len(rechunked.chunksizes["time"]) == 8
+        # Custom seasons also produce boundary chunks
+        assert len(rechunked.chunksizes["time"]) == 9  
         assert rechunked.chunksizes["x"] == (2,) * 5
 
         # Test error on missing season (should fail with incomplete seasons)
