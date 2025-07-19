@@ -184,10 +184,10 @@ class ConcatenatableArray:
                 pass
             else:
                 raise UnexpectedDataAccess("Tried accessing data.")
-        return ConcatenatableArray(arr)
+        return type(self)(arr)
 
     def __eq__(self, other: Self) -> Self:  # type: ignore[override]
-        return ConcatenatableArray(self._array == other._array)
+        return type(self)(self._array == other._array)
 
     def __array_function__(self, func, types, args, kwargs) -> Any:
         if func not in CONCATENATABLEARRAY_HANDLED_ARRAY_FUNCTIONS:
