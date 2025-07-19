@@ -7102,4 +7102,4 @@ def test_h5netcdf_storage_options() -> None:
             combine="nested",
             storage_options={"skip_instance_cache": False},
         ) as ds:
-            assert_identical(xr.concat([ds1, ds2], dim="time"), ds)
+            assert_identical(xr.concat([ds1, ds2], dim="time", data_vars="all"), ds)
