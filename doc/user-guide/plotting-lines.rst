@@ -2,7 +2,7 @@
 .. _plotting.lines:
 
 Line Plots (1D)
-================
+===============
 
 The following imports are necessary for all of the examples.
 
@@ -34,7 +34,7 @@ For these examples we'll use the North American air temperature dataset.
 
 
 Simple Example
----------------
+--------------
 
 The simplest way to make a plot is to call the :py:func:`DataArray.plot()` method.
 
@@ -84,7 +84,7 @@ Keyword arguments work the same way, and are more explicit.
 
 
 Adding to Existing Axis
---------------------
+-----------------------
 
 To add the plot to an existing axis pass in the axis as a keyword argument
 ``ax``. This works for all xarray plotting methods.
@@ -106,7 +106,7 @@ On the right is a histogram created by :py:func:`xarray.plot.hist`.
 
 
 Controlling the figure size
---------------------
+---------------------------
 
 You can pass a ``figsize`` argument to all xarray's plotting methods to
 control the figure size. For convenience, xarray's plotting methods also
@@ -139,7 +139,7 @@ entire figure (as for matplotlib's ``figsize`` argument).
 
 
 Determine x-axis values
---------------------
+-----------------------
 
 Per default dimension coordinates are used for the x-axis (here the time coordinates).
 However, you can also use non-dimension coordinates, MultiIndex levels, and dimensions
@@ -176,7 +176,7 @@ Finally, if a dataset does not have any coordinates it enumerates all data point
 The same applies to 2D plots below.
 
 Multiple lines showing variation along a dimension
---------------------
+--------------------------------------------------
 
 It is possible to make line plots of two-dimensional data by calling :py:func:`xarray.plot.line`
 with appropriate arguments. Consider the 3D variable ``air`` defined above. We can use line
@@ -198,7 +198,7 @@ If required, the automatic legend can be turned off using ``add_legend=False``. 
 
 
 Dimension along y-axis
---------------------
+----------------------
 
 It is also possible to make line plots such that the data are on the x-axis and a dimension is on the y-axis. This can be done by specifying the appropriate ``y`` keyword argument.
 
@@ -237,7 +237,7 @@ is ignored.
 
 
 Other axes kwargs
---------------------
+-----------------
 
 
 The keyword arguments ``xincrease`` and ``yincrease`` let you control the axes direction.
