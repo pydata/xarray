@@ -51,7 +51,7 @@ Getting Started
 The plotting functionality in xarray is organized into several focused sections:
 
 - **Line plots**: For 1-dimensional data and time series
-- **2D plots**: For images, maps, and spatial data  
+- **2D plots**: For images, maps, and spatial data
 - **Faceting**: For creating multi-panel plots (small multiples)
 - **Scatter and quiver plots**: For vector data and 3D visualizations
 
