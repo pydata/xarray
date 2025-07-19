@@ -41,7 +41,7 @@ To write to a local directory, we pass a path to a directory:
 .. jupyter-execute::
     :hide-code:
 
-    ! rm -rf path/to/directory.zarr
+    ! rm -rf /tmp/path/directory.zarr
 
 .. jupyter-execute::
     :stderr:
@@ -54,7 +54,7 @@ To write to a local directory, we pass a path to a directory:
             "z": ("x", list("abcd")),
         },
     )
-    ds.to_zarr("path/to/directory.zarr", zarr_format=2, consolidated=False)
+    ds.to_zarr("/tmp/path/directory.zarr", zarr_format=2, consolidated=False)
 
 (The suffix ``.zarr`` is optional--just a reminder that a zarr store lives
 there.) If the directory does not exist, it will be created. If a zarr
@@ -82,7 +82,7 @@ To read back a zarr dataset that has been created this way, we use the
 
 .. jupyter-execute::
 
-    ds_zarr = xr.open_zarr("path/to/directory.zarr", consolidated=False)
+    ds_zarr = xr.open_zarr("/tmp/path/directory.zarr", consolidated=False)
     ds_zarr
 
 Cloud Storage Buckets
@@ -186,7 +186,7 @@ to Zarr:
 .. jupyter-execute::
     :hide-code:
 
-    ! rm -rf path/to/directory.zarr
+    ! rm -rf /tmp/directory.zarr /tmp/foo.zarr
 
 .. jupyter-execute::
 
@@ -196,7 +196,7 @@ to Zarr:
     # shape and chunks are used
     dummies = dask.array.zeros(30, chunks=10)
     ds = xr.Dataset({"foo": ("x", dummies)}, coords={"x": np.arange(30)})
-    path = "path/to/directory.zarr"
+    path = "/tmp/directory.zarr"
     # Now we write the metadata without computing any array values
     ds.to_zarr(path, compute=False, consolidated=False)
 
@@ -236,17 +236,12 @@ These options can be passed to the ``to_zarr`` method as variable encoding.
 For example:
 
 .. jupyter-execute::
-    :hide-code:
-
-    ! rm -rf foo.zarr
-
-.. jupyter-execute::
 
     import zarr
     from zarr.codecs import BloscCodec
 
     compressor = BloscCodec(cname="zstd", clevel=3, shuffle="shuffle")
-    ds.to_zarr("foo.zarr", consolidated=False, encoding={"foo": {"compressors": [compressor]}})
+    ds.to_zarr("/tmp/foo.zarr", consolidated=False, encoding={"foo": {"compressors": [compressor]}})
 
 .. note::
 
@@ -288,7 +283,7 @@ order, e.g., for time-stepping a simulation:
 .. jupyter-execute::
     :hide-code:
 
-    ! rm -rf path/to/directory.zarr
+    ! rm -rf /tmp/path/directory.zarr
 
 .. jupyter-execute::
 
@@ -300,7 +295,7 @@ order, e.g., for time-stepping a simulation:
             "t": pd.date_range("2001-01-01", periods=2),
         },
     )
-    ds1.to_zarr("path/to/directory.zarr", consolidated=False)
+    ds1.to_zarr("/tmp/path/directory.zarr", consolidated=False)
 
 .. jupyter-execute::
 
@@ -312,7 +307,7 @@ order, e.g., for time-stepping a simulation:
             "t": pd.date_range("2001-01-03", periods=2),
         },
     )
-    ds2.to_zarr("path/to/directory.zarr", append_dim="t", consolidated=False)
+    ds2.to_zarr("/tmp/path/directory.zarr", append_dim="t", consolidated=False)
 
 .. _io.zarr.writing_chunks:
 
@@ -362,8 +357,8 @@ split them into chunks:
 
 .. jupyter-execute::
 
-    ds.to_zarr("path/to/directory.zarr", consolidated=False, mode="w")
-    !tree -I zarr.json path/to/directory.zarr
+    ds.to_zarr("/tmp/path/directory.zarr", consolidated=False, mode="w")
+    !tree -I zarr.json /tmp/path/directory.zarr
 
 
 This may cause unwanted overhead on some systems, such as when reading from a cloud
@@ -373,12 +368,12 @@ shape of each coordinate array in the ``encoding`` argument:
 .. jupyter-execute::
 
     ds.to_zarr(
-        "path/to/directory.zarr",
+        "/tmp/path/directory.zarr",
         encoding={"xc": {"chunks": ds.xc.shape}, "yc": {"chunks": ds.yc.shape}},
         consolidated=False,
         mode="w",
     )
-    !tree -I zarr.json path/to/directory.zarr
+    !tree -I zarr.json /tmp/path/directory.zarr
 
 
 The number of chunks on Tair matches our dask chunks, while there is now only a single
