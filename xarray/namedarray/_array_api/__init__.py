@@ -248,7 +248,7 @@ from xarray.namedarray._array_api._indexing_functions import take, take_along_ax
 
 __all__ += ["take", "take_along_axis"]
 
-import xarray.namedarray._array_api._info as __array_namespace_info__
+from xarray.namedarray._array_api._info import __array_namespace_info__
 
 __all__ += [
     "__array_namespace_info__",
