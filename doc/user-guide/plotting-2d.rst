@@ -10,6 +10,7 @@ by default when the data is two-dimensional.
 
 .. jupyter-execute::
 
+    import cartopy.crs as ccrs
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
@@ -47,8 +48,6 @@ read on.
 
 .. jupyter-execute::
 
-    import cartopy.crs as ccrs
-
     a0 = xr.DataArray(np.zeros((4, 3, 2)), dims=("y", "x", "z"), name="temperature")
     a0[0, 0, 0] = 1
     a = a0.isel(z=0)
@@ -70,57 +69,8 @@ the pixels are centered over their coordinates, and the
 axis labels and ranges correspond to the values of the
 coordinates.
 
-Multidimensional coordinates
-----------------------------
-
-See also: :ref:`/examples/multidimensional-coords.ipynb`.
-
-You can plot irregular grids defined by multidimensional coordinates with
-xarray, but you'll have to tell the plot function to use these coordinates
-instead of the default ones:
-
-.. jupyter-execute::
-
-    lon, lat = np.meshgrid(np.linspace(-20, 20, 5), np.linspace(0, 30, 4))
-    lon += lat / 10
-    lat += lon / 10
-    da = xr.DataArray(
-        np.arange(20).reshape(4, 5),
-        dims=["y", "x"],
-        coords={"lat": (("y", "x"), lat), "lon": (("y", "x"), lon)},
-    )
-
-    da.plot.pcolormesh(x="lon", y="lat");
-
-Note that in this case, xarray still follows the pixel centered convention:
-
-.. jupyter-execute::
-    :stderr:
-
-    ax = plt.subplot(projection=ccrs.PlateCarree())
-    da.plot.pcolormesh(x="lon", y="lat", ax=ax)
-    ax.scatter(lon, lat, transform=ccrs.PlateCarree())
-    ax.coastlines()
-    ax.gridlines(draw_labels=True);
-
-.. note::
-    The data model of xarray does not support datasets with `cell boundaries`_
-    yet. If you want to use these coordinates, you'll have to make the plots
-    outside the xarray framework.
-
-.. _cell boundaries: https://cfconventions.org/Data/cf-conventions/cf-conventions-1.12/cf-conventions.html#cell-boundaries
-
-One can also make line plots with multidimensional coordinates. In this case, ``hue`` must be a dimension name, not a coordinate name.
-
-.. jupyter-execute::
-
-    f, ax = plt.subplots(2, 1)
-    da.plot.line(x="lon", hue="y", ax=ax[0])
-    da.plot.line(x="lon", hue="x", ax=ax[1]);
-
-================
- Missing Values
-================
+Missing Values
+--------------
 
 Xarray plots data with :ref:`missing_values`.
 
@@ -130,9 +80,8 @@ Xarray plots data with :ref:`missing_values`.
     bad_air2d[dict(lat=slice(0, 10), lon=slice(0, 25))] = np.nan
     bad_air2d.plot();
 
-========================
- Nonuniform Coordinates
-========================
+Nonuniform Coordinates
+----------------------
 
 It's not necessary for the coordinates to be evenly spaced. Both
 :py:func:`xarray.plot.pcolormesh` (default) and :py:func:`xarray.plot.contourf` can
@@ -146,9 +95,8 @@ produce plots with nonuniform coordinates.
 
     b.plot();
 
-====================
- Other types of plot
-====================
+Other types of plot
+-------------------
 
 There are several other options for plotting 2D data.
 
@@ -198,9 +146,8 @@ matplotlib is available.
         plt.xlabel("Never gonna see this.")
         air2d.plot();
 
-===========
- Colormaps
-===========
+Colormaps
+---------
 
 Xarray borrows logic from Seaborn to infer what kind of color map to use. For
 example, consider the original data in Kelvins rather than Celsius:
@@ -214,9 +161,8 @@ Kelvins do not have 0, so the default color map was used.
 
 .. _robust-plotting:
 
-========
- Robust
-========
+Robust
+------
 
 Outliers often have an extreme effect on the output of the plot.
 Here we add two bad data points. This affects the color scale,
@@ -244,9 +190,8 @@ Observe that the ranges of the color bar have changed. The arrows on the
 color bar indicate
 that the colors include data points outside the bounds.
 
-====================
- Discrete Colormaps
-====================
+Discrete Colormaps
+------------------
 
 It is often useful, when visualizing 2d data, to use a discrete colormap,
 rather than the default continuous colormaps that matplotlib uses. The
@@ -281,6 +226,54 @@ since levels are chosen automatically).
 
     air2d.plot(levels=10, cmap="husl");
 
+Multidimensional coordinates
+----------------------------
+
+See also: :ref:`/examples/multidimensional-coords.ipynb`.
+
+You can plot irregular grids defined by multidimensional coordinates with
+xarray, but you'll have to tell the plot function to use these coordinates
+instead of the default ones:
+
+.. jupyter-execute::
+
+    lon, lat = np.meshgrid(np.linspace(-20, 20, 5), np.linspace(0, 30, 4))
+    lon += lat / 10
+    lat += lon / 10
+    da = xr.DataArray(
+        np.arange(20).reshape(4, 5),
+        dims=["y", "x"],
+        coords={"lat": (("y", "x"), lat), "lon": (("y", "x"), lon)},
+    )
+
+    da.plot.pcolormesh(x="lon", y="lat");
+
+Note that in this case, xarray still follows the pixel centered convention:
+
+.. jupyter-execute::
+    :stderr:
+
+    ax = plt.subplot(projection=ccrs.PlateCarree())
+    da.plot.pcolormesh(x="lon", y="lat", ax=ax)
+    ax.scatter(lon, lat, transform=ccrs.PlateCarree())
+    ax.coastlines()
+    ax.gridlines(draw_labels=True);
+
+.. note::
+    The data model of xarray does not support datasets with `cell boundaries`_
+    yet. If you want to use these coordinates, you'll have to make the plots
+    outside the xarray framework.
+
+.. _cell boundaries: https://cfconventions.org/Data/cf-conventions/cf-conventions-1.12/cf-conventions.html#cell-boundaries
+
+One can also make line plots with multidimensional coordinates. In this case, ``hue`` must be a dimension name, not a coordinate name.
+
+.. jupyter-execute::
+
+    f, ax = plt.subplots(2, 1)
+    da.plot.line(x="lon", hue="y", ax=ax[0])
+    da.plot.line(x="lon", hue="x", ax=ax[1]);
+
 .. _plot-maps:
 
 Maps
@@ -289,10 +282,6 @@ Maps
 To follow this section you'll need to have Cartopy installed and working.
 
 This script will plot the air temperature on a map.
-
-.. jupyter-execute::
-
-    import cartopy.crs as ccrs
 
 .. jupyter-execute::
     :stderr:
