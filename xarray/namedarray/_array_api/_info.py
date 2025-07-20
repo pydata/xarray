@@ -29,10 +29,10 @@ if TYPE_CHECKING:
     )
 
 
-def __array_namespace_info__() -> ModuleType:
-    import xarray.namedarray._array_api._info
+# def __array_namespace_info__() -> ModuleType:
+#     import xarray.namedarray._array_api._info
 
-    return xarray.namedarray._array_api._info
+#     return xarray.namedarray._array_api._info
 
 
 def capabilities() -> _Capabilities:
