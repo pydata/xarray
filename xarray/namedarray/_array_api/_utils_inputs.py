@@ -1,12 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
-from xarray.namedarray._array_api._dtypes import (
-    _dtype_categories,
-)
-from xarray.namedarray.core import NamedArray
-
 _py_scalars = (bool, int, float, complex)
 
 
