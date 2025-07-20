@@ -19,8 +19,6 @@ from xarray.namedarray._array_api._dtypes import (
 )
 
 if TYPE_CHECKING:
-    from types import ModuleType
-
     from xarray.namedarray._typing import (
         _Capabilities,
         _DataTypes,
