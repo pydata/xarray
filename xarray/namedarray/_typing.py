@@ -3,13 +3,11 @@ from __future__ import annotations
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from types import EllipsisType, ModuleType
 from typing import (
-    TYPE_CHECKING,
     Any,
     Final,
     Literal,
     Never,
     Protocol,
-    Self,
     SupportsIndex,
     TypeAlias,
     TypedDict,
