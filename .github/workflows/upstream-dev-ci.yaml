@@ -92,7 +92,7 @@ jobs:
           && steps.status.outcome == 'failure'
           && github.event_name == 'schedule'
           && github.repository_owner == 'pydata'
-        uses: xarray-contrib/issue-from-pytest-log@v1
+        uses: scientific-python/issue-from-pytest-log-action@v1
         with:
           log-path: output-${{ matrix.python-version }}-log.jsonl
 
@@ -140,7 +140,7 @@ jobs:
         run: |
           python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v5.4.2
+        uses: codecov/codecov-action@v5.4.3
         with:
           file: mypy_report/cobertura.xml
           flags: mypy

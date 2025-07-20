@@ -130,6 +130,20 @@ has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
 has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "3.0.0")
+has_zarr_v3_dtypes, requires_zarr_v3_dtypes = _importorskip("zarr", "3.1.0")
+if has_zarr_v3:
+    import zarr
+
+    # manual update by checking attrs for now
+    # TODO: use version specifier
+    # installing from git main is giving me a lower version than the
+    # most recently released zarr
+    has_zarr_v3_dtypes = hasattr(zarr.core, "dtype")
+
+    requires_zarr_v3_dtypes = pytest.mark.skipif(
+        not has_zarr_v3_dtypes, reason="requires zarr>3.1.0"
+    )
+
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg")
@@ -363,6 +377,14 @@ def create_test_data(
                 )
             ),
         )
+        if has_pyarrow:
+            obj["var5"] = (
+                "dim1",
+                pd.array(
+                    rs.integers(1, 10, size=dim_sizes[0]).tolist(),
+                    dtype="int64[pyarrow]",
+                ),
+            )
     if dim_sizes == _DEFAULT_TEST_DIM_SIZES:
         numbers_values = np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64")
     else:

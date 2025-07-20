@@ -5,6 +5,7 @@ import operator
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
+from itertools import starmap
 from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, cast, overload
 
 import numpy as np
@@ -120,7 +121,9 @@ def _normalize_indexes(
                 )
             data: T_DuckArray = as_compatible_data(idx)
             pd_idx = safe_cast_to_index(data)
-            pd_idx.name = k
+            if pd_idx.name != k:
+                pd_idx = pd_idx.copy()
+                pd_idx.name = k
             if isinstance(pd_idx, pd.MultiIndex):
                 idx = PandasMultiIndex(pd_idx, k)
             else:
@@ -526,27 +529,26 @@ class Aligner(Generic[T_Alignable]):
 
         for key, aligned_idx in self.aligned_indexes.items():
             obj_idx = matching_indexes.get(key)
-            if obj_idx is not None:
-                if self.reindex[key]:
-                    indexers = obj_idx.reindex_like(aligned_idx, **self.reindex_kwargs)
-                    for dim, idxer in indexers.items():
-                        if dim in self.exclude_dims:
-                            raise AlignmentError(
-                                f"cannot reindex or align along dimension {dim!r} because "
-                                "it is explicitly excluded from alignment. This is likely caused by "
-                                "wrong results returned by the `reindex_like` method of this index:\n"
-                                f"{obj_idx!r}"
-                            )
-                        if dim in dim_pos_indexers and not np.array_equal(
-                            idxer, dim_pos_indexers[dim]
-                        ):
-                            raise AlignmentError(
-                                f"cannot reindex or align along dimension {dim!r} because "
-                                "of conflicting re-indexers returned by multiple indexes\n"
-                                f"first index: {obj_idx!r}\nsecond index: {dim_index[dim]!r}\n"
-                            )
-                        dim_pos_indexers[dim] = idxer
-                        dim_index[dim] = obj_idx
+            if obj_idx is not None and self.reindex[key]:
+                indexers = obj_idx.reindex_like(aligned_idx, **self.reindex_kwargs)
+                for dim, idxer in indexers.items():
+                    if dim in self.exclude_dims:
+                        raise AlignmentError(
+                            f"cannot reindex or align along dimension {dim!r} because "
+                            "it is explicitly excluded from alignment. This is likely caused by "
+                            "wrong results returned by the `reindex_like` method of this index:\n"
+                            f"{obj_idx!r}"
+                        )
+                    if dim in dim_pos_indexers and not np.array_equal(
+                        idxer, dim_pos_indexers[dim]
+                    ):
+                        raise AlignmentError(
+                            f"cannot reindex or align along dimension {dim!r} because "
+                            "of conflicting re-indexers returned by multiple indexes\n"
+                            f"first index: {obj_idx!r}\nsecond index: {dim_index[dim]!r}\n"
+                        )
+                    dim_pos_indexers[dim] = idxer
+                    dim_index[dim] = obj_idx
 
         return dim_pos_indexers
 
@@ -611,12 +613,14 @@ class Aligner(Generic[T_Alignable]):
 
     def reindex_all(self) -> None:
         self.results = tuple(
-            self._reindex_one(obj, matching_indexes, matching_index_vars)
-            for obj, matching_indexes, matching_index_vars in zip(
-                self.objects,
-                self.objects_matching_indexes,
-                self.objects_matching_index_vars,
-                strict=True,
+            starmap(
+                self._reindex_one,
+                zip(
+                    self.objects,
+                    self.objects_matching_indexes,
+                    self.objects_matching_index_vars,
+                    strict=True,
+                ),
             )
         )
 

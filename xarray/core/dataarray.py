@@ -498,7 +498,7 @@ class DataArray(
         self,
         variable: Variable | None = None,
         coords=None,
-        name: Hashable | None | Default = _default,
+        name: Hashable | Default | None = _default,
         attrs=_default,
         indexes=None,
     ) -> Self:
@@ -520,7 +520,7 @@ class DataArray(
     def _replace_maybe_drop_dims(
         self,
         variable: Variable,
-        name: Hashable | None | Default = _default,
+        name: Hashable | Default | None = _default,
     ) -> Self:
         if self.sizes == variable.sizes:
             coords = self._coords.copy()
@@ -581,7 +581,7 @@ class DataArray(
         return self._to_dataset_whole(name=_THIS_ARRAY, shallow_copy=False)
 
     def _from_temp_dataset(
-        self, dataset: Dataset, name: Hashable | None | Default = _default
+        self, dataset: Dataset, name: Hashable | Default | None = _default
     ) -> Self:
         variable = dataset._variables.pop(_THIS_ARRAY)
         coords = dataset._variables
@@ -2609,8 +2609,8 @@ class DataArray(
 
     def expand_dims(
         self,
-        dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
-        axis: None | int | Sequence[int] = None,
+        dim: Hashable | Sequence[Hashable] | Mapping[Any, Any] | None = None,
+        axis: int | Sequence[int] | None = None,
         create_index_for_new_dim: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
@@ -4214,6 +4214,7 @@ class DataArray(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -4237,6 +4238,7 @@ class DataArray(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -4258,6 +4260,7 @@ class DataArray(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -4359,6 +4362,16 @@ class DataArray(
             two or more chunked arrays in the same location in parallel if they are
             not writing in independent regions, for those cases it is better to use
             a synchronizer.
+        align_chunks: bool, default False
+            If True, rechunks the Dask array to align with Zarr chunks before writing.
+            This ensures each Dask chunk maps to one or more contiguous Zarr chunks,
+            which avoids race conditions.
+            Internally, the process sets safe_chunks=False and tries to preserve
+            the original Dask chunking as much as possible.
+            Note: While this alignment avoids write conflicts stemming from chunk
+            boundary misalignment, it does not protect against race conditions
+            if multiple uncoordinated processes write to the same
+            Zarr array concurrently.
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
@@ -4450,6 +4463,7 @@ class DataArray(
             append_dim=append_dim,
             region=region,
             safe_chunks=safe_chunks,
+            align_chunks=align_chunks,
             storage_options=storage_options,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
@@ -5446,7 +5460,7 @@ class DataArray(
         ----------
         coord : Hashable, or sequence of Hashable
             Coordinate(s) used for the integration.
-        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+        datetime_unit : {'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as', None}, optional
             Specify the unit if a datetime coordinate is used.
 
@@ -5503,7 +5517,7 @@ class DataArray(
         ----------
         coord : Hashable, or sequence of Hashable
             Coordinate(s) used for the integration.
-        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+        datetime_unit : {'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as', None}, optional
             Specify the unit if a datetime coordinate is used.
 
@@ -6901,7 +6915,7 @@ class DataArray(
         :ref:`groupby`
             Users guide explanation of how to group and bin data.
 
-        :doc:`xarray-tutorial:intermediate/01-high-level-computation-patterns`
+        :doc:`xarray-tutorial:intermediate/computation/01-high-level-computation-patterns`
             Tutorial on :py:func:`~xarray.DataArray.Groupby` for windowed computation
 
         :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`

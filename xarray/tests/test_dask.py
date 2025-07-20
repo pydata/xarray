@@ -255,14 +255,10 @@ class TestVariable(DaskTestCase):
 
     def test_missing_methods(self):
         v = self.lazy_var
-        try:
+        with pytest.raises(NotImplementedError, match="dask"):
             v.argsort()
-        except NotImplementedError as err:
-            assert "dask" in str(err)
-        try:
+        with pytest.raises(NotImplementedError, match="dask"):
             v[0].item()
-        except NotImplementedError as err:
-            assert "dask" in str(err)
 
     def test_univariate_ufunc(self):
         u = self.eager_var
@@ -1133,7 +1129,8 @@ def test_unify_chunks(map_ds):
 def test_unify_chunks_shallow_copy(obj, transform):
     obj = transform(obj)
     unified = obj.unify_chunks()
-    assert_identical(obj, unified) and obj is not obj.unify_chunks()
+    assert_identical(obj, unified)
+    # assert obj is not unified
 
 
 @pytest.mark.parametrize("obj", [make_da()])
@@ -1376,7 +1373,7 @@ def test_map_blocks_da_ds_with_template(obj):
 
     # Check that indexes are written into the graph directly
     dsk = dict(actual.__dask_graph__())
-    assert len({k for k in dsk if "x-coordinate" in k})
+    assert {k for k in dsk if "x-coordinate" in k}
     assert all(
         isinstance(v, PandasIndex) for k, v in dsk.items() if "x-coordinate" in k
     )
@@ -1640,7 +1637,7 @@ def test_normalize_token_with_backend(map_ds):
     with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp_file:
         map_ds.to_netcdf(tmp_file)
         read = xr.open_dataset(tmp_file)
-        assert not dask.base.tokenize(map_ds) == dask.base.tokenize(read)
+        assert dask.base.tokenize(map_ds) != dask.base.tokenize(read)
         read.close()
 
 
@@ -1822,3 +1819,15 @@ def test_idxmin_chunking():
     actual = da.idxmin("time")
     assert actual.chunksizes == {k: da.chunksizes[k] for k in ["x", "y"]}
     assert_identical(actual, da.compute().idxmin("time"))
+
+
+def test_conjugate():
+    # Test for https://github.com/pydata/xarray/issues/10302
+    z = 1j * da.arange(100)
+
+    data = xr.DataArray(z, coords={"x": np.arange(100)})
+
+    conj_data = data.conjugate()
+    assert dask.is_dask_collection(conj_data)
+
+    assert_equal(conj_data, data.conj())
