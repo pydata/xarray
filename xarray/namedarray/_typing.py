@@ -3,13 +3,11 @@ from __future__ import annotations
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from types import EllipsisType, ModuleType
 from typing import (
-    TYPE_CHECKING,
     Any,
     Final,
     Literal,
     Never,
     Protocol,
-    Self,
     SupportsIndex,
     TypeAlias,
     TypedDict,
@@ -23,6 +21,7 @@ import numpy as np
 from numpy.typing import ArrayLike as _npArrayLike
 
 _ArrayLike = _npArrayLike
+
 
 class Default(list[Never]):
     """
