@@ -25,8 +25,8 @@ class Interpolation:
                 "var1": (("x", "y"), randn_xy),
                 "var2": (("x", "t"), randn_xt),
                 "var3": (("t",), randn_t),
-                "var4":(("z",), np.array(["text"])),
-                "var5":(("k",), np.array(["a", "b", "c"])),
+                "var4": (("z",), np.array(["text"])),
+                "var5": (("k",), np.array(["a", "b", "c"])),
             },
             coords={
                 "x": np.arange(nx),
@@ -34,7 +34,7 @@ class Interpolation:
                 "t": pd.date_range("1970-01-01", periods=nt, freq="D"),
                 "x_coords": ("x", np.linspace(1.1, 2.1, nx)),
                 "z": np.array([1]),
-                "k": np.linspace(0, nx, 3)
+                "k": np.linspace(0, nx, 3),
             },
         )
 
@@ -56,6 +56,7 @@ class Interpolation:
     def time_interpolation_string_1d(self, is_short):
         new_k = new_x_short if is_short else new_x_long
         self.ds.interp(k=new_k).compute()
+
 
 class InterpolationDask(Interpolation):
     def setup(self, *args, **kwargs):
