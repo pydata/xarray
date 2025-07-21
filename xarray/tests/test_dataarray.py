@@ -53,6 +53,7 @@ from xarray.tests import (
     assert_no_warnings,
     has_dask,
     has_dask_ge_2025_1_0,
+    has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -61,6 +62,7 @@ from xarray.tests import (
     requires_iris,
     requires_numexpr,
     requires_pint,
+    requires_pyarrow,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -3074,6 +3076,58 @@ class TestDataArray:
 
         with set_options(keep_attrs=True):
             assert func(da).attrs == da.attrs
+
+    @pytest.mark.parametrize(
+        "fill_value,extension_array",
+        [
+            pytest.param("a", pd.Categorical([pd.NA, "a", "b"]), id="categorical"),
+        ]
+        + [
+            pytest.param(
+                0,
+                pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
+                id="int64[pyarrow]",
+            )
+        ]
+        if has_pyarrow
+        else [],
+    )
+    def test_fillna_extension_array(self, fill_value, extension_array) -> None:
+        srs: pd.Series = pd.Series(index=np.array([1, 2, 3]), data=extension_array)
+        da = srs.to_xarray()
+        filled = da.fillna(fill_value)
+        assert filled.dtype == srs.dtype
+        assert (filled.values == np.array([fill_value, *(srs.values[1:])])).all()
+
+    @requires_pyarrow
+    def test_fillna_extension_array_bad_val(self) -> None:
+        srs: pd.Series = pd.Series(
+            index=np.array([1, 2, 3]),
+            data=pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
+        )
+        da = srs.to_xarray()
+        with pytest.raises(ValueError):
+            da.fillna("a")
+
+    @pytest.mark.parametrize(
+        "extension_array",
+        [
+            pytest.param(pd.Categorical([pd.NA, "a", "b"]), id="categorical"),
+        ]
+        + [
+            pytest.param(
+                pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"), id="int64[pyarrow]"
+            )
+        ]
+        if has_pyarrow
+        else [],
+    )
+    def test_dropna_extension_array(self, extension_array) -> None:
+        srs: pd.Series = pd.Series(index=np.array([1, 2, 3]), data=extension_array)
+        da = srs.to_xarray()
+        filled = da.dropna("index")
+        assert filled.dtype == srs.dtype
+        assert (filled.values == srs.values[1:]).all()
 
     def test_fillna(self) -> None:
         a = DataArray([np.nan, 1, np.nan, 3], coords={"x": range(4)}, dims="x")
