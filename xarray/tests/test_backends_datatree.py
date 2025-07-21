@@ -495,7 +495,7 @@ class TestPyDAPDatatreeIO:
             |       Salinity     (time, Z, Y, X) float32 ...
         """
         tree = open_datatree(url, engine=self.engine)
-        assert set(tree.dims) == set(["time", "Z", "nv"])
+        assert set(tree.dims) == {"time", "Z", "nv"}
         assert tree["/SimpleGroup"].coords["time"].dims == ("time",)
         assert tree["/SimpleGroup"].coords["Z"].dims == ("Z",)
         assert tree["/SimpleGroup"].coords["Y"].dims == ("Y",)
