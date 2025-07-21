@@ -151,9 +151,9 @@ class TreeNode(Generic[Tree]):
 
             self._pre_attach(parent, child_name)
             parentchildren = parent._children
-            assert not any(
-                child is self for child in parentchildren
-            ), "Tree is corrupt."
+            assert not any(child is self for child in parentchildren), (
+                "Tree is corrupt."
+            )
             parentchildren[child_name] = self
             self._parent = parent
             self._post_attach(parent, child_name)
@@ -559,11 +559,10 @@ class TreeNode(Generic[Tree]):
                     current_node = current_node.parent
             elif part in ("", "."):
                 pass
+            elif current_node.get(part) is None:
+                raise KeyError(f"Could not find node at {path}")
             else:
-                if current_node.get(part) is None:
-                    raise KeyError(f"Could not find node at {path}")
-                else:
-                    current_node = current_node.get(part)
+                current_node = current_node.get(part)
         return current_node
 
     def _set(self: Tree, key: str, val: Tree) -> None:
@@ -631,16 +630,15 @@ class TreeNode(Generic[Tree]):
                         current_node = current_node.parent
                 elif part in ("", "."):
                     pass
+                elif part in current_node.children:
+                    current_node = current_node.children[part]
+                elif new_nodes_along_path:
+                    # Want child classes (i.e. DataTree) to populate tree with their own types
+                    new_node = type(self)()
+                    current_node._set(part, new_node)
+                    current_node = current_node.children[part]
                 else:
-                    if part in current_node.children:
-                        current_node = current_node.children[part]
-                    elif new_nodes_along_path:
-                        # Want child classes (i.e. DataTree) to populate tree with their own types
-                        new_node = type(self)()
-                        current_node._set(part, new_node)
-                        current_node = current_node.children[part]
-                    else:
-                        raise KeyError(f"Could not reach node at path {path}")
+                    raise KeyError(f"Could not reach node at path {path}")
 
         if name in current_node.children:
             # Deal with anything already existing at this location
@@ -754,7 +752,7 @@ class NamedNode(TreeNode, Generic[Tree]):
             )
 
         this_path = NodePath(self.path)
-        if other.path in list(parent.path for parent in (self, *self.parents)):
+        if any(other.path == parent.path for parent in (self, *self.parents)):
             return str(this_path.relative_to(other.path))
         else:
             common_ancestor = self.find_common_ancestor(other)
@@ -788,12 +786,12 @@ class NamedNode(TreeNode, Generic[Tree]):
             raise NotFoundInTreeError(
                 "Cannot find relative path to ancestor because nodes do not lie within the same tree"
             )
-        if ancestor.path not in list(a.path for a in (self, *self.parents)):
+        if ancestor.path not in [a.path for a in (self, *self.parents)]:
             raise NotFoundInTreeError(
                 "Cannot find relative path to ancestor because given node is not an ancestor of this node"
             )
 
-        parents_paths = list(parent.path for parent in (self, *self.parents))
+        parents_paths = [parent.path for parent in (self, *self.parents)]
         generation_gap = list(parents_paths).index(ancestor.path)
         path_upwards = "../" * generation_gap if generation_gap > 0 else "."
         return NodePath(path_upwards)

@@ -477,8 +477,9 @@ def unique_subset_of(
     )
 
 
-class CFTimeStategy(st.SearchStrategy):
+class CFTimeStrategy(st.SearchStrategy):
     def __init__(self, min_value, max_value):
+        super().__init__()
         self.min_value = min_value
         self.max_value = max_value
 
@@ -495,6 +496,7 @@ class CFTimeStrategyISO8601(st.SearchStrategy):
     def __init__(self):
         from xarray.tests.test_coding_times import _all_cftime_date_types
 
+        super().__init__()
         self.date_types = _all_cftime_date_types()
         self.calendars = list(self.date_types)
 
@@ -506,5 +508,5 @@ class CFTimeStrategyISO8601(st.SearchStrategy):
             daysinmonth = date_type(99999, 12, 1).daysinmonth
             min_value = date_type(-99999, 1, 1)
             max_value = date_type(99999, 12, daysinmonth, 23, 59, 59, 999999)
-            strategy = CFTimeStategy(min_value, max_value)
+            strategy = CFTimeStrategy(min_value, max_value)
             return strategy.do_draw(data)

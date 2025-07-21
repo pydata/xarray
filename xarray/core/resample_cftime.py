@@ -50,7 +50,7 @@ from xarray.coding.cftime_offsets import (
     QuarterEnd,
     Tick,
     YearEnd,
-    cftime_range,
+    date_range,
     normalize_date,
     to_offset,
 )
@@ -84,7 +84,16 @@ class CFTimeGrouper:
         self.freq = to_offset(freq)
         self.origin = origin
 
-        if isinstance(self.freq, MonthEnd | QuarterEnd | YearEnd):
+        if isinstance(self.freq, MonthEnd | QuarterEnd | YearEnd) or self.origin in [
+            "end",
+            "end_day",
+        ]:
+            # The backward resample sets ``closed`` to ``'right'`` by default
+            # since the last value should be considered as the edge point for
+            # the last bin. When origin in "end" or "end_day", the value for a
+            # specific ``cftime.datetime`` index stands for the resample result
+            # from the current ``cftime.datetime`` minus ``freq`` to the current
+            # ``cftime.datetime`` with a right close.
             if closed is None:
                 self.closed = "right"
             else:
@@ -94,30 +103,14 @@ class CFTimeGrouper:
             else:
                 self.label = label
         else:
-            # The backward resample sets ``closed`` to ``'right'`` by default
-            # since the last value should be considered as the edge point for
-            # the last bin. When origin in "end" or "end_day", the value for a
-            # specific ``cftime.datetime`` index stands for the resample result
-            # from the current ``cftime.datetime`` minus ``freq`` to the current
-            # ``cftime.datetime`` with a right close.
-            if self.origin in ["end", "end_day"]:
-                if closed is None:
-                    self.closed = "right"
-                else:
-                    self.closed = closed
-                if label is None:
-                    self.label = "right"
-                else:
-                    self.label = label
+            if closed is None:
+                self.closed = "left"
             else:
-                if closed is None:
-                    self.closed = "left"
-                else:
-                    self.closed = closed
-                if label is None:
-                    self.label = "left"
-                else:
-                    self.label = label
+                self.closed = closed
+            if label is None:
+                self.label = "left"
+            else:
+                self.label = label
 
         if offset is not None:
             try:
@@ -219,8 +212,8 @@ def _get_time_bins(
     first, last = _get_range_edges(
         index.min(), index.max(), freq, closed=closed, origin=origin, offset=offset
     )
-    datetime_bins = labels = cftime_range(
-        freq=freq, start=first, end=last, name=index.name
+    datetime_bins = labels = date_range(
+        freq=freq, start=first, end=last, name=index.name, use_cftime=True
     )
 
     datetime_bins, labels = _adjust_bin_edges(
@@ -475,7 +468,7 @@ def exact_cftime_datetime_difference(a: CFTimeDatetime, b: CFTimeDatetime):
     datetime.timedelta
     """
     seconds = b.replace(microsecond=0) - a.replace(microsecond=0)
-    seconds = int(round(seconds.total_seconds()))
+    seconds = round(seconds.total_seconds())
     microseconds = b.microsecond - a.microsecond
     return datetime.timedelta(seconds=seconds, microseconds=microseconds)
 

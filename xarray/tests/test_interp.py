@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from itertools import combinations, permutations, product
 from typing import cast, get_args
 
@@ -29,10 +30,8 @@ from xarray.tests import (
 )
 from xarray.tests.test_dataset import create_test_data
 
-try:
+with contextlib.suppress(ImportError):
     import scipy
-except ImportError:
-    pass
 
 ALL_1D = get_args(Interp1dOptions) + get_args(InterpolantOptions)
 
@@ -125,7 +124,7 @@ def test_interpolate_1d(method: InterpOptions, dim: str, case: int) -> None:
     if not has_scipy:
         pytest.skip("scipy is not installed.")
 
-    if not has_dask and case in [1]:
+    if not has_dask and case == 1:
         pytest.skip("dask is not installed in the environment.")
 
     da = get_example_data(case)
@@ -434,7 +433,7 @@ def test_interpolate_nd_with_nan() -> None:
     "case", [pytest.param(0, id="no_chunk"), pytest.param(1, id="chunk_y")]
 )
 def test_interpolate_scalar(method: InterpOptions, case: int) -> None:
-    if not has_dask and case in [1]:
+    if not has_dask and case == 1:
         pytest.skip("dask is not installed in the environment.")
 
     da = get_example_data(case)
@@ -464,7 +463,7 @@ def test_interpolate_scalar(method: InterpOptions, case: int) -> None:
     "case", [pytest.param(3, id="no_chunk"), pytest.param(4, id="chunked")]
 )
 def test_interpolate_nd_scalar(method: InterpOptions, case: int) -> None:
-    if not has_dask and case in [4]:
+    if not has_dask and case == 4:
         pytest.skip("dask is not installed in the environment.")
 
     da = get_example_data(case)
@@ -718,7 +717,6 @@ def test_interp_like() -> None:
         pytest.param("2000-01-01T12:00", 0.5, marks=pytest.mark.xfail),
     ],
 )
-@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 def test_datetime(x_new, expected) -> None:
     da = xr.DataArray(
         np.arange(24),
@@ -752,10 +750,12 @@ def test_datetime_single_string() -> None:
 @requires_cftime
 @requires_scipy
 def test_cftime() -> None:
-    times = xr.cftime_range("2000", periods=24, freq="D")
+    times = xr.date_range("2000", periods=24, freq="D", use_cftime=True)
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
-    times_new = xr.cftime_range("2000-01-01T12:00:00", periods=3, freq="D")
+    times_new = xr.date_range(
+        "2000-01-01T12:00:00", periods=3, freq="D", use_cftime=True
+    )
     actual = da.interp(time=times_new)
     expected = xr.DataArray([0.5, 1.5, 2.5], coords=[times_new], dims=["time"])
 
@@ -765,11 +765,11 @@ def test_cftime() -> None:
 @requires_cftime
 @requires_scipy
 def test_cftime_type_error() -> None:
-    times = xr.cftime_range("2000", periods=24, freq="D")
+    times = xr.date_range("2000", periods=24, freq="D", use_cftime=True)
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
-    times_new = xr.cftime_range(
-        "2000-01-01T12:00:00", periods=3, freq="D", calendar="noleap"
+    times_new = xr.date_range(
+        "2000-01-01T12:00:00", periods=3, freq="D", calendar="noleap", use_cftime=True
     )
     with pytest.raises(TypeError):
         da.interp(time=times_new)
@@ -780,8 +780,8 @@ def test_cftime_type_error() -> None:
 def test_cftime_list_of_strings() -> None:
     from cftime import DatetimeProlepticGregorian
 
-    times = xr.cftime_range(
-        "2000", periods=24, freq="D", calendar="proleptic_gregorian"
+    times = xr.date_range(
+        "2000", periods=24, freq="D", calendar="proleptic_gregorian", use_cftime=True
     )
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
@@ -801,8 +801,8 @@ def test_cftime_list_of_strings() -> None:
 def test_cftime_single_string() -> None:
     from cftime import DatetimeProlepticGregorian
 
-    times = xr.cftime_range(
-        "2000", periods=24, freq="D", calendar="proleptic_gregorian"
+    times = xr.date_range(
+        "2000", periods=24, freq="D", calendar="proleptic_gregorian", use_cftime=True
     )
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
@@ -831,7 +831,7 @@ def test_datetime_to_non_datetime_error() -> None:
 @requires_cftime
 @requires_scipy
 def test_cftime_to_non_cftime_error() -> None:
-    times = xr.cftime_range("2000", periods=24, freq="D")
+    times = xr.date_range("2000", periods=24, freq="D", use_cftime=True)
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
     with pytest.raises(TypeError):
@@ -860,7 +860,7 @@ def test_datetime_interp_noerror() -> None:
 @requires_cftime
 @requires_scipy
 def test_3641() -> None:
-    times = xr.cftime_range("0001", periods=3, freq="500YE")
+    times = xr.date_range("0001", periods=3, freq="500YE", use_cftime=True)
     da = xr.DataArray(range(3), dims=["time"], coords=[times])
     da.interp(time=["0002-05-01"])
 

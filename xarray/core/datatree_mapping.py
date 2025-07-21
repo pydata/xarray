@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Any, cast, overload
 
@@ -13,12 +12,21 @@ if TYPE_CHECKING:
 
 
 @overload
-def map_over_datasets(func: Callable[..., Dataset | None], *args: Any) -> DataTree: ...
+def map_over_datasets(
+    func: Callable[
+        ...,
+        Dataset | None,
+    ],
+    *args: Any,
+    kwargs: Mapping[str, Any] | None = None,
+) -> DataTree: ...
 
 
 @overload
 def map_over_datasets(
-    func: Callable[..., tuple[Dataset | None, Dataset | None]], *args: Any
+    func: Callable[..., tuple[Dataset | None, Dataset | None]],
+    *args: Any,
+    kwargs: Mapping[str, Any] | None = None,
 ) -> tuple[DataTree, DataTree]: ...
 
 
@@ -26,12 +34,16 @@ def map_over_datasets(
 # (python typing does not have a way to match tuple lengths in general)
 @overload
 def map_over_datasets(
-    func: Callable[..., tuple[Dataset | None, ...]], *args: Any
+    func: Callable[..., tuple[Dataset | None, ...]],
+    *args: Any,
+    kwargs: Mapping[str, Any] | None = None,
 ) -> tuple[DataTree, ...]: ...
 
 
 def map_over_datasets(
-    func: Callable[..., Dataset | None | tuple[Dataset | None, ...]], *args: Any
+    func: Callable[..., Dataset | tuple[Dataset | None, ...] | None],
+    *args: Any,
+    kwargs: Mapping[str, Any] | None = None,
 ) -> DataTree | tuple[DataTree, ...]:
     """
     Applies a function to every dataset in one or more DataTree objects with
@@ -62,12 +74,14 @@ def map_over_datasets(
     func : callable
         Function to apply to datasets with signature:
 
-        `func(*args: Dataset) -> Union[Dataset, tuple[Dataset, ...]]`.
+        `func(*args: Dataset, **kwargs) -> Union[Dataset, tuple[Dataset, ...]]`.
 
         (i.e. func must accept at least one Dataset and return at least one Dataset.)
     *args : tuple, optional
         Positional arguments passed on to `func`. Any DataTree arguments will be
         converted to Dataset objects via `.dataset`.
+    kwargs : dict, optional
+        Optional keyword arguments passed directly to ``func``.
 
     Returns
     -------
@@ -85,10 +99,13 @@ def map_over_datasets(
 
     from xarray.core.datatree import DataTree
 
+    if kwargs is None:
+        kwargs = {}
+
     # Walk all trees simultaneously, applying func to all nodes that lie in same position in different trees
     # We don't know which arguments are DataTrees so we zip all arguments together as iterables
     # Store tuples of results in a dict because we don't yet know how many trees we need to rebuild to return
-    out_data_objects: dict[str, Dataset | None | tuple[Dataset | None, ...]] = {}
+    out_data_objects: dict[str, Dataset | tuple[Dataset | None, ...] | None] = {}
 
     tree_args = [arg for arg in args if isinstance(arg, DataTree)]
     name = result_name(tree_args)
@@ -100,7 +117,7 @@ def map_over_datasets(
                 node_dataset_args.insert(i, arg)
 
         func_with_error_context = _handle_errors_with_path_context(path)(func)
-        results = func_with_error_context(*node_dataset_args)
+        results = func_with_error_context(*node_dataset_args, **kwargs)
         out_data_objects[path] = results
 
     num_return_values = _check_all_return_values(out_data_objects)
@@ -144,24 +161,20 @@ def _handle_errors_with_path_context(path: str):
 
 
 def add_note(err: BaseException, msg: str) -> None:
-    # TODO: remove once python 3.10 can be dropped
-    if sys.version_info < (3, 11):
-        err.__notes__ = getattr(err, "__notes__", []) + [msg]  # type: ignore[attr-defined]
-    else:
-        err.add_note(msg)
+    err.add_note(msg)
 
 
 def _check_single_set_return_values(path_to_node: str, obj: Any) -> int | None:
     """Check types returned from single evaluation of func, and return number of return values received from func."""
-    if isinstance(obj, None | Dataset):
+    if isinstance(obj, Dataset | None):
         return None  # no need to pack results
 
     if not isinstance(obj, tuple) or not all(
         isinstance(r, Dataset | None) for r in obj
     ):
         raise TypeError(
-            f"the result of calling func on the node at position is not a Dataset or None "
-            f"or a tuple of such types: {obj!r}"
+            f"the result of calling func on the node at position '{path_to_node}' is"
+            f" not a Dataset or None or a tuple of such types:\n{obj!r}"
         )
 
     return len(obj)

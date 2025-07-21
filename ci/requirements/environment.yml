@@ -4,13 +4,12 @@ channels:
   - nodefaults
 dependencies:
   - aiobotocore
-  - array-api-strict
+  - array-api-strict<2.4
   - boto3
   - bottleneck
   - cartopy
   - cftime
   - dask-core
-  - dask-expr # dask raises a deprecation warning without this, breaking doctests
   - distributed
   - flox
   - fsspec
@@ -21,15 +20,17 @@ dependencies:
   - iris
   - lxml # Optional dep of pydap
   - matplotlib-base
+  - mypy==1.15 # mypy 1.16 breaks CI
   - nc-time-axis
   - netcdf4
   - numba
   - numbagg
   - numexpr
-  - numpy>=2
+  - numpy>=2.2
   - opt_einsum
   - packaging
   - pandas
+  - pandas-stubs<=2.2.3.241126 # https://github.com/pydata/xarray/issues/10110
   # - pint>=0.22
   - pip
   - pooch
@@ -40,14 +41,26 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-env
-  - pytest-xdist
+  - pytest-mypy-plugins
   - pytest-timeout
+  - pytest-xdist
   - rasterio
   - scipy
   - seaborn
   - sparse
   - toolz
+  - types-colorama
+  - types-docutils
+  - types-psutil
+  - types-Pygments
+  - types-python-dateutil
+  - types-pytz
+  - types-PyYAML
+  - types-setuptools
+  - types-openpyxl
   - typing_extensions
   - zarr
   - pip:
       - jax # no way to get cpu-only jaxlib from conda if gpu is present
+      - types-defusedxml
+      - types-pexpect

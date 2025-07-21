@@ -353,6 +353,8 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             if k not in {"cmap", "colors", "cbar_kwargs", "levels"}
         }
         func_kwargs.update(cmap_params)
+        # to avoid redundant calling, colorbar and labelling is instead handled
+        # by `_finalize_grid` at the end
         func_kwargs["add_colorbar"] = False
         if func.__name__ != "surface":
             func_kwargs["add_labels"] = False
@@ -375,7 +377,10 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
                 )
                 self._mappables.append(mappable)
 
-        self._finalize_grid(x, y)
+        xlabel = label_from_attrs(self.data[x])
+        ylabel = label_from_attrs(self.data[y])
+
+        self._finalize_grid(xlabel, ylabel)
 
         if kwargs.get("add_colorbar", True):
             self.add_colorbar(**cbar_kwargs)
@@ -544,7 +549,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         )
 
         if add_legend:
-            use_legend_elements = False if func.__name__ == "hist" else True
+            use_legend_elements = func.__name__ != "hist"
             if use_legend_elements:
                 self.add_legend(
                     use_legend_elements=use_legend_elements,
@@ -791,7 +796,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             # Find the plot with the largest xlim values:
             lower, upper = lims_largest[axis]
             for ax in self.axs.flat:
-                get_lim: None | Callable[[], tuple[float, float]] = getattr(
+                get_lim: Callable[[], tuple[float, float]] | None = getattr(
                     ax, f"get_{axis}lim", None
                 )
                 if get_lim:
@@ -857,15 +862,15 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         for ax in axes:
             getattr(ax, f"set_{axis}label")(label, **kwargs)
 
-    def set_xlabels(self, label: None | str = None, **kwargs: Any) -> None:
+    def set_xlabels(self, label: str | None = None, **kwargs: Any) -> None:
         """Label the x axis on the bottom row of the grid."""
         self._set_labels("x", self._bottom_axes, label, **kwargs)
 
-    def set_ylabels(self, label: None | str = None, **kwargs: Any) -> None:
+    def set_ylabels(self, label: str | None = None, **kwargs: Any) -> None:
         """Label the y axis on the left column of the grid."""
         self._set_labels("y", self._left_axes, label, **kwargs)
 
-    def set_zlabels(self, label: None | str = None, **kwargs: Any) -> None:
+    def set_zlabels(self, label: str | None = None, **kwargs: Any) -> None:
         """Label the z axis."""
         self._set_labels("z", self._left_axes, label, **kwargs)
 
@@ -905,14 +910,14 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
                 # Only label the ones with data
                 if d is not None:
                     coord, value = list(d.items()).pop()
-                    title = nicetitle(coord, value, maxchar=maxchar)
+                    title = nicetitle(coord, value)
                     ax.set_title(title, size=size, **kwargs)
         else:
             # The row titles on the right edge of the grid
             for index, (ax, row_name, handle) in enumerate(
                 zip(self.axs[:, -1], self.row_names, self.row_labels, strict=True)
             ):
-                title = nicetitle(coord=self._row_var, value=row_name, maxchar=maxchar)
+                title = nicetitle(coord=self._row_var, value=row_name)
                 if not handle:
                     self.row_labels[index] = ax.annotate(
                         title,
@@ -931,7 +936,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             for index, (ax, col_name, handle) in enumerate(
                 zip(self.axs[0, :], self.col_names, self.col_labels, strict=True)
             ):
-                title = nicetitle(coord=self._col_var, value=col_name, maxchar=maxchar)
+                title = nicetitle(coord=self._col_var, value=col_name)
                 if not handle:
                     self.col_labels[index] = ax.set_title(title, size=size, **kwargs)
                 else:

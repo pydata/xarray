@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import copy
 import math
-import sys
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
+from itertools import starmap
 from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
@@ -85,10 +85,7 @@ if TYPE_CHECKING:
         PostComputeCallable: Any  # type: ignore[no-redef]
         PostPersistCallable: Any  # type: ignore[no-redef]
 
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
+    from typing import Self
 
     T_NamedArray = TypeVar("T_NamedArray", bound="_NamedArray[Any]")
     T_NamedArrayInteger = TypeVar(
@@ -205,7 +202,7 @@ def from_array(
 
         return NamedArray(dims, data, attrs)
 
-    if isinstance(data, _arrayfunction_or_api):
+    if isinstance(data, _arrayfunction_or_api) and not isinstance(data, np.generic):
         return NamedArray(dims, data, attrs)
 
     if isinstance(data, tuple):
@@ -834,6 +831,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if chunkmanager.is_chunked_array(data_old):
             data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
         else:
+            ndata: duckarray[Any, Any]
             if not isinstance(data_old, ExplicitlyIndexed):
                 ndata = data_old
             else:
@@ -848,7 +846,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore[assignment]
 
             if is_dict_like(chunks):
-                chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
+                chunks = tuple(starmap(chunks.get, enumerate(ndata.shape)))
 
             data_chunked = chunkmanager.from_array(ndata, chunks, **from_array_kwargs)  # type: ignore[arg-type]
 

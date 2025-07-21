@@ -10,8 +10,7 @@ import pytest
 from numpy.testing import assert_allclose, assert_array_equal
 
 import xarray as xr
-from xarray.core.alignment import broadcast
-from xarray.core.computation import (
+from xarray.computation.apply_ufunc import (
     _UFuncSignature,
     apply_ufunc,
     broadcast_compat_data,
@@ -19,9 +18,10 @@ from xarray.core.computation import (
     join_dict_keys,
     ordered_set_intersection,
     ordered_set_union,
-    result_name,
     unified_dim_sizes,
 )
+from xarray.core.utils import result_name
+from xarray.structure.alignment import broadcast
 from xarray.tests import (
     has_dask,
     raise_if_dask_computes,
@@ -634,6 +634,7 @@ def test_apply_groupby_add() -> None:
         add(data_array.groupby("y"), data_array.groupby("x"))
 
 
+@pytest.mark.filterwarnings("ignore:Duplicate dimension names present")
 def test_unified_dim_sizes() -> None:
     assert unified_dim_sizes([xr.Variable((), 0)]) == {}
     assert unified_dim_sizes([xr.Variable("x", [1]), xr.Variable("x", [1])]) == {"x": 1}
@@ -646,9 +647,9 @@ def test_unified_dim_sizes() -> None:
         exclude_dims={"z"},
     ) == {"x": 1, "y": 2}
 
-    # duplicate dimensions
-    with pytest.raises(ValueError):
-        unified_dim_sizes([xr.Variable(("x", "x"), [[1]])])
+    with pytest.raises(ValueError, match="broadcasting cannot handle"):
+        with pytest.warns(UserWarning, match="Duplicate dimension names"):
+            unified_dim_sizes([xr.Variable(("x", "x"), [[1]])])
 
     # mismatched lengths
     with pytest.raises(ValueError):
@@ -1396,7 +1397,7 @@ def test_apply_dask_new_output_sizes_not_supplied_same_dim_names() -> None:
             da,
             input_core_dims=[["i", "j"]],
             output_core_dims=[["i", "j"]],
-            exclude_dims=set(("i", "j")),
+            exclude_dims={"i", "j"},
             dask="parallelized",
         )
 
@@ -1851,7 +1852,6 @@ def test_equally_weighted_cov_corr() -> None:
         coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
         dims=("a", "time", "x"),
     )
-    #
     assert_allclose(
         xr.cov(da, db, weights=None), xr.cov(da, db, weights=xr.DataArray(1))
     )
@@ -2013,9 +2013,8 @@ def test_output_wrong_dim_size() -> None:
 
 @pytest.mark.parametrize("use_dask", [True, False])
 def test_dot(use_dask: bool) -> None:
-    if use_dask:
-        if not has_dask:
-            pytest.skip("test for dask.")
+    if use_dask and not has_dask:
+        pytest.skip("test for dask.")
 
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
@@ -2145,9 +2144,8 @@ def test_dot(use_dask: bool) -> None:
 def test_dot_align_coords(use_dask: bool) -> None:
     # GH 3694
 
-    if use_dask:
-        if not has_dask:
-            pytest.skip("test for dask.")
+    if use_dask and not has_dask:
+        pytest.skip("test for dask.")
 
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
@@ -2205,6 +2203,7 @@ def test_where() -> None:
 def test_where_attrs() -> None:
     cond = xr.DataArray([True, False], coords={"a": [0, 1]}, attrs={"attr": "cond_da"})
     cond["a"].attrs = {"attr": "cond_coord"}
+    input_cond = cond.copy()
     x = xr.DataArray([1, 1], coords={"a": [0, 1]}, attrs={"attr": "x_da"})
     x["a"].attrs = {"attr": "x_coord"}
     y = xr.DataArray([0, 0], coords={"a": [0, 1]}, attrs={"attr": "y_da"})
@@ -2215,6 +2214,22 @@ def test_where_attrs() -> None:
     expected = xr.DataArray([1, 0], coords={"a": [0, 1]}, attrs={"attr": "x_da"})
     expected["a"].attrs = {"attr": "x_coord"}
     assert_identical(expected, actual)
+    # Check also that input coordinate attributes weren't modified by reference
+    assert x["a"].attrs == {"attr": "x_coord"}
+    assert y["a"].attrs == {"attr": "y_coord"}
+    assert cond["a"].attrs == {"attr": "cond_coord"}
+    assert_identical(cond, input_cond)
+
+    # 3 DataArrays, drop attrs
+    actual = xr.where(cond, x, y, keep_attrs=False)
+    expected = xr.DataArray([1, 0], coords={"a": [0, 1]})
+    assert_identical(expected, actual)
+    assert_identical(expected.coords["a"], actual.coords["a"])
+    # Check also that input coordinate attributes weren't modified by reference
+    assert x["a"].attrs == {"attr": "x_coord"}
+    assert y["a"].attrs == {"attr": "y_coord"}
+    assert cond["a"].attrs == {"attr": "cond_coord"}
+    assert_identical(cond, input_cond)
 
     # x as a scalar, takes no attrs
     actual = xr.where(cond, 0, y, keep_attrs=True)
@@ -2344,6 +2359,20 @@ def test_where_attrs() -> None:
             id="datetime",
         ),
         pytest.param(
+            # Force a non-ns unit for the coordinate, make sure we convert to `ns`
+            # for backwards compatibility at the moment. This can be relaxed in the future.
+            xr.DataArray(
+                pd.date_range("1970-01-01", freq="s", periods=3, unit="s"), dims="x"
+            ),
+            xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]}),
+            xr.DataArray(
+                [0, 1e9, 2e9],
+                dims="x",
+                coords={"x": pd.date_range("1970-01-01", freq="s", periods=3)},
+            ),
+            id="datetime-non-ns",
+        ),
+        pytest.param(
             xr.DataArray(
                 np.array([1000, 2000, 3000], dtype="timedelta64[ns]"), dims="x"
             ),
@@ -2456,6 +2485,14 @@ def test_polyval_degree_dim_checks() -> None:
         pytest.param(
             xr.DataArray(pd.date_range("1970-01-01", freq="ns", periods=3), dims="x"),
             id="datetime",
+        ),
+        # Force a non-ns unit for the coordinate, make sure we convert to `ns` in both polyfit & polval
+        # for backwards compatibility at the moment. This can be relaxed in the future.
+        pytest.param(
+            xr.DataArray(
+                pd.date_range("1970-01-01", freq="s", unit="s", periods=3), dims="x"
+            ),
+            id="datetime-non-ns",
         ),
         pytest.param(
             xr.DataArray(np.array([0, 1, 2], dtype="timedelta64[ns]"), dims="x"),
@@ -2604,3 +2641,14 @@ def test_complex_number_reduce(compute_backend):
     # Check that xarray doesn't call into numbagg, which doesn't compile for complex
     # numbers at the moment (but will when numba supports dynamic compilation)
     da.min()
+
+
+def test_fix() -> None:
+    val = 3.0
+    val_fixed = np.fix(val)
+
+    da = xr.DataArray([val])
+    expected = xr.DataArray([val_fixed])
+
+    actual = np.fix(da)
+    assert_identical(expected, actual)

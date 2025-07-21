@@ -1,7 +1,7 @@
 import re
 import sys
 import typing
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from copy import copy, deepcopy
 from textwrap import dedent
 
@@ -837,7 +837,7 @@ class TestTreeFromDict:
 
     def test_full(self, simple_datatree) -> None:
         dt = simple_datatree
-        paths = list(node.path for node in dt.subtree)
+        paths = [node.path for node in dt.subtree]
         assert paths == [
             "/",
             "/set1",
@@ -1019,6 +1019,29 @@ class TestDatasetView:
 
         weighted_mean(dt.dataset)
 
+    def test_map_keep_attrs(self) -> None:
+        # test DatasetView.map(..., keep_attrs=...)
+        data = xr.DataArray([1, 2, 3], dims="x", attrs={"da": "attrs"})
+        ds = xr.Dataset({"data": data}, attrs={"ds": "attrs"})
+        dt = DataTree(ds)
+
+        def func_keep(ds):
+            # x.mean() removes the attrs of the data_vars
+            return ds.map(lambda x: x.mean(), keep_attrs=True)
+
+        result = xr.map_over_datasets(func_keep, dt)
+        expected = dt.mean(keep_attrs=True)
+        xr.testing.assert_identical(result, expected)
+
+        # per default DatasetView.map does not keep attrs
+        def func(ds):
+            # x.mean() removes the attrs of the data_vars
+            return ds.map(lambda x: x.mean())
+
+        result = xr.map_over_datasets(func, dt)
+        expected = dt.mean()
+        xr.testing.assert_identical(result, expected.mean())
+
 
 class TestAccess:
     def test_attribute_access(self, create_test_datatree) -> None:
@@ -1196,6 +1219,76 @@ class TestRepr:
         ).strip()
         assert result == expected
 
+    def test_repr_truncates_nodes(self) -> None:
+        # construct a datatree with 50 nodes
+        number_of_files = 10
+        number_of_groups = 5
+        tree_dict = {}
+        for f in range(number_of_files):
+            for g in range(number_of_groups):
+                tree_dict[f"file_{f}/group_{g}"] = Dataset({"g": f * g})
+
+        tree = DataTree.from_dict(tree_dict)
+        with xr.set_options(display_max_children=3):
+            result = repr(tree)
+
+        expected = dedent(
+            """
+            <xarray.DataTree>
+            Group: /
+            ├── Group: /file_0
+            │   ├── Group: /file_0/group_0
+            │   │       Dimensions:  ()
+            │   │       Data variables:
+            │   │           g        int64 8B 0
+            │   ├── Group: /file_0/group_1
+            │   │       Dimensions:  ()
+            │   │       Data variables:
+            │   │           g        int64 8B 0
+            │   ...
+            │   └── Group: /file_0/group_4
+            │           Dimensions:  ()
+            │           Data variables:
+            │               g        int64 8B 0
+            ├── Group: /file_1
+            │   ├── Group: /file_1/group_0
+            │   │       Dimensions:  ()
+            │   │       Data variables:
+            │   │           g        int64 8B 0
+            │   ├── Group: /file_1/group_1
+            │   │       Dimensions:  ()
+            │   │       Data variables:
+            │   │           g        int64 8B 1
+            │   ...
+            │   └── Group: /file_1/group_4
+            │           Dimensions:  ()
+            │           Data variables:
+            │               g        int64 8B 4
+            ...
+            └── Group: /file_9
+                ├── Group: /file_9/group_0
+                │       Dimensions:  ()
+                │       Data variables:
+                │           g        int64 8B 0
+                ├── Group: /file_9/group_1
+                │       Dimensions:  ()
+                │       Data variables:
+                │           g        int64 8B 9
+                ...
+                └── Group: /file_9/group_4
+                        Dimensions:  ()
+                        Data variables:
+                            g        int64 8B 36
+            """
+        ).strip()
+        assert expected == result
+
+        with xr.set_options(display_max_children=10):
+            result = repr(tree)
+
+        for key in tree_dict:
+            assert key in result
+
     def test_repr_inherited_dims(self) -> None:
         tree = DataTree.from_dict(
             {
@@ -1240,8 +1333,12 @@ class TestRepr:
     )
     def test_doc_example(self) -> None:
         # regression test for https://github.com/pydata/xarray/issues/9499
-        time = xr.DataArray(data=["2022-01", "2023-01"], dims="time")
-        stations = xr.DataArray(data=list("abcdef"), dims="station")
+        time = xr.DataArray(
+            data=np.array(["2022-01", "2023-01"], dtype="<U7"), dims="time"
+        )
+        stations = xr.DataArray(
+            data=np.array(list("abcdef"), dtype="<U1"), dims="station"
+        )
         lon = [-100, -80, -60]
         lat = [10, 20, 30]
         # Set up fake data
@@ -1336,7 +1433,6 @@ class TestRepr:
 
 def _exact_match(message: str) -> str:
     return re.escape(dedent(message).strip())
-    return "^" + re.escape(dedent(message.rstrip())) + "$"
 
 
 class TestInheritance:
@@ -1560,7 +1656,7 @@ class TestRestructuring:
 
         # test drop multiple nodes
         dropped = sue.drop_nodes(names=["Mary", "Kate"])
-        assert not set(["Mary", "Kate"]).intersection(set(dropped.children))
+        assert not {"Mary", "Kate"}.intersection(set(dropped.children))
         assert "Ashley" in dropped.children
 
         # test raise
@@ -1583,29 +1679,84 @@ class TestRestructuring:
         result = dt.assign({"foo": xr.DataArray(0), "a": DataTree()})
         assert_equal(result, expected)
 
+    def test_filter_like(self) -> None:
+        flower_tree = DataTree.from_dict(
+            {"root": None, "trunk": None, "leaves": None, "flowers": None}
+        )
+        fruit_tree = DataTree.from_dict(
+            {"root": None, "trunk": None, "leaves": None, "fruit": None}
+        )
+        barren_tree = DataTree.from_dict({"root": None, "trunk": None})
+
+        # test filter_like tree
+        filtered_tree = flower_tree.filter_like(barren_tree)
+
+        assert filtered_tree.equals(barren_tree)
+        assert "flowers" not in filtered_tree.children
+
+        # test symmetrical pruning results in isomorphic trees
+        assert flower_tree.filter_like(fruit_tree).isomorphic(
+            fruit_tree.filter_like(flower_tree)
+        )
+
+        # test "deep" pruning
+        dt = DataTree.from_dict(
+            {"/a/A": None, "/a/B": None, "/b/A": None, "/b/B": None}
+        )
+        other = DataTree.from_dict({"/a/A": None, "/b/A": None})
+
+        filtered = dt.filter_like(other)
+        assert filtered.equals(other)
+
 
 class TestPipe:
-    def test_noop(self, create_test_datatree) -> None:
+    def test_noop(self, create_test_datatree: Callable[[], DataTree]) -> None:
         dt = create_test_datatree()
 
         actual = dt.pipe(lambda tree: tree)
         assert actual.identical(dt)
 
-    def test_params(self, create_test_datatree) -> None:
+    def test_args(self, create_test_datatree: Callable[[], DataTree]) -> None:
         dt = create_test_datatree()
 
-        def f(tree, **attrs):
-            return tree.assign(arr_with_attrs=xr.Variable("dim0", [], attrs=attrs))
+        def f(tree: DataTree, x: int, y: int) -> DataTree:
+            return tree.assign(
+                arr_with_attrs=xr.Variable("dim0", [], attrs=dict(x=x, y=y))
+            )
+
+        actual = dt.pipe(f, 1, 2)
+        assert actual["arr_with_attrs"].attrs == dict(x=1, y=2)
+
+    def test_kwargs(self, create_test_datatree: Callable[[], DataTree]) -> None:
+        dt = create_test_datatree()
+
+        def f(tree: DataTree, *, x: int, y: int, z: int) -> DataTree:
+            return tree.assign(
+                arr_with_attrs=xr.Variable("dim0", [], attrs=dict(x=x, y=y, z=z))
+            )
 
         attrs = {"x": 1, "y": 2, "z": 3}
 
         actual = dt.pipe(f, **attrs)
         assert actual["arr_with_attrs"].attrs == attrs
 
-    def test_named_self(self, create_test_datatree) -> None:
+    def test_args_kwargs(self, create_test_datatree: Callable[[], DataTree]) -> None:
         dt = create_test_datatree()
 
-        def f(x, tree, y):
+        def f(tree: DataTree, x: int, *, y: int, z: int) -> DataTree:
+            return tree.assign(
+                arr_with_attrs=xr.Variable("dim0", [], attrs=dict(x=x, y=y, z=z))
+            )
+
+        attrs = {"x": 1, "y": 2, "z": 3}
+
+        actual = dt.pipe(f, attrs["x"], y=attrs["y"], z=attrs["z"])
+        assert actual["arr_with_attrs"].attrs == attrs
+
+    def test_named_self(self, create_test_datatree: Callable[[], DataTree]) -> None:
+        dt = create_test_datatree()
+
+        def f(x: int, tree: DataTree, y: int):
             tree.attrs.update({"x": x, "y": y})
             return tree
 
@@ -1896,6 +2047,26 @@ class TestIndexing:
         )
         assert_identical(actual, expected)
 
+    def test_sel_isel_error_has_node_info(self) -> None:
+        tree = DataTree.from_dict(
+            {
+                "/first": xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"x": [1, 2, 3]}),
+                "/second": xr.Dataset({"b": ("x", [4, 5])}, coords={"x": [2, 3]}),
+            }
+        )
+
+        with pytest.raises(
+            KeyError,
+            match="Raised whilst mapping function over node with path 'second'",
+        ):
+            tree.sel(x=1)
+
+        with pytest.raises(
+            IndexError,
+            match="Raised whilst mapping function over node with path 'first'",
+        ):
+            tree.isel(x=4)
+
 
 class TestAggregations:
     def test_reduce_method(self) -> None:
@@ -2138,7 +2309,7 @@ class TestUFuncs:
     @pytest.mark.xfail(reason="__array_ufunc__ not implemented yet")
     def test_tree(self, create_test_datatree):
         dt = create_test_datatree()
-        expected = create_test_datatree(modify=lambda ds: np.sin(ds))
+        expected = create_test_datatree(modify=np.sin)
         result_tree = np.sin(dt)
         assert_equal(result_tree, expected)
 
@@ -2153,7 +2324,7 @@ class Closer:
         self.closed = True
 
 
-@pytest.fixture()
+@pytest.fixture
 def tree_and_closers():
     tree = DataTree.from_dict({"/child/grandchild": None})
     closers = {
@@ -2334,15 +2505,15 @@ class TestDask:
         assert_identical(actual, expected)
 
         assert actual.chunksizes == original_chunksizes, "chunksizes were modified"
-        assert (
-            tree.chunksizes == original_chunksizes
-        ), "original chunksizes were modified"
-        assert all(
-            d == 1 for d in actual_hlg_depths.values()
-        ), "unexpected dask graph depth"
-        assert all(
-            d == 2 for d in original_hlg_depths.values()
-        ), "original dask graph was modified"
+        assert tree.chunksizes == original_chunksizes, (
+            "original chunksizes were modified"
+        )
+        assert all(d == 1 for d in actual_hlg_depths.values()), (
+            "unexpected dask graph depth"
+        )
+        assert all(d == 2 for d in original_hlg_depths.values()), (
+            "original dask graph was modified"
+        )
 
     def test_chunk(self):
         ds1 = xr.Dataset({"a": ("x", np.arange(10))})

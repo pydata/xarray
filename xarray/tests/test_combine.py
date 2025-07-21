@@ -15,7 +15,7 @@ from xarray import (
     merge,
 )
 from xarray.core import dtypes
-from xarray.core.combine import (
+from xarray.structure.combine import (
     _check_shape_tile_ids,
     _combine_all_along_first_dim,
     _combine_nd,
@@ -556,11 +556,11 @@ class TestNestedCombine:
                 datasets, concat_dim=["dim1", "dim2"], combine_attrs="identical"
             )
 
-        for combine_attrs in expected_dict:
+        for combine_attrs, expected in expected_dict.items():
             result = combine_nested(
                 datasets, concat_dim=["dim1", "dim2"], combine_attrs=combine_attrs
             )
-            assert_identical(result, expected_dict[combine_attrs])
+            assert_identical(result, expected)
 
     def test_combine_nested_missing_data_new_dim(self):
         # Your data includes "time" and "station" dimensions, and each year's
@@ -1042,6 +1042,20 @@ class TestCombineDatasetsbyCoords:
         # test that this fails if fill_value is None
         with pytest.raises(ValueError):
             combine_by_coords([x1, x2, x3], fill_value=None)
+
+    def test_combine_by_coords_override_order(self) -> None:
+        # regression test for https://github.com/pydata/xarray/issues/8828
+        x1 = Dataset({"a": (("y", "x"), [[1]])}, coords={"y": [0], "x": [0]})
+        x2 = Dataset(
+            {"a": (("y", "x"), [[2]]), "b": (("y", "x"), [[1]])},
+            coords={"y": [0], "x": [0]},
+        )
+        actual = combine_by_coords([x1, x2], compat="override")
+        assert_equal(actual["a"], actual["b"])
+        assert_equal(actual["a"], x1["a"])
+
+        actual = combine_by_coords([x2, x1], compat="override")
+        assert_equal(actual["a"], x2["a"])
 
 
 class TestCombineMixedObjectsbyCoords:

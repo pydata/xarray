@@ -6,12 +6,12 @@ from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar, Union, overload
 
 import numpy as np
 import pandas as pd
 
-from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
+from xarray.core import dtypes, duck_array_ops, formatting, formatting_html
 from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import ResampleCompatible
@@ -36,11 +36,11 @@ ALL_DIMS = ...
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
+    from xarray.computation.rolling_exp import RollingExp
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.indexes import Index
     from xarray.core.resample import Resample
-    from xarray.core.rolling_exp import RollingExp
     from xarray.core.types import (
         DatetimeLike,
         DTypeLikeSave,
@@ -60,6 +60,7 @@ if TYPE_CHECKING:
 T_Resample = TypeVar("T_Resample", bound="Resample")
 C = TypeVar("C")
 T = TypeVar("T")
+P = ParamSpec("P")
 
 
 class ImplementsArrayReduce:
@@ -412,8 +413,7 @@ def get_squeeze_dims(
 
     if any(xarray_obj.sizes[k] > 1 for k in dim):
         raise ValueError(
-            "cannot select a dimension to squeeze out "
-            "which has length greater than one"
+            "cannot select a dimension to squeeze out which has length greater than one"
         )
     return dim
 
@@ -457,7 +457,7 @@ class DataWithCoords(AttrAccessMixin):
         numpy.squeeze
         """
         dims = get_squeeze_dims(self, dim, axis)
-        return self.isel(drop=drop, **{d: 0 for d in dims})
+        return self.isel(drop=drop, **dict.fromkeys(dims, 0))
 
     def clip(
         self,
@@ -491,7 +491,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         numpy.clip : equivalent function
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
             # When this was a unary func, the default was True, so retaining the
@@ -719,11 +719,27 @@ class DataWithCoords(AttrAccessMixin):
         out.attrs.update(*args, **kwargs)
         return out
 
+    @overload
     def pipe(
         self,
-        func: Callable[..., T] | tuple[Callable[..., T], str],
+        func: Callable[Concatenate[Self, P], T],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T: ...
+
+    @overload
+    def pipe(
+        self,
+        func: tuple[Callable[..., T], str],
         *args: Any,
         **kwargs: Any,
+    ) -> T: ...
+
+    def pipe(
+        self,
+        func: Callable[Concatenate[Self, P], T] | tuple[Callable[P, T], str],
+        *args: P.args,
+        **kwargs: P.kwargs,
     ) -> T:
         """
         Apply ``func(self, *args, **kwargs)``
@@ -841,15 +857,19 @@ class DataWithCoords(AttrAccessMixin):
         pandas.DataFrame.pipe
         """
         if isinstance(func, tuple):
-            func, target = func
+            # Use different var when unpacking function from tuple because the type
+            # signature of the unpacked function differs from the expected type
+            # signature in the case where only a function is given, rather than a tuple.
+            # This makes type checkers happy at both call sites below.
+            f, target = func
             if target in kwargs:
                 raise ValueError(
                     f"{target} is both the pipe target and a keyword argument"
                 )
             kwargs[target] = self
-            return func(*args, **kwargs)
-        else:
-            return func(self, *args, **kwargs)
+            return f(*args, **kwargs)
+
+        return func(self, *args, **kwargs)
 
     def rolling_exp(
         self: T_DataWithCoords,
@@ -880,7 +900,6 @@ class DataWithCoords(AttrAccessMixin):
         --------
         core.rolling_exp.RollingExp
         """
-        from xarray.core import rolling_exp
 
         if "keep_attrs" in window_kwargs:
             warnings.warn(
@@ -892,7 +911,9 @@ class DataWithCoords(AttrAccessMixin):
 
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
 
-        return rolling_exp.RollingExp(self, window, window_type)
+        from xarray.computation.rolling_exp import RollingExp
+
+        return RollingExp(self, window, window_type)
 
     def _resample(
         self,
@@ -1097,7 +1118,7 @@ class DataWithCoords(AttrAccessMixin):
                 f"Received {type(freq)} instead."
             )
 
-        rgrouper = ResolvedGrouper(grouper, group, self, eagerly_compute_group=False)
+        rgrouper = ResolvedGrouper(grouper, group, self)
 
         return resample_cls(
             self,
@@ -1195,9 +1216,9 @@ class DataWithCoords(AttrAccessMixin):
         numpy.where : corresponding numpy function
         where : equivalent function
         """
-        from xarray.core.alignment import align
         from xarray.core.dataarray import DataArray
         from xarray.core.dataset import Dataset
+        from xarray.structure.alignment import align
 
         if callable(cond):
             cond = cond(self)
@@ -1232,6 +1253,8 @@ class DataWithCoords(AttrAccessMixin):
 
             self = self.isel(**indexers)
             cond = cond.isel(**indexers)
+
+        from xarray.computation import ops
 
         return ops.where_method(self, cond, other)
 
@@ -1288,7 +1311,7 @@ class DataWithCoords(AttrAccessMixin):
         array([False,  True, False])
         Dimensions without coordinates: x
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -1331,7 +1354,7 @@ class DataWithCoords(AttrAccessMixin):
         array([ True, False,  True])
         Dimensions without coordinates: x
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -1370,7 +1393,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         numpy.isin
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
         from xarray.core.dataarray import DataArray
         from xarray.core.dataset import Dataset
         from xarray.core.variable import Variable
@@ -1453,7 +1476,7 @@ class DataWithCoords(AttrAccessMixin):
         dask.array.Array.astype
         sparse.COO.astype
         """
-        from xarray.core.computation import apply_ufunc
+        from xarray.computation.apply_ufunc import apply_ufunc
 
         kwargs = dict(order=order, casting=casting, subok=subok, copy=copy)
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
@@ -1678,11 +1701,11 @@ def full_like(
 
     if isinstance(other, Dataset):
         if not isinstance(fill_value, dict):
-            fill_value = {k: fill_value for k in other.data_vars.keys()}
+            fill_value = dict.fromkeys(other.data_vars.keys(), fill_value)
 
         dtype_: Mapping[Any, DTypeLikeSave]
         if not isinstance(dtype, Mapping):
-            dtype_ = {k: dtype for k in other.data_vars.keys()}
+            dtype_ = dict.fromkeys(other.data_vars.keys(), dtype)
         else:
             dtype_ = dtype
 
@@ -1759,7 +1782,7 @@ def _full_like_variable(
             other.shape,
             fill_value,
             dtype=dtype,
-            chunks=chunks if chunks else other.data.chunks,
+            chunks=chunks or other.data.chunks,
             **from_array_kwargs,
         )
     else:
@@ -2061,7 +2084,7 @@ def is_np_timedelta_like(dtype: DTypeLike) -> bool:
 
 
 def _contains_cftime_datetimes(array: Any) -> bool:
-    """Check if a array inside a Variable contains cftime.datetime objects"""
+    """Check if an array inside a Variable contains cftime.datetime objects"""
     if cftime is None:
         return False
 

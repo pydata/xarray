@@ -133,7 +133,7 @@ unhashable = """
 # We require a "hack" to tell type checkers that e.g. Variable + DataArray = DataArray
 # In reality this returns NotImplemented, but this is not a valid type in python 3.9.
 # Therefore, we return DataArray. In reality this would call DataArray.__add__(Variable)
-# TODO: change once python 3.10 is the minimum.
+# TODO: change once python 3.11 is the minimum.
 #
 # Mypy seems to require that __iadd__ and __add__ have the same signature.
 # This requires some extra type: ignores[misc] in the inplace methods :/
@@ -222,32 +222,33 @@ def unops() -> list[OpsType]:
 # ruff does not reformat everything. When reformatting, the
 # type-ignores end up in the wrong line :/
 
-ops_info = {}
-# TODO add inplace ops for DataTree?
-ops_info["DataTreeOpsMixin"] = binops(other_type="DtCompatible") + unops()
-ops_info["DatasetOpsMixin"] = (
-    binops_overload(other_type="DsCompatible", overload_types=["DataTree"])
-    + inplace(other_type="DsCompatible", type_ignore="misc")
-    + unops()
-)
-ops_info["DataArrayOpsMixin"] = (
-    binops_overload(other_type="DaCompatible", overload_types=["Dataset", "DataTree"])
-    + inplace(other_type="DaCompatible", type_ignore="misc")
-    + unops()
-)
-ops_info["VariableOpsMixin"] = (
-    binops_overload(
-        other_type="VarCompatible", overload_types=["T_DA", "Dataset", "DataTree"]
-    )
-    + inplace(other_type="VarCompatible", type_ignore="misc")
-    + unops()
-)
-ops_info["DatasetGroupByOpsMixin"] = binops(
-    other_type="Dataset | DataArray", return_type="Dataset"
-)
-ops_info["DataArrayGroupByOpsMixin"] = binops(
-    other_type="T_Xarray", return_type="T_Xarray"
-)
+ops_info = {
+    # TODO add inplace ops for DataTree?
+    "DataTreeOpsMixin": binops(other_type="DtCompatible") + unops(),
+    "DatasetOpsMixin": (
+        binops_overload(other_type="DsCompatible", overload_types=["DataTree"])
+        + inplace(other_type="DsCompatible", type_ignore="misc")
+        + unops()
+    ),
+    "DataArrayOpsMixin": (
+        binops_overload(
+            other_type="DaCompatible", overload_types=["Dataset", "DataTree"]
+        )
+        + inplace(other_type="DaCompatible", type_ignore="misc")
+        + unops()
+    ),
+    "VariableOpsMixin": (
+        binops_overload(
+            other_type="VarCompatible", overload_types=["T_DA", "Dataset", "DataTree"]
+        )
+        + inplace(other_type="VarCompatible", type_ignore="misc")
+        + unops()
+    ),
+    "DatasetGroupByOpsMixin": binops(
+        other_type="Dataset | DataArray", return_type="Dataset"
+    ),
+    "DataArrayGroupByOpsMixin": binops(other_type="T_Xarray", return_type="T_Xarray"),
+}
 
 MODULE_PREAMBLE = '''\
 """Mixin classes with arithmetic operators."""
@@ -260,7 +261,8 @@ import operator
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, overload
 
-from xarray.core import nputils, ops
+from xarray.core import nputils
+from xarray.computation import ops
 from xarray.core.types import (
     DaCompatible,
     DsCompatible,

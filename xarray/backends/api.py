@@ -11,6 +11,7 @@ from collections.abc import (
 )
 from functools import partial
 from io import BytesIO
+from itertools import starmap
 from numbers import Number
 from typing import (
     TYPE_CHECKING,
@@ -33,15 +34,11 @@ from xarray.backends.common import (
     _normalize_path,
 )
 from xarray.backends.locks import _get_scheduler
-from xarray.coders import CFDatetimeCoder
+from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import indexing
-from xarray.core.combine import (
-    _infer_concat_order_from_positions,
-    _nested_combine,
-    combine_by_coords,
-)
+from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
+from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees
@@ -49,6 +46,12 @@ from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 from xarray.core.utils import is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
+from xarray.structure.chunks import _get_chunk, _maybe_chunk
+from xarray.structure.combine import (
+    _infer_concat_order_from_positions,
+    _nested_combine,
+    combine_by_coords,
+)
 
 if TYPE_CHECKING:
     try:
@@ -64,12 +67,13 @@ if TYPE_CHECKING:
         NestedSequence,
         ReadBuffer,
         T_Chunks,
+        ZarrStoreLike,
     )
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
         T_NetcdfEngine,
-        Literal["pydap", "zarr"],
+        Literal["pydap", "zarr"],  # noqa: PYI051
         type[BackendEntrypoint],
         str,  # no nice typing support for custom backends
         None,
@@ -103,8 +107,7 @@ def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:
             engine = "pydap"
         except ImportError as err:
             raise ValueError(
-                "netCDF4 or pydap is required for accessing "
-                "remote datasets via OPeNDAP"
+                "netCDF4 or pydap is required for accessing remote datasets via OPeNDAP"
             ) from err
     return engine
 
@@ -377,6 +380,15 @@ def _chunk_ds(
     return backend_ds._replace(variables)
 
 
+def _maybe_create_default_indexes(ds):
+    to_index = {
+        name: coord.variable
+        for name, coord in ds.coords.items()
+        if coord.dims == (name,) and name not in ds.xindexes
+    }
+    return ds.assign_coords(Coordinates(to_index))
+
+
 def _dataset_from_backend_dataset(
     backend_ds,
     filename_or_obj,
@@ -387,6 +399,7 @@ def _dataset_from_backend_dataset(
     inline_array,
     chunked_array_type,
     from_array_kwargs,
+    create_default_indexes,
     **extra_tokens,
 ):
     if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
@@ -395,11 +408,15 @@ def _dataset_from_backend_dataset(
         )
 
     _protect_dataset_variables_inplace(backend_ds, cache)
-    if chunks is None:
-        ds = backend_ds
+
+    if create_default_indexes:
+        ds = _maybe_create_default_indexes(backend_ds)
     else:
+        ds = backend_ds
+
+    if chunks is not None:
         ds = _chunk_ds(
-            backend_ds,
+            ds,
             filename_or_obj,
             engine,
             chunks,
@@ -432,6 +449,7 @@ def _datatree_from_backend_datatree(
     inline_array,
     chunked_array_type,
     from_array_kwargs,
+    create_default_indexes,
     **extra_tokens,
 ):
     if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
@@ -440,9 +458,11 @@ def _datatree_from_backend_datatree(
         )
 
     _protect_datatree_variables_inplace(backend_tree, cache)
-    if chunks is None:
-        tree = backend_tree
+    if create_default_indexes:
+        tree = backend_tree.map_over_datasets(_maybe_create_default_indexes)
     else:
+        tree = backend_tree
+    if chunks is not None:
         tree = DataTree.from_dict(
             {
                 path: _chunk_ds(
@@ -454,13 +474,15 @@ def _datatree_from_backend_datatree(
                     inline_array,
                     chunked_array_type,
                     from_array_kwargs,
+                    node=path,
                     **extra_tokens,
                 )
-                for path, [node] in group_subtrees(backend_tree)
+                for path, [node] in group_subtrees(tree)
             },
-            name=backend_tree.name,
+            name=tree.name,
         )
 
+    if create_default_indexes or chunks is not None:
         for path, [node] in group_subtrees(backend_tree):
             tree[path].set_close(node._close)
 
@@ -486,11 +508,15 @@ def open_dataset(
     | CFDatetimeCoder
     | Mapping[str, bool | CFDatetimeCoder]
     | None = None,
-    decode_timedelta: bool | Mapping[str, bool] | None = None,
+    decode_timedelta: bool
+    | CFTimedeltaCoder
+    | Mapping[str, bool | CFTimedeltaCoder]
+    | None = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
+    create_default_indexes: bool = True,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
@@ -554,11 +580,14 @@ def open_dataset(
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
-    decode_timedelta : bool or dict-like, optional
+    decode_timedelta : bool, CFTimedeltaCoder, or dict-like, optional
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of decode_time.
+        If None (default), assume the same value of ``decode_times``; if
+        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
+        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
+        matching ``time_unit``.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -601,6 +630,13 @@ def open_dataset(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    create_default_indexes : bool, default: True
+        If True, create pandas indexes for :term:`dimension coordinates <dimension coordinate>`,
+        which loads the coordinate data into memory. Set it to False if you want to avoid loading
+        data into memory.
+
+        Note that backends can still choose to create other indexes. If you want to control that,
+        please refer to the backend's documentation.
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -693,6 +729,7 @@ def open_dataset(
         chunked_array_type,
         from_array_kwargs,
         drop_variables=drop_variables,
+        create_default_indexes=create_default_indexes,
         **decoders,
         **kwargs,
     )
@@ -702,8 +739,8 @@ def open_dataset(
 def open_dataarray(
     filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     *,
-    engine: T_Engine | None = None,
-    chunks: T_Chunks | None = None,
+    engine: T_Engine = None,
+    chunks: T_Chunks = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
@@ -711,11 +748,12 @@ def open_dataarray(
     | CFDatetimeCoder
     | Mapping[str, bool | CFDatetimeCoder]
     | None = None,
-    decode_timedelta: bool | None = None,
+    decode_timedelta: bool | CFTimedeltaCoder | None = None,
     use_cftime: bool | None = None,
     concat_characters: bool | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
+    create_default_indexes: bool = True,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
@@ -775,7 +813,8 @@ def open_dataarray(
         be replaced by NA. This keyword may not be supported by all the backends.
     decode_times : bool, CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them encoded as numbers.
+        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or
+        leave them encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -783,7 +822,10 @@ def open_dataarray(
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of decode_time.
+        If None (default), assume the same value of ``decode_times``; if
+        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
+        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
+        matching ``time_unit``.
         This keyword may not be supported by all the backends.
     use_cftime: bool, optional
         Only relevant if encoded dates come from a standard calendar
@@ -820,6 +862,13 @@ def open_dataarray(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    create_default_indexes : bool, default: True
+        If True, create pandas indexes for :term:`dimension coordinates <dimension coordinate>`,
+        which loads the coordinate data into memory. Set it to False if you want to avoid loading
+        data into memory.
+
+        Note that backends can still choose to create other indexes. If you want to control that,
+        please refer to the backend's documentation.
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -877,6 +926,7 @@ def open_dataarray(
         chunks=chunks,
         cache=cache,
         drop_variables=drop_variables,
+        create_default_indexes=create_default_indexes,
         inline_array=inline_array,
         chunked_array_type=chunked_array_type,
         from_array_kwargs=from_array_kwargs,
@@ -925,11 +975,15 @@ def open_datatree(
     | CFDatetimeCoder
     | Mapping[str, bool | CFDatetimeCoder]
     | None = None,
-    decode_timedelta: bool | Mapping[str, bool] | None = None,
+    decode_timedelta: bool
+    | CFTimedeltaCoder
+    | Mapping[str, bool | CFTimedeltaCoder]
+    | None = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
+    create_default_indexes: bool = True,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
@@ -984,7 +1038,8 @@ def open_datatree(
         This keyword may not be supported by all the backends.
     decode_times : bool, CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them encoded as numbers.
+        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or
+        leave them encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -992,7 +1047,10 @@ def open_datatree(
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of decode_time.
+        If None (default), assume the same value of ``decode_times``; if
+        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
+        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
+        matching ``time_unit``.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -1035,6 +1093,13 @@ def open_datatree(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    create_default_indexes : bool, default: True
+        If True, create pandas indexes for :term:`dimension coordinates <dimension coordinate>`,
+        which loads the coordinate data into memory. Set it to False if you want to avoid loading
+        data into memory.
+
+        Note that backends can still choose to create other indexes. If you want to control that,
+        please refer to the backend's documentation.
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -1100,7 +1165,7 @@ def open_datatree(
 
     decoders = _resolve_decoders_kwargs(
         decode_cf,
-        open_backend_dataset_parameters=(),
+        open_backend_dataset_parameters=backend.open_dataset_parameters,
         mask_and_scale=mask_and_scale,
         decode_times=decode_times,
         decode_timedelta=decode_timedelta,
@@ -1128,6 +1193,7 @@ def open_datatree(
         chunked_array_type,
         from_array_kwargs,
         drop_variables=drop_variables,
+        create_default_indexes=create_default_indexes,
         **decoders,
         **kwargs,
     )
@@ -1147,11 +1213,15 @@ def open_groups(
     | CFDatetimeCoder
     | Mapping[str, bool | CFDatetimeCoder]
     | None = None,
-    decode_timedelta: bool | Mapping[str, bool] | None = None,
+    decode_timedelta: bool
+    | CFTimedeltaCoder
+    | Mapping[str, bool | CFTimedeltaCoder]
+    | None = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
+    create_default_indexes: bool = True,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
@@ -1210,7 +1280,8 @@ def open_groups(
         This keyword may not be supported by all the backends.
     decode_times : bool, CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them encoded as numbers.
+        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or
+        leave them encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -1218,9 +1289,10 @@ def open_groups(
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of decode_time.
-        Pass a mapping, e.g. ``{"my_variable": False}``,
-        to toggle this feature per-variable individually.
+        If None (default), assume the same value of ``decode_times``; if
+        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
+        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
+        matching ``time_unit``.
         This keyword may not be supported by all the backends.
     use_cftime: bool or dict-like, optional
         Only relevant if encoded dates come from a standard calendar
@@ -1261,6 +1333,13 @@ def open_groups(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    create_default_indexes : bool, default: True
+        If True, create pandas indexes for :term:`dimension coordinates <dimension coordinate>`,
+        which loads the coordinate data into memory. Set it to False if you want to avoid loading
+        data into memory.
+
+        Note that backends can still choose to create other indexes. If you want to control that,
+        please refer to the backend's documentation.
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -1356,6 +1435,7 @@ def open_groups(
             chunked_array_type,
             from_array_kwargs,
             drop_variables=drop_variables,
+            create_default_indexes=create_default_indexes,
             **decoders,
             **kwargs,
         )
@@ -1370,7 +1450,7 @@ def open_mfdataset(
     | os.PathLike
     | ReadBuffer
     | NestedSequence[str | os.PathLike | ReadBuffer],
-    chunks: T_Chunks | None = None,
+    chunks: T_Chunks = None,
     concat_dim: (
         str
         | DataArray
@@ -1382,7 +1462,7 @@ def open_mfdataset(
     ) = None,
     compat: CompatOptions = "no_conflicts",
     preprocess: Callable[[Dataset], Dataset] | None = None,
-    engine: T_Engine | None = None,
+    engine: T_Engine = None,
     data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
     coords="different",
     combine: Literal["by_coords", "nested"] = "by_coords",
@@ -1646,8 +1726,7 @@ def open_mfdataset(
             )
         else:
             raise ValueError(
-                f"{combine} is an invalid option for the keyword argument"
-                " ``combine``"
+                f"{combine} is an invalid option for the keyword argument ``combine``"
             )
     except ValueError:
         for ds in datasets:
@@ -2086,10 +2165,9 @@ def save_mfdataset(
         import dask
 
         return dask.delayed(
-            [
-                dask.delayed(_finalize_store)(w, s)
-                for w, s in zip(writes, stores, strict=True)
-            ]
+            list(
+                starmap(dask.delayed(_finalize_store), zip(writes, stores, strict=True))
+            )
         )
 
 
@@ -2097,7 +2175,7 @@ def save_mfdataset(
 @overload
 def to_zarr(
     dataset: Dataset,
-    store: MutableMapping | str | os.PathLike[str] | None = None,
+    store: ZarrStoreLike | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
     synchronizer=None,
@@ -2109,6 +2187,7 @@ def to_zarr(
     append_dim: Hashable | None = None,
     region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
+    align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
@@ -2120,7 +2199,7 @@ def to_zarr(
 @overload
 def to_zarr(
     dataset: Dataset,
-    store: MutableMapping | str | os.PathLike[str] | None = None,
+    store: ZarrStoreLike | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
     synchronizer=None,
@@ -2132,6 +2211,7 @@ def to_zarr(
     append_dim: Hashable | None = None,
     region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
+    align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
@@ -2141,7 +2221,7 @@ def to_zarr(
 
 def to_zarr(
     dataset: Dataset,
-    store: MutableMapping | str | os.PathLike[str] | None = None,
+    store: ZarrStoreLike | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
     synchronizer=None,
@@ -2153,6 +2233,7 @@ def to_zarr(
     append_dim: Hashable | None = None,
     region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
+    align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
     zarr_format: int | None = None,
@@ -2202,13 +2283,16 @@ def to_zarr(
         append_dim=append_dim,
         write_region=region,
         safe_chunks=safe_chunks,
+        align_chunks=align_chunks,
         zarr_version=zarr_version,
         zarr_format=zarr_format,
         write_empty=write_empty_chunks,
         **kwargs,
     )
 
-    dataset = zstore._validate_and_autodetect_region(dataset)
+    dataset = zstore._validate_and_autodetect_region(
+        dataset,
+    )
     zstore._validate_encoding(encoding)
 
     writer = ArrayWriter()

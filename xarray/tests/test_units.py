@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import functools
 import operator
 
@@ -20,10 +21,8 @@ from xarray.tests import (
 from xarray.tests.test_plot import PlotTestCase
 from xarray.tests.test_variable import _PAD_XR_NP_ARGS
 
-try:
+with contextlib.suppress(ImportError):
     import matplotlib.pyplot as plt
-except ImportError:
-    pass
 
 
 pint = pytest.importorskip("pint")
@@ -235,9 +234,7 @@ def convert_units(obj, to):
     elif isinstance(obj, xr.DataArray):
         name = obj.name
 
-        new_units = (
-            to.get(name, None) or to.get("data", None) or to.get(None, None) or None
-        )
+        new_units = to.get(name) or to.get("data") or to.get(None) or None
         data = convert_units(obj.variable, {None: new_units})
 
         coords = {
@@ -1385,7 +1382,7 @@ def test_replication_full_like_dataset(variant, dtype):
 
     units = {
         **extract_units(ds),
-        **{name: unit_registry.degK for name in ds.data_vars},
+        **dict.fromkeys(ds.data_vars, unit_registry.degK),
     }
     expected = attach_units(
         xr.full_like(strip_units(ds), fill_value=strip_units(fill_value)), units
@@ -1871,7 +1868,7 @@ class TestVariable:
     )
     def test_isel(self, variable, indexers, dask, dtype):
         if dask:
-            variable = variable.chunk({dim: 2 for dim in variable.dims})
+            variable = variable.chunk(dict.fromkeys(variable.dims, 2))
         quantified = xr.Variable(
             variable.dims, variable.data.astype(dtype) * unit_registry.s
         )
@@ -2651,7 +2648,7 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         scalar_types = (int, float)
-        args = list(value * unit for value in func.args)
+        args = [value * unit for value in func.args]
         kwargs = {
             key: (value * unit if isinstance(value, scalar_types) else value)
             for key, value in func.kwargs.items()
@@ -2709,7 +2706,7 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         scalar_types = (int, float)
-        args = list(value * unit for value in func.args)
+        args = [value * unit for value in func.args]
         kwargs = {
             key: (value * unit if isinstance(value, scalar_types) else value)
             for key, value in func.kwargs.items()
@@ -5638,7 +5635,7 @@ class TestPintWrappingDask:
 
         assert_units_equal(expected, actual)
         # Don't use isinstance b/c we don't want to allow subclasses through
-        assert type(expected.data) == type(actual.data)  # noqa: E721
+        assert type(expected.data) is type(actual.data)
 
 
 @requires_matplotlib

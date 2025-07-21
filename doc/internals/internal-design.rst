@@ -1,12 +1,12 @@
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
 
     np.random.seed(123456)
-    np.set_printoptions(threshold=20)
+    np.set_printoptions(threshold=10, edgeitems=2)
 
 .. _internal design:
 
@@ -86,9 +86,9 @@ DataArray Objects
 
 The simplest data structure used by most users is :py:class:`~xarray.DataArray`.
 A :py:class:`~xarray.DataArray` is a composite object consisting of multiple
-:py:class:`~xarray.core.variable.Variable` objects which store related data.
+:py:class:`~xarray.Variable` objects which store related data.
 
-A single :py:class:`~xarray.core.Variable` is referred to as the "data variable", and stored under the :py:attr:`~xarray.DataArray.variable`` attribute.
+A single :py:class:`~xarray.Variable` is referred to as the "data variable", and stored under the :py:attr:`~xarray.DataArray.variable`` attribute.
 A :py:class:`~xarray.DataArray` inherits all of the properties of this data variable, i.e. ``dims``, ``data``, ``attrs`` and ``encoding``,
 all of which are implemented by forwarding on to the underlying ``Variable`` object.
 
@@ -111,7 +111,7 @@ Finally a :py:class:`~xarray.DataArray` defines a :py:attr:`~xarray.DataArray.na
 variable but is stored on the wrapping ``DataArray`` class.
 The ``name`` attribute is primarily used when one or more :py:class:`~xarray.DataArray` objects are promoted into a :py:class:`~xarray.Dataset`
 (e.g. via :py:meth:`~xarray.DataArray.to_dataset`).
-Note that the underlying :py:class:`~xarray.core.Variable` objects are all unnamed, so they can always be referred to uniquely via a
+Note that the underlying :py:class:`~xarray.Variable` objects are all unnamed, so they can always be referred to uniquely via a
 dict-like mapping.
 
 .. _internal design.dataset:
@@ -150,7 +150,7 @@ Lazy Loading
 If we open a ``Variable`` object from disk using :py:func:`~xarray.open_dataset` we can see that the actual values of
 the array wrapped by the data variable are not displayed.
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.tutorial.open_dataset("air_temperature")["air"]
     var = da.variable
@@ -162,7 +162,7 @@ This is because the values have not yet been loaded.
 If we look at the private attribute :py:meth:`~xarray.Variable._data` containing the underlying array object, we see
 something interesting:
 
-.. ipython:: python
+.. jupyter-execute::
 
     var._data
 
@@ -171,13 +171,13 @@ but provide important functionality.
 
 Calling the public :py:attr:`~xarray.Variable.data` property loads the underlying array into memory.
 
-.. ipython:: python
+.. jupyter-execute::
 
     var.data
 
 This array is now cached, which we can see by accessing the private attribute again:
 
-.. ipython:: python
+.. jupyter-execute::
 
     var._data
 
@@ -189,14 +189,14 @@ subsequent analysis, by deferring loading data until after indexing is performed
 
 Let's open the data from disk again.
 
-.. ipython:: python
+.. jupyter-execute::
 
     da = xr.tutorial.open_dataset("air_temperature")["air"]
     var = da.variable
 
 Now, notice how even after subsetting the data has does not get loaded:
 
-.. ipython:: python
+.. jupyter-execute::
 
     var.isel(time=0)
 
@@ -204,7 +204,7 @@ The shape has changed, but the values are still not shown.
 
 Looking at the private attribute again shows how this indexing information was propagated via the hidden lazy indexing classes:
 
-.. ipython:: python
+.. jupyter-execute::
 
     var.isel(time=0)._data
 

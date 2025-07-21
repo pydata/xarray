@@ -37,6 +37,7 @@
 from __future__ import annotations
 
 import contextlib
+import difflib
 import functools
 import importlib
 import inspect
@@ -60,13 +61,24 @@ from collections.abc import (
     MutableMapping,
     MutableSet,
     Sequence,
-    Set,
     ValuesView,
+)
+from collections.abc import (
+    Set as AbstractSet,
 )
 from enum import Enum
 from pathlib import Path
 from types import EllipsisType, ModuleType
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeGuard, TypeVar, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Literal,
+    TypeGuard,
+    TypeVar,
+    cast,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -112,6 +124,47 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
 
     wrapper.__doc__ = alias_message(old_name, obj.__name__)
     return wrapper
+
+
+def did_you_mean(
+    word: Hashable, possibilities: Iterable[Hashable], *, n: int = 10
+) -> str:
+    """
+    Suggest a few correct words based on a list of possibilities
+
+    Parameters
+    ----------
+    word : Hashable
+        Word to compare to a list of possibilities.
+    possibilities : Iterable of Hashable
+        The iterable of Hashable that contains the correct values.
+    n : int, default: 10
+        Maximum number of suggestions to show.
+
+    Examples
+    --------
+    >>> did_you_mean("bluch", ("blech", "gray_r", 1, None, (2, 56)))
+    "Did you mean one of ('blech',)?"
+    >>> did_you_mean("none", ("blech", "gray_r", 1, None, (2, 56)))
+    'Did you mean one of (None,)?'
+
+    See also
+    --------
+    https://en.wikipedia.org/wiki/String_metric
+    """
+    # Convert all values to string, get_close_matches doesn't handle all hashables:
+    possibilities_str: dict[str, Hashable] = {str(k): k for k in possibilities}
+
+    msg = ""
+    if len(
+        best_str := difflib.get_close_matches(
+            str(word), list(possibilities_str.keys()), n=n
+        )
+    ):
+        best = tuple(possibilities_str[k] for k in best_str)
+        msg = f"Did you mean one of {best}?"
+
+    return msg
 
 
 def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
@@ -188,7 +241,7 @@ def equivalent(first: T, second: T) -> bool:
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    return all(equivalent(f, s) for f, s in zip(first, second, strict=True))
+    return all(itertools.starmap(equivalent, zip(first, second, strict=True)))
 
 
 def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
@@ -653,10 +706,8 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
 def try_read_magic_number_from_file_or_path(filename_or_obj, count=8) -> bytes | None:
     magic_number = try_read_magic_number_from_path(filename_or_obj, count)
     if magic_number is None:
-        try:
+        with contextlib.suppress(TypeError):
             magic_number = read_magic_number_from_file(filename_or_obj, count)
-        except TypeError:
-            pass
     return magic_number
 
 
@@ -709,7 +760,7 @@ def decode_numpy_dict_values(attrs: Mapping[K, V]) -> dict[K, V]:
     attrs = dict(attrs)
     for k, v in attrs.items():
         if isinstance(v, np.ndarray):
-            attrs[k] = v.tolist()
+            attrs[k] = cast(V, v.tolist())
         elif isinstance(v, np.generic):
             attrs[k] = v.item()
     return attrs
@@ -846,7 +897,7 @@ def parse_dims_as_tuple(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | EllipsisType: ...
+) -> tuple[Hashable, ...] | EllipsisType | None: ...
 
 
 def parse_dims_as_tuple(
@@ -855,7 +906,7 @@ def parse_dims_as_tuple(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | EllipsisType:
+) -> tuple[Hashable, ...] | EllipsisType | None:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -907,7 +958,7 @@ def parse_dims_as_set(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> set[Hashable] | None | EllipsisType: ...
+) -> set[Hashable] | EllipsisType | None: ...
 
 
 def parse_dims_as_set(
@@ -916,7 +967,7 @@ def parse_dims_as_set(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> set[Hashable] | None | EllipsisType:
+) -> set[Hashable] | EllipsisType | None:
     """Like parse_dims_as_tuple, but returning a set instead of a tuple."""
     # TODO: Consider removing parse_dims_as_tuple?
     if dim is None or dim is ...:
@@ -948,7 +999,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | EllipsisType: ...
+) -> tuple[Hashable, ...] | EllipsisType | None: ...
 
 
 def parse_ordered_dims(
@@ -957,7 +1008,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | EllipsisType:
+) -> tuple[Hashable, ...] | EllipsisType | None:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -1006,7 +1057,7 @@ def parse_ordered_dims(
         )
 
 
-def _check_dims(dim: Set[Hashable], all_dims: Set[Hashable]) -> None:
+def _check_dims(dim: AbstractSet[Hashable], all_dims: AbstractSet[Hashable]) -> None:
     wrong_dims = (dim - all_dims) - {...}
     if wrong_dims:
         wrong_dims_str = ", ".join(f"'{d}'" for d in wrong_dims)
@@ -1035,7 +1086,7 @@ class UncachedAccessor(Generic[_Accessor]):
     @overload
     def __get__(self, obj: object, cls) -> _Accessor: ...
 
-    def __get__(self, obj: None | object, cls) -> type[_Accessor] | _Accessor:
+    def __get__(self, obj: object | None, cls) -> type[_Accessor] | _Accessor:
         if obj is None:
             return self._accessor
 
@@ -1236,12 +1287,12 @@ def attempt_import(module: str) -> ModuleType:
         matplotlib="for plotting",
         hypothesis="for the `xarray.testing.strategies` submodule",
     )
-    package_name = module.split(".")[0]  # e.g. "zarr" from "zarr.storage"
+    package_name = module.split(".", maxsplit=1)[0]  # e.g. "zarr" from "zarr.storage"
     install_name = install_mapping.get(package_name, package_name)
     reason = package_purpose.get(package_name, "")
     try:
         return importlib.import_module(module)
-    except (ImportError, ModuleNotFoundError) as e:
+    except ImportError as e:
         raise ImportError(
             f"The {install_name} package is required {reason}"
             " but could not be imported."
@@ -1262,3 +1313,28 @@ def result_name(objects: Iterable[Any]) -> Any:
     else:
         name = None
     return name
+
+
+def _get_func_args(func, param_names):
+    """Use `inspect.signature` to try accessing `func` args. Otherwise, ensure
+    they are provided by user.
+    """
+    try:
+        func_args = inspect.signature(func).parameters
+    except ValueError as err:
+        func_args = {}
+        if not param_names:
+            raise ValueError(
+                "Unable to inspect `func` signature, and `param_names` was not provided."
+            ) from err
+    if param_names:
+        params = param_names
+    else:
+        params = list(func_args)[1:]
+        if any(
+            (p.kind in [p.VAR_POSITIONAL, p.VAR_KEYWORD]) for p in func_args.values()
+        ):
+            raise ValueError(
+                "`param_names` must be provided because `func` takes variable length arguments."
+            )
+    return params, func_args
