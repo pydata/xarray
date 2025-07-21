@@ -39,7 +39,7 @@ except ImportError:
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.collections import LineCollection
-    from matplotlib.colors import Colormap, Normalize
+    from matplotlib.colors import Colorizer, Colormap, Normalize
     from matplotlib.lines import Line2D
     from matplotlib.ticker import FuncFormatter
     from matplotlib.typing import ColorType, DrawStyleType, LineStyleType
@@ -1863,7 +1863,6 @@ def _line(
     vmin: float | None = ...,
     vmax: float | None = ...,
     alpha: float | None = ...,
-    linewidths: float | Sequence[float] | None = ...,
     *,
     edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = ...,
     plotnonfinite: bool = ...,
@@ -1886,7 +1885,6 @@ def _line(
     vmin: float | None = ...,
     vmax: float | None = ...,
     alpha: float | None = ...,
-    linewidths: float | Sequence[float] | None = ...,
     *,
     edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = ...,
     plotnonfinite: bool = ...,
@@ -1902,16 +1900,16 @@ def _line(
     y: float | ArrayLike,
     z: float | ArrayLike | None = None,
     s: float | ArrayLike | None = None,
-    c: Sequence[ColorType] | ColorType | None = None,
+    c: ArrayLike | Sequence[ColorType] | ColorType | None = None,
     linestyle: LineStyleType | None = None,
     cmap: str | Colormap | None = None,
     norm: str | Normalize | None = None,
     vmin: float | None = None,
     vmax: float | None = None,
     alpha: float | None = None,
-    linewidths: float | Sequence[float] | None = None,
     *,
     edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = None,
+    colorizer: Colorizer | None = None,
     plotnonfinite: bool = False,
     data=None,
     drawstyle: DrawStyleType = "default",
@@ -1947,6 +1945,8 @@ def _line(
         )
 
         return c, colors, edgecolors
+
+    linewidths = s  # Can be different in scatter, but same in line plots.
 
     # add edgecolors and linewidths to kwargs so they
     # can be processed by normailze_kwargs
@@ -2071,9 +2071,14 @@ def _line(
     collection.update(kwargs)
 
     if colors is None:
+        if colorizer:
+            collection._set_colorizer_check_keywords(
+                colorizer, cmap=cmap, norm=norm, vmin=vmin, vmax=vmax
+            )
+        else:
+            collection.set_cmap(cmap)
+            collection.set_norm(norm)
         collection.set_array(c)
-        collection.set_cmap(cmap)
-        collection.set_norm(norm)
         collection._scale_norm(norm, vmin, vmax)
     else:
         extra_kwargs = {"cmap": cmap, "norm": norm, "vmin": vmin, "vmax": vmax}
