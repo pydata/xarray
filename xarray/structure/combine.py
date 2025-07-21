@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast
 import pandas as pd
 
 from xarray.core import dtypes
-from xarray.core.concat import concat
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
-from xarray.core.merge import merge
 from xarray.core.utils import iterate_nested
+from xarray.structure.concat import concat
+from xarray.structure.merge import merge
 
 if TYPE_CHECKING:
     from xarray.core.types import (
@@ -383,7 +383,7 @@ DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]
 
 def combine_nested(
     datasets: DATASET_HYPERCUBE,
-    concat_dim: str | DataArray | None | Sequence[str | DataArray | pd.Index | None],
+    concat_dim: str | DataArray | Sequence[str | DataArray | pd.Index | None] | None,
     compat: str = "no_conflicts",
     data_vars: str = "all",
     coords: str = "different",

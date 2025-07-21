@@ -5,13 +5,44 @@
 Parallel Computing with Dask
 ============================
 
+.. jupyter-execute::
+
+    # Note that it's not necessary to import dask to use xarray with dask.
+    import numpy as np
+    import pandas as pd
+    import xarray as xr
+    import bottleneck
+
+.. jupyter-execute::
+    :hide-code:
+
+    import os
+
+    np.random.seed(123456)
+
+    # limit the amount of information printed to screen
+    xr.set_options(display_expand_data=False)
+    np.set_printoptions(precision=3, linewidth=100, threshold=10, edgeitems=2)
+
+    ds = xr.Dataset(
+        {
+            "temperature": (
+                ("time", "latitude", "longitude"),
+                np.random.randn(30, 180, 180),
+            ),
+            "time": pd.date_range("2015-01-01", periods=30),
+            "longitude": np.arange(180),
+            "latitude": np.arange(89.5, -90.5, -1),
+        }
+    )
+    ds.to_netcdf("example-data.nc")
+
+
 Xarray integrates with `Dask <https://dask.org/?utm_source=xarray-docs>`__, a general purpose library for parallel computing, to handle larger-than-memory computations.
 
 If you’ve been using Xarray to read in large datasets or split up data across a number of files, you may already be using Dask:
 
 .. code-block:: python
-
-    import xarray as xr
 
     ds = xr.open_zarr("/path/to/data.zarr")
     timeseries = ds["temp"].mean(dim=["x", "y"]).compute()  # Compute result
@@ -115,31 +146,6 @@ When reading data, Dask divides your dataset into smaller chunks. You can specif
 Loading Dask Arrays
 ~~~~~~~~~~~~~~~~~~~
 
-.. ipython:: python
-    :suppress:
-
-    import os
-
-    import numpy as np
-    import pandas as pd
-    import xarray as xr
-
-    np.random.seed(123456)
-    np.set_printoptions(precision=3, linewidth=100, threshold=100, edgeitems=3)
-
-    ds = xr.Dataset(
-        {
-            "temperature": (
-                ("time", "latitude", "longitude"),
-                np.random.randn(30, 180, 180),
-            ),
-            "time": pd.date_range("2015-01-01", periods=30),
-            "longitude": np.arange(180),
-            "latitude": np.arange(89.5, -90.5, -1),
-        }
-    )
-    ds.to_netcdf("example-data.nc")
-
 There are a few common cases where you may want to convert lazy Dask arrays into eager, in-memory Xarray data structures:
 
 - You want to inspect smaller intermediate results when working interactively or debugging
@@ -148,7 +154,7 @@ There are a few common cases where you may want to convert lazy Dask arrays into
 
 To do this, you can use :py:meth:`Dataset.compute` or :py:meth:`DataArray.compute`:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.compute()
 
@@ -158,11 +164,12 @@ To do this, you can use :py:meth:`Dataset.compute` or :py:meth:`DataArray.comput
 
 You can also access :py:attr:`DataArray.values`, which will always be a NumPy array:
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [5]: ds.temperature.values
-    Out[5]:
+    ds.temperature.values
+
+.. jupyter-output::
+
     array([[[  4.691e-01,  -2.829e-01, ...,  -5.577e-01,   3.814e-01],
             [  1.337e+00,  -1.531e+00, ...,   8.726e-01,  -1.538e+00],
             ...
@@ -171,9 +178,7 @@ You can also access :py:attr:`DataArray.values`, which will always be a NumPy ar
 NumPy ufuncs like :py:func:`numpy.sin` transparently work on all xarray objects, including those
 that store lazy Dask arrays:
 
-.. ipython:: python
-
-    import numpy as np
+.. jupyter-execute::
 
     np.sin(ds)
 
@@ -249,11 +254,6 @@ we use to calculate `Spearman's rank-correlation coefficient <https://en.wikiped
 
 .. code-block:: python
 
-    import numpy as np
-    import xarray as xr
-    import bottleneck
-
-
     def covariance_gufunc(x, y):
         return (
             (x - x.mean(axis=-1, keepdims=True)) * (y - y.mean(axis=-1, keepdims=True))
@@ -282,45 +282,46 @@ we use to calculate `Spearman's rank-correlation coefficient <https://en.wikiped
 
 The only aspect of this example that is different from standard usage of
 ``apply_ufunc()`` is that we needed to supply the ``output_dtypes`` arguments.
-(Read up on :ref:`comput.wrapping-custom` for an explanation of the
+(Read up on :ref:`compute.wrapping-custom` for an explanation of the
 "core dimensions" listed in ``input_core_dims``.)
 
 Our new ``spearman_correlation()`` function achieves near linear speedup
 when run on large arrays across the four cores on my laptop. It would also
 work as a streaming operation, when run on arrays loaded from disk:
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [56]: rs = np.random.default_rng(0)
+    rs = np.random.default_rng(0)
 
-    In [57]: array1 = xr.DataArray(rs.randn(1000, 100000), dims=["place", "time"])  # 800MB
+    array1 = xr.DataArray(rs.randn(1000, 100000), dims=["place", "time"])  # 800MB
 
-    In [58]: array2 = array1 + 0.5 * rs.randn(1000, 100000)
+    array2 = array1 + 0.5 * rs.randn(1000, 100000)
 
     # using one core, on NumPy arrays
-    In [61]: %time _ = spearman_correlation(array1, array2, 'time')
-    CPU times: user 21.6 s, sys: 2.84 s, total: 24.5 s
-    Wall time: 24.9 s
+    %time _ = spearman_correlation(array1, array2, 'time')
+    # CPU times: user 21.6 s, sys: 2.84 s, total: 24.5 s
+    # Wall time: 24.9 s
 
-    In [8]: chunked1 = array1.chunk({"place": 10})
+    chunked1 = array1.chunk({"place": 10})
 
-    In [9]: chunked2 = array2.chunk({"place": 10})
+    chunked2 = array2.chunk({"place": 10})
 
     # using all my laptop's cores, with Dask
-    In [63]: r = spearman_correlation(chunked1, chunked2, "time").compute()
+    r = spearman_correlation(chunked1, chunked2, "time").compute()
 
-    In [64]: %time _ = r.compute()
-    CPU times: user 30.9 s, sys: 1.74 s, total: 32.6 s
-    Wall time: 4.59 s
+    %time _ = r.compute()
+    # CPU times: user 30.9 s, sys: 1.74 s, total: 32.6 s
+    # Wall time: 4.59 s
 
 One limitation of ``apply_ufunc()`` is that it cannot be applied to arrays with
 multiple chunks along a core dimension:
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [63]: spearman_correlation(chunked1, chunked2, "place")
+    spearman_correlation(chunked1, chunked2, "place")
+
+.. jupyter-output::
+
     ValueError: dimension 'place' on 0th function argument to apply_ufunc with
     dask='parallelized' consists of multiple chunks, but is also a core
     dimension. To fix, rechunk into a single Dask array chunk along this
@@ -347,7 +348,7 @@ Functions that consume and return Xarray objects can be easily applied in parall
 Your function will receive an Xarray Dataset or DataArray subset to one chunk
 along each chunked dimension.
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds.temperature
 
@@ -356,7 +357,7 @@ At compute time, a function applied with :py:func:`map_blocks` will receive a Da
 (time x latitude x longitude) with values loaded. The following snippet illustrates how to check the shape of the object
 received by the applied function.
 
-.. ipython:: python
+.. jupyter-execute::
 
     def func(da):
         print(da.sizes)
@@ -375,7 +376,7 @@ work for your function, provide the ``template`` kwarg (see :ref:`below <templat
 
 In this case, automatic inference has worked so let's check that the result is as expected.
 
-.. ipython:: python
+.. jupyter-execute::
 
     mapped.load(scheduler="single-threaded")
     mapped.identical(ds.time)
@@ -387,8 +388,8 @@ the returned result is identical to ``ds.time`` as expected.
 
 Here is a common example where automated inference will not work.
 
-.. ipython:: python
-    :okexcept:
+.. jupyter-execute::
+    :raises:
 
     def func(da):
         print(da.sizes)
@@ -412,7 +413,7 @@ incur much memory cost.
     ``attrs`` set in ``func`` will be ignored.
 
 
-.. ipython:: python
+.. jupyter-execute::
 
     template = ds.temperature.isel(time=[1, 11, 21])
     mapped = xr.map_blocks(func, ds.temperature, template=template)
@@ -421,7 +422,7 @@ incur much memory cost.
 Notice that the 0-shaped sizes were not printed to screen. Since ``template`` has been provided
 :py:func:`map_blocks` does not need to infer it by running ``func`` on 0-shaped inputs.
 
-.. ipython:: python
+.. jupyter-execute::
 
     mapped.identical(template)
 
@@ -429,7 +430,7 @@ Notice that the 0-shaped sizes were not printed to screen. Since ``template`` ha
 :py:func:`map_blocks` also allows passing ``args`` and ``kwargs`` down to the user function ``func``.
 ``func`` will be executed as ``func(block_xarray, *args, **kwargs)`` so ``args`` must be a list and ``kwargs`` must be a dictionary.
 
-.. ipython:: python
+.. jupyter-execute::
 
     def func(obj, a, b=0):
         return obj + a + b
@@ -439,8 +440,8 @@ Notice that the 0-shaped sizes were not printed to screen. Since ``template`` ha
     expected = ds + 10 + 10
     mapped.identical(expected)
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     ds.close()  # Closes "example-data.nc".
     os.remove("example-data.nc")
@@ -477,8 +478,6 @@ Dask is pretty easy to use but there are some gotchas, many of which are under a
 Here's an example of a simplified workflow putting some of these tips together:
 
 .. code-block:: python
-
-    import xarray
 
     ds = xr.open_zarr(  # Since we're doing a spatial reduction, increase chunk size in x, y
         "my-data.zarr", chunks={"x": 100, "y": 100}

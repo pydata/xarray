@@ -8,14 +8,14 @@ from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 import numpy as np
 
-from xarray.core.alignment import align
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.indexes import Index
-from xarray.core.merge import merge
 from xarray.core.utils import is_dask_collection
 from xarray.core.variable import Variable
+from xarray.structure.alignment import align
+from xarray.structure.merge import merge
 
 if TYPE_CHECKING:
     from xarray.core.types import T_Xarray
@@ -363,12 +363,14 @@ def map_blocks(
 
         # check that index lengths and values are as expected
         for name, index in result._indexes.items():
-            if name in expected["shapes"]:
-                if result.sizes[name] != expected["shapes"][name]:
-                    raise ValueError(
-                        f"Received dimension {name!r} of length {result.sizes[name]}. "
-                        f"Expected length {expected['shapes'][name]}."
-                    )
+            if (
+                name in expected["shapes"]
+                and result.sizes[name] != expected["shapes"][name]
+            ):
+                raise ValueError(
+                    f"Received dimension {name!r} of length {result.sizes[name]}. "
+                    f"Expected length {expected['shapes'][name]}."
+                )
 
             # ChainMap wants MutableMapping, but xindexes is Mapping
             merged_indexes = collections.ChainMap(

@@ -57,6 +57,11 @@ def test_allclose_regression() -> None:
             xr.DataArray(np.array("b", dtype="|S1")),
             id="DataArray_with_character_dtype",
         ),
+        pytest.param(
+            xr.Coordinates({"x": [1e-17, 2]}),
+            xr.Coordinates({"x": [0, 3]}),
+            id="Coordinates",
+        ),
     ),
 )
 def test_assert_allclose(obj1, obj2) -> None:
@@ -81,6 +86,19 @@ def test_assert_allclose_equal_transpose(func) -> None:
     with pytest.raises(AssertionError):
         getattr(xr.testing, func)(ds1, ds2)
     getattr(xr.testing, func)(ds1, ds2, check_dim_order=False)
+
+
+def test_assert_equal_transpose_datatree() -> None:
+    """Ensure `check_dim_order=False` works for transposed DataTree"""
+    ds = xr.Dataset(data_vars={"data": (("x", "y"), [[1, 2]])})
+
+    a = xr.DataTree.from_dict({"node": ds})
+    b = xr.DataTree.from_dict({"node": ds.transpose("y", "x")})
+
+    with pytest.raises(AssertionError):
+        xr.testing.assert_equal(a, b)
+
+    xr.testing.assert_equal(a, b, check_dim_order=False)
 
 
 @pytest.mark.filterwarnings("error")

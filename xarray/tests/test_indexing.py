@@ -129,7 +129,7 @@ class TestIndexers:
         ):
             dim_indexers = {"x": x_indexer}
             index_vars = x_index.create_variables()
-            indexes = {k: x_index for k in index_vars}
+            indexes = dict.fromkeys(index_vars, x_index)
             variables = {}
             variables.update(index_vars)
             variables.update(other_vars)

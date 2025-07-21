@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, TypeVar, get_args
 import numpy as np
 import pandas as pd
 
-from xarray.computation.computation import apply_ufunc
+from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.core import utils
 from xarray.core.common import _contains_datetime_like_objects, ones_like
 from xarray.core.duck_array_ops import (
@@ -364,11 +364,10 @@ def interp_na(
             # Convert to float
             max_gap = timedelta_to_numeric(max_gap)
 
-        if not use_coordinate:
-            if not isinstance(max_gap, Number | np.number):
-                raise TypeError(
-                    f"Expected integer or floating point max_gap since use_coordinate=False. Received {max_type}."
-                )
+        if not use_coordinate and not isinstance(max_gap, Number | np.number):
+            raise TypeError(
+                f"Expected integer or floating point max_gap since use_coordinate=False. Received {max_type}."
+            )
 
     # method
     index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate)
@@ -499,7 +498,7 @@ def _get_interpolator(
     # take higher dimensional data but scipy.interp1d can.
     if (
         method == "linear"
-        and not kwargs.get("fill_value") == "extrapolate"
+        and kwargs.get("fill_value") != "extrapolate"
         and not vectorizeable_only
     ):
         kwargs.update(method=method)

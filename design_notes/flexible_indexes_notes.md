@@ -97,12 +97,12 @@ The new `indexes` argument of Dataset/DataArray constructors may be used to spec
 ```python
 >>> da = xr.DataArray(
 ...     data=[[275.2, 273.5], [270.8, 278.6]],
-...     dims=('x', 'y'),
+...     dims=("x", "y"),
 ...     coords={
-...         'lat': (('x', 'y'), [[45.6, 46.5], [50.2, 51.6]]),
-...         'lon': (('x', 'y'), [[5.7, 10.5], [6.2, 12.8]]),
+...         "lat": (("x", "y"), [[45.6, 46.5], [50.2, 51.6]]),
+...         "lon": (("x", "y"), [[5.7, 10.5], [6.2, 12.8]]),
 ...     },
-...     indexes={('lat', 'lon'): SpatialIndex},
+...     indexes={("lat", "lon"): SpatialIndex},
 ... )
 <xarray.DataArray (x: 2, y: 2)>
 array([[275.2, 273.5],
@@ -120,7 +120,7 @@ More formally, `indexes` would accept `Mapping[CoordinateNames, IndexSpec]` wher
 Currently index objects like `pandas.MultiIndex` can be passed directly to `coords`, which in this specific case results in the implicit creation of virtual coordinates. With the new `indexes` argument this behavior may become even more confusing than it currently is. For the sake of clarity, it would be appropriate to eventually drop support for this specific behavior and treat any given mapping value given in `coords` as an array that can be wrapped into an Xarray variable, i.e., in the case of a multi-index:
 
 ```python
->>> xr.DataArray([1.0, 2.0], dims='x', coords={'x': midx})
+>>> xr.DataArray([1.0, 2.0], dims="x", coords={"x": midx})
 <xarray.DataArray (x: 2)>
 array([1., 2.])
 Coordinates:
@@ -166,11 +166,11 @@ Besides `pandas.Index`, other indexes currently supported in Xarray like `CFTime
 
 Like for the indexes, explicit coordinate creation should be preferred over implicit coordinate creation. However, there may be some situations where we would like to keep creating coordinates implicitly for backwards compatibility.
 
-For example, it is currently possible to pass a `pandas.MulitIndex` object as a coordinate to the Dataset/DataArray constructor:
+For example, it is currently possible to pass a `pandas.MultiIndex` object as a coordinate to the Dataset/DataArray constructor:
 
 ```python
->>> midx = pd.MultiIndex.from_arrays([['a', 'b'], [0, 1]], names=['lvl1', 'lvl2'])
->>> da = xr.DataArray([1.0, 2.0], dims='x', coords={'x': midx})
+>>> midx = pd.MultiIndex.from_arrays([["a", "b"], [0, 1]], names=["lvl1", "lvl2"])
+>>> da = xr.DataArray([1.0, 2.0], dims="x", coords={"x": midx})
 >>> da
 <xarray.DataArray (x: 2)>
 array([1., 2.])
@@ -201,7 +201,9 @@ Besides `pandas.MultiIndex`, there may be other situations where we would like t
 The example given here is quite confusing, though: this is not an easily predictable behavior. We could entirely avoid the implicit creation of coordinates, e.g., using a helper function that generates coordinate + index dictionaries that we could then pass directly to the DataArray/Dataset constructor:
 
 ```python
->>> coords_dict, index_dict = create_coords_from_index(midx, dims='x', include_dim_coord=True)
+>>> coords_dict, index_dict = create_coords_from_index(
+...     midx, dims="x", include_dim_coord=True
+... )
 >>> coords_dict
 {'x': <xarray.Variable (x: 2)>
  array([('a', 0), ('b', 1)], dtype=object),
@@ -211,7 +213,7 @@ The example given here is quite confusing, though: this is not an easily predict
  array([0, 1])}
 >>> index_dict
 {('lvl1', 'lvl2'): midx}
->>> xr.DataArray([1.0, 2.0], dims='x', coords=coords_dict, indexes=index_dict)
+>>> xr.DataArray([1.0, 2.0], dims="x", coords=coords_dict, indexes=index_dict)
 <xarray.DataArray (x: 2)>
 array([1., 2.])
 Coordinates:

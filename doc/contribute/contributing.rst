@@ -72,6 +72,7 @@ If you are reporting a bug, please use the provided template which includes the 
 
       ```python
       import xarray as xr
+
       ds = xr.Dataset(...)
 
       ...
@@ -82,6 +83,7 @@ If you are reporting a bug, please use the provided template which includes the 
 
       ```python
       import xarray as xr
+
       xr.show_versions()
 
       ...
@@ -290,7 +292,7 @@ We'll now kick off a two-step process:
 .. code-block:: sh
 
    # Create and activate the build environment
-   conda create -c conda-forge -n xarray-tests python=3.10
+   conda create -c conda-forge -n xarray-tests python=3.11
 
    # This is for Linux and MacOS
    conda env update -f ci/requirements/environment.yml
@@ -387,24 +389,24 @@ Some other important things to know about the docs:
   for a detailed explanation, or look at some of the existing functions to
   extend it in a similar manner.
 
-- The tutorials make heavy use of the `ipython directive
-  <https://matplotlib.org/sampledoc/ipython_directive.html>`_ sphinx extension.
-  This directive lets you put code in the documentation which will be run
+- The documentation makes heavy use of the `jupyter-sphinx extension
+  <https://jupyter-sphinx.readthedocs.io>`_.
+  The ``jupyter-execute`` directive lets you put code in the documentation which will be run
   during the doc build. For example:
 
   .. code:: rst
 
-      .. ipython:: python
+      .. jupyter-execute::
 
           x = 2
           x**3
 
-  will be rendered as::
+  will be rendered as:
 
-      In [1]: x = 2
+  .. jupyter-execute::
 
-      In [2]: x**3
-      Out[2]: 8
+       x = 2
+       x**3
 
   Almost all code examples in the docs are run (and the output saved) during the
   doc build. This approach means that code examples will always be up to date,
@@ -549,8 +551,7 @@ Code Formatting
 
 xarray uses several tools to ensure a consistent code format throughout the project:
 
-- `ruff <https://github.com/astral-sh/ruff>`_ for formatting, code quality checks and standardized order in imports
-- `absolufy-imports <https://github.com/MarcoGorelli/absolufy-imports>`_ for absolute instead of relative imports from different files,
+- `ruff <https://github.com/astral-sh/ruff>`_ for formatting, code quality checks and standardized order in imports, and
 - `mypy <https://mypy-lang.org/>`_ for static type checking on `type hints
   <https://docs.python.org/3/library/typing.html>`_.
 
@@ -609,7 +610,7 @@ A pull-request will be considered for merging when you have an all 'green' build
 tests are failing, then you will get a red 'X', where you can click through to see the
 individual failed tests. This is an example of a green build.
 
-.. image:: _static/ci.png
+.. image:: ../_static/ci.png
 
 .. note::
 
@@ -1013,7 +1014,7 @@ If you have made updates to the documentation, you can now see a preview of the 
 the ``docs/readthedocs.org`` check near the bottom of the list of checks that run automatically when submitting a PR,
 then clicking on the "View Docs" button on the right (not the big green button, the small black one further down).
 
-.. image:: _static/view-docs.png
+.. image:: ../_static/view-docs.png
 
 
 If you need to make more changes, you can make them in

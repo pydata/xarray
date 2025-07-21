@@ -8,7 +8,7 @@ from collections.abc import Hashable
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -21,8 +21,13 @@ try:
 except ImportError:
     from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
 
+import contextlib
+
+from pandas.errors import UndefinedVariableError
+
 import xarray as xr
 from xarray import (
+    AlignmentError,
     DataArray,
     Dataset,
     IndexVariable,
@@ -57,6 +62,7 @@ from xarray.tests import (
     create_test_data,
     has_cftime,
     has_dask,
+    has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
@@ -68,18 +74,10 @@ from xarray.tests import (
     requires_sparse,
     source_ndarray,
 )
+from xarray.tests.indexes import ScalarIndex, XYIndex
 
-try:
-    from pandas.errors import UndefinedVariableError
-except ImportError:
-    # TODO: remove once we stop supporting pandas<1.4.3
-    from pandas.core.computation.ops import UndefinedVariableError
-
-
-try:
+with contextlib.suppress(ImportError):
     import dask.array as da
-except ImportError:
-    pass
 
 # from numpy version 2.0 trapz is deprecated and renamed to trapezoid
 # remove once numpy 2.0 is the oldest supported version
@@ -279,28 +277,31 @@ class AccessibleAsDuckArrayDataStore(backends.InMemoryDataStore):
 
 class TestDataset:
     def test_repr(self) -> None:
-        data = create_test_data(seed=123)
+        data = create_test_data(seed=123, use_extension_array=True)
         data.attrs["foo"] = "bar"
         # need to insert str dtype at runtime to handle different endianness
+        var5 = (
+            "\n                var5     (dim1) int64[pyarrow] 64B 5 9 7 2 6 2 8 1"
+            if has_pyarrow
+            else ""
+        )
         expected = dedent(
-            """\
+            f"""\
             <xarray.Dataset> Size: 2kB
             Dimensions:  (dim2: 9, dim3: 10, time: 20, dim1: 8)
             Coordinates:
               * dim2     (dim2) float64 72B 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
-              * dim3     (dim3) {} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
-              * time     (time) datetime64[{}] 160B 2000-01-01 2000-01-02 ... 2000-01-20
+              * dim3     (dim3) {data["dim3"].dtype} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+              * time     (time) datetime64[ns] 160B 2000-01-01 2000-01-02 ... 2000-01-20
                 numbers  (dim3) int64 80B 0 1 2 0 0 1 1 2 2 3
             Dimensions without coordinates: dim1
             Data variables:
                 var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
                 var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
                 var3     (dim3, dim1) float64 640B 0.4107 0.9941 0.1665 ... 0.716 1.555
+                var4     (dim1) category 32B b c b a c a c a{var5}
             Attributes:
-                foo:      bar""".format(
-                data["dim3"].dtype,
-                "ns",
-            )
+                foo:      bar"""
         )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
 
@@ -1213,7 +1214,7 @@ class TestDataset:
         import dask.array
 
         N = 365 * 2
-        ΔN = 28
+        ΔN = 28  # noqa: PLC2401
         time = xr.date_range(
             "2001-01-01", periods=N + ΔN, freq="D", calendar=calendar
         ).to_numpy(copy=True)
@@ -1597,32 +1598,8 @@ class TestDataset:
         # regression test https://github.com/pydata/xarray/issues/10063
         # isel on a multi-coordinate index should return a unique index associated
         # to each coordinate
-        class MultiCoordIndex(xr.Index):
-            def __init__(self, idx1, idx2):
-                self.idx1 = idx1
-                self.idx2 = idx2
-
-            @classmethod
-            def from_variables(cls, variables, *, options=None):
-                idx1 = PandasIndex.from_variables(
-                    {"x": variables["x"]}, options=options
-                )
-                idx2 = PandasIndex.from_variables(
-                    {"y": variables["y"]}, options=options
-                )
-
-                return cls(idx1, idx2)
-
-            def create_variables(self, variables=None):
-                return {**self.idx1.create_variables(), **self.idx2.create_variables()}
-
-            def isel(self, indexers):
-                idx1 = self.idx1.isel({"x": indexers.get("x", slice(None))})
-                idx2 = self.idx2.isel({"y": indexers.get("y", slice(None))})
-                return MultiCoordIndex(idx1, idx2)
-
         coords = xr.Coordinates(coords={"x": [0, 1], "y": [1, 2]}, indexes={})
-        ds = xr.Dataset(coords=coords).set_xindex(["x", "y"], MultiCoordIndex)
+        ds = xr.Dataset(coords=coords).set_xindex(["x", "y"], XYIndex)
 
         ds2 = ds.isel(x=slice(None), y=slice(None))
         assert ds2.xindexes["x"] is ds2.xindexes["y"]
@@ -1813,7 +1790,7 @@ class TestDataset:
         actual3 = ds.unstack("index")
         assert actual3["var"].shape == (2, 2)
 
-    def test_categorical_reindex(self) -> None:
+    def test_categorical_index_reindex(self) -> None:
         cat = pd.CategoricalIndex(
             ["foo", "bar", "baz"],
             categories=["foo", "bar", "baz", "qux", "quux", "corge"],
@@ -1824,6 +1801,32 @@ class TestDataset:
         )
         actual = ds.reindex(cat=["foo"])["cat"].values
         assert (actual == np.array(["foo"])).all()
+
+    @pytest.mark.parametrize("fill_value", [np.nan, pd.NA])
+    def test_extensionarray_negative_reindex(self, fill_value) -> None:
+        cat = pd.Categorical(
+            ["foo", "bar", "baz"],
+            categories=["foo", "bar", "baz", "qux", "quux", "corge"],
+        )
+        ds = xr.Dataset(
+            {"cat": ("index", cat)},
+            coords={"index": ("index", np.arange(3))},
+        )
+        reindexed_cat = cast(
+            pd.api.extensions.ExtensionArray,
+            (
+                ds.reindex(index=[-1, 1, 1], fill_value=fill_value)["cat"]
+                .to_pandas()
+                .values
+            ),
+        )
+        assert reindexed_cat.equals(pd.array([pd.NA, "bar", "bar"], dtype=cat.dtype))  # type: ignore[attr-defined]
+
+    def test_extension_array_reindex_same(self) -> None:
+        series = pd.Series([1, 2, pd.NA, 3], dtype=pd.Int32Dtype())
+        test = xr.Dataset({"test": series})
+        res = test.reindex(dim_0=series.index)
+        align(res, test, join="exact")
 
     def test_categorical_multiindex(self) -> None:
         i1 = pd.Series([0, 0])
@@ -2366,6 +2369,19 @@ class TestDataset:
         assert_identical(expected, actual)
         assert actual.x.dtype == expected.x.dtype
 
+    def test_reindex_with_multiindex_level(self) -> None:
+        # test for https://github.com/pydata/xarray/issues/10347
+        mindex = pd.MultiIndex.from_product(
+            [[100, 200, 300], [1, 2, 3, 4]], names=["x", "y"]
+        )
+        y_idx = PandasIndex(mindex.levels[1], "y")
+
+        ds1 = xr.Dataset(coords={"y": [1, 2, 3]})
+        ds2 = xr.Dataset(coords=xr.Coordinates.from_xindex(y_idx))
+
+        actual = ds1.reindex(y=ds2.y)
+        assert_identical(actual, ds2)
+
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": 2, "bar": 1}])
     def test_align_fill_value(self, fill_value) -> None:
         x = Dataset({"foo": DataArray([1, 2], dims=["x"], coords={"x": [1, 2]})})
@@ -2543,6 +2559,28 @@ class TestDataset:
 
         assert_identical(expected_x2, x2)
 
+    def test_align_multiple_indexes_common_dim(self) -> None:
+        a = Dataset(coords={"x": [1, 2], "xb": ("x", [3, 4])}).set_xindex("xb")
+        b = Dataset(coords={"x": [1], "xb": ("x", [3])}).set_xindex("xb")
+
+        (a2, b2) = align(a, b, join="inner")
+        assert_identical(a2, b, check_default_indexes=False)
+        assert_identical(b2, b, check_default_indexes=False)
+
+        c = Dataset(coords={"x": [1, 3], "xb": ("x", [2, 4])}).set_xindex("xb")
+
+        with pytest.raises(AlignmentError, match=".*conflicting re-indexers"):
+            align(a, c)
+
+    def test_align_conflicting_indexes(self) -> None:
+        class CustomIndex(PandasIndex): ...
+
+        a = Dataset(coords={"xb": ("x", [3, 4])}).set_xindex("xb")
+        b = Dataset(coords={"xb": ("x", [3])}).set_xindex("xb", CustomIndex)
+
+        with pytest.raises(AlignmentError, match="cannot align.*conflicting indexes"):
+            align(a, b)
+
     def test_align_non_unique(self) -> None:
         x = Dataset({"foo": ("x", [3, 4, 5]), "x": [0, 0, 1]})
         x1, x2 = align(x, x)
@@ -2585,6 +2623,61 @@ class TestDataset:
 
         assert ds.x.attrs == {"units": "m"}
         assert ds_noattr.x.attrs == {}
+
+    def test_align_scalar_index(self) -> None:
+        # ensure that indexes associated with scalar coordinates are not ignored
+        # during alignment
+        ds1 = Dataset(coords={"x": 0}).set_xindex("x", ScalarIndex)
+        ds2 = Dataset(coords={"x": 0}).set_xindex("x", ScalarIndex)
+
+        actual = xr.align(ds1, ds2, join="exact")
+        assert_identical(actual[0], ds1, check_default_indexes=False)
+        assert_identical(actual[1], ds2, check_default_indexes=False)
+
+        ds3 = Dataset(coords={"x": 1}).set_xindex("x", ScalarIndex)
+
+        with pytest.raises(AlignmentError, match="cannot align objects"):
+            xr.align(ds1, ds3, join="exact")
+
+    def test_align_multi_dim_index_exclude_dims(self) -> None:
+        ds1 = (
+            Dataset(coords={"x": [1, 2], "y": [3, 4]})
+            .drop_indexes(["x", "y"])
+            .set_xindex(["x", "y"], XYIndex)
+        )
+        ds2 = (
+            Dataset(coords={"x": [1, 2], "y": [5, 6]})
+            .drop_indexes(["x", "y"])
+            .set_xindex(["x", "y"], XYIndex)
+        )
+
+        for join in ("outer", "exact"):
+            actual = xr.align(ds1, ds2, join=join, exclude="y")
+            assert_identical(actual[0], ds1, check_default_indexes=False)
+            assert_identical(actual[1], ds2, check_default_indexes=False)
+
+        with pytest.raises(
+            AlignmentError, match="cannot align objects.*index.*not equal"
+        ):
+            xr.align(ds1, ds2, join="exact")
+
+        with pytest.raises(AlignmentError, match="cannot exclude dimension"):
+            xr.align(ds1, ds2, join="override", exclude="y")
+
+    def test_align_index_equals_future_warning(self) -> None:
+        # TODO: remove this test once the deprecation cycle is completed
+        class DeprecatedEqualsSignatureIndex(PandasIndex):
+            def equals(self, other: Index) -> bool:  # type: ignore[override]
+                return super().equals(other, exclude=None)
+
+        ds = (
+            Dataset(coords={"x": [1, 2]})
+            .drop_indexes("x")
+            .set_xindex("x", DeprecatedEqualsSignatureIndex)
+        )
+
+        with pytest.warns(FutureWarning, match="signature.*deprecated"):
+            xr.align(ds, ds.copy(), join="exact")
 
     def test_broadcast(self) -> None:
         ds = Dataset(
@@ -4098,6 +4191,33 @@ class TestDataset:
             expected_stacked_variable,
         )
 
+    def test_to_stacked_array_transposed(self) -> None:
+        # test that to_stacked_array uses updated dim order after transposition
+        ds = xr.Dataset(
+            data_vars=dict(
+                v1=(["d1", "d2"], np.arange(6).reshape((2, 3))),
+            ),
+            coords=dict(
+                d1=(["d1"], np.arange(2)),
+                d2=(["d2"], np.arange(3)),
+            ),
+        )
+        da = ds.to_stacked_array(
+            new_dim="new_dim",
+            sample_dims=[],
+            variable_dim="variable",
+        )
+        dsT = ds.transpose()
+        daT = dsT.to_stacked_array(
+            new_dim="new_dim",
+            sample_dims=[],
+            variable_dim="variable",
+        )
+        v1 = np.arange(6)
+        v1T = np.arange(6).reshape((2, 3)).T.flatten()
+        np.testing.assert_equal(da.to_numpy(), v1)
+        np.testing.assert_equal(daT.to_numpy(), v1T)
+
     def test_update(self) -> None:
         data = create_test_data(seed=0)
         expected = data.copy()
@@ -4205,6 +4325,26 @@ class TestDataset:
         keys = ["foo", 1]
         dataset = Dataset({key: ("dim0", range(1)) for key in keys})
         assert_identical(dataset, dataset[keys])
+
+    def test_getitem_extra_dim_index_coord(self) -> None:
+        class AnyIndex(Index):
+            def should_add_coord_to_array(self, name, var, dims):
+                return True
+
+        idx = AnyIndex()
+        coords = Coordinates(
+            coords={
+                "x": ("x", [1, 2]),
+                "x_bounds": (("x", "x_bnds"), [(0.5, 1.5), (1.5, 2.5)]),
+            },
+            indexes={"x": idx, "x_bounds": idx},
+        )
+
+        ds = Dataset({"foo": (("x"), [1.0, 2.0])}, coords=coords)
+        actual = ds["foo"]
+
+        assert_identical(actual.coords, coords, check_default_indexes=False)
+        assert "x_bnds" not in actual.dims
 
     def test_virtual_variables_default_coords(self) -> None:
         dataset = Dataset({"foo": ("x", range(10))})
@@ -4354,7 +4494,6 @@ class TestDataset:
         ds["x"] = np.arange(3)
         ds_copy = ds.copy()
         ds_copy["bar"] = ds["bar"].to_pandas()
-
         assert_equal(ds, ds_copy)
 
     def test_setitem_auto_align(self) -> None:
@@ -4945,6 +5084,16 @@ class TestDataset:
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
+    def test_from_dataframe_categorical_dtype_index(self) -> None:
+        cat = pd.CategoricalIndex(list("abcd"))
+        df = pd.DataFrame({"f": [0, 1, 2, 3]}, index=cat)
+        ds = df.to_xarray()
+        restored = ds.to_dataframe()
+        df.index.name = (
+            "index"  # restored gets the name because it has the coord with the name
+        )
+        pd.testing.assert_frame_equal(df, restored)
+
     def test_from_dataframe_categorical_index(self) -> None:
         cat = pd.CategoricalDtype(
             categories=["foo", "bar", "baz", "qux", "quux", "corge"]
@@ -4969,7 +5118,7 @@ class TestDataset:
         )
         ser = pd.Series(1, index=cat)
         ds = ser.to_xarray()
-        assert ds.coords.dtypes["index"] == np.dtype("O")
+        assert ds.coords.dtypes["index"] == ser.index.dtype
 
     @requires_sparse
     def test_from_dataframe_sparse(self) -> None:
@@ -5690,20 +5839,21 @@ class TestDataset:
     def test_reduce_non_numeric(self) -> None:
         data1 = create_test_data(seed=44, use_extension_array=True)
         data2 = create_test_data(seed=44)
-        add_vars = {"var5": ["dim1", "dim2"], "var6": ["dim1"]}
+        add_vars = {"var6": ["dim1", "dim2"], "var7": ["dim1"]}
         for v, dims in sorted(add_vars.items()):
             size = tuple(data1.sizes[d] for d in dims)
             data = np.random.randint(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {"foo": "variable"})
-        # var4 is extension array categorical and should be dropped
+        # var4 and var5 are extension arrays and should be dropped
         assert (
             "var4" not in data1.mean()
             and "var5" not in data1.mean()
             and "var6" not in data1.mean()
+            and "var7" not in data1.mean()
         )
         assert_equal(data1.mean(), data2.mean())
         assert_equal(data1.mean(dim="dim1"), data2.mean(dim="dim1"))
-        assert "var5" not in data1.mean(dim="dim2") and "var6" in data1.mean(dim="dim2")
+        assert "var6" not in data1.mean(dim="dim2") and "var7" in data1.mean(dim="dim2")
 
     @pytest.mark.filterwarnings(
         "ignore:Once the behaviour of DataArray:DeprecationWarning"
@@ -6840,11 +6990,7 @@ class TestDataset:
                 if utils.is_dict_like(constant_values):
                     if (
                         expected := constant_values.get(data_var_name, None)
-                    ) is not None:
-                        self._test_data_var_interior(
-                            ds[data_var_name], data_var, padded_dim_name, expected
-                        )
-                    elif (
+                    ) is not None or (
                         expected := constant_values.get(padded_dim_name, None)
                     ) is not None:
                         self._test_data_var_interior(

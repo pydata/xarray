@@ -9,17 +9,16 @@ from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
-from html import escape
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, cast, overload
 
 import numpy as np
 import pandas as pd
+from numpy.typing import DTypeLike
 from packaging.version import Version
 
 from xarray.core import duck_array_ops
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.nputils import NumpyVIndexAdapter
-from xarray.core.options import OPTIONS
 from xarray.core.types import T_Xarray
 from xarray.core.utils import (
     NDArrayMixin,
@@ -28,14 +27,14 @@ from xarray.core.utils import (
     is_duck_array,
     is_duck_dask_array,
     is_scalar,
+    is_valid_numpy_dtype,
     to_0d_array,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import array_type, integer_types, is_chunked_array
 
 if TYPE_CHECKING:
-    from numpy.typing import DTypeLike
-
+    from xarray.core.extension_array import PandasExtensionArray
     from xarray.core.indexes import Index
     from xarray.core.types import Self
     from xarray.core.variable import Variable
@@ -240,16 +239,16 @@ def expanded_indexer(key, ndim):
     return tuple(new_key)
 
 
-def _normalize_slice(sl: slice, size: int) -> slice:
+def normalize_slice(sl: slice, size: int) -> slice:
     """
     Ensure that given slice only contains positive start and stop values
     (stop can be -1 for full-size slices with negative steps, e.g. [-10::-1])
 
     Examples
     --------
-    >>> _normalize_slice(slice(0, 9), 10)
+    >>> normalize_slice(slice(0, 9), 10)
     slice(0, 9, 1)
-    >>> _normalize_slice(slice(0, -1), 10)
+    >>> normalize_slice(slice(0, -1), 10)
     slice(0, 9, 1)
     """
     return slice(*sl.indices(size))
@@ -266,7 +265,7 @@ def _expand_slice(slice_: slice, size: int) -> np.ndarray[Any, np.dtype[np.integ
     >>> _expand_slice(slice(0, -1), 10)
     array([0, 1, 2, 3, 4, 5, 6, 7, 8])
     """
-    sl = _normalize_slice(slice_, size)
+    sl = normalize_slice(slice_, size)
     return np.arange(sl.start, sl.stop, sl.step)
 
 
@@ -275,14 +274,14 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
     index it with another slice to return a new slice equivalent to applying
     the slices sequentially
     """
-    old_slice = _normalize_slice(old_slice, size)
+    old_slice = normalize_slice(old_slice, size)
 
     size_after_old_slice = len(range(old_slice.start, old_slice.stop, old_slice.step))
     if size_after_old_slice == 0:
         # nothing left after applying first slice
         return slice(0)
 
-    applied_slice = _normalize_slice(applied_slice, size_after_old_slice)
+    applied_slice = normalize_slice(applied_slice, size_after_old_slice)
 
     start = old_slice.start + applied_slice.start * old_slice.step
     if start < 0:
@@ -443,7 +442,7 @@ class OuterIndexer(ExplicitIndexer):
                         f"invalid indexer array for {type(self).__name__}; must be scalar "
                         f"or have 1 dimension: {k!r}"
                     )
-                k = k.astype(np.int64)  # type: ignore[union-attr]
+                k = duck_array_ops.astype(k, np.int64, copy=False)
             else:
                 raise TypeError(
                     f"unexpected indexer type for {type(self).__name__}: {k!r}"
@@ -487,7 +486,7 @@ class VectorizedIndexer(ExplicitIndexer):
                         "invalid indexer key: ndarray arguments "
                         f"have different numbers of dimensions: {ndims}"
                     )
-                k = k.astype(np.int64)  # type: ignore[union-attr]
+                k = duck_array_ops.astype(k, np.int64, copy=False)
             else:
                 raise TypeError(
                     f"unexpected indexer type for {type(self).__name__}: {k!r}"
@@ -768,7 +767,15 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
 def _wrap_numpy_scalars(array):
     """Wrap NumPy scalars in 0d arrays."""
-    if np.isscalar(array):
+    ndim = duck_array_ops.ndim(array)
+    if ndim == 0 and (
+        isinstance(array, np.generic)
+        or not (is_duck_array(array) or isinstance(array, NDArrayMixin))
+    ):
+        return np.array(array)
+    elif hasattr(array, "dtype"):
+        return array
+    elif ndim == 0:
         return np.array(array)
     else:
         return array
@@ -1744,28 +1751,57 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("_dtype", "array")
 
     array: pd.Index
-    _dtype: np.dtype
+    _dtype: np.dtype | pd.api.extensions.ExtensionDtype
 
-    def __init__(self, array: pd.Index, dtype: DTypeLike = None):
+    def __init__(
+        self,
+        array: pd.Index,
+        dtype: DTypeLike | pd.api.extensions.ExtensionDtype | None = None,
+    ):
         from xarray.core.indexes import safe_cast_to_index
 
         self.array = safe_cast_to_index(array)
 
         if dtype is None:
-            self._dtype = get_valid_numpy_dtype(array)
+            if pd.api.types.is_extension_array_dtype(array.dtype):
+                cast(pd.api.extensions.ExtensionDtype, array.dtype)
+                self._dtype = array.dtype
+            else:
+                self._dtype = get_valid_numpy_dtype(array)
+        elif pd.api.types.is_extension_array_dtype(dtype):
+            self._dtype = cast(pd.api.extensions.ExtensionDtype, dtype)
         else:
-            self._dtype = np.dtype(dtype)
+            self._dtype = np.dtype(cast(DTypeLike, dtype))
 
     @property
-    def dtype(self) -> np.dtype:
+    def _in_memory(self) -> bool:
+        # prevent costly conversion of a memory-saving pd.RangeIndex into a
+        # large numpy array.
+        return not isinstance(self.array, pd.RangeIndex)
+
+    @property
+    def dtype(self) -> np.dtype | pd.api.extensions.ExtensionDtype:  # type: ignore[override]
         return self._dtype
 
-    def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
-    ) -> np.ndarray:
+    def _get_numpy_dtype(self, dtype: np.typing.DTypeLike | None = None) -> np.dtype:
         if dtype is None:
-            dtype = self.dtype
+            if is_valid_numpy_dtype(self.dtype):
+                return cast(np.dtype, self.dtype)
+            else:
+                return get_valid_numpy_dtype(self.array)
+        else:
+            return np.dtype(dtype)
+
+    def __array__(
+        self,
+        dtype: np.typing.DTypeLike | None = None,
+        /,
+        *,
+        copy: bool | None = None,
+    ) -> np.ndarray:
+        dtype = self._get_numpy_dtype(dtype)
         array = self.array
+
         if isinstance(array, pd.PeriodIndex):
             with suppress(AttributeError):
                 # this might not be public API
@@ -1776,14 +1812,24 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         else:
             return np.asarray(array.values, dtype=dtype)
 
-    def get_duck_array(self) -> np.ndarray:
+    def get_duck_array(self) -> np.ndarray | PandasExtensionArray:
+        # We return an PandasExtensionArray wrapper type that satisfies
+        # duck array protocols.
+        # `NumpyExtensionArray` is excluded
+        if pd.api.types.is_extension_array_dtype(self.array) and not isinstance(
+            self.array.array,
+            pd.arrays.NumpyExtensionArray,  # type: ignore[attr-defined]
+        ):
+            from xarray.core.extension_array import PandasExtensionArray
+
+            return PandasExtensionArray(self.array.array)
         return np.asarray(self)
 
     @property
     def shape(self) -> _Shape:
         return (len(self.array),)
 
-    def _convert_scalar(self, item):
+    def _convert_scalar(self, item) -> np.ndarray:
         if item is pd.NaT:
             # work around the impossibility of casting NaT with asarray
             # note: it probably would be better in general to return
@@ -1799,94 +1845,60 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             # numpy fails to convert pd.Timestamp to np.datetime64[ns]
             item = np.asarray(item.to_datetime64())
         elif self.dtype != object:
-            item = np.asarray(item, dtype=self.dtype)
+            dtype = self._get_numpy_dtype()
+            item = np.asarray(item, dtype=dtype)
 
         # as for numpy.ndarray indexing, we always want the result to be
         # a NumPy array.
         return to_0d_array(item)
 
-    def _prepare_key(self, key: Any | tuple[Any, ...]) -> tuple[Any, ...]:
-        if isinstance(key, tuple) and len(key) == 1:
+    def _index_get(
+        self, indexer: ExplicitIndexer, func_name: str
+    ) -> PandasIndexingAdapter | np.ndarray:
+        key = indexer.tuple
+
+        if len(key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
             # objects don't like tuples)
             (key,) = key
 
-        return key
+        # if multidimensional key, convert the index to numpy array and index the latter
+        if getattr(key, "ndim", 0) > 1:
+            indexable = NumpyIndexingAdapter(np.asarray(self))
+            return getattr(indexable, func_name)(indexer)
 
-    def _handle_result(
-        self, result: Any
-    ) -> (
-        PandasIndexingAdapter
-        | NumpyIndexingAdapter
-        | np.ndarray
-        | np.datetime64
-        | np.timedelta64
-    ):
+        # otherwise index the pandas index then re-wrap or convert the result
+        result = self.array[key]
+
         if isinstance(result, pd.Index):
             return type(self)(result, dtype=self.dtype)
         else:
             return self._convert_scalar(result)
 
-    def _oindex_get(
-        self, indexer: OuterIndexer
-    ) -> (
-        PandasIndexingAdapter
-        | NumpyIndexingAdapter
-        | np.ndarray
-        | np.datetime64
-        | np.timedelta64
-    ):
-        key = self._prepare_key(indexer.tuple)
-
-        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
-            indexable = NumpyIndexingAdapter(np.asarray(self))
-            return indexable.oindex[indexer]
-
-        result = self.array[key]
-
-        return self._handle_result(result)
+    def _oindex_get(self, indexer: OuterIndexer) -> PandasIndexingAdapter | np.ndarray:
+        return self._index_get(indexer, "_oindex_get")
 
     def _vindex_get(
         self, indexer: VectorizedIndexer
-    ) -> (
-        PandasIndexingAdapter
-        | NumpyIndexingAdapter
-        | np.ndarray
-        | np.datetime64
-        | np.timedelta64
-    ):
+    ) -> PandasIndexingAdapter | np.ndarray:
         _assert_not_chunked_indexer(indexer.tuple)
-        key = self._prepare_key(indexer.tuple)
-
-        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
-            indexable = NumpyIndexingAdapter(np.asarray(self))
-            return indexable.vindex[indexer]
-
-        result = self.array[key]
-
-        return self._handle_result(result)
+        return self._index_get(indexer, "_vindex_get")
 
     def __getitem__(
         self, indexer: ExplicitIndexer
-    ) -> (
-        PandasIndexingAdapter
-        | NumpyIndexingAdapter
-        | np.ndarray
-        | np.datetime64
-        | np.timedelta64
-    ):
-        key = self._prepare_key(indexer.tuple)
-
-        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
-            indexable = NumpyIndexingAdapter(np.asarray(self))
-            return indexable[indexer]
-
-        result = self.array[key]
-
-        return self._handle_result(result)
+    ) -> PandasIndexingAdapter | np.ndarray:
+        return self._index_get(indexer, "__getitem__")
 
     def transpose(self, order) -> pd.Index:
         return self.array  # self.array should be always one-dimensional
+
+    def _repr_inline_(self, max_width: int) -> str:
+        # we want to display values in the inline repr for lazy coordinates too
+        # (pd.RangeIndex and pd.MultiIndex). `format_array_flat` prevents loading
+        # the whole array in memory.
+        from xarray.core.formatting import format_array_flat
+
+        return format_array_flat(self, max_width)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(array={self.array!r}, dtype={self.dtype!r})"
@@ -1902,6 +1914,14 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         array = self.array.copy(deep=True) if deep else self.array
         return type(self)(array, self._dtype)
 
+    @property
+    def nbytes(self) -> int:
+        if pd.api.types.is_extension_array_dtype(self.dtype):
+            return self.array.nbytes
+
+        dtype = self._get_numpy_dtype()
+        return dtype.itemsize * len(self.array)
+
 
 class PandasMultiIndexingAdapter(PandasIndexingAdapter):
     """Handles explicit indexing for a pandas.MultiIndex.
@@ -1914,23 +1934,27 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
     __slots__ = ("_dtype", "adapter", "array", "level")
 
     array: pd.MultiIndex
-    _dtype: np.dtype
+    _dtype: np.dtype | pd.api.extensions.ExtensionDtype
     level: str | None
 
     def __init__(
         self,
         array: pd.MultiIndex,
-        dtype: DTypeLike = None,
+        dtype: DTypeLike | pd.api.extensions.ExtensionDtype | None = None,
         level: str | None = None,
     ):
         super().__init__(array, dtype)
         self.level = level
 
     def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self,
+        dtype: DTypeLike | None = None,
+        /,
+        *,
+        copy: bool | None = None,
     ) -> np.ndarray:
-        if dtype is None:
-            dtype = self.dtype
+        dtype = self._get_numpy_dtype(dtype)
+
         if self.level is not None:
             return np.asarray(
                 self.array.get_level_values(self.level).values, dtype=dtype
@@ -1938,45 +1962,26 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         else:
             return super().__array__(dtype, copy=copy)
 
-    def _convert_scalar(self, item):
+    @property
+    def _in_memory(self) -> bool:
+        # The pd.MultiIndex's data is fully in memory, but it has a different
+        # layout than the level and dimension coordinate arrays. Marking this
+        # adapter class as a "lazy" array will prevent costly conversion when,
+        # e.g., formatting the Xarray reprs.
+        return False
+
+    def _convert_scalar(self, item: Any):
         if isinstance(item, tuple) and self.level is not None:
             idx = tuple(self.array.names).index(self.level)
             item = item[idx]
         return super()._convert_scalar(item)
 
-    def _oindex_get(
-        self, indexer: OuterIndexer
-    ) -> (
-        PandasIndexingAdapter
-        | NumpyIndexingAdapter
-        | np.ndarray
-        | np.datetime64
-        | np.timedelta64
-    ):
-        result = super()._oindex_get(indexer)
+    def _index_get(
+        self, indexer: ExplicitIndexer, func_name: str
+    ) -> PandasIndexingAdapter | np.ndarray:
+        result = super()._index_get(indexer, func_name)
         if isinstance(result, type(self)):
             result.level = self.level
-        return result
-
-    def _vindex_get(
-        self, indexer: VectorizedIndexer
-    ) -> (
-        PandasIndexingAdapter
-        | NumpyIndexingAdapter
-        | np.ndarray
-        | np.datetime64
-        | np.timedelta64
-    ):
-        result = super()._vindex_get(indexer)
-        if isinstance(result, type(self)):
-            result.level = self.level
-        return result
-
-    def __getitem__(self, indexer: ExplicitIndexer):
-        result = super().__getitem__(indexer)
-        if isinstance(result, type(self)):
-            result.level = self.level
-
         return result
 
     def __repr__(self) -> str:
@@ -1988,31 +1993,11 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
             )
             return f"{type(self).__name__}{props}"
 
-    def _get_array_subset(self) -> np.ndarray:
-        # used to speed-up the repr for big multi-indexes
-        threshold = max(100, OPTIONS["display_values_threshold"] + 2)
-        if self.size > threshold:
-            pos = threshold // 2
-            indices = np.concatenate([np.arange(0, pos), np.arange(-pos, 0)])
-            subset = self[OuterIndexer((indices,))]
-        else:
-            subset = self
-
-        return np.asarray(subset)
-
     def _repr_inline_(self, max_width: int) -> str:
-        from xarray.core.formatting import format_array_flat
-
         if self.level is None:
             return "MultiIndex"
         else:
-            return format_array_flat(self._get_array_subset(), max_width)
-
-    def _repr_html_(self) -> str:
-        from xarray.core.formatting import short_array_repr
-
-        array_repr = short_array_repr(self._get_array_subset())
-        return f"<pre>{escape(array_repr)}</pre>"
+            return super()._repr_inline_(max_width=max_width)
 
     def copy(self, deep: bool = True) -> Self:
         # see PandasIndexingAdapter.copy
@@ -2048,6 +2033,10 @@ class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     @property
     def shape(self) -> tuple[int, ...]:
         return tuple(self._transform.dim_size.values())
+
+    @property
+    def _in_memory(self) -> bool:
+        return False
 
     def get_duck_array(self) -> np.ndarray:
         all_coords = self._transform.generate_coords(dims=self._dims)
@@ -2103,29 +2092,15 @@ class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         )
 
     def transpose(self, order: Iterable[int]) -> Self:
-        new_dims = tuple([self._dims[i] for i in order])
+        new_dims = tuple(self._dims[i] for i in order)
         return type(self)(self._transform, self._coord_name, new_dims)
 
     def __repr__(self: Any) -> str:
         return f"{type(self).__name__}(transform={self._transform!r})"
 
-    def _get_array_subset(self) -> np.ndarray:
-        threshold = max(100, OPTIONS["display_values_threshold"] + 2)
-        if self.size > threshold:
-            pos = threshold // 2
-            flat_indices = np.concatenate(
-                [np.arange(0, pos), np.arange(self.size - pos, self.size)]
-            )
-            subset = self.vindex[
-                VectorizedIndexer(np.unravel_index(flat_indices, self.shape))
-            ]
-        else:
-            subset = self
-
-        return np.asarray(subset)
-
     def _repr_inline_(self, max_width: int) -> str:
-        """Good to see some labels even for a lazy coordinate."""
+        # we want to display values in the inline repr for this lazy coordinate
+        # `format_array_flat` prevents loading the whole array in memory.
         from xarray.core.formatting import format_array_flat
 
-        return format_array_flat(self._get_array_subset(), max_width)
+        return format_array_flat(self, max_width)

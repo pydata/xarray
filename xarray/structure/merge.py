@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Hashable, Iterable, Mapping, Sequence, Set
+from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Set as AbstractSet
 from typing import TYPE_CHECKING, Any, NamedTuple, Union
 
 import pandas as pd
 
 from xarray.core import dtypes
-from xarray.core.alignment import deep_align
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import (
     Index,
@@ -17,6 +17,7 @@ from xarray.core.indexes import (
 )
 from xarray.core.utils import Frozen, compat_dict_union, dict_equiv, equivalent
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from xarray.structure.alignment import deep_align
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates
@@ -283,17 +284,23 @@ def merge_collected(
                                 "conflicting attribute values on combined "
                                 f"variable {name!r}:\nfirst value: {variable.attrs!r}\nsecond value: {other_variable.attrs!r}"
                             )
-                merged_vars[name] = variable
-                merged_vars[name].attrs = merge_attrs(
+                attrs = merge_attrs(
                     [var.attrs for var, _ in indexed_elements],
                     combine_attrs=combine_attrs,
                 )
+                if variable.attrs or attrs:
+                    # Make a shallow copy to so that assigning merged_vars[name].attrs
+                    # does not affect the original input variable.
+                    merged_vars[name] = variable.copy(deep=False)
+                    merged_vars[name].attrs = attrs
+                else:
+                    merged_vars[name] = variable
                 merged_indexes[name] = index
             else:
                 variables = [variable for variable, _ in elements_list]
                 try:
                     merged_vars[name] = unique_variable(
-                        name, variables, compat, equals.get(name, None)
+                        name, variables, compat, equals.get(name)
                     )
                 except MergeError:
                     if compat != "minimal":
@@ -365,7 +372,7 @@ def collect_variables_and_indexes(
                 append(name, variable, indexes[name])
             elif variable.dims == (name,):
                 idx, idx_vars = create_default_index_implicit(variable)
-                append_all(idx_vars, {k: idx for k in idx_vars})
+                append_all(idx_vars, dict.fromkeys(idx_vars, idx))
             else:
                 append(name, variable, None)
 
@@ -390,7 +397,7 @@ def collect_from_coordinates(
 def merge_coordinates_without_align(
     objects: list[Coordinates],
     prioritized: Mapping[Any, MergeElement] | None = None,
-    exclude_dims: Set = frozenset(),
+    exclude_dims: AbstractSet = frozenset(),
     combine_attrs: CombineAttrsOptions = "override",
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
     """Merge variables/indexes from coordinates without automatic alignments.
@@ -677,10 +684,6 @@ def merge_core(
         Dictionary mapping from dimension names to sizes.
     attrs : dict
         Dictionary of attributes
-
-    Raises
-    ------
-    MergeError if the merge cannot be done successfully.
     """
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
@@ -715,7 +718,7 @@ def merge_core(
         coord_names.intersection_update(variables)
     if explicit_coords is not None:
         coord_names.update(explicit_coords)
-    for dim in dims.keys():
+    for dim in dims:
         if dim in variables:
             coord_names.add(dim)
     ambiguous_coords = coord_names.intersection(noncoord_names)
@@ -946,7 +949,7 @@ def merge(
     >>> xr.merge([x, y, z], join="exact")
     Traceback (most recent call last):
     ...
-    ValueError: cannot align objects with join='exact' where ...
+    xarray.structure.alignment.AlignmentError: cannot align objects with join='exact' where ...
 
     Raises
     ------

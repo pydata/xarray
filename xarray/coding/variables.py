@@ -21,6 +21,7 @@ from xarray.coding.common import (
 )
 from xarray.coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import dtypes, duck_array_ops, indexing
+from xarray.core.types import Self
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
@@ -58,13 +59,16 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return np.dtype(self.array.dtype.kind + str(self.array.dtype.itemsize))
 
     def _oindex_get(self, key):
-        return np.asarray(self.array.oindex[key], dtype=self.dtype)
+        return type(self)(self.array.oindex[key])
 
     def _vindex_get(self, key):
-        return np.asarray(self.array.vindex[key], dtype=self.dtype)
+        return type(self)(self.array.vindex[key])
 
-    def __getitem__(self, key) -> np.ndarray:
-        return np.asarray(self.array[key], dtype=self.dtype)
+    def __getitem__(self, key) -> Self:
+        return type(self)(self.array[key])
+
+    def get_duck_array(self):
+        return duck_array_ops.astype(self.array.get_duck_array(), dtype=self.dtype)
 
 
 class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
@@ -96,13 +100,16 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return np.dtype("bool")
 
     def _oindex_get(self, key):
-        return np.asarray(self.array.oindex[key], dtype=self.dtype)
+        return type(self)(self.array.oindex[key])
 
     def _vindex_get(self, key):
-        return np.asarray(self.array.vindex[key], dtype=self.dtype)
+        return type(self)(self.array.vindex[key])
 
-    def __getitem__(self, key) -> np.ndarray:
-        return np.asarray(self.array[key], dtype=self.dtype)
+    def __getitem__(self, key) -> Self:
+        return type(self)(self.array[key])
+
+    def get_duck_array(self):
+        return duck_array_ops.astype(self.array.get_duck_array(), dtype=self.dtype)
 
 
 def _apply_mask(
@@ -157,10 +164,8 @@ def _check_fill_values(attrs, name, dtype):
     Issue SerializationWarning if appropriate.
     """
     raw_fill_dict = {}
-    [
+    for attr in ("missing_value", "_FillValue"):
         pop_to(attrs, raw_fill_dict, attr, name=name)
-        for attr in ("missing_value", "_FillValue")
-    ]
     encoded_fill_values = set()
     for k in list(raw_fill_dict):
         v = raw_fill_dict[k]
@@ -345,7 +350,17 @@ class CFMaskCoder(VariableCoder):
         if fill_value is not None and has_unsigned:
             pop_to(encoding, attrs, "_Unsigned")
             # XXX: Is this actually needed? Doesn't the backend handle this?
-            data = duck_array_ops.astype(duck_array_ops.around(data), dtype)
+            # two-stage casting to prevent undefined cast from float to unsigned int
+            # first float -> int with corresponding itemsize
+            # second int -> int/uint to final itemsize
+            signed_dtype = np.dtype(f"i{data.itemsize}")
+            data = duck_array_ops.astype(
+                duck_array_ops.astype(
+                    duck_array_ops.around(data), signed_dtype, copy=False
+                ),
+                dtype,
+                copy=False,
+            )
             attrs["_FillValue"] = fill_value
 
         return Variable(dims, data, attrs, encoding, fastpath=True)
@@ -359,11 +374,9 @@ class CFMaskCoder(VariableCoder):
 
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        # Even if _Unsigned is use, retain on-disk _FillValue
-        [
+        # Even if _Unsigned is used, retain on-disk _FillValue
+        for attr, value in raw_fill_dict.items():
             safe_setitem(encoding, attr, value, name=name)
-            for attr, value in raw_fill_dict.items()
-        ]
 
         if "_Unsigned" in attrs:
             unsigned = pop_to(attrs, encoding, "_Unsigned")
@@ -510,9 +523,9 @@ class CFScaleOffsetCoder(VariableCoder):
 
             scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
             add_offset = pop_to(attrs, encoding, "add_offset", name=name)
-            if np.ndim(scale_factor) > 0:
+            if duck_array_ops.ndim(scale_factor) > 0:
                 scale_factor = np.asarray(scale_factor).item()
-            if np.ndim(add_offset) > 0:
+            if duck_array_ops.ndim(add_offset) > 0:
                 add_offset = np.asarray(add_offset).item()
             # if we have a _FillValue/masked_value in encoding we already have the wanted
             # floating point dtype here (via CFMaskCoder), so no check is necessary

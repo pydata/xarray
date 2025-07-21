@@ -51,7 +51,6 @@ from unicodedata import normalize
 
 import numpy as np
 
-from xarray.computation.computation import apply_ufunc
 from xarray.core import duck_array_ops
 from xarray.core.types import T_DataArray
 
@@ -126,6 +125,8 @@ def _apply_str_ufunc(
     dask_gufunc_kwargs = dict()
     if output_sizes is not None:
         dask_gufunc_kwargs["output_sizes"] = output_sizes
+
+    from xarray.computation.apply_ufunc import apply_ufunc
 
     return apply_ufunc(
         func,
@@ -348,7 +349,7 @@ class StringAccessor(Generic[T_DataArray]):
             islice = slice(-1, None) if iind == -1 else slice(iind, iind + 1)
             item = x[islice]
 
-            return item if item else default
+            return item or default
 
         return self._apply(func=f, func_args=(i,))
 
@@ -661,10 +662,11 @@ class StringAccessor(Generic[T_DataArray]):
         """
         args = tuple(self._stringify(x) for x in args)
         kwargs = {key: self._stringify(val) for key, val in kwargs.items()}
-        func = lambda x, *args, **kwargs: self._obj.dtype.type.format(
-            x, *args, **kwargs
+        return self._apply(
+            func=self._obj.dtype.type.format,
+            func_args=args,
+            func_kwargs={"kwargs": kwargs},
         )
-        return self._apply(func=func, func_args=args, func_kwargs={"kwargs": kwargs})
 
     def capitalize(self) -> T_DataArray:
         """
@@ -1943,7 +1945,7 @@ class StringAccessor(Generic[T_DataArray]):
         if regex:
             pat = self._re_compile(pat=pat, flags=flags, case=case)
             func = lambda x, ipat, irepl, i_n: ipat.sub(
-                repl=irepl, string=x, count=i_n if i_n >= 0 else 0
+                repl=irepl, string=x, count=max(i_n, 0)
             )
         else:
             pat = self._stringify(pat)

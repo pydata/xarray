@@ -20,6 +20,8 @@ from xarray.core.variable import IndexVariable, Variable
 from xarray.namedarray.utils import is_duck_dask_array
 
 if TYPE_CHECKING:
+    from typing import Self
+
     from numpy.typing import DTypeLike
 
     from xarray.core.dataarray import DataArray
@@ -650,7 +652,7 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
 class CombinedDatetimelikeAccessor(
     DatetimeAccessor[T_DataArray], TimedeltaAccessor[T_DataArray]
 ):
-    def __new__(cls, obj: T_DataArray) -> CombinedDatetimelikeAccessor:
+    def __new__(cls, obj: T_DataArray) -> Self:
         # CombinedDatetimelikeAccessor isn't really instantiated. Instead
         # we need to choose which parent (datetime or timedelta) is
         # appropriate. Since we're checking the dtypes anyway, we'll just

@@ -13,20 +13,22 @@ import warnings
 from collections.abc import Callable
 from functools import partial
 from importlib import import_module
+from typing import Any
 
 import numpy as np
 import pandas as pd
-from numpy import (  # noqa: F401
+from numpy import (
     isclose,
     isnat,
     take,
-    unravel_index,
+    unravel_index,  # noqa: F401
 )
 from pandas.api.types import is_extension_array_dtype
 
 from xarray.compat import dask_array_compat, dask_array_ops
 from xarray.compat.array_api_compat import get_array_namespace
 from xarray.core import dtypes, nputils
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.options import OPTIONS
 from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
 from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -47,8 +49,6 @@ dask_available = module_available("dask")
 
 
 def einsum(*args, **kwargs):
-    from xarray.core.options import OPTIONS
-
     if OPTIONS["use_opt_einsum"] and module_available("opt_einsum"):
         import opt_einsum
 
@@ -143,6 +143,21 @@ def round(array):
 around: Callable = round
 
 
+def isna(data: Any) -> bool:
+    """Checks if data is literally np.nan or pd.NA.
+
+    Parameters
+    ----------
+    data
+        Any python object
+
+    Returns
+    -------
+        Whether or not the data is np.nan or pd.NA
+    """
+    return data is pd.NA or data is np.nan  # noqa: PLW0177
+
+
 def isnull(data):
     data = asarray(data)
 
@@ -168,16 +183,15 @@ def isnull(data):
         # bool_ is for backwards compat with numpy<2, and cupy
         dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
         return full_like(data, dtype=dtype, fill_value=False)
+    # at this point, array should have dtype=object
+    elif isinstance(data, np.ndarray) or is_extension_array_dtype(data):
+        return pandas_isnull(data)
     else:
-        # at this point, array should have dtype=object
-        if isinstance(data, np.ndarray) or is_extension_array_dtype(data):
-            return pandas_isnull(data)
-        else:
-            # Not reachable yet, but intended for use with other duck array
-            # types. For full consistency with pandas, we should accept None as
-            # a null value as well as NaN, but it isn't clear how to do this
-            # with duck typing.
-            return data != data
+        # Not reachable yet, but intended for use with other duck array
+        # types. For full consistency with pandas, we should accept None as
+        # a null value as well as NaN, but it isn't clear how to do this
+        # with duck typing.
+        return data != data  # noqa: PLR0124
 
 
 def notnull(data):
@@ -251,18 +265,25 @@ def asarray(data, xp=np, dtype=None):
 
 
 def as_shared_dtype(scalars_or_arrays, xp=None):
-    """Cast a arrays to a shared dtype using xarray's type promotion rules."""
+    """Cast arrays to a shared dtype using xarray's type promotion rules."""
     if any(is_extension_array_dtype(x) for x in scalars_or_arrays):
         extension_array_types = [
             x.dtype for x in scalars_or_arrays if is_extension_array_dtype(x)
         ]
-        if len(extension_array_types) == len(scalars_or_arrays) and all(
+        non_nans = [x for x in scalars_or_arrays if not isna(x)]
+        if len(extension_array_types) == len(non_nans) and all(
             isinstance(x, type(extension_array_types[0])) for x in extension_array_types
         ):
-            return scalars_or_arrays
+            return [
+                x
+                if not isna(x)
+                else PandasExtensionArray(
+                    type(non_nans[0].array)._from_sequence([x], dtype=non_nans[0].dtype)
+                )
+                for x in scalars_or_arrays
+            ]
         raise ValueError(
-            "Cannot cast arrays to shared type, found"
-            f" array types {[x.dtype for x in scalars_or_arrays]}"
+            f"Cannot cast values to shared type, found values: {scalars_or_arrays}"
         )
 
     # Avoid calling array_type("cupy") repeatidely in the any check
@@ -658,9 +679,7 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
         The output data type.
 
     """
-    import datetime as dt
-
-    if isinstance(value, dt.timedelta):
+    if isinstance(value, datetime.timedelta):
         out = py_timedelta_to_float(value, datetime_unit)
     elif isinstance(value, np.timedelta64):
         out = np_timedelta64_to_float(value, datetime_unit)
@@ -771,6 +790,12 @@ def _nd_cum_func(cum_func, array, axis, **kwargs):
     for ax in axis:
         out = cum_func(out, axis=ax, **kwargs)
     return out
+
+
+def ndim(array) -> int:
+    # Required part of the duck array and the array-api, but we fall back in case
+    # https://docs.xarray.dev/en/latest/internals/duck-arrays-integration.html#duck-array-requirements
+    return array.ndim if hasattr(array, "ndim") else np.ndim(array)
 
 
 def cumprod(array, axis=None, **kwargs):

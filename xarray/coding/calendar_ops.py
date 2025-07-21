@@ -9,7 +9,6 @@ from xarray.coding.times import (
     _should_cftime_be_used,
     convert_times,
 )
-from xarray.computation.computation import apply_ufunc
 from xarray.core.common import (
     _contains_datetime_like_objects,
     full_like,
@@ -214,7 +213,7 @@ def convert_calendar(
         out[dim] = new_times
 
         # Remove NaN that where put on invalid dates in target calendar
-        out = out.where(out[dim].notnull(), drop=True)
+        out = out.sel({dim: out[dim].notnull()})
 
         if use_cftime:
             # Reassign times to ensure time index of output is a CFTimeIndex
@@ -333,6 +332,8 @@ def _decimal_year(times):
     else:
         function = _decimal_year_numpy
         kwargs = {"dtype": times.dtype}
+    from xarray.computation.apply_ufunc import apply_ufunc
+
     return apply_ufunc(
         function,
         times,

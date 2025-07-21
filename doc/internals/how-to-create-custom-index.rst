@@ -53,8 +53,8 @@ number, order and dimensions of the coordinates are all arbitrary), it is the
 responsibility of the index to check the consistency and validity of those input
 coordinates.
 
-For example, :py:class:`~xarray.core.indexes.PandasIndex` accepts only one coordinate and
-:py:class:`~xarray.core.indexes.PandasMultiIndex` accepts one or more 1-dimensional coordinates that must all
+For example, :py:class:`~xarray.indexes.PandasIndex` accepts only one coordinate and
+:py:class:`~xarray.indexes.PandasMultiIndex` accepts one or more 1-dimensional coordinates that must all
 share the same dimension. Other, custom indexes need not have the same
 constraints, e.g.,
 
