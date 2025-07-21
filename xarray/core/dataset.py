@@ -3854,7 +3854,7 @@ class Dataset(
                 if all(var.sizes[d] == 1 for d in (use_indexers.keys() & var.dims)):
                     # Broadcastable, can be handled quickly without reindex:
                     to_broadcast = (var.squeeze(),) + tuple(
-                        dest for index, dest in use_indexers.values()
+                        dest for _, dest in use_indexers.values()
                     )
                     variables[name] = broadcast_variables(*to_broadcast)[0].copy(
                         deep=True
