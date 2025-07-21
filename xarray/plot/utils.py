@@ -13,7 +13,7 @@ from collections.abc import (
 )
 from datetime import date, datetime
 from inspect import getfullargspec
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -1925,10 +1925,9 @@ def _line(
 
     The function attempts to be as similar to the scatter version as possible.
     """
-    import matplotlib.cbook as cbook
     import matplotlib.collections as mcoll
     import matplotlib.pyplot as plt
-    from matplotlib import _api
+    from matplotlib import _api, cbook
 
     rcParams = plt.matplotlib.rcParams
 
@@ -1992,7 +1991,7 @@ def _line(
         and not np.issubdtype(s_.dtype, np.integer)
     ):
         raise ValueError(
-            "s must be a scalar, " "or float array-like with the same size as x and y"
+            "s must be a scalar, or float array-like with the same size as x and y"
         )
 
     # get the original edgecolor the user passed before we normalize
