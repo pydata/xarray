@@ -3850,7 +3850,7 @@ class Dataset(
                 # For normal number types do the interpolation:
                 var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
                 variables[name] = missing.interp(var, var_indexers, method, **kwargs)
-            elif dtype_kind in "ObU" and use_indexers.keys() & var.dims:
+            elif dtype_kind in "ObU" and (use_indexers.keys() & var.dims):
                 if all(var.sizes[d] == 1 for d in (use_indexers.keys() & var.dims)):
                     # Broadcastable, can be handled quickly without reindex:
                     to_broadcast = (var.copy().squeeze(),) + tuple(
