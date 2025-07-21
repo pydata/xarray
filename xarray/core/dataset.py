@@ -3853,10 +3853,10 @@ class Dataset(
             elif dtype_kind in "ObU" and (use_indexers.keys() & var.dims):
                 if all(var.sizes[d] == 1 for d in (use_indexers.keys() & var.dims)):
                     # Broadcastable, can be handled quickly without reindex:
-                    to_broadcast = (var.copy().squeeze(),) + tuple(
+                    to_broadcast = (var.squeeze(),) + tuple(
                         dest for index, dest in use_indexers.values()
                     )
-                    variables[name] = broadcast_variables(*to_broadcast)[0]
+                    variables[name] = broadcast_variables(*to_broadcast)[0].copy(deep=True)
                 else:
                     # For types that we do not understand do stepwise
                     # interpolation to avoid modifying the elements.
