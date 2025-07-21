@@ -1179,10 +1179,6 @@ class TestDataset:
         assert len(rechunked.chunksizes["time"]) == 9
         assert rechunked.chunksizes["x"] == (2,) * 5
 
-        # Test error on missing season (should fail with incomplete seasons)
-        with pytest.raises(ValueError):
-            ds.chunk(x=2, time=SeasonResampler(["DJF", "MAM", "SON"]))
-
         # Test that drop_incomplete doesn't affect chunking
         rechunked_drop_true = ds.chunk(
             time=SeasonResampler(["DJF", "MAM", "JJA", "SON"], drop_incomplete=True)
@@ -1214,6 +1210,10 @@ class TestDataset:
         # This should work
         result = ds.chunk(x=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
         assert result.chunks is not None
+
+        # Test error on missing season (should fail with incomplete seasons)
+        with pytest.raises(ValueError):
+            ds.chunk(x=SeasonResampler(["DJF", "MAM", "SON"]))
 
     @requires_dask
     def test_chunk(self) -> None:
