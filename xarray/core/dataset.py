@@ -3856,7 +3856,9 @@ class Dataset(
                     to_broadcast = (var.squeeze(),) + tuple(
                         dest for index, dest in use_indexers.values()
                     )
-                    variables[name] = broadcast_variables(*to_broadcast)[0].copy(deep=True)
+                    variables[name] = broadcast_variables(*to_broadcast)[0].copy(
+                        deep=True
+                    )
                 else:
                     # For types that we do not understand do stepwise
                     # interpolation to avoid modifying the elements.
