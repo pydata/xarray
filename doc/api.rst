@@ -10,35 +10,31 @@ This page provides an auto-generated summary of xarray's API. For more details
 and examples, refer to the relevant chapters in the main part of the
 documentation.
 
-See also: :ref:`public api`
+See also: :ref:`public-api` and :ref:`api-stability`.
 
-Top-level functions
-===================
+.. toctree::
+   :maxdepth: 1
 
-.. autosummary::
-   :toctree: generated/
-
-   apply_ufunc
-   align
-   broadcast
-   concat
-   merge
-   combine_by_coords
-   combine_nested
-   where
-   infer_freq
-   full_like
-   zeros_like
-   ones_like
-   cov
-   corr
-   cross
-   dot
-   polyval
-   map_blocks
-   show_versions
-   set_options
-   get_options
-   unify_chunks
-
-Dataset
+   api/top-level
+   api/dataset
+   api/dataarray
+   api/datatree
+   api/coordinates
+   api/indexes
+   api/ufuncs
+   api/io
+   api/encoding
+   api/plotting
+   api/groupby
+   api/rolling
+   api/coarsen
+   api/rolling-exp
+   api/weighted
+   api/resample
+   api/accessors
+   api/tutorial
+   api/testing
+   api/backends
+   api/exceptions
+   api/advanced
+   api/deprecated
