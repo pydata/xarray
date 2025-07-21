@@ -1136,15 +1136,6 @@ class TestDataset:
         assert ds.chunks == {}
 
     @requires_dask
-    def test_chunk(self) -> None:
-        data = create_test_data()
-        for chunks in [1, 2, 3, 4, 5]:
-            rechunked = data.chunk({"dim1": chunks})
-            assert rechunked.chunks["dim1"] == (chunks,) * (8 // chunks) + (
-                (8 % chunks,) if 8 % chunks else ()
-            )
-
-    @requires_dask
     @pytest.mark.parametrize(
         "use_cftime,calendar",
         [(True, "standard"), (False, "standard"), (True, "noleap"), (True, "360_day")],
@@ -1223,6 +1214,9 @@ class TestDataset:
         # This should work
         result = ds.chunk(x=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
         assert result.chunks is not None
+
+    @requires_dask
+    def test_chunk(self) -> None:
         data = create_test_data()
         for v in data.variables.values():
             assert isinstance(v.data, np.ndarray)

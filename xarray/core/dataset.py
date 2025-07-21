@@ -2481,11 +2481,11 @@ class Dataset(
                 f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.sizes.keys())}"
             )
 
-        def _resolve_frequency(name: Hashable, resampler: Resampler) -> tuple[int, ...]:
+        def _resolve_resampler(name: Hashable, resampler: Resampler) -> tuple[int, ...]:
             variable = self._variables.get(name, None)
             if variable is None:
                 raise ValueError(
-                    f"Cannot chunk by resampler {resampler!r} for virtual variables."
+                    f"Cannot chunk by resampler {resampler!r} for virtual variable {name!r}."
                 )
             if variable.ndim != 1:
                 raise ValueError(
@@ -2501,7 +2501,7 @@ class Dataset(
 
         chunks_mapping_ints: Mapping[Any, T_ChunkDim] = {
             name: (
-                _resolve_frequency(name, chunks)
+                _resolve_resampler(name, chunks)
                 if isinstance(chunks, Resampler)
                 else chunks
             )
