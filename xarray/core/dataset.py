@@ -3854,11 +3854,11 @@ class Dataset(
                 matching_dims = use_indexers.keys() & var.dims
 
                 # if matching_dims and all(var.sizes[d] == 1 for d in matching_dims):
-                    # Broadcastable, can be handled quickly without reindex:
-                    # to_broadcast = (var.squeeze(),) + tuple(
-                        # dest for index, dest in use_indexers.values()
-                    # )
-                    # variables[name] = broadcast_variables(*to_broadcast)[0]
+                # Broadcastable, can be handled quickly without reindex:
+                # to_broadcast = (var.squeeze(),) + tuple(
+                # dest for index, dest in use_indexers.values()
+                # )
+                # variables[name] = broadcast_variables(*to_broadcast)[0]
                 if matching_dims:
                     # For types that we do not understand do stepwise
                     # interpolation to avoid modifying the elements.
