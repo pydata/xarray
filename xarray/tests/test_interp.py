@@ -1083,6 +1083,9 @@ def test_interp_non_numeric_scalar() -> None:
     )
     xr.testing.assert_identical(actual, expected)
 
+    # Make sure the array is a copy:
+    assert actual["non_numeric"].data.base is None
+
 
 @requires_scipy
 def test_interp_non_numeric_1d() -> None:
