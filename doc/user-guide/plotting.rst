@@ -4,6 +4,9 @@
 Plotting
 ========
 
+Introduction
+------------
+
 Labeled data enables expressive computations. These same
 labels can also be used to easily create informative plots.
 
@@ -53,7 +56,7 @@ The plotting functionality in xarray is organized into several focused sections:
 - **Line plots**: For 1-dimensional data and time series
 - **2D plots**: For images, maps, and spatial data
 - **Faceting**: For creating multi-panel plots (small multiples)
-- **Scatter and quiver plots**: For vector data and 3D visualizations
+- **Dataset plotting**: For scatter plots, quiver plots, and vector data visualization
 
 Each section provides detailed examples and best practices for that type of visualization.
 
@@ -65,4 +68,4 @@ The following topics are covered in the subsections below:
    plotting-lines
    plotting-2d
    plotting-faceting
-   plotting-scatter-quiver
+   plotting-datasets

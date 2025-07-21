@@ -1,13 +1,8 @@
 .. currentmodule:: xarray
-.. _plotting.scatter-quiver:
-
-Scatter, Quiver, & Streamplot
-==============================
-
 .. _plot-dataset:
 
-Datasets
----------
+Dataset Plotting
+================
 
 Xarray has limited support for plotting Dataset variables against each other.
 Consider this dataset
@@ -36,7 +31,7 @@ Consider this dataset
 
 
 Scatter
-~~~~~~~
+-------
 
 Let's plot the ``A`` DataArray as a function of the ``y`` coord
 
@@ -106,7 +101,7 @@ For more advanced scatter plots, we recommend converting the relevant data varia
 to a pandas DataFrame and using the extensive plotting capabilities of ``seaborn``.
 
 Quiver
-~~~~~~
+------
 
 Visualizing vector fields is supported with quiver plots:
 
@@ -125,7 +120,7 @@ where ``u`` and ``v`` denote the x and y direction components of the arrow vecto
 The scale determines the number of data units per arrow length unit, i.e. a smaller scale parameter makes the arrow longer.
 
 Streamplot
-~~~~~~~~~~
+----------
 
 Visualizing vector fields is also supported with streamline plots:
 

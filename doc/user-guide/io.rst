@@ -111,12 +111,13 @@ You can learn more about using and developing backends in the
 
         linkStyle default font-size:18pt,stroke-width:4
 
-Subsections
------------
+Organization
+------------
 
-.. toctree::
-   :maxdepth: 2
+This documentation is organized into separate sections for each major file format:
 
-   io-netcdf-hdf
-   io-zarr
-   io-other-formats
+- :ref:`io.netcdf`: NetCDF and HDF5 file formats, including complex data types
+- :ref:`io.zarr`: Zarr format for cloud-optimized array storage
+- :doc:`io-other-formats`: Additional formats including Iris, pickle, and various other backends
+
+Each section provides detailed examples and best practices for working with that specific format.
