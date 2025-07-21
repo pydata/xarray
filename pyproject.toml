@@ -13,12 +13,12 @@ classifiers = [
 ]
 description = "N-D labeled arrays and datasets in Python"
 dynamic = ["version"]
-# license = "Apache-2.0"
+license = "Apache-2.0"
 name = "xarray"
 readme = "README.md"
 requires-python = ">=3.11"
 
-dependencies = ["numpy>=1.26", "packaging>=24.1", "pandas>=2.2"]
+dependencies = ["numpy>=1.26", "packaging>=24.2", "pandas>=2.2"]
 
 # We don't encode minimum requirements here (though if we can write a script to
 # generate the text from `min_deps_check.py`, that's welcome...). We do add
@@ -97,7 +97,7 @@ dask = "xarray.namedarray.daskmanager:DaskManager"
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=42", "setuptools-scm>=7"]
+requires = ["setuptools>=77.0.3", "setuptools-scm>=8"]
 
 [tool.setuptools.packages.find]
 include = ["xarray*"]
