@@ -13,7 +13,7 @@ classifiers = [
 ]
 description = "N-D labeled arrays and datasets in Python"
 dynamic = ["version"]
-license = "Apache-2.0"
+# license = "Apache-2.0"
 name = "xarray"
 readme = "README.md"
 requires-python = ">=3.11"
