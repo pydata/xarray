@@ -591,7 +591,7 @@ Writing complex data to NetCDF files is supported via :py:meth:`~xarray.DataArra
 
 .. tab:: h5netcdf
 
-   This requires the `h5netcdf <https://h5netcdf.org>`_ library to be installed.
+   This requires the `h5netcdf <https://h5netcdf.org>`__ library to be installed.
 
    .. jupyter-execute::
 

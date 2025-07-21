@@ -41,6 +41,7 @@ examples that describe many common tasks that you can accomplish with Xarray.
    :maxdepth: 2
    :caption: Plotting
 
+   plotting
    plotting-lines
    plotting-2d
    plotting-faceting
