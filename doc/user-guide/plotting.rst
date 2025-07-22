@@ -752,7 +752,6 @@ allowing multiple lines being drawn efficiently. It uses similar arguments as
 Let's return to the air temperature dataset:
 
 .. jupyter-execute::
-    :stderr:
 
     airtemps = xr.tutorial.open_dataset("air_temperature")
     air = airtemps.air - 273.15
@@ -764,7 +763,6 @@ Let's return to the air temperature dataset:
 Make it a little more transparent:
 
 .. jupyter-execute::
-    :stderr:
 
     air.isel(lon=10).plot.lines(x="time", hue="lat", alpha=0.2)
 
@@ -783,7 +781,6 @@ Lines can modify the linestyle but does not allow markers. Instead combine :py:f
 with :py:func:`xarray.plot.scatter`:
 
 .. jupyter-execute::
-    :stderr:
 
     air.isel(lat=10, lon=10)[:200].plot.lines(x="time", color="k", linestyle="dashed")
     air.isel(lat=10, lon=10)[:200].plot.scatter(x="time", color="k", marker="^")
