@@ -536,6 +536,8 @@ def safe_cast_to_index(array: Any) -> pd.Index:
                 kwargs["dtype"] = "float64"
 
         index = pd.Index(to_numpy(array), **kwargs)
+        if isinstance(index.dtype, pd.StringDtype):
+            index = index.astype("O")
 
     return _maybe_cast_to_cftimeindex(index)
 

@@ -33,6 +33,7 @@ accel = [
   "numba>=0.59",
   "flox>=0.9",
   "opt_einsum",
+  "numpy<2.3",    # numba has not updated yet: https://github.com/numba/numba/issues/10105
 ]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
