@@ -536,6 +536,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
                 kwargs["dtype"] = "float64"
 
         index = pd.Index(to_numpy(array), **kwargs)
+        # See https://github.com/pydata/xarray/issues/10553
         if isinstance(index.dtype, pd.StringDtype):
             index = index.astype("O")
 
