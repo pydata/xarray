@@ -790,7 +790,7 @@ Switching to another dataset with more variables we can analyse in similar
 fashion as :py:func:`xarray.plot.scatter`:
 
 .. jupyter-execute::
-
+    :stderr:
     ds = xr.tutorial.scatter_example_dataset(seed=42)
 
     ds.plot.lines(x="A", y="B", hue="y", linewidth="x", row="x", col="w")
