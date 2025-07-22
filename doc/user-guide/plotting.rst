@@ -791,7 +791,6 @@ fashion as :py:func:`xarray.plot.scatter`:
 
 .. jupyter-execute::
     :stderr:
-    :stderr:
 
     ds = xr.tutorial.scatter_example_dataset(seed=42)
     ds.plot.lines(x="A", y="B", hue="y", linewidth="x", row="x", col="w")
