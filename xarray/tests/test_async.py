@@ -11,56 +11,19 @@ from xarray.tests.test_dataset import create_test_data
 
 if has_zarr_v3:
     import zarr
-    from zarr.abc.store import ByteRequest, Store
-    from zarr.core.buffer import Buffer, BufferPrototype
-    from zarr.storage import MemoryStore
-    from zarr.storage._wrapper import WrapperStore
-
-    T_Store = TypeVar("T_Store", bound=Store)
-
-    class ReadOnlyStore(WrapperStore[T_Store]):
-        """
-        We shouldn't need this - but we currently do just as a way around https://github.com/zarr-developers/zarr-python/issues/3105#issuecomment-2990367167
-
-        Works the same way as the zarr LoggingStore.
-        """
-
-        read_only = True
-
-        def __init__(
-            self,
-            store: T_Store,
-        ) -> None:
-            super().__init__(store)
-
-        async def get(
-            self,
-            key: str,
-            prototype: BufferPrototype,
-            byte_range: ByteRequest | None = None,
-        ) -> Buffer | None:
-            return await self._store.get(
-                key=key, prototype=prototype, byte_range=byte_range
-            )
-
 else:
-    ReadOnlyStore = {}
+    # TODO what should we test when async loading not available?
+    pytest.mark.skip(reason="async loading from zarr requires zarr-python v3")
 
 
 @pytest.fixture
-def memorystore() -> "MemoryStore":
+def store() -> "MemoryStore":
     memorystore = zarr.storage.MemoryStore({})
 
     ds = create_test_data()
     ds.to_zarr(memorystore, zarr_format=3, consolidated=False)
 
     return memorystore
-
-
-@pytest.fixture
-def store(memorystore) -> "zarr.abc.store.Store":
-    # TODO we shouldn't this Store at all for the patched tests, but we currently use it just as a way around https://github.com/zarr-developers/zarr-python/issues/3105#issuecomment-2990367167
-    return ReadOnlyStore(memorystore)
 
 
 def get_xr_obj(
