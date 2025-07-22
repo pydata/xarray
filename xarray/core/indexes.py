@@ -768,10 +768,12 @@ class PandasIndex(Index):
 
         if not indexes:
             coord_dtype = None
-        elif len(set(idx.coord_dtype for idx in indexes)) == 1:
-            coord_dtype = indexes[0].coord_dtype
         else:
-            coord_dtype = np.result_type(*[idx.coord_dtype for idx in indexes])
+            indexes_coord_dtypes = {idx.coord_dtype for idx in indexes}
+            if len(indexes_coord_dtypes) == 1:
+                coord_dtype = next(iter(indexes_coord_dtypes))
+            else:
+                coord_dtype = np.result_type(*indexes_coord_dtypes)
 
         return cls(new_pd_index, dim=dim, coord_dtype=coord_dtype)
 
@@ -1247,7 +1249,7 @@ class PandasMultiIndex(PandasIndex):
                 level = name
                 dtype = self.level_coords_dtype[name]  # type: ignore[index]  # TODO: are Hashables ok?
 
-            var = variables.get(name, None)
+            var = variables.get(name)
             if var is not None:
                 attrs = var.attrs
                 encoding = var.encoding
@@ -1453,14 +1455,15 @@ class PandasMultiIndex(PandasIndex):
 class CoordinateTransformIndex(Index):
     """Helper class for creating Xarray indexes based on coordinate transforms.
 
-    EXPERIMENTAL (not ready for public use yet).
-
     - wraps a :py:class:`CoordinateTransform` instance
     - takes care of creating the index (lazy) coordinates
     - supports point-wise label-based selection
     - supports exact alignment only, by comparing indexes based on their transform
       (not on their explicit coordinate labels)
 
+    .. caution::
+        This API is experimental and subject to change. Please report any bugs or surprising
+        behaviour you encounter.
     """
 
     transform: CoordinateTransform
@@ -1955,7 +1958,7 @@ def _wrap_index_equals(
             f"the signature ``{index_cls_name}.equals(self, other)`` is deprecated. "
             f"Please update it to "
             f"``{index_cls_name}.equals(self, other, *, exclude=None)`` "
-            "or kindly ask the maintainers of ``{index_cls_name}`` to do it. "
+            f"or kindly ask the maintainers of ``{index_cls_name}`` to do it. "
             "See documentation of xarray.Index.equals() for more info.",
             FutureWarning,
         )

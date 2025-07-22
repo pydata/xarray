@@ -1321,8 +1321,7 @@ class TestDataArrayGroupBy:
         grouped = self.da.groupby("abc")
         expected_groups = {"a": range(9), "c": [9], "b": range(10, 20)}
         assert expected_groups.keys() == grouped.groups.keys()
-        for key in expected_groups:
-            expected_group = expected_groups[key]
+        for key, expected_group in expected_groups.items():
             actual_group = grouped.groups[key]
 
             # TODO: array_api doesn't allow slice:
@@ -3236,7 +3235,7 @@ def test_shuffle_simple() -> None:
     da = xr.DataArray(
         dims="x",
         data=dask.array.from_array([1, 2, 3, 4, 5, 6], chunks=2),
-        coords={"label": ("x", "a b c a b c".split(" "))},
+        coords={"label": ("x", ["a", "b", "c", "a", "b", "c"])},
     )
     actual = da.groupby(label=UniqueGrouper()).shuffle_to_chunks()
     expected = da.isel(x=[0, 3, 1, 4, 2, 5])
@@ -3256,8 +3255,6 @@ def test_shuffle_simple() -> None:
 )
 def test_shuffle_by(chunks, expected_chunks):
     import dask.array
-
-    from xarray.groupers import UniqueGrouper
 
     da = xr.DataArray(
         dims="x",

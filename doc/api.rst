@@ -12,9 +12,6 @@ documentation.
 
 See also: :ref:`public-api` and :ref:`api-stability`.
 
-Top-level functions
-===================
-
 .. autosummary::
    :toctree: generated/
 
@@ -1747,3 +1744,30 @@ Deprecated / Pending Deprecation
 
    DataArray.dt.weekofyear
    DataArray.dt.week
+=======
+.. toctree::
+   :maxdepth: 1
+
+   api/top-level
+   api/dataset
+   api/dataarray
+   api/datatree
+   api/coordinates
+   api/indexes
+   api/ufuncs
+   api/io
+   api/encoding
+   api/plotting
+   api/groupby
+   api/rolling
+   api/coarsen
+   api/rolling-exp
+   api/weighted
+   api/resample
+   api/accessors
+   api/tutorial
+   api/testing
+   api/backends
+   api/exceptions
+   api/advanced
+   api/deprecated

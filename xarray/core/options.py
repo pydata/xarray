@@ -46,16 +46,16 @@ if TYPE_CHECKING:
         display_values_threshold: int
         display_style: Literal["text", "html"]
         display_width: int
-        display_expand_attrs: Literal["default", True, False]
-        display_expand_coords: Literal["default", True, False]
-        display_expand_data_vars: Literal["default", True, False]
-        display_expand_data: Literal["default", True, False]
-        display_expand_groups: Literal["default", True, False]
-        display_expand_indexes: Literal["default", True, False]
-        display_default_indexes: Literal["default", True, False]
+        display_expand_attrs: Literal["default"] | bool
+        display_expand_coords: Literal["default"] | bool
+        display_expand_data_vars: Literal["default"] | bool
+        display_expand_data: Literal["default"] | bool
+        display_expand_groups: Literal["default"] | bool
+        display_expand_indexes: Literal["default"] | bool
+        display_default_indexes: Literal["default"] | bool
         enable_cftimeindex: bool
         file_cache_maxsize: int
-        keep_attrs: Literal["default", True, False]
+        keep_attrs: Literal["default"] | bool
         warn_for_unclosed_files: bool
         use_bottleneck: bool
         use_flox: bool

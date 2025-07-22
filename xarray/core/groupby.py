@@ -540,7 +540,7 @@ class ComposedGrouper:
         _flatcodes = where(mask.data, -1, _flatcodes)
 
         full_index = pd.MultiIndex.from_product(
-            list(grouper.full_index.values for grouper in groupers),
+            [grouper.full_index.values for grouper in groupers],
             names=tuple(grouper.name for grouper in groupers),
         )
         if not full_index.is_unique:

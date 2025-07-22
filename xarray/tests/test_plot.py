@@ -235,7 +235,7 @@ class TestPlot(PlotTestCase):
         z = np.arange(10)
         da = DataArray(np.cos(z), dims=["z"], coords=[z], name="f")
 
-        xy: list[list[None | str]] = [[None, None], [None, "z"], ["z", None]]
+        xy: list[list[str | None]] = [[None, None], [None, "z"], ["z", None]]
 
         f, axs = plt.subplots(3, 1, squeeze=False)
         for aa, (x, y) in enumerate(xy):
@@ -828,7 +828,7 @@ class TestPlot1D(PlotTestCase):
         darray = self.darray.expand_dims({"d": np.array([10.009])})
         darray.plot.line(x="period")
         title = plt.gca().get_title()
-        assert "d = 10.01" == title
+        assert "d = [10.009]" == title
 
 
 class TestPlotStep(PlotTestCase):
@@ -2789,7 +2789,7 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_add_guide(
         self,
         add_guide: bool | None,
-        hue_style: Literal["continuous", "discrete", None],
+        hue_style: Literal["continuous", "discrete"] | None,
         legend: bool,
         colorbar: bool,
     ) -> None:
