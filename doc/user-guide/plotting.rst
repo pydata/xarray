@@ -752,6 +752,7 @@ allowing multiple lines being drawn efficiently. It uses similar arguments as
 Let's return to the air temperature dataset:
 
 .. jupyter-execute::
+    :stderr:
 
     airtemps = xr.tutorial.open_dataset("air_temperature")
     air = airtemps.air - 273.15
@@ -763,6 +764,7 @@ Let's return to the air temperature dataset:
 Make it a little more transparent:
 
 .. jupyter-execute::
+    :stderr:
 
     air.isel(lon=10).plot.lines(x="time", hue="lat", alpha=0.2)
 
@@ -772,6 +774,7 @@ a similar way as ``markersize`` kwarg for scatter plots, it lets you vary the
 line's size by variable value.
 
 .. jupyter-execute::
+    :stderr:
 
     air_zoom = air.isel(time=slice(1200, 1500), lat=[5, 10, 15], lon=[10, 15])
     air_zoom.plot.lines(x="time", hue="lat", linewidth="lon", add_colorbar=False)
@@ -780,10 +783,10 @@ Lines can modify the linestyle but does not allow markers. Instead combine :py:f
 with :py:func:`xarray.plot.scatter`:
 
 .. jupyter-execute::
+    :stderr:
 
     air.isel(lat=10, lon=10)[:200].plot.lines(x="time", color="k", linestyle="dashed")
     air.isel(lat=10, lon=10)[:200].plot.scatter(x="time", color="k", marker="^")
-    plt.draw()
 
 
 Switching to another dataset with more variables we can analyse in similar
