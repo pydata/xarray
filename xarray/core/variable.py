@@ -23,6 +23,7 @@ from xarray.core.common import AbstractArray
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
     BasicIndexer,
+    CoordinateTransformIndexingAdapter,
     OuterIndexer,
     PandasIndexingAdapter,
     VectorizedIndexer,
@@ -403,10 +404,15 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             return cls_(dims_, data, attrs_)
 
     @property
-    def _in_memory(self):
+    def _in_memory(self) -> bool:
+        if isinstance(
+            self._data, PandasIndexingAdapter | CoordinateTransformIndexingAdapter
+        ):
+            return self._data._in_memory
+
         return isinstance(
             self._data,
-            np.ndarray | np.number | PandasIndexingAdapter | PandasExtensionArray,
+            np.ndarray | np.number | PandasExtensionArray,
         ) or (
             isinstance(self._data, indexing.MemoryCachedArray)
             and isinstance(self._data.array, indexing.NumpyIndexingAdapter)
@@ -2232,8 +2238,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         for i, d in enumerate(variable.dims):
             if d in windows:
                 size = variable.shape[i]
-                shape.append(int(size / windows[d]))
-                shape.append(windows[d])
+                shape.extend((int(size / windows[d]), windows[d]))
                 axis_count += 1
                 axes.append(i + axis_count)
             else:

@@ -9,8 +9,9 @@ import numpy as np
 class CoordinateTransform:
     """Abstract coordinate transform with dimension & coordinate names.
 
-    EXPERIMENTAL (not ready for public use yet).
-
+    .. caution::
+        This API is experimental and subject to change. Please report any bugs or surprising
+        behaviour you encounter.
     """
 
     coord_names: tuple[Hashable, ...]
@@ -80,7 +81,7 @@ class CoordinateTransform:
         Parameters
         ----------
         other : CoordinateTransform
-            The other Index object to compare with this object.
+            The other CoordinateTransform object to compare with this object.
         exclude : frozenset of hashable, optional
             Dimensions excluded from checking. It is None by default, (i.e.,
             when this method is not called in the context of alignment). For a
