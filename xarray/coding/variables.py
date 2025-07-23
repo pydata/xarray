@@ -70,6 +70,9 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         return duck_array_ops.astype(self.array.get_duck_array(), dtype=self.dtype)
 
+    def transpose(self, order):
+        return type(self)(self.array.transpose(order))
+
 
 class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """Decode arrays on the fly from integer to boolean datatype
@@ -110,6 +113,9 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
     def get_duck_array(self):
         return duck_array_ops.astype(self.array.get_duck_array(), dtype=self.dtype)
+
+    def transpose(self, order):
+        return type(self)(self.array.transpose(order))
 
 
 def _apply_mask(
