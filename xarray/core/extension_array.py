@@ -11,7 +11,7 @@ from packaging.version import Version
 from pandas.api.types import is_extension_array_dtype
 
 from xarray.core.types import DTypeLikeSave, T_ExtensionArray
-from xarray.core.utils import NDArrayMixin
+from xarray.core.utils import NDArrayMixin, is_allowed_extension_array
 
 HANDLED_EXTENSION_ARRAY_FUNCTIONS: dict[Callable, Callable] = {}
 
@@ -101,9 +101,9 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
         # This does not use the UNSUPPORTED_EXTENSION_ARRAY_TYPES whitelist because
         # we do support extension arrays from datetime, for example, that need
         # duck array support internally via this class.
-        if isinstance(self.array, pd.arrays.NumpyExtensionArray):
+        if not is_allowed_extension_array(self.array):
             raise TypeError(
-                "`NumpyExtensionArray` should be converted to a numpy array in `xarray` internally."
+                "`NumpyExtensionArray` or string dtype should be converted to a numpy array in `xarray` internally."
             )
 
     def __array_function__(self, func, types, args, kwargs):

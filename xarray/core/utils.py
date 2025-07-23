@@ -104,6 +104,20 @@ V = TypeVar("V")
 T = TypeVar("T")
 
 
+def is_allowed_extension_array_dtype(dtype: Any):
+    return pd.api.types.is_extension_array_dtype(dtype) and not isinstance(
+        dtype, pd.StringDtype
+    )
+
+
+def is_allowed_extension_array(array: Any):
+    return (
+        hasattr(array, "dtype")
+        and is_allowed_extension_array_dtype(array.dtype)
+        and not isinstance(array, pd.arrays.NumpyExtensionArray)
+    )
+
+
 def alias_message(old_name: str, new_name: str) -> str:
     return f"{old_name} has been deprecated. Use {new_name} instead."
 
