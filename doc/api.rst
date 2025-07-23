@@ -789,7 +789,6 @@ Index into all nodes in the subtree simultaneously.
 
    DataTree.isel
    DataTree.sel
-   DataTree.subset
 
 ..    DataTree.drop_sel
 ..    DataTree.drop_isel
