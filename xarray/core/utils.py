@@ -105,7 +105,7 @@ T = TypeVar("T")
 
 
 def is_allowed_extension_array_dtype(dtype: Any):
-    return pd.api.types.is_extension_array_dtype(dtype) and not isinstance(
+    return pd.api.types.is_extension_array_dtype(dtype) and not isinstance(  # noqa: TID251
         dtype, pd.StringDtype
     )
 
