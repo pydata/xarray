@@ -114,7 +114,7 @@ def is_allowed_extension_array(array: Any):
     return (
         hasattr(array, "dtype")
         and is_allowed_extension_array_dtype(array.dtype)
-        and not isinstance(array, pd.arrays.NumpyExtensionArray)
+        and not isinstance(array, pd.arrays.NumpyExtensionArray)  # type: ignore[attr-defined]
     )
 
 
