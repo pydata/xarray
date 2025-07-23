@@ -29,16 +29,23 @@ examples that describe many common tasks that you can accomplish with Xarray.
 
 .. toctree::
    :maxdepth: 2
-   :caption: I/O
+   :caption: Reading and Writing Files
 
    io
-   complex-numbers
+   io-netcdf-hdf
+   io-zarr
+   io-other-formats
+
 
 .. toctree::
    :maxdepth: 2
-   :caption: Visualization
+   :caption: Plotting
 
    plotting
+   plotting-lines
+   plotting-2d
+   plotting-faceting
+   plotting-datasets
 
 
 .. toctree::
