@@ -58,8 +58,7 @@
   //     "six": ["", null],        // test with and without six installed
   //     "pip+emcee": [""],   // emcee is only available for install with pip.
   // },
-  "matrix": {
-  },
+  "matrix": {},
   // fix for bad builds
   // https://github.com/airspeed-velocity/asv/issues/1389#issuecomment-2076131185
   "build_command": [
