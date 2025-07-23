@@ -59,7 +59,7 @@
   //     "pip+emcee": [""],   // emcee is only available for install with pip.
   // },
   "matrix": {
-      "setuptools":["77.0.3"]
+    "setuptools": ["77.0.3"]
   },
   // fix for bad builds
   // https://github.com/airspeed-velocity/asv/issues/1389#issuecomment-2076131185
