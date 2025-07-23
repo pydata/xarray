@@ -60,6 +60,17 @@
   // },
   "matrix": {
     "setuptools": [""]
+    "numpy": [""],
+    "pandas": [""],
+    "netcdf4": [""],
+    "scipy": [""],
+    "bottleneck": [""],
+    "dask": [""],
+    "distributed": [""],
+    "flox": [""],
+    "numpy_groupies": [""],
+    "sparse": [""],
+    "cftime": [""]
   },
   // fix for bad builds
   // https://github.com/airspeed-velocity/asv/issues/1389#issuecomment-2076131185
