@@ -11,6 +11,7 @@ from numbers import Number
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, overload
 
 from xarray.core import utils
+from xarray.core.common import _contains_cftime_datetimes
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import IndexVariable, Variable
 from xarray.namedarray.parallelcompat import (
@@ -83,9 +84,27 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
         for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape, strict=True)
     )
 
-    chunk_shape = chunkmanager.normalize_chunks(
-        chunk_shape, shape=shape, dtype=var.dtype, previous_chunks=preferred_chunk_shape
-    )
+    if _contains_cftime_datetimes(var):
+        # If we have cftime datetimes, need to preprocess them - we can't pass
+        # an object dtype into DaskManager.normalize_chunks.
+        from dask import config as dask_config
+        from dask.utils import parse_bytes
+
+        from xarray.namedarray.utils import build_chunkspec
+
+        target_chunksize = parse_bytes(dask_config.get("array.chunk-size"))
+        chunk_shape = build_chunkspec(var, target_chunksize=target_chunksize)
+
+        chunk_shape = chunkmanager.normalize_chunks(
+            chunk_shape, shape=shape, previous_chunks=preferred_chunk_shape
+        )
+    else:
+        chunk_shape = chunkmanager.normalize_chunks(
+            chunk_shape,
+            shape=shape,
+            dtype=var.dtype,
+            previous_chunks=preferred_chunk_shape,
+        )
 
     # Warn where requested chunks break preferred chunks, provided that the variable
     # contains data.
