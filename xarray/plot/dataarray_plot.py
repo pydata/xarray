@@ -1587,7 +1587,9 @@ artist :
             # passing it to the colorbar is sufficient for imshow and
             # pcolormesh
             kwargs["extend"] = cmap_params["extend"]
-            if not isinstance(kwargs["locator"], ticker.LogLocator):
+            if "locator" in kwargs and not isinstance(
+                kwargs["locator"], ticker.LogLocator
+            ):
                 kwargs["levels"] = cmap_params["levels"]
             # if colors == a single color, matplotlib draws dashed negative
             # contours. we lose this feature if we pass cmap and not colors
