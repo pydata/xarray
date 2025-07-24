@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.types import AspectOptions, ScaleOptions, NormOptions
+    from xarray.core.types import AspectOptions, NormOptions, ScaleOptions
 
     try:
         import matplotlib.pyplot as plt
@@ -70,7 +70,7 @@ def _make_norm_from_string(
     <class 'matplotlib.colors.LogScaleNorm'>
 
     """
-    from matplotlib.colors import make_norm_from_scale, Normalize
+    from matplotlib.colors import Normalize, make_norm_from_scale
     from matplotlib.scale import scale_factory
 
     scale = type(scale_factory(norm, None))  # type: ignore [arg-type] # mpl issue, use of ax is discouraged
