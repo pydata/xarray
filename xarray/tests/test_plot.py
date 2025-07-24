@@ -1810,11 +1810,10 @@ class TestContour(Common2dMixin, PlotTestCase):
         # https://github.com/matplotlib/matplotlib/blob/84464dd085210fb57cc2419f0d4c0235391d97e6/lib/matplotlib/colors.pyi#L133
         colors = cast(np.ndarray, cmap.colors)
 
-        assert self._color_as_tuple(colors[1]) == (1.0, 0.0, 0.0)
-        assert self._color_as_tuple(colors[2]) == (1.0, 1.0, 1.0)
+        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]
+
         # the last color is now under "over"
-        assert hasattr(cmap, "_rgba_over")
-        assert self._color_as_tuple(cmap._rgba_over) == (0.0, 0.0, 1.0)
+        assert self._color_as_tuple(cmap.get_over()) == (0.0, 0.0, 1.0)
 
     def test_cmap_and_color_both(self) -> None:
         with pytest.raises(ValueError):
