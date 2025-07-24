@@ -1775,7 +1775,8 @@ class TestContourf(Common2dMixin, PlotTestCase):
         # Using a norm should plot a nice colorbar and look consistent with pcolormesh.
         norm = mpl.colors.LogNorm(0.1, 1e1)
 
-        artist = self.plotmethod(norm=norm, add_colorbar=True)
+        with pytest.warns(UserWarning):
+            artist = self.plotmethod(norm=norm, add_colorbar=True)
 
         actual = artist.colorbar.locator()
         expected = np.array([0.01, 0.1, 1.0, 10.0])
@@ -1849,7 +1850,8 @@ class TestContour(Common2dMixin, PlotTestCase):
         # Using a norm should plot a nice colorbar and look consistent with pcolormesh.
         norm = mpl.colors.LogNorm(0.1, 1e1)
 
-        artist = self.plotmethod(norm=norm, add_colorbar=True)
+        with pytest.warns(UserWarning):
+            artist = self.plotmethod(norm=norm, add_colorbar=True)
 
         actual = artist.colorbar.locator()
         expected = np.array([0.01, 0.1, 1.0, 10.0])
