@@ -1817,7 +1817,7 @@ class TestContour(Common2dMixin, PlotTestCase):
         cmap = artist.cmap
         assert isinstance(cmap, mpl.colors.ListedColormap)
 
-        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]
+        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]  # type: ignore[attr-defined]
 
         # the last color is now under "over"
         assert self._color_as_tuple(cmap.get_over()) == (0.0, 0.0, 1.0)
