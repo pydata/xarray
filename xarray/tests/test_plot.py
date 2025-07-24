@@ -1787,16 +1787,18 @@ class TestContour(Common2dMixin, PlotTestCase):
         artist = self.plotmethod(colors="k")
         assert artist.cmap.colors[0] == "k"
 
+        # 2 colors, will repeat every other tick:
         artist = self.plotmethod(colors=["k", "b"])
-        assert self._color_as_tuple(artist.cmap.colors[1]) == (0.0, 0.0, 1.0)
+        assert artist.cmap.colors[:2] == ["k", "b"]
 
+        # 4 colors, will repeat every 4th tick:
         artist = self.darray.plot.contour(
             levels=[-0.5, 0.0, 0.5, 1.0], colors=["k", "r", "w", "b"]
         )
-        assert self._color_as_tuple(artist.cmap.colors[1]) == (1.0, 0.0, 0.0)
-        assert self._color_as_tuple(artist.cmap.colors[2]) == (1.0, 1.0, 1.0)
+        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]
+
         # the last color is now under "over"
-        assert self._color_as_tuple(artist.cmap._rgba_over) == (0.0, 0.0, 1.0)
+        assert self._color_as_tuple(artist.cmap.get_over()) == (0.0, 0.0, 1.0)
 
     def test_colors_np_levels(self) -> None:
         # https://github.com/pydata/xarray/issues/3284
