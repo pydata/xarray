@@ -1806,9 +1806,6 @@ class TestContour(Common2dMixin, PlotTestCase):
         artist = self.darray.plot.contour(levels=levels, colors=["k", "r", "w", "b"])
         cmap = artist.cmap
         assert isinstance(cmap, mpl.colors.ListedColormap)
-        # non-optimal typing in matplotlib (ArrayLike)
-        # https://github.com/matplotlib/matplotlib/blob/84464dd085210fb57cc2419f0d4c0235391d97e6/lib/matplotlib/colors.pyi#L133
-        colors = cast(np.ndarray, cmap.colors)
 
         assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]
 
