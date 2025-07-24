@@ -1855,13 +1855,6 @@ class TestContour(Common2dMixin, PlotTestCase):
         np.testing.assert_allclose(actual, expected)
 
 
-c = TestContour()
-c.setUp()
-c.test_colors()
-c.test_colormap_norm()
-err
-
-
 class TestPcolormesh(Common2dMixin, PlotTestCase):
     plotfunc = staticmethod(xplt.pcolormesh)
 
