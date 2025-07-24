@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, NoReturn, cast
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
+from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
 from xarray.compat.array_api_compat import to_like_array
@@ -217,6 +218,14 @@ def _possibly_convert_objects(values):
     """
     as_series = pd.Series(values.ravel(), copy=False)
     result = np.asarray(as_series).reshape(values.shape)
+    # FIXME: Why does pd.Series no longer preserve data type metadata for object dtype?
+    if (
+        result.dtype.kind == "O"
+        and values.dtype.kind == "O"
+        and Version(pd.__version__) >= Version("3.0.0dev0")
+    ):
+        result = np.asarray(as_series, copy=True).reshape(values.shape)
+        result.dtype = values.dtype
     if not result.flags.writeable:
         # GH8843, pandas copy-on-write mode creates read-only arrays by default
         try:
