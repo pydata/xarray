@@ -200,7 +200,9 @@ Dims = Union[str, Collection[Hashable], EllipsisType, None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
-T_ChunkDim: TypeAlias = str | int | Literal["auto"] | tuple[int, ...] | None  # noqa: PYI051
+T_ChunkDim: TypeAlias = (
+    str | int | Literal["auto"] | tuple[int, ...] | None
+)  # noqa: PYI051
 T_ChunkDimFreq: TypeAlias = Union["TimeResampler", T_ChunkDim]
 T_ChunksFreq: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDimFreq]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
@@ -289,7 +291,9 @@ ScaleOptions = Literal["linear", "symlog", "log", "logit"] | None
 HueStyleOptions = Literal["continuous", "discrete"] | None
 AspectOptions = Union[Literal["auto", "equal"], float, None]
 ExtendOptions = Literal["neither", "both", "min", "max"] | None
-
+NormOptions = Literal[
+    "asinh", "function", "functionlog", "linear", "log", "logit", "symlog"
+]
 
 _T_co = TypeVar("_T_co", covariant=True)
 

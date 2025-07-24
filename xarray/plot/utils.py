@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.types import AspectOptions, ScaleOptions
+    from xarray.core.types import AspectOptions, ScaleOptions, NormOptions
 
     try:
         import matplotlib.pyplot as plt
@@ -56,6 +56,26 @@ ROBUST_PERCENTILE = 2.0
 # copied from seaborn
 _MARKERSIZE_RANGE = (18.0, 36.0, 72.0)
 _LINEWIDTH_RANGE = (1.5, 1.5, 6.0)
+
+
+def _make_norm_from_string(
+    norm: NormOptions,
+) -> type[Normalize]:
+    """
+    Get norm from string.
+
+    Examples
+    --------
+    >>> _make_norm_from_string("log")
+    <class 'matplotlib.colors.LogScaleNorm'>
+
+    """
+    from matplotlib.colors import make_norm_from_scale, Normalize
+    from matplotlib.scale import scale_factory
+
+    scale = type(scale_factory(norm, None))  # type: ignore [arg-type] # mpl issue, use of ax is discouraged
+
+    return make_norm_from_scale(scale, Normalize)
 
 
 def _determine_extend(calc_data, vmin, vmax):
@@ -264,6 +284,8 @@ def _determine_cmap_params(
 
     # now check norm and harmonize with vmin, vmax
     if norm is not None:
+        norm = _make_norm_from_string(norm)() if isinstance(norm, str) else norm
+
         if norm.vmin is None:
             norm.vmin = vmin
         else:
@@ -278,9 +300,9 @@ def _determine_cmap_params(
                 raise ValueError("Cannot supply vmax and a norm with a different vmax.")
             vmax = norm.vmax
 
-    # if BoundaryNorm, then set levels
-    if isinstance(norm, mpl.colors.BoundaryNorm):
-        levels = norm.boundaries
+        # if BoundaryNorm, then set levels
+        if isinstance(norm, mpl.colors.BoundaryNorm):
+            levels = norm.boundaries
 
     # Choose default colormaps if not provided
     if cmap is None:
