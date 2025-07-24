@@ -1771,6 +1771,16 @@ class TestContourf(Common2dMixin, PlotTestCase):
         artist = self.plotmethod(levels=3)
         assert artist.extend == "neither"
 
+    def test_colormap_norm(self) -> None:
+        norm = mpl.colors.LogNorm(0.1, 1e1)
+
+        artist = self.plotmethod(norm=norm, add_colorbar=True)
+
+        actual = artist.colorbar.locator()
+        expected = np.array([0.01, 0.1, 1.0, 10.0])
+
+        np.testing.assert_allclose(actual, expected)
+
 
 @pytest.mark.slow
 class TestContour(Common2dMixin, PlotTestCase):
@@ -1837,19 +1847,19 @@ class TestContour(Common2dMixin, PlotTestCase):
     def test_colormap_norm(self) -> None:
         norm = mpl.colors.LogNorm(0.1, 1e1)
 
-        artist = self.plotmethod(norm=norm)
-
-        lev_exp = np.arange(
-            np.floor(np.log10(artist.colorbar.vmin) - 2),
-            np.ceil(np.log10(artist.colorbar.vmax) + 4),
-            2,
-        )
-        expected = np.power(10, lev_exp)
+        artist = self.plotmethod(norm=norm, add_colorbar=True)
 
         actual = artist.colorbar.locator()
+        expected = np.array([0.01, 0.1, 1.0, 10.0])
+
         np.testing.assert_allclose(actual, expected)
 
 
+c = TestContour()
+c.setUp()
+c.test_colors()
+c.test_colormap_norm()
+err
 class TestPcolormesh(Common2dMixin, PlotTestCase):
     plotfunc = staticmethod(xplt.pcolormesh)
 
