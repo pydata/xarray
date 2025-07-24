@@ -1834,6 +1834,21 @@ class TestContour(Common2dMixin, PlotTestCase):
         self.plotmethod(levels=[0.1])
         self.plotmethod(levels=1)
 
+    def test_colormap_norm(self) -> None:
+        norm = mpl.colors.LogNorm(0.1, 1e1)
+
+        artist = self.plotmethod(norm=norm)
+
+        lev_exp = np.arange(
+            np.floor(np.log10(artist.colorbar.vmin) - 2),
+            np.ceil(np.log10(artist.colorbar.vmax) + 4),
+            2,
+        )
+        expected = np.power(10, lev_exp)
+
+        actual = artist.colorbar.locator()
+        np.testing.assert_allclose(actual, expected)
+
 
 class TestPcolormesh(Common2dMixin, PlotTestCase):
     plotfunc = staticmethod(xplt.pcolormesh)
