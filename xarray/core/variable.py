@@ -217,8 +217,7 @@ def _possibly_convert_objects(values):
     * pd.Timedelta
     """
     as_series = pd.Series(values.ravel(), copy=False)
-    result = np.asarray(as_series).reshape(values.shape)
-    # FIXME: Why does pd.Series no longer preserve data type metadata for object dtype?
+    # For why we need this behavior: https://github.com/pandas-dev/pandas/issues/61938
     if (
         result.dtype.kind == "O"
         and values.dtype.kind == "O"
@@ -226,6 +225,8 @@ def _possibly_convert_objects(values):
     ):
         result = np.asarray(as_series, copy=True).reshape(values.shape)
         result.dtype = values.dtype
+    else:
+        result = np.asarray(as_series).reshape(values.shape)
     if not result.flags.writeable:
         # GH8843, pandas copy-on-write mode creates read-only arrays by default
         try:
