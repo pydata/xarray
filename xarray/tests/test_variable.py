@@ -1594,7 +1594,7 @@ class TestVariable(VariableSubclassobjects):
         data = pd.Categorical(np.arange(10, dtype="int64"))
         v = self.cls("x", data)
         print(v)  # should not error
-        assert pd.api.types.is_extension_array_dtype(v.dtype)
+        assert isinstance(v.dtype, pd.CategoricalDtype)
 
     def test_squeeze(self):
         v = Variable(["x", "y"], [[1]])

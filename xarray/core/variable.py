@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, NoReturn, cast
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
+from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
 from xarray.compat.array_api_compat import to_like_array
@@ -40,6 +41,7 @@ from xarray.core.utils import (
     emit_user_level_warning,
     ensure_us_time_resolution,
     infix_dims,
+    is_allowed_extension_array,
     is_dict_like,
     is_duck_array,
     is_duck_dask_array,
@@ -198,7 +200,9 @@ def _maybe_wrap_data(data):
         return PandasIndexingAdapter(data)
     if isinstance(data, UNSUPPORTED_EXTENSION_ARRAY_TYPES):
         return data.to_numpy()
-    if isinstance(data, pd.api.extensions.ExtensionArray):
+    if isinstance(
+        data, pd.api.extensions.ExtensionArray
+    ) and is_allowed_extension_array(data):
         return PandasExtensionArray(data)
     return data
 
@@ -213,7 +217,16 @@ def _possibly_convert_objects(values):
     * pd.Timedelta
     """
     as_series = pd.Series(values.ravel(), copy=False)
-    result = np.asarray(as_series).reshape(values.shape)
+    # For why we need this behavior: https://github.com/pandas-dev/pandas/issues/61938
+    if (
+        result.dtype.kind == "O"
+        and values.dtype.kind == "O"
+        and Version(pd.__version__) >= Version("3.0.0dev0")
+    ):
+        result = np.asarray(as_series, copy=True).reshape(values.shape)
+        result.dtype = values.dtype
+    else:
+        result = np.asarray(as_series).reshape(values.shape)
     if not result.flags.writeable:
         # GH8843, pandas copy-on-write mode creates read-only arrays by default
         try:
@@ -261,7 +274,8 @@ def as_compatible_data(
     if isinstance(data, pd.Series | pd.DataFrame):
         if (
             isinstance(data, pd.Series)
-            and pd.api.types.is_extension_array_dtype(data)
+            and is_allowed_extension_array(data.array)
+            # Some datetime types are not allowed as well as backing Variable types
             and not isinstance(data.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES)
         ):
             pandas_data = data.array

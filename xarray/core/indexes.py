@@ -23,6 +23,7 @@ from xarray.core.utils import (
     Frozen,
     emit_user_level_warning,
     get_valid_numpy_dtype,
+    is_allowed_extension_array_dtype,
     is_dict_like,
     is_scalar,
 )
@@ -666,9 +667,8 @@ class PandasIndex(Index):
 
         self.index = index
         self.dim = dim
-
         if coord_dtype is None:
-            if pd.api.types.is_extension_array_dtype(index.dtype):
+            if is_allowed_extension_array_dtype(index.dtype):
                 cast(pd.api.extensions.ExtensionDtype, index.dtype)
                 coord_dtype = index.dtype
             else:
