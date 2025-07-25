@@ -6,6 +6,7 @@ from abc import abstractmethod
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
+import cftime
 import numpy as np
 import pytest
 from packaging.version import Version
@@ -18,6 +19,7 @@ from xarray.namedarray._typing import (
     _ShapeType_co,
 )
 from xarray.namedarray.core import NamedArray, from_array
+from xarray.namedarray.utils import fake_target_chunksize
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -26,6 +28,7 @@ if TYPE_CHECKING:
 
     from xarray.namedarray._typing import (
         Default,
+        DuckArray,
         _AttrsLike,
         _Dim,
         _DimsLike,
@@ -609,3 +612,40 @@ def test_repr() -> None:
 
     # Basic comparison:
     assert r == "<xarray.NamedArray (x: 1)> Size: 8B\narray([0], dtype=uint64)"
+
+
+@pytest.mark.parametrize(
+    "input_array, expected_chunksize_faked",
+    [
+        (np.arange(100).reshape(10, 10), 1024),
+        (np.arange(100).reshape(10, 10).astype(np.float32), 2048),
+        (
+            np.array(
+                [
+                    cftime.Datetime360Day(2000, month, day, 0, 0, 0, 0)
+                    for month in range(1, 11)
+                    for day in range(1, 11)
+                ],
+                dtype=object,
+            ).reshape(10, 10),
+            73,
+        ),
+    ],
+)
+def test_fake_target_chunksize(
+    input_array: DuckArray[Any], expected_chunksize_faked: int
+) -> None:
+    """
+    Check that `fake_target_chunksize` returns the expected chunksize and dtype.
+    - It pretends to dask we are chunking an array with an 8-byte dtype, ie. a float64.
+    As such, it wll *double* the amount of memory a 4-byte dtype (like float32) would try to use,
+    fooling it into actually using the correct amount of memory. For object dtypes, which are
+    generally larger, it will reduce the effective dask configuration chunksize, reducing the size of
+    the arrays per chunk such that we get the same amount of memory used.
+    """
+    target_chunksize = 1024
+
+    faked_chunksize, dtype = fake_target_chunksize(input_array, target_chunksize)  # type: ignore[var-annotated]
+
+    assert faked_chunksize == expected_chunksize_faked
+    assert dtype == np.float64

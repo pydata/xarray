@@ -298,8 +298,6 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         """
 
         if _contains_cftime_datetimes(data):
-            # Preprocess chunks if they're cftime
-
             from dask import config as dask_config
             from dask.array.core import normalize_chunks
             from dask.utils import parse_bytes
@@ -307,13 +305,13 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             from xarray.namedarray.utils import fake_target_chunksize
 
             target_chunksize = parse_bytes(dask_config.get("array.chunk-size"))
-            limit, var_dtype = fake_target_chunksize(
+            limit, var_dtype = fake_target_chunksize(  # type: ignore[var-annotated]
                 data, target_chunksize=target_chunksize
             )
 
             chunks = normalize_chunks(
                 chunks,
-                shape=data.shape,
+                shape=data.shape,  # type: ignore[attr-defined]
                 dtype=var_dtype,
                 limit=limit,
             )  # type: ignore[no-untyped-call]

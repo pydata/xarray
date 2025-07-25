@@ -24,7 +24,7 @@ if TYPE_CHECKING:
         DaskArray = NDArray  # type: ignore[assignment, misc]
         DaskCollection: Any = NDArray  # type: ignore[no-redef]
 
-    from xarray.namedarray._typing import _Dim, _DType, duckarray
+    from xarray.namedarray._typing import DuckArray, _Dim, _DType, duckarray
 
 
 K = TypeVar("K")
@@ -197,7 +197,7 @@ def either_dict_or_kwargs(
 
 
 def fake_target_chunksize(
-    data: Any,  # Should be duckarray I think, but causes upstream issues
+    data: DuckArray[Any],
     target_chunksize: int,
 ) -> tuple[int, _DType]:
     """
@@ -211,11 +211,14 @@ def fake_target_chunksize(
 
     output_dtype: _DType = np.dtype(np.float64)  # type: ignore[assignment]
 
-    cftime_nbytes_approx: int = sys.getsizeof(first_n_items(data, 1))  # type: ignore[no-untyped-call]
+    if data.dtype == object:
+        nbytes_approx: int = sys.getsizeof(first_n_items(data, 1))  # type: ignore[no-untyped-call]
+    else:
+        nbytes_approx = data[0].itemsize
 
     f64_nbytes = output_dtype.itemsize  # Should be 8 bytes
 
-    target_chunksize = int(target_chunksize * (cftime_nbytes_approx / f64_nbytes))
+    target_chunksize = int(target_chunksize * (f64_nbytes / nbytes_approx))
 
     return target_chunksize, output_dtype
 
