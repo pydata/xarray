@@ -102,7 +102,7 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
         # duck array support internally via this class.
         if not is_allowed_extension_array(self.array):
             raise TypeError(
-                "`NumpyExtensionArray` or string dtype should be converted to a numpy array in `xarray` internally."
+                f"{self.array.dtype!r} should be converted to a numpy array in `xarray` internally."
             )
 
     def __array_function__(self, func, types, args, kwargs):
