@@ -638,7 +638,7 @@ def test_fake_target_chunksize(
     """
     Check that `fake_target_chunksize` returns the expected chunksize and dtype.
     - It pretends to dask we are chunking an array with an 8-byte dtype, ie. a float64.
-    As such, it wll *double* the amount of memory a 4-byte dtype (like float32) would try to use,
+    As such, it will *double* the amount of memory a 4-byte dtype (like float32) would try to use,
     fooling it into actually using the correct amount of memory. For object dtypes, which are
     generally larger, it will reduce the effective dask configuration chunksize, reducing the size of
     the arrays per chunk such that we get the same amount of memory used.
