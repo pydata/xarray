@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import os
 from collections.abc import (
     Callable,
@@ -122,23 +123,21 @@ def _get_default_engine_gz() -> Literal["scipy"]:
     return engine
 
 
-def _get_default_engine_netcdf() -> Literal["netcdf4", "scipy"]:
-    engine: Literal["netcdf4", "scipy"]
-    try:
-        import netCDF4  # noqa: F401
+def _get_default_engine_netcdf() -> Literal["netcdf4", "h5netcdf", "scipy"]:
+    candidates: list[tuple[str, str]] = [
+        ("netcdf4", "netCDF4"),
+        ("h5netcdf", "h5netcdf"),
+        ("scipy", "scipy.io.netcdf"),
+    ]
 
-        engine = "netcdf4"
-    except ImportError:  # pragma: no cover
-        try:
-            import scipy.io.netcdf  # noqa: F401
+    for engine, module_name in candidates:
+        if importlib.util.find_spec(module_name) is not None:
+            return cast(Literal["netcdf4", "h5netcdf", "scipy"], engine)
 
-            engine = "scipy"
-        except ImportError as err:
-            raise ValueError(
-                "cannot read or write netCDF files without "
-                "netCDF4-python or scipy installed"
-            ) from err
-    return engine
+    raise ValueError(
+        "cannot read or write NetCDF files because none of "
+        "'netCDF4-python', 'h5netcdf', or 'scipy' are installed"
+    )
 
 
 def _get_default_engine(path: str, allow_remote: bool = False) -> T_NetcdfEngine:
