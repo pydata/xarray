@@ -197,7 +197,7 @@ def either_dict_or_kwargs(
 
 
 def fake_target_chunksize(
-    data: Any,  # Should be duckarray I think, but causes upsteam issues
+    data: Any,  # Should be duckarray I think, but causes upstream issues
     target_chunksize: int,
 ) -> tuple[int, _DType]:
     """
