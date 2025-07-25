@@ -5416,6 +5416,35 @@ class TestDask(DatasetIOBase):
             ) as actual:
                 assert_identical(expected, actual)
 
+    def test_open_dataset_cftime_autochunk(self) -> None:
+        """Create a dataset with cftime datetime objects and
+        ensure that auto-chunking works correctly."""
+        import cftime
+
+        from xarray.core.common import _contains_cftime_datetimes
+
+        original = xr.Dataset(
+            {
+                "foo": ("time", [0.0]),
+                "time_bnds": (
+                    ("time", "bnds"),
+                    [
+                        [
+                            cftime.Datetime360Day(2005, 12, 1, 0, 0, 0, 0),
+                            cftime.Datetime360Day(2005, 12, 2, 0, 0, 0, 0),
+                        ]
+                    ],
+                ),
+            },
+            {"time": [cftime.Datetime360Day(2005, 12, 1, 12, 0, 0, 0)]},
+        )
+        with create_tmp_file() as tmp:
+            original.to_netcdf(tmp)
+            with open_dataset(tmp, chunks="auto") as actual:
+                assert isinstance(actual.time_bnds.variable.data, da.Array)
+                assert _contains_cftime_datetimes(actual.time)
+                assert_identical(original, actual)
+
     # Flaky test. Very open to contributions on fixing this
     @pytest.mark.flaky
     def test_dask_roundtrip(self) -> None:
