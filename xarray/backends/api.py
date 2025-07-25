@@ -1494,9 +1494,9 @@ def open_mfdataset(
     chunks : int, dict, 'auto' or None, optional
         Dictionary with keys given by dimension names and values given by chunk sizes.
         In general, these should divide the dimensions of each dataset. If int, chunk
-        each dimension by ``chunks``. By default, chunks will be chosen to match the 
-        chunks on disk. This may impact performance: please see the full documentation 
-        for more details [2]_. This argument is evaluated on a per-file basis, so chunk 
+        each dimension by ``chunks``. By default, chunks will be chosen to match the
+        chunks on disk. This may impact performance: please see the full documentation
+        for more details [2]_. This argument is evaluated on a per-file basis, so chunk
         sizes that span multiple files will be ignored.
     concat_dim : str, DataArray, Index or a Sequence of these or None, optional
         Dimensions to concatenate files along.  You only need to provide this argument
