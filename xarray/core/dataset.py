@@ -26,7 +26,6 @@ from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_extension_array_dtype
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
@@ -91,6 +90,7 @@ from xarray.core.utils import (
     either_dict_or_kwargs,
     emit_user_level_warning,
     infix_dims,
+    is_allowed_extension_array,
     is_dict_like,
     is_duck_array,
     is_duck_dask_array,
@@ -6771,7 +6771,7 @@ class Dataset(
             elif (
                 # Some reduction functions (e.g. std, var) need to run on variables
                 # that don't have the reduce dims: PR5393
-                not is_extension_array_dtype(var.dtype)
+                not pd.api.types.is_extension_array_dtype(var.dtype)  # noqa: TID251
                 and (
                     not reduce_dims
                     or not numeric_only
@@ -7096,12 +7096,12 @@ class Dataset(
         non_extension_array_columns = [
             k
             for k in columns_in_order
-            if not is_extension_array_dtype(self.variables[k].data)
+            if not pd.api.types.is_extension_array_dtype(self.variables[k].data)  # noqa: TID251
         ]
         extension_array_columns = [
             k
             for k in columns_in_order
-            if is_extension_array_dtype(self.variables[k].data)
+            if pd.api.types.is_extension_array_dtype(self.variables[k].data)  # noqa: TID251
         ]
         extension_array_columns_different_index = [
             k
@@ -7293,7 +7293,7 @@ class Dataset(
         arrays = []
         extension_arrays = []
         for k, v in dataframe.items():
-            if not is_extension_array_dtype(v) or isinstance(
+            if not is_allowed_extension_array(v) or isinstance(
                 v.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES
             ):
                 arrays.append((k, np.asarray(v)))
