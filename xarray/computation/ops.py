@@ -159,7 +159,7 @@ def fillna(data, other, join="left", dataset_join="left"):
 
 
 # Unsure why we get a mypy error here
-def where_method(self, cond, other=dtypes.NA):  # type: ignore[has-type]
+def where_method(self, cond, other=dtypes.NA):
     """Return elements from `self` or `other` depending on `cond`.
 
     Parameters
