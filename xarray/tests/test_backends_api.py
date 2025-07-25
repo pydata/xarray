@@ -30,6 +30,7 @@ def test__get_default_engine() -> None:
     assert engine_default == "netcdf4"
 
 
+@requires_h5netcdf
 def test_default_engine_h5netcdf(monkeypatch):
     """Test the default netcdf engine when h5netcdf is the only importable module."""
 
