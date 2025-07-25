@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, overload
 
 from xarray.core import utils
 from xarray.core.common import _contains_cftime_datetimes
-from xarray.core.utils import emit_user_level_warning
+from xarray.core.utils import emit_user_level_warning, is_dict_like
 from xarray.core.variable import IndexVariable, Variable
 from xarray.namedarray.parallelcompat import (
     ChunkManagerEntrypoint,
@@ -84,27 +84,33 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
         for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape, strict=True)
     )
 
-    if _contains_cftime_datetimes(var):
+    # Chunks can be either dict-like or tuple-like (according to type annotations)
+    #  at this point, so check for # this before we manually construct our chunk
+    # spec- if we've set chunks to auto
+    _chunks = list(chunks.values()) if is_dict_like(chunks) else chunks
+    auto_chunks = all(_chunk == "auto" for _chunk in _chunks)
+
+    if _contains_cftime_datetimes(var) and auto_chunks:
         # If we have cftime datetimes, need to preprocess them - we can't pass
         # an object dtype into DaskManager.normalize_chunks.
         from dask import config as dask_config
         from dask.utils import parse_bytes
 
-        from xarray.namedarray.utils import build_chunkspec
+        from xarray.namedarray.utils import fake_target_chunksize
 
         target_chunksize = parse_bytes(dask_config.get("array.chunk-size"))
-        chunk_shape = build_chunkspec(var, target_chunksize=target_chunksize)
-
-        chunk_shape = chunkmanager.normalize_chunks(
-            chunk_shape, shape=shape, previous_chunks=preferred_chunk_shape
-        )
+        limit, var_dtype = fake_target_chunksize(var, target_chunksize=target_chunksize)
     else:
-        chunk_shape = chunkmanager.normalize_chunks(
-            chunk_shape,
-            shape=shape,
-            dtype=var.dtype,
-            previous_chunks=preferred_chunk_shape,
-        )
+        var_dtype = var.dtype
+        limit = None
+
+    chunk_shape = chunkmanager.normalize_chunks(
+        chunk_shape,
+        shape=shape,
+        dtype=var_dtype,
+        limit=limit,
+        previous_chunks=preferred_chunk_shape,
+    )
 
     # Warn where requested chunks break preferred chunks, provided that the variable
     # contains data.

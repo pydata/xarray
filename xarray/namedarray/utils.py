@@ -17,8 +17,6 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from xarray.namedarray.parallelcompat import T_ChunkedArray
-
     try:
         from dask.array.core import Array as DaskArray
         from dask.typing import DaskCollection
@@ -26,7 +24,7 @@ if TYPE_CHECKING:
         DaskArray = NDArray  # type: ignore[assignment, misc]
         DaskCollection: Any = NDArray  # type: ignore[no-redef]
 
-    from xarray.namedarray._typing import _Dim, duckarray
+    from xarray.namedarray._typing import _Dim, _DType, duckarray
 
 
 K = TypeVar("K")
@@ -198,28 +196,28 @@ def either_dict_or_kwargs(
     return pos_kwargs
 
 
-def build_chunkspec(
-    data: T_ChunkedArray,
+def fake_target_chunksize(
+    data: Any,  # Should be duckarray I think, but causes upsteam issues
     target_chunksize: int,
-) -> tuple[int, ...]:
+) -> tuple[int, _DType]:
     """
-    Try to make chunks roughly cubic. This needs to be a bit smarter, it
-    really ought to account for xr.structure.chunks._getchunk and try to
-    use the default encoding to set the chunk size.
+    Naughty trick - let's get the ratio of our cftime_nbytes, and then compute
+    the ratio of that size to a np.float64. Then we can just adjust our target_chunksize
+    and use the default dask chunking algorithm to get a reasonable chunk size.
     """
+    import numpy as np
+
     from xarray.core.formatting import first_n_items
 
-    cftime_nbytes_approx: int = sys.getsizeof(first_n_items(data, 1))  # type: ignore[no-untyped-call]
-    elements_per_chunk = target_chunksize // cftime_nbytes_approx
-    ndim = data.ndim  # type:ignore[attr-defined]
-    shape = data.shape  # type:ignore[attr-defined]
-    if ndim > 0:
-        chunk_size_per_dim = int(elements_per_chunk ** (1.0 / ndim))
-        chunks = tuple(min(chunk_size_per_dim, dim_size) for dim_size in shape)
-    else:
-        chunks = ()
+    output_dtype: _DType = np.dtype(np.float64)  # type: ignore[assignment]
 
-    return chunks
+    cftime_nbytes_approx: int = sys.getsizeof(first_n_items(data, 1))  # type: ignore[no-untyped-call]
+
+    f64_nbytes = output_dtype.itemsize  # Should be 8 bytes
+
+    target_chunksize = int(target_chunksize * (cftime_nbytes_approx / f64_nbytes))
+
+    return target_chunksize, output_dtype
 
 
 class ReprObject:

@@ -301,15 +301,21 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             # Preprocess chunks if they're cftime
 
             from dask import config as dask_config
+            from dask.array.core import normalize_chunks
             from dask.utils import parse_bytes
 
-            from xarray.namedarray.utils import build_chunkspec
+            from xarray.namedarray.utils import fake_target_chunksize
 
             target_chunksize = parse_bytes(dask_config.get("array.chunk-size"))
-
-            chunks = build_chunkspec(
-                data,
-                target_chunksize=target_chunksize,
+            limit, var_dtype = fake_target_chunksize(
+                data, target_chunksize=target_chunksize
             )
+
+            chunks = normalize_chunks(
+                chunks,
+                shape=data.shape,
+                dtype=var_dtype,
+                limit=limit,
+            )  # type: ignore[no-untyped-call]
 
         return data.rechunk(chunks, **kwargs)
