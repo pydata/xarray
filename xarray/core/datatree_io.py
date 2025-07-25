@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import io
 from os import PathLike
-from typing import TYPE_CHECKING, Any, Literal, get_args
+from typing import TYPE_CHECKING, Any, Literal, get_args, overload
 
 from xarray.core.datatree import DataTree
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
@@ -13,10 +14,9 @@ T_DataTreeNetcdfTypes = Literal["NETCDF4"]
 if TYPE_CHECKING:
     from xarray.core.types import ZarrStoreLike
 
-
 def _datatree_to_netcdf(
     dt: DataTree,
-    filepath: str | PathLike,
+    filepath: str | PathLike | io.IOBase | None = None,
     mode: NetcdfWriteModes = "w",
     encoding: Mapping[str, Any] | None = None,
     unlimited_dims: Mapping | None = None,
@@ -26,7 +26,7 @@ def _datatree_to_netcdf(
     write_inherited_coords: bool = False,
     compute: bool = True,
     **kwargs,
-) -> None:
+) -> None | bytes:
     """This function creates an appropriate datastore for writing a datatree to
     disk as a netCDF file.
 
@@ -34,10 +34,13 @@ def _datatree_to_netcdf(
     """
 
     if format not in [None, *get_args(T_DataTreeNetcdfTypes)]:
-        raise ValueError("to_netcdf only supports the NETCDF4 format")
+        raise ValueError("DataTree.to_netcdf only supports the NETCDF4 format")
 
     if engine not in [None, *get_args(T_DataTreeNetcdfEngine)]:
-        raise ValueError("to_netcdf only supports the netcdf4 and h5netcdf engines")
+        raise ValueError("DataTree.to_netcdf only supports the netcdf4 and h5netcdf engines")
+
+    if engine is None:
+        engine = "h5netcdf"
 
     if group is not None:
         raise NotImplementedError(
@@ -58,6 +61,9 @@ def _datatree_to_netcdf(
             f"unexpected encoding group name(s) provided: {set(encoding) - set(dt.groups)}"
         )
 
+    if filepath is None:
+        filepath = io.BytesIO()
+
     if unlimited_dims is None:
         unlimited_dims = {}
 
@@ -77,6 +83,8 @@ def _datatree_to_netcdf(
             **kwargs,
         )
         mode = "a"
+
+    return filepath.getvalue() if isinstance(filepath, io.BytesIO) else None
 
 
 def _datatree_to_zarr(

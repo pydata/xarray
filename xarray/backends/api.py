@@ -43,7 +43,7 @@ from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
-from xarray.core.utils import is_remote_uri
+from xarray.core.utils import emit_user_level_warning, is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
 from xarray.structure.chunks import _get_chunk, _maybe_chunk
@@ -1911,11 +1911,11 @@ def to_netcdf(
     if path_or_file is None:
         if engine is None:
             engine = "scipy"
-        elif engine != "scipy":
+        elif engine not in ("scipy", "h5netcdf"):
             raise ValueError(
                 "invalid engine for creating bytes with "
-                f"to_netcdf: {engine!r}. Only the default engine "
-                "or engine='scipy' is supported"
+                f"to_netcdf: {engine!r}. Only the default engine, "
+                "engine='scipy' or engine='h5netcdf' is supported."
             )
         if not compute:
             raise NotImplementedError(
@@ -1927,7 +1927,13 @@ def to_netcdf(
             engine = _get_default_engine(path_or_file)
         path_or_file = _normalize_path(path_or_file)
     else:  # file-like object
-        engine = "scipy"
+        if engine not in ("scipy", "h5netcdf"):
+            emit_user_level_warning(
+                f"Requested {engine=} is not compatible with writing to a file-like object. "
+                "This will raise an error in the future, for now defaulting to engine='scipy'.",
+                FutureWarning,
+            )
+            engine = "scipy"
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
