@@ -91,18 +91,9 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
     auto_chunks = all(_chunk == "auto" for _chunk in _chunks)
 
     if _contains_cftime_datetimes(var) and auto_chunks:
-        # If we have cftime datetimes, need to preprocess them - we can't pass
-        # an object dtype into DaskManager.normalize_chunks.
-        from dask import config as dask_config
-        from dask.utils import parse_bytes
-
-        from xarray.namedarray.utils import fake_target_chunksize
-
-        target_chunksize = parse_bytes(dask_config.get("array.chunk-size"))
-        limit, var_dtype = fake_target_chunksize(var, target_chunksize=target_chunksize)
+        limit, var_dtype = chunkmanager.get_auto_chunk_size(var)
     else:
-        var_dtype = var.dtype
-        limit = None
+        limit, var_dtype = None, var.dtype
 
     chunk_shape = chunkmanager.normalize_chunks(
         chunk_shape,

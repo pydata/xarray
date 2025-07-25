@@ -24,7 +24,9 @@ if TYPE_CHECKING:
         DaskArray = NDArray  # type: ignore[assignment, misc]
         DaskCollection: Any = NDArray  # type: ignore[no-redef]
 
+    from xarray.core.variable import Variable
     from xarray.namedarray._typing import DuckArray, _Dim, _DType, duckarray
+    from xarray.namedarray.parallelcompat import T_ChunkedArray
 
 
 K = TypeVar("K")
@@ -197,13 +199,17 @@ def either_dict_or_kwargs(
 
 
 def fake_target_chunksize(
-    data: DuckArray[Any],
+    data: DuckArray[Any] | T_ChunkedArray | Variable,
     target_chunksize: int,
 ) -> tuple[int, _DType]:
     """
     Naughty trick - let's get the ratio of our cftime_nbytes, and then compute
     the ratio of that size to a np.float64. Then we can just adjust our target_chunksize
     and use the default dask chunking algorithm to get a reasonable chunk size.
+
+    ? I don't think T_chunkedArray or Variable should be necessary, but the calls
+    ? to this in daskmanager.py requires it to be that. I still need to wrap my head
+    ? around the typing here a bit more.
     """
     import numpy as np
 

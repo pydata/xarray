@@ -11,8 +11,10 @@ from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedAr
 from xarray.namedarray.utils import is_duck_dask_array, module_available
 
 if TYPE_CHECKING:
+    from xarray.core.variable import Variable
     from xarray.namedarray._typing import (
         T_Chunks,
+        _DType,
         _DType_co,
         _NormalizedChunks,
         duckarray,
@@ -317,3 +319,12 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             )  # type: ignore[no-untyped-call]
 
         return data.rechunk(chunks, **kwargs)
+
+    def get_auto_chunk_size(self, var: Variable) -> tuple[int, _DType]:
+        from dask import config as dask_config
+        from dask.utils import parse_bytes
+
+        from xarray.namedarray.utils import fake_target_chunksize
+
+        target_chunksize = parse_bytes(dask_config.get("array.chunk-size"))
+        return fake_target_chunksize(var, target_chunksize=target_chunksize)
