@@ -6,7 +6,6 @@ from abc import abstractmethod
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
-import cftime
 import numpy as np
 import pytest
 from packaging.version import Version
@@ -39,6 +38,13 @@ if TYPE_CHECKING:
         _ShapeLike,
         duckarray,
     )
+
+try:
+    import cftime
+
+    cftime_available = True
+except ModuleNotFoundError:
+    cftime_available = False
 
 
 class CustomArrayBase(Generic[_ShapeType_co, _DType_co]):
@@ -620,15 +626,21 @@ def test_repr() -> None:
         (np.arange(100).reshape(10, 10), 1024),
         (np.arange(100).reshape(10, 10).astype(np.float32), 2048),
         (
-            np.array(
-                [
-                    cftime.Datetime360Day(2000, month, day, 0, 0, 0, 0)
-                    for month in range(1, 11)
-                    for day in range(1, 11)
-                ],
-                dtype=object,
-            ).reshape(10, 10),
-            73,
+            pytest.param(
+                np.array(
+                    [
+                        cftime.Datetime360Day(2000, month, day, 0, 0, 0, 0)
+                        for month in range(1, 11)
+                        for day in range(1, 11)
+                    ],
+                    dtype=object,
+                ).reshape(10, 10),
+                73,
+                marks=pytest.mark.xfail(
+                    not cftime_available,
+                    reason="cftime not available, cannot test object dtype with cftime dates",
+                ),
+            )
         ),
     ],
 )
