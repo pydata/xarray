@@ -13,6 +13,8 @@ v2025.07.2 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- DataTree.to_netcdf() can now write to a file-like object, or return bytes if called without a filepath. (:issue:`10570`)
+  By `Matthew Willson <https://github.com/mjwillson>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

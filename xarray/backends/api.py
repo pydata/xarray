@@ -1911,11 +1911,11 @@ def to_netcdf(
     if path_or_file is None:
         if engine is None:
             engine = "scipy"
-        elif engine != "scipy":
+        elif engine not in ("scipy", "h5netcdf"):
             raise ValueError(
                 "invalid engine for creating bytes with "
-                f"to_netcdf: {engine!r}. Only the default engine "
-                "or engine='scipy' is supported"
+                f"to_netcdf: {engine!r}. Only the default engine, "
+                "engine='scipy' or engine='h5netcdf' is supported."
             )
         if not compute:
             raise NotImplementedError(
@@ -1926,7 +1926,10 @@ def to_netcdf(
         if engine is None:
             engine = _get_default_engine(path_or_file)
         path_or_file = _normalize_path(path_or_file)
-    else:  # file-like object
+    elif engine not in ("scipy", "h5netcdf"):
+        # Requested engine is not compatible with writing to a file-like object.
+        # Ideally we would raise an error, but for backwards-compatibility with
+        # old behaviour we overwrite the engine to scipy.
         engine = "scipy"
 
     # validate Dataset keys, DataArray names, and attr keys/values

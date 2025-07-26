@@ -159,11 +159,9 @@ class H5NetCDFStore(WritableCFDataStore):
             )
 
         if isinstance(filename, bytes):
-            raise ValueError(
-                "can't open netCDF4/HDF5 as bytes "
-                "try passing a path or file-like object"
-            )
-        elif isinstance(filename, io.IOBase):
+            filename = io.BytesIO(filename)
+
+        if isinstance(filename, io.IOBase) and mode == "r":
             magic_number = read_magic_number_from_file(filename)
             if not magic_number.startswith(b"\211HDF\r\n\032\n"):
                 raise ValueError(
