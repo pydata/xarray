@@ -300,9 +300,9 @@ def _determine_cmap_params(
                 raise ValueError("Cannot supply vmax and a norm with a different vmax.")
             vmax = norm.vmax
 
-        # if BoundaryNorm, then set levels
-        if isinstance(norm, mpl.colors.BoundaryNorm):
-            levels = norm.boundaries
+    # if BoundaryNorm, then set levels
+     if isinstance(norm, mpl.colors.BoundaryNorm):
+        levels = norm.boundaries
 
     # Choose default colormaps if not provided
     if cmap is None:
