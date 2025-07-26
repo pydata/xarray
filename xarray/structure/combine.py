@@ -461,9 +461,36 @@ def combine_nested(
           of all non-null values.
         - "override": skip comparing and pick variable from first dataset
     data_vars : {"minimal", "different", "all" or list of str}, optional
-        Details are in the documentation of concat
+        These data variables will be concatenated together:
+          * "minimal": Only data variables in which the dimension already
+            appears are included. If concatenating over a dimension _not_
+            present in any of the objects, then all data variables will
+            be concatenated along that new dimension.
+          * "different": Data variables which are not equal (ignoring
+            attributes) across all datasets are also concatenated (as well as
+            all for which dimension already appears). Beware: this option may
+            load the data payload of data variables into memory if they are not
+            already loaded.
+          * "all": All data variables will be concatenated.
+          * list of dims: The listed data variables will be concatenated, in
+            addition to the "minimal" data variables.
+
     coords : {"minimal", "different", "all" or list of str}, optional
-        Details are in the documentation of concat
+        These coordinate variables will be concatenated together:
+          * "minimal": Only coordinates in which the dimension already appears
+            are included. If concatenating over a dimension _not_
+            present in any of the objects, then all data variables will
+            be concatenated along that new dimension.
+          * "different": Coordinates which are not equal (ignoring attributes)
+            across all datasets are also concatenated (as well as all for which
+            dimension already appears). Beware: this option may load the data
+            payload of coordinate variables into memory if they are not already
+            loaded.
+          * "all": All coordinate variables will be concatenated, except
+            those corresponding to other dimensions.
+          * list of Hashable: The listed coordinate variables will be concatenated,
+            in addition to the "minimal" coordinates.
+
     fill_value : scalar or dict-like, optional
         Value to use for newly missing values. If a dict-like, maps
         variable names to fill values. Use a data array's name to

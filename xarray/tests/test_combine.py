@@ -1201,23 +1201,18 @@ class TestNewDefaults:
             old = concat([ds(0), ds(1)], dim=concat_dim)
         with set_options(use_new_combine_kwarg_defaults=True):
             new = concat([ds(0), ds(1)], dim=concat_dim)
-
         assert_identical(old, new)
 
     def test_concat_along_new_dim(self):
         concat_dim = "new_dim"
         ds = create_test_data
         with set_options(use_new_combine_kwarg_defaults=False):
-            with pytest.warns(
-                FutureWarning,
-                match="will change from data_vars='all' to data_vars='minimal'",
-            ):
-                old = concat([ds(0), ds(1)], dim=concat_dim)
+            old = concat([ds(0), ds(1)], dim=concat_dim)
         with set_options(use_new_combine_kwarg_defaults=True):
             new = concat([ds(0), ds(1)], dim=concat_dim)
 
-        with pytest.raises(AssertionError):
-            assert_identical(old, new)
+        assert concat_dim in old.dims
+        assert concat_dim in new.dims
 
     def test_nested_merge_with_overlapping_values(self):
         ds1 = Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
@@ -1273,17 +1268,12 @@ class TestNewDefaults:
         expected = Dataset({"x": ("baz", [0]), "y": ("baz", [1])}, {"baz": [100]})
 
         with set_options(use_new_combine_kwarg_defaults=False):
-            with pytest.warns(
-                FutureWarning,
-                match="will change from data_vars='all' to data_vars='minimal'",
-            ):
-                old = combine_nested(objs, concat_dim=dim)
+            old = combine_nested(objs, concat_dim=dim)
         with set_options(use_new_combine_kwarg_defaults=True):
             new = combine_nested(objs, concat_dim=dim)
 
         assert_identical(expected, old)
-        with pytest.raises(AssertionError):
-            assert_identical(old, new)
+        assert_identical(old, new)
 
     def test_combine_nested_missing_data_new_dim(self):
         # Your data includes "time" and "station" dimensions, and each year's
@@ -1299,16 +1289,14 @@ class TestNewDefaults:
             with pytest.warns(
                 FutureWarning, match="will change from join='outer' to join='exact'"
             ):
-                with pytest.warns(
-                    FutureWarning,
-                    match="will change from data_vars='all' to data_vars='minimal'",
-                ):
-                    old = combine_nested(datasets, concat_dim="t")
+                old = combine_nested(datasets, concat_dim="t")
         with set_options(use_new_combine_kwarg_defaults=True):
             with pytest.raises(ValueError, match="might be related to new default"):
                 combine_nested(datasets, concat_dim="t")
+            new = combine_nested(datasets, concat_dim="t", join="outer")
 
         assert_identical(expected, old)
+        assert_identical(expected, new)
 
     def test_combine_by_coords_multiple_variables(self):
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"y": [1], "x": [1]})]

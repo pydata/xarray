@@ -546,7 +546,7 @@ class TestConcatDataset:
         data = data.copy(deep=True)
         # make sure the coords argument behaves as expected
         data.coords["extra"] = ("dim4", np.arange(3))
-        datasets = [g.squeeze() for _, g in data.groupby(dim)]
+        datasets = [g for _, g in data.groupby(dim)]
 
         actual = concat(
             datasets, data[dim], coords=coords, data_vars="all", compat="equals"
@@ -625,13 +625,15 @@ class TestConcatDataset:
             actual = concat([ds1, ds2], "y", data_vars=data_vars)
         assert_identical(expected, actual)
 
-    def test_concat_constant_index_minimal_raises_merge_error(self) -> None:
+    def test_concat_constant_index_minimal(self) -> None:
         ds1 = Dataset({"foo": 1.5}, {"y": 1})
         ds2 = Dataset({"foo": 2.5}, {"y": 1})
-        with pytest.raises(merge.MergeError, match="conflicting values"):
-            # previously dim="y", and raised error which makes no sense.
-            # "foo" has dimension "y" so minimal should concatenate it?
-            concat([ds1, ds2], "new_dim", data_vars="minimal", compat="equals")
+        actual = concat([ds1, ds2], "new_dim", data_vars="minimal", compat="equals")
+        expected = Dataset(
+            {"foo": ("new_dim", [1.5, 2.5])},
+            coords={"y": 1},
+        )
+        assert_identical(actual, expected)
 
     def test_concat_size0(self) -> None:
         data = create_test_data()
@@ -1464,16 +1466,10 @@ class TestNewDefaults:
             for ds, varname in zip(datasets, vars_to_drop, strict=True)
         ]
         with set_options(use_new_combine_kwarg_defaults=False):
-            with pytest.warns(
-                FutureWarning,
-                match="will change from data_vars='all' to data_vars='minimal'",
-            ):
-                old = concat(datasets, dim="day")
+            old = concat(datasets, dim="day")
         with set_options(use_new_combine_kwarg_defaults=True):
             new = concat(datasets, dim="day")
-
-        with pytest.raises(AssertionError):
-            assert_identical(old, new)
+        assert_identical(old, new)
 
     @pytest.mark.parametrize("coords", ["different", "minimal", "all"])
     def test_concat_coords_kwarg(
@@ -1483,23 +1479,19 @@ class TestNewDefaults:
 
         # make sure the coords argument behaves as expected
         data.coords["extra"] = ("dim4", np.arange(3))
-        datasets = [g.squeeze() for _, g in data.groupby("dim1", squeeze=False)]
+        datasets = [g for _, g in data.groupby("dim1")]
 
         with set_options(use_new_combine_kwarg_defaults=False):
-            with pytest.warns(
-                FutureWarning,
-                match="will change from data_vars='all' to data_vars='minimal'",
-            ):
-                expectation: AbstractContextManager = (
-                    pytest.warns(
-                        FutureWarning,
-                        match="will change from compat='equals' to compat='override'",
-                    )
-                    if coords == "different"
-                    else nullcontext()
+            expectation: AbstractContextManager = (
+                pytest.warns(
+                    FutureWarning,
+                    match="will change from compat='equals' to compat='override'",
                 )
-                with expectation:
-                    old = concat(datasets, data["dim1"], coords=coords)
+                if coords == "different"
+                else nullcontext()
+            )
+            with expectation:
+                old = concat(datasets, data["dim1"], coords=coords)
 
         with set_options(use_new_combine_kwarg_defaults=True):
             if coords == "different":
@@ -1507,8 +1499,7 @@ class TestNewDefaults:
                     concat(datasets, data["dim1"], coords=coords)
             else:
                 new = concat(datasets, data["dim1"], coords=coords)
-                with pytest.raises(AssertionError):
-                    assert_identical(old, new)
+                assert_identical(old, new)
 
     def test_concat_promote_shape_for_scalars_with_mixed_lengths_along_concat_dim(
         self,

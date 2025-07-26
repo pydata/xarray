@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Iterable
-from typing import TYPE_CHECKING, Any, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, Union, overload
 
 import numpy as np
 import pandas as pd
@@ -101,7 +101,9 @@ def concat(
     data_vars : {"minimal", "different", "all"} or list of Hashable, optional
         These data variables will be concatenated together:
           * "minimal": Only data variables in which the dimension already
-            appears are included.
+            appears are included. If concatenating over a dimension _not_
+            present in any of the objects, then all data variables will
+            be concatenated along that new dimension.
           * "different": Data variables which are not equal (ignoring
             attributes) across all datasets are also concatenated (as well as
             all for which dimension already appears). Beware: this option may
@@ -115,7 +117,9 @@ def concat(
     coords : {"minimal", "different", "all"} or list of Hashable, optional
         These coordinate variables will be concatenated together:
           * "minimal": Only coordinates in which the dimension already appears
-            are included.
+            are included. If concatenating over a dimension _not_
+            present in any of the objects, then all data variables will
+            be concatenated along that new dimension.
           * "different": Coordinates which are not equal (ignoring attributes)
             across all datasets are also concatenated (as well as all for which
             dimension already appears). Beware: this option may load the data
@@ -337,7 +341,7 @@ def _calc_concat_dim_index(
 def _calc_concat_over(
     datasets,
     dim,
-    dim_names,
+    all_dims,
     data_vars: T_DataVars | CombineKwargDefault,
     coords,
     compat,
@@ -348,14 +352,14 @@ def _calc_concat_over(
     # variables to be concatenated
     concat_over = set()
     # variables checked for equality
-    equals = {}
+    equals: dict[Hashable, bool] = {}
     # skip merging these variables.
     #   if concatenating over a dimension 'x' that is associated with an index over 2 variables,
     #   'x' and 'y', then we assert join="equals" on `y` and don't need to merge it.
     #   that assertion happens in the align step prior to this function being called
     skip_merge = set()
 
-    if dim in dim_names:
+    if dim in all_dims:
         concat_over_existing_dim = True
         concat_over.add(dim)
     else:
@@ -371,7 +375,7 @@ def _calc_concat_over(
                 skip_merge.update(idx_vars.keys())
         concat_dim_lengths.append(ds.sizes.get(dim, 1))
 
-    def process_subset_opt(opt, subset):
+    def process_subset_opt(opt, subset: Literal["coords", "data_vars"]) -> None:
         original = set(concat_over)
         compat_str = (
             compat._value if isinstance(compat, CombineKwargDefault) else compat
@@ -463,7 +467,14 @@ def _calc_concat_over(
                     )
                 )
             elif opt == "minimal":
-                pass
+                # with "minimal" concatenation over a new dimension;
+                # we act like "all" for data_vars
+                if not concat_over_existing_dim and subset == "data_vars":
+                    concat_over.update(
+                        set().union(
+                            *[set(getattr(d, subset)) - set(d.dims) for d in datasets]
+                        )
+                    )
             else:
                 raise ValueError(f"unexpected value for {subset}: {opt}")
 
@@ -471,6 +482,7 @@ def _calc_concat_over(
                 isinstance(opt, CombineKwargDefault)
                 and opt != "minimal"
                 and original != concat_over
+                and concat_over_existing_dim
             ):
                 warnings.append(
                     opt.warning_message(
@@ -510,6 +522,7 @@ def _calc_concat_over(
 def _parse_datasets(
     datasets: list[T_Dataset],
 ) -> tuple[
+    set[Hashable],
     dict[Hashable, Variable],
     dict[Hashable, int],
     set[Hashable],
@@ -538,7 +551,14 @@ def _parse_datasets(
                 dim_coords[dim] = ds.coords[dim].variable
         dims = dims | set(ds.dims)
 
-    return dim_coords, dims_sizes, all_coord_names, data_vars, list(variables_order)
+    return (
+        dims,
+        dim_coords,
+        dims_sizes,
+        all_coord_names,
+        data_vars,
+        list(variables_order),
+    )
 
 
 def _dataset_concat(
@@ -583,10 +603,10 @@ def _dataset_concat(
         )
     )
 
-    dim_coords, dims_sizes, coord_names, data_names, vars_order = _parse_datasets(
-        datasets
+    all_dims, dim_coords, dims_sizes, coord_names, data_names, vars_order = (
+        _parse_datasets(datasets)
     )
-    dim_names = set(dim_coords)
+    indexed_dim_names = set(dim_coords)
 
     both_data_and_coords = coord_names & data_names
     if both_data_and_coords:
@@ -600,15 +620,19 @@ def _dataset_concat(
     # case where concat dimension is a coordinate or data_var but not a dimension
     if (
         dim_name in coord_names or dim_name in data_names
-    ) and dim_name not in dim_names:
+    ) and dim_name not in indexed_dim_names:
         datasets = [
             ds.expand_dims(dim_name, create_index_for_new_dim=create_index_for_new_dim)
             for ds in datasets
         ]
+        all_dims.add(dim_name)
+        # This isn't being used any more, but keeping it up to date
+        # just in case we decide to use it later.
+        indexed_dim_names.add(dim_name)
 
     # determine which variables to concatenate
     concat_over, equals, concat_dim_lengths, skip_merge = _calc_concat_over(
-        datasets, dim_name, dim_names, data_vars, coords, compat
+        datasets, dim_name, all_dims, data_vars, coords, compat
     )
 
     # determine which variables to merge, and then merge them according to compat
