@@ -30,6 +30,7 @@ if TYPE_CHECKING:
         AspectOptions,
         ExtendOptions,
         HueStyleOptions,
+        NormOptions,
         ScaleOptions,
     )
     from xarray.plot.facetgrid import FacetGrid

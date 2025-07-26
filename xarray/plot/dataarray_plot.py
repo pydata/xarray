@@ -50,6 +50,7 @@ if TYPE_CHECKING:
         AspectOptions,
         ExtendOptions,
         HueStyleOptions,
+        NormOptions,
         ScaleOptions,
         T_DataArray,
     )
