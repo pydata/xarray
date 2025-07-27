@@ -559,7 +559,7 @@ def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeysDims) -> _Dims:
                 _check_indexing_dims(dims[i : i + 1], key_dims)
                 j += 1
                 # new_dims.pop(j)
-            elif len(dims) == 1:
+            elif len(dims) == 1 and (key_dims > 1):
                 # Broadcast to same dims:
                 # TODO: Proper _broadcast_dims?
                 # TODO: Test case: set(dims) & set(key_dims) = {}
