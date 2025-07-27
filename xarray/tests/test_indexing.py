@@ -274,6 +274,61 @@ class TestIndexers:
             arr.loc[0, 0, 0] = 999
 
 
+class TestMultipleSlices:
+    def test_init(self):
+        slices = [slice(None, 2), slice(3, None)]
+        actual = indexing.MultipleSlices(*slices)
+
+        assert isinstance(actual, indexing.MultipleSlices)
+        assert actual._slices == slices and actual._slices is not slices
+
+        actual = indexing.MultipleSlices(slices)
+
+        assert isinstance(actual, indexing.MultipleSlices)
+        assert actual._slices == slices and actual._slices is not slices
+
+    def test_init_error(self):
+        slices = [1, slice(2, 3), "a"]
+        with pytest.raises(ValueError, match="slice objects"):
+            indexing.MultipleSlices(*slices)
+
+    @pytest.mark.parametrize(
+        ["iterable", "expected"],
+        (
+            ((slice(i, j) for i, j in [(0, 3), (4, 6)]), [slice(0, 3), slice(4, 6)]),
+            (
+                (slice(None, 2), slice(3, 4), slice(4, 5)),
+                [slice(None, 2), slice(3, 4), slice(4, 5)],
+            ),
+        ),
+    )
+    def test_from_iterable(self, iterable, expected):
+        actual = indexing.MultipleSlices.from_iterable(iterable)
+        assert isinstance(actual, indexing.MultipleSlices)
+        assert actual._slices == expected
+
+    @pytest.mark.parametrize(
+        ["slices", "expected_slices"],
+        (
+            ([slice(None, 3), slice(3, None)], [slice(None)]),
+            ([slice(None, 2), slice(2, 4), slice(4, 10)], [slice(None, 10)]),
+            (
+                [slice(None, 2, 1), slice(2, 6, 2), slice(6, 10, 2)],
+                [slice(None, 2, 1), slice(2, 10, 2)],
+            ),
+            (
+                [slice(None, 2), slice(2, 5, 1), slice(5, None, 2)],
+                [slice(None, 5), slice(5, None, 2)],
+            ),
+        ),
+    )
+    def test_merge_slices(self, slices, expected_slices):
+        multi_slice = indexing.MultipleSlices.from_iterable(slices)
+        actual = multi_slice.merge_slices()
+
+        assert actual._slices == expected_slices
+
+
 class TestLazyArray:
     def test_slice_slice(self) -> None:
         arr = ReturnItem()

@@ -591,6 +591,54 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
             return result
 
 
+class MultipleSlices:
+    __slots__ = ("_slices",)
+
+    def __init__(self, *slices: tuple[slice, ...] | tuple[list[slice]]):
+        if len(slices) == 1 and isinstance(slices[0], list):
+            [slices] = slices
+
+        slices_: list[slice] = list(slices)
+
+        if any(not isinstance(s, slice) for s in slices_):
+            raise ValueError("Can only wrap slice objects.")
+
+        self._slices = slices_
+
+    @classmethod
+    def from_iterable(cls: type[Self], slices: Iterable[slice]) -> Self:
+        slices_ = list(slices)
+        if not slices_:
+            raise ValueError("need at least one slice object")
+
+        return cls(slices_)
+
+    @property
+    def slices(self):
+        return self._slices
+
+    def merge_slices(self) -> Self:
+        new_slices = list(self._slices[:1])
+        previous_index = 0
+        for current in self._slices[1:]:
+            previous = new_slices[previous_index]
+
+            if (
+                previous.step == current.step
+                # `None` is treated as `1` for position slices
+                or (previous.step in (None, 1) and current.step in (None, 1))
+            ) and previous.stop == current.start:
+                new_slices[previous_index] = slice(
+                    previous.start, current.stop, previous.step
+                )
+                continue
+
+            new_slices.append(current)
+            previous_index += 1
+
+        return type(self)(new_slices)
+
+
 class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and outer indexing lazy."""
 
