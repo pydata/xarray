@@ -148,6 +148,7 @@ def unique_variable(
         compat_str = (
             compat._value if isinstance(compat, CombineKwargDefault) else compat
         )
+        assert compat_str is not None
         # first check without comparing values i.e. no computes
         for var in variables[1:]:
             equals = getattr(out, compat_str)(var, equiv=lazy_array_equiv)

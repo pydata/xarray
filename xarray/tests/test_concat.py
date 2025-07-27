@@ -628,7 +628,7 @@ class TestConcatDataset:
     def test_concat_constant_index_minimal(self) -> None:
         ds1 = Dataset({"foo": 1.5}, {"y": 1})
         ds2 = Dataset({"foo": 2.5}, {"y": 1})
-        actual = concat([ds1, ds2], "new_dim", data_vars="minimal", compat="equals")
+        actual = concat([ds1, ds2], "new_dim", data_vars=None, compat="equals")
         expected = Dataset(
             {"foo": ("new_dim", [1.5, 2.5])},
             coords={"y": 1},

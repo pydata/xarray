@@ -35,10 +35,10 @@ import inspect
 import warnings
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, TypeVar
+from typing import Any, Self, TypeVar
 
 from xarray.core.options import OPTIONS
-from xarray.core.utils import ReprObject, emit_user_level_warning
+from xarray.core.utils import emit_user_level_warning
 
 T = TypeVar("T", bound=Callable)
 
@@ -155,26 +155,26 @@ class CombineKwargDefault:
     """
 
     _old: str
-    _new: str
+    _new: str | None
     _name: str
 
-    def __init__(self, *, name: str, old: str, new: str):
+    def __init__(self, *, name: str, old: str, new: str | None):
         self._name = name
         self._old = old
         self._new = new
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str | None:
         return self._value
 
-    def __eq__(self, other: ReprObject | Any) -> bool:
+    def __eq__(self, other: Self | Any) -> bool:
         return (
             self._value == other._value
-            if isinstance(other, ReprObject)
+            if isinstance(other, type(self))
             else self._value == other
         )
 
     @property
-    def _value(self) -> str:
+    def _value(self) -> str | None:
         return self._new if OPTIONS["use_new_combine_kwarg_defaults"] else self._old
 
     def __hash__(self) -> int:
@@ -212,7 +212,7 @@ class CombineKwargDefault:
         )
 
 
-_DATA_VARS_DEFAULT = CombineKwargDefault(name="data_vars", old="all", new="minimal")
+_DATA_VARS_DEFAULT = CombineKwargDefault(name="data_vars", old="all", new=None)
 _COORDS_DEFAULT = CombineKwargDefault(name="coords", old="different", new="minimal")
 _COMPAT_CONCAT_DEFAULT = CombineKwargDefault(
     name="compat", old="equals", new="override"

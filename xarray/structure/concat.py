@@ -37,7 +37,7 @@ if TYPE_CHECKING:
         JoinOptions,
     )
 
-    T_DataVars = Union[ConcatOptions, Iterable[Hashable]]
+    T_DataVars = Union[ConcatOptions, Iterable[Hashable], None]
 
 
 # TODO: replace dim: Any by 1D array_likes
@@ -98,18 +98,18 @@ def concat(
         unchanged. If dimension is provided as a Variable, DataArray or Index, its name
         is used as the dimension to concatenate along and the values are added
         as a coordinate.
-    data_vars : {"minimal", "different", "all"} or list of Hashable, optional
+    data_vars : {"minimal", "different", "all", None} or list of Hashable, optional
         These data variables will be concatenated together:
           * "minimal": Only data variables in which the dimension already
-            appears are included. If concatenating over a dimension _not_
-            present in any of the objects, then all data variables will
-            be concatenated along that new dimension.
+            appears are included.
           * "different": Data variables which are not equal (ignoring
             attributes) across all datasets are also concatenated (as well as
             all for which dimension already appears). Beware: this option may
             load the data payload of data variables into memory if they are not
             already loaded.
           * "all": All data variables will be concatenated.
+          * None: Means ``"all"`` if ``dim`` is not present in any of the ``objs``,
+            and ``"minimal"`` if ``dim`` is present in any of ``objs``.
           * list of dims: The listed data variables will be concatenated, in
             addition to the "minimal" data variables.
 
@@ -352,7 +352,7 @@ def _calc_concat_over(
     # variables to be concatenated
     concat_over = set()
     # variables checked for equality
-    equals: dict[Hashable, bool] = {}
+    equals: dict[Hashable, bool | None] = {}
     # skip merging these variables.
     #   if concatenating over a dimension 'x' that is associated with an index over 2 variables,
     #   'x' and 'y', then we assert join="equals" on `y` and don't need to merge it.
@@ -364,6 +364,11 @@ def _calc_concat_over(
         concat_over.add(dim)
     else:
         concat_over_existing_dim = False
+
+    if data_vars is None or (
+        isinstance(data_vars, CombineKwargDefault) and data_vars._value is None
+    ):
+        data_vars = "minimal" if concat_over_existing_dim else "all"
 
     concat_dim_lengths = []
     for ds in datasets:
@@ -380,6 +385,7 @@ def _calc_concat_over(
         compat_str = (
             compat._value if isinstance(compat, CombineKwargDefault) else compat
         )
+        assert compat_str is not None
         if isinstance(opt, str | CombineKwargDefault):
             if opt == "different":
                 if isinstance(compat, CombineKwargDefault) and compat != "override":
@@ -467,20 +473,13 @@ def _calc_concat_over(
                     )
                 )
             elif opt == "minimal":
-                # with "minimal" concatenation over a new dimension;
-                # we act like "all" for data_vars
-                if not concat_over_existing_dim and subset == "data_vars":
-                    concat_over.update(
-                        set().union(
-                            *[set(getattr(d, subset)) - set(d.dims) for d in datasets]
-                        )
-                    )
+                pass
             else:
                 raise ValueError(f"unexpected value for {subset}: {opt}")
 
             if (
                 isinstance(opt, CombineKwargDefault)
-                and opt != "minimal"
+                and opt._value is not None
                 and original != concat_over
                 and concat_over_existing_dim
             ):

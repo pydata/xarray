@@ -463,15 +463,15 @@ def combine_nested(
     data_vars : {"minimal", "different", "all" or list of str}, optional
         These data variables will be concatenated together:
           * "minimal": Only data variables in which the dimension already
-            appears are included. If concatenating over a dimension _not_
-            present in any of the objects, then all data variables will
-            be concatenated along that new dimension.
+            appears are included.
           * "different": Data variables which are not equal (ignoring
             attributes) across all datasets are also concatenated (as well as
             all for which dimension already appears). Beware: this option may
             load the data payload of data variables into memory if they are not
             already loaded.
           * "all": All data variables will be concatenated.
+          * None: Means ``"all"`` if ``dim`` is not present in any of the ``objs``,
+            and ``"minimal"`` if ``dim`` is present in any of ``objs``.
           * list of dims: The listed data variables will be concatenated, in
             addition to the "minimal" data variables.
 
