@@ -355,6 +355,10 @@ def as_integer_slice(value: slice) -> slice:
     return slice(start, stop, step)
 
 
+def as_integer_multi_slice(value: MultipleSlices) -> MultipleSlices:
+    return MultipleSlices.from_iterable(as_integer_slice(s) for s in value.slices)
+
+
 class IndexCallable:
     """Provide getitem and setitem syntax for callable objects."""
 
@@ -406,6 +410,11 @@ class BasicIndexer(ExplicitIndexer):
         super().__init__(tuple(new_key))
 
 
+outer_indexer_key_type = (
+    int | np.integer | slice | np.ndarray[Any, np.dtype[np.generic]]
+)
+
+
 class OuterIndexer(ExplicitIndexer):
     """Tuple for outer/orthogonal indexing.
 
@@ -417,12 +426,7 @@ class OuterIndexer(ExplicitIndexer):
 
     __slots__ = ()
 
-    def __init__(
-        self,
-        key: tuple[
-            int | np.integer | slice | np.ndarray[Any, np.dtype[np.generic]], ...
-        ],
-    ):
+    def __init__(self, key: tuple[outer_indexer_key_type | MultipleSlices, ...]):
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
@@ -432,6 +436,8 @@ class OuterIndexer(ExplicitIndexer):
                 k = int(k)
             elif isinstance(k, slice):
                 k = as_integer_slice(k)
+            elif isinstance(k, MultipleSlices):
+                k = as_integer_multi_slice(k)
             elif is_duck_array(k):
                 if not np.issubdtype(k.dtype, np.integer):
                     raise TypeError(
