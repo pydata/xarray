@@ -27,12 +27,12 @@ Deprecations
   Adds an option: ``use_new_combine_kwarg_defaults`` to opt in to new defaults immediately.
   New values are:
 
-  - ``data_vars``: "minimal"
+  - ``data_vars``: None which means ``all`` when concatenating along a new dimension, and ``"minimal"`` when concatenating along an existing dimension
   - ``coords``: "minimal"
   - ``compat``: "override"
   - ``join``: "exact"
 
-  By `Julia Signell <https://github.com/jsignell>`_.
+  (:issue:`8778`, :issue:`1385`, :pull:`10062`). By `Julia Signell <https://github.com/jsignell>`_.
 
 Bug fixes
 ~~~~~~~~~
