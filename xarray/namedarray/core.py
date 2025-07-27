@@ -737,10 +737,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         if isinstance(key, NamedArray) and isdtype(key.dtype, "bool"):
             self_new, key_new = _broadcast_arrays(self, key)
-            # self_new, key_new = self, key
             _data = self_new._data[key_new._data]
             _dims = _flatten_dims(_atleast1d_dims(self_new.dims))
-            # _dims = dims
             return self._new(_dims, _data)
         elif (
             isinstance(key, int | slice | tuple | NamedArray)
@@ -750,6 +748,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             # TODO: __getitem__ not always available, use expand_dims
             _key_tuple = key if isinstance(key, tuple) else (key,)
             # _dims = _dims_from_tuple_indexing(self.dims, _key_tuple)
+
             try:
                 _dims = _dims_from_tuple_indexing(
                     self.dims,
