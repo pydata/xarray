@@ -757,7 +757,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                         k.dims if isinstance(k, NamedArray) else k for k in _key_tuple
                     ),
                 )
-            except Exception as e:
+            except Exception:
                 raise NotImplementedError(f"{self=}\n{key=}")
 
             _data = self._data[
