@@ -12,6 +12,7 @@ from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     requires_dask,
+    requires_h5netcdf,
     requires_netCDF4,
     requires_scipy,
 )
