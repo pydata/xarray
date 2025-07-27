@@ -695,7 +695,7 @@ class TestConcatDataset:
             concat(split_data, "dim1", compat="minimal")
 
         with pytest.raises(ValueError, match=r"unexpected value for"):
-            concat([data, data], "new_dim", coords="foobar")  # type: ignore[call-overload]
+            concat([data, data], "new_dim", coords="foobar")
 
         with pytest.raises(
             ValueError, match=r"coordinate in some datasets but not others"

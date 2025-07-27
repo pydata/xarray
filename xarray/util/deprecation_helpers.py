@@ -163,8 +163,8 @@ class CombineKwargDefault:
         self._old = old
         self._new = new
 
-    def __repr__(self) -> str | None:
-        return self._value
+    def __repr__(self) -> str:
+        return str(self._value)
 
     def __eq__(self, other: Self | Any) -> bool:
         return (

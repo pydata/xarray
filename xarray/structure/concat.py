@@ -46,7 +46,7 @@ def concat(
     objs: Iterable[T_Dataset],
     dim: Hashable | T_Variable | T_DataArray | pd.Index | Any,
     data_vars: T_DataVars | CombineKwargDefault = _DATA_VARS_DEFAULT,
-    coords: ConcatOptions | list[Hashable] | CombineKwargDefault = _COORDS_DEFAULT,
+    coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault = _COORDS_DEFAULT,
     compat: CompatOptions | CombineKwargDefault = _COMPAT_CONCAT_DEFAULT,
     positions: Iterable[Iterable[int]] | None = None,
     fill_value: object = dtypes.NA,
@@ -61,7 +61,7 @@ def concat(
     objs: Iterable[T_DataArray],
     dim: Hashable | T_Variable | T_DataArray | pd.Index | Any,
     data_vars: T_DataVars | CombineKwargDefault = _DATA_VARS_DEFAULT,
-    coords: ConcatOptions | list[Hashable] | CombineKwargDefault = _COORDS_DEFAULT,
+    coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault = _COORDS_DEFAULT,
     compat: CompatOptions | CombineKwargDefault = _COMPAT_CONCAT_DEFAULT,
     positions: Iterable[Iterable[int]] | None = None,
     fill_value: object = dtypes.NA,
@@ -75,7 +75,7 @@ def concat(
     objs,
     dim,
     data_vars: T_DataVars | CombineKwargDefault = _DATA_VARS_DEFAULT,
-    coords: ConcatOptions | list[Hashable] | CombineKwargDefault = _COORDS_DEFAULT,
+    coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault = _COORDS_DEFAULT,
     compat: CompatOptions | CombineKwargDefault = _COMPAT_CONCAT_DEFAULT,
     positions=None,
     fill_value=dtypes.NA,
@@ -339,25 +339,25 @@ def _calc_concat_dim_index(
 
 
 def _calc_concat_over(
-    datasets,
-    dim,
-    all_dims,
+    datasets: list[T_Dataset],
+    dim: Hashable,
+    all_dims: set[Hashable],
     data_vars: T_DataVars | CombineKwargDefault,
-    coords,
-    compat,
-):
+    coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault,
+    compat: CompatOptions | CombineKwargDefault,
+) -> tuple[set[Hashable], dict[Hashable, bool], list[int], set[Hashable]]:
     """
     Determine which dataset variables need to be concatenated in the result,
     """
     # variables to be concatenated
     concat_over = set()
     # variables checked for equality
-    equals: dict[Hashable, bool | None] = {}
+    equals: dict[Hashable, bool] = {}
     # skip merging these variables.
     #   if concatenating over a dimension 'x' that is associated with an index over 2 variables,
     #   'x' and 'y', then we assert join="equals" on `y` and don't need to merge it.
     #   that assertion happens in the align step prior to this function being called
-    skip_merge = set()
+    skip_merge: set[Hashable] = set()
 
     if dim in all_dims:
         concat_over_existing_dim = True
@@ -380,7 +380,10 @@ def _calc_concat_over(
                 skip_merge.update(idx_vars.keys())
         concat_dim_lengths.append(ds.sizes.get(dim, 1))
 
-    def process_subset_opt(opt, subset: Literal["coords", "data_vars"]) -> None:
+    def process_subset_opt(
+        opt: ConcatOptions | Iterable[Hashable] | CombineKwargDefault,
+        subset: Literal["coords", "data_vars"],
+    ) -> None:
         original = set(concat_over)
         compat_str = (
             compat._value if isinstance(compat, CombineKwargDefault) else compat
@@ -411,7 +414,7 @@ def _calc_concat_over(
                 # all nonindexes that are not the same in each dataset
                 for k in getattr(datasets[0], subset):
                     if k not in concat_over:
-                        equals[k] = None
+                        equal = None
 
                         variables = [
                             ds.variables[k] for ds in datasets if k in ds.variables
@@ -430,19 +433,19 @@ def _calc_concat_over(
 
                         # first check without comparing values i.e. no computes
                         for var in variables[1:]:
-                            equals[k] = getattr(variables[0], compat_str)(
+                            equal = getattr(variables[0], compat_str)(
                                 var, equiv=lazy_array_equiv
                             )
-                            if equals[k] is not True:
+                            if equal is not True:
                                 # exit early if we know these are not equal or that
                                 # equality cannot be determined i.e. one or all of
                                 # the variables wraps a numpy array
                                 break
 
-                        if equals[k] is False:
+                        if equal is False:
                             concat_over.add(k)
 
-                        elif equals[k] is None:
+                        elif equal is None:
                             # Compare the variable of all datasets vs. the one
                             # of the first dataset. Perform the minimum amount of
                             # loads in order to avoid multiple loads from disk
@@ -464,7 +467,10 @@ def _calc_concat_over(
                                         ds.variables[k].data = v.data
                                     break
                             else:
-                                equals[k] = True
+                                equal = True
+                        if TYPE_CHECKING:
+                            assert equal is not None
+                        equals[k] = equal
 
             elif opt == "all":
                 concat_over.update(
@@ -564,7 +570,7 @@ def _dataset_concat(
     datasets: Iterable[T_Dataset],
     dim: str | T_Variable | T_DataArray | pd.Index,
     data_vars: T_DataVars | CombineKwargDefault,
-    coords: str | list[Hashable] | CombineKwargDefault,
+    coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault,
     compat: CompatOptions | CombineKwargDefault,
     positions: Iterable[Iterable[int]] | None,
     fill_value: Any,
@@ -807,7 +813,7 @@ def _dataarray_concat(
     arrays: Iterable[T_DataArray],
     dim: str | T_Variable | T_DataArray | pd.Index,
     data_vars: T_DataVars | CombineKwargDefault,
-    coords: str | list[Hashable] | CombineKwargDefault,
+    coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault,
     compat: CompatOptions | CombineKwargDefault,
     positions: Iterable[Iterable[int]] | None,
     fill_value: object,
