@@ -368,7 +368,17 @@ class TestLazyArray:
         v_lazy = Variable(["i", "j", "k"], lazy)
         arr = ReturnItem()
         # test orthogonally applied indexers
-        indexers = [arr[:], 0, -2, arr[:3], [0, 1, 2, 3], [0], np.arange(10) < 5]
+        indexers = [
+            arr[:],
+            0,
+            -2,
+            arr[:3],
+            [0, 1, 2, 3],
+            [0],
+            np.arange(10) < 5,
+            indexing.MultipleSlices(slice(0, 3), slice(5, 7)),
+            indexing.MultipleSlices(slice(None, 5), slice(7, None, 2)),
+        ]
         for i in indexers:
             for j in indexers:
                 for k in indexers:
