@@ -24,6 +24,7 @@ from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
     BasicIndexer,
     CoordinateTransformIndexingAdapter,
+    MultipleSlices,
     OuterIndexer,
     PandasIndexingAdapter,
     VectorizedIndexer,
@@ -708,7 +709,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         for k in key:
             if isinstance(k, Variable):
                 k = k.data
-            if not isinstance(k, BASIC_INDEXING_TYPES):
+            if not isinstance(k, BASIC_INDEXING_TYPES) and not isinstance(
+                k, MultipleSlices
+            ):
                 if not is_duck_array(k):
                     k = np.asarray(k)
                 if k.size == 0:
