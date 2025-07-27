@@ -692,6 +692,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         <xarray.NamedArray (z: 2, x: 1)> Size: 16B
         array([[4],
                [4]])
+        >>> key = NamedArray(("z", "y"), np.array([[1], [-1]]))
+        >>> x[key]
+
 
         OLD
 
@@ -747,10 +750,15 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             # TODO: __getitem__ not always available, use expand_dims
             _key_tuple = key if isinstance(key, tuple) else (key,)
             # _dims = _dims_from_tuple_indexing(self.dims, _key_tuple)
-            _dims = _dims_from_tuple_indexing(
-                self.dims,
-                tuple(k.dims if isinstance(k, NamedArray) else k for k in _key_tuple),
-            )
+            try:
+                _dims = _dims_from_tuple_indexing(
+                    self.dims,
+                    tuple(
+                        k.dims if isinstance(k, NamedArray) else k for k in _key_tuple
+                    ),
+                )
+            except Exception as e:
+                raise NotImplementedError(f"{self=}\n{key=}")
 
             _data = self._data[
                 tuple(k._data if isinstance(k, NamedArray) else k for k in _key_tuple)

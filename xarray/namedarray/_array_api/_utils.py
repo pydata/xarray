@@ -560,6 +560,29 @@ def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeysDims) -> _Dims:
                 raise NotImplementedError(
                     f"What happens here? {key_no_ellipsis=}, {dims=}, {i=}, {k=}"
                 )
+                # If T contains at least one non-zero-dimensional integer array,
+                # all elements of T must be broadcast against each other to determine
+                # a common shape S2 = (s1, s2, ..., sN) according to standard
+                # broadcasting rules (see Broadcasting). If one or more elements in T
+                # are not broadcast-compatible with the others, an exception must be
+                # raised.
+
+                # After broadcasting elements of T to a common shape S2, the resulting
+                # tuple U = (u1, u2, ..., uN) must only contain integer arrays having
+                # shape S2 (i.e.,
+                # u1 = broadcast_to(t1, S2),
+                # u2 = broadcast_to(t2, S2), et cetera).
+
+                # Each element in U must specify a multi-dimensional index
+                # v_i = (u1[i], u2[i], ..., uN[i]), where i ranges over S2. The result
+                # of A[U] must be constructed by gathering elements from A at each
+                # coordinate tuple v_i. For example, let A have shape (4,4) and U
+                # contain integer arrays equivalent to ([0,1], [2,3]), with u1 = [0,1]
+                # and u2 = [2,3]. The resulting coordinate tuples must be (0,2) and
+                # (1,3), respectively, and the resulting array must have shape (2,)
+                # and contain elements A[(0,2)] and A[(1,3)].
+
+                # The result of A[U] must be an array having the broadcasted shape S2.
 
     return tuple(new_dims)
 
