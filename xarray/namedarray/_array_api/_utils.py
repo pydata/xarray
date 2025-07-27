@@ -530,6 +530,9 @@ def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeysDims) -> _Dims:
     >>> key = (NamedArray(("x",), np.array([0])).dims, 0)
     >>> _dims_from_tuple_indexing(("x", "y", "z"), key)
     ('x', 'z')
+    >>> key = (NamedArray(("x", "y"), np.array([[0]])).dims,)
+    >>> _dims_from_tuple_indexing(("x",), key)
+    ('x', 'y')
     """
     key_no_ellipsis = _replace_ellipsis(key, len(dims))
 
@@ -547,15 +550,20 @@ def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeysDims) -> _Dims:
             # Slice retains the dimension.
             j += 1
         elif isinstance(k, tuple):
-            _dims = k
-            if len(_dims) == 0:
+            key_dims = k
+            if len(key_dims) == 0:
                 # if 0 dim, removes 1 dimension
                 new_dims.pop(j)
-            elif len(_dims) == 1:
+            elif len(key_dims) == 1:
                 # same size retains the dimension:
-                _check_indexing_dims(dims[i : i + 1], _dims)
+                _check_indexing_dims(dims[i : i + 1], key_dims)
                 j += 1
                 # new_dims.pop(j)
+            elif len(dims) == 1:
+                # Broadcast to same dims:
+                # TODO: Proper _broadcast_dims?
+                # TODO: Test case: set(dims) & set(key_dims) = {}
+                new_dims = key_dims
             else:
                 raise NotImplementedError(
                     f"What happens here? {key_no_ellipsis=}, {dims=}, {i=}, {k=}"
