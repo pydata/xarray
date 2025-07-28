@@ -42,6 +42,11 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 
 
+Performance
+~~~~~~~~~~~
+- Speed up non-numeric scalars when calling :py:meth:`Dataset.interp`. (:issue:`10054`, :pull:`10554`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
 .. _whats-new.2025.07.1:
 
 v2025.07.1 (July 09, 2025)

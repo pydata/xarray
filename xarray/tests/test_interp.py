@@ -1066,6 +1066,28 @@ def test_interp1d_complex_out_of_bounds() -> None:
 
 
 @requires_scipy
+def test_interp_non_numeric_scalar() -> None:
+    ds = xr.Dataset(
+        {
+            "non_numeric": ("time", np.array(["a"])),
+        },
+        coords={"time": (np.array([0]))},
+    )
+    actual = ds.interp(time=np.linspace(0, 3, 3))
+
+    expected = xr.Dataset(
+        {
+            "non_numeric": ("time", np.array(["a", "a", "a"])),
+        },
+        coords={"time": np.linspace(0, 3, 3)},
+    )
+    xr.testing.assert_identical(actual, expected)
+
+    # Make sure the array is a copy:
+    assert actual["non_numeric"].data.base is None
+
+
+@requires_scipy
 def test_interp_non_numeric_1d() -> None:
     ds = xr.Dataset(
         {
