@@ -308,6 +308,8 @@ def _index_indexer_1d(old_indexer, applied_indexer, size: int):
             indexer = slice_slice(old_indexer, applied_indexer, size)
         elif isinstance(applied_indexer, integer_types):
             indexer = range(*old_indexer.indices(size))[applied_indexer]  # type: ignore[assignment]
+        elif is_full_slice(old_indexer):
+            indexer = applied_indexer
         else:
             indexer = _expand_slice(old_indexer, size)[applied_indexer]
     else:
