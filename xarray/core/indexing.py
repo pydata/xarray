@@ -299,8 +299,14 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
     return slice(start, stop, step)
 
 
-def slice_slice_by_array(old_slice, array, size):
+def slice_slice_by_array(
+    old_slice: slice,
+    array: np.ndarray[Any, np.dtype[np.generic]],
+    size: int,
+) -> np.ndarray[Any, np.dtype[np.generic]]:
+    # to get a concrete slice, limited to the size of the array
     normalized = normalize_slice(old_slice, size)
+
     new_indexer = array * normalized.step + normalized.start
 
     if np.any(new_indexer >= normalized.stop):
