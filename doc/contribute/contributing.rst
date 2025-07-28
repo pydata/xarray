@@ -37,7 +37,7 @@ Where to start?
 If you are brand new to *xarray* or open-source development, we recommend going
 through the `GitHub "issues" tab <https://github.com/pydata/xarray/issues>`_
 to find issues that interest you.
-Some issues are particularly suited for new contributors by the label `Documentation <https://github.com/pydata/xarray/labels/topic-documentation>`_
+Some issues are particularly suited for new contributors by the label `Documentation <https://github.com/pydata/xarray/labels/topic-documentation>`__
 and `good first issue
 <https://github.com/pydata/xarray/labels/contrib-good-first-issue>`_ where you could start out.
 These are well documented issues, that do not require a deep understanding of the internals of xarray.
@@ -323,7 +323,7 @@ The editing workflow
 
 3. Check what the actual changes are with ``git diff``.
 
-4. Build the `documentation <https://docs.xarray.dev/en/stable/contributing.html#building-the-documentation>`_
+4. Build the `documentation <https://docs.xarray.dev/en/stable/contributing.html#building-the-documentation>`__
 for the documentation changes.
 
 5. `Run the test suite <https://docs.xarray.dev/en/stable/contributing.html#running-the-test-suite>`_ for code changes.
