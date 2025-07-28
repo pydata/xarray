@@ -339,17 +339,23 @@ def _index_indexer_1d(
     if is_full_slice(applied_indexer):
         # shortcut for the usual case
         return old_indexer
+
+    indexer: OuterIndexerType
     if isinstance(old_indexer, slice):
         if isinstance(applied_indexer, slice):
             indexer = slice_slice(old_indexer, applied_indexer, size)
         elif isinstance(applied_indexer, integer_types):
-            indexer = range(*old_indexer.indices(size))[applied_indexer]  # type: ignore[assignment]
+            indexer = range(*old_indexer.indices(size))[applied_indexer]
         elif is_full_slice(old_indexer):
             indexer = applied_indexer
         else:
             indexer = slice_slice_by_array(old_indexer, applied_indexer, size)
-    else:
+    elif isinstance(old_indexer, np.ndarray):
         indexer = old_indexer[applied_indexer]
+    else:
+        # should be unreachable
+        raise ValueError("cannot index integers. Please open an issuec-")
+
     return indexer
 
 
@@ -664,7 +670,8 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
     def _updated_key(self, new_key: ExplicitIndexer) -> BasicIndexer | OuterIndexer:
         iter_new_key = iter(expanded_indexer(new_key.tuple, self.ndim))
-        full_key = []
+
+        full_key: list[OuterIndexerType] = []
         for size, k in zip(self.array.shape, self.key.tuple, strict=True):
             if isinstance(k, integer_types):
                 full_key.append(k)
@@ -673,7 +680,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         full_key_tuple = tuple(full_key)
 
         if all(isinstance(k, integer_types + (slice,)) for k in full_key_tuple):
-            return BasicIndexer(full_key_tuple)
+            return BasicIndexer(cast(tuple[BasicIndexerType, ...], full_key_tuple))
         return OuterIndexer(full_key_tuple)
 
     @property
