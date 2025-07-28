@@ -276,8 +276,8 @@ request.  If you have uncommitted changes, you will need to ``git stash`` them
 prior to updating.  This will effectively store your changes, which can be
 reapplied after updating.
 
-If the **xarray** ``main`` branch version has updated since you last fetched changes,
-you may also wish to reinstall xarray so that the pip version reflects the **xarray**
+If the *xarray* ``main`` branch version has updated since you last fetched changes,
+you may also wish to reinstall xarray so that the pip version reflects the *xarray*
 version::
     pip install -e .
 
@@ -322,10 +322,10 @@ The editing workflow
 
 3. Check what the actual changes are with ``git diff``.
 
-4. Build the `documentation run <https://docs.xarray.dev/en/stable/contributing.html#building-the-documentation>`_
+4. Build the `documentation <https://docs.xarray.dev/en/stable/contributing.html#building-the-documentation>`_
 for the documentation changes.
 
-`Run the test suite <https://docs.xarray.dev/en/stable/contributing.html#running-the-test-suite>`_ for code changes.
+5. `Run the test suite <https://docs.xarray.dev/en/stable/contributing.html#running-the-test-suite>`_ for code changes.
 
 Commit and push your changes
 ----------------------------
