@@ -157,7 +157,7 @@ maintainers to see what you've done, and why you did it, we recommend you to fol
 
     git fetch --tags upstream
     
-   This will ensure that when you create a development environment (below), a reasonable version number is created.
+   This will ensure that when you create a development environment a reasonable version number is created.
    
 .. _contributing.dev_env:
 
