@@ -1958,7 +1958,18 @@ def to_netcdf(
             f"is not currently supported with dask's {scheduler} scheduler"
         )
 
-    target = path_or_file if path_or_file is not None else BytesIO()
+    if path_or_file is None:
+        target = BytesIO()
+        # We can't get the BytesIO's value *before* closing the store, since
+        # the h5netcdf backend won't finish writing until its close is called.
+        # However if we try to get the BytesIO's value *after* closing the store,
+        # the scipy backend will close the BytesIO, preventing its value from
+        # being read. The solution is to prevent the BytesIO from being closed:
+        close_bytesio = target.close
+        target.close = lambda: None  # type: ignore[method-assign]
+    else:
+        target = path_or_file  # type: ignore[assignment]
+
     kwargs = dict(autoclose=True) if autoclose else {}
     if invalid_netcdf:
         if engine == "h5netcdf":
@@ -1998,12 +2009,14 @@ def to_netcdf(
 
         writes = writer.sync(compute=compute)
 
-        if isinstance(target, BytesIO):
-            store.sync()
-            return target.getvalue()
     finally:
         if not multifile and compute:  # type: ignore[redundant-expr]
             store.close()
+
+    if path_or_file is None:
+        value = target.getvalue()
+        close_bytesio()
+        return value
 
     if not compute:
         import dask

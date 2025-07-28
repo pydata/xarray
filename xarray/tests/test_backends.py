@@ -4602,6 +4602,15 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
 
 
 @requires_h5netcdf
+class TestH5NetCDFInMemoryData:
+    def test_roundtrip_via_bytes(self) -> None:
+        original = create_test_data()
+        netcdf_bytes = original.to_netcdf(engine="h5netcdf")
+        roundtrip = open_dataset(netcdf_bytes, engine="h5netcdf")  # type: ignore[arg-type]
+        assert_identical(roundtrip, original)
+
+
+@requires_h5netcdf
 @requires_dask
 @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
 class TestH5NetCDFViaDaskData(TestH5NetCDFData):
