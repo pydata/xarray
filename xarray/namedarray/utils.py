@@ -11,7 +11,6 @@ import numpy as np
 from packaging.version import Version
 
 from xarray.namedarray._typing import ErrorOptionsWithWarn, _DimsLike
-from xarray.namedarray.utils import fake_target_chunksize
 
 if TYPE_CHECKING:
     from typing import TypeGuard
