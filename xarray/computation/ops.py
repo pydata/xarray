@@ -17,9 +17,6 @@ from xarray.core import dtypes, duck_array_ops
 if TYPE_CHECKING:
     from typing import Any
 
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
-
 try:
     import bottleneck as bn
 
@@ -164,7 +161,8 @@ def fillna(data, other, join="left", dataset_join="left"):
     )
 
 
-def where_method(self, cond: DataArray | Dataset, other: Any = dtypes.NA):
+# TODO: type this properly
+def where_method(self: Any, cond: Any, other: Any = dtypes.NA):
     """Return elements from `self` or `other` depending on `cond`.
 
     Parameters
