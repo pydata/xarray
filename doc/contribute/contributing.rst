@@ -279,6 +279,7 @@ reapplied after updating.
 If the *xarray* ``main`` branch version has updated since you last fetched changes,
 you may also wish to reinstall xarray so that the pip version reflects the *xarray*
 version::
+
     pip install -e .
 
 Create a new feature branch
@@ -432,7 +433,7 @@ How to build the *xarray* documentation
 
 Requirements
 ~~~~~~~~~~~~
-Make sure to follow the instructions on :ref:`creating a development environment above <contributing.dev_env>`, but
+Make sure to follow the instructions on :ref:`creating a development environment<contributing.dev_env>` above, but
 to build the docs you need to use the environment file ``ci/requirements/doc.yml``.
 You should also use this environment and these steps if you want to view changes you've made to the docstrings.
 
