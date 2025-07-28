@@ -172,7 +172,7 @@ First make sure you have followed `Setting up xarray for development
 Before starting a new set of changes, fetch all changes from ``upstream/main``, and start a new
 feature branch from that. From time to time you should fetch the upstream changes from GitHub: ::
 
-    git fetch upstream
+    git fetch --tags upstream
     git merge upstream/main
 
 This will combine your commits with the latest *xarray* git ``main``.  If this
@@ -180,6 +180,11 @@ leads to merge conflicts, you must resolve these before submitting your pull
 request.  If you have uncommitted changes, you will need to ``git stash`` them
 prior to updating.  This will effectively store your changes, which can be
 reapplied after updating.
+
+If the **xarray** ``main`` branch version has updated since you last fetched changes,
+you may also wish to reinstall xarray so that the pip version reflects the **xarray**
+version::
+    pip install -e .
 
 Create a new feature branch
 ---------------------------
