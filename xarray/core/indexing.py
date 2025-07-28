@@ -300,10 +300,9 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
 
 
 def slice_slice_by_array(old_slice, array, size):
-    # _expand_slice(old_indexer, size)[applied_indexer]
     normalized = normalize_slice(old_slice, size)
-
     new_indexer = array * normalized.step + normalized.start
+
     if np.any(new_indexer >= normalized.stop):
         raise IndexError("indices out of bounds")  # TODO: more helpful error message
 
