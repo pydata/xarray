@@ -309,7 +309,7 @@ def slice_slice_by_array(
 
     new_indexer = array * normalized.step + normalized.start
 
-    if np.any(new_indexer >= normalized.stop):
+    if np.any(new_indexer >= size):
         raise IndexError("indices out of bounds")  # TODO: more helpful error message
 
     return new_indexer
