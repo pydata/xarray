@@ -299,6 +299,17 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
     return slice(start, stop, step)
 
 
+def slice_slice_by_array(old_slice, array, size):
+    # _expand_slice(old_indexer, size)[applied_indexer]
+    normalized = normalize_slice(old_slice, size)
+
+    new_indexer = array * normalized.step + normalized.start
+    if np.any(new_indexer >= normalized.stop):
+        raise IndexError("indices out of bounds")  # TODO: more helpful error message
+
+    return new_indexer
+
+
 def _index_indexer_1d(old_indexer, applied_indexer, size: int):
     if is_full_slice(applied_indexer):
         # shortcut for the usual case
@@ -311,7 +322,7 @@ def _index_indexer_1d(old_indexer, applied_indexer, size: int):
         elif is_full_slice(old_indexer):
             indexer = applied_indexer
         else:
-            indexer = _expand_slice(old_indexer, size)[applied_indexer]
+            indexer = slice_slice_by_array(old_indexer, applied_indexer, size)
     else:
         indexer = old_indexer[applied_indexer]
     return indexer
