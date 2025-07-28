@@ -245,7 +245,7 @@ class TestCoordinates:
         assert isinstance(actual, Coordinates)
         assert set(actual.variables) == set()
 
-    def test_rename_dims(self):
+    def test_rename_dims(self) -> None:
         coords = Coordinates(
             coords={
                 "x": Variable("x", range(3)),
@@ -265,7 +265,7 @@ class TestCoordinates:
         assert set(actual.dims) == {"u", "v"}
         assert set(actual.variables) == {"a", "x", "y"}
 
-    def test_rename_vars(self):
+    def test_rename_vars(self) -> None:
         coords = Coordinates(
             coords={
                 "x": Variable("x", range(3)),
@@ -285,7 +285,7 @@ class TestCoordinates:
         assert set(actual.dims) == {"x", "y"}
         assert set(actual.variables) == {"a", "u", "v"}
 
-    def test_operator_merge(self):
+    def test_operator_merge(self) -> None:
         coords1 = Coordinates({"x": ("x", [0, 1, 2])})
         coords2 = Coordinates({"y": ("y", [3, 4, 5])})
         expected = Dataset(coords={"x": [0, 1, 2], "y": [3, 4, 5]})

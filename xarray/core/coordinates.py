@@ -807,7 +807,7 @@ class Coordinates(AbstractCoordinates):
         self,
         dims_dict: Mapping[Any, Hashable] | None = None,
         **dims: Hashable,
-    ) -> Coordinates:
+    ) -> Self:
         """Returns a new object with renamed dimensions only.
 
         Parameters
@@ -825,7 +825,7 @@ class Coordinates(AbstractCoordinates):
         renamed : Coordinates
             Coordinates object with renamed dimensions.
         """
-        return self.to_dataset().rename_dims(dims_dict, **dims).coords
+        return cast(Self, self.to_dataset().rename_dims(dims_dict, **dims).coords)
 
     def rename_vars(
         self,
@@ -848,7 +848,7 @@ class Coordinates(AbstractCoordinates):
         renamed : Coordinates
             Coordinates object with renamed variables
         """
-        return self.to_dataset().rename_vars(name_dict, **names).coords
+        return cast(Self, self.to_dataset().rename_vars(name_dict, **names).coords)
 
 
 class DatasetCoordinates(Coordinates):
