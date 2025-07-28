@@ -256,8 +256,6 @@ This can be done by running: ::
 from the root of the xarray repository. You can skip the pre-commit checks with
 ``git commit --no-verify``.
 
-.. _contributing.documentation:
-
 
 Update the ``main`` branch
 --------------------------
@@ -354,6 +352,8 @@ Follow the PR template, which looks like this. ::
 Mention anything you'd like particular attention for - such as a complicated change or some code you are not happy with.
 If you don't think your request is ready to be merged, just say so in your pull request message and use
 the "Draft PR" feature of GitHub. This is a good way of getting some preliminary code review.
+
+.. _contributing.documentation:
 
 Contributing to the documentation
 =================================
