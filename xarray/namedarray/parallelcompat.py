@@ -749,8 +749,8 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
     def get_auto_chunk_size(
         self,
-        var,
-    ) -> tuple[int, _DType]:
+        var,  #: xarray.Variable,
+    ) -> int:
         """
         Get the default chunk size for a variable.
 
@@ -768,8 +768,6 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         -------
         chunk_size : int
             The chunk size in bytes.
-        dtype : np.dtype
-            The data type of the variable.
         """
 
         raise NotImplementedError(

@@ -19,6 +19,7 @@ from xarray.namedarray.parallelcompat import (
     get_chunked_array_type,
     guess_chunkmanager,
 )
+from xarray.namedarray.utils import fake_target_chunksize
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -88,10 +89,11 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
     #  at this point, so check for # this before we manually construct our chunk
     # spec- if we've set chunks to auto
     _chunks = list(chunks.values()) if is_dict_like(chunks) else chunks
-    auto_chunks = all(_chunk == "auto" for _chunk in _chunks)
+    auto_chunks = any(_chunk == "auto" for _chunk in _chunks)
 
     if _contains_cftime_datetimes(var) and auto_chunks:
-        limit, var_dtype = chunkmanager.get_auto_chunk_size(var)
+        limit = chunkmanager.get_auto_chunk_size(var)
+        limit, var_dtype = fake_target_chunksize(var, limit)
     else:
         limit, var_dtype = None, var.dtype
 

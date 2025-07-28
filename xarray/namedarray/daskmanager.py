@@ -320,11 +320,8 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
         return data.rechunk(chunks, **kwargs)
 
-    def get_auto_chunk_size(self, var: Variable) -> tuple[int, _DType]:
+    def get_auto_chunk_size(self, var: Variable) -> int:
         from dask import config as dask_config
         from dask.utils import parse_bytes
 
-        from xarray.namedarray.utils import fake_target_chunksize
-
-        target_chunksize = parse_bytes(dask_config.get("array.chunk-size"))
-        return fake_target_chunksize(var, target_chunksize=target_chunksize)
+        return parse_bytes(dask_config.get("array.chunk-size"))

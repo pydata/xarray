@@ -19,6 +19,7 @@ from xarray.namedarray._typing import (
 )
 from xarray.namedarray.core import NamedArray, from_array
 from xarray.namedarray.utils import fake_target_chunksize
+from xarray.tests import requires_cftime
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -625,23 +626,6 @@ def test_repr() -> None:
     [
         (np.arange(100).reshape(10, 10), 1024),
         (np.arange(100).reshape(10, 10).astype(np.float32), 2048),
-        (
-            pytest.param(
-                np.array(
-                    [
-                        cftime.Datetime360Day(2000, month, day, 0, 0, 0, 0)
-                        for month in range(1, 11)
-                        for day in range(1, 11)
-                    ],
-                    dtype=object,
-                ).reshape(10, 10),
-                73,
-                marks=pytest.mark.xfail(
-                    not cftime_available,
-                    reason="cftime not available, cannot test object dtype with cftime dates",
-                ),
-            )
-        ),
     ],
 )
 def test_fake_target_chunksize(
@@ -660,4 +644,30 @@ def test_fake_target_chunksize(
     faked_chunksize, dtype = fake_target_chunksize(input_array, target_chunksize)  # type: ignore[var-annotated]
 
     assert faked_chunksize == expected_chunksize_faked
+    assert dtype == np.float64
+
+
+@requires_cftime
+def test_fake_target_chunksize_cftime() -> None:
+    """
+    Check that `fake_target_chunksize` returns the expected chunksize and dtype.
+    - It pretends to dask we are chunking an array with an 8-byte dtype, ie. a float64.
+    - This is the same as the above test, but specifically for a CFTime array case - split for testing reasons
+    """
+    import cftime
+
+    target_chunksize = 1024
+
+    input_array = np.array(
+        [
+            cftime.Datetime360Day(2000, month, day, 0, 0, 0, 0)
+            for month in range(1, 11)
+            for day in range(1, 11)
+        ],
+        dtype=object,
+    ).reshape(10, 10)
+
+    faked_chunksize, dtype = fake_target_chunksize(input_array, target_chunksize)  # type: ignore[var-annotated]
+
+    assert faked_chunksize == 73
     assert dtype == np.float64
