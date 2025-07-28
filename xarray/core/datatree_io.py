@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 import io
+from collections.abc import Mapping
 from os import PathLike
-from typing import TYPE_CHECKING, Any, Literal, get_args, overload
+from typing import TYPE_CHECKING, Any, Literal, get_args
 
 from xarray.core.datatree import DataTree
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
@@ -13,6 +13,7 @@ T_DataTreeNetcdfTypes = Literal["NETCDF4"]
 
 if TYPE_CHECKING:
     from xarray.core.types import ZarrStoreLike
+
 
 def _datatree_to_netcdf(
     dt: DataTree,
@@ -37,7 +38,9 @@ def _datatree_to_netcdf(
         raise ValueError("DataTree.to_netcdf only supports the NETCDF4 format")
 
     if engine not in [None, *get_args(T_DataTreeNetcdfEngine)]:
-        raise ValueError("DataTree.to_netcdf only supports the netcdf4 and h5netcdf engines")
+        raise ValueError(
+            "DataTree.to_netcdf only supports the netcdf4 and h5netcdf engines"
+        )
 
     if engine is None:
         engine = "h5netcdf"

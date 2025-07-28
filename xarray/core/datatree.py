@@ -3,7 +3,6 @@ from __future__ import annotations
 import functools
 import io
 import itertools
-from os import PathLike
 import textwrap
 from collections import ChainMap
 from collections.abc import (
@@ -14,6 +13,7 @@ from collections.abc import (
     Mapping,
 )
 from html import escape
+from os import PathLike
 from typing import (
     TYPE_CHECKING,
     Any,

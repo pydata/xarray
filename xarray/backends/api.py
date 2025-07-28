@@ -1926,14 +1926,13 @@ def to_netcdf(
         if engine is None:
             engine = _get_default_engine(path_or_file)
         path_or_file = _normalize_path(path_or_file)
-    else:  # file-like object
-        if engine not in ("scipy", "h5netcdf"):
-            emit_user_level_warning(
-                f"Requested {engine=} is not compatible with writing to a file-like object. "
-                "This will raise an error in the future, for now defaulting to engine='scipy'.",
-                FutureWarning,
-            )
-            engine = "scipy"
+    elif engine not in ("scipy", "h5netcdf"):
+        emit_user_level_warning(
+            f"Requested {engine=} is not compatible with writing to a file-like object. "
+            "This will raise an error in the future, for now defaulting to engine='scipy'.",
+            FutureWarning,
+        )
+        engine = "scipy"
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)

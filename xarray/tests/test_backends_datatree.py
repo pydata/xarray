@@ -551,13 +551,13 @@ class TestH5NetCDFDatatreeIO(DatatreeIOBase):
 
     def test_roundtrip_using_filelike_object(self, tmpdir, simple_datatree):
         original_dt = simple_datatree
-        filepath = tmpdir + '/test.nc'
+        filepath = tmpdir + "/test.nc"
         # h5py requires both read and write access when writing, it will
         # work with file-like objects provided they support both, and are
         # seekable.
-        with open(filepath, 'wb+') as file:
+        with open(filepath, "wb+") as file:
             original_dt.to_netcdf(file, engine=self.engine)
-        with open(filepath, 'rb') as file:
+        with open(filepath, "rb") as file:
             roundtrip_dt = open_datatree(file, engine=self.engine)
             assert_equal(original_dt, roundtrip_dt)
 
