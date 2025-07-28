@@ -316,7 +316,7 @@ class TestLazyArray:
     )
     def test_slice_slice_by_array(self, old_slice, array, size, expected):
         actual = indexing.slice_slice_by_array(old_slice, array, size)
-
+    expected = np.arange(size)[old_slice][array]
         assert_array_equal(actual, expected)
 
     def test_lazily_indexed_array(self) -> None:
