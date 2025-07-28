@@ -129,6 +129,8 @@ you can work seamlessly between your local repository and GitHub.
     The following instructions assume you want to learn how to interact with github via the git command-line utility,
     but contributors who are new to git may find it easier to use other tools instead such as
     `Github Desktop <https://desktop.github.com/>`_.
+    
+.. _contributing.dev_workflow:
 
 Development workflow
 ====================
@@ -190,7 +192,7 @@ development environment:
 - Install either `Anaconda <https://www.anaconda.com/download/>`_ or `miniconda
   <https://conda.io/miniconda.html>`_
 - Make sure your conda is up to date (``conda update conda``)
-- Make sure that you have :ref:`cloned the repository <contributing.forking>`
+- Make sure that you have :ref:`cloned the repository <contributing.dev_workflow>`
 - ``cd`` to the *xarray* source directory
 
 We'll now kick off a two-step process:
