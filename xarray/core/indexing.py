@@ -304,9 +304,9 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
 
 def slice_slice_by_array(
     old_slice: slice,
-    array: np.ndarray[Any, np.dtype[np.generic]],
+    array: np.ndarray[Any, np.dtype[np.integer]],
     size: int,
-) -> np.ndarray[Any, np.dtype[np.generic]]:
+) -> np.ndarray[Any, np.dtype[np.integer]]:
     """Given a slice and the size of the dimension to which it will be applied,
     index it with an array to return a new array equivalent to applying
     the slices sequentially
