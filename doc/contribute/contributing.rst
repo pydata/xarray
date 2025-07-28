@@ -129,7 +129,7 @@ you can work seamlessly between your local repository and GitHub.
     The following instructions assume you want to learn how to interact with github via the git command-line utility,
     but contributors who are new to git may find it easier to use other tools instead such as
     `Github Desktop <https://desktop.github.com/>`_.
-    
+
 .. _contributing.dev_workflow:
 
 Development workflow
@@ -156,9 +156,9 @@ maintainers to see what you've done, and why you did it, we recommend you to fol
 4. Copy tags across from the xarray repository::
 
     git fetch --tags upstream
-    
+
    This will ensure that when you create a development environment a reasonable version number is created.
-   
+
 .. _contributing.dev_env:
 
 Creating a development environment
