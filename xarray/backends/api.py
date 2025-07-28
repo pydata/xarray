@@ -1471,6 +1471,7 @@ def open_mfdataset(
     preprocess: Callable[[Dataset], Dataset] | None = None,
     engine: T_Engine = None,
     data_vars: Literal["all", "minimal", "different"]
+    | None
     | list[str]
     | CombineKwargDefault = _DATA_VARS_DEFAULT,
     coords=_COORDS_DEFAULT,

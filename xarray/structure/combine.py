@@ -729,6 +729,7 @@ def combine_by_coords(
     data_objects: Iterable[Dataset | DataArray] = [],
     compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
     data_vars: Literal["all", "minimal", "different"]
+    | None
     | list[str]
     | CombineKwargDefault = _DATA_VARS_DEFAULT,
     coords: str | CombineKwargDefault = _COORDS_DEFAULT,
