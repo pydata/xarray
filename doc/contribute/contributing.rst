@@ -151,6 +151,12 @@ maintainers to see what you've done, and why you did it, we recommend you to fol
    This creates the directory ``xarray`` and connects your repository to
    the upstream (main project) *xarray* repository.
 
+4. Copy tags across from the xarray repository::
+
+    git fetch --tags upstream
+    
+   This will ensure that when you create a development environment (below), a reasonable version number is created.
+
 Creating a development environment
 ----------------------------------
 
@@ -316,7 +322,7 @@ built version:
    $ python  # start an interpreter
    >>> import xarray
    >>> xarray.__version__
-   '0.10.0+dev46.g015daca'
+   '2025.7.2.dev14+g5ce69b2b.d20250725'
 
 This will create the new environment, and not touch any of your existing environments,
 nor any existing Python installation.
