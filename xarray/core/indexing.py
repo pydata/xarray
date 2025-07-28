@@ -652,6 +652,8 @@ class MultipleSlices:
         slices_: list[slice] | tuple[slice, ...]
         if len(slices) == 1 and isinstance(slices[0], list):
             slices_ = slices[0]
+        else:
+            slices_ = cast(tuple[slice, ...], slices)
 
         if any(not isinstance(s, slice) for s in slices_):
             raise ValueError("Can only wrap slice objects.")
