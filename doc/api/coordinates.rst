@@ -54,6 +54,7 @@ Coordinates contents
    Coordinates.to_dataset
    Coordinates.to_index
    Coordinates.assign
+   Coordinates.drop_dims
    Coordinates.drop_vars
    Coordinates.merge
    Coordinates.copy
