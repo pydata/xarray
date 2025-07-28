@@ -304,6 +304,19 @@ def slice_slice_by_array(
     array: np.ndarray[Any, np.dtype[np.generic]],
     size: int,
 ) -> np.ndarray[Any, np.dtype[np.generic]]:
+    """Given a slice and the size of the dimension to which it will be applied,
+    index it with an array to return a new array equivalent to applying
+    the slices sequentially
+
+    Examples
+    --------
+    >>> slice_slice_by_array(slice(2, 10), np.array([1, 3, 5]), 12)
+    array([3, 5, 7])
+    >>> slice_slice_by_array(slice(1, None, 2), np.array([1, 3, 7, 8]), 20)
+    array([ 3,  7, 15, 17])
+    >>> slice_slice_by_array(slice(None, None, -1), np.array([2, 4, 7]), 20)
+    array([17, 15, 12])
+    """
     # to get a concrete slice, limited to the size of the array
     normalized = normalize_slice(old_slice, size)
 
