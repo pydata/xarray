@@ -42,6 +42,9 @@ if TYPE_CHECKING:
     from xarray.namedarray._typing import _Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
+    BasicIndexerType = int | np.integer | slice
+    OuterIndexerType = BasicIndexerType | np.ndarray[Any, np.dtype[np.generic]]
+
 
 @dataclass
 class IndexSelResult:
@@ -299,11 +302,18 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
     return slice(start, stop, step)
 
 
-def _index_indexer_1d(old_indexer, applied_indexer, size: int):
+def _index_indexer_1d(
+    old_indexer: OuterIndexerType | MultipleSlices,
+    applied_indexer: OuterIndexerType | MultipleSlices,
+    size: int,
+) -> OuterIndexerType | MultipleSlices:
     if is_full_slice(applied_indexer):
         # shortcut for the usual case
         return old_indexer
+    if is_full_slice(old_indexer):
+        return applied_indexer
 
+    indexer: OuterIndexerType | MultipleSlices
     if isinstance(old_indexer, slice):
         if isinstance(applied_indexer, slice):
             indexer = slice_slice(old_indexer, applied_indexer, size)
@@ -312,7 +322,7 @@ def _index_indexer_1d(old_indexer, applied_indexer, size: int):
                 slice_slice(old_indexer, s, size) for s in applied_indexer.slices
             ).merge_slices()
         elif isinstance(applied_indexer, integer_types):
-            indexer = range(*old_indexer.indices(size))[applied_indexer]  # type: ignore[assignment]
+            indexer = range(*old_indexer.indices(size))[applied_indexer]
         else:
             indexer = _expand_slice(old_indexer, size)[applied_indexer]
     elif isinstance(old_indexer, MultipleSlices):
@@ -345,6 +355,7 @@ def _index_indexer_1d(old_indexer, applied_indexer, size: int):
     elif isinstance(applied_indexer, MultipleSlices):
         indexer = applied_indexer.slice(old_indexer)
     else:
+        old_indexer = cast(np.ndarray, old_indexer)
         indexer = old_indexer[applied_indexer]
     return indexer
 
@@ -635,22 +646,21 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
 class MultipleSlices:
     __slots__ = ("_slices",)
 
-    def __init__(self, *slices: tuple[slice, ...] | tuple[list[slice]]):
+    def __init__(self, *slices: slice | list[slice]):
+        slices_: list[slice] | tuple[slice, ...]
         if len(slices) == 1 and isinstance(slices[0], list):
-            [slices] = slices
-
-        slices_: list[slice] = list(slices)
+            slices_ = slices[0]
 
         if any(not isinstance(s, slice) for s in slices_):
             raise ValueError("Can only wrap slice objects.")
 
-        self._slices = slices_
+        self._slices = list(slices_)
 
     def __repr__(self):
         return f"MultipleSlices({', '.join(repr(s) for s in self.slices)})"
 
     @classmethod
-    def from_iterable(cls: type[Self], slices: Iterable[slice]) -> Self:
+    def from_iterable(cls, slices: Iterable[slice]) -> Self:
         slices_ = list(slices)
         if not slices_:
             raise ValueError("need at least one slice object")
@@ -736,7 +746,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
     def _updated_key(self, new_key: ExplicitIndexer) -> BasicIndexer | OuterIndexer:
         iter_new_key = iter(expanded_indexer(new_key.tuple, self.ndim))
-        full_key = []
+        full_key: list[OuterIndexerType | MultipleSlices] = []
         for size, k in zip(self.array.shape, self.key.tuple, strict=True):
             if isinstance(k, integer_types):
                 full_key.append(k)
@@ -745,7 +755,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         full_key_tuple = tuple(full_key)
 
         if all(isinstance(k, integer_types + (slice,)) for k in full_key_tuple):
-            return BasicIndexer(full_key_tuple)
+            return BasicIndexer(cast(tuple[BasicIndexerType, ...], full_key_tuple))
         return OuterIndexer(full_key_tuple)
 
     @property
