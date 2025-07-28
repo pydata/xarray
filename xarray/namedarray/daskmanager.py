@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from xarray.core.variable import Variable
     from xarray.namedarray._typing import (
         T_Chunks,
-        _DType,
         _DType_co,
         _NormalizedChunks,
         duckarray,
