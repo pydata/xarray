@@ -26,6 +26,7 @@ from xarray.core.utils import (
     get_valid_numpy_dtype,
     is_duck_array,
     is_duck_dask_array,
+    is_full_slice,
     is_scalar,
     is_valid_numpy_dtype,
     to_0d_array,
@@ -299,7 +300,7 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
 
 
 def _index_indexer_1d(old_indexer, applied_indexer, size: int):
-    if isinstance(applied_indexer, slice) and applied_indexer == slice(None):
+    if is_full_slice(applied_indexer):
         # shortcut for the usual case
         return old_indexer
     if isinstance(old_indexer, slice):
