@@ -52,6 +52,17 @@ def __extension_duck_array__concatenate(
     return type(arrays[0])._concat_same_type(arrays)  # type: ignore[attr-defined]
 
 
+@implements(np.reshape)
+def __extension_duck_array__reshape(
+    arr: T_ExtensionArray, shape: tuple
+) -> T_ExtensionArray:
+    if (shape[0] == len(arr) and len(shape) == 1) or shape == (-1,):
+        return arr
+    raise NotImplementedError(
+        f"Cannot reshape 1d-only pandas extension array to: {shape}"
+    )
+
+
 @implements(np.where)
 def __extension_duck_array__where(
     condition: np.ndarray, x: T_ExtensionArray, y: T_ExtensionArray
@@ -134,6 +145,10 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
         return ufunc(*inputs, **kwargs)
 
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
+        if (
+            isinstance(key, tuple) and len(key) == 1
+        ):  # pyarrow type arrays can't handle since-length tuples
+            key = key[0]
         item = self.array[key]
         if is_extension_array_dtype(item):
             return PandasExtensionArray(item)
