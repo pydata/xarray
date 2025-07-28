@@ -42,6 +42,9 @@ if TYPE_CHECKING:
     from xarray.namedarray._typing import _Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
+    BasicIndexerType = int | np.integer | slice
+    OuterIndexerType = BasicIndexerType | np.ndarray[Any, np.dtype[np.integer]]
+
 
 @dataclass
 class IndexSelResult:
@@ -328,7 +331,11 @@ def slice_slice_by_array(
     return new_indexer
 
 
-def _index_indexer_1d(old_indexer, applied_indexer, size: int):
+def _index_indexer_1d(
+    old_indexer: OuterIndexerType,
+    applied_indexer: OuterIndexerType,
+    size: int,
+) -> OuterIndexerType:
     if is_full_slice(applied_indexer):
         # shortcut for the usual case
         return old_indexer
@@ -419,7 +426,7 @@ class BasicIndexer(ExplicitIndexer):
 
     __slots__ = ()
 
-    def __init__(self, key: tuple[int | np.integer | slice, ...]):
+    def __init__(self, key: tuple[BasicIndexerType, ...]):
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
@@ -451,9 +458,7 @@ class OuterIndexer(ExplicitIndexer):
 
     def __init__(
         self,
-        key: tuple[
-            int | np.integer | slice | np.ndarray[Any, np.dtype[np.generic]], ...
-        ],
+        key: tuple[BasicIndexerType | np.ndarray[Any, np.dtype[np.generic]], ...],
     ):
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
