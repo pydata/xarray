@@ -778,6 +778,31 @@ class Coordinates(AbstractCoordinates):
         """
         return cast(Self, self.to_dataset().drop_vars(names, errors=errors).coords)
 
+    def drop_dims(
+        self,
+        drop_dims: str | Iterable[Hashable],
+        *,
+        errors: ErrorOptions = "raise",
+    ) -> Self:
+        """Drop dimensions and associated variables from this dataset.
+
+        Parameters
+        ----------
+        drop_dims : str or Iterable of Hashable
+            Dimension or dimensions to drop.
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if any of the
+            dimensions passed are not in the dataset. If 'ignore', any given
+            dimensions that are in the dataset are dropped and no error is raised.
+
+        Returns
+        -------
+        obj : Coordinates
+            Coordinates object without the given dimensions (or any coordinates
+            containing those dimensions).
+        """
+        return cast(Self, self.to_dataset().drop_dims(drop_dims, errors=errors).coords)
+
     def rename_dims(
         self,
         dims_dict: Mapping[Any, Hashable] | None = None,

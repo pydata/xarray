@@ -227,6 +227,24 @@ class TestCoordinates:
         assert isinstance(actual, Coordinates)
         assert set(actual.variables) == {"a"}
 
+    def test_drop_dims(self) -> None:
+        coords = Coordinates(
+            coords={
+                "x": Variable("x", range(3)),
+                "y": Variable("y", list("ab")),
+                "a": Variable(["x", "y"], np.arange(6).reshape(3, 2)),
+            },
+            indexes={},
+        )
+
+        actual = coords.drop_dims("x")
+        assert isinstance(actual, Coordinates)
+        assert set(actual.variables) == {"y"}
+
+        actual = coords.drop_dims(["x", "y"])
+        assert isinstance(actual, Coordinates)
+        assert set(actual.variables) == set()
+
     def test_rename_dims(self):
         coords = Coordinates(
             coords={
