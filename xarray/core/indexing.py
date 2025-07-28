@@ -353,7 +353,9 @@ def _index_indexer_1d(
             ]
             indexer = np.concatenate(parts)
     elif isinstance(applied_indexer, MultipleSlices):
-        indexer = applied_indexer.slice(old_indexer)
+        old_indexer = cast(np.ndarray, old_indexer)
+        parts = [old_indexer[s] for s in applied_indexer.slices]
+        indexer = np.concatenate(parts)
     else:
         old_indexer = cast(np.ndarray, old_indexer)
         indexer = old_indexer[applied_indexer]
