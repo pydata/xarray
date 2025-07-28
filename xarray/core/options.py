@@ -265,7 +265,7 @@ class set_options:
         :py:func:`~xarray.concat`, :py:func:`~xarray.merge`,
         :py:func:`~xarray.open_mfdataset`. New values are:
 
-        * ``data_vars``: "minimal"
+        * ``data_vars``: None
         * ``coords``: "minimal"
         * ``compat``: "override"
         * ``join``: "exact"

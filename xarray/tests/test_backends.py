@@ -4956,7 +4956,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds.to_netcdf(f)
 
                 with xr.open_mfdataset(
-                    files, data_vars="minimal", combine="nested", concat_dim="t"
+                    files, data_vars=None, combine="nested", concat_dim="t"
                 ) as ds:
                     assert ds["v1"].test_dataarray_attr == 0
 
@@ -4974,7 +4974,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 "compat": "no_conflicts",
             },  # old defaults
             {
-                "data_vars": "minimal",
+                "data_vars": None,
                 "coords": "minimal",
                 "compat": "override",
             },  # new defaults
