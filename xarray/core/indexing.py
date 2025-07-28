@@ -339,6 +339,9 @@ def _index_indexer_1d(
     if is_full_slice(applied_indexer):
         # shortcut for the usual case
         return old_indexer
+    if is_full_slice(old_indexer):
+        # shortcut for full slices
+        return applied_indexer
 
     indexer: OuterIndexerType
     if isinstance(old_indexer, slice):
@@ -346,8 +349,6 @@ def _index_indexer_1d(
             indexer = slice_slice(old_indexer, applied_indexer, size)
         elif isinstance(applied_indexer, integer_types):
             indexer = range(*old_indexer.indices(size))[applied_indexer]
-        elif is_full_slice(old_indexer):
-            indexer = applied_indexer
         else:
             indexer = slice_slice_by_array(old_indexer, applied_indexer, size)
     elif isinstance(old_indexer, np.ndarray):
