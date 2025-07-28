@@ -262,8 +262,7 @@ from the root of the xarray repository. You can skip the pre-commit checks with
 Update the ``main`` branch
 --------------------------
 
-First make sure you have followed `Setting up xarray for development
-<https://docs.xarray.dev/en/stable/contributing.html#creating-a-development-environment>`_
+First make sure you have :ref:`created a development environment <contributing.dev_env>`.
 
 Before starting a new set of changes, fetch all changes from ``upstream/main``, and start a new
 feature branch from that. From time to time you should fetch the upstream changes from GitHub: ::
