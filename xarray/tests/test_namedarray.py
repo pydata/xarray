@@ -40,13 +40,6 @@ if TYPE_CHECKING:
         duckarray,
     )
 
-try:
-    import cftime
-
-    cftime_available = True
-except ModuleNotFoundError:
-    cftime_available = False
-
 
 class CustomArrayBase(Generic[_ShapeType_co, _DType_co]):
     def __init__(self, array: duckarray[Any, _DType_co]) -> None:
