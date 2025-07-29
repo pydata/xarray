@@ -652,6 +652,9 @@ class MultipleSlices:
         if any(not isinstance(s, slice) for s in slices):
             raise ValueError("Can only wrap slice objects.")
 
+        if any(is_full_slice(s) for s in slices) and len(slices) > 1:
+            raise ValueError("Full slices can only be wrapped on their own.")
+
         self._slices = list(slices)
 
     def __repr__(self):
@@ -662,7 +665,6 @@ class MultipleSlices:
         instance = cls.__new__(cls)
         instance._slices = slices
         return instance
-
 
     @classmethod
     def from_iterable(cls, slices: Iterable[slice]) -> Self:

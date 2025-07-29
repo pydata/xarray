@@ -287,6 +287,9 @@ class TestMultipleSlices:
         with pytest.raises(ValueError, match="slice objects"):
             indexing.MultipleSlices(*slices)
 
+        with pytest.raises(ValueError, match="Full slices"):
+            indexing.MultipleSlices(slice(None, 2), slice(None))
+
     def test_construct_direct(self):
         slices = [slice(None, 2), slice(3, None)]
         actual = indexing.MultipleSlices._construct_direct(slices)
