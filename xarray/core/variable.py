@@ -218,15 +218,15 @@ def _possibly_convert_objects(values):
     """
     as_series = pd.Series(values.ravel(), copy=False)
     # For why we need this behavior: https://github.com/pandas-dev/pandas/issues/61938
+    result = np.asarray(as_series).reshape(values.shape)
     if (
         result.dtype.kind == "O"
         and values.dtype.kind == "O"
         and Version(pd.__version__) >= Version("3.0.0dev0")
     ):
+        # need to copy to be able to override `dtype`
         result = np.asarray(as_series, copy=True).reshape(values.shape)
         result.dtype = values.dtype
-    else:
-        result = np.asarray(as_series).reshape(values.shape)
     if not result.flags.writeable:
         # GH8843, pandas copy-on-write mode creates read-only arrays by default
         try:
