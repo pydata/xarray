@@ -1129,6 +1129,28 @@ def test_advanced_indexing_dask_array() -> None:
     assert_identical(expected, actual)
 
 
+@requires_dask
+@pytest.mark.parametrize(
+    "key",
+    (
+        indexing.MultipleSlices(slice(1, 3), slice(7, 4, -1)),
+        indexing.MultipleSlices(slice(None, 2), slice(5, None)),
+    ),
+)
+def test_indexing_dask_multi_slice(key) -> None:
+    da = DataArray(
+        np.ones(10 * 3 * 3).reshape((10, 3, 3)),
+        dims=("time", "x", "y"),
+    )
+    chunked = da.chunk(dict(time=-1, x=1, y=1))
+
+    with raise_if_dask_computes():
+        actual = chunked.isel(time=key)
+
+    expected = da.isel(time=key)
+    assert_identical(actual, expected)
+
+
 def test_backend_indexing_non_numpy() -> None:
     """This model indexing of a Zarr store that reads to GPU memory."""
     array = DuckArrayWrapper(np.array([1, 2, 3]))
