@@ -126,7 +126,7 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
         if func not in HANDLED_EXTENSION_ARRAY_FUNCTIONS:
             raise KeyError("Function not registered for pandas extension arrays.")
         res = HANDLED_EXTENSION_ARRAY_FUNCTIONS[func](*args, **kwargs)
-        if pd.api.types.is_extension_array_dtype(res):  # noqa: TID251
+        if is_allowed_extension_array(res):
             return PandasExtensionArray(res)
         return res
 
@@ -135,7 +135,7 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
 
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
         item = self.array[key]
-        if pd.api.types.is_extension_array_dtype(item):  # noqa: TID251
+        if is_allowed_extension_array(item):
             return PandasExtensionArray(item)
         if np.isscalar(item) or isinstance(key, int):
             return PandasExtensionArray(type(self.array)._from_sequence([item]))  # type: ignore[call-arg,attr-defined,unused-ignore]
