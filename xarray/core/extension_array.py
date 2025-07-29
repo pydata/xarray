@@ -99,7 +99,8 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
             raise TypeError(f"{self.array} is not an pandas ExtensionArray.")
         # This does not use the UNSUPPORTED_EXTENSION_ARRAY_TYPES whitelist because
         # we do support extension arrays from datetime, for example, that need
-        # duck array support internally via this class.
+        # duck array support internally via this class.  These can appear from `DatetimeIndex`
+        # wrapped by `PandasIndex` internally, for example.
         if not is_allowed_extension_array(self.array):
             raise TypeError(
                 f"{self.array.dtype!r} should be converted to a numpy array in `xarray` internally."
