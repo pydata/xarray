@@ -42,8 +42,8 @@ if TYPE_CHECKING:
     from xarray.namedarray._typing import _Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
-    BasicIndexerType = int | np.integer | slice
-    OuterIndexerType = BasicIndexerType | np.ndarray[Any, np.dtype[np.integer]]
+BasicIndexerType = int | np.integer | slice
+OuterIndexerType = BasicIndexerType | np.ndarray[Any, np.dtype[np.integer]]
 
 
 @dataclass
