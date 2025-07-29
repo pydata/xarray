@@ -693,6 +693,11 @@ class MultipleSlices:
                     previous.start, current.stop, previous.step
                 )
                 continue
+            elif (
+                current.start is None and current.stop == 0
+            ) or current.start == current.stop:
+                # length 0 slice
+                continue
 
             new_slices.append(current)
             previous_index += 1

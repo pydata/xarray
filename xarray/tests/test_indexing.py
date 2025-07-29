@@ -325,6 +325,10 @@ class TestMultipleSlices:
                 [slice(None, 2), slice(2, 5, 1), slice(5, None, 2)],
                 [slice(None, 5), slice(5, None, 2)],
             ),
+            (
+                [slice(None, 2), slice(0), slice(2, 5)],
+                [slice(None, 5)],
+            ),
         ),
     )
     def test_merge_slices(self, slices, expected_slices):
