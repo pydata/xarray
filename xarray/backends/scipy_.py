@@ -167,7 +167,7 @@ class ScipyDataStore(WritableCFDataStore):
 
         self.lock = ensure_lock(lock)
 
-        if isinstance(filename_or_obj, str):
+        if isinstance(filename_or_obj, str):  # path
             manager = CachingFileManager(
                 _open_scipy_netcdf,
                 filename_or_obj,
@@ -175,11 +175,33 @@ class ScipyDataStore(WritableCFDataStore):
                 lock=lock,
                 kwargs=dict(mmap=mmap, version=version),
             )
-        else:
+        elif isinstance(filename_or_obj, bytes):  # file contents
             scipy_dataset = _open_scipy_netcdf(
                 filename_or_obj, mode=mode, mmap=mmap, version=version
             )
             manager = DummyFileManager(scipy_dataset)
+        elif hasattr(filename_or_obj, "seek"):  # file object
+            # Note: checking for .seek matches the check for file objects
+            # in scipy.io.netcdf_file
+            scipy_dataset = _open_scipy_netcdf(
+                filename_or_obj, mode=mode, mmap=mmap, version=version
+            )
+            # scipy.io.netcdf_file.close() incorrectly closes file objects that
+            # were passed in as constructor arguments:
+            # https://github.com/scipy/scipy/issues/13905
+            # Instead of closing such files, only call flush(), which is
+            # equivalent as long as the netcdf_file object is not mmapped.
+            # This suffices to keep BytesIO objects open long enough to read
+            # their contents from to_netcdf(), but underlying files still get
+            # closed when the netcdf_file is garbage collected (via __del__),
+            # and will need to be fixed upstream in scipy.
+            if scipy_dataset.use_mmap:
+                close = scipy_dataset.close
+            else:
+                close = scipy_dataset.flush
+            manager = DummyFileManager(scipy_dataset, close=close)
+        else:
+            raise ValueError(f"cannot open {filename_or_obj=}")
 
         self._manager = manager
 

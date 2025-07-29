@@ -339,8 +339,11 @@ class _HashedSequence(list):
 class DummyFileManager(FileManager):
     """FileManager that simply wraps an open file in the FileManager interface."""
 
-    def __init__(self, value):
+    def __init__(self, value, *, close=None):
+        if close is None:
+            close = value.close
         self._value = value
+        self._close = close
 
     def acquire(self, needs_lock=True):
         del needs_lock  # ignored
@@ -353,4 +356,4 @@ class DummyFileManager(FileManager):
 
     def close(self, needs_lock=True):
         del needs_lock  # ignored
-        self._value.close()
+        self._close()

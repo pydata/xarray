@@ -1959,13 +1959,6 @@ def to_netcdf(
 
     if path_or_file is None:
         target = BytesIO()
-        # We can't get the BytesIO's value *before* closing the store, since
-        # the h5netcdf backend won't finish writing until its close is called.
-        # However if we try to get the BytesIO's value *after* closing the store,
-        # the scipy backend will close the BytesIO, preventing its value from
-        # being read. The solution is to prevent the BytesIO from being closed:
-        close_bytesio = target.close
-        target.close = lambda: None  # type: ignore[method-assign]
     else:
         target = path_or_file  # type: ignore[assignment]
 
@@ -2013,8 +2006,9 @@ def to_netcdf(
             store.close()
 
     if path_or_file is None:
+        assert isinstance(target, BytesIO)  # created in this function
         value = target.getvalue()
-        close_bytesio()
+        target.close()
         return value
 
     if not compute:

@@ -558,8 +558,8 @@ class TestH5NetCDFDatatreeIO(DatatreeIOBase):
         with open(filepath, "wb+") as file:
             original_dt.to_netcdf(file, engine=self.engine)
         with open(filepath, "rb") as file:
-            roundtrip_dt = open_datatree(file, engine=self.engine)
-            assert_equal(original_dt, roundtrip_dt)
+            with open_datatree(file, engine=self.engine) as roundtrip_dt:
+                assert_equal(original_dt, roundtrip_dt)
 
 
 @requires_zarr

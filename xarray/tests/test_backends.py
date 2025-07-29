@@ -4069,6 +4069,8 @@ class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only):
 
 @requires_scipy
 class TestScipyFileObject(CFEncodedBase, NetCDF3Only):
+    # TODO: Consider consolidating some of these cases (e.g.,
+    # test_file_remains_open) with TestH5NetCDFFileObject
     engine: T_NetcdfEngine = "scipy"
 
     @contextlib.contextmanager
@@ -4090,6 +4092,20 @@ class TestScipyFileObject(CFEncodedBase, NetCDF3Only):
             with open(tmp_file, "rb") as f:
                 with self.open(f, **open_kwargs) as ds:
                     yield ds
+
+    @pytest.mark.xfail(
+        reason="scipy.io.netcdf_file closes files upon garbage collection"
+    )
+    def test_file_remains_open(self) -> None:
+        data = Dataset({"foo": ("x", [1, 2, 3])})
+        f = BytesIO()
+        data.to_netcdf(f, engine="h5netcdf")
+        assert not f.closed
+        restored = open_dataset(f, engine="h5netcdf")
+        assert not f.closed
+        assert_identical(restored, data)
+        restored.close()
+        assert not f.closed
 
     @pytest.mark.skip(reason="cannot pickle file objects")
     def test_pickle(self) -> None:
@@ -4599,6 +4615,17 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                 f.seek(8)
                 with open_dataset(f):  # ensure file gets closed
                     pass
+
+    def test_file_remains_open(self) -> None:
+        data = Dataset({"foo": ("x", [1, 2, 3])})
+        f = BytesIO()
+        data.to_netcdf(f, engine="h5netcdf")
+        assert not f.closed
+        restored = open_dataset(f, engine="h5netcdf")
+        assert not f.closed
+        assert_identical(restored, data)
+        restored.close()
+        assert not f.closed
 
 
 @requires_h5netcdf

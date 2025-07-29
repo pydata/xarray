@@ -152,6 +152,8 @@ class H5NetCDFStore(WritableCFDataStore):
     ):
         import h5netcdf
 
+        cacheable = isinstance(filename, str)
+
         if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
             mode_ = "rb" if mode == "r" else mode
             filename = _open_remote_file(
@@ -187,7 +189,12 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
-        manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
+        if cacheable:
+            manager = CachingFileManager(
+                h5netcdf.File, filename, mode=mode, kwargs=kwargs
+            )
+        else:
+            manager = DummyFileManager(h5netcdf.File(filename, mode=mode, **kwargs))
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):
