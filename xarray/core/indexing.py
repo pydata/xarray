@@ -2047,7 +2047,13 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             return getattr(indexable, func_name)(indexer)
 
         # otherwise index the pandas index then re-wrap or convert the result
-        result = self.array[key]
+        if not isinstance(key, MultipleSlices):
+            result = self.array[key]
+        else:
+            result = None
+            for s in key.slices:
+                subset = self.array[s]
+                result = result.union(subset) if result is not None else subset
 
         if isinstance(result, pd.Index):
             return type(self)(result, dtype=self.dtype)

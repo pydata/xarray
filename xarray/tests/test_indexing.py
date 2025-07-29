@@ -1048,6 +1048,27 @@ def test_indexing_1d_object_array() -> None:
     assert [actual.data.item()] == [expected.data.item()]
 
 
+@pytest.mark.parametrize(
+    "key",
+    (
+        indexing.MultipleSlices(slice(1, 3), slice(7, 4, -1)),
+        indexing.MultipleSlices(slice(None, 2), slice(5, None)),
+    ),
+)
+def test_indexing_index_multi_slice(key) -> None:
+    indexer = indexing.OuterIndexer((key,))
+    x = np.arange(20)
+
+    pd_adapter = indexing.PandasIndexingAdapter(pd.Index(x))
+    np_adapter = indexing.NumpyIndexingAdapter(x)
+
+    actual = pd_adapter.oindex[indexer]
+    # indexes are sorted
+    expected = np.sort(np_adapter.oindex[indexer])
+
+    assert_array_equal(actual, expected)
+
+
 @requires_dask
 def test_indexing_dask_array() -> None:
     import dask.array
