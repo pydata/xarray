@@ -15,7 +15,7 @@ import numpy as np
 from xarray.core import dtypes, duck_array_ops
 
 if TYPE_CHECKING:
-    from typing import Any
+    pass
 
 try:
     import bottleneck as bn
