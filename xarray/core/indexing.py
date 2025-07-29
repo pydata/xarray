@@ -648,20 +648,21 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
 class MultipleSlices:
     __slots__ = ("_slices",)
 
-    def __init__(self, *slices: slice | list[slice]):
-        slices_: list[slice] | tuple[slice, ...]
-        if len(slices) == 1 and isinstance(slices[0], list):
-            slices_ = slices[0]
-        else:
-            slices_ = cast(tuple[slice, ...], slices)
-
-        if any(not isinstance(s, slice) for s in slices_):
+    def __init__(self, *slices: slice):
+        if any(not isinstance(s, slice) for s in slices):
             raise ValueError("Can only wrap slice objects.")
 
-        self._slices = list(slices_)
+        self._slices = list(slices)
 
     def __repr__(self):
         return f"MultipleSlices({', '.join(repr(s) for s in self.slices)})"
+
+    @classmethod
+    def _construct_direct(cls, slices: list[slice]) -> Self:
+        instance = cls.__new__(cls)
+        instance._slices = slices
+        return instance
+
 
     @classmethod
     def from_iterable(cls, slices: Iterable[slice]) -> Self:
@@ -669,7 +670,7 @@ class MultipleSlices:
         if not slices_:
             raise ValueError("need at least one slice object")
 
-        return cls(slices_)
+        return cls._construct_direct(slices_)
 
     @property
     def slices(self):
@@ -694,7 +695,7 @@ class MultipleSlices:
             new_slices.append(current)
             previous_index += 1
 
-        return type(self)(new_slices)
+        return self._construct_direct(new_slices)
 
 
 def decompose_by_multiple_slices(

@@ -282,15 +282,17 @@ class TestMultipleSlices:
         assert isinstance(actual, indexing.MultipleSlices)
         assert actual._slices == slices and actual._slices is not slices
 
-        actual = indexing.MultipleSlices(slices)
-
-        assert isinstance(actual, indexing.MultipleSlices)
-        assert actual._slices == slices and actual._slices is not slices
-
     def test_init_error(self):
         slices = [1, slice(2, 3), "a"]
         with pytest.raises(ValueError, match="slice objects"):
             indexing.MultipleSlices(*slices)
+
+    def test_construct_direct(self):
+        slices = [slice(None, 2), slice(3, None)]
+        actual = indexing.MultipleSlices._construct_direct(slices)
+
+        assert isinstance(actual, indexing.MultipleSlices)
+        assert actual._slices is slices
 
     @pytest.mark.parametrize(
         ["iterable", "expected"],
