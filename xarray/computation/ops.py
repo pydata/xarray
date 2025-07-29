@@ -162,7 +162,7 @@ def fillna(data, other, join="left", dataset_join="left"):
 
 
 # TODO: type this properly
-def where_method(self: Any, cond: Any, other: Any = dtypes.NA):
+def where_method(self, cond, other=dtypes.NA):  # type: ignore[has-type]
     """Return elements from `self` or `other` depending on `cond`.
 
     Parameters
