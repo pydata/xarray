@@ -110,7 +110,7 @@ def is_allowed_extension_array_dtype(dtype: Any):
     )
 
 
-def is_allowed_extension_array(array: Any):
+def is_allowed_extension_array(array: Any) -> bool:
     return (
         hasattr(array, "dtype")
         and is_allowed_extension_array_dtype(array.dtype)
