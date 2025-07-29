@@ -265,12 +265,12 @@ def asarray(data, xp=np, dtype=None):
 
 def as_shared_dtype(scalars_or_arrays, xp=None):
     """Cast arrays to a shared dtype using xarray's type promotion rules."""
-    if any(pd.api.types.is_extension_array_dtype(x) for x in scalars_or_arrays):  # noqa: TID251
-        extension_array_types = [
-            x.dtype
-            for x in scalars_or_arrays
-            if pd.api.types.is_extension_array_dtype(x)  # noqa: TID251
-        ]
+    extension_array_types = [
+        x.dtype
+        for x in scalars_or_arrays
+        if pd.api.types.is_extension_array_dtype(x)  # noqa: TID251
+    ]
+    if len(extension_array_types) >= 1:
         non_nans = [x for x in scalars_or_arrays if not isna(x)]
         if len(extension_array_types) == len(non_nans) and all(
             isinstance(x, type(extension_array_types[0])) for x in extension_array_types
