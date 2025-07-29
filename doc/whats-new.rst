@@ -33,6 +33,9 @@ Bug fixes
 - Fix ``KeyError`` when passing a ``dim`` argument different from the default to ``convert_calendar`` (:pull:`10544`).
   By `Eric Jansen <https://github.com/ej81>`_.
 
+- Fix transpose of boolean arrays read from disk. (:issue:`10536`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
@@ -41,6 +44,11 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+
+Performance
+~~~~~~~~~~~
+- Speed up non-numeric scalars when calling :py:meth:`Dataset.interp`. (:issue:`10054`, :pull:`10554`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 .. _whats-new.2025.07.1:
 
