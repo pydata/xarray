@@ -76,5 +76,3 @@ repos:
     rev: v1
     hooks:
       - id: typos
-        # https://github.com/crate-ci/typos/issues/347
-        pass_filenames: false
