@@ -230,14 +230,13 @@ def _possibly_convert_objects(values):
     # For why we need this behavior: https://github.com/pandas-dev/pandas/issues/61938
     # Object datatype inputs that are strings
     # will be converted to strings by `pandas.Series`, and as of 3.0.0, lose
-    # metadata.  If the roundtrip back to numpy in this function yields an
+    # `dtype.metadata`.  If the roundtrip back to numpy in this function yields an
     # object array again, the dtype.metadata will be preserved.
     if (
         result.dtype.kind == "O"
         and values.dtype.kind == "O"
         and Version(pd.__version__) >= Version("3.0.0dev0")
     ):
-        # need to copy to be able to override `dtype`
         result.dtype = values.dtype
     return result
 
