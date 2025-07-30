@@ -1588,7 +1588,7 @@ artist :
             # pcolormesh
             kwargs["extend"] = cmap_params["extend"]
             if not (
-                "locator" in kwargs and isinstance(kwargs["locator"], ticker.LogLocator)
+                isinstance(kwargs.get("locator"), ticker.LogLocator)
             ):
                 kwargs["levels"] = cmap_params["levels"]
             # if colors == a single color, matplotlib draws dashed negative
