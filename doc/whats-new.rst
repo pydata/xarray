@@ -44,7 +44,8 @@ Bug fixes
 
 - Fix transpose of boolean arrays read from disk. (:issue:`10536`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
+- Fix detection of the ``h5netcdf`` backend. Xarray now selects ``h5netcdf`` if the default ``netCDF4`` engine is not available (:issue:`10401`, :pull:`10557`).
+  By `Scott Staniewicz <https://github.com/scottstanie>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -53,6 +54,11 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+
+Performance
+~~~~~~~~~~~
+- Speed up non-numeric scalars when calling :py:meth:`Dataset.interp`. (:issue:`10054`, :pull:`10554`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 .. _whats-new.2025.07.1:
 
