@@ -165,8 +165,6 @@ class H5NetCDFStore(WritableCFDataStore):
     ):
         import h5netcdf
 
-        cacheable = isinstance(filename, str)
-
         if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
             mode_ = "rb" if mode == "r" else mode
             filename = _open_remote_file(
@@ -202,14 +200,10 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
-        if cacheable:
-            manager: FileManager = CachingFileManager(
-                h5netcdf.File, filename, mode=mode, kwargs=kwargs
-            )
-        else:
-            manager: FileManager = DummyFileManager(  # type: ignore[no-redef]
-                h5netcdf.File(filename, mode=mode, **kwargs)
-            )
+        # TODO: Replace this with DummyFileManager in the case where filename is
+        # actually a file object. For mysterious reasons, this triggers test
+        # failures in arViz.
+        manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):
