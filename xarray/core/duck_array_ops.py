@@ -23,7 +23,6 @@ from numpy import (
     take,
     unravel_index,  # noqa: F401
 )
-from pandas.api.types import is_extension_array_dtype
 
 from xarray.compat import dask_array_compat, dask_array_ops
 from xarray.compat.array_api_compat import get_array_namespace
@@ -184,7 +183,7 @@ def isnull(data):
         dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
         return full_like(data, dtype=dtype, fill_value=False)
     # at this point, array should have dtype=object
-    elif isinstance(data, np.ndarray) or is_extension_array_dtype(data):
+    elif isinstance(data, np.ndarray) or pd.api.types.is_extension_array_dtype(data):  # noqa: TID251
         return pandas_isnull(data)
     else:
         # Not reachable yet, but intended for use with other duck array
@@ -266,10 +265,12 @@ def asarray(data, xp=np, dtype=None):
 
 def as_shared_dtype(scalars_or_arrays, xp=None):
     """Cast arrays to a shared dtype using xarray's type promotion rules."""
-    if any(is_extension_array_dtype(x) for x in scalars_or_arrays):
-        extension_array_types = [
-            x.dtype for x in scalars_or_arrays if is_extension_array_dtype(x)
-        ]
+    extension_array_types = [
+        x.dtype
+        for x in scalars_or_arrays
+        if pd.api.types.is_extension_array_dtype(x)  # noqa: TID251
+    ]
+    if len(extension_array_types) >= 1:
         non_nans = [x for x in scalars_or_arrays if not isna(x)]
         if len(extension_array_types) == len(non_nans) and all(
             isinstance(x, type(extension_array_types[0])) for x in extension_array_types

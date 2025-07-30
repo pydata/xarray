@@ -33,6 +33,7 @@ accel = [
   "numba>=0.59",
   "flox>=0.9",
   "opt_einsum",
+  "numpy<2.3",    # numba has not updated yet: https://github.com/numba/numba/issues/10105
 ]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
@@ -324,6 +325,8 @@ known-first-party = ["xarray"]
 [tool.ruff.lint.flake8-tidy-imports]
 # Disallow all relative imports.
 ban-relative-imports = "all"
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"pandas.api.types.is_extension_array_dtype".msg = "Use xarray.core.utils.is_allowed_extension_array{_dtype} instead.  Only use the banend API if the incoming data has already been sanitized by xarray"
 
 [tool.pytest.ini_options]
 addopts = [

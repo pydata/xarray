@@ -24,6 +24,8 @@ from xarray.core.utils import (
     NDArrayMixin,
     either_dict_or_kwargs,
     get_valid_numpy_dtype,
+    is_allowed_extension_array,
+    is_allowed_extension_array_dtype,
     is_duck_array,
     is_duck_dask_array,
     is_full_slice,
@@ -1830,12 +1832,12 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         self.array = safe_cast_to_index(array)
 
         if dtype is None:
-            if pd.api.types.is_extension_array_dtype(array.dtype):
+            if is_allowed_extension_array(array):
                 cast(pd.api.extensions.ExtensionDtype, array.dtype)
                 self._dtype = array.dtype
             else:
                 self._dtype = get_valid_numpy_dtype(array)
-        elif pd.api.types.is_extension_array_dtype(dtype):
+        elif is_allowed_extension_array_dtype(dtype):
             self._dtype = cast(pd.api.extensions.ExtensionDtype, dtype)
         else:
             self._dtype = np.dtype(cast(DTypeLike, dtype))
@@ -1883,10 +1885,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         # We return an PandasExtensionArray wrapper type that satisfies
         # duck array protocols.
         # `NumpyExtensionArray` is excluded
-        if pd.api.types.is_extension_array_dtype(self.array) and not isinstance(
-            self.array.array,
-            pd.arrays.NumpyExtensionArray,  # type: ignore[attr-defined]
-        ):
+        if is_allowed_extension_array(self.array):
             from xarray.core.extension_array import PandasExtensionArray
 
             return PandasExtensionArray(self.array.array)
@@ -1983,7 +1982,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     @property
     def nbytes(self) -> int:
-        if pd.api.types.is_extension_array_dtype(self.dtype):
+        if is_allowed_extension_array(self.array):
             return self.array.nbytes
 
         dtype = self._get_numpy_dtype()
