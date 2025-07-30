@@ -246,7 +246,7 @@ def astype(data, dtype, *, xp=None, **kwargs):
         xp = get_array_namespace(data)
 
     if xp == np:
-        # numpy currently doesn't have a astype:
+        # numpy<2 and dask don't have astype in their namespace
         return data.astype(dtype, **kwargs)
     return xp.astype(data, dtype, **kwargs)
 
