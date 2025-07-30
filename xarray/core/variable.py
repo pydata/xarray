@@ -209,7 +209,10 @@ def _maybe_wrap_data(data):
 
 def _possibly_convert_objects(values):
     """Convert object arrays into datetime64 and timedelta64 according
-    to the pandas convention.
+    to the pandas convention.  For backwards compat, as of 3.0.0 pandas,
+    object dtype inputs are cast to strings by `pandas.Series`
+    but we output them as object dtype with the input metadata preserved as well.
+
 
     * datetime.datetime
     * datetime.timedelta
@@ -217,22 +220,25 @@ def _possibly_convert_objects(values):
     * pd.Timedelta
     """
     as_series = pd.Series(values.ravel(), copy=False)
-    # For why we need this behavior: https://github.com/pandas-dev/pandas/issues/61938
     result = np.asarray(as_series).reshape(values.shape)
-    if (
-        result.dtype.kind == "O"
-        and values.dtype.kind == "O"
-        and Version(pd.__version__) >= Version("3.0.0dev0")
-    ):
-        # need to copy to be able to override `dtype`
-        result = np.asarray(as_series, copy=True).reshape(values.shape)
-        result.dtype = values.dtype
     if not result.flags.writeable:
         # GH8843, pandas copy-on-write mode creates read-only arrays by default
         try:
             result.flags.writeable = True
         except ValueError:
             result = result.copy()
+    # For why we need this behavior: https://github.com/pandas-dev/pandas/issues/61938
+    # Object datatype inputs that are strings
+    # will be converted to strings by `pandas.Series`, and as of 3.0.0, lose
+    # metadata.  If the roundtrip back to numpy in this function yields an
+    # object array again, the dtype.metadata will be preserved.
+    if (
+        result.dtype.kind == "O"
+        and values.dtype.kind == "O"
+        and Version(pd.__version__) >= Version("3.0.0dev0")
+    ):
+        # need to copy to be able to override `dtype`
+        result.dtype = values.dtype
     return result
 
 
