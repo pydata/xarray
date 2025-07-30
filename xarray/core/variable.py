@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, NoReturn, cast
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
+from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
 from xarray.compat.array_api_compat import to_like_array
@@ -208,7 +209,10 @@ def _maybe_wrap_data(data):
 
 def _possibly_convert_objects(values):
     """Convert object arrays into datetime64 and timedelta64 according
-    to the pandas convention.
+    to the pandas convention.  For backwards compat, as of 3.0.0 pandas,
+    object dtype inputs are cast to strings by `pandas.Series`
+    but we output them as object dtype with the input metadata preserved as well.
+
 
     * datetime.datetime
     * datetime.timedelta
@@ -223,6 +227,17 @@ def _possibly_convert_objects(values):
             result.flags.writeable = True
         except ValueError:
             result = result.copy()
+    # For why we need this behavior: https://github.com/pandas-dev/pandas/issues/61938
+    # Object datatype inputs that are strings
+    # will be converted to strings by `pandas.Series`, and as of 3.0.0, lose
+    # `dtype.metadata`.  If the roundtrip back to numpy in this function yields an
+    # object array again, the dtype.metadata will be preserved.
+    if (
+        result.dtype.kind == "O"
+        and values.dtype.kind == "O"
+        and Version(pd.__version__) >= Version("3.0.0dev0")
+    ):
+        result.dtype = values.dtype
     return result
 
 
