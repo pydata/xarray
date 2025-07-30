@@ -302,6 +302,25 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
     return slice(start, stop, step)
 
 
+def normalize_array(
+    array: np.ndarray[Any, np.dtype[np.integer]], size: int
+) -> np.ndarray[Any, np.dtype[np.integer]]:
+    """
+    Ensure that the given array only contains positive values.
+
+    Examples
+    --------
+    >>> normalize_array(np.array([-1, -2, -3, -4]), 10)
+    array([9, 8, 7, 6])
+    >>> normalize_array(np.array([-5, 3, 5, -1, 8]), 12)
+    array([ 7,  3,  5, 11,  8])
+    """
+    if np.issubdtype(array.dtype, np.unsignedinteger):
+        return array
+
+    return np.where(array >= 0, array, array + size)
+
+
 def slice_slice_by_array(
     old_slice: slice,
     array: np.ndarray[Any, np.dtype[np.integer]],
@@ -321,9 +340,12 @@ def slice_slice_by_array(
     array([17, 15, 12])
     """
     # to get a concrete slice, limited to the size of the array
-    normalized = normalize_slice(old_slice, size)
+    normalized_slice = normalize_slice(old_slice, size)
 
-    new_indexer = array * normalized.step + normalized.start
+    size_after_slice = len(range(*normalized_slice.indices(size)))
+    normalized_array = normalize_array(array, size_after_slice)
+
+    new_indexer = normalized_array * normalized_slice.step + normalized_slice.start
 
     if np.any(new_indexer >= size):
         raise IndexError("indices out of bounds")  # TODO: more helpful error message
