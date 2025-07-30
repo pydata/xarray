@@ -72,9 +72,7 @@ repos:
     hooks:
       - id: validate-pyproject
         additional_dependencies: ["validate-pyproject-schema-store[all]"]
-  - repo: https://github.com/crate-ci/typos
-    rev: v1
+  - repo: https://github.com/adhtruong/mirrors-typos
+    rev: v1.34.0
     hooks:
       - id: typos
-        # https://github.com/crate-ci/typos/issues/347
-        pass_filenames: false
