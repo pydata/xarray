@@ -1771,6 +1771,16 @@ class TestContourf(Common2dMixin, PlotTestCase):
         artist = self.plotmethod(levels=3)
         assert artist.extend == "neither"
 
+    def test_cbar_logscale(self) -> None:
+        _darray = self.darray.copy()
+        _darray.values = np.abs(_darray.values)
+        _darray.plot.contourf(
+            norm=mpl.colors.LogNorm(vmin=0.1, vmax=10), locator=mpl.ticker.LogLocator()
+        )
+        ax = plt.gca()
+        cbar = ax.figure.colorbar(ax.collections[0], ax=ax)
+        np.testing.assert_array_equal(cbar.get_ticks(), np.logspace(-3, 1, num=5))
+
 
 @pytest.mark.slow
 class TestContour(Common2dMixin, PlotTestCase):
