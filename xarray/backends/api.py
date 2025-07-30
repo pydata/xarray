@@ -10,7 +10,7 @@ from collections.abc import (
     Sequence,
 )
 from functools import partial
-from io import BytesIO
+from io import BytesIO, IOBase
 from itertools import starmap
 from numbers import Number
 from typing import (
@@ -1811,7 +1811,7 @@ def to_netcdf(
 @overload
 def to_netcdf(
     dataset: Dataset,
-    path_or_file: str | os.PathLike,
+    path_or_file: str | os.PathLike | IOBase,
     mode: NetcdfWriteModes = "w",
     format: T_NetcdfTypes | None = None,
     group: str | None = None,
@@ -1867,7 +1867,7 @@ def to_netcdf(
 @overload
 def to_netcdf(
     dataset: Dataset,
-    path_or_file: str | os.PathLike | None,
+    path_or_file: str | os.PathLike | IOBase | None,
     mode: NetcdfWriteModes = "w",
     format: T_NetcdfTypes | None = None,
     group: str | None = None,
@@ -1883,7 +1883,7 @@ def to_netcdf(
 
 def to_netcdf(
     dataset: Dataset,
-    path_or_file: str | os.PathLike | None = None,
+    path_or_file: str | os.PathLike | IOBase | None = None,
     mode: NetcdfWriteModes = "w",
     format: T_NetcdfTypes | None = None,
     group: str | None = None,

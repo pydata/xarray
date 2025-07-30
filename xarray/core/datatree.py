@@ -1680,7 +1680,7 @@ class DataTree(
     @overload
     def to_netcdf(
         self,
-        filepath: str | PathLike,
+        filepath: str | PathLike | io.IOBase,
         mode: NetcdfWriteModes = "w",
         encoding=None,
         unlimited_dims=None,
