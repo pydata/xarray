@@ -17,6 +17,7 @@ else:
     pytest.mark.skip(reason="async loading from zarr requires zarr-python v3")
     zarr = None
 
+
 @pytest.fixture
 def store() -> "MemoryStore":
     memorystore = zarr.storage.MemoryStore({})
@@ -43,7 +44,7 @@ def get_xr_obj(
 
 def _resolve_class_from_string(class_path: str) -> type[Any]:
     """Resolve a string class path like 'zarr.AsyncArray' to the actual class."""
-    module_path, class_name = class_path.rsplit('.', 1)
+    module_path, class_name = class_path.rsplit(".", 1)
     module = import_module(module_path)
     return getattr(module, class_name)
 
@@ -109,7 +110,11 @@ class TestAsyncLoad:
             ({"dim2": 2}, "isel", ("zarr.AsyncArray", "getitem")),
             ({"dim2": slice(1.0, 3.0)}, "sel", ("zarr.AsyncArray", "getitem")),
             ({"dim2": slice(1, 3)}, "isel", ("zarr.AsyncArray", "getitem")),
-            ({"dim2": [1.0, 3.0]}, "sel", ("zarr.core.indexing.AsyncOIndex", "getitem")),
+            (
+                {"dim2": [1.0, 3.0]},
+                "sel",
+                ("zarr.core.indexing.AsyncOIndex", "getitem"),
+            ),
             ({"dim2": [1, 3]}, "isel", ("zarr.core.indexing.AsyncOIndex", "getitem")),
             (
                 {
