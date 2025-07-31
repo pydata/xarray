@@ -171,9 +171,6 @@ class H5NetCDFStore(WritableCFDataStore):
                 filename, mode=mode_, storage_options=storage_options
             )
 
-        if isinstance(filename, bytes):
-            filename = io.BytesIO(filename)
-
         if isinstance(filename, io.IOBase) and mode == "r":
             magic_number = read_magic_number_from_file(filename)
             if not magic_number.startswith(b"\211HDF\r\n\032\n"):
@@ -200,10 +197,11 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
-        # TODO: Replace this with DummyFileManager in the case where filename is
-        # actually a file object. For mysterious reasons, this triggers test
-        # failures in arViz.
-        manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
+        manager = (
+            CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
+            if isinstance(filename, str)
+            else h5netcdf.File(filename, mode=mode, **kwargs)
+        )
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):

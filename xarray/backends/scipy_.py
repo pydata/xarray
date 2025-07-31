@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import gzip
-import io
 import os
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
@@ -119,10 +118,6 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
             else:
                 raise
 
-    if isinstance(filename, bytes) and filename.startswith(b"CDF"):
-        # it's a NetCDF3 bytestring
-        filename = io.BytesIO(filename)
-
     try:
         return scipy.io.netcdf_file(filename, mode=mode, mmap=mmap, version=version)
     except TypeError as e:  # netcdf3 message is obscure in this case
@@ -141,7 +136,7 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
 
 
 class ScipyDataStore(WritableCFDataStore):
-    """Store for reading and writing data via scipy.io.netcdf.
+    """Store for reading and writing data via scipy.io.netcdf_file.
 
     This store has the advantage of being able to be initialized with a
     StringIO object, allow for serialization without writing to disk.
@@ -175,11 +170,6 @@ class ScipyDataStore(WritableCFDataStore):
                 lock=lock,
                 kwargs=dict(mmap=mmap, version=version),
             )
-        elif isinstance(filename_or_obj, bytes):  # file contents
-            scipy_dataset = _open_scipy_netcdf(
-                filename_or_obj, mode=mode, mmap=mmap, version=version
-            )
-            manager = DummyFileManager(scipy_dataset)
         elif hasattr(filename_or_obj, "seek"):  # file object
             # Note: checking for .seek matches the check for file objects
             # in scipy.io.netcdf_file
@@ -201,7 +191,9 @@ class ScipyDataStore(WritableCFDataStore):
                 close = scipy_dataset.flush
             manager = DummyFileManager(scipy_dataset, close=close)
         else:
-            raise ValueError(f"cannot open {filename_or_obj=}")
+            raise ValueError(
+                f"cannot open {filename_or_obj=} with scipy.io.netcdf_file"
+            )
 
         self._manager = manager
 

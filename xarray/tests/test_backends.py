@@ -4562,10 +4562,10 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
         with pytest.raises(
             ValueError, match=r"match in any of xarray's currently installed IO"
         ):
-            with open_dataset(b"garbage"):  # type: ignore[arg-type]
+            with open_dataset(b"garbage"):
                 pass
         with pytest.raises(ValueError, match=r"can only read bytes"):
-            with open_dataset(b"garbage", engine="netcdf4"):  # type: ignore[arg-type]
+            with open_dataset(b"garbage", engine="netcdf4"):
                 pass
         with pytest.raises(
             ValueError, match=r"not the signature of a valid netCDF4 file"
@@ -4633,7 +4633,13 @@ class TestH5NetCDFInMemoryData:
     def test_roundtrip_via_bytes(self) -> None:
         original = create_test_data()
         netcdf_bytes = original.to_netcdf(engine="h5netcdf")
-        roundtrip = open_dataset(netcdf_bytes, engine="h5netcdf")  # type: ignore[arg-type]
+        roundtrip = open_dataset(netcdf_bytes, engine="h5netcdf")
+        assert_identical(roundtrip, original)
+
+    def test_roundtrip_group_via_bytes(self) -> None:
+        original = create_test_data()
+        netcdf_bytes = original.to_netcdf(group="sub", engine="h5netcdf")
+        roundtrip = open_dataset(netcdf_bytes, group="sub", engine="h5netcdf")
         assert_identical(roundtrip, original)
 
 

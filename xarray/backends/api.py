@@ -497,7 +497,7 @@ def _datatree_from_backend_datatree(
 
 
 def open_dataset(
-    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | bytes | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -527,12 +527,12 @@ def open_dataset(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like or DataStore
+    filename_or_obj : str, Path, file-like, bytes or DataStore
         Strings and Path objects are interpreted as a path to a netCDF file
         or an OpenDAP URL and opened with python-netCDF4, unless the filename
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
-        objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
+        objects are opened by scipy.io.netcdf (netCDF3) or h5netcdf (netCDF4).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "zarr", None}\
         , installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
@@ -686,6 +686,9 @@ def open_dataset(
     open_mfdataset
     """
 
+    if isinstance(filename_or_obj, bytes):
+        filename_or_obj = BytesIO(filename_or_obj)
+
     if cache is None:
         cache = chunks is None
 
@@ -737,7 +740,7 @@ def open_dataset(
 
 
 def open_dataarray(
-    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | bytes | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -768,12 +771,12 @@ def open_dataarray(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like or DataStore
+    filename_or_obj : str, Path, file-like, bytes or DataStore
         Strings and Path objects are interpreted as a path to a netCDF file
         or an OpenDAP URL and opened with python-netCDF4, unless the filename
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
-        objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
+        objects are opened by scipy.io.netcdf (netCDF3) or h5netcdf (netCDF4).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "zarr", None}\
         , installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
@@ -964,7 +967,7 @@ def open_dataarray(
 
 
 def open_datatree(
-    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | bytes | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -995,8 +998,9 @@ def open_datatree(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like, or DataStore
-        Strings and Path objects are interpreted as a path to a netCDF file or Zarr store.
+    filename_or_obj : str, Path, file-like, bytes or DataStore
+        Strings and Path objects are interpreted as a path to a netCDF file or
+        Zarr store. Bytes are interpreted as file contents.
     engine : {"netcdf4", "h5netcdf", "zarr", None}, \
              installed backend or xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
@@ -1149,6 +1153,9 @@ def open_datatree(
     xarray.open_groups
     xarray.open_dataset
     """
+    if isinstance(filename_or_obj, bytes):
+        filename_or_obj = BytesIO(filename_or_obj)
+
     if cache is None:
         cache = chunks is None
 
@@ -1237,8 +1244,9 @@ def open_groups(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like, or DataStore
-        Strings and Path objects are interpreted as a path to a netCDF file or Zarr store.
+    filename_or_obj : str, Path, file-like, butes, or DataStore
+        Strings and Path objects are interpreted as a path to a netCDF file or
+        Zarr store. Bytes are interpreted as file contents.
     engine : {"netcdf4", "h5netcdf", "zarr", None}, \
              installed backend or xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
@@ -1390,6 +1398,9 @@ def open_groups(
     xarray.open_dataset
     xarray.DataTree.from_dict
     """
+    if isinstance(filename_or_obj, bytes):
+        filename_or_obj = BytesIO(filename_or_obj)
+
     if cache is None:
         cache = chunks is None
 
