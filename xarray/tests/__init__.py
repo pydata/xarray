@@ -143,6 +143,7 @@ if has_zarr_v3:
     requires_zarr_v3_dtypes = pytest.mark.skipif(
         not has_zarr_v3_dtypes, reason="requires zarr>3.1.0"
     )
+has_zarr_v3_async_index, requires_zarr_v3_async_index = _importorskip("zarr", "3.1.2")
 
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")

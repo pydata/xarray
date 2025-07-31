@@ -1,20 +1,21 @@
 import asyncio
-from typing import Literal
+from importlib import import_module
+from typing import Any, Literal
 from unittest.mock import patch
 
 import pytest
 
 import xarray as xr
 import xarray.testing as xrt
-from xarray.tests import has_zarr_v3, requires_zarr_v3
+from xarray.tests import has_zarr_v3_async_index, requires_zarr_v3_async_index
 from xarray.tests.test_dataset import create_test_data
 
-if has_zarr_v3:
+if has_zarr_v3_async_index:
     import zarr
 else:
     # TODO what should we test when async loading not available?
     pytest.mark.skip(reason="async loading from zarr requires zarr-python v3")
-
+    zarr = None
 
 @pytest.fixture
 def store() -> "MemoryStore":
@@ -40,11 +41,18 @@ def get_xr_obj(
             return ds
 
 
-@requires_zarr_v3
+def _resolve_class_from_string(class_path: str) -> type[Any]:
+    """Resolve a string class path like 'zarr.AsyncArray' to the actual class."""
+    module_path, class_name = class_path.rsplit('.', 1)
+    module = import_module(module_path)
+    return getattr(module, class_name)
+
+
+@requires_zarr_v3_async_index
 @pytest.mark.asyncio
 class TestAsyncLoad:
     async def test_concurrent_load_multiple_variables(self, store) -> None:
-        target_class = zarr.AsyncArray
+        target_class = _resolve_class_from_string("zarr.AsyncArray")
         method_name = "getitem"
         original_method = getattr(target_class, method_name)
 
@@ -71,7 +79,7 @@ class TestAsyncLoad:
     async def test_concurrent_load_multiple_objects(self, store, cls_name) -> None:
         N_OBJECTS = 5
 
-        target_class = zarr.AsyncArray
+        target_class = _resolve_class_from_string("zarr.AsyncArray")
         method_name = "getitem"
         original_method = getattr(target_class, method_name)
 
@@ -95,21 +103,21 @@ class TestAsyncLoad:
     @pytest.mark.parametrize(
         "indexer, method, zarr_class_and_method",
         [
-            ({}, "sel", (zarr.AsyncArray, "getitem")),
-            ({}, "isel", (zarr.AsyncArray, "getitem")),
-            ({"dim2": 1.0}, "sel", (zarr.AsyncArray, "getitem")),
-            ({"dim2": 2}, "isel", (zarr.AsyncArray, "getitem")),
-            ({"dim2": slice(1.0, 3.0)}, "sel", (zarr.AsyncArray, "getitem")),
-            ({"dim2": slice(1, 3)}, "isel", (zarr.AsyncArray, "getitem")),
-            ({"dim2": [1.0, 3.0]}, "sel", (zarr.core.indexing.AsyncOIndex, "getitem")),
-            ({"dim2": [1, 3]}, "isel", (zarr.core.indexing.AsyncOIndex, "getitem")),
+            ({}, "sel", ("zarr.AsyncArray", "getitem")),
+            ({}, "isel", ("zarr.AsyncArray", "getitem")),
+            ({"dim2": 1.0}, "sel", ("zarr.AsyncArray", "getitem")),
+            ({"dim2": 2}, "isel", ("zarr.AsyncArray", "getitem")),
+            ({"dim2": slice(1.0, 3.0)}, "sel", ("zarr.AsyncArray", "getitem")),
+            ({"dim2": slice(1, 3)}, "isel", ("zarr.AsyncArray", "getitem")),
+            ({"dim2": [1.0, 3.0]}, "sel", ("zarr.core.indexing.AsyncOIndex", "getitem")),
+            ({"dim2": [1, 3]}, "isel", ("zarr.core.indexing.AsyncOIndex", "getitem")),
             (
                 {
                     "dim1": xr.Variable(data=[2, 3], dims="points"),
                     "dim2": xr.Variable(data=[1.0, 2.0], dims="points"),
                 },
                 "sel",
-                (zarr.core.indexing.AsyncVIndex, "getitem"),
+                ("zarr.core.indexing.AsyncVIndex", "getitem"),
             ),
             (
                 {
@@ -117,7 +125,7 @@ class TestAsyncLoad:
                     "dim2": xr.Variable(data=[1, 3], dims="points"),
                 },
                 "isel",
-                (zarr.core.indexing.AsyncVIndex, "getitem"),
+                ("zarr.core.indexing.AsyncVIndex", "getitem"),
             ),
         ],
         ids=[
@@ -145,7 +153,8 @@ class TestAsyncLoad:
             pytest.skip("Variable doesn't have a .sel method")
 
         # each type of indexing ends up calling a different zarr indexing method
-        target_class, method_name = zarr_class_and_method
+        target_class_path, method_name = zarr_class_and_method
+        target_class = _resolve_class_from_string(target_class_path)
         original_method = getattr(target_class, method_name)
 
         with patch.object(
