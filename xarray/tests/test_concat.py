@@ -625,7 +625,7 @@ class TestConcatDataset:
             actual = concat([ds1, ds2], "y", data_vars=data_vars)
         assert_identical(expected, actual)
 
-    def test_concat_constant_index_minimal(self) -> None:
+    def test_concat_constant_index_None(self) -> None:
         ds1 = Dataset({"foo": 1.5}, {"y": 1})
         ds2 = Dataset({"foo": 2.5}, {"y": 1})
         actual = concat([ds1, ds2], "new_dim", data_vars=None, compat="equals")
@@ -634,6 +634,20 @@ class TestConcatDataset:
             coords={"y": 1},
         )
         assert_identical(actual, expected)
+
+    def test_concat_constant_index_minimal(self) -> None:
+        ds1 = Dataset({"foo": 1.5}, {"y": 1})
+        ds2 = Dataset({"foo": 2.5}, {"y": 1})
+
+        with set_options(use_new_combine_kwarg_defaults=False):
+            with pytest.raises(merge.MergeError, match="conflicting values"):
+                concat([ds1, ds2], dim="new_dim", data_vars="minimal")
+
+        with set_options(use_new_combine_kwarg_defaults=True):
+            with pytest.raises(
+                ValueError, match="data_vars='minimal' and coords='minimal'"
+            ):
+                concat([ds1, ds2], dim="new_dim", data_vars="minimal")
 
     def test_concat_size0(self) -> None:
         data = create_test_data()

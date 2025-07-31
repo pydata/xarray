@@ -365,6 +365,12 @@ def _calc_concat_over(
     else:
         concat_over_existing_dim = False
 
+    if data_vars == "minimal" and coords == "minimal" and not concat_over_existing_dim:
+        raise ValueError(
+            "Cannot specify both data_vars='minimal' and coords='minimal' when "
+            "concatenating over a new dimension."
+        )
+
     if data_vars is None or (
         isinstance(data_vars, CombineKwargDefault) and data_vars._value is None
     ):

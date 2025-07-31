@@ -1455,7 +1455,7 @@ class TestDataArray:
             original = xr.concat([da, db], dim="x")
             assert original.y.size == 4
         with set_options(use_new_combine_kwarg_defaults=True):
-            # default compat="minimal" will pick the first one
+            # default compat="override" will pick the first one
             new = xr.concat([da, db], dim="x")
             assert new.y.size == 1
 
