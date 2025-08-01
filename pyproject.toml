@@ -329,7 +329,6 @@ ban-relative-imports = "all"
 "pandas.api.types.is_extension_array_dtype".msg = "Use xarray.core.utils.is_allowed_extension_array{_dtype} instead.  Only use the banend API if the incoming data has already been sanitized by xarray"
 
 
-
 # We want to forbid warnings from within xarray in our tests — instead we should
 # fix our own code, or mark the test itself as expecting a warning. So this:
 # - Converts any warning from xarray into an error
