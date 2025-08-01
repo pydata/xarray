@@ -1959,7 +1959,6 @@ class TestSubset:
         assert dt_zero_size.is_data_empty is True
 
     def test_prune_basic(self) -> None:
-        # Test basic pruning of empty nodes
         tree = DataTree.from_dict(
             {"/a": xr.Dataset({"foo": ("x", [1, 2])}), "/b": xr.Dataset()}
         )
@@ -1985,7 +1984,6 @@ class TestSubset:
 
         pruned = tree.prune()
 
-        # Check structure
         assert "group1" in pruned.children
         assert "subA" in pruned.children["group1"].children
         assert "subB" not in pruned.children["group1"].children
