@@ -365,13 +365,16 @@ class TestMergeMethod:
         with pytest.raises(ValueError, match=r"should be coordinates or not"):
             data.merge(data.reset_coords())
 
-    def test_merge_drop_attrs(self):
+    @pytest.mark.parametrize(
+        "join", ["outer", "inner", "left", "right", "exact", "override"]
+    )
+    def test_merge_drop_attrs(self, join):
         data = create_test_data()
         ds1 = data[["var1"]]
         ds2 = data[["var3"]]
         ds1.coords["dim2"].attrs["keep me"] = "example"
         ds2.coords["numbers"].attrs["foo"] = "bar"
-        actual = ds1.merge(ds2, combine_attrs="drop")
+        actual = ds1.merge(ds2, combine_attrs="drop", join=join)
         assert actual.coords["dim2"].attrs == {}
         assert actual.coords["numbers"].attrs == {}
         assert ds1.coords["dim2"].attrs["keep me"] == "example"
