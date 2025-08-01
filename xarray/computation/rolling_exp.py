@@ -108,7 +108,6 @@ class RollingExp(Generic[T_DataWithCoords]):
         >>> da.rolling_exp(x=2, window_type="span").mean()
         <xarray.DataArray (x: 5)> Size: 40B
         array([1.        , 1.        , 1.69230769, 1.9       , 1.96694215])
-        Dimensions without coordinates: x
         """
 
         import numbagg
@@ -146,7 +145,6 @@ class RollingExp(Generic[T_DataWithCoords]):
         >>> da.rolling_exp(x=2, window_type="span").sum()
         <xarray.DataArray (x: 5)> Size: 40B
         array([1.        , 1.33333333, 2.44444444, 2.81481481, 2.9382716 ])
-        Dimensions without coordinates: x
         """
 
         import numbagg
@@ -179,7 +177,6 @@ class RollingExp(Generic[T_DataWithCoords]):
         >>> da.rolling_exp(x=2, window_type="span").std()
         <xarray.DataArray (x: 5)> Size: 40B
         array([       nan, 0.        , 0.67936622, 0.42966892, 0.25389527])
-        Dimensions without coordinates: x
         """
 
         import numbagg
@@ -209,7 +206,6 @@ class RollingExp(Generic[T_DataWithCoords]):
         >>> da.rolling_exp(x=2, window_type="span").var()
         <xarray.DataArray (x: 5)> Size: 40B
         array([       nan, 0.        , 0.46153846, 0.18461538, 0.06446281])
-        Dimensions without coordinates: x
         """
         dim_order = self.obj.dims
         import numbagg
@@ -237,7 +233,6 @@ class RollingExp(Generic[T_DataWithCoords]):
         >>> da.rolling_exp(x=2, window_type="span").cov(da**2)
         <xarray.DataArray (x: 5)> Size: 40B
         array([       nan, 0.        , 1.38461538, 0.55384615, 0.19338843])
-        Dimensions without coordinates: x
         """
 
         dim_order = self.obj.dims
@@ -267,7 +262,6 @@ class RollingExp(Generic[T_DataWithCoords]):
         >>> da.rolling_exp(x=2, window_type="span").corr(da.shift(x=1))
         <xarray.DataArray (x: 5)> Size: 40B
         array([       nan,        nan,        nan, 0.4330127 , 0.48038446])
-        Dimensions without coordinates: x
         """
 
         dim_order = self.obj.dims
