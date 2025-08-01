@@ -7,10 +7,14 @@ import pytest
 
 import xarray as xr
 import xarray.testing as xrt
-from xarray.tests import has_zarr, requires_zarr, has_zarr_v3_async_index, requires_zarr_v3_async_index
-from xarray.tests.test_dataset import create_test_data
+from xarray.tests import (
+    has_zarr,
+    has_zarr_v3_async_index,
+    requires_zarr,
+    requires_zarr_v3_async_index,
+)
 from xarray.tests.test_backends import ZARR_FORMATS
-
+from xarray.tests.test_dataset import create_test_data
 
 if has_zarr:
     import zarr
@@ -180,15 +184,17 @@ class TestAsyncLoad:
         xrt.assert_identical(result, expected)
 
     @requires_zarr
-    @pytest.mark.skipif(has_zarr_v3_async_index, reason="newer version of zarr has async indexing")
+    @pytest.mark.skipif(
+        has_zarr_v3_async_index, reason="newer version of zarr has async indexing"
+    )
     @pytest.mark.parametrize(
         "indexer",
         [
             {"dim2": [1, 3]},  # tests oindexing
-                {  # test vindexing
-                    "dim1": xr.Variable(data=[2, 3], dims="points"),
-                    "dim2": xr.Variable(data=[1, 3], dims="points"),
-                },
+            {  # test vindexing
+                "dim1": xr.Variable(data=[2, 3], dims="points"),
+                "dim2": xr.Variable(data=[1, 3], dims="points"),
+            },
         ],
     )
     async def test_raise_on_older_zarr_version(self, store, indexer):

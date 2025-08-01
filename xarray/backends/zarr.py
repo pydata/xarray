@@ -183,7 +183,8 @@ def encode_zarr_attr_value(value):
 def has_zarr_async_index() -> bool:
     try:
         import zarr
-        return hasattr(zarr.AsyncArray, 'oindex')
+
+        return hasattr(zarr.AsyncArray, "oindex")
     except (ImportError, AttributeError):
         return False
 
@@ -230,14 +231,18 @@ class ZarrArrayWrapper(BackendArray):
 
     async def _async_oindex(self, key):
         if not has_zarr_async_index():
-            raise NotImplementedError("For lazy orthogonal async indexing with zarr, zarr-python=>v3.1.2 is required")
+            raise NotImplementedError(
+                "For lazy orthogonal async indexing with zarr, zarr-python=>v3.1.2 is required"
+            )
 
         async_array = self._array._async_array
         return await async_array.oindex.getitem(key)
 
     async def _async_vindex(self, key):
         if not has_zarr_async_index():
-            raise NotImplementedError("For lazy orthogonal async indexing with zarr, zarr-python=>v3.1.2 is required")
+            raise NotImplementedError(
+                "For lazy orthogonal async indexing with zarr, zarr-python=>v3.1.2 is required"
+            )
 
         async_array = self._array._async_array
         return await async_array.vindex.getitem(key)
