@@ -1942,6 +1942,77 @@ class TestSubset:
         )
         assert_identical(actual, expected)
 
+    def test_is_data_empty(self) -> None:
+        ds_with_data = xr.Dataset({"foo": ("x", [1, 2])})
+        dt_with_data = DataTree(dataset=ds_with_data)
+        assert dt_with_data.is_data_empty is False
+
+        ds_coords_only = xr.Dataset(coords={"x": [1, 2]})
+        dt_coords_only = DataTree(dataset=ds_coords_only)
+        assert dt_coords_only.is_data_empty is True
+
+        dt_empty = DataTree()
+        assert dt_empty.is_data_empty is True
+
+        ds_zero_size = xr.Dataset({"var": ("time", [])})
+        dt_zero_size = DataTree(dataset=ds_zero_size)
+        assert dt_zero_size.is_data_empty is True
+
+    def test_prune_basic(self) -> None:
+        # Test basic pruning of empty nodes
+        tree = DataTree.from_dict(
+            {"/a": xr.Dataset({"foo": ("x", [1, 2])}), "/b": xr.Dataset()}
+        )
+
+        pruned = tree.prune()
+
+        assert "a" in pruned.children
+        assert "b" not in pruned.children
+        assert_identical(
+            pruned.children["a"].to_dataset(), tree.children["a"].to_dataset()
+        )
+
+    def test_prune_with_intermediate_nodes(self) -> None:
+        tree = DataTree.from_dict(
+            {
+                "/": xr.Dataset(),
+                "/group1": xr.Dataset(),
+                "/group1/subA": xr.Dataset({"temp": ("x", [1, 2])}),
+                "/group1/subB": xr.Dataset(),
+                "/group2": xr.Dataset(),
+            }
+        )
+
+        pruned = tree.prune()
+
+        # Check structure
+        assert "group1" in pruned.children
+        assert "subA" in pruned.children["group1"].children
+        assert "subB" not in pruned.children["group1"].children
+        assert "group2" not in pruned.children
+
+    def test_prune_after_filtering(self) -> None:
+        import pandas as pd
+
+        ds1 = xr.Dataset(
+            {"foo": ("time", [1, 2, 3, 4, 5])},
+            coords={"time": pd.date_range("2023-01-01", periods=5, freq="D")},
+        )
+        ds2 = xr.Dataset(
+            {"var": ("time", [1, 2, 3, 4, 5])},
+            coords={"time": pd.date_range("2023-01-04", periods=5, freq="D")},
+        )
+
+        tree = DataTree.from_dict({"a": ds1, "b": ds2})
+        filtered = tree.sel(time=slice("2023-01-01", "2023-01-03"))
+
+        assert "b" in filtered.children
+        assert filtered.children["b"].is_data_empty is True
+
+        pruned = filtered.prune()
+        assert "a" in pruned.children
+        assert "b" not in pruned.children
+
 
 class TestIndexing:
     def test_isel_siblings(self) -> None:
