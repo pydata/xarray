@@ -1,5 +1,5 @@
 import xarray as xr
-import jax.numpy as jnp
+
 
 def jax_to_xarray(jax_array, dims=None):
     """
