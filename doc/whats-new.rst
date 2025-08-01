@@ -12,6 +12,11 @@ v2025.07.2 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Added :py:attr:`DataTree.is_data_empty` property to check if a node contains data variables with actual data (:issue:`10590`, :pull:`10598`).
+  By `Alfonso Ladino <https://github.com/aladinor`_.
+- Added :py:meth:`DataTree.prune` method to remove empty nodes while preserving tree structure.
+  Useful for cleaning up DataTree after time-based filtering operations (:issue:`10590`, :pull:`10598`).
+  By `Alfonso Ladino <https://github.com/aladinor`_.
 
 
 Breaking changes
