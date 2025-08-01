@@ -28,6 +28,7 @@ from xarray.core.utils import (
     is_allowed_extension_array_dtype,
     is_duck_array,
     is_duck_dask_array,
+    is_full_slice,
     is_scalar,
     is_valid_numpy_dtype,
     to_0d_array,
@@ -42,6 +43,9 @@ if TYPE_CHECKING:
     from xarray.core.variable import Variable
     from xarray.namedarray._typing import _Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
+
+BasicIndexerType = int | np.integer | slice
+OuterIndexerType = BasicIndexerType | np.ndarray[Any, np.dtype[np.generic]]
 
 
 @dataclass
@@ -300,18 +304,62 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
     return slice(start, stop, step)
 
 
-def _index_indexer_1d(old_indexer, applied_indexer, size: int):
-    if isinstance(applied_indexer, slice) and applied_indexer == slice(None):
+def _index_indexer_1d(
+    old_indexer: OuterIndexerType | MultipleSlices,
+    applied_indexer: OuterIndexerType | MultipleSlices,
+    size: int,
+) -> OuterIndexerType | MultipleSlices:
+    if is_full_slice(applied_indexer):
         # shortcut for the usual case
         return old_indexer
+    if is_full_slice(old_indexer):
+        return applied_indexer
+
+    indexer: OuterIndexerType | MultipleSlices
     if isinstance(old_indexer, slice):
         if isinstance(applied_indexer, slice):
             indexer = slice_slice(old_indexer, applied_indexer, size)
+        elif isinstance(applied_indexer, MultipleSlices):
+            indexer = MultipleSlices.from_iterable(
+                slice_slice(old_indexer, s, size) for s in applied_indexer.slices
+            ).merge_slices()
         elif isinstance(applied_indexer, integer_types):
-            indexer = range(*old_indexer.indices(size))[applied_indexer]  # type: ignore[assignment]
+            indexer = range(*old_indexer.indices(size))[applied_indexer]
         else:
             indexer = _expand_slice(old_indexer, size)[applied_indexer]
+    elif isinstance(old_indexer, MultipleSlices):
+        if isinstance(applied_indexer, slice):
+            indexer = MultipleSlices.from_iterable(
+                slice_slice(s, applied_indexer, size) for s in old_indexer.slices
+            ).merge_slices()
+        elif isinstance(applied_indexer, MultipleSlices):
+            new_slices = (
+                slice_slice(slice_a, slice_b, size)
+                for slice_a in old_indexer.slices
+                for slice_b in applied_indexer.slices
+            )
+
+            indexer = MultipleSlices.from_iterable(
+                s for s in new_slices if len(range(*s.indices(size))) > 0
+            )
+        elif isinstance(applied_indexer, integer_types):
+            [selected_slice] = [
+                s
+                for s in old_indexer.slices
+                if s.start >= applied_indexer and s.stop < applied_indexer
+            ]
+            indexer = range(*selected_slice.indices(size))[applied_indexer]
+        else:
+            parts = [
+                _expand_slice(s, size)[applied_indexer] for s in old_indexer.slices
+            ]
+            indexer = np.concatenate(parts)
+    elif isinstance(applied_indexer, MultipleSlices):
+        old_indexer = cast(np.ndarray, old_indexer)
+        parts = [old_indexer[s] for s in applied_indexer.slices]
+        indexer = np.concatenate(parts)
     else:
+        old_indexer = cast(np.ndarray, old_indexer)
         indexer = old_indexer[applied_indexer]
     return indexer
 
@@ -355,6 +403,10 @@ def as_integer_slice(value: slice) -> slice:
     stop = as_integer_or_none(value.stop)
     step = as_integer_or_none(value.step)
     return slice(start, stop, step)
+
+
+def as_integer_multi_slice(value: MultipleSlices) -> MultipleSlices:
+    return MultipleSlices.from_iterable(as_integer_slice(s) for s in value.slices)
 
 
 class IndexCallable:
@@ -408,6 +460,11 @@ class BasicIndexer(ExplicitIndexer):
         super().__init__(tuple(new_key))
 
 
+outer_indexer_key_type = (
+    int | np.integer | slice | np.ndarray[Any, np.dtype[np.generic]]
+)
+
+
 class OuterIndexer(ExplicitIndexer):
     """Tuple for outer/orthogonal indexing.
 
@@ -419,12 +476,7 @@ class OuterIndexer(ExplicitIndexer):
 
     __slots__ = ()
 
-    def __init__(
-        self,
-        key: tuple[
-            int | np.integer | slice | np.ndarray[Any, np.dtype[np.generic]], ...
-        ],
-    ):
+    def __init__(self, key: tuple[outer_indexer_key_type | MultipleSlices, ...]):
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
@@ -434,6 +486,8 @@ class OuterIndexer(ExplicitIndexer):
                 k = int(k)
             elif isinstance(k, slice):
                 k = as_integer_slice(k)
+            elif isinstance(k, MultipleSlices):
+                k = as_integer_multi_slice(k)
             elif is_duck_array(k):
                 if not np.issubdtype(k.dtype, np.integer):
                     raise TypeError(
@@ -593,6 +647,81 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
             return result
 
 
+class MultipleSlices:
+    __slots__ = ("_slices",)
+
+    def __init__(self, *slices: slice):
+        if any(not isinstance(s, slice) for s in slices):
+            raise ValueError("Can only wrap slice objects.")
+
+        if any(is_full_slice(s) for s in slices) and len(slices) > 1:
+            raise ValueError("Full slices can only be wrapped on their own.")
+
+        self._slices = list(slices)
+
+    def __repr__(self):
+        return f"MultipleSlices({', '.join(repr(s) for s in self.slices)})"
+
+    @classmethod
+    def _construct_direct(cls, slices: list[slice]) -> Self:
+        instance = cls.__new__(cls)
+        instance._slices = slices
+        return instance
+
+    @classmethod
+    def from_iterable(cls, slices: Iterable[slice]) -> Self:
+        slices_ = list(slices)
+        if not slices_:
+            raise ValueError("need at least one slice object")
+
+        return cls._construct_direct(slices_)
+
+    @property
+    def slices(self):
+        return self._slices
+
+    def merge_slices(self) -> Self:
+        new_slices = list(self._slices[:1])
+        previous_index = 0
+        for current in self._slices[1:]:
+            previous = new_slices[previous_index]
+
+            if (
+                previous.step == current.step
+                # `None` is treated as `1` for position slices
+                or (previous.step in (None, 1) and current.step in (None, 1))
+            ) and previous.stop == current.start:
+                new_slices[previous_index] = slice(
+                    previous.start, current.stop, previous.step
+                )
+                continue
+            elif (
+                current.start is None and current.stop == 0
+            ) or current.start == current.stop:
+                # length 0 slice
+                continue
+
+            new_slices.append(current)
+            previous_index += 1
+
+        return self._construct_direct(new_slices)
+
+
+def decompose_by_multiple_slices(
+    indexer: tuple[outer_indexer_key_type | MultipleSlices, ...],
+) -> tuple[tuple[slice | MultipleSlices, ...], tuple[outer_indexer_key_type, ...]]:
+    others = tuple(
+        k if not isinstance(k, MultipleSlices) else slice(None) for k in indexer
+    )
+    multiple_slices = tuple(
+        k if isinstance(k, MultipleSlices) else slice(None)
+        for k in indexer
+        if not isinstance(k, integer_types)
+    )
+
+    return multiple_slices, others
+
+
 class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and outer indexing lazy."""
 
@@ -625,11 +754,13 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
                 shape += (len(range(*k.indices(size))),)
             elif isinstance(k, np.ndarray):
                 shape += (k.size,)
+            elif isinstance(k, MultipleSlices):
+                shape += (sum(len(range(*s.indices(size))) for s in k.slices),)
         self._shape = shape
 
     def _updated_key(self, new_key: ExplicitIndexer) -> BasicIndexer | OuterIndexer:
         iter_new_key = iter(expanded_indexer(new_key.tuple, self.ndim))
-        full_key = []
+        full_key: list[OuterIndexerType | MultipleSlices] = []
         for size, k in zip(self.array.shape, self.key.tuple, strict=True):
             if isinstance(k, integer_types):
                 full_key.append(k)
@@ -638,7 +769,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         full_key_tuple = tuple(full_key)
 
         if all(isinstance(k, integer_types + (slice,)) for k in full_key_tuple):
-            return BasicIndexer(full_key_tuple)
+            return BasicIndexer(cast(tuple[BasicIndexerType, ...], full_key_tuple))
         return OuterIndexer(full_key_tuple)
 
     @property
@@ -683,6 +814,10 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
     def _oindex_set(self, key: OuterIndexer, value: Any) -> None:
         full_key = self._updated_key(key)
+        if any(isinstance(k, MultipleSlices) for k in key.tuple):
+            raise NotImplementedError(
+                "Assignment is not supported for a list of slices, yet."
+            )
         self.array.oindex[full_key] = value
 
     def __setitem__(self, key: BasicIndexer, value: Any) -> None:
@@ -1545,8 +1680,29 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return self.array.transpose(order)
 
     def _oindex_get(self, indexer: OuterIndexer):
-        key = _outer_to_numpy_indexer(indexer, self.array.shape)
-        return self.array[key]
+        multi_slices, others = decompose_by_multiple_slices(indexer.tuple)
+        others_ = _outer_to_numpy_indexer(OuterIndexer(others), self.array.shape)
+
+        if all(is_full_slice(s) for s in multi_slices):
+            return self.array[others_]
+
+        # apply other indexers
+        if any(not is_full_slice(s) for s in others_):
+            value = self.array[others_ + (Ellipsis,)]
+        else:
+            value = self.array
+
+        # apply the multi-slices
+        for axis, subkey in enumerate(multi_slices):
+            if not isinstance(subkey, MultipleSlices):
+                continue
+
+            parts = [
+                value[(slice(None),) * axis + (slice_,)] for slice_ in subkey.slices
+            ]
+            value = np.concatenate(parts, axis=axis)
+
+        return value
 
     def _vindex_get(self, indexer: VectorizedIndexer):
         _assert_not_chunked_indexer(indexer.tuple)
@@ -1619,12 +1775,25 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             )
         self.array = array
 
+    def _oindex_get_impl(self, value, axis, subkey):
+        if not isinstance(subkey, MultipleSlices):
+            return value[(slice(None),) * axis + (subkey, Ellipsis)]
+
+        xp = value.__array_namespace__()
+        return xp.concat(
+            [
+                value[(slice(None),) * axis + (slice_, Ellipsis)]
+                for slice_ in subkey._slices
+            ],
+            axis=axis,
+        )
+
     def _oindex_get(self, indexer: OuterIndexer):
         # manual orthogonal indexing (implemented like DaskIndexingAdapter)
         key = indexer.tuple
         value = self.array
         for axis, subkey in reversed(list(enumerate(key))):
-            value = value[(slice(None),) * axis + (subkey, Ellipsis)]
+            value = self._oindex_get_impl(value, axis, subkey)
         return value
 
     def _vindex_get(self, indexer: VectorizedIndexer):
@@ -1686,11 +1855,21 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         key = indexer.tuple
         try:
             return self.array[key]
-        except NotImplementedError:
+        except (NotImplementedError, TypeError):
             # manual orthogonal indexing
             value = self.array
             for axis, subkey in reversed(list(enumerate(key))):
-                value = value[(slice(None),) * axis + (subkey,)]
+                if not isinstance(subkey, MultipleSlices):
+                    value = value[(slice(None),) * axis + (subkey, Ellipsis)]
+                    continue
+
+                value = np.concatenate(
+                    [
+                        value[(slice(None),) * axis + (slice_, Ellipsis)]
+                        for slice_ in subkey._slices
+                    ],
+                    axis=axis,
+                )
             return value
 
     def _vindex_get(self, indexer: VectorizedIndexer):
@@ -1867,7 +2046,13 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             return getattr(indexable, func_name)(indexer)
 
         # otherwise index the pandas index then re-wrap or convert the result
-        result = self.array[key]
+        if not isinstance(key, MultipleSlices):
+            result = self.array[key]
+        else:
+            result = None
+            for s in key.slices:
+                subset = self.array[s]
+                result = result.union(subset) if result is not None else subset
 
         if isinstance(result, pd.Index):
             return type(self)(result, dtype=self.dtype)
