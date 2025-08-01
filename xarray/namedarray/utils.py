@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import sys
 import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
 from functools import lru_cache
@@ -23,7 +24,9 @@ if TYPE_CHECKING:
         DaskArray = NDArray  # type: ignore[assignment, misc]
         DaskCollection: Any = NDArray  # type: ignore[no-redef]
 
-    from xarray.namedarray._typing import _Dim, duckarray
+    from xarray.core.variable import Variable
+    from xarray.namedarray._typing import DuckArray, _Dim, _DType, duckarray
+    from xarray.namedarray.parallelcompat import T_ChunkedArray
 
 
 K = TypeVar("K")
@@ -193,6 +196,37 @@ def either_dict_or_kwargs(
             f"cannot specify both keyword and positional arguments to .{func_name}"
         )
     return pos_kwargs
+
+
+def fake_target_chunksize(
+    data: DuckArray[Any] | T_ChunkedArray | Variable,
+    target_chunksize: int,
+) -> tuple[int, _DType]:
+    """
+    Naughty trick - let's get the ratio of our cftime_nbytes, and then compute
+    the ratio of that size to a np.float64. Then we can just adjust our target_chunksize
+    and use the default dask chunking algorithm to get a reasonable chunk size.
+
+    ? I don't think T_chunkedArray or Variable should be necessary, but the calls
+    ? to this in daskmanager.py requires it to be that. I still need to wrap my head
+    ? around the typing here a bit more.
+    """
+    import numpy as np
+
+    from xarray.core.formatting import first_n_items
+
+    output_dtype: _DType = np.dtype(np.float64)  # type: ignore[assignment]
+
+    if data.dtype == object:
+        nbytes_approx: int = sys.getsizeof(first_n_items(data, 1))  # type: ignore[no-untyped-call]
+    else:
+        nbytes_approx = data[0].itemsize
+
+    f64_nbytes = output_dtype.itemsize  # Should be 8 bytes
+
+    target_chunksize = int(target_chunksize * (f64_nbytes / nbytes_approx))
+
+    return target_chunksize, output_dtype
 
 
 class ReprObject:
