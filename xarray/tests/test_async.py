@@ -9,6 +9,8 @@ import xarray as xr
 import xarray.testing as xrt
 from xarray.tests import has_zarr, requires_zarr, has_zarr_v3_async_index, requires_zarr_v3_async_index
 from xarray.tests.test_dataset import create_test_data
+from xarray.tests.test_backends import ZARR_FORMATS
+
 
 if has_zarr:
     import zarr
@@ -16,12 +18,12 @@ else:
     zarr = None
 
 
-@pytest.fixture
-def store() -> "zarr.storage.MemoryStore":
+@pytest.fixture(scope="module", params=ZARR_FORMATS)
+def store(request) -> "zarr.storage.MemoryStore":
     memorystore = zarr.storage.MemoryStore({})
 
     ds = create_test_data()
-    ds.to_zarr(memorystore, zarr_format=3, consolidated=False)
+    ds.to_zarr(memorystore, zarr_format=request.param, consolidated=False)
 
     return memorystore
 
@@ -29,7 +31,7 @@ def store() -> "zarr.storage.MemoryStore":
 def get_xr_obj(
     store: "zarr.abc.store.Store", cls_name: Literal["Variable", "DataArray", "Dataset"]
 ):
-    ds = xr.open_zarr(store, zarr_format=3, consolidated=False, chunks=None)
+    ds = xr.open_zarr(store, consolidated=False, chunks=None)
 
     match cls_name:
         case "Variable":
@@ -63,7 +65,7 @@ class TestAsyncLoad:
             target_class, method_name, wraps=original_method, autospec=True
         ) as mocked_meth:
             # blocks upon loading the coordinate variables here
-            ds = xr.open_zarr(store, zarr_format=3, consolidated=False, chunks=None)
+            ds = xr.open_zarr(store, consolidated=False, chunks=None)
 
             # TODO we're not actually testing that these indexing methods are not blocking...
             result_ds = await ds.load_async()
@@ -177,7 +179,6 @@ class TestAsyncLoad:
         expected = getattr(xr_obj, method)(**indexer).load()
         xrt.assert_identical(result, expected)
 
-    # TODO generalize store to a v2 store?
     @requires_zarr
     @pytest.mark.skipif(has_zarr_v3_async_index, reason="newer version of zarr has async indexing")
     @pytest.mark.parametrize(
@@ -193,7 +194,9 @@ class TestAsyncLoad:
     async def test_raise_on_older_zarr_version(self, store, indexer):
         """Test that trying to use async load with insufficiently new version of zarr raises a clear error"""
 
-        ds = xr.open_zarr(store, zarr_format=3, consolidated=False, chunks=None)
+        ds = xr.open_zarr(store, consolidated=False, chunks=None)
 
         with pytest.raises(NotImplementedError, match="async indexing"):
             await ds.isel(**indexer).load_async()
+
+    # TODO also test raising informative error if attempting to do basic async indexing with 3.0.0 <= zarr <= 3.1.1?
