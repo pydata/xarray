@@ -19,7 +19,7 @@ from xarray.tests.test_dataset import create_test_data
 if has_zarr:
     import zarr
 else:
-    zarr = None
+    zarr = None  # type: ignore[assignment]
 
 
 @pytest.fixture(scope="module", params=ZARR_FORMATS)
@@ -27,7 +27,7 @@ def store(request) -> "zarr.storage.MemoryStore":
     memorystore = zarr.storage.MemoryStore({})
 
     ds = create_test_data()
-    ds.to_zarr(memorystore, zarr_format=request.param, consolidated=False)
+    ds.to_zarr(memorystore, zarr_format=request.param, consolidated=False)  # type: ignore[call-overload]
 
     return memorystore
 
