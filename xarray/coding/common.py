@@ -79,6 +79,9 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         return self.func(self.array.get_duck_array())
 
+    async def async_get_duck_array(self):
+        return self.func(await self.array.async_get_duck_array())
+
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.array!r}, func={self.func!r}, dtype={self.dtype!r})"
 
