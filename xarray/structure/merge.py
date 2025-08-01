@@ -276,7 +276,7 @@ def merge_collected(
             if index is not None:
                 merged_indexes[name] = index
         else:
-            attrs = None
+            attrs: dict[Any, Any] = {}
             indexed_elements = [
                 (variable, index)
                 for variable, index in elements_list
