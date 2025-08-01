@@ -64,7 +64,10 @@ dimension:
 
 .. jupyter-execute::
 
-    xr.concat([da.isel(x=0), da.isel(x=1)], "new_dim")
+    da0 = da.isel(x=0, drop=True)
+    da1 = da.isel(x=1, drop=True)
+
+    xr.concat([da0, da1], "new_dim")
 
 The second argument to ``concat`` can also be an :py:class:`~pandas.Index` or
 :py:class:`~xarray.DataArray` object as well as a string, in which case it is
@@ -72,7 +75,7 @@ used to label the values along the new dimension:
 
 .. jupyter-execute::
 
-    xr.concat([da.isel(x=0), da.isel(x=1)], pd.Index([-90, -100], name="new_dim"))
+    xr.concat([da0, da1], pd.Index([-90, -100], name="new_dim"))
 
 Of course, ``concat`` also works on ``Dataset`` objects:
 
@@ -86,6 +89,12 @@ over which variables are concatenated and how it handles conflicting variables
 between datasets. With the default parameters, xarray will load some coordinate
 variables into memory to compare them between datasets. This may be prohibitively
 expensive if you are manipulating your dataset lazily using :ref:`dask`.
+
+.. note::
+
+   In a future version of xarray the default values for many of these options
+   will change. You can opt into the new default values early using
+   ``xr.set_options(use_new_combine_kwarg_defaults=True)``.
 
 .. _merge:
 
@@ -109,10 +118,18 @@ If you merge another dataset (or a dictionary including data array objects), by
 default the resulting dataset will be aligned on the **union** of all index
 coordinates:
 
+.. note::
+
+   In a future version of xarray the default value for ``join`` and ``compat``
+   will change. This change will mean that xarray will no longer attempt
+   to align the indices of the merged dataset. You can opt into the new default
+   values early using ``xr.set_options(use_new_combine_kwarg_defaults=True)``.
+   Or explicitly set ``join='outer'`` to preserve old behavior.
+
 .. jupyter-execute::
 
     other = xr.Dataset({"bar": ("x", [1, 2, 3, 4]), "x": list("abcd")})
-    xr.merge([ds, other])
+    xr.merge([ds, other], join="outer")
 
 This ensures that ``merge`` is non-destructive. ``xarray.MergeError`` is raised
 if you attempt to merge two variables with the same name but different values:
@@ -122,6 +139,16 @@ if you attempt to merge two variables with the same name but different values:
 
     xr.merge([ds, ds + 1])
 
+
+.. note::
+
+    In a future version of xarray the default value for ``compat`` will change
+    from ``compat='no_conflicts'`` to ``compat='override'``. In this scenario
+    the values in the first object override all the values in other objects.
+
+    .. jupyter-execute::
+
+        xr.merge([ds, ds + 1], compat="override")
 
 The same non-destructive merging between ``DataArray`` index coordinates is
 used in the :py:class:`~xarray.Dataset` constructor:
@@ -155,6 +182,11 @@ For datasets, ``ds0.combine_first(ds1)`` works similarly to
 ``xr.merge([ds0, ds1])``, except that ``xr.merge`` raises ``MergeError`` when
 there are conflicting values in variables to be merged, whereas
 ``.combine_first`` defaults to the calling object's values.
+
+.. note::
+
+   In a future version of xarray the default options for ``xr.merge`` will change
+   such that the behavior matches ``combine_first``.
 
 .. _update:
 
@@ -248,7 +280,7 @@ coordinates as long as any non-missing values agree or are disjoint:
 
     ds1 = xr.Dataset({"a": ("x", [10, 20, 30, np.nan])}, {"x": [1, 2, 3, 4]})
     ds2 = xr.Dataset({"a": ("x", [np.nan, 30, 40, 50])}, {"x": [2, 3, 4, 5]})
-    xr.merge([ds1, ds2], compat="no_conflicts")
+    xr.merge([ds1, ds2], join="outer", compat="no_conflicts")
 
 Note that due to the underlying representation of missing values as floating
 point numbers (``NaN``), variable data type is not always preserved when merging
@@ -311,12 +343,11 @@ coordinates, not on their position in the list passed to ``combine_by_coords``.
 
 .. jupyter-execute::
 
-
     x1 = xr.DataArray(name="foo", data=np.random.randn(3), coords=[("x", [0, 1, 2])])
     x2 = xr.DataArray(name="foo", data=np.random.randn(3), coords=[("x", [3, 4, 5])])
     xr.combine_by_coords([x2, x1])
 
-These functions can be used by :py:func:`~xarray.open_mfdataset` to open many
+These functions are used by :py:func:`~xarray.open_mfdataset` to open many
 files as one dataset. The particular function used is specified by setting the
 argument ``'combine'`` to ``'by_coords'`` or ``'nested'``. This is useful for
 situations where your data is split across many files in multiple locations,

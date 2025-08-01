@@ -13,6 +13,7 @@ from xarray import (
     combine_nested,
     concat,
     merge,
+    set_options,
 )
 from xarray.core import dtypes
 from xarray.structure.combine import (
@@ -279,8 +280,10 @@ class TestNewTileIDs:
 
 
 class TestCombineND:
-    @pytest.mark.parametrize("concat_dim", ["dim1", "new_dim"])
-    def test_concat_once(self, create_combined_ids, concat_dim):
+    @pytest.mark.parametrize(
+        "concat_dim, kwargs", [("dim1", {}), ("new_dim", {"data_vars": "all"})]
+    )
+    def test_concat_once(self, create_combined_ids, concat_dim, kwargs):
         shape = (2,)
         combined_ids = create_combined_ids(shape)
         ds = create_test_data
@@ -290,9 +293,12 @@ class TestCombineND:
             data_vars="all",
             coords="different",
             compat="no_conflicts",
+            fill_value=dtypes.NA,
+            join="outer",
+            combine_attrs="drop",
         )
 
-        expected_ds = concat([ds(0), ds(1)], dim=concat_dim)
+        expected_ds = concat([ds(0), ds(1)], dim=concat_dim, **kwargs)
         assert_combined_tile_ids_equal(result, {(): expected_ds})
 
     def test_concat_only_first_dim(self, create_combined_ids):
@@ -304,6 +310,9 @@ class TestCombineND:
             data_vars="all",
             coords="different",
             compat="no_conflicts",
+            fill_value=dtypes.NA,
+            join="outer",
+            combine_attrs="drop",
         )
 
         ds = create_test_data
@@ -315,17 +324,28 @@ class TestCombineND:
 
         assert_combined_tile_ids_equal(result, expected)
 
-    @pytest.mark.parametrize("concat_dim", ["dim1", "new_dim"])
-    def test_concat_twice(self, create_combined_ids, concat_dim):
+    @pytest.mark.parametrize(
+        "concat_dim, kwargs", [("dim1", {}), ("new_dim", {"data_vars": "all"})]
+    )
+    def test_concat_twice(self, create_combined_ids, concat_dim, kwargs):
         shape = (2, 3)
         combined_ids = create_combined_ids(shape)
-        result = _combine_nd(combined_ids, concat_dims=["dim1", concat_dim])
+        result = _combine_nd(
+            combined_ids,
+            concat_dims=["dim1", concat_dim],
+            data_vars="all",
+            coords="different",
+            compat="no_conflicts",
+            fill_value=dtypes.NA,
+            join="outer",
+            combine_attrs="drop",
+        )
 
         ds = create_test_data
         partway1 = concat([ds(0), ds(3)], dim="dim1")
         partway2 = concat([ds(1), ds(4)], dim="dim1")
         partway3 = concat([ds(2), ds(5)], dim="dim1")
-        expected = concat([partway1, partway2, partway3], dim=concat_dim)
+        expected = concat([partway1, partway2, partway3], **kwargs, dim=concat_dim)
 
         assert_equal(result, expected)
 
@@ -417,7 +437,7 @@ class TestNestedCombine:
             Dataset({"a": ("x", [20]), "x": [0]}),
         ]
         expected = Dataset({"a": (("t", "x"), [[10], [20]]), "x": [0]})
-        actual = combine_nested(objs, concat_dim="t")
+        actual = combine_nested(objs, data_vars="all", concat_dim="t")
         assert_identical(expected, actual)
 
         # Same but with a DataArray as new dim, see GH #1988 and #2647
@@ -425,42 +445,60 @@ class TestNestedCombine:
         expected = Dataset(
             {"a": (("baz", "x"), [[10], [20]]), "x": [0], "baz": [100, 150]}
         )
-        actual = combine_nested(objs, concat_dim=dim)
+        actual = combine_nested(objs, data_vars="all", concat_dim=dim)
         assert_identical(expected, actual)
 
-    def test_nested_merge(self):
+    def test_nested_merge_with_self(self):
         data = Dataset({"x": 0})
         actual = combine_nested([data, data, data], concat_dim=None)
         assert_identical(data, actual)
 
+    def test_nested_merge_with_overlapping_values(self):
         ds1 = Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
         ds2 = Dataset({"a": ("x", [2, 3]), "x": [1, 2]})
         expected = Dataset({"a": ("x", [1, 2, 3]), "x": [0, 1, 2]})
-        actual = combine_nested([ds1, ds2], concat_dim=None)
+        with pytest.warns(
+            FutureWarning,
+            match="will change from compat='no_conflicts' to compat='override'",
+        ):
+            actual = combine_nested([ds1, ds2], join="outer", concat_dim=None)
         assert_identical(expected, actual)
-        actual = combine_nested([ds1, ds2], concat_dim=[None])
+        actual = combine_nested(
+            [ds1, ds2], join="outer", compat="no_conflicts", concat_dim=None
+        )
+        assert_identical(expected, actual)
+        actual = combine_nested(
+            [ds1, ds2], join="outer", compat="no_conflicts", concat_dim=[None]
+        )
         assert_identical(expected, actual)
 
+    def test_nested_merge_with_nan_no_conflicts(self):
         tmp1 = Dataset({"x": 0})
         tmp2 = Dataset({"x": np.nan})
-        actual = combine_nested([tmp1, tmp2], concat_dim=None)
+        actual = combine_nested([tmp1, tmp2], compat="no_conflicts", concat_dim=None)
         assert_identical(tmp1, actual)
-        actual = combine_nested([tmp1, tmp2], concat_dim=[None])
+        with pytest.warns(
+            FutureWarning,
+            match="will change from compat='no_conflicts' to compat='override'",
+        ):
+            combine_nested([tmp1, tmp2], concat_dim=None)
+        actual = combine_nested([tmp1, tmp2], compat="no_conflicts", concat_dim=[None])
         assert_identical(tmp1, actual)
 
-        # Single object, with a concat_dim explicitly provided
+    def test_nested_merge_with_concat_dim_explicitly_provided(self):
         # Test the issue reported in GH #1988
         objs = [Dataset({"x": 0, "y": 1})]
         dim = DataArray([100], name="baz", dims="baz")
-        actual = combine_nested(objs, concat_dim=[dim])
+        actual = combine_nested(objs, concat_dim=[dim], data_vars="all")
         expected = Dataset({"x": ("baz", [0]), "y": ("baz", [1])}, {"baz": [100]})
         assert_identical(expected, actual)
 
+    def test_nested_merge_with_non_scalars(self):
         # Just making sure that auto_combine is doing what is
         # expected for non-scalar values, too.
         objs = [Dataset({"x": ("z", [0, 1]), "y": ("z", [1, 2])})]
         dim = DataArray([100], name="baz", dims="baz")
-        actual = combine_nested(objs, concat_dim=[dim])
+        actual = combine_nested(objs, concat_dim=[dim], data_vars="all")
         expected = Dataset(
             {"x": (("baz", "z"), [[0, 1]]), "y": (("baz", "z"), [[1, 2]])},
             {"baz": [100]},
@@ -510,10 +548,14 @@ class TestNestedCombine:
         partway1 = concat([ds(0), ds(3)], dim="dim1")
         partway2 = concat([ds(1), ds(4)], dim="dim1")
         partway3 = concat([ds(2), ds(5)], dim="dim1")
-        expected = concat([partway1, partway2, partway3], dim="dim2")
+        expected = concat([partway1, partway2, partway3], data_vars="all", dim="dim2")
 
         datasets = [[ds(0), ds(1), ds(2)], [ds(3), ds(4), ds(5)]]
-        result = combine_nested(datasets, concat_dim=["dim1", "dim2"])
+        result = combine_nested(
+            datasets,
+            data_vars="all",
+            concat_dim=["dim1", "dim2"],
+        )
         assert_equal(result, expected)
 
     def test_auto_combine_2d_combine_attrs_kwarg(self):
@@ -522,7 +564,7 @@ class TestNestedCombine:
         partway1 = concat([ds(0), ds(3)], dim="dim1")
         partway2 = concat([ds(1), ds(4)], dim="dim1")
         partway3 = concat([ds(2), ds(5)], dim="dim1")
-        expected = concat([partway1, partway2, partway3], dim="dim2")
+        expected = concat([partway1, partway2, partway3], data_vars="all", dim="dim2")
 
         expected_dict = {}
         expected_dict["drop"] = expected.copy(deep=True)
@@ -553,12 +595,18 @@ class TestNestedCombine:
 
         with pytest.raises(ValueError, match=r"combine_attrs='identical'"):
             result = combine_nested(
-                datasets, concat_dim=["dim1", "dim2"], combine_attrs="identical"
+                datasets,
+                concat_dim=["dim1", "dim2"],
+                data_vars="all",
+                combine_attrs="identical",
             )
 
         for combine_attrs, expected in expected_dict.items():
             result = combine_nested(
-                datasets, concat_dim=["dim1", "dim2"], combine_attrs=combine_attrs
+                datasets,
+                concat_dim=["dim1", "dim2"],
+                data_vars="all",
+                combine_attrs=combine_attrs,
             )
             assert_identical(result, expected)
 
@@ -572,7 +620,7 @@ class TestNestedCombine:
         expected = Dataset(
             {"a": (("t", "x"), [[np.nan, 2, 3], [1, 2, np.nan]])}, {"x": [0, 1, 2]}
         )
-        actual = combine_nested(datasets, concat_dim="t")
+        actual = combine_nested(datasets, data_vars="all", join="outer", concat_dim="t")
         assert_identical(expected, actual)
 
     def test_invalid_hypercube_input(self):
@@ -650,7 +698,13 @@ class TestNestedCombine:
             },
             {"x": [0, 1, 2]},
         )
-        actual = combine_nested(datasets, concat_dim="t", fill_value=fill_value)
+        actual = combine_nested(
+            datasets,
+            concat_dim="t",
+            data_vars="all",
+            join="outer",
+            fill_value=fill_value,
+        )
         assert_identical(expected, actual)
 
     def test_combine_nested_unnamed_data_arrays(self):
@@ -710,26 +764,30 @@ class TestCombineDatasetsbyCoords:
         expected = Dataset({"x": [0, 1, 2]})
         assert_identical(expected, actual)
 
+    def test_combine_by_coords_handles_non_sorted_variables(self):
         # ensure auto_combine handles non-sorted variables
         objs = [
             Dataset({"x": ("a", [0]), "y": ("a", [0]), "a": [0]}),
             Dataset({"x": ("a", [1]), "y": ("a", [1]), "a": [1]}),
         ]
-        actual = combine_by_coords(objs)
+        actual = combine_by_coords(objs, join="outer")
         expected = Dataset({"x": ("a", [0, 1]), "y": ("a", [0, 1]), "a": [0, 1]})
         assert_identical(expected, actual)
 
+    def test_combine_by_coords_multiple_variables(self):
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"y": [1], "x": [1]})]
-        actual = combine_by_coords(objs)
+        actual = combine_by_coords(objs, join="outer")
         expected = Dataset({"x": [0, 1], "y": [0, 1]})
         assert_equal(actual, expected)
 
+    def test_combine_by_coords_for_scalar_variables(self):
         objs = [Dataset({"x": 0}), Dataset({"x": 1})]
         with pytest.raises(
             ValueError, match=r"Could not find any dimension coordinates"
         ):
             combine_by_coords(objs)
 
+    def test_combine_by_coords_requires_coord_or_index(self):
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [0]})]
         with pytest.raises(
             ValueError,
@@ -959,9 +1017,13 @@ class TestCombineDatasetsbyCoords:
     def test_infer_order_from_coords(self):
         data = create_test_data()
         objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]
-        actual = combine_by_coords(objs)
+        actual = combine_by_coords(objs, data_vars="all")
         expected = data
         assert expected.broadcast_equals(actual)
+
+        with set_options(use_new_combine_kwarg_defaults=True):
+            actual = combine_by_coords(objs)
+        assert_identical(actual, expected)
 
     def test_combine_leaving_bystander_dimensions(self):
         # Check non-monotonic bystander dimension coord doesn't raise
@@ -997,7 +1059,7 @@ class TestCombineDatasetsbyCoords:
             Dataset({"a": ("x", [1]), "x": [1]}),
         ]
         expected = Dataset({"a": ("x", [0, 1]), "b": ("x", [0, np.nan])}, {"x": [0, 1]})
-        actual = combine_by_coords(datasets)
+        actual = combine_by_coords(datasets, join="outer")
         assert_identical(expected, actual)
 
     def test_combine_by_coords_still_fails(self):
@@ -1014,7 +1076,7 @@ class TestCombineDatasetsbyCoords:
         assert_identical(expected, actual)
 
         objs = [Dataset({"x": 0, "y": 1}), Dataset({"y": np.nan, "z": 2})]
-        actual = combine_by_coords(objs)
+        actual = combine_by_coords(objs, compat="no_conflicts")
         expected = Dataset({"x": 0, "y": 1, "z": 2})
         assert_identical(expected, actual)
 
@@ -1032,7 +1094,7 @@ class TestCombineDatasetsbyCoords:
         x1 = Dataset({"a": (("y", "x"), [[1]])}, coords={"y": [0], "x": [0]})
         x2 = Dataset({"a": (("y", "x"), [[1]])}, coords={"y": [1], "x": [0]})
         x3 = Dataset({"a": (("y", "x"), [[1]])}, coords={"y": [0], "x": [1]})
-        actual = combine_by_coords([x1, x2, x3])
+        actual = combine_by_coords([x1, x2, x3], join="outer")
         expected = Dataset(
             {"a": (("y", "x"), [[1, 1], [1, np.nan]])},
             coords={"y": [0, 1], "x": [0, 1]},
@@ -1040,8 +1102,10 @@ class TestCombineDatasetsbyCoords:
         assert_identical(expected, actual)
 
         # test that this fails if fill_value is None
-        with pytest.raises(ValueError):
-            combine_by_coords([x1, x2, x3], fill_value=None)
+        with pytest.raises(
+            ValueError, match="supplied objects do not form a hypercube"
+        ):
+            combine_by_coords([x1, x2, x3], join="outer", fill_value=None)
 
     def test_combine_by_coords_override_order(self) -> None:
         # regression test for https://github.com/pydata/xarray/issues/8828
@@ -1111,7 +1175,7 @@ class TestCombineMixedObjectsbyCoords:
         named_da1 = DataArray(name="a", data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
         named_da2 = DataArray(name="b", data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x")
 
-        actual = combine_by_coords([named_da1, named_da2])
+        actual = combine_by_coords([named_da1, named_da2], join="outer")
         expected = Dataset(
             {
                 "a": DataArray(data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x"),
@@ -1124,9 +1188,130 @@ class TestCombineMixedObjectsbyCoords:
         named_da1 = DataArray(name="a", data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
         named_da2 = DataArray(name="a", data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x")
 
-        actual = combine_by_coords([named_da1, named_da2])
-        expected = merge([named_da1, named_da2])
+        actual = combine_by_coords([named_da1, named_da2], join="outer")
+        expected = merge([named_da1, named_da2], compat="no_conflicts", join="outer")
         assert_identical(expected, actual)
+
+
+class TestNewDefaults:
+    def test_concat_along_existing_dim(self):
+        concat_dim = "dim1"
+        ds = create_test_data
+        with set_options(use_new_combine_kwarg_defaults=False):
+            old = concat([ds(0), ds(1)], dim=concat_dim)
+        with set_options(use_new_combine_kwarg_defaults=True):
+            new = concat([ds(0), ds(1)], dim=concat_dim)
+        assert_identical(old, new)
+
+    def test_concat_along_new_dim(self):
+        concat_dim = "new_dim"
+        ds = create_test_data
+        with set_options(use_new_combine_kwarg_defaults=False):
+            old = concat([ds(0), ds(1)], dim=concat_dim)
+        with set_options(use_new_combine_kwarg_defaults=True):
+            new = concat([ds(0), ds(1)], dim=concat_dim)
+
+        assert concat_dim in old.dims
+        assert concat_dim in new.dims
+
+    def test_nested_merge_with_overlapping_values(self):
+        ds1 = Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
+        ds2 = Dataset({"a": ("x", [2, 3]), "x": [1, 2]})
+        expected = Dataset({"a": ("x", [1, 2, 3]), "x": [0, 1, 2]})
+        with set_options(use_new_combine_kwarg_defaults=False):
+            with pytest.warns(
+                FutureWarning, match="will change from join='outer' to join='exact'"
+            ):
+                with pytest.warns(
+                    FutureWarning,
+                    match="will change from compat='no_conflicts' to compat='override'",
+                ):
+                    old = combine_nested([ds1, ds2], concat_dim=None)
+        with set_options(use_new_combine_kwarg_defaults=True):
+            with pytest.raises(ValueError, match="might be related to new default"):
+                combine_nested([ds1, ds2], concat_dim=None)
+
+        assert_identical(old, expected)
+
+    def test_nested_merge_with_nan_order_matters(self):
+        ds1 = Dataset({"x": 0})
+        ds2 = Dataset({"x": np.nan})
+        with set_options(use_new_combine_kwarg_defaults=False):
+            with pytest.warns(
+                FutureWarning,
+                match="will change from compat='no_conflicts' to compat='override'",
+            ):
+                old = combine_nested([ds1, ds2], concat_dim=None)
+        with set_options(use_new_combine_kwarg_defaults=True):
+            new = combine_nested([ds1, ds2], concat_dim=None)
+
+        assert_identical(ds1, old)
+        assert_identical(old, new)
+
+        with set_options(use_new_combine_kwarg_defaults=False):
+            with pytest.warns(
+                FutureWarning,
+                match="will change from compat='no_conflicts' to compat='override'",
+            ):
+                old = combine_nested([ds2, ds1], concat_dim=None)
+        with set_options(use_new_combine_kwarg_defaults=True):
+            new = combine_nested([ds2, ds1], concat_dim=None)
+
+        assert_identical(ds1, old)
+        with pytest.raises(AssertionError):
+            assert_identical(old, new)
+
+    def test_nested_merge_with_concat_dim_explicitly_provided(self):
+        # Test the issue reported in GH #1988
+        objs = [Dataset({"x": 0, "y": 1})]
+        dim = DataArray([100], name="baz", dims="baz")
+        expected = Dataset({"x": ("baz", [0]), "y": ("baz", [1])}, {"baz": [100]})
+
+        with set_options(use_new_combine_kwarg_defaults=False):
+            old = combine_nested(objs, concat_dim=dim)
+        with set_options(use_new_combine_kwarg_defaults=True):
+            new = combine_nested(objs, concat_dim=dim)
+
+        assert_identical(expected, old)
+        assert_identical(old, new)
+
+    def test_combine_nested_missing_data_new_dim(self):
+        # Your data includes "time" and "station" dimensions, and each year's
+        # data has a different set of stations.
+        datasets = [
+            Dataset({"a": ("x", [2, 3]), "x": [1, 2]}),
+            Dataset({"a": ("x", [1, 2]), "x": [0, 1]}),
+        ]
+        expected = Dataset(
+            {"a": (("t", "x"), [[np.nan, 2, 3], [1, 2, np.nan]])}, {"x": [0, 1, 2]}
+        )
+        with set_options(use_new_combine_kwarg_defaults=False):
+            with pytest.warns(
+                FutureWarning, match="will change from join='outer' to join='exact'"
+            ):
+                old = combine_nested(datasets, concat_dim="t")
+        with set_options(use_new_combine_kwarg_defaults=True):
+            with pytest.raises(ValueError, match="might be related to new default"):
+                combine_nested(datasets, concat_dim="t")
+            new = combine_nested(datasets, concat_dim="t", join="outer")
+
+        assert_identical(expected, old)
+        assert_identical(expected, new)
+
+    def test_combine_by_coords_multiple_variables(self):
+        objs = [Dataset({"x": [0], "y": [0]}), Dataset({"y": [1], "x": [1]})]
+        expected = Dataset({"x": [0, 1], "y": [0, 1]})
+
+        with set_options(use_new_combine_kwarg_defaults=False):
+            with pytest.warns(
+                FutureWarning, match="will change from join='outer' to join='exact'"
+            ):
+                old = combine_by_coords(objs)
+        with set_options(use_new_combine_kwarg_defaults=True):
+            with pytest.raises(ValueError, match="might be related to new default"):
+                combine_by_coords(objs)
+
+        assert_identical(old, expected)
 
 
 @requires_cftime

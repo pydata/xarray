@@ -10,8 +10,16 @@ from xarray.core import dtypes
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.utils import iterate_nested
+from xarray.structure.alignment import AlignmentError
 from xarray.structure.concat import concat
 from xarray.structure.merge import merge
+from xarray.util.deprecation_helpers import (
+    _COMPAT_DEFAULT,
+    _COORDS_DEFAULT,
+    _DATA_VARS_DEFAULT,
+    _JOIN_DEFAULT,
+    CombineKwargDefault,
+)
 
 if TYPE_CHECKING:
     from xarray.core.types import (
@@ -200,12 +208,12 @@ def _check_shape_tile_ids(combined_tile_ids):
 def _combine_nd(
     combined_ids,
     concat_dims,
-    data_vars="all",
-    coords="different",
-    compat: CompatOptions = "no_conflicts",
-    fill_value=dtypes.NA,
-    join: JoinOptions = "outer",
-    combine_attrs: CombineAttrsOptions = "drop",
+    data_vars,
+    coords,
+    compat: CompatOptions | CombineKwargDefault,
+    fill_value,
+    join: JoinOptions | CombineKwargDefault,
+    combine_attrs: CombineAttrsOptions,
 ):
     """
     Combines an N-dimensional structure of datasets into one by applying a
@@ -262,10 +270,10 @@ def _combine_all_along_first_dim(
     dim,
     data_vars,
     coords,
-    compat: CompatOptions,
-    fill_value=dtypes.NA,
-    join: JoinOptions = "outer",
-    combine_attrs: CombineAttrsOptions = "drop",
+    compat: CompatOptions | CombineKwargDefault,
+    fill_value,
+    join: JoinOptions | CombineKwargDefault,
+    combine_attrs: CombineAttrsOptions,
 ):
     # Group into lines of datasets which must be combined along dim
     grouped = groupby_defaultdict(list(combined_ids.items()), key=_new_tile_id)
@@ -276,7 +284,14 @@ def _combine_all_along_first_dim(
         combined_ids = dict(sorted(group))
         datasets = combined_ids.values()
         new_combined_ids[new_id] = _combine_1d(
-            datasets, dim, compat, data_vars, coords, fill_value, join, combine_attrs
+            datasets,
+            concat_dim=dim,
+            compat=compat,
+            data_vars=data_vars,
+            coords=coords,
+            fill_value=fill_value,
+            join=join,
+            combine_attrs=combine_attrs,
         )
     return new_combined_ids
 
@@ -284,12 +299,12 @@ def _combine_all_along_first_dim(
 def _combine_1d(
     datasets,
     concat_dim,
-    compat: CompatOptions = "no_conflicts",
-    data_vars="all",
-    coords="different",
-    fill_value=dtypes.NA,
-    join: JoinOptions = "outer",
-    combine_attrs: CombineAttrsOptions = "drop",
+    compat: CompatOptions | CombineKwargDefault,
+    data_vars,
+    coords,
+    fill_value,
+    join: JoinOptions | CombineKwargDefault,
+    combine_attrs: CombineAttrsOptions,
 ):
     """
     Applies either concat or merge to 1D list of datasets depending on value
@@ -320,13 +335,20 @@ def _combine_1d(
             else:
                 raise
     else:
-        combined = merge(
-            datasets,
-            compat=compat,
-            fill_value=fill_value,
-            join=join,
-            combine_attrs=combine_attrs,
-        )
+        try:
+            combined = merge(
+                datasets,
+                compat=compat,
+                fill_value=fill_value,
+                join=join,
+                combine_attrs=combine_attrs,
+            )
+        except AlignmentError as e:
+            e.add_note(
+                "If you are intending to concatenate datasets, please specify the concatenation dimension explicitly. "
+                "Using merge to concatenate is quite inefficient."
+            )
+            raise e
 
     return combined
 
@@ -343,9 +365,9 @@ def _nested_combine(
     data_vars,
     coords,
     ids,
-    fill_value=dtypes.NA,
-    join: JoinOptions = "outer",
-    combine_attrs: CombineAttrsOptions = "drop",
+    fill_value,
+    join: JoinOptions | CombineKwargDefault,
+    combine_attrs: CombineAttrsOptions,
 ):
     if len(datasets) == 0:
         return Dataset()
@@ -366,7 +388,7 @@ def _nested_combine(
     # Apply series of concatenate or merge operations along each dimension
     combined = _combine_nd(
         combined_ids,
-        concat_dims,
+        concat_dims=concat_dims,
         compat=compat,
         data_vars=data_vars,
         coords=coords,
@@ -383,12 +405,12 @@ DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]
 
 def combine_nested(
     datasets: DATASET_HYPERCUBE,
-    concat_dim: str | DataArray | Sequence[str | DataArray | pd.Index | None] | None,
-    compat: str = "no_conflicts",
-    data_vars: str = "all",
-    coords: str = "different",
+    concat_dim: str | DataArray | Sequence[str | DataArray | pd.Index | None],
+    compat: str | CombineKwargDefault = _COMPAT_DEFAULT,
+    data_vars: str | CombineKwargDefault = _DATA_VARS_DEFAULT,
+    coords: str | CombineKwargDefault = _COORDS_DEFAULT,
     fill_value: object = dtypes.NA,
-    join: JoinOptions = "outer",
+    join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     combine_attrs: CombineAttrsOptions = "drop",
 ) -> Dataset:
     """
@@ -439,9 +461,36 @@ def combine_nested(
           of all non-null values.
         - "override": skip comparing and pick variable from first dataset
     data_vars : {"minimal", "different", "all" or list of str}, optional
-        Details are in the documentation of concat
+        These data variables will be concatenated together:
+          * "minimal": Only data variables in which the dimension already
+            appears are included.
+          * "different": Data variables which are not equal (ignoring
+            attributes) across all datasets are also concatenated (as well as
+            all for which dimension already appears). Beware: this option may
+            load the data payload of data variables into memory if they are not
+            already loaded.
+          * "all": All data variables will be concatenated.
+          * None: Means ``"all"`` if ``dim`` is not present in any of the ``objs``,
+            and ``"minimal"`` if ``dim`` is present in any of ``objs``.
+          * list of dims: The listed data variables will be concatenated, in
+            addition to the "minimal" data variables.
+
     coords : {"minimal", "different", "all" or list of str}, optional
-        Details are in the documentation of concat
+        These coordinate variables will be concatenated together:
+          * "minimal": Only coordinates in which the dimension already appears
+            are included. If concatenating over a dimension _not_
+            present in any of the objects, then all data variables will
+            be concatenated along that new dimension.
+          * "different": Coordinates which are not equal (ignoring attributes)
+            across all datasets are also concatenated (as well as all for which
+            dimension already appears). Beware: this option may load the data
+            payload of coordinate variables into memory if they are not already
+            loaded.
+          * "all": All coordinate variables will be concatenated, except
+            those corresponding to other dimensions.
+          * list of Hashable: The listed coordinate variables will be concatenated,
+            in addition to the "minimal" coordinates.
+
     fill_value : scalar or dict-like, optional
         Value to use for newly missing values. If a dict-like, maps
         variable names to fill values. Use a data array's name to
@@ -619,12 +668,12 @@ def groupby_defaultdict(
 
 def _combine_single_variable_hypercube(
     datasets,
-    fill_value=dtypes.NA,
-    data_vars="all",
-    coords="different",
-    compat: CompatOptions = "no_conflicts",
-    join: JoinOptions = "outer",
-    combine_attrs: CombineAttrsOptions = "no_conflicts",
+    fill_value,
+    data_vars,
+    coords,
+    compat: CompatOptions | CombineKwargDefault,
+    join: JoinOptions | CombineKwargDefault,
+    combine_attrs: CombineAttrsOptions,
 ):
     """
     Attempt to combine a list of Datasets into a hypercube using their
@@ -678,11 +727,14 @@ def _combine_single_variable_hypercube(
 
 def combine_by_coords(
     data_objects: Iterable[Dataset | DataArray] = [],
-    compat: CompatOptions = "no_conflicts",
-    data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
-    coords: str = "different",
+    compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
+    data_vars: Literal["all", "minimal", "different"]
+    | None
+    | list[str]
+    | CombineKwargDefault = _DATA_VARS_DEFAULT,
+    coords: str | CombineKwargDefault = _COORDS_DEFAULT,
     fill_value: object = dtypes.NA,
-    join: JoinOptions = "outer",
+    join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     combine_attrs: CombineAttrsOptions = "no_conflicts",
 ) -> Dataset | DataArray:
     """
@@ -862,7 +914,7 @@ def combine_by_coords(
         temperature    (y, x) float64 96B 10.98 14.3 12.06 ... 1.743 0.4044 16.65
         precipitation  (y, x) float64 96B 0.4376 0.8918 0.9637 ... 0.4615 0.7805
 
-    >>> xr.combine_by_coords([x3, x1])
+    >>> xr.combine_by_coords([x3, x1], join="outer")
     <xarray.Dataset> Size: 464B
     Dimensions:        (y: 4, x: 6)
     Coordinates:
@@ -882,7 +934,7 @@ def combine_by_coords(
         temperature    (y, x) float64 96B 10.98 14.3 12.06 ... 18.89 10.44 8.293
         precipitation  (y, x) float64 96B 0.4376 0.8918 0.9637 ... 0.01879 0.6176
 
-    >>> xr.combine_by_coords([x1, x2, x3])
+    >>> xr.combine_by_coords([x1, x2, x3], join="outer")
     <xarray.Dataset> Size: 464B
     Dimensions:        (y: 4, x: 6)
     Coordinates:

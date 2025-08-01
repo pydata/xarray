@@ -36,7 +36,7 @@ from xarray.backends.common import (
 )
 from xarray.backends.locks import _get_scheduler
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
-from xarray.core import indexing
+from xarray.core import dtypes, indexing
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
@@ -52,6 +52,13 @@ from xarray.structure.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
     combine_by_coords,
+)
+from xarray.util.deprecation_helpers import (
+    _COMPAT_DEFAULT,
+    _COORDS_DEFAULT,
+    _DATA_VARS_DEFAULT,
+    _JOIN_DEFAULT,
+    CombineKwargDefault,
 )
 
 if TYPE_CHECKING:
@@ -1459,14 +1466,17 @@ def open_mfdataset(
         | Sequence[Index]
         | None
     ) = None,
-    compat: CompatOptions = "no_conflicts",
+    compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
     preprocess: Callable[[Dataset], Dataset] | None = None,
     engine: T_Engine = None,
-    data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
-    coords="different",
+    data_vars: Literal["all", "minimal", "different"]
+    | None
+    | list[str]
+    | CombineKwargDefault = _DATA_VARS_DEFAULT,
+    coords=_COORDS_DEFAULT,
     combine: Literal["by_coords", "nested"] = "by_coords",
     parallel: bool = False,
-    join: JoinOptions = "outer",
+    join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     attrs_file: str | os.PathLike | None = None,
     combine_attrs: CombineAttrsOptions = "override",
     **kwargs,
@@ -1711,6 +1721,7 @@ def open_mfdataset(
                 ids=ids,
                 join=join,
                 combine_attrs=combine_attrs,
+                fill_value=dtypes.NA,
             )
         elif combine == "by_coords":
             # Redo ordering from coordinates, ignoring how they were ordered
