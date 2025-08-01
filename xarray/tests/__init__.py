@@ -131,6 +131,7 @@ has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
 has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "3.0.0")
 has_zarr_v3_dtypes, requires_zarr_v3_dtypes = _importorskip("zarr", "3.1.0")
+has_zarr_v3_async_index, requires_zarr_v3_async_index = _importorskip("zarr", "3.1.2")
 if has_zarr_v3:
     import zarr
 
@@ -139,11 +140,15 @@ if has_zarr_v3:
     # installing from git main is giving me a lower version than the
     # most recently released zarr
     has_zarr_v3_dtypes = hasattr(zarr.core, "dtype")
+    has_zarr_v3_async_index = hasattr(zarr.AsyncArray, "oindex")
 
     requires_zarr_v3_dtypes = pytest.mark.skipif(
         not has_zarr_v3_dtypes, reason="requires zarr>3.1.0"
     )
-has_zarr_v3_async_index, requires_zarr_v3_async_index = _importorskip("zarr", "3.1.2")
+    requires_zarr_v3_async_index = pytest.mark.skipif(
+        not has_zarr_v3_async_index, reason="requires zarr>3.1.1"
+    )
+
 
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")

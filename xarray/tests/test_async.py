@@ -7,18 +7,17 @@ import pytest
 
 import xarray as xr
 import xarray.testing as xrt
-from xarray.tests import has_zarr_v3_async_index, requires_zarr_v3_async_index
+from xarray.tests import has_zarr, requires_zarr, has_zarr_v3_async_index, requires_zarr_v3_async_index
 from xarray.tests.test_dataset import create_test_data
 
-if has_zarr_v3_async_index:
+if has_zarr:
     import zarr
 else:
-    # TODO what should we test when async loading not available?
-    pytest.mark.skip(reason="async loading from zarr requires zarr-python v3")
     zarr = None
 
+
 @pytest.fixture
-def store() -> "MemoryStore":
+def store() -> "zarr.storage.MemoryStore":
     memorystore = zarr.storage.MemoryStore({})
 
     ds = create_test_data()
@@ -43,14 +42,14 @@ def get_xr_obj(
 
 def _resolve_class_from_string(class_path: str) -> type[Any]:
     """Resolve a string class path like 'zarr.AsyncArray' to the actual class."""
-    module_path, class_name = class_path.rsplit('.', 1)
+    module_path, class_name = class_path.rsplit(".", 1)
     module = import_module(module_path)
     return getattr(module, class_name)
 
 
-@requires_zarr_v3_async_index
 @pytest.mark.asyncio
 class TestAsyncLoad:
+    @requires_zarr_v3_async_index
     async def test_concurrent_load_multiple_variables(self, store) -> None:
         target_class = _resolve_class_from_string("zarr.AsyncArray")
         method_name = "getitem"
@@ -75,6 +74,7 @@ class TestAsyncLoad:
 
         xrt.assert_identical(result_ds, ds.load())
 
+    @requires_zarr_v3_async_index
     @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
     async def test_concurrent_load_multiple_objects(self, store, cls_name) -> None:
         N_OBJECTS = 5
@@ -99,6 +99,7 @@ class TestAsyncLoad:
         for result in results:
             xrt.assert_identical(result, xr_obj.load())
 
+    @requires_zarr_v3_async_index
     @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
     @pytest.mark.parametrize(
         "indexer, method, zarr_class_and_method",
@@ -109,7 +110,11 @@ class TestAsyncLoad:
             ({"dim2": 2}, "isel", ("zarr.AsyncArray", "getitem")),
             ({"dim2": slice(1.0, 3.0)}, "sel", ("zarr.AsyncArray", "getitem")),
             ({"dim2": slice(1, 3)}, "isel", ("zarr.AsyncArray", "getitem")),
-            ({"dim2": [1.0, 3.0]}, "sel", ("zarr.core.indexing.AsyncOIndex", "getitem")),
+            (
+                {"dim2": [1.0, 3.0]},
+                "sel",
+                ("zarr.core.indexing.AsyncOIndex", "getitem"),
+            ),
             ({"dim2": [1, 3]}, "isel", ("zarr.core.indexing.AsyncOIndex", "getitem")),
             (
                 {
@@ -171,3 +176,24 @@ class TestAsyncLoad:
 
         expected = getattr(xr_obj, method)(**indexer).load()
         xrt.assert_identical(result, expected)
+
+    # TODO generalize store to a v2 store?
+    @requires_zarr
+    @pytest.mark.skipif(has_zarr_v3_async_index, reason="newer version of zarr has async indexing")
+    @pytest.mark.parametrize(
+        "indexer",
+        [
+            {"dim2": [1, 3]},  # tests oindexing
+                {  # test vindexing
+                    "dim1": xr.Variable(data=[2, 3], dims="points"),
+                    "dim2": xr.Variable(data=[1, 3], dims="points"),
+                },
+        ],
+    )
+    async def test_raise_on_older_zarr_version(self, store, indexer):
+        """Test that trying to use async load with insufficiently new version of zarr raises a clear error"""
+
+        ds = xr.open_zarr(store, zarr_format=3, consolidated=False, chunks=None)
+
+        with pytest.raises(NotImplementedError, match="async indexing"):
+            await ds.isel(**indexer).load_async()
