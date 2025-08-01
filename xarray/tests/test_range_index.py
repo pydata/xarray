@@ -196,7 +196,14 @@ def test_range_index_empty_slice() -> None:
 
     # Should preserve step
     assert empty.sizes["y"] == 0
-    assert empty._indexes["y"].step == 2.5
+    range_index_y = empty._indexes["y"]
+    assert isinstance(range_index_y, RangeIndex)
+    assert range_index_y.step == 2.5
+
+    # Test that it's printable
+    repr_str2 = repr(empty)
+    assert "RangeIndex" in repr_str2
+    assert "step=2.5" in repr_str2
 
     # Test negative step
     index3 = RangeIndex.arange(10, 0, -1, dim="z")
@@ -205,7 +212,14 @@ def test_range_index_empty_slice() -> None:
     empty3 = da3.isel(z=slice(0))
 
     assert empty3.sizes["z"] == 0
-    assert empty3._indexes["z"].step == -1.0
+    range_index_z = empty3._indexes["z"]
+    assert isinstance(range_index_z, RangeIndex)
+    assert range_index_z.step == -1.0
+
+    # Test that it's printable
+    repr_str3 = repr(empty3)
+    assert "RangeIndex" in repr_str3
+    assert "step=-1" in repr_str3
 
 
 def test_range_index_sel() -> None:
