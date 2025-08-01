@@ -17,7 +17,11 @@ from xarray.backends.common import (
     datatree_from_dict_with_io_cleanup,
     find_root_and_group,
 )
-from xarray.backends.file_manager import CachingFileManager, DummyFileManager
+from xarray.backends.file_manager import (
+    CachingFileManager,
+    DummyFileManager,
+    FileManager,
+)
 from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from xarray.backends.netCDF4_ import (
     BaseNetCDF4Array,
@@ -40,6 +44,8 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
+    import h5netcdf
+
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
@@ -109,7 +115,14 @@ class H5NetCDFStore(WritableCFDataStore):
         "lock",
     )
 
-    def __init__(self, manager, group=None, mode=None, lock=HDF5_LOCK, autoclose=False):
+    def __init__(
+        self,
+        manager: FileManager | h5netcdf.File | h5netcdf.Group,
+        group=None,
+        mode=None,
+        lock=HDF5_LOCK,
+        autoclose=False,
+    ):
         import h5netcdf
 
         if isinstance(manager, h5netcdf.File | h5netcdf.Group):
@@ -158,12 +171,7 @@ class H5NetCDFStore(WritableCFDataStore):
                 filename, mode=mode_, storage_options=storage_options
             )
 
-        if isinstance(filename, bytes):
-            raise ValueError(
-                "can't open netCDF4/HDF5 as bytes "
-                "try passing a path or file-like object"
-            )
-        elif isinstance(filename, io.IOBase):
+        if isinstance(filename, io.IOBase) and mode == "r":
             magic_number = read_magic_number_from_file(filename)
             if not magic_number.startswith(b"\211HDF\r\n\032\n"):
                 raise ValueError(
@@ -189,7 +197,11 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
-        manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
+        manager = (
+            CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
+            if isinstance(filename, str)
+            else h5netcdf.File(filename, mode=mode, **kwargs)
+        )
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):
