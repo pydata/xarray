@@ -386,6 +386,7 @@ filterwarnings = [
 [tool.pytest.ini_options]
 log_cli = true
 log_cli_level = "INFO"
+
 markers = [
   "flaky: flaky tests",
   "mypy: type annotation tests",
@@ -396,6 +397,7 @@ markers = [
 minversion = "7"
 python_files = ["test_*.py"]
 testpaths = ["xarray/tests", "properties"]
+
 
 
 [tool.aliases]
