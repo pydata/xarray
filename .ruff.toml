@@ -1,0 +1,9 @@
+[tool.ruff]
+# General ruff settings if needed
+
+[tool.ruff.per-file-ignores]
+"some/file.py" = ["E501", "F401"]
+"asv_bench/**" = ["TID252"]
+"xarray/tests/**" = ["PLR0124"]
+"xarray/core/_typed_ops.py" = ["PYI034"]
+"xarray/namedarray/_typing.py" = ["PYI018", "PYI046"]
