@@ -220,7 +220,7 @@ complete examples, please consult the relevant documentation.*
             )
 
             # combine the datasets
-            combined_ds = xr.combine_by_coords([ds1, ds2])
+            combined_ds = xr.combine_by_coords([ds1, ds2], join="outer")
             combined_ds
 
     lazy
