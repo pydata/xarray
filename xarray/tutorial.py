@@ -62,7 +62,7 @@ def _check_netcdf_engine_installed(name):
             import scipy  # noqa: F401
         except ImportError:
             try:
-                import    dask  # noqa: F401
+                import dask  # noqa: F401
             except ImportError as err:
                 raise ImportError(
                     f"opening tutorial dataset {name} requires either scipy or "
