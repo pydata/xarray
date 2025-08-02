@@ -383,7 +383,7 @@ filterwarnings = [
   "default:::xarray.tests.test_strategies",
 ]
 
-log_cli_level = "INFO"
+[tool.pytest.ini_options] log_cli_level = "INFO"
 markers = [
   "flaky: flaky tests",
   "mypy: type annotation tests",
