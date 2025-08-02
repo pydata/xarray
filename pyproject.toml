@@ -328,7 +328,6 @@ testpaths = ["xarray/tests", "properties"]
 known-first-party = ["xarray"]
 
 
-
 [tool.ruff.lint.flake8-tidy-imports]
 # Disallow all relative imports.
 ban-relative-imports = "all"
