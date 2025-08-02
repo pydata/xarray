@@ -234,9 +234,7 @@ def convert_units(obj, to):
     elif isinstance(obj, xr.DataArray):
         name = obj.name
 
-        new_units = (
-            to.get(name, None) or to.get("data", None) or to.get(None, None) or None
-        )
+        new_units = to.get(name) or to.get("data") or to.get(None) or None
         data = convert_units(obj.variable, {None: new_units})
 
         coords = {
@@ -733,6 +731,9 @@ def test_broadcast_dataset(dtype):
         "coords",
     ),
 )
+@pytest.mark.filterwarnings(
+    "ignore:.*the default value for coords will change:FutureWarning"
+)
 def test_combine_by_coords(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
@@ -809,6 +810,12 @@ def test_combine_by_coords(variant, unit, error, dtype):
         ),
         "coords",
     ),
+)
+@pytest.mark.filterwarnings(
+    "ignore:.*the default value for join will change:FutureWarning"
+)
+@pytest.mark.filterwarnings(
+    "ignore:.*the default value for compat will change:FutureWarning"
 )
 def test_combine_nested(variant, unit, error, dtype):
     original_unit = unit_registry.m
@@ -1050,6 +1057,12 @@ def test_concat_dataset(variant, unit, error, dtype):
         "coords",
     ),
 )
+@pytest.mark.filterwarnings(
+    "ignore:.*the default value for join will change:FutureWarning"
+)
+@pytest.mark.filterwarnings(
+    "ignore:.*the default value for compat will change:FutureWarning"
+)
 def test_merge_dataarray(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
@@ -1153,6 +1166,12 @@ def test_merge_dataarray(variant, unit, error, dtype):
         ),
         "coords",
     ),
+)
+@pytest.mark.filterwarnings(
+    "ignore:.*the default value for join will change:FutureWarning"
+)
+@pytest.mark.filterwarnings(
+    "ignore:.*the default value for compat will change:FutureWarning"
 )
 def test_merge_dataset(variant, unit, error, dtype):
     original_unit = unit_registry.m
@@ -2650,7 +2669,7 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         scalar_types = (int, float)
-        args = list(value * unit for value in func.args)
+        args = [value * unit for value in func.args]
         kwargs = {
             key: (value * unit if isinstance(value, scalar_types) else value)
             for key, value in func.kwargs.items()
@@ -2708,7 +2727,7 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         scalar_types = (int, float)
-        args = list(value * unit for value in func.args)
+        args = [value * unit for value in func.args]
         kwargs = {
             key: (value * unit if isinstance(value, scalar_types) else value)
             for key, value in func.kwargs.items()
@@ -5572,6 +5591,12 @@ class TestDataset:
             "coords",
         ),
     )
+    @pytest.mark.filterwarnings(
+        "ignore:.*the default value for join will change:FutureWarning"
+    )
+    @pytest.mark.filterwarnings(
+        "ignore:.*the default value for compat will change:FutureWarning"
+    )
     def test_merge(self, variant, unit, error, dtype):
         left_variants = {
             "data": (unit_registry.m, 1, 1),
@@ -5637,7 +5662,7 @@ class TestPintWrappingDask:
 
         assert_units_equal(expected, actual)
         # Don't use isinstance b/c we don't want to allow subclasses through
-        assert type(expected.data) == type(actual.data)  # noqa: E721
+        assert type(expected.data) is type(actual.data)
 
 
 @requires_matplotlib

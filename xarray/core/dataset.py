@@ -26,7 +26,6 @@ from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_extension_array_dtype
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
@@ -91,6 +90,7 @@ from xarray.core.utils import (
     either_dict_or_kwargs,
     emit_user_level_warning,
     infix_dims,
+    is_allowed_extension_array,
     is_dict_like,
     is_duck_array,
     is_duck_dask_array,
@@ -122,7 +122,13 @@ from xarray.structure.merge import (
     merge_coordinates_without_align,
     merge_data_and_coords,
 )
-from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
+from xarray.util.deprecation_helpers import (
+    _COMPAT_DEFAULT,
+    _JOIN_DEFAULT,
+    CombineKwargDefault,
+    _deprecate_positional_args,
+    deprecate_dims,
+)
 
 if TYPE_CHECKING:
     from dask.dataframe import DataFrame as DaskDataFrame
@@ -791,9 +797,9 @@ class Dataset(
         variables: dict[Hashable, Variable] | None = None,
         coord_names: set[Hashable] | None = None,
         dims: dict[Any, int] | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         indexes: dict[Hashable, Index] | None = None,
-        encoding: dict | None | Default = _default,
+        encoding: dict | Default | None = _default,
         inplace: bool = False,
     ) -> Self:
         """Fastpath constructor for internal use.
@@ -840,7 +846,7 @@ class Dataset(
         self,
         variables: dict[Hashable, Variable],
         coord_names: set | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         indexes: dict[Hashable, Index] | None = None,
         inplace: bool = False,
     ) -> Self:
@@ -855,7 +861,7 @@ class Dataset(
         variables: dict[Hashable, Variable],
         coord_names: set | None = None,
         dims: dict[Hashable, int] | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         inplace: bool = False,
     ) -> Self:
         """Deprecated version of _replace_with_new_dims().
@@ -1359,7 +1365,6 @@ class Dataset(
         to avoid leaving the dataset in a partially updated state when an error occurs.
         """
         from xarray.core.dataarray import DataArray
-        from xarray.structure.alignment import align
 
         if isinstance(value, Dataset):
             missing_vars = [
@@ -2551,7 +2556,6 @@ class Dataset(
         + string indexers are cast to the appropriate date type if the
           associated index is a DatetimeIndex or CFTimeIndex
         """
-        from xarray.coding.cftimeindex import CFTimeIndex
         from xarray.core.dataarray import DataArray
 
         indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
@@ -3853,13 +3857,22 @@ class Dataset(
                 var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
                 variables[name] = missing.interp(var, var_indexers, method, **kwargs)
             elif dtype_kind in "ObU" and (use_indexers.keys() & var.dims):
-                # For types that we do not understand do stepwise
-                # interpolation to avoid modifying the elements.
-                # reindex the variable instead because it supports
-                # booleans and objects and retains the dtype but inside
-                # this loop there might be some duplicate code that slows it
-                # down, therefore collect these signals and run it later:
-                reindex_vars.append(name)
+                if all(var.sizes[d] == 1 for d in (use_indexers.keys() & var.dims)):
+                    # Broadcastable, can be handled quickly without reindex:
+                    to_broadcast = (var.squeeze(),) + tuple(
+                        dest for _, dest in use_indexers.values()
+                    )
+                    variables[name] = broadcast_variables(*to_broadcast)[0].copy(
+                        deep=True
+                    )
+                else:
+                    # For types that we do not understand do stepwise
+                    # interpolation to avoid modifying the elements.
+                    # reindex the variable instead because it supports
+                    # booleans and objects and retains the dtype but inside
+                    # this loop there might be some duplicate code that slows it
+                    # down, therefore collect these signals and run it later:
+                    reindex_vars.append(name)
             elif all(d not in indexers for d in var.dims):
                 # For anything else we can only keep variables if they
                 # are not dependent on any coords that are being
@@ -4350,8 +4363,8 @@ class Dataset(
 
     def expand_dims(
         self,
-        dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
-        axis: None | int | Sequence[int] = None,
+        dim: Hashable | Sequence[Hashable] | Mapping[Any, Any] | None = None,
+        axis: int | Sequence[int] | None = None,
         create_index_for_new_dim: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
@@ -4942,6 +4955,20 @@ class Dataset(
         if isinstance(index, PandasMultiIndex):
             coord_names = [index.dim] + list(coord_names)
 
+        # Check for extra variables that don't match the coordinate names
+        extra_vars = set(new_coord_vars) - set(coord_names)
+        if extra_vars:
+            extra_vars_str = ", ".join(f"'{name}'" for name in extra_vars)
+            coord_names_str = ", ".join(f"'{name}'" for name in coord_names)
+            raise ValueError(
+                f"The index created extra variables {extra_vars_str} that are not "
+                f"in the list of coordinates {coord_names_str}. "
+                f"Use a factory method pattern instead:\n"
+                f"  index = {index_cls.__name__}.from_variables(ds, {list(coord_names)!r})\n"
+                f"  coords = xr.Coordinates.from_xindex(index)\n"
+                f"  ds = ds.assign_coords(coords)"
+            )
+
         variables: dict[Hashable, Variable]
         indexes: dict[Hashable, Index]
 
@@ -5300,7 +5327,14 @@ class Dataset(
 
         # concatenate the arrays
         stackable_vars = [stack_dataarray(da) for da in self.data_vars.values()]
-        data_array = concat(stackable_vars, dim=new_dim)
+        data_array = concat(
+            stackable_vars,
+            dim=new_dim,
+            data_vars="all",
+            coords="different",
+            compat="equals",
+            join="outer",
+        )
 
         if name is not None:
             data_array.name = name
@@ -5544,8 +5578,8 @@ class Dataset(
         self,
         other: CoercibleMapping | DataArray,
         overwrite_vars: Hashable | Iterable[Hashable] = frozenset(),
-        compat: CompatOptions = "no_conflicts",
-        join: JoinOptions = "outer",
+        compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
+        join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
         fill_value: Any = xrdtypes.NA,
         combine_attrs: CombineAttrsOptions = "override",
     ) -> Self:
@@ -5795,11 +5829,10 @@ class Dataset(
                 other_names.update(idx_other_names)
         if other_names:
             names_set |= set(other_names)
-            warnings.warn(
+            emit_user_level_warning(
                 f"Deleting a single level of a MultiIndex is deprecated. Previously, this deleted all levels of a MultiIndex. "
                 f"Please also drop the following variables: {other_names!r} to avoid an error in the future.",
                 DeprecationWarning,
-                stacklevel=2,
             )
 
         assert_no_index_corrupted(self.xindexes, names_set)
@@ -6760,7 +6793,7 @@ class Dataset(
             elif (
                 # Some reduction functions (e.g. std, var) need to run on variables
                 # that don't have the reduce dims: PR5393
-                not is_extension_array_dtype(var.dtype)
+                not pd.api.types.is_extension_array_dtype(var.dtype)  # noqa: TID251
                 and (
                     not reduce_dims
                     or not numeric_only
@@ -7085,12 +7118,12 @@ class Dataset(
         non_extension_array_columns = [
             k
             for k in columns_in_order
-            if not is_extension_array_dtype(self.variables[k].data)
+            if not pd.api.types.is_extension_array_dtype(self.variables[k].data)  # noqa: TID251
         ]
         extension_array_columns = [
             k
             for k in columns_in_order
-            if is_extension_array_dtype(self.variables[k].data)
+            if pd.api.types.is_extension_array_dtype(self.variables[k].data)  # noqa: TID251
         ]
         extension_array_columns_different_index = [
             k
@@ -7282,7 +7315,7 @@ class Dataset(
         arrays = []
         extension_arrays = []
         for k, v in dataframe.items():
-            if not is_extension_array_dtype(v) or isinstance(
+            if not is_allowed_extension_array(v) or isinstance(
                 v.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES
             ):
                 arrays.append((k, np.asarray(v)))
@@ -8268,8 +8301,6 @@ class Dataset(
         --------
         numpy.gradient: corresponding numpy function
         """
-        from xarray.core.variable import Variable
-
         if coord not in self.variables and coord not in self.dims:
             variables_and_dims = tuple(set(self.variables.keys()).union(self.dims))
             raise ValueError(
@@ -9945,7 +9976,7 @@ class Dataset(
         :ref:`groupby`
             Users guide explanation of how to group and bin data.
 
-        :doc:`xarray-tutorial:intermediate/01-high-level-computation-patterns`
+        :doc:`xarray-tutorial:intermediate/computation/01-high-level-computation-patterns`
             Tutorial on :py:func:`~xarray.Dataset.Groupby` for windowed computation.
 
         :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`

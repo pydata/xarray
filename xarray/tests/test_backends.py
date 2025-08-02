@@ -55,9 +55,12 @@ from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
+from xarray.core.indexes import PandasIndex
 from xarray.core.options import set_options
+from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.utils import module_available
 from xarray.namedarray.pycompat import array_type
+from xarray.structure.alignment import AlignmentError
 from xarray.tests import (
     assert_allclose,
     assert_array_equal,
@@ -71,6 +74,7 @@ from xarray.tests import (
     has_scipy,
     has_zarr,
     has_zarr_v3,
+    has_zarr_v3_dtypes,
     mock,
     network,
     requires_cftime,
@@ -88,6 +92,7 @@ from xarray.tests import (
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
+    requires_zarr_v3,
 )
 from xarray.tests.test_coding_times import (
     _ALL_CALENDARS,
@@ -116,6 +121,7 @@ if has_zarr:
 
     if has_zarr_v3:
         from zarr.storage import MemoryStore as KVStore
+        from zarr.storage import WrapperStore
 
         ZARR_FORMATS = [2, 3]
     else:
@@ -126,8 +132,11 @@ if has_zarr:
             )
         except ImportError:
             KVStore = None  # type: ignore[assignment,misc,unused-ignore]
+
+        WrapperStore = object  # type: ignore[assignment,misc,unused-ignore]
 else:
     KVStore = None  # type: ignore[assignment,misc,unused-ignore]
+    WrapperStore = object  # type: ignore[assignment,misc,unused-ignore]
     ZARR_FORMATS = []
 
 
@@ -300,7 +309,15 @@ def create_encoded_unsigned_false_masked_scaled_data(dtype: np.dtype) -> Dataset
 
 def create_boolean_data() -> Dataset:
     attributes = {"units": "-"}
-    return Dataset({"x": ("t", [True, False, False, True], attributes)})
+    return Dataset(
+        {
+            "x": (
+                ("t", "x"),
+                [[False, True, False, True], [True, False, False, True]],
+                attributes,
+            )
+        }
+    )
 
 
 class TestCommon:
@@ -642,6 +659,16 @@ class DatasetIOBase:
         ) as actual:
             assert_identical(expected, actual)
 
+    def test_roundtrip_timedelta_data_via_dtype(
+        self, time_unit: PDDatetimeUnitOptions
+    ) -> None:
+        time_deltas = pd.to_timedelta(["1h", "2h", "NaT"]).as_unit(time_unit)  # type: ignore[arg-type, unused-ignore]
+        expected = Dataset(
+            {"td": ("td", time_deltas), "td0": time_deltas[0].to_numpy()}
+        )
+        with self.roundtrip(expected) as actual:
+            assert_identical(expected, actual)
+
     def test_roundtrip_float64_data(self) -> None:
         expected = Dataset({"x": ("y", np.array([1.0, 2.0, np.pi], dtype="float64"))})
         with self.roundtrip(expected) as actual:
@@ -708,6 +735,9 @@ class DatasetIOBase:
             with self.roundtrip(actual) as actual2:
                 assert_identical(original, actual2)
                 assert actual2["x"].dtype == "bool"
+            with self.roundtrip(actual) as actual3:
+                # GH10536
+                assert_identical(original.transpose(), actual3.transpose())
 
     def test_orthogonal_indexing(self) -> None:
         in_memory = create_test_data()
@@ -2050,6 +2080,26 @@ class NetCDF4Base(NetCDFBase):
                         with self.roundtrip(original):
                             pass
 
+    @pytest.mark.parametrize("create_default_indexes", [True, False])
+    def test_create_default_indexes(self, tmp_path, create_default_indexes) -> None:
+        store_path = tmp_path / "tmp.nc"
+        original_ds = xr.Dataset(
+            {"data": ("x", np.arange(3))}, coords={"x": [-1, 0, 1]}
+        )
+        original_ds.to_netcdf(store_path, engine=self.engine, mode="w")
+
+        with open_dataset(
+            store_path,
+            engine=self.engine,
+            create_default_indexes=create_default_indexes,
+        ) as loaded_ds:
+            if create_default_indexes:
+                assert list(loaded_ds.xindexes) == ["x"] and isinstance(
+                    loaded_ds.xindexes["x"], PandasIndex
+                )
+            else:
+                assert len(loaded_ds.xindexes) == 0
+
 
 @requires_netCDF4
 class TestNetCDF4Data(NetCDF4Base):
@@ -2389,16 +2439,18 @@ class ZarrBase(CFEncodedBase):
             self.save(
                 expected, store_target=store, consolidated=False, **self.version_kwargs
             )
-            with pytest.warns(
-                RuntimeWarning,
-                match="Failed to open Zarr store with consolidated",
-            ):
-                with xr.open_zarr(store, **self.version_kwargs) as ds:
-                    assert_identical(ds, expected)
+            if getattr(store, "supports_consolidated_metadata", True):
+                with pytest.warns(
+                    RuntimeWarning,
+                    match="Failed to open Zarr store with consolidated",
+                ):
+                    with xr.open_zarr(store, **self.version_kwargs) as ds:
+                        assert_identical(ds, expected)
 
     def test_non_existent_store(self) -> None:
         with pytest.raises(
-            FileNotFoundError, match="(No such file or directory|Unable to find group)"
+            FileNotFoundError,
+            match="(No such file or directory|Unable to find group|No group found in store)",
         ):
             xr.open_zarr(f"{uuid.uuid4()}")
 
@@ -2480,6 +2532,7 @@ class ZarrBase(CFEncodedBase):
                 assert_identical(actual.load(), auto.load())
 
     @requires_dask
+    @pytest.mark.filterwarnings("ignore:.*does not have a Zarr V3 specification.*")
     def test_warning_on_bad_chunks(self) -> None:
         original = create_test_data().chunk({"dim1": 4, "dim2": 3, "dim3": 3})
 
@@ -2888,7 +2941,9 @@ class ZarrBase(CFEncodedBase):
 
     @pytest.mark.parametrize("dtype", ["U", "S"])
     def test_append_string_length_mismatch_raises(self, dtype) -> None:
-        skip_if_zarr_format_3("This actually works fine with Zarr format 3")
+        if has_zarr_v3 and not has_zarr_v3_dtypes:
+            skip_if_zarr_format_3("This actually works fine with Zarr format 3")
+
         ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w", **self.version_kwargs)
@@ -2901,8 +2956,12 @@ class ZarrBase(CFEncodedBase):
     def test_append_string_length_mismatch_works(self, dtype) -> None:
         skip_if_zarr_format_2("This doesn't work with Zarr format 2")
         # ...but it probably would if we used object dtype
+        if has_zarr_v3_dtypes:
+            pytest.skip("This works on pre ZDtype Zarr-Python, but fails after.")
+
         ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
         expected = xr.concat([ds, ds_to_append], dim="time")
+
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w", **self.version_kwargs)
             ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
@@ -3600,10 +3659,6 @@ class TestInstrumentedZarrStore:
                 )
 
     @requires_dask
-    @pytest.mark.skipif(
-        sys.version_info.major == 3 and sys.version_info.minor < 11,
-        reason="zarr too old",
-    )
     def test_region_write(self) -> None:
         ds = Dataset({"foo": ("x", [1, 2, 3])}, coords={"x": [1, 2, 3]}).chunk()
         with self.create_zarr_target() as store:
@@ -3742,6 +3797,42 @@ class TestZarrDictStore(ZarrBase):
                 assert_identical(original, actual)
                 # Verify chunks are preserved
                 assert actual["var1"].encoding["chunks"] == (2, 2)
+
+
+class NoConsolidatedMetadataSupportStore(WrapperStore):
+    """
+    Store that explicitly does not support consolidated metadata.
+
+    Useful as a proxy for stores like Icechunk, see https://github.com/zarr-developers/zarr-python/pull/3119.
+    """
+
+    supports_consolidated_metadata = False
+
+    def __init__(
+        self,
+        store,
+        *,
+        read_only: bool = False,
+    ) -> None:
+        self._store = store.with_read_only(read_only=read_only)
+
+    def with_read_only(
+        self, read_only: bool = False
+    ) -> NoConsolidatedMetadataSupportStore:
+        return type(self)(
+            store=self._store,
+            read_only=read_only,
+        )
+
+
+@requires_zarr_v3
+class TestZarrNoConsolidatedMetadataSupport(ZarrBase):
+    @contextlib.contextmanager
+    def create_zarr_target(self):
+        # TODO the zarr version would need to be >3.08 for the supports_consolidated_metadata property to have any effect
+        yield NoConsolidatedMetadataSupportStore(
+            zarr.storage.MemoryStore({}, read_only=False)
+        )
 
 
 @requires_zarr
@@ -4008,6 +4099,26 @@ class TestScipyFileObject(CFEncodedBase, NetCDF3Only):
     @pytest.mark.skip(reason="cannot pickle file objects")
     def test_pickle_dataarray(self) -> None:
         pass
+
+    @pytest.mark.parametrize("create_default_indexes", [True, False])
+    def test_create_default_indexes(self, tmp_path, create_default_indexes) -> None:
+        store_path = tmp_path / "tmp.nc"
+        original_ds = xr.Dataset(
+            {"data": ("x", np.arange(3))}, coords={"x": [-1, 0, 1]}
+        )
+        original_ds.to_netcdf(store_path, engine=self.engine, mode="w")
+
+        with open_dataset(
+            store_path,
+            engine=self.engine,
+            create_default_indexes=create_default_indexes,
+        ) as loaded_ds:
+            if create_default_indexes:
+                assert list(loaded_ds.xindexes) == ["x"] and isinstance(
+                    loaded_ds.xindexes["x"], PandasIndex
+                )
+            else:
+                assert len(loaded_ds.xindexes) == 0
 
 
 @requires_scipy
@@ -4696,7 +4807,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
     var_name = "v1"
 
     @contextlib.contextmanager
-    def setup_files_and_datasets(self, fuzz=0):
+    def setup_files_and_datasets(self, *, fuzz=0, new_combine_kwargs: bool = False):
         ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
 
         # to test join='exact'
@@ -4708,7 +4819,8 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds1.to_netcdf(tmpfile1)
                 ds2.to_netcdf(tmpfile2)
 
-                yield [tmpfile1, tmpfile2], [ds1, ds2]
+                with set_options(use_new_combine_kwarg_defaults=new_combine_kwargs):
+                    yield [tmpfile1, tmpfile2], [ds1, ds2]
 
     def gen_datasets_with_common_coord_and_time(self):
         # create coordinate data
@@ -4745,11 +4857,19 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
             if combine == "by_coords":
                 files.reverse()
             with open_mfdataset(
-                files, data_vars=opt, combine=combine, concat_dim=concat_dim, join=join
+                files,
+                data_vars=opt,
+                combine=combine,
+                concat_dim=concat_dim,
+                join=join,
+                compat="equals",
             ) as ds:
-                ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim="t", join=join)
+                ds_expect = xr.concat(
+                    [ds1, ds2], data_vars=opt, dim="t", join=join, compat="equals"
+                )
                 assert_identical(ds, ds_expect)
 
+    @pytest.mark.parametrize("use_new_combine_kwarg_defaults", [True, False])
     @pytest.mark.parametrize(
         ["combine_attrs", "attrs", "expected", "expect_error"],
         (
@@ -4777,7 +4897,12 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         ),
     )
     def test_open_mfdataset_dataset_combine_attrs(
-        self, combine_attrs, attrs, expected, expect_error
+        self,
+        use_new_combine_kwarg_defaults,
+        combine_attrs,
+        attrs,
+        expected,
+        expect_error,
     ):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
             # Give the files an inconsistent attribute
@@ -4787,22 +4912,28 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds.close()
                 ds.to_netcdf(f)
 
-            if expect_error:
-                with pytest.raises(xr.MergeError):
-                    xr.open_mfdataset(
-                        files,
-                        combine="nested",
-                        concat_dim="t",
-                        combine_attrs=combine_attrs,
-                    )
-            else:
-                with xr.open_mfdataset(
-                    files,
-                    combine="nested",
-                    concat_dim="t",
-                    combine_attrs=combine_attrs,
-                ) as ds:
-                    assert ds.attrs == expected
+            with set_options(
+                use_new_combine_kwarg_defaults=use_new_combine_kwarg_defaults
+            ):
+                warning: contextlib.AbstractContextManager = (
+                    pytest.warns(FutureWarning)
+                    if not use_new_combine_kwarg_defaults
+                    else contextlib.nullcontext()
+                )
+                error: contextlib.AbstractContextManager = (
+                    pytest.raises(xr.MergeError)
+                    if expect_error
+                    else contextlib.nullcontext()
+                )
+                with warning:
+                    with error:
+                        with xr.open_mfdataset(
+                            files,
+                            combine="nested",
+                            concat_dim="t",
+                            combine_attrs=combine_attrs,
+                        ) as ds:
+                            assert ds.attrs == expected
 
     def test_open_mfdataset_dataset_attr_by_coords(self) -> None:
         """
@@ -4816,14 +4947,18 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds.close()
                 ds.to_netcdf(f)
 
-            with xr.open_mfdataset(files, combine="nested", concat_dim="t") as ds:
-                assert ds.test_dataset_attr == 10
+            with set_options(use_new_combine_kwarg_defaults=True):
+                with xr.open_mfdataset(files, combine="nested", concat_dim="t") as ds:
+                    assert ds.test_dataset_attr == 10
 
     def test_open_mfdataset_dataarray_attr_by_coords(self) -> None:
         """
         Case when an attribute of a member DataArray differs across the multiple files
         """
-        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+        with self.setup_files_and_datasets(new_combine_kwargs=True) as (
+            files,
+            [ds1, ds2],
+        ):
             # Give the files an inconsistent attribute
             for i, f in enumerate(files):
                 ds = open_dataset(f).load()
@@ -4831,29 +4966,66 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds.close()
                 ds.to_netcdf(f)
 
-            with xr.open_mfdataset(files, combine="nested", concat_dim="t") as ds:
-                assert ds["v1"].test_dataarray_attr == 0
+                with xr.open_mfdataset(
+                    files, data_vars=None, combine="nested", concat_dim="t"
+                ) as ds:
+                    assert ds["v1"].test_dataarray_attr == 0
 
     @pytest.mark.parametrize(
         "combine, concat_dim", [("nested", "t"), ("by_coords", None)]
     )
-    @pytest.mark.parametrize("opt", ["all", "minimal", "different"])
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"data_vars": "all"},
+            {"data_vars": "minimal"},
+            {
+                "data_vars": "all",
+                "coords": "different",
+                "compat": "no_conflicts",
+            },  # old defaults
+            {
+                "data_vars": None,
+                "coords": "minimal",
+                "compat": "override",
+            },  # new defaults
+            {"data_vars": "different", "compat": "no_conflicts"},
+            {},
+        ],
+    )
     def test_open_mfdataset_exact_join_raises_error(
-        self, combine, concat_dim, opt
+        self, combine, concat_dim, kwargs
     ) -> None:
-        with self.setup_files_and_datasets(fuzz=0.1) as (files, [ds1, ds2]):
+        with self.setup_files_and_datasets(fuzz=0.1, new_combine_kwargs=True) as (
+            files,
+            _,
+        ):
             if combine == "by_coords":
                 files.reverse()
+
             with pytest.raises(
-                ValueError, match=r"cannot align objects.*join.*exact.*"
+                ValueError, match="cannot align objects with join='exact'"
             ):
                 open_mfdataset(
                     files,
-                    data_vars=opt,
+                    **kwargs,
                     combine=combine,
                     concat_dim=concat_dim,
                     join="exact",
                 )
+
+    def test_open_mfdataset_defaults_with_exact_join_warns_as_well_as_raising(
+        self,
+    ) -> None:
+        with self.setup_files_and_datasets(fuzz=0.1, new_combine_kwargs=True) as (
+            files,
+            _,
+        ):
+            files.reverse()
+            with pytest.raises(
+                ValueError, match="cannot align objects with join='exact'"
+            ):
+                open_mfdataset(files, combine="by_coords")
 
     def test_common_coord_when_datavars_all(self) -> None:
         opt: Final = "all"
@@ -4876,7 +5048,10 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
     def test_common_coord_when_datavars_minimal(self) -> None:
         opt: Final = "minimal"
 
-        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+        with self.setup_files_and_datasets(new_combine_kwargs=True) as (
+            files,
+            [ds1, ds2],
+        ):
             # open the files using data_vars option
             with open_mfdataset(
                 files, data_vars=opt, combine="nested", concat_dim="t"
@@ -4901,6 +5076,55 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
             with pytest.raises(ValueError):
                 with open_mfdataset(files, coords="minimum", combine="by_coords"):
                     pass
+
+    @pytest.mark.parametrize(
+        "combine, concat_dim", [("nested", "t"), ("by_coords", None)]
+    )
+    @pytest.mark.parametrize(
+        "kwargs", [{"data_vars": "different"}, {"coords": "different"}]
+    )
+    def test_open_mfdataset_warns_when_kwargs_set_to_different(
+        self, combine, concat_dim, kwargs
+    ) -> None:
+        with self.setup_files_and_datasets(new_combine_kwargs=True) as (
+            files,
+            [ds1, ds2],
+        ):
+            if combine == "by_coords":
+                files.reverse()
+            with pytest.raises(
+                ValueError, match="Previously the default was `compat='no_conflicts'`"
+            ):
+                open_mfdataset(files, combine=combine, concat_dim=concat_dim, **kwargs)
+            with pytest.raises(
+                ValueError, match="Previously the default was `compat='equals'`"
+            ):
+                xr.concat([ds1, ds2], dim="t", **kwargs)
+
+            with set_options(use_new_combine_kwarg_defaults=False):
+                expectation: contextlib.AbstractContextManager = (
+                    pytest.warns(
+                        FutureWarning,
+                        match="will change from data_vars='all'",
+                    )
+                    if "data_vars" not in kwargs
+                    else contextlib.nullcontext()
+                )
+
+                with pytest.warns(
+                    FutureWarning,
+                    match="will change from compat='equals'",
+                ):
+                    with expectation:
+                        ds_expect = xr.concat([ds1, ds2], dim="t", **kwargs)
+                with pytest.warns(
+                    FutureWarning, match="will change from compat='no_conflicts'"
+                ):
+                    with expectation:
+                        with open_mfdataset(
+                            files, combine=combine, concat_dim=concat_dim, **kwargs
+                        ) as ds:
+                            assert_identical(ds, ds_expect)
 
 
 @requires_dask
@@ -5157,10 +5381,47 @@ class TestDask(DatasetIOBase):
                 ds2.t.encoding["units"] = "days since 2000-01-01"
                 ds1.to_netcdf(tmp1)
                 ds2.to_netcdf(tmp2)
-                with open_mfdataset([tmp1, tmp2], combine="nested") as actual:
+                with open_mfdataset(
+                    [tmp1, tmp2], combine="nested", concat_dim="t"
+                ) as actual:
                     assert actual.t.encoding["units"] == original.t.encoding["units"]
                     assert actual.t.encoding["units"] == ds1.t.encoding["units"]
                     assert actual.t.encoding["units"] != ds2.t.encoding["units"]
+
+    def test_encoding_mfdataset_new_defaults(self) -> None:
+        original = Dataset(
+            {
+                "foo": ("t", np.random.randn(10)),
+                "t": ("t", pd.date_range(start="2010-01-01", periods=10, freq="1D")),
+            }
+        )
+        original.t.encoding["units"] = "days since 2010-01-01"
+
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                ds1 = original.isel(t=slice(5))
+                ds2 = original.isel(t=slice(5, 10))
+                ds1.t.encoding["units"] = "days since 2010-01-01"
+                ds2.t.encoding["units"] = "days since 2000-01-01"
+                ds1.to_netcdf(tmp1)
+                ds2.to_netcdf(tmp2)
+
+                for setting in [True, False]:
+                    with set_options(use_new_combine_kwarg_defaults=setting):
+                        with open_mfdataset(
+                            [tmp1, tmp2], combine="nested", concat_dim="t"
+                        ) as old:
+                            assert (
+                                old.t.encoding["units"] == original.t.encoding["units"]
+                            )
+                            assert old.t.encoding["units"] == ds1.t.encoding["units"]
+                            assert old.t.encoding["units"] != ds2.t.encoding["units"]
+
+                with set_options(use_new_combine_kwarg_defaults=True):
+                    with pytest.raises(
+                        AlignmentError, match="If you are intending to concatenate"
+                    ):
+                        open_mfdataset([tmp1, tmp2], combine="nested")
 
     def test_preprocess_mfdataset(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
@@ -5244,25 +5505,21 @@ class TestDask(DatasetIOBase):
                 actual = 1.0 * ds
                 assert_allclose(original, actual, decode_bytes=False)
 
-    def test_open_mfdataset_concat_dim_none(self) -> None:
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                data = Dataset({"x": 0})
-                data.to_netcdf(tmp1)
-                Dataset({"x": np.nan}).to_netcdf(tmp2)
-                with open_mfdataset(
-                    [tmp1, tmp2], concat_dim=None, combine="nested"
-                ) as actual:
-                    assert_identical(data, actual)
-
-    def test_open_mfdataset_concat_dim_default_none(self) -> None:
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                data = Dataset({"x": 0})
-                data.to_netcdf(tmp1)
-                Dataset({"x": np.nan}).to_netcdf(tmp2)
-                with open_mfdataset([tmp1, tmp2], combine="nested") as actual:
-                    assert_identical(data, actual)
+    @pytest.mark.parametrize(
+        "kwargs",
+        [pytest.param({"concat_dim": None}, id="none"), pytest.param({}, id="default")],
+    )
+    def test_open_mfdataset_concat_dim(self, kwargs) -> None:
+        with set_options(use_new_combine_kwarg_defaults=True):
+            with create_tmp_file() as tmp1:
+                with create_tmp_file() as tmp2:
+                    data = Dataset({"x": 0})
+                    data.to_netcdf(tmp1)
+                    Dataset({"x": np.nan}).to_netcdf(tmp2)
+                    with open_mfdataset(
+                        [tmp1, tmp2], **kwargs, combine="nested"
+                    ) as actual:
+                        assert_identical(data, actual)
 
     def test_open_dataset(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
@@ -5289,7 +5546,9 @@ class TestDask(DatasetIOBase):
         )
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
-            with open_mfdataset([tmp], concat_dim=dim, combine="nested") as actual:
+            with open_mfdataset(
+                [tmp], concat_dim=dim, data_vars="all", combine="nested"
+            ) as actual:
                 assert_identical(expected, actual)
 
     def test_open_multi_dataset(self) -> None:
@@ -5313,7 +5572,7 @@ class TestDask(DatasetIOBase):
             original.to_netcdf(tmp1)
             original.to_netcdf(tmp2)
             with open_mfdataset(
-                [tmp1, tmp2], concat_dim=dim, combine="nested"
+                [tmp1, tmp2], concat_dim=dim, data_vars="all", combine="nested"
             ) as actual:
                 assert_identical(expected, actual)
 
@@ -5425,7 +5684,9 @@ class TestPydap:
 
         ds = DatasetType("bears", **original.attrs)
         for key, var in original.data_vars.items():
-            ds[key] = BaseType(key, var.values, dims=var.dims, **var.attrs)
+            ds[key] = BaseType(
+                key, var.values, dtype=var.values.dtype.kind, dims=var.dims, **var.attrs
+            )
         # check all dims are stored in ds
         for d in original.coords:
             ds[d] = BaseType(d, original[d].values, dims=(d,), **original[d].attrs)
@@ -5437,9 +5698,9 @@ class TestPydap:
             # print("QQ0:", expected["bears"].load())
             pydap_ds = self.convert_to_pydap_dataset(expected)
             actual = open_dataset(PydapDataStore(pydap_ds))
-            if Version(np.__version__) < Version("2.3.0"):
-                # netcdf converts string to byte not unicode
-                expected["bears"] = expected["bears"].astype(str)
+            # netcdf converts string to byte not unicode
+            # fixed in pydap 3.5.6. https://github.com/pydap/pydap/issues/510
+            actual["bears"].values = actual["bears"].values.astype("S")
             yield actual, expected
 
     def test_cmp_local_file(self) -> None:
@@ -5483,9 +5744,6 @@ class TestPydap:
             with create_tmp_file() as tmp_file:
                 actual.to_netcdf(tmp_file)
                 with open_dataset(tmp_file) as actual2:
-                    if Version(np.__version__) < Version("2.3.0"):
-                        # netcdf converts string to byte not unicode
-                        actual2["bears"] = actual2["bears"].astype(str)
                     assert_equal(actual2, expected)
 
     @requires_dask
@@ -5503,9 +5761,11 @@ class TestPydapOnline(TestPydap):
         # in pydap 3.5.0, urls defaults to dap2.
         url = "http://test.opendap.org/opendap/data/nc/bears.nc"
         actual = open_dataset(url, engine="pydap", **kwargs)
+        # pydap <3.5.6 converts to unicode dtype=|U. Not what
+        # xarray expects. Thus force to bytes dtype. pydap >=3.5.6
+        # does not convert to unicode. https://github.com/pydap/pydap/issues/510
+        actual["bears"].values = actual["bears"].values.astype("S")
         with open_example_dataset("bears.nc") as expected:
-            # workaround to restore string which is converted to byte
-            expected["bears"] = expected["bears"].astype(str)
             yield actual, expected
 
     def output_grid_deprecation_warning_dap2dataset(self):
@@ -5518,7 +5778,8 @@ class TestPydapOnline(TestPydap):
         actual = open_dataset(url, engine="pydap", **kwargs)
         with open_example_dataset("bears.nc") as expected:
             # workaround to restore string which is converted to byte
-            expected["bears"] = expected["bears"].astype(str)
+            # only needed for pydap <3.5.6 https://github.com/pydap/pydap/issues/510
+            expected["bears"].values = expected["bears"].values.astype("S")
             yield actual, expected
 
     def test_session(self) -> None:
@@ -6379,6 +6640,26 @@ def test_zarr_closing_internal_zip_store():
 
 
 @requires_zarr
+@pytest.mark.parametrize("create_default_indexes", [True, False])
+def test_zarr_create_default_indexes(tmp_path, create_default_indexes) -> None:
+    from xarray.core.indexes import PandasIndex
+
+    store_path = tmp_path / "tmp.zarr"
+    original_ds = xr.Dataset({"data": ("x", np.arange(3))}, coords={"x": [-1, 0, 1]})
+    original_ds.to_zarr(store_path, mode="w")
+
+    with open_dataset(
+        store_path, engine="zarr", create_default_indexes=create_default_indexes
+    ) as loaded_ds:
+        if create_default_indexes:
+            assert list(loaded_ds.xindexes) == ["x"] and isinstance(
+                loaded_ds.xindexes["x"], PandasIndex
+            )
+        else:
+            assert len(loaded_ds.xindexes) == 0
+
+
+@requires_zarr
 @pytest.mark.usefixtures("default_zarr_format")
 def test_raises_key_error_on_invalid_zarr_store(tmp_path):
     root = zarr.open_group(tmp_path / "tmp.zarr")
@@ -6828,7 +7109,8 @@ def test_h5netcdf_storage_options() -> None:
             files,
             engine="h5netcdf",
             concat_dim="time",
+            data_vars="all",
             combine="nested",
             storage_options={"skip_instance_cache": False},
         ) as ds:
-            assert_identical(xr.concat([ds1, ds2], dim="time"), ds)
+            assert_identical(xr.concat([ds1, ds2], dim="time", data_vars="all"), ds)

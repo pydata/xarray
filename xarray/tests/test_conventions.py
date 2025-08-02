@@ -37,6 +37,10 @@ class TestBoolTypeArray:
         assert bx.dtype == bool
         assert_array_equal(bx, np.array([True, False, True, True, False], dtype=bool))
 
+        x = np.array([[1, 0, 1], [0, 1, 0]], dtype="i1")
+        bx = coding.variables.BoolTypeArray(x)
+        assert_array_equal(bx.transpose((1, 0)), x.transpose((1, 0)))
+
 
 class TestNativeEndiannessArray:
     def test(self) -> None:
@@ -46,6 +50,11 @@ class TestNativeEndiannessArray:
         assert a.dtype == expected.dtype
         assert a.dtype == expected[:].dtype
         assert_array_equal(a, expected)
+
+        y = np.arange(6, dtype=">i8").reshape((2, 3))
+        b = coding.variables.NativeEndiannessArray(y)
+        expected2 = np.arange(6, dtype="int64").reshape((2, 3))
+        assert_array_equal(b.transpose((1, 0)), expected2.transpose((1, 0)))
 
 
 def test_decode_cf_with_conflicting_fill_missing_value() -> None:

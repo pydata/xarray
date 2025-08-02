@@ -498,7 +498,7 @@ class DataArray(
         self,
         variable: Variable | None = None,
         coords=None,
-        name: Hashable | None | Default = _default,
+        name: Hashable | Default | None = _default,
         attrs=_default,
         indexes=None,
     ) -> Self:
@@ -520,7 +520,7 @@ class DataArray(
     def _replace_maybe_drop_dims(
         self,
         variable: Variable,
-        name: Hashable | None | Default = _default,
+        name: Hashable | Default | None = _default,
     ) -> Self:
         if self.sizes == variable.sizes:
             coords = self._coords.copy()
@@ -581,7 +581,7 @@ class DataArray(
         return self._to_dataset_whole(name=_THIS_ARRAY, shallow_copy=False)
 
     def _from_temp_dataset(
-        self, dataset: Dataset, name: Hashable | None | Default = _default
+        self, dataset: Dataset, name: Hashable | Default | None = _default
     ) -> Self:
         variable = dataset._variables.pop(_THIS_ARRAY)
         coords = dataset._variables
@@ -2609,8 +2609,8 @@ class DataArray(
 
     def expand_dims(
         self,
-        dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
-        axis: None | int | Sequence[int] = None,
+        dim: Hashable | Sequence[Hashable] | Mapping[Any, Any] | None = None,
+        axis: int | Sequence[int] | None = None,
         create_index_for_new_dim: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
@@ -6915,7 +6915,7 @@ class DataArray(
         :ref:`groupby`
             Users guide explanation of how to group and bin data.
 
-        :doc:`xarray-tutorial:intermediate/01-high-level-computation-patterns`
+        :doc:`xarray-tutorial:intermediate/computation/01-high-level-computation-patterns`
             Tutorial on :py:func:`~xarray.DataArray.Groupby` for windowed computation
 
         :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`

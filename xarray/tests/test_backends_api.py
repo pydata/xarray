@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+import sys
 from numbers import Number
 
 import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.backends.api import _get_default_engine
+from xarray.backends.api import _get_default_engine, _get_default_engine_netcdf
 from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     requires_dask,
+    requires_h5netcdf,
     requires_netCDF4,
     requires_scipy,
 )
@@ -27,6 +29,17 @@ def test__get_default_engine() -> None:
 
     engine_default = _get_default_engine("/example")
     assert engine_default == "netcdf4"
+
+
+@requires_h5netcdf
+def test_default_engine_h5netcdf(monkeypatch):
+    """Test the default netcdf engine when h5netcdf is the only importable module."""
+
+    monkeypatch.delitem(sys.modules, "netCDF4", raising=False)
+    monkeypatch.delitem(sys.modules, "scipy", raising=False)
+    monkeypatch.setattr(sys, "meta_path", [])
+
+    assert _get_default_engine_netcdf() == "h5netcdf"
 
 
 def test_custom_engine() -> None:
@@ -201,3 +214,39 @@ class TestPreferredChunks:
                 chunks=dict(zip(initial[self.var_name].dims, req_chunks, strict=True)),
             )
         self.check_dataset(initial, final, explicit_chunks(req_chunks, shape))
+
+    @pytest.mark.parametrize("create_default_indexes", [True, False])
+    def test_default_indexes(self, create_default_indexes):
+        """Create default indexes if the backend does not create them."""
+        coords = xr.Coordinates({"x": ("x", [0, 1]), "y": list("abc")}, indexes={})
+        initial = xr.Dataset({"a": ("x", [1, 2])}, coords=coords)
+
+        with assert_no_warnings():
+            final = xr.open_dataset(
+                initial,
+                engine=PassThroughBackendEntrypoint,
+                create_default_indexes=create_default_indexes,
+            )
+
+        if create_default_indexes:
+            assert all(name in final.xindexes for name in ["x", "y"])
+        else:
+            assert len(final.xindexes) == 0
+
+    @pytest.mark.parametrize("create_default_indexes", [True, False])
+    def test_default_indexes_passthrough(self, create_default_indexes):
+        """Allow creating indexes in the backend."""
+
+        initial = xr.Dataset(
+            {"a": (["x", "y"], [[1, 2, 3], [4, 5, 6]])},
+            coords={"x": ("x", [0, 1]), "y": ("y", list("abc"))},
+        ).stack(z=["x", "y"])
+
+        with assert_no_warnings():
+            final = xr.open_dataset(
+                initial,
+                engine=PassThroughBackendEntrypoint,
+                create_default_indexes=create_default_indexes,
+            )
+
+        assert initial.coords.equals(final.coords)

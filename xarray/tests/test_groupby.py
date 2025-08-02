@@ -2438,6 +2438,7 @@ class TestDatasetResample:
                 for i in range(3)
             ],
             dim=actual["time"],
+            data_vars="all",
         )
         assert_allclose(expected, actual)
 
@@ -3235,7 +3236,7 @@ def test_shuffle_simple() -> None:
     da = xr.DataArray(
         dims="x",
         data=dask.array.from_array([1, 2, 3, 4, 5, 6], chunks=2),
-        coords={"label": ("x", "a b c a b c".split(" "))},
+        coords={"label": ("x", ["a", "b", "c", "a", "b", "c"])},
     )
     actual = da.groupby(label=UniqueGrouper()).shuffle_to_chunks()
     expected = da.isel(x=[0, 3, 1, 4, 2, 5])
@@ -3255,8 +3256,6 @@ def test_shuffle_simple() -> None:
 )
 def test_shuffle_by(chunks, expected_chunks):
     import dask.array
-
-    from xarray.groupers import UniqueGrouper
 
     da = xr.DataArray(
         dims="x",

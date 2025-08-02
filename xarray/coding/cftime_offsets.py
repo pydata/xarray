@@ -1419,8 +1419,6 @@ def date_range(
     cftime_range
     date_range_like
     """
-    from xarray.coding.times import _is_standard_calendar
-
     if tz is not None:
         use_cftime = False
 

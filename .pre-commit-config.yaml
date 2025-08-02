@@ -24,24 +24,24 @@ repos:
       - id: rst-inline-touching-normal
       - id: text-unicode-replacement-char
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.1
+    rev: v0.12.2
     hooks:
-      - id: ruff-format
-      - id: ruff
+      - id: ruff-check
         args: ["--fix", "--show-fixes"]
+      - id: ruff-format
   - repo: https://github.com/keewis/blackdoc
-    rev: v0.3.9
+    rev: v0.4.1
     hooks:
       - id: blackdoc
         exclude: "generate_aggregations.py"
         additional_dependencies: ["black==24.8.0"]
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: v3.5.3
+    rev: v3.6.2
     hooks:
       - id: prettier
         args: [--cache-location=.prettier_cache/cache]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.16.0
+    rev: v1.16.1
     hooks:
       - id: mypy
         # Copied from setup.cfg
@@ -72,9 +72,7 @@ repos:
     hooks:
       - id: validate-pyproject
         additional_dependencies: ["validate-pyproject-schema-store[all]"]
-  - repo: https://github.com/crate-ci/typos
-    rev: v1
+  - repo: https://github.com/adhtruong/mirrors-typos
+    rev: v1.34.0
     hooks:
       - id: typos
-        # https://github.com/crate-ci/typos/issues/347
-        pass_filenames: false

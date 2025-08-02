@@ -419,9 +419,10 @@ def _infer_xy_labels(
         _assert_valid_xy(darray, x, "x")
         _assert_valid_xy(darray, y, "y")
 
-        if darray._indexes.get(x, 1) is darray._indexes.get(y, 2):
-            if isinstance(darray._indexes[x], PandasMultiIndex):
-                raise ValueError("x and y cannot be levels of the same MultiIndex")
+        if darray._indexes.get(x, 1) is darray._indexes.get(y, 2) and isinstance(
+            darray._indexes[x], PandasMultiIndex
+        ):
+            raise ValueError("x and y cannot be levels of the same MultiIndex")
 
     return x, y
 
@@ -457,8 +458,6 @@ def get_axis(
     ax: Axes | None = None,
     **subplot_kws: Any,
 ) -> Axes:
-    from xarray.core.utils import attempt_import
-
     if TYPE_CHECKING:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
@@ -955,7 +954,7 @@ def _process_cmap_cbar_kwargs(
     cmap_kwargs = {
         "plot_data": data,
         "levels": levels,
-        "cmap": colors if colors else cmap,
+        "cmap": colors or cmap,
         "filled": func.__name__ != "contour",
     }
 
@@ -1048,8 +1047,6 @@ def legend_elements(
     labels : list of str
         The string labels for elements of the legend.
     """
-    import warnings
-
     import matplotlib as mpl
 
     mlines = mpl.lines
@@ -1146,7 +1143,7 @@ def legend_elements(
         # Labels are not numerical so modifying label_values is not
         # possible, instead filter the array with nicely distributed
         # indexes:
-        if type(num) == int:  # noqa: E721
+        if type(num) is int:
             loc = mpl.ticker.LinearLocator(num)
         else:
             raise ValueError("`num` only supports integers for non-numeric labels.")
@@ -1326,7 +1323,7 @@ def _parse_size(
 def _parse_size(
     data: DataArray | None,
     norm: tuple[float | None, float | None, bool] | Normalize | None,
-) -> None | pd.Series:
+) -> pd.Series | None:
     import matplotlib as mpl
 
     if data is None:
@@ -1591,7 +1588,7 @@ class _Normalize(Sequence):
         >>> _Normalize(a).ticks
         array([1, 3, 5])
         """
-        val: None | np.ndarray
+        val: np.ndarray | None
         if self.data_is_numeric:
             val = None
         else:
@@ -1650,13 +1647,13 @@ class _Normalize(Sequence):
         """
         import matplotlib.pyplot as plt
 
-        def _func(x: Any, pos: None | Any = None):
+        def _func(x: Any, pos: Any | None = None):
             return f"{self._lookup_arr([x])[0]}"
 
         return plt.FuncFormatter(_func)
 
     @property
-    def func(self) -> Callable[[Any, None | Any], Any]:
+    def func(self) -> Callable[[Any, Any | None], Any]:
         """
         Return a lambda function that maps self.values elements back to
         the original value as a numpy array. Useful with ax.legend_elements.
@@ -1675,7 +1672,7 @@ class _Normalize(Sequence):
         array([0.5, 3. ])
         """
 
-        def _func(x: Any, pos: None | Any = None):
+        def _func(x: Any, pos: Any | None = None):
             return self._lookup_arr(x)
 
         return _func
@@ -1684,8 +1681,8 @@ class _Normalize(Sequence):
 def _determine_guide(
     hueplt_norm: _Normalize,
     sizeplt_norm: _Normalize,
-    add_colorbar: None | bool = None,
-    add_legend: None | bool = None,
+    add_colorbar: bool | None = None,
+    add_legend: bool | None = None,
     plotfunc_name: str | None = None,
 ) -> tuple[bool, bool]:
     if plotfunc_name == "hist":
