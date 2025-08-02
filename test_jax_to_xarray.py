@@ -1,8 +1,7 @@
 import jax.numpy as jnp
-
-from jax_to_xarray import jax_to_xarray
+import xarray as xr
 
 data = jnp.ones((2, 3))
-da = jax_to_xarray(data, dims=["x", "y"])
+da = xr.DataArray(jnp.asarray(data), dims=["x", "y"])  # Optional: jnp.asarray
 
 print(da)
