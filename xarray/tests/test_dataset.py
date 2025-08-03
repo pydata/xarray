@@ -1141,6 +1141,30 @@ class TestDataset:
         [(True, "standard"), (False, "standard"), (True, "noleap"), (True, "360_day")],
     )
     def test_chunk_by_season_resampler(self, use_cftime: bool, calendar: str) -> None:
+        # With 2 years of data starting Jan 1, we get 9 seasonal chunks:
+        # partial DJF (Jan-Feb), MAM, JJA, SON, DJF, MAM, JJA, SON, partial DJF (Dec)
+        ds = xr.Dataset(
+            {"foo": (("x", "time"), np.ones((10, 365 * 2)))},
+            coords={
+                "x": np.arange(10),
+                "time": pd.date_range("2000-01-01", periods=365 * 2),
+            },
+        )
+        rechunked = ds.chunk({"x": 2, "time": SeasonResampler()})
+        assert len(rechunked.chunksizes["time"]) == 9
+        assert rechunked.chunksizes["x"] == (2,) * 5
+        # Write out the actual chunks tuple for clarity
+        assert rechunked.chunksizes["time"] == (31, 92, 92, 92, 31, 92, 92, 92, 31)
+
+        # Test custom seasons
+        rechunked = ds.chunk(
+            {"x": 2, "time": SeasonResampler(["DJFM", "AM", "JJA", "SON"])}
+        )
+        # Custom seasons also produce boundary chunks
+        assert len(rechunked.chunksizes["time"]) == 9
+        assert rechunked.chunksizes["x"] == (2,) * 5
+        # Write out the actual chunks tuple for clarity
+        assert rechunked.chunksizes["time"] == (120, 61, 92, 92, 120, 61, 92, 92, 120)
         """Test chunking using SeasonResampler."""
         import dask.array
 
@@ -1164,13 +1188,6 @@ class TestDataset:
             coords={"time": time},
         )
 
-        # Test standard seasons
-        rechunked = ds.chunk(x=2, time=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
-        # With 2 years of data starting Jan 1, we get 9 seasonal chunks:
-        # partial DJF (Jan-Feb), MAM, JJA, SON, DJF, MAM, JJA, SON, partial DJF (Dec)
-        assert len(rechunked.chunksizes["time"]) == 9
-        assert rechunked.chunksizes["x"] == (2,) * 5
-
         # Test custom seasons
         rechunked = ds.chunk(
             {"x": 2, "time": SeasonResampler(["DJFM", "AM", "JJA", "SON"])}
@@ -1193,6 +1210,13 @@ class TestDataset:
 
     @requires_dask
     def test_chunk_by_season_resampler_errors(self):
+        # Test error on missing season (should fail with incomplete seasons)
+        ds = Dataset(
+            {"x": ("time", np.arange(12))},
+            coords={"time": pd.date_range("2000-01-01", periods=12, freq="M")},
+        )
+        with pytest.raises(ValueError, match="do not cover all 12 months"):
+            ds.chunk(x=SeasonResampler(["DJF", "MAM", "SON"]))
         """Test error handling for SeasonResampler chunking."""
         ds = Dataset({"foo": ("x", [1, 2, 3])})
 
