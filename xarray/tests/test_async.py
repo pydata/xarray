@@ -30,6 +30,7 @@ def store(request) -> "zarr.storage.MemoryStore":
     memorystore = zarr.storage.MemoryStore({})
 
     ds = create_test_data()
+    print(ds)
     ds.to_zarr(memorystore, zarr_format=request.param, consolidated=False)  # type: ignore[call-overload]
 
     return memorystore
@@ -64,9 +65,8 @@ class TestAsyncLoad:
         method_name = "getitem"
         original_method = getattr(target_class, method_name)
 
-        # TODO up the number of variables in the dataset?
-        # the coordinate variable is not lazy
-        N_LAZY_VARS = 1
+        # the indexed coordinate variables is not lazy, so the create_test_dataset has 4 lazy variables in total
+        N_LAZY_VARS = 4
 
         with patch.object(
             target_class, method_name, wraps=original_method, autospec=True
