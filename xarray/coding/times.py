@@ -1358,9 +1358,9 @@ class CFDatetimeCoder(VariableCoder):
         self.time_unit = time_unit
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if np.issubdtype(
-            variable.data.dtype, np.datetime64
-        ) or contains_cftime_datetimes(variable):
+        if np.issubdtype(variable.dtype, np.datetime64) or contains_cftime_datetimes(
+            variable
+        ):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
 
             units = encoding.pop("units", None)
@@ -1477,7 +1477,7 @@ class CFTimedeltaCoder(VariableCoder):
         self._emit_decode_timedelta_future_warning = False
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if np.issubdtype(variable.data.dtype, np.timedelta64):
+        if np.issubdtype(variable.dtype, np.timedelta64):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
             dtype = encoding.get("dtype", None)
             units = encoding.pop("units", None)
