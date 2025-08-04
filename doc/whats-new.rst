@@ -15,11 +15,6 @@ New Features
 
 - Added new asynchronous loading methods :py:meth:`~xarray.Dataset.load_async`, :py:meth:`~xarray.DataArray.load_async`, :py:meth:`~xarray.Variable.load_async`.
   (:issue:`10326`, :pull:`10327`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
-- Allow an Xarray index that uses multiple dimensions checking equality with another
-  index for only a subset of those dimensions (i.e., ignoring the dimensions
-  that are excluded from alignment).
-  (:issue:`10243`, :pull:`10293`)
-  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
