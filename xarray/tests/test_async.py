@@ -9,6 +9,8 @@ import xarray as xr
 import xarray.testing as xrt
 from xarray.tests import (
     has_zarr,
+    has_zarr_v3,
+    # TODO rename this to show it's specifically for o/vindexing
     has_zarr_v3_async_index,
     requires_zarr,
     requires_zarr_v3_async_index,
@@ -184,17 +186,32 @@ class TestAsyncLoad:
         xrt.assert_identical(result, expected)
 
     @requires_zarr
-    @pytest.mark.skipif(
-        has_zarr_v3_async_index, reason="newer version of zarr has async indexing"
-    )
     @pytest.mark.parametrize(
         "indexer",
         [
-            {"dim2": [1, 3]},  # tests oindexing
-            {  # test vindexing
-                "dim1": xr.Variable(data=[2, 3], dims="points"),
-                "dim2": xr.Variable(data=[1, 3], dims="points"),
-            },
+            pytest.param(
+                {"dim2": 2},
+                marks=pytest.mark.skipif(
+                    has_zarr_v3, reason="current version of zarr has basic async indexing"
+                ),
+            ),  # tests basic indexing
+            pytest.param(
+                {"dim2": [1, 3]},
+                marks=pytest.mark.skipif(
+                    has_zarr_v3_async_index,
+                    reason="current version of zarr has async orthogonal indexing",
+                ),
+            ),  # tests oindexing
+            pytest.param(
+                {
+                    "dim1": xr.Variable(data=[2, 3], dims="points"),
+                    "dim2": xr.Variable(data=[1, 3], dims="points"),
+                },
+                marks=pytest.mark.skipif(
+                    has_zarr_v3_async_index,
+                    reason="current version of zarr has async vectorized indexing",
+                ),
+            ),  # tests vindexing
         ],
     )
     async def test_raise_on_older_zarr_version(self, store, indexer):
@@ -202,7 +219,6 @@ class TestAsyncLoad:
 
         ds = xr.open_zarr(store, consolidated=False, chunks=None)
 
+        # TODO match the correct error message in each case
         with pytest.raises(NotImplementedError, match="async indexing"):
             await ds.isel(**indexer).load_async()
-
-    # TODO also test raising informative error if attempting to do basic async indexing with 3.0.0 <= zarr <= 3.1.1?

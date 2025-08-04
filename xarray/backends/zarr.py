@@ -225,7 +225,11 @@ class ZarrArrayWrapper(BackendArray):
         return self._array[key]
 
     async def _async_getitem(self, key):
-        # TODO requires zarr-python v3.0.0
+        if not _zarr_v3():
+            raise NotImplementedError(
+                "For lazy basic async indexing with zarr, zarr-python=>v3.0.0 is required"
+            )
+
         async_array = self._array._async_array
         return await async_array.getitem(key)
 
