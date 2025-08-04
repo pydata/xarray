@@ -161,9 +161,13 @@ class TestAsyncLoad:
         indexer,
         target_zarr_class,
     ) -> None:
-
-        if not has_zarr_v3_async_oindex and target_zarr_class in ("zarr.core.indexing.AsyncOIndex", "zarr.core.indexing.AsyncVIndex"):
-            pytest.skip("current version of zarr does not support orthogonal or vectorized async indexing")
+        if not has_zarr_v3_async_oindex and target_zarr_class in (
+            "zarr.core.indexing.AsyncOIndex",
+            "zarr.core.indexing.AsyncVIndex",
+        ):
+            pytest.skip(
+                "current version of zarr does not support orthogonal or vectorized async indexing"
+            )
 
         if cls_name == "Variable" and method == "sel":
             pytest.skip("Variable doesn't have a .sel method")
@@ -197,7 +201,8 @@ class TestAsyncLoad:
                 {"dim2": 2},
                 "basic async indexing",
                 marks=pytest.mark.skipif(
-                    has_zarr_v3, reason="current version of zarr has basic async indexing"
+                    has_zarr_v3,
+                    reason="current version of zarr has basic async indexing",
                 ),
             ),  # tests basic indexing
             pytest.param(
