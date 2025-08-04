@@ -47,7 +47,7 @@ from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.types import ArrayLike
 from xarray.core.utils import is_scalar
-from xarray.groupers import TimeResampler
+from xarray.groupers import SeasonResampler, TimeResampler
 from xarray.namedarray.pycompat import array_type, integer_types
 from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
@@ -1135,6 +1135,109 @@ class TestDataset:
         create_test_data().dump_to_store(store)
         ds = open_dataset(store)
         assert ds.chunks == {}
+
+    @requires_dask
+    @pytest.mark.parametrize(
+        "use_cftime,calendar",
+        [(True, "standard"), (False, "standard"), (True, "noleap"), (True, "360_day")],
+    )
+    def test_chunk_by_season_resampler(self, use_cftime: bool, calendar: str) -> None:
+        ds = xr.Dataset(
+            {"foo": (("x", "time"), np.ones((10, 365 * 2)))},
+            coords={
+                "x": np.arange(10),
+                "time": pd.date_range("2000-01-01", periods=365 * 2),
+            },
+        )
+
+        # Standard seasons
+        rechunked = ds.chunk(
+            {"x": 2, "time": SeasonResampler(["DJF", "MAM", "JJA", "SON"])}
+        )
+        assert len(rechunked.chunksizes["time"]) == 9
+        assert rechunked.chunksizes["x"] == (2,) * 5
+        assert rechunked.chunksizes["time"] == (31, 92, 92, 92, 31, 92, 92, 92, 31)
+
+        # Custom seasons
+        rechunked = ds.chunk(
+            {"x": 2, "time": SeasonResampler(["DJFM", "AM", "JJA", "SON"])}
+        )
+        assert len(rechunked.chunksizes["time"]) == 9
+        assert rechunked.chunksizes["x"] == (2,) * 5
+        assert rechunked.chunksizes["time"] == (120, 61, 92, 92, 120, 61, 92, 92, 120)
+        """Test chunking using SeasonResampler."""
+        import dask.array
+
+        if use_cftime:
+            pytest.importorskip("cftime")
+
+        # Skip non-standard calendars with use_cftime=False as they're incompatible
+        if not use_cftime and calendar != "standard":
+            pytest.skip(f"Calendar '{calendar}' requires use_cftime=True")
+
+        N = 366 + 365  # 2 years
+        time = xr.date_range(
+            "2000-01-01", periods=N, freq="D", use_cftime=use_cftime, calendar=calendar
+        )
+        ds = Dataset(
+            {
+                "pr": ("time", dask.array.random.random((N), chunks=(20))),
+                "pr2d": (("x", "time"), dask.array.random.random((10, N), chunks=(20))),
+                "ones": ("time", np.ones((N,))),
+            },
+            coords={"time": time},
+        )
+
+        # Test custom seasons
+        rechunked = ds.chunk(
+            {"x": 2, "time": SeasonResampler(["DJFM", "AM", "JJA", "SON"])}
+        )
+        # Custom seasons also produce boundary chunks
+        assert len(rechunked.chunksizes["time"]) == 9
+        assert rechunked.chunksizes["x"] == (2,) * 5
+
+        # Test that drop_incomplete doesn't affect chunking
+        rechunked_drop_true = ds.chunk(
+            time=SeasonResampler(["DJF", "MAM", "JJA", "SON"], drop_incomplete=True)
+        )
+        rechunked_drop_false = ds.chunk(
+            time=SeasonResampler(["DJF", "MAM", "JJA", "SON"], drop_incomplete=False)
+        )
+        assert (
+            rechunked_drop_true.chunksizes["time"]
+            == rechunked_drop_false.chunksizes["time"]
+        )
+
+    @requires_dask
+    def test_chunk_by_season_resampler_errors(self):
+        # Test error on missing season (should fail with incomplete seasons)
+        ds = Dataset(
+            {"x": ("time", np.arange(12))},
+            coords={"time": pd.date_range("2000-01-01", periods=12, freq="M")},
+        )
+        with pytest.raises(ValueError, match="do not cover all 12 months"):
+            ds.chunk(x=SeasonResampler(["DJF", "MAM", "SON"]))
+        """Test error handling for SeasonResampler chunking."""
+        ds = Dataset({"foo": ("x", [1, 2, 3])})
+
+        # Test error on virtual variable
+        with pytest.raises(ValueError, match="virtual variable"):
+            ds.chunk(x=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
+
+        # Test error on non-datetime variable
+        ds["x"] = ("x", [1, 2, 3])
+        with pytest.raises(ValueError, match="datetime variables"):
+            ds.chunk(x=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
+
+        # Test successful case with 1D datetime variable
+        ds["x"] = ("x", xr.date_range("2001-01-01", periods=3, freq="D"))
+        # This should work
+        result = ds.chunk(x=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
+        assert result.chunks is not None
+
+        # Test error on missing season (should fail with incomplete seasons)
+        with pytest.raises(ValueError):
+            ds.chunk(x=SeasonResampler(["DJF", "MAM", "SON"]))
 
     @requires_dask
     def test_chunk(self) -> None:
