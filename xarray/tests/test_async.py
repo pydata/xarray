@@ -13,6 +13,7 @@ from xarray.tests import (
     # TODO rename this to show it's specifically for o/vindexing
     has_zarr_v3_async_index,
     requires_zarr,
+    requires_zarr_v3,
     requires_zarr_v3_async_index,
 )
 from xarray.tests.test_backends import ZARR_FORMATS
@@ -57,7 +58,7 @@ def _resolve_class_from_string(class_path: str) -> type[Any]:
 
 @pytest.mark.asyncio
 class TestAsyncLoad:
-    @requires_zarr_v3_async_index
+    @requires_zarr_v3
     async def test_concurrent_load_multiple_variables(self, store) -> None:
         target_class = zarr.AsyncArray
         method_name = "getitem"
@@ -82,7 +83,7 @@ class TestAsyncLoad:
 
         xrt.assert_identical(result_ds, ds.load())
 
-    @requires_zarr_v3_async_index
+    @requires_zarr_v3
     @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
     async def test_concurrent_load_multiple_objects(self, store, cls_name) -> None:
         N_OBJECTS = 5
@@ -107,8 +108,9 @@ class TestAsyncLoad:
         for result in results:
             xrt.assert_identical(result, xr_obj.load())
 
-    @requires_zarr_v3_async_index
+    @requires_zarr_v3
     @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
+    # TODO remove the method part as it's always the same
     @pytest.mark.parametrize(
         "indexer, method, zarr_class_and_method",
         [
@@ -162,6 +164,10 @@ class TestAsyncLoad:
         indexer,
         zarr_class_and_method,
     ) -> None:
+
+        if not has_zarr_v3_async_index and zarr_class_and_method[0] in ("zarr.core.indexing.AsyncOIndex", "zarr.core.indexing.AsyncVIndex"):
+            pytest.skip("current version of zarr does not support orthogonal or vectorized async indexing")
+
         if cls_name == "Variable" and method == "sel":
             pytest.skip("Variable doesn't have a .sel method")
 
