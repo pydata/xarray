@@ -274,6 +274,70 @@ class TestIndexers:
             arr.loc[0, 0, 0] = 999
 
 
+class TestMultipleSlices:
+    def test_init(self):
+        slices = [slice(None, 2), slice(3, None)]
+        actual = indexing.MultipleSlices(*slices)
+
+        assert isinstance(actual, indexing.MultipleSlices)
+        assert actual._slices == slices and actual._slices is not slices
+
+    def test_init_error(self):
+        slices = [1, slice(2, 3), "a"]
+        with pytest.raises(ValueError, match="slice objects"):
+            indexing.MultipleSlices(*slices)
+
+        with pytest.raises(ValueError, match="Full slices"):
+            indexing.MultipleSlices(slice(None, 2), slice(None))
+
+    def test_construct_direct(self):
+        slices = [slice(None, 2), slice(3, None)]
+        actual = indexing.MultipleSlices._construct_direct(slices)
+
+        assert isinstance(actual, indexing.MultipleSlices)
+        assert actual._slices is slices
+
+    @pytest.mark.parametrize(
+        ["iterable", "expected"],
+        (
+            ((slice(i, j) for i, j in [(0, 3), (4, 6)]), [slice(0, 3), slice(4, 6)]),
+            (
+                (slice(None, 2), slice(3, 4), slice(4, 5)),
+                [slice(None, 2), slice(3, 4), slice(4, 5)],
+            ),
+        ),
+    )
+    def test_from_iterable(self, iterable, expected):
+        actual = indexing.MultipleSlices.from_iterable(iterable)
+        assert isinstance(actual, indexing.MultipleSlices)
+        assert actual._slices == expected
+
+    @pytest.mark.parametrize(
+        ["slices", "expected_slices"],
+        (
+            ([slice(None, 3), slice(3, None)], [slice(None)]),
+            ([slice(None, 2), slice(2, 4), slice(4, 10)], [slice(None, 10)]),
+            (
+                [slice(None, 2, 1), slice(2, 6, 2), slice(6, 10, 2)],
+                [slice(None, 2, 1), slice(2, 10, 2)],
+            ),
+            (
+                [slice(None, 2), slice(2, 5, 1), slice(5, None, 2)],
+                [slice(None, 5), slice(5, None, 2)],
+            ),
+            (
+                [slice(None, 2), slice(0), slice(2, 5)],
+                [slice(None, 5)],
+            ),
+        ),
+    )
+    def test_merge_slices(self, slices, expected_slices):
+        multi_slice = indexing.MultipleSlices.from_iterable(slices)
+        actual = multi_slice.merge_slices()
+
+        assert actual._slices == expected_slices
+
+
 class TestLazyArray:
     def test_slice_slice(self) -> None:
         arr = ReturnItem()
@@ -313,7 +377,17 @@ class TestLazyArray:
         v_lazy = Variable(["i", "j", "k"], lazy)
         arr = ReturnItem()
         # test orthogonally applied indexers
-        indexers = [arr[:], 0, -2, arr[:3], [0, 1, 2, 3], [0], np.arange(10) < 5]
+        indexers = [
+            arr[:],
+            0,
+            -2,
+            arr[:3],
+            [0, 1, 2, 3],
+            [0],
+            np.arange(10) < 5,
+            indexing.MultipleSlices(slice(0, 3), slice(5, 7)),
+            indexing.MultipleSlices(slice(None, 5), slice(7, None, 2)),
+        ]
         for i in indexers:
             for j in indexers:
                 for k in indexers:
@@ -974,6 +1048,27 @@ def test_indexing_1d_object_array() -> None:
     assert [actual.data.item()] == [expected.data.item()]
 
 
+@pytest.mark.parametrize(
+    "key",
+    (
+        indexing.MultipleSlices(slice(1, 3), slice(7, 4, -1)),
+        indexing.MultipleSlices(slice(None, 2), slice(5, None)),
+    ),
+)
+def test_indexing_index_multi_slice(key) -> None:
+    indexer = indexing.OuterIndexer((key,))
+    x = np.arange(20)
+
+    pd_adapter = indexing.PandasIndexingAdapter(pd.Index(x))
+    np_adapter = indexing.NumpyIndexingAdapter(x)
+
+    actual = pd_adapter.oindex[indexer]
+    # indexes are sorted
+    expected = np.sort(np_adapter.oindex[indexer])
+
+    assert_array_equal(actual, expected)
+
+
 @requires_dask
 def test_indexing_dask_array() -> None:
     import dask.array
@@ -1053,6 +1148,28 @@ def test_advanced_indexing_dask_array() -> None:
     with raise_if_dask_computes():
         actual = ds.b.sel(x=ds.a.data)
     assert_identical(expected, actual)
+
+
+@requires_dask
+@pytest.mark.parametrize(
+    "key",
+    (
+        indexing.MultipleSlices(slice(1, 3), slice(7, 4, -1)),
+        indexing.MultipleSlices(slice(None, 2), slice(5, None)),
+    ),
+)
+def test_indexing_dask_multi_slice(key) -> None:
+    da = DataArray(
+        np.ones(10 * 3 * 3).reshape((10, 3, 3)),
+        dims=("time", "x", "y"),
+    )
+    chunked = da.chunk(dict(time=-1, x=1, y=1))
+
+    with raise_if_dask_computes():
+        actual = chunked.isel(time=key)
+
+    expected = da.isel(time=key)
+    assert_identical(actual, expected)
 
 
 def test_backend_indexing_non_numpy() -> None:
