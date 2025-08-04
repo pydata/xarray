@@ -245,7 +245,7 @@ class ZarrArrayWrapper(BackendArray):
     async def _async_vindex(self, key):
         if not has_zarr_async_index():
             raise NotImplementedError(
-                "For lazy orthogonal async indexing with zarr, zarr-python=>v3.1.2 is required"
+                "For lazy vectorized async indexing with zarr, zarr-python=>v3.1.2 is required"
             )
 
         async_array = self._array._async_array
