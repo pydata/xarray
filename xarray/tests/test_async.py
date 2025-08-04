@@ -110,29 +110,28 @@ class TestAsyncLoad:
 
     @requires_zarr_v3
     @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
-    # TODO remove the method part as it's always the same
     @pytest.mark.parametrize(
-        "indexer, method, zarr_class_and_method",
+        "indexer, method, target_zarr_class",
         [
-            ({}, "sel", ("zarr.AsyncArray", "getitem")),
-            ({}, "isel", ("zarr.AsyncArray", "getitem")),
-            ({"dim2": 1.0}, "sel", ("zarr.AsyncArray", "getitem")),
-            ({"dim2": 2}, "isel", ("zarr.AsyncArray", "getitem")),
-            ({"dim2": slice(1.0, 3.0)}, "sel", ("zarr.AsyncArray", "getitem")),
-            ({"dim2": slice(1, 3)}, "isel", ("zarr.AsyncArray", "getitem")),
+            ({}, "sel", "zarr.AsyncArray"),
+            ({}, "isel", "zarr.AsyncArray"),
+            ({"dim2": 1.0}, "sel", "zarr.AsyncArray"),
+            ({"dim2": 2}, "isel", "zarr.AsyncArray"),
+            ({"dim2": slice(1.0, 3.0)}, "sel", "zarr.AsyncArray"),
+            ({"dim2": slice(1, 3)}, "isel", "zarr.AsyncArray"),
             (
                 {"dim2": [1.0, 3.0]},
                 "sel",
-                ("zarr.core.indexing.AsyncOIndex", "getitem"),
+                "zarr.core.indexing.AsyncOIndex",
             ),
-            ({"dim2": [1, 3]}, "isel", ("zarr.core.indexing.AsyncOIndex", "getitem")),
+            ({"dim2": [1, 3]}, "isel", "zarr.core.indexing.AsyncOIndex"),
             (
                 {
                     "dim1": xr.Variable(data=[2, 3], dims="points"),
                     "dim2": xr.Variable(data=[1.0, 2.0], dims="points"),
                 },
                 "sel",
-                ("zarr.core.indexing.AsyncVIndex", "getitem"),
+                "zarr.core.indexing.AsyncVIndex",
             ),
             (
                 {
@@ -140,7 +139,7 @@ class TestAsyncLoad:
                     "dim2": xr.Variable(data=[1, 3], dims="points"),
                 },
                 "isel",
-                ("zarr.core.indexing.AsyncVIndex", "getitem"),
+                "zarr.core.indexing.AsyncVIndex",
             ),
         ],
         ids=[
@@ -162,18 +161,19 @@ class TestAsyncLoad:
         cls_name,
         method,
         indexer,
-        zarr_class_and_method,
+        target_zarr_class,
     ) -> None:
 
-        if not has_zarr_v3_async_index and zarr_class_and_method[0] in ("zarr.core.indexing.AsyncOIndex", "zarr.core.indexing.AsyncVIndex"):
+        if not has_zarr_v3_async_index and target_zarr_class in ("zarr.core.indexing.AsyncOIndex", "zarr.core.indexing.AsyncVIndex"):
             pytest.skip("current version of zarr does not support orthogonal or vectorized async indexing")
 
         if cls_name == "Variable" and method == "sel":
             pytest.skip("Variable doesn't have a .sel method")
 
-        # each type of indexing ends up calling a different zarr indexing method
-        target_class_path, method_name = zarr_class_and_method
-        target_class = _resolve_class_from_string(target_class_path)
+        # Each type of indexing ends up calling a different zarr indexing method
+        # They all use a method named .getitem, but on a different internal zarr class
+        target_class = _resolve_class_from_string(target_zarr_class)
+        method_name = "getitem"
         original_method = getattr(target_class, method_name)
 
         with patch.object(
