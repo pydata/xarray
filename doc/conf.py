@@ -282,11 +282,11 @@ html_css_files = ["style.css"]
 # configuration for sphinxext.opengraph
 ogp_site_url = "https://docs.xarray.dev/en/latest/"
 ogp_image = "https://docs.xarray.dev/en/stable/_static/logos/Xarray_Logo_RGB_Final.png"
-ogp_custom_meta_tags = [
+ogp_custom_meta_tags = (
     '<meta name="twitter:card" content="summary_large_image" />',
     '<meta property="twitter:site" content="@xarray_dev" />',
     '<meta name="image" property="og:image" content="https://docs.xarray.dev/en/stable/_static/logos/Xarray_Logo_RGB_Final.png" />',
-]
+)
 
 # Redirects for pages that were moved to new locations
 rediraffe_redirects = {
