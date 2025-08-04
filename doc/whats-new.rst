@@ -38,20 +38,10 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-- Fix Pydap test_cmp_local_file for numpy 2.3.0 changes, 1. do always return arrays for all versions and 2. skip astype(str) for numpy >= 2.3.0 for expected data. (:pull:`10421`)
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- Fix the SciPy backend for netCDF3 files . (:issue:`8909`, :pull:`10376`)
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-- Allow accessing arbitrary attributes on Pandas ExtensionArrays.
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-- Check and fix character array string dimension names, issue warnings as needed (:issue:`6352`, :pull:`10395`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-
 - Fix Pydap Datatree backend testing. Testing now compares elements of (unordered) two sets (before, lists) (:pull:`10525`).
   By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 - Fix ``KeyError`` when passing a ``dim`` argument different from the default to ``convert_calendar`` (:pull:`10544`).
   By `Eric Jansen <https://github.com/ej81>`_.
-
 - Fix transpose of boolean arrays read from disk. (:issue:`10536`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix detection of the ``h5netcdf`` backend. Xarray now selects ``h5netcdf`` if the default ``netCDF4`` engine is not available (:issue:`10401`, :pull:`10557`).
