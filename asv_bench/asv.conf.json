@@ -69,7 +69,7 @@
     "distributed": [""],
     "flox": [""],
     "numpy_groupies": [""],
-    "sparse": [""],
+    "sparse": ["0.15"],
     "cftime": [""]
   },
   // fix for bad builds
