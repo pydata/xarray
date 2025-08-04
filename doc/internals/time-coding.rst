@@ -205,7 +205,7 @@ Timestamp
 
 When arguments are numeric (not strings) "unit" can be anything from ``'Y'``, ``'W'``, ``'D'``, ``'h'``, ``'m'``, ``'s'``, ``'ms'``, ``'us'`` or ``'ns'``, though the returned resolution will be ``"ns"``.
 
-In normal operation :py:class:`pandas.Timestamp` holds the timestamp in the provided resolution, but only one of ``'s'``, ``'ms'``, ``'us'``, ``'ns'``. Lower resolution input is automatically converted to ``'s'``, higher resolution input is cutted to ``'ns'``.
+In normal operation :py:class:`pandas.Timestamp` holds the timestamp in the provided resolution, but only one of ``'s'``, ``'ms'``, ``'us'``, ``'ns'``. Lower resolution input is automatically converted to ``'s'``, higher resolution input is truncated to ``'ns'``.
 
 The same conversion rules apply here as for :py:func:`pandas.to_timedelta` (see `to_timedelta`_).
 Depending on the internal resolution Timestamps can be represented in the range:
