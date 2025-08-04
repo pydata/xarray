@@ -757,7 +757,6 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return _wrap_numpy_scalars(array)
 
     async def async_get_duck_array(self):
-        print("inside LazilyVectorizedIndexedArray.async_get_duck_array")
         from xarray.backends.common import BackendArray
 
         if isinstance(self.array, BackendArray):

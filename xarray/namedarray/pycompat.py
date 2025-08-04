@@ -156,7 +156,6 @@ async def async_to_duck_array(
         IndexingAdapter,
     )
 
-    print(type(data))
     if isinstance(data, IndexingAdapter):
         # These wrap in-memory arrays, and async isn't needed
         return data.get_duck_array()
