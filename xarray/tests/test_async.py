@@ -57,7 +57,7 @@ def _resolve_class_from_string(class_path: str) -> type[Any]:
 class TestAsyncLoad:
     @requires_zarr_v3_async_index
     async def test_concurrent_load_multiple_variables(self, store) -> None:
-        target_class = _resolve_class_from_string("zarr.AsyncArray")
+        target_class = zarr.AsyncArray
         method_name = "getitem"
         original_method = getattr(target_class, method_name)
 
@@ -85,7 +85,7 @@ class TestAsyncLoad:
     async def test_concurrent_load_multiple_objects(self, store, cls_name) -> None:
         N_OBJECTS = 5
 
-        target_class = _resolve_class_from_string("zarr.AsyncArray")
+        target_class = zarr.AsyncArray
         method_name = "getitem"
         original_method = getattr(target_class, method_name)
 
