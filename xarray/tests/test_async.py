@@ -14,7 +14,6 @@ from xarray.tests import (
     has_zarr_v3_async_index,
     requires_zarr,
     requires_zarr_v3,
-    requires_zarr_v3_async_index,
 )
 from xarray.tests.test_backends import ZARR_FORMATS
 from xarray.tests.test_dataset import create_test_data
