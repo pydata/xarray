@@ -198,7 +198,7 @@ class Dataset(
     DataWithCoords,
     DatasetAggregations,
     DatasetArithmetic,
-    Mapping[Hashable, "DataArray"],
+    Mapping[Hashable, "xarray.DataArray"],
 ):
     """A multi-dimensional, in memory, array database.
 
