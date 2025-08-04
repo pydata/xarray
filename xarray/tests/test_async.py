@@ -10,8 +10,7 @@ import xarray.testing as xrt
 from xarray.tests import (
     has_zarr,
     has_zarr_v3,
-    # TODO rename this to show it's specifically for o/vindexing
-    has_zarr_v3_async_index,
+    has_zarr_v3_async_oindex,
     requires_zarr,
     requires_zarr_v3,
 )
@@ -163,7 +162,7 @@ class TestAsyncLoad:
         target_zarr_class,
     ) -> None:
 
-        if not has_zarr_v3_async_index and target_zarr_class in ("zarr.core.indexing.AsyncOIndex", "zarr.core.indexing.AsyncVIndex"):
+        if not has_zarr_v3_async_oindex and target_zarr_class in ("zarr.core.indexing.AsyncOIndex", "zarr.core.indexing.AsyncVIndex"):
             pytest.skip("current version of zarr does not support orthogonal or vectorized async indexing")
 
         if cls_name == "Variable" and method == "sel":
@@ -205,7 +204,7 @@ class TestAsyncLoad:
                 {"dim2": [1, 3]},
                 "orthogonal async indexing",
                 marks=pytest.mark.skipif(
-                    has_zarr_v3_async_index,
+                    has_zarr_v3_async_oindex,
                     reason="current version of zarr has async orthogonal indexing",
                 ),
             ),  # tests oindexing
@@ -216,7 +215,7 @@ class TestAsyncLoad:
                 },
                 "vectorized async indexing",
                 marks=pytest.mark.skipif(
-                    has_zarr_v3_async_index,
+                    has_zarr_v3_async_oindex,
                     reason="current version of zarr has async vectorized indexing",
                 ),
             ),  # tests vindexing
