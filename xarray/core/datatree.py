@@ -1496,7 +1496,7 @@ class DataTree(
         The ``drop_size_zero_vars`` parameter controls whether variables
         with zero size are considered empty:
 
-        >>> dt_with_empty.prune(drop_size_zero_vars=True)
+        >>> dt.prune(drop_size_zero_vars=True)
         <xarray.DataTree>
         Group: /
         └── Group: /a
@@ -1505,7 +1505,7 @@ class DataTree(
                 Data variables:
                     foo      (x) int64 16B 1 2
         """
-        non_empty_cond: Callable[DataTree, [DataTree]]
+        non_empty_cond: Callable[[DataTree], bool]
         if drop_size_zero_vars:
             non_empty_cond = lambda node: len(node.data_vars) > 0 and any(
                 var.size > 0 for var in node.data_vars.values()
