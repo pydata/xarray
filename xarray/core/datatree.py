@@ -1514,10 +1514,12 @@ class DataTree(
         """
         non_empty_cond: Callable[DataTree, [DataTree]]
         if drop_size_zero_vars:
-            non_empty_cond = lambda node: len(node.data_vars) > 0 and any(var.size > 0 for var in node.data_vars.values())
+            non_empty_cond = lambda node: len(node.data_vars) > 0 and any(
+                var.size > 0 for var in node.data_vars.values()
+            )
         else:
             non_empty_cond = lambda node: len(node.data_vars) > 0
-        
+
         return self.filter(cond)
 
     def match(self, pattern: str) -> DataTree:
