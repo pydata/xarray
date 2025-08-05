@@ -1942,21 +1942,23 @@ class TestSubset:
         )
         assert_identical(actual, expected)
 
-    def test_is_data_empty(self) -> None:
-        ds_with_data = xr.Dataset({"foo": ("x", [1, 2])})
-        dt_with_data = DataTree(dataset=ds_with_data)
-        assert dt_with_data.is_data_empty is False
+    def test_prune_with_zero_size_vars(self) -> None:
+        tree = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"foo": ("x", [1, 2])}),
+                "/b": xr.Dataset({"empty": ("dim", [])}),
+                "/c": xr.Dataset(),
+            }
+        )
+        pruned_default = tree.prune()
+        assert "a" in pruned_default.children
+        assert "b" in pruned_default.children
+        assert "c" not in pruned_default.children
 
-        ds_coords_only = xr.Dataset(coords={"x": [1, 2]})
-        dt_coords_only = DataTree(dataset=ds_coords_only)
-        assert dt_coords_only.is_data_empty is True
-
-        dt_empty = DataTree()
-        assert dt_empty.is_data_empty is True
-
-        ds_zero_size = xr.Dataset({"var": ("time", [])})
-        dt_zero_size = DataTree(dataset=ds_zero_size)
-        assert dt_zero_size.is_data_empty is True
+        pruned_strict = tree.prune(drop_size_zero_vars=True)
+        assert "a" in pruned_strict.children
+        assert "b" not in pruned_strict.children
+        assert "c" not in pruned_strict.children
 
     def test_prune_basic(self) -> None:
         tree = DataTree.from_dict(
@@ -2005,7 +2007,7 @@ class TestSubset:
         filtered = tree.sel(time=slice("2023-01-01", "2023-01-03"))
 
         assert "b" in filtered.children
-        assert filtered.children["b"].is_data_empty is True
+        assert len(filtered.children["b"].data_vars) == 1
 
         pruned = filtered.prune()
         assert "a" in pruned.children

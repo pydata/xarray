@@ -687,13 +687,6 @@ class DataTree(
         return not (self.has_data or self.has_attrs)
 
     @property
-    def is_data_empty(self) -> bool:
-        """False if node contains any data variables with actual data. Does not look at children."""
-        if not self._data_variables:
-            return True
-        return not any(var.size > 0 for var in self._data_variables.values())
-
-    @property
     def is_hollow(self) -> bool:
         """True if only leaf nodes contain data."""
         return not any(node.has_data for node in self.subtree if not node.is_leaf)
@@ -1455,12 +1448,18 @@ class DataTree(
         other_keys = {key for key, _ in other.subtree_with_keys}
         return self.filter(lambda node: node.relative_to(self) in other_keys)
 
-    def prune(self) -> DataTree:
+    def prune(self, drop_size_zero_vars: bool = True) -> DataTree:
         """
         Remove empty nodes from the tree.
 
-        Returns a new tree containing only nodes that contain data variables.
+        Returns a new tree containing only nodes that contain data variables with actual data.
         Intermediate nodes are kept if they are required to support non-empty children.
+
+        Parameters
+        ----------
+        drop_size_zero_vars : bool, default True
+            If True, also considers variables with zero size as empty.
+            If False, keeps nodes with data variables even if they have zero size.
 
         Returns
         -------
@@ -1470,14 +1469,13 @@ class DataTree(
         See Also
         --------
         filter
-        is_data_empty
 
         Examples
         --------
         >>> dt = xr.DataTree.from_dict(
         ...     {
         ...         "/a": xr.Dataset({"foo": ("x", [1, 2])}),
-        ...         "/b": xr.Dataset(),  # empty dataset
+        ...         "/b": xr.Dataset(),
         ...     }
         ... )
         >>> dt.prune()
@@ -1488,8 +1486,44 @@ class DataTree(
                 Dimensions without coordinates: x
                 Data variables:
                     foo      (x) int64 16B 1 2
+
+        With zero-size variables:
+
+        >>> dt_zero = xr.DataTree.from_dict(
+        ...     {
+        ...         "/a": xr.Dataset({"foo": ("x", [1, 2])}),
+        ...         "/b": xr.Dataset({"empty": ("dim", [])}),
+        ...     }
+        ... )
+        >>> dt_zero.prune()
+        <xarray.DataTree>
+        Group: /
+        └── Group: /a
+                Dimensions:  (x: 2)
+                Dimensions without coordinates: x
+                Data variables:
+                    foo      (x) int64 16B 1 2
+
+        >>> dt_zero.prune(drop_size_zero_vars=False)
+        <xarray.DataTree>
+        Group: /
+        ├── Group: /a
+        │       Dimensions:  (x: 2)
+        │       Dimensions without coordinates: x
+        │       Data variables:
+        │           foo      (x) int64 16B 1 2
+        └── Group: /b
+                Dimensions:    (dim: 0)
+                Dimensions without coordinates: dim
+                Data variables:
+                    empty    (dim) float64 0B
         """
-        return self.filter(lambda node: not node.is_data_empty)
+        if drop_size_zero_vars:
+            return self.filter(
+                lambda node: len(node.data_vars) > 0
+                and any(var.size > 0 for var in node.data_vars.values())
+            )
+        return self.filter(lambda node: len(node.data_vars) > 0)
 
     def match(self, pattern: str) -> DataTree:
         """
