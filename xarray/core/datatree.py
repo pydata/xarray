@@ -1457,7 +1457,7 @@ class DataTree(
 
         Parameters
         ----------
-        drop_size_zero_vars : bool, default True
+        drop_size_zero_vars : bool, default False
             If True, also considers variables with zero size as empty.
             If False, keeps nodes with data variables even if they have zero size.
 
@@ -1475,30 +1475,11 @@ class DataTree(
         >>> dt = xr.DataTree.from_dict(
         ...     {
         ...         "/a": xr.Dataset({"foo": ("x", [1, 2])}),
-        ...         "/b": xr.Dataset(),
+        ...         "/b": xr.Dataset({"bar": ("x", [])}),
+        ...         "/c": xr.Dataset(),
         ...     }
         ... )
         >>> dt.prune()
-        <xarray.DataTree>
-        Group: /
-        └── Group: /a
-                Dimensions:  (x: 2)
-                Dimensions without coordinates: x
-                Data variables:
-                    foo      (x) int64 16B 1 2
-
-        The ``drop_size_zero_vars`` parameter controls whether variables
-        with zero size are considered empty:
-
-        >>> dt_with_empty = xr.DataTree.from_dict(
-        ...     {
-        ...         "/a": xr.Dataset({"foo": ("x", [1, 2])}),
-        ...         "/b": xr.Dataset({"bar": ("x", [])}),
-        ...     }
-        ... )
-        >>> dt_with_empty.prune(
-        ...     drop_size_zero_vars=False
-        ... )  # doctest: +NORMALIZE_WHITESPACE
         <xarray.DataTree>
         Group: /
         ├── Group: /a
@@ -1511,6 +1492,18 @@ class DataTree(
                 Dimensions without coordinates: x
                 Data variables:
                     bar      (x) float64 0B
+
+        The ``drop_size_zero_vars`` parameter controls whether variables
+        with zero size are considered empty:
+
+        >>> dt_with_empty.prune(drop_size_zero_vars=True)
+        <xarray.DataTree>
+        Group: /
+        └── Group: /a
+                Dimensions:  (x: 2)
+                Dimensions without coordinates: x
+                Data variables:
+                    foo      (x) int64 16B 1 2
         """
         non_empty_cond: Callable[DataTree, [DataTree]]
         if drop_size_zero_vars:
@@ -1520,7 +1513,7 @@ class DataTree(
         else:
             non_empty_cond = lambda node: len(node.data_vars) > 0
 
-        return self.filter(cond)
+        return self.filter(non_empty_cond)
 
     def match(self, pattern: str) -> DataTree:
         """
