@@ -1513,7 +1513,7 @@ class DataTree(
         │       Data variables:
         │           foo      (x) int64 16B 1 2
         └── Group: /b
-                Dimensions:    (dim: 0)
+                Dimensions:  (dim: 0)
                 Dimensions without coordinates: dim
                 Data variables:
                     empty    (dim) float64 0B
