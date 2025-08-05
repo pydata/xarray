@@ -1952,12 +1952,12 @@ class TestSubset:
         )
         pruned_default = tree.prune()
         assert "a" in pruned_default.children
-        assert "b" in pruned_default.children
+        assert "b" not in pruned_default.children
         assert "c" not in pruned_default.children
 
-        pruned_strict = tree.prune(drop_size_zero_vars=True)
+        pruned_strict = tree.prune(drop_size_zero_vars=False)
         assert "a" in pruned_strict.children
-        assert "b" not in pruned_strict.children
+        assert "b" in pruned_strict.children
         assert "c" not in pruned_strict.children
 
     def test_prune_basic(self) -> None:
