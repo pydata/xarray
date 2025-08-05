@@ -1497,14 +1497,19 @@ class DataTree(
         ...     }
         ... )
         >>> # Default behavior removes nodes with zero-size variables
-        >>> dt_with_empty.prune()
+        >>> dt_with_empty.prune(drop_size_zero_vars=False)
         <xarray.DataTree>
         Group: /
-        └── Group: /a
-                Dimensions:  (x: 2)
+        ├── Group: /a
+        │       Dimensions:  (x: 2)
+        │       Dimensions without coordinates: x
+        │       Data variables:
+        │           foo      (x) int64 16B 1 2
+        └── Group: /b
+                Dimensions:  (x: 0)
                 Dimensions without coordinates: x
                 Data variables:
-                    foo      (x) int64 16B 1 2
+                    bar      (x) float64 0B
         """
         if drop_size_zero_vars:
             return self.filter(
