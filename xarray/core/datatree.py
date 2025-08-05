@@ -1487,15 +1487,17 @@ class DataTree(
                 Data variables:
                     foo      (x) int64 16B 1 2
 
-        With zero-size variables:
+        The ``drop_size_zero_vars`` parameter controls whether variables
+        with zero size are considered empty:
 
-        >>> dt_zero = xr.DataTree.from_dict(
+        >>> dt_with_empty = xr.DataTree.from_dict(
         ...     {
         ...         "/a": xr.Dataset({"foo": ("x", [1, 2])}),
-        ...         "/b": xr.Dataset({"empty": ("dim", [])}),
+        ...         "/b": xr.Dataset({"bar": ("x", [])}),
         ...     }
         ... )
-        >>> dt_zero.prune()
+        >>> # Default behavior removes nodes with zero-size variables
+        >>> dt_with_empty.prune()
         <xarray.DataTree>
         Group: /
         └── Group: /a
@@ -1503,20 +1505,6 @@ class DataTree(
                 Dimensions without coordinates: x
                 Data variables:
                     foo      (x) int64 16B 1 2
-
-        >>> dt_zero.prune(drop_size_zero_vars=False)
-        <xarray.DataTree>
-        Group: /
-        ├── Group: /a
-        │       Dimensions:  (x: 2)
-        │       Dimensions without coordinates: x
-        │       Data variables:
-        │           foo      (x) int64 16B 1 2
-        └── Group: /b
-                Dimensions:  (dim: 0)
-                Dimensions without coordinates: dim
-                Data variables:
-                    empty    (dim) float64 0B
         """
         if drop_size_zero_vars:
             return self.filter(
