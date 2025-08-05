@@ -1496,7 +1496,9 @@ class DataTree(
         ...         "/b": xr.Dataset({"bar": ("x", [])}),
         ...     }
         ... )
-        >>> dt_with_empty.prune(drop_size_zero_vars=False)
+        >>> dt_with_empty.prune(
+        ...     drop_size_zero_vars=False
+        ... )  # doctest: +NORMALIZE_WHITESPACE
         <xarray.DataTree>
         Group: /
         ├── Group: /a
