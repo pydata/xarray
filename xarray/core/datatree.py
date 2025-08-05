@@ -1496,7 +1496,6 @@ class DataTree(
         ...         "/b": xr.Dataset({"bar": ("x", [])}),
         ...     }
         ... )
-        >>> # Default behavior removes nodes with zero-size variables
         >>> dt_with_empty.prune(drop_size_zero_vars=False)
         <xarray.DataTree>
         Group: /
