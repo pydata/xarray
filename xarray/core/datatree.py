@@ -1516,7 +1516,7 @@ class DataTree(
                 Dimensions:  (dim: 0)
                 Dimensions without coordinates: dim
                 Data variables:
-                   empty    (dim) float64 0B
+                    empty    (dim) float64 0B
         """
         if drop_size_zero_vars:
             return self.filter(
