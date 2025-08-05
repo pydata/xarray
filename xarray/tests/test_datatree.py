@@ -1950,15 +1950,23 @@ class TestSubset:
                 "/c": xr.Dataset(),
             }
         )
-        pruned_default = tree.prune()
-        assert "a" in pruned_default.children
-        assert "b" not in pruned_default.children
-        assert "c" not in pruned_default.children
 
-        pruned_strict = tree.prune(drop_size_zero_vars=False)
-        assert "a" in pruned_strict.children
-        assert "b" in pruned_strict.children
-        assert "c" not in pruned_strict.children
+        pruned_default = tree.prune()
+        expected_default = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"foo": ("x", [1, 2])}),
+                "/b": xr.Dataset({"empty": ("dim", [])}),
+            }
+        )
+        assert_identical(pruned_default, expected_default)
+
+        pruned_strict = tree.prune(drop_size_zero_vars=True)
+        expected_strict = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"foo": ("x", [1, 2])}),
+            }
+        )
+        assert_identical(pruned_strict, expected_strict)
 
     def test_prune_basic(self) -> None:
         tree = DataTree.from_dict(
