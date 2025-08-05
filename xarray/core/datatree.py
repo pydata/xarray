@@ -1448,7 +1448,7 @@ class DataTree(
         other_keys = {key for key, _ in other.subtree_with_keys}
         return self.filter(lambda node: node.relative_to(self) in other_keys)
 
-    def prune(self, drop_size_zero_vars: bool = True) -> DataTree:
+    def prune(self, drop_size_zero_vars: bool = False) -> DataTree:
         """
         Remove empty nodes from the tree.
 
