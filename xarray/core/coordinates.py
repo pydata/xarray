@@ -112,12 +112,13 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
         raise NotImplementedError()
 
     def to_index(self, ordered_dims: Sequence[Hashable] | None = None) -> pd.Index:
-        """Convert all index coordinates into a :py:class:`pandas.Index`.
+        """Convert all index dimension coordinates into a :py:class:`pandas.Index`.
 
         Parameters
         ----------
         ordered_dims : sequence of hashable, optional
-            Possibly reordered version of this object's dimensions indicating
+            Possibly reordered version of this object's dimensions (or the full dimensions
+            of it's corresponding Dataset, DataArray or DataTree object) indicating
             the order in which dimensions should appear on the result.
 
         Returns
@@ -125,14 +126,14 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
         pandas.Index
             Index subclass corresponding to the outer-product of all dimension
             coordinates. This will be a MultiIndex if this object is has more
-            than more dimension.
+            than one dimension.
         """
         if ordered_dims is None:
-            ordered_dims = list(self.dims)
-        elif set(ordered_dims) != set(self.dims):
+            ordered_dims = list(self._data.dims)
+        elif set(ordered_dims) != set(self._data.dims):
             raise ValueError(
                 "ordered_dims must match dims, but does not: "
-                f"{ordered_dims} vs {self.dims}"
+                f"{ordered_dims} vs {tuple(self._data.dims)}"
             )
 
         if len(ordered_dims) == 0:
