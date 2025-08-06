@@ -524,6 +524,13 @@ class IndexingAdapter:
     indexing semantics.
     """
 
+    @property
+    def ndim(self):
+        raise NotImplementedError
+
+    def __getitem__(self, indexer: ExplicitIndexer):
+        raise NotImplementedError
+
     def get_duck_array(self):
         key = BasicIndexer((slice(None),) * self.ndim)
         return self[key]
