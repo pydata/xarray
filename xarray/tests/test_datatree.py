@@ -1942,6 +1942,19 @@ class TestSubset:
         )
         assert_identical(actual, expected)
 
+    def test_prune_basic(self) -> None:
+        tree = DataTree.from_dict(
+            {"/a": xr.Dataset({"foo": ("x", [1, 2])}), "/b": xr.Dataset()}
+        )
+
+        pruned = tree.prune()
+
+        assert "a" in pruned.children
+        assert "b" not in pruned.children
+        assert_identical(
+            pruned.children["a"].to_dataset(), tree.children["a"].to_dataset()
+        )
+
     def test_prune_with_zero_size_vars(self) -> None:
         tree = DataTree.from_dict(
             {
@@ -1968,19 +1981,6 @@ class TestSubset:
         )
         assert_identical(pruned_strict, expected_strict)
 
-    def test_prune_basic(self) -> None:
-        tree = DataTree.from_dict(
-            {"/a": xr.Dataset({"foo": ("x", [1, 2])}), "/b": xr.Dataset()}
-        )
-
-        pruned = tree.prune()
-
-        assert "a" in pruned.children
-        assert "b" not in pruned.children
-        assert_identical(
-            pruned.children["a"].to_dataset(), tree.children["a"].to_dataset()
-        )
-
     def test_prune_with_intermediate_nodes(self) -> None:
         tree = DataTree.from_dict(
             {
@@ -1988,16 +1988,17 @@ class TestSubset:
                 "/group1": xr.Dataset(),
                 "/group1/subA": xr.Dataset({"temp": ("x", [1, 2])}),
                 "/group1/subB": xr.Dataset(),
-                "/group2": xr.Dataset(),
+                "/group2": xr.Dataset({"empty": ("dim", [])}),
             }
         )
-
         pruned = tree.prune()
-
-        assert "group1" in pruned.children
-        assert "subA" in pruned.children["group1"].children
-        assert "subB" not in pruned.children["group1"].children
-        assert "group2" not in pruned.children
+        expected_tree = DataTree.from_dict(
+            {
+                "/group1/subA": xr.Dataset({"temp": ("x", [1, 2])}),
+                "/group2": xr.Dataset({"empty": ("dim", [])}),
+            }
+        )
+        assert_identical(pruned, expected_tree)
 
     def test_prune_after_filtering(self) -> None:
         import pandas as pd
@@ -2018,8 +2019,10 @@ class TestSubset:
         assert len(filtered.children["b"].data_vars) == 1
 
         pruned = filtered.prune(drop_size_zero_vars=True)
-        assert "a" in pruned.children
-        assert "b" not in pruned.children
+        expected_tree = DataTree.from_dict(
+            {"a": ds1.sel(time=slice("2023-01-01", "2023-01-03"))}
+        )
+        assert_identical(pruned, expected_tree)
 
 
 class TestIndexing:
