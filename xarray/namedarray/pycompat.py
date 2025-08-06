@@ -153,13 +153,9 @@ async def async_to_duck_array(
     from xarray.core.indexing import (
         ExplicitlyIndexed,
         ImplicitToExplicitIndexingAdapter,
-        IndexingAdapter,
     )
 
-    if isinstance(data, IndexingAdapter):
-        # These wrap in-memory arrays, and async isn't needed
-        return data.get_duck_array()
-    elif isinstance(data, ExplicitlyIndexed | ImplicitToExplicitIndexingAdapter):
+    if isinstance(data, ExplicitlyIndexed | ImplicitToExplicitIndexingAdapter):
         return await data.async_get_duck_array()  # type: ignore[no-untyped-call, no-any-return]
     else:
         return to_duck_array(data, **kwargs)
