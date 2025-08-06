@@ -2017,7 +2017,7 @@ class TestSubset:
         assert "b" in filtered.children
         assert len(filtered.children["b"].data_vars) == 1
 
-        pruned = filtered.prune()
+        pruned = filtered.prune(drop_size_zero_vars=True)
         assert "a" in pruned.children
         assert "b" not in pruned.children
 
