@@ -156,6 +156,6 @@ async def async_to_duck_array(
     )
 
     if isinstance(data, ExplicitlyIndexed | ImplicitToExplicitIndexingAdapter):
-        return await data.async_get_duck_array()  # type: ignore[no-untyped-call, no-any-return]
+        return await data.async_get_duck_array()  # type: ignore[union-attr, no-any-return]
     else:
         return to_duck_array(data, **kwargs)
