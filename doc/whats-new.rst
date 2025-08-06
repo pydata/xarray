@@ -13,6 +13,8 @@ v2025.07.2 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added new asynchronous loading methods :py:meth:`~xarray.Dataset.load_async`, :py:meth:`~xarray.DataArray.load_async`, :py:meth:`~xarray.Variable.load_async`.
+  (:issue:`10326`, :pull:`10327`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -36,12 +38,10 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
 - Fix Pydap Datatree backend testing. Testing now compares elements of (unordered) two sets (before, lists) (:pull:`10525`).
   By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 - Fix ``KeyError`` when passing a ``dim`` argument different from the default to ``convert_calendar`` (:pull:`10544`).
   By `Eric Jansen <https://github.com/ej81>`_.
-
 - Fix transpose of boolean arrays read from disk. (:issue:`10536`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix detection of the ``h5netcdf`` backend. Xarray now selects ``h5netcdf`` if the default ``netCDF4`` engine is not available (:issue:`10401`, :pull:`10557`).
