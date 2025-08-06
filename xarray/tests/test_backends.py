@@ -4062,6 +4062,16 @@ class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only):
         ):
             Dataset({"foo": 42}).to_netcdf(engine="scipy")
 
+    def test_roundtrip_via_bytes(self) -> None:
+        original = create_test_data()
+        with pytest.warns(
+            FutureWarning,
+            match=re.escape("return value of to_netcdf() without a target"),
+        ):
+            netcdf_bytes = original.to_netcdf(engine="scipy")
+        roundtrip = open_dataset(netcdf_bytes, engine="scipy")
+        assert_identical(roundtrip, original)
+
     def test_bytes_pickle(self) -> None:
         data = Dataset({"foo": ("x", [1, 2, 3])})
         with pytest.warns(
