@@ -10,7 +10,7 @@ from collections.abc import (
     Sequence,
 )
 from functools import partial
-from io import BytesIO, IOBase
+from io import IOBase
 from itertools import starmap
 from numbers import Number
 from typing import (
@@ -693,9 +693,6 @@ def open_dataset(
     open_mfdataset
     """
 
-    if isinstance(filename_or_obj, bytes | memoryview):
-        filename_or_obj = BytesIO(filename_or_obj)
-
     if cache is None:
         cache = chunks is None
 
@@ -1172,9 +1169,6 @@ def open_datatree(
     xarray.open_groups
     xarray.open_dataset
     """
-    if isinstance(filename_or_obj, bytes | memoryview):
-        filename_or_obj = BytesIO(filename_or_obj)
-
     if cache is None:
         cache = chunks is None
 
@@ -1423,9 +1417,6 @@ def open_groups(
     xarray.open_dataset
     xarray.DataTree.from_dict
     """
-    if isinstance(filename_or_obj, bytes | memoryview):
-        filename_or_obj = BytesIO(filename_or_obj)
-
     if cache is None:
         cache = chunks is None
 
