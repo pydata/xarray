@@ -1479,7 +1479,7 @@ class DataTree(
         ...         "/c": xr.Dataset(),
         ...     }
         ... )
-        >>> dt.prune()
+        >>> dt.prune()  # doctest: +NORMALIZE_WHITESPACE
         <xarray.DataTree>
         Group: /
         ├── Group: /a
@@ -1496,7 +1496,7 @@ class DataTree(
         The ``drop_size_zero_vars`` parameter controls whether variables
         with zero size are considered empty:
 
-        >>> dt.prune(drop_size_zero_vars=True)
+        >>> dt.prune(drop_size_zero_vars=True)  # doctest: +NORMALIZE_WHITESPACE
         <xarray.DataTree>
         Group: /
         └── Group: /a
