@@ -905,6 +905,13 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if dim is not None:
             axis = self.get_axis_num(dim)
 
+        # sorting the axis ensures that the performance is consistent
+        # regardless of the input order of the dims
+        if isinstance(axis, tuple):
+            axis = tuple(sorted(axis))
+        elif isinstance(axis, list):
+            axis = sorted(axis)
+
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore", r"Mean of empty slice", category=RuntimeWarning
