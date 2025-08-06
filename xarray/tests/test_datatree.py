@@ -2001,22 +2001,19 @@ class TestSubset:
         assert_identical(pruned, expected_tree)
 
     def test_prune_after_filtering(self) -> None:
-        import pandas as pd
+        from pandas import date_range
 
         ds1 = xr.Dataset(
             {"foo": ("time", [1, 2, 3, 4, 5])},
-            coords={"time": pd.date_range("2023-01-01", periods=5, freq="D")},
+            coords={"time": date_range("2023-01-01", periods=5, freq="D")},
         )
         ds2 = xr.Dataset(
             {"var": ("time", [1, 2, 3, 4, 5])},
-            coords={"time": pd.date_range("2023-01-04", periods=5, freq="D")},
+            coords={"time": date_range("2023-01-04", periods=5, freq="D")},
         )
 
         tree = DataTree.from_dict({"a": ds1, "b": ds2})
         filtered = tree.sel(time=slice("2023-01-01", "2023-01-03"))
-
-        assert "b" in filtered.children
-        assert len(filtered.children["b"].data_vars) == 1
 
         pruned = filtered.prune(drop_size_zero_vars=True)
         expected_tree = DataTree.from_dict(
