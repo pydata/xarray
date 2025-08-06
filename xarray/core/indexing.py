@@ -1589,7 +1589,7 @@ def is_fancy_indexer(indexer: Any) -> bool:
     return True
 
 
-class NumpyIndexingAdapter(IndexingAdapter, ExplicitlyIndexedNDArrayMixin):
+class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin, IndexingAdapter):
     """Wrap a NumPy array to use explicit indexing."""
 
     __slots__ = ("array",)
@@ -1668,7 +1668,7 @@ class NdArrayLikeIndexingAdapter(NumpyIndexingAdapter):
         self.array = array
 
 
-class ArrayApiIndexingAdapter(IndexingAdapter, ExplicitlyIndexedNDArrayMixin):
+class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin, IndexingAdapter):
     """Wrap an array API array to use explicit indexing."""
 
     __slots__ = ("array",)
@@ -1809,7 +1809,7 @@ class DaskIndexingAdapter(IndexingAdapter, ExplicitlyIndexedNDArrayMixin):
         return self.array.transpose(order)
 
 
-class PandasIndexingAdapter(IndexingAdapter, ExplicitlyIndexedNDArrayMixin):
+class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin, IndexingAdapter):
     """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
 
     __slots__ = ("_dtype", "array")
@@ -2067,7 +2067,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
 
 
 class CoordinateTransformIndexingAdapter(
-    IndexingAdapter, ExplicitlyIndexedNDArrayMixin
+    ExplicitlyIndexedNDArrayMixin, IndexingAdapter
 ):
     """Wrap a CoordinateTransform as a lazy coordinate array.
 
