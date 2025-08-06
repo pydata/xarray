@@ -30,6 +30,7 @@ from xarray.backends import plugins
 from xarray.backends.common import (
     AbstractDataStore,
     ArrayWriter,
+    BytesIOProxy,
     _find_absolute_paths,
     _normalize_path,
 )
@@ -497,7 +498,12 @@ def _datatree_from_backend_datatree(
 
 
 def open_dataset(
-    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | bytes | AbstractDataStore,
+    filename_or_obj: str
+    | os.PathLike[Any]
+    | ReadBuffer
+    | bytes
+    | memoryview
+    | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -527,12 +533,13 @@ def open_dataset(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like, bytes or DataStore
+    filename_or_obj : str, Path, file-like, bytes, memoryview or DataStore
         Strings and Path objects are interpreted as a path to a netCDF file
         or an OpenDAP URL and opened with python-netCDF4, unless the filename
         ends with .gz, in which case the file is gunzipped and opened with
-        scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
-        objects are opened by scipy.io.netcdf (netCDF3) or h5netcdf (netCDF4).
+        scipy.io.netcdf (only netCDF3 supported). Bytes, memoryview and
+        file-like objects are opened by scipy.io.netcdf (netCDF3) or h5netcdf
+        (netCDF4).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "zarr", None}\
         , installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
@@ -686,7 +693,7 @@ def open_dataset(
     open_mfdataset
     """
 
-    if isinstance(filename_or_obj, bytes):
+    if isinstance(filename_or_obj, bytes | memoryview):
         filename_or_obj = BytesIO(filename_or_obj)
 
     if cache is None:
@@ -740,7 +747,12 @@ def open_dataset(
 
 
 def open_dataarray(
-    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | bytes | AbstractDataStore,
+    filename_or_obj: str
+    | os.PathLike[Any]
+    | ReadBuffer
+    | bytes
+    | memoryview
+    | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -771,12 +783,13 @@ def open_dataarray(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like, bytes or DataStore
+    filename_or_obj : str, Path, file-like, bytes, memoryview or DataStore
         Strings and Path objects are interpreted as a path to a netCDF file
         or an OpenDAP URL and opened with python-netCDF4, unless the filename
         ends with .gz, in which case the file is gunzipped and opened with
-        scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
-        objects are opened by scipy.io.netcdf (netCDF3) or h5netcdf (netCDF4).
+        scipy.io.netcdf (only netCDF3 supported). Bytes, memoryview and
+        file-like objects are opened by scipy.io.netcdf (netCDF3) or h5netcdf
+        (netCDF4).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "zarr", None}\
         , installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
@@ -967,7 +980,12 @@ def open_dataarray(
 
 
 def open_datatree(
-    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | bytes | AbstractDataStore,
+    filename_or_obj: str
+    | os.PathLike[Any]
+    | ReadBuffer
+    | bytes
+    | memoryview
+    | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -1000,7 +1018,8 @@ def open_datatree(
     ----------
     filename_or_obj : str, Path, file-like, bytes or DataStore
         Strings and Path objects are interpreted as a path to a netCDF file or
-        Zarr store. Bytes are interpreted as file contents.
+        Zarr store. Bytes and memoryview objects are interpreted as file
+        contents.
     engine : {"netcdf4", "h5netcdf", "zarr", None}, \
              installed backend or xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
@@ -1153,7 +1172,7 @@ def open_datatree(
     xarray.open_groups
     xarray.open_dataset
     """
-    if isinstance(filename_or_obj, bytes):
+    if isinstance(filename_or_obj, bytes | memoryview):
         filename_or_obj = BytesIO(filename_or_obj)
 
     if cache is None:
@@ -1209,7 +1228,12 @@ def open_datatree(
 
 
 def open_groups(
-    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+    filename_or_obj: str
+    | os.PathLike[Any]
+    | ReadBuffer
+    | bytes
+    | memoryview
+    | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -1244,9 +1268,10 @@ def open_groups(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like, butes, or DataStore
+    filename_or_obj : str, Path, file-like, bytes, memoryview or DataStore
         Strings and Path objects are interpreted as a path to a netCDF file or
-        Zarr store. Bytes are interpreted as file contents.
+        Zarr store. Bytes and memoryview objects are interpreted as file
+        contents.
     engine : {"netcdf4", "h5netcdf", "zarr", None}, \
              installed backend or xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
@@ -1398,7 +1423,7 @@ def open_groups(
     xarray.open_dataset
     xarray.DataTree.from_dict
     """
-    if isinstance(filename_or_obj, bytes):
+    if isinstance(filename_or_obj, bytes | memoryview):
         filename_or_obj = BytesIO(filename_or_obj)
 
     if cache is None:
@@ -1781,7 +1806,7 @@ def to_netcdf(
 ) -> tuple[ArrayWriter, AbstractDataStore]: ...
 
 
-# path=None writes to bytes
+# path=None writes to bytes or memoryview, depending on store
 @overload
 def to_netcdf(
     dataset: Dataset,
@@ -1796,7 +1821,7 @@ def to_netcdf(
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
-) -> bytes: ...
+) -> bytes | memoryview: ...
 
 
 # compute=False returns dask.Delayed
@@ -1889,7 +1914,7 @@ def to_netcdf(
     multifile: bool = False,
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
-) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None: ...
+) -> tuple[ArrayWriter, AbstractDataStore] | bytes | memoryview | Delayed | None: ...
 
 
 def to_netcdf(
@@ -1905,7 +1930,7 @@ def to_netcdf(
     multifile: bool = False,
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
-) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
+) -> tuple[ArrayWriter, AbstractDataStore] | bytes | memoryview | Delayed | None:
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -1921,12 +1946,13 @@ def to_netcdf(
 
     if path_or_file is None:
         if engine is None:
+            # TODO: only use 'scipy' if format is None or a netCDF3 format
             engine = "scipy"
         elif engine not in ("scipy", "h5netcdf"):
             raise ValueError(
-                "invalid engine for creating bytes with "
-                f"to_netcdf: {engine!r}. Only the default engine, "
-                "engine='scipy' or engine='h5netcdf' is supported."
+                "invalid engine for creating bytes/memoryview with "
+                f"to_netcdf: {engine!r}. Only engine=None, engine='scipy' and "
+                "engine='h5netcdf' is supported."
             )
         if not compute:
             raise NotImplementedError(
@@ -1937,13 +1963,16 @@ def to_netcdf(
         if engine is None:
             engine = _get_default_engine(path_or_file)
         path_or_file = _normalize_path(path_or_file)
-    elif engine not in ("scipy", "h5netcdf"):
-        emit_user_level_warning(
-            f"Requested {engine=} is not compatible with writing to a file-like object. "
-            "This will raise an error in the future, for now defaulting to engine='scipy'.",
-            FutureWarning,
-        )
-        engine = "scipy"
+    else:
+        # filelike object
+        if engine is not None and engine not in ("scipy", "h5netcdf"):
+            emit_user_level_warning(
+                f"Requested {engine=} is not compatible with writing to a file-like object. "
+                "This will raise an error in the future, for now defaulting to engine='scipy'.",
+                FutureWarning,
+            )
+        if engine != "h5netcdf":
+            engine = "scipy"
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
@@ -1969,7 +1998,7 @@ def to_netcdf(
         )
 
     if path_or_file is None:
-        target = BytesIO()
+        target = BytesIOProxy()
     else:
         target = path_or_file  # type: ignore[assignment]
 
@@ -2017,15 +2046,14 @@ def to_netcdf(
             store.close()
 
     if path_or_file is None:
-        assert isinstance(target, BytesIO)  # created in this function
-        value = target.getvalue()
-        target.close()
-        return value
+        assert isinstance(target, BytesIOProxy)  # created in this function
+        return target.getvalue_or_getbuffer()
 
     if not compute:
         import dask
 
         return dask.delayed(_finalize_store)(writes, store)
+
     return None
 
 

@@ -11,6 +11,7 @@ import numpy as np
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendEntrypoint,
+    BytesIOProxy,
     WritableCFDataStore,
     _normalize_path,
     _open_remote_file,
@@ -171,6 +172,11 @@ class H5NetCDFStore(WritableCFDataStore):
                 filename, mode=mode_, storage_options=storage_options
             )
 
+        if isinstance(filename, BytesIOProxy):
+            source = filename
+            filename = io.BytesIO()
+            source.getvalue = filename.getbuffer
+
         if isinstance(filename, io.IOBase) and mode == "r":
             magic_number = read_magic_number_from_file(filename)
             if not magic_number.startswith(b"\211HDF\r\n\032\n"):
@@ -202,6 +208,7 @@ class H5NetCDFStore(WritableCFDataStore):
             if isinstance(filename, str)
             else h5netcdf.File(filename, mode=mode, **kwargs)
         )
+        print(f"{manager=}")
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):
@@ -400,6 +407,20 @@ def _emit_phony_dims_warning():
     )
 
 
+def _normalize_filename_or_obj(
+    filename_or_obj: str
+    | os.PathLike[Any]
+    | ReadBuffer
+    | bytes
+    | memoryview
+    | AbstractDataStore,
+) -> str | ReadBuffer | AbstractDataStore:
+    if isinstance(filename_or_obj, bytes | memoryview):
+        return io.BytesIO(filename_or_obj)
+    else:
+        return _normalize_path(filename_or_obj)  # type: ignore[return-value]
+
+
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the h5netcdf package.
@@ -429,8 +450,14 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
     ) -> bool:
+        filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None:
             return magic_number.startswith(b"\211HDF\r\n\032\n")
@@ -443,7 +470,12 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -466,7 +498,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         # remove and set phony_dims="access" above
         emit_phony_dims_warning, phony_dims = _check_phony_dims(phony_dims)
 
-        filename_or_obj = _normalize_path(filename_or_obj)
+        filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
             format=format,
@@ -503,7 +535,12 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -546,7 +583,12 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -573,7 +615,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         # remove and set phony_dims="access" above
         emit_phony_dims_warning, phony_dims = _check_phony_dims(phony_dims)
 
-        filename_or_obj = _normalize_path(filename_or_obj)
+        filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
             format=format,

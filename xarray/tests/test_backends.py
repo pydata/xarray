@@ -4056,12 +4056,19 @@ class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only):
         yield backends.ScipyDataStore(fobj, "w")
 
     def test_to_netcdf_explicit_engine(self) -> None:
-        # regression test for GH1321
-        Dataset({"foo": 42}).to_netcdf(engine="scipy")
+        with pytest.warns(
+            FutureWarning,
+            match=re.escape("return value of to_netcdf() without a target"),
+        ):
+            Dataset({"foo": 42}).to_netcdf(engine="scipy")
 
     def test_bytes_pickle(self) -> None:
         data = Dataset({"foo": ("x", [1, 2, 3])})
-        fobj = data.to_netcdf()
+        with pytest.warns(
+            FutureWarning,
+            match=re.escape("return value of to_netcdf() without a target"),
+        ):
+            fobj = data.to_netcdf()
         with self.open(fobj) as ds:
             unpickled = pickle.loads(pickle.dumps(ds))
             assert_identical(unpickled, data)
@@ -4099,9 +4106,9 @@ class TestScipyFileObject(CFEncodedBase, NetCDF3Only):
     def test_file_remains_open(self) -> None:
         data = Dataset({"foo": ("x", [1, 2, 3])})
         f = BytesIO()
-        data.to_netcdf(f, engine="h5netcdf")
+        data.to_netcdf(f, engine="scipy")
         assert not f.closed
-        restored = open_dataset(f, engine="h5netcdf")
+        restored = open_dataset(f, engine="scipy")
         assert not f.closed
         assert_identical(restored, data)
         restored.close()
@@ -4231,9 +4238,10 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
             with pytest.raises(ValueError, match=r"unrecognized engine"):
                 open_dataset(tmp_file, engine="foobar")
 
-        netcdf_bytes = data.to_netcdf()
+        bytes_io = BytesIO()
+        data.to_netcdf(bytes_io, engine="scipy")
         with pytest.raises(ValueError, match=r"unrecognized engine"):
-            open_dataset(BytesIO(netcdf_bytes), engine="foobar")
+            open_dataset(bytes_io, engine="foobar")
 
     def test_cross_engine_read_write_netcdf3(self) -> None:
         data = create_test_data()
@@ -4279,6 +4287,32 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
         with self.roundtrip(ds) as actual:
             assert actual.encoding["unlimited_dims"] == set("y")
             assert_equal(ds, actual)
+
+    @requires_scipy
+    def test_roundtrip_via_bytes(self) -> None:
+        original = create_test_data()
+        with pytest.warns(
+            FutureWarning,
+            match=re.escape("return value of to_netcdf() without a target"),
+        ):
+            netcdf_bytes = original.to_netcdf()
+        roundtrip = open_dataset(netcdf_bytes)
+        assert_identical(roundtrip, original)
+
+    @pytest.mark.xfail(
+        reason="scipy.io.netcdf_file closes files upon garbage collection"
+    )
+    @requires_scipy
+    def test_roundtrip_via_file_object(self) -> None:
+        original = create_test_data()
+        f = BytesIO()
+        original.to_netcdf(f)
+        assert not f.closed
+        restored = open_dataset(f)
+        assert not f.closed
+        assert_identical(restored, original)
+        restored.close()
+        assert not f.closed
 
 
 @requires_h5netcdf
@@ -5863,7 +5897,11 @@ class TestDataArrayToNetCDF:
     def test_dataarray_to_netcdf_return_bytes(self) -> None:
         # regression test for GH1410
         data = xr.DataArray([1, 2, 3])
-        output = data.to_netcdf()
+        with pytest.warns(
+            FutureWarning,
+            match=re.escape("return value of to_netcdf() without a target"),
+        ):
+            output = data.to_netcdf(engine="scipy")
         assert isinstance(output, bytes)
 
     def test_dataarray_to_netcdf_no_name_pathlib(self) -> None:
@@ -6400,7 +6438,10 @@ def test_scipy_entrypoint(tmp_path: Path) -> None:
     with open(path, "rb") as f:
         _check_guess_can_open_and_open(entrypoint, f, engine="scipy", expected=ds)
 
-    contents = ds.to_netcdf(engine="scipy")
+    with pytest.warns(
+        FutureWarning, match=re.escape("return value of to_netcdf() without a target")
+    ):
+        contents = ds.to_netcdf(engine="scipy")
     _check_guess_can_open_and_open(entrypoint, contents, engine="scipy", expected=ds)
     _check_guess_can_open_and_open(
         entrypoint, BytesIO(contents), engine="scipy", expected=ds
@@ -6415,7 +6456,7 @@ def test_scipy_entrypoint(tmp_path: Path) -> None:
     assert entrypoint.guess_can_open("something-local.nc")
     assert entrypoint.guess_can_open("something-local.nc.gz")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
-    assert not entrypoint.guess_can_open(b"not-a-netcdf-file")  # type: ignore[arg-type]
+    assert not entrypoint.guess_can_open(b"not-a-netcdf-file")
 
 
 @requires_h5netcdf

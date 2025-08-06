@@ -1661,7 +1661,7 @@ class DataTree(
     def __eq__(self, other: DtCompatible) -> Self:  # type: ignore[override]
         return super().__eq__(other)
 
-    # filepath=None writes to bytes
+    # filepath=None writes to a memoryview
     @overload
     def to_netcdf(
         self,
@@ -1675,7 +1675,7 @@ class DataTree(
         write_inherited_coords: bool = False,
         compute: bool = True,
         **kwargs,
-    ) -> bytes: ...
+    ) -> memoryview: ...
 
     @overload
     def to_netcdf(
@@ -1704,7 +1704,7 @@ class DataTree(
         write_inherited_coords: bool = False,
         compute: bool = True,
         **kwargs,
-    ) -> None | bytes:
+    ) -> None | memoryview:
         """
         Write datatree contents to a netCDF file.
 
@@ -1713,7 +1713,7 @@ class DataTree(
         filepath : str or PathLike or file-like object or None
             Path to which to save this datatree, or a file-like object to write
             it to (which must support read and write and be seekable) or None
-            to return in-memory bytes.
+            to return in-memory bytes as a memoryview.
         mode : {"w", "a"}, default: "w"
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
@@ -1754,7 +1754,8 @@ class DataTree(
 
         Returns
         -------
-            A bytes object with the byte content of the netCDF file, if filepath was None.
+            * ``memoryview`` if path is None
+            * ``None`` otherwise
 
         Note
         ----

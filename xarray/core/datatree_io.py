@@ -27,12 +27,8 @@ def _datatree_to_netcdf(
     write_inherited_coords: bool = False,
     compute: bool = True,
     **kwargs,
-) -> None | bytes:
-    """This function creates an appropriate datastore for writing a datatree to
-    disk as a netCDF file.
-
-    See `DataTree.to_netcdf` for full API docs.
-    """
+) -> None | memoryview:
+    """Implementation of `DataTree.to_netcdf`."""
 
     if format not in [None, *get_args(T_DataTreeNetcdfTypes)]:
         raise ValueError("DataTree.to_netcdf only supports the NETCDF4 format")
@@ -65,7 +61,11 @@ def _datatree_to_netcdf(
         )
 
     if filepath is None:
-        filepath = io.BytesIO()
+        # No need to use BytesIOProxy here because the legacy scipy backend
+        # cannot write netCDF files with groups
+        target = io.BytesIO()
+    else:
+        target = filepath  # type: ignore[assignment]
 
     if unlimited_dims is None:
         unlimited_dims = {}
@@ -75,7 +75,7 @@ def _datatree_to_netcdf(
         ds = node.to_dataset(inherit=write_inherited_coords or at_root)
         group_path = None if at_root else "/" + node.relative_to(dt)
         ds.to_netcdf(
-            filepath,
+            target,
             group=group_path,
             mode=mode,
             encoding=encoding.get(node.path),
@@ -87,7 +87,11 @@ def _datatree_to_netcdf(
         )
         mode = "a"
 
-    return filepath.getvalue() if isinstance(filepath, io.BytesIO) else None
+    if filepath is None:
+        assert isinstance(target, io.BytesIO)
+        return target.getbuffer()
+
+    return None
 
 
 def _datatree_to_zarr(
@@ -101,11 +105,7 @@ def _datatree_to_zarr(
     compute: bool = True,
     **kwargs,
 ):
-    """This function creates an appropriate datastore for writing a datatree
-    to a zarr store.
-
-    See `DataTree.to_zarr` for full API docs.
-    """
+    """Implementation of `DataTree.to_zarr`."""
 
     from zarr import consolidate_metadata
 
