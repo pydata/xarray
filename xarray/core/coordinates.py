@@ -24,6 +24,7 @@ from xarray.core.indexes import (
 from xarray.core.types import DataVars, Self, T_DataArray, T_Xarray
 from xarray.core.utils import (
     Frozen,
+    FrozenMappingWarningOnValuesAccess,
     ReprObject,
     either_dict_or_kwargs,
     emit_user_level_warning,
@@ -741,8 +742,8 @@ class DatasetCoordinates(Coordinates):
 
     @property
     def dims(self) -> Frozen[Hashable, int]:
-        # deliberately display all dims, not just those on coordinate variables - see https://github.com/pydata/xarray/issues/9466
-        return self._data.dims
+        dims = calculate_dimensions(self.variables)
+        return FrozenMappingWarningOnValuesAccess(dims)
 
     @property
     def dtypes(self) -> Frozen[Hashable, np.dtype]:
@@ -851,8 +852,8 @@ class DataTreeCoordinates(Coordinates):
 
     @property
     def dims(self) -> Frozen[Hashable, int]:
-        # deliberately display all dims, not just those on coordinate variables - see https://github.com/pydata/xarray/issues/9466
-        return Frozen(self._data.dims)
+        dims = calculate_dimensions(self.variables)
+        return FrozenMappingWarningOnValuesAccess(dims)
 
     @property
     def dtypes(self) -> Frozen[Hashable, np.dtype]:
@@ -942,7 +943,8 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
 
     @property
     def dims(self) -> tuple[Hashable, ...]:
-        return self._data.dims
+        dims = calculate_dimensions(self._data._coords)
+        return tuple(dims)
 
     @property
     def dtypes(self) -> Frozen[Hashable, np.dtype]:
@@ -967,7 +969,9 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
         self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
     ) -> None:
         validate_dataarray_coords(
-            self._data.shape, Coordinates._construct_direct(coords, indexes), self.dims
+            self._data.shape,
+            Coordinates._construct_direct(coords, indexes),
+            self._data.dims,
         )
 
         self._data._coords = coords
