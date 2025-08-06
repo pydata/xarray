@@ -1733,7 +1733,7 @@ def _assert_not_chunked_indexer(idxr: tuple[Any, ...]) -> None:
         )
 
 
-class DaskIndexingAdapter(IndexingAdapter, ExplicitlyIndexedNDArrayMixin):
+class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin, IndexingAdapter):
     """Wrap a dask array to support explicit indexing."""
 
     __slots__ = ("array",)
