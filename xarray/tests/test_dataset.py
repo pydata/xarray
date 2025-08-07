@@ -13,6 +13,7 @@ from typing import Any, Literal, cast
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 from pandas.core.indexes.datetimes import DatetimeIndex
 
 # remove once numpy 2.0 is the oldest supported version
@@ -299,7 +300,7 @@ class TestDataset:
                 var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
                 var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
                 var3     (dim3, dim1) float64 640B 0.4107 0.9941 0.1665 ... 0.716 1.555
-                var4     (dim1) category 32B b c b a c a c a{var5}
+                var4     (dim1) category 3{6 if Version(pd.__version__) >= Version("3.0.0dev0") else 2}B b c b a c a c a{var5}
             Attributes:
                 foo:      bar"""
         )
@@ -6239,7 +6240,7 @@ class TestDataset:
         assert_equal(actual, expected)
 
         actual = ds + ds[["bar"]]
-        expected = (2 * ds[["bar"]]).merge(ds.coords)
+        expected = (2 * ds[["bar"]]).merge(ds.coords, compat="override")
         assert_identical(expected, actual)
 
         assert_identical(ds + Dataset(), ds.coords.to_dataset())
@@ -6675,12 +6676,12 @@ class TestDataset:
             coords={"x": ["a", "b", "c"]},
         )
         assert_equal(actual, expected)
-        assert_equal(actual, xr.merge([dsx0, dsx1]))
+        assert_equal(actual, xr.merge([dsx0, dsx1], join="outer"))
 
         # works just like xr.merge([self, other])
         dsy2 = DataArray([2, 2, 2], [("x", ["b", "c", "d"])]).to_dataset(name="dsy2")
         actual = dsx0.combine_first(dsy2)
-        expected = xr.merge([dsy2, dsx0])
+        expected = xr.merge([dsy2, dsx0], join="outer")
         assert_equal(actual, expected)
 
     def test_sortby(self) -> None:

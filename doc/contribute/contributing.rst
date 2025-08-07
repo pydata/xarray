@@ -37,7 +37,7 @@ Where to start?
 If you are brand new to *xarray* or open-source development, we recommend going
 through the `GitHub "issues" tab <https://github.com/pydata/xarray/issues>`_
 to find issues that interest you.
-Some issues are particularly suited for new contributors by the label `Documentation <https://github.com/pydata/xarray/labels/topic-documentation>`_
+Some issues are particularly suited for new contributors by the label `Documentation <https://github.com/pydata/xarray/labels/topic-documentation>`__
 and `good first issue
 <https://github.com/pydata/xarray/labels/contrib-good-first-issue>`_ where you could start out.
 These are well documented issues, that do not require a deep understanding of the internals of xarray.
@@ -130,6 +130,8 @@ you can work seamlessly between your local repository and GitHub.
     but contributors who are new to git may find it easier to use other tools instead such as
     `Github Desktop <https://desktop.github.com/>`_.
 
+.. _contributing.dev_workflow:
+
 Development workflow
 ====================
 
@@ -151,22 +153,121 @@ maintainers to see what you've done, and why you did it, we recommend you to fol
    This creates the directory ``xarray`` and connects your repository to
    the upstream (main project) *xarray* repository.
 
+4. Copy tags across from the xarray repository::
+
+    git fetch --tags upstream
+
+   This will ensure that when you create a development environment a reasonable version number is created.
+
+.. _contributing.dev_env:
+
 Creating a development environment
 ----------------------------------
 
-To test out code changes locally, you'll need to build *xarray* from source, which requires you to
-`create a local development environment <https://docs.xarray.dev/en/stable/contributing.html#contributing-dev-env>`_.
+To test out code changes locally, you'll need to build *xarray* from source, which
+requires a Python environment. If you're making documentation changes, you can
+skip to :ref:`contributing.documentation` but you won't be able to build the
+documentation locally before pushing your changes.
+
+.. note::
+
+    For small changes, such as fixing a typo, you don't necessarily need to build and test xarray locally.
+    If you make your changes then :ref:`commit and push them to a new branch <contributing.changes>`,
+    xarray's automated :ref:`continuous integration tests <contributing.ci>` will run and check your code in various ways.
+    You can then try to fix these problems by committing and pushing more commits to the same branch.
+
+    You can also avoid building the documentation locally by instead :ref:`viewing the updated documentation via the CI <contributing.pr>`.
+
+    To speed up this feedback loop or for more complex development tasks you should build and test xarray locally.
+
+
+.. _contributing.dev_python:
+
+Creating a Python Environment
+-----------------------------
+
+Before starting any development, you'll need to create an isolated xarray
+development environment:
+
+- Install either `Anaconda <https://www.anaconda.com/download/>`_ or `miniconda
+  <https://conda.io/miniconda.html>`_
+- Make sure your conda is up to date (``conda update conda``)
+- Make sure that you have :ref:`cloned the repository <contributing.dev_workflow>`
+- ``cd`` to the *xarray* source directory
+
+We'll now kick off a two-step process:
+
+1. Install the build dependencies
+2. Build and install xarray
+
+.. code-block:: sh
+
+   # Create and activate the build environment
+   conda create -c conda-forge -n xarray-tests python=3.11
+
+   # This is for Linux and MacOS
+   conda env update -f ci/requirements/environment.yml
+
+   # On windows, use environment-windows.yml instead
+   conda env update -f ci/requirements/environment-windows.yml
+
+   conda activate xarray-tests
+
+   # or with older versions of Anaconda:
+   source activate xarray-tests
+
+   # Build and install xarray
+   pip install -e .
+
+At this point you should be able to import *xarray* from your locally
+built version:
+
+.. code-block:: sh
+
+   $ python  # start an interpreter
+   >>> import xarray
+   >>> xarray.__version__
+   '2025.7.2.dev14+g5ce69b2b.d20250725'
+
+This will create the new environment, and not touch any of your existing environments,
+nor any existing Python installation.
+
+To view your environments::
+
+      conda info -e
+
+To return to your root environment::
+
+      conda deactivate
+
+See the full `conda docs here <https://conda.pydata.org/docs>`__.
+
+Install pre-commit hooks
+------------------------
+
+We highly recommend that you setup `pre-commit <https://pre-commit.com/>`_ hooks to automatically
+run all the above tools every time you make a git commit. To install the hooks::
+
+    python -m pip install pre-commit
+    pre-commit install
+
+This can be done by running: ::
+
+    pre-commit run
+
+from the root of the xarray repository. You can skip the pre-commit checks with
+``git commit --no-verify``.
+
 
 Update the ``main`` branch
 --------------------------
 
-First make sure you have followed `Setting up xarray for development
-<https://docs.xarray.dev/en/stable/contributing.html#creating-a-development-environment>`_
+First make sure you have :ref:`created a development environment <contributing.dev_env>`.
 
 Before starting a new set of changes, fetch all changes from ``upstream/main``, and start a new
 feature branch from that. From time to time you should fetch the upstream changes from GitHub: ::
 
-    git fetch upstream
+    git fetch --tags upstream
     git merge upstream/main
 
 This will combine your commits with the latest *xarray* git ``main``.  If this
@@ -174,6 +275,12 @@ leads to merge conflicts, you must resolve these before submitting your pull
 request.  If you have uncommitted changes, you will need to ``git stash`` them
 prior to updating.  This will effectively store your changes, which can be
 reapplied after updating.
+
+If the *xarray* ``main`` branch version has updated since you last fetched changes,
+you may also wish to reinstall xarray so that the pip version reflects the *xarray*
+version::
+
+    pip install -e .
 
 Create a new feature branch
 ---------------------------
@@ -216,10 +323,10 @@ The editing workflow
 
 3. Check what the actual changes are with ``git diff``.
 
-4. Build the `documentation run <https://docs.xarray.dev/en/stable/contributing.html#building-the-documentation>`_
+4. Build the `documentation <https://docs.xarray.dev/en/stable/contributing.html#building-the-documentation>`__
 for the documentation changes.
 
-`Run the test suite <https://docs.xarray.dev/en/stable/contributing.html#running-the-test-suite>`_ for code changes.
+5. `Run the test suite <https://docs.xarray.dev/en/stable/contributing.html#running-the-test-suite>`_ for code changes.
 
 Commit and push your changes
 ----------------------------
@@ -247,105 +354,6 @@ Follow the PR template, which looks like this. ::
 Mention anything you'd like particular attention for - such as a complicated change or some code you are not happy with.
 If you don't think your request is ready to be merged, just say so in your pull request message and use
 the "Draft PR" feature of GitHub. This is a good way of getting some preliminary code review.
-
-.. _contributing.dev_env:
-
-Creating a development environment
-==================================
-
-To test out code changes locally, you'll need to build *xarray* from source, which
-requires a Python environment. If you're making documentation changes, you can
-skip to :ref:`contributing.documentation` but you won't be able to build the
-documentation locally before pushing your changes.
-
-.. note::
-
-    For small changes, such as fixing a typo, you don't necessarily need to build and test xarray locally.
-    If you make your changes then :ref:`commit and push them to a new branch <contributing.changes>`,
-    xarray's automated :ref:`continuous integration tests <contributing.ci>` will run and check your code in various ways.
-    You can then try to fix these problems by committing and pushing more commits to the same branch.
-
-    You can also avoid building the documentation locally by instead :ref:`viewing the updated documentation via the CI <contributing.pr>`.
-
-    To speed up this feedback loop or for more complex development tasks you should build and test xarray locally.
-
-
-.. _contributing.dev_python:
-
-Creating a Python Environment
------------------------------
-
-Before starting any development, you'll need to create an isolated xarray
-development environment:
-
-- Install either `Anaconda <https://www.anaconda.com/download/>`_ or `miniconda
-  <https://conda.io/miniconda.html>`_
-- Make sure your conda is up to date (``conda update conda``)
-- Make sure that you have :ref:`cloned the repository <contributing.forking>`
-- ``cd`` to the *xarray* source directory
-
-We'll now kick off a two-step process:
-
-1. Install the build dependencies
-2. Build and install xarray
-
-.. code-block:: sh
-
-   # Create and activate the build environment
-   conda create -c conda-forge -n xarray-tests python=3.11
-
-   # This is for Linux and MacOS
-   conda env update -f ci/requirements/environment.yml
-
-   # On windows, use environment-windows.yml instead
-   conda env update -f ci/requirements/environment-windows.yml
-
-   conda activate xarray-tests
-
-   # or with older versions of Anaconda:
-   source activate xarray-tests
-
-   # Build and install xarray
-   pip install -e .
-
-At this point you should be able to import *xarray* from your locally
-built version:
-
-.. code-block:: sh
-
-   $ python  # start an interpreter
-   >>> import xarray
-   >>> xarray.__version__
-   '0.10.0+dev46.g015daca'
-
-This will create the new environment, and not touch any of your existing environments,
-nor any existing Python installation.
-
-To view your environments::
-
-      conda info -e
-
-To return to your root environment::
-
-      conda deactivate
-
-See the full `conda docs here <https://conda.pydata.org/docs>`__.
-
-Install pre-commit hooks
-------------------------
-
-We highly recommend that you setup `pre-commit <https://pre-commit.com/>`_ hooks to automatically
-run all the above tools every time you make a git commit. To install the hooks::
-
-    python -m pip install pre-commit
-    pre-commit install
-
-This can be done by running: ::
-
-    pre-commit run
-
-from the root of the xarray repository. You can skip the pre-commit checks with
-``git commit --no-verify``.
 
 .. _contributing.documentation:
 
@@ -425,7 +433,7 @@ How to build the *xarray* documentation
 
 Requirements
 ~~~~~~~~~~~~
-Make sure to follow the instructions on :ref:`creating a development environment above <contributing.dev_env>`, but
+Make sure to follow the instructions on :ref:`creating a development environment<contributing.dev_env>` above, but
 to build the docs you need to use the environment file ``ci/requirements/doc.yml``.
 You should also use this environment and these steps if you want to view changes you've made to the docstrings.
 
