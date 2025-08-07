@@ -1027,10 +1027,10 @@ def drop_indexed_coords(
         if isinstance(idx, PandasMultiIndex) and idx_drop_coords == {idx.dim}:
             idx_drop_coords.update(idx.index.names)
             emit_user_level_warning(
-                f"updating coordinate {idx.dim!r} with a PandasMultiIndex would leave "
+                f"updating coordinate {idx.dim!r}, which is a PandasMultiIndex, would leave "
                 f"the multi-index level coordinates {list(idx.index.names)!r} in an inconsistent state. "
-                f"This will raise an error in the future. Use `.drop_vars({list(idx_coords)!r})` before "
-                "assigning new coordinate values.",
+                f"This will raise an error in the future. Use `.drop_vars({list(idx_coords)!r})` "
+                "to drop the coordinates' values before assigning new coordinate values.",
                 FutureWarning,
             )
 
