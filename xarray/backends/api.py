@@ -45,7 +45,7 @@ from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
-from xarray.core.utils import emit_user_level_warning, is_remote_uri
+from xarray.core.utils import is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
 from xarray.structure.chunks import _get_chunk, _maybe_chunk
@@ -1945,35 +1945,27 @@ def to_netcdf(
     if encoding is None:
         encoding = {}
 
-    if path_or_file is None:
+    if isinstance(path_or_file, str):
+        if engine is None:
+            engine = _get_default_engine(path_or_file)
+        path_or_file = _normalize_path(path_or_file)
+    else:
+        # writing to bytes/memoryview or a file-like object
         if engine is None:
             # TODO: only use 'scipy' if format is None or a netCDF3 format
             engine = "scipy"
         elif engine not in ("scipy", "h5netcdf"):
             raise ValueError(
-                "invalid engine for creating bytes/memoryview with "
-                f"to_netcdf: {engine!r}. Only engine=None, engine='scipy' and "
-                "engine='h5netcdf' is supported."
+                "invalid engine for creating bytes/memoryview or writing to a "
+                f"file-like object with to_netcdf: {engine!r}. Only "
+                "engine=None, engine='scipy' and engine='h5netcdf' is "
+                "supported."
             )
         if not compute:
             raise NotImplementedError(
                 "to_netcdf() with compute=False is not yet implemented when "
                 "returning bytes"
             )
-    elif isinstance(path_or_file, str):
-        if engine is None:
-            engine = _get_default_engine(path_or_file)
-        path_or_file = _normalize_path(path_or_file)
-    else:
-        # filelike object
-        if engine is not None and engine not in ("scipy", "h5netcdf"):
-            emit_user_level_warning(
-                f"Requested {engine=} is not compatible with writing to a file-like object. "
-                "This will raise an error in the future, for now defaulting to engine='scipy'.",
-                FutureWarning,
-            )
-        if engine != "h5netcdf":
-            engine = "scipy"
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
