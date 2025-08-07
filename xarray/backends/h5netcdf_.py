@@ -208,7 +208,6 @@ class H5NetCDFStore(WritableCFDataStore):
             if isinstance(filename, str)
             else h5netcdf.File(filename, mode=mode, **kwargs)
         )
-        print(f"{manager=}")
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):
