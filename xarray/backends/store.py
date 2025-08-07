@@ -24,13 +24,23 @@ class StoreBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
     ) -> bool:
         return isinstance(filename_or_obj, AbstractDataStore)
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,

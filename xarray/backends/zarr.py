@@ -1550,7 +1550,12 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
     ) -> bool:
         if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
@@ -1560,7 +1565,12 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -1615,7 +1625,12 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -1657,7 +1672,12 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,

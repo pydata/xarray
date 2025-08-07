@@ -209,13 +209,23 @@ class PydapBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
     ) -> bool:
         return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -258,7 +268,12 @@ class PydapBackendEntrypoint(BackendEntrypoint):
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -295,7 +310,12 @@ class PydapBackendEntrypoint(BackendEntrypoint):
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
