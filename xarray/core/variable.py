@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, NoReturn, cast
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
+from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
 from xarray.compat.array_api_compat import to_like_array
@@ -40,6 +41,7 @@ from xarray.core.utils import (
     emit_user_level_warning,
     ensure_us_time_resolution,
     infix_dims,
+    is_allowed_extension_array,
     is_dict_like,
     is_duck_array,
     is_duck_dask_array,
@@ -198,14 +200,19 @@ def _maybe_wrap_data(data):
         return PandasIndexingAdapter(data)
     if isinstance(data, UNSUPPORTED_EXTENSION_ARRAY_TYPES):
         return data.to_numpy()
-    if isinstance(data, pd.api.extensions.ExtensionArray):
+    if isinstance(
+        data, pd.api.extensions.ExtensionArray
+    ) and is_allowed_extension_array(data):
         return PandasExtensionArray(data)
     return data
 
 
 def _possibly_convert_objects(values):
     """Convert object arrays into datetime64 and timedelta64 according
-    to the pandas convention.
+    to the pandas convention.  For backwards compat, as of 3.0.0 pandas,
+    object dtype inputs are cast to strings by `pandas.Series`
+    but we output them as object dtype with the input metadata preserved as well.
+
 
     * datetime.datetime
     * datetime.timedelta
@@ -220,6 +227,17 @@ def _possibly_convert_objects(values):
             result.flags.writeable = True
         except ValueError:
             result = result.copy()
+    # For why we need this behavior: https://github.com/pandas-dev/pandas/issues/61938
+    # Object datatype inputs that are strings
+    # will be converted to strings by `pandas.Series`, and as of 3.0.0, lose
+    # `dtype.metadata`.  If the roundtrip back to numpy in this function yields an
+    # object array again, the dtype.metadata will be preserved.
+    if (
+        result.dtype.kind == "O"
+        and values.dtype.kind == "O"
+        and Version(pd.__version__) >= Version("3.0.0dev0")
+    ):
+        result.dtype = values.dtype
     return result
 
 
@@ -261,7 +279,8 @@ def as_compatible_data(
     if isinstance(data, pd.Series | pd.DataFrame):
         if (
             isinstance(data, pd.Series)
-            and pd.api.types.is_extension_array_dtype(data)
+            and is_allowed_extension_array(data.array)
+            # Some datetime types are not allowed as well as backing Variable types
             and not isinstance(data.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES)
         ):
             pandas_data = data.array
