@@ -666,6 +666,18 @@ class TestCoords:
             "b": np.dtype("int64"),
         }
 
+    def test_dims(self) -> None:
+        # https://github.com/pydata/xarray/issues/9466
+        ds = Dataset(
+            data_vars={
+                "foo": (["x", "y"], np.random.randn(2, 3)),
+            },
+        )
+        dt = DataTree(dataset=ds)
+        dt["child"] = DataTree()
+
+        assert not len(dt.coords.dims)
+
     def test_modify(self) -> None:
         ds = Dataset(
             data_vars={

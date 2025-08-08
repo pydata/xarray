@@ -1522,6 +1522,12 @@ class TestDataArray:
             self.mda["level_1"] = ("x", np.arange(4))
             self.mda.coords["level_1"] = ("x", np.arange(4))
 
+    def test_coords_dims(self) -> None:
+        da = DataArray(
+            [[1.0, 2.0], [3.0, 4.0]], coords={"a": ("x", [0, 1])}, dims=("x", "y")
+        )
+        assert da.coords.dims == ("x",)
+
     def test_coords_to_index(self) -> None:
         da = DataArray(np.zeros((2, 3)), [("x", [1, 2]), ("y", list("abc"))])
 
