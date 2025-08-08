@@ -138,7 +138,12 @@ def refresh_engines() -> None:
 
 
 def guess_engine(
-    store_spec: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+    store_spec: str
+    | os.PathLike[Any]
+    | ReadBuffer
+    | bytes
+    | memoryview
+    | AbstractDataStore,
 ) -> str | type[BackendEntrypoint]:
     engines = list_engines()
 

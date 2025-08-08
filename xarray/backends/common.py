@@ -4,9 +4,18 @@ import logging
 import os
 import time
 import traceback
-from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from glob import glob
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Generic,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -188,6 +197,24 @@ def _find_absolute_paths(
     return _normalize_path_list(paths)
 
 
+BytesOrMemory = TypeVar("BytesOrMemory", bytes, memoryview)
+
+
+@dataclass
+class BytesIOProxy(Generic[BytesOrMemory]):
+    """Proxy object for a write that returns either bytes or a memoryview."""
+
+    # TODO: remove this in favor of BytesIO when Dataset.to_netcdf() stops
+    # returning bytes from the scipy engine
+    getvalue: Callable[[], BytesOrMemory] | None = None
+
+    def getvalue_or_getbuffer(self) -> BytesOrMemory:
+        """Get the value of this write as bytes or memory."""
+        if self.getvalue is None:
+            raise ValueError("must set getvalue before fetching value")
+        return self.getvalue()
+
+
 def _open_remote_file(file, mode, storage_options=None):
     import fsspec
 
@@ -322,6 +349,11 @@ class AbstractDataStore:
 
     def __exit__(self, exception_type, exception_value, traceback):
         self.close()
+
+
+T_PathFileOrDataStore = (
+    str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
+)
 
 
 class ArrayWriter:
@@ -705,7 +737,12 @@ class BackendEntrypoint:
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> Dataset:
@@ -717,7 +754,12 @@ class BackendEntrypoint:
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
     ) -> bool:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
@@ -727,7 +769,12 @@ class BackendEntrypoint:
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> DataTree:
@@ -739,7 +786,12 @@ class BackendEntrypoint:
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> dict[str, Dataset]:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import io
 import itertools
 import textwrap
 from collections import ChainMap
@@ -12,6 +13,7 @@ from collections.abc import (
     Mapping,
 )
 from html import escape
+from os import PathLike
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -1659,9 +1661,11 @@ class DataTree(
     def __eq__(self, other: DtCompatible) -> Self:  # type: ignore[override]
         return super().__eq__(other)
 
+    # filepath=None writes to a memoryview
+    @overload
     def to_netcdf(
         self,
-        filepath,
+        filepath: None = None,
         mode: NetcdfWriteModes = "w",
         encoding=None,
         unlimited_dims=None,
@@ -1671,14 +1675,45 @@ class DataTree(
         write_inherited_coords: bool = False,
         compute: bool = True,
         **kwargs,
-    ):
+    ) -> memoryview: ...
+
+    @overload
+    def to_netcdf(
+        self,
+        filepath: str | PathLike | io.IOBase,
+        mode: NetcdfWriteModes = "w",
+        encoding=None,
+        unlimited_dims=None,
+        format: T_DataTreeNetcdfTypes | None = None,
+        engine: T_DataTreeNetcdfEngine | None = None,
+        group: str | None = None,
+        write_inherited_coords: bool = False,
+        compute: bool = True,
+        **kwargs,
+    ) -> None: ...
+
+    def to_netcdf(
+        self,
+        filepath: str | PathLike | io.IOBase | None = None,
+        mode: NetcdfWriteModes = "w",
+        encoding=None,
+        unlimited_dims=None,
+        format: T_DataTreeNetcdfTypes | None = None,
+        engine: T_DataTreeNetcdfEngine | None = None,
+        group: str | None = None,
+        write_inherited_coords: bool = False,
+        compute: bool = True,
+        **kwargs,
+    ) -> None | memoryview:
         """
         Write datatree contents to a netCDF file.
 
         Parameters
         ----------
-        filepath : str or Path
-            Path to which to save this datatree.
+        filepath : str or PathLike or file-like object or None
+            Path to which to save this datatree, or a file-like object to write
+            it to (which must support read and write and be seekable) or None
+            to return in-memory bytes as a memoryview.
         mode : {"w", "a"}, default: "w"
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
@@ -1717,6 +1752,11 @@ class DataTree(
         kwargs :
             Additional keyword arguments to be passed to ``xarray.Dataset.to_netcdf``
 
+        Returns
+        -------
+            * ``memoryview`` if path is None
+            * ``None`` otherwise
+
         Note
         ----
             Due to file format specifications the on-disk root group name
@@ -1724,7 +1764,7 @@ class DataTree(
         """
         from xarray.core.datatree_io import _datatree_to_netcdf
 
-        _datatree_to_netcdf(
+        return _datatree_to_netcdf(
             self,
             filepath,
             mode=mode,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import re
 
 import numpy as np
@@ -53,10 +54,11 @@ def test_infer_dtype_error_on_mixed_types(data):
 def test_encoding_failure_note():
     # Create an arbitrary value that cannot be encoded in netCDF3
     ds = xr.Dataset({"invalid": np.array([2**63 - 1], dtype=np.int64)})
+    f = io.BytesIO()
     with pytest.raises(
         ValueError,
         match=re.escape(
             "Raised while encoding variable 'invalid' with value <xarray.Variable"
         ),
     ):
-        ds.to_netcdf()
+        ds.to_netcdf(f, engine="scipy")
