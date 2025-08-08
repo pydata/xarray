@@ -24,7 +24,6 @@ if TYPE_CHECKING:
         DaskArray = NDArray  # type: ignore[assignment, misc]
         DaskCollection: Any = NDArray  # type: ignore[no-redef]
 
-    from xarray.core.variable import Variable
     from xarray.namedarray._typing import DuckArray, _Dim, _DType, duckarray
     from xarray.namedarray.parallelcompat import T_ChunkedArray
 
@@ -199,7 +198,7 @@ def either_dict_or_kwargs(
 
 
 def fake_target_chunksize(
-    data: DuckArray[Any] | T_ChunkedArray | Variable,
+    data: DuckArray[Any] | T_ChunkedArray,
     target_chunksize: int,
 ) -> tuple[int, _DType]:
     """
@@ -220,7 +219,7 @@ def fake_target_chunksize(
     if data.dtype == object:
         nbytes_approx: int = sys.getsizeof(first_n_items(data, 1))  # type: ignore[no-untyped-call]
     else:
-        nbytes_approx = data[0].itemsize
+        nbytes_approx = data.dtype.itemsize
 
     f64_nbytes = output_dtype.itemsize  # Should be 8 bytes
 

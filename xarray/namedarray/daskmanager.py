@@ -18,7 +18,7 @@ if TYPE_CHECKING:
         _NormalizedChunks,
         duckarray,
     )
-    from xarray.namedarray.parallelcompat import _Chunks
+    from xarray.namedarray.parallelcompat import ChunkedArrayMixinProtocol, _Chunks
 
     try:
         from dask.array import Array as DaskArray
@@ -268,9 +268,9 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             raise NotImplementedError("Only chunks='auto' is supported at present.")
         return dask.array.shuffle(x, indexer, axis, chunks="auto")
 
-    def rechunk(  # type: ignore[override]
+    def rechunk(
         self,
-        data: T_ChunkedArray,
+        data: ChunkedArrayMixinProtocol,
         chunks: _NormalizedChunks | tuple[int, ...] | _Chunks,
         **kwargs: Any,
     ) -> Any:
