@@ -202,10 +202,10 @@ BytesOrMemory = TypeVar("BytesOrMemory", bytes, memoryview)
 
 @dataclass
 class BytesIOProxy(Generic[BytesOrMemory]):
-    """Proxy object for a write that either bytes or a memoryview."""
+    """Proxy object for a write that returns either bytes or a memoryview."""
 
     # TODO: remove this in favor of BytesIO when Dataset.to_netcdf() stops
-    # return bytes from the scipy engine
+    # returning bytes from the scipy engine
     getvalue: Callable[[], BytesOrMemory] | None = None
 
     def getvalue_or_getbuffer(self) -> BytesOrMemory:
