@@ -10,6 +10,7 @@ from xarray.backends.common import (
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
+    T_PathFileOrDataStore,
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
     robust_getitem,
@@ -207,25 +208,14 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     description = "Open remote datasets via OPeNDAP using pydap in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.PydapBackendEntrypoint.html"
 
-    def guess_can_open(
-        self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
-    ) -> bool:
+    def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
 
     def open_dataset(
         self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
+        filename_or_obj: (
+            str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
+        ),
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -268,12 +258,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
 
     def open_datatree(
         self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -310,12 +295,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,

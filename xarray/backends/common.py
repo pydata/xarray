@@ -351,6 +351,11 @@ class AbstractDataStore:
         self.close()
 
 
+T_PathFileOrDataStore = (
+    str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
+)
+
+
 class ArrayWriter:
     __slots__ = ("lock", "regions", "sources", "targets")
 

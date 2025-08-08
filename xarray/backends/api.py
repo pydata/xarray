@@ -32,6 +32,7 @@ from xarray.backends.common import (
     AbstractDataStore,
     ArrayWriter,
     BytesIOProxy,
+    T_PathFileOrDataStore,
     _find_absolute_paths,
     _normalize_path,
 )
@@ -504,12 +505,7 @@ def _datatree_from_backend_datatree(
 
 
 def open_dataset(
-    filename_or_obj: str
-    | os.PathLike[Any]
-    | ReadBuffer
-    | bytes
-    | memoryview
-    | AbstractDataStore,
+    filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -750,12 +746,7 @@ def open_dataset(
 
 
 def open_dataarray(
-    filename_or_obj: str
-    | os.PathLike[Any]
-    | ReadBuffer
-    | bytes
-    | memoryview
-    | AbstractDataStore,
+    filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -983,12 +974,7 @@ def open_dataarray(
 
 
 def open_datatree(
-    filename_or_obj: str
-    | os.PathLike[Any]
-    | ReadBuffer
-    | bytes
-    | memoryview
-    | AbstractDataStore,
+    filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -1228,12 +1214,7 @@ def open_datatree(
 
 
 def open_groups(
-    filename_or_obj: str
-    | os.PathLike[Any]
-    | ReadBuffer
-    | bytes
-    | memoryview
-    | AbstractDataStore,
+    filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,

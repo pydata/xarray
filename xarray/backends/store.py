@@ -1,46 +1,32 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from xarray import conventions
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendEntrypoint,
+    T_PathFileOrDataStore,
 )
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataset import Dataset
 
 if TYPE_CHECKING:
-    import os
-
-    from xarray.core.types import ReadBuffer
+    pass
 
 
 class StoreBackendEntrypoint(BackendEntrypoint):
     description = "Open AbstractDataStore instances in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.StoreBackendEntrypoint.html"
 
-    def guess_can_open(
-        self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
-    ) -> bool:
+    def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         return isinstance(filename_or_obj, AbstractDataStore)
 
     def open_dataset(
         self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,

@@ -12,6 +12,7 @@ from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendEntrypoint,
     BytesIOProxy,
+    T_PathFileOrDataStore,
     WritableCFDataStore,
     _normalize_path,
     _open_remote_file,
@@ -407,17 +408,12 @@ def _emit_phony_dims_warning():
 
 
 def _normalize_filename_or_obj(
-    filename_or_obj: str
-    | os.PathLike[Any]
-    | ReadBuffer
-    | bytes
-    | memoryview
-    | AbstractDataStore,
+    filename_or_obj: T_PathFileOrDataStore,
 ) -> str | ReadBuffer | AbstractDataStore:
     if isinstance(filename_or_obj, bytes | memoryview):
         return io.BytesIO(filename_or_obj)
     else:
-        return _normalize_path(filename_or_obj)  # type: ignore[return-value]
+        return _normalize_path(filename_or_obj)
 
 
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
@@ -447,15 +443,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     )
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.H5netcdfBackendEntrypoint.html"
 
-    def guess_can_open(
-        self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
-    ) -> bool:
+    def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None:
@@ -469,12 +457,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
     def open_dataset(
         self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -534,12 +517,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
     def open_datatree(
         self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -582,12 +560,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
