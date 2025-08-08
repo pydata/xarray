@@ -46,6 +46,9 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix detection of the ``h5netcdf`` backend. Xarray now selects ``h5netcdf`` if the default ``netCDF4`` engine is not available (:issue:`10401`, :pull:`10557`).
   By `Scott Staniewicz <https://github.com/scottstanie>`_.
+- Ensure ``unlimited_dims` passed to :py:meth:`xarray.DataArray.to_netcdf`, :py:meth:`xarray.Dataset.to_netcdf` or :py:meth:`xarray.DataTree.to_netcdf` only contains dimensions present in the object; raise ``ValueError`` otherwise (:issue:`10549`, :pull:`10608`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
