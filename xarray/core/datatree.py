@@ -75,7 +75,9 @@ except ImportError:
 if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
+    from dask.delayed import Delayed
 
+    from xarray.backends import ZarrStore
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
     from xarray.core.types import (
         Dims,
@@ -1788,7 +1790,7 @@ class DataTree(
         write_inherited_coords: bool = False,
         compute: bool = True,
         **kwargs,
-    ):
+    ) -> ZarrStore | Delayed:
         """
         Write datatree contents to a Zarr store.
 
@@ -1831,7 +1833,7 @@ class DataTree(
         """
         from xarray.core.datatree_io import _datatree_to_zarr
 
-        _datatree_to_zarr(
+        return _datatree_to_zarr(
             self,
             store,
             mode=mode,

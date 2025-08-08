@@ -4,7 +4,7 @@ import functools
 import io
 import os
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
 import numpy as np
 
@@ -23,6 +23,7 @@ from xarray.backends.file_manager import (
     CachingFileManager,
     DummyFileManager,
     FileManager,
+    PickleableFileManager,
 )
 from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from xarray.backends.netCDF4_ import (
@@ -149,6 +150,17 @@ class H5NetCDFStore(WritableCFDataStore):
         self.lock = ensure_lock(lock)
         self.autoclose = autoclose
 
+    def get_child_store(self, group: str) -> Self:
+        if self._group is not None:
+            group = os.path.join(self._group, group)
+        return type(self)(
+            self._manager,
+            group=group,
+            mode=self._mode,
+            lock=self.lock,
+            autoclose=self.autoclose,
+        )
+
     @classmethod
     def open(
         cls,
@@ -176,7 +188,7 @@ class H5NetCDFStore(WritableCFDataStore):
         if isinstance(filename, BytesIOProxy):
             source = filename
             filename = io.BytesIO()
-            source.getvalue = filename.getbuffer
+            source.getter = filename.getbuffer
 
         if isinstance(filename, io.IOBase) and mode == "r":
             magic_number = read_magic_number_from_file(filename)
@@ -204,11 +216,10 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
-        manager = (
-            CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
-            if isinstance(filename, str)
-            else h5netcdf.File(filename, mode=mode, **kwargs)
+        manager_cls = (
+            CachingFileManager if isinstance(filename, str) else PickleableFileManager
         )
+        manager = manager_cls(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):
