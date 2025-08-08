@@ -749,7 +749,6 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
     def get_auto_chunk_size(
         self,
-        var,  #: xarray.Variable,
     ) -> int:
         """
         Get the default chunk size for a variable.
@@ -759,8 +758,6 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
         Parameters
         ----------
-        var : xarray.Variable
-            The variable for which to get the chunk size.
         target_chunksize : int, optional
             The target chunk size in bytes. If not provided, a default value is used.
 

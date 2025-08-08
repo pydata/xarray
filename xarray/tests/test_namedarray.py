@@ -634,7 +634,7 @@ def test_fake_target_chunksize(
     """
     target_chunksize = 1024
 
-    faked_chunksize, dtype = fake_target_chunksize(input_array, target_chunksize)  # type: ignore[var-annotated]
+    faked_chunksize, dtype = fake_target_chunksize(input_array, target_chunksize)  # type: ignore[arg-type]
 
     assert faked_chunksize == expected_chunksize_faked
     assert dtype == np.float64
@@ -660,7 +660,7 @@ def test_fake_target_chunksize_cftime() -> None:
         dtype=object,
     ).reshape(10, 10)
 
-    faked_chunksize, dtype = fake_target_chunksize(input_array, target_chunksize)  # type: ignore[var-annotated]
+    faked_chunksize, dtype = fake_target_chunksize(input_array, target_chunksize)  # type: ignore[arg-type]
 
     assert faked_chunksize == 73
     assert dtype == np.float64

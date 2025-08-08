@@ -11,14 +11,14 @@ from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedAr
 from xarray.namedarray.utils import is_duck_dask_array, module_available
 
 if TYPE_CHECKING:
-    from xarray.core.variable import Variable
     from xarray.namedarray._typing import (
         T_Chunks,
+        _Chunks,
         _DType_co,
         _NormalizedChunks,
         duckarray,
     )
-    from xarray.namedarray.parallelcompat import ChunkedArrayMixinProtocol, _Chunks
+    from xarray.namedarray.parallelcompat import ChunkedArrayMixinProtocol
 
     try:
         from dask.array import Array as DaskArray
@@ -303,11 +303,9 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
             from xarray.namedarray.utils import fake_target_chunksize
 
-            limit = self.get_auto_chunk_size(data)
+            limit = self.get_auto_chunk_size()
 
-            limit, var_dtype = fake_target_chunksize(  # type: ignore[var-annotated]
-                data, target_chunksize=limit
-            )
+            limit, var_dtype = fake_target_chunksize(data, target_chunksize=limit)
 
             chunks = normalize_chunks(
                 chunks,
@@ -318,7 +316,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
         return data.rechunk(chunks, **kwargs)
 
-    def get_auto_chunk_size(self, var: Variable) -> int:
+    def get_auto_chunk_size(self) -> int:
         from dask import config as dask_config
         from dask.utils import parse_bytes
 

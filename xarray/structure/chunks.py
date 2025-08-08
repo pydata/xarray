@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.types import T_ChunkDim
+    from xarray.core.variable import IndexVariable, Variable
 
     MissingCoreDimOptions = Literal["raise", "copy", "drop"]
 
@@ -91,11 +92,9 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
     _chunks = list(chunks.values()) if is_dict_like(chunks) else chunks
     auto_chunks = any(_chunk == "auto" for _chunk in _chunks)
 
-    if _contains_cftime_datetimes(var) and auto_chunks:
-        limit = chunkmanager.get_auto_chunk_size(var)
-        limit, var_dtype = fake_target_chunksize(var, limit)
-    else:
-        limit, var_dtype = None, var.dtype
+    limit = chunkmanager.get_auto_chunk_size()
+    no_op = not (_contains_cftime_datetimes(var) and auto_chunks)
+    limit, var_dtype = fake_target_chunksize(var, limit, no_op)
 
     chunk_shape = chunkmanager.normalize_chunks(
         chunk_shape,

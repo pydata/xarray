@@ -24,7 +24,8 @@ if TYPE_CHECKING:
         DaskArray = NDArray  # type: ignore[assignment, misc]
         DaskCollection: Any = NDArray  # type: ignore[no-redef]
 
-    from xarray.namedarray._typing import DuckArray, _Dim, _DType, duckarray
+    from xarray.core.variable import Variable
+    from xarray.namedarray._typing import _Dim, duckarray
     from xarray.namedarray.parallelcompat import T_ChunkedArray
 
 
@@ -198,9 +199,10 @@ def either_dict_or_kwargs(
 
 
 def fake_target_chunksize(
-    data: DuckArray[Any] | T_ChunkedArray,
+    data: Variable | T_ChunkedArray,
     target_chunksize: int,
-) -> tuple[int, _DType]:
+    no_op: bool = False,
+) -> tuple[int, np.dtype[Any]]:
     """
     Naughty trick - let's get the ratio of our cftime_nbytes, and then compute
     the ratio of that size to a np.float64. Then we can just adjust our target_chunksize
@@ -210,11 +212,15 @@ def fake_target_chunksize(
     ? to this in daskmanager.py requires it to be that. I still need to wrap my head
     ? around the typing here a bit more.
     """
+
+    if no_op:
+        return target_chunksize, data.dtype
+
     import numpy as np
 
     from xarray.core.formatting import first_n_items
 
-    output_dtype: _DType = np.dtype(np.float64)  # type: ignore[assignment]
+    output_dtype = np.dtype(np.float64)
 
     if data.dtype == object:
         nbytes_approx: int = sys.getsizeof(first_n_items(data, 1))  # type: ignore[no-untyped-call]
