@@ -1481,7 +1481,7 @@ class DataTree(
         ...         "/c": xr.Dataset(),
         ...     }
         ... )
-        >>> dt.prune()  # doctest: +NORMALIZE_WHITESPACE
+        >>> dt.prune()  # doctest: +ELLIPSIS,+NORMALIZE_WHITESPACE+NORMALIZE_WHITESPACE
         <xarray.DataTree>
         Group: /
         ├── Group: /a
