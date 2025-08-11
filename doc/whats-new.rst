@@ -15,8 +15,6 @@ New Features
 
 - :py:meth:`DataTree.to_netcdf` can now write to a file-like object, or return bytes if called without a filepath. (:issue:`10570`)
   By `Matthew Willson <https://github.com/mjwillson>`_.
-- Added exception handling for invalid files in ``xarray.open_mfdataset``
-  By `Pratiman Patel <https://github.com/pratiman-91>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
