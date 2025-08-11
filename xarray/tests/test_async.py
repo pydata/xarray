@@ -206,7 +206,7 @@ class TestAsyncLoad:
             ),  # tests basic indexing
             pytest.param(
                 {"dim2": [1, 3]},
-                "(orthogonal|vectorized) async indexing",  # see https://github.com/pydata/xarray/pull/10327#issuecomment-3175821377
+                "orthogonal async indexing",
                 marks=pytest.mark.skipif(
                     has_zarr_v3_async_oindex,
                     reason="current version of zarr has async orthogonal indexing",
@@ -217,7 +217,7 @@ class TestAsyncLoad:
                     "dim1": xr.Variable(data=[2, 3], dims="points"),
                     "dim2": xr.Variable(data=[1, 3], dims="points"),
                 },
-                "(orthogonal|vectorized) async indexing",  # see https://github.com/pydata/xarray/pull/10327#issuecomment-3175821377
+                "vectorized async indexing",
                 marks=pytest.mark.skipif(
                     has_zarr_v3_async_oindex,
                     reason="current version of zarr has async vectorized indexing",
@@ -229,6 +229,7 @@ class TestAsyncLoad:
         """Test that trying to use async load with insufficiently new version of zarr raises a clear error"""
 
         ds = xr.open_zarr(store, consolidated=False, chunks=None)
+        var = ds["var1"].variable
 
         with pytest.raises(NotImplementedError, match=expected_err_msg):
-            await ds.isel(**indexer).load_async()
+            await var.isel(**indexer).load_async()
