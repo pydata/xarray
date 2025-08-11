@@ -15,6 +15,9 @@ New Features
 
 - :py:meth:`DataTree.to_netcdf` can now write to a file-like object, or return bytes if called without a filepath. (:issue:`10570`)
   By `Matthew Willson <https://github.com/mjwillson>`_.
+- ``compute=False`` is now supported by :py:meth:`DataTree.to_netcdf` and
+  :py:meth:`DataTree.to_zarr`.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

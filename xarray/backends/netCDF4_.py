@@ -5,7 +5,7 @@ import operator
 import os
 from collections.abc import Iterable
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
 import numpy as np
 
@@ -399,6 +399,17 @@ class NetCDF4DataStore(WritableCFDataStore):
         self.is_remote = is_remote_uri(self._filename)
         self.lock = ensure_lock(lock)
         self.autoclose = autoclose
+
+    def get_child_store(self, group: str) -> Self:
+        if self._group is not None:
+            group = os.path.join(self._group, group)
+        return type(self)(
+            self._manager,
+            group=group,
+            mode=self._mode,
+            lock=self.lock,
+            autoclose=self.autoclose,
+        )
 
     @classmethod
     def open(
