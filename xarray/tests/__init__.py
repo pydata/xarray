@@ -48,6 +48,7 @@ except ImportError:
 warnings.filterwarnings("ignore", "'urllib3.contrib.pyopenssl' module is deprecated")
 warnings.filterwarnings("ignore", "Deprecated call to `pkg_resources.declare_namespace")
 warnings.filterwarnings("ignore", "pkg_resources is deprecated as an API")
+warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
 
 arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),
@@ -130,6 +131,20 @@ has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
 has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "3.0.0")
+has_zarr_v3_dtypes, requires_zarr_v3_dtypes = _importorskip("zarr", "3.1.0")
+if has_zarr_v3:
+    import zarr
+
+    # manual update by checking attrs for now
+    # TODO: use version specifier
+    # installing from git main is giving me a lower version than the
+    # most recently released zarr
+    has_zarr_v3_dtypes = hasattr(zarr.core, "dtype")
+
+    requires_zarr_v3_dtypes = pytest.mark.skipif(
+        not has_zarr_v3_dtypes, reason="requires zarr>3.1.0"
+    )
+
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg")

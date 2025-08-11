@@ -495,7 +495,7 @@ class TestPyDAPDatatreeIO:
             |       Salinity     (time, Z, Y, X) float32 ...
         """
         tree = open_datatree(url, engine=self.engine)
-        assert list(tree.dims) == ["time", "Z", "nv"]
+        assert set(tree.dims) == {"time", "Z", "nv"}
         assert tree["/SimpleGroup"].coords["time"].dims == ("time",)
         assert tree["/SimpleGroup"].coords["Z"].dims == ("Z",)
         assert tree["/SimpleGroup"].coords["Y"].dims == ("Y",)
@@ -538,6 +538,28 @@ class TestH5NetCDFDatatreeIO(DatatreeIOBase):
                     "phony_dim_2": 5,
                     "phony_dim_3": 25,
                 }
+
+    def test_roundtrip_via_bytes(self, simple_datatree):
+        original_dt = simple_datatree
+        roundtrip_dt = open_datatree(original_dt.to_netcdf())
+        assert_equal(original_dt, roundtrip_dt)
+
+    def test_roundtrip_via_bytes_engine_specified(self, simple_datatree):
+        original_dt = simple_datatree
+        roundtrip_dt = open_datatree(original_dt.to_netcdf(engine=self.engine))
+        assert_equal(original_dt, roundtrip_dt)
+
+    def test_roundtrip_using_filelike_object(self, tmpdir, simple_datatree):
+        original_dt = simple_datatree
+        filepath = tmpdir + "/test.nc"
+        # h5py requires both read and write access when writing, it will
+        # work with file-like objects provided they support both, and are
+        # seekable.
+        with open(filepath, "wb+") as file:
+            original_dt.to_netcdf(file, engine=self.engine)
+        with open(filepath, "rb") as file:
+            with open_datatree(file, engine=self.engine) as roundtrip_dt:
+                assert_equal(original_dt, roundtrip_dt)
 
 
 @requires_zarr

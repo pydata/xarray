@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import datetime
+import io
 import math
 import sys
 import warnings
@@ -26,7 +27,6 @@ from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_extension_array_dtype
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
@@ -91,6 +91,7 @@ from xarray.core.utils import (
     either_dict_or_kwargs,
     emit_user_level_warning,
     infix_dims,
+    is_allowed_extension_array,
     is_dict_like,
     is_duck_array,
     is_duck_dask_array,
@@ -122,7 +123,13 @@ from xarray.structure.merge import (
     merge_coordinates_without_align,
     merge_data_and_coords,
 )
-from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
+from xarray.util.deprecation_helpers import (
+    _COMPAT_DEFAULT,
+    _JOIN_DEFAULT,
+    CombineKwargDefault,
+    _deprecate_positional_args,
+    deprecate_dims,
+)
 
 if TYPE_CHECKING:
     from dask.dataframe import DataFrame as DaskDataFrame
@@ -1878,7 +1885,7 @@ class Dataset(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes: ...
+    ) -> bytes | memoryview: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -1901,7 +1908,7 @@ class Dataset(
     @overload
     def to_netcdf(
         self,
-        path: str | PathLike,
+        path: str | PathLike | io.IOBase,
         mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
@@ -1932,7 +1939,7 @@ class Dataset(
 
     def to_netcdf(
         self,
-        path: str | PathLike | None = None,
+        path: str | PathLike | io.IOBase | None = None,
         mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
@@ -1942,7 +1949,7 @@ class Dataset(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes | Delayed | None:
+    ) -> bytes | memoryview | Delayed | None:
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -2014,9 +2021,9 @@ class Dataset(
 
         Returns
         -------
-            * ``bytes`` if path is None
+            * ``bytes`` or ``memoryview`` if path is None
             * ``dask.delayed.Delayed`` if compute is False
-            * None otherwise
+            * ``None`` otherwise
 
         See Also
         --------
@@ -3851,13 +3858,22 @@ class Dataset(
                 var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
                 variables[name] = missing.interp(var, var_indexers, method, **kwargs)
             elif dtype_kind in "ObU" and (use_indexers.keys() & var.dims):
-                # For types that we do not understand do stepwise
-                # interpolation to avoid modifying the elements.
-                # reindex the variable instead because it supports
-                # booleans and objects and retains the dtype but inside
-                # this loop there might be some duplicate code that slows it
-                # down, therefore collect these signals and run it later:
-                reindex_vars.append(name)
+                if all(var.sizes[d] == 1 for d in (use_indexers.keys() & var.dims)):
+                    # Broadcastable, can be handled quickly without reindex:
+                    to_broadcast = (var.squeeze(),) + tuple(
+                        dest for _, dest in use_indexers.values()
+                    )
+                    variables[name] = broadcast_variables(*to_broadcast)[0].copy(
+                        deep=True
+                    )
+                else:
+                    # For types that we do not understand do stepwise
+                    # interpolation to avoid modifying the elements.
+                    # reindex the variable instead because it supports
+                    # booleans and objects and retains the dtype but inside
+                    # this loop there might be some duplicate code that slows it
+                    # down, therefore collect these signals and run it later:
+                    reindex_vars.append(name)
             elif all(d not in indexers for d in var.dims):
                 # For anything else we can only keep variables if they
                 # are not dependent on any coords that are being
@@ -5312,7 +5328,14 @@ class Dataset(
 
         # concatenate the arrays
         stackable_vars = [stack_dataarray(da) for da in self.data_vars.values()]
-        data_array = concat(stackable_vars, dim=new_dim)
+        data_array = concat(
+            stackable_vars,
+            dim=new_dim,
+            data_vars="all",
+            coords="different",
+            compat="equals",
+            join="outer",
+        )
 
         if name is not None:
             data_array.name = name
@@ -5556,8 +5579,8 @@ class Dataset(
         self,
         other: CoercibleMapping | DataArray,
         overwrite_vars: Hashable | Iterable[Hashable] = frozenset(),
-        compat: CompatOptions = "no_conflicts",
-        join: JoinOptions = "outer",
+        compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
+        join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
         fill_value: Any = xrdtypes.NA,
         combine_attrs: CombineAttrsOptions = "override",
     ) -> Self:
@@ -5807,11 +5830,10 @@ class Dataset(
                 other_names.update(idx_other_names)
         if other_names:
             names_set |= set(other_names)
-            warnings.warn(
+            emit_user_level_warning(
                 f"Deleting a single level of a MultiIndex is deprecated. Previously, this deleted all levels of a MultiIndex. "
                 f"Please also drop the following variables: {other_names!r} to avoid an error in the future.",
                 DeprecationWarning,
-                stacklevel=2,
             )
 
         assert_no_index_corrupted(self.xindexes, names_set)
@@ -6772,7 +6794,7 @@ class Dataset(
             elif (
                 # Some reduction functions (e.g. std, var) need to run on variables
                 # that don't have the reduce dims: PR5393
-                not is_extension_array_dtype(var.dtype)
+                not pd.api.types.is_extension_array_dtype(var.dtype)  # noqa: TID251
                 and (
                     not reduce_dims
                     or not numeric_only
@@ -7097,12 +7119,12 @@ class Dataset(
         non_extension_array_columns = [
             k
             for k in columns_in_order
-            if not is_extension_array_dtype(self.variables[k].data)
+            if not pd.api.types.is_extension_array_dtype(self.variables[k].data)  # noqa: TID251
         ]
         extension_array_columns = [
             k
             for k in columns_in_order
-            if is_extension_array_dtype(self.variables[k].data)
+            if pd.api.types.is_extension_array_dtype(self.variables[k].data)  # noqa: TID251
         ]
         extension_array_columns_different_index = [
             k
@@ -7294,7 +7316,7 @@ class Dataset(
         arrays = []
         extension_arrays = []
         for k, v in dataframe.items():
-            if not is_extension_array_dtype(v) or isinstance(
+            if not is_allowed_extension_array(v) or isinstance(
                 v.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES
             ):
                 arrays.append((k, np.asarray(v)))
@@ -9955,7 +9977,7 @@ class Dataset(
         :ref:`groupby`
             Users guide explanation of how to group and bin data.
 
-        :doc:`xarray-tutorial:intermediate/01-high-level-computation-patterns`
+        :doc:`xarray-tutorial:intermediate/computation/01-high-level-computation-patterns`
             Tutorial on :py:func:`~xarray.Dataset.Groupby` for windowed computation.
 
         :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
