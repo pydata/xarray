@@ -10,8 +10,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.backends.api import open_datatree, open_groups
-from xarray.core.datatree import DataTree
+from xarray import DataTree, load_datatree, open_datatree, open_groups
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
     has_zarr_v3,
@@ -19,6 +18,7 @@ from xarray.tests import (
     parametrize_zarr_format,
     requires_dask,
     requires_h5netcdf,
+    requires_h5netcdf_or_netCDF4,
     requires_netCDF4,
     requires_pydap,
     requires_zarr,
@@ -264,6 +264,21 @@ class DatatreeIOBase:
         with open_datatree(filepath, engine=self.engine) as roundtrip_dt:
             assert_equal(original_dt, roundtrip_dt)
             assert_identical(expected_dt, roundtrip_dt)
+
+    def test_roundtrip_via_memoryview_engine_specified(self, simple_datatree):
+        original_dt = simple_datatree
+        roundtrip_dt = load_datatree(
+            original_dt.to_netcdf(engine=self.engine), engine=self.engine
+        )
+        assert_equal(original_dt, roundtrip_dt)
+
+
+@requires_h5netcdf_or_netCDF4
+class TestGenericNetCDFIO:
+    def test_roundtrip_via_memoryview(self, simple_datatree):
+        original_dt = simple_datatree
+        roundtrip_dt = load_datatree(original_dt.to_netcdf())
+        assert_equal(original_dt, roundtrip_dt)
 
 
 @requires_netCDF4
@@ -539,16 +554,6 @@ class TestH5NetCDFDatatreeIO(DatatreeIOBase):
                     "phony_dim_3": 25,
                 }
 
-    def test_roundtrip_via_bytes(self, simple_datatree):
-        original_dt = simple_datatree
-        roundtrip_dt = open_datatree(original_dt.to_netcdf())
-        assert_equal(original_dt, roundtrip_dt)
-
-    def test_roundtrip_via_bytes_engine_specified(self, simple_datatree):
-        original_dt = simple_datatree
-        roundtrip_dt = open_datatree(original_dt.to_netcdf(engine=self.engine))
-        assert_equal(original_dt, roundtrip_dt)
-
     def test_roundtrip_using_filelike_object(self, tmpdir, simple_datatree):
         original_dt = simple_datatree
         filepath = tmpdir + "/test.nc"
@@ -575,6 +580,9 @@ class TestZarrDatatreeIO:
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
             assert_equal(original_dt, roundtrip_dt)
 
+    @pytest.mark.filterwarnings(
+        "ignore:Numcodecs codecs are not in the Zarr version 3 specification"
+    )
     def test_zarr_encoding(self, tmpdir, simple_datatree, zarr_format):
         filepath = str(tmpdir / "test.zarr")
         original_dt = simple_datatree
@@ -601,11 +609,10 @@ class TestZarrDatatreeIO:
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
             with pytest.raises(ValueError, match="unexpected encoding group.*"):
-                original_dt.to_zarr(
-                    filepath, encoding=enc, engine="zarr", zarr_format=zarr_format
-                )
+                original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
 
     @pytest.mark.xfail(reason="upstream zarr read-only changes have broken this test")
+    @pytest.mark.filterwarnings("ignore:Duplicate name")
     def test_to_zarr_zip_store(self, tmpdir, simple_datatree, zarr_format):
         from zarr.storage import ZipStore
 
@@ -653,7 +660,9 @@ class TestZarrDatatreeIO:
 
         storepath = tmp_path / "test.zarr"
         original_dt = simple_datatree.chunk()
-        original_dt.to_zarr(str(storepath), compute=False, zarr_format=zarr_format)
+        result = original_dt.to_zarr(
+            str(storepath), compute=False, zarr_format=zarr_format
+        )
 
         def assert_expected_zarr_files_exist(
             arr_dir: Path,
@@ -723,6 +732,13 @@ class TestZarrDatatreeIO:
                     is_scalar=not bool(var.dims),
                     zarr_format=zarr_format,
                 )
+
+        in_progress_dt = load_datatree(str(storepath), engine="zarr")
+        assert not in_progress_dt.equals(original_dt)
+
+        result.compute()  # type: ignore[union-attr]
+        written_dt = load_datatree(str(storepath), engine="zarr")
+        assert_identical(written_dt, original_dt)
 
     def test_to_zarr_inherited_coords(self, tmpdir, zarr_format):
         original_dt = DataTree.from_dict(

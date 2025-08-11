@@ -173,6 +173,10 @@ has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
 )
+has_h5netcdf_or_netCDF4 = has_h5netcdf or has_netCDF4
+requires_h5netcdf_or_netCDF4 = pytest.mark.skipif(
+    not has_h5netcdf_or_netCDF4, reason="requires h5netcdf or netCDF4"
+)
 has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
 requires_numbagg_or_bottleneck = pytest.mark.skipif(
     not has_numbagg_or_bottleneck, reason="requires numbagg or bottleneck"
