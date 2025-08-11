@@ -23,12 +23,11 @@ else:
     zarr = None  # type: ignore[assignment]
 
 
-@pytest.fixture(scope="module", params=ZARR_FORMATS)
+@pytest.fixture(params=ZARR_FORMATS)
 def store(request) -> "zarr.storage.MemoryStore":
     memorystore = zarr.storage.MemoryStore({})
 
     ds = create_test_data()
-    print(ds)
     ds.to_zarr(memorystore, zarr_format=request.param, consolidated=False)  # type: ignore[call-overload]
 
     return memorystore
