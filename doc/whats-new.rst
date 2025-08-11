@@ -5,15 +5,16 @@
 What's New
 ==========
 
-.. _whats-new.2025.07.1:
+.. _whats-new.2025.07.2:
 
-v2025.07.1 (unreleased)
+v2025.07.2 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
-- Allow skipping the creation of default indexes when opening datasets (:pull:`8051`).
-  By `Benoit Bovy <https://github.com/benbovy>`_ and `Justus Magin <https://github.com/keewis>`_.
+
+- :py:meth:`DataTree.to_netcdf` can now write to a file-like object, or return bytes if called without a filepath. (:issue:`10570`)
+  By `Matthew Willson <https://github.com/mjwillson>`_.
 - Added exception handling for invalid files in ``xarray.open_mfdataset``
   By `Pratiman Patel <https://github.com/pratiman-91>`_.
 
@@ -24,6 +25,65 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- Start a deprecation cycle for changing the default keyword arguments to :py:func:`concat`, :py:func:`merge`,
+  :py:func:`combine_nested`, :py:func:`combine_by_coords`, and :py:func:`open_mfdataset`.
+  Emits a :py:class:`FutureWarning` when using old defaults and new defaults would result in different behavior.
+  Adds an option: ``use_new_combine_kwarg_defaults`` to opt in to new defaults immediately.
+  New values are:
+
+  - ``data_vars``: None which means ``all`` when concatenating along a new dimension, and ``"minimal"`` when concatenating along an existing dimension
+  - ``coords``: "minimal"
+  - ``compat``: "override"
+  - ``join``: "exact"
+
+  (:issue:`8778`, :issue:`1385`, :pull:`10062`). By `Julia Signell <https://github.com/jsignell>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Fix Pydap Datatree backend testing. Testing now compares elements of (unordered) two sets (before, lists) (:pull:`10525`).
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+- Fix ``KeyError`` when passing a ``dim`` argument different from the default to ``convert_calendar`` (:pull:`10544`).
+  By `Eric Jansen <https://github.com/ej81>`_.
+
+- Fix transpose of boolean arrays read from disk. (:issue:`10536`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix detection of the ``h5netcdf`` backend. Xarray now selects ``h5netcdf`` if the default ``netCDF4`` engine is not available (:issue:`10401`, :pull:`10557`).
+  By `Scott Staniewicz <https://github.com/scottstanie>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+Performance
+~~~~~~~~~~~
+- Speed up non-numeric scalars when calling :py:meth:`Dataset.interp`. (:issue:`10054`, :pull:`10554`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
+.. _whats-new.2025.07.1:
+
+v2025.07.1 (July 09, 2025)
+--------------------------
+
+This release brings a lot of improvements to flexible indexes functionality, including new classes
+to ease building of new indexes with custom coordinate transforms (:py:class:`indexes.CoordinateTransformIndex`)
+and tree-like index structures (:py:class:`indexes.NDPointIndex`).
+See a `new gallery <https://xarray-indexes.readthedocs.io>`_ showing off the possibilities enabled by flexible indexes.
+
+Thanks to the 7 contributors to this release:
+Benoit Bovy, Deepak Cherian, Dhruva Kumar Kaushal, Dimitri Papadopoulos Orfanos, Illviljan, Justus Magin and Tom Nicholas
+
+New Features
+~~~~~~~~~~~~
+- New :py:class:`xarray.indexes.NDPointIndex`, which by default uses :py:class:`scipy.spatial.KDTree` under the hood for
+  the selection of irregular, n-dimensional data (:pull:`10478`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+- Allow skipping the creation of default indexes when opening datasets (:pull:`8051`).
+  By `Benoit Bovy <https://github.com/benbovy>`_ and `Justus Magin <https://github.com/keewis>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -37,7 +97,7 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- A `new gallery <https://xarray-indexes.readthedocs.io>`_ showing off the possibilities enabled by flexible indexes.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -65,9 +125,6 @@ New Features
 
 - Expose :py:class:`~xarray.indexes.RangeIndex`, and :py:class:`~xarray.indexes.CoordinateTransformIndex` as public api
   under the ``xarray.indexes`` namespace. By `Deepak Cherian <https://github.com/dcherian>`_.
-- New :py:class:`xarray.indexes.NDPointIndex`, which by default uses :py:class:`scipy.spatial.KDTree` under the hood for
-  the selection of irregular, n-dimensional data (:pull:`10478`).
-  By `Benoit Bovy <https://github.com/benbovy>`_.
 - Support zarr-python's new ``.supports_consolidated_metadata`` store property (:pull:`10457``).
   by `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Better error messages when encoding data to be written to disk fails (:pull:`10464`).
@@ -8384,8 +8441,15 @@ Backwards incompatible changes
 
   .. code:: python
 
-      ds = xray.Dataset({"x": 0})
+    In [1]: ds = xray.Dataset({"x": 0})
 
+    In [2]: xray.concat([ds, ds], dim="y")
+    Out[2]:
+    <xarray.Dataset> Size: 16B
+    Dimensions:  (y: 2)
+    Dimensions without coordinates: y
+    Data variables:
+        x        (y) int64 16B 0 0
   .. code:: python
 
       xray.concat([ds, ds], dim="y")
