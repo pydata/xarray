@@ -7,7 +7,6 @@ import operator
 from collections import Counter, defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
-from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, cast, overload
