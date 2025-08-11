@@ -309,7 +309,7 @@ class AbstractDataStore:
         raise NotImplementedError()
 
     def get_parent_dimensions(self):  # pragma: no cover
-        raise {}
+        return {}
 
     def get_attrs(self):  # pragma: no cover
         raise NotImplementedError()
