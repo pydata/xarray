@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import datetime
+import io
 import math
 import sys
 import warnings
@@ -1911,7 +1912,7 @@ class Dataset(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes: ...
+    ) -> bytes | memoryview: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -1934,7 +1935,7 @@ class Dataset(
     @overload
     def to_netcdf(
         self,
-        path: str | PathLike,
+        path: str | PathLike | io.IOBase,
         mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
@@ -1965,7 +1966,7 @@ class Dataset(
 
     def to_netcdf(
         self,
-        path: str | PathLike | None = None,
+        path: str | PathLike | io.IOBase | None = None,
         mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
@@ -1975,7 +1976,7 @@ class Dataset(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes | Delayed | None:
+    ) -> bytes | memoryview | Delayed | None:
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -2047,9 +2048,9 @@ class Dataset(
 
         Returns
         -------
-            * ``bytes`` if path is None
+            * ``bytes`` or ``memoryview`` if path is None
             * ``dask.delayed.Delayed`` if compute is False
-            * None otherwise
+            * ``None`` otherwise
 
         See Also
         --------

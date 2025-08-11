@@ -15,6 +15,10 @@ New Features
 
 - Added new asynchronous loading methods :py:meth:`~xarray.Dataset.load_async`, :py:meth:`~xarray.DataArray.load_async`, :py:meth:`~xarray.Variable.load_async`.
   (:issue:`10326`, :pull:`10327`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- :py:meth:`DataTree.to_netcdf` can now write to a file-like object, or return bytes if called without a filepath. (:issue:`10570`)
+  By `Matthew Willson <https://github.com/mjwillson>`_.
+- Added exception handling for invalid files in :py:func:`open_mfdataset`. (:issue:`6736`)
+  By `Pratiman Patel <https://github.com/pratiman-91>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
