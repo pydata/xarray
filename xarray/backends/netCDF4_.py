@@ -518,6 +518,16 @@ class NetCDF4DataStore(WritableCFDataStore):
     def get_dimensions(self):
         return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
 
+    def get_parent_dimensions(self):
+        group = self.ds
+        dims = {}
+        # dimensions defined in child groups have higher precedence
+        while (group := group.parent) is not None:
+            for k, v in group.dimensions.items():
+                if k not in dims:
+                    dims[k] = len(v)
+        return FrozenDict(dims)
+
     def get_encoding(self):
         return {
             "unlimited_dims": {

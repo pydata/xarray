@@ -19,6 +19,13 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- When writing to NetCDF files with groups, Xarray no longer redefines dimensions
+  that have the same size in parent groups (:issue:`10241`). This conforms with
+  `CF Conventions <https://cfconventions.org/cf-conventions/cf-conventions.html#_scope>`_
+  but may require adjustments for code that consumes NetCDF files produced by
+  Xarray.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 
 Deprecations
 ~~~~~~~~~~~~

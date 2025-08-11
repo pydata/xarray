@@ -308,6 +308,9 @@ class AbstractDataStore:
     def get_dimensions(self):  # pragma: no cover
         raise NotImplementedError()
 
+    def get_parent_dimensions(self):  # pragma: no cover
+        raise {}
+
     def get_attrs(self):  # pragma: no cover
         raise NotImplementedError()
 
@@ -563,13 +566,14 @@ class AbstractWritableDataStore(AbstractDataStore):
         if unlimited_dims is None:
             unlimited_dims = set()
 
+        parent_dims = self.get_parent_dimensions()
         existing_dims = self.get_dimensions()
 
         dims = {}
         for v in unlimited_dims:  # put unlimited_dims first
             dims[v] = None
         for v in variables.values():
-            dims.update(dict(zip(v.dims, v.shape, strict=True)))
+            dims |= v.sizes
 
         for dim, length in dims.items():
             if dim in existing_dims and length != existing_dims[dim]:
@@ -577,7 +581,7 @@ class AbstractWritableDataStore(AbstractDataStore):
                     "Unable to update size for existing dimension"
                     f"{dim!r} ({length} != {existing_dims[dim]})"
                 )
-            elif dim not in existing_dims:
+            elif dim not in existing_dims and length != parent_dims.get(dim):
                 is_unlimited = dim in unlimited_dims
                 self.set_dimension(dim, length, is_unlimited)
 
