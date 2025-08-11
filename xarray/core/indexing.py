@@ -877,13 +877,13 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
         duck_array = self.array.get_duck_array()
         # ensure the array object is cached in-memory
         self.array = as_indexable(duck_array)
-        return deepcopy(self.array)
+        return duck_array
 
     async def async_get_duck_array(self):
         duck_array = await self.array.async_get_duck_array()
         # ensure the array object is cached in-memory
         self.array = as_indexable(duck_array)
-        return deepcopy(self.array)
+        return duck_array
 
     def _oindex_get(self, indexer: OuterIndexer):
         return type(self)(_wrap_numpy_scalars(self.array.oindex[indexer]))
