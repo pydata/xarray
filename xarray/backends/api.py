@@ -245,6 +245,28 @@ def _validate_attrs(dataset, engine, invalid_netcdf=False):
             check_attr(k, v, valid_types)
 
 
+def _sanitize_unlimited_dims(dataset, unlimited_dims):
+    msg_origin = "unlimited_dims-kwarg"
+    if unlimited_dims is None:
+        unlimited_dims = dataset.encoding.get("unlimited_dims", None)
+        msg_origin = "dataset.encoding"
+    if unlimited_dims is not None:
+        if isinstance(unlimited_dims, str) or not isinstance(unlimited_dims, Iterable):
+            unlimited_dims = [unlimited_dims]
+        else:
+            unlimited_dims = list(unlimited_dims)
+        dataset_dims = set(dataset.dims)
+        unlimited_dims = set(unlimited_dims)
+        if undeclared_dims := (unlimited_dims - dataset_dims):
+            msg = (
+                f"Unlimited dimension(s) {undeclared_dims!r} declared in {msg_origin!r}, "
+                f"but not part of current dataset dimensions. "
+                f"Consider removing {undeclared_dims!r} from {msg_origin!r}."
+            )
+            raise ValueError(msg)
+        return unlimited_dims
+
+
 def _resolve_decoders_kwargs(decode_cf, open_backend_dataset_parameters, **decoders):
     for d in list(decoders):
         if decode_cf is False and d in open_backend_dataset_parameters:
@@ -2047,6 +2069,8 @@ def to_netcdf(
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
     _validate_attrs(dataset, engine, invalid_netcdf)
+    # sanitize unlimited_dims
+    unlimited_dims = _sanitize_unlimited_dims(dataset, unlimited_dims)
 
     # handle scheduler specific logic
     scheduler = get_dask_scheduler()
