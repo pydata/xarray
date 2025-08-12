@@ -1324,6 +1324,47 @@ class CFEncodedBase(DatasetIOBase):
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
                 pass
 
+    def test_encoding_unlimited_dims(self) -> None:
+        if isinstance(self, ZarrBase):
+            pytest.skip("No unlimited_dims handled in zarr.")
+        ds = Dataset({"x": ("y", np.arange(10.0))})
+        with self.roundtrip(ds, save_kwargs=dict(unlimited_dims=["y"])) as actual:
+            assert actual.encoding["unlimited_dims"] == set("y")
+            assert_equal(ds, actual)
+
+        # Regression test for https://github.com/pydata/xarray/issues/2134
+        with self.roundtrip(ds, save_kwargs=dict(unlimited_dims="y")) as actual:
+            assert actual.encoding["unlimited_dims"] == set("y")
+            assert_equal(ds, actual)
+
+        ds.encoding = {"unlimited_dims": ["y"]}
+        with self.roundtrip(ds) as actual:
+            assert actual.encoding["unlimited_dims"] == set("y")
+            assert_equal(ds, actual)
+
+        # Regression test for https://github.com/pydata/xarray/issues/2134
+        ds.encoding = {"unlimited_dims": "y"}
+        with self.roundtrip(ds) as actual:
+            assert actual.encoding["unlimited_dims"] == set("y")
+            assert_equal(ds, actual)
+
+        # test unlimited_dims validation
+        # https://github.com/pydata/xarray/issues/10549
+        ds.encoding = {"unlimited_dims": "z"}
+        with pytest.raises(
+            ValueError,
+            match=r"Unlimited dimension\(s\) .* declared in 'dataset.encoding'",
+        ):
+            with self.roundtrip(ds) as _:
+                pass
+        ds.encoding = {}
+        with pytest.raises(
+            ValueError,
+            match=r"Unlimited dimension\(s\) .* declared in 'unlimited_dims-kwarg'",
+        ):
+            with self.roundtrip(ds, save_kwargs=dict(unlimited_dims=["z"])) as _:
+                pass
+
     def test_encoding_kwarg_dates(self) -> None:
         ds = Dataset({"t": pd.date_range("2000-01-01", periods=3)})
         units = "days since 1900-01-01"
@@ -1917,16 +1958,6 @@ class NetCDF4Base(NetCDFBase):
             for kwargs in [{}, {"decode_cf": True}]:
                 with open_dataset(tmp_file, **cast(dict, kwargs)) as actual:
                     assert_identical(expected, actual)
-
-    def test_encoding_unlimited_dims(self) -> None:
-        ds = Dataset({"x": ("y", np.arange(10.0))})
-        with self.roundtrip(ds, save_kwargs=dict(unlimited_dims=["y"])) as actual:
-            assert actual.encoding["unlimited_dims"] == set("y")
-            assert_equal(ds, actual)
-        ds.encoding = {"unlimited_dims": ["y"]}
-        with self.roundtrip(ds) as actual:
-            assert actual.encoding["unlimited_dims"] == set("y")
-            assert_equal(ds, actual)
 
     def test_raise_on_forward_slashes_in_names(self) -> None:
         # test for forward slash in variable names and dimensions
@@ -4392,16 +4423,6 @@ class TestH5NetCDFData(NetCDF4Base):
             with open_dataset(tmp_file) as actual:
                 expected = Dataset(attrs={"foo": "bar"})
                 assert_identical(expected, actual)
-
-    def test_encoding_unlimited_dims(self) -> None:
-        ds = Dataset({"x": ("y", np.arange(10.0))})
-        with self.roundtrip(ds, save_kwargs=dict(unlimited_dims=["y"])) as actual:
-            assert actual.encoding["unlimited_dims"] == set("y")
-            assert_equal(ds, actual)
-        ds.encoding = {"unlimited_dims": ["y"]}
-        with self.roundtrip(ds) as actual:
-            assert actual.encoding["unlimited_dims"] == set("y")
-            assert_equal(ds, actual)
 
     def test_compression_encoding_h5py(self) -> None:
         ENCODINGS: tuple[tuple[dict[str, Any], dict[str, Any]], ...] = (
