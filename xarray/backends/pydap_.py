@@ -325,6 +325,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
+        batch=False,
     ) -> Dataset:
         store = PydapDataStore.open(
             url=filename_or_obj,
@@ -335,6 +336,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             timeout=timeout,
             verify=verify,
             user_charset=user_charset,
+            batch=batch,
         )
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
