@@ -18,6 +18,8 @@ New Features
 - ``compute=False`` is now supported by :py:meth:`DataTree.to_netcdf` and
   :py:meth:`DataTree.to_zarr`.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Added exception handling for invalid files in :py:func:`open_mfdataset`. (:issue:`6736`)
+  By `Pratiman Patel <https://github.com/pratiman-91>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
