@@ -2705,6 +2705,10 @@ class IndexVariable(Variable):
         # data is already loaded into memory for IndexVariable
         return self
 
+    async def load_async(self):
+        # data is already loaded into memory for IndexVariable
+        return self
+
     # https://github.com/python/mypy/issues/1465
     @Variable.data.setter  # type: ignore[attr-defined]
     def data(self, data):
