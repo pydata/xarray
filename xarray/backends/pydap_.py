@@ -369,6 +369,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
+        batch=False,
     ) -> DataTree:
         groups_dict = self.open_groups_as_dict(
             filename_or_obj,
@@ -381,10 +382,11 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             decode_timedelta=decode_timedelta,
             group=group,
             application=None,
-            session=None,
-            timeout=None,
-            verify=None,
-            user_charset=None,
+            session=session,
+            timeout=timeout,
+            verify=application,
+            user_charset=user_charset,
+            batch=batch,
         )
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
