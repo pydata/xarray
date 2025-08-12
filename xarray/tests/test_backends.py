@@ -3902,11 +3902,11 @@ class TestZarrDictStore(ZarrBase):
 
             xrt.assert_identical(result_ds, ds.load())
 
-    # TODO parametrize_zarr_format in to_zarr
     @pytest.mark.asyncio
+    @parametrize_zarr_format
     @requires_zarr_v3
     @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
-    async def test_concurrent_load_multiple_objects(self, cls_name) -> None:
+    async def test_concurrent_load_multiple_objects(self, cls_name, zarr_format) -> None:
         N_OBJECTS = 5
 
         target_class = zarr.AsyncArray
@@ -3915,7 +3915,7 @@ class TestZarrDictStore(ZarrBase):
 
         original = create_test_data()
         with self.create_zarr_target() as store:
-            original.to_zarr(store, consolidated=False)
+            original.to_zarr(store, consolidated=False, zarr_format=zarr_format)
 
             with patch.object(
                 target_class, method_name, wraps=original_method, autospec=True
@@ -3982,12 +3982,14 @@ class TestZarrDictStore(ZarrBase):
             "vectorized-isel",
         ],
     )
+    @parametrize_zarr_format
     async def test_indexing(
         self,
         cls_name,
         method,
         indexer,
         target_zarr_class,
+        zarr_format,
     ) -> None:
         if not has_zarr_v3_async_oindex and target_zarr_class in (
             "zarr.core.indexing.AsyncOIndex",
@@ -4014,7 +4016,7 @@ class TestZarrDictStore(ZarrBase):
 
         original = create_test_data()
         with self.create_zarr_target() as store:
-            original.to_zarr(store, consolidated=False)
+            original.to_zarr(store, consolidated=False, zarr_format=zarr_format)
 
             with patch.object(
                 target_class, method_name, wraps=original_method, autospec=True
@@ -4030,6 +4032,53 @@ class TestZarrDictStore(ZarrBase):
 
             expected = getattr(xr_obj, method)(**indexer).load()
             xrt.assert_identical(result, expected)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("indexer", "expected_err_msg"),
+        [
+            pytest.param(
+                {"dim2": 2},
+                "basic async indexing",
+                marks=pytest.mark.skipif(
+                    has_zarr_v3,
+                    reason="current version of zarr has basic async indexing",
+                ),
+            ),  # tests basic indexing
+            pytest.param(
+                {"dim2": [1, 3]},
+                "orthogonal async indexing",
+                marks=pytest.mark.skipif(
+                    has_zarr_v3_async_oindex,
+                    reason="current version of zarr has async orthogonal indexing",
+                ),
+            ),  # tests oindexing
+            pytest.param(
+                {
+                    "dim1": xr.Variable(data=[2, 3], dims="points"),
+                    "dim2": xr.Variable(data=[1, 3], dims="points"),
+                },
+                "vectorized async indexing",
+                marks=pytest.mark.skipif(
+                    has_zarr_v3_async_oindex,
+                    reason="current version of zarr has async vectorized indexing",
+                ),
+            ),  # tests vindexing
+        ],
+    )
+    @parametrize_zarr_format
+    async def test_raise_on_older_zarr_version(self, indexer, expected_err_msg, zarr_format):
+        """Test that trying to use async load with insufficiently new version of zarr raises a clear error"""
+
+        original = create_test_data()
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, consolidated=False, zarr_format=zarr_format)
+
+            ds = xr.open_zarr(store, consolidated=False, chunks=None)
+            var = ds["var1"].variable
+
+            with pytest.raises(NotImplementedError, match=expected_err_msg):
+                await var.isel(**indexer).load_async()
 
 
 def get_xr_obj(
