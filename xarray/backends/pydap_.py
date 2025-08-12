@@ -36,8 +36,10 @@ if TYPE_CHECKING:
 
 
 class PydapArrayWrapper(BackendArray):
-    def __init__(self, array):
+    def __init__(self, array, batch=False, cache=None):
         self.array = array
+        self._batch = batch
+        self._cache = cache
 
     @property
     def shape(self) -> tuple[int, ...]:
@@ -53,13 +55,29 @@ class PydapArrayWrapper(BackendArray):
         )
 
     def _getitem(self, key):
-        result = robust_getitem(self.array, key, catch=ValueError)
-        # in some cases, pydap doesn't squeeze axes automatically like numpy
-        result = np.asarray(result)
+        if self.array.id in self._cache.keys():
+            # safely avoid re-downloading some coordinates
+            result = self._cache[self.array.id]
+        elif self._batch and hasattr(self.array, "dataset"):
+            # this are both True only for pydap>3.5.5
+            from pydap.lib import resolve_batch_for_all_variables
+
+            parent = self.array.parent  # could be root ds | group
+            variables = list(parent.variables())
+            resolve_batch_for_all_variables(parent, variables, key)
+
+            result = np.asarray(
+                parent.dataset._current_batch_promise.wait_for_result(self.array.id)
+            )
+        else:
+            result = robust_getitem(self.array, key, catch=ValueError)
+            try:
+                result = np.asarray(result.data)
+            except AttributeError:
+                result = np.asarray(result)
         axis = tuple(n for n, k in enumerate(key) if isinstance(k, integer_types))
         if result.ndim + len(axis) != self.array.ndim and axis:
             result = np.squeeze(result, axis)
-
         return result
 
 
