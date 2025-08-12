@@ -408,6 +408,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
+        batch=False,
     ) -> dict[str, Dataset]:
         from xarray.core.treenode import NodePath
 
@@ -419,6 +420,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             timeout=timeout,
             verify=verify,
             user_charset=user_charset,
+            batch=batch,
         )
 
         # Check for a group and make it a parent if it exists
