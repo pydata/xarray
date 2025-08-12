@@ -606,6 +606,10 @@ class TestCFEncodedDataStore(CFEncodedBase):
         # CFEncodedInMemoryStore doesn't support explicit string encodings.
         pass
 
+    def test_encoding_unlimited_dims(self) -> None:
+        # CFEncodedInMemoryStore doesn't support unlimited_dims.
+        pass
+
 
 class TestDecodeCFVariableWithArrayUnits:
     def test_decode_cf_variable_with_array_units(self) -> None:
