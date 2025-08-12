@@ -4015,7 +4015,7 @@ class DataArray(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes: ...
+    ) -> bytes | memoryview: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -4079,7 +4079,7 @@ class DataArray(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes | Delayed | None:
+    ) -> bytes | memoryview | Delayed | None:
         """Write DataArray contents to a netCDF file.
 
         Parameters
@@ -4149,8 +4149,7 @@ class DataArray(
 
         Returns
         -------
-        store: bytes or Delayed or None
-            * ``bytes`` if path is None
+            * ``bytes`` or ``memoryview`` if path is None
             * ``dask.delayed.Delayed`` if compute is False
             * None otherwise
 

@@ -11,7 +11,7 @@ from collections.abc import (
     Sequence,
 )
 from functools import partial
-from io import BytesIO
+from io import IOBase
 from itertools import starmap
 from numbers import Number
 from typing import (
@@ -19,6 +19,7 @@ from typing import (
     Any,
     Final,
     Literal,
+    TypeVar,
     Union,
     cast,
     overload,
@@ -31,6 +32,8 @@ from xarray.backends import plugins
 from xarray.backends.common import (
     AbstractDataStore,
     ArrayWriter,
+    BytesIOProxy,
+    T_PathFileOrDataStore,
     _find_absolute_paths,
     _normalize_path,
 )
@@ -43,8 +46,8 @@ from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees
-from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
-from xarray.core.utils import is_remote_uri
+from xarray.core.types import NetcdfWriteModes, ReadBuffer, ZarrWriteModes
+from xarray.core.utils import emit_user_level_warning, is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
 from xarray.structure.chunks import _get_chunk, _maybe_chunk
@@ -71,6 +74,7 @@ if TYPE_CHECKING:
     from xarray.core.types import (
         CombineAttrsOptions,
         CompatOptions,
+        ErrorOptionsWithWarn,
         JoinOptions,
         NestedSequence,
         ReadBuffer,
@@ -238,6 +242,28 @@ def _validate_attrs(dataset, engine, invalid_netcdf=False):
     for variable in dataset.variables.values():
         for k, v in variable.attrs.items():
             check_attr(k, v, valid_types)
+
+
+def _sanitize_unlimited_dims(dataset, unlimited_dims):
+    msg_origin = "unlimited_dims-kwarg"
+    if unlimited_dims is None:
+        unlimited_dims = dataset.encoding.get("unlimited_dims", None)
+        msg_origin = "dataset.encoding"
+    if unlimited_dims is not None:
+        if isinstance(unlimited_dims, str) or not isinstance(unlimited_dims, Iterable):
+            unlimited_dims = [unlimited_dims]
+        else:
+            unlimited_dims = list(unlimited_dims)
+        dataset_dims = set(dataset.dims)
+        unlimited_dims = set(unlimited_dims)
+        if undeclared_dims := (unlimited_dims - dataset_dims):
+            msg = (
+                f"Unlimited dimension(s) {undeclared_dims!r} declared in {msg_origin!r}, "
+                f"but not part of current dataset dimensions. "
+                f"Consider removing {undeclared_dims!r} from {msg_origin!r}."
+            )
+            raise ValueError(msg)
+        return unlimited_dims
 
 
 def _resolve_decoders_kwargs(decode_cf, open_backend_dataset_parameters, **decoders):
@@ -503,7 +529,7 @@ def _datatree_from_backend_datatree(
 
 
 def open_dataset(
-    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+    filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -533,12 +559,13 @@ def open_dataset(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like or DataStore
+    filename_or_obj : str, Path, file-like, bytes, memoryview or DataStore
         Strings and Path objects are interpreted as a path to a netCDF file
         or an OpenDAP URL and opened with python-netCDF4, unless the filename
         ends with .gz, in which case the file is gunzipped and opened with
-        scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
-        objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
+        scipy.io.netcdf (only netCDF3 supported). Bytes, memoryview and
+        file-like objects are opened by scipy.io.netcdf (netCDF3) or h5netcdf
+        (netCDF4).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "zarr", None}\
         , installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
@@ -743,7 +770,7 @@ def open_dataset(
 
 
 def open_dataarray(
-    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+    filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -774,12 +801,13 @@ def open_dataarray(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like or DataStore
+    filename_or_obj : str, Path, file-like, bytes, memoryview or DataStore
         Strings and Path objects are interpreted as a path to a netCDF file
         or an OpenDAP URL and opened with python-netCDF4, unless the filename
         ends with .gz, in which case the file is gunzipped and opened with
-        scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
-        objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
+        scipy.io.netcdf (only netCDF3 supported). Bytes, memoryview and
+        file-like objects are opened by scipy.io.netcdf (netCDF3) or h5netcdf
+        (netCDF4).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "zarr", None}\
         , installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
@@ -970,7 +998,7 @@ def open_dataarray(
 
 
 def open_datatree(
-    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+    filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -1001,8 +1029,10 @@ def open_datatree(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like, or DataStore
-        Strings and Path objects are interpreted as a path to a netCDF file or Zarr store.
+    filename_or_obj : str, Path, file-like, bytes or DataStore
+        Strings and Path objects are interpreted as a path to a netCDF file or
+        Zarr store. Bytes and memoryview objects are interpreted as file
+        contents.
     engine : {"netcdf4", "h5netcdf", "zarr", None}, \
              installed backend or xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
@@ -1208,7 +1238,7 @@ def open_datatree(
 
 
 def open_groups(
-    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+    filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -1243,8 +1273,10 @@ def open_groups(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like, or DataStore
-        Strings and Path objects are interpreted as a path to a netCDF file or Zarr store.
+    filename_or_obj : str, Path, file-like, bytes, memoryview or DataStore
+        Strings and Path objects are interpreted as a path to a netCDF file or
+        Zarr store. Bytes and memoryview objects are interpreted as file
+        contents.
     engine : {"netcdf4", "h5netcdf", "zarr", None}, \
              installed backend or xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
@@ -1451,6 +1483,28 @@ def open_groups(
     return groups
 
 
+_FLike = TypeVar("_FLike", bound=Union[str, ReadBuffer])
+
+
+def _remove_path(
+    paths: NestedSequence[_FLike], paths_to_remove: set[_FLike]
+) -> NestedSequence[_FLike]:
+    # Initialize an empty list to store the result
+    result: list[Union[_FLike, NestedSequence[_FLike]]] = []
+
+    for item in paths:
+        if isinstance(item, list):
+            # If the current item is a list, recursively call remove_elements on it
+            nested_result = _remove_path(item, paths_to_remove)
+            if nested_result:  # Only add non-empty lists to avoid adding empty lists
+                result.append(nested_result)
+        elif item not in paths_to_remove:
+            # Add the item to the result if it is not in the set of elements to remove
+            result.append(item)
+
+    return result
+
+
 def open_mfdataset(
     paths: str
     | os.PathLike
@@ -1479,6 +1533,7 @@ def open_mfdataset(
     join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     attrs_file: str | os.PathLike | None = None,
     combine_attrs: CombineAttrsOptions = "override",
+    errors: ErrorOptionsWithWarn = "raise",
     **kwargs,
 ) -> Dataset:
     """Open multiple files as a single dataset.
@@ -1605,6 +1660,12 @@ def open_mfdataset(
 
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
+    errors : {"raise", "warn", "ignore"}, default: "raise"
+        String indicating how to handle errors in opening dataset.
+
+        - "raise": invalid dataset will raise an exception.
+        - "warn": a warning will be issued for each invalid dataset.
+        - "ignore": invalid dataset will be ignored.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`. For an
         overview of some of the possible options, see the documentation of
@@ -1697,7 +1758,32 @@ def open_mfdataset(
         open_ = open_dataset
         getattr_ = getattr
 
-    datasets = [open_(p, **open_kwargs) for p in paths1d]
+    if errors not in ("raise", "warn", "ignore"):
+        raise ValueError(
+            f"'errors' must be 'raise', 'warn' or 'ignore', got '{errors}'"
+        )
+
+    datasets = []
+    invalid_paths = set()
+    for p in paths1d:
+        try:
+            ds = open_(p, **open_kwargs)
+            datasets.append(ds)
+        except Exception as e:
+            if errors == "raise":
+                raise
+            elif errors == "warn":
+                emit_user_level_warning(f"Could not open {p} due to {e}. Ignoring.")
+            # remove invalid paths
+            invalid_paths.add(p)
+
+    if invalid_paths:
+        paths = _remove_path(paths, invalid_paths)
+        if combine == "nested":
+            # Create new ids and paths based on removed items
+            combined_ids_paths = _infer_concat_order_from_positions(paths)
+            ids = list(combined_ids_paths.keys())
+
     closers = [getattr_(ds, "_close") for ds in datasets]
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
@@ -1780,7 +1866,7 @@ def to_netcdf(
 ) -> tuple[ArrayWriter, AbstractDataStore]: ...
 
 
-# path=None writes to bytes
+# path=None writes to bytes or memoryview, depending on store
 @overload
 def to_netcdf(
     dataset: Dataset,
@@ -1795,7 +1881,7 @@ def to_netcdf(
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
-) -> bytes: ...
+) -> bytes | memoryview: ...
 
 
 # compute=False returns dask.Delayed
@@ -1821,7 +1907,7 @@ def to_netcdf(
 @overload
 def to_netcdf(
     dataset: Dataset,
-    path_or_file: str | os.PathLike,
+    path_or_file: str | os.PathLike | IOBase,
     mode: NetcdfWriteModes = "w",
     format: T_NetcdfTypes | None = None,
     group: str | None = None,
@@ -1877,7 +1963,7 @@ def to_netcdf(
 @overload
 def to_netcdf(
     dataset: Dataset,
-    path_or_file: str | os.PathLike | None,
+    path_or_file: str | os.PathLike | IOBase | None,
     mode: NetcdfWriteModes = "w",
     format: T_NetcdfTypes | None = None,
     group: str | None = None,
@@ -1888,12 +1974,12 @@ def to_netcdf(
     multifile: bool = False,
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
-) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None: ...
+) -> tuple[ArrayWriter, AbstractDataStore] | bytes | memoryview | Delayed | None: ...
 
 
 def to_netcdf(
     dataset: Dataset,
-    path_or_file: str | os.PathLike | None = None,
+    path_or_file: str | os.PathLike | IOBase | None = None,
     mode: NetcdfWriteModes = "w",
     format: T_NetcdfTypes | None = None,
     group: str | None = None,
@@ -1904,7 +1990,7 @@ def to_netcdf(
     multifile: bool = False,
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
-) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
+) -> tuple[ArrayWriter, AbstractDataStore] | bytes | memoryview | Delayed | None:
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -1918,30 +2004,33 @@ def to_netcdf(
     if encoding is None:
         encoding = {}
 
-    if path_or_file is None:
+    if isinstance(path_or_file, str):
         if engine is None:
+            engine = _get_default_engine(path_or_file)
+        path_or_file = _normalize_path(path_or_file)
+    else:
+        # writing to bytes/memoryview or a file-like object
+        if engine is None:
+            # TODO: only use 'scipy' if format is None or a netCDF3 format
             engine = "scipy"
-        elif engine != "scipy":
+        elif engine not in ("scipy", "h5netcdf"):
             raise ValueError(
-                "invalid engine for creating bytes with "
-                f"to_netcdf: {engine!r}. Only the default engine "
-                "or engine='scipy' is supported"
+                "invalid engine for creating bytes/memoryview or writing to a "
+                f"file-like object with to_netcdf: {engine!r}. Only "
+                "engine=None, engine='scipy' and engine='h5netcdf' is "
+                "supported."
             )
         if not compute:
             raise NotImplementedError(
                 "to_netcdf() with compute=False is not yet implemented when "
                 "returning bytes"
             )
-    elif isinstance(path_or_file, str):
-        if engine is None:
-            engine = _get_default_engine(path_or_file)
-        path_or_file = _normalize_path(path_or_file)
-    else:  # file-like object
-        engine = "scipy"
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
     _validate_attrs(dataset, engine, invalid_netcdf)
+    # sanitize unlimited_dims
+    unlimited_dims = _sanitize_unlimited_dims(dataset, unlimited_dims)
 
     try:
         store_open = WRITEABLE_STORES[engine]
@@ -1962,7 +2051,11 @@ def to_netcdf(
             f"is not currently supported with dask's {scheduler} scheduler"
         )
 
-    target = path_or_file if path_or_file is not None else BytesIO()
+    if path_or_file is None:
+        target = BytesIOProxy()
+    else:
+        target = path_or_file  # type: ignore[assignment]
+
     kwargs = dict(autoclose=True) if autoclose else {}
     if invalid_netcdf:
         if engine == "h5netcdf":
@@ -1975,14 +2068,6 @@ def to_netcdf(
         kwargs["auto_complex"] = auto_complex
 
     store = store_open(target, mode, format, group, **kwargs)
-
-    if unlimited_dims is None:
-        unlimited_dims = dataset.encoding.get("unlimited_dims", None)
-    if unlimited_dims is not None:
-        if isinstance(unlimited_dims, str) or not isinstance(unlimited_dims, Iterable):
-            unlimited_dims = [unlimited_dims]
-        else:
-            unlimited_dims = list(unlimited_dims)
 
     writer = ArrayWriter()
 
@@ -2002,17 +2087,19 @@ def to_netcdf(
 
         writes = writer.sync(compute=compute)
 
-        if isinstance(target, BytesIO):
-            store.sync()
-            return target.getvalue()
     finally:
         if not multifile and compute:  # type: ignore[redundant-expr]
             store.close()
+
+    if path_or_file is None:
+        assert isinstance(target, BytesIOProxy)  # created in this function
+        return target.getvalue_or_getbuffer()
 
     if not compute:
         import dask
 
         return dask.delayed(_finalize_store)(writes, store)
+
     return None
 
 
