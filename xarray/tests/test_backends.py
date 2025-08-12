@@ -3906,7 +3906,9 @@ class TestZarrDictStore(ZarrBase):
     @parametrize_zarr_format
     @requires_zarr_v3
     @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
-    async def test_concurrent_load_multiple_objects(self, cls_name, zarr_format) -> None:
+    async def test_concurrent_load_multiple_objects(
+        self, cls_name, zarr_format
+    ) -> None:
         N_OBJECTS = 5
 
         target_class = zarr.AsyncArray
@@ -3933,7 +3935,6 @@ class TestZarrDictStore(ZarrBase):
             for result in results:
                 xrt.assert_identical(result, xr_obj.load())
 
-    # TODO parametrize zarr_format?
     @pytest.mark.asyncio
     @requires_zarr_v3
     @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
@@ -4067,7 +4068,9 @@ class TestZarrDictStore(ZarrBase):
         ],
     )
     @parametrize_zarr_format
-    async def test_raise_on_older_zarr_version(self, indexer, expected_err_msg, zarr_format):
+    async def test_raise_on_older_zarr_version(
+        self, indexer, expected_err_msg, zarr_format
+    ):
         """Test that trying to use async load with insufficiently new version of zarr raises a clear error"""
 
         original = create_test_data()
