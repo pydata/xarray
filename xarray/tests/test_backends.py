@@ -2454,6 +2454,44 @@ class ZarrBase(CFEncodedBase):
         ):
             xr.open_zarr(f"{uuid.uuid4()}")
 
+    @pytest.mark.skipif(
+        not has_zarr_v3, reason="zarr-python <3 did not support async loading"
+    )
+    @pytest.mark.asyncio
+    async def test_load_async(self) -> None:
+        """Copied from `test_load` on the base test class, but won't work for netcdf"""
+        expected = create_test_data()
+
+        @contextlib.contextmanager
+        def assert_loads(vars=None):
+            if vars is None:
+                vars = expected
+            with self.roundtrip(expected) as actual:
+                for k, v in actual.variables.items():
+                    # IndexVariables are eagerly loaded into memory
+                    assert v._in_memory == (k in actual.dims)
+                yield actual
+                for k, v in actual.variables.items():
+                    if k in vars:
+                        assert v._in_memory
+                assert_identical(expected, actual)
+
+        with pytest.raises(AssertionError):
+            # make sure the contextmanager works!
+            with assert_loads() as ds:
+                pass
+
+        with assert_loads() as ds:
+            await ds.load_async()
+
+        with assert_loads(["var1", "dim1", "dim2"]) as ds:
+            await ds["var1"].load_async()
+
+        # verify we can read data even after closing the file
+        with self.roundtrip(expected) as ds:
+            actual = await ds.load_async()
+        assert_identical(expected, actual)
+
     @pytest.mark.skipif(has_zarr_v3, reason="chunk_store not implemented in zarr v3")
     def test_with_chunkstore(self) -> None:
         expected = create_test_data()
