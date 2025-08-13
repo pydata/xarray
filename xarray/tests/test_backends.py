@@ -81,6 +81,7 @@ from xarray.tests import (
     has_zarr_v3_dtypes,
     mock,
     network,
+    parametrize_zarr_format,
     requires_cftime,
     requires_dask,
     requires_fsspec,
@@ -4089,16 +4090,18 @@ class TestZarrDictStore(ZarrBase):
             ),  # tests vindexing
         ],
     )
+    @parametrize_zarr_format
     async def test_raise_on_older_zarr_version(
         self,
         indexer,
         expected_err_msg,
+        zarr_format,
     ):
         """Test that trying to use async load with insufficiently new version of zarr raises a clear error"""
 
         original = create_test_data()
         with self.create_zarr_target() as store:
-            original.to_zarr(store, consolidated=False, zarr_format=3)
+            original.to_zarr(store, consolidated=False, zarr_format=zarr_format)
 
             ds = xr.open_zarr(store, consolidated=False, chunks=None)
             var = ds["var1"].variable
