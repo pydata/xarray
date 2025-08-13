@@ -2897,34 +2897,31 @@ class TestBackendIndexing:
         self.d = np.random.random((10, 3)).astype(np.float64)
         self.cat = PandasExtensionArray(pd.Categorical(["a", "b"] * 5))
 
-    def check_orthogonal_indexing(self, v):
+    async def check_orthogonal_indexing(self, v):
+        expected = self.d[[8, 3]][:, [2, 1]]
+
         result = v.isel(x=[8, 3], y=[2, 1])
-        expected = self.d[[8, 3]][:, [2, 1]]
         assert np.allclose(result, expected)
 
-    async def check_orthogonal_async_indexing(self, v):
         result = await v.isel(x=[8, 3], y=[2, 1]).load_async()
-        expected = self.d[[8, 3]][:, [2, 1]]
         assert np.allclose(result, expected)
 
-    def check_vectorized_indexing(self, v):
+    async def check_vectorized_indexing(self, v):
         ind_x = Variable("z", [0, 2])
         ind_y = Variable("z", [2, 1])
-        result = v.isel(x=ind_x, y=ind_y)
         expected = self.d[ind_x, ind_y]
+
+        result = v.isel(x=ind_x, y=ind_y).load()
         assert np.allclose(result, expected)
 
-    async def check_vectorized_async_indexing(self, v):
-        ind_x = Variable("z", [0, 2])
-        ind_y = Variable("z", [2, 1])
         result = await v.isel(x=ind_x, y=ind_y).load_async()
-        expected = self.d[ind_x, ind_y]
         assert np.allclose(result, expected)
 
-    def test_NumpyIndexingAdapter(self):
+    @pytest.mark.asyncio
+    async def test_NumpyIndexingAdapter(self):
         v = Variable(dims=("x", "y"), data=NumpyIndexingAdapter(self.d))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v)
+        await self.check_vectorized_indexing(v)
         # could not doubly wrapping
         with pytest.raises(TypeError, match=r"NumpyIndexingAdapter only wraps "):
             v = Variable(
@@ -2939,71 +2936,58 @@ class TestBackendIndexing:
         lazy = Variable(dims=("x"), data=LazilyIndexedArray(self.cat))
         assert (lazy[[0, 1, 5]] == ["a", "b", "b"]).all()
 
-    def test_LazilyIndexedArray(self):
+    @pytest.mark.asyncio
+    async def test_LazilyIndexedArray(self):
         v = Variable(dims=("x", "y"), data=LazilyIndexedArray(self.d))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v)
+        await self.check_vectorized_indexing(v)
         # doubly wrapping
         v = Variable(
             dims=("x", "y"),
             data=LazilyIndexedArray(LazilyIndexedArray(self.d)),
         )
-        self.check_orthogonal_indexing(v)
+        await self.check_orthogonal_indexing(v)
         # hierarchical wrapping
         v = Variable(
             dims=("x", "y"), data=LazilyIndexedArray(NumpyIndexingAdapter(self.d))
         )
-        self.check_orthogonal_indexing(v)
+        await self.check_orthogonal_indexing(v)
 
     @pytest.mark.asyncio
-    async def test_lazy_async_indexing(self) -> None:
-        v = Variable(dims=("x", "y"), data=LazilyIndexedArray(self.d))
-        await self.check_orthogonal_async_indexing(v)
-        await self.check_vectorized_async_indexing(v)
-        # doubly wrapping
-        v = Variable(
-            dims=("x", "y"),
-            data=LazilyIndexedArray(LazilyIndexedArray(self.d)),
-        )
-        await self.check_orthogonal_async_indexing(v)
-        # hierarchical wrapping
-        v = Variable(
-            dims=("x", "y"), data=LazilyIndexedArray(NumpyIndexingAdapter(self.d))
-        )
-        await self.check_orthogonal_async_indexing(v)
-
-    def test_CopyOnWriteArray(self):
+    async def test_CopyOnWriteArray(self):
         v = Variable(dims=("x", "y"), data=CopyOnWriteArray(self.d))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v)
+        await self.check_vectorized_indexing(v)
         # doubly wrapping
         v = Variable(dims=("x", "y"), data=CopyOnWriteArray(LazilyIndexedArray(self.d)))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v)
+        await self.check_vectorized_indexing(v)
 
-    def test_MemoryCachedArray(self):
+    @pytest.mark.asyncio
+    async def test_MemoryCachedArray(self):
         v = Variable(dims=("x", "y"), data=MemoryCachedArray(self.d))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v)
+        await self.check_vectorized_indexing(v)
         # doubly wrapping
         v = Variable(dims=("x", "y"), data=CopyOnWriteArray(MemoryCachedArray(self.d)))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v)
+        await self.check_vectorized_indexing(v)
 
     @requires_dask
-    def test_DaskIndexingAdapter(self):
+    @pytest.mark.asyncio
+    async def test_DaskIndexingAdapter(self):
         import dask.array as da
 
         dask_array = da.asarray(self.d)
         v = Variable(dims=("x", "y"), data=DaskIndexingAdapter(dask_array))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v)
+        await self.check_vectorized_indexing(v)
         # doubly wrapping
         v = Variable(
             dims=("x", "y"), data=CopyOnWriteArray(DaskIndexingAdapter(dask_array))
         )
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v)
+        await self.check_vectorized_indexing(v)
 
 
 def test_clip(var):
