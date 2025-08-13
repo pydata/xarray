@@ -243,7 +243,7 @@ class PydapDataStore(AbstractDataStore):
         return Frozen(attrs)
 
     def get_dimensions(self):
-        return Frozen(self.ds.dimensions)
+        return Frozen(sorted(self.ds.dimensions))
 
     @property
     def ds(self):
