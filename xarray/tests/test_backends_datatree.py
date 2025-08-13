@@ -265,6 +265,23 @@ class DatatreeIOBase:
             assert_equal(original_dt, roundtrip_dt)
             assert_identical(expected_dt, roundtrip_dt)
 
+    @requires_netCDF4
+    def test_no_redundant_dimensions(self, tmpdir):
+        # regression test for https://github.com/pydata/xarray/issues/10241
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2, 3]}),
+                "/child": xr.Dataset({"foo": ("x", [4, 5, 6])}),
+            }
+        )
+        filepath = tmpdir / "test.zarr"
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        root = nc4.Dataset(str(filepath))
+        child = root.groups["child"]
+        assert list(root.dimensions) == ["x"]
+        assert list(child.dimensions) == []
+
 
 @requires_netCDF4
 class TestNetCDF4DatatreeIO(DatatreeIOBase):
