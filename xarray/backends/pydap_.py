@@ -63,12 +63,10 @@ class PydapArrayWrapper(BackendArray):
             # this are both True only for pydap>3.5.5
             from pydap.lib import resolve_batch_for_all_variables
 
-            parent = self.array.parent  # could be root ds | group
-            variables = list(parent.variables())
-            resolve_batch_for_all_variables(parent, variables, key)
-
+            dataset = self.array.dataset
+            resolve_batch_for_all_variables(self.array, key)
             result = np.asarray(
-                parent.dataset._current_batch_promise.wait_for_result(self.array.id)
+                dataset._current_batch_promise.wait_for_result(self.array.id)
             )
         else:
             result = robust_getitem(self.array, key, catch=ValueError)
