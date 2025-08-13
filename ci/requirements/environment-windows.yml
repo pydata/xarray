@@ -36,6 +36,7 @@ dependencies:
   - pytest-env
   - pytest-mypy-plugins
   - pytest-timeout
+  - pytest-randomly
   - pytest-xdist
   - rasterio
   - scipy
