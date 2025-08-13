@@ -976,7 +976,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             encoding = copy.copy(self._encoding)
         return type(self)(dims, data, attrs, encoding, fastpath=True)
 
-    def load(self, **kwargs):
+    def load(self, **kwargs) -> Self:
         """Manually trigger loading of this variable's data from disk or a
         remote source into memory and return this variable.
 
@@ -991,16 +991,34 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         See Also
         --------
+        Variable.compute
+        Variable.load_async
         dask.array.compute
         """
         self._data = to_duck_array(self._data, **kwargs)
         return self
 
-    async def load_async(self, **kwargs):
+    async def load_async(self, **kwargs) -> Self:
+        """Manually trigger and await asynchronous loading of this variable's data from disk or a
+        remote source into memory and return this variable.
+
+        Only works when opening data lazily from IO storage backends which support lazy asynchronous loading.
+        Otherwise will raise a NotImplementedError.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        See Also
+        --------
+        Variable.load
+        dask.array.compute
+        """
         self._data = await async_to_duck_array(self._data, **kwargs)
         return self
 
-    def compute(self, **kwargs):
+    def compute(self, **kwargs) -> Self:
         """Manually trigger loading of this variable's data from disk or a
         remote source into memory and return a new variable. The original is
         left unaltered.
@@ -1017,6 +1035,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         See Also
         --------
         dask.array.compute
+        Variable.load
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
