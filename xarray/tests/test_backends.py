@@ -6570,7 +6570,7 @@ def test_batchdap4_downloads(protocol, batch) -> None:
     from requests_cache import CachedSession
 
     _version_ = Version(pydap.__version__)
-    session = CachedSession()
+    session = CachedSession(cache_name="debug")  # so that urls are cached
     session.cache.clear()
     url = "https://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc"
 

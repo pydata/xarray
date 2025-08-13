@@ -647,7 +647,7 @@ class TestPyDAPDatatreeIO:
 
         _version_ = Version(pydap.__version__)
 
-        session = CachedSession()
+        session = CachedSession(cache_name="debug")  # so that urls are cached
         session.cache.clear()
 
         tree = open_datatree(url, engine=self.engine, session=session)
@@ -661,15 +661,9 @@ class TestPyDAPDatatreeIO:
                 list(expected.dims) + ["Z", "nv"]
             )
 
-        # group (including root). So in this case 3. In the future there
-        # should a only be 2 downloads (all dimensions should be downloaded)
-        # within single
-
         if _version_ > Version("3.5.5"):
-            # Total downloads are: 1 dmr, + 1 dap url per Group | root.
-            # since there is a group then 2 dap url. In the future there
-            # should only be 1 dap url downloaded.
-            assert len(session.cache.urls()) == 3
+            # Total downloads are: 1 dmr, + 1 dap url for all dimensions across groups
+            assert len(session.cache.urls()) == 2
         else:
             # 1 dmr + 1 dap url per dimension (total there are 4 dimension arrays)
             assert len(session.cache.urls()) == 5
