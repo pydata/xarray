@@ -183,7 +183,7 @@ def either_dict_or_kwargs(
 ) -> Mapping[Hashable, T]:
     if pos_kwargs is None or pos_kwargs == {}:
         # Need an explicit cast to appease mypy due to invariance; see
-        # https://github.com/python/mypy/issues/Users/gcaria/repositories/xarray/xarray/core/dataarray.py/6228
+        # https://github.com/python/mypy/issues/6228
         return cast(Mapping[Hashable, T], kw_kwargs)
 
     if not is_dict_like(pos_kwargs):
