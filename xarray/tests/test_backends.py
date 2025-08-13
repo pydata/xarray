@@ -6574,15 +6574,14 @@ def test_batchdap4_downloads(protocol, batch) -> None:
     session.cache.clear()
     url = "https://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc"
 
-    args = {
-        "filename_or_obj": url.replace("https", protocol),
-        "engine": "pydap",
-        "session": session,
-        "decode_times": False,
-    }
-
     if protocol == "dap4":
-        ds = open_dataset(**args, batch=batch)
+        ds = open_dataset(
+            url.replace("https", protocol),
+            engine="pydap",
+            session=session,
+            decode_times=False,
+            batch=batch,
+        )
         if _version_ > Version("3.5.5"):
             # total downloads are:
             # 1 dmr + 1 dap (dimensions)
@@ -6601,9 +6600,13 @@ def test_batchdap4_downloads(protocol, batch) -> None:
             ds.load()
             assert len(session.cache.urls()) == 4 + 4
     elif protocol == "dap2":
-        ds = open_dataset(**args)
+        ds = open_dataset(
+            url.replace("https", protocol),
+            engine="pydap",
+            session=session,
+            decode_times=False,
+        )
         # das + dds + 3 dods urls
-
         assert len(session.cache.urls()) == 5
 
 
