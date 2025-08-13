@@ -23,12 +23,20 @@ from xarray.tests import (
     requires_pydap,
     requires_zarr,
 )
+from xarray.tests.test_backends import TestNetCDF4Data
 
 if TYPE_CHECKING:
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine
 
 with contextlib.suppress(ImportError):
     import netCDF4 as nc4
+
+
+class TestNetCDF4DataTree(TestNetCDF4Data):
+    @contextlib.contextmanager
+    def open(self, path, **kwargs):
+        with open_datatree(path, engine=self.engine, **kwargs) as ds:
+            yield ds.to_dataset()
 
 
 def diff_chunks(
