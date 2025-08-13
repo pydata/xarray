@@ -3944,46 +3944,49 @@ class TestZarrDictStore(ZarrBase):
     @pytest.mark.parametrize(
         "indexer, method, target_zarr_class",
         [
-            ({}, "sel", "zarr.AsyncArray"),
-            ({}, "isel", "zarr.AsyncArray"),
-            ({"dim2": 1.0}, "sel", "zarr.AsyncArray"),
-            ({"dim2": 2}, "isel", "zarr.AsyncArray"),
-            ({"dim2": slice(1.0, 3.0)}, "sel", "zarr.AsyncArray"),
-            ({"dim2": slice(1, 3)}, "isel", "zarr.AsyncArray"),
-            (
+            pytest.param({}, "sel", "zarr.AsyncArray", id="no-indexing-sel"),
+            pytest.param({}, "isel", "zarr.AsyncArray", id="no-indexing-isel"),
+            pytest.param({"dim2": 1.0}, "sel", "zarr.AsyncArray", id="basic-int-sel"),
+            pytest.param({"dim2": 2}, "isel", "zarr.AsyncArray", id="basic-int-isel"),
+            pytest.param(
+                {"dim2": slice(1.0, 3.0)},
+                "sel",
+                "zarr.AsyncArray",
+                id="basic-slice-sel",
+            ),
+            pytest.param(
+                {"dim2": slice(1, 3)}, "isel", "zarr.AsyncArray", id="basic-slice-isel"
+            ),
+            pytest.param(
                 {"dim2": [1.0, 3.0]},
                 "sel",
                 "zarr.core.indexing.AsyncOIndex",
+                id="outer-sel",
             ),
-            ({"dim2": [1, 3]}, "isel", "zarr.core.indexing.AsyncOIndex"),
-            (
+            pytest.param(
+                {"dim2": [1, 3]},
+                "isel",
+                "zarr.core.indexing.AsyncOIndex",
+                id="outer-isel",
+            ),
+            pytest.param(
                 {
                     "dim1": xr.Variable(data=[2, 3], dims="points"),
                     "dim2": xr.Variable(data=[1.0, 2.0], dims="points"),
                 },
                 "sel",
                 "zarr.core.indexing.AsyncVIndex",
+                id="vectorized-sel",
             ),
-            (
+            pytest.param(
                 {
                     "dim1": xr.Variable(data=[2, 3], dims="points"),
                     "dim2": xr.Variable(data=[1, 3], dims="points"),
                 },
                 "isel",
                 "zarr.core.indexing.AsyncVIndex",
+                id="vectorized-isel",
             ),
-        ],
-        ids=[
-            "no-indexing-sel",
-            "no-indexing-isel",
-            "basic-int-sel",
-            "basic-int-isel",
-            "basic-slice-sel",
-            "basic-slice-isel",
-            "outer-sel",
-            "outer-isel",
-            "vectorized-sel",
-            "vectorized-isel",
         ],
     )
     async def test_indexing(
