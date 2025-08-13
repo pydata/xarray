@@ -726,6 +726,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             clobber=clobber,
             diskless=diskless,
             persist=persist,
+            auto_complex=auto_complex,
             lock=lock,
             autoclose=autoclose,
             **kwargs,
@@ -765,6 +766,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             clobber=clobber,
             diskless=diskless,
             persist=persist,
+            auto_complex=auto_complex,
             lock=lock,
             autoclose=autoclose,
         )
