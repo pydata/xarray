@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import io
 import itertools
 import textwrap
 from collections import ChainMap
@@ -12,6 +13,7 @@ from collections.abc import (
     Mapping,
 )
 from html import escape
+from os import PathLike
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -1448,6 +1450,73 @@ class DataTree(
         other_keys = {key for key, _ in other.subtree_with_keys}
         return self.filter(lambda node: node.relative_to(self) in other_keys)
 
+    def prune(self, drop_size_zero_vars: bool = False) -> DataTree:
+        """
+        Remove empty nodes from the tree.
+
+        Returns a new tree containing only nodes that contain data variables with actual data.
+        Intermediate nodes are kept if they are required to support non-empty children.
+
+        Parameters
+        ----------
+        drop_size_zero_vars : bool, default False
+            If True, also considers variables with zero size as empty.
+            If False, keeps nodes with data variables even if they have zero size.
+
+        Returns
+        -------
+        DataTree
+            A new tree with empty nodes removed.
+
+        See Also
+        --------
+        filter
+
+        Examples
+        --------
+        >>> dt = xr.DataTree.from_dict(
+        ...     {
+        ...         "/a": xr.Dataset({"foo": ("x", [1, 2])}),
+        ...         "/b": xr.Dataset({"bar": ("x", [])}),
+        ...         "/c": xr.Dataset(),
+        ...     }
+        ... )
+        >>> dt.prune()  # doctest: +ELLIPSIS,+NORMALIZE_WHITESPACE
+        <xarray.DataTree>
+        Group: /
+        ├── Group: /a
+        │       Dimensions:  (x: 2)
+        │       Dimensions without coordinates: x
+        │       Data variables:
+        │           foo      (x) int64 16B 1 2
+        └── Group: /b
+                Dimensions:  (x: 0)
+                Dimensions without coordinates: x
+                Data variables:
+                    bar      (x) float64 0B...
+
+        The ``drop_size_zero_vars`` parameter controls whether variables
+        with zero size are considered empty:
+
+        >>> dt.prune(drop_size_zero_vars=True)
+        <xarray.DataTree>
+        Group: /
+        └── Group: /a
+                Dimensions:  (x: 2)
+                Dimensions without coordinates: x
+                Data variables:
+                    foo      (x) int64 16B 1 2
+        """
+        non_empty_cond: Callable[[DataTree], bool]
+        if drop_size_zero_vars:
+            non_empty_cond = lambda node: len(node.data_vars) > 0 and any(
+                var.size > 0 for var in node.data_vars.values()
+            )
+        else:
+            non_empty_cond = lambda node: len(node.data_vars) > 0
+
+        return self.filter(non_empty_cond)
+
     def match(self, pattern: str) -> DataTree:
         """
         Return nodes with paths matching pattern.
@@ -1659,9 +1728,11 @@ class DataTree(
     def __eq__(self, other: DtCompatible) -> Self:  # type: ignore[override]
         return super().__eq__(other)
 
+    # filepath=None writes to a memoryview
+    @overload
     def to_netcdf(
         self,
-        filepath,
+        filepath: None = None,
         mode: NetcdfWriteModes = "w",
         encoding=None,
         unlimited_dims=None,
@@ -1671,14 +1742,45 @@ class DataTree(
         write_inherited_coords: bool = False,
         compute: bool = True,
         **kwargs,
-    ):
+    ) -> memoryview: ...
+
+    @overload
+    def to_netcdf(
+        self,
+        filepath: str | PathLike | io.IOBase,
+        mode: NetcdfWriteModes = "w",
+        encoding=None,
+        unlimited_dims=None,
+        format: T_DataTreeNetcdfTypes | None = None,
+        engine: T_DataTreeNetcdfEngine | None = None,
+        group: str | None = None,
+        write_inherited_coords: bool = False,
+        compute: bool = True,
+        **kwargs,
+    ) -> None: ...
+
+    def to_netcdf(
+        self,
+        filepath: str | PathLike | io.IOBase | None = None,
+        mode: NetcdfWriteModes = "w",
+        encoding=None,
+        unlimited_dims=None,
+        format: T_DataTreeNetcdfTypes | None = None,
+        engine: T_DataTreeNetcdfEngine | None = None,
+        group: str | None = None,
+        write_inherited_coords: bool = False,
+        compute: bool = True,
+        **kwargs,
+    ) -> None | memoryview:
         """
         Write datatree contents to a netCDF file.
 
         Parameters
         ----------
-        filepath : str or Path
-            Path to which to save this datatree.
+        filepath : str or PathLike or file-like object or None
+            Path to which to save this datatree, or a file-like object to write
+            it to (which must support read and write and be seekable) or None
+            to return in-memory bytes as a memoryview.
         mode : {"w", "a"}, default: "w"
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
@@ -1717,6 +1819,11 @@ class DataTree(
         kwargs :
             Additional keyword arguments to be passed to ``xarray.Dataset.to_netcdf``
 
+        Returns
+        -------
+            * ``memoryview`` if path is None
+            * ``None`` otherwise
+
         Note
         ----
             Due to file format specifications the on-disk root group name
@@ -1724,7 +1831,7 @@ class DataTree(
         """
         from xarray.core.datatree_io import _datatree_to_netcdf
 
-        _datatree_to_netcdf(
+        return _datatree_to_netcdf(
             self,
             filepath,
             mode=mode,

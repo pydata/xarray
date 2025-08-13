@@ -4,9 +4,18 @@ import logging
 import os
 import time
 import traceback
-from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from glob import glob
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Generic,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -188,6 +197,24 @@ def _find_absolute_paths(
     return _normalize_path_list(paths)
 
 
+BytesOrMemory = TypeVar("BytesOrMemory", bytes, memoryview)
+
+
+@dataclass
+class BytesIOProxy(Generic[BytesOrMemory]):
+    """Proxy object for a write that returns either bytes or a memoryview."""
+
+    # TODO: remove this in favor of BytesIO when Dataset.to_netcdf() stops
+    # returning bytes from the scipy engine
+    getvalue: Callable[[], BytesOrMemory] | None = None
+
+    def getvalue_or_getbuffer(self) -> BytesOrMemory:
+        """Get the value of this write as bytes or memory."""
+        if self.getvalue is None:
+            raise ValueError("must set getvalue before fetching value")
+        return self.getvalue()
+
+
 def _open_remote_file(file, mode, storage_options=None):
     import fsspec
 
@@ -227,6 +254,20 @@ def find_root_and_group(ds):
         ds = ds.parent
     group = "/" + "/".join(hierarchy)
     return ds, group
+
+
+def collect_ancestor_dimensions(group) -> dict[str, int]:
+    """Returns dimensions defined in parent groups.
+
+    If dimensions are defined in multiple ancestors, use the size of the closest
+    ancestor.
+    """
+    dims = {}
+    while (group := group.parent) is not None:
+        for k, v in group.dimensions.items():
+            if k not in dims:
+                dims[k] = len(v)
+    return dims
 
 
 def datatree_from_dict_with_io_cleanup(groups_dict: Mapping[str, Dataset]) -> DataTree:
@@ -281,6 +322,9 @@ class AbstractDataStore:
     def get_dimensions(self):  # pragma: no cover
         raise NotImplementedError()
 
+    def get_parent_dimensions(self):  # pragma: no cover
+        return {}
+
     def get_attrs(self):  # pragma: no cover
         raise NotImplementedError()
 
@@ -322,6 +366,11 @@ class AbstractDataStore:
 
     def __exit__(self, exception_type, exception_value, traceback):
         self.close()
+
+
+T_PathFileOrDataStore = (
+    str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
+)
 
 
 class ArrayWriter:
@@ -531,13 +580,14 @@ class AbstractWritableDataStore(AbstractDataStore):
         if unlimited_dims is None:
             unlimited_dims = set()
 
+        parent_dims = self.get_parent_dimensions()
         existing_dims = self.get_dimensions()
 
         dims = {}
         for v in unlimited_dims:  # put unlimited_dims first
             dims[v] = None
         for v in variables.values():
-            dims.update(dict(zip(v.dims, v.shape, strict=True)))
+            dims |= v.sizes
 
         for dim, length in dims.items():
             if dim in existing_dims and length != existing_dims[dim]:
@@ -545,7 +595,7 @@ class AbstractWritableDataStore(AbstractDataStore):
                     "Unable to update size for existing dimension"
                     f"{dim!r} ({length} != {existing_dims[dim]})"
                 )
-            elif dim not in existing_dims:
+            elif dim not in existing_dims and length != parent_dims.get(dim):
                 is_unlimited = dim in unlimited_dims
                 self.set_dimension(dim, length, is_unlimited)
 
@@ -705,7 +755,12 @@ class BackendEntrypoint:
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> Dataset:
@@ -717,7 +772,12 @@ class BackendEntrypoint:
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
     ) -> bool:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
@@ -727,7 +787,12 @@ class BackendEntrypoint:
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> DataTree:
@@ -739,7 +804,12 @@ class BackendEntrypoint:
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> dict[str, Dataset]:
