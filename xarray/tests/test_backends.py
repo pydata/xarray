@@ -352,6 +352,11 @@ class TestCommon:
 class NetCDF3Only:
     netcdf3_formats: tuple[T_NetcdfTypes, ...] = ("NETCDF3_CLASSIC", "NETCDF3_64BIT")
 
+    @pytest.mark.asyncio
+    @pytest.mark.skip(reason="NetCDF backends don't support async loading")
+    async def test_load_async(self) -> None:
+        await super().test_load_async()
+
     @requires_scipy
     def test_dtype_coercion_error(self) -> None:
         """Failing dtype coercion should lead to an error"""
@@ -462,6 +467,7 @@ class DatasetIOBase:
             assert_identical(expected, actual)
 
     def test_load(self) -> None:
+        # Note: please keep this in sync with test_load_async below as much as possible!
         expected = create_test_data()
 
         @contextlib.contextmanager
@@ -492,6 +498,43 @@ class DatasetIOBase:
         # verify we can read data even after closing the file
         with self.roundtrip(expected) as ds:
             actual = ds.load()
+        assert_identical(expected, actual)
+
+    @pytest.mark.asyncio
+    async def test_load_async(self) -> None:
+        # Note: please keep this in sync with test_load above as much as possible!
+
+        # Copied from `test_load` on the base test class, but won't work for netcdf
+        expected = create_test_data()
+
+        @contextlib.contextmanager
+        def assert_loads(vars=None):
+            if vars is None:
+                vars = expected
+            with self.roundtrip(expected) as actual:
+                for k, v in actual.variables.items():
+                    # IndexVariables are eagerly loaded into memory
+                    assert v._in_memory == (k in actual.dims)
+                yield actual
+                for k, v in actual.variables.items():
+                    if k in vars:
+                        assert v._in_memory
+                assert_identical(expected, actual)
+
+        with pytest.raises(AssertionError):
+            # make sure the contextmanager works!
+            with assert_loads() as ds:
+                pass
+
+        with assert_loads() as ds:
+            await ds.load_async()
+
+        with assert_loads(["var1", "dim1", "dim2"]) as ds:
+            await ds["var1"].load_async()
+
+        # verify we can read data even after closing the file
+        with self.roundtrip(expected) as ds:
+            actual = await ds.load_async()
         assert_identical(expected, actual)
 
     def test_dataset_compute(self) -> None:
@@ -1525,6 +1568,11 @@ class CFEncodedBase(DatasetIOBase):
 class NetCDFBase(CFEncodedBase):
     """Tests for all netCDF3 and netCDF4 backends."""
 
+    @pytest.mark.asyncio
+    @pytest.mark.skip(reason="NetCDF backends don't support async loading")
+    async def test_load_async(self) -> None:
+        await super().test_load_async()
+
     @pytest.mark.skipif(
         ON_WINDOWS, reason="Windows does not allow modifying open files"
     )
@@ -2454,6 +2502,14 @@ class ZarrBase(CFEncodedBase):
             with self.open(store_target, **open_kwargs) as ds:
                 yield ds
 
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(
+        not has_zarr_v3,
+        reason="zarr-python <3 did not support async loading",
+    )
+    async def test_load_async(self) -> None:
+        await super().test_load_async()
+
     def test_roundtrip_bytes_with_fill_value(self):
         pytest.xfail("Broken by Zarr 3.0.7")
 
@@ -2488,44 +2544,6 @@ class ZarrBase(CFEncodedBase):
             match="(No such file or directory|Unable to find group|No group found in store)",
         ):
             xr.open_zarr(f"{uuid.uuid4()}")
-
-    @pytest.mark.skipif(
-        not has_zarr_v3, reason="zarr-python <3 did not support async loading"
-    )
-    @pytest.mark.asyncio
-    async def test_load_async(self) -> None:
-        """Copied from `test_load` on the base test class, but won't work for netcdf"""
-        expected = create_test_data()
-
-        @contextlib.contextmanager
-        def assert_loads(vars=None):
-            if vars is None:
-                vars = expected
-            with self.roundtrip(expected) as actual:
-                for k, v in actual.variables.items():
-                    # IndexVariables are eagerly loaded into memory
-                    assert v._in_memory == (k in actual.dims)
-                yield actual
-                for k, v in actual.variables.items():
-                    if k in vars:
-                        assert v._in_memory
-                assert_identical(expected, actual)
-
-        with pytest.raises(AssertionError):
-            # make sure the contextmanager works!
-            with assert_loads() as ds:
-                pass
-
-        with assert_loads() as ds:
-            await ds.load_async()
-
-        with assert_loads(["var1", "dim1", "dim2"]) as ds:
-            await ds["var1"].load_async()
-
-        # verify we can read data even after closing the file
-        with self.roundtrip(expected) as ds:
-            actual = await ds.load_async()
-        assert_identical(expected, actual)
 
     @pytest.mark.skipif(has_zarr_v3, reason="chunk_store not implemented in zarr v3")
     def test_with_chunkstore(self) -> None:
@@ -4352,13 +4370,18 @@ def test_zarr_version_deprecated() -> None:
 
 
 @requires_scipy
-class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only):
+class TestScipyInMemoryData(NetCDF3Only, CFEncodedBase):
     engine: T_NetcdfEngine = "scipy"
 
     @contextlib.contextmanager
     def create_store(self):
         fobj = BytesIO()
         yield backends.ScipyDataStore(fobj, "w")
+
+    @pytest.mark.asyncio
+    @pytest.mark.skip(reason="NetCDF backends don't support async loading")
+    async def test_load_async(self) -> None:
+        await super().test_load_async()
 
     def test_to_netcdf_explicit_engine(self) -> None:
         with pytest.warns(
@@ -4390,7 +4413,7 @@ class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only):
 
 
 @requires_scipy
-class TestScipyFileObject(CFEncodedBase, NetCDF3Only):
+class TestScipyFileObject(NetCDF3Only, CFEncodedBase):
     # TODO: Consider consolidating some of these cases (e.g.,
     # test_file_remains_open) with TestH5NetCDFFileObject
     engine: T_NetcdfEngine = "scipy"
@@ -4459,7 +4482,7 @@ class TestScipyFileObject(CFEncodedBase, NetCDF3Only):
 
 
 @requires_scipy
-class TestScipyFilePath(CFEncodedBase, NetCDF3Only):
+class TestScipyFilePath(NetCDF3Only, CFEncodedBase):
     engine: T_NetcdfEngine = "scipy"
 
     @contextlib.contextmanager
@@ -4496,7 +4519,7 @@ class TestScipyFilePath(CFEncodedBase, NetCDF3Only):
 
 
 @requires_netCDF4
-class TestNetCDF3ViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
+class TestNetCDF3ViaNetCDF4Data(NetCDF3Only, CFEncodedBase):
     engine: T_NetcdfEngine = "netcdf4"
     file_format: T_NetcdfTypes = "NETCDF3_CLASSIC"
 
@@ -4517,7 +4540,7 @@ class TestNetCDF3ViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
 
 
 @requires_netCDF4
-class TestNetCDF4ClassicViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
+class TestNetCDF4ClassicViaNetCDF4Data(NetCDF3Only, CFEncodedBase):
     engine: T_NetcdfEngine = "netcdf4"
     file_format: T_NetcdfTypes = "NETCDF4_CLASSIC"
 
@@ -4531,7 +4554,7 @@ class TestNetCDF4ClassicViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
 
 
 @requires_scipy_or_netCDF4
-class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
+class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
     # verify that we can read and write netCDF3 files as long as we have scipy
     # or netCDF4-python installed
     file_format: T_NetcdfTypes = "NETCDF3_64BIT"
