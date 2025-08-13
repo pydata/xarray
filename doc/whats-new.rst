@@ -57,6 +57,10 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Clarify lazy behaviour and eager loading for ``chunks=None`` in :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_dataarray`, :py:func:`~xarray.open_datatree`, :py:func:`~xarray.open_groups` and :py:func:`~xarray.open_zarr` (:issue:`10612`, :pull:`10627`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
