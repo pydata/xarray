@@ -3897,7 +3897,7 @@ class TestZarrDictStore(ZarrBase):
                 result_ds = await ds.load_async()
 
                 mocked_meth.assert_called()
-                assert mocked_meth.call_count >= N_LAZY_VARS
+                assert mocked_meth.call_count == N_LAZY_VARS
                 mocked_meth.assert_awaited()
 
             xrt.assert_identical(result_ds, ds.load())
@@ -3929,7 +3929,7 @@ class TestZarrDictStore(ZarrBase):
                 results = await asyncio.gather(*coros)
 
                 mocked_meth.assert_called()
-                assert mocked_meth.call_count >= N_OBJECTS
+                assert mocked_meth.call_count == N_OBJECTS
                 mocked_meth.assert_awaited()
 
             for result in results:
