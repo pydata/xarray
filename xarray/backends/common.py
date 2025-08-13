@@ -256,6 +256,20 @@ def find_root_and_group(ds):
     return ds, group
 
 
+def collect_ancestor_dimensions(group) -> dict[str, int]:
+    """Returns dimensions defined in parent groups.
+
+    If dimensions are defined in multiple ancestors, use the size of the closest
+    ancestor.
+    """
+    dims = {}
+    while (group := group.parent) is not None:
+        for k, v in group.dimensions.items():
+            if k not in dims:
+                dims[k] = len(v)
+    return dims
+
+
 def datatree_from_dict_with_io_cleanup(groups_dict: Mapping[str, Dataset]) -> DataTree:
     """DataTree.from_dict with file clean-up."""
     try:
