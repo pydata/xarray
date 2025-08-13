@@ -65,4 +65,4 @@ dependencies:
       - jax # no way to get cpu-only jaxlib from conda if gpu is present
       - types-defusedxml
       - types-pexpect
-      - git+https://github.com/pydap/pydap.git # just for now - will restore to conda after new release
+      - pydap==3.5.6 # just for now - will restore to conda after new release
