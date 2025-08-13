@@ -643,12 +643,13 @@ class TestPyDAPDatatreeIO:
             |       Salinity     (time, Z, Y, X) float32 ...
         """
         import pydap
-        from requests_cache import CachedSession
+        from pydap.net import create_session
+
+        # Create a session with pre-set retry params in pydap backend, to cache urls
+        session = create_session(use_cache=True, cache_kwargs={"cache_name": "debug"})
+        session.cache.clear()
 
         _version_ = Version(pydap.__version__)
-
-        session = CachedSession(cache_name="debug")  # so that urls are cached
-        session.cache.clear()
 
         tree = open_datatree(url, engine=self.engine, session=session)
         assert set(tree.dims) == {"time", "Z", "nv"}

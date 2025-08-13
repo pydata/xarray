@@ -6567,10 +6567,11 @@ class TestPydapOnline(TestPydap):
 def test_batchdap4_downloads(protocol, batch) -> None:
     """Test that in dap4, all dimensions are downloaded at once"""
     import pydap
-    from requests_cache import CachedSession
+    from pydap.net import create_session
 
     _version_ = Version(pydap.__version__)
-    session = CachedSession(cache_name="debug")  # so that urls are cached
+    # Create a session with pre-set params in pydap backend, to cache urls
+    session = create_session(use_cache=True, cache_kwargs={"cache_name": "debug"})
     session.cache.clear()
     url = "https://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc"
 
@@ -6613,10 +6614,12 @@ def test_batchdap4_downloads(protocol, batch) -> None:
 @requires_pydap
 @network
 def test_batch_warnswithdap2() -> None:
-    from requests_cache import CachedSession
+    from pydap.net import create_session
 
-    session = CachedSession()
+    # Create a session with pre-set retry params in pydap backend, to cache urls
+    session = create_session(use_cache=True, cache_kwargs={"cache_name": "debug"})
     session.cache.clear()
+
     url = "dap2://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc"
     with pytest.warns(UserWarning):
         open_dataset(

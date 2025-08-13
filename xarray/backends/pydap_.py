@@ -118,7 +118,6 @@ class PydapDataStore(AbstractDataStore):
         """
         self.dataset = dataset
         self.group = group
-        self.session = session
         self._batch = batch
         self._batch_done = False
         self._array_cache = {}  # holds 1D dimension data
