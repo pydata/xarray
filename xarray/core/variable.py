@@ -633,6 +633,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             the first len(new_order) indexing should be moved to these
             positions.
         """
+        print(key)
         key = self._item_key_to_tuple(key)  # key is a tuple
         # key is a tuple of full size
         key = indexing.expanded_indexer(key, self.ndim)
@@ -646,7 +647,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             k.item() if isinstance(k, np.ndarray) and k.ndim == 0 else k for k in key
         )
 
-        if all(isinstance(k, BASIC_INDEXING_TYPES) for k in key):
+        if all(
+            (isinstance(k, BASIC_INDEXING_TYPES) and not isinstance(k, bool))
+            for k in key
+        ):
             return self._broadcast_indexes_basic(key)
 
         self._validate_indexers(key)

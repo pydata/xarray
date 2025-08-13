@@ -430,7 +430,7 @@ class OuterIndexer(ExplicitIndexer):
 
         new_key = []
         for k in key:
-            if isinstance(k, integer_types):
+            if isinstance(k, integer_types) and not isinstance(k, bool):
                 k = int(k)
             elif isinstance(k, slice):
                 k = as_integer_slice(k)
@@ -447,7 +447,7 @@ class OuterIndexer(ExplicitIndexer):
                 k = duck_array_ops.astype(k, np.int64, copy=False)
             else:
                 raise TypeError(
-                    f"unexpected indexer type for {type(self).__name__}: {k!r}"
+                    f"unexpected indexer type for {type(self).__name__}: {k!r}, {type(k)}"
                 )
             new_key.append(k)
 
@@ -1518,7 +1518,7 @@ def is_fancy_indexer(indexer: Any) -> bool:
     """Return False if indexer is a int, slice, a 1-dimensional list, or a 0 or
     1-dimensional ndarray; in all other cases return True
     """
-    if isinstance(indexer, int | slice):
+    if isinstance(indexer, int | slice) and not isinstance(indexer, bool):
         return False
     if isinstance(indexer, np.ndarray):
         return indexer.ndim > 1
@@ -1650,11 +1650,7 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
 
 def _apply_vectorized_indexer_dask_wrapper(indices, coord):
-    from xarray.core.indexing import (
-        VectorizedIndexer,
-        apply_indexer,
-        as_indexable,
-    )
+    from xarray.core.indexing import VectorizedIndexer, apply_indexer, as_indexable
 
     return apply_indexer(
         as_indexable(coord), VectorizedIndexer((indices.squeeze(axis=-1),))

@@ -1516,7 +1516,6 @@ class DataArray(
         """
 
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
-
         if any(is_fancy_indexer(idx) for idx in indexers.values()):
             ds = self._to_temp_dataset()._isel_fancy(
                 indexers, drop=drop, missing_dims=missing_dims
