@@ -748,6 +748,8 @@ class TestDataArray:
     def test_getitem_typeerror(self) -> None:
         with pytest.raises(TypeError, match=r"unexpected indexer type"):
             self.dv[True]
+        with pytest.raises(TypeError, match=r"unexpected indexer type"):
+            self.dv[np.array(True)]
         with pytest.raises(TypeError, match=r"invalid indexer array"):
             self.dv[3.0]
         with pytest.raises(TypeError, match=r"invalid indexer array"):
