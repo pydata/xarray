@@ -6563,7 +6563,8 @@ class TestPydapOnline(TestPydap):
 @requires_pydap
 @network
 @pytest.mark.parametrize("protocol", ["dap2", "dap4"])
-def test_batchdap4_downloads(protocol) -> None:
+@pytest.mark.parametrize("batch", [False, True])
+def test_batchdap4_downloads(protocol, batch) -> None:
     """Test that in dap4, all dimensions are downloaded at once"""
     import pydap
     from requests_cache import CachedSession
@@ -6573,20 +6574,36 @@ def test_batchdap4_downloads(protocol) -> None:
     session.cache.clear()
     url = "https://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc"
 
-    open_dataset(
-        url.replace("https", protocol),
-        engine="pydap",
-        session=session,
-        decode_times=False,
-    )
+    args = {
+        "filename_or_obj": url.replace("https", protocol),
+        "engine": "pydap",
+        "session": session,
+        "decode_times": False,
+    }
+
     if protocol == "dap4":
+        ds = open_dataset(**args, batch=batch)
         if _version_ > Version("3.5.5"):
-            # should download 2 urls only (1 dmr and 1 dap)
+            # total downloads are:
+            # 1 dmr + 1 dap (dimensions)
             assert len(session.cache.urls()) == 2
+            # now load the rest of the variables
+            ds.load()
+            if batch:
+                # all non-dimensions are downloaded in a single https requests
+                assert len(session.cache.urls()) == 2 + 1
+            if not batch:
+                # each non-dimension array is downloaded with an individual
+                # https requests
+                assert len(session.cache.urls()) == 2 + 4
         else:
             assert len(session.cache.urls()) == 4
-        # das + dds + 3 dods urls
+            ds.load()
+            assert len(session.cache.urls()) == 4 + 4
     elif protocol == "dap2":
+        ds = open_dataset(**args)
+        # das + dds + 3 dods urls
+
         assert len(session.cache.urls()) == 5
 
 
