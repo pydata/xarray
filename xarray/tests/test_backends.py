@@ -355,7 +355,7 @@ class NetCDF3Only:
     @pytest.mark.asyncio
     @pytest.mark.skip(reason="NetCDF backends don't support async loading")
     async def test_load_async(self) -> None:
-        await super().test_load_async()
+        pass
 
     @requires_scipy
     def test_dtype_coercion_error(self) -> None:
