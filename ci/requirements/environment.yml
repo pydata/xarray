@@ -36,7 +36,7 @@ dependencies:
   - pooch
   - pre-commit
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
-  - pydap
+  # - pydap
   - pytest
   - pytest-asyncio
   - pytest-cov
@@ -65,3 +65,4 @@ dependencies:
       - jax # no way to get cpu-only jaxlib from conda if gpu is present
       - types-defusedxml
       - types-pexpect
+      - git+https://github.com/pydap/pydap.git # just for now - will restore to conda after new release
