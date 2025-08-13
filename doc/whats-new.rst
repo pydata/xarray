@@ -12,6 +12,9 @@ v2025.07.2 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Added :py:meth:`DataTree.prune` method to remove empty nodes while preserving tree structure.
+  Useful for cleaning up DataTree after time-based filtering operations (:issue:`10590`, :pull:`10598`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
 
 - Added new asynchronous loading methods :py:meth:`Dataset.load_async`, :py:meth:`DataArray.load_async`, :py:meth:`Variable.load_async`.
   Note that users are expected to limit concurrency themselves - xarray does not internally limit concurrency in any way.
@@ -23,6 +26,13 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+
+- When writing to NetCDF files with groups, Xarray no longer redefines dimensions
+  that have the same size in parent groups (:issue:`10241`). This conforms with
+  `CF Conventions for group scrope <https://cfconventions.org/cf-conventions/cf-conventions.html#_scope>`_
+  but may require adjustments for code that consumes NetCDF files produced by
+  Xarray.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 
 Deprecations
@@ -57,6 +67,10 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+
+- Clarify lazy behaviour and eager loading for ``chunks=None`` in :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_dataarray`, :py:func:`~xarray.open_datatree`, :py:func:`~xarray.open_groups` and :py:func:`~xarray.open_zarr` (:issue:`10612`, :pull:`10627`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 
 Internal Changes

@@ -1704,6 +1704,17 @@ class NetCDF4Base(NetCDFBase):
             with self.open(tmp_file, group="data/2") as actual2:
                 assert_identical(data2, actual2)
 
+    def test_child_group_with_inconsistent_dimensions(self) -> None:
+        base = Dataset(coords={"x": [1, 2]})
+        child = Dataset(coords={"x": [1, 2, 3]})
+        with create_tmp_file() as tmp_file:
+            self.save(base, tmp_file)
+            self.save(child, tmp_file, group="child", mode="a")
+            with self.open(tmp_file) as actual_base:
+                assert_identical(base, actual_base)
+            with self.open(tmp_file, group="child") as actual_child:
+                assert_identical(child, actual_child)
+
     @pytest.mark.parametrize(
         "input_strings, is_bytes",
         [
