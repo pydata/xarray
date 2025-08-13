@@ -500,12 +500,31 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self._dims = self._parse_dimensions(value)
 
     def _parse_dimensions(self, dims: _DimsLike) -> _Dims:
-        dims = (dims,) if isinstance(dims, str) else tuple(dims)
+        original_dims = dims  # Keep reference to original input for error messages
+
+        if isinstance(dims, str):
+            dims = (dims,)
+        elif isinstance(dims, Iterable):
+            dims = tuple(dims)
+        else:
+            # Single non-string, non-iterable hashable (int, UUID, etc.)
+            dims = (dims,)
+
         if len(dims) != self.ndim:
-            raise ValueError(
-                f"dimensions {dims} must have the same length as the "
-                f"number of data dimensions, ndim={self.ndim}"
-            )
+            # Provide a more helpful error message that explains the tuple ambiguity
+            if isinstance(original_dims, tuple) and len(dims) > 1 and self.ndim == 1:
+                raise ValueError(
+                    f"You passed dims={original_dims} for 1-dimensional data. "
+                    f"This is ambiguous: did you mean {len(dims)} separate dimensions, "
+                    f"or a single dimension with tuple name {original_dims}? "
+                    f"For a single tuple-named dimension, use dims=[{original_dims}]. "
+                    f"For multiple dimensions, use {len(dims)}-dimensional data."
+                )
+            else:
+                raise ValueError(
+                    f"dimensions {dims} must have the same length as the "
+                    f"number of data dimensions, ndim={self.ndim}"
+                )
         if len(set(dims)) < len(dims):
             repeated_dims = {d for d in dims if dims.count(d) > 1}
             warnings.warn(

@@ -47,6 +47,7 @@ from xarray.core.utils import (
     is_duck_dask_array,
     maybe_coerce_to_str,
 )
+from xarray.namedarray._typing import _DimsLike
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import (
@@ -369,7 +370,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def __init__(
         self,
-        dims,
+        dims: _DimsLike,
         data: T_DuckArray | ArrayLike,
         attrs=None,
         encoding=None,
@@ -378,10 +379,14 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         Parameters
         ----------
-        dims : str or sequence of str
-            Name(s) of the the data dimension(s). Must be either a string (only
-            for 1D data) or a sequence of strings with length equal to the
+        dims : Hashable or sequence of Hashable
+            Name(s) of the the data dimension(s). Must be either a Hashable
+            (only for 1D data) or a sequence of Hashables with length equal to the
             number of dimensions.
+
+            Note: Tuples are treated as sequences, so ('a', 'b') means two
+            dimensions named 'a' and 'b'. To use a tuple as a single dimension
+            name, wrap it in a list: [('a', 'b')].
         data : array_like
             Data array which supports numpy-like data access.
         attrs : dict_like or None, optional
