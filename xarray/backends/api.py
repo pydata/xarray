@@ -581,7 +581,7 @@ def open_dataset(
         - ``chunks=None`` skips using dask. This uses xarray's internally private
           :ref:`lazy indexing classes <internal design.lazy indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
-          This can be more efficient for smaller arrays, though results may vary.
+          This can be more efficient for smaller arrays or when large arrays are sliced before computation.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
         - ``chunks={}`` loads the data with dask using the engine's preferred chunk
           size, generally identical to the format's chunk size. If not available, a
