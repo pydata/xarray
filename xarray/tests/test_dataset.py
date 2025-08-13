@@ -6240,7 +6240,7 @@ class TestDataset:
         assert_equal(actual, expected)
 
         actual = ds + ds[["bar"]]
-        expected = (2 * ds[["bar"]]).merge(ds.coords)
+        expected = (2 * ds[["bar"]]).merge(ds.coords, compat="override")
         assert_identical(expected, actual)
 
         assert_identical(ds + Dataset(), ds.coords.to_dataset())
@@ -6676,12 +6676,12 @@ class TestDataset:
             coords={"x": ["a", "b", "c"]},
         )
         assert_equal(actual, expected)
-        assert_equal(actual, xr.merge([dsx0, dsx1]))
+        assert_equal(actual, xr.merge([dsx0, dsx1], join="outer"))
 
         # works just like xr.merge([self, other])
         dsy2 = DataArray([2, 2, 2], [("x", ["b", "c", "d"])]).to_dataset(name="dsy2")
         actual = dsx0.combine_first(dsy2)
-        expected = xr.merge([dsy2, dsx0])
+        expected = xr.merge([dsy2, dsx0], join="outer")
         assert_equal(actual, expected)
 
     def test_sortby(self) -> None:

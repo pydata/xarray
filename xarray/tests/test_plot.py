@@ -331,9 +331,10 @@ class TestPlot(PlotTestCase):
         assert not plt.gca().get_legend()
         plt.cla()
         self.darray[:, :, 0].plot.line(x="dim_0", add_legend=True)
-        assert plt.gca().get_legend()
+        legend = plt.gca().get_legend()
+        assert legend is not None
         # check whether legend title is set
-        assert plt.gca().get_legend().get_title().get_text() == "dim_1"
+        assert legend.get_title().get_text() == "dim_1"
 
     def test_2d_line_accepts_x_kw(self) -> None:
         self.darray[:, :, 0].plot.line(x="dim_0")
@@ -344,10 +345,14 @@ class TestPlot(PlotTestCase):
 
     def test_2d_line_accepts_hue_kw(self) -> None:
         self.darray[:, :, 0].plot.line(hue="dim_0")
-        assert plt.gca().get_legend().get_title().get_text() == "dim_0"
+        legend = plt.gca().get_legend()
+        assert legend is not None
+        assert legend.get_title().get_text() == "dim_0"
         plt.cla()
         self.darray[:, :, 0].plot.line(hue="dim_1")
-        assert plt.gca().get_legend().get_title().get_text() == "dim_1"
+        legend = plt.gca().get_legend()
+        assert legend is not None
+        assert legend.get_title().get_text() == "dim_1"
 
     def test_2d_coords_line_plot(self) -> None:
         lon, lat = np.meshgrid(np.linspace(-20, 20, 5), np.linspace(0, 30, 4))
@@ -2917,7 +2922,9 @@ class TestDatasetScatterPlots(PlotTestCase):
         pc = ds2.plot.scatter(x="A", y="B", markersize="hue")
         axes = pc.axes
         assert axes is not None
-        actual = [t.get_text() for t in axes.get_legend().texts]
+        legend = axes.get_legend()
+        assert legend is not None
+        actual = [t.get_text() for t in legend.texts]
         expected = ["hue", "a", "b"]
         assert actual == expected
 

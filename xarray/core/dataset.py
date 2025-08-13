@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import datetime
+import io
 import math
 import sys
 import warnings
@@ -122,7 +123,13 @@ from xarray.structure.merge import (
     merge_coordinates_without_align,
     merge_data_and_coords,
 )
-from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
+from xarray.util.deprecation_helpers import (
+    _COMPAT_DEFAULT,
+    _JOIN_DEFAULT,
+    CombineKwargDefault,
+    _deprecate_positional_args,
+    deprecate_dims,
+)
 
 if TYPE_CHECKING:
     from dask.dataframe import DataFrame as DaskDataFrame
@@ -1878,7 +1885,7 @@ class Dataset(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes: ...
+    ) -> bytes | memoryview: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -1901,7 +1908,7 @@ class Dataset(
     @overload
     def to_netcdf(
         self,
-        path: str | PathLike,
+        path: str | PathLike | io.IOBase,
         mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
@@ -1932,7 +1939,7 @@ class Dataset(
 
     def to_netcdf(
         self,
-        path: str | PathLike | None = None,
+        path: str | PathLike | io.IOBase | None = None,
         mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
@@ -1942,7 +1949,7 @@ class Dataset(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes | Delayed | None:
+    ) -> bytes | memoryview | Delayed | None:
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -2014,9 +2021,9 @@ class Dataset(
 
         Returns
         -------
-            * ``bytes`` if path is None
+            * ``bytes`` or ``memoryview`` if path is None
             * ``dask.delayed.Delayed`` if compute is False
-            * None otherwise
+            * ``None`` otherwise
 
         See Also
         --------
@@ -5321,7 +5328,14 @@ class Dataset(
 
         # concatenate the arrays
         stackable_vars = [stack_dataarray(da) for da in self.data_vars.values()]
-        data_array = concat(stackable_vars, dim=new_dim)
+        data_array = concat(
+            stackable_vars,
+            dim=new_dim,
+            data_vars="all",
+            coords="different",
+            compat="equals",
+            join="outer",
+        )
 
         if name is not None:
             data_array.name = name
@@ -5565,8 +5579,8 @@ class Dataset(
         self,
         other: CoercibleMapping | DataArray,
         overwrite_vars: Hashable | Iterable[Hashable] = frozenset(),
-        compat: CompatOptions = "no_conflicts",
-        join: JoinOptions = "outer",
+        compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
+        join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
         fill_value: Any = xrdtypes.NA,
         combine_attrs: CombineAttrsOptions = "override",
     ) -> Self:

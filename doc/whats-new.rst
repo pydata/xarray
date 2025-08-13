@@ -13,6 +13,10 @@ v2025.07.2 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:meth:`DataTree.to_netcdf` can now write to a file-like object, or return bytes if called without a filepath. (:issue:`10570`)
+  By `Matthew Willson <https://github.com/mjwillson>`_.
+- Added exception handling for invalid files in :py:func:`open_mfdataset`. (:issue:`6736`)
+  By `Pratiman Patel <https://github.com/pratiman-91>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -21,6 +25,18 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- Start a deprecation cycle for changing the default keyword arguments to :py:func:`concat`, :py:func:`merge`,
+  :py:func:`combine_nested`, :py:func:`combine_by_coords`, and :py:func:`open_mfdataset`.
+  Emits a :py:class:`FutureWarning` when using old defaults and new defaults would result in different behavior.
+  Adds an option: ``use_new_combine_kwarg_defaults`` to opt in to new defaults immediately.
+  New values are:
+
+  - ``data_vars``: None which means ``all`` when concatenating along a new dimension, and ``"minimal"`` when concatenating along an existing dimension
+  - ``coords``: "minimal"
+  - ``compat``: "override"
+  - ``join``: "exact"
+
+  (:issue:`8778`, :issue:`1385`, :pull:`10062`). By `Julia Signell <https://github.com/jsignell>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -34,6 +50,9 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix detection of the ``h5netcdf`` backend. Xarray now selects ``h5netcdf`` if the default ``netCDF4`` engine is not available (:issue:`10401`, :pull:`10557`).
   By `Scott Staniewicz <https://github.com/scottstanie>`_.
+- Ensure ``unlimited_dims`` passed to :py:meth:`xarray.DataArray.to_netcdf`, :py:meth:`xarray.Dataset.to_netcdf` or :py:meth:`xarray.DataTree.to_netcdf` only contains dimensions present in the object; raise ``ValueError`` otherwise (:issue:`10549`, :pull:`10608`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
@@ -8425,8 +8444,15 @@ Backwards incompatible changes
 
   .. code:: python
 
-      ds = xray.Dataset({"x": 0})
+    In [1]: ds = xray.Dataset({"x": 0})
 
+    In [2]: xray.concat([ds, ds], dim="y")
+    Out[2]:
+    <xarray.Dataset> Size: 16B
+    Dimensions:  (y: 2)
+    Dimensions without coordinates: y
+    Data variables:
+        x        (y) int64 16B 0 0
   .. code:: python
 
       xray.concat([ds, ds], dim="y")
