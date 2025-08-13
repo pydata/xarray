@@ -282,6 +282,7 @@ class DatatreeIOBase:
         assert list(root.dimensions) == ["x"]
         assert list(child.dimensions) == []
 
+    @requires_dask
     def test_compute_false(self, tmpdir, simple_datatree):
         filepath = tmpdir / "test.nc"
         original_dt = simple_datatree.chunk()

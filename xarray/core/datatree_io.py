@@ -94,8 +94,6 @@ def _datatree_to_netcdf(
         invalid_netcdf=invalid_netcdf,
         auto_complex=auto_complex,
     )
-    if group is not None:
-        root_store = root_store.get_child(group)
 
     writer = ArrayWriter()
 
