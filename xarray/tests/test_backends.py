@@ -3908,6 +3908,11 @@ class TestZarrDictStore(ZarrBase):
         cls_name,
     ) -> None:
         N_OBJECTS = 5
+        N_LAZY_VARS = {
+            "Variable": 1,
+            "DataArray": 1,
+            "Dataset": 4,
+        }  # specific to the create_test_data() used
 
         target_class = zarr.AsyncArray
         method_name = "getitem"
@@ -3927,7 +3932,7 @@ class TestZarrDictStore(ZarrBase):
                 results = await asyncio.gather(*coros)
 
                 mocked_meth.assert_called()
-                assert mocked_meth.call_count == N_OBJECTS
+                assert mocked_meth.call_count == N_OBJECTS * N_LAZY_VARS[cls_name]
                 mocked_meth.assert_awaited()
 
             for result in results:
