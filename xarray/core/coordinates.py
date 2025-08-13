@@ -177,7 +177,7 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
 
                 # compute the cartesian product
                 code_list += [
-                    np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i]).tolist()
+                    np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i])
                     for code in codes
                 ]
                 level_list += levels
