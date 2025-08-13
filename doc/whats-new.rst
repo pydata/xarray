@@ -15,6 +15,8 @@ New Features
 
 - :py:meth:`DataTree.to_netcdf` can now write to a file-like object, or return bytes if called without a filepath. (:issue:`10570`)
   By `Matthew Willson <https://github.com/mjwillson>`_.
+- Added exception handling for invalid files in :py:func:`open_mfdataset`. (:issue:`6736`)
+  By `Pratiman Patel <https://github.com/pratiman-91>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -55,9 +57,16 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix detection of the ``h5netcdf`` backend. Xarray now selects ``h5netcdf`` if the default ``netCDF4`` engine is not available (:issue:`10401`, :pull:`10557`).
   By `Scott Staniewicz <https://github.com/scottstanie>`_.
+- Ensure ``unlimited_dims`` passed to :py:meth:`xarray.DataArray.to_netcdf`, :py:meth:`xarray.Dataset.to_netcdf` or :py:meth:`xarray.DataTree.to_netcdf` only contains dimensions present in the object; raise ``ValueError`` otherwise (:issue:`10549`, :pull:`10608`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
+
+- Clarify lazy behaviour and eager loading for ``chunks=None`` in :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_dataarray`, :py:func:`~xarray.open_datatree`, :py:func:`~xarray.open_groups` and :py:func:`~xarray.open_zarr` (:issue:`10612`, :pull:`10627`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 
 Internal Changes
