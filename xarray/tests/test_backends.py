@@ -6560,6 +6560,53 @@ class TestPydapOnline(TestPydap):
         )
 
 
+@requires_pydap
+@network
+@pytest.mark.parametrize("protocol", ["dap2", "dap4"])
+def test_batchdap4_downloads(protocol) -> None:
+    """Test that in dap4, all dimensions are downloaded at once"""
+    import pydap
+    from requests_cache import CachedSession
+
+    _version_ = Version(pydap.__version__)
+    session = CachedSession()
+    session.cache.clear()
+    url = "https://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc"
+
+    open_dataset(
+        url.replace("https", protocol),
+        engine="pydap",
+        session=session,
+        decode_times=False,
+    )
+    if protocol == "dap4":
+        if _version_ > Version("3.5.5"):
+            # should download 2 urls only (1 dmr and 1 dap)
+            assert len(session.cache.urls()) == 2
+        else:
+            assert len(session.cache.urls()) == 4
+        # das + dds + 3 dods urls
+    elif protocol == "dap2":
+        assert len(session.cache.urls()) == 5
+
+
+@requires_pydap
+@network
+def test_batch_warnswithdap2() -> None:
+    from requests_cache import CachedSession
+
+    session = CachedSession()
+    session.cache.clear()
+    url = "dap2://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc"
+    with pytest.warns(UserWarning):
+        open_dataset(
+            url, engine="pydap", session=session, batch=True, decode_times=False
+        )
+
+    # no batching is supported here
+    assert len(session.cache.urls()) == 5
+
+
 class TestEncodingInvalid:
     def test_extract_nc4_variable_encoding(self) -> None:
         var = xr.Variable(("x",), [1, 2, 3], {}, {"foo": "bar"})

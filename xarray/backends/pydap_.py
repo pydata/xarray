@@ -162,9 +162,9 @@ class PydapDataStore(AbstractDataStore):
         args = {"dataset": dataset}
         if group:
             args["group"] = group
-        if url.startswith(("https", "dap2")):
+        if url.startswith(("http", "dap2")):
             args["protocol"] = "dap2"
-        else:
+        elif url.startswith("dap4"):
             args["protocol"] = "dap4"
         if batch:
             if args["protocol"] == "dap2":
