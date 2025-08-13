@@ -12,15 +12,41 @@ v2025.07.2 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Added :py:meth:`DataTree.prune` method to remove empty nodes while preserving tree structure.
+  Useful for cleaning up DataTree after time-based filtering operations (:issue:`10590`, :pull:`10598`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
 
+- :py:meth:`DataTree.to_netcdf` can now write to a file-like object, or return bytes if called without a filepath. (:issue:`10570`)
+  By `Matthew Willson <https://github.com/mjwillson>`_.
+- Added exception handling for invalid files in :py:func:`open_mfdataset`. (:issue:`6736`)
+  By `Pratiman Patel <https://github.com/pratiman-91>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+
+- When writing to NetCDF files with groups, Xarray no longer redefines dimensions
+  that have the same size in parent groups (:issue:`10241`). This conforms with
+  `CF Conventions for group scrope <https://cfconventions.org/cf-conventions/cf-conventions.html#_scope>`_
+  but may require adjustments for code that consumes NetCDF files produced by
+  Xarray.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 
 Deprecations
 ~~~~~~~~~~~~
 
+- Start a deprecation cycle for changing the default keyword arguments to :py:func:`concat`, :py:func:`merge`,
+  :py:func:`combine_nested`, :py:func:`combine_by_coords`, and :py:func:`open_mfdataset`.
+  Emits a :py:class:`FutureWarning` when using old defaults and new defaults would result in different behavior.
+  Adds an option: ``use_new_combine_kwarg_defaults`` to opt in to new defaults immediately.
+  New values are:
+
+  - ``data_vars``: None which means ``all`` when concatenating along a new dimension, and ``"minimal"`` when concatenating along an existing dimension
+  - ``coords``: "minimal"
+  - ``compat``: "override"
+  - ``join``: "exact"
+
+  (:issue:`8778`, :issue:`1385`, :pull:`10062`). By `Julia Signell <https://github.com/jsignell>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -32,15 +58,28 @@ Bug fixes
 
 - Fix transpose of boolean arrays read from disk. (:issue:`10536`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix detection of the ``h5netcdf`` backend. Xarray now selects ``h5netcdf`` if the default ``netCDF4`` engine is not available (:issue:`10401`, :pull:`10557`).
+  By `Scott Staniewicz <https://github.com/scottstanie>`_.
+- Ensure ``unlimited_dims`` passed to :py:meth:`xarray.DataArray.to_netcdf`, :py:meth:`xarray.Dataset.to_netcdf` or :py:meth:`xarray.DataTree.to_netcdf` only contains dimensions present in the object; raise ``ValueError`` otherwise (:issue:`10549`, :pull:`10608`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Clarify lazy behaviour and eager loading for ``chunks=None`` in :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_dataarray`, :py:func:`~xarray.open_datatree`, :py:func:`~xarray.open_groups` and :py:func:`~xarray.open_zarr` (:issue:`10612`, :pull:`10627`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+
+Performance
+~~~~~~~~~~~
+- Speed up non-numeric scalars when calling :py:meth:`Dataset.interp`. (:issue:`10054`, :pull:`10554`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 .. _whats-new.2025.07.1:
 
@@ -8419,8 +8458,15 @@ Backwards incompatible changes
 
   .. code:: python
 
-      ds = xray.Dataset({"x": 0})
+    In [1]: ds = xray.Dataset({"x": 0})
 
+    In [2]: xray.concat([ds, ds], dim="y")
+    Out[2]:
+    <xarray.Dataset> Size: 16B
+    Dimensions:  (y: 2)
+    Dimensions without coordinates: y
+    Data variables:
+        x        (y) int64 16B 0 0
   .. code:: python
 
       xray.concat([ds, ds], dim="y")

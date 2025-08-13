@@ -265,6 +265,23 @@ class DatatreeIOBase:
             assert_equal(original_dt, roundtrip_dt)
             assert_identical(expected_dt, roundtrip_dt)
 
+    @requires_netCDF4
+    def test_no_redundant_dimensions(self, tmpdir):
+        # regression test for https://github.com/pydata/xarray/issues/10241
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2, 3]}),
+                "/child": xr.Dataset({"foo": ("x", [4, 5, 6])}),
+            }
+        )
+        filepath = tmpdir / "test.zarr"
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        root = nc4.Dataset(str(filepath))
+        child = root.groups["child"]
+        assert list(root.dimensions) == ["x"]
+        assert list(child.dimensions) == []
+
 
 @requires_netCDF4
 class TestNetCDF4DatatreeIO(DatatreeIOBase):
@@ -538,6 +555,28 @@ class TestH5NetCDFDatatreeIO(DatatreeIOBase):
                     "phony_dim_2": 5,
                     "phony_dim_3": 25,
                 }
+
+    def test_roundtrip_via_bytes(self, simple_datatree):
+        original_dt = simple_datatree
+        roundtrip_dt = open_datatree(original_dt.to_netcdf())
+        assert_equal(original_dt, roundtrip_dt)
+
+    def test_roundtrip_via_bytes_engine_specified(self, simple_datatree):
+        original_dt = simple_datatree
+        roundtrip_dt = open_datatree(original_dt.to_netcdf(engine=self.engine))
+        assert_equal(original_dt, roundtrip_dt)
+
+    def test_roundtrip_using_filelike_object(self, tmpdir, simple_datatree):
+        original_dt = simple_datatree
+        filepath = tmpdir + "/test.nc"
+        # h5py requires both read and write access when writing, it will
+        # work with file-like objects provided they support both, and are
+        # seekable.
+        with open(filepath, "wb+") as file:
+            original_dt.to_netcdf(file, engine=self.engine)
+        with open(filepath, "rb") as file:
+            with open_datatree(file, engine=self.engine) as roundtrip_dt:
+                assert_equal(original_dt, roundtrip_dt)
 
 
 @requires_zarr

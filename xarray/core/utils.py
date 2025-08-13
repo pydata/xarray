@@ -104,6 +104,20 @@ V = TypeVar("V")
 T = TypeVar("T")
 
 
+def is_allowed_extension_array_dtype(dtype: Any):
+    return pd.api.types.is_extension_array_dtype(dtype) and not isinstance(  # noqa: TID251
+        dtype, pd.StringDtype
+    )
+
+
+def is_allowed_extension_array(array: Any) -> bool:
+    return (
+        hasattr(array, "dtype")
+        and is_allowed_extension_array_dtype(array.dtype)
+        and not isinstance(array, pd.arrays.NumpyExtensionArray)  # type: ignore[attr-defined]
+    )
+
+
 def alias_message(old_name: str, new_name: str) -> str:
     return f"{old_name} has been deprecated. Use {new_name} instead."
 
@@ -680,15 +694,12 @@ def is_remote_uri(path: str) -> bool:
 
 def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
     # check byte header to determine file type
-    if isinstance(filename_or_obj, bytes):
-        magic_number = filename_or_obj[:count]
-    elif isinstance(filename_or_obj, io.IOBase):
-        if filename_or_obj.tell() != 0:
-            filename_or_obj.seek(0)
-        magic_number = filename_or_obj.read(count)
-        filename_or_obj.seek(0)
-    else:
+    if not isinstance(filename_or_obj, io.IOBase):
         raise TypeError(f"cannot read the magic number from {type(filename_or_obj)}")
+    if filename_or_obj.tell() != 0:
+        filename_or_obj.seek(0)
+    magic_number = filename_or_obj.read(count)
+    filename_or_obj.seek(0)
     return magic_number
 
 
