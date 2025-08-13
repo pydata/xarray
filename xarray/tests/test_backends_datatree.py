@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 import pytest
+from packaging.version import Version
 
 import xarray as xr
 from xarray import DataTree, load_datatree, open_datatree, open_groups
@@ -641,7 +642,15 @@ class TestPyDAPDatatreeIO:
             │       Temperature  (time, Z, Y, X) float32 ...
             |       Salinity     (time, Z, Y, X) float32 ...
         """
-        tree = open_datatree(url, engine=self.engine)
+        import pydap
+        from requests_cache import CachedSession
+
+        _version_ = Version(pydap.__version__)
+
+        session = CachedSession()
+        session.cache.clear()
+
+        tree = open_datatree(url, engine=self.engine, session=session)
         assert set(tree.dims) == {"time", "Z", "nv"}
         assert tree["/SimpleGroup"].coords["time"].dims == ("time",)
         assert tree["/SimpleGroup"].coords["Z"].dims == ("Z",)
@@ -651,6 +660,19 @@ class TestPyDAPDatatreeIO:
             assert set(tree["/SimpleGroup"].dims) == set(
                 list(expected.dims) + ["Z", "nv"]
             )
+
+        # group (including root). So in this case 3. In the future there
+        # should a only be 2 downloads (all dimensions should be downloaded)
+        # within single
+
+        if _version_ > Version("3.5.5"):
+            # Total downloads are: 1 dmr, + 1 dap url per Group | root.
+            # since there is a group then 2 dap url. In the future there
+            # should only be 1 dap url downloaded.
+            assert len(session.cache.urls()) == 3
+        else:
+            # 1 dmr + 1 dap url per dimension (total there are 4 dimension arrays)
+            assert len(session.cache.urls()) == 5
 
     def test_open_groups_to_dict(self, url=all_aligned_child_nodes_url) -> None:
         aligned_dict_of_datasets = open_groups(url, engine=self.engine)
