@@ -16,6 +16,7 @@ from xarray.backends.common import (
     T_PathFileOrDataStore,
     WritableCFDataStore,
     _normalize_path,
+    collect_ancestor_dimensions,
     datatree_from_dict_with_io_cleanup,
     find_root_and_group,
     robust_getitem,
@@ -528,6 +529,9 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     def get_dimensions(self):
         return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
+
+    def get_parent_dimensions(self):
+        return FrozenDict(collect_ancestor_dimensions(self.ds))
 
     def get_encoding(self):
         return {

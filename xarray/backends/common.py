@@ -257,6 +257,20 @@ def find_root_and_group(ds):
     return ds, group
 
 
+def collect_ancestor_dimensions(group) -> dict[str, int]:
+    """Returns dimensions defined in parent groups.
+
+    If dimensions are defined in multiple ancestors, use the size of the closest
+    ancestor.
+    """
+    dims = {}
+    while (group := group.parent) is not None:
+        for k, v in group.dimensions.items():
+            if k not in dims:
+                dims[k] = len(v)
+    return dims
+
+
 def datatree_from_dict_with_io_cleanup(groups_dict: Mapping[str, Dataset]) -> DataTree:
     """DataTree.from_dict with file clean-up."""
     try:
@@ -312,6 +326,9 @@ class AbstractDataStore:
 
     def get_dimensions(self):  # pragma: no cover
         raise NotImplementedError()
+
+    def get_parent_dimensions(self):  # pragma: no cover
+        return {}
 
     def get_attrs(self):  # pragma: no cover
         raise NotImplementedError()
@@ -568,13 +585,14 @@ class AbstractWritableDataStore(AbstractDataStore):
         if unlimited_dims is None:
             unlimited_dims = set()
 
+        parent_dims = self.get_parent_dimensions()
         existing_dims = self.get_dimensions()
 
         dims = {}
         for v in unlimited_dims:  # put unlimited_dims first
             dims[v] = None
         for v in variables.values():
-            dims.update(dict(zip(v.dims, v.shape, strict=True)))
+            dims |= v.sizes
 
         for dim, length in dims.items():
             if dim in existing_dims and length != existing_dims[dim]:
@@ -582,7 +600,7 @@ class AbstractWritableDataStore(AbstractDataStore):
                     "Unable to update size for existing dimension"
                     f"{dim!r} ({length} != {existing_dims[dim]})"
                 )
-            elif dim not in existing_dims:
+            elif dim not in existing_dims and length != parent_dims.get(dim):
                 is_unlimited = dim in unlimited_dims
                 self.set_dimension(dim, length, is_unlimited)
 
