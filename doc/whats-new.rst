@@ -14,6 +14,7 @@ New Features
 ~~~~~~~~~~~~
 
 - Added new asynchronous loading methods :py:meth:`Dataset.load_async`, :py:meth:`DataArray.load_async`, :py:meth:`Variable.load_async`.
+  Note that users are expected to limit concurrency themselves - xarray does not internally limit concurrency in any way.
   (:issue:`10326`, :pull:`10327`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - :py:meth:`DataTree.to_netcdf` can now write to a file-like object, or return bytes if called without a filepath. (:issue:`10570`)
   By `Matthew Willson <https://github.com/mjwillson>`_.

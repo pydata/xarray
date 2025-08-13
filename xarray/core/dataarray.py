@@ -1180,6 +1180,8 @@ class DataArray(
         Only works when opening data lazily from IO storage backends which support lazy asynchronous loading.
         Otherwise will raise a NotImplementedError.
 
+        Note users are expected to limit concurrency themselves - xarray does not internally limit concurrency in any way.
+
         Parameters
         ----------
         **kwargs : dict
