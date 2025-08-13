@@ -97,10 +97,9 @@ def _datatree_to_netcdf(
 
     writer = ArrayWriter()
 
+    # TODO: allow this work (setting up the file for writing array data)
+    # to be parallelized with dask
     try:
-        # TODO: allow this work (setting up the file for writing array data)
-        # to be parallelized with dask
-
         for node in dt.subtree:
             at_root = node is dt
             dataset = node.to_dataset(inherit=write_inherited_coords or at_root)
@@ -200,7 +199,6 @@ def _datatree_to_zarr(
 
     writer = ArrayWriter()
 
-    # TODO: figure out how to properly handle unlimited_dims
     try:
         for node in dt.subtree:
             at_root = node is dt
