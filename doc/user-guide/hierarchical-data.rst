@@ -453,6 +453,8 @@ The result is a new tree, containing only the nodes matching the condition.
 
 (Yes, under the hood :py:meth:`~xarray.DataTree.filter` is just syntactic sugar for the pattern we showed you in :ref:`iterating over trees` !)
 
+If you want to filter out empty nodes you can use :py:meth:`~xarray.DataTree.prune`.
+
 .. _Tree Contents:
 
 Tree Contents
