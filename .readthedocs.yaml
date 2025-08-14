@@ -14,6 +14,9 @@ build:
       - git fetch --unshallow || true
     pre_install:
       - git update-index --assume-unchanged doc/conf.py ci/requirements/doc.yml
+      - export NO_COLOR=1
+      - export TERM=dumb
+      - export FORCE_COLOR=0
 
 conda:
   environment: ci/requirements/doc.yml

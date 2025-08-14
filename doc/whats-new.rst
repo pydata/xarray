@@ -143,7 +143,18 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+
+
+- Split large documentation pages for better discoverability:
+
+  - "Reading and Writing Files" page split into: netCDF/HDF5, Zarr, and Other Formats
+  - "Plotting" page split into: Line Plots, 2D Plots, Faceting, and Scatter/Quiver/Streamplot
+
+  The original pages now serve as navigation hubs with improved organization.
+  By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_, `Scott Henderson <https://github.com/scottyhq>`_, and `Deepak Cherian <https://github.com/dcherian>`_.
+
 - A `new gallery <https://xarray-indexes.readthedocs.io>`_ showing off the possibilities enabled by flexible indexes.
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

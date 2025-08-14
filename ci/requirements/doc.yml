@@ -41,12 +41,12 @@ dependencies:
   - sphinx-copybutton
   - sphinx-design
   - sphinx-inline-tabs
-  - sphinx>=6,<8
   - sphinxcontrib-mermaid
   - sphinxcontrib-srclinks
   - sphinx-remove-toctrees
   - sphinxext-opengraph
   - sphinxext-rediraffe
+  - tree # for zarr docs
   - zarr
   - pip:
       # relative to this file. Needs to be editable to be accepted.
