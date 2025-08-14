@@ -10,7 +10,7 @@ What's New
 v2025.08.0 (August 14, 2025)
 ----------------------------
 
-This release brings the ability to load xarray objects asynchronously, write netCDF as bytes, fixes a number of bugs, and starts an important deprecation cycle for changing the default values of keyword arguments for various xarray combining functons.
+This release brings the ability to load xarray objects asynchronously, write netCDF as bytes, fixes a number of bugs, and starts an important deprecation cycle for changing the default values of keyword arguments for various xarray combining functions.
 
 Thanks to the 24 contributors to this release:
 Alfonso Ladino, Brigitta Sipőcz, Claude, Deepak Cherian, Dimitri Papadopoulos Orfanos, Eric Jansen, Ian Hunt-Isaak, Ilan Gold, Illviljan, Julia Signell, Justus Magin, Kai Mühlbauer, Mathias Hauser, Matthew, Michael Niklas, Miguel Jimenez, Nick Hodgskin, Pratiman, Scott Staniewicz, Spencer Clark, Stephan Hoyer, Tom Nicholas, Yang Yang and jemmajeffree
