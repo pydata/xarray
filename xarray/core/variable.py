@@ -971,7 +971,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             data = copy.copy(self.data)
         if attrs is _default:
             attrs = copy.copy(self._attrs)
-
         if encoding is _default:
             encoding = copy.copy(self._encoding)
         return type(self)(dims, data, attrs, encoding, fastpath=True)
