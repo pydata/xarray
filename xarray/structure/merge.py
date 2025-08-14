@@ -276,6 +276,7 @@ def merge_collected(
             if index is not None:
                 merged_indexes[name] = index
         else:
+            attrs: dict[Any, Any] = {}
             indexed_elements = [
                 (variable, index)
                 for variable, index in elements_list
@@ -306,13 +307,7 @@ def merge_collected(
                     [var.attrs for var, _ in indexed_elements],
                     combine_attrs=combine_attrs,
                 )
-                if variable.attrs or attrs:
-                    # Make a shallow copy to so that assigning merged_vars[name].attrs
-                    # does not affect the original input variable.
-                    merged_vars[name] = variable.copy(deep=False)
-                    merged_vars[name].attrs = attrs
-                else:
-                    merged_vars[name] = variable
+                merged_vars[name] = variable
                 merged_indexes[name] = index
             else:
                 variables = [variable for variable, _ in elements_list]
@@ -342,9 +337,14 @@ def merge_collected(
                         raise
 
                 if name in merged_vars:
-                    merged_vars[name].attrs = merge_attrs(
+                    attrs = merge_attrs(
                         [var.attrs for var in variables], combine_attrs=combine_attrs
                     )
+
+            if name in merged_vars and (merged_vars[name].attrs or attrs):
+                # Ensure that assigning attrs does not affect the original input variable.
+                merged_vars[name] = merged_vars[name].copy(deep=False)
+                merged_vars[name].attrs = attrs
 
     return merged_vars, merged_indexes
 

@@ -228,6 +228,7 @@
    Variable.isnull
    Variable.item
    Variable.load
+   Variable.load_async
    Variable.max
    Variable.mean
    Variable.median
