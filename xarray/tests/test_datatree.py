@@ -165,7 +165,9 @@ class TestPaths:
                 "/Kate": DataTree(),
             }
         )
-        assert john["/Mary"].same_tree(john["/Kate"])
+        mary = john.children["/Mary"]
+        kate = john.children["/Kate"]
+        assert mary.same_tree(kate)
 
     def test_relative_paths(self) -> None:
         john = DataTree.from_dict(
@@ -1884,7 +1886,7 @@ class TestIsomorphicEqualsAndIdentical:
         assert not child.identical(new_child)
 
         deeper_root = DataTree(children={"root": root})
-        grandchild = deeper_root["/root/child"]
+        grandchild = deeper_root.children["/root/child"]
         assert child.equals(grandchild)
         assert child.identical(grandchild)
 
