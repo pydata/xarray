@@ -50,6 +50,7 @@ from xarray.core.utils import (
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import (
+    async_to_duck_array,
     integer_types,
     is_0d_dask_array,
     is_chunked_array,
@@ -975,9 +976,12 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             encoding = copy.copy(self._encoding)
         return type(self)(dims, data, attrs, encoding, fastpath=True)
 
-    def load(self, **kwargs):
-        """Manually trigger loading of this variable's data from disk or a
-        remote source into memory and return this variable.
+    def load(self, **kwargs) -> Self:
+        """Trigger loading data into memory and return this variable.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original variable is modified and returned.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -988,17 +992,61 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.array.compute``.
 
+        Returns
+        -------
+        object : Variable
+            Same object but with lazy data as an in-memory array.
+
         See Also
         --------
         dask.array.compute
+        Variable.compute
+        Variable.load_async
+        DataArray.load
+        Dataset.load
         """
         self._data = to_duck_array(self._data, **kwargs)
         return self
 
-    def compute(self, **kwargs):
-        """Manually trigger loading of this variable's data from disk or a
-        remote source into memory and return a new variable. The original is
-        left unaltered.
+    async def load_async(self, **kwargs) -> Self:
+        """Trigger and await asynchronous loading of data into memory and return this variable.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original variable is modified and returned.
+
+        Only works when opening data lazily from IO storage backends which support lazy asynchronous loading.
+        Otherwise will raise a NotImplementedError.
+
+        Note users are expected to limit concurrency themselves - xarray does not internally limit concurrency in any way.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        Returns
+        -------
+        object : Variable
+            Same object but with lazy data as an in-memory array.
+
+        See Also
+        --------
+        dask.array.compute
+        Variable.load
+        Variable.compute
+        DataArray.load_async
+        Dataset.load_async
+        """
+        self._data = await async_to_duck_array(self._data, **kwargs)
+        return self
+
+    def compute(self, **kwargs) -> Self:
+        """Trigger loading data into memory and return a new variable.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        The original variable is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -1009,9 +1057,18 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.array.compute``.
 
+        Returns
+        -------
+        object : Variable
+            New object with the data as an in-memory array.
+
         See Also
         --------
         dask.array.compute
+        Variable.load
+        Variable.load_async
+        DataArray.compute
+        Dataset.compute
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -2697,6 +2754,10 @@ class IndexVariable(Variable):
         )
 
     def load(self):
+        # data is already loaded into memory for IndexVariable
+        return self
+
+    async def load_async(self):
         # data is already loaded into memory for IndexVariable
         return self
 
