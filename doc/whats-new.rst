@@ -62,6 +62,9 @@ Bug fixes
   By `Scott Staniewicz <https://github.com/scottstanie>`_.
 - Ensure ``unlimited_dims`` passed to :py:meth:`xarray.DataArray.to_netcdf`, :py:meth:`xarray.Dataset.to_netcdf` or :py:meth:`xarray.DataTree.to_netcdf` only contains dimensions present in the object; raise ``ValueError`` otherwise (:issue:`10549`, :pull:`10608`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix distribution of ``auto_complex`` keyword argument for open_datatree (:issue:`10631`, :pull:`10632`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 
 Documentation
