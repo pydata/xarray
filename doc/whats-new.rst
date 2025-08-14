@@ -5,6 +5,34 @@
 What's New
 ==========
 
+.. _whats-new.2025.08.1:
+
+v2025.08.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
 .. _whats-new.2025.08.0:
 
 v2025.08.0 (August 14, 2025)
