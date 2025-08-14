@@ -165,8 +165,8 @@ class TestPaths:
                 "/Kate": DataTree(),
             }
         )
-        mary = john.children["/Mary"]
-        kate = john.children["/Kate"]
+        mary = john.children["Mary"]
+        kate = john.children["Kate"]
         assert mary.same_tree(kate)
 
     def test_relative_paths(self) -> None:
@@ -176,14 +176,8 @@ class TestPaths:
                 "/Annie": DataTree(),
             }
         )
-        sue_result = john["Mary/Sue"]
-        if isinstance(sue_result, DataTree):
-            sue: DataTree = sue_result
-
-        annie_result = john["Annie"]
-        if isinstance(annie_result, DataTree):
-            annie: DataTree = annie_result
-
+        sue = john.children["Mary"].children["Sue"]
+        annie = john.children["Annie"]
         assert sue.relative_to(john) == "Mary/Sue"
         assert john.relative_to(sue) == "../.."
         assert annie.relative_to(sue) == "../../Annie"
@@ -1886,7 +1880,7 @@ class TestIsomorphicEqualsAndIdentical:
         assert not child.identical(new_child)
 
         deeper_root = DataTree(children={"root": root})
-        grandchild = deeper_root.children["/root/child"]
+        grandchild = deeper_root.children["root"].children["child"]
         assert child.equals(grandchild)
         assert child.identical(grandchild)
 
