@@ -6675,7 +6675,7 @@ Enhancements
 
 .. _Zarr: http://zarr.readthedocs.io/
 
-.. _Iris: http://scitools.org.uk/iris
+.. _Iris: http://scitools-iris.readthedocs.io
 
 .. _netcdftime: https://unidata.github.io/netcdftime
 
