@@ -568,6 +568,10 @@ def test_invalid_for_all(indexer_cls) -> None:
         indexer_cls((slice("foo"),))
     with pytest.raises(TypeError):
         indexer_cls((np.array(["foo"]),))
+    with pytest.raises(TypeError):
+        indexer_cls(True)
+    with pytest.raises(TypeError):
+        indexer_cls(np.array(True))
 
 
 def check_integer(indexer_cls):
