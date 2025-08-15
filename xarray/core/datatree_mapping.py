@@ -13,15 +13,14 @@ if TYPE_CHECKING:
 
 @overload
 def map_over_datasets(
-    func: Callable[
-        ...,
-        Dataset | None,
-    ],
+    func: Callable[..., Dataset | None],
     *args: Any,
     kwargs: Mapping[str, Any] | None = None,
 ) -> DataTree: ...
 
 
+# add an explicit overload for the most common case of two return values
+# (python typing does not have a way to match tuple lengths in general)
 @overload
 def map_over_datasets(
     func: Callable[..., tuple[Dataset | None, Dataset | None]],
@@ -30,8 +29,6 @@ def map_over_datasets(
 ) -> tuple[DataTree, DataTree]: ...
 
 
-# add an expect overload for the most common case of two return values
-# (python typing does not have a way to match tuple lengths in general)
 @overload
 def map_over_datasets(
     func: Callable[..., tuple[Dataset | None, ...]],
@@ -41,7 +38,7 @@ def map_over_datasets(
 
 
 def map_over_datasets(
-    func: Callable[..., Dataset | tuple[Dataset | None, ...] | None],
+    func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
     *args: Any,
     kwargs: Mapping[str, Any] | None = None,
 ) -> DataTree | tuple[DataTree, ...]:

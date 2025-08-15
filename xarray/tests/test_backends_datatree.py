@@ -724,7 +724,7 @@ class TestZarrDatatreeIO:
             # inherited variables aren't meant to be written to zarr
             local_node_variables = node.to_dataset(inherit=False).variables
             for name, var in local_node_variables.items():
-                var_dir = storepath / node.path.removeprefix("/") / name
+                var_dir = storepath / node.path.removeprefix("/") / name  # type: ignore[operator]
 
                 assert_expected_zarr_files_exist(
                     arr_dir=var_dir,

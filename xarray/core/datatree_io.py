@@ -74,13 +74,13 @@ def _datatree_to_netcdf(
         at_root = node is dt
         ds = node.to_dataset(inherit=write_inherited_coords or at_root)
         group_path = None if at_root else "/" + node.relative_to(dt)
-        ds.to_netcdf(
+        ds.to_netcdf(  # type: ignore[misc]  # Not all union combinations were tried because there are too many unions
             target,
             group=group_path,
             mode=mode,
             encoding=encoding.get(node.path),
             unlimited_dims=unlimited_dims.get(node.path),
-            engine=engine,
+            engine=engine,  # type: ignore[arg-type]
             format=format,
             compute=compute,
             **kwargs,
@@ -134,7 +134,7 @@ def _datatree_to_zarr(
         at_root = node is dt
         ds = node.to_dataset(inherit=write_inherited_coords or at_root)
         group_path = None if at_root else "/" + node.relative_to(dt)
-        ds.to_zarr(
+        ds.to_zarr(  # type: ignore[call-overload]
             store,
             group=group_path,
             mode=mode,

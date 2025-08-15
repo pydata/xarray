@@ -100,7 +100,7 @@ class TestFamilyTree:
         john: TreeNode = TreeNode()
 
         with pytest.raises(TypeError):
-            john.children = {"Kate": 666}
+            john.children = {"Kate": 666}  # type: ignore[dict-item]
 
         with pytest.raises(InvalidTreeError, match="Cannot add same node"):
             john.children = {"Kate": kate, "Evil_Kate": kate}
