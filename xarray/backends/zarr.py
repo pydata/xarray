@@ -180,12 +180,23 @@ def encode_zarr_attr_value(value):
     return encoded
 
 
+def has_zarr_async_index() -> bool:
+    try:
+        import zarr
+
+        return hasattr(zarr.AsyncArray, "oindex")
+    except (ImportError, AttributeError):
+        return False
+
+
 class ZarrArrayWrapper(BackendArray):
     __slots__ = ("_array", "dtype", "shape")
 
     def __init__(self, zarr_array):
         # some callers attempt to evaluate an array if an `array` property exists on the object.
         # we prefix with _ to avoid this inference.
+
+        # TODO type hint this?
         self._array = zarr_array
         self.shape = self._array.shape
 
@@ -213,6 +224,33 @@ class ZarrArrayWrapper(BackendArray):
     def _getitem(self, key):
         return self._array[key]
 
+    async def _async_getitem(self, key):
+        if not _zarr_v3():
+            raise NotImplementedError(
+                "For lazy basic async indexing with zarr, zarr-python=>v3.0.0 is required"
+            )
+
+        async_array = self._array._async_array
+        return await async_array.getitem(key)
+
+    async def _async_oindex(self, key):
+        if not has_zarr_async_index():
+            raise NotImplementedError(
+                "For lazy orthogonal async indexing with zarr, zarr-python=>v3.1.2 is required"
+            )
+
+        async_array = self._array._async_array
+        return await async_array.oindex.getitem(key)
+
+    async def _async_vindex(self, key):
+        if not has_zarr_async_index():
+            raise NotImplementedError(
+                "For lazy vectorized async indexing with zarr, zarr-python=>v3.1.2 is required"
+            )
+
+        async_array = self._array._async_array
+        return await async_array.vindex.getitem(key)
+
     def __getitem__(self, key):
         array = self._array
         if isinstance(key, indexing.BasicIndexer):
@@ -227,6 +265,18 @@ class ZarrArrayWrapper(BackendArray):
 
         # if self.ndim == 0:
         # could possibly have a work-around for 0d data here
+
+    async def async_getitem(self, key):
+        array = self._array
+        if isinstance(key, indexing.BasicIndexer):
+            method = self._async_getitem
+        elif isinstance(key, indexing.VectorizedIndexer):
+            method = self._async_vindex
+        elif isinstance(key, indexing.OuterIndexer):
+            method = self._async_oindex
+        return await indexing.async_explicit_indexing_adapter(
+            key, array.shape, indexing.IndexingSupport.VECTORIZED, method
+        )
 
 
 def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):

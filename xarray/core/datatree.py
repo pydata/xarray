@@ -442,7 +442,7 @@ class DatasetView(Dataset):
 
 
 class DataTree(
-    NamedNode["DataTree"],
+    NamedNode,
     DataTreeAggregations,
     DataTreeOpsMixin,
     TreeAttrAccessMixin,
@@ -562,9 +562,12 @@ class DataTree(
 
     @property
     def _coord_variables(self) -> ChainMap[Hashable, Variable]:
+        # ChainMap is incorrected typed in typeshed (only the first argument
+        # needs to be mutable)
+        # https://github.com/python/typeshed/issues/8430
         return ChainMap(
             self._node_coord_variables,
-            *(p._node_coord_variables_with_index for p in self.parents),
+            *(p._node_coord_variables_with_index for p in self.parents),  # type: ignore[arg-type]
         )
 
     @property
@@ -1343,7 +1346,7 @@ class DataTree(
         )
 
     def _inherited_coords_set(self) -> set[str]:
-        return set(self.parent.coords if self.parent else [])
+        return set(self.parent.coords if self.parent else [])  # type: ignore[arg-type]
 
     def identical(self, other: DataTree) -> bool:
         """
@@ -1566,9 +1569,33 @@ class DataTree(
         }
         return DataTree.from_dict(matching_nodes, name=self.name)
 
+    @overload
     def map_over_datasets(
         self,
-        func: Callable,
+        func: Callable[..., Dataset | None],
+        *args: Any,
+        kwargs: Mapping[str, Any] | None = None,
+    ) -> DataTree: ...
+
+    @overload
+    def map_over_datasets(
+        self,
+        func: Callable[..., tuple[Dataset | None, Dataset | None]],
+        *args: Any,
+        kwargs: Mapping[str, Any] | None = None,
+    ) -> tuple[DataTree, DataTree]: ...
+
+    @overload
+    def map_over_datasets(
+        self,
+        func: Callable[..., tuple[Dataset | None, ...]],
+        *args: Any,
+        kwargs: Mapping[str, Any] | None = None,
+    ) -> tuple[DataTree, ...]: ...
+
+    def map_over_datasets(
+        self,
+        func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
         *args: Any,
         kwargs: Mapping[str, Any] | None = None,
     ) -> DataTree | tuple[DataTree, ...]:
@@ -1603,8 +1630,7 @@ class DataTree(
         map_over_datasets
         """
         # TODO this signature means that func has no way to know which node it is being called upon - change?
-        # TODO fix this typing error
-        return map_over_datasets(func, self, *args, kwargs=kwargs)
+        return map_over_datasets(func, self, *args, kwargs=kwargs)  # type: ignore[arg-type]
 
     @overload
     def pipe(
@@ -1698,7 +1724,7 @@ class DataTree(
 
     def _unary_op(self, f, *args, **kwargs) -> DataTree:
         # TODO do we need to any additional work to avoid duplication etc.? (Similar to aggregations)
-        return self.map_over_datasets(functools.partial(f, **kwargs), *args)  # type: ignore[return-value]
+        return self.map_over_datasets(functools.partial(f, **kwargs), *args)
 
     def _binary_op(self, other, f, reflexive=False, join=None) -> DataTree:
         from xarray.core.groupby import GroupBy
@@ -1960,7 +1986,7 @@ class DataTree(
         )
 
     def _get_all_dims(self) -> set:
-        all_dims = set()
+        all_dims: set[Any] = set()
         for node in self.subtree:
             all_dims.update(node._node_dims)
         return all_dims

@@ -506,6 +506,25 @@ class TestMemoryCachedArray:
         assert isinstance(child.array, indexing.NumpyIndexingAdapter)
         assert isinstance(wrapped.array, indexing.LazilyIndexedArray)
 
+    @pytest.mark.asyncio
+    async def test_async_wrapper(self) -> None:
+        original = indexing.LazilyIndexedArray(np.arange(10))
+        wrapped = indexing.MemoryCachedArray(original)
+        await wrapped.async_get_duck_array()
+        assert_array_equal(wrapped, np.arange(10))
+        assert isinstance(wrapped.array, indexing.NumpyIndexingAdapter)
+
+    @pytest.mark.asyncio
+    async def test_async_sub_array(self) -> None:
+        original = indexing.LazilyIndexedArray(np.arange(10))
+        wrapped = indexing.MemoryCachedArray(original)
+        child = wrapped[B[:5]]
+        assert isinstance(child, indexing.MemoryCachedArray)
+        await child.async_get_duck_array()
+        assert_array_equal(child, np.arange(5))
+        assert isinstance(child.array, indexing.NumpyIndexingAdapter)
+        assert isinstance(wrapped.array, indexing.LazilyIndexedArray)
+
     def test_setitem(self) -> None:
         original = np.arange(10)
         wrapped = indexing.MemoryCachedArray(original)

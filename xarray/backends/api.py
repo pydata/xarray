@@ -305,7 +305,7 @@ def _protect_dataset_variables_inplace(dataset: Dataset, cache: bool) -> None:
 
 def _protect_datatree_variables_inplace(tree: DataTree, cache: bool) -> None:
     for node in tree.subtree:
-        _protect_dataset_variables_inplace(node, cache)
+        _protect_dataset_variables_inplace(node.dataset, cache)
 
 
 def _finalize_store(writes, store):
