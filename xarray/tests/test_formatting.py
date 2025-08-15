@@ -6,6 +6,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+import sparse
 
 import xarray as xr
 from xarray.core import formatting
@@ -1232,3 +1233,69 @@ Coordinates:
   * bar      (x) int64 32B 1 2 1 2
     """.strip()
     assert actual == expected
+
+
+class FakeDaskArray:
+    __module__ = "dask.array"
+
+
+class EmptyReprDask:
+    __module__ = "dask.array"
+
+    def __repr__(self) -> str:
+        return ""
+
+
+class LongStringReprDask:
+    __module__ = "dask.array"
+
+    def __repr__(self) -> str:
+        return "x" * 1000
+
+
+@pytest.mark.parametrize(
+    "bad_obj",
+    [FakeDaskArray(), EmptyReprDask(), LongStringReprDask()],
+)
+def test_inline_dask_repr_rejects_nonconforming_obj(bad_obj) -> None:
+    """Ensure inline_dask_repr raises AssertionError for
+    invalid Dask-like objects."""
+    with pytest.raises(AssertionError):
+        formatting.inline_dask_repr(bad_obj)
+
+
+def test_inline_sparse_repr_empty():
+    """Testing for inline_sparse_repr returns a string for an empty
+    sparse COO matrix"""
+    coo = sparse.COO(np.zeros((2, 2)))
+    actual = formatting.inline_sparse_repr(coo)
+
+    assert isinstance(actual, str)
+    assert "nnz=0" in actual
+    assert "fill_value=" in actual
+
+
+@pytest.mark.parametrize(
+    "items,max_items,expected",
+    [
+        ([1, 2], 100, "[1, 2]"),
+        ([1, 2, 3], 3, "[1, 2, 3]"),
+        ([42], 5, "[42]"),  # single element
+        ([1, 2, 3], 0, "[]"),  # non-positive -> empty
+        ([1, 2, 3], -1, "[]"),  # non-positive -> empty
+    ],
+)
+def test_shorten_list_repr_cases(items, max_items, expected) -> None:
+    """Verify shorten_list_repr() returns the expected
+    string for given inputs."""
+    actual = formatting.shorten_list_repr(items, max_items=max_items)
+    assert actual == expected
+
+
+def test_shorten_list_repr_long_truncate_ellipsis() -> None:
+    """Long list is truncated and includes an ellipsis."""
+    actual = formatting.shorten_list_repr(list(range(20)), max_items=5)
+
+    assert actual.startswith("[")
+    assert "..." in actual
+    assert actual.endswith("]")
