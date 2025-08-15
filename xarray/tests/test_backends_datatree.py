@@ -38,6 +38,12 @@ class TestNetCDF4DataTree(_TestNetCDF4Data):
         with open_datatree(path, engine=self.engine, **kwargs) as ds:
             yield ds.to_dataset()
 
+    def test_child_group_with_inconsistent_dimensions(self) -> None:
+        with pytest.raises(
+            ValueError, match=r"group '/child' is not aligned with its parents"
+        ):
+            super().test_child_group_with_inconsistent_dimensions()
+
 
 def diff_chunks(
     comparison: dict[tuple[str, Hashable], bool], tree1: DataTree, tree2: DataTree
