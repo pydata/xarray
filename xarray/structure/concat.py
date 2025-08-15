@@ -226,7 +226,6 @@ def concat(
     Coordinates:
         x        (new_dim) <U1 8B 'a' 'b'
       * y        (y) int64 24B 10 20 30
-    Dimensions without coordinates: new_dim
 
     >>> xr.concat(
     ...     [da.isel(x=0), da.isel(x=1)],
