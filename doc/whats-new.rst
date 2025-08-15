@@ -12,6 +12,8 @@ v2025.08.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Add convenience methods to :py:class:`~xarray.Coordinates` (:pull:`10318`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 Breaking changes
