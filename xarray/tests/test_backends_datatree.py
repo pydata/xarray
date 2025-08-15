@@ -767,6 +767,31 @@ class TestZarrDatatreeIO:
         with open_datatree(str(storepath), engine="zarr") as written_dt:
             assert_identical(written_dt, original_dt)
 
+    @requires_dask
+    def test_to_zarr_no_redundant_computation(self, tmpdir, zarr_format):
+        import dask.array as da
+
+        eval_count = 0
+
+        def expensive_func(x):
+            nonlocal eval_count
+            eval_count += 1
+            return x + 1
+
+        base = da.random.random((), chunks=())
+        derived1 = da.map_blocks(expensive_func, base, meta=np.array((), np.float64))
+        derived2 = derived1 + 1  # depends on derived1
+        tree = DataTree.from_dict(
+            {
+                "group1": xr.Dataset({"derived": derived1}),
+                "group2": xr.Dataset({"derived": derived2}),
+            }
+        )
+
+        filepath = str(tmpdir / "test.zarr")
+        tree.to_zarr(filepath, zarr_format=zarr_format)
+        assert eval_count == 1  # not 2
+
     def test_to_zarr_inherited_coords(self, tmpdir, zarr_format):
         original_dt = DataTree.from_dict(
             {

@@ -13,6 +13,9 @@ v2025.08.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- ``compute=False`` is now supported by :py:meth:`DataTree.to_netcdf` and
+  :py:meth:`DataTree.to_zarr`.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -25,6 +28,10 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- :py:meth:`DataTree.to_netcdf` and :py:meth:`DataTree.to_zarr` with avoid
+  redundant computation of Dask arrays with cross-group dependencies
+  (:issue:`10637`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -54,9 +61,6 @@ New Features
   (:issue:`10326`, :pull:`10327`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - :py:meth:`DataTree.to_netcdf` can now write to a file-like object, or return bytes if called without a filepath. (:issue:`10570`)
   By `Matthew Willson <https://github.com/mjwillson>`_.
-- ``compute=False`` is now supported by :py:meth:`DataTree.to_netcdf` and
-  :py:meth:`DataTree.to_zarr`.
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Added exception handling for invalid files in :py:func:`open_mfdataset`. (:issue:`6736`)
   By `Pratiman Patel <https://github.com/pratiman-91>`_.
 
