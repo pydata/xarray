@@ -1399,8 +1399,8 @@ class CFEncodedBase(DatasetIOBase):
         # test unlimited_dims validation
         # https://github.com/pydata/xarray/issues/10549
         ds.encoding = {"unlimited_dims": "z"}
-        with pytest.raises(
-            ValueError,
+        with pytest.warns(
+            UserWarning,
             match=r"Unlimited dimension\(s\) .* declared in 'dataset.encoding'",
         ):
             with self.roundtrip(ds) as _:
