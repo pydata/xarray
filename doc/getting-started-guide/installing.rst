@@ -57,7 +57,7 @@ For plotting
 ~~~~~~~~~~~~
 
 - `matplotlib <https://matplotlib.org>`__: required for :ref:`plotting`
-- `cartopy <https://scitools.org.uk/cartopy>`__: recommended for :ref:`plot-maps`
+- `cartopy <https://cartopy.readthedocs.io>`__: recommended for :ref:`plot-maps`
 - `seaborn <https://seaborn.pydata.org>`__: for better
   color palettes
 - `nc-time-axis <https://nc-time-axis.readthedocs.io>`__: for plotting

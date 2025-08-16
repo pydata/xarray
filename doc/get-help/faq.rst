@@ -169,7 +169,7 @@ different approaches to handling metadata: Iris strictly interprets
 integration with Cartopy_.
 
 .. _Iris: https://scitools-iris.readthedocs.io/en/stable/
-.. _Cartopy: https://scitools.org.uk/cartopy/docs/latest/
+.. _Cartopy: https://cartopy.readthedocs.io/stable/
 
 We think the design decisions we have made for xarray (namely, basing it on
 pandas) make it a faster and more flexible data analysis tool. That said, Iris
