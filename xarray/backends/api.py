@@ -2153,15 +2153,6 @@ def dump_to_store(
     if encoding is None:
         encoding = {}
 
-    if unlimited_dims is None:
-        unlimited_dims = dataset.encoding.get("unlimited_dims", None)
-
-    if unlimited_dims is not None:
-        if isinstance(unlimited_dims, str) or not isinstance(unlimited_dims, Iterable):
-            unlimited_dims = [unlimited_dims]
-        else:
-            unlimited_dims = list(unlimited_dims)
-
     variables, attrs = conventions.encode_dataset_coordinates(dataset)
 
     check_encoding = set()
