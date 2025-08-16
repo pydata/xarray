@@ -37,7 +37,6 @@ dependencies:
   - pre-commit
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - pydap
-  - pydap-server
   - pytest
   - pytest-asyncio
   - pytest-cov
