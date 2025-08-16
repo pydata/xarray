@@ -647,7 +647,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             k.item() if isinstance(k, np.ndarray) and k.ndim == 0 else k for k in key
         )
 
-        if all(isinstance(k, BASIC_INDEXING_TYPES) for k in key):
+        if all(
+            (isinstance(k, BASIC_INDEXING_TYPES) and not isinstance(k, bool))
+            for k in key
+        ):
             return self._broadcast_indexes_basic(key)
 
         self._validate_indexers(key)

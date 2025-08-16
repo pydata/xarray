@@ -35,12 +35,7 @@ from xarray.compat.array_api_compat import to_like_array
 from xarray.computation import ops
 from xarray.computation.arithmetic import DatasetArithmetic
 from xarray.core import dtypes as xrdtypes
-from xarray.core import (
-    duck_array_ops,
-    formatting,
-    formatting_html,
-    utils,
-)
+from xarray.core import duck_array_ops, formatting, formatting_html, utils
 from xarray.core._aggregations import DatasetAggregations
 from xarray.core.common import (
     DataWithCoords,
@@ -2636,7 +2631,7 @@ class Dataset(
 
         # all indexers should be int, slice, np.ndarrays, or Variable
         for k, v in indexers.items():
-            if isinstance(v, int | slice | Variable):
+            if isinstance(v, int | slice | Variable) and not isinstance(v, bool):
                 yield k, v
             elif isinstance(v, DataArray):
                 yield k, v.variable
