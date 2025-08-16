@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import gzip
 import itertools
@@ -16,6 +17,7 @@ import warnings
 from collections import ChainMap
 from collections.abc import Generator, Iterator, Mapping
 from contextlib import ExitStack
+from importlib import import_module
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
@@ -28,6 +30,7 @@ from packaging.version import Version
 from pandas.errors import OutOfBoundsDatetime
 
 import xarray as xr
+import xarray.testing as xrt
 from xarray import (
     DataArray,
     Dataset,
@@ -74,9 +77,11 @@ from xarray.tests import (
     has_scipy,
     has_zarr,
     has_zarr_v3,
+    has_zarr_v3_async_oindex,
     has_zarr_v3_dtypes,
     mock,
     network,
+    parametrize_zarr_format,
     requires_cftime,
     requires_dask,
     requires_fsspec,
@@ -349,6 +354,11 @@ class TestCommon:
 class NetCDF3Only:
     netcdf3_formats: tuple[T_NetcdfTypes, ...] = ("NETCDF3_CLASSIC", "NETCDF3_64BIT")
 
+    @pytest.mark.asyncio
+    @pytest.mark.skip(reason="NetCDF backends don't support async loading")
+    async def test_load_async(self) -> None:
+        pass
+
     @requires_scipy
     def test_dtype_coercion_error(self) -> None:
         """Failing dtype coercion should lead to an error"""
@@ -459,6 +469,7 @@ class DatasetIOBase:
             assert_identical(expected, actual)
 
     def test_load(self) -> None:
+        # Note: please keep this in sync with test_load_async below as much as possible!
         expected = create_test_data()
 
         @contextlib.contextmanager
@@ -489,6 +500,43 @@ class DatasetIOBase:
         # verify we can read data even after closing the file
         with self.roundtrip(expected) as ds:
             actual = ds.load()
+        assert_identical(expected, actual)
+
+    @pytest.mark.asyncio
+    async def test_load_async(self) -> None:
+        # Note: please keep this in sync with test_load above as much as possible!
+
+        # Copied from `test_load` on the base test class, but won't work for netcdf
+        expected = create_test_data()
+
+        @contextlib.contextmanager
+        def assert_loads(vars=None):
+            if vars is None:
+                vars = expected
+            with self.roundtrip(expected) as actual:
+                for k, v in actual.variables.items():
+                    # IndexVariables are eagerly loaded into memory
+                    assert v._in_memory == (k in actual.dims)
+                yield actual
+                for k, v in actual.variables.items():
+                    if k in vars:
+                        assert v._in_memory
+                assert_identical(expected, actual)
+
+        with pytest.raises(AssertionError):
+            # make sure the contextmanager works!
+            with assert_loads() as ds:
+                pass
+
+        with assert_loads() as ds:
+            await ds.load_async()
+
+        with assert_loads(["var1", "dim1", "dim2"]) as ds:
+            await ds["var1"].load_async()
+
+        # verify we can read data even after closing the file
+        with self.roundtrip(expected) as ds:
+            actual = await ds.load_async()
         assert_identical(expected, actual)
 
     def test_dataset_compute(self) -> None:
@@ -1325,6 +1373,47 @@ class CFEncodedBase(DatasetIOBase):
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
                 pass
 
+    def test_encoding_unlimited_dims(self) -> None:
+        if isinstance(self, ZarrBase):
+            pytest.skip("No unlimited_dims handled in zarr.")
+        ds = Dataset({"x": ("y", np.arange(10.0))})
+        with self.roundtrip(ds, save_kwargs=dict(unlimited_dims=["y"])) as actual:
+            assert actual.encoding["unlimited_dims"] == set("y")
+            assert_equal(ds, actual)
+
+        # Regression test for https://github.com/pydata/xarray/issues/2134
+        with self.roundtrip(ds, save_kwargs=dict(unlimited_dims="y")) as actual:
+            assert actual.encoding["unlimited_dims"] == set("y")
+            assert_equal(ds, actual)
+
+        ds.encoding = {"unlimited_dims": ["y"]}
+        with self.roundtrip(ds) as actual:
+            assert actual.encoding["unlimited_dims"] == set("y")
+            assert_equal(ds, actual)
+
+        # Regression test for https://github.com/pydata/xarray/issues/2134
+        ds.encoding = {"unlimited_dims": "y"}
+        with self.roundtrip(ds) as actual:
+            assert actual.encoding["unlimited_dims"] == set("y")
+            assert_equal(ds, actual)
+
+        # test unlimited_dims validation
+        # https://github.com/pydata/xarray/issues/10549
+        ds.encoding = {"unlimited_dims": "z"}
+        with pytest.raises(
+            ValueError,
+            match=r"Unlimited dimension\(s\) .* declared in 'dataset.encoding'",
+        ):
+            with self.roundtrip(ds) as _:
+                pass
+        ds.encoding = {}
+        with pytest.raises(
+            ValueError,
+            match=r"Unlimited dimension\(s\) .* declared in 'unlimited_dims-kwarg'",
+        ):
+            with self.roundtrip(ds, save_kwargs=dict(unlimited_dims=["z"])) as _:
+                pass
+
     def test_encoding_kwarg_dates(self) -> None:
         ds = Dataset({"t": pd.date_range("2000-01-01", periods=3)})
         units = "days since 1900-01-01"
@@ -1481,6 +1570,11 @@ class CFEncodedBase(DatasetIOBase):
 class NetCDFBase(CFEncodedBase):
     """Tests for all netCDF3 and netCDF4 backends."""
 
+    @pytest.mark.asyncio
+    @pytest.mark.skip(reason="NetCDF backends don't support async loading")
+    async def test_load_async(self) -> None:
+        await super().test_load_async()
+
     @pytest.mark.skipif(
         ON_WINDOWS, reason="Windows does not allow modifying open files"
     )
@@ -1610,6 +1704,17 @@ class NetCDF4Base(NetCDFBase):
                 assert_identical(data1, actual1)
             with self.open(tmp_file, group="data/2") as actual2:
                 assert_identical(data2, actual2)
+
+    def test_child_group_with_inconsistent_dimensions(self) -> None:
+        base = Dataset(coords={"x": [1, 2]})
+        child = Dataset(coords={"x": [1, 2, 3]})
+        with create_tmp_file() as tmp_file:
+            self.save(base, tmp_file)
+            self.save(child, tmp_file, group="child", mode="a")
+            with self.open(tmp_file) as actual_base:
+                assert_identical(base, actual_base)
+            with self.open(tmp_file, group="child") as actual_child:
+                assert_identical(child, actual_child)
 
     @pytest.mark.parametrize(
         "input_strings, is_bytes",
@@ -1918,16 +2023,6 @@ class NetCDF4Base(NetCDFBase):
             for kwargs in [{}, {"decode_cf": True}]:
                 with open_dataset(tmp_file, **cast(dict, kwargs)) as actual:
                     assert_identical(expected, actual)
-
-    def test_encoding_unlimited_dims(self) -> None:
-        ds = Dataset({"x": ("y", np.arange(10.0))})
-        with self.roundtrip(ds, save_kwargs=dict(unlimited_dims=["y"])) as actual:
-            assert actual.encoding["unlimited_dims"] == set("y")
-            assert_equal(ds, actual)
-        ds.encoding = {"unlimited_dims": ["y"]}
-        with self.roundtrip(ds) as actual:
-            assert actual.encoding["unlimited_dims"] == set("y")
-            assert_equal(ds, actual)
 
     def test_raise_on_forward_slashes_in_names(self) -> None:
         # test for forward slash in variable names and dimensions
@@ -2493,6 +2588,14 @@ class ZarrBase(CFEncodedBase):
             with self.open(store_target, **open_kwargs) as ds:
                 yield ds
 
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(
+        not has_zarr_v3,
+        reason="zarr-python <3 did not support async loading",
+    )
+    async def test_load_async(self) -> None:
+        await super().test_load_async()
+
     def test_roundtrip_bytes_with_fill_value(self):
         pytest.xfail("Broken by Zarr 3.0.7")
 
@@ -2604,6 +2707,12 @@ class ZarrBase(CFEncodedBase):
 
                 assert_identical(actual, auto)
                 assert_identical(actual.load(), auto.load())
+
+    def test_unlimited_dims_encoding_is_ignored(self) -> None:
+        ds = Dataset({"x": np.arange(10)})
+        ds.encoding = {"unlimited_dims": ["x"]}
+        with self.roundtrip(ds) as actual:
+            assert_identical(ds, actual)
 
     @requires_dask
     @pytest.mark.filterwarnings("ignore:.*does not have a Zarr V3 specification.*")
@@ -3872,6 +3981,239 @@ class TestZarrDictStore(ZarrBase):
                 # Verify chunks are preserved
                 assert actual["var1"].encoding["chunks"] == (2, 2)
 
+    @pytest.mark.asyncio
+    @requires_zarr_v3
+    async def test_async_load_multiple_variables(self) -> None:
+        target_class = zarr.AsyncArray
+        method_name = "getitem"
+        original_method = getattr(target_class, method_name)
+
+        # the indexed coordinate variables is not lazy, so the create_test_dataset has 4 lazy variables in total
+        N_LAZY_VARS = 4
+
+        original = create_test_data()
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, zarr_format=3, consolidated=False)
+
+            with patch.object(
+                target_class, method_name, wraps=original_method, autospec=True
+            ) as mocked_meth:
+                # blocks upon loading the coordinate variables here
+                ds = xr.open_zarr(store, consolidated=False, chunks=None)
+
+                # TODO we're not actually testing that these indexing methods are not blocking...
+                result_ds = await ds.load_async()
+
+                mocked_meth.assert_called()
+                assert mocked_meth.call_count == N_LAZY_VARS
+                mocked_meth.assert_awaited()
+
+            xrt.assert_identical(result_ds, ds.load())
+
+    @pytest.mark.asyncio
+    @requires_zarr_v3
+    @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
+    async def test_concurrent_load_multiple_objects(
+        self,
+        cls_name,
+    ) -> None:
+        N_OBJECTS = 5
+        N_LAZY_VARS = {
+            "Variable": 1,
+            "DataArray": 1,
+            "Dataset": 4,
+        }  # specific to the create_test_data() used
+
+        target_class = zarr.AsyncArray
+        method_name = "getitem"
+        original_method = getattr(target_class, method_name)
+
+        original = create_test_data()
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, consolidated=False, zarr_format=3)
+
+            with patch.object(
+                target_class, method_name, wraps=original_method, autospec=True
+            ) as mocked_meth:
+                xr_obj = get_xr_obj(store, cls_name)
+
+                # TODO we're not actually testing that these indexing methods are not blocking...
+                coros = [xr_obj.load_async() for _ in range(N_OBJECTS)]
+                results = await asyncio.gather(*coros)
+
+                mocked_meth.assert_called()
+                assert mocked_meth.call_count == N_OBJECTS * N_LAZY_VARS[cls_name]
+                mocked_meth.assert_awaited()
+
+            for result in results:
+                xrt.assert_identical(result, xr_obj.load())
+
+    @pytest.mark.asyncio
+    @requires_zarr_v3
+    @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
+    @pytest.mark.parametrize(
+        "indexer, method, target_zarr_class",
+        [
+            pytest.param({}, "sel", "zarr.AsyncArray", id="no-indexing-sel"),
+            pytest.param({}, "isel", "zarr.AsyncArray", id="no-indexing-isel"),
+            pytest.param({"dim2": 1.0}, "sel", "zarr.AsyncArray", id="basic-int-sel"),
+            pytest.param({"dim2": 2}, "isel", "zarr.AsyncArray", id="basic-int-isel"),
+            pytest.param(
+                {"dim2": slice(1.0, 3.0)},
+                "sel",
+                "zarr.AsyncArray",
+                id="basic-slice-sel",
+            ),
+            pytest.param(
+                {"dim2": slice(1, 3)}, "isel", "zarr.AsyncArray", id="basic-slice-isel"
+            ),
+            pytest.param(
+                {"dim2": [1.0, 3.0]},
+                "sel",
+                "zarr.core.indexing.AsyncOIndex",
+                id="outer-sel",
+            ),
+            pytest.param(
+                {"dim2": [1, 3]},
+                "isel",
+                "zarr.core.indexing.AsyncOIndex",
+                id="outer-isel",
+            ),
+            pytest.param(
+                {
+                    "dim1": xr.Variable(data=[2, 3], dims="points"),
+                    "dim2": xr.Variable(data=[1.0, 2.0], dims="points"),
+                },
+                "sel",
+                "zarr.core.indexing.AsyncVIndex",
+                id="vectorized-sel",
+            ),
+            pytest.param(
+                {
+                    "dim1": xr.Variable(data=[2, 3], dims="points"),
+                    "dim2": xr.Variable(data=[1, 3], dims="points"),
+                },
+                "isel",
+                "zarr.core.indexing.AsyncVIndex",
+                id="vectorized-isel",
+            ),
+        ],
+    )
+    async def test_indexing(
+        self,
+        cls_name,
+        method,
+        indexer,
+        target_zarr_class,
+    ) -> None:
+        if not has_zarr_v3_async_oindex and target_zarr_class in (
+            "zarr.core.indexing.AsyncOIndex",
+            "zarr.core.indexing.AsyncVIndex",
+        ):
+            pytest.skip(
+                "current version of zarr does not support orthogonal or vectorized async indexing"
+            )
+
+        if cls_name == "Variable" and method == "sel":
+            pytest.skip("Variable doesn't have a .sel method")
+
+        # Each type of indexing ends up calling a different zarr indexing method
+        # They all use a method named .getitem, but on a different internal zarr class
+        def _resolve_class_from_string(class_path: str) -> type[Any]:
+            """Resolve a string class path like 'zarr.AsyncArray' to the actual class."""
+            module_path, class_name = class_path.rsplit(".", 1)
+            module = import_module(module_path)
+            return getattr(module, class_name)
+
+        target_class = _resolve_class_from_string(target_zarr_class)
+        method_name = "getitem"
+        original_method = getattr(target_class, method_name)
+
+        original = create_test_data()
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, consolidated=False, zarr_format=3)
+
+            with patch.object(
+                target_class, method_name, wraps=original_method, autospec=True
+            ) as mocked_meth:
+                xr_obj = get_xr_obj(store, cls_name)
+
+                # TODO we're not actually testing that these indexing methods are not blocking...
+                result = await getattr(xr_obj, method)(**indexer).load_async()
+
+                mocked_meth.assert_called()
+                mocked_meth.assert_awaited()
+                assert mocked_meth.call_count > 0
+
+            expected = getattr(xr_obj, method)(**indexer).load()
+            xrt.assert_identical(result, expected)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("indexer", "expected_err_msg"),
+        [
+            pytest.param(
+                {"dim2": 2},
+                "basic async indexing",
+                marks=pytest.mark.skipif(
+                    has_zarr_v3,
+                    reason="current version of zarr has basic async indexing",
+                ),
+            ),  # tests basic indexing
+            pytest.param(
+                {"dim2": [1, 3]},
+                "orthogonal async indexing",
+                marks=pytest.mark.skipif(
+                    has_zarr_v3_async_oindex,
+                    reason="current version of zarr has async orthogonal indexing",
+                ),
+            ),  # tests oindexing
+            pytest.param(
+                {
+                    "dim1": xr.Variable(data=[2, 3], dims="points"),
+                    "dim2": xr.Variable(data=[1, 3], dims="points"),
+                },
+                "vectorized async indexing",
+                marks=pytest.mark.skipif(
+                    has_zarr_v3_async_oindex,
+                    reason="current version of zarr has async vectorized indexing",
+                ),
+            ),  # tests vindexing
+        ],
+    )
+    @parametrize_zarr_format
+    async def test_raise_on_older_zarr_version(
+        self,
+        indexer,
+        expected_err_msg,
+        zarr_format,
+    ):
+        """Test that trying to use async load with insufficiently new version of zarr raises a clear error"""
+
+        original = create_test_data()
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, consolidated=False, zarr_format=zarr_format)
+
+            ds = xr.open_zarr(store, consolidated=False, chunks=None)
+            var = ds["var1"].variable
+
+            with pytest.raises(NotImplementedError, match=expected_err_msg):
+                await var.isel(**indexer).load_async()
+
+
+def get_xr_obj(
+    store: zarr.abc.store.Store, cls_name: Literal["Variable", "DataArray", "Dataset"]
+):
+    ds = xr.open_zarr(store, consolidated=False, chunks=None)
+
+    match cls_name:
+        case "Variable":
+            return ds["var1"].variable
+        case "DataArray":
+            return ds["var1"]
+        case "Dataset":
+            return ds
+
 
 class NoConsolidatedMetadataSupportStore(WrapperStore):
     """
@@ -4142,6 +4484,11 @@ class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only, InMemoryNetCDF):
         with self.open(saved, **open_kwargs) as ds:
             yield ds
 
+    @pytest.mark.asyncio
+    @pytest.mark.skip(reason="NetCDF backends don't support async loading")
+    async def test_load_async(self) -> None:
+        await super().test_load_async()
+
 
 @requires_scipy
 class TestScipyFileObject(CFEncodedBase, NetCDF3Only, FileObjectNetCDF):
@@ -4209,7 +4556,7 @@ class TestScipyFileObject(CFEncodedBase, NetCDF3Only, FileObjectNetCDF):
 
 
 @requires_scipy
-class TestScipyFilePath(CFEncodedBase, NetCDF3Only):
+class TestScipyFilePath(NetCDF3Only, CFEncodedBase):
     engine: T_NetcdfEngine = "scipy"
 
     @contextlib.contextmanager
@@ -4246,7 +4593,7 @@ class TestScipyFilePath(CFEncodedBase, NetCDF3Only):
 
 
 @requires_netCDF4
-class TestNetCDF3ViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
+class TestNetCDF3ViaNetCDF4Data(NetCDF3Only, CFEncodedBase):
     engine: T_NetcdfEngine = "netcdf4"
     file_format: T_NetcdfTypes = "NETCDF3_CLASSIC"
 
@@ -4267,7 +4614,7 @@ class TestNetCDF3ViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
 
 
 @requires_netCDF4
-class TestNetCDF4ClassicViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
+class TestNetCDF4ClassicViaNetCDF4Data(NetCDF3Only, CFEncodedBase):
     engine: T_NetcdfEngine = "netcdf4"
     file_format: T_NetcdfTypes = "NETCDF4_CLASSIC"
 
@@ -4281,7 +4628,7 @@ class TestNetCDF4ClassicViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
 
 
 @requires_scipy_or_netCDF4
-class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
+class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
     # verify that we can read and write netCDF3 files as long as we have scipy
     # or netCDF4-python installed
     file_format: T_NetcdfTypes = "NETCDF3_64BIT"
@@ -4418,16 +4765,6 @@ class TestH5NetCDFData(NetCDF4Base):
             with open_dataset(tmp_file) as actual:
                 expected = Dataset(attrs={"foo": "bar"})
                 assert_identical(expected, actual)
-
-    def test_encoding_unlimited_dims(self) -> None:
-        ds = Dataset({"x": ("y", np.arange(10.0))})
-        with self.roundtrip(ds, save_kwargs=dict(unlimited_dims=["y"])) as actual:
-            assert actual.encoding["unlimited_dims"] == set("y")
-            assert_equal(ds, actual)
-        ds.encoding = {"unlimited_dims": ["y"]}
-        with self.roundtrip(ds) as actual:
-            assert actual.encoding["unlimited_dims"] == set("y")
-            assert_equal(ds, actual)
 
     def test_compression_encoding_h5py(self) -> None:
         ENCODINGS: tuple[tuple[dict[str, Any], dict[str, Any]], ...] = (
@@ -5365,6 +5702,68 @@ class TestDask(DatasetIOBase):
 
                 with open_mfdataset(
                     [tmp1, tmp2], concat_dim="x", combine="nested"
+                ) as actual:
+                    assert_identical(original, actual)
+
+    def test_open_mfdataset_with_ignore(self) -> None:
+        original = Dataset({"foo": ("x", np.random.randn(10))})
+        with create_tmp_files(2) as (tmp1, tmp2):
+            ds1 = original.isel(x=slice(5))
+            ds2 = original.isel(x=slice(5, 10))
+            ds1.to_netcdf(tmp1)
+            ds2.to_netcdf(tmp2)
+            with open_mfdataset(
+                [tmp1, "non-existent-file.nc", tmp2],
+                concat_dim="x",
+                combine="nested",
+                errors="ignore",
+            ) as actual:
+                assert_identical(original, actual)
+
+    def test_open_mfdataset_with_warn(self) -> None:
+        original = Dataset({"foo": ("x", np.random.randn(10))})
+        with pytest.warns(UserWarning, match="Ignoring."):
+            with create_tmp_files(2) as (tmp1, tmp2):
+                ds1 = original.isel(x=slice(5))
+                ds2 = original.isel(x=slice(5, 10))
+                ds1.to_netcdf(tmp1)
+                ds2.to_netcdf(tmp2)
+                with open_mfdataset(
+                    [tmp1, "non-existent-file.nc", tmp2],
+                    concat_dim="x",
+                    combine="nested",
+                    errors="warn",
+                ) as actual:
+                    assert_identical(original, actual)
+
+    def test_open_mfdataset_2d_with_ignore(self) -> None:
+        original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
+        with create_tmp_files(4) as (tmp1, tmp2, tmp3, tmp4):
+            original.isel(x=slice(5), y=slice(4)).to_netcdf(tmp1)
+            original.isel(x=slice(5, 10), y=slice(4)).to_netcdf(tmp2)
+            original.isel(x=slice(5), y=slice(4, 8)).to_netcdf(tmp3)
+            original.isel(x=slice(5, 10), y=slice(4, 8)).to_netcdf(tmp4)
+            with open_mfdataset(
+                [[tmp1, tmp2], ["non-existent-file.nc", tmp3, tmp4]],
+                combine="nested",
+                concat_dim=["y", "x"],
+                errors="ignore",
+            ) as actual:
+                assert_identical(original, actual)
+
+    def test_open_mfdataset_2d_with_warn(self) -> None:
+        original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
+        with pytest.warns(UserWarning, match="Ignoring."):
+            with create_tmp_files(4) as (tmp1, tmp2, tmp3, tmp4):
+                original.isel(x=slice(5), y=slice(4)).to_netcdf(tmp1)
+                original.isel(x=slice(5, 10), y=slice(4)).to_netcdf(tmp2)
+                original.isel(x=slice(5), y=slice(4, 8)).to_netcdf(tmp3)
+                original.isel(x=slice(5, 10), y=slice(4, 8)).to_netcdf(tmp4)
+                with open_mfdataset(
+                    [[tmp1, tmp2, "non-existent-file.nc"], [tmp3, tmp4]],
+                    combine="nested",
+                    concat_dim=["y", "x"],
+                    errors="warn",
                 ) as actual:
                     assert_identical(original, actual)
 
@@ -6413,8 +6812,12 @@ def test_extract_zarr_variable_encoding() -> None:
 def test_open_fsspec() -> None:
     import fsspec
 
-    if not hasattr(zarr.storage, "FSStore") or not hasattr(
-        zarr.storage.FSStore, "getitems"
+    if not (
+        (
+            hasattr(zarr.storage, "FSStore")
+            and hasattr(zarr.storage.FSStore, "getitems")
+        )  # zarr v2
+        or hasattr(zarr.storage, "FsspecStore")  # zarr v3
     ):
         pytest.skip("zarr too old")
 

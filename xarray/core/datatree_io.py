@@ -59,9 +59,6 @@ def _datatree_to_netcdf(
             "specifying a root group for the tree has not been implemented"
         )
 
-    if not compute:
-        raise NotImplementedError("compute=False has not been implemented yet")
-
     if encoding is None:
         encoding = {}
 
@@ -96,15 +93,12 @@ def _datatree_to_netcdf(
         invalid_netcdf=invalid_netcdf,
         auto_complex=auto_complex,
     )
-    if group is not None:
-        root_store = root_store.get_child(group)
 
     writer = ArrayWriter()
 
+    # TODO: allow this work (setting up the file for writing array data)
+    # to be parallelized with dask
     try:
-        # TODO: allow this work (setting up the file for writing array data)
-        # to be parallelized with dask
-
         for node in dt.subtree:
             at_root = node is dt
             dataset = node.to_dataset(inherit=write_inherited_coords or at_root)
@@ -127,6 +121,8 @@ def _datatree_to_netcdf(
     finally:
         if compute:
             root_store.close()
+        else:
+            root_store.sync()
 
     if filepath is None:
         assert isinstance(target, BytesIOProxy)
@@ -202,7 +198,6 @@ def _datatree_to_zarr(
 
     writer = ArrayWriter()
 
-    # TODO: figure out how to properly handle unlimited_dims
     try:
         for node in dt.subtree:
             at_root = node is dt

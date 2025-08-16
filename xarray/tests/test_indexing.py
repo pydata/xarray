@@ -305,6 +305,22 @@ class TestLazyArray:
                     actual = x[new_slice]
                     assert_array_equal(expected, actual)
 
+    @pytest.mark.parametrize(
+        ["old_slice", "array", "size"],
+        (
+            (slice(None, 8), np.arange(2, 6), 10),
+            (slice(2, None), np.arange(2, 6), 10),
+            (slice(1, 10, 2), np.arange(1, 4), 15),
+            (slice(10, None, -1), np.array([2, 5, 7]), 12),
+            (slice(2, None, 2), np.array([3, -2, 5, -1]), 13),
+            (slice(8, None), np.array([1, -2, 2, -1, -7]), 20),
+        ),
+    )
+    def test_slice_slice_by_array(self, old_slice, array, size):
+        actual = indexing.slice_slice_by_array(old_slice, array, size)
+        expected = np.arange(size)[old_slice][array]
+        assert_array_equal(actual, expected)
+
     def test_lazily_indexed_array(self) -> None:
         original = np.random.rand(10, 20, 30)
         x = indexing.NumpyIndexingAdapter(original)
@@ -486,6 +502,25 @@ class TestMemoryCachedArray:
         wrapped = indexing.MemoryCachedArray(original)
         child = wrapped[B[:5]]
         assert isinstance(child, indexing.MemoryCachedArray)
+        assert_array_equal(child, np.arange(5))
+        assert isinstance(child.array, indexing.NumpyIndexingAdapter)
+        assert isinstance(wrapped.array, indexing.LazilyIndexedArray)
+
+    @pytest.mark.asyncio
+    async def test_async_wrapper(self) -> None:
+        original = indexing.LazilyIndexedArray(np.arange(10))
+        wrapped = indexing.MemoryCachedArray(original)
+        await wrapped.async_get_duck_array()
+        assert_array_equal(wrapped, np.arange(10))
+        assert isinstance(wrapped.array, indexing.NumpyIndexingAdapter)
+
+    @pytest.mark.asyncio
+    async def test_async_sub_array(self) -> None:
+        original = indexing.LazilyIndexedArray(np.arange(10))
+        wrapped = indexing.MemoryCachedArray(original)
+        child = wrapped[B[:5]]
+        assert isinstance(child, indexing.MemoryCachedArray)
+        await child.async_get_duck_array()
         assert_array_equal(child, np.arange(5))
         assert isinstance(child.array, indexing.NumpyIndexingAdapter)
         assert isinstance(wrapped.array, indexing.LazilyIndexedArray)

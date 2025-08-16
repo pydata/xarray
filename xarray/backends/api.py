@@ -19,6 +19,7 @@ from typing import (
     Any,
     Final,
     Literal,
+    TypeVar,
     Union,
     cast,
     overload,
@@ -46,8 +47,8 @@ from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees
-from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
-from xarray.core.utils import is_remote_uri
+from xarray.core.types import NetcdfWriteModes, ReadBuffer, ZarrWriteModes
+from xarray.core.utils import emit_user_level_warning, is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
 from xarray.structure.chunks import _get_chunk, _maybe_chunk
@@ -74,6 +75,7 @@ if TYPE_CHECKING:
     from xarray.core.types import (
         CombineAttrsOptions,
         CompatOptions,
+        ErrorOptionsWithWarn,
         JoinOptions,
         NestedSequence,
         ReadBuffer,
@@ -260,6 +262,28 @@ def _validate_attrs(dataset, engine, invalid_netcdf=False):
             check_attr(k, v, valid_types)
 
 
+def _sanitize_unlimited_dims(dataset, unlimited_dims):
+    msg_origin = "unlimited_dims-kwarg"
+    if unlimited_dims is None:
+        unlimited_dims = dataset.encoding.get("unlimited_dims", None)
+        msg_origin = "dataset.encoding"
+    if unlimited_dims is not None:
+        if isinstance(unlimited_dims, str) or not isinstance(unlimited_dims, Iterable):
+            unlimited_dims = [unlimited_dims]
+        else:
+            unlimited_dims = list(unlimited_dims)
+        dataset_dims = set(dataset.dims)
+        unlimited_dims = set(unlimited_dims)
+        if undeclared_dims := (unlimited_dims - dataset_dims):
+            msg = (
+                f"Unlimited dimension(s) {undeclared_dims!r} declared in {msg_origin!r}, "
+                f"but not part of current dataset dimensions. "
+                f"Consider removing {undeclared_dims!r} from {msg_origin!r}."
+            )
+            raise ValueError(msg)
+        return unlimited_dims
+
+
 def _resolve_decoders_kwargs(decode_cf, open_backend_dataset_parameters, **decoders):
     for d in list(decoders):
         if decode_cf is False and d in open_backend_dataset_parameters:
@@ -298,7 +322,7 @@ def _protect_dataset_variables_inplace(dataset: Dataset, cache: bool) -> None:
 
 def _protect_datatree_variables_inplace(tree: DataTree, cache: bool) -> None:
     for node in tree.subtree:
-        _protect_dataset_variables_inplace(node, cache)
+        _protect_dataset_variables_inplace(node.dataset, cache)
 
 
 def _finalize_store(writes, store):
@@ -602,8 +626,10 @@ def open_dataset(
 
         - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
-        - ``chunks=None`` skips using dask, which is generally faster for
-          small arrays.
+        - ``chunks=None`` skips using dask. This uses xarray's internally private
+          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          but data is eagerly loaded into memory as numpy arrays when accessed.
+          This can be more efficient for smaller arrays or when large arrays are sliced before computation.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
         - ``chunks={}`` loads the data with dask using the engine's preferred chunk
           size, generally identical to the format's chunk size. If not available, a
@@ -842,8 +868,10 @@ def open_dataarray(
 
         - ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
-        - ``chunks=None`` skips using dask, which is generally faster for
-          small arrays.
+        - ``chunks=None`` skips using dask. This uses xarray's internally private
+          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          but data is eagerly loaded into memory as numpy arrays when accessed.
+          This can be more efficient for smaller arrays, though results may vary.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
         - ``chunks={}`` loads the data with dask using engine preferred chunks if
           exposed by the backend, otherwise with a single chunk for all arrays.
@@ -1065,8 +1093,10 @@ def open_datatree(
 
         - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
-        - ``chunks=None`` skips using dask, which is generally faster for
-          small arrays.
+        - ``chunks=None`` skips using dask. This uses xarray's internally private
+          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          but data is eagerly loaded into memory as numpy arrays when accessed.
+          This can be more efficient for smaller arrays, though results may vary.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
         - ``chunks={}`` loads the data with dask using the engine's preferred chunk
           size, generally identical to the format's chunk size. If not available, a
@@ -1307,8 +1337,10 @@ def open_groups(
 
         - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
-        - ``chunks=None`` skips using dask, which is generally faster for
-          small arrays.
+        - ``chunks=None`` skips using dask. This uses xarray's internally private
+          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          but data is eagerly loaded into memory as numpy arrays when accessed.
+          This can be more efficient for smaller arrays, though results may vary.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
         - ``chunks={}`` loads the data with dask using the engine's preferred chunk
           size, generally identical to the format's chunk size. If not available, a
@@ -1502,6 +1534,28 @@ def open_groups(
     return groups
 
 
+_FLike = TypeVar("_FLike", bound=Union[str, ReadBuffer])
+
+
+def _remove_path(
+    paths: NestedSequence[_FLike], paths_to_remove: set[_FLike]
+) -> NestedSequence[_FLike]:
+    # Initialize an empty list to store the result
+    result: list[Union[_FLike, NestedSequence[_FLike]]] = []
+
+    for item in paths:
+        if isinstance(item, list):
+            # If the current item is a list, recursively call remove_elements on it
+            nested_result = _remove_path(item, paths_to_remove)
+            if nested_result:  # Only add non-empty lists to avoid adding empty lists
+                result.append(nested_result)
+        elif item not in paths_to_remove:
+            # Add the item to the result if it is not in the set of elements to remove
+            result.append(item)
+
+    return result
+
+
 def open_mfdataset(
     paths: (
         str | os.PathLike | ReadBuffer | NestedSequence[str | os.PathLike | ReadBuffer]
@@ -1528,6 +1582,7 @@ def open_mfdataset(
     join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     attrs_file: str | os.PathLike | None = None,
     combine_attrs: CombineAttrsOptions = "override",
+    errors: ErrorOptionsWithWarn = "raise",
     **kwargs,
 ) -> Dataset:
     """Open multiple files as a single dataset.
@@ -1654,6 +1709,12 @@ def open_mfdataset(
 
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
+    errors : {"raise", "warn", "ignore"}, default: "raise"
+        String indicating how to handle errors in opening dataset.
+
+        - "raise": invalid dataset will raise an exception.
+        - "warn": a warning will be issued for each invalid dataset.
+        - "ignore": invalid dataset will be ignored.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`. For an
         overview of some of the possible options, see the documentation of
@@ -1746,7 +1807,32 @@ def open_mfdataset(
         open_ = open_dataset
         getattr_ = getattr
 
-    datasets = [open_(p, **open_kwargs) for p in paths1d]
+    if errors not in ("raise", "warn", "ignore"):
+        raise ValueError(
+            f"'errors' must be 'raise', 'warn' or 'ignore', got '{errors}'"
+        )
+
+    datasets = []
+    invalid_paths = set()
+    for p in paths1d:
+        try:
+            ds = open_(p, **open_kwargs)
+            datasets.append(ds)
+        except Exception as e:
+            if errors == "raise":
+                raise
+            elif errors == "warn":
+                emit_user_level_warning(f"Could not open {p} due to {e}. Ignoring.")
+            # remove invalid paths
+            invalid_paths.add(p)
+
+    if invalid_paths:
+        paths = _remove_path(paths, invalid_paths)
+        if combine == "nested":
+            # Create new ids and paths based on removed items
+            combined_ids_paths = _infer_concat_order_from_positions(paths)
+            ids = list(combined_ids_paths.keys())
+
     closers = [getattr_(ds, "_close") for ds in datasets]
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
@@ -1820,6 +1906,7 @@ def get_writable_netcdf_store(
     invalid_netcdf: bool,
     auto_complex: bool | None,
 ) -> AbstractWritableDataStore:
+    """Create a store for writing to a netCDF file."""
     try:
         store_open = WRITEABLE_STORES[engine]
     except KeyError as err:
@@ -2018,6 +2105,8 @@ def to_netcdf(
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
     _validate_attrs(dataset, engine, invalid_netcdf)
+    # sanitize unlimited_dims
+    unlimited_dims = _sanitize_unlimited_dims(dataset, unlimited_dims)
 
     # handle scheduler specific logic
     scheduler = get_dask_scheduler()
@@ -2071,8 +2160,11 @@ def to_netcdf(
         writes = writer.sync(compute=compute)
 
     finally:
-        if not multifile and compute:  # type: ignore[redundant-expr]
-            store.close()
+        if not multifile:
+            if compute:
+                store.close()
+            else:
+                store.sync()
 
     if path_or_file is None:
         assert isinstance(target, BytesIOProxy)  # created in this function
@@ -2244,9 +2336,11 @@ def save_mfdataset(
     try:
         writes = [w.sync(compute=compute) for w in writers]
     finally:
-        if compute:
-            for store in stores:
+        for store in stores:
+            if compute:
                 store.close()
+            else:
+                store.sync()
 
     if not compute:
         import dask
@@ -2273,6 +2367,7 @@ def get_writable_zarr_store(
     zarr_format: int | None = None,
     write_empty_chunks: bool | None = None,
 ) -> backends.ZarrStore:
+    """Create a store for writing to Zarr."""
     from xarray.backends.zarr import _choose_default_mode, _get_mappers
 
     kwargs, mapper, chunk_mapper = _get_mappers(
@@ -2380,6 +2475,7 @@ def to_zarr(
 
     See `Dataset.to_zarr` for full API docs.
     """
+
     # validate Dataset keys, DataArray names
     _validate_dataset_names(dataset)
 

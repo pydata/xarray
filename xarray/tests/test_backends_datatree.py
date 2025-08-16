@@ -265,6 +265,37 @@ class DatatreeIOBase:
             assert_equal(original_dt, roundtrip_dt)
             assert_identical(expected_dt, roundtrip_dt)
 
+    @requires_netCDF4
+    def test_no_redundant_dimensions(self, tmpdir):
+        # regression test for https://github.com/pydata/xarray/issues/10241
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2, 3]}),
+                "/child": xr.Dataset({"foo": ("x", [4, 5, 6])}),
+            }
+        )
+        filepath = tmpdir / "test.zarr"
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        root = nc4.Dataset(str(filepath))
+        child = root.groups["child"]
+        assert list(root.dimensions) == ["x"]
+        assert list(child.dimensions) == []
+
+    @requires_dask
+    def test_compute_false(self, tmpdir, simple_datatree):
+        filepath = tmpdir / "test.nc"
+        original_dt = simple_datatree.chunk()
+        result = original_dt.to_netcdf(filepath, engine=self.engine, compute=False)
+
+        with open_datatree(filepath, engine=self.engine) as in_progress_dt:
+            assert in_progress_dt.isomorphic(original_dt)
+            assert not in_progress_dt.equals(original_dt)
+
+        result.compute()
+        with open_datatree(filepath, engine=self.engine) as written_dt:
+            assert_identical(written_dt, original_dt)
+
     def test_roundtrip_via_memoryview_engine_specified(self, simple_datatree):
         original_dt = simple_datatree
         roundtrip_dt = load_datatree(
@@ -716,7 +747,7 @@ class TestZarrDatatreeIO:
             # inherited variables aren't meant to be written to zarr
             local_node_variables = node.to_dataset(inherit=False).variables
             for name, var in local_node_variables.items():
-                var_dir = storepath / node.path.removeprefix("/") / name
+                var_dir = storepath / node.path.removeprefix("/") / name  # type: ignore[operator]
 
                 assert_expected_zarr_files_exist(
                     arr_dir=var_dir,
@@ -739,6 +770,31 @@ class TestZarrDatatreeIO:
         result.compute()  # type: ignore[union-attr]
         written_dt = load_datatree(str(storepath), engine="zarr")
         assert_identical(written_dt, original_dt)
+
+    @requires_dask
+    def test_to_zarr_no_redundant_computation(self, tmpdir, zarr_format):
+        import dask.array as da
+
+        eval_count = 0
+
+        def expensive_func(x):
+            nonlocal eval_count
+            eval_count += 1
+            return x + 1
+
+        base = da.random.random((), chunks=())
+        derived1 = da.map_blocks(expensive_func, base, meta=np.array((), np.float64))
+        derived2 = derived1 + 1  # depends on derived1
+        tree = DataTree.from_dict(
+            {
+                "group1": xr.Dataset({"derived": derived1}),
+                "group2": xr.Dataset({"derived": derived2}),
+            }
+        )
+
+        filepath = str(tmpdir / "test.zarr")
+        tree.to_zarr(filepath, zarr_format=zarr_format)
+        assert eval_count == 1  # not 2
 
     def test_to_zarr_inherited_coords(self, tmpdir, zarr_format):
         original_dt = DataTree.from_dict(
