@@ -367,6 +367,8 @@ def _build_and_get_enum(
 
 @dataclass
 class _Thunk:
+    """Pickleable equivalent of `lambda: value`."""
+
     value: Any
 
     def __call__(self):
