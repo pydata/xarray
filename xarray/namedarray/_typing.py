@@ -63,8 +63,8 @@ _DTypeLike = Union[
 _IntOrUnknown = int
 _Shape = tuple[_IntOrUnknown, ...]
 _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
-_ShapeType = TypeVar("_ShapeType", bound=Any)
-_ShapeType_co = TypeVar("_ShapeType_co", bound=Any, covariant=True)
+_ShapeType = TypeVar("_ShapeType", bound=_Shape)
+_ShapeType_co = TypeVar("_ShapeType_co", bound=_Shape, covariant=True)
 
 _Axis = int
 _Axes = tuple[_Axis, ...]
@@ -113,7 +113,7 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
     """
 
     @property
-    def shape(self) -> _Shape: ...
+    def shape(self) -> _ShapeType_co: ...
 
     @property
     def dtype(self) -> _DType_co: ...
