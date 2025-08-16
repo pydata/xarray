@@ -13,6 +13,9 @@ v2025.08.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- ``compute=False`` is now supported by :py:meth:`DataTree.to_netcdf` and
+  :py:meth:`DataTree.to_zarr`.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -25,6 +28,10 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- :py:meth:`DataTree.to_netcdf` and :py:meth:`DataTree.to_zarr` now avoid
+  redundant computation of Dask arrays with cross-group dependencies
+  (:issue:`10637`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Documentation
 ~~~~~~~~~~~~~

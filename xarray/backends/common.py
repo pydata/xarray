@@ -12,6 +12,7 @@ from typing import (
     Any,
     ClassVar,
     Generic,
+    Self,
     TypeVar,
     Union,
     overload,
@@ -326,6 +327,10 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
 class AbstractDataStore:
     __slots__ = ()
 
+    def get_child_store(self, group: str) -> Self:  # pragma: no cover
+        """Get a store corresponding to the indicated child group."""
+        raise NotImplementedError()
+
     def get_dimensions(self):  # pragma: no cover
         raise NotImplementedError()
 
@@ -605,6 +610,10 @@ class AbstractWritableDataStore(AbstractDataStore):
             elif dim not in existing_dims and length != parent_dims.get(dim):
                 is_unlimited = dim in unlimited_dims
                 self.set_dimension(dim, length, is_unlimited)
+
+    def sync(self):
+        """Write all buffered data to disk."""
+        raise NotImplementedError()
 
 
 def _infer_dtype(array, name=None):
