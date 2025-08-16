@@ -318,7 +318,7 @@ def _multi_file_closer(closers):
         closer()
 
 
-def load_dataset(filename_or_obj, **kwargs) -> Dataset:
+def load_dataset(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:
     """Open, load into memory, and close a Dataset from a file or file-like
     object.
 
@@ -344,7 +344,7 @@ def load_dataset(filename_or_obj, **kwargs) -> Dataset:
         return ds.load()
 
 
-def load_dataarray(filename_or_obj, **kwargs):
+def load_dataarray(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataArray:
     """Open, load into memory, and close a DataArray from a file or file-like
     object containing a single data variable.
 
@@ -368,6 +368,32 @@ def load_dataarray(filename_or_obj, **kwargs):
 
     with open_dataarray(filename_or_obj, **kwargs) as da:
         return da.load()
+
+
+def load_datatree(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataTree:
+    """Open, load into memory, and close a DataTree from a file or file-like
+    object.
+
+    This is a thin wrapper around :py:meth:`~xarray.open_datatree`. It differs
+    from `open_datatree` in that it loads the Dataset into memory, closes the
+    file, and returns the Dataset. In contrast, `open_datatree` keeps the file
+    handle open and lazy loads its contents. All parameters are passed directly
+    to `open_datatree`. See that documentation for further details.
+
+    Returns
+    -------
+    datatree : DataTree
+        The newly created DataTree.
+
+    See Also
+    --------
+    open_datatree
+    """
+    if "cache" in kwargs:
+        raise TypeError("cache has no effect in this context")
+
+    with open_datatree(filename_or_obj, **kwargs) as ds:
+        return ds.load()
 
 
 def _chunk_ds(

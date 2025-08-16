@@ -13,6 +13,10 @@ v2025.08.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added :py:func:`load_datatree` for loading ``DataTree`` objects into memory
+  from disk. It has the same relationship to :py:func:`open_datatree`, as
+  :py:func:`load_dataset` has to :py:func:`open_dataset`.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
