@@ -38,10 +38,18 @@ def _future_array_api_result_type(*arrays_and_dtypes, xp):
 
 
 def result_type(*arrays_and_dtypes, xp) -> np.dtype:
-    if xp is np or any(
-        isinstance(getattr(t, "dtype", t), np.dtype) for t in arrays_and_dtypes
-    ):
-        return xp.result_type(*arrays_and_dtypes)
+    is_np_dtype = [
+        hasattr(t, "dtype") and isinstance(t.dtype, np.dtype) for t in arrays_and_dtypes
+    ]
+    if xp is np or any(is_np_dtype):
+        # Numpy can only apply type promotion rules on non-builtin & numpy-compatible Python objects.
+        # So we convert any incompatible objects (e.g. user-defined class instances) stored in the array to numpy Object dtype.
+        # Then, numpy's type promotion will fall back to Object dtype rather than raising an exception.
+        all_valid_arrays_and_dtypes = [
+            t if is_np_dtype[i] or t.__class__.__module__ == "builtins" else np.object_
+            for i, t in enumerate(arrays_and_dtypes)
+        ]
+        return xp.result_type(*all_valid_arrays_and_dtypes)
     else:
         return _future_array_api_result_type(*arrays_and_dtypes, xp=xp)
 
