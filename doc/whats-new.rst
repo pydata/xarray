@@ -28,7 +28,7 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
-- :py:meth:`DataTree.to_netcdf` and :py:meth:`DataTree.to_zarr` with avoid
+- :py:meth:`DataTree.to_netcdf` and :py:meth:`DataTree.to_zarr` now avoid
   redundant computation of Dask arrays with cross-group dependencies
   (:issue:`10637`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
