@@ -1102,8 +1102,8 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
 
     return merge_core(
         [dataset, other],
-        compat="broadcast_equals",
-        join="outer",
+        compat="override",
+        join="left",
         priority_arg=1,
         indexes=dataset.xindexes,
         combine_attrs="override",
