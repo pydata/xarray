@@ -609,14 +609,19 @@ class YearEnd(YearOffset):
             return date - YearEnd(month=self.month)
 
 
-class Day(Tick):
+class Day(BaseCFTimeOffset):
+    """Day offset following definition in pandas/_libs/tslibs/offsets.pyx"""
+
     _freq = "D"
 
-    def as_timedelta(self) -> timedelta:
-        return timedelta(days=self.n)
-
     def __apply__(self, other):
-        return other + self.as_timedelta()
+        if isinstance(other, Day):
+            return Day(self.n + other.n)
+        else:
+            return other + timedelta(days=self.n)
+
+    def onOffset(self, date) -> bool:
+        return True
 
 
 class Hour(Tick):
@@ -719,7 +724,7 @@ _PATTERN = rf"^((?P<multiple>[+-]?\d+)|())(?P<freq>({_FREQUENCY_CONDITION}))$"
 
 # pandas defines these offsets as "Tick" objects, which for instance have
 # distinct behavior from monthly or longer frequencies in resample.
-CFTIME_TICKS = (Day, Hour, Minute, Second)
+CFTIME_TICKS = (Hour, Minute, Second)
 
 
 def _generate_anchored_deprecated_frequencies(

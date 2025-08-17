@@ -830,7 +830,6 @@ def test_cftimeindex_add_timedeltaindex(calendar) -> None:
 @pytest.mark.parametrize(
     "freq,units",
     [
-        ("D", "D"),
         ("h", "h"),
         ("min", "min"),
         ("s", "s"),

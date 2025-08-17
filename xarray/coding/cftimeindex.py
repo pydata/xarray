@@ -707,16 +707,22 @@ class CFTimeIndex(pd.Index):
 
     def _round_via_method(self, freq, method):
         """Round dates using a specified method."""
-        from xarray.coding.cftime_offsets import CFTIME_TICKS, to_offset
+        from xarray.coding.cftime_offsets import CFTIME_TICKS, Day, to_offset
 
         if not self._data.size:
             return CFTimeIndex(np.array(self))
 
         offset = to_offset(freq)
-        if not isinstance(offset, CFTIME_TICKS):
+        if isinstance(offset, Day):
+            # Following pandas, "In the 'round' context, Day unambiguously
+            # means 24h, not calendar-day"
+            offset_as_timedelta = timedelta(days=offset.n)
+        elif isinstance(offset, CFTIME_TICKS):
+            offset_as_timedelta = offset.as_timedelta()
+        else:
             raise ValueError(f"{offset} is a non-fixed frequency")
 
-        unit = _total_microseconds(offset.as_timedelta())
+        unit = _total_microseconds(offset_as_timedelta)
         values = self.asi8
         rounded = method(values, unit)
         return _cftimeindex_from_i8(rounded, self.date_type, self.name)
