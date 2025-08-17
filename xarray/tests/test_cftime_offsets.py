@@ -471,7 +471,15 @@ def test_mul_float_multiple_next_higher_resolution():
 
 @pytest.mark.parametrize(
     "offset",
-    [YearBegin(), YearEnd(), QuarterBegin(), QuarterEnd(), MonthBegin(), MonthEnd()],
+    [
+        YearBegin(),
+        YearEnd(),
+        QuarterBegin(),
+        QuarterEnd(),
+        MonthBegin(),
+        MonthEnd(),
+        Day(),
+    ],
     ids=_id_func,
 )
 def test_nonTick_offset_multiplied_float_error(offset):
