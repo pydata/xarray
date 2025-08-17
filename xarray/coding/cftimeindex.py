@@ -490,7 +490,7 @@ class CFTimeIndex(pd.Index):
         >>> index.shift(1, "ME")
         CFTimeIndex([2000-02-29 00:00:00],
                     dtype='object', length=1, calendar='standard', freq=None)
-        >>> index.shift(1.5, "D")
+        >>> index.shift(1.5, "24h")
         CFTimeIndex([2000-02-01 12:00:00],
                     dtype='object', length=1, calendar='standard', freq=None)
         """

@@ -806,16 +806,13 @@ def delta_to_tick(delta: timedelta | pd.Timedelta) -> Tick:
             "nanoseconds to 'CFTimeOffset' object"
         )
     if delta.microseconds == 0:
-        if delta.seconds == 0:
-            return Day(n=delta.days)
+        seconds = delta.days * 86400 + delta.seconds
+        if seconds % 3600 == 0:
+            return Hour(n=seconds // 3600)
+        elif seconds % 60 == 0:
+            return Minute(n=seconds // 60)
         else:
-            seconds = delta.days * 86400 + delta.seconds
-            if seconds % 3600 == 0:
-                return Hour(n=seconds // 3600)
-            elif seconds % 60 == 0:
-                return Minute(n=seconds // 60)
-            else:
-                return Second(n=seconds)
+            return Second(n=seconds)
     # Regardless of the days and seconds this will always be a Millisecond
     # or Microsecond object
     elif delta.microseconds % 1_000 == 0:
