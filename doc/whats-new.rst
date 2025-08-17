@@ -12,8 +12,6 @@ v2025.08.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-- Run ``TestNetCDF4Data`` as ``TestNetCDF4DataTree`` through ``open_datatree`` (:pull:`10632`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Breaking changes
@@ -36,6 +34,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Run ``TestNetCDF4Data`` as ``TestNetCDF4DataTree`` through ``open_datatree`` (:pull:`10632`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 .. _whats-new.2025.08.0:
 
