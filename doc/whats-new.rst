@@ -24,6 +24,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Warn instead of raise In case of misconfiguration of ``unlimited_dims`` originating from dataset.encoding, to prevent breaking users workflows (:issue:``, :pull:``).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Documentation
