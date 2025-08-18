@@ -329,6 +329,34 @@ class TestGetItem:
         assert_identical(results[{"temp": 1}], data[{"temp": 1}])  # type: ignore[index]
 
 
+def test_subset() -> None:
+    ds1 = xr.Dataset(data_vars={"var1": ("x", [1, 2]), "var2": ("x", [0, 1])})
+    ds2 = xr.Dataset(data_vars={"var1": ("x", [1, 2])})
+    dt = xr.DataTree.from_dict({"ds1": ds1, "ds2": ds2})
+
+    dt_var1 = xr.DataTree.from_dict({"ds1": ds1[["var1"]], "ds2": ds2})
+
+    # errors as map_over_datasets does not skip empty nodes
+    with pytest.raises(KeyError, match="var1"):
+        dt.subset("var1")
+
+    # will still error if map_over_datasets will ever skip empty nodes
+    with pytest.raises(KeyError, match="var2"):
+        dt.subset("var2")
+
+    result = dt.subset("var1", errors="ignore")
+    expected = dt_var1
+    xr.testing.assert_equal(result, expected)
+
+    result = dt.subset(["var1"], errors="ignore")
+    expected = dt_var1
+    xr.testing.assert_equal(result, expected)
+
+    result = dt.subset(["var1", "var2"], errors="ignore")
+    expected = dt
+    xr.testing.assert_equal(result, expected)
+
+
 class TestUpdate:
     def test_update(self) -> None:
         dt = DataTree()
