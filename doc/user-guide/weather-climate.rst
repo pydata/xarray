@@ -279,3 +279,62 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 .. _precision range: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timestamp-limitations
 .. _ISO 8601 standard: https://en.wikipedia.org/wiki/ISO_8601
 .. _partial datetime string indexing: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#partial-string-indexing
+
+.. _cftime_arithmetic_limitations:
+
+CFTime arithmetic limitations
+-----------------------------
+
+A current limitation when working with non-standard calendars and :py:class:`cftime.datetime` 
+objects is that they support arithmetic with :py:class:`datetime.timedelta`, but **not** with :py:class:`numpy.timedelta64`.
+
+This means that certain xarray operations (such as :py:meth:`~xarray.DataArray.diff`)
+may produce ``timedelta64`` results that cannot be directly combined with ``cftime`` coordinates.
+
+For example:
+
+.. code-block:: python
+
+   import xarray as xr
+   import numpy as np
+   import pandas as pd
+   import cftime
+
+   time = xr.DataArray(
+       xr.cftime_range("2000", periods=3, freq="MS", calendar="noleap"),
+       dims="time"
+   )
+
+   # Attempt to compute midpoints
+   time[:-1] + 0.5 * time.diff("time")
+
+results in
+
+.. code-block:: none
+
+   UFuncTypeError: ufunc 'add' cannot use operands with types dtype('O') and dtype('<m8[ns]')
+
+because :py:meth:`~xarray.DataArray.diff` returns ``timedelta64``, which is not
+compatible with ``cftime.datetime``.
+
+**Workarounds**
+
+- Use :py:meth:`numpy.diff` on the underlying values, which returns
+  ``datetime.timedelta`` objects that are compatible:
+
+  .. code-block:: python
+
+     mids = time[:-1] + 0.5 * np.diff(time.values)
+
+- Or, convert ``timedelta64`` values to Python ``timedelta`` objects explicitly,
+  for example via :py:meth:`pandas.to_timedelta`:
+
+  .. code-block:: python
+
+     td = pd.to_timedelta(time.diff("time").values).to_pytimedelta()
+     mids = time[:-1] + 0.5 * td
+
+These limitations stem from the ``cftime`` library itself; arithmetic between
+``cftime.datetime`` and ``numpy.timedelta64`` is not implemented.
+
+
