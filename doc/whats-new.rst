@@ -13,6 +13,9 @@ v2025.08.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- ``compute=False`` is now supported by :py:meth:`DataTree.to_netcdf` and
+  :py:meth:`DataTree.to_zarr`.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -29,6 +32,10 @@ Bug fixes
 - Warn instead of raise in case of misconfiguration of ``unlimited_dims`` originating from dataset.encoding, to prevent breaking users workflows (:issue:`10647`, :pull:`10648`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
+- :py:meth:`DataTree.to_netcdf` and :py:meth:`DataTree.to_zarr` now avoid
+  redundant computation of Dask arrays with cross-group dependencies
+  (:issue:`10637`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Documentation
 ~~~~~~~~~~~~~

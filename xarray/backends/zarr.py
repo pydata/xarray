@@ -5,7 +5,7 @@ import json
 import os
 import struct
 from collections.abc import Hashable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
 import numpy as np
 import pandas as pd
@@ -785,6 +785,22 @@ class ZarrStore(AbstractWritableDataStore):
             # on demand.
             self._members = self._fetch_members()
 
+    def get_child_store(self, group: str) -> Self:
+        zarr_group = self.zarr_group.require_group(group)
+        return type(self)(
+            zarr_group=zarr_group,
+            mode=self._mode,
+            consolidate_on_close=self._consolidate_on_close,
+            append_dim=self._append_dim,
+            write_region=self._write_region,
+            safe_chunks=self._safe_chunks,
+            write_empty=self._write_empty,
+            close_store_on_close=self._close_store_on_close,
+            use_zarr_fill_value_as_mask=self._use_zarr_fill_value_as_mask,
+            align_chunks=self._align_chunks,
+            cache_members=self._cache_members,
+        )
+
     @property
     def members(self) -> dict[str, ZarrArray | ZarrGroup]:
         """
@@ -1046,9 +1062,6 @@ class ZarrStore(AbstractWritableDataStore):
                 kwargs["zarr_format"] = self.zarr_group.metadata.zarr_format
             zarr.consolidate_metadata(self.zarr_group.store, **kwargs)
 
-    def sync(self):
-        pass
-
     def _open_existing_array(self, *, name) -> ZarrArray:
         import zarr
         from zarr import Array as ZarrArray
@@ -1265,6 +1278,9 @@ class ZarrStore(AbstractWritableDataStore):
                 )
 
             writer.add(v.data, zarr_array, region)
+
+    def sync(self) -> None:
+        pass
 
     def close(self) -> None:
         if self._close_store_on_close:
