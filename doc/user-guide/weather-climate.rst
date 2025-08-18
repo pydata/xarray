@@ -282,8 +282,8 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
 .. _cftime_arithmetic_limitations:
 
-CFTime arithmetic limitations
------------------------------
+Arithmetic limitations with non-standard calendars
+--------------------------------------------------
 
 A current limitation when working with non-standard calendars and :py:class:`cftime.datetime` 
 objects is that they support arithmetic with :py:class:`datetime.timedelta`, but **not** with :py:class:`numpy.timedelta64`.
@@ -291,48 +291,52 @@ objects is that they support arithmetic with :py:class:`datetime.timedelta`, but
 This means that certain xarray operations (such as :py:meth:`~xarray.DataArray.diff`)
 may produce ``timedelta64`` results that cannot be directly combined with ``cftime`` coordinates.
 
-For example:
+For example, lets define a cftime DataArray with a no-leap calendar:
+
+.. jupyter-execute::
+
+    import xarray as xr
+    import numpy as np
+    import pandas as pd
+    import cftime
+ 
+    time = xr.DataArray(
+        xr.cftime_range("2000", periods=3, freq="MS", calendar="noleap"),
+        dims="time"
+    )
+
+If you want to compute, e.g., midpoints in the time intervals, this will not work:
 
 .. code-block:: python
 
-   import xarray as xr
-   import numpy as np
-   import pandas as pd
-   import cftime
+    # Attempt to compute midpoints
+    time[:-1] + 0.5 * time.diff("time")
 
-   time = xr.DataArray(
-       xr.cftime_range("2000", periods=3, freq="MS", calendar="noleap"),
-       dims="time"
-   )
-
-   # Attempt to compute midpoints
-   time[:-1] + 0.5 * time.diff("time")
-
-results in
+and result in an error like this:
 
 .. code-block:: none
 
    UFuncTypeError: ufunc 'add' cannot use operands with types dtype('O') and dtype('<m8[ns]')
 
-because :py:meth:`~xarray.DataArray.diff` returns ``timedelta64``, which is not
+This is because :py:meth:`~xarray.DataArray.diff` returns ``timedelta64``, which is not
 compatible with ``cftime.datetime``.
 
 **Workarounds**
 
-- Use :py:meth:`numpy.diff` on the underlying values, which returns
-  ``datetime.timedelta`` objects that are compatible:
+One possible workaround is to use :py:meth:`numpy.diff` on the underlying values,
+which returns ``datetime.timedelta`` objects that are compatible:
 
-  .. code-block:: python
+.. jupyter-execute::
 
-     mids = time[:-1] + 0.5 * np.diff(time.values)
+    mids = time[:-1] + 0.5 * np.diff(time.values)
 
-- Or, convert ``timedelta64`` values to Python ``timedelta`` objects explicitly,
-  for example via :py:meth:`pandas.to_timedelta`:
+or you can convert ``timedelta64`` values to Python ``timedelta`` objects explicitly,
+for example via :py:meth:`pandas.to_timedelta`:
 
-  .. code-block:: python
+.. jupyter-execute::
 
-     td = pd.to_timedelta(time.diff("time").values).to_pytimedelta()
-     mids = time[:-1] + 0.5 * td
+    td = pd.to_timedelta(time.diff("time").values).to_pytimedelta()
+    mids = time[:-1] + 0.5 * td
 
 These limitations stem from the ``cftime`` library itself; arithmetic between
 ``cftime.datetime`` and ``numpy.timedelta64`` is not implemented.
