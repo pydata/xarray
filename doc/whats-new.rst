@@ -24,6 +24,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Fix distribution of ``auto_complex`` keyword argument for open_datatree (:issue:`10631`, :pull:`10632`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Documentation
@@ -32,6 +34,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Run ``TestNetCDF4Data`` as ``TestNetCDF4DataTree`` through ``open_datatree`` (:pull:`10632`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 .. _whats-new.2025.08.0:
 
