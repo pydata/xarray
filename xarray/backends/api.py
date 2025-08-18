@@ -392,8 +392,8 @@ def load_datatree(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataTree:
     if "cache" in kwargs:
         raise TypeError("cache has no effect in this context")
 
-    with open_datatree(filename_or_obj, **kwargs) as ds:
-        return ds.load()
+    with open_datatree(filename_or_obj, **kwargs) as dt:
+        return dt.load()
 
 
 def _chunk_ds(
