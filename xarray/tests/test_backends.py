@@ -1401,8 +1401,8 @@ class CFEncodedBase(DatasetIOBase):
         # test unlimited_dims validation
         # https://github.com/pydata/xarray/issues/10549
         ds.encoding = {"unlimited_dims": "z"}
-        with pytest.raises(
-            ValueError,
+        with pytest.warns(
+            UserWarning,
             match=r"Unlimited dimension\(s\) .* declared in 'dataset.encoding'",
         ):
             with self.roundtrip(ds) as _:
@@ -2635,6 +2635,12 @@ class ZarrBase(CFEncodedBase):
 
                 assert_identical(actual, auto)
                 assert_identical(actual.load(), auto.load())
+
+    def test_unlimited_dims_encoding_is_ignored(self) -> None:
+        ds = Dataset({"x": np.arange(10)})
+        ds.encoding = {"unlimited_dims": ["x"]}
+        with self.roundtrip(ds) as actual:
+            assert_identical(ds, actual)
 
     @requires_dask
     @pytest.mark.filterwarnings("ignore:.*does not have a Zarr V3 specification.*")
@@ -6834,8 +6840,12 @@ def test_extract_zarr_variable_encoding() -> None:
 def test_open_fsspec() -> None:
     import fsspec
 
-    if not hasattr(zarr.storage, "FSStore") or not hasattr(
-        zarr.storage.FSStore, "getitems"
+    if not (
+        (
+            hasattr(zarr.storage, "FSStore")
+            and hasattr(zarr.storage.FSStore, "getitems")
+        )  # zarr v2
+        or hasattr(zarr.storage, "FsspecStore")  # zarr v3
     ):
         pytest.skip("zarr too old")
 
