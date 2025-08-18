@@ -285,7 +285,7 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 Arithmetic limitations with non-standard calendars
 --------------------------------------------------
 
-A current limitation when working with non-standard calendars and :py:class:`cftime.datetime` 
+A current limitation when working with non-standard calendars and :py:class:`cftime.datetime`
 objects is that they support arithmetic with :py:class:`datetime.timedelta`, but **not** with :py:class:`numpy.timedelta64`.
 
 This means that certain xarray operations (such as :py:meth:`~xarray.DataArray.diff`)
@@ -299,7 +299,7 @@ For example, lets define a cftime DataArray with a no-leap calendar:
     import numpy as np
     import pandas as pd
     import cftime
- 
+
     time = xr.DataArray(
         xr.cftime_range("2000", periods=3, freq="MS", calendar="noleap"),
         dims="time"
@@ -340,5 +340,3 @@ for example via :py:meth:`pandas.to_timedelta`:
 
 These limitations stem from the ``cftime`` library itself; arithmetic between
 ``cftime.datetime`` and ``numpy.timedelta64`` is not implemented.
-
-
