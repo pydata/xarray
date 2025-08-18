@@ -312,7 +312,7 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     __slots__ = ()
 
     async def async_getitem(self, key: indexing.ExplicitIndexer) -> np.typing.ArrayLike:
-        raise NotImplementedError("Backend does not not support asynchronous loading")
+        raise NotImplementedError("Backend does not support asynchronous loading")
 
     def get_duck_array(self, dtype: np.typing.DTypeLike = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
