@@ -375,8 +375,8 @@ def load_datatree(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataTree:
     object.
 
     This is a thin wrapper around :py:meth:`~xarray.open_datatree`. It differs
-    from `open_datatree` in that it loads the Dataset into memory, closes the
-    file, and returns the Dataset. In contrast, `open_datatree` keeps the file
+    from `open_datatree` in that it loads the DataTree into memory, closes the
+    file, and returns the DataTree. In contrast, `open_datatree` keeps the file
     handle open and lazy loads its contents. All parameters are passed directly
     to `open_datatree`. See that documentation for further details.
 
