@@ -262,7 +262,10 @@ def _sanitize_unlimited_dims(dataset, unlimited_dims):
                 f"but not part of current dataset dimensions. "
                 f"Consider removing {undeclared_dims!r} from {msg_origin!r}."
             )
-            raise ValueError(msg)
+            if msg_origin == "unlimited_dims-kwarg":
+                raise ValueError(msg)
+            else:
+                emit_user_level_warning(msg)
         return unlimited_dims
 
 
