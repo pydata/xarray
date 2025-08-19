@@ -4582,10 +4582,13 @@ class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
         pass
 
     @requires_scipy
+    @requires_netCDF4
     def test_engine(self) -> None:
         data = create_test_data()
+
         with pytest.raises(ValueError, match=r"unrecognized engine"):
             data.to_netcdf("foo.nc", engine="foobar")  # type: ignore[call-overload]
+
         with pytest.raises(
             ValueError,
             match=re.escape(
