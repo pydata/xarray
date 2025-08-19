@@ -24,6 +24,19 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The default backend ``engine`` used by :py:meth:`Dataset.to_netcdf`
+  and :py:meth:`DataTree.to_netcdf` is now chosen consistently with
+  :py:func:`open_dataset` and :py:func:`open_datatree`, using whichever netCDF
+  libraries are available and preferring netCDF4 to h5netcdf to scipy
+  (:issue:`10654`). Previously, :py:meth:`DataTree.to_netcdf` was hard-coded to
+  use h5netcdf.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- The return value of :py:meth:`Dataset.to_netcdf` without ``path`` is
+  now a ``memoryview`` object instead of ``bytes``. This removes an unnecessary
+  memory copy and ensures consistency when using either ``engine="scipy"`` or
+  ``engine="h5netcdf"``. If you need a bytes object, simply wrap the return
+  value of ``to_netcdf()`` with ``bytes()``.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -40,6 +53,7 @@ Bug fixes
   redundant computation of Dask arrays with cross-group dependencies
   (:issue:`10637`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
