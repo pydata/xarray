@@ -13,6 +13,10 @@ v2025.08.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added :py:func:`load_datatree` for loading ``DataTree`` objects into memory
+  from disk. It has the same relationship to :py:func:`open_datatree`, as
+  :py:func:`load_dataset` has to :py:func:`open_dataset`.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - ``compute=False`` is now supported by :py:meth:`DataTree.to_netcdf` and
   :py:meth:`DataTree.to_zarr`.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
@@ -27,6 +31,10 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Fix distribution of ``auto_complex`` keyword argument for open_datatree (:issue:`10631`, :pull:`10632`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Warn instead of raise in case of misconfiguration of ``unlimited_dims`` originating from dataset.encoding, to prevent breaking users workflows (:issue:`10647`, :pull:`10648`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 - :py:meth:`DataTree.to_netcdf` and :py:meth:`DataTree.to_zarr` now avoid
   redundant computation of Dask arrays with cross-group dependencies
@@ -39,6 +47,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Run ``TestNetCDF4Data`` as ``TestNetCDF4DataTree`` through ``open_datatree`` (:pull:`10632`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 .. _whats-new.2025.08.0:
 

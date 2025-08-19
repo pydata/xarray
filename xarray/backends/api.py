@@ -280,7 +280,10 @@ def _sanitize_unlimited_dims(dataset, unlimited_dims):
                 f"but not part of current dataset dimensions. "
                 f"Consider removing {undeclared_dims!r} from {msg_origin!r}."
             )
-            raise ValueError(msg)
+            if msg_origin == "unlimited_dims-kwarg":
+                raise ValueError(msg)
+            else:
+                emit_user_level_warning(msg)
         return unlimited_dims
 
 
@@ -399,8 +402,8 @@ def load_datatree(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataTree:
     object.
 
     This is a thin wrapper around :py:meth:`~xarray.open_datatree`. It differs
-    from `open_datatree` in that it loads the Dataset into memory, closes the
-    file, and returns the Dataset. In contrast, `open_datatree` keeps the file
+    from `open_datatree` in that it loads the DataTree into memory, closes the
+    file, and returns the DataTree. In contrast, `open_datatree` keeps the file
     handle open and lazy loads its contents. All parameters are passed directly
     to `open_datatree`. See that documentation for further details.
 
@@ -416,8 +419,8 @@ def load_datatree(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataTree:
     if "cache" in kwargs:
         raise TypeError("cache has no effect in this context")
 
-    with open_datatree(filename_or_obj, **kwargs) as ds:
-        return ds.load()
+    with open_datatree(filename_or_obj, **kwargs) as dt:
+        return dt.load()
 
 
 def _chunk_ds(

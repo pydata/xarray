@@ -34,9 +34,11 @@ import xarray.testing as xrt
 from xarray import (
     DataArray,
     Dataset,
+    DataTree,
     backends,
     load_dataarray,
     load_dataset,
+    load_datatree,
     open_dataarray,
     open_dataset,
     open_mfdataset,
@@ -1400,8 +1402,8 @@ class CFEncodedBase(DatasetIOBase):
         # test unlimited_dims validation
         # https://github.com/pydata/xarray/issues/10549
         ds.encoding = {"unlimited_dims": "z"}
-        with pytest.raises(
-            ValueError,
+        with pytest.warns(
+            UserWarning,
             match=r"Unlimited dimension\(s\) .* declared in 'dataset.encoding'",
         ):
             with self.roundtrip(ds) as _:
@@ -6114,17 +6116,29 @@ class TestDask(DatasetIOBase):
             original = Dataset({"foo": ("x", np.random.randn(10))})
             original.to_netcdf(tmp)
             ds = load_dataset(tmp)
+            assert_identical(original, ds)
             # this would fail if we used open_dataset instead of load_dataset
             ds.to_netcdf(tmp)
 
     def test_load_dataarray(self) -> None:
         with create_tmp_file() as tmp:
-            original = Dataset({"foo": ("x", np.random.randn(10))})
+            original = DataArray(np.random.randn(10), dims=["x"])
             original.to_netcdf(tmp)
-            ds = load_dataarray(tmp)
+            da = load_dataarray(tmp)
+            assert_identical(original, da)
             # this would fail if we used open_dataarray instead of
             # load_dataarray
-            ds.to_netcdf(tmp)
+            da.to_netcdf(tmp)
+
+    def test_load_datatree(self) -> None:
+        with create_tmp_file() as tmp:
+            original = DataTree(Dataset({"foo": ("x", np.random.randn(10))}))
+            original.to_netcdf(tmp)
+            dt = load_datatree(tmp)
+            xr.testing.assert_identical(original, dt)
+            # this would fail if we used open_datatree instead of
+            # load_datatree
+            dt.to_netcdf(tmp)
 
     @pytest.mark.skipif(
         ON_WINDOWS,

@@ -23,12 +23,26 @@ from xarray.tests import (
     requires_pydap,
     requires_zarr,
 )
+from xarray.tests.test_backends import TestNetCDF4Data as _TestNetCDF4Data
 
 if TYPE_CHECKING:
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine
 
 with contextlib.suppress(ImportError):
     import netCDF4 as nc4
+
+
+class TestNetCDF4DataTree(_TestNetCDF4Data):
+    @contextlib.contextmanager
+    def open(self, path, **kwargs):
+        with open_datatree(path, engine=self.engine, **kwargs) as ds:
+            yield ds.to_dataset()
+
+    def test_child_group_with_inconsistent_dimensions(self) -> None:
+        with pytest.raises(
+            ValueError, match=r"group '/child' is not aligned with its parents"
+        ):
+            super().test_child_group_with_inconsistent_dimensions()
 
 
 def diff_chunks(

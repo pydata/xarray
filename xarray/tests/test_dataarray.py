@@ -34,11 +34,7 @@ from xarray.coders import CFDatetimeCoder
 from xarray.core import dtypes
 from xarray.core.common import full_like
 from xarray.core.coordinates import Coordinates, CoordinateValidationError
-from xarray.core.indexes import (
-    Index,
-    PandasIndex,
-    filter_indexes_from_coords,
-)
+from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
 from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.testing import _assert_internal_invariants
@@ -748,6 +744,16 @@ class TestDataArray:
             da.loc[{"y": []}], DataArray(np.zeros((3, 0)), dims=["x", "y"])
         )
         assert_identical(da[[]], DataArray(np.zeros((0, 4)), dims=["x", "y"]))
+
+    def test_getitem_typeerror(self) -> None:
+        with pytest.raises(TypeError, match=r"unexpected indexer type"):
+            self.dv[True]
+        with pytest.raises(TypeError, match=r"unexpected indexer type"):
+            self.dv[np.array(True)]
+        with pytest.raises(TypeError, match=r"invalid indexer array"):
+            self.dv[3.0]
+        with pytest.raises(TypeError, match=r"invalid indexer array"):
+            self.dv[None]
 
     def test_setitem(self) -> None:
         # basic indexing should work as numpy's indexing

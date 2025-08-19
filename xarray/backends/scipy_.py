@@ -290,8 +290,8 @@ class ScipyDataStore(WritableCFDataStore):
 
         data = variable.data
         # nb. this still creates a numpy array in all memory, even though we
-        # don't write the data yet; scipy.io.netcdf does not not support
-        # incremental writes.
+        # don't write the data yet; scipy.io.netcdf does not support incremental
+        # writes.
         if name not in self.ds.variables:
             self.ds.createVariable(name, data.dtype, variable.dims)
         scipy_var = self.ds.variables[name]
