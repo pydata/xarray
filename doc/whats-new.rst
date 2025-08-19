@@ -17,6 +17,13 @@ New Features
   :py:meth:`DataTree.to_zarr`.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+Performance
+~~~~~~~~~~~
+
+- Small optimizations to help reduce indexing speed of datasets (:pull:`9003`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
+
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
