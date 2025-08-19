@@ -17,7 +17,6 @@ from numbers import Number
 from typing import (
     TYPE_CHECKING,
     Any,
-    Final,
     Literal,
     TypeVar,
     Union,
@@ -98,60 +97,31 @@ if TYPE_CHECKING:
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
 
-ENGINES = {
-    "netcdf4": backends.NetCDF4DataStore.open,
-    "scipy": backends.ScipyDataStore,
-    "pydap": backends.PydapDataStore.open,
-    "h5netcdf": backends.H5NetCDFStore.open,
-    "zarr": backends.ZarrStore.open_group,
-}
 
-
-def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:
-    engine: Literal["netcdf4", "pydap"]
-    try:
-        import netCDF4  # noqa: F401
-
-        engine = "netcdf4"
-    except ImportError:  # pragma: no cover
-        try:
-            import pydap  # noqa: F401
-
-            engine = "pydap"
-        except ImportError as err:
-            raise ValueError(
-                "netCDF4 or pydap is required for accessing remote datasets via OPeNDAP"
-            ) from err
-    return engine
-
-
-def _get_default_engine_gz() -> Literal["scipy"]:
-    try:
-        import scipy  # noqa: F401
-
-        engine: Final = "scipy"
-    except ImportError as err:  # pragma: no cover
-        raise ValueError("scipy is required for accessing .gz files") from err
-    return engine
-
-
-def get_default_engine_netcdf(
+def get_default_netcdf_write_engine(
     format: T_NetcdfTypes | None,
+    to_file_object: bool = False,
+    to_memoryview: bool = False,
 ) -> Literal["netcdf4", "h5netcdf", "scipy"]:
+    """Return the default netCDF library to use for writing a netCDF file."""
     engines = {
         "netcdf4": "netCDF4",
-        "scipy": "scipy.io.netcdf",
+        "scipy": "scipy.io",
         "h5netcdf": "h5netcdf",
     }
 
-    if format is None:
-        candidates = ["netcdf4", "h5netcdf", "scipy"]
-    elif format.upper().startswith("NETCDF3"):
-        candidates = ["netcdf4", "scipy"]
-    elif format.upper().startswith("NETCDF4"):
-        candidates = ["netcdf4", "h5netcdf"]
-    else:
-        raise AssertionError(f"unexpected {format=}")
+    candidates = list(plugins.STANDARD_BACKENDS_ORDER)
+
+    if format is not None:
+        if format.upper().startswith("NETCDF3"):
+            candidates.remove("h5netcdf")
+        elif format.upper().startswith("NETCDF4"):
+            candidates.remove("scipy")
+        else:
+            raise ValueError(f"unexpected {format=}")
+
+    if to_file_object:
+        candidates.remove("netcdf4")
 
     for engine in candidates:
         module_name = engines[engine]
@@ -159,23 +129,11 @@ def get_default_engine_netcdf(
             return cast(Literal["netcdf4", "h5netcdf", "scipy"], engine)
 
     format_str = f"with {format=}" if format is not None else ""
+    libraries = ", ".join(engines[c] for c in candidates)
     raise ValueError(
-        f"cannot read or write NetCDF files{format_str} because none of "
-        f"{set(candidates)} are installed"
+        f"cannot write NetCDF files{format_str} because none of the suitable "
+        f"backend libraries ({libraries}) are installed"
     )
-
-
-def _get_default_engine(
-    path: str | None,
-    allow_remote: bool = False,
-    format: T_NetcdfTypes | None = None,
-) -> T_NetcdfEngine:
-    if path is not None:
-        if allow_remote and is_remote_uri(path):
-            return _get_default_engine_remote_uri()  # type: ignore[return-value]
-        if path.endswith(".gz"):
-            return _get_default_engine_gz()
-    return get_default_engine_netcdf(format)
 
 
 def _validate_dataset_names(dataset: Dataset) -> None:
@@ -371,7 +329,7 @@ def load_dataset(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:
         return ds.load()
 
 
-def load_dataarray(filename_or_obj: T_PathFileOrDataStore, **kwargs):
+def load_dataarray(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataArray:
     """Open, load into memory, and close a DataArray from a file or file-like
     object containing a single data variable.
 
@@ -2083,27 +2041,15 @@ def to_netcdf(
 
     The ``multifile`` argument is only for the private use of save_mfdataset.
     """
-    if isinstance(path_or_file, os.PathLike):
-        path_or_file = os.fspath(path_or_file)
-
     if encoding is None:
         encoding = {}
 
-    if isinstance(path_or_file, str) or path_or_file is None:
-        if engine is None:
-            engine = _get_default_engine(path_or_file, format=format)
-        path_or_file = _normalize_path(path_or_file)
-    # writing to a file-like object
-    elif engine is None:
-        # TODO: only use 'scipy' if format is None or a netCDF3 format
-        engine = "scipy"
-    elif engine not in ("scipy", "h5netcdf"):
-        raise ValueError(
-            "invalid engine for creating bytes/memoryview or writing to a "
-            f"file-like object with to_netcdf: {engine!r}. Only "
-            "engine=None, engine='scipy' and engine='h5netcdf' is "
-            "supported."
-        )
+    path_or_file = _normalize_path(path_or_file)
+
+    if engine is None:
+        to_memoryview = path_or_file is None
+        to_file_object = not to_memoryview and not isinstance(path_or_file, str)
+        engine = get_default_netcdf_write_engine(format, to_file_object, to_memoryview)
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
