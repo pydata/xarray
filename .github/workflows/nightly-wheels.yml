@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository == 'pydata/xarray'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - uses: actions/setup-python@v5
