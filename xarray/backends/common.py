@@ -4,9 +4,19 @@ import logging
 import os
 import time
 import traceback
-from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from glob import glob
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Generic,
+    Self,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -188,6 +198,24 @@ def _find_absolute_paths(
     return _normalize_path_list(paths)
 
 
+BytesOrMemory = TypeVar("BytesOrMemory", bytes, memoryview)
+
+
+@dataclass
+class BytesIOProxy(Generic[BytesOrMemory]):
+    """Proxy object for a write that returns either bytes or a memoryview."""
+
+    # TODO: remove this in favor of BytesIO when Dataset.to_netcdf() stops
+    # returning bytes from the scipy engine
+    getvalue: Callable[[], BytesOrMemory] | None = None
+
+    def getvalue_or_getbuffer(self) -> BytesOrMemory:
+        """Get the value of this write as bytes or memory."""
+        if self.getvalue is None:
+            raise ValueError("must set getvalue before fetching value")
+        return self.getvalue()
+
+
 def _open_remote_file(file, mode, storage_options=None):
     import fsspec
 
@@ -227,6 +255,20 @@ def find_root_and_group(ds):
         ds = ds.parent
     group = "/" + "/".join(hierarchy)
     return ds, group
+
+
+def collect_ancestor_dimensions(group) -> dict[str, int]:
+    """Returns dimensions defined in parent groups.
+
+    If dimensions are defined in multiple ancestors, use the size of the closest
+    ancestor.
+    """
+    dims = {}
+    while (group := group.parent) is not None:
+        for k, v in group.dimensions.items():
+            if k not in dims:
+                dims[k] = len(v)
+    return dims
 
 
 def datatree_from_dict_with_io_cleanup(groups_dict: Mapping[str, Dataset]) -> DataTree:
@@ -270,16 +312,30 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     __slots__ = ()
 
+    async def async_getitem(self, key: indexing.ExplicitIndexer) -> np.typing.ArrayLike:
+        raise NotImplementedError("Backend does not support asynchronous loading")
+
     def get_duck_array(self, dtype: np.typing.DTypeLike = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return self[key]  # type: ignore[index]
+
+    async def async_get_duck_array(self, dtype: np.typing.DTypeLike = None):
+        key = indexing.BasicIndexer((slice(None),) * self.ndim)
+        return await self.async_getitem(key)
 
 
 class AbstractDataStore:
     __slots__ = ()
 
+    def get_child_store(self, group: str) -> Self:  # pragma: no cover
+        """Get a store corresponding to the indicated child group."""
+        raise NotImplementedError()
+
     def get_dimensions(self):  # pragma: no cover
         raise NotImplementedError()
+
+    def get_parent_dimensions(self):  # pragma: no cover
+        return {}
 
     def get_attrs(self):  # pragma: no cover
         raise NotImplementedError()
@@ -322,6 +378,11 @@ class AbstractDataStore:
 
     def __exit__(self, exception_type, exception_value, traceback):
         self.close()
+
+
+T_PathFileOrDataStore = (
+    str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
+)
 
 
 class ArrayWriter:
@@ -531,13 +592,14 @@ class AbstractWritableDataStore(AbstractDataStore):
         if unlimited_dims is None:
             unlimited_dims = set()
 
+        parent_dims = self.get_parent_dimensions()
         existing_dims = self.get_dimensions()
 
         dims = {}
         for v in unlimited_dims:  # put unlimited_dims first
             dims[v] = None
         for v in variables.values():
-            dims.update(dict(zip(v.dims, v.shape, strict=True)))
+            dims |= v.sizes
 
         for dim, length in dims.items():
             if dim in existing_dims and length != existing_dims[dim]:
@@ -545,9 +607,13 @@ class AbstractWritableDataStore(AbstractDataStore):
                     "Unable to update size for existing dimension"
                     f"{dim!r} ({length} != {existing_dims[dim]})"
                 )
-            elif dim not in existing_dims:
+            elif dim not in existing_dims and length != parent_dims.get(dim):
                 is_unlimited = dim in unlimited_dims
                 self.set_dimension(dim, length, is_unlimited)
+
+    def sync(self):
+        """Write all buffered data to disk."""
+        raise NotImplementedError()
 
 
 def _infer_dtype(array, name=None):
@@ -705,7 +771,12 @@ class BackendEntrypoint:
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> Dataset:
@@ -717,7 +788,12 @@ class BackendEntrypoint:
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
     ) -> bool:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
@@ -727,7 +803,12 @@ class BackendEntrypoint:
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> DataTree:
@@ -739,7 +820,12 @@ class BackendEntrypoint:
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> dict[str, Dataset]:

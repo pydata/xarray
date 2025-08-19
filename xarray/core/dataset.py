@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import copy
 import datetime
+import io
 import math
 import sys
 import warnings
@@ -26,7 +28,6 @@ from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_extension_array_dtype
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
@@ -34,12 +35,7 @@ from xarray.compat.array_api_compat import to_like_array
 from xarray.computation import ops
 from xarray.computation.arithmetic import DatasetArithmetic
 from xarray.core import dtypes as xrdtypes
-from xarray.core import (
-    duck_array_ops,
-    formatting,
-    formatting_html,
-    utils,
-)
+from xarray.core import duck_array_ops, formatting, formatting_html, utils
 from xarray.core._aggregations import DatasetAggregations
 from xarray.core.common import (
     DataWithCoords,
@@ -91,6 +87,7 @@ from xarray.core.utils import (
     either_dict_or_kwargs,
     emit_user_level_warning,
     infix_dims,
+    is_allowed_extension_array,
     is_dict_like,
     is_duck_array,
     is_duck_dask_array,
@@ -122,7 +119,13 @@ from xarray.structure.merge import (
     merge_coordinates_without_align,
     merge_data_and_coords,
 )
-from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
+from xarray.util.deprecation_helpers import (
+    _COMPAT_DEFAULT,
+    _JOIN_DEFAULT,
+    CombineKwargDefault,
+    _deprecate_positional_args,
+    deprecate_dims,
+)
 
 if TYPE_CHECKING:
     from dask.dataframe import DataFrame as DaskDataFrame
@@ -513,9 +516,11 @@ class Dataset(
         )
 
     def load(self, **kwargs) -> Self:
-        """Manually trigger loading and/or computation of this dataset's data
-        from disk or a remote source into memory and return this dataset.
-        Unlike compute, the original dataset is modified and returned.
+        """Trigger loading data into memory and return this dataset.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original dataset is modified and returned.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -527,29 +532,93 @@ class Dataset(
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.compute``.
 
+        Returns
+        -------
+        object : Dataset
+            Same object but with lazy data variables and coordinates as in-memory arrays.
+
         See Also
         --------
         dask.compute
+        Dataset.compute
+        Dataset.load_async
+        DataArray.load
+        Variable.load
         """
         # access .data to coerce everything to numpy or dask arrays
-        lazy_data = {
+        chunked_data = {
             k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
         }
-        if lazy_data:
-            chunkmanager = get_chunked_array_type(*lazy_data.values())
+        if chunked_data:
+            chunkmanager = get_chunked_array_type(*chunked_data.values())
 
             # evaluate all the chunked arrays simultaneously
             evaluated_data: tuple[np.ndarray[Any, Any], ...] = chunkmanager.compute(
-                *lazy_data.values(), **kwargs
+                *chunked_data.values(), **kwargs
             )
 
-            for k, data in zip(lazy_data, evaluated_data, strict=False):
+            for k, data in zip(chunked_data, evaluated_data, strict=False):
                 self.variables[k].data = data
 
         # load everything else sequentially
-        for k, v in self.variables.items():
-            if k not in lazy_data:
-                v.load()
+        [v.load() for k, v in self.variables.items() if k not in chunked_data]
+
+        return self
+
+    async def load_async(self, **kwargs) -> Self:
+        """Trigger and await asynchronous loading of data into memory and return this dataset.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original dataset is modified and returned.
+
+        Only works when opening data lazily from IO storage backends which support lazy asynchronous loading.
+        Otherwise will raise a NotImplementedError.
+
+        Note users are expected to limit concurrency themselves - xarray does not internally limit concurrency in any way.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.compute``.
+
+        Returns
+        -------
+        object : Dataset
+            Same object but with lazy data variables and coordinates as in-memory arrays.
+
+        See Also
+        --------
+        dask.compute
+        Dataset.compute
+        Dataset.load
+        DataArray.load_async
+        Variable.load_async
+        """
+        # TODO refactor this to pull out the common chunked_data codepath
+
+        # this blocks on chunked arrays but not on lazily indexed arrays
+
+        # access .data to coerce everything to numpy or dask arrays
+        chunked_data = {
+            k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
+        }
+        if chunked_data:
+            chunkmanager = get_chunked_array_type(*chunked_data.values())
+
+            # evaluate all the chunked arrays simultaneously
+            evaluated_data: tuple[np.ndarray[Any, Any], ...] = chunkmanager.compute(
+                *chunked_data.values(), **kwargs
+            )
+
+            for k, data in zip(chunked_data, evaluated_data, strict=False):
+                self.variables[k].data = data
+
+        # load everything else concurrently
+        coros = [
+            v.load_async() for k, v in self.variables.items() if k not in chunked_data
+        ]
+        await asyncio.gather(*coros)
 
         return self
 
@@ -688,9 +757,11 @@ class Dataset(
         )
 
     def compute(self, **kwargs) -> Self:
-        """Manually trigger loading and/or computation of this dataset's data
-        from disk or a remote source into memory and return a new dataset.
-        Unlike load, the original dataset is left unaltered.
+        """Trigger loading data into memory and return a new dataset.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.load``, the original dataset is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -710,6 +781,10 @@ class Dataset(
         See Also
         --------
         dask.compute
+        Dataset.load
+        Dataset.load_async
+        DataArray.compute
+        Variable.compute
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -1878,7 +1953,7 @@ class Dataset(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes: ...
+    ) -> bytes | memoryview: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -1901,7 +1976,7 @@ class Dataset(
     @overload
     def to_netcdf(
         self,
-        path: str | PathLike,
+        path: str | PathLike | io.IOBase,
         mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
@@ -1932,7 +2007,7 @@ class Dataset(
 
     def to_netcdf(
         self,
-        path: str | PathLike | None = None,
+        path: str | PathLike | io.IOBase | None = None,
         mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
@@ -1942,7 +2017,7 @@ class Dataset(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes | Delayed | None:
+    ) -> bytes | memoryview | Delayed | None:
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -2014,9 +2089,9 @@ class Dataset(
 
         Returns
         -------
-            * ``bytes`` if path is None
+            * ``bytes`` or ``memoryview`` if path is None
             * ``dask.delayed.Delayed`` if compute is False
-            * None otherwise
+            * ``None`` otherwise
 
         See Also
         --------
@@ -2557,7 +2632,7 @@ class Dataset(
 
         # all indexers should be int, slice, np.ndarrays, or Variable
         for k, v in indexers.items():
-            if isinstance(v, int | slice | Variable):
+            if isinstance(v, int | slice | Variable) and not isinstance(v, bool):
                 yield k, v
             elif isinstance(v, DataArray):
                 yield k, v.variable
@@ -3852,13 +3927,22 @@ class Dataset(
                 var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
                 variables[name] = missing.interp(var, var_indexers, method, **kwargs)
             elif dtype_kind in "ObU" and (use_indexers.keys() & var.dims):
-                # For types that we do not understand do stepwise
-                # interpolation to avoid modifying the elements.
-                # reindex the variable instead because it supports
-                # booleans and objects and retains the dtype but inside
-                # this loop there might be some duplicate code that slows it
-                # down, therefore collect these signals and run it later:
-                reindex_vars.append(name)
+                if all(var.sizes[d] == 1 for d in (use_indexers.keys() & var.dims)):
+                    # Broadcastable, can be handled quickly without reindex:
+                    to_broadcast = (var.squeeze(),) + tuple(
+                        dest for _, dest in use_indexers.values()
+                    )
+                    variables[name] = broadcast_variables(*to_broadcast)[0].copy(
+                        deep=True
+                    )
+                else:
+                    # For types that we do not understand do stepwise
+                    # interpolation to avoid modifying the elements.
+                    # reindex the variable instead because it supports
+                    # booleans and objects and retains the dtype but inside
+                    # this loop there might be some duplicate code that slows it
+                    # down, therefore collect these signals and run it later:
+                    reindex_vars.append(name)
             elif all(d not in indexers for d in var.dims):
                 # For anything else we can only keep variables if they
                 # are not dependent on any coords that are being
@@ -5313,7 +5397,14 @@ class Dataset(
 
         # concatenate the arrays
         stackable_vars = [stack_dataarray(da) for da in self.data_vars.values()]
-        data_array = concat(stackable_vars, dim=new_dim)
+        data_array = concat(
+            stackable_vars,
+            dim=new_dim,
+            data_vars="all",
+            coords="different",
+            compat="equals",
+            join="outer",
+        )
 
         if name is not None:
             data_array.name = name
@@ -5557,8 +5648,8 @@ class Dataset(
         self,
         other: CoercibleMapping | DataArray,
         overwrite_vars: Hashable | Iterable[Hashable] = frozenset(),
-        compat: CompatOptions = "no_conflicts",
-        join: JoinOptions = "outer",
+        compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
+        join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
         fill_value: Any = xrdtypes.NA,
         combine_attrs: CombineAttrsOptions = "override",
     ) -> Self:
@@ -6772,7 +6863,7 @@ class Dataset(
             elif (
                 # Some reduction functions (e.g. std, var) need to run on variables
                 # that don't have the reduce dims: PR5393
-                not is_extension_array_dtype(var.dtype)
+                not pd.api.types.is_extension_array_dtype(var.dtype)  # noqa: TID251
                 and (
                     not reduce_dims
                     or not numeric_only
@@ -7097,12 +7188,12 @@ class Dataset(
         non_extension_array_columns = [
             k
             for k in columns_in_order
-            if not is_extension_array_dtype(self.variables[k].data)
+            if not pd.api.types.is_extension_array_dtype(self.variables[k].data)  # noqa: TID251
         ]
         extension_array_columns = [
             k
             for k in columns_in_order
-            if is_extension_array_dtype(self.variables[k].data)
+            if pd.api.types.is_extension_array_dtype(self.variables[k].data)  # noqa: TID251
         ]
         extension_array_columns_different_index = [
             k
@@ -7294,7 +7385,7 @@ class Dataset(
         arrays = []
         extension_arrays = []
         for k, v in dataframe.items():
-            if not is_extension_array_dtype(v) or isinstance(
+            if not is_allowed_extension_array(v) or isinstance(
                 v.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES
             ):
                 arrays.append((k, np.asarray(v)))

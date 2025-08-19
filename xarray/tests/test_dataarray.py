@@ -34,11 +34,7 @@ from xarray.coders import CFDatetimeCoder
 from xarray.core import dtypes
 from xarray.core.common import full_like
 from xarray.core.coordinates import Coordinates, CoordinateValidationError
-from xarray.core.indexes import (
-    Index,
-    PandasIndex,
-    filter_indexes_from_coords,
-)
+from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
 from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.testing import _assert_internal_invariants
@@ -749,6 +745,16 @@ class TestDataArray:
         )
         assert_identical(da[[]], DataArray(np.zeros((0, 4)), dims=["x", "y"]))
 
+    def test_getitem_typeerror(self) -> None:
+        with pytest.raises(TypeError, match=r"unexpected indexer type"):
+            self.dv[True]
+        with pytest.raises(TypeError, match=r"unexpected indexer type"):
+            self.dv[np.array(True)]
+        with pytest.raises(TypeError, match=r"invalid indexer array"):
+            self.dv[3.0]
+        with pytest.raises(TypeError, match=r"invalid indexer array"):
+            self.dv[None]
+
     def test_setitem(self) -> None:
         # basic indexing should work as numpy's indexing
         tuples: list[tuple[int | list[int] | slice, int | list[int] | slice]] = [
@@ -1439,11 +1445,25 @@ class TestDataArray:
         # GH: 3512
         da = DataArray([0, 1], dims=["x"], coords={"x": [0, 1], "y": "a"})
         db = DataArray([2, 3], dims=["x"], coords={"x": [0, 1], "y": "b"})
-        data = xr.concat([da, db], dim="x").set_index(xy=["x", "y"])
+        data = xr.concat(
+            [da, db], dim="x", coords="different", compat="equals"
+        ).set_index(xy=["x", "y"])
         assert data.dims == ("xy",)
         actual = data.sel(y="a")
         expected = data.isel(xy=[0, 1]).unstack("xy").squeeze("y")
         assert_equal(actual, expected)
+
+    def test_concat_with_default_coords_warns(self) -> None:
+        da = DataArray([0, 1], dims=["x"], coords={"x": [0, 1], "y": "a"})
+        db = DataArray([2, 3], dims=["x"], coords={"x": [0, 1], "y": "b"})
+
+        with pytest.warns(FutureWarning):
+            original = xr.concat([da, db], dim="x")
+            assert original.y.size == 4
+        with set_options(use_new_combine_kwarg_defaults=True):
+            # default compat="override" will pick the first one
+            new = xr.concat([da, db], dim="x")
+            assert new.y.size == 1
 
     def test_virtual_default_coords(self) -> None:
         array = DataArray(np.zeros((5,)), dims="x")

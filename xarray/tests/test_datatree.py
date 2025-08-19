@@ -165,7 +165,9 @@ class TestPaths:
                 "/Kate": DataTree(),
             }
         )
-        assert john["/Mary"].same_tree(john["/Kate"])
+        mary = john.children["Mary"]
+        kate = john.children["Kate"]
+        assert mary.same_tree(kate)
 
     def test_relative_paths(self) -> None:
         john = DataTree.from_dict(
@@ -174,14 +176,8 @@ class TestPaths:
                 "/Annie": DataTree(),
             }
         )
-        sue_result = john["Mary/Sue"]
-        if isinstance(sue_result, DataTree):
-            sue: DataTree = sue_result
-
-        annie_result = john["Annie"]
-        if isinstance(annie_result, DataTree):
-            annie: DataTree = annie_result
-
+        sue = john.children["Mary"].children["Sue"]
+        annie = john.children["Annie"]
         assert sue.relative_to(john) == "Mary/Sue"
         assert john.relative_to(sue) == "../.."
         assert annie.relative_to(sue) == "../../Annie"
@@ -1884,7 +1880,7 @@ class TestIsomorphicEqualsAndIdentical:
         assert not child.identical(new_child)
 
         deeper_root = DataTree(children={"root": root})
-        grandchild = deeper_root["/root/child"]
+        grandchild = deeper_root.children["root"].children["child"]
         assert child.equals(grandchild)
         assert child.identical(grandchild)
 
@@ -1941,6 +1937,85 @@ class TestSubset:
             lambda node: node["age"].item() == 10
         )
         assert_identical(actual, expected)
+
+    def test_prune_basic(self) -> None:
+        tree = DataTree.from_dict(
+            {"/a": xr.Dataset({"foo": ("x", [1, 2])}), "/b": xr.Dataset()}
+        )
+
+        pruned = tree.prune()
+
+        assert "a" in pruned.children
+        assert "b" not in pruned.children
+        assert_identical(
+            pruned.children["a"].to_dataset(), tree.children["a"].to_dataset()
+        )
+
+    def test_prune_with_zero_size_vars(self) -> None:
+        tree = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"foo": ("x", [1, 2])}),
+                "/b": xr.Dataset({"empty": ("dim", [])}),
+                "/c": xr.Dataset(),
+            }
+        )
+
+        pruned_default = tree.prune()
+        expected_default = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"foo": ("x", [1, 2])}),
+                "/b": xr.Dataset({"empty": ("dim", [])}),
+            }
+        )
+        assert_identical(pruned_default, expected_default)
+
+        pruned_strict = tree.prune(drop_size_zero_vars=True)
+        expected_strict = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"foo": ("x", [1, 2])}),
+            }
+        )
+        assert_identical(pruned_strict, expected_strict)
+
+    def test_prune_with_intermediate_nodes(self) -> None:
+        tree = DataTree.from_dict(
+            {
+                "/": xr.Dataset(),
+                "/group1": xr.Dataset(),
+                "/group1/subA": xr.Dataset({"temp": ("x", [1, 2])}),
+                "/group1/subB": xr.Dataset(),
+                "/group2": xr.Dataset({"empty": ("dim", [])}),
+            }
+        )
+        pruned = tree.prune()
+        expected_tree = DataTree.from_dict(
+            {
+                "/group1/subA": xr.Dataset({"temp": ("x", [1, 2])}),
+                "/group2": xr.Dataset({"empty": ("dim", [])}),
+            }
+        )
+        assert_identical(pruned, expected_tree)
+
+    def test_prune_after_filtering(self) -> None:
+        from pandas import date_range
+
+        ds1 = xr.Dataset(
+            {"foo": ("time", [1, 2, 3, 4, 5])},
+            coords={"time": date_range("2023-01-01", periods=5, freq="D")},
+        )
+        ds2 = xr.Dataset(
+            {"var": ("time", [1, 2, 3, 4, 5])},
+            coords={"time": date_range("2023-01-04", periods=5, freq="D")},
+        )
+
+        tree = DataTree.from_dict({"a": ds1, "b": ds2})
+        filtered = tree.sel(time=slice("2023-01-01", "2023-01-03"))
+
+        pruned = filtered.prune(drop_size_zero_vars=True)
+        expected_tree = DataTree.from_dict(
+            {"a": ds1.sel(time=slice("2023-01-01", "2023-01-03"))}
+        )
+        assert_identical(pruned, expected_tree)
 
 
 class TestIndexing:
