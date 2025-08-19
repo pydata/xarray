@@ -2124,7 +2124,7 @@ def to_netcdf(
 
     if path_or_file is None:
         assert isinstance(target, BytesIOProxy)  # created in this function
-        return target.getvalue_or_getbuffer()
+        return target.getbuffer()
 
     if not compute:
         return delayed_close_after_writes(writes, store)

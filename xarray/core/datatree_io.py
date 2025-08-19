@@ -13,7 +13,7 @@ from xarray.backends.api import (
     get_writable_netcdf_store,
     get_writable_zarr_store,
 )
-from xarray.backends.common import ArrayWriter
+from xarray.backends.common import ArrayWriter, BytesIOProxy
 from xarray.backends.locks import get_dask_scheduler
 from xarray.core.datatree import DataTree
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
@@ -81,11 +81,9 @@ def _datatree_to_netcdf(
         if not compute:
             raise NotImplementedError(
                 "to_netcdf() with compute=False is not yet implemented when "
-                "returning bytes"
+                "returning a memoryview"
             )
-        # No need to use BytesIOProxy here because the legacy scipy backend
-        # cannot write netCDF files with groups
-        target = io.BytesIO()
+        target = BytesIOProxy()
     else:
         target = filepath  # type: ignore[assignment]
 
@@ -139,7 +137,7 @@ def _datatree_to_netcdf(
             root_store.sync()
 
     if filepath is None:
-        assert isinstance(target, io.BytesIO)
+        assert isinstance(target, BytesIOProxy)  # created in this function
         return target.getbuffer()
 
     if not compute:
