@@ -40,6 +40,7 @@ dependencies:
   - pip
   - pydap=3.5.0
   - pytest
+  - pytest-asyncio
   - pytest-cov
   - pytest-env
   - pytest-mypy-plugins
