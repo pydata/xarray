@@ -1215,6 +1215,13 @@ class DataTree(
         --------
         Dataset
 
+        Notes
+        -----
+        ``DataTree.from_dict`` serves a conceptually different purpose from
+        ``Dataset.from_dict`` and ``DataArray.from_dict``. It converts a
+        hierarchy of Xarray objects into a DataTree, rather than converting pure
+        Python data structures.
+
         Examples
         --------
 
