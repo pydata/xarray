@@ -1179,12 +1179,14 @@ class DataTree(
         Parameters
         ----------
         data : dict-like, optional
-            A mapping from path names to DataTree or Dataset objects, or objects
-            coercible into a DataArray.
+            A mapping from path names to ``None`` (indicating an empty node),
+            ``DataTree`` or ``Dataset`` objects, or objects coercible into a
+            ``DataArray``.
 
-            Path names are to be given as unix-like path. If path names
-            containing more than one part are given, new tree nodes will be
-            constructed as necessary.
+            Path names should be given as unix-like paths, either absolute
+            (/path/to/item) or relative to the root node (path/to/item). If path
+            names containing more than one part are given, new tree nodes will
+            be constructed automatically as necessary.
 
             To assign data to the root node of the tree use "", ".", "/" or "./"
             as the path.
@@ -1197,9 +1199,67 @@ class DataTree(
         -------
         DataTree
 
+        See also
+        --------
+        Dataset
+
         Notes
         -----
         If your dictionary is nested you will need to flatten it before using this method.
+
+        Examples
+        --------
+
+        Construct a tree from a dict of Dataset objects:
+
+        >>> dt = DataTree.from_dict(
+        ...     {
+        ...         "/": Dataset(coords={"time": [1, 2, 3]}),
+        ...         "/ocean": Dataset(
+        ...             {
+        ...                 "temperature": ("time", [4, 5, 6]),
+        ...                 "salinity": ("time", [7, 8, 9]),
+        ...             }
+        ...         ),
+        ...         "/atmosphere": Dataset(
+        ...             {
+        ...                 "temperature": ("time", [2, 3, 4]),
+        ...                 "humidity": ("time", [4, 5, 6]),
+        ...             }
+        ...         ),
+        ...     }
+        ... )
+        >>> dt
+        <xarray.DataTree>
+        Group: /
+        │   Dimensions:  (time: 3)
+        │   Coordinates:
+        │     * time     (time) int64 24B 1 2 3
+        ├── Group: /ocean
+        │       Dimensions:      (time: 3)
+        │       Data variables:
+        │           temperature  (time) int64 24B 4 5 6
+        │           salinity     (time) int64 24B 7 8 9
+        └── Group: /atmosphere
+                Dimensions:      (time: 3)
+                Data variables:
+                    temperature  (time) int64 24B 2 3 4
+                    humidity     (time) int64 24B 4 5 6
+
+        Or equivalently, use a dict of values that can be converted into
+        `DataArray` objects, with syntax similar to the Dataset constructor:
+
+        >>> dt2 = DataTree.from_dict(
+        ...     data={
+        ...         "/ocean/temperature": ("time", [4, 5, 6]),
+        ...         "/ocean/salinity": ("time", [7, 8, 9]),
+        ...         "/atmosphere/temperature": ("time", [2, 3, 4]),
+        ...         "/atmosphere/humidity": ("time", [3, 4, 5]),
+        ...     },
+        ...     coords={"/time": [1, 2, 3]},
+        ... )
+        >>> assert dt.identical(dt2)
+
         """
         if data is None:
             data = {}
@@ -1235,7 +1295,8 @@ class DataTree(
                     raise ValueError("cannot set DataArray value at root")
                 if path.parent in nodes:
                     raise ValueError(
-                        f"cannot set DataArray value at {str(path)!r} when parent node at {str(path.parent)!r} is also set"
+                        f"cannot set DataArray value at {str(path)!r} when "
+                        f"parent node at {str(path.parent)!r} is also set"
                     )
                 del nodes[path]
                 if isinstance(node, _CoordWrapper):
