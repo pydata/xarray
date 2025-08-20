@@ -1232,7 +1232,7 @@ class DataTree(
         ...         "/atmosphere": Dataset(
         ...             {
         ...                 "temperature": ("time", [2, 3, 4]),
-        ...                 "humidity": ("time", [4, 5, 6]),
+        ...                 "humidity": ("time", [3, 4, 5]),
         ...             }
         ...         ),
         ...     }
@@ -1252,7 +1252,7 @@ class DataTree(
                 Dimensions:      (time: 3)
                 Data variables:
                     temperature  (time) int64 24B 2 3 4
-                    humidity     (time) int64 24B 4 5 6
+                    humidity     (time) int64 24B 3 4 5
 
         Or equivalently, use a dict of values that can be converted into
         `DataArray` objects, with syntax similar to the Dataset constructor:
