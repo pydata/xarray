@@ -905,10 +905,49 @@ class TestTreeFromDict:
         # despite 'Bart' coming before 'Lisa' when sorted alphabetically
         assert list(reversed["Homer"].children.keys()) == ["Lisa", "Bart"]
 
-    def test_array_values(self) -> None:
+    def test_array_values_dataarray(self) -> None:
+        expected = DataTree(dataset=Dataset({"a": 1}))
+        actual = DataTree.from_dict({"a": DataArray(1)})
+        assert_identical(actual, expected)
+
+    def test_array_values_scalars(self) -> None:
+        expected = DataTree(
+            dataset=Dataset({"a": 1}),
+            children={"b": DataTree(Dataset({"c": 2, "d": 3}))},
+        )
+        actual = DataTree.from_dict({"a": 1, "b/c": 2, "b/d": 3})
+        assert_identical(actual, expected)
+
+    def test_array_values_deep(self) -> None:
+        expected = DataTree(
+            children={"a": DataTree(children={"b": DataTree(Dataset({"c": 1}))})}
+        )
+        actual = DataTree.from_dict(data={"a/b/c": 1})
+        assert_identical(actual, expected)
+
+    def test_array_values_data_and_coords(self) -> None:
+        expected = DataTree(dataset=Dataset({"a": 1}, coords={"b": 2}))
+        actual = DataTree.from_dict(data={"a": 1}, coords={"b": 2})
+        assert_identical(actual, expected)
+
+    def test_array_values_new_name(self) -> None:
+        expected = DataTree(dataset=Dataset({"foo": 1}))
         data = {"foo": xr.DataArray(1, name="bar")}
-        with pytest.raises(TypeError):
-            DataTree.from_dict(data)  # type: ignore[arg-type]
+        actual = DataTree.from_dict(data)
+        assert_identical(actual, expected)
+
+    def test_array_values_at_root(self) -> None:
+        with pytest.raises(ValueError, match="cannot set DataArray value at root"):
+            DataTree.from_dict({"/": 1})
+
+    def test_array_values_parent_node_also_set(self) -> None:
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                r"cannot set DataArray value at '/a' when parent node at '/' is also set"
+            ),
+        ):
+            DataTree.from_dict({"/": Dataset(), "/a": 1})
 
     def test_relative_paths(self) -> None:
         tree = DataTree.from_dict({".": None, "foo": None, "./bar": None, "x/y": None})
@@ -937,10 +976,16 @@ class TestTreeFromDict:
         actual = DataTree.from_dict({"./": ds})
         assert_identical(actual, expected)
 
+    def test_multiple_entries(self):
         with pytest.raises(
-            ValueError, match="multiple entries found corresponding to the root node"
+            ValueError, match="multiple entries found corresponding to node '/'"
         ):
-            DataTree.from_dict({"": ds, "/": ds})
+            DataTree.from_dict({"": None, ".": None})
+
+        with pytest.raises(
+            ValueError, match="multiple entries found corresponding to node '/a'"
+        ):
+            DataTree.from_dict({"a": None, "/a": None})
 
     def test_name(self):
         tree = DataTree.from_dict({"/": None}, name="foo")

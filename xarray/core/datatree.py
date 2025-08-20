@@ -4,7 +4,7 @@ import functools
 import io
 import itertools
 import textwrap
-from collections import ChainMap
+from collections import ChainMap, defaultdict
 from collections.abc import (
     Callable,
     Hashable,
@@ -12,6 +12,7 @@ from collections.abc import (
     Iterator,
     Mapping,
 )
+from dataclasses import dataclass, field
 from html import escape
 from os import PathLike
 from typing import (
@@ -439,6 +440,17 @@ class DatasetView(Dataset):
         attrs = self.attrs if keep_attrs else None
         # return type(self)(variables, attrs=attrs)
         return Dataset(variables, attrs=attrs)
+
+
+@dataclass
+class _CoordWrapper:
+    value: CoercibleValue
+
+
+@dataclass
+class _DatasetArgs:
+    data_vars: dict[str, CoercibleValue] = field(default_factory=dict)
+    coords: dict[str, CoercibleValue] = field(default_factory=dict)
 
 
 class DataTree(
@@ -1157,8 +1169,8 @@ class DataTree(
     @classmethod
     def from_dict(
         cls,
-        d: Mapping[str, Dataset | DataTree | None],
-        /,
+        data: Mapping[str, CoercibleValue | Dataset | DataTree | None] | None = None,
+        coords: Mapping[str, CoercibleValue] | None = None,
         name: str | None = None,
     ) -> Self:
         """
@@ -1166,8 +1178,9 @@ class DataTree(
 
         Parameters
         ----------
-        d : dict-like
-            A mapping from path names to xarray.Dataset or DataTree objects.
+        data : dict-like, optional
+            A mapping from path names to DataTree or Dataset objects, or objects
+            coercible into a DataArray.
 
             Path names are to be given as unix-like path. If path names
             containing more than one part are given, new tree nodes will be
@@ -1175,6 +1188,8 @@ class DataTree(
 
             To assign data to the root node of the tree use "", ".", "/" or "./"
             as the path.
+        coords : dict-like, optional
+            A mapping from path names to objects coercible into a DataArray.
         name : Hashable | None, optional
             Name for the root node of the tree. Default is None.
 
@@ -1186,19 +1201,53 @@ class DataTree(
         -----
         If your dictionary is nested you will need to flatten it before using this method.
         """
-        # Find any values corresponding to the root
-        d_cast = dict(d)
-        root_data = None
-        for key in ("", ".", "/", "./"):
-            if key in d_cast:
-                if root_data is not None:
+        if data is None:
+            data = {}
+
+        if coords is None:
+            coords = {}
+
+        # Canonicalize and unify paths between `data` and `coords`
+        nodes: dict[
+            NodePath, _CoordWrapper | CoercibleValue | Dataset | DataTree | None
+        ] = {}
+        for key, value in data.items():
+            path = NodePath(key).absolute()
+            if path in nodes:
+                raise ValueError(
+                    f"multiple entries found corresponding to node {str(path)!r}"
+                )
+            nodes[path] = value
+        for key, value in coords.items():
+            path = NodePath(key).absolute()
+            if path in nodes:
+                raise ValueError(
+                    f"multiple entries found corresponding to node {str(path)!r}"
+                )
+            nodes[path] = _CoordWrapper(value)
+
+        # Merge nodes corresponding to DataArrays into Datasets
+        dataset_args: defaultdict[NodePath, _DatasetArgs] = defaultdict(_DatasetArgs)
+        for path in list(nodes):
+            node = nodes[path]
+            if node is not None and not isinstance(node, Dataset | DataTree):
+                if path.parent == path:
+                    raise ValueError("cannot set DataArray value at root")
+                if path.parent in nodes:
                     raise ValueError(
-                        "multiple entries found corresponding to the root node"
+                        f"cannot set DataArray value at {str(path)!r} when parent node at {str(path.parent)!r} is also set"
                     )
-                root_data = d_cast.pop(key)
+                del nodes[path]
+                if isinstance(node, _CoordWrapper):
+                    dataset_args[path.parent].coords[path.name] = node.value
+                else:
+                    dataset_args[path.parent].data_vars[path.name] = node
+        for path, args in dataset_args.items():
+            nodes[path] = Dataset(args.data_vars, args.coords)
 
         # Create the root node
-        if isinstance(root_data, DataTree):
+        root_data = nodes.pop(NodePath("/"), None)
+        if isinstance(root_data, cls):
             obj = root_data.copy()
             obj.name = name
         elif root_data is None or isinstance(root_data, Dataset):
@@ -1211,19 +1260,19 @@ class DataTree(
 
         def depth(item) -> int:
             pathstr, _ = item
-            return len(NodePath(pathstr).parts)
+            return len(pathstr.parts)
 
-        if d_cast:
-            # Populate tree with children determined from data_objects mapping
+        if nodes:
+            # Populate tree with children
             # Sort keys by depth so as to insert nodes from root first (see GH issue #9276)
-            for path, data in sorted(d_cast.items(), key=depth):
+            for path, node in sorted(nodes.items(), key=depth):
                 # Create and set new node
-                if isinstance(data, DataTree):
-                    new_node = data.copy()
-                elif isinstance(data, Dataset) or data is None:
-                    new_node = cls(dataset=data)
+                if isinstance(node, DataTree):
+                    new_node = node.copy()
+                elif isinstance(node, Dataset) or node is None:
+                    new_node = cls(dataset=node)
                 else:
-                    raise TypeError(f"invalid values: {data}")
+                    raise TypeError(f"invalid values: {node}")
                 obj._set_item(
                     path,
                     new_node,
@@ -1231,9 +1280,7 @@ class DataTree(
                     new_nodes_along_path=True,
                 )
 
-        # TODO: figure out why mypy is raising an error here, likely something
-        # to do with the return type of Dataset.copy()
-        return obj  # type: ignore[return-value]
+        return obj
 
     def to_dict(self, relative: bool = False) -> dict[str, Dataset]:
         """
