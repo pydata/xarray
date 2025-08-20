@@ -86,6 +86,7 @@ if TYPE_CHECKING:
         DtCompatible,
         ErrorOptions,
         ErrorOptionsWithWarn,
+        NestedDict,
         NetcdfWriteModes,
         T_ChunkDimFreq,
         T_ChunksFreq,
@@ -1169,8 +1170,16 @@ class DataTree(
     @classmethod
     def from_dict(
         cls,
-        data: Mapping[str, CoercibleValue | Dataset | DataTree | None] | None = None,
-        coords: Mapping[str, CoercibleValue] | None = None,
+        data: Mapping[
+            str,
+            CoercibleValue
+            | Dataset
+            | DataTree
+            | None
+            | NestedDict[CoercibleValue | Dataset | DataTree | None],
+        ]
+        | None = None,
+        coords: Mapping[str, CoercibleValue | NestedDict[CoercibleValue]] | None = None,
         name: str | None = None,
     ) -> Self:
         """
@@ -1180,18 +1189,21 @@ class DataTree(
         ----------
         data : dict-like, optional
             A mapping from path names to ``None`` (indicating an empty node),
-            ``DataTree`` or ``Dataset`` objects, or objects coercible into a
-            ``DataArray``.
+            ``DataTree``, ``Dataset``, objects coercible into a ``DataArray`` or
+            a nested dictionary of any of the above types.
 
             Path names should be given as unix-like paths, either absolute
             (/path/to/item) or relative to the root node (path/to/item). If path
             names containing more than one part are given, new tree nodes will
             be constructed automatically as necessary.
 
+            Nested dictionaries are automatically flattened.
+
             To assign data to the root node of the tree use "", ".", "/" or "./"
             as the path.
         coords : dict-like, optional
-            A mapping from path names to objects coercible into a DataArray.
+            A mapping from path names to objects coercible into a DataArray, or
+            nested dictionaries of coercible objects.
         name : Hashable | None, optional
             Name for the root node of the tree. Default is None.
 
@@ -1202,10 +1214,6 @@ class DataTree(
         See also
         --------
         Dataset
-
-        Notes
-        -----
-        If your dictionary is nested you will need to flatten it before using this method.
 
         Examples
         --------
@@ -1260,6 +1268,19 @@ class DataTree(
         ... )
         >>> assert dt.identical(dt2)
 
+        Nested dictionaries are automatically flattened:
+
+        >>> DataTree.from_dict({"a": {"b": {"c": {"x": 1, "y": 2}}}})
+        <xarray.DataTree>
+        Group: /
+        └── Group: /a
+            └── Group: /a/b
+                └── Group: /a/b/c
+                        Dimensions:  ()
+                        Data variables:
+                            x        int64 8B 1
+                            y        int64 8B 2
+
         """
         if data is None:
             data = {}
@@ -1268,23 +1289,20 @@ class DataTree(
             coords = {}
 
         # Canonicalize and unify paths between `data` and `coords`
+        flat_data_and_coords = itertools.chain(
+            utils.flat_items(data),
+            ((k, _CoordWrapper(v)) for k, v in utils.flat_items(coords)),
+        )
         nodes: dict[
             NodePath, _CoordWrapper | CoercibleValue | Dataset | DataTree | None
         ] = {}
-        for key, value in data.items():
+        for key, value in flat_data_and_coords:
             path = NodePath(key).absolute()
             if path in nodes:
                 raise ValueError(
                     f"multiple entries found corresponding to node {str(path)!r}"
                 )
             nodes[path] = value
-        for key, value in coords.items():
-            path = NodePath(key).absolute()
-            if path in nodes:
-                raise ValueError(
-                    f"multiple entries found corresponding to node {str(path)!r}"
-                )
-            nodes[path] = _CoordWrapper(value)
 
         # Merge nodes corresponding to DataArrays into Datasets
         dataset_args: defaultdict[NodePath, _DatasetArgs] = defaultdict(_DatasetArgs)

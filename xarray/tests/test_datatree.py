@@ -925,10 +925,31 @@ class TestTreeFromDict:
         actual = DataTree.from_dict(data={"a/b/c": 1})
         assert_identical(actual, expected)
 
+    def test_nested_array_values(self) -> None:
+        expected = DataTree(
+            children={"a": DataTree(children={"b": DataTree(Dataset({"c": 1}))})}
+        )
+        actual = DataTree.from_dict({"a": {"b": {"c": 1}}})
+        assert_identical(actual, expected)
+
+    def test_nested_array_values_duplicates(self) -> None:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("multiple entries found corresponding to node '/a/b'"),
+        ):
+            DataTree.from_dict({"a": {"b": 1}, "a/b": 2})
+
     def test_array_values_data_and_coords(self) -> None:
         expected = DataTree(dataset=Dataset({"a": 1}, coords={"b": 2}))
         actual = DataTree.from_dict(data={"a": 1}, coords={"b": 2})
         assert_identical(actual, expected)
+
+    def test_data_and_coords_conflicting(self) -> None:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("multiple entries found corresponding to node '/a'"),
+        ):
+            DataTree.from_dict(data={"a": 1}, coords={"a": 2})
 
     def test_array_values_new_name(self) -> None:
         expected = DataTree(dataset=Dataset({"foo": 1}))
