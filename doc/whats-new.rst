@@ -5,18 +5,85 @@
 What's New
 ==========
 
-.. _whats-new.2025.07.2:
+.. _whats-new.2025.08.1:
 
-v2025.07.2 (unreleased)
+v2025.08.1 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
 
+- Added :py:func:`load_datatree` for loading ``DataTree`` objects into memory
+  from disk. It has the same relationship to :py:func:`open_datatree`, as
+  :py:func:`load_dataset` has to :py:func:`open_dataset`.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- ``compute=False`` is now supported by :py:meth:`DataTree.to_netcdf` and
+  :py:meth:`DataTree.to_zarr`.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+- Fix distribution of ``auto_complex`` keyword argument for open_datatree (:issue:`10631`, :pull:`10632`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Warn instead of raise in case of misconfiguration of ``unlimited_dims`` originating from dataset.encoding, to prevent breaking users workflows (:issue:`10647`, :pull:`10648`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+- :py:meth:`DataTree.to_netcdf` and :py:meth:`DataTree.to_zarr` now avoid
+  redundant computation of Dask arrays with cross-group dependencies
+  (:issue:`10637`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+Documentation
+~~~~~~~~~~~~~
+- Added new FAQ entries addressing common user questions about performance optimization, groupby behavior, import errors, and plotting controls (:issue:`1285`).
+  By `Bijan Fallah <https://github.com/fallah>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Run ``TestNetCDF4Data`` as ``TestNetCDF4DataTree`` through ``open_datatree`` (:pull:`10632`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+
+.. _whats-new.2025.08.0:
+
+v2025.08.0 (August 14, 2025)
+----------------------------
+
+This release brings the ability to load xarray objects asynchronously, write netCDF as bytes, fixes a number of bugs, and starts an important deprecation cycle for changing the default values of keyword arguments for various xarray combining functions.
+
+Thanks to the 24 contributors to this release:
+Alfonso Ladino, Brigitta Sipőcz, Claude, Deepak Cherian, Dimitri Papadopoulos Orfanos, Eric Jansen, Ian Hunt-Isaak, Ilan Gold, Illviljan, Julia Signell, Justus Magin, Kai Mühlbauer, Mathias Hauser, Matthew, Michael Niklas, Miguel Jimenez, Nick Hodgskin, Pratiman, Scott Staniewicz, Spencer Clark, Stephan Hoyer, Tom Nicholas, Yang Yang and jemmajeffree
+
+New Features
+~~~~~~~~~~~~
+
+- Added :py:meth:`DataTree.prune` method to remove empty nodes while preserving tree structure.
+  Useful for cleaning up DataTree after time-based filtering operations (:issue:`10590`, :pull:`10598`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
+- Added new asynchronous loading methods :py:meth:`Dataset.load_async`, :py:meth:`DataArray.load_async`, :py:meth:`Variable.load_async`.
+  Note that users are expected to limit concurrency themselves - xarray does not internally limit concurrency in any way.
+  (:issue:`10326`, :pull:`10327`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- :py:meth:`DataTree.to_netcdf` can now write to a file-like object, or return bytes if called without a filepath. (:issue:`10570`)
+  By `Matthew Willson <https://github.com/mjwillson>`_.
+- Added exception handling for invalid files in :py:func:`open_mfdataset`. (:issue:`6736`)
+  By `Pratiman Patel <https://github.com/pratiman-91>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- When writing to NetCDF files with groups, Xarray no longer redefines dimensions
+  that have the same size in parent groups (:issue:`10241`). This conforms with
+  `CF Conventions for group scrope <https://cfconventions.org/cf-conventions/cf-conventions.html#_scope>`_
+  but may require adjustments for code that consumes NetCDF files produced by Xarray.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -41,24 +108,25 @@ Bug fixes
   By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 - Fix ``KeyError`` when passing a ``dim`` argument different from the default to ``convert_calendar`` (:pull:`10544`).
   By `Eric Jansen <https://github.com/ej81>`_.
-
 - Fix transpose of boolean arrays read from disk. (:issue:`10536`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix detection of the ``h5netcdf`` backend. Xarray now selects ``h5netcdf`` if the default ``netCDF4`` engine is not available (:issue:`10401`, :pull:`10557`).
   By `Scott Staniewicz <https://github.com/scottstanie>`_.
+- Fix :py:func:`merge` to prevent altering original object depending on join value (:pull:`10596`)
+  By `Julia Signell <https://github.com/jsignell>`_.
+- Ensure ``unlimited_dims`` passed to :py:meth:`xarray.DataArray.to_netcdf`, :py:meth:`xarray.Dataset.to_netcdf` or :py:meth:`xarray.DataTree.to_netcdf` only contains dimensions present in the object; raise ``ValueError`` otherwise (:issue:`10549`, :pull:`10608`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
-- Added new FAQ entries addressing common user questions about performance optimization, groupby behavior, import errors, and plotting controls (:issue:`1285`).
-  By `Your Name <https://github.com/fallah>`_.
-
-Internal Changes
-~~~~~~~~~~~~~~~~
+- Clarify lazy behaviour and eager loading for ``chunks=None`` in :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_dataarray`, :py:func:`~xarray.open_datatree`, :py:func:`~xarray.open_groups` and :py:func:`~xarray.open_zarr` (:issue:`10612`, :pull:`10627`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Performance
 ~~~~~~~~~~~
+
 - Speed up non-numeric scalars when calling :py:meth:`Dataset.interp`. (:issue:`10054`, :pull:`10554`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
@@ -6627,7 +6695,7 @@ Enhancements
 
 .. _Zarr: http://zarr.readthedocs.io/
 
-.. _Iris: http://scitools.org.uk/iris
+.. _Iris: http://scitools-iris.readthedocs.io
 
 .. _netcdftime: https://unidata.github.io/netcdftime
 

@@ -691,8 +691,7 @@ def find_independent_seasons(seasons: Sequence[str]) -> Sequence[SeasonsGroup]:
     >>> find_independent_seasons(
     ...     ["DJF", "FMA", "AMJ", "JJA", "ASO", "OND"]
     ... )  # doctest: +NORMALIZE_WHITESPACE
-    [SeasonsGroup(seasons=('DJF', 'AMJ', 'ASO'), inds=((12, 1, 2), (4, 5, 6), (8, 9, 10)), codes=[0, 2, 4]),
-    SeasonsGroup(seasons=('FMA', 'JJA', 'OND'), inds=((2, 3, 4), (6, 7, 8), (10, 11, 12)), codes=[1, 3, 5])]
+    [SeasonsGroup(seasons=('DJF', 'AMJ', 'ASO'), inds=((12, 1, 2), (4, 5, 6), (8, 9, 10)), codes=[0, 2, 4]), SeasonsGroup(seasons=('FMA', 'JJA', 'OND'), inds=((2, 3, 4), (6, 7, 8), (10, 11, 12)), codes=[1, 3, 5])]
 
     >>> find_independent_seasons(["DJF", "MAM", "JJA", "SON"])
     [SeasonsGroup(seasons=('DJF', 'MAM', 'JJA', 'SON'), inds=((12, 1, 2), (3, 4, 5), (6, 7, 8), (9, 10, 11)), codes=[0, 1, 2, 3])]

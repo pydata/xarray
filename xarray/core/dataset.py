@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import copy
 import datetime
+import io
 import math
 import sys
 import warnings
@@ -33,12 +35,7 @@ from xarray.compat.array_api_compat import to_like_array
 from xarray.computation import ops
 from xarray.computation.arithmetic import DatasetArithmetic
 from xarray.core import dtypes as xrdtypes
-from xarray.core import (
-    duck_array_ops,
-    formatting,
-    formatting_html,
-    utils,
-)
+from xarray.core import duck_array_ops, formatting, formatting_html, utils
 from xarray.core._aggregations import DatasetAggregations
 from xarray.core.common import (
     DataWithCoords,
@@ -519,9 +516,11 @@ class Dataset(
         )
 
     def load(self, **kwargs) -> Self:
-        """Manually trigger loading and/or computation of this dataset's data
-        from disk or a remote source into memory and return this dataset.
-        Unlike compute, the original dataset is modified and returned.
+        """Trigger loading data into memory and return this dataset.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original dataset is modified and returned.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -533,29 +532,93 @@ class Dataset(
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.compute``.
 
+        Returns
+        -------
+        object : Dataset
+            Same object but with lazy data variables and coordinates as in-memory arrays.
+
         See Also
         --------
         dask.compute
+        Dataset.compute
+        Dataset.load_async
+        DataArray.load
+        Variable.load
         """
         # access .data to coerce everything to numpy or dask arrays
-        lazy_data = {
+        chunked_data = {
             k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
         }
-        if lazy_data:
-            chunkmanager = get_chunked_array_type(*lazy_data.values())
+        if chunked_data:
+            chunkmanager = get_chunked_array_type(*chunked_data.values())
 
             # evaluate all the chunked arrays simultaneously
             evaluated_data: tuple[np.ndarray[Any, Any], ...] = chunkmanager.compute(
-                *lazy_data.values(), **kwargs
+                *chunked_data.values(), **kwargs
             )
 
-            for k, data in zip(lazy_data, evaluated_data, strict=False):
+            for k, data in zip(chunked_data, evaluated_data, strict=False):
                 self.variables[k].data = data
 
         # load everything else sequentially
-        for k, v in self.variables.items():
-            if k not in lazy_data:
-                v.load()
+        [v.load() for k, v in self.variables.items() if k not in chunked_data]
+
+        return self
+
+    async def load_async(self, **kwargs) -> Self:
+        """Trigger and await asynchronous loading of data into memory and return this dataset.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original dataset is modified and returned.
+
+        Only works when opening data lazily from IO storage backends which support lazy asynchronous loading.
+        Otherwise will raise a NotImplementedError.
+
+        Note users are expected to limit concurrency themselves - xarray does not internally limit concurrency in any way.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.compute``.
+
+        Returns
+        -------
+        object : Dataset
+            Same object but with lazy data variables and coordinates as in-memory arrays.
+
+        See Also
+        --------
+        dask.compute
+        Dataset.compute
+        Dataset.load
+        DataArray.load_async
+        Variable.load_async
+        """
+        # TODO refactor this to pull out the common chunked_data codepath
+
+        # this blocks on chunked arrays but not on lazily indexed arrays
+
+        # access .data to coerce everything to numpy or dask arrays
+        chunked_data = {
+            k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
+        }
+        if chunked_data:
+            chunkmanager = get_chunked_array_type(*chunked_data.values())
+
+            # evaluate all the chunked arrays simultaneously
+            evaluated_data: tuple[np.ndarray[Any, Any], ...] = chunkmanager.compute(
+                *chunked_data.values(), **kwargs
+            )
+
+            for k, data in zip(chunked_data, evaluated_data, strict=False):
+                self.variables[k].data = data
+
+        # load everything else concurrently
+        coros = [
+            v.load_async() for k, v in self.variables.items() if k not in chunked_data
+        ]
+        await asyncio.gather(*coros)
 
         return self
 
@@ -694,9 +757,11 @@ class Dataset(
         )
 
     def compute(self, **kwargs) -> Self:
-        """Manually trigger loading and/or computation of this dataset's data
-        from disk or a remote source into memory and return a new dataset.
-        Unlike load, the original dataset is left unaltered.
+        """Trigger loading data into memory and return a new dataset.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.load``, the original dataset is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -716,6 +781,10 @@ class Dataset(
         See Also
         --------
         dask.compute
+        Dataset.load
+        Dataset.load_async
+        DataArray.compute
+        Variable.compute
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -1884,7 +1953,7 @@ class Dataset(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes: ...
+    ) -> bytes | memoryview: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -1907,7 +1976,7 @@ class Dataset(
     @overload
     def to_netcdf(
         self,
-        path: str | PathLike,
+        path: str | PathLike | io.IOBase,
         mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
@@ -1938,7 +2007,7 @@ class Dataset(
 
     def to_netcdf(
         self,
-        path: str | PathLike | None = None,
+        path: str | PathLike | io.IOBase | None = None,
         mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
@@ -1948,7 +2017,7 @@ class Dataset(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes | Delayed | None:
+    ) -> bytes | memoryview | Delayed | None:
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -2020,9 +2089,9 @@ class Dataset(
 
         Returns
         -------
-            * ``bytes`` if path is None
+            * ``bytes`` or ``memoryview`` if path is None
             * ``dask.delayed.Delayed`` if compute is False
-            * None otherwise
+            * ``None`` otherwise
 
         See Also
         --------
@@ -2562,7 +2631,7 @@ class Dataset(
 
         # all indexers should be int, slice, np.ndarrays, or Variable
         for k, v in indexers.items():
-            if isinstance(v, int | slice | Variable):
+            if isinstance(v, int | slice | Variable) and not isinstance(v, bool):
                 yield k, v
             elif isinstance(v, DataArray):
                 yield k, v.variable

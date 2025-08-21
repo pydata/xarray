@@ -25,7 +25,7 @@ repos:
       - id: rst-inline-touching-normal
       - id: text-unicode-replacement-char
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.2
+    rev: v0.12.7
     hooks:
       - id: ruff-check
         args: ["--fix", "--show-fixes"]
@@ -42,7 +42,7 @@ repos:
       - id: prettier
         args: [--cache-location=.prettier_cache/cache]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.16.1
+    rev: v1.17.1
     hooks:
       - id: mypy
         # Copied from setup.cfg
