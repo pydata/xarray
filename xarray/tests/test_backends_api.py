@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+import sys
 from numbers import Number
 
 import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.backends.api import _get_default_engine
+from xarray.backends.api import _get_default_engine, _get_default_engine_netcdf
 from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     requires_dask,
+    requires_h5netcdf,
     requires_netCDF4,
     requires_scipy,
 )
@@ -27,6 +29,17 @@ def test__get_default_engine() -> None:
 
     engine_default = _get_default_engine("/example")
     assert engine_default == "netcdf4"
+
+
+@requires_h5netcdf
+def test_default_engine_h5netcdf(monkeypatch):
+    """Test the default netcdf engine when h5netcdf is the only importable module."""
+
+    monkeypatch.delitem(sys.modules, "netCDF4", raising=False)
+    monkeypatch.delitem(sys.modules, "scipy", raising=False)
+    monkeypatch.setattr(sys, "meta_path", [])
+
+    assert _get_default_engine_netcdf() == "h5netcdf"
 
 
 def test_custom_engine() -> None:
