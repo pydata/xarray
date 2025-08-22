@@ -5015,7 +5015,6 @@ class TestDataset:
         # from_dataframe attempts to broadcast across because it doesn't know better, so cat must be converted
         ds["cat"] = (("x", "y"), np.stack((ds["cat"].to_numpy(), ds["cat"].to_numpy())))
         assert_identical(ds.assign_coords(x=[0, 1]), Dataset.from_dataframe(actual))
-
         # Check multiindex reordering
         new_order = ["x", "y"]
         # revert broadcasting fix above for 1d arrays
@@ -5048,6 +5047,21 @@ class TestDataset:
             ValueError, match="does not match the set of dimensions of this"
         ):
             ds.to_dataframe(dim_order=invalid_order)
+
+        # test a case with a MultiIndex along a single dimension
+        data_dict = dict(
+            x=[1, 2, 1, 2, 1], y=["a", "a", "b", "b", "b"], z=[5, 10, 15, 20, 25]
+        )
+        data_dict_w_dims = {k: ("single_dim", v) for k, v in data_dict.items()}
+
+        # Dataset multi-indexed along "single_dim" by "x" and "y"
+        ds = Dataset(data_dict_w_dims).set_coords(["x", "y"]).set_xindex(["x", "y"])
+        expected = pd.DataFrame(data_dict).set_index(["x", "y"])
+        actual = ds.to_dataframe()
+        assert expected.equals(actual)
+        # should be possible to reset index, as there should be no duplication
+        # between index and columns, and dataframes should still be equal
+        assert expected.reset_index().equals(actual.reset_index())
 
         # check pathological cases
         df = pd.DataFrame([1])
