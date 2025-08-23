@@ -208,3 +208,87 @@ class TestCoordinates:
         coords = Coordinates(coords={"x": var}, indexes={})
         ds = Dataset(coords=coords)
         assert ds.coords["x"].dims == ("x", "y")
+
+    def test_drop_vars(self):
+        coords = Coordinates(
+            coords={
+                "x": Variable("x", range(3)),
+                "y": Variable("y", list("ab")),
+                "a": Variable(["x", "y"], np.arange(6).reshape(3, 2)),
+            },
+            indexes={},
+        )
+
+        actual = coords.drop_vars("x")
+        assert isinstance(actual, Coordinates)
+        assert set(actual.variables) == {"a", "y"}
+
+        actual = coords.drop_vars(["x", "y"])
+        assert isinstance(actual, Coordinates)
+        assert set(actual.variables) == {"a"}
+
+    def test_drop_dims(self) -> None:
+        coords = Coordinates(
+            coords={
+                "x": Variable("x", range(3)),
+                "y": Variable("y", list("ab")),
+                "a": Variable(["x", "y"], np.arange(6).reshape(3, 2)),
+            },
+            indexes={},
+        )
+
+        actual = coords.drop_dims("x")
+        assert isinstance(actual, Coordinates)
+        assert set(actual.variables) == {"y"}
+
+        actual = coords.drop_dims(["x", "y"])
+        assert isinstance(actual, Coordinates)
+        assert set(actual.variables) == set()
+
+    def test_rename_dims(self) -> None:
+        coords = Coordinates(
+            coords={
+                "x": Variable("x", range(3)),
+                "y": Variable("y", list("ab")),
+                "a": Variable(["x", "y"], np.arange(6).reshape(3, 2)),
+            },
+            indexes={},
+        )
+
+        actual = coords.rename_dims({"x": "X"})
+        assert isinstance(actual, Coordinates)
+        assert set(actual.dims) == {"X", "y"}
+        assert set(actual.variables) == {"a", "x", "y"}
+
+        actual = coords.rename_dims({"x": "u", "y": "v"})
+        assert isinstance(actual, Coordinates)
+        assert set(actual.dims) == {"u", "v"}
+        assert set(actual.variables) == {"a", "x", "y"}
+
+    def test_rename_vars(self) -> None:
+        coords = Coordinates(
+            coords={
+                "x": Variable("x", range(3)),
+                "y": Variable("y", list("ab")),
+                "a": Variable(["x", "y"], np.arange(6).reshape(3, 2)),
+            },
+            indexes={},
+        )
+
+        actual = coords.rename_vars({"x": "X"})
+        assert isinstance(actual, Coordinates)
+        assert set(actual.dims) == {"x", "y"}
+        assert set(actual.variables) == {"a", "X", "y"}
+
+        actual = coords.rename_vars({"x": "u", "y": "v"})
+        assert isinstance(actual, Coordinates)
+        assert set(actual.dims) == {"x", "y"}
+        assert set(actual.variables) == {"a", "u", "v"}
+
+    def test_operator_merge(self) -> None:
+        coords1 = Coordinates({"x": ("x", [0, 1, 2])})
+        coords2 = Coordinates({"y": ("y", [3, 4, 5])})
+        expected = Dataset(coords={"x": [0, 1, 2], "y": [3, 4, 5]})
+
+        actual = coords1 | coords2
+        assert_identical(Dataset(coords=actual), expected)
