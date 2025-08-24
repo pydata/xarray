@@ -93,17 +93,14 @@ def unaligned_datatree_nc(tmp_path_factory):
 
     Group: /
     │   Dimensions:        (lat: 1, lon: 2)
-    │   Dimensions without coordinates: lat, lon
     │   Data variables:
     │       root_variable  (lat, lon) float64 16B ...
     └── Group: /Group1
         │   Dimensions:      (lat: 1, lon: 2)
-        │   Dimensions without coordinates: lat, lon
         │   Data variables:
         │       group_1_var  (lat, lon) float64 16B ...
         └── Group: /Group1/subgroup1
                 Dimensions:        (lat: 2, lon: 2)
-                Dimensions without coordinates: lat, lon
                 Data variables:
                     subgroup1_var  (lat, lon) float64 32B ...
     """
@@ -142,7 +139,6 @@ def unaligned_datatree_zarr_factory(
     """Creates a zarr store with the following unaligned group hierarchy:
     Group: /
     │   Dimensions:  (y: 3, x: 2)
-    │   Dimensions without coordinates: y, x
     │   Data variables:
     │       a        (y) int64 24B ...
     │       set0     (x) int64 16B ...
@@ -158,7 +154,6 @@ def unaligned_datatree_zarr_factory(
     │               b        int64 8B ...
     └── Group: /Group2
             Dimensions:  (y: 2, x: 2)
-            Dimensions without coordinates: y, x
             Data variables:
                 a        (y) int64 16B ...
                 b        (x) float64 16B ...
@@ -409,17 +404,14 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         and `DataTree.from_dict`.
         Group: /
         │   Dimensions:        (lat: 1, lon: 2)
-        │   Dimensions without coordinates: lat, lon
         │   Data variables:
         │       root_variable  (lat, lon) float64 16B ...
         └── Group: /Group1
             │   Dimensions:      (lat: 1, lon: 2)
-            │   Dimensions without coordinates: lat, lon
             │   Data variables:
             │       group_1_var  (lat, lon) float64 16B ...
             └── Group: /Group1/subgroup1
                     Dimensions:        (lat: 1, lon: 2)
-                    Dimensions without coordinates: lat, lon
                     Data variables:
                         subgroup1_var  (lat, lon) float64 16B ...
         """
