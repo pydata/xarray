@@ -171,7 +171,7 @@ def test_build_engines_sorted() -> None:
     backend_entrypoints = list(plugins.build_engines(dummy_pkg_entrypoints))
 
     indices = []
-    for be in plugins.STANDARD_BACKENDS_ORDER:
+    for be in plugins.NETCDF_BACKENDS_ORDER:
         try:
             index = backend_entrypoints.index(be)
             backend_entrypoints.pop(index)
