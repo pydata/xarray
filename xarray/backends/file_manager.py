@@ -6,7 +6,7 @@ import io
 import threading
 import uuid
 import warnings
-from collections.abc import Hashable
+from collections.abc import Hashable, Mapping
 from typing import Any
 
 from xarray.backends.locks import acquire
@@ -82,9 +82,9 @@ class CachingFileManager(FileManager):
     def __init__(
         self,
         opener,
-        *args,
-        mode=_DEFAULT_MODE,
-        kwargs=None,
+        *args: Any,
+        mode: Any = _DEFAULT_MODE,
+        kwargs: Mapping[str, Any] | None = None,
         lock=None,
         cache=None,
         manager_id: Hashable | None = None,
@@ -290,13 +290,6 @@ class CachingFileManager(FileManager):
         )
 
 
-@atexit.register
-def _remove_del_method():
-    # We don't need to close unclosed files at program exit, and may not be able
-    # to, because Python is cleaning up imports / globals.
-    del CachingFileManager.__del__
-
-
 class _RefCounter:
     """Class for keeping track of reference counts."""
 
@@ -334,6 +327,90 @@ class _HashedSequence(list):
 
     def __hash__(self):
         return self.hashvalue
+
+
+class PickleableFileManager(FileManager):
+    """File manager that supports pickling by reopening a file object.
+
+    Use PickleableFileManager for wrapping file-like objects that do not natively
+    support pickling (e.g., netCDF4.Dataset and h5netcdf.File) in cases where a
+    global cache is not desirable (e.g., for netCDF files opened from bytes in
+    memory, or from existing file objects).
+    """
+
+    def __init__(
+        self,
+        opener,
+        *args,
+        mode=_DEFAULT_MODE,
+        kwargs=None,
+    ):
+        kwargs = {} if kwargs is None else dict(kwargs)
+        self._opener = opener
+        self._args = args
+        self._mode = "a" if mode == "w" else mode
+        self._kwargs = kwargs
+
+        # Note: No need for locking with PickleableFileManager, because all
+        # opening of files happens in the constructor.
+        if mode is not _DEFAULT_MODE:
+            kwargs = kwargs.copy()
+            kwargs["mode"] = mode
+        self._file = opener(*args, **kwargs)
+        self._closed = False
+
+    def acquire(self, needs_lock=True):
+        return self._file
+
+    @contextlib.contextmanager
+    def acquire_context(self, needs_lock=True):
+        yield self._file
+
+    def close(self, needs_lock=True):
+        if not self._closed:
+            self._file.close()
+            self._closed = True
+
+    def __del__(self) -> None:
+        # If opener() raised an error in the constructor, _closed may not be set
+        if not getattr(self, "_closed", True):
+            self.close()
+
+            if OPTIONS["warn_for_unclosed_files"]:
+                warnings.warn(
+                    f"deallocating {self}, but file is not already closed. "
+                    "This may indicate a bug.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+
+    def __getstate__(self):
+        # file is intentionally omitted: we want to open it again
+        return (self._opener, self._args, self._mode, self._kwargs)
+
+    def __setstate__(self, state) -> None:
+        opener, args, mode, kwargs = state
+        self.__init__(opener, *args, mode=mode, kwargs=kwargs)  # type: ignore[misc]
+
+    def __repr__(self) -> str:
+        args_string = ", ".join(map(repr, self._args))
+        if self._mode is not _DEFAULT_MODE:
+            args_string += f", mode={self._mode!r}"
+        if "memory" in self._kwargs:
+            kwargs = self._kwargs | {"memory": utils.ReprObject("...")}
+        else:
+            kwargs = self._kwargs
+        return (
+            f"{type(self).__name__}({self._opener!r}, {args_string}, kwargs={kwargs})"
+        )
+
+
+@atexit.register
+def _remove_del_methods():
+    # We don't need to close unclosed files at program exit, and may not be able
+    # to, because Python is cleaning up imports / globals.
+    del CachingFileManager.__del__
+    del PickleableFileManager.__del__
 
 
 class DummyFileManager(FileManager):

@@ -10,8 +10,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.backends.api import open_datatree, open_groups
-from xarray.core.datatree import DataTree
+from xarray import DataTree, load_datatree, open_datatree, open_groups
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
     has_zarr_v3,
@@ -19,6 +18,7 @@ from xarray.tests import (
     parametrize_zarr_format,
     requires_dask,
     requires_h5netcdf,
+    requires_h5netcdf_or_netCDF4,
     requires_netCDF4,
     requires_pydap,
     requires_zarr,
@@ -310,6 +310,21 @@ class DatatreeIOBase:
         with open_datatree(filepath, engine=self.engine) as written_dt:
             assert_identical(written_dt, original_dt)
 
+    def test_roundtrip_via_memoryview_engine_specified(self, simple_datatree):
+        original_dt = simple_datatree
+        roundtrip_dt = load_datatree(
+            original_dt.to_netcdf(engine=self.engine), engine=self.engine
+        )
+        assert_equal(original_dt, roundtrip_dt)
+
+
+@requires_h5netcdf_or_netCDF4
+class TestGenericNetCDFIO:
+    def test_roundtrip_via_memoryview(self, simple_datatree):
+        original_dt = simple_datatree
+        roundtrip_dt = load_datatree(original_dt.to_netcdf())
+        assert_equal(original_dt, roundtrip_dt)
+
 
 @requires_netCDF4
 class TestNetCDF4DatatreeIO(DatatreeIOBase):
@@ -584,16 +599,6 @@ class TestH5NetCDFDatatreeIO(DatatreeIOBase):
                     "phony_dim_3": 25,
                 }
 
-    def test_roundtrip_via_bytes(self, simple_datatree):
-        original_dt = simple_datatree
-        roundtrip_dt = open_datatree(original_dt.to_netcdf())
-        assert_equal(original_dt, roundtrip_dt)
-
-    def test_roundtrip_via_bytes_engine_specified(self, simple_datatree):
-        original_dt = simple_datatree
-        roundtrip_dt = open_datatree(original_dt.to_netcdf(engine=self.engine))
-        assert_equal(original_dt, roundtrip_dt)
-
     def test_roundtrip_using_filelike_object(self, tmpdir, simple_datatree):
         original_dt = simple_datatree
         filepath = tmpdir + "/test.nc"
@@ -773,13 +778,12 @@ class TestZarrDatatreeIO:
                     zarr_format=zarr_format,
                 )
 
-        with open_datatree(str(storepath), engine="zarr") as in_progress_dt:
-            assert in_progress_dt.isomorphic(original_dt)
-            assert not in_progress_dt.equals(original_dt)
+        in_progress_dt = load_datatree(str(storepath), engine="zarr")
+        assert not in_progress_dt.equals(original_dt)
 
-        result.compute()
-        with open_datatree(str(storepath), engine="zarr") as written_dt:
-            assert_identical(written_dt, original_dt)
+        result.compute()  # type: ignore[union-attr]
+        written_dt = load_datatree(str(storepath), engine="zarr")
+        assert_identical(written_dt, original_dt)
 
     @requires_dask
     def test_to_zarr_no_redundant_computation(self, tmpdir, zarr_format):

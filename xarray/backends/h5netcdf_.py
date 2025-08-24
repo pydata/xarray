@@ -24,6 +24,7 @@ from xarray.backends.file_manager import (
     CachingFileManager,
     DummyFileManager,
     FileManager,
+    PickleableFileManager,
 )
 from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from xarray.backends.netCDF4_ import (
@@ -188,7 +189,7 @@ class H5NetCDFStore(WritableCFDataStore):
         if isinstance(filename, BytesIOProxy):
             source = filename
             filename = io.BytesIO()
-            source.getvalue = filename.getbuffer
+            source.getter = filename.getbuffer
 
         if isinstance(filename, io.IOBase) and mode == "r":
             magic_number = read_magic_number_from_file(filename)
@@ -216,11 +217,10 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
-        manager = (
-            CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
-            if isinstance(filename, str)
-            else h5netcdf.File(filename, mode=mode, **kwargs)
+        manager_cls = (
+            CachingFileManager if isinstance(filename, str) else PickleableFileManager
         )
+        manager = manager_cls(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):

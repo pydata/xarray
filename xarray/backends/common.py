@@ -11,7 +11,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
-    Generic,
     Self,
     TypeVar,
     Union,
@@ -198,22 +197,19 @@ def _find_absolute_paths(
     return _normalize_path_list(paths)
 
 
-BytesOrMemory = TypeVar("BytesOrMemory", bytes, memoryview)
-
-
 @dataclass
-class BytesIOProxy(Generic[BytesOrMemory]):
-    """Proxy object for a write that returns either bytes or a memoryview."""
+class BytesIOProxy:
+    """Proxy object for a write that returns a memoryview."""
 
-    # TODO: remove this in favor of BytesIO when Dataset.to_netcdf() stops
-    # returning bytes from the scipy engine
-    getvalue: Callable[[], BytesOrMemory] | None = None
+    getter: Callable[[], memoryview] | None = None
 
-    def getvalue_or_getbuffer(self) -> BytesOrMemory:
-        """Get the value of this write as bytes or memory."""
-        if self.getvalue is None:
-            raise ValueError("must set getvalue before fetching value")
-        return self.getvalue()
+    # TODO: rename this to getbfuffer() when Dataset.to_netcdf() stops returning
+    # bytes from the scipy engine
+    def getbuffer(self) -> memoryview:
+        """Get the value of this write a memoryview."""
+        if self.getter is None:
+            raise ValueError("must set getter before fetching value")
+        return self.getter()
 
 
 def _open_remote_file(file, mode, storage_options=None):

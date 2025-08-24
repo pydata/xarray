@@ -135,30 +135,47 @@ def _get_default_engine_gz() -> Literal["scipy"]:
     return engine
 
 
-def _get_default_engine_netcdf() -> Literal["netcdf4", "h5netcdf", "scipy"]:
-    candidates: list[tuple[str, str]] = [
-        ("netcdf4", "netCDF4"),
-        ("h5netcdf", "h5netcdf"),
-        ("scipy", "scipy.io.netcdf"),
-    ]
+def get_default_engine_netcdf(
+    format: T_NetcdfTypes | None,
+) -> Literal["netcdf4", "h5netcdf", "scipy"]:
+    engines = {
+        "netcdf4": "netCDF4",
+        "scipy": "scipy.io.netcdf",
+        "h5netcdf": "h5netcdf",
+    }
 
-    for engine, module_name in candidates:
+    if format is None:
+        candidates = ["netcdf4", "h5netcdf", "scipy"]
+    elif format.upper().startswith("NETCDF3"):
+        candidates = ["netcdf4", "scipy"]
+    elif format.upper().startswith("NETCDF4"):
+        candidates = ["netcdf4", "h5netcdf"]
+    else:
+        raise AssertionError(f"unexpected {format=}")
+
+    for engine in candidates:
+        module_name = engines[engine]
         if importlib.util.find_spec(module_name) is not None:
             return cast(Literal["netcdf4", "h5netcdf", "scipy"], engine)
 
+    format_str = f"with {format=}" if format is not None else ""
     raise ValueError(
-        "cannot read or write NetCDF files because none of "
-        "'netCDF4-python', 'h5netcdf', or 'scipy' are installed"
+        f"cannot read or write NetCDF files{format_str} because none of "
+        f"{set(candidates)} are installed"
     )
 
 
-def _get_default_engine(path: str, allow_remote: bool = False) -> T_NetcdfEngine:
-    if allow_remote and is_remote_uri(path):
-        return _get_default_engine_remote_uri()  # type: ignore[return-value]
-    elif path.endswith(".gz"):
-        return _get_default_engine_gz()
-    else:
-        return _get_default_engine_netcdf()
+def _get_default_engine(
+    path: str | None,
+    allow_remote: bool = False,
+    format: T_NetcdfTypes | None = None,
+) -> T_NetcdfEngine:
+    if path is not None:
+        if allow_remote and is_remote_uri(path):
+            return _get_default_engine_remote_uri()  # type: ignore[return-value]
+        if path.endswith(".gz"):
+            return _get_default_engine_gz()
+    return get_default_engine_netcdf(format)
 
 
 def _validate_dataset_names(dataset: Dataset) -> None:
@@ -354,7 +371,7 @@ def load_dataset(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:
         return ds.load()
 
 
-def load_dataarray(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataArray:
+def load_dataarray(filename_or_obj: T_PathFileOrDataStore, **kwargs):
     """Open, load into memory, and close a DataArray from a file or file-like
     object containing a single data variable.
 
@@ -572,14 +589,12 @@ def open_dataset(
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool
-    | CFDatetimeCoder
-    | Mapping[str, bool | CFDatetimeCoder]
-    | None = None,
-    decode_timedelta: bool
-    | CFTimedeltaCoder
-    | Mapping[str, bool | CFTimedeltaCoder]
-    | None = None,
+    decode_times: (
+        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None
+    ) = None,
+    decode_timedelta: (
+        bool | CFTimedeltaCoder | Mapping[str, bool | CFTimedeltaCoder] | None
+    ) = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
@@ -815,10 +830,9 @@ def open_dataarray(
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
-    decode_times: bool
-    | CFDatetimeCoder
-    | Mapping[str, bool | CFDatetimeCoder]
-    | None = None,
+    decode_times: (
+        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None
+    ) = None,
     decode_timedelta: bool | CFTimedeltaCoder | None = None,
     use_cftime: bool | None = None,
     concat_characters: bool | None = None,
@@ -1045,14 +1059,12 @@ def open_datatree(
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool
-    | CFDatetimeCoder
-    | Mapping[str, bool | CFDatetimeCoder]
-    | None = None,
-    decode_timedelta: bool
-    | CFTimedeltaCoder
-    | Mapping[str, bool | CFTimedeltaCoder]
-    | None = None,
+    decode_times: (
+        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None
+    ) = None,
+    decode_timedelta: (
+        bool | CFTimedeltaCoder | Mapping[str, bool | CFTimedeltaCoder] | None
+    ) = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
@@ -1287,14 +1299,12 @@ def open_groups(
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool
-    | CFDatetimeCoder
-    | Mapping[str, bool | CFDatetimeCoder]
-    | None = None,
-    decode_timedelta: bool
-    | CFTimedeltaCoder
-    | Mapping[str, bool | CFTimedeltaCoder]
-    | None = None,
+    decode_times: (
+        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None
+    ) = None,
+    decode_timedelta: (
+        bool | CFTimedeltaCoder | Mapping[str, bool | CFTimedeltaCoder] | None
+    ) = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
@@ -1550,10 +1560,9 @@ def _remove_path(
 
 
 def open_mfdataset(
-    paths: str
-    | os.PathLike
-    | ReadBuffer
-    | NestedSequence[str | os.PathLike | ReadBuffer],
+    paths: (
+        str | os.PathLike | ReadBuffer | NestedSequence[str | os.PathLike | ReadBuffer]
+    ),
     chunks: T_Chunks = None,
     concat_dim: (
         str
@@ -1567,10 +1576,9 @@ def open_mfdataset(
     compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
     preprocess: Callable[[Dataset], Dataset] | None = None,
     engine: T_Engine = None,
-    data_vars: Literal["all", "minimal", "different"]
-    | None
-    | list[str]
-    | CombineKwargDefault = _DATA_VARS_DEFAULT,
+    data_vars: (
+        Literal["all", "minimal", "different"] | None | list[str] | CombineKwargDefault
+    ) = _DATA_VARS_DEFAULT,
     coords=_COORDS_DEFAULT,
     combine: Literal["by_coords", "nested"] = "by_coords",
     parallel: bool = False,
@@ -2081,27 +2089,21 @@ def to_netcdf(
     if encoding is None:
         encoding = {}
 
-    if isinstance(path_or_file, str):
+    if isinstance(path_or_file, str) or path_or_file is None:
         if engine is None:
-            engine = _get_default_engine(path_or_file)
+            engine = _get_default_engine(path_or_file, format=format)
         path_or_file = _normalize_path(path_or_file)
-    else:
-        # writing to bytes/memoryview or a file-like object
-        if engine is None:
-            # TODO: only use 'scipy' if format is None or a netCDF3 format
-            engine = "scipy"
-        elif engine not in ("scipy", "h5netcdf"):
-            raise ValueError(
-                "invalid engine for creating bytes/memoryview or writing to a "
-                f"file-like object with to_netcdf: {engine!r}. Only "
-                "engine=None, engine='scipy' and engine='h5netcdf' is "
-                "supported."
-            )
-        if not compute:
-            raise NotImplementedError(
-                "to_netcdf() with compute=False is not yet implemented when "
-                "returning bytes"
-            )
+    # writing to a file-like object
+    elif engine is None:
+        # TODO: only use 'scipy' if format is None or a netCDF3 format
+        engine = "scipy"
+    elif engine not in ("scipy", "h5netcdf"):
+        raise ValueError(
+            "invalid engine for creating bytes/memoryview or writing to a "
+            f"file-like object with to_netcdf: {engine!r}. Only "
+            "engine=None, engine='scipy' and engine='h5netcdf' is "
+            "supported."
+        )
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
@@ -2121,6 +2123,11 @@ def to_netcdf(
         )
 
     if path_or_file is None:
+        if not compute:
+            raise NotImplementedError(
+                "to_netcdf() with compute=False is not yet implemented when "
+                "returning a memoryview"
+            )
         target = BytesIOProxy()
     else:
         target = path_or_file  # type: ignore[assignment]
@@ -2164,7 +2171,7 @@ def to_netcdf(
 
     if path_or_file is None:
         assert isinstance(target, BytesIOProxy)  # created in this function
-        return target.getvalue_or_getbuffer()
+        return target.getbuffer()
 
     if not compute:
         return delayed_close_after_writes(writes, store)
@@ -2181,6 +2188,15 @@ def dump_to_store(
 
     if encoding is None:
         encoding = {}
+
+    if unlimited_dims is None:
+        unlimited_dims = dataset.encoding.get("unlimited_dims", None)
+
+    if unlimited_dims is not None:
+        if isinstance(unlimited_dims, str) or not isinstance(unlimited_dims, Iterable):
+            unlimited_dims = [unlimited_dims]
+        else:
+            unlimited_dims = list(unlimited_dims)
 
     variables, attrs = conventions.encode_dataset_coordinates(dataset)
 

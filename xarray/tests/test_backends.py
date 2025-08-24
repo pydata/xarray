@@ -89,6 +89,7 @@ from xarray.tests import (
     requires_fsspec,
     requires_h5netcdf,
     requires_h5netcdf_1_4_0_or_above,
+    requires_h5netcdf_or_netCDF4,
     requires_h5netcdf_ros3,
     requires_iris,
     requires_netcdf,
@@ -2393,6 +2394,79 @@ class TestNetCDF4AlreadyOpen:
                 assert_identical(expected, copied)
 
 
+class InMemoryNetCDF:
+    engine: T_NetcdfEngine | None
+
+    def test_roundtrip(self) -> None:
+        original = create_test_data()
+        result = original.to_netcdf(engine=self.engine)
+        roundtrip = load_dataset(result, engine=self.engine)
+        assert_identical(roundtrip, original)
+
+    def test_roundtrip_via_memoryview(self) -> None:
+        original = create_test_data()
+        result = memoryview(original.to_netcdf(engine=self.engine))
+        roundtrip = load_dataset(result, engine=self.engine)
+        assert_identical(roundtrip, original)
+
+    def test_roundtrip_via_bytes(self) -> None:
+        original = create_test_data()
+        result = bytes(original.to_netcdf(engine=self.engine))
+        roundtrip = load_dataset(result, engine=self.engine)
+        assert_identical(roundtrip, original)
+
+    def test_pickle_open_dataset_from_bytes(self) -> None:
+        original = Dataset({"foo": ("x", [1, 2, 3])})
+        netcdf_bytes = bytes(original.to_netcdf(engine=self.engine))
+        with open_dataset(netcdf_bytes, engine=self.engine) as roundtrip:
+            unpickled = pickle.loads(pickle.dumps(roundtrip))
+            assert_identical(unpickled, original)
+            unpickled.close()
+
+
+class InMemoryNetCDFWithGroups(InMemoryNetCDF):
+    def test_roundtrip_group_via_memoryview(self) -> None:
+        original = create_test_data()
+        netcdf_bytes = original.to_netcdf(group="sub", engine=self.engine)
+        roundtrip = load_dataset(netcdf_bytes, group="sub", engine=self.engine)
+        assert_identical(roundtrip, original)
+
+
+class FileObjectNetCDF:
+    engine: T_NetcdfEngine
+
+    def test_open_twice(self) -> None:
+        expected = create_test_data()
+        expected.attrs["foo"] = "bar"
+        with create_tmp_file() as tmp_file:
+            expected.to_netcdf(tmp_file, engine=self.engine)
+            with open(tmp_file, "rb") as f:
+                with open_dataset(f, engine=self.engine):
+                    with open_dataset(f, engine=self.engine):
+                        pass
+
+    def test_file_remains_open(self) -> None:
+        data = Dataset({"foo": ("x", [1, 2, 3])})
+        f = BytesIO()
+        data.to_netcdf(f, engine=self.engine)
+        assert not f.closed
+        restored = open_dataset(f, engine=self.engine)
+        assert not f.closed
+        assert_identical(restored, data)
+        restored.close()
+        assert not f.closed
+
+
+@requires_h5netcdf_or_netCDF4
+class TestGenericNetCDF4InMemory(InMemoryNetCDFWithGroups):
+    engine = None
+
+
+@requires_netCDF4
+class TestNetCDF4InMemory(InMemoryNetCDFWithGroups):
+    engine: T_NetcdfEngine = "netcdf4"
+
+
 @requires_netCDF4
 @requires_dask
 @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
@@ -4393,7 +4467,7 @@ def test_zarr_version_deprecated() -> None:
 
 
 @requires_scipy
-class TestScipyInMemoryData(NetCDF3Only, CFEncodedBase):
+class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only, InMemoryNetCDF):
     engine: T_NetcdfEngine = "scipy"
 
     @contextlib.contextmanager
@@ -4401,42 +4475,26 @@ class TestScipyInMemoryData(NetCDF3Only, CFEncodedBase):
         fobj = BytesIO()
         yield backends.ScipyDataStore(fobj, "w")
 
+    @contextlib.contextmanager
+    def roundtrip(
+        self, data, save_kwargs=None, open_kwargs=None, allow_cleanup_failure=False
+    ):
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
+        saved = self.save(data, path=None, **save_kwargs)
+        with self.open(saved, **open_kwargs) as ds:
+            yield ds
+
     @pytest.mark.asyncio
     @pytest.mark.skip(reason="NetCDF backends don't support async loading")
     async def test_load_async(self) -> None:
         await super().test_load_async()
 
-    def test_to_netcdf_explicit_engine(self) -> None:
-        with pytest.warns(
-            FutureWarning,
-            match=re.escape("return value of to_netcdf() without a target"),
-        ):
-            Dataset({"foo": 42}).to_netcdf(engine="scipy")
-
-    def test_roundtrip_via_bytes(self) -> None:
-        original = create_test_data()
-        with pytest.warns(
-            FutureWarning,
-            match=re.escape("return value of to_netcdf() without a target"),
-        ):
-            netcdf_bytes = original.to_netcdf(engine="scipy")
-        roundtrip = open_dataset(netcdf_bytes, engine="scipy")
-        assert_identical(roundtrip, original)
-
-    def test_bytes_pickle(self) -> None:
-        data = Dataset({"foo": ("x", [1, 2, 3])})
-        with pytest.warns(
-            FutureWarning,
-            match=re.escape("return value of to_netcdf() without a target"),
-        ):
-            fobj = data.to_netcdf()
-        with self.open(fobj) as ds:
-            unpickled = pickle.loads(pickle.dumps(ds))
-            assert_identical(unpickled, data)
-
 
 @requires_scipy
-class TestScipyFileObject(NetCDF3Only, CFEncodedBase):
+class TestScipyFileObject(CFEncodedBase, NetCDF3Only, FileObjectNetCDF):
     # TODO: Consider consolidating some of these cases (e.g.,
     # test_file_remains_open) with TestH5NetCDFFileObject
     engine: T_NetcdfEngine = "scipy"
@@ -4461,19 +4519,15 @@ class TestScipyFileObject(NetCDF3Only, CFEncodedBase):
                 with self.open(f, **open_kwargs) as ds:
                     yield ds
 
+    @pytest.mark.xfail(reason="not working yet")
+    def test_open_twice(self):
+        super().test_open_twice()
+
     @pytest.mark.xfail(
         reason="scipy.io.netcdf_file closes files upon garbage collection"
     )
     def test_file_remains_open(self) -> None:
-        data = Dataset({"foo": ("x", [1, 2, 3])})
-        f = BytesIO()
-        data.to_netcdf(f, engine="scipy")
-        assert not f.closed
-        restored = open_dataset(f, engine="scipy")
-        assert not f.closed
-        assert_identical(restored, data)
-        restored.close()
-        assert not f.closed
+        super().test_file_remains_open()
 
     @pytest.mark.skip(reason="cannot pickle file objects")
     def test_pickle(self) -> None:
@@ -4591,8 +4645,6 @@ class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
         data = create_test_data()
         with pytest.raises(ValueError, match=r"unrecognized engine"):
             data.to_netcdf("foo.nc", engine="foobar")  # type: ignore[call-overload]
-        with pytest.raises(ValueError, match=r"invalid engine"):
-            data.to_netcdf(engine="netcdf4")
 
         with create_tmp_file() as tmp_file:
             data.to_netcdf(tmp_file)
@@ -4648,32 +4700,6 @@ class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
         with self.roundtrip(ds) as actual:
             assert actual.encoding["unlimited_dims"] == set("y")
             assert_equal(ds, actual)
-
-    @requires_scipy
-    def test_roundtrip_via_bytes(self) -> None:
-        original = create_test_data()
-        with pytest.warns(
-            FutureWarning,
-            match=re.escape("return value of to_netcdf() without a target"),
-        ):
-            netcdf_bytes = original.to_netcdf()
-        roundtrip = open_dataset(netcdf_bytes)
-        assert_identical(roundtrip, original)
-
-    @pytest.mark.xfail(
-        reason="scipy.io.netcdf_file closes files upon garbage collection"
-    )
-    @requires_scipy
-    def test_roundtrip_via_file_object(self) -> None:
-        original = create_test_data()
-        f = BytesIO()
-        original.to_netcdf(f)
-        assert not f.closed
-        restored = open_dataset(f)
-        assert not f.closed
-        assert_identical(restored, original)
-        restored.close()
-        assert not f.closed
 
 
 @requires_h5netcdf
@@ -4940,7 +4966,7 @@ class TestH5NetCDFAlreadyOpen:
 
 
 @requires_h5netcdf
-class TestH5NetCDFFileObject(TestH5NetCDFData):
+class TestH5NetCDFFileObject(TestH5NetCDFData, FileObjectNetCDF):
     engine: T_NetcdfEngine = "h5netcdf"
 
     def test_open_badbytes(self) -> None:
@@ -4949,24 +4975,16 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
         ):
             with open_dataset(b"garbage"):
                 pass
-        with pytest.raises(ValueError, match=r"can only read bytes"):
-            with open_dataset(b"garbage", engine="netcdf4"):
+        with pytest.raises(
+            ValueError, match=r"not the signature of a valid netCDF4 file"
+        ):
+            with open_dataset(b"garbage", engine="h5netcdf"):
                 pass
         with pytest.raises(
             ValueError, match=r"not the signature of a valid netCDF4 file"
         ):
             with open_dataset(BytesIO(b"garbage"), engine="h5netcdf"):
                 pass
-
-    def test_open_twice(self) -> None:
-        expected = create_test_data()
-        expected.attrs["foo"] = "bar"
-        with create_tmp_file() as tmp_file:
-            expected.to_netcdf(tmp_file, engine="h5netcdf")
-            with open(tmp_file, "rb") as f:
-                with open_dataset(f, engine="h5netcdf"):
-                    with open_dataset(f, engine="h5netcdf"):
-                        pass
 
     @requires_scipy
     def test_open_fileobj(self) -> None:
@@ -5001,31 +5019,10 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                 with open_dataset(f):  # ensure file gets closed
                     pass
 
-    def test_file_remains_open(self) -> None:
-        data = Dataset({"foo": ("x", [1, 2, 3])})
-        f = BytesIO()
-        data.to_netcdf(f, engine="h5netcdf")
-        assert not f.closed
-        restored = open_dataset(f, engine="h5netcdf")
-        assert not f.closed
-        assert_identical(restored, data)
-        restored.close()
-        assert not f.closed
-
 
 @requires_h5netcdf
-class TestH5NetCDFInMemoryData:
-    def test_roundtrip_via_bytes(self) -> None:
-        original = create_test_data()
-        netcdf_bytes = original.to_netcdf(engine="h5netcdf")
-        roundtrip = open_dataset(netcdf_bytes, engine="h5netcdf")
-        assert_identical(roundtrip, original)
-
-    def test_roundtrip_group_via_bytes(self) -> None:
-        original = create_test_data()
-        netcdf_bytes = original.to_netcdf(group="sub", engine="h5netcdf")
-        roundtrip = open_dataset(netcdf_bytes, group="sub", engine="h5netcdf")
-        assert_identical(roundtrip, original)
+class TestH5NetCDFInMemoryData(InMemoryNetCDFWithGroups):
+    engine: T_NetcdfEngine = "h5netcdf"
 
 
 @requires_h5netcdf
@@ -6466,17 +6463,6 @@ class TestDataArrayToNetCDF:
             with open_dataarray(tmp, drop_variables=["y"]) as loaded:
                 assert_identical(expected, loaded)
 
-    @requires_scipy
-    def test_dataarray_to_netcdf_return_bytes(self) -> None:
-        # regression test for GH1410
-        data = xr.DataArray([1, 2, 3])
-        with pytest.warns(
-            FutureWarning,
-            match=re.escape("return value of to_netcdf() without a target"),
-        ):
-            output = data.to_netcdf(engine="scipy")
-        assert isinstance(output, bytes)
-
     def test_dataarray_to_netcdf_no_name_pathlib(self) -> None:
         original_da = DataArray(np.arange(12).reshape((3, 4)))
 
@@ -6997,6 +6983,9 @@ def test_netcdf4_entrypoint(tmp_path: Path) -> None:
     assert entrypoint.guess_can_open("something-local.cdf")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
 
+    contents = ds.to_netcdf(engine="netcdf4")
+    _check_guess_can_open_and_open(entrypoint, contents, engine="netcdf4", expected=ds)
+
     path = tmp_path / "baz"
     with open(path, "wb") as f:
         f.write(b"not-a-netcdf-file")
@@ -7015,10 +7004,7 @@ def test_scipy_entrypoint(tmp_path: Path) -> None:
     with open(path, "rb") as f:
         _check_guess_can_open_and_open(entrypoint, f, engine="scipy", expected=ds)
 
-    with pytest.warns(
-        FutureWarning, match=re.escape("return value of to_netcdf() without a target")
-    ):
-        contents = ds.to_netcdf(engine="scipy")
+    contents = ds.to_netcdf(engine="scipy")
     _check_guess_can_open_and_open(entrypoint, contents, engine="scipy", expected=ds)
     _check_guess_can_open_and_open(
         entrypoint, BytesIO(contents), engine="scipy", expected=ds
@@ -7049,6 +7035,9 @@ def test_h5netcdf_entrypoint(tmp_path: Path) -> None:
     )
     with open(path, "rb") as f:
         _check_guess_can_open_and_open(entrypoint, f, engine="h5netcdf", expected=ds)
+
+    contents = ds.to_netcdf(engine="h5netcdf")
+    _check_guess_can_open_and_open(entrypoint, contents, engine="h5netcdf", expected=ds)
 
     assert entrypoint.guess_can_open("something-local.nc")
     assert entrypoint.guess_can_open("something-local.nc4")

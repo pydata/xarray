@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.backends.api import _get_default_engine, _get_default_engine_netcdf
+from xarray.backends.api import _get_default_engine, get_default_engine_netcdf
 from xarray.tests import (
     assert_identical,
     assert_no_warnings,
@@ -39,7 +39,7 @@ def test_default_engine_h5netcdf(monkeypatch):
     monkeypatch.delitem(sys.modules, "scipy", raising=False)
     monkeypatch.setattr(sys, "meta_path", [])
 
-    assert _get_default_engine_netcdf() == "h5netcdf"
+    assert get_default_engine_netcdf(format=None) == "h5netcdf"
 
 
 def test_custom_engine() -> None:
