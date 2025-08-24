@@ -1142,6 +1142,8 @@ class TestDataset:
         [(True, "standard"), (False, "standard"), (True, "noleap"), (True, "360_day")],
     )
     def test_chunk_by_season_resampler(self, use_cftime: bool, calendar: str) -> None:
+        import dask.array
+
         ds = xr.Dataset(
             {"foo": (("x", "time"), np.ones((10, 365 * 2)))},
             coords={
@@ -1156,7 +1158,7 @@ class TestDataset:
         )
         assert len(rechunked.chunksizes["time"]) == 9
         assert rechunked.chunksizes["x"] == (2,) * 5
-        assert rechunked.chunksizes["time"] == (31, 92, 92, 92, 31, 92, 92, 92, 31)
+        assert rechunked.chunksizes["time"] == (60, 92, 92, 91, 90, 92, 92, 91, 30)
 
         # Custom seasons
         rechunked = ds.chunk(
@@ -1164,9 +1166,7 @@ class TestDataset:
         )
         assert len(rechunked.chunksizes["time"]) == 9
         assert rechunked.chunksizes["x"] == (2,) * 5
-        assert rechunked.chunksizes["time"] == (120, 61, 92, 92, 120, 61, 92, 92, 120)
-        """Test chunking using SeasonResampler."""
-        import dask.array
+        assert rechunked.chunksizes["time"] == (91, 61, 92, 91, 121, 61, 92, 91, 30)
 
         if use_cftime:
             pytest.importorskip("cftime")
@@ -1210,16 +1210,16 @@ class TestDataset:
 
     @requires_dask
     def test_chunk_by_season_resampler_errors(self):
+        """Test error handling for SeasonResampler chunking."""
         # Test error on missing season (should fail with incomplete seasons)
         ds = Dataset(
             {"x": ("time", np.arange(12))},
-            coords={"time": pd.date_range("2000-01-01", periods=12, freq="M")},
+            coords={"time": pd.date_range("2000-01-01", periods=12, freq="MS")},
         )
-        with pytest.raises(ValueError, match="do not cover all 12 months"):
-            ds.chunk(x=SeasonResampler(["DJF", "MAM", "SON"]))
-        """Test error handling for SeasonResampler chunking."""
-        ds = Dataset({"foo": ("x", [1, 2, 3])})
+        with pytest.raises(ValueError, match="does not cover all 12 months"):
+            ds.chunk(time=SeasonResampler(["DJF", "MAM", "SON"]))
 
+        ds = Dataset({"foo": ("x", [1, 2, 3])})
         # Test error on virtual variable
         with pytest.raises(ValueError, match="virtual variable"):
             ds.chunk(x=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))

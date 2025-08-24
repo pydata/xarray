@@ -171,7 +171,7 @@ class Resampler(Grouper):
     Currently only used for TimeResampler, but could be used for SpaceResampler in the future.
     """
 
-    def compute_chunks(self, name: Hashable, variable: Variable) -> tuple[int, ...]:
+    def compute_chunks(self, variable: Variable, *, dim: Hashable) -> tuple[int, ...]:
         """
         Compute chunk sizes for this resampler.
 
@@ -180,10 +180,10 @@ class Resampler(Grouper):
 
         Parameters
         ----------
-        name : Hashable
-            The name of the dimension being chunked.
         variable : Variable
             The variable being chunked.
+        dim : Hashable
+            The name of the dimension being chunked.
 
         Returns
         -------
@@ -586,7 +586,7 @@ class TimeResampler(Resampler):
             coords=coordinates_from_variable(unique_coord),
         )
 
-    def compute_chunks(self, name: Hashable, variable: Variable) -> tuple[int, ...]:
+    def compute_chunks(self, variable: Variable, *, dim: Hashable) -> tuple[int, ...]:
         """
         Compute chunk sizes for this time resampler.
 
@@ -609,23 +609,23 @@ class TimeResampler(Resampler):
 
         if not _contains_datetime_like_objects(variable):
             raise ValueError(
-                f"chunks={self!r} only supported for datetime variables. "
-                f"Received variable {name!r} with dtype {variable.dtype!r} instead."
+                f"Computing chunks with {type(self)!r} only supported for datetime variables. "
+                f"Received variable with dtype {variable.dtype!r} instead."
             )
 
         chunks = (
             DataArray(
                 np.ones(variable.shape, dtype=int),
-                dims=(name,),
-                coords={name: variable},
+                dims=(dim,),
+                coords={dim: variable},
             )
-            .resample({name: self})
+            .resample({dim: self})
             .sum()
         )
         # When bins (binning) or time periods are missing (resampling)
         # we can end up with NaNs. Drop them.
         if chunks.dtype.kind == "f":
-            chunks = chunks.dropna(name).astype(int)
+            chunks = chunks.dropna(dim).astype(int)
         chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
         return chunks_tuple
 
@@ -1031,7 +1031,7 @@ class SeasonResampler(Resampler):
 
         return EncodedGroups(codes=codes, full_index=full_index)
 
-    def compute_chunks(self, name: Hashable, variable: Variable) -> tuple[int, ...]:
+    def compute_chunks(self, variable: Variable, *, dim: Hashable) -> tuple[int, ...]:
         """
         Compute chunk sizes for this season resampler.
 
@@ -1054,8 +1054,14 @@ class SeasonResampler(Resampler):
 
         if not _contains_datetime_like_objects(variable):
             raise ValueError(
-                f"chunks={self!r} only supported for datetime variables. "
-                f"Received variable {name!r} with dtype {variable.dtype!r} instead."
+                f"Computing chunks with {type(self)!r} only supported for datetime variables. "
+                f"Received variable with dtype {variable.dtype!r} instead."
+            )
+
+        if len("".join(self.seasons)) != 12:
+            raise ValueError(
+                "Cannot rechunk with a SeasonResampler that does not cover all 12 months. "
+                f"Received `seasons={self.seasons!r}`."
             )
 
         # Create a temporary resampler that ignores drop_incomplete for chunking
@@ -1065,16 +1071,16 @@ class SeasonResampler(Resampler):
         chunks = (
             DataArray(
                 np.ones(variable.shape, dtype=int),
-                dims=(name,),
-                coords={name: variable},
+                dims=(dim,),
+                coords={dim: variable},
             )
-            .resample({name: resampler_for_chunking})
+            .resample({dim: resampler_for_chunking})
             .sum()
         )
         # When bins (binning) or time periods are missing (resampling)
         # we can end up with NaNs. Drop them.
         if chunks.dtype.kind == "f":
-            chunks = chunks.dropna(name).astype(int)
+            chunks = chunks.dropna(dim).astype(int)
         chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
         return chunks_tuple
 

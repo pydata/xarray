@@ -12,8 +12,8 @@ v2025.08.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-Support chunking by :py:class:`~xarray.groupers.SeasonResampler` for seasonal data analysis (:issue:`10425`, :pull:`10519`).
-By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
+- Support rechunking by :py:class:`~xarray.groupers.SeasonResampler` for seasonal data analysis (:issue:`10425`, :pull:`10519`).
+  By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
 - Add convenience methods to :py:class:`~xarray.Coordinates` (:pull:`10318`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Added :py:func:`load_datatree` for loading ``DataTree`` objects into memory

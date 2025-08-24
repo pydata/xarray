@@ -2567,10 +2567,11 @@ class Dataset(
                     f"chunks={resampler!r} only supported for 1D variables. "
                     f"Received variable {name!r} with {variable.ndim} dimensions instead."
                 )
-            newchunks = resampler.compute_chunks(name, variable)
+            newchunks = resampler.compute_chunks(variable, dim=name)
             if sum(newchunks) != variable.shape[0]:
                 raise ValueError(
-                    f"Logic bug in rechunking using {resampler!r}. New chunks tuple does not match size of data. Please open an issue."
+                    f"Logic bug in rechunking variable {name!r} using {resampler!r}. "
+                    "New chunks tuple does not match size of data. Please open an issue."
                 )
             return newchunks
 
