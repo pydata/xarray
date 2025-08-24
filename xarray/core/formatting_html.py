@@ -62,10 +62,24 @@ def format_dims(dim_sizes, dims_with_index) -> str:
 
 
 def summarize_attrs(attrs) -> str:
-    attrs_dl = "".join(
-        f"<dt><span>{escape(str(k))} :</span></dt><dd>{escape(str(v))}</dd>"
-        for k, v in attrs.items()
-    )
+    attrs_dl = ""
+    for k, v in attrs.items():
+        if isinstance(v, dict):
+            attr_id = "attrs-" + str(uuid.uuid4())
+
+            attrs_dl += "<div class='xr-attr-item'>"
+            attrs_dl += f"<input id='{attr_id}' class='xr-attr-in' type='checkbox'>"
+            attrs_dl += (
+                f"<label class='xr-attr-nested' for='{attr_id}'>{escape(str(k))} : "
+            )
+            attrs_dl += f"<span>({len(v)})</span></label>"
+            attrs_dl += "<span class='xr-attr-nested-inner'>"
+            attrs_dl += summarize_attrs(v)
+            attrs_dl += "</span></div>"
+        else:
+            attrs_dl += (
+                f"<dt><span>{escape(str(k))} :</span></dt><dd>{escape(str(v))}</dd>"
+            )
 
     return f"<dl class='xr-attrs'>{attrs_dl}</dl>"
 
