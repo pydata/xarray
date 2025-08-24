@@ -650,7 +650,7 @@ Alternatively you can also create a :py:class:`~xarray.DataTree` object from:
 - A dictionary mapping directory-like paths to either :py:class:`~xarray.DataTree` nodes or data, using :py:meth:`xarray.DataTree.from_dict()`,
 - A well formed netCDF or Zarr file on disk with :py:func:`~xarray.open_datatree()`. See :ref:`reading and writing files <io>`.
 
-For data files with groups that do not not align see
+For data files with groups that do not align see
 :py:func:`xarray.open_groups` or target each group individually
 :py:func:`xarray.open_dataset(group='groupname') <xarray.open_dataset>`. For
 more information about coordinate alignment see :ref:`datatree-inheritance`
