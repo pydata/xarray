@@ -5,15 +5,24 @@
 What's New
 ==========
 
-.. _whats-new.2025.07.2:
+.. _whats-new.2025.08.1:
 
-v2025.07.2 (unreleased)
+v2025.08.1 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
 Support chunking by :py:class:`~xarray.groupers.SeasonResampler` for seasonal data analysis (:issue:`10425`, :pull:`10519`).
 By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
+- Add convenience methods to :py:class:`~xarray.Coordinates` (:pull:`10318`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Added :py:func:`load_datatree` for loading ``DataTree`` objects into memory
+  from disk. It has the same relationship to :py:func:`open_datatree`, as
+  :py:func:`load_dataset` has to :py:func:`open_dataset`.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- ``compute=False`` is now supported by :py:meth:`DataTree.to_netcdf` and
+  :py:meth:`DataTree.to_zarr`.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -25,12 +34,15 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Fix distribution of ``auto_complex`` keyword argument for open_datatree (:issue:`10631`, :pull:`10632`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Warn instead of raise in case of misconfiguration of ``unlimited_dims`` originating from dataset.encoding, to prevent breaking users workflows (:issue:`10647`, :pull:`10648`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
-- Fix Pydap Datatree backend testing. Testing now compares elements of (unordered) two sets (before, lists) (:pull:`10525`).
-  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
-- Fix ``KeyError`` when passing a ``dim`` argument different from the default to ``convert_calendar`` (:pull:`10544`).
-  By `Eric Jansen <https://github.com/ej81>`_.
-
+- :py:meth:`DataTree.to_netcdf` and :py:meth:`DataTree.to_zarr` now avoid
+  redundant computation of Dask arrays with cross-group dependencies
+  (:issue:`10637`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -38,7 +50,86 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Run ``TestNetCDF4Data`` as ``TestNetCDF4DataTree`` through ``open_datatree`` (:pull:`10632`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
+
+.. _whats-new.2025.08.0:
+
+v2025.08.0 (August 14, 2025)
+----------------------------
+
+This release brings the ability to load xarray objects asynchronously, write netCDF as bytes, fixes a number of bugs, and starts an important deprecation cycle for changing the default values of keyword arguments for various xarray combining functions.
+
+Thanks to the 24 contributors to this release:
+Alfonso Ladino, Brigitta Sipőcz, Claude, Deepak Cherian, Dimitri Papadopoulos Orfanos, Eric Jansen, Ian Hunt-Isaak, Ilan Gold, Illviljan, Julia Signell, Justus Magin, Kai Mühlbauer, Mathias Hauser, Matthew, Michael Niklas, Miguel Jimenez, Nick Hodgskin, Pratiman, Scott Staniewicz, Spencer Clark, Stephan Hoyer, Tom Nicholas, Yang Yang and jemmajeffree
+
+New Features
+~~~~~~~~~~~~
+
+- Added :py:meth:`DataTree.prune` method to remove empty nodes while preserving tree structure.
+  Useful for cleaning up DataTree after time-based filtering operations (:issue:`10590`, :pull:`10598`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
+- Added new asynchronous loading methods :py:meth:`Dataset.load_async`, :py:meth:`DataArray.load_async`, :py:meth:`Variable.load_async`.
+  Note that users are expected to limit concurrency themselves - xarray does not internally limit concurrency in any way.
+  (:issue:`10326`, :pull:`10327`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- :py:meth:`DataTree.to_netcdf` can now write to a file-like object, or return bytes if called without a filepath. (:issue:`10570`)
+  By `Matthew Willson <https://github.com/mjwillson>`_.
+- Added exception handling for invalid files in :py:func:`open_mfdataset`. (:issue:`6736`)
+  By `Pratiman Patel <https://github.com/pratiman-91>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- When writing to NetCDF files with groups, Xarray no longer redefines dimensions
+  that have the same size in parent groups (:issue:`10241`). This conforms with
+  `CF Conventions for group scrope <https://cfconventions.org/cf-conventions/cf-conventions.html#_scope>`_
+  but may require adjustments for code that consumes NetCDF files produced by Xarray.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+- Start a deprecation cycle for changing the default keyword arguments to :py:func:`concat`, :py:func:`merge`,
+  :py:func:`combine_nested`, :py:func:`combine_by_coords`, and :py:func:`open_mfdataset`.
+  Emits a :py:class:`FutureWarning` when using old defaults and new defaults would result in different behavior.
+  Adds an option: ``use_new_combine_kwarg_defaults`` to opt in to new defaults immediately.
+  New values are:
+
+  - ``data_vars``: None which means ``all`` when concatenating along a new dimension, and ``"minimal"`` when concatenating along an existing dimension
+  - ``coords``: "minimal"
+  - ``compat``: "override"
+  - ``join``: "exact"
+
+  (:issue:`8778`, :issue:`1385`, :pull:`10062`). By `Julia Signell <https://github.com/jsignell>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Fix Pydap Datatree backend testing. Testing now compares elements of (unordered) two sets (before, lists) (:pull:`10525`).
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+- Fix ``KeyError`` when passing a ``dim`` argument different from the default to ``convert_calendar`` (:pull:`10544`).
+  By `Eric Jansen <https://github.com/ej81>`_.
+- Fix transpose of boolean arrays read from disk. (:issue:`10536`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix detection of the ``h5netcdf`` backend. Xarray now selects ``h5netcdf`` if the default ``netCDF4`` engine is not available (:issue:`10401`, :pull:`10557`).
+  By `Scott Staniewicz <https://github.com/scottstanie>`_.
+- Fix :py:func:`merge` to prevent altering original object depending on join value (:pull:`10596`)
+  By `Julia Signell <https://github.com/jsignell>`_.
+- Ensure ``unlimited_dims`` passed to :py:meth:`xarray.DataArray.to_netcdf`, :py:meth:`xarray.Dataset.to_netcdf` or :py:meth:`xarray.DataTree.to_netcdf` only contains dimensions present in the object; raise ``ValueError`` otherwise (:issue:`10549`, :pull:`10608`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Clarify lazy behaviour and eager loading for ``chunks=None`` in :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_dataarray`, :py:func:`~xarray.open_datatree`, :py:func:`~xarray.open_groups` and :py:func:`~xarray.open_zarr` (:issue:`10612`, :pull:`10627`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+Performance
+~~~~~~~~~~~
+
+- Speed up non-numeric scalars when calling :py:meth:`Dataset.interp`. (:issue:`10054`, :pull:`10554`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 .. _whats-new.2025.07.1:
 
@@ -6605,7 +6696,7 @@ Enhancements
 
 .. _Zarr: http://zarr.readthedocs.io/
 
-.. _Iris: http://scitools.org.uk/iris
+.. _Iris: http://scitools-iris.readthedocs.io
 
 .. _netcdftime: https://unidata.github.io/netcdftime
 
@@ -8417,8 +8508,15 @@ Backwards incompatible changes
 
   .. code:: python
 
-      ds = xray.Dataset({"x": 0})
+    In [1]: ds = xray.Dataset({"x": 0})
 
+    In [2]: xray.concat([ds, ds], dim="y")
+    Out[2]:
+    <xarray.Dataset> Size: 16B
+    Dimensions:  (y: 2)
+    Dimensions without coordinates: y
+    Data variables:
+        x        (y) int64 16B 0 0
   .. code:: python
 
       xray.concat([ds, ds], dim="y")

@@ -12,6 +12,8 @@ from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
+    BytesIOProxy,
+    T_PathFileOrDataStore,
     WritableCFDataStore,
     _normalize_path,
 )
@@ -28,12 +30,15 @@ from xarray.core.utils import (
     Frozen,
     FrozenDict,
     close_on_error,
+    emit_user_level_warning,
     module_available,
     try_read_magic_number_from_file_or_path,
 )
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
+    import scipy.io
+
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.types import ReadBuffer
@@ -119,10 +124,6 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
             else:
                 raise
 
-    if isinstance(filename, bytes) and filename.startswith(b"CDF"):
-        # it's a NetCDF3 bytestring
-        filename = io.BytesIO(filename)
-
     try:
         return scipy.io.netcdf_file(filename, mode=mode, mmap=mmap, version=version)
     except TypeError as e:  # netcdf3 message is obscure in this case
@@ -141,7 +142,7 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
 
 
 class ScipyDataStore(WritableCFDataStore):
-    """Store for reading and writing data via scipy.io.netcdf.
+    """Store for reading and writing data via scipy.io.netcdf_file.
 
     This store has the advantage of being able to be initialized with a
     StringIO object, allow for serialization without writing to disk.
@@ -167,7 +168,23 @@ class ScipyDataStore(WritableCFDataStore):
 
         self.lock = ensure_lock(lock)
 
-        if isinstance(filename_or_obj, str):
+        if isinstance(filename_or_obj, BytesIOProxy):
+            emit_user_level_warning(
+                "return value of to_netcdf() without a target for "
+                "engine='scipy' is currently bytes, but will switch to "
+                "memoryview in a future version of Xarray. To silence this "
+                "warning, use the following pattern or switch to "
+                "to_netcdf(engine='h5netcdf'):\n"
+                "    target = io.BytesIO()\n"
+                "    dataset.to_netcdf(target)\n"
+                "    result = target.getbuffer()",
+                FutureWarning,
+            )
+            source = filename_or_obj
+            filename_or_obj = io.BytesIO()
+            source.getvalue = filename_or_obj.getvalue
+
+        if isinstance(filename_or_obj, str):  # path
             manager = CachingFileManager(
                 _open_scipy_netcdf,
                 filename_or_obj,
@@ -175,16 +192,32 @@ class ScipyDataStore(WritableCFDataStore):
                 lock=lock,
                 kwargs=dict(mmap=mmap, version=version),
             )
-        else:
+        elif hasattr(filename_or_obj, "seek"):  # file object
+            # Note: checking for .seek matches the check for file objects
+            # in scipy.io.netcdf_file
             scipy_dataset = _open_scipy_netcdf(
                 filename_or_obj, mode=mode, mmap=mmap, version=version
             )
-            manager = DummyFileManager(scipy_dataset)
+            # scipy.io.netcdf_file.close() incorrectly closes file objects that
+            # were passed in as constructor arguments:
+            # https://github.com/scipy/scipy/issues/13905
+            # Instead of closing such files, only call flush(), which is
+            # equivalent as long as the netcdf_file object is not mmapped.
+            # This suffices to keep BytesIO objects open long enough to read
+            # their contents from to_netcdf(), but underlying files still get
+            # closed when the netcdf_file is garbage collected (via __del__),
+            # and will need to be fixed upstream in scipy.
+            assert not scipy_dataset.use_mmap  # no mmap for file objects
+            manager = DummyFileManager(scipy_dataset, close=scipy_dataset.flush)
+        else:
+            raise ValueError(
+                f"cannot open {filename_or_obj=} with scipy.io.netcdf_file"
+            )
 
         self._manager = manager
 
     @property
-    def ds(self):
+    def ds(self) -> scipy.io.netcdf_file:
         return self._manager.acquire()
 
     def open_store_variable(self, name, var):
@@ -245,8 +278,8 @@ class ScipyDataStore(WritableCFDataStore):
 
         data = variable.data
         # nb. this still creates a numpy array in all memory, even though we
-        # don't write the data yet; scipy.io.netcdf does not not support
-        # incremental writes.
+        # don't write the data yet; scipy.io.netcdf does not support incremental
+        # writes.
         if name not in self.ds.variables:
             self.ds.createVariable(name, data.dtype, variable.dims)
         scipy_var = self.ds.variables[name]
@@ -263,6 +296,20 @@ class ScipyDataStore(WritableCFDataStore):
 
     def close(self):
         self._manager.close()
+
+
+def _normalize_filename_or_obj(
+    filename_or_obj: str
+    | os.PathLike[Any]
+    | ReadBuffer
+    | bytes
+    | memoryview
+    | AbstractDataStore,
+) -> str | ReadBuffer | AbstractDataStore:
+    if isinstance(filename_or_obj, bytes | memoryview):
+        return io.BytesIO(filename_or_obj)
+    else:
+        return _normalize_path(filename_or_obj)  # type: ignore[return-value]
 
 
 class ScipyBackendEntrypoint(BackendEntrypoint):
@@ -291,8 +338,9 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
     ) -> bool:
+        filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None and magic_number.startswith(b"\x1f\x8b"):
             with gzip.open(filename_or_obj) as f:  # type: ignore[arg-type]
@@ -308,7 +356,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -323,7 +371,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         mmap=None,
         lock=None,
     ) -> Dataset:
-        filename_or_obj = _normalize_path(filename_or_obj)
+        filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
         store = ScipyDataStore(
             filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
         )

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Hashable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from typing import (
     TYPE_CHECKING,
@@ -21,7 +21,7 @@ from xarray.core.indexes import (
     assert_no_index_corrupted,
     create_default_index_implicit,
 )
-from xarray.core.types import DataVars, Self, T_DataArray, T_Xarray
+from xarray.core.types import DataVars, ErrorOptions, Self, T_DataArray, T_Xarray
 from xarray.core.utils import (
     Frozen,
     ReprObject,
@@ -177,7 +177,7 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
 
                 # compute the cartesian product
                 code_list += [
-                    np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i]).tolist()
+                    np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i])
                     for code in codes
                 ]
                 level_list += levels
@@ -561,6 +561,35 @@ class Coordinates(AbstractCoordinates):
             variables=coords, coord_names=coord_names, indexes=indexes
         )
 
+    def __or__(self, other: Mapping[Any, Any] | None) -> Coordinates:
+        """Merge two sets of coordinates to create a new Coordinates object
+
+        The method implements the logic used for joining coordinates in the
+        result of a binary operation performed on xarray objects:
+
+        - If two index coordinates conflict (are not equal), an exception is
+          raised. You must align your data before passing it to this method.
+        - If an index coordinate and a non-index coordinate conflict, the non-
+          index coordinate is dropped.
+        - If two non-index coordinates conflict, both are dropped.
+
+        Parameters
+        ----------
+        other : dict-like, optional
+            A :py:class:`Coordinates` object or any mapping that can be turned
+            into coordinates.
+
+        Returns
+        -------
+        merged : Coordinates
+            A new Coordinates object with merged coordinates.
+
+        See Also
+        --------
+        Coordinates.merge
+        """
+        return self.merge(other).coords
+
     def __setitem__(self, key: Hashable, value: Any) -> None:
         self.update({key: value})
 
@@ -718,6 +747,108 @@ class Coordinates(AbstractCoordinates):
                 coords=variables, indexes=dict(self.xindexes), dims=dict(self.sizes)
             ),
         )
+
+    def drop_vars(
+        self,
+        names: str
+        | Iterable[Hashable]
+        | Callable[
+            [Coordinates | Dataset | DataArray | DataTree],
+            str | Iterable[Hashable],
+        ],
+        *,
+        errors: ErrorOptions = "raise",
+    ) -> Self:
+        """Drop variables from this Coordinates object.
+
+        Note that indexes that depend on these variables will also be dropped.
+
+        Parameters
+        ----------
+        names : hashable or iterable or callable
+            Name(s) of variables to drop. If a callable, this is object is passed as its
+            only argument and its result is used.
+        errors : {"raise", "ignore"}, default: "raise"
+            Error treatment.
+
+            - ``'raise'``: raises a :py:class:`ValueError` error if any of the variable
+              passed are not in the dataset
+            - ``'ignore'``: any given names that are in the dataset are dropped and no
+              error is raised.
+        """
+        return cast(Self, self.to_dataset().drop_vars(names, errors=errors).coords)
+
+    def drop_dims(
+        self,
+        drop_dims: str | Iterable[Hashable],
+        *,
+        errors: ErrorOptions = "raise",
+    ) -> Self:
+        """Drop dimensions and associated variables from this dataset.
+
+        Parameters
+        ----------
+        drop_dims : str or Iterable of Hashable
+            Dimension or dimensions to drop.
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if any of the
+            dimensions passed are not in the dataset. If 'ignore', any given
+            dimensions that are in the dataset are dropped and no error is raised.
+
+        Returns
+        -------
+        obj : Coordinates
+            Coordinates object without the given dimensions (or any coordinates
+            containing those dimensions).
+        """
+        return cast(Self, self.to_dataset().drop_dims(drop_dims, errors=errors).coords)
+
+    def rename_dims(
+        self,
+        dims_dict: Mapping[Any, Hashable] | None = None,
+        **dims: Hashable,
+    ) -> Self:
+        """Returns a new object with renamed dimensions only.
+
+        Parameters
+        ----------
+        dims_dict : dict-like, optional
+            Dictionary whose keys are current dimension names and
+            whose values are the desired names. The desired names must
+            not be the name of an existing dimension or Variable in the Coordinates.
+        **dims : optional
+            Keyword form of ``dims_dict``.
+            One of dims_dict or dims must be provided.
+
+        Returns
+        -------
+        renamed : Coordinates
+            Coordinates object with renamed dimensions.
+        """
+        return cast(Self, self.to_dataset().rename_dims(dims_dict, **dims).coords)
+
+    def rename_vars(
+        self,
+        name_dict: Mapping[Any, Hashable] | None = None,
+        **names: Hashable,
+    ) -> Coordinates:
+        """Returns a new object with renamed variables.
+
+        Parameters
+        ----------
+        name_dict : dict-like, optional
+            Dictionary whose keys are current variable or coordinate names and
+            whose values are the desired names.
+        **names : optional
+            Keyword form of ``name_dict``.
+            One of name_dict or names must be provided.
+
+        Returns
+        -------
+        renamed : Coordinates
+            Coordinates object with renamed variables
+        """
+        return cast(Self, self.to_dataset().rename_vars(name_dict, **names).coords)
 
 
 class DatasetCoordinates(Coordinates):
@@ -1027,10 +1158,10 @@ def drop_indexed_coords(
         if isinstance(idx, PandasMultiIndex) and idx_drop_coords == {idx.dim}:
             idx_drop_coords.update(idx.index.names)
             emit_user_level_warning(
-                f"updating coordinate {idx.dim!r} with a PandasMultiIndex would leave "
+                f"updating coordinate {idx.dim!r}, which is a PandasMultiIndex, would leave "
                 f"the multi-index level coordinates {list(idx.index.names)!r} in an inconsistent state. "
-                f"This will raise an error in the future. Use `.drop_vars({list(idx_coords)!r})` before "
-                "assigning new coordinate values.",
+                f"This will raise an error in the future. Use `.drop_vars({list(idx_coords)!r})` "
+                "to drop the coordinates' values before assigning new coordinate values.",
                 FutureWarning,
             )
 

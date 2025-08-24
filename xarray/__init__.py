@@ -4,6 +4,7 @@ from xarray import coders, groupers, indexes, testing, tutorial, ufuncs
 from xarray.backends.api import (
     load_dataarray,
     load_dataset,
+    load_datatree,
     open_dataarray,
     open_dataset,
     open_datatree,
@@ -96,6 +97,7 @@ __all__ = (  # noqa: RUF022
     "infer_freq",
     "load_dataarray",
     "load_dataset",
+    "load_datatree",
     "map_blocks",
     "map_over_datasets",
     "merge",
