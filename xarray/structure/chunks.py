@@ -11,8 +11,7 @@ from numbers import Number
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, overload
 
 from xarray.core import utils
-from xarray.core.common import _contains_cftime_datetimes
-from xarray.core.utils import emit_user_level_warning, is_dict_like
+from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import IndexVariable, Variable
 from xarray.namedarray.parallelcompat import (
     ChunkManagerEntrypoint,
@@ -86,15 +85,8 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
         for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape, strict=True)
     )
 
-    # Chunks can be either dict-like or tuple-like (according to type annotations)
-    #  at this point, so check for # this before we manually construct our chunk
-    # spec- if we've set chunks to auto
-    _chunks = list(chunks.values()) if is_dict_like(chunks) else chunks
-    auto_chunks = any(_chunk == "auto" for _chunk in _chunks)
-
     limit = chunkmanager.get_auto_chunk_size()
-    no_op = not (_contains_cftime_datetimes(var) and auto_chunks)
-    limit, var_dtype = fake_target_chunksize(var, limit, no_op)
+    limit, var_dtype = fake_target_chunksize(var, limit)
 
     chunk_shape = chunkmanager.normalize_chunks(
         chunk_shape,

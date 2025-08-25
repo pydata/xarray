@@ -60,6 +60,7 @@ from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
+from xarray.core.common import _contains_cftime_datetimes
 from xarray.core.indexes import PandasIndex
 from xarray.core.options import set_options
 from xarray.core.types import PDDatetimeUnitOptions
@@ -6066,8 +6067,6 @@ class TestDask(DatasetIOBase):
         """Create a dataset with cftime datetime objects and
         ensure that auto-chunking works correctly."""
         import cftime
-
-        from xarray.core.common import _contains_cftime_datetimes
 
         original = xr.Dataset(
             {

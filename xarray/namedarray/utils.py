@@ -201,23 +201,12 @@ def either_dict_or_kwargs(
 def fake_target_chunksize(
     data: Variable | T_ChunkedArray,
     target_chunksize: int,
-    no_op: bool = False,
 ) -> tuple[int, np.dtype[Any]]:
     """
     Naughty trick - let's get the ratio of our cftime_nbytes, and then compute
     the ratio of that size to a np.float64. Then we can just adjust our target_chunksize
     and use the default dask chunking algorithm to get a reasonable chunk size.
-
-    ? I don't think T_chunkedArray or Variable should be necessary, but the calls
-    ? to this in daskmanager.py requires it to be that. I still need to wrap my head
-    ? around the typing here a bit more.
     """
-
-    if no_op:
-        return target_chunksize, data.dtype
-
-    import numpy as np
-
     from xarray.core.formatting import first_n_items
 
     output_dtype = np.dtype(np.float64)
@@ -227,7 +216,7 @@ def fake_target_chunksize(
     else:
         nbytes_approx = data.dtype.itemsize
 
-    f64_nbytes = output_dtype.itemsize  # Should be 8 bytes
+    f64_nbytes = output_dtype.itemsize
 
     target_chunksize = int(target_chunksize * (f64_nbytes / nbytes_approx))
 
