@@ -301,7 +301,7 @@ For example, lets define a cftime DataArray with a no-leap calendar:
     import cftime
 
     time = xr.DataArray(
-        xr.cftime_range("2000", periods=3, freq="MS", calendar="noleap"),
+        xr.date_range("2000", periods=3, freq="MS", calendar="noleap"),
         dims="time"
     )
 
