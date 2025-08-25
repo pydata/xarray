@@ -79,7 +79,18 @@ Grouper Objects
    :toctree: ../generated/
 
    groupers.BinGrouper
-   groupers.UniqueGrouper
-   groupers.TimeResampler
    groupers.SeasonGrouper
+   groupers.UniqueGrouper
+
+
+Resampler Objects
+-----------------
+
+.. autosummary::
+   :toctree: ../generated/
+
    groupers.SeasonResampler
+   groupers.SeasonResampler.compute_chunks
+
+   groupers.TimeResampler
+   groupers.TimeResampler.compute_chunks
