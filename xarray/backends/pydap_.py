@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
@@ -166,8 +165,7 @@ class PydapDataStore(AbstractDataStore):
         elif hasattr(url, "ds"):
             # pydap dataset
             dataset = url.ds
-        args = {"dataset": dataset}
-        args["checksums"] = checksums
+        args = {"dataset": dataset, "checksums": checksums}
         if group:
             args["group"] = group
         if url.startswith(("http", "dap2")):
@@ -175,17 +173,7 @@ class PydapDataStore(AbstractDataStore):
         elif url.startswith("dap4"):
             args["protocol"] = "dap4"
         if batch:
-            if args["protocol"] == "dap2":
-                warnings.warn(
-                    f"`batch={batch}` is currently only compatible with the `DAP4` "
-                    "protocol. Make sue the OPeNDAP server implements the `DAP4` "
-                    "protocol and then replace the scheme of the url with `dap4` "
-                    "to make use of it. Setting `batch=False`.",
-                    stacklevel=2,
-                )
-            else:
-                # only update if dap4
-                args["batch"] = batch
+            args["batch"] = batch
         return cls(**args)
 
     def open_store_variable(self, var):
