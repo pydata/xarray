@@ -12,7 +12,7 @@ import itertools
 import operator
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Hashable, Mapping, Sequence
 from dataclasses import dataclass, field
 from itertools import chain, pairwise
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -52,6 +52,8 @@ __all__ = [
     "EncodedGroups",
     "Grouper",
     "Resampler",
+    "SeasonGrouper",
+    "SeasonResampler",
     "TimeResampler",
     "UniqueGrouper",
 ]
@@ -169,7 +171,26 @@ class Resampler(Grouper):
     Currently only used for TimeResampler, but could be used for SpaceResampler in the future.
     """
 
-    pass
+    def compute_chunks(self, variable: Variable, *, dim: Hashable) -> tuple[int, ...]:
+        """
+        Compute chunk sizes for this resampler.
+
+        This method should be implemented by subclasses to provide appropriate
+        chunking behavior for their specific resampling strategy.
+
+        Parameters
+        ----------
+        variable : Variable
+            The variable being chunked.
+        dim : Hashable
+            The name of the dimension being chunked.
+
+        Returns
+        -------
+        tuple[int, ...]
+            A tuple of chunk sizes for the dimension.
+        """
+        raise NotImplementedError("Subclasses must implement compute_chunks method")
 
 
 @dataclass
@@ -564,6 +585,49 @@ class TimeResampler(Resampler):
             unique_coord=unique_coord,
             coords=coordinates_from_variable(unique_coord),
         )
+
+    def compute_chunks(self, variable: Variable, *, dim: Hashable) -> tuple[int, ...]:
+        """
+        Compute chunk sizes for this time resampler.
+
+        This method is used during chunking operations to determine appropriate
+        chunk sizes for the given variable when using this resampler.
+
+        Parameters
+        ----------
+        name : Hashable
+            The name of the dimension being chunked.
+        variable : Variable
+            The variable being chunked.
+
+        Returns
+        -------
+        tuple[int, ...]
+            A tuple of chunk sizes for the dimension.
+        """
+        from xarray.core.dataarray import DataArray
+
+        if not _contains_datetime_like_objects(variable):
+            raise ValueError(
+                f"Computing chunks with {type(self)!r} only supported for datetime variables. "
+                f"Received variable with dtype {variable.dtype!r} instead."
+            )
+
+        chunks = (
+            DataArray(
+                np.ones(variable.shape, dtype=int),
+                dims=(dim,),
+                coords={dim: variable},
+            )
+            .resample({dim: self})
+            .sum()
+        )
+        # When bins (binning) or time periods are missing (resampling)
+        # we can end up with NaNs. Drop them.
+        if chunks.dtype.kind == "f":
+            chunks = chunks.dropna(dim).astype(int)
+        chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
+        return chunks_tuple
 
 
 def _factorize_given_labels(data: np.ndarray, labels: np.ndarray) -> np.ndarray:
@@ -966,6 +1030,59 @@ class SeasonResampler(Resampler):
         codes = group.copy(data=final_codes, deep=False)
 
         return EncodedGroups(codes=codes, full_index=full_index)
+
+    def compute_chunks(self, variable: Variable, *, dim: Hashable) -> tuple[int, ...]:
+        """
+        Compute chunk sizes for this season resampler.
+
+        This method is used during chunking operations to determine appropriate
+        chunk sizes for the given variable when using this resampler.
+
+        Parameters
+        ----------
+        name : Hashable
+            The name of the dimension being chunked.
+        variable : Variable
+            The variable being chunked.
+
+        Returns
+        -------
+        tuple[int, ...]
+            A tuple of chunk sizes for the dimension.
+        """
+        from xarray.core.dataarray import DataArray
+
+        if not _contains_datetime_like_objects(variable):
+            raise ValueError(
+                f"Computing chunks with {type(self)!r} only supported for datetime variables. "
+                f"Received variable with dtype {variable.dtype!r} instead."
+            )
+
+        if len("".join(self.seasons)) != 12:
+            raise ValueError(
+                "Cannot rechunk with a SeasonResampler that does not cover all 12 months. "
+                f"Received `seasons={self.seasons!r}`."
+            )
+
+        # Create a temporary resampler that ignores drop_incomplete for chunking
+        # This prevents data from being silently dropped during chunking
+        resampler_for_chunking = type(self)(seasons=self.seasons, drop_incomplete=False)
+
+        chunks = (
+            DataArray(
+                np.ones(variable.shape, dtype=int),
+                dims=(dim,),
+                coords={dim: variable},
+            )
+            .resample({dim: resampler_for_chunking})
+            .sum()
+        )
+        # When bins (binning) or time periods are missing (resampling)
+        # we can end up with NaNs. Drop them.
+        if chunks.dtype.kind == "f":
+            chunks = chunks.dropna(dim).astype(int)
+        chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
+        return chunks_tuple
 
     def reset(self) -> Self:
         return type(self)(seasons=self.seasons, drop_incomplete=self.drop_incomplete)
