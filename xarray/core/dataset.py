@@ -2486,7 +2486,9 @@ class Dataset(
         sizes along that dimension will not be updated; non-dask arrays will be
         converted into dask arrays with a single block.
 
-        Along datetime-like dimensions, a :py:class:`groupers.TimeResampler` or :py:class:`groupers.SeasonResampler` object is also accepted.
+        Along datetime-like dimensions, a :py:class:`Resampler` object
+        (e.g. :py:class:`groupers.TimeResampler` or :py:class:`groupers.SeasonResampler`)
+        is also accepted.
 
         Parameters
         ----------

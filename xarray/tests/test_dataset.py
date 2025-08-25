@@ -1139,46 +1139,21 @@ class TestDataset:
     @requires_dask
     @pytest.mark.parametrize(
         "use_cftime,calendar",
-        [(True, "standard"), (False, "standard"), (True, "noleap"), (True, "360_day")],
+        [
+            (False, "standard"),
+            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "standard"),
+            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "noleap"),
+            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "360_day"),
+        ],
     )
     def test_chunk_by_season_resampler(self, use_cftime: bool, calendar: str) -> None:
         import dask.array
 
-        ds = xr.Dataset(
-            {"foo": (("x", "time"), np.ones((10, 365 * 2)))},
-            coords={
-                "x": np.arange(10),
-                "time": pd.date_range("2000-01-01", periods=365 * 2),
-            },
-        )
-
-        # Standard seasons
-        rechunked = ds.chunk(
-            {"x": 2, "time": SeasonResampler(["DJF", "MAM", "JJA", "SON"])}
-        )
-        assert len(rechunked.chunksizes["time"]) == 9
-        assert rechunked.chunksizes["x"] == (2,) * 5
-        assert rechunked.chunksizes["time"] == (60, 92, 92, 91, 90, 92, 92, 91, 30)
-
-        # Custom seasons
-        rechunked = ds.chunk(
-            {"x": 2, "time": SeasonResampler(["DJFM", "AM", "JJA", "SON"])}
-        )
-        assert len(rechunked.chunksizes["time"]) == 9
-        assert rechunked.chunksizes["x"] == (2,) * 5
-        assert rechunked.chunksizes["time"] == (91, 61, 92, 91, 121, 61, 92, 91, 30)
-
-        if use_cftime:
-            pytest.importorskip("cftime")
-
-        # Skip non-standard calendars with use_cftime=False as they're incompatible
-        if not use_cftime and calendar != "standard":
-            pytest.skip(f"Calendar '{calendar}' requires use_cftime=True")
-
-        N = 366 + 365  # 2 years
+        N = 365 + 365  # 2 years - 1 day
         time = xr.date_range(
             "2000-01-01", periods=N, freq="D", use_cftime=use_cftime, calendar=calendar
         )
+
         ds = Dataset(
             {
                 "pr": ("time", dask.array.random.random((N), chunks=(20))),
@@ -1188,13 +1163,40 @@ class TestDataset:
             coords={"time": time},
         )
 
-        # Test custom seasons
+        # Standard seasons
+        rechunked = ds.chunk(
+            {"x": 2, "time": SeasonResampler(["DJF", "MAM", "JJA", "SON"])}
+        )
+        assert rechunked.chunksizes["x"] == (2,) * 5
+        assert len(rechunked.chunksizes["time"]) == 9
+        assert rechunked.chunksizes["x"] == (2,) * 5
+        assert sum(rechunked.chunksizes["time"]) == ds.sizes["time"]
+
+        if calendar == "standard":
+            assert rechunked.chunksizes["time"] == (60, 92, 92, 91, 90, 92, 92, 91, 30)
+        elif calendar == "noleap":
+            assert rechunked.chunksizes["time"] == (59, 92, 92, 91, 90, 92, 92, 91, 31)
+        elif calendar == "360_day":
+            assert rechunked.chunksizes["time"] == (60, 90, 90, 90, 90, 90, 90, 90, 40)
+        else:
+            raise AssertionError("unreachable")
+
+        # Custom seasons
         rechunked = ds.chunk(
             {"x": 2, "time": SeasonResampler(["DJFM", "AM", "JJA", "SON"])}
         )
-        # Custom seasons also produce boundary chunks
         assert len(rechunked.chunksizes["time"]) == 9
+        assert sum(rechunked.chunksizes["time"]) == ds.sizes["time"]
         assert rechunked.chunksizes["x"] == (2,) * 5
+
+        if calendar == "standard":
+            assert rechunked.chunksizes["time"] == (91, 61, 92, 91, 121, 61, 92, 91, 30)
+        elif calendar == "noleap":
+            assert rechunked.chunksizes["time"] == (90, 61, 92, 91, 121, 61, 92, 91, 31)
+        elif calendar == "360_day":
+            assert rechunked.chunksizes["time"] == (90, 60, 90, 90, 120, 60, 90, 90, 40)
+        else:
+            raise AssertionError("unreachable")
 
         # Test that drop_incomplete doesn't affect chunking
         rechunked_drop_true = ds.chunk(
