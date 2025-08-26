@@ -5168,6 +5168,26 @@ class TestDataset:
         # between index and columns, and dataframes should still be equal
         assert expected.reset_index().equals(actual.reset_index())
 
+        # MultiIndex deduplication should not affect other coordinates.
+        mindex_single = pd.MultiIndex.from_product(
+            [list(range(6)), list("ab")], names=["A", "B"]
+        )
+        ds = DataArray(
+            range(12), [("MI", mindex_single)], dims="MI", name="test"
+        )._to_dataset_whole()
+        ds.coords["C"] = "a single value"
+        ds.coords["D"] = ds.coords["A"] ** 2
+        expected = pd.DataFrame(
+            dict(
+                test=range(12),
+                C="a single value",
+                D=[0, 0, 1, 1, 4, 4, 9, 9, 16, 16, 25, 25],
+            )
+        ).set_index(mindex_single)
+        actual = ds.to_dataframe()
+        assert expected.equals(actual)
+        assert expected.reset_index().equals(actual.reset_index())
+
         # check pathological cases
         df = pd.DataFrame([1])
         actual_ds = Dataset.from_dataframe(df)
