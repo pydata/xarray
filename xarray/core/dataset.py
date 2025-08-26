@@ -7235,7 +7235,7 @@ class Dataset(
             ]
             broadcasted_df = broadcasted_df.join(extension_array_df)
         # remove columns also represented as levels of the MultiIndex. This is necessary
-        # because otherwise MultiIndex levels may otherwise be duplicated as columns and
+        # because MultiIndex levels may otherwise be duplicated as columns and
         # is safe because xarray forbids clashes between Data variable names and coordinate names,
         # so any named multi-index levels that clash with a coordinate-derived column
         # must be derived from that same array.
