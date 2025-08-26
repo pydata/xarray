@@ -7183,7 +7183,10 @@ class Dataset(
     def _to_dataframe(self, ordered_dims: Mapping[Any, int]):
         from xarray.core.extension_array import PandasExtensionArray
 
-        columns_in_order = [k for k in self.variables if k not in self.dims]
+        # All and only non-index arrays (whether data or coordinates) should
+        # become columns in the output DataFrame. Excluding indexes rather
+        # than dims handles the case of a MultiIndex along a single dimension.
+        columns_in_order = [k for k in self.variables if k not in self.indexes]
         non_extension_array_columns = [
             k
             for k in columns_in_order
@@ -7234,14 +7237,6 @@ class Dataset(
                 0
             ]
             broadcasted_df = broadcasted_df.join(extension_array_df)
-        # remove columns also represented as levels of the MultiIndex. This is necessary
-        # because MultiIndex levels may otherwise be duplicated as columns and
-        # is safe because xarray forbids clashes between Data variable names and coordinate names,
-        # so any named multi-index levels that clash with a coordinate-derived column
-        # must be derived from that same array.
-        columns_in_order = [
-            c for c in columns_in_order if c not in broadcasted_df.index.names
-        ]
         return broadcasted_df[columns_in_order]
 
     def to_dataframe(self, dim_order: Sequence[Hashable] | None = None) -> pd.DataFrame:
