@@ -12,7 +12,10 @@ v2025.08.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Support rechunking by :py:class:`~xarray.groupers.SeasonResampler` for seasonal data analysis (:issue:`10425`, :pull:`10519`).
+  By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
+- Add convenience methods to :py:class:`~xarray.Coordinates` (:pull:`10318`)
+  By `Justus Magin <https://github.com/keewis>`_.
 - Added :py:func:`load_datatree` for loading ``DataTree`` objects into memory
   from disk. It has the same relationship to :py:func:`open_datatree`, as
   :py:func:`load_dataset` has to :py:func:`open_dataset`.
@@ -156,7 +159,7 @@ Bug fixes
   creates extra variables that don't match the provided coordinate names, instead
   of silently ignoring them. The error message suggests using the factory method
   pattern with :py:meth:`xarray.Coordinates.from_xindex` and
-  :py:meth:`Dataset.assign_coords` for advanced use cases (:issue:`10499`).
+  :py:meth:`Dataset.assign_coords` for advanced use cases (:issue:`10499`, :pull:`10503`).
   By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
 
 Documentation
