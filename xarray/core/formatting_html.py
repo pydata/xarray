@@ -64,24 +64,65 @@ def format_dims(dim_sizes, dims_with_index) -> str:
 def summarize_attrs(attrs) -> str:
     attrs_dl = ""
     for k, v in attrs.items():
-        if isinstance(v, dict):
-            attr_id = "attrs-" + str(uuid.uuid4())
+        # Supply default repr values for certain built-in type (so far, just dict)
 
-            attrs_dl += "<div class='xr-attr-item'>"
-            attrs_dl += f"<input id='{attr_id}' class='xr-attr-in' type='checkbox'>"
-            attrs_dl += (
-                f"<label class='xr-attr-nested' for='{attr_id}'>{escape(str(k))} : "
-            )
-            attrs_dl += f"<span>({len(v)})</span></label>"
-            attrs_dl += "<span class='xr-attr-nested-inner'>"
-            attrs_dl += summarize_attrs(v)
-            attrs_dl += "</span></div>"
+        # Check for a _repr_html_inline_ method
+        if hasattr(v, "_repr_html_inline_"):
+            repr_html_inline_fn = v._repr_html_inline_
+        elif isinstance(v, dict):
+            repr_html_inline_fn = lambda: _default_repr_html_inline_dict(v)  # noqa: B023
         else:
-            attrs_dl += (
-                f"<dt><span>{escape(str(k))} :</span></dt><dd>{escape(str(v))}</dd>"
-            )
+            repr_html_inline_fn = None
+        # Check for a _repr_html_ method
+        if hasattr(v, "_repr_html_"):
+            repr_html_fn = v._repr_html_
+        elif isinstance(v, dict):
+            repr_html_fn = lambda: _default_repr_html_dict(v)  # noqa: B023
+        else:
+            repr_html_fn = None
+
+        if repr_html_inline_fn and repr_html_fn:
+            # If we have both, then consider if we need to include an expand option
+            inline_repr = repr_html_inline_fn()
+            full_repr = repr_html_fn()
+            if inline_repr == full_repr:
+                value_representation = inline_repr
+            else:
+                # Show the inline, with an option to expand and show the full
+                value_representation = _collapsible_repr(inline_repr, full_repr)
+        elif repr_html_inline_fn:
+            value_representation = escape(repr_html_inline_fn())
+        else:
+            value_representation = escape(str(v))
+
+        attrs_dl += (
+            f"<dt><span>{escape(str(k))} :</span></dt><dd>{value_representation}</dd>"
+        )
 
     return f"<dl class='xr-attrs'>{attrs_dl}</dl>"
+
+
+def _default_repr_html_inline_dict(d: dict) -> str:
+    return f"dict : <span>({len(d)})</span>"
+
+
+def _default_repr_html_dict(d: dict) -> str:
+    return summarize_attrs(d)
+
+
+def _collapsible_repr(inline_html: str, full_html: str) -> str:
+    r_id = "attrs-" + str(uuid.uuid4())
+
+    r = "<div class='xr-attr-item'>"
+    r += f"<input id='{r_id}' class='xr-attr-in' type='checkbox'>"
+    r += f"<label class='xr-attr-nested' for='{r_id}'>"
+    r += inline_html
+    r += "</label>"
+    r += "<span class='xr-attr-nested-inner'>"
+    r += full_html
+    r += "</span></div>"
+
+    return r
 
 
 def _icon(icon_name) -> str:
