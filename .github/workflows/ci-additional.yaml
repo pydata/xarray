@@ -311,6 +311,10 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
+      - uses: actions/setup-python@v5
+        with:
+          python: "3.x"
+
       - name: All-deps minimum versions policy
         uses: xarray-contrib/minimum-dependency-versions@af493cb84f163e4a1634d564be9cae2a3e7b9fca # v0.1
         with:
