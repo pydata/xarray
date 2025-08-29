@@ -23,6 +23,7 @@ policy:
     - pytest-timeout
     - pytest-xdist
     - pytest-hypothesis
+    - hypothesis
   # these packages don't fail the CI, but will be printed in the report
   ignored_violations:
     # remove when we can pin to pydap 3.5.1 without error
