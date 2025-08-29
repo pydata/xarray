@@ -38,6 +38,7 @@ and values given by ``DataArray`` objects.
    Coordinates.__getitem__
    Coordinates.__setitem__
    Coordinates.__delitem__
+   Coordinates.__or__
    Coordinates.update
    Coordinates.get
    Coordinates.items
@@ -53,8 +54,12 @@ Coordinates contents
    Coordinates.to_dataset
    Coordinates.to_index
    Coordinates.assign
+   Coordinates.drop_dims
+   Coordinates.drop_vars
    Coordinates.merge
    Coordinates.copy
+   Coordinates.rename_vars
+   Coordinates.rename_dims
 
 Comparisons
 -----------

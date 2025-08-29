@@ -34,9 +34,11 @@ import xarray.testing as xrt
 from xarray import (
     DataArray,
     Dataset,
+    DataTree,
     backends,
     load_dataarray,
     load_dataset,
+    load_datatree,
     open_dataarray,
     open_dataset,
     open_mfdataset,
@@ -2634,6 +2636,12 @@ class ZarrBase(CFEncodedBase):
                 assert_identical(actual, auto)
                 assert_identical(actual.load(), auto.load())
 
+    def test_unlimited_dims_encoding_is_ignored(self) -> None:
+        ds = Dataset({"x": np.arange(10)})
+        ds.encoding = {"unlimited_dims": ["x"]}
+        with self.roundtrip(ds) as actual:
+            assert_identical(ds, actual)
+
     @requires_dask
     @pytest.mark.filterwarnings("ignore:.*does not have a Zarr V3 specification.*")
     def test_warning_on_bad_chunks(self) -> None:
@@ -4293,9 +4301,10 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 # that was performed by the roundtrip_dir
                 if (write_empty is False) or (write_empty is None and has_zarr_v3):
                     expected.append("1.1.0")
-                elif not has_zarr_v3:
-                    # TODO: remove zarr3 if once zarr issue is fixed
-                    # https://github.com/zarr-developers/zarr-python/issues/2931
+                elif not has_zarr_v3 or has_zarr_v3_async_oindex:
+                    # this was broken from zarr 3.0.0 until 3.1.2
+                    # async oindex released in 3.1.2 along with a fix
+                    # for write_empty_chunks in append
                     expected.extend(
                         [
                             "1.1.0",
@@ -6111,17 +6120,29 @@ class TestDask(DatasetIOBase):
             original = Dataset({"foo": ("x", np.random.randn(10))})
             original.to_netcdf(tmp)
             ds = load_dataset(tmp)
+            assert_identical(original, ds)
             # this would fail if we used open_dataset instead of load_dataset
             ds.to_netcdf(tmp)
 
     def test_load_dataarray(self) -> None:
         with create_tmp_file() as tmp:
-            original = Dataset({"foo": ("x", np.random.randn(10))})
+            original = DataArray(np.random.randn(10), dims=["x"])
             original.to_netcdf(tmp)
-            ds = load_dataarray(tmp)
+            da = load_dataarray(tmp)
+            assert_identical(original, da)
             # this would fail if we used open_dataarray instead of
             # load_dataarray
-            ds.to_netcdf(tmp)
+            da.to_netcdf(tmp)
+
+    def test_load_datatree(self) -> None:
+        with create_tmp_file() as tmp:
+            original = DataTree(Dataset({"foo": ("x", np.random.randn(10))}))
+            original.to_netcdf(tmp)
+            dt = load_datatree(tmp)
+            xr.testing.assert_identical(original, dt)
+            # this would fail if we used open_datatree instead of
+            # load_datatree
+            dt.to_netcdf(tmp)
 
     @pytest.mark.skipif(
         ON_WINDOWS,
@@ -6820,8 +6841,12 @@ def test_extract_zarr_variable_encoding() -> None:
 def test_open_fsspec() -> None:
     import fsspec
 
-    if not hasattr(zarr.storage, "FSStore") or not hasattr(
-        zarr.storage.FSStore, "getitems"
+    if not (
+        (
+            hasattr(zarr.storage, "FSStore")
+            and hasattr(zarr.storage.FSStore, "getitems")
+        )  # zarr v2
+        or hasattr(zarr.storage, "FsspecStore")  # zarr v3
     ):
         pytest.skip("zarr too old")
 
