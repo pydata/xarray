@@ -723,7 +723,7 @@ _PATTERN = rf"^((?P<multiple>[+-]?\d+)|())(?P<freq>({_FREQUENCY_CONDITION}))$"
 
 
 # pandas defines these offsets as "Tick" objects, which for instance have
-# distinct behavior from monthly or longer frequencies in resample.
+# distinct behavior from daily or longer frequencies in resample.
 CFTIME_TICKS = (Hour, Minute, Second)
 
 
