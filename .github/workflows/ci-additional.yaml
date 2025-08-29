@@ -313,7 +313,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python: "3.x"
+          python-version: "3.x"
 
       - name: All-deps minimum versions policy
         uses: xarray-contrib/minimum-dependency-versions@e2ac8ff0a76e8603d8536ef5d64743a375961ce9 # v0.1.1
