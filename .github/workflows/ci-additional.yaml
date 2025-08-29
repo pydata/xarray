@@ -311,23 +311,14 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
-      - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-name: xarray-tests
-          create-args: >-
-            python=3.12
-            pyyaml
-            python-dateutil
-            cytoolz
-            rich
-            rich-click
-            py-rattler
-
       - name: All-deps minimum versions policy
-        run: |
-          python ci/minimum_versions.py ci/requirements/min-all-deps.yml
+        uses: xarray-contrib/minimum-dependency-versions@af493cb84f163e4a1634d564be9cae2a3e7b9fca # v0.1
+        with:
+          policy: ci/policy.yaml
+          environment-paths: ci/requirements/min-all-deps.yml
 
       - name: Bare minimum versions policy
-        run: |
-          python ci/minimum_versions.py ci/requirements/bare-minimum.yml
+        uses: xarray-contrib/minimum-dependency-versions@af493cb84f163e4a1634d564be9cae2a3e7b9fca # v0.1
+        with:
+          policy: ci/policy.yaml
+          environment-paths: ci/requirements/bare-minimum.yml
