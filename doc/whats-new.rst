@@ -26,6 +26,15 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- Following pandas 3.0 (`pandas-dev/pandas#61985
+  <https://github.com/pandas-dev/pandas/pull/61985>`_), ``Day`` is no longer
+  considered a ``Tick``-like frequency. Therefore non-``None`` values of
+  ``offset`` and non-``"start_day"`` values of ``origin`` will have no effect
+  when resampling to a daily frequency for objects indexed by a
+  :py:class:`xarray.CFTimeIndex`. As in `pandas-dev/pandas#62101
+  <https://github.com/pandas-dev/pandas/pull/62101>`_ warnings will be emitted
+  if non default values are provided in this context (:issue:`10640`,
+  :pull:`10650`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 
 Deprecations

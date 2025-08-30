@@ -445,7 +445,6 @@ _MUL_TESTS = [
     (Second(), 3, Second(n=3)),
     (Millisecond(), 3, Millisecond(n=3)),
     (Microsecond(), 3, Microsecond(n=3)),
-    (Day(), 0.5, Hour(n=12)),
     (Hour(), 0.5, Minute(n=30)),
     (Hour(), -0.5, Minute(n=-30)),
     (Minute(), 0.5, Second(n=30)),
@@ -472,7 +471,15 @@ def test_mul_float_multiple_next_higher_resolution():
 
 @pytest.mark.parametrize(
     "offset",
-    [YearBegin(), YearEnd(), QuarterBegin(), QuarterEnd(), MonthBegin(), MonthEnd()],
+    [
+        YearBegin(),
+        YearEnd(),
+        QuarterBegin(),
+        QuarterEnd(),
+        MonthBegin(),
+        MonthEnd(),
+        Day(),
+    ],
     ids=_id_func,
 )
 def test_nonTick_offset_multiplied_float_error(offset):
@@ -531,6 +538,20 @@ def test_add_sub_monthly(offset, expected_date_args, calendar):
     initial = date_type(1, 1, 1)
     expected = date_type(*expected_date_args)
     result = offset + initial
+    assert result == expected
+
+
+def test_add_daily_offsets() -> None:
+    offset = Day(n=2)
+    expected = Day(n=4)
+    result = offset + offset
+    assert result == expected
+
+
+def test_subtract_daily_offsets() -> None:
+    offset = Day(n=2)
+    expected = Day(n=0)
+    result = offset - offset
     assert result == expected
 
 
