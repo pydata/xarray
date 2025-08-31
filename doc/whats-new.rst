@@ -43,6 +43,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Fix contour plots not normalizing the colors correctly when using for example logarithmic norms. (:issue:`10551`, :pull:`10565`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Fix distribution of ``auto_complex`` keyword argument for open_datatree (:issue:`10631`, :pull:`10632`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Warn instead of raise in case of misconfiguration of ``unlimited_dims`` originating from dataset.encoding, to prevent breaking users workflows (:issue:`10647`, :pull:`10648`).
