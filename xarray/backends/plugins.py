@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
     from xarray.core.types import ReadBuffer
 
-STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
+NETCDF_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
 
 def remove_duplicates(entrypoints: EntryPoints) -> list[EntryPoint]:
@@ -92,7 +92,7 @@ def sort_backends(
     backend_entrypoints: dict[str, type[BackendEntrypoint]],
 ) -> dict[str, type[BackendEntrypoint]]:
     ordered_backends_entrypoints = {}
-    for be_name in STANDARD_BACKENDS_ORDER:
+    for be_name in NETCDF_BACKENDS_ORDER:
         if backend_entrypoints.get(be_name) is not None:
             ordered_backends_entrypoints[be_name] = backend_entrypoints.pop(be_name)
     ordered_backends_entrypoints.update(
