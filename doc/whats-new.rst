@@ -12,7 +12,10 @@ v2025.09.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Support rechunking by :py:class:`~xarray.groupers.SeasonResampler` for seasonal data analysis (:issue:`10425`, :pull:`10519`).
+  By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
+- Add convenience methods to :py:class:`~xarray.Coordinates` (:pull:`10318`)
+  By `Justus Magin <https://github.com/keewis>`_.
 - Added :py:func:`load_datatree` for loading ``DataTree`` objects into memory
   from disk. It has the same relationship to :py:func:`open_datatree`, as
   :py:func:`load_dataset` has to :py:func:`open_dataset`.
@@ -23,6 +26,15 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- Following pandas 3.0 (`pandas-dev/pandas#61985
+  <https://github.com/pandas-dev/pandas/pull/61985>`_), ``Day`` is no longer
+  considered a ``Tick``-like frequency. Therefore non-``None`` values of
+  ``offset`` and non-``"start_day"`` values of ``origin`` will have no effect
+  when resampling to a daily frequency for objects indexed by a
+  :py:class:`xarray.CFTimeIndex`. As in `pandas-dev/pandas#62101
+  <https://github.com/pandas-dev/pandas/pull/62101>`_ warnings will be emitted
+  if non default values are provided in this context (:issue:`10640`,
+  :pull:`10650`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 - The default backend ``engine`` used by :py:meth:`Dataset.to_netcdf`
   and :py:meth:`DataTree.to_netcdf` is now chosen consistently with
@@ -45,6 +57,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Fix contour plots not normalizing the colors correctly when using for example logarithmic norms. (:issue:`10551`, :pull:`10565`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Fix distribution of ``auto_complex`` keyword argument for open_datatree (:issue:`10631`, :pull:`10632`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Warn instead of raise in case of misconfiguration of ``unlimited_dims`` originating from dataset.encoding, to prevent breaking users workflows (:issue:`10647`, :pull:`10648`).
@@ -174,7 +188,7 @@ Bug fixes
   creates extra variables that don't match the provided coordinate names, instead
   of silently ignoring them. The error message suggests using the factory method
   pattern with :py:meth:`xarray.Coordinates.from_xindex` and
-  :py:meth:`Dataset.assign_coords` for advanced use cases (:issue:`10499`).
+  :py:meth:`Dataset.assign_coords` for advanced use cases (:issue:`10499`, :pull:`10503`).
   By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
 
 Documentation

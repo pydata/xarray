@@ -2484,13 +2484,16 @@ class Dataset(
         sizes along that dimension will not be updated; non-dask arrays will be
         converted into dask arrays with a single block.
 
-        Along datetime-like dimensions, a :py:class:`groupers.TimeResampler` object is also accepted.
+        Along datetime-like dimensions, a :py:class:`Resampler` object
+        (e.g. :py:class:`groupers.TimeResampler` or :py:class:`groupers.SeasonResampler`)
+        is also accepted.
 
         Parameters
         ----------
-        chunks : int, tuple of int, "auto" or mapping of hashable to int or a TimeResampler, optional
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or a Resampler, optional
             Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, or
-            ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": TimeResampler(freq="YE")}``.
+            ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": TimeResampler(freq="YE")}`` or
+            ``{"time": SeasonResampler(["DJF", "MAM", "JJA", "SON"])}``.
         name_prefix : str, default: "xarray-"
             Prefix for the name of any new dask arrays.
         token : str, optional
@@ -2525,8 +2528,7 @@ class Dataset(
         xarray.unify_chunks
         dask.array.from_array
         """
-        from xarray.core.dataarray import DataArray
-        from xarray.groupers import TimeResampler
+        from xarray.groupers import Resampler
 
         if chunks is None and not chunks_kwargs:
             warnings.warn(
@@ -2554,41 +2556,29 @@ class Dataset(
                 f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.sizes.keys())}"
             )
 
-        def _resolve_frequency(
-            name: Hashable, resampler: TimeResampler
-        ) -> tuple[int, ...]:
+        def _resolve_resampler(name: Hashable, resampler: Resampler) -> tuple[int, ...]:
             variable = self._variables.get(name, None)
             if variable is None:
                 raise ValueError(
-                    f"Cannot chunk by resampler {resampler!r} for virtual variables."
+                    f"Cannot chunk by resampler {resampler!r} for virtual variable {name!r}."
                 )
-            elif not _contains_datetime_like_objects(variable):
+            if variable.ndim != 1:
                 raise ValueError(
-                    f"chunks={resampler!r} only supported for datetime variables. "
-                    f"Received variable {name!r} with dtype {variable.dtype!r} instead."
+                    f"chunks={resampler!r} only supported for 1D variables. "
+                    f"Received variable {name!r} with {variable.ndim} dimensions instead."
                 )
-
-            assert variable.ndim == 1
-            chunks = (
-                DataArray(
-                    np.ones(variable.shape, dtype=int),
-                    dims=(name,),
-                    coords={name: variable},
+            newchunks = resampler.compute_chunks(variable, dim=name)
+            if sum(newchunks) != variable.shape[0]:
+                raise ValueError(
+                    f"Logic bug in rechunking variable {name!r} using {resampler!r}. "
+                    "New chunks tuple does not match size of data. Please open an issue."
                 )
-                .resample({name: resampler})
-                .sum()
-            )
-            # When bins (binning) or time periods are missing (resampling)
-            # we can end up with NaNs. Drop them.
-            if chunks.dtype.kind == "f":
-                chunks = chunks.dropna(name).astype(int)
-            chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
-            return chunks_tuple
+            return newchunks
 
         chunks_mapping_ints: Mapping[Any, T_ChunkDim] = {
             name: (
-                _resolve_frequency(name, chunks)
-                if isinstance(chunks, TimeResampler)
+                _resolve_resampler(name, chunks)
+                if isinstance(chunks, Resampler)
                 else chunks
             )
             for name, chunks in chunks_mapping.items()

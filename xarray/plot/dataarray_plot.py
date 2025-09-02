@@ -1594,7 +1594,7 @@ artist :
             kwargs["levels"] = cmap_params["levels"]
             # if colors == a single color, matplotlib draws dashed negative
             # contours. we lose this feature if we pass cmap and not colors
-            if isinstance(colors, str):
+            if colors is not None:
                 cmap_params["cmap"] = None
                 kwargs["colors"] = colors
 
