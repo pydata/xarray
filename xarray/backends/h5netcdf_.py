@@ -321,6 +321,8 @@ class H5NetCDFStore(WritableCFDataStore):
     def set_attribute(self, key, value):
         if self.format != "NETCDF4":
             value = encode_nc3_attr_value(value)
+            if isinstance(value, bytes):
+                value = np.bytes_(value)
         self.ds.attrs[key] = value
 
     def encode_variable(self, variable, name=None):
