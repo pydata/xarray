@@ -2555,7 +2555,7 @@ class ZarrBase(CFEncodedBase):
     def test_non_existent_store(self) -> None:
         with pytest.raises(
             FileNotFoundError,
-            match="(No such file or directory|Unable to find group|No group found in store)",
+            match="(No such file or directory|Unable to find group|No group found in store|does not exist)",
         ):
             xr.open_zarr(f"{uuid.uuid4()}")
 
