@@ -4575,9 +4575,20 @@ class TestNetCDF4ClassicViaNetCDF4Data(NetCDF3Only, CFEncodedBase):
             ) as store:
                 yield store
 
+    @requires_h5netcdf
+    def test_string_attributes_stored_as_char(self, tmp_path):
+        import h5netcdf
+
+        original = Dataset(attrs={"foo": "bar"})
+        store_path = tmp_path / "tmp.nc"
+        original.to_netcdf(store_path, engine=self.engine, format=self.file_format)
+        with h5netcdf.File(store_path, "r") as ds:
+            # Check that the attribute is stored as a char array
+            assert ds._h5file.attrs["foo"].dtype == np.dtype("S3")
+
 
 @requires_h5netcdf
-class TestNetCDF4ClassicViaH5NetCDFData(NetCDF3Only, CFEncodedBase):
+class TestNetCDF4ClassicViaH5NetCDFData(TestNetCDF4ClassicViaNetCDF4Data):
     engine: T_NetcdfEngine = "h5netcdf"
     file_format: T_NetcdfTypes = "NETCDF4_CLASSIC"
 
@@ -4589,6 +4600,8 @@ class TestNetCDF4ClassicViaH5NetCDFData(NetCDF3Only, CFEncodedBase):
             ) as store:
                 yield store
 
+
+# TODO: add cross-engine tests for NETCDF4_CLASSIC
 
 @requires_scipy_or_netCDF4
 class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
