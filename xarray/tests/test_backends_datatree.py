@@ -804,6 +804,7 @@ class TestZarrDatatreeIO:
         with open_datatree(str(storepath), engine="zarr") as written_dt:
             assert_identical(written_dt, original_dt)
 
+    @requires_dask
     def test_rplus_mode(
         self, tmp_path: Path, simple_datatree: DataTree, zarr_format: Literal[2, 3]
     ) -> None:
