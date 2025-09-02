@@ -26,6 +26,7 @@ from xarray.backends.file_manager import (
     FileManager,
 )
 from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
+from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 from xarray.backends.netCDF4_ import (
     BaseNetCDF4Array,
     _build_and_get_enum,
@@ -197,7 +198,7 @@ class H5NetCDFStore(WritableCFDataStore):
                     f"{magic_number!r} is not the signature of a valid netCDF4 file"
                 )
 
-        if format not in [None, "NETCDF4"]:
+        if format not in [None, "NETCDF4", "NETCDF4_CLASSIC"]:
             raise ValueError("invalid format for h5netcdf backend")
 
         kwargs = {
@@ -318,10 +319,15 @@ class H5NetCDFStore(WritableCFDataStore):
             self.ds.dimensions[name] = length
 
     def set_attribute(self, key, value):
+        if self.format != "NETCDF4":
+            value = encode_nc3_attr_value(value)
         self.ds.attrs[key] = value
 
     def encode_variable(self, variable, name=None):
-        return _encode_nc4_variable(variable, name=name)
+        if self.format == "NETCDF4":
+            return _encode_nc4_variable(variable, name=name)
+
+        return encode_nc3_variable(variable, name=name)
 
     def prepare_variable(
         self, name, variable, check_encoding=False, unlimited_dims=None
@@ -330,7 +336,7 @@ class H5NetCDFStore(WritableCFDataStore):
 
         _ensure_no_forward_slash_in_name(name)
         attrs = variable.attrs.copy()
-        dtype = _get_datatype(variable, raise_on_invalid_encoding=check_encoding)
+        dtype = _get_datatype(variable, self.format, raise_on_invalid_encoding=check_encoding)
 
         fillvalue = attrs.pop("_FillValue", None)
 

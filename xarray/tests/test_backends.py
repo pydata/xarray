@@ -4576,6 +4576,20 @@ class TestNetCDF4ClassicViaNetCDF4Data(NetCDF3Only, CFEncodedBase):
                 yield store
 
 
+@requires_h5netcdf
+class TestNetCDF4ClassicViaH5NetCDFData(NetCDF3Only, CFEncodedBase):
+    engine: T_NetcdfEngine = "h5netcdf"
+    file_format: T_NetcdfTypes = "NETCDF4_CLASSIC"
+
+    @contextlib.contextmanager
+    def create_store(self):
+        with create_tmp_file() as tmp_file:
+            with backends.H5NetCDFStore.open(
+                tmp_file, mode="w", format="NETCDF4_CLASSIC"
+            ) as store:
+                yield store
+
+
 @requires_scipy_or_netCDF4
 class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
     # verify that we can read and write netCDF3 files as long as we have scipy
