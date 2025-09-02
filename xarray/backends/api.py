@@ -100,7 +100,7 @@ DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
 
 def get_default_netcdf_write_engine(
     format: T_NetcdfTypes | None,
-    to_file_or_memoryview: bool,
+    to_fileobject_or_memoryview: bool,
 ) -> Literal["netcdf4", "h5netcdf", "scipy"]:
     """Return the default netCDF library to use for writing a netCDF file."""
     module_names = {
@@ -119,7 +119,7 @@ def get_default_netcdf_write_engine(
         else:
             raise ValueError(f"unexpected {format=}")
 
-    if to_file_or_memoryview:
+    if to_fileobject_or_memoryview:
         candidates.remove("netcdf4")
 
     for engine in candidates:
@@ -2055,8 +2055,8 @@ def to_netcdf(
     path_or_file = _normalize_path(path_or_file)
 
     if engine is None:
-        to_file_or_memoryview = not isinstance(path_or_file, str)
-        engine = get_default_netcdf_write_engine(format, to_file_or_memoryview)
+        to_fileobject_or_memoryview = not isinstance(path_or_file, str)
+        engine = get_default_netcdf_write_engine(format, to_fileobject_or_memoryview)
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)

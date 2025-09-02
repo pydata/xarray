@@ -23,21 +23,23 @@ from xarray.tests import (
 @requires_scipy
 @requires_h5netcdf
 def test_get_default_netcdf_write_engine() -> None:
-    engine = get_default_netcdf_write_engine(format=None, to_file_or_memoryview=False)
-    assert engine == "netcdf4"
-
     engine = get_default_netcdf_write_engine(
-        format="NETCDF4", to_file_or_memoryview=False
+        format=None, to_fileobject_or_memoryview=False
     )
     assert engine == "netcdf4"
 
     engine = get_default_netcdf_write_engine(
-        format="NETCDF4", to_file_or_memoryview=True
+        format="NETCDF4", to_fileobject_or_memoryview=False
+    )
+    assert engine == "netcdf4"
+
+    engine = get_default_netcdf_write_engine(
+        format="NETCDF4", to_fileobject_or_memoryview=True
     )
     assert engine == "h5netcdf"
 
     engine = get_default_netcdf_write_engine(
-        format="NETCDF3_CLASSIC", to_file_or_memoryview=True
+        format="NETCDF3_CLASSIC", to_fileobject_or_memoryview=True
     )
     assert engine == "scipy"
 
@@ -50,7 +52,9 @@ def test_default_engine_h5netcdf(monkeypatch):
     monkeypatch.delitem(sys.modules, "scipy", raising=False)
     monkeypatch.setattr(sys, "meta_path", [])
 
-    engine = get_default_netcdf_write_engine(format=None, to_file_or_memoryview=False)
+    engine = get_default_netcdf_write_engine(
+        format=None, to_fileobject_or_memoryview=False
+    )
     assert engine == "h5netcdf"
 
     with pytest.raises(
@@ -60,7 +64,7 @@ def test_default_engine_h5netcdf(monkeypatch):
         ),
     ):
         get_default_netcdf_write_engine(
-            format="NETCDF3_CLASSIC", to_file_or_memoryview=False
+            format="NETCDF3_CLASSIC", to_fileobject_or_memoryview=False
         )
 
 
