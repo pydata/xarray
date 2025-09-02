@@ -5,9 +5,9 @@
 What's New
 ==========
 
-.. _whats-new.2025.08.1:
+.. _whats-new.2025.08.0:
 
-v2025.08.1 (unreleased)
+v2025.09.0 (unreleased)
 -----------------------
 
 New Features
@@ -30,7 +30,7 @@ Breaking changes
   libraries are available and valid, and preferring netCDF4 to h5netcdf to scipy
   (:issue:`10654`). This will change the default backend in some edge cases
   (e.g., from scipy to netCDF4 when writing to a file-like object or bytes). To
-  avoid around these new defaults, set ``engine`` explicitly.
+  override these new defaults, set ``engine`` explicitly.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - The return value of :py:meth:`Dataset.to_netcdf` without ``path`` is now a
   ``memoryview`` object instead of ``bytes`` (:pull:`10656`). This removes an
