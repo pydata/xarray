@@ -5,9 +5,9 @@
 What's New
 ==========
 
-.. _whats-new.2025.08.1:
+.. _whats-new.2025.09.0:
 
-v2025.08.1 (unreleased)
+v2025.09.0 (unreleased)
 -----------------------
 
 New Features
@@ -36,6 +36,20 @@ Breaking changes
   if non default values are provided in this context (:issue:`10640`,
   :pull:`10650`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
+- The default backend ``engine`` used by :py:meth:`Dataset.to_netcdf`
+  and :py:meth:`DataTree.to_netcdf` is now chosen consistently with
+  :py:func:`open_dataset` and :py:func:`open_datatree`, using whichever netCDF
+  libraries are available and valid, and preferring netCDF4 to h5netcdf to scipy
+  (:issue:`10654`). This will change the default backend in some edge cases
+  (e.g., from scipy to netCDF4 when writing to a file-like object or bytes). To
+  override these new defaults, set ``engine`` explicitly.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- The return value of :py:meth:`Dataset.to_netcdf` without ``path`` is now a
+  ``memoryview`` object instead of ``bytes`` (:pull:`10656`). This removes an
+  unnecessary memory copy and ensures consistency when using either
+  ``engine="scipy"`` or ``engine="h5netcdf"``. If you need a bytes object,
+  simply wrap the return value of ``to_netcdf()`` with ``bytes()``.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -54,6 +68,10 @@ Bug fixes
   redundant computation of Dask arrays with cross-group dependencies
   (:issue:`10637`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- :py:meth:`DataTree.to_netcdf` had h5netcdf hard-coded as default
+  (:issue:`10654`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~

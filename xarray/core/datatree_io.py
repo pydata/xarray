@@ -6,12 +6,14 @@ from os import PathLike
 from typing import TYPE_CHECKING, Any, Literal, get_args
 
 from xarray.backends.api import (
+    _normalize_path,
     delayed_close_after_writes,
     dump_to_store,
+    get_default_netcdf_write_engine,
     get_writable_netcdf_store,
     get_writable_zarr_store,
 )
-from xarray.backends.common import ArrayWriter
+from xarray.backends.common import ArrayWriter, BytesIOProxy
 from xarray.backends.locks import get_dask_scheduler
 from xarray.core.datatree import DataTree
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
@@ -50,8 +52,14 @@ def _datatree_to_netcdf(
             "DataTree.to_netcdf only supports the netcdf4 and h5netcdf engines"
         )
 
+    filepath = _normalize_path(filepath)
+
     if engine is None:
-        engine = "h5netcdf"
+        to_fileobject_or_memoryview = not isinstance(filepath, str)
+        engine = get_default_netcdf_write_engine(
+            format="NETCDF4",  # required for supporting groups
+            to_fileobject_or_memoryview=to_fileobject_or_memoryview,
+        )  # type: ignore[assignment]
 
     if group is not None:
         raise NotImplementedError(
@@ -70,9 +78,12 @@ def _datatree_to_netcdf(
         )
 
     if filepath is None:
-        # No need to use BytesIOProxy here because the legacy scipy backend
-        # cannot write netCDF files with groups
-        target = io.BytesIO()
+        if not compute:
+            raise NotImplementedError(
+                "to_netcdf() with compute=False is not yet implemented when "
+                "returning a memoryview"
+            )
+        target = BytesIOProxy()
     else:
         target = filepath  # type: ignore[assignment]
 
@@ -126,7 +137,7 @@ def _datatree_to_netcdf(
             root_store.sync()
 
     if filepath is None:
-        assert isinstance(target, io.BytesIO)
+        assert isinstance(target, BytesIOProxy)  # created in this function
         return target.getbuffer()
 
     if not compute:
