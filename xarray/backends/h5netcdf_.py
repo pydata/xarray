@@ -338,7 +338,9 @@ class H5NetCDFStore(WritableCFDataStore):
 
         _ensure_no_forward_slash_in_name(name)
         attrs = variable.attrs.copy()
-        dtype = _get_datatype(variable, self.format, raise_on_invalid_encoding=check_encoding)
+        dtype = _get_datatype(
+            variable, self.format, raise_on_invalid_encoding=check_encoding
+        )
 
         fillvalue = attrs.pop("_FillValue", None)
 

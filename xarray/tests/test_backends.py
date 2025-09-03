@@ -4603,6 +4603,7 @@ class TestNetCDF4ClassicViaH5NetCDFData(TestNetCDF4ClassicViaNetCDF4Data):
 
 # TODO: add cross-engine tests for NETCDF4_CLASSIC
 
+
 @requires_scipy_or_netCDF4
 class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
     # verify that we can read and write netCDF3 files as long as we have scipy
