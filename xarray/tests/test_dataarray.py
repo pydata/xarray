@@ -3028,6 +3028,9 @@ class TestDataArray:
 
         np.testing.assert_allclose(actual.values, expected)
 
+    @pytest.mark.filterwarnings(
+        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
+    )
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_interpolation_deprecated(self, method) -> None:
         da = DataArray(self.va)
