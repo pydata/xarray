@@ -42,6 +42,12 @@ def pytest_collection_modifyitems(items):
 
 
 @pytest.fixture(autouse=True)
+def set_zarr_v3_api(monkeypatch):
+    """Set ZARR_V3_EXPERIMENTAL_API environment variable for all tests."""
+    monkeypatch.setenv("ZARR_V3_EXPERIMENTAL_API", "1")
+
+
+@pytest.fixture(autouse=True)
 def add_standard_imports(doctest_namespace, tmpdir):
     import numpy as np
     import pandas as pd
