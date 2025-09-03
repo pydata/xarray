@@ -7661,7 +7661,7 @@ def test_cumulative_integrate(dask) -> None:
     from scipy.integrate import cumulative_trapezoid
 
     expected_x = xr.DataArray(
-        cumulative_trapezoid(da.compute(), da["x"], axis=0, initial=0.0),  # type: ignore[call-overload]
+        cumulative_trapezoid(da.compute(), da["x"], axis=0, initial=0.0),  # type: ignore[call-overload,unused-ignore]
         dims=["x", "y"],
         coords=da.coords,
     )
@@ -7677,7 +7677,7 @@ def test_cumulative_integrate(dask) -> None:
     # along y
     actual = da.cumulative_integrate("y")
     expected_y = xr.DataArray(
-        cumulative_trapezoid(da, da["y"], axis=1, initial=0.0),  # type: ignore[call-overload]
+        cumulative_trapezoid(da, da["y"], axis=1, initial=0.0),  # type: ignore[call-overload,unused-ignore]
         dims=["x", "y"],
         coords=da.coords,
     )

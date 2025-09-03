@@ -465,7 +465,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             return duck_array.array
         return duck_array
 
-    @data.setter  # type: ignore[override]
+    @data.setter  # type: ignore[override,unused-ignore]
     def data(self, data: T_DuckArray | ArrayLike) -> None:
         data = as_compatible_data(data)
         self._check_shape(data)

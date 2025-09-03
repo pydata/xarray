@@ -139,7 +139,7 @@ def test_interpolate_1d(method: InterpOptions, dim: str, case: int) -> None:
             axis=obj.get_axis_num(dim),
             bounds_error=False,
             fill_value=np.nan,
-            kind=method,  # type: ignore[arg-type]
+            kind=method,  # type: ignore[arg-type,unused-ignore]
         )(new_x)
 
     if dim == "x":
@@ -170,7 +170,7 @@ def test_interpolate_1d_methods(method: InterpOptions) -> None:
             axis=obj.get_axis_num(dim),
             bounds_error=False,
             fill_value=np.nan,
-            kind=method,  # type: ignore[arg-type]
+            kind=method,  # type: ignore[arg-type,unused-ignore]
         )(new_x)
 
     coords = {"x": xdest, "y": da["y"], "x2": ("x", func(da["x2"], xdest))}
@@ -229,7 +229,7 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
                 da[dim],
                 obj.data,
                 axis=obj.get_axis_num(dim),
-                kind=method,  # type: ignore[arg-type]
+                kind=method,  # type: ignore[arg-type,unused-ignore]
                 bounds_error=False,
                 fill_value=np.nan,
                 **scipy_kwargs,
@@ -449,7 +449,7 @@ def test_interpolate_scalar(method: InterpOptions, case: int) -> None:
             axis=obj.get_axis_num("x"),
             bounds_error=False,
             fill_value=np.nan,
-            kind=method,  # type: ignore[arg-type]
+            kind=method,  # type: ignore[arg-type,unused-ignore]
         )(new_x)
 
     coords = {"x": xdest, "y": da["y"], "x2": func(da["x2"], xdest)}
@@ -476,7 +476,7 @@ def test_interpolate_nd_scalar(method: InterpOptions, case: int) -> None:
     expected_data = scipy.interpolate.RegularGridInterpolator(
         (da["x"], da["y"], da["z"]),
         da.transpose("x", "y", "z").values,
-        method=method,  # type: ignore[arg-type]
+        method=method,  # type: ignore[arg-type,unused-ignore]
         bounds_error=False,
         fill_value=np.nan,
     )(np.asarray([(xdest, ydest, z_val) for z_val in zdest]))
