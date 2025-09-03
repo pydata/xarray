@@ -151,6 +151,10 @@ class H5NetCDFStore(WritableCFDataStore):
                     raise ValueError(
                         "must supply a h5netcdf.File if the group argument is provided"
                     )
+                if format == "NETCDF4_CLASSIC":
+                    raise ValueError(
+                        "Cannot create sub-groups in `NETCDF4_CLASSIC` format."
+                    )
                 root = manager
             manager = DummyFileManager(root)
 
@@ -214,6 +218,9 @@ class H5NetCDFStore(WritableCFDataStore):
 
         if format not in [None, "NETCDF4", "NETCDF4_CLASSIC"]:
             raise ValueError("invalid format for h5netcdf backend")
+
+        if format == "NETCDF4_CLASSIC" and group is not None:
+            raise ValueError("Cannot create sub-groups in `NETCDF4_CLASSIC` format.")
 
         kwargs = {
             "invalid_netcdf": invalid_netcdf,
