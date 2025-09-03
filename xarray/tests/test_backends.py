@@ -2555,7 +2555,7 @@ class ZarrBase(CFEncodedBase):
     def test_non_existent_store(self) -> None:
         with pytest.raises(
             FileNotFoundError,
-            match="(No such file or directory|Unable to find group|No group found in store)",
+            match="(No such file or directory|Unable to find group|No group found in store|does not exist)",
         ):
             xr.open_zarr(f"{uuid.uuid4()}")
 
@@ -4407,29 +4407,25 @@ class TestScipyInMemoryData(NetCDF3Only, CFEncodedBase):
         await super().test_load_async()
 
     def test_to_netcdf_explicit_engine(self) -> None:
-        with pytest.warns(
-            FutureWarning,
-            match=re.escape("return value of to_netcdf() without a target"),
-        ):
-            Dataset({"foo": 42}).to_netcdf(engine="scipy")
+        Dataset({"foo": 42}).to_netcdf(engine="scipy")
 
     def test_roundtrip_via_bytes(self) -> None:
         original = create_test_data()
-        with pytest.warns(
-            FutureWarning,
-            match=re.escape("return value of to_netcdf() without a target"),
-        ):
-            netcdf_bytes = original.to_netcdf(engine="scipy")
+        netcdf_bytes = original.to_netcdf(engine="scipy")
         roundtrip = open_dataset(netcdf_bytes, engine="scipy")
         assert_identical(roundtrip, original)
 
+    def test_to_bytes_compute_false(self) -> None:
+        original = create_test_data()
+        with pytest.raises(
+            NotImplementedError,
+            match=re.escape("to_netcdf() with compute=False is not yet implemented"),
+        ):
+            original.to_netcdf(engine="scipy", compute=False)
+
     def test_bytes_pickle(self) -> None:
         data = Dataset({"foo": ("x", [1, 2, 3])})
-        with pytest.warns(
-            FutureWarning,
-            match=re.escape("return value of to_netcdf() without a target"),
-        ):
-            fobj = data.to_netcdf()
+        fobj = data.to_netcdf(engine="scipy")
         with self.open(fobj) as ds:
             unpickled = pickle.loads(pickle.dumps(ds))
             assert_identical(unpickled, data)
@@ -4628,11 +4624,19 @@ class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
         pass
 
     @requires_scipy
+    @requires_netCDF4
     def test_engine(self) -> None:
         data = create_test_data()
+
         with pytest.raises(ValueError, match=r"unrecognized engine"):
             data.to_netcdf("foo.nc", engine="foobar")  # type: ignore[call-overload]
-        with pytest.raises(ValueError, match=r"invalid engine"):
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "can only read bytes or file-like objects with engine='scipy' or 'h5netcdf'"
+            ),
+        ):
             data.to_netcdf(engine="netcdf4")
 
         with create_tmp_file() as tmp_file:
@@ -4693,12 +4697,8 @@ class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
     @requires_scipy
     def test_roundtrip_via_bytes(self) -> None:
         original = create_test_data()
-        with pytest.warns(
-            FutureWarning,
-            match=re.escape("return value of to_netcdf() without a target"),
-        ):
-            netcdf_bytes = original.to_netcdf()
-        roundtrip = open_dataset(netcdf_bytes)
+        netcdf_bytes = original.to_netcdf()
+        roundtrip = load_dataset(netcdf_bytes)
         assert_identical(roundtrip, original)
 
     @pytest.mark.xfail(
@@ -6511,12 +6511,8 @@ class TestDataArrayToNetCDF:
     def test_dataarray_to_netcdf_return_bytes(self) -> None:
         # regression test for GH1410
         data = xr.DataArray([1, 2, 3])
-        with pytest.warns(
-            FutureWarning,
-            match=re.escape("return value of to_netcdf() without a target"),
-        ):
-            output = data.to_netcdf(engine="scipy")
-        assert isinstance(output, bytes)
+        output = data.to_netcdf(engine="scipy")
+        assert isinstance(output, memoryview)
 
     def test_dataarray_to_netcdf_no_name_pathlib(self) -> None:
         original_da = DataArray(np.arange(12).reshape((3, 4)))
@@ -7056,10 +7052,7 @@ def test_scipy_entrypoint(tmp_path: Path) -> None:
     with open(path, "rb") as f:
         _check_guess_can_open_and_open(entrypoint, f, engine="scipy", expected=ds)
 
-    with pytest.warns(
-        FutureWarning, match=re.escape("return value of to_netcdf() without a target")
-    ):
-        contents = ds.to_netcdf(engine="scipy")
+    contents = ds.to_netcdf(engine="scipy")
     _check_guess_can_open_and_open(entrypoint, contents, engine="scipy", expected=ds)
     _check_guess_can_open_and_open(
         entrypoint, BytesIO(contents), engine="scipy", expected=ds
