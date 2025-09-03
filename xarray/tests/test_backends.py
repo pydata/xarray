@@ -206,11 +206,17 @@ def _check_compression_codec_available(codec: str | None) -> bool:
 
             # Attempt to create a variable with the compression
             if codec and codec.startswith("blosc"):
-                nc.createVariable(
-                    "test", "f4", ("x",), compression=codec, blosc_shuffle=1
+                nc.createVariable(  # type: ignore[call-overload]
+                    varname="test",
+                    datatype="f4",
+                    dimensions=("x",),
+                    compression=codec,
+                    blosc_shuffle=1,
                 )
             else:
-                nc.createVariable("test", "f4", ("x",), compression=codec)
+                nc.createVariable(  # type: ignore[call-overload]
+                    varname="test", datatype="f4", dimensions=("x",), compression=codec
+                )
 
             nc.close()
             os.unlink(tmp_path)
