@@ -6166,11 +6166,11 @@ class TestDataset:
         ds = create_test_data(seed=123)
         q = [0.25, 0.5, 0.75]
 
-        with warnings.catch_warnings(record=True) as w:
+        with pytest.warns(
+            FutureWarning,
+            match="`interpolation` argument to quantile was renamed to `method`",
+        ):
             ds.quantile(q, interpolation=method)
-
-            # ensure the warning is only raised once
-            assert len(w) == 1
 
         with warnings.catch_warnings(record=True):
             with pytest.raises(TypeError, match="interpolation and method keywords"):
