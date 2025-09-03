@@ -45,7 +45,7 @@ from xarray import (
     save_mfdataset,
 )
 from xarray.backends.common import robust_getitem
-from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint
+from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint, _h5dump
 from xarray.backends.netcdf3 import _nc3_dtype_coercions
 from xarray.backends.netCDF4_ import (
     NetCDF4BackendEntrypoint,
@@ -4601,23 +4601,18 @@ class TestNetCDF4ClassicViaH5NetCDFData(TestNetCDF4ClassicViaNetCDF4Data):
                 yield store
 
     @requires_netCDF4
-    def test_cdl_representation(self, tmp_path) -> None:
-        import netCDF4
-
+    def test_h5dump(self, tmp_path) -> None:
         data = create_test_data()
 
-        # Create CDL representation using netCDF4
-        fn = tmp_path / "tmp.nc"
+        # Dump the representation of the netCDF4-generated file
+        fn = tmp_path / "netcdf4.nc"
         data.to_netcdf(fn, engine="netcdf4", format=self.file_format)
-        with netCDF4.Dataset(fn) as ds:
-            expected = ds.tocdl()
+        expected = _h5dump(fn)
 
-        # Write using h5netcdf
+        # Dump the representation of the h5netcdf-generated file
+        fn = tmp_path / "h5netcdf.nc"
         data.to_netcdf(fn, engine=self.engine, format=self.file_format)
-
-        # Read using netCDF4
-        with netCDF4.Dataset(fn) as ds:
-            actual = ds.tocdl()
+        actual = _h5dump(fn)
 
         assert expected == actual
 
