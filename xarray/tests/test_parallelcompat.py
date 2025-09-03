@@ -48,7 +48,7 @@ class DummyChunkedArray(np.ndarray):
     def __array_finalize__(self, obj):
         if obj is None:
             return
-        self.chunks = getattr(obj, "chunks", None)
+        self.chunks = getattr(obj, "chunks", None)  # type: ignore[assignment]
 
     def rechunk(self, chunks, **kwargs):
         copied = self.copy()
