@@ -318,11 +318,16 @@ class H5NetCDFStore(WritableCFDataStore):
         else:
             self.ds.dimensions[name] = length
 
-    def set_attribute(self, key, value):
+    def convert_string(self, value):
+        """If format is NETCDF4_CLASSIC, convert strings to char arrays."""
         if self.format != "NETCDF4":
             value = encode_nc3_attr_value(value)
             if isinstance(value, bytes):
                 value = np.bytes_(value)
+        return value
+
+    def set_attribute(self, key, value):
+        value = self.convert_string(value)
         self.ds.attrs[key] = value
 
     def encode_variable(self, variable, name=None):
@@ -402,7 +407,7 @@ class H5NetCDFStore(WritableCFDataStore):
             nc4_var = self.ds[name]
 
         for k, v in attrs.items():
-            nc4_var.attrs[k] = v
+            nc4_var.attrs[k] = self.convert_string(v)
 
         target = H5NetCDFArrayWrapper(name, self)
 

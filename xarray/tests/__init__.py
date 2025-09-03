@@ -397,6 +397,7 @@ def create_test_data(
     else:
         numbers_values = rs.integers(0, 3, _dims["dim3"], dtype="int64")
     obj.coords["numbers"] = ("dim3", numbers_values)
+    obj.attrs = {"foo": "bar"}
     obj.encoding = {"foo": "bar"}
     assert_writeable(obj)
     return obj
