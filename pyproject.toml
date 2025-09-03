@@ -362,9 +362,6 @@ addopts = [
 filterwarnings = [
   "error:::xarray.*",
   "default:No index created:UserWarning:xarray.core.dataset",
-  "default::UserWarning:xarray.tests.test_coding_times",
-  "default::UserWarning:xarray.tests.test_computation",
-  "default::UserWarning:xarray.tests.test_dataset",
   "default:Failed to decode variable.*NumPy will stop allowing conversion of out-of-bound Python integers to integer arrays:DeprecationWarning",
   "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning:xarray.*",
   "default:invalid value encountered in cast:RuntimeWarning:xarray.conventions",
