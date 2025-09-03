@@ -23,6 +23,9 @@ New Features
 - ``compute=False`` is now supported by :py:meth:`DataTree.to_netcdf` and
   :py:meth:`DataTree.to_zarr`.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- The ``h5netcdf`` engine can now write ``NETCDF4_CLASSIC`` files
+  (:issue:`10676`, :pull:``).
+  By `David Huard <https://github.com/huard>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
