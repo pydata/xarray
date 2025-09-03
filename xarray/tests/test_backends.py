@@ -154,6 +154,66 @@ def skip_if_zarr_format_2(reason: str):
 
 ON_WINDOWS = sys.platform == "win32"
 default_value = object()
+
+
+def _check_compression_codec_available(codec: str | None) -> bool:
+    """Check if a compression codec is available in the netCDF4 library.
+
+    Parameters
+    ----------
+    codec : str or None
+        The compression codec name (e.g., 'zstd', 'blosc_lz', etc.)
+
+    Returns
+    -------
+    bool
+        True if the codec is available, False otherwise.
+    """
+    if codec is None or codec in ("zlib", "szip"):
+        # These are standard and should be available
+        return True
+
+    if not has_netCDF4:
+        return False
+
+    try:
+        import os
+        import tempfile
+
+        import netCDF4
+
+        # Try to create a file with the compression to test availability
+        with tempfile.NamedTemporaryFile(suffix=".nc", delete=False) as tmp:
+            tmp_path = tmp.name
+
+        try:
+            nc = netCDF4.Dataset(tmp_path, "w", format="NETCDF4")
+            nc.createDimension("x", 10)
+
+            # Attempt to create a variable with the compression
+            if codec and codec.startswith("blosc"):
+                nc.createVariable(
+                    "test", "f4", ("x",), compression=codec, blosc_shuffle=1
+                )
+            else:
+                nc.createVariable("test", "f4", ("x",), compression=codec)
+
+            nc.close()
+            os.unlink(tmp_path)
+            return True
+        except (RuntimeError, netCDF4.NetCDF4MissingFeatureException):
+            # Codec not available
+            if os.path.exists(tmp_path):
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+            return False
+    except Exception:
+        # Any other error, assume codec is not available
+        return False
+
+
 dask_array_type = array_type("dask")
 
 if TYPE_CHECKING:
@@ -2097,12 +2157,48 @@ class TestNetCDF4Data(NetCDF4Base):
             None,
             "zlib",
             "szip",
-            "zstd",
-            "blosc_lz",
-            "blosc_lz4",
-            "blosc_lz4hc",
-            "blosc_zlib",
-            "blosc_zstd",
+            pytest.param(
+                "zstd",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("zstd"),
+                    reason="zstd codec not available in netCDF4 installation",
+                ),
+            ),
+            pytest.param(
+                "blosc_lz",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("blosc_lz"),
+                    reason="blosc_lz codec not available in netCDF4 installation",
+                ),
+            ),
+            pytest.param(
+                "blosc_lz4",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("blosc_lz4"),
+                    reason="blosc_lz4 codec not available in netCDF4 installation",
+                ),
+            ),
+            pytest.param(
+                "blosc_lz4hc",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("blosc_lz4hc"),
+                    reason="blosc_lz4hc codec not available in netCDF4 installation",
+                ),
+            ),
+            pytest.param(
+                "blosc_zlib",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("blosc_zlib"),
+                    reason="blosc_zlib codec not available in netCDF4 installation",
+                ),
+            ),
+            pytest.param(
+                "blosc_zstd",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("blosc_zstd"),
+                    reason="blosc_zstd codec not available in netCDF4 installation",
+                ),
+            ),
         ],
     )
     @requires_netCDF4_1_6_2_or_above
@@ -2379,7 +2475,8 @@ class ZarrBase(CFEncodedBase):
 
     def test_non_existent_store(self) -> None:
         with pytest.raises(
-            FileNotFoundError, match="(No such file or directory|Unable to find group)"
+            FileNotFoundError,
+            match="(No such file or directory|Unable to find group|does not exist)",
         ):
             xr.open_zarr(f"{uuid.uuid4()}")
 

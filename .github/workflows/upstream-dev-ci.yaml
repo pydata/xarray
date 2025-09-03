@@ -40,8 +40,6 @@ jobs:
     name: upstream-dev
     runs-on: ubuntu-latest
     needs: detect-ci-trigger
-    env:
-      ZARR_V3_EXPERIMENTAL_API: 1
     if: |
       always()
       && (
