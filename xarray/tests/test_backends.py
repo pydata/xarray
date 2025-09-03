@@ -218,10 +218,8 @@ def _check_compression_codec_available(codec: str | None) -> bool:
         except (RuntimeError, netCDF4.NetCDF4MissingFeatureException):
             # Codec not available
             if os.path.exists(tmp_path):
-                try:
+                with contextlib.suppress(OSError):
                     os.unlink(tmp_path)
-                except OSError:
-                    pass
             return False
     except Exception:
         # Any other error, assume codec is not available
