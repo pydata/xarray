@@ -1,41 +1,39 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from xarray import conventions
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendEntrypoint,
+    T_PathFileOrDataStore,
 )
+from xarray.core.coordinates import Coordinates
 from xarray.core.dataset import Dataset
 
 if TYPE_CHECKING:
-    import os
-
-    from xarray.core.types import ReadBuffer
+    pass
 
 
 class StoreBackendEntrypoint(BackendEntrypoint):
     description = "Open AbstractDataStore instances in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.StoreBackendEntrypoint.html"
 
-    def guess_can_open(
-        self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
-    ) -> bool:
+    def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         return isinstance(filename_or_obj, AbstractDataStore)
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
         decode_coords=True,
         drop_variables: str | Iterable[str] | None = None,
+        set_indexes: bool = True,
         use_cftime=None,
         decode_timedelta=None,
     ) -> Dataset:
@@ -56,8 +54,19 @@ class StoreBackendEntrypoint(BackendEntrypoint):
             decode_timedelta=decode_timedelta,
         )
 
-        ds = Dataset(vars, attrs=attrs)
-        ds = ds.set_coords(coord_names.intersection(vars))
+        # split data and coordinate variables (promote dimension coordinates)
+        data_vars = {}
+        coord_vars = {}
+        for name, var in vars.items():
+            if name in coord_names or var.dims == (name,):
+                coord_vars[name] = var
+            else:
+                data_vars[name] = var
+
+        # explicit Coordinates object with no index passed
+        coords = Coordinates(coord_vars, indexes={})
+
+        ds = Dataset(data_vars, coords=coords, attrs=attrs)
         ds.set_close(filename_or_obj.close)
         ds.encoding = encoding
 

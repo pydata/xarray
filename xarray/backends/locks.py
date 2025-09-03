@@ -118,9 +118,7 @@ def _get_lock_maker(scheduler=None):
     dask.utils.get_scheduler_lock
     """
 
-    if scheduler is None:
-        return _get_threaded_lock
-    elif scheduler == "threaded":
+    if scheduler is None or scheduler == "threaded":
         return _get_threaded_lock
     elif scheduler == "multiprocessing":
         return _get_multiprocessing_lock
@@ -136,7 +134,7 @@ def _get_lock_maker(scheduler=None):
         raise KeyError(scheduler)
 
 
-def _get_scheduler(get=None, collection=None) -> str | None:
+def get_dask_scheduler(get=None, collection=None) -> str | None:
     """Determine the dask scheduler that is being used.
 
     None is returned if no dask scheduler is active.
@@ -186,7 +184,7 @@ def get_write_lock(key):
     -------
     Lock object that can be used like a threading.Lock object.
     """
-    scheduler = _get_scheduler()
+    scheduler = get_dask_scheduler()
     lock_maker = _get_lock_maker(scheduler)
     return lock_maker(key)
 

@@ -14,6 +14,7 @@ Geosciences
 
 - `aospy <https://aospy.readthedocs.io>`_: Automated analysis and management of gridded climate data.
 - `argopy <https://github.com/euroargodev/argopy>`_: xarray-based Argo data access, manipulation and visualisation for standard users as well as Argo experts.
+- `cf_xarray <https://cf-xarray.readthedocs.io/en/latest/>`_: Provides an accessor (DataArray.cf or Dataset.cf) that allows you to interpret Climate and Forecast metadata convention attributes present on xarray objects.
 - `climpred <https://climpred.readthedocs.io>`_: Analysis of ensemble forecast models for climate prediction.
 - `geocube <https://corteva.github.io/geocube>`_: Tool to convert geopandas vector data into rasterized xarray data.
 - `GeoWombat <https://github.com/jgrss/geowombat>`_: Utilities for analysis of remotely sensed and gridded raster data at scale (easily tame Landsat, Sentinel, Quickbird, and PlanetScope).
@@ -71,6 +72,7 @@ Other domains
 - `ptsa <https://pennmem.github.io/ptsa/html/index.html>`_: EEG Time Series Analysis
 - `pycalphad <https://pycalphad.org/docs/latest/>`_: Computational Thermodynamics in Python
 - `pyomeca <https://pyomeca.github.io/>`_: Python framework for biomechanical analysis
+- `movement <https://movement.neuroinformatics.dev/>`_: A Python toolbox for analysing animal body movements
 
 Extend xarray capabilities
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

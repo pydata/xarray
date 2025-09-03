@@ -13,6 +13,7 @@ from typing import Any, Literal, cast
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 from pandas.core.indexes.datetimes import DatetimeIndex
 
 # remove once numpy 2.0 is the oldest supported version
@@ -20,6 +21,10 @@ try:
     from numpy.exceptions import RankWarning
 except ImportError:
     from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
+
+import contextlib
+
+from pandas.errors import UndefinedVariableError
 
 import xarray as xr
 from xarray import (
@@ -42,7 +47,7 @@ from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.types import ArrayLike
 from xarray.core.utils import is_scalar
-from xarray.groupers import TimeResampler
+from xarray.groupers import SeasonResampler, TimeResampler
 from xarray.namedarray.pycompat import array_type, integer_types
 from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
@@ -58,6 +63,7 @@ from xarray.tests import (
     create_test_data,
     has_cftime,
     has_dask,
+    has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
@@ -69,18 +75,10 @@ from xarray.tests import (
     requires_sparse,
     source_ndarray,
 )
+from xarray.tests.indexes import ScalarIndex, XYIndex
 
-try:
-    from pandas.errors import UndefinedVariableError
-except ImportError:
-    # TODO: remove once we stop supporting pandas<1.4.3
-    from pandas.core.computation.ops import UndefinedVariableError
-
-
-try:
+with contextlib.suppress(ImportError):
     import dask.array as da
-except ImportError:
-    pass
 
 # from numpy version 2.0 trapz is deprecated and renamed to trapezoid
 # remove once numpy 2.0 is the oldest supported version
@@ -283,26 +281,28 @@ class TestDataset:
         data = create_test_data(seed=123, use_extension_array=True)
         data.attrs["foo"] = "bar"
         # need to insert str dtype at runtime to handle different endianness
+        var5 = (
+            "\n                var5     (dim1) int64[pyarrow] 64B 5 9 7 2 6 2 8 1"
+            if has_pyarrow
+            else ""
+        )
         expected = dedent(
-            """\
+            f"""\
             <xarray.Dataset> Size: 2kB
             Dimensions:  (dim2: 9, dim3: 10, time: 20, dim1: 8)
             Coordinates:
               * dim2     (dim2) float64 72B 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
-              * dim3     (dim3) {} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
-              * time     (time) datetime64[{}] 160B 2000-01-01 2000-01-02 ... 2000-01-20
+              * dim3     (dim3) {data["dim3"].dtype} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+              * time     (time) datetime64[ns] 160B 2000-01-01 2000-01-02 ... 2000-01-20
                 numbers  (dim3) int64 80B 0 1 2 0 0 1 1 2 2 3
             Dimensions without coordinates: dim1
             Data variables:
                 var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
                 var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
                 var3     (dim3, dim1) float64 640B 0.4107 0.9941 0.1665 ... 0.716 1.555
-                var4     (dim1) category 32B 'b' 'c' 'b' 'a' 'c' 'a' 'c' 'a'
+                var4     (dim1) category 3{6 if Version(pd.__version__) >= Version("3.0.0dev0") else 2}B b c b a c a c a{var5}
             Attributes:
-                foo:      bar""".format(
-                data["dim3"].dtype,
-                "ns",
-            )
+                foo:      bar"""
         )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
 
@@ -1137,6 +1137,111 @@ class TestDataset:
         assert ds.chunks == {}
 
     @requires_dask
+    @pytest.mark.parametrize(
+        "use_cftime,calendar",
+        [
+            (False, "standard"),
+            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "standard"),
+            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "noleap"),
+            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "360_day"),
+        ],
+    )
+    def test_chunk_by_season_resampler(self, use_cftime: bool, calendar: str) -> None:
+        import dask.array
+
+        N = 365 + 365  # 2 years - 1 day
+        time = xr.date_range(
+            "2000-01-01", periods=N, freq="D", use_cftime=use_cftime, calendar=calendar
+        )
+
+        ds = Dataset(
+            {
+                "pr": ("time", dask.array.random.random((N), chunks=(20))),
+                "pr2d": (("x", "time"), dask.array.random.random((10, N), chunks=(20))),
+                "ones": ("time", np.ones((N,))),
+            },
+            coords={"time": time},
+        )
+
+        # Standard seasons
+        rechunked = ds.chunk(
+            {"x": 2, "time": SeasonResampler(["DJF", "MAM", "JJA", "SON"])}
+        )
+        assert rechunked.chunksizes["x"] == (2,) * 5
+        assert len(rechunked.chunksizes["time"]) == 9
+        assert rechunked.chunksizes["x"] == (2,) * 5
+        assert sum(rechunked.chunksizes["time"]) == ds.sizes["time"]
+
+        if calendar == "standard":
+            assert rechunked.chunksizes["time"] == (60, 92, 92, 91, 90, 92, 92, 91, 30)
+        elif calendar == "noleap":
+            assert rechunked.chunksizes["time"] == (59, 92, 92, 91, 90, 92, 92, 91, 31)
+        elif calendar == "360_day":
+            assert rechunked.chunksizes["time"] == (60, 90, 90, 90, 90, 90, 90, 90, 40)
+        else:
+            raise AssertionError("unreachable")
+
+        # Custom seasons
+        rechunked = ds.chunk(
+            {"x": 2, "time": SeasonResampler(["DJFM", "AM", "JJA", "SON"])}
+        )
+        assert len(rechunked.chunksizes["time"]) == 9
+        assert sum(rechunked.chunksizes["time"]) == ds.sizes["time"]
+        assert rechunked.chunksizes["x"] == (2,) * 5
+
+        if calendar == "standard":
+            assert rechunked.chunksizes["time"] == (91, 61, 92, 91, 121, 61, 92, 91, 30)
+        elif calendar == "noleap":
+            assert rechunked.chunksizes["time"] == (90, 61, 92, 91, 121, 61, 92, 91, 31)
+        elif calendar == "360_day":
+            assert rechunked.chunksizes["time"] == (90, 60, 90, 90, 120, 60, 90, 90, 40)
+        else:
+            raise AssertionError("unreachable")
+
+        # Test that drop_incomplete doesn't affect chunking
+        rechunked_drop_true = ds.chunk(
+            time=SeasonResampler(["DJF", "MAM", "JJA", "SON"], drop_incomplete=True)
+        )
+        rechunked_drop_false = ds.chunk(
+            time=SeasonResampler(["DJF", "MAM", "JJA", "SON"], drop_incomplete=False)
+        )
+        assert (
+            rechunked_drop_true.chunksizes["time"]
+            == rechunked_drop_false.chunksizes["time"]
+        )
+
+    @requires_dask
+    def test_chunk_by_season_resampler_errors(self):
+        """Test error handling for SeasonResampler chunking."""
+        # Test error on missing season (should fail with incomplete seasons)
+        ds = Dataset(
+            {"x": ("time", np.arange(12))},
+            coords={"time": pd.date_range("2000-01-01", periods=12, freq="MS")},
+        )
+        with pytest.raises(ValueError, match="does not cover all 12 months"):
+            ds.chunk(time=SeasonResampler(["DJF", "MAM", "SON"]))
+
+        ds = Dataset({"foo": ("x", [1, 2, 3])})
+        # Test error on virtual variable
+        with pytest.raises(ValueError, match="virtual variable"):
+            ds.chunk(x=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
+
+        # Test error on non-datetime variable
+        ds["x"] = ("x", [1, 2, 3])
+        with pytest.raises(ValueError, match="datetime variables"):
+            ds.chunk(x=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
+
+        # Test successful case with 1D datetime variable
+        ds["x"] = ("x", xr.date_range("2001-01-01", periods=3, freq="D"))
+        # This should work
+        result = ds.chunk(x=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
+        assert result.chunks is not None
+
+        # Test error on missing season (should fail with incomplete seasons)
+        with pytest.raises(ValueError):
+            ds.chunk(x=SeasonResampler(["DJF", "MAM", "SON"]))
+
+    @requires_dask
     def test_chunk(self) -> None:
         data = create_test_data()
         for v in data.variables.values():
@@ -1215,7 +1320,7 @@ class TestDataset:
         import dask.array
 
         N = 365 * 2
-        ΔN = 28
+        ΔN = 28  # noqa: PLC2401
         time = xr.date_range(
             "2001-01-01", periods=N + ΔN, freq="D", calendar=calendar
         ).to_numpy(copy=True)
@@ -1599,32 +1704,8 @@ class TestDataset:
         # regression test https://github.com/pydata/xarray/issues/10063
         # isel on a multi-coordinate index should return a unique index associated
         # to each coordinate
-        class MultiCoordIndex(xr.Index):
-            def __init__(self, idx1, idx2):
-                self.idx1 = idx1
-                self.idx2 = idx2
-
-            @classmethod
-            def from_variables(cls, variables, *, options=None):
-                idx1 = PandasIndex.from_variables(
-                    {"x": variables["x"]}, options=options
-                )
-                idx2 = PandasIndex.from_variables(
-                    {"y": variables["y"]}, options=options
-                )
-
-                return cls(idx1, idx2)
-
-            def create_variables(self, variables=None):
-                return {**self.idx1.create_variables(), **self.idx2.create_variables()}
-
-            def isel(self, indexers):
-                idx1 = self.idx1.isel({"x": indexers.get("x", slice(None))})
-                idx2 = self.idx2.isel({"y": indexers.get("y", slice(None))})
-                return MultiCoordIndex(idx1, idx2)
-
         coords = xr.Coordinates(coords={"x": [0, 1], "y": [1, 2]}, indexes={})
-        ds = xr.Dataset(coords=coords).set_xindex(["x", "y"], MultiCoordIndex)
+        ds = xr.Dataset(coords=coords).set_xindex(["x", "y"], XYIndex)
 
         ds2 = ds.isel(x=slice(None), y=slice(None))
         assert ds2.xindexes["x"] is ds2.xindexes["y"]
@@ -2394,6 +2475,19 @@ class TestDataset:
         assert_identical(expected, actual)
         assert actual.x.dtype == expected.x.dtype
 
+    def test_reindex_with_multiindex_level(self) -> None:
+        # test for https://github.com/pydata/xarray/issues/10347
+        mindex = pd.MultiIndex.from_product(
+            [[100, 200, 300], [1, 2, 3, 4]], names=["x", "y"]
+        )
+        y_idx = PandasIndex(mindex.levels[1], "y")
+
+        ds1 = xr.Dataset(coords={"y": [1, 2, 3]})
+        ds2 = xr.Dataset(coords=xr.Coordinates.from_xindex(y_idx))
+
+        actual = ds1.reindex(y=ds2.y)
+        assert_identical(actual, ds2)
+
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": 2, "bar": 1}])
     def test_align_fill_value(self, fill_value) -> None:
         x = Dataset({"foo": DataArray([1, 2], dims=["x"], coords={"x": [1, 2]})})
@@ -2639,18 +2733,6 @@ class TestDataset:
     def test_align_scalar_index(self) -> None:
         # ensure that indexes associated with scalar coordinates are not ignored
         # during alignment
-        class ScalarIndex(Index):
-            def __init__(self, value: int):
-                self.value = value
-
-            @classmethod
-            def from_variables(cls, variables, *, options):
-                var = next(iter(variables.values()))
-                return cls(int(var.values))
-
-            def equals(self, other, *, exclude=None):
-                return isinstance(other, ScalarIndex) and other.value == self.value
-
         ds1 = Dataset(coords={"x": 0}).set_xindex("x", ScalarIndex)
         ds2 = Dataset(coords={"x": 0}).set_xindex("x", ScalarIndex)
 
@@ -2664,27 +2746,6 @@ class TestDataset:
             xr.align(ds1, ds3, join="exact")
 
     def test_align_multi_dim_index_exclude_dims(self) -> None:
-        class XYIndex(Index):
-            def __init__(self, x: PandasIndex, y: PandasIndex):
-                self.x: PandasIndex = x
-                self.y: PandasIndex = y
-
-            @classmethod
-            def from_variables(cls, variables, *, options):
-                return cls(
-                    x=PandasIndex.from_variables(
-                        {"x": variables["x"]}, options=options
-                    ),
-                    y=PandasIndex.from_variables(
-                        {"y": variables["y"]}, options=options
-                    ),
-                )
-
-            def equals(self, other, exclude=None):
-                x_eq = True if self.x.dim in exclude else self.x.equals(other.x)
-                y_eq = True if self.y.dim in exclude else self.y.equals(other.y)
-                return x_eq and y_eq
-
         ds1 = (
             Dataset(coords={"x": [1, 2], "y": [3, 4]})
             .drop_indexes(["x", "y"])
@@ -5884,20 +5945,21 @@ class TestDataset:
     def test_reduce_non_numeric(self) -> None:
         data1 = create_test_data(seed=44, use_extension_array=True)
         data2 = create_test_data(seed=44)
-        add_vars = {"var5": ["dim1", "dim2"], "var6": ["dim1"]}
+        add_vars = {"var6": ["dim1", "dim2"], "var7": ["dim1"]}
         for v, dims in sorted(add_vars.items()):
             size = tuple(data1.sizes[d] for d in dims)
             data = np.random.randint(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {"foo": "variable"})
-        # var4 is extension array categorical and should be dropped
+        # var4 and var5 are extension arrays and should be dropped
         assert (
             "var4" not in data1.mean()
             and "var5" not in data1.mean()
             and "var6" not in data1.mean()
+            and "var7" not in data1.mean()
         )
         assert_equal(data1.mean(), data2.mean())
         assert_equal(data1.mean(dim="dim1"), data2.mean(dim="dim1"))
-        assert "var5" not in data1.mean(dim="dim2") and "var6" in data1.mean(dim="dim2")
+        assert "var6" not in data1.mean(dim="dim2") and "var7" in data1.mean(dim="dim2")
 
     @pytest.mark.filterwarnings(
         "ignore:Once the behaviour of DataArray:DeprecationWarning"
@@ -6283,7 +6345,7 @@ class TestDataset:
         assert_equal(actual, expected)
 
         actual = ds + ds[["bar"]]
-        expected = (2 * ds[["bar"]]).merge(ds.coords)
+        expected = (2 * ds[["bar"]]).merge(ds.coords, compat="override")
         assert_identical(expected, actual)
 
         assert_identical(ds + Dataset(), ds.coords.to_dataset())
@@ -6719,12 +6781,12 @@ class TestDataset:
             coords={"x": ["a", "b", "c"]},
         )
         assert_equal(actual, expected)
-        assert_equal(actual, xr.merge([dsx0, dsx1]))
+        assert_equal(actual, xr.merge([dsx0, dsx1], join="outer"))
 
         # works just like xr.merge([self, other])
         dsy2 = DataArray([2, 2, 2], [("x", ["b", "c", "d"])]).to_dataset(name="dsy2")
         actual = dsx0.combine_first(dsy2)
-        expected = xr.merge([dsy2, dsx0])
+        expected = xr.merge([dsy2, dsx0], join="outer")
         assert_equal(actual, expected)
 
     def test_sortby(self) -> None:
@@ -7034,11 +7096,7 @@ class TestDataset:
                 if utils.is_dict_like(constant_values):
                     if (
                         expected := constant_values.get(data_var_name, None)
-                    ) is not None:
-                        self._test_data_var_interior(
-                            ds[data_var_name], data_var, padded_dim_name, expected
-                        )
-                    elif (
+                    ) is not None or (
                         expected := constant_values.get(padded_dim_name, None)
                     ) is not None:
                         self._test_data_var_interior(

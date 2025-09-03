@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, NoReturn, cast
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
+from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
 from xarray.compat.array_api_compat import to_like_array
@@ -23,6 +24,7 @@ from xarray.core.common import AbstractArray
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
     BasicIndexer,
+    CoordinateTransformIndexingAdapter,
     OuterIndexer,
     PandasIndexingAdapter,
     VectorizedIndexer,
@@ -39,6 +41,7 @@ from xarray.core.utils import (
     emit_user_level_warning,
     ensure_us_time_resolution,
     infix_dims,
+    is_allowed_extension_array,
     is_dict_like,
     is_duck_array,
     is_duck_dask_array,
@@ -47,6 +50,7 @@ from xarray.core.utils import (
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import (
+    async_to_duck_array,
     integer_types,
     is_0d_dask_array,
     is_chunked_array,
@@ -63,6 +67,11 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 )
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
+UNSUPPORTED_EXTENSION_ARRAY_TYPES = (
+    pd.arrays.DatetimeArray,
+    pd.arrays.TimedeltaArray,
+    pd.arrays.NumpyExtensionArray,  # type: ignore[attr-defined]
+)
 
 if TYPE_CHECKING:
     from xarray.core.types import (
@@ -168,15 +177,14 @@ def as_variable(
             f"explicit list of dimensions: {obj!r}"
         )
 
-    if auto_convert:
-        if name is not None and name in obj.dims and obj.ndim == 1:
-            # automatically convert the Variable into an Index
-            emit_user_level_warning(
-                f"variable {name!r} with name matching its dimension will not be "
-                "automatically converted into an `IndexVariable` object in the future.",
-                FutureWarning,
-            )
-            obj = obj.to_index_variable()
+    if auto_convert and name is not None and name in obj.dims and obj.ndim == 1:
+        # automatically convert the Variable into an Index
+        emit_user_level_warning(
+            f"variable {name!r} with name matching its dimension will not be "
+            "automatically converted into an `IndexVariable` object in the future.",
+            FutureWarning,
+        )
+        obj = obj.to_index_variable()
 
     return obj
 
@@ -191,14 +199,21 @@ def _maybe_wrap_data(data):
     """
     if isinstance(data, pd.Index):
         return PandasIndexingAdapter(data)
-    if isinstance(data, pd.api.extensions.ExtensionArray):
+    if isinstance(data, UNSUPPORTED_EXTENSION_ARRAY_TYPES):
+        return data.to_numpy()
+    if isinstance(
+        data, pd.api.extensions.ExtensionArray
+    ) and is_allowed_extension_array(data):
         return PandasExtensionArray(data)
     return data
 
 
 def _possibly_convert_objects(values):
     """Convert object arrays into datetime64 and timedelta64 according
-    to the pandas convention.
+    to the pandas convention.  For backwards compat, as of 3.0.0 pandas,
+    object dtype inputs are cast to strings by `pandas.Series`
+    but we output them as object dtype with the input metadata preserved as well.
+
 
     * datetime.datetime
     * datetime.timedelta
@@ -213,6 +228,17 @@ def _possibly_convert_objects(values):
             result.flags.writeable = True
         except ValueError:
             result = result.copy()
+    # For why we need this behavior: https://github.com/pandas-dev/pandas/issues/61938
+    # Object datatype inputs that are strings
+    # will be converted to strings by `pandas.Series`, and as of 3.0.0, lose
+    # `dtype.metadata`.  If the roundtrip back to numpy in this function yields an
+    # object array again, the dtype.metadata will be preserved.
+    if (
+        result.dtype.kind == "O"
+        and values.dtype.kind == "O"
+        and Version(pd.__version__) >= Version("3.0.0dev0")
+    ):
+        result.dtype = values.dtype
     return result
 
 
@@ -252,7 +278,15 @@ def as_compatible_data(
 
     # we don't want nested self-described arrays
     if isinstance(data, pd.Series | pd.DataFrame):
-        pandas_data = data.values
+        if (
+            isinstance(data, pd.Series)
+            and is_allowed_extension_array(data.array)
+            # Some datetime types are not allowed as well as backing Variable types
+            and not isinstance(data.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES)
+        ):
+            pandas_data = data.array
+        else:
+            pandas_data = data.values  # type: ignore[assignment]
         if isinstance(pandas_data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
             return convert_non_numpy_type(pandas_data)
         else:
@@ -390,10 +424,15 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             return cls_(dims_, data, attrs_)
 
     @property
-    def _in_memory(self):
+    def _in_memory(self) -> bool:
+        if isinstance(
+            self._data, PandasIndexingAdapter | CoordinateTransformIndexingAdapter
+        ):
+            return self._data._in_memory
+
         return isinstance(
             self._data,
-            np.ndarray | np.number | PandasIndexingAdapter | PandasExtensionArray,
+            np.ndarray | np.number | PandasExtensionArray,
         ) or (
             isinstance(self._data, indexing.MemoryCachedArray)
             and isinstance(self._data.array, indexing.NumpyIndexingAdapter)
@@ -608,7 +647,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             k.item() if isinstance(k, np.ndarray) and k.ndim == 0 else k for k in key
         )
 
-        if all(isinstance(k, BASIC_INDEXING_TYPES) for k in key):
+        if all(
+            (isinstance(k, BASIC_INDEXING_TYPES) and not isinstance(k, bool))
+            for k in key
+        ):
             return self._broadcast_indexes_basic(key)
 
         self._validate_indexers(key)
@@ -932,14 +974,16 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             data = copy.copy(self.data)
         if attrs is _default:
             attrs = copy.copy(self._attrs)
-
         if encoding is _default:
             encoding = copy.copy(self._encoding)
         return type(self)(dims, data, attrs, encoding, fastpath=True)
 
-    def load(self, **kwargs):
-        """Manually trigger loading of this variable's data from disk or a
-        remote source into memory and return this variable.
+    def load(self, **kwargs) -> Self:
+        """Trigger loading data into memory and return this variable.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original variable is modified and returned.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -950,17 +994,61 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.array.compute``.
 
+        Returns
+        -------
+        object : Variable
+            Same object but with lazy data as an in-memory array.
+
         See Also
         --------
         dask.array.compute
+        Variable.compute
+        Variable.load_async
+        DataArray.load
+        Dataset.load
         """
         self._data = to_duck_array(self._data, **kwargs)
         return self
 
-    def compute(self, **kwargs):
-        """Manually trigger loading of this variable's data from disk or a
-        remote source into memory and return a new variable. The original is
-        left unaltered.
+    async def load_async(self, **kwargs) -> Self:
+        """Trigger and await asynchronous loading of data into memory and return this variable.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original variable is modified and returned.
+
+        Only works when opening data lazily from IO storage backends which support lazy asynchronous loading.
+        Otherwise will raise a NotImplementedError.
+
+        Note users are expected to limit concurrency themselves - xarray does not internally limit concurrency in any way.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        Returns
+        -------
+        object : Variable
+            Same object but with lazy data as an in-memory array.
+
+        See Also
+        --------
+        dask.array.compute
+        Variable.load
+        Variable.compute
+        DataArray.load_async
+        Dataset.load_async
+        """
+        self._data = await async_to_duck_array(self._data, **kwargs)
+        return self
+
+    def compute(self, **kwargs) -> Self:
+        """Trigger loading data into memory and return a new variable.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        The original variable is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -971,9 +1059,18 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.array.compute``.
 
+        Returns
+        -------
+        object : Variable
+            New object with the data as an in-memory array.
+
         See Also
         --------
         dask.array.compute
+        Variable.load
+        Variable.load_async
+        DataArray.compute
+        Dataset.compute
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -2219,8 +2316,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         for i, d in enumerate(variable.dims):
             if d in windows:
                 size = variable.shape[i]
-                shape.append(int(size / windows[d]))
-                shape.append(windows[d])
+                shape.extend((int(size / windows[d]), windows[d]))
                 axis_count += 1
                 axes.append(i + axis_count)
             else:
@@ -2663,6 +2759,10 @@ class IndexVariable(Variable):
         # data is already loaded into memory for IndexVariable
         return self
 
+    async def load_async(self):
+        # data is already loaded into memory for IndexVariable
+        return self
+
     # https://github.com/python/mypy/issues/1465
     @Variable.data.setter  # type: ignore[attr-defined]
     def data(self, data):
@@ -2930,15 +3030,15 @@ def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
 
 
 def _broadcast_compat_data(self, other):
-    if not OPTIONS["arithmetic_broadcast"]:
-        if (isinstance(other, Variable) and self.dims != other.dims) or (
-            is_duck_array(other) and self.ndim != other.ndim
-        ):
-            raise ValueError(
-                "Broadcasting is necessary but automatic broadcasting is disabled via "
-                "global option `'arithmetic_broadcast'`. "
-                "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
-            )
+    if not OPTIONS["arithmetic_broadcast"] and (
+        (isinstance(other, Variable) and self.dims != other.dims)
+        or (is_duck_array(other) and self.ndim != other.ndim)
+    ):
+        raise ValueError(
+            "Broadcasting is necessary but automatic broadcasting is disabled via "
+            "global option `'arithmetic_broadcast'`. "
+            "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
+        )
 
     if all(hasattr(other, attr) for attr in ["dims", "data", "shape", "encoding"]):
         # `other` satisfies the necessary Variable API for broadcast_variables

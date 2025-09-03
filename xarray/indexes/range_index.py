@@ -5,10 +5,11 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from xarray.core import duck_array_ops
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.dataarray import DataArray
 from xarray.core.indexes import CoordinateTransformIndex, Index, PandasIndex
-from xarray.core.indexing import IndexSelResult, normalize_slice
+from xarray.core.indexing import IndexSelResult
 from xarray.core.variable import Variable
 
 
@@ -19,8 +20,9 @@ class RangeCoordinateTransform(CoordinateTransform):
 
     start: float
     stop: float
+    _step: float | None
 
-    __slots__ = ("start", "stop")
+    __slots__ = ("_step", "start", "stop")
 
     def __init__(
         self,
@@ -38,6 +40,7 @@ class RangeCoordinateTransform(CoordinateTransform):
 
         self.start = start
         self.stop = stop
+        self._step = None  # Will be calculated by property
 
     @property
     def coord_name(self) -> Hashable:
@@ -53,7 +56,13 @@ class RangeCoordinateTransform(CoordinateTransform):
 
     @property
     def step(self) -> float:
-        return (self.stop - self.start) / self.size
+        if self._step is not None:
+            return self._step
+        if self.size > 0:
+            return (self.stop - self.start) / self.size
+        else:
+            # For empty arrays, default to 1.0
+            return 1.0
 
     def forward(self, dim_positions: dict[str, Any]) -> dict[Hashable, Any]:
         positions = dim_positions[self.dim]
@@ -78,18 +87,24 @@ class RangeCoordinateTransform(CoordinateTransform):
         )
 
     def slice(self, sl: slice) -> "RangeCoordinateTransform":
-        sl = normalize_slice(sl, self.size)
+        new_range = range(self.size)[sl]
+        new_size = len(new_range)
 
-        # TODO: support reverse transform (i.e., start > stop)?
-        assert sl.start < sl.stop
+        new_start = self.start + new_range.start * self.step
+        new_stop = self.start + new_range.stop * self.step
 
-        new_size = (sl.stop - sl.start) // sl.step
-        new_start = self.start + sl.start * self.step
-        new_stop = new_start + new_size * sl.step * self.step
-
-        return type(self)(
-            new_start, new_stop, new_size, self.coord_name, self.dim, dtype=self.dtype
+        result = type(self)(
+            new_start,
+            new_stop,
+            new_size,
+            self.coord_name,
+            self.dim,
+            dtype=self.dtype,
         )
+        if new_size == 0:
+            # For empty slices, preserve step from parent
+            result._step = self.step
+        return result
 
 
 class RangeIndex(CoordinateTransformIndex):
@@ -320,9 +335,9 @@ class RangeIndex(CoordinateTransformIndex):
 
         if isinstance(idxer, slice):
             return RangeIndex(self.transform.slice(idxer))
-        elif isinstance(idxer, Variable) and idxer.ndim > 1:
-            return None
-        elif np.ndim(idxer) == 0:
+        elif (isinstance(idxer, Variable) and idxer.ndim > 1) or duck_array_ops.ndim(
+            idxer
+        ) == 0:
             return None
         else:
             values = self.transform.forward({self.dim: np.asarray(idxer)})[

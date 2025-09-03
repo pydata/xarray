@@ -30,6 +30,7 @@ if TYPE_CHECKING:
         "keep_attrs",
         "warn_for_unclosed_files",
         "use_bottleneck",
+        "use_new_combine_kwarg_defaults",
         "use_numbagg",
         "use_opt_einsum",
         "use_flox",
@@ -46,19 +47,20 @@ if TYPE_CHECKING:
         display_values_threshold: int
         display_style: Literal["text", "html"]
         display_width: int
-        display_expand_attrs: Literal["default", True, False]
-        display_expand_coords: Literal["default", True, False]
-        display_expand_data_vars: Literal["default", True, False]
-        display_expand_data: Literal["default", True, False]
-        display_expand_groups: Literal["default", True, False]
-        display_expand_indexes: Literal["default", True, False]
-        display_default_indexes: Literal["default", True, False]
+        display_expand_attrs: Literal["default"] | bool
+        display_expand_coords: Literal["default"] | bool
+        display_expand_data_vars: Literal["default"] | bool
+        display_expand_data: Literal["default"] | bool
+        display_expand_groups: Literal["default"] | bool
+        display_expand_indexes: Literal["default"] | bool
+        display_default_indexes: Literal["default"] | bool
         enable_cftimeindex: bool
         file_cache_maxsize: int
-        keep_attrs: Literal["default", True, False]
+        keep_attrs: Literal["default"] | bool
         warn_for_unclosed_files: bool
         use_bottleneck: bool
         use_flox: bool
+        use_new_combine_kwarg_defaults: bool
         use_numbagg: bool
         use_opt_einsum: bool
 
@@ -87,6 +89,7 @@ OPTIONS: T_Options = {
     "warn_for_unclosed_files": False,
     "use_bottleneck": True,
     "use_flox": True,
+    "use_new_combine_kwarg_defaults": False,
     "use_numbagg": True,
     "use_opt_einsum": True,
 }
@@ -117,6 +120,7 @@ _VALIDATORS = {
     "file_cache_maxsize": _positive_integer,
     "keep_attrs": lambda choice: choice in [True, False, "default"],
     "use_bottleneck": lambda value: isinstance(value, bool),
+    "use_new_combine_kwarg_defaults": lambda value: isinstance(value, bool),
     "use_numbagg": lambda value: isinstance(value, bool),
     "use_opt_einsum": lambda value: isinstance(value, bool),
     "use_flox": lambda value: isinstance(value, bool),
@@ -256,6 +260,15 @@ class set_options:
     use_flox : bool, default: True
         Whether to use ``numpy_groupies`` and `flox`` to
         accelerate groupby and resampling reductions.
+    use_new_combine_kwarg_defaults : bool, default False
+        Whether to use new kwarg default values for combine functions:
+        :py:func:`~xarray.concat`, :py:func:`~xarray.merge`,
+        :py:func:`~xarray.open_mfdataset`. New values are:
+
+        * ``data_vars``: None
+        * ``coords``: "minimal"
+        * ``compat``: "override"
+        * ``join``: "exact"
     use_numbagg : bool, default: True
         Whether to use ``numbagg`` to accelerate reductions.
         Takes precedence over ``use_bottleneck`` when both are True.
