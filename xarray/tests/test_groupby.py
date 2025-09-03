@@ -565,6 +565,9 @@ def test_ds_groupby_quantile() -> None:
     assert_identical(expected, actual)
 
 
+@pytest.mark.filterwarnings(
+    "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
+)
 @pytest.mark.parametrize("as_dataset", [False, True])
 def test_groupby_quantile_interpolation_deprecated(as_dataset: bool) -> None:
     array = xr.DataArray(data=[1, 2, 3, 4], coords={"x": [1, 1, 2, 2]}, dims="x")
