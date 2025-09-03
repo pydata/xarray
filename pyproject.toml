@@ -359,7 +359,6 @@ addopts = [
 filterwarnings = [
   "error:::xarray.*",
   "default:Failed to decode variable.*NumPy will stop allowing conversion of out-of-bound Python integers to integer arrays:DeprecationWarning",
-  "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning:xarray.*",
   "default:invalid value encountered in cast:RuntimeWarning:xarray.conventions",
   "default:invalid value encountered in cast:RuntimeWarning:xarray.tests.test_units",
   "default:NumPy will stop allowing conversion of:DeprecationWarning",
