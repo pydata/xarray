@@ -456,7 +456,7 @@ class CFTimeIndex(pd.Index):
         """Needed for .loc based partial-string indexing"""
         return self.__contains__(key)
 
-    def shift(  # type: ignore[override]  # freq is typed Any, we are more precise
+    def shift(
         self,
         periods: int | float,
         freq: str | timedelta | BaseCFTimeOffset | None = None,

@@ -6380,7 +6380,7 @@ class TestPydapOnline(TestPydap):
             yield actual, expected
 
     def test_session(self) -> None:
-        from requests import Session
+        from requests import Session  # type: ignore[import-untyped]
 
         session = Session()  # blank requests.Session object
         with mock.patch("pydap.client.open_url") as mock_func:

@@ -817,7 +817,7 @@ class PandasIndex(Index):
             # scalar indexer: drop index
             return None
 
-        return self._replace(self.index[indxr])  # type: ignore[index]
+        return self._replace(self.index[indxr])
 
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
@@ -1052,7 +1052,7 @@ class PandasMultiIndex(PandasIndex):
         dim = next(iter(variables.values())).dims[0]
 
         index = pd.MultiIndex.from_arrays(
-            [var.values for var in variables.values()], names=variables.keys()
+            [var.values for var in variables.values()], names=list(variables.keys())
         )
         index.name = dim
         level_coords_dtype = {name: var.dtype for name, var in variables.items()}
@@ -1108,7 +1108,7 @@ class PandasMultiIndex(PandasIndex):
         # https://github.com/pandas-dev/pandas/issues/14672
         if all(index.is_monotonic_increasing for index in level_indexes):
             index = pd.MultiIndex.from_product(
-                level_indexes, sortorder=0, names=variables.keys()
+                level_indexes, sortorder=0, names=list(variables.keys())
             )
         else:
             split_labels, levels = zip(
@@ -1118,7 +1118,7 @@ class PandasMultiIndex(PandasIndex):
             labels = [x.ravel().tolist() for x in labels_mesh]
 
             index = pd.MultiIndex(
-                levels=levels, codes=labels, sortorder=0, names=variables.keys()
+                levels=levels, codes=labels, sortorder=0, names=list(variables.keys())
             )
         level_coords_dtype = {k: var.dtype for k, var in variables.items()}
 
@@ -1137,7 +1137,7 @@ class PandasMultiIndex(PandasIndex):
         new_indexes: dict[Hashable, Index] = {}
         for name, lev in zip(clean_index.names, clean_index.levels, strict=True):
             idx = PandasIndex(
-                lev.copy(), name, coord_dtype=self.level_coords_dtype[name]
+                lev.copy(), name, coord_dtype=self.level_coords_dtype[str(name)]
             )
             new_indexes[name] = idx
 
@@ -1192,7 +1192,8 @@ class PandasMultiIndex(PandasIndex):
             level_variables[name] = var
 
         codes_as_lists = [list(x) for x in codes]
-        index = pd.MultiIndex(levels=levels, codes=codes_as_lists, names=names)
+        levels_as_lists = [list(level) for level in levels]
+        index = pd.MultiIndex(levels=levels_as_lists, codes=codes_as_lists, names=names)
         level_coords_dtype = {k: var.dtype for k, var in level_variables.items()}
         obj = cls(index, dim, level_coords_dtype=level_coords_dtype)
         index_vars = obj.create_variables(level_variables)
@@ -1211,7 +1212,9 @@ class PandasMultiIndex(PandasIndex):
         )
 
         if isinstance(index, pd.MultiIndex):
-            level_coords_dtype = {k: self.level_coords_dtype[k] for k in index.names}
+            level_coords_dtype = {
+                k: self.level_coords_dtype[str(k)] for k in index.names
+            }
             return self._replace(index, level_coords_dtype=level_coords_dtype)
         else:
             # backward compatibility: rename the level coordinate to the dimension name
@@ -1229,7 +1232,7 @@ class PandasMultiIndex(PandasIndex):
 
         """
         index = cast(pd.MultiIndex, self.index.reorder_levels(level_variables.keys()))
-        level_coords_dtype = {k: self.level_coords_dtype[k] for k in index.names}
+        level_coords_dtype = {k: self.level_coords_dtype[str(k)] for k in index.names}
         return self._replace(index, level_coords_dtype=level_coords_dtype)
 
     def create_variables(
@@ -1379,7 +1382,7 @@ class PandasMultiIndex(PandasIndex):
         if new_index is not None:
             if isinstance(new_index, pd.MultiIndex):
                 level_coords_dtype = {
-                    k: self.level_coords_dtype[k] for k in new_index.names
+                    k: self.level_coords_dtype[str(k)] for k in new_index.names
                 }
                 new_index = self._replace(
                     new_index, level_coords_dtype=level_coords_dtype

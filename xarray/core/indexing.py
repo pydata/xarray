@@ -1387,7 +1387,7 @@ def _decompose_outer_indexer(
             elif isinstance(k, integer_types):
                 backend_indexer.append(k)
             else:  # slice:  convert positive step slice for backend
-                bk_slice, np_slice = _decompose_slice(k, s)
+                bk_slice, np_slice = _decompose_slice(cast(slice, k), s)
                 backend_indexer.append(bk_slice)
                 np_indexer.append(np_slice)
 
@@ -1425,7 +1425,7 @@ def _decompose_outer_indexer(
         elif isinstance(k, integer_types):
             backend_indexer.append(k)
         else:  # slice:  convert positive step slice for backend
-            bk_slice, np_slice = _decompose_slice(k, s)
+            bk_slice, np_slice = _decompose_slice(cast(slice, k), s)
             backend_indexer.append(bk_slice)
             np_indexer.append(np_slice)
 

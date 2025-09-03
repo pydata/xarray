@@ -1812,7 +1812,7 @@ class TestContour(Common2dMixin, PlotTestCase):
         artist = self.darray.plot.contour(
             levels=[-0.5, 0.0, 0.5, 1.0], colors=["k", "r", "w", "b"]
         )
-        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]
+        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]  # type: ignore[attr-defined]
 
         # the last color is now under "over"
         assert self._color_as_tuple(artist.cmap.get_over()) == (0.0, 0.0, 1.0)

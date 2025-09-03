@@ -1426,7 +1426,7 @@ def date_range(
 
     if _is_standard_calendar(calendar) and use_cftime is not True:
         try:
-            return pd.date_range(
+            return pd.date_range(  # type: ignore[call-overload]
                 start=start,
                 end=end,
                 periods=periods,
