@@ -2580,8 +2580,8 @@ class TestDataArray:
         a = orig[:0, :1].stack(new_dim=("x", "y")).indexes["new_dim"]
         b = pd.MultiIndex(
             levels=[
-                list(pd.Index([], dtype=np.int64)),
-                list(pd.Index([0], dtype=np.int64)),
+                pd.Index([], dtype=np.int64),  # type: ignore[list-item]
+                pd.Index([0], dtype=np.int64),  # type: ignore[list-item]
             ],
             codes=[[], []],
             names=["x", "y"],
