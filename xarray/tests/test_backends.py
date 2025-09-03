@@ -4600,8 +4600,26 @@ class TestNetCDF4ClassicViaH5NetCDFData(TestNetCDF4ClassicViaNetCDF4Data):
             ) as store:
                 yield store
 
+    @requires_netCDF4
+    def test_cdl_representation(self, tmp_path) -> None:
+        import netCDF4
 
-# TODO: add cross-engine tests for NETCDF4_CLASSIC
+        data = create_test_data()
+
+        # Create CDL representation using netCDF4
+        fn = tmp_path / "tmp.nc"
+        data.to_netcdf(fn, engine="netcdf4", format=self.file_format)
+        with netCDF4.Dataset(fn) as ds:
+            expected = ds.tocdl()
+
+        # Write using h5netcdf
+        data.to_netcdf(fn, engine=self.engine, format=self.file_format)
+
+        # Read using netCDF4
+        with netCDF4.Dataset(fn) as ds:
+            actual = ds.tocdl()
+
+        assert expected == actual
 
 
 @requires_scipy_or_netCDF4
