@@ -198,7 +198,6 @@ module = [
   "xarray.tests.test_duck_array_ops",
   "xarray.tests.test_indexing",
   "xarray.tests.test_merge",
-  "xarray.tests.test_missing",
   "xarray.tests.test_sparse",
   "xarray.tests.test_ufuncs",
   "xarray.tests.test_units",
