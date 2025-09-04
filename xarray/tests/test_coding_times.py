@@ -1763,7 +1763,7 @@ def test_encode_cf_timedelta_via_dask(
 ) -> None:
     import dask.array
 
-    times_pd = pd.timedelta_range(start="0D", freq="D", periods=3, unit=time_unit)  # type: ignore[call-arg]
+    times_pd = pd.timedelta_range(start="0D", freq="D", periods=3, unit=time_unit)  # type: ignore[call-arg,unused-ignore]
     times = dask.array.from_array(times_pd, chunks=1)
     encoded_times, encoding_units = encode_cf_timedelta(times, units, dtype)
 
@@ -1934,7 +1934,7 @@ _DECODE_TIMEDELTA_VIA_DTYPE_TESTS = {
 def test_decode_timedelta_via_dtype(
     decode_times, decode_timedelta, original_unit, expected_dtype
 ) -> None:
-    timedeltas = pd.timedelta_range(0, freq="D", periods=3, unit=original_unit)  # type: ignore[call-arg]
+    timedeltas = pd.timedelta_range(0, freq="D", periods=3, unit=original_unit)  # type: ignore[call-arg,unused-ignore]
     encoding = {"units": "days"}
     var = Variable(["time"], timedeltas, encoding=encoding)
     encoded = conventions.encode_cf_variable(var)

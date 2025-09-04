@@ -1618,8 +1618,10 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         if isinstance(filename_or_obj, str | os.PathLike):
-            _, ext = os.path.splitext(filename_or_obj)
-            return ext == ".zarr"
+            # allow a trailing slash to account for an autocomplete
+            # adding it.
+            _, ext = os.path.splitext(str(filename_or_obj).rstrip("/"))
+            return ext in [".zarr"]
 
         return False
 
