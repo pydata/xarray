@@ -817,7 +817,7 @@ class PandasIndex(Index):
             # scalar indexer: drop index
             return None
 
-        return self._replace(self.index[indxr])
+        return self._replace(self.index[indxr])  # type: ignore[index,unused-ignore]
 
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
