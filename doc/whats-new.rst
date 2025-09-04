@@ -13,13 +13,6 @@ v2025.09.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
-- Added :py:func:`load_datatree` for loading ``DataTree`` objects into memory
-  from disk. It has the same relationship to :py:func:`open_datatree`, as
-  :py:func:`load_dataset` has to :py:func:`open_dataset`.
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
-- ``compute=False`` is now supported by :py:meth:`DataTree.to_netcdf` and
-  :py:meth:`DataTree.to_zarr`.
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - :py:func:`DataTree.from_dict` now supports passing in ``DataArray`` and nested
   dictionary values, and has a ``coords`` argument for specifying coordinates as
   ``DataArray`` objects (:pull:`10658`).
