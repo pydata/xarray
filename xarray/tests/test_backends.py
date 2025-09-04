@@ -45,7 +45,7 @@ from xarray import (
     save_mfdataset,
 )
 from xarray.backends.common import robust_getitem
-from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint
+from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint, _h5dump
 from xarray.backends.netcdf3 import _nc3_dtype_coercions
 from xarray.backends.netCDF4_ import (
     NetCDF4BackendEntrypoint,
@@ -4670,6 +4670,47 @@ class TestNetCDF4ClassicViaNetCDF4Data(NetCDF3Only, CFEncodedBase):
                 tmp_file, mode="w", format="NETCDF4_CLASSIC"
             ) as store:
                 yield store
+
+    @requires_h5netcdf
+    def test_string_attributes_stored_as_char(self, tmp_path):
+        import h5netcdf
+
+        original = Dataset(attrs={"foo": "bar"})
+        store_path = tmp_path / "tmp.nc"
+        original.to_netcdf(store_path, engine=self.engine, format=self.file_format)
+        with h5netcdf.File(store_path, "r") as ds:
+            # Check that the attribute is stored as a char array
+            assert ds._h5file.attrs["foo"].dtype == np.dtype("S3")
+
+
+@requires_h5netcdf
+class TestNetCDF4ClassicViaH5NetCDFData(TestNetCDF4ClassicViaNetCDF4Data):
+    engine: T_NetcdfEngine = "h5netcdf"
+    file_format: T_NetcdfTypes = "NETCDF4_CLASSIC"
+
+    @contextlib.contextmanager
+    def create_store(self):
+        with create_tmp_file() as tmp_file:
+            with backends.H5NetCDFStore.open(
+                tmp_file, mode="w", format="NETCDF4_CLASSIC"
+            ) as store:
+                yield store
+
+    @requires_netCDF4
+    def test_h5dump(self, tmp_path) -> None:
+        data = create_test_data()
+
+        # Dump the representation of the netCDF4-generated file
+        fn = tmp_path / "netcdf4.nc"
+        data.to_netcdf(fn, engine="netcdf4", format=self.file_format)
+        expected = _h5dump(fn)
+
+        # Dump the representation of the h5netcdf-generated file
+        fn = tmp_path / "h5netcdf.nc"
+        data.to_netcdf(fn, engine=self.engine, format=self.file_format)
+        actual = _h5dump(fn)
+
+        assert expected == actual
 
 
 @requires_scipy_or_netCDF4

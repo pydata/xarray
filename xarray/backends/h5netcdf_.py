@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import io
 import os
+import subprocess
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Self
 
@@ -26,6 +27,7 @@ from xarray.backends.file_manager import (
     FileManager,
 )
 from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
+from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 from xarray.backends.netCDF4_ import (
     BaseNetCDF4Array,
     _build_and_get_enum,
@@ -98,6 +100,19 @@ _extract_h5nc_encoding = functools.partial(
     backend="h5netcdf",
     unlimited_dims=None,
 )
+
+
+def _h5dump(fn: str):
+    """Call h5dump on an h5netcdf file."""
+    out = subprocess.run(
+        ["h5dump", "-A", "-B", fn], check=False, capture_output=True
+    ).stdout.decode()
+
+    # Strip first and last line
+    # HDF5 "file" {
+    # ...
+    # }
+    return "\n".join(out.splitlines()[1:-1])
 
 
 def _h5netcdf_create_group(dataset, name):
@@ -197,7 +212,7 @@ class H5NetCDFStore(WritableCFDataStore):
                     f"{magic_number!r} is not the signature of a valid netCDF4 file"
                 )
 
-        if format not in [None, "NETCDF4"]:
+        if format not in [None, "NETCDF4", "NETCDF4_CLASSIC"]:
             raise ValueError("invalid format for h5netcdf backend")
 
         kwargs = {
@@ -229,6 +244,12 @@ class H5NetCDFStore(WritableCFDataStore):
                 root, self._group, self._mode, create_group=_h5netcdf_create_group
             )
         return ds
+
+    def encode(self, variables, attributes):
+        """Overload encode to set _nc3_strict flag."""
+        if self.format != "NETCDF4":
+            self.ds._h5file.attrs["_nc3_strict"] = np.int32(1)
+        return super().encode(variables, attributes)
 
     @property
     def ds(self):
@@ -317,11 +338,23 @@ class H5NetCDFStore(WritableCFDataStore):
         else:
             self.ds.dimensions[name] = length
 
+    def convert_string(self, value):
+        """If format is NETCDF4_CLASSIC, convert strings to char arrays."""
+        if self.format != "NETCDF4":
+            value = encode_nc3_attr_value(value)
+            if isinstance(value, bytes):
+                value = np.bytes_(value)
+        return value
+
     def set_attribute(self, key, value):
+        value = self.convert_string(value)
         self.ds.attrs[key] = value
 
     def encode_variable(self, variable, name=None):
-        return _encode_nc4_variable(variable, name=name)
+        if self.format == "NETCDF4":
+            return _encode_nc4_variable(variable, name=name)
+
+        return encode_nc3_variable(variable, name=name)
 
     def prepare_variable(
         self, name, variable, check_encoding=False, unlimited_dims=None
@@ -330,7 +363,9 @@ class H5NetCDFStore(WritableCFDataStore):
 
         _ensure_no_forward_slash_in_name(name)
         attrs = variable.attrs.copy()
-        dtype = _get_datatype(variable, raise_on_invalid_encoding=check_encoding)
+        dtype = _get_datatype(
+            variable, self.format, raise_on_invalid_encoding=check_encoding
+        )
 
         fillvalue = attrs.pop("_FillValue", None)
 
@@ -392,7 +427,7 @@ class H5NetCDFStore(WritableCFDataStore):
             nc4_var = self.ds[name]
 
         for k, v in attrs.items():
-            nc4_var.attrs[k] = v
+            nc4_var.attrs[k] = self.convert_string(v)
 
         target = H5NetCDFArrayWrapper(name, self)
 
