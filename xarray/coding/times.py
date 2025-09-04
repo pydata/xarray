@@ -1416,8 +1416,9 @@ def resolve_time_unit_from_attrs_dtype(
     dtype = np.dtype(attrs_dtype)
     resolution, _ = np.datetime_data(dtype)
     resolution = cast(NPDatetimeUnitOptions, resolution)
+    time_unit: PDDatetimeUnitOptions
     if np.timedelta64(1, resolution) > np.timedelta64(1, "s"):
-        time_unit = cast(PDDatetimeUnitOptions, "s")
+        time_unit = "s"
         message = (
             f"Following pandas, xarray only supports decoding to timedelta64 "
             f"values with a resolution of 's', 'ms', 'us', or 'ns'. Encoded "
@@ -1430,7 +1431,7 @@ def resolve_time_unit_from_attrs_dtype(
         )
         emit_user_level_warning(message)
     elif np.timedelta64(1, resolution) < np.timedelta64(1, "ns"):
-        time_unit = cast(PDDatetimeUnitOptions, "ns")
+        time_unit = "ns"
         message = (
             f"Following pandas, xarray only supports decoding to timedelta64 "
             f"values with a resolution of 's', 'ms', 'us', or 'ns'. Encoded "
@@ -1534,7 +1535,7 @@ class CFTimedeltaCoder(VariableCoder):
                         FutureWarning,
                     )
                 if self.time_unit is None:
-                    time_unit = cast(PDDatetimeUnitOptions, "ns")
+                    time_unit = "ns"
                 else:
                     time_unit = self.time_unit
 

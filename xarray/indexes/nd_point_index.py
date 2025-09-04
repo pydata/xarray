@@ -80,7 +80,7 @@ class ScipyKDTreeAdapter(TreeAdapter):
         self._kdtree = KDTree(points, **options)
 
     def query(self, points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        return self._kdtree.query(points)
+        return self._kdtree.query(points)  # type: ignore[return-value,unused-ignore]
 
     def equals(self, other: Self) -> bool:
         return np.array_equal(self._kdtree.data, other._kdtree.data)

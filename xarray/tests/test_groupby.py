@@ -2222,7 +2222,7 @@ class TestDataArrayResample:
             f = interp1d(
                 np.arange(len(times)),
                 data,
-                kind=kwargs["order"] if kind == "polynomial" else kind,
+                kind=kwargs["order"] if kind == "polynomial" else kind,  # type: ignore[arg-type,unused-ignore]
                 axis=-1,
                 bounds_error=True,
                 assume_sorted=True,
@@ -2300,7 +2300,7 @@ class TestDataArrayResample:
             f = interp1d(
                 np.arange(len(times)),
                 data,
-                kind=kwargs["order"] if kind == "polynomial" else kind,
+                kind=kwargs["order"] if kind == "polynomial" else kind,  # type: ignore[arg-type,unused-ignore]
                 axis=-1,
                 bounds_error=True,
                 assume_sorted=True,

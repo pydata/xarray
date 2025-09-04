@@ -817,7 +817,7 @@ class PandasIndex(Index):
             # scalar indexer: drop index
             return None
 
-        return self._replace(self.index[indxr])  # type: ignore[index]
+        return self._replace(self.index[indxr])  # type: ignore[index,unused-ignore]
 
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
@@ -1009,7 +1009,7 @@ class PandasMultiIndex(PandasIndex):
     index: pd.MultiIndex
     dim: Hashable
     coord_dtype: Any
-    level_coords_dtype: dict[str, Any]
+    level_coords_dtype: dict[Hashable | None, Any]
 
     __slots__ = ("coord_dtype", "dim", "index", "level_coords_dtype")
 
@@ -1052,7 +1052,7 @@ class PandasMultiIndex(PandasIndex):
         dim = next(iter(variables.values())).dims[0]
 
         index = pd.MultiIndex.from_arrays(
-            [var.values for var in variables.values()], names=variables.keys()
+            [var.values for var in variables.values()], names=list(variables.keys())
         )
         index.name = dim
         level_coords_dtype = {name: var.dtype for name, var in variables.items()}
@@ -1108,7 +1108,7 @@ class PandasMultiIndex(PandasIndex):
         # https://github.com/pandas-dev/pandas/issues/14672
         if all(index.is_monotonic_increasing for index in level_indexes):
             index = pd.MultiIndex.from_product(
-                level_indexes, sortorder=0, names=variables.keys()
+                level_indexes, sortorder=0, names=list(variables.keys())
             )
         else:
             split_labels, levels = zip(
@@ -1118,7 +1118,7 @@ class PandasMultiIndex(PandasIndex):
             labels = [x.ravel().tolist() for x in labels_mesh]
 
             index = pd.MultiIndex(
-                levels=levels, codes=labels, sortorder=0, names=variables.keys()
+                levels=levels, codes=labels, sortorder=0, names=list(variables.keys())
             )
         level_coords_dtype = {k: var.dtype for k, var in variables.items()}
 
@@ -1192,7 +1192,8 @@ class PandasMultiIndex(PandasIndex):
             level_variables[name] = var
 
         codes_as_lists = [list(x) for x in codes]
-        index = pd.MultiIndex(levels=levels, codes=codes_as_lists, names=names)
+        levels_as_lists = [list(level) for level in levels]
+        index = pd.MultiIndex(levels=levels_as_lists, codes=codes_as_lists, names=names)
         level_coords_dtype = {k: var.dtype for k, var in level_variables.items()}
         obj = cls(index, dim, level_coords_dtype=level_coords_dtype)
         index_vars = obj.create_variables(level_variables)
@@ -1247,7 +1248,7 @@ class PandasMultiIndex(PandasIndex):
                 dtype = None
             else:
                 level = name
-                dtype = self.level_coords_dtype[name]  # type: ignore[index]  # TODO: are Hashables ok?
+                dtype = self.level_coords_dtype[name]
 
             var = variables.get(name)
             if var is not None:
