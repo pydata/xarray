@@ -946,8 +946,9 @@ class TestTreeFromDict:
         with pytest.raises(
             TypeError,
             match=re.escape(
-                r"failed to construct xarray.Dataset for DataTree node at '/' "
-                r"with data_vars={'a': {'b': {'c': 1}}} and coords={}"
+                r"data contains a dict value at key='a', which is not a valid "
+                r"argument to DataTree.from_dict() with nested=False: "
+                r"{'b': {'c': 1}}"
             ),
         ):
             DataTree.from_dict({"a": {"b": {"c": 1}}})

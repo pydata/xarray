@@ -1328,8 +1328,20 @@ class DataTree(
         if coords is None:
             coords = {}
 
-        data_items = utils.flat_items(data) if nested else data.items()
-        coords_items = utils.flat_items(coords) if nested else coords.items()
+        if nested:
+            data_items = utils.flat_items(data)
+            coords_items = utils.flat_items(coords)
+        else:
+            data_items = data.items()
+            coords_items = coords.items()
+            for arg_name, items in [("data", data_items), ("coords", coords_items)]:
+                for key, value in items:
+                    if isinstance(value, dict):
+                        raise TypeError(
+                            f"{arg_name} contains a dict value at {key=}, "
+                            "which is not a valid argument to "
+                            f"DataTree.from_dict() with nested=False: {value}"
+                        )
 
         # Canonicalize and unify paths between `data` and `coords`
         flat_data_and_coords = itertools.chain(
