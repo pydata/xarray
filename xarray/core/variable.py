@@ -2954,13 +2954,13 @@ class IndexVariable(Variable):
             return index
 
     @property
-    def level_names(self) -> list[str] | None:
+    def level_names(self) -> list[Hashable | None] | None:
         """Return MultiIndex level names or None if this IndexVariable has no
         MultiIndex.
         """
         index = self.to_index()
         if isinstance(index, pd.MultiIndex):
-            return [str(name) for name in index.names]
+            return list(index.names)
         else:
             return None
 
