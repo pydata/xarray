@@ -239,16 +239,14 @@ def _encode_unsigned_fill_value(
     fill_value: Any,
     encoded_dtype: np.dtype,
 ) -> Any:
-    if hasattr(fill_value, "item"):
-        # if numpy type, convert to python native integer to determine overflow
-        # otherwise numpy unsigned ints will silently cast to the signed counterpart
-        fill_value = fill_value.item()
-
-    # Check if fill value fits in the encoded dtype
-    # For signed types, check against actual bounds
-    info = np.iinfo(encoded_dtype)
-    if not (info.min <= fill_value <= info.max):
-        # Value is out of bounds
+    try:
+        if hasattr(fill_value, "item"):
+            # if numpy type, convert to python native integer to determine overflow
+            # otherwise numpy unsigned ints will silently cast to the signed counterpart
+            fill_value = fill_value.item()
+        # passes if provided fill value fits in encoded on-disk type
+        new_fill = encoded_dtype.type(fill_value)
+    except OverflowError:
         encoded_kind_str = "signed" if encoded_dtype.kind == "i" else "unsigned"
         warnings.warn(
             f"variable {name!r} will be stored as {encoded_kind_str} integers "
@@ -263,9 +261,6 @@ def _encode_unsigned_fill_value(
         orig_dtype = np.dtype(f"{orig_kind}{encoded_dtype.itemsize}")
         # use view here to prevent OverflowError
         new_fill = np.array(fill_value, dtype=orig_dtype).view(encoded_dtype).item()
-    else:
-        # Value fits, use _safe_type_cast to handle NumPy version differences
-        new_fill = _safe_type_cast(fill_value, encoded_dtype)
     return new_fill
 
 
@@ -310,7 +305,7 @@ class CFMaskCoder(VariableCoder):
             if has_unsigned:
                 encoding["_FillValue"] = _encode_unsigned_fill_value(name, fv, dtype)
             elif "add_offset" not in encoding and "scale_factor" not in encoding:
-                encoding["_FillValue"] = _safe_type_cast(fv, dtype)
+                encoding["_FillValue"] = dtype.type(fv)
             else:
                 encoding["_FillValue"] = fv
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
@@ -325,7 +320,7 @@ class CFMaskCoder(VariableCoder):
                     _encode_unsigned_fill_value(name, mv, dtype)
                     if has_unsigned
                     else (
-                        _safe_type_cast(mv, dtype)
+                        dtype.type(mv)
                         if "add_offset" not in encoding
                         and "scale_factor" not in encoding
                         else mv
@@ -438,19 +433,6 @@ def _scale_offset_decoding(data, scale_factor, add_offset, dtype: np.typing.DTyp
     if add_offset is not None:
         data += add_offset
     return data
-
-
-def _safe_type_cast(value, dtype):
-    """Safely cast a value to a dtype, handling overflow across NumPy versions.
-
-    This handles the difference between NumPy 1.x (raises DeprecationWarning)
-    and NumPy 2.x (raises OverflowError) when casting out-of-bounds values.
-    """
-    # Use the approach that works consistently across NumPy versions:
-    # First create array with default dtype, then cast to target dtype
-    # This allows overflow behavior (wrapping) which is needed for
-    # unsigned/signed conversions in CF conventions
-    return np.array(value).astype(dtype).item()
 
 
 def _choose_float_dtype(
