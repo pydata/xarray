@@ -29,6 +29,18 @@ pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
 
 
+def create_nan_array(values, dtype):
+    """Create array with NaN values, handling cast warnings for int dtypes."""
+    import warnings
+
+    # When casting float arrays with NaN to integer, NumPy raises a warning
+    # This is expected behavior when dtype is int
+    with warnings.catch_warnings():
+        if np.issubdtype(dtype, np.integer):
+            warnings.filterwarnings("ignore", "invalid value encountered in cast")
+        return np.array(values).astype(dtype)
+
+
 # make sure scalars are converted to 0d arrays so quantities can
 # always be treated like ndarrays
 unit_registry = pint.UnitRegistry(force_ndarray_like=True)
@@ -2781,7 +2793,7 @@ class TestDataArray:
     @pytest.mark.parametrize("func", (method("ffill"), method("bfill")), ids=repr)
     def test_missing_value_filling(self, func, dtype):
         array = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * unit_registry.degK
         )
         x = np.arange(len(array))
@@ -2818,7 +2830,7 @@ class TestDataArray:
     def test_fillna(self, fill_value, unit, error, dtype):
         original_unit = unit_registry.m
         array = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * original_unit
         )
         data_array = xr.DataArray(data=array)
@@ -2846,7 +2858,7 @@ class TestDataArray:
 
     def test_dropna(self, dtype):
         array = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * unit_registry.m
         )
         x = np.arange(len(array))
@@ -2871,12 +2883,12 @@ class TestDataArray:
     )
     def test_isin(self, unit, dtype):
         array = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * unit_registry.m
         )
         data_array = xr.DataArray(data=array, dims="x")
 
-        raw_values = np.array([1.4, np.nan, 2.3]).astype(dtype)
+        raw_values = create_nan_array([1.4, np.nan, 2.3], dtype)
         values = raw_values * unit
 
         units = {None: unit_registry.m if array.check(unit) else None}
@@ -4267,11 +4279,11 @@ class TestDataset:
     @pytest.mark.parametrize("func", (method("ffill"), method("bfill")), ids=repr)
     def test_missing_value_filling(self, func, dtype):
         array1 = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * unit_registry.degK
         )
         array2 = (
-            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
+            create_nan_array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan], dtype)
             * unit_registry.Pa
         )
 
@@ -4310,11 +4322,11 @@ class TestDataset:
     )
     def test_fillna(self, fill_value, unit, error, dtype):
         array1 = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * unit_registry.m
         )
         array2 = (
-            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
+            create_nan_array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan], dtype)
             * unit_registry.m
         )
         ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
@@ -4340,11 +4352,11 @@ class TestDataset:
 
     def test_dropna(self, dtype):
         array1 = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * unit_registry.degK
         )
         array2 = (
-            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
+            create_nan_array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan], dtype)
             * unit_registry.Pa
         )
         ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
@@ -4368,16 +4380,16 @@ class TestDataset:
     )
     def test_isin(self, unit, dtype):
         array1 = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * unit_registry.m
         )
         array2 = (
-            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
+            create_nan_array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan], dtype)
             * unit_registry.m
         )
         ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
 
-        raw_values = np.array([1.4, np.nan, 2.3]).astype(dtype)
+        raw_values = create_nan_array([1.4, np.nan, 2.3], dtype)
         values = raw_values * unit
 
         converted_values = (
@@ -4453,11 +4465,11 @@ class TestDataset:
     @pytest.mark.xfail(reason="interpolate_na uses numpy.vectorize")
     def test_interpolate_na(self, dtype):
         array1 = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * unit_registry.degK
         )
         array2 = (
-            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
+            create_nan_array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan], dtype)
             * unit_registry.Pa
         )
         ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
@@ -4502,10 +4514,10 @@ class TestDataset:
         data_unit, other_data_unit, dims_unit, other_dims_unit = variants.get(variant)
 
         array1 = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype) * data_unit
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype) * data_unit
         )
         array2 = (
-            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype) * data_unit
+            create_nan_array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan], dtype) * data_unit
         )
         x = np.arange(len(array1)) * dims_unit
         ds = xr.Dataset(

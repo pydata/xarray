@@ -302,15 +302,12 @@ class CFMaskCoder(VariableCoder):
         if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
             # but not for packed data
-            encoding["_FillValue"] = (
-                _encode_unsigned_fill_value(name, fv, dtype)
-                if has_unsigned
-                else (
-                    dtype.type(fv)
-                    if "add_offset" not in encoding and "scale_factor" not in encoding
-                    else fv
-                )
-            )
+            if has_unsigned:
+                encoding["_FillValue"] = _encode_unsigned_fill_value(name, fv, dtype)
+            elif "add_offset" not in encoding and "scale_factor" not in encoding:
+                encoding["_FillValue"] = dtype.type(fv)
+            else:
+                encoding["_FillValue"] = fv
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
 
         if mv_exists:

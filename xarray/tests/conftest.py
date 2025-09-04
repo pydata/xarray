@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -7,6 +9,27 @@ import pytest
 import xarray as xr
 from xarray import DataArray, Dataset, DataTree
 from xarray.tests import create_test_data, has_cftime, requires_dask
+
+
+@pytest.fixture(autouse=True)
+def handle_numpy_1_warnings():
+    """Handle NumPy 1.x DeprecationWarnings for out-of-bound integer conversions.
+
+    NumPy 1.x raises DeprecationWarning when converting out-of-bounds values
+    (e.g., 255 to int8), while NumPy 2.x raises OverflowError. This fixture
+    suppresses the warning in NumPy 1.x environments to allow tests to pass.
+    """
+    # Only apply for NumPy < 2.0
+    if np.__version__.startswith("1."):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                "NumPy will stop allowing conversion of out-of-bound Python integers",
+                DeprecationWarning,
+            )
+            yield
+    else:
+        yield
 
 
 @pytest.fixture(params=["numpy", pytest.param("dask", marks=requires_dask)])
