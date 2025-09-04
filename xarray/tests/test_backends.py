@@ -7149,6 +7149,31 @@ def test_h5netcdf_entrypoint(tmp_path: Path) -> None:
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
 
 
+@requires_zarr
+def test_zarr_entrypoint(tmp_path: Path) -> None:
+    from xarray.backends.zarr import ZarrBackendEntrypoint
+
+    entrypoint = ZarrBackendEntrypoint()
+    ds = create_test_data()
+
+    path = tmp_path / "foo.zarr"
+    ds.to_zarr(path)
+    _check_guess_can_open_and_open(entrypoint, path, engine="zarr", expected=ds)
+    _check_guess_can_open_and_open(entrypoint, str(path), engine="zarr", expected=ds)
+
+    # add a trailing slash to the path and check again
+    path = tmp_path / "foo.zarr/"
+    _check_guess_can_open_and_open(entrypoint, path, engine="zarr", expected=ds)
+    _check_guess_can_open_and_open(entrypoint, str(path), engine="zarr", expected=ds)
+
+    # Test the new functionality: .zarr with trailing slash
+    assert entrypoint.guess_can_open("something-local.zarr")
+    assert entrypoint.guess_can_open("something-local.zarr/")  # With trailing slash
+    assert not entrypoint.guess_can_open("something-local.nc")
+    assert not entrypoint.guess_can_open("not-found-and-no-extension")
+    assert not entrypoint.guess_can_open("something.zarr.txt")
+
+
 @requires_netCDF4
 @pytest.mark.parametrize("str_type", (str, np.str_))
 def test_write_file_from_np_str(str_type: type[str | np.str_], tmpdir: str) -> None:
