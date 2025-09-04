@@ -918,7 +918,17 @@ class TestTreeFromDict:
         actual = DataTree.from_dict({"a": 1, "b/c": 2, "b/d": 3})
         assert_identical(actual, expected)
 
-    def test_array_values_deep(self) -> None:
+    def test_invalid_values(self) -> None:
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                r"failed to construct xarray.Dataset for DataTree node at '/' "
+                r"with data_vars={'a': set()} and coords={}"
+            ),
+        ):
+            DataTree.from_dict({"a": set()})
+
+    def test_array_values_nested_key(self) -> None:
         expected = DataTree(
             children={"a": DataTree(children={"b": DataTree(Dataset({"c": 1}))})}
         )
@@ -929,15 +939,25 @@ class TestTreeFromDict:
         expected = DataTree(
             children={"a": DataTree(children={"b": DataTree(Dataset({"c": 1}))})}
         )
-        actual = DataTree.from_dict({"a": {"b": {"c": 1}}})
+        actual = DataTree.from_dict({"a": {"b": {"c": 1}}}, nested=True)
         assert_identical(actual, expected)
+
+    def test_nested_array_values_without_nested_kwarg(self) -> None:
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                r"failed to construct xarray.Dataset for DataTree node at '/' "
+                r"with data_vars={'a': {'b': {'c': 1}}} and coords={}"
+            ),
+        ):
+            DataTree.from_dict({"a": {"b": {"c": 1}}})
 
     def test_nested_array_values_duplicates(self) -> None:
         with pytest.raises(
             ValueError,
             match=re.escape("multiple entries found corresponding to node '/a/b'"),
         ):
-            DataTree.from_dict({"a": {"b": 1}, "a/b": 2})
+            DataTree.from_dict({"a": {"b": 1}, "a/b": 2}, nested=True)
 
     def test_array_values_data_and_coords(self) -> None:
         expected = DataTree(dataset=Dataset({"a": 1}, coords={"b": 2}))

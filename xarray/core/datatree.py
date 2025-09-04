@@ -1167,6 +1167,36 @@ class DataTree(
         result._replace_node(children=children_to_keep)
         return result
 
+    @overload
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, CoercibleValue | Dataset | DataTree | None] | None = ...,
+        coords: Mapping[str, CoercibleValue] | None = ...,
+        *,
+        name: str | None = ...,
+        nested: Literal[False] = ...,
+    ) -> Self: ...
+
+    @overload
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[
+            str,
+            CoercibleValue
+            | Dataset
+            | DataTree
+            | None
+            | NestedDict[CoercibleValue | Dataset | DataTree | None],
+        ]
+        | None = ...,
+        coords: Mapping[str, CoercibleValue | NestedDict[CoercibleValue]] | None = ...,
+        *,
+        name: str | None = ...,
+        nested: Literal[True] = ...,
+    ) -> Self: ...
+
     @classmethod
     def from_dict(
         cls,
@@ -1180,7 +1210,9 @@ class DataTree(
         ]
         | None = None,
         coords: Mapping[str, CoercibleValue | NestedDict[CoercibleValue]] | None = None,
+        *,
         name: str | None = None,
+        nested: bool = False,
     ) -> Self:
         """
         Create a datatree from a dictionary of data objects, organised by paths into the tree.
@@ -1197,8 +1229,6 @@ class DataTree(
             names containing more than one part are given, new tree nodes will
             be constructed automatically as necessary.
 
-            Nested dictionaries are automatically flattened.
-
             To assign data to the root node of the tree use "", ".", "/" or "./"
             as the path.
         coords : dict-like, optional
@@ -1206,6 +1236,9 @@ class DataTree(
             nested dictionaries of coercible objects.
         name : Hashable | None, optional
             Name for the root node of the tree. Default is None.
+        nested : bool, optional
+            If true, nested dictionaries in ``data`` and ``coords`` are
+            automatically flattened.
 
         Returns
         -------
@@ -1275,9 +1308,9 @@ class DataTree(
         ... )
         >>> assert dt.identical(dt2)
 
-        Nested dictionaries are automatically flattened:
+        Nested dictionaries are automatically flattened if ``nested=True``:
 
-        >>> DataTree.from_dict({"a": {"b": {"c": {"x": 1, "y": 2}}}})
+        >>> DataTree.from_dict({"a": {"b": {"c": {"x": 1, "y": 2}}}}, nested=True)
         <xarray.DataTree>
         Group: /
         └── Group: /a
@@ -1295,10 +1328,13 @@ class DataTree(
         if coords is None:
             coords = {}
 
+        data_items = utils.flat_items(data) if nested else data.items()
+        coords_items = utils.flat_items(coords) if nested else coords.items()
+
         # Canonicalize and unify paths between `data` and `coords`
         flat_data_and_coords = itertools.chain(
-            utils.flat_items(data),
-            ((k, _CoordWrapper(v)) for k, v in utils.flat_items(coords)),
+            data_items,
+            ((k, _CoordWrapper(v)) for k, v in coords_items),
         )
         nodes: dict[
             NodePath, _CoordWrapper | CoercibleValue | Dataset | DataTree | None
@@ -1329,7 +1365,14 @@ class DataTree(
                 else:
                     dataset_args[path.parent].data_vars[path.name] = node
         for path, args in dataset_args.items():
-            nodes[path] = Dataset(args.data_vars, args.coords)
+            try:
+                nodes[path] = Dataset(args.data_vars, args.coords)
+            except (ValueError, TypeError) as e:
+                raise type(e)(
+                    "failed to construct xarray.Dataset for DataTree node at "
+                    f"{str(path)!r} with data_vars={args.data_vars} and "
+                    f"coords={args.coords}"
+                ) from e
 
         # Create the root node
         root_data = nodes.pop(NodePath("/"), None)
