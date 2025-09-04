@@ -7162,9 +7162,9 @@ def test_zarr_entrypoint(tmp_path: Path) -> None:
     _check_guess_can_open_and_open(entrypoint, str(path), engine="zarr", expected=ds)
 
     # add a trailing slash to the path and check again
-    path = tmp_path / "foo.zarr/"
-    _check_guess_can_open_and_open(entrypoint, path, engine="zarr", expected=ds)
-    _check_guess_can_open_and_open(entrypoint, str(path), engine="zarr", expected=ds)
+    _check_guess_can_open_and_open(
+        entrypoint, str(path) + "/", engine="zarr", expected=ds
+    )
 
     # Test the new functionality: .zarr with trailing slash
     assert entrypoint.guess_can_open("something-local.zarr")
