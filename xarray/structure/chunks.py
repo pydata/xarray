@@ -18,11 +18,13 @@ from xarray.namedarray.parallelcompat import (
     get_chunked_array_type,
     guess_chunkmanager,
 )
+from xarray.namedarray.utils import fake_target_chunksize
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.types import T_ChunkDim
+    from xarray.core.variable import IndexVariable, Variable
 
     MissingCoreDimOptions = Literal["raise", "copy", "drop"]
 
@@ -83,8 +85,15 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
         for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape, strict=True)
     )
 
+    limit = chunkmanager.get_auto_chunk_size()
+    limit, var_dtype = fake_target_chunksize(var, limit)
+
     chunk_shape = chunkmanager.normalize_chunks(
-        chunk_shape, shape=shape, dtype=var.dtype, previous_chunks=preferred_chunk_shape
+        chunk_shape,
+        shape=shape,
+        dtype=var_dtype,
+        limit=limit,
+        previous_chunks=preferred_chunk_shape,
     )
 
     # Warn where requested chunks break preferred chunks, provided that the variable
