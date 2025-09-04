@@ -1009,7 +1009,7 @@ class PandasMultiIndex(PandasIndex):
     index: pd.MultiIndex
     dim: Hashable
     coord_dtype: Any
-    level_coords_dtype: dict[str, Any]
+    level_coords_dtype: dict[Hashable | None, Any]
 
     __slots__ = ("coord_dtype", "dim", "index", "level_coords_dtype")
 
@@ -1137,7 +1137,7 @@ class PandasMultiIndex(PandasIndex):
         new_indexes: dict[Hashable, Index] = {}
         for name, lev in zip(clean_index.names, clean_index.levels, strict=True):
             idx = PandasIndex(
-                lev.copy(), name, coord_dtype=self.level_coords_dtype[str(name)]
+                lev.copy(), name, coord_dtype=self.level_coords_dtype[name]
             )
             new_indexes[name] = idx
 
@@ -1213,7 +1213,7 @@ class PandasMultiIndex(PandasIndex):
 
         if isinstance(index, pd.MultiIndex):
             level_coords_dtype = {
-                k: self.level_coords_dtype[str(k)] for k in index.names
+                k: self.level_coords_dtype[k] for k in index.names
             }
             return self._replace(index, level_coords_dtype=level_coords_dtype)
         else:
@@ -1232,7 +1232,7 @@ class PandasMultiIndex(PandasIndex):
 
         """
         index = cast(pd.MultiIndex, self.index.reorder_levels(level_variables.keys()))
-        level_coords_dtype = {k: self.level_coords_dtype[str(k)] for k in index.names}
+        level_coords_dtype = {k: self.level_coords_dtype[k] for k in index.names}
         return self._replace(index, level_coords_dtype=level_coords_dtype)
 
     def create_variables(
@@ -1250,7 +1250,7 @@ class PandasMultiIndex(PandasIndex):
                 dtype = None
             else:
                 level = name
-                dtype = self.level_coords_dtype[name]  # type: ignore[index]  # TODO: are Hashables ok?
+                dtype = self.level_coords_dtype[name]
 
             var = variables.get(name)
             if var is not None:
@@ -1382,7 +1382,7 @@ class PandasMultiIndex(PandasIndex):
         if new_index is not None:
             if isinstance(new_index, pd.MultiIndex):
                 level_coords_dtype = {
-                    k: self.level_coords_dtype[str(k)] for k in new_index.names
+                    k: self.level_coords_dtype[k] for k in new_index.names
                 }
                 new_index = self._replace(
                     new_index, level_coords_dtype=level_coords_dtype
