@@ -6161,16 +6161,19 @@ class TestDataset:
         assert_identical(result.var2, ds.var2.quantile(q, method=method))
         assert_identical(result.var3, ds.var3.quantile(q, method=method))
 
+    @pytest.mark.filterwarnings(
+        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
+    )
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_interpolation_deprecated(self, method) -> None:
         ds = create_test_data(seed=123)
         q = [0.25, 0.5, 0.75]
 
-        with warnings.catch_warnings(record=True) as w:
+        with pytest.warns(
+            FutureWarning,
+            match="`interpolation` argument to quantile was renamed to `method`",
+        ):
             ds.quantile(q, interpolation=method)
-
-            # ensure the warning is only raised once
-            assert len(w) == 1
 
         with warnings.catch_warnings(record=True):
             with pytest.raises(TypeError, match="interpolation and method keywords"):
