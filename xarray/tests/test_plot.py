@@ -1812,7 +1812,7 @@ class TestContour(Common2dMixin, PlotTestCase):
         artist = self.darray.plot.contour(
             levels=[-0.5, 0.0, 0.5, 1.0], colors=["k", "r", "w", "b"]
         )
-        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]
+        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]  # type: ignore[attr-defined,unused-ignore]
 
         # the last color is now under "over"
         assert self._color_as_tuple(artist.cmap.get_over()) == (0.0, 0.0, 1.0)
@@ -1824,7 +1824,7 @@ class TestContour(Common2dMixin, PlotTestCase):
         cmap = artist.cmap
         assert isinstance(cmap, mpl.colors.ListedColormap)
 
-        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]  # type: ignore[attr-defined]
+        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]  # type: ignore[attr-defined,unused-ignore]
 
         # the last color is now under "over"
         assert self._color_as_tuple(cmap.get_over()) == (0.0, 0.0, 1.0)
@@ -3466,7 +3466,7 @@ def test_plot1d_default_rcparams() -> None:
         fg = ds.plot.scatter(x="A", y="B", col="x", marker="o")
         ax = fg.axs.ravel()[0]
         actual = mpl.colors.to_rgba_array("w")
-        expected = ax.collections[0].get_edgecolor()  # type: ignore[assignment]
+        expected = ax.collections[0].get_edgecolor()  # type: ignore[assignment,unused-ignore]
         np.testing.assert_allclose(actual, expected)
 
         # scatter should not emit any warnings when using unfilled markers:
