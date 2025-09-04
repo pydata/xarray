@@ -39,9 +39,9 @@ complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
   "netCDF4>=1.6.0",
   "h5netcdf",
-  "pydap",
   "scipy>=1.13",
-  "zarr>=2.18",
+  'pydap',
+  "zarr @ git+https://github.com/d-v-b/zarr-python.git@feat/fixed-length-strings",
   "fsspec",
   "cftime",
   "pooch",
