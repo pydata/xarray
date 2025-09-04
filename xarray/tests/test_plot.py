@@ -3466,7 +3466,7 @@ def test_plot1d_default_rcparams() -> None:
         fg = ds.plot.scatter(x="A", y="B", col="x", marker="o")
         ax = fg.axs.ravel()[0]
         actual = mpl.colors.to_rgba_array("w")
-        expected = ax.collections[0].get_edgecolor()
+        expected = ax.collections[0].get_edgecolor()  # type: ignore[assignment,unused-ignore]
         np.testing.assert_allclose(actual, expected)
 
         # scatter should not emit any warnings when using unfilled markers:
