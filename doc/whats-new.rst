@@ -7,8 +7,14 @@ What's New
 
 .. _whats-new.2025.09.0:
 
-v2025.09.0 (unreleased)
------------------------
+v2025.09.0 (September 2, 2025)
+------------------------------
+
+This release brings a number of small improvements and fixes, especially related
+to writing DataTree objects and netCDF files to disk.
+
+Thanks to the 13 contributors to this release:
+Benoit Bovy, DHRUVA KUMAR KAUSHAL, Deepak Cherian, Dhruva Kumar Kaushal, Giacomo Caria, Ian Hunt-Isaak, Illviljan, Justus Magin, Kai Mühlbauer, Ruth Comer, Spencer Clark, Stephan Hoyer and Tom Nicholas
 
 New Features
 ~~~~~~~~~~~~
@@ -53,10 +59,6 @@ Breaking changes
   simply wrap the return value of ``to_netcdf()`` with ``bytes()``.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
-Deprecations
-~~~~~~~~~~~~
-
-
 Bug fixes
 ~~~~~~~~~
 - Fix contour plots not normalizing the colors correctly when using for example logarithmic norms. (:issue:`10551`, :pull:`10565`)
@@ -73,11 +75,6 @@ Bug fixes
 - :py:meth:`DataTree.to_netcdf` had h5netcdf hard-coded as default
   (:issue:`10654`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-
-Documentation
-~~~~~~~~~~~~~
-
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
