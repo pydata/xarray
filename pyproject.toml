@@ -361,9 +361,9 @@ filterwarnings = [
   "default:invalid value encountered in cast:RuntimeWarning:xarray.conventions",
   "default:invalid value encountered in cast:RuntimeWarning:xarray.tests.test_units",
   # Zarr 2 V3 implementation
-  "ignore:Zarr-Python is not in alignment with the final V3 specification",
+  "default:Zarr-Python is not in alignment with the final V3 specification",
   # TODO: this is raised for vlen-utf8, consolidated metadata, U1 dtype
-  "ignore:is currently not part .* the Zarr version 3 specification.",
+  "default:is currently not part .* the Zarr version 3 specification.",
   # TODO: remove once we know how to deal with a changed signature in protocols
   "default:::xarray.tests.test_strategies",
 ]
