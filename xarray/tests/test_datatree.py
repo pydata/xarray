@@ -204,7 +204,7 @@ class TestStoreDatasets:
     def test_set_data(self) -> None:
         john = DataTree(name="john")
         dat = xr.Dataset({"a": 0})
-        john.dataset = dat  # type: ignore[assignment]
+        john.dataset = dat
 
         assert_identical(john.to_dataset(), dat)
 
@@ -225,7 +225,7 @@ class TestStoreDatasets:
         eve = DataTree(children={"john": john})
         assert eve.is_hollow
 
-        eve.dataset = xr.Dataset({"a": 1})  # type: ignore[assignment]
+        eve.dataset = xr.Dataset({"a": 1})
         assert not eve.is_hollow
 
 
@@ -262,13 +262,13 @@ class TestVariablesChildrenNameCollisions:
         )
 
         with pytest.raises(ValueError, match="node already contains a variable"):
-            dt.dataset = xr.Dataset({"a": 0})  # type: ignore[assignment]
+            dt.dataset = xr.Dataset({"a": 0})
 
-        dt.dataset = xr.Dataset()  # type: ignore[assignment]
+        dt.dataset = xr.Dataset()
 
         new_ds = dt.to_dataset().assign(a=xr.DataArray(0))
         with pytest.raises(ValueError, match="node already contains a variable"):
-            dt.dataset = new_ds  # type: ignore[assignment]
+            dt.dataset = new_ds
 
 
 class TestGet: ...
@@ -527,7 +527,7 @@ class TestSetItem:
         john["mary"] = DataTree()
         assert_identical(john["mary"].to_dataset(), xr.Dataset())
 
-        john.dataset = xr.Dataset()  # type: ignore[assignment]
+        john.dataset = xr.Dataset()
         with pytest.raises(ValueError, match="has no name"):
             john["."] = DataTree()
 
@@ -1568,7 +1568,7 @@ class TestInheritance:
             )
 
         dt = DataTree()
-        dt.dataset = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment]
+        dt.dataset = xr.Dataset(coords={"x": [1.0]})
         dt["/b"] = DataTree()
         with pytest.raises(ValueError, match=expected_msg):
             dt["/b"].dataset = xr.Dataset(coords={"x": [2.0]})
@@ -1603,7 +1603,7 @@ class TestInheritance:
             )
 
         dt = DataTree()
-        dt.dataset = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment]
+        dt.dataset = xr.Dataset(coords={"x": [1.0]})
         dt["/b/c"] = DataTree()
         with pytest.raises(ValueError, match=expected_msg):
             dt["/b/c"].dataset = xr.Dataset(coords={"x": [2.0]})

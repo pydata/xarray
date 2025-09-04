@@ -57,6 +57,7 @@ dependencies:
   - types-python-dateutil
   - types-pytz
   - types-PyYAML
+  - types-requests
   - types-setuptools
   - types-openpyxl
   - typing_extensions

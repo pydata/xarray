@@ -2776,11 +2776,11 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
 
         expect = orig.copy(deep=True)
         # see https://github.com/python/mypy/issues/3004 for why we need to ignore type
-        expect.values = [[2.0, 2.0], [2.0, 2.0]]  # type: ignore[assignment]
+        expect.values = [[2.0, 2.0], [2.0, 2.0]]
         assert_identical(expect, full_like(orig, 2))
 
         # override dtype
-        expect.values = [[True, True], [True, True]]  # type: ignore[assignment]
+        expect.values = [[True, True], [True, True]]
         assert expect.dtype == bool
         assert_identical(expect, full_like(orig, True, dtype=bool))
 

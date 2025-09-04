@@ -5303,7 +5303,7 @@ class TestDataset:
     def test_from_dataframe_non_unique_columns(self) -> None:
         # regression test for GH449
         df = pd.DataFrame(np.zeros((2, 2)))
-        df.columns = ["foo", "foo"]  # type: ignore[assignment]
+        df.columns = ["foo", "foo"]
         with pytest.raises(ValueError, match=r"non-unique columns"):
             Dataset.from_dataframe(df)
 
@@ -6742,8 +6742,8 @@ class TestDataset:
 
         expected = ds.copy(deep=True)
         # https://github.com/python/mypy/issues/3004
-        expected["d1"].values = [2, 2, 2]  # type: ignore[assignment]
-        expected["d2"].values = [2.0, 2.0, 2.0]  # type: ignore[assignment]
+        expected["d1"].values = [2, 2, 2]
+        expected["d2"].values = [2.0, 2.0, 2.0]
         assert expected["d1"].dtype == int
         assert expected["d2"].dtype == float
         assert_identical(expected, actual)
@@ -6751,8 +6751,8 @@ class TestDataset:
         # override dtype
         actual = full_like(ds, fill_value=True, dtype=bool)
         expected = ds.copy(deep=True)
-        expected["d1"].values = [True, True, True]  # type: ignore[assignment]
-        expected["d2"].values = [True, True, True]  # type: ignore[assignment]
+        expected["d1"].values = [True, True, True]
+        expected["d2"].values = [True, True, True]
         assert expected["d1"].dtype == bool
         assert expected["d2"].dtype == bool
         assert_identical(expected, actual)
