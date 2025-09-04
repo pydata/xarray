@@ -302,15 +302,26 @@ class CFMaskCoder(VariableCoder):
         if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
             # but not for packed data
-            encoding["_FillValue"] = (
-                _encode_unsigned_fill_value(name, fv, dtype)
-                if has_unsigned
-                else (
-                    dtype.type(fv)
-                    if "add_offset" not in encoding and "scale_factor" not in encoding
-                    else fv
-                )
-            )
+            if has_unsigned:
+                encoding["_FillValue"] = _encode_unsigned_fill_value(name, fv, dtype)
+            elif "add_offset" not in encoding and "scale_factor" not in encoding:
+                # Handle overflow when casting fill_value to dtype
+                # This is needed for older NumPy versions that raise DeprecationWarning
+                # and newer versions that raise OverflowError
+                import warnings
+
+                try:
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings(
+                            "ignore", ".*NumPy will stop allowing conversion.*"
+                        )
+                        encoding["_FillValue"] = dtype.type(fv)
+                except OverflowError:
+                    # For NumPy >= 2.0, handle overflow explicitly
+                    # Use the wrapped value that would result from the cast
+                    encoding["_FillValue"] = np.array(fv).astype(dtype).item()
+            else:
+                encoding["_FillValue"] = fv
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
 
         if mv_exists:
