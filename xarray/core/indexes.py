@@ -1212,9 +1212,7 @@ class PandasMultiIndex(PandasIndex):
         )
 
         if isinstance(index, pd.MultiIndex):
-            level_coords_dtype = {
-                k: self.level_coords_dtype[k] for k in index.names
-            }
+            level_coords_dtype = {k: self.level_coords_dtype[k] for k in index.names}
             return self._replace(index, level_coords_dtype=level_coords_dtype)
         else:
             # backward compatibility: rename the level coordinate to the dimension name
