@@ -211,12 +211,13 @@ def _datatree_to_zarr(
     writer = ArrayWriter()
 
     try:
-        for node in dt.subtree:
+        for rel_path, node in dt.subtree_with_keys:
             at_root = node is dt
             dataset = node.to_dataset(inherit=write_inherited_coords or at_root)
-            node_store = (
-                root_store if at_root else root_store.get_child_store(node.path)
-            )
+            # Use a relative path for group, because absolute paths are broken
+            # with consolidated metadata in zarr 3.1.2 and earlier:
+            # https://github.com/zarr-developers/zarr-python/pull/3428
+            node_store = root_store if at_root else root_store.get_child_store(rel_path)
 
             dataset = node_store._validate_and_autodetect_region(dataset)
             node_store._validate_encoding(encoding)
