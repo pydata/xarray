@@ -23,6 +23,8 @@ New Features
 - ``compute=False`` is now supported by :py:meth:`DataTree.to_netcdf` and
   :py:meth:`DataTree.to_zarr`.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- ``open_dataset`` will now correctly infer a path ending in ``.zarr/`` as zarr
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
