@@ -35,10 +35,9 @@ if TYPE_CHECKING:
 
 
 class PydapArrayWrapper(BackendArray):
-    def __init__(self, array, batch=False, cache=None, checksums=True):
+    def __init__(self, array, batch=False, checksums=True):
         self.array = array
         self._batch = batch
-        self._cache = cache
         self._checksums = checksums
 
     @property
@@ -55,10 +54,7 @@ class PydapArrayWrapper(BackendArray):
         )
 
     def _getitem(self, key):
-        if self.array.id in self._cache.keys():
-            # safely avoid re-downloading some coordinates
-            result = self._cache[self.array.id]
-        elif self._batch and hasattr(self.array, "dataset"):
+        if self._batch and hasattr(self.array, "dataset"):  # is self.array not loaded?
             # this are both True only for pydap>3.5.5
             from pydap.lib import resolve_batch_for_all_variables
 
@@ -69,10 +65,10 @@ class PydapArrayWrapper(BackendArray):
             )
         else:
             result = robust_getitem(self.array, key, catch=ValueError)
-            try:
-                result = np.asarray(result.data)
-            except AttributeError:
-                result = np.asarray(result)
+            # try:
+            result = np.asarray(result.data)
+            # except AttributeError:
+            #     result = np.asarray(result)
         axis = tuple(n for n, k in enumerate(key) if isinstance(k, integer_types))
         if result.ndim + len(axis) != self.array.ndim and axis:
             result = np.squeeze(result, axis)
@@ -117,8 +113,6 @@ class PydapDataStore(AbstractDataStore):
         self.dataset = dataset
         self.group = group
         self._batch = batch
-        self._batch_done = False
-        self._array_cache = {}  # holds 1D dimension data
         self._protocol = protocol
         self._checksums = checksums  # true by default
 
@@ -201,7 +195,7 @@ class PydapDataStore(AbstractDataStore):
         else:
             # all non-dimension variables
             data = indexing.LazilyIndexedArray(
-                PydapArrayWrapper(var, self._batch, self._array_cache, self._checksums)
+                PydapArrayWrapper(var, self._batch, self._checksums)
             )
 
         return Variable(dimensions, data, var.attributes)
@@ -248,19 +242,14 @@ class PydapDataStore(AbstractDataStore):
         return get_group(self.dataset, self.group)
 
     def _get_data_array(self, var):
-        """gets dimension data all at once, storing the numpy
-        arrays within a cached dictionary
-        """
+        """gets dimension data all at once"""
         from pydap.lib import get_batch_data
 
-        if not self._batch_done or var.id not in self._array_cache:
-            # store all dim data into a dict for reuse
-            self._array_cache = get_batch_data(
-                var.parent, self._array_cache, self._checksums
-            )
-            self._batch_done = True
-
-        return self._array_cache[var.id]
+        if not var._is_data_loaded():
+            # this implies dat has not been deserialized yet
+            # runs only once per store/hierarchy
+            get_batch_data(var.parent, checksums=self._checksums)
+        return self.dataset[var.id].data
 
 
 class PydapBackendEntrypoint(BackendEntrypoint):
