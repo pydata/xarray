@@ -906,7 +906,9 @@ def _calc_idxminmax(
         # The dim is not specified and ambiguous.  Don't guess.
         raise ValueError("Must supply 'dim' argument for multidimensional arrays")
 
-    dims = [dim] if isinstance(dim, str) else list(dim)
+    dim_is_str = isinstance(dim, str)
+    # Standardize to an iterable format
+    dims = [dim] if dim_is_str else dim
 
     for _dim in dims:
         if _dim not in array.dims:
@@ -929,8 +931,8 @@ def _calc_idxminmax(
     # This will run argmin or argmax.
     indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
     # Force dictionary format in case of single dim so that we can iterate over it in for loop below
-    if len(dims) == 1:
-        indx = {dims[0]: indx}
+    if dim_is_str:
+        indx = {dim: indx}
 
     res = {}
     for _dim, _da_idx in zip(dims, indx.values(), strict=False):
@@ -952,6 +954,6 @@ def _calc_idxminmax(
         _res.attrs = _da_idx.attrs
         res[_dim] = _res
 
-    if len(dims) == 1:
-        res = res[dims[0]]
+    if dim_is_str:
+        return res[dim]
     return res
