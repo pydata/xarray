@@ -3,11 +3,11 @@ from __future__ import annotations
 import functools
 import io
 import os
-import subprocess
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Self
 
 import numpy as np
+from packaging.version import Version
 
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
@@ -100,19 +100,6 @@ _extract_h5nc_encoding = functools.partial(
     backend="h5netcdf",
     unlimited_dims=None,
 )
-
-
-def _h5dump(fn: str):
-    """Call h5dump on an h5netcdf file."""
-    out = subprocess.run(
-        ["h5dump", "-A", "-B", fn], check=False, capture_output=True
-    ).stdout.decode()
-
-    # Strip first and last line
-    # HDF5 "file" {
-    # ...
-    # }
-    return "\n".join(out.splitlines()[1:-1])
 
 
 def _h5netcdf_create_group(dataset, name):
@@ -231,6 +218,8 @@ class H5NetCDFStore(WritableCFDataStore):
             kwargs.update(driver_kwds)
         if phony_dims is not None:
             kwargs["phony_dims"] = phony_dims
+        if format is not None and Version(h5netcdf.__version__) > Version("1.6"):
+            kwargs["format"] = format
 
         if lock is None:
             if mode == "r":
@@ -251,12 +240,6 @@ class H5NetCDFStore(WritableCFDataStore):
                 root, self._group, self._mode, create_group=_h5netcdf_create_group
             )
         return ds
-
-    def encode(self, variables, attributes):
-        """Overload encode to set _nc3_strict flag."""
-        if self.format != "NETCDF4":
-            self.ds._h5file.attrs["_nc3_strict"] = np.int32(1)
-        return super().encode(variables, attributes)
 
     @property
     def ds(self):

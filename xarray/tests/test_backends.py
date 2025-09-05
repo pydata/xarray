@@ -45,7 +45,7 @@ from xarray import (
     save_mfdataset,
 )
 from xarray.backends.common import robust_getitem
-from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint, _h5dump
+from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint
 from xarray.backends.netcdf3 import _nc3_dtype_coercions
 from xarray.backends.netCDF4_ import (
     NetCDF4BackendEntrypoint,
@@ -4581,6 +4581,7 @@ class TestNetCDF4ClassicViaNetCDF4Data(NetCDF3Only, CFEncodedBase):
         with h5netcdf.File(store_path, "r") as ds:
             # Check that the attribute is stored as a char array
             assert ds._h5file.attrs["foo"].dtype == np.dtype("S3")
+            # assert ds._h5file.attrs["_nc3_strict"] == 1
 
 
 @requires_h5netcdf
@@ -4597,20 +4598,19 @@ class TestNetCDF4ClassicViaH5NetCDFData(TestNetCDF4ClassicViaNetCDF4Data):
                 yield store
 
     @requires_netCDF4
-    def test_h5dump(self, tmp_path) -> None:
-        data = create_test_data()
-
-        # Dump the representation of the netCDF4-generated file
-        fn = tmp_path / "netcdf4.nc"
-        data.to_netcdf(fn, engine="netcdf4", format=self.file_format)
-        expected = _h5dump(fn)
-
-        # Dump the representation of the h5netcdf-generated file
-        fn = tmp_path / "h5netcdf.nc"
-        data.to_netcdf(fn, engine=self.engine, format=self.file_format)
-        actual = _h5dump(fn)
-
-        assert expected == actual
+    def test_cross_engine_read_write_netcdf4(self) -> None:
+        # Drop dim3, because its labels include strings. These appear to be
+        # not properly read with python-netCDF4, which converts them into
+        # unicode instead of leaving them as bytes.
+        data = create_test_data().drop_vars("dim3")
+        data.attrs["foo"] = "bar"
+        valid_engines: list[T_NetcdfEngine] = ["netcdf4", "h5netcdf"]
+        for write_engine in valid_engines:
+            with create_tmp_file() as tmp_file:
+                data.to_netcdf(tmp_file, engine=write_engine, format=self.file_format)
+                for read_engine in valid_engines:
+                    with open_dataset(tmp_file, engine=read_engine) as actual:
+                        assert_identical(data, actual)
 
 
 @requires_scipy_or_netCDF4
