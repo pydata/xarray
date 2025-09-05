@@ -17,7 +17,6 @@ from numbers import Number
 from typing import (
     TYPE_CHECKING,
     Any,
-    Final,
     Literal,
     TypeVar,
     Union,
@@ -98,67 +97,42 @@ if TYPE_CHECKING:
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
 
-ENGINES = {
-    "netcdf4": backends.NetCDF4DataStore.open,
-    "scipy": backends.ScipyDataStore,
-    "pydap": backends.PydapDataStore.open,
-    "h5netcdf": backends.H5NetCDFStore.open,
-    "zarr": backends.ZarrStore.open_group,
-}
 
+def get_default_netcdf_write_engine(
+    format: T_NetcdfTypes | None,
+    to_fileobject_or_memoryview: bool,
+) -> Literal["netcdf4", "h5netcdf", "scipy"]:
+    """Return the default netCDF library to use for writing a netCDF file."""
+    module_names = {
+        "netcdf4": "netCDF4",
+        "scipy": "scipy",
+        "h5netcdf": "h5netcdf",
+    }
 
-def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:
-    engine: Literal["netcdf4", "pydap"]
-    try:
-        import netCDF4  # noqa: F401
+    candidates = list(plugins.NETCDF_BACKENDS_ORDER)
 
-        engine = "netcdf4"
-    except ImportError:  # pragma: no cover
-        try:
-            import pydap  # noqa: F401
+    if format is not None:
+        if format.upper().startswith("NETCDF3"):
+            candidates.remove("h5netcdf")
+        elif format.upper().startswith("NETCDF4"):
+            candidates.remove("scipy")
+        else:
+            raise ValueError(f"unexpected {format=}")
 
-            engine = "pydap"
-        except ImportError as err:
-            raise ValueError(
-                "netCDF4 or pydap is required for accessing remote datasets via OPeNDAP"
-            ) from err
-    return engine
+    if to_fileobject_or_memoryview:
+        candidates.remove("netcdf4")
 
-
-def _get_default_engine_gz() -> Literal["scipy"]:
-    try:
-        import scipy  # noqa: F401
-
-        engine: Final = "scipy"
-    except ImportError as err:  # pragma: no cover
-        raise ValueError("scipy is required for accessing .gz files") from err
-    return engine
-
-
-def _get_default_engine_netcdf() -> Literal["netcdf4", "h5netcdf", "scipy"]:
-    candidates: list[tuple[str, str]] = [
-        ("netcdf4", "netCDF4"),
-        ("h5netcdf", "h5netcdf"),
-        ("scipy", "scipy.io.netcdf"),
-    ]
-
-    for engine, module_name in candidates:
+    for engine in candidates:
+        module_name = module_names[engine]
         if importlib.util.find_spec(module_name) is not None:
             return cast(Literal["netcdf4", "h5netcdf", "scipy"], engine)
 
+    format_str = f" with {format=}" if format is not None else ""
+    libraries = ", ".join(module_names[c] for c in candidates)
     raise ValueError(
-        "cannot read or write NetCDF files because none of "
-        "'netCDF4-python', 'h5netcdf', or 'scipy' are installed"
+        f"cannot write NetCDF files{format_str} because none of the suitable "
+        f"backend libraries ({libraries}) are installed"
     )
-
-
-def _get_default_engine(path: str, allow_remote: bool = False) -> T_NetcdfEngine:
-    if allow_remote and is_remote_uri(path):
-        return _get_default_engine_remote_uri()  # type: ignore[return-value]
-    elif path.endswith(".gz"):
-        return _get_default_engine_gz()
-    else:
-        return _get_default_engine_netcdf()
 
 
 def _validate_dataset_names(dataset: Dataset) -> None:
@@ -328,7 +302,7 @@ def _multi_file_closer(closers):
         closer()
 
 
-def load_dataset(filename_or_obj, **kwargs) -> Dataset:
+def load_dataset(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:
     """Open, load into memory, and close a Dataset from a file or file-like
     object.
 
@@ -354,7 +328,7 @@ def load_dataset(filename_or_obj, **kwargs) -> Dataset:
         return ds.load()
 
 
-def load_dataarray(filename_or_obj, **kwargs):
+def load_dataarray(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataArray:
     """Open, load into memory, and close a DataArray from a file or file-like
     object containing a single data variable.
 
@@ -378,6 +352,32 @@ def load_dataarray(filename_or_obj, **kwargs):
 
     with open_dataarray(filename_or_obj, **kwargs) as da:
         return da.load()
+
+
+def load_datatree(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataTree:
+    """Open, load into memory, and close a DataTree from a file or file-like
+    object.
+
+    This is a thin wrapper around :py:meth:`~xarray.open_datatree`. It differs
+    from `open_datatree` in that it loads the DataTree into memory, closes the
+    file, and returns the DataTree. In contrast, `open_datatree` keeps the file
+    handle open and lazy loads its contents. All parameters are passed directly
+    to `open_datatree`. See that documentation for further details.
+
+    Returns
+    -------
+    datatree : DataTree
+        The newly created DataTree.
+
+    See Also
+    --------
+    open_datatree
+    """
+    if "cache" in kwargs:
+        raise TypeError("cache has no effect in this context")
+
+    with open_datatree(filename_or_obj, **kwargs) as dt:
+        return dt.load()
 
 
 def _chunk_ds(
@@ -1932,7 +1932,7 @@ def to_netcdf(
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
-) -> bytes | memoryview: ...
+) -> memoryview: ...
 
 
 # compute=False returns dask.Delayed
@@ -2025,7 +2025,7 @@ def to_netcdf(
     multifile: bool = False,
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
-) -> tuple[ArrayWriter, AbstractDataStore] | bytes | memoryview | Delayed | None: ...
+) -> tuple[ArrayWriter, AbstractDataStore] | memoryview | Delayed | None: ...
 
 
 def to_netcdf(
@@ -2041,7 +2041,7 @@ def to_netcdf(
     multifile: bool = False,
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
-) -> tuple[ArrayWriter, AbstractDataStore] | bytes | memoryview | Delayed | None:
+) -> tuple[ArrayWriter, AbstractDataStore] | memoryview | Delayed | None:
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -2049,33 +2049,14 @@ def to_netcdf(
 
     The ``multifile`` argument is only for the private use of save_mfdataset.
     """
-    if isinstance(path_or_file, os.PathLike):
-        path_or_file = os.fspath(path_or_file)
-
     if encoding is None:
         encoding = {}
 
-    if isinstance(path_or_file, str):
-        if engine is None:
-            engine = _get_default_engine(path_or_file)
-        path_or_file = _normalize_path(path_or_file)
-    else:
-        # writing to bytes/memoryview or a file-like object
-        if engine is None:
-            # TODO: only use 'scipy' if format is None or a netCDF3 format
-            engine = "scipy"
-        elif engine not in ("scipy", "h5netcdf"):
-            raise ValueError(
-                "invalid engine for creating bytes/memoryview or writing to a "
-                f"file-like object with to_netcdf: {engine!r}. Only "
-                "engine=None, engine='scipy' and engine='h5netcdf' is "
-                "supported."
-            )
-        if not compute:
-            raise NotImplementedError(
-                "to_netcdf() with compute=False is not yet implemented when "
-                "returning bytes"
-            )
+    path_or_file = _normalize_path(path_or_file)
+
+    if engine is None:
+        to_fileobject_or_memoryview = not isinstance(path_or_file, str)
+        engine = get_default_netcdf_write_engine(format, to_fileobject_or_memoryview)
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
@@ -2095,6 +2076,11 @@ def to_netcdf(
         )
 
     if path_or_file is None:
+        if not compute:
+            raise NotImplementedError(
+                "to_netcdf() with compute=False is not yet implemented when "
+                "returning a memoryview"
+            )
         target = BytesIOProxy()
     else:
         target = path_or_file  # type: ignore[assignment]
@@ -2138,7 +2124,7 @@ def to_netcdf(
 
     if path_or_file is None:
         assert isinstance(target, BytesIOProxy)  # created in this function
-        return target.getvalue_or_getbuffer()
+        return target.getbuffer()
 
     if not compute:
         return delayed_close_after_writes(writes, store)

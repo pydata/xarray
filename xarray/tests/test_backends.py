@@ -34,9 +34,11 @@ import xarray.testing as xrt
 from xarray import (
     DataArray,
     Dataset,
+    DataTree,
     backends,
     load_dataarray,
     load_dataset,
+    load_datatree,
     open_dataarray,
     open_dataset,
     open_mfdataset,
@@ -166,6 +168,70 @@ def skip_if_zarr_format_2(reason: str):
 
 ON_WINDOWS = sys.platform == "win32"
 default_value = object()
+
+
+def _check_compression_codec_available(codec: str | None) -> bool:
+    """Check if a compression codec is available in the netCDF4 library.
+
+    Parameters
+    ----------
+    codec : str or None
+        The compression codec name (e.g., 'zstd', 'blosc_lz', etc.)
+
+    Returns
+    -------
+    bool
+        True if the codec is available, False otherwise.
+    """
+    if codec is None or codec in ("zlib", "szip"):
+        # These are standard and should be available
+        return True
+
+    if not has_netCDF4:
+        return False
+
+    try:
+        import os
+        import tempfile
+
+        import netCDF4
+
+        # Try to create a file with the compression to test availability
+        with tempfile.NamedTemporaryFile(suffix=".nc", delete=False) as tmp:
+            tmp_path = tmp.name
+
+        try:
+            nc = netCDF4.Dataset(tmp_path, "w", format="NETCDF4")
+            nc.createDimension("x", 10)
+
+            # Attempt to create a variable with the compression
+            if codec and codec.startswith("blosc"):
+                nc.createVariable(  # type: ignore[call-overload]
+                    varname="test",
+                    datatype="f4",
+                    dimensions=("x",),
+                    compression=codec,
+                    blosc_shuffle=1,
+                )
+            else:
+                nc.createVariable(  # type: ignore[call-overload]
+                    varname="test", datatype="f4", dimensions=("x",), compression=codec
+                )
+
+            nc.close()
+            os.unlink(tmp_path)
+            return True
+        except (RuntimeError, netCDF4.NetCDF4MissingFeatureException):
+            # Codec not available
+            if os.path.exists(tmp_path):
+                with contextlib.suppress(OSError):
+                    os.unlink(tmp_path)
+            return False
+    except Exception:
+        # Any other error, assume codec is not available
+        return False
+
+
 dask_array_type = array_type("dask")
 
 if TYPE_CHECKING:
@@ -2261,12 +2327,48 @@ class TestNetCDF4Data(NetCDF4Base):
             None,
             "zlib",
             "szip",
-            "zstd",
-            "blosc_lz",
-            "blosc_lz4",
-            "blosc_lz4hc",
-            "blosc_zlib",
-            "blosc_zstd",
+            pytest.param(
+                "zstd",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("zstd"),
+                    reason="zstd codec not available in netCDF4 installation",
+                ),
+            ),
+            pytest.param(
+                "blosc_lz",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("blosc_lz"),
+                    reason="blosc_lz codec not available in netCDF4 installation",
+                ),
+            ),
+            pytest.param(
+                "blosc_lz4",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("blosc_lz4"),
+                    reason="blosc_lz4 codec not available in netCDF4 installation",
+                ),
+            ),
+            pytest.param(
+                "blosc_lz4hc",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("blosc_lz4hc"),
+                    reason="blosc_lz4hc codec not available in netCDF4 installation",
+                ),
+            ),
+            pytest.param(
+                "blosc_zlib",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("blosc_zlib"),
+                    reason="blosc_zlib codec not available in netCDF4 installation",
+                ),
+            ),
+            pytest.param(
+                "blosc_zstd",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("blosc_zstd"),
+                    reason="blosc_zstd codec not available in netCDF4 installation",
+                ),
+            ),
         ],
     )
     @requires_netCDF4_1_6_2_or_above
@@ -2551,10 +2653,13 @@ class ZarrBase(CFEncodedBase):
                         assert_identical(ds, expected)
 
     def test_non_existent_store(self) -> None:
-        with pytest.raises(
-            FileNotFoundError,
-            match="(No such file or directory|Unable to find group|No group found in store)",
-        ):
+        patterns = [
+            "No such file or directory",
+            "Unable to find group",
+            "No group found in store",
+            "does not exist",
+        ]
+        with pytest.raises(FileNotFoundError, match=f"({'|'.join(patterns)})"):
             xr.open_zarr(f"{uuid.uuid4()}")
 
     @pytest.mark.skipif(has_zarr_v3, reason="chunk_store not implemented in zarr v3")
@@ -4299,9 +4404,10 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 # that was performed by the roundtrip_dir
                 if (write_empty is False) or (write_empty is None and has_zarr_v3):
                     expected.append("1.1.0")
-                elif not has_zarr_v3:
-                    # TODO: remove zarr3 if once zarr issue is fixed
-                    # https://github.com/zarr-developers/zarr-python/issues/2931
+                elif not has_zarr_v3 or has_zarr_v3_async_oindex:
+                    # this was broken from zarr 3.0.0 until 3.1.2
+                    # async oindex released in 3.1.2 along with a fix
+                    # for write_empty_chunks in append
                     expected.extend(
                         [
                             "1.1.0",
@@ -4404,29 +4510,25 @@ class TestScipyInMemoryData(NetCDF3Only, CFEncodedBase):
         await super().test_load_async()
 
     def test_to_netcdf_explicit_engine(self) -> None:
-        with pytest.warns(
-            FutureWarning,
-            match=re.escape("return value of to_netcdf() without a target"),
-        ):
-            Dataset({"foo": 42}).to_netcdf(engine="scipy")
+        Dataset({"foo": 42}).to_netcdf(engine="scipy")
 
     def test_roundtrip_via_bytes(self) -> None:
         original = create_test_data()
-        with pytest.warns(
-            FutureWarning,
-            match=re.escape("return value of to_netcdf() without a target"),
-        ):
-            netcdf_bytes = original.to_netcdf(engine="scipy")
+        netcdf_bytes = original.to_netcdf(engine="scipy")
         roundtrip = open_dataset(netcdf_bytes, engine="scipy")
         assert_identical(roundtrip, original)
 
+    def test_to_bytes_compute_false(self) -> None:
+        original = create_test_data()
+        with pytest.raises(
+            NotImplementedError,
+            match=re.escape("to_netcdf() with compute=False is not yet implemented"),
+        ):
+            original.to_netcdf(engine="scipy", compute=False)
+
     def test_bytes_pickle(self) -> None:
         data = Dataset({"foo": ("x", [1, 2, 3])})
-        with pytest.warns(
-            FutureWarning,
-            match=re.escape("return value of to_netcdf() without a target"),
-        ):
-            fobj = data.to_netcdf()
+        fobj = data.to_netcdf(engine="scipy")
         with self.open(fobj) as ds:
             unpickled = pickle.loads(pickle.dumps(ds))
             assert_identical(unpickled, data)
@@ -4584,11 +4686,19 @@ class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
         pass
 
     @requires_scipy
+    @requires_netCDF4
     def test_engine(self) -> None:
         data = create_test_data()
+
         with pytest.raises(ValueError, match=r"unrecognized engine"):
             data.to_netcdf("foo.nc", engine="foobar")  # type: ignore[call-overload]
-        with pytest.raises(ValueError, match=r"invalid engine"):
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "can only read bytes or file-like objects with engine='scipy' or 'h5netcdf'"
+            ),
+        ):
             data.to_netcdf(engine="netcdf4")
 
         with create_tmp_file() as tmp_file:
@@ -4649,12 +4759,8 @@ class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
     @requires_scipy
     def test_roundtrip_via_bytes(self) -> None:
         original = create_test_data()
-        with pytest.warns(
-            FutureWarning,
-            match=re.escape("return value of to_netcdf() without a target"),
-        ):
-            netcdf_bytes = original.to_netcdf()
-        roundtrip = open_dataset(netcdf_bytes)
+        netcdf_bytes = original.to_netcdf()
+        roundtrip = load_dataset(netcdf_bytes)
         assert_identical(roundtrip, original)
 
     @pytest.mark.xfail(
@@ -6117,17 +6223,29 @@ class TestDask(DatasetIOBase):
             original = Dataset({"foo": ("x", np.random.randn(10))})
             original.to_netcdf(tmp)
             ds = load_dataset(tmp)
+            assert_identical(original, ds)
             # this would fail if we used open_dataset instead of load_dataset
             ds.to_netcdf(tmp)
 
     def test_load_dataarray(self) -> None:
         with create_tmp_file() as tmp:
-            original = Dataset({"foo": ("x", np.random.randn(10))})
+            original = DataArray(np.random.randn(10), dims=["x"])
             original.to_netcdf(tmp)
-            ds = load_dataarray(tmp)
+            da = load_dataarray(tmp)
+            assert_identical(original, da)
             # this would fail if we used open_dataarray instead of
             # load_dataarray
-            ds.to_netcdf(tmp)
+            da.to_netcdf(tmp)
+
+    def test_load_datatree(self) -> None:
+        with create_tmp_file() as tmp:
+            original = DataTree(Dataset({"foo": ("x", np.random.randn(10))}))
+            original.to_netcdf(tmp)
+            dt = load_datatree(tmp)
+            xr.testing.assert_identical(original, dt)
+            # this would fail if we used open_datatree instead of
+            # load_datatree
+            dt.to_netcdf(tmp)
 
     @pytest.mark.skipif(
         ON_WINDOWS,
@@ -6455,12 +6573,8 @@ class TestDataArrayToNetCDF:
     def test_dataarray_to_netcdf_return_bytes(self) -> None:
         # regression test for GH1410
         data = xr.DataArray([1, 2, 3])
-        with pytest.warns(
-            FutureWarning,
-            match=re.escape("return value of to_netcdf() without a target"),
-        ):
-            output = data.to_netcdf(engine="scipy")
-        assert isinstance(output, bytes)
+        output = data.to_netcdf(engine="scipy")
+        assert isinstance(output, memoryview)
 
     def test_dataarray_to_netcdf_no_name_pathlib(self) -> None:
         original_da = DataArray(np.arange(12).reshape((3, 4)))
@@ -7000,10 +7114,7 @@ def test_scipy_entrypoint(tmp_path: Path) -> None:
     with open(path, "rb") as f:
         _check_guess_can_open_and_open(entrypoint, f, engine="scipy", expected=ds)
 
-    with pytest.warns(
-        FutureWarning, match=re.escape("return value of to_netcdf() without a target")
-    ):
-        contents = ds.to_netcdf(engine="scipy")
+    contents = ds.to_netcdf(engine="scipy")
     _check_guess_can_open_and_open(entrypoint, contents, engine="scipy", expected=ds)
     _check_guess_can_open_and_open(
         entrypoint, BytesIO(contents), engine="scipy", expected=ds
@@ -7039,6 +7150,31 @@ def test_h5netcdf_entrypoint(tmp_path: Path) -> None:
     assert entrypoint.guess_can_open("something-local.nc4")
     assert entrypoint.guess_can_open("something-local.cdf")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
+
+
+@requires_zarr
+def test_zarr_entrypoint(tmp_path: Path) -> None:
+    from xarray.backends.zarr import ZarrBackendEntrypoint
+
+    entrypoint = ZarrBackendEntrypoint()
+    ds = create_test_data()
+
+    path = tmp_path / "foo.zarr"
+    ds.to_zarr(path)
+    _check_guess_can_open_and_open(entrypoint, path, engine="zarr", expected=ds)
+    _check_guess_can_open_and_open(entrypoint, str(path), engine="zarr", expected=ds)
+
+    # add a trailing slash to the path and check again
+    _check_guess_can_open_and_open(
+        entrypoint, str(path) + "/", engine="zarr", expected=ds
+    )
+
+    # Test the new functionality: .zarr with trailing slash
+    assert entrypoint.guess_can_open("something-local.zarr")
+    assert entrypoint.guess_can_open("something-local.zarr/")  # With trailing slash
+    assert not entrypoint.guess_can_open("something-local.nc")
+    assert not entrypoint.guess_can_open("not-found-and-no-extension")
+    assert not entrypoint.guess_can_open("something.zarr.txt")
 
 
 @requires_netCDF4

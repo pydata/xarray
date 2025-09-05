@@ -25,7 +25,7 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 2
       - uses: xarray-contrib/ci-trigger@v1
@@ -37,8 +37,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: detect-ci-trigger
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
-    env:
-      ZARR_V3_EXPERIMENTAL_API: 1
     defaults:
       run:
         shell: bash -l {0}
@@ -81,7 +79,7 @@ jobs:
             numprocesses: 1
             os: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Set environment variables
@@ -175,7 +173,7 @@ jobs:
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v5.4.3
+        uses: codecov/codecov-action@v5.5.0
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
