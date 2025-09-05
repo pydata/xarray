@@ -25,6 +25,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix the ``align_chunks`` parameter on the :py:meth:`~xarray.Dataset.to_zarr` method, it was not being
+  passed to the underlying :py:meth:`~xarray.backends.api` method (:issue:`10501`, :pull:`10516`).
 
 Documentation
 ~~~~~~~~~~~~~
@@ -101,9 +103,6 @@ Bug fixes
   redundant computation of Dask arrays with cross-group dependencies
   (:issue:`10637`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-- Fix the ``align_chunks`` parameter on the :py:meth:`~xarray.Dataset.to_zarr` method, it was not being
-  passed to the underlying :py:meth:`~xarray.backends.api` method (:issue:`10501`, :pull:`10516`).
 
 Documentation
 ~~~~~~~~~~~~~
