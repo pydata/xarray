@@ -184,9 +184,9 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
                 names += index.names
 
         return pd.MultiIndex(
-            levels=level_list,
+            levels=level_list,  # type: ignore[arg-type,unused-ignore]
             codes=[list(c) for c in code_list],
-            names=names,  # type: ignore[arg-type,unused-ignore]
+            names=names,
         )
 
 
