@@ -18,7 +18,7 @@ def test_vindex() -> None:
 
     # getitem
     assert_array_equal(vindex[0], x[0])
-    assert_array_equal(vindex[[1, 2], [1, 2]], x[[1, 2], [1, 2]])
+    assert_array_equal(vindex[[1, 2], [1, 2]], x[([1, 2], [1, 2])])
     assert vindex[[0, 1], [0, 1], :].shape == (2, 5)
     assert vindex[[0, 1], :, [0, 1]].shape == (2, 4)
     assert vindex[:, [0, 1], [0, 1]].shape == (2, 3)

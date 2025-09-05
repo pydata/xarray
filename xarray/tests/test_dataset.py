@@ -3790,7 +3790,7 @@ class TestDataset:
     def test_set_index(self) -> None:
         expected = create_test_multiindex()
         mindex = expected["x"].to_index()
-        indexes = [mindex.get_level_values(n) for n in mindex.names]
+        indexes = [mindex.get_level_values(str(n)) for n in mindex.names]
         coords = {idx.name: ("x", idx) for idx in indexes}
         ds = Dataset({}, coords=coords)
 
@@ -3851,7 +3851,7 @@ class TestDataset:
     def test_reset_index(self) -> None:
         ds = create_test_multiindex()
         mindex = ds["x"].to_index()
-        indexes = [mindex.get_level_values(n) for n in mindex.names]
+        indexes = [mindex.get_level_values(str(n)) for n in mindex.names]
         coords = {idx.name: ("x", idx) for idx in indexes}
         expected = Dataset({}, coords=coords)
 
@@ -5303,7 +5303,7 @@ class TestDataset:
     def test_from_dataframe_non_unique_columns(self) -> None:
         # regression test for GH449
         df = pd.DataFrame(np.zeros((2, 2)))
-        df.columns = ["foo", "foo"]  # type: ignore[assignment]
+        df.columns = ["foo", "foo"]  # type: ignore[assignment,unused-ignore]
         with pytest.raises(ValueError, match=r"non-unique columns"):
             Dataset.from_dataframe(df)
 
@@ -6161,16 +6161,19 @@ class TestDataset:
         assert_identical(result.var2, ds.var2.quantile(q, method=method))
         assert_identical(result.var3, ds.var3.quantile(q, method=method))
 
+    @pytest.mark.filterwarnings(
+        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
+    )
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_interpolation_deprecated(self, method) -> None:
         ds = create_test_data(seed=123)
         q = [0.25, 0.5, 0.75]
 
-        with warnings.catch_warnings(record=True) as w:
+        with pytest.warns(
+            FutureWarning,
+            match="`interpolation` argument to quantile was renamed to `method`",
+        ):
             ds.quantile(q, interpolation=method)
-
-            # ensure the warning is only raised once
-            assert len(w) == 1
 
         with warnings.catch_warnings(record=True):
             with pytest.raises(TypeError, match="interpolation and method keywords"):
@@ -6742,8 +6745,8 @@ class TestDataset:
 
         expected = ds.copy(deep=True)
         # https://github.com/python/mypy/issues/3004
-        expected["d1"].values = [2, 2, 2]  # type: ignore[assignment]
-        expected["d2"].values = [2.0, 2.0, 2.0]  # type: ignore[assignment]
+        expected["d1"].values = [2, 2, 2]  # type: ignore[assignment,unused-ignore]
+        expected["d2"].values = [2.0, 2.0, 2.0]  # type: ignore[assignment,unused-ignore]
         assert expected["d1"].dtype == int
         assert expected["d2"].dtype == float
         assert_identical(expected, actual)
@@ -6751,8 +6754,8 @@ class TestDataset:
         # override dtype
         actual = full_like(ds, fill_value=True, dtype=bool)
         expected = ds.copy(deep=True)
-        expected["d1"].values = [True, True, True]  # type: ignore[assignment]
-        expected["d2"].values = [True, True, True]  # type: ignore[assignment]
+        expected["d1"].values = [True, True, True]  # type: ignore[assignment,unused-ignore]
+        expected["d2"].values = [True, True, True]  # type: ignore[assignment,unused-ignore]
         assert expected["d1"].dtype == bool
         assert expected["d2"].dtype == bool
         assert_identical(expected, actual)
@@ -7661,7 +7664,7 @@ def test_cumulative_integrate(dask) -> None:
     from scipy.integrate import cumulative_trapezoid
 
     expected_x = xr.DataArray(
-        cumulative_trapezoid(da.compute(), da["x"], axis=0, initial=0.0),
+        cumulative_trapezoid(da.compute(), da["x"], axis=0, initial=0.0),  # type: ignore[call-overload,unused-ignore]
         dims=["x", "y"],
         coords=da.coords,
     )
@@ -7677,7 +7680,7 @@ def test_cumulative_integrate(dask) -> None:
     # along y
     actual = da.cumulative_integrate("y")
     expected_y = xr.DataArray(
-        cumulative_trapezoid(da, da["y"], axis=1, initial=0.0),
+        cumulative_trapezoid(da, da["y"], axis=1, initial=0.0),  # type: ignore[call-overload,unused-ignore]
         dims=["x", "y"],
         coords=da.coords,
     )
