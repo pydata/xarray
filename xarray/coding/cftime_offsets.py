@@ -609,14 +609,19 @@ class YearEnd(YearOffset):
             return date - YearEnd(month=self.month)
 
 
-class Day(Tick):
+class Day(BaseCFTimeOffset):
+    """Day offset following definition in pandas/_libs/tslibs/offsets.pyx"""
+
     _freq = "D"
 
-    def as_timedelta(self) -> timedelta:
-        return timedelta(days=self.n)
-
     def __apply__(self, other):
-        return other + self.as_timedelta()
+        if isinstance(other, Day):
+            return Day(self.n + other.n)
+        else:
+            return other + timedelta(days=self.n)
+
+    def onOffset(self, date) -> bool:
+        return True
 
 
 class Hour(Tick):
@@ -718,8 +723,8 @@ _PATTERN = rf"^((?P<multiple>[+-]?\d+)|())(?P<freq>({_FREQUENCY_CONDITION}))$"
 
 
 # pandas defines these offsets as "Tick" objects, which for instance have
-# distinct behavior from monthly or longer frequencies in resample.
-CFTIME_TICKS = (Day, Hour, Minute, Second)
+# distinct behavior from daily or longer frequencies in resample.
+CFTIME_TICKS = (Hour, Minute, Second)
 
 
 def _generate_anchored_deprecated_frequencies(
@@ -801,16 +806,13 @@ def delta_to_tick(delta: timedelta | pd.Timedelta) -> Tick:
             "nanoseconds to 'CFTimeOffset' object"
         )
     if delta.microseconds == 0:
-        if delta.seconds == 0:
-            return Day(n=delta.days)
+        seconds = delta.days * 86400 + delta.seconds
+        if seconds % 3600 == 0:
+            return Hour(n=seconds // 3600)
+        elif seconds % 60 == 0:
+            return Minute(n=seconds // 60)
         else:
-            seconds = delta.days * 86400 + delta.seconds
-            if seconds % 3600 == 0:
-                return Hour(n=seconds // 3600)
-            elif seconds % 60 == 0:
-                return Minute(n=seconds // 60)
-            else:
-                return Second(n=seconds)
+            return Second(n=seconds)
     # Regardless of the days and seconds this will always be a Millisecond
     # or Microsecond object
     elif delta.microseconds % 1_000 == 0:
@@ -1424,7 +1426,7 @@ def date_range(
 
     if _is_standard_calendar(calendar) and use_cftime is not True:
         try:
-            return pd.date_range(
+            return pd.date_range(  # type: ignore[call-overload,unused-ignore]
                 start=start,
                 end=end,
                 periods=periods,

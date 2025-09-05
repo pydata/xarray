@@ -100,17 +100,16 @@ DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
 
 def get_default_netcdf_write_engine(
     format: T_NetcdfTypes | None,
-    to_file_object: bool = False,
-    to_memoryview: bool = False,
+    to_fileobject_or_memoryview: bool,
 ) -> Literal["netcdf4", "h5netcdf", "scipy"]:
     """Return the default netCDF library to use for writing a netCDF file."""
-    engines = {
+    module_names = {
         "netcdf4": "netCDF4",
-        "scipy": "scipy.io",
+        "scipy": "scipy",
         "h5netcdf": "h5netcdf",
     }
 
-    candidates = list(plugins.STANDARD_BACKENDS_ORDER)
+    candidates = list(plugins.NETCDF_BACKENDS_ORDER)
 
     if format is not None:
         if format.upper().startswith("NETCDF3"):
@@ -120,16 +119,16 @@ def get_default_netcdf_write_engine(
         else:
             raise ValueError(f"unexpected {format=}")
 
-    if to_file_object:
+    if to_fileobject_or_memoryview:
         candidates.remove("netcdf4")
 
     for engine in candidates:
-        module_name = engines[engine]
+        module_name = module_names[engine]
         if importlib.util.find_spec(module_name) is not None:
             return cast(Literal["netcdf4", "h5netcdf", "scipy"], engine)
 
-    format_str = f"with {format=}" if format is not None else ""
-    libraries = ", ".join(engines[c] for c in candidates)
+    format_str = f" with {format=}" if format is not None else ""
+    libraries = ", ".join(module_names[c] for c in candidates)
     raise ValueError(
         f"cannot write NetCDF files{format_str} because none of the suitable "
         f"backend libraries ({libraries}) are installed"
@@ -1924,7 +1923,7 @@ def to_netcdf(
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
-) -> bytes | memoryview: ...
+) -> memoryview: ...
 
 
 # compute=False returns dask.Delayed
@@ -2017,7 +2016,7 @@ def to_netcdf(
     multifile: bool = False,
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
-) -> tuple[ArrayWriter, AbstractDataStore] | bytes | memoryview | Delayed | None: ...
+) -> tuple[ArrayWriter, AbstractDataStore] | memoryview | Delayed | None: ...
 
 
 def to_netcdf(
@@ -2033,7 +2032,7 @@ def to_netcdf(
     multifile: bool = False,
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
-) -> tuple[ArrayWriter, AbstractDataStore] | bytes | memoryview | Delayed | None:
+) -> tuple[ArrayWriter, AbstractDataStore] | memoryview | Delayed | None:
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -2047,9 +2046,8 @@ def to_netcdf(
     path_or_file = _normalize_path(path_or_file)
 
     if engine is None:
-        to_memoryview = path_or_file is None
-        to_file_object = not to_memoryview and not isinstance(path_or_file, str)
-        engine = get_default_netcdf_write_engine(format, to_file_object, to_memoryview)
+        to_fileobject_or_memoryview = not isinstance(path_or_file, str)
+        engine = get_default_netcdf_write_engine(format, to_fileobject_or_memoryview)
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)

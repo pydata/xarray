@@ -6,9 +6,10 @@ from os import PathLike
 from typing import TYPE_CHECKING, Any, Literal, get_args
 
 from xarray.backends.api import (
+    _normalize_path,
     delayed_close_after_writes,
     dump_to_store,
-    get_default_engine_netcdf,
+    get_default_netcdf_write_engine,
     get_writable_netcdf_store,
     get_writable_zarr_store,
 )
@@ -51,8 +52,14 @@ def _datatree_to_netcdf(
             "DataTree.to_netcdf only supports the netcdf4 and h5netcdf engines"
         )
 
+    filepath = _normalize_path(filepath)
+
     if engine is None:
-        engine = get_default_engine_netcdf(format="NETCDF4")  # type: ignore[assignment]
+        to_fileobject_or_memoryview = not isinstance(filepath, str)
+        engine = get_default_netcdf_write_engine(
+            format="NETCDF4",  # required for supporting groups
+            to_fileobject_or_memoryview=to_fileobject_or_memoryview,
+        )  # type: ignore[assignment]
 
     if group is not None:
         raise NotImplementedError(
@@ -71,6 +78,11 @@ def _datatree_to_netcdf(
         )
 
     if filepath is None:
+        if not compute:
+            raise NotImplementedError(
+                "to_netcdf() with compute=False is not yet implemented when "
+                "returning a memoryview"
+            )
         target = BytesIOProxy()
     else:
         target = filepath  # type: ignore[assignment]
@@ -125,7 +137,7 @@ def _datatree_to_netcdf(
             root_store.sync()
 
     if filepath is None:
-        assert isinstance(target, BytesIOProxy)
+        assert isinstance(target, BytesIOProxy)  # created in this function
         return target.getbuffer()
 
     if not compute:
@@ -199,12 +211,13 @@ def _datatree_to_zarr(
     writer = ArrayWriter()
 
     try:
-        for node in dt.subtree:
+        for rel_path, node in dt.subtree_with_keys:
             at_root = node is dt
             dataset = node.to_dataset(inherit=write_inherited_coords or at_root)
-            node_store = (
-                root_store if at_root else root_store.get_child_store(node.path)
-            )
+            # Use a relative path for group, because absolute paths are broken
+            # with consolidated metadata in zarr 3.1.2 and earlier:
+            # https://github.com/zarr-developers/zarr-python/pull/3428
+            node_store = root_store if at_root else root_store.get_child_store(rel_path)
 
             dataset = node_store._validate_and_autodetect_region(dataset)
             node_store._validate_encoding(encoding)

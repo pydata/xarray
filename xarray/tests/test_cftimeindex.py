@@ -830,7 +830,6 @@ def test_cftimeindex_add_timedeltaindex(calendar) -> None:
 @pytest.mark.parametrize(
     "freq,units",
     [
-        ("D", "D"),
         ("h", "h"),
         ("min", "min"),
         ("s", "s"),
@@ -856,7 +855,7 @@ def test_cftimeindex_shift_float_us() -> None:
 
 
 @requires_cftime
-@pytest.mark.parametrize("freq", ["YS", "YE", "QS", "QE", "MS", "ME"])
+@pytest.mark.parametrize("freq", ["YS", "YE", "QS", "QE", "MS", "ME", "D"])
 def test_cftimeindex_shift_float_fails_for_non_tick_freqs(freq) -> None:
     a = xr.date_range("2000", periods=3, freq="D", use_cftime=True)
     with pytest.raises(TypeError, match="unsupported operand type"):

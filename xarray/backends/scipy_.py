@@ -198,7 +198,7 @@ class ScipyDataStore(WritableCFDataStore):
         if isinstance(filename_or_obj, BytesIOProxy):
             source = filename_or_obj
             filename_or_obj = io.BytesIO()
-            source.getter = filename_or_obj.getbuffer
+            source.getvalue = filename_or_obj.getbuffer
 
         if isinstance(filename_or_obj, str):  # path
             manager = CachingFileManager(

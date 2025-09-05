@@ -199,17 +199,15 @@ def _find_absolute_paths(
 
 @dataclass
 class BytesIOProxy:
-    """Proxy object for a write that returns a memoryview."""
+    """Proxy object for a write that a memoryview."""
 
-    getter: Callable[[], memoryview] | None = None
+    getvalue: Callable[[], memoryview] | None = None
 
-    # TODO: rename this to getbfuffer() when Dataset.to_netcdf() stops returning
-    # bytes from the scipy engine
     def getbuffer(self) -> memoryview:
-        """Get the value of this write a memoryview."""
-        if self.getter is None:
-            raise ValueError("must set getter before fetching value")
-        return self.getter()
+        """Get the value of this write as bytes or memory."""
+        if self.getvalue is None:
+            raise ValueError("must set getvalue before fetching value")
+        return self.getvalue()
 
 
 def _open_remote_file(file, mode, storage_options=None):
