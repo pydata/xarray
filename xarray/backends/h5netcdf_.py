@@ -189,7 +189,7 @@ class H5NetCDFStore(WritableCFDataStore):
         if isinstance(filename, BytesIOProxy):
             source = filename
             filename = io.BytesIO()
-            source.getter = filename.getbuffer
+            source.getvalue = filename.getbuffer
 
         if isinstance(filename, io.IOBase) and mode == "r":
             magic_number = read_magic_number_from_file(filename)
@@ -218,7 +218,9 @@ class H5NetCDFStore(WritableCFDataStore):
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
         manager_cls = (
-            CachingFileManager if isinstance(filename, str) else PickleableFileManager
+            CachingFileManager
+            if isinstance(filename, str) and not is_remote_uri(filename)
+            else PickleableFileManager
         )
         manager = manager_cls(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
@@ -460,6 +462,11 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
+        # magic_number = (
+        #     bytes(filename_or_obj[:8])
+        #     if isinstance(filename_or_obj, bytes | memoryview)
+        #     else try_read_magic_number_from_path(filename_or_obj)
+        # )
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None:
             return magic_number.startswith(b"\211HDF\r\n\032\n")
@@ -647,7 +654,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         # only warn if phony_dims exist in file
         # remove together with the above check
         # after some versions
-        if store.ds._phony_dim_count > 0 and emit_phony_dims_warning:
+        if store.ds._root._phony_dim_count > 0 and emit_phony_dims_warning:
             _emit_phony_dims_warning()
 
         return groups_dict

@@ -100,7 +100,7 @@ DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
 
 def get_default_netcdf_write_engine(
     format: T_NetcdfTypes | None,
-    to_fileobject_or_memoryview: bool,
+    to_fileobject: bool,
 ) -> Literal["netcdf4", "h5netcdf", "scipy"]:
     """Return the default netCDF library to use for writing a netCDF file."""
     module_names = {
@@ -119,7 +119,7 @@ def get_default_netcdf_write_engine(
         else:
             raise ValueError(f"unexpected {format=}")
 
-    if to_fileobject_or_memoryview:
+    if to_fileobject:
         candidates.remove("netcdf4")
 
     for engine in candidates:
@@ -2046,8 +2046,8 @@ def to_netcdf(
     path_or_file = _normalize_path(path_or_file)
 
     if engine is None:
-        to_fileobject_or_memoryview = not isinstance(path_or_file, str)
-        engine = get_default_netcdf_write_engine(format, to_fileobject_or_memoryview)
+        to_fileobject = isinstance(path_or_file, IOBase)
+        engine = get_default_netcdf_write_engine(format, to_fileobject)
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
@@ -2132,15 +2132,6 @@ def dump_to_store(
 
     if encoding is None:
         encoding = {}
-
-    if unlimited_dims is None:
-        unlimited_dims = dataset.encoding.get("unlimited_dims", None)
-
-    if unlimited_dims is not None:
-        if isinstance(unlimited_dims, str) or not isinstance(unlimited_dims, Iterable):
-            unlimited_dims = [unlimited_dims]
-        else:
-            unlimited_dims = list(unlimited_dims)
 
     variables, attrs = conventions.encode_dataset_coordinates(dataset)
 

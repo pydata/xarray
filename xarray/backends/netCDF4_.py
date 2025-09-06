@@ -384,7 +384,7 @@ class _CloseWithCopy:
 
     def __call__(self):
         value = self.nc4_dataset.close()
-        self.proxy.getter = _Thunk(value)
+        self.proxy.getvalue = _Thunk(value)
 
 
 class NetCDF4DataStore(WritableCFDataStore):
@@ -462,11 +462,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             filename = os.fspath(filename)
 
         if not isinstance(filename, str | bytes | memoryview | BytesIOProxy):
-            raise TypeError(
-                f"invalid filename for netCDF4 backend: {filename}"
-                # "can only read bytes or file-like objects "
-                # "with engine='scipy' or 'h5netcdf'"
-            )
+            raise TypeError(f"invalid filename for netCDF4 backend: {filename}")
 
         if format is None:
             format = "NETCDF4"
@@ -515,6 +511,11 @@ class NetCDF4DataStore(WritableCFDataStore):
             manager = PickleableFileManager(
                 netCDF4.Dataset, "<xarray-in-memory-read>", mode=mode, kwargs=kwargs
             )
+            # nc4_dataset = netCDF4.Dataset("<xarray-in-memory-read>", mode=mode, **kwargs)
+            # def close():
+            #     if nc4_dataset.isopen():
+            #         nc4_dataset.close()
+            # manager = DummyFileManager(nc4_dataset, close=close)
         else:
             manager = CachingFileManager(
                 netCDF4.Dataset, filename, mode=mode, kwargs=kwargs

@@ -2523,6 +2523,14 @@ class InMemoryNetCDF:
             assert_identical(unpickled, original)
             unpickled.close()
 
+    def test_compute_false(self) -> None:
+        original = create_test_data()
+        with pytest.raises(
+            NotImplementedError,
+            match=re.escape("to_netcdf() with compute=False is not yet implemented"),
+        ):
+            original.to_netcdf(engine=self.engine, compute=False)
+
 
 class InMemoryNetCDFWithGroups(InMemoryNetCDF):
     def test_roundtrip_group_via_memoryview(self) -> None:
@@ -4595,30 +4603,6 @@ class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only, InMemoryNetCDF):
     async def test_load_async(self) -> None:
         await super().test_load_async()
 
-    def test_to_netcdf_explicit_engine(self) -> None:
-        Dataset({"foo": 42}).to_netcdf(engine="scipy")
-
-    def test_roundtrip_via_bytes(self) -> None:
-        original = create_test_data()
-        netcdf_bytes = original.to_netcdf(engine="scipy")
-        roundtrip = open_dataset(netcdf_bytes, engine="scipy")
-        assert_identical(roundtrip, original)
-
-    def test_to_bytes_compute_false(self) -> None:
-        original = create_test_data()
-        with pytest.raises(
-            NotImplementedError,
-            match=re.escape("to_netcdf() with compute=False is not yet implemented"),
-        ):
-            original.to_netcdf(engine="scipy", compute=False)
-
-    def test_bytes_pickle(self) -> None:
-        data = Dataset({"foo": ("x", [1, 2, 3])})
-        fobj = data.to_netcdf(engine="scipy")
-        with self.open(fobj) as ds:
-            unpickled = pickle.loads(pickle.dumps(ds))
-            assert_identical(unpickled, data)
-
 
 @requires_scipy
 class TestScipyFileObject(CFEncodedBase, NetCDF3Only, FileObjectNetCDF):
@@ -4645,6 +4629,11 @@ class TestScipyFileObject(CFEncodedBase, NetCDF3Only, FileObjectNetCDF):
             with open(tmp_file, "rb") as f:
                 with self.open(f, **open_kwargs) as ds:
                     yield ds
+
+    @pytest.mark.asyncio
+    @pytest.mark.skip(reason="NetCDF backends don't support async loading")
+    async def test_load_async(self) -> None:
+        await super().test_load_async()
 
     @pytest.mark.xfail(reason="not working yet")
     def test_open_twice(self):
@@ -4774,14 +4763,6 @@ class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
 
         with pytest.raises(ValueError, match=r"unrecognized engine"):
             data.to_netcdf("foo.nc", engine="foobar")  # type: ignore[call-overload]
-
-        with pytest.raises(
-            ValueError,
-            match=re.escape(
-                "can only read bytes or file-like objects with engine='scipy' or 'h5netcdf'"
-            ),
-        ):
-            data.to_netcdf(engine="netcdf4")
 
         with create_tmp_file() as tmp_file:
             data.to_netcdf(tmp_file)
@@ -5224,6 +5205,7 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
             assert actual["y"].encoding["chunksizes"] == (100, 50)
 
 
+@network
 @requires_h5netcdf_ros3
 class TestH5NetCDFDataRos3Driver(TestCommon):
     engine: T_NetcdfEngine = "h5netcdf"

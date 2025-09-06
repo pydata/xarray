@@ -329,6 +329,10 @@ class _HashedSequence(list):
         return self.hashvalue
 
 
+def _get_none(*args, **kwargs) -> None:
+    return None
+
+
 class PickleableFileManager(FileManager):
     """File manager that supports pickling by reopening a file object.
 
@@ -357,23 +361,33 @@ class PickleableFileManager(FileManager):
             kwargs = kwargs.copy()
             kwargs["mode"] = mode
         self._file = opener(*args, **kwargs)
-        self._closed = False
+
+    @property
+    def _closed(self) -> bool:
+        # If opener() raised an error in the constructor, _file may not be set
+        return getattr(self, "_file", None) is None
+
+    def _assert_open(self):
+        if self._closed:
+            raise ValueError("file is closed")
 
     def acquire(self, needs_lock=True):
+        self._assert_open()
         return self._file
 
     @contextlib.contextmanager
     def acquire_context(self, needs_lock=True):
+        self._assert_open()
         yield self._file
 
     def close(self, needs_lock=True):
         if not self._closed:
+            assert self._file is not None
             self._file.close()
-            self._closed = True
+            self._file = None
 
     def __del__(self) -> None:
-        # If opener() raised an error in the constructor, _closed may not be set
-        if not getattr(self, "_closed", True):
+        if not self._closed:
             self.close()
 
             if OPTIONS["warn_for_unclosed_files"]:
@@ -386,13 +400,16 @@ class PickleableFileManager(FileManager):
 
     def __getstate__(self):
         # file is intentionally omitted: we want to open it again
-        return (self._opener, self._args, self._mode, self._kwargs)
+        opener = _get_none if self._closed else self._opener
+        return (opener, self._args, self._mode, self._kwargs)
 
     def __setstate__(self, state) -> None:
         opener, args, mode, kwargs = state
         self.__init__(opener, *args, mode=mode, kwargs=kwargs)  # type: ignore[misc]
 
     def __repr__(self) -> str:
+        if self._closed:
+            return f"<closed {type(self).__name__}>"
         args_string = ", ".join(map(repr, self._args))
         if self._mode is not _DEFAULT_MODE:
             args_string += f", mode={self._mode!r}"
