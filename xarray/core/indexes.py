@@ -563,12 +563,17 @@ def _query_slice(index, label, coord_name="", method=None, tolerance=None) -> sl
     slice_label_start = _sanitize_slice_element(label.start)
     slice_label_stop = _sanitize_slice_element(label.stop)
     slice_label_step = _sanitize_slice_element(label.step)
-    
+
     if method is not None or tolerance is not None:
         # likely slower because it requires two lookups, but pandas.Index.slice_indexer doesn't support method or tolerance
-        slice_index_start = index.get_indexer([slice_label_start], method=method, tolerance=tolerance)
-        slice_index_stop = index.get_indexer([slice_label_stop], method=method, tolerance=tolerance)
-        
+        # see https://github.com/pydata/xarray/issues/10710
+        slice_index_start = index.get_indexer(
+            [slice_label_start], method=method, tolerance=tolerance
+        )
+        slice_index_stop = index.get_indexer(
+            [slice_label_stop], method=method, tolerance=tolerance
+        )
+
         if slice_label_step not in [None, 1]:
             # TODO test that passing this through works
             raise NotImplementedError(f"unsure how to handle step = {slice_label_step}")
@@ -576,7 +581,8 @@ def _query_slice(index, label, coord_name="", method=None, tolerance=None) -> sl
         # TODO handle start being greater than stop
         # TODO handle non-zero step
         # TODO is there already a function for this somewhere?
-        indexer = slice(slice_index_start.item(), slice_index_stop.item())
+        # +1 needed to emulate behaviour of xarray sel with slice without method kwarg, which is inclusive of point at stop label
+        indexer = slice(slice_index_start.item(), slice_index_stop.item() + 1)
     else:
         indexer = index.slice_indexer(
             slice_label_start,
@@ -591,7 +597,7 @@ def _query_slice(index, label, coord_name="", method=None, tolerance=None) -> sl
                 f"{coord_name!r} with a slice over integer positions; the index is "
                 "unsorted or non-unique"
             )
-    
+
     return indexer
 
 
