@@ -6127,6 +6127,68 @@ class TestReduce2D(TestReduce):
         for key in expected3:
             assert_identical(result3[key], expected3[key])
 
+    @pytest.mark.filterwarnings(
+        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+    )
+    def test_idxmax_dim(
+        self,
+        x: np.ndarray,
+        minindex: list[int | float],
+        maxindex: list[int | float],
+        nanindex: list[int | None],
+    ) -> None:
+        ar = xr.DataArray(
+            x,
+            dims=["y", "x"],
+            coords={"x": np.arange(x.shape[1]) * 4, "y": 1 - np.arange(x.shape[0])},
+            attrs=self.attrs,
+        )
+
+        coordarr = xr.DataArray(ar.coords["x"].data, dims=["x"])
+
+        if np.isnan(maxindex).any():
+            return
+
+        expected0list = [coordarr.isel(x=indi, drop=True) for indi in maxindex]
+        expected0 = {"x": xr.concat(expected0list, dim=ar.coords["y"])}
+        expected0["x"].name = "x"
+
+        result0 = ar.idxmax(dim=["x"])
+        for key in expected0:
+            assert_identical(result0[key], expected0[key])
+
+        result1 = ar.idxmax(dim=["x"], keep_attrs=True)
+        expected1 = deepcopy(expected0)
+        expected1["x"].attrs = self.attrs
+        for key in expected1:
+            assert_identical(result1[key], expected1[key])
+
+        maxindex = [
+            x if y is None or ar.dtype.kind == "O" else y
+            for x, y in zip(maxindex, nanindex, strict=True)
+        ]
+        expected2list = [coordarr.isel(x=indi, drop=True) for indi in maxindex]
+        expected2 = {"x": xr.concat(expected2list, dim=ar.coords["y"])}
+        expected2["x"].name = "x"
+        expected2["x"].attrs = {}
+
+        result2 = ar.idxmax(dim=["x"], skipna=False)
+
+        for key in expected2:
+            assert_identical(result2[key], expected2[key])
+
+        result3 = ar.idxmax(...)
+        ar_expected0 = ar.sel(expected0)
+        expected3 = {
+            "y": ar_expected0.idxmax(),
+            "x": ar.coords["x"][maxindex[ar_expected0.argmax().item()]].reset_coords(
+                drop=True
+            ),
+        }
+
+        for key in expected3:
+            assert_identical(result3[key], expected3[key])
+
 
 @pytest.mark.parametrize(
     "x, minindices_x, minindices_y, minindices_z, minindices_xy, "
