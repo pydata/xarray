@@ -7750,6 +7750,7 @@ class Dataset(
         n: int = 1,
         *,
         label: Literal["upper", "lower"] = "upper",
+        dims_found=False,
     ) -> Self:
         """Calculate the n-th order discrete difference along given axis.
 
@@ -7822,14 +7823,25 @@ class Dataset(
                     variables[name] = var.isel(slice_end) - var.isel(slice_start)
                 else:
                     variables[name] = var.isel(slice_new)
+                dims_found = True
             else:
                 variables[name] = var
 
         difference = self._replace_with_new_dims(variables, indexes=indexes)
 
         if n > 1:
-            return difference.diff(dim, n - 1)
+            return difference.diff(dim, n - 1, dims_found=dims_found)
         else:
+            if dims_found:
+                return difference
+            else:
+                from warnings import warn
+
+                warn(
+                    "Expected dim to be present in at least one DataArray found in DataSet, "
+                    "dim provided not present. This will raise a KeyError in the future.",
+                    DeprecationWarning,
+                )
             return difference
 
     def shift(

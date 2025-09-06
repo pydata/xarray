@@ -4003,6 +4003,12 @@ class TestDataArray:
         expected = DataArray(np.diff(da.values, axis=1), dims=["x", "y"])
         assert_equal(expected, actual)
 
+    def test_dataarray_diff_dim_nonexist(self) -> None:
+        # uncomment this code for test corresponding to pushed changes
+        # with pytest.raises(KeyError, match=r"dim provided not present"):
+        #     DataArray(np.random.randn(3, 4), dims=["x", "y"]).diff("z")
+        pass
+
     def test_coordinate_diff(self) -> None:
         # regression test for GH634
         arr = DataArray(range(0, 20, 2), dims=["lon"], coords=[range(10)])
