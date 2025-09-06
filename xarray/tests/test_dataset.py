@@ -2164,8 +2164,9 @@ class TestDataset:
         actual = data.sel(dim2=[1.45], method="backfill")
         assert_identical(expected, actual)
 
-        with pytest.raises(NotImplementedError, match=r"slice objects"):
-            data.sel(dim2=slice(1, 3), method="ffill")
+        expected = data.isel(dim2=slice(2, 7))
+        actual = data.sel(dim2=slice(1, 3), method="ffill")
+        assert_identical(expected, actual)
 
         with pytest.raises(TypeError, match=r"``method``"):
             # this should not pass silently
