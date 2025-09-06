@@ -834,8 +834,6 @@ class PandasIndex(Index):
             # scalar indexer: drop index
             return None
 
-        print(indxr)
-
         return self._replace(self.index[indxr])  # type: ignore[index]
 
     def sel(
