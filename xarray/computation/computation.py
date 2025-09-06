@@ -897,7 +897,9 @@ def _calc_idxminmax(
     if not array.ndim:
         raise ValueError("This function does not apply for scalars")
 
-    if dim is not None:
+    if dim is Ellipsis:
+        dim = array.dims
+    elif dim is not None:
         pass  # Use the dim if available
     elif array.ndim == 1:
         # it is okay to guess the dim if there is only 1
