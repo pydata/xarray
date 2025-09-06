@@ -304,6 +304,10 @@ class NestedSequence(Protocol[_T_co]):
     def __reversed__(self, /) -> Iterator[_T_co | NestedSequence[_T_co]]: ...
 
 
+_T = TypeVar("_T")
+NestedDict = dict[str, "NestedDict[_T] | _T"]
+
+
 AnyStr_co = TypeVar("AnyStr_co", str, bytes, covariant=True)
 
 
