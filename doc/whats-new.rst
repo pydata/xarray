@@ -23,7 +23,7 @@ New Features
 - ``compute=False`` is now supported by :py:meth:`DataTree.to_netcdf` and
   :py:meth:`DataTree.to_zarr`.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-- ``.sel`` operations now support the ``method`` and `tolerance` keyword arguments, 
+- ``.sel`` operations now support the ``method`` and ``tolerance`` keyword arguments,
   for the case of indexing with a slice.
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
