@@ -559,24 +559,39 @@ def _sanitize_slice_element(x):
     return x
 
 
-def _query_slice(index, label, coord_name="", method=None, tolerance=None):
+def _query_slice(index, label, coord_name="", method=None, tolerance=None) -> slice:
+    slice_label_start = _sanitize_slice_element(label.start)
+    slice_label_stop = _sanitize_slice_element(label.stop)
+    slice_label_step = _sanitize_slice_element(label.step)
+    
     if method is not None or tolerance is not None:
-        raise NotImplementedError(
-            "cannot use ``method`` argument if any indexers are slice objects"
+        # likely slower because it requires two lookups, but pandas.Index.slice_indexer doesn't support method or tolerance
+        slice_index_start = index.get_indexer([slice_label_start], method=method, tolerance=tolerance)
+        slice_index_stop = index.get_indexer([slice_label_stop], method=method, tolerance=tolerance)
+        
+        if slice_label_step not in [None, 1]:
+            # TODO test that passing this through works
+            raise NotImplementedError(f"unsure how to handle step = {slice_label_step}")
+
+        # TODO handle start being greater than stop
+        # TODO handle non-zero step
+        # TODO is there already a function for this somewhere?
+        indexer = slice(slice_index_start.item(), slice_index_stop.item())
+    else:
+        indexer = index.slice_indexer(
+            slice_label_start,
+            slice_label_stop,
+            slice_label_step,
         )
-    indexer = index.slice_indexer(
-        _sanitize_slice_element(label.start),
-        _sanitize_slice_element(label.stop),
-        _sanitize_slice_element(label.step),
-    )
-    if not isinstance(indexer, slice):
-        # unlike pandas, in xarray we never want to silently convert a
-        # slice indexer into an array indexer
-        raise KeyError(
-            "cannot represent labeled-based slice indexer for coordinate "
-            f"{coord_name!r} with a slice over integer positions; the index is "
-            "unsorted or non-unique"
-        )
+        if not isinstance(indexer, slice):
+            # unlike pandas, in xarray we never want to silently convert a
+            # slice indexer into an array indexer
+            raise KeyError(
+                "cannot represent labeled-based slice indexer for coordinate "
+                f"{coord_name!r} with a slice over integer positions; the index is "
+                "unsorted or non-unique"
+            )
+    
     return indexer
 
 
@@ -816,6 +831,8 @@ class PandasIndex(Index):
         if not isinstance(indxr, slice) and is_scalar(indxr):
             # scalar indexer: drop index
             return None
+
+        print(indxr)
 
         return self._replace(self.index[indxr])  # type: ignore[index]
 
