@@ -2175,6 +2175,27 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"cannot supply"):
             data.sel(dim1=0, method="nearest")
 
+    def test_sel_method_with_slice(self) -> None:
+        # regression test for https://github.com/pydata/xarray/issues/10710
+
+        data_int_coords = xr.Dataset(coords={"lat": ("lat", [20, 21, 22, 23])})
+        expected = xr.Dataset(coords={"lat": ("lat", [21, 22])})
+        actual = data_int_coords.sel(lat=slice(21, 22), method="nearest")
+        assert_identical(expected, actual)
+
+        # check consistency with not passing method kwarg, for case of ints, where method kwarg should be irrelevant
+        expected = data_int_coords.sel(lat=slice(21, 22))
+        assert_identical(expected, actual)
+
+        data_float_coords = xr.Dataset(
+            coords={"lat": ("lat", [20.1, 21.1, 22.1, 23.1])}
+        )
+        expected = xr.Dataset(coords={"lat": ("lat", [21.1, 22.1])})
+        actual = data_float_coords.sel(lat=slice(21, 22), method="nearest")
+        assert_identical(expected, actual)
+
+        # TODO backwards slices?
+
     def test_loc(self) -> None:
         data = create_test_data()
         expected = data.sel(dim3="a")
