@@ -20,7 +20,7 @@ dependencies:
   - iris
   - lxml # Optional dep of pydap
   - matplotlib-base
-  - mypy==1.15 # mypy 1.16 breaks CI
+  - mypy==1.17.1
   - nc-time-axis
   - netcdf4
   - numba
@@ -57,6 +57,7 @@ dependencies:
   - types-python-dateutil
   - types-pytz
   - types-PyYAML
+  - types-requests
   - types-setuptools
   - types-openpyxl
   - typing_extensions

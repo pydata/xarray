@@ -1928,6 +1928,9 @@ class TestVariable(VariableSubclassobjects):
 
         np.testing.assert_allclose(actual.values, expected)
 
+    @pytest.mark.filterwarnings(
+        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
+    )
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_interpolation_deprecation(self, method) -> None:
         v = Variable(["x", "y"], self.d)
@@ -2776,11 +2779,11 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
 
         expect = orig.copy(deep=True)
         # see https://github.com/python/mypy/issues/3004 for why we need to ignore type
-        expect.values = [[2.0, 2.0], [2.0, 2.0]]  # type: ignore[assignment]
+        expect.values = [[2.0, 2.0], [2.0, 2.0]]  # type: ignore[assignment,unused-ignore]
         assert_identical(expect, full_like(orig, 2))
 
         # override dtype
-        expect.values = [[True, True], [True, True]]  # type: ignore[assignment]
+        expect.values = [[True, True], [True, True]]  # type: ignore[assignment,unused-ignore]
         assert expect.dtype == bool
         assert_identical(expect, full_like(orig, True, dtype=bool))
 
