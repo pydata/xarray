@@ -511,11 +511,6 @@ class NetCDF4DataStore(WritableCFDataStore):
             manager = PickleableFileManager(
                 netCDF4.Dataset, "<xarray-in-memory-read>", mode=mode, kwargs=kwargs
             )
-            # nc4_dataset = netCDF4.Dataset("<xarray-in-memory-read>", mode=mode, **kwargs)
-            # def close():
-            #     if nc4_dataset.isopen():
-            #         nc4_dataset.close()
-            # manager = DummyFileManager(nc4_dataset, close=close)
         else:
             manager = CachingFileManager(
                 netCDF4.Dataset, filename, mode=mode, kwargs=kwargs

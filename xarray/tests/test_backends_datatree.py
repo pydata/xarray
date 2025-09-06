@@ -379,12 +379,27 @@ class NetCDFIOBase(DatatreeIOBase):
 class TestGenericNetCDFIO(NetCDFIOBase):
     engine: T_DataTreeNetcdfEngine | None = None
 
-    # def test_cross_engine_roundtrip_via_memoryview(self, simple_datatree) -> None:
-    #     original_dt = simple_datatree
-    #     memview = original_dt.to_netcdf(engine='h5netcdf')
-    #     roundtrip_dt = load_datatree(memview, engine='')
-    #     # del memview
-    #     assert_equal(original_dt, roundtrip_dt)
+    @requires_h5netcdf
+    @requires_netCDF4
+    def test_memoryview_write_h5netcdf_read_netcdf4(self, simple_datatree) -> None:
+        # This test triggers a warning from pytype, but does not fail:
+        #   PytestUnraisableExceptionWarning: Exception ignored in: <_io.BytesIO object at 0x32ce0c540>
+        #   BufferError: Existing exports of data: object cannot be re-sized
+        # The warning is silenced if _either_ memview is converted into bytes or
+        # the use of PickleableFileManager inside NetCDF4DataStore.open() is
+        # replaced by DummyFileStore. shoyer suspects a netCDF4-python bug.
+        original_dt = simple_datatree
+        memview = original_dt.to_netcdf(engine="h5netcdf")
+        roundtrip_dt = load_datatree(memview, engine="netcdf4")
+        assert_equal(original_dt, roundtrip_dt)
+
+    @requires_h5netcdf
+    @requires_netCDF4
+    def test_memoryview_write_netcdf4_read_h5netcdf(self, simple_datatree) -> None:
+        original_dt = simple_datatree
+        memview = original_dt.to_netcdf(engine="netcdf4")
+        roundtrip_dt = load_datatree(memview, engine="h5netcdf")
+        assert_equal(original_dt, roundtrip_dt)
 
     def test_open_datatree(self, unaligned_datatree_nc) -> None:
         """Test if `open_datatree` fails to open a netCDF4 with an unaligned group hierarchy."""

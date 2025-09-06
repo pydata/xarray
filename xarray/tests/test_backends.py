@@ -2503,12 +2503,6 @@ class InMemoryNetCDF:
         roundtrip = load_dataset(result, engine=self.engine)
         assert_identical(roundtrip, original)
 
-    def test_roundtrip_via_memoryview(self) -> None:
-        original = create_test_data()
-        result = memoryview(original.to_netcdf(engine=self.engine))
-        roundtrip = load_dataset(result, engine=self.engine)
-        assert_identical(roundtrip, original)
-
     def test_roundtrip_via_bytes(self) -> None:
         original = create_test_data()
         result = bytes(original.to_netcdf(engine=self.engine))
@@ -5203,6 +5197,24 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
         with self.roundtrip(ds) as actual:
             assert actual["x"].encoding["chunksizes"] == (50, 100)
             assert actual["y"].encoding["chunksizes"] == (100, 50)
+
+
+@requires_netCDF4
+@requires_h5netcdf
+def test_memoryview_write_h5netcdf_read_netcdf4() -> None:
+    original = create_test_data()
+    result = original.to_netcdf(engine="h5netcdf")
+    roundtrip = load_dataset(result, engine="netcdf4")
+    assert_identical(roundtrip, original)
+
+
+@requires_netCDF4
+@requires_h5netcdf
+def test_memoryview_write_netcdf4_read_h5netcdf() -> None:
+    original = create_test_data()
+    result = original.to_netcdf(engine="netcdf4")
+    roundtrip = load_dataset(result, engine="h5netcdf")
+    assert_identical(roundtrip, original)
 
 
 @network
