@@ -574,7 +574,6 @@ def _query_slice(index, label, coord_name="", method=None, tolerance=None) -> sl
             [slice_label_stop], method=method, tolerance=tolerance
         )
 
-        # TODO handle start being greater than stop
         # TODO is there already a function for this somewhere?
         # +1 needed to emulate behaviour of xarray sel with slice without method kwarg, which is inclusive of point at stop label
         indexer = slice(

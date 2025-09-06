@@ -2210,7 +2210,35 @@ class TestDataset:
         actual = data_float_coords.sel(lat=slice(21, 22, 2), method="nearest")
         assert_identical(expected, actual)
 
-        # TODO backwards slices?
+        # backwards slices
+        data_int_coords = xr.Dataset(coords={"lat": ("lat", [23, 22, 21, 20])})
+        expected = xr.Dataset(coords={"lat": ("lat", [22, 21])})
+        actual = data_int_coords.sel(lat=slice(22, 21), method="nearest")
+        assert_identical(expected, actual)
+
+        data_float_coords = xr.Dataset(
+            coords={"lat": ("lat", [23.1, 22.1, 21.1, 20.1])}
+        )
+        expected = xr.Dataset(coords={"lat": ("lat", [22.1, 21.1])})
+        actual = data_float_coords.sel(lat=slice(22, 21), method="nearest")
+        assert_identical(expected, actual)
+
+    def test_sel_negative_slices(self) -> None:
+        data_int_coords = xr.Dataset(coords={"lat": ("lat", [-23, -22, -21, -20])})
+        expected = xr.Dataset(coords={"lat": ("lat", [-22, -21])})
+        actual = data_int_coords.sel(lat=slice(-22, -21))
+        assert_identical(expected, actual)
+
+        expected = xr.Dataset(coords={"lat": ("lat", [-22, -21])})
+        actual = data_int_coords.sel(lat=slice(-22, -21), method="nearest")
+        assert_identical(expected, actual)
+
+        data_float_coords = xr.Dataset(
+            coords={"lat": ("lat", [-23.1, -22.1, -21.1, -20.1])}
+        )
+        expected = xr.Dataset(coords={"lat": ("lat", [-22.1, -21.1])})
+        actual = data_float_coords.sel(lat=slice(-22, -21), method="nearest")
+        assert_identical(expected, actual)
 
     def test_loc(self) -> None:
         data = create_test_data()
