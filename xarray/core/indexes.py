@@ -562,7 +562,7 @@ def _sanitize_slice_element(x):
 def _query_slice(index, label, coord_name="", method=None, tolerance=None) -> slice:
     slice_label_start = _sanitize_slice_element(label.start)
     slice_label_stop = _sanitize_slice_element(label.stop)
-    slice_label_step = _sanitize_slice_element(label.step)
+    slice_index_step = _sanitize_slice_element(label.step)
 
     if method is not None or tolerance is not None:
         # likely slower because it requires two lookups, but pandas.Index.slice_indexer doesn't support method or tolerance
@@ -574,20 +574,17 @@ def _query_slice(index, label, coord_name="", method=None, tolerance=None) -> sl
             [slice_label_stop], method=method, tolerance=tolerance
         )
 
-        if slice_label_step not in [None, 1]:
-            # TODO test that passing this through works
-            raise NotImplementedError(f"unsure how to handle step = {slice_label_step}")
-
         # TODO handle start being greater than stop
-        # TODO handle non-zero step
         # TODO is there already a function for this somewhere?
         # +1 needed to emulate behaviour of xarray sel with slice without method kwarg, which is inclusive of point at stop label
-        indexer = slice(slice_index_start.item(), slice_index_stop.item() + 1)
+        indexer = slice(
+            slice_index_start.item(), slice_index_stop.item() + 1, slice_index_step
+        )
     else:
         indexer = index.slice_indexer(
             slice_label_start,
             slice_label_stop,
-            slice_label_step,
+            slice_index_step,
         )
         if not isinstance(indexer, slice):
             # unlike pandas, in xarray we never want to silently convert a

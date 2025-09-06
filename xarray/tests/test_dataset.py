@@ -2168,6 +2168,10 @@ class TestDataset:
         actual = data.sel(dim2=slice(1, 3), method="ffill")
         assert_identical(expected, actual)
 
+        expected = data.isel(dim2=slice(2, 7, 2))
+        actual = data.sel(dim2=slice(1, 3, 2), method="ffill")
+        assert_identical(expected, actual)
+
         with pytest.raises(TypeError, match=r"``method``"):
             # this should not pass silently
             data.sel(dim2=1, method=data)  # type: ignore[arg-type]
@@ -2184,8 +2188,14 @@ class TestDataset:
         actual = data_int_coords.sel(lat=slice(21, 22), method="nearest")
         assert_identical(expected, actual)
 
+        # check non-zero step
+        expected = xr.Dataset(coords={"lat": ("lat", [21])})
+        actual = data_int_coords.sel(lat=slice(21, 22, 2), method="nearest")
+        assert_identical(expected, actual)
+
         # check consistency with not passing method kwarg, for case of ints, where method kwarg should be irrelevant
         expected = data_int_coords.sel(lat=slice(21, 22))
+        actual = data_int_coords.sel(lat=slice(21, 22), method="nearest")
         assert_identical(expected, actual)
 
         data_float_coords = xr.Dataset(
@@ -2193,6 +2203,11 @@ class TestDataset:
         )
         expected = xr.Dataset(coords={"lat": ("lat", [21.1, 22.1])})
         actual = data_float_coords.sel(lat=slice(21, 22), method="nearest")
+        assert_identical(expected, actual)
+
+        # check non-zero step
+        expected = xr.Dataset(coords={"lat": ("lat", [21.1])})
+        actual = data_float_coords.sel(lat=slice(21, 22, 2), method="nearest")
         assert_identical(expected, actual)
 
         # TODO backwards slices?
