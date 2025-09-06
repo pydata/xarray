@@ -559,7 +559,7 @@ def _sanitize_slice_element(x):
     return x
 
 
-def _query_slice(index, label, coord_name="", method=None, tolerance=None) -> slice:
+def _query_slice(index, label, coord_name="", method=None, tolerance=None):
     slice_label_start = _sanitize_slice_element(label.start)
     slice_label_stop = _sanitize_slice_element(label.stop)
     slice_index_step = _sanitize_slice_element(label.step)
