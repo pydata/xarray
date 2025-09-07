@@ -220,3 +220,37 @@ def test_ensure_warnings_not_elevated(func) -> None:
             getattr(xr.testing, func)(a, b)
 
         assert len(w) == 0
+
+
+def test_assert_equal_dataset_check_dim_order():
+    """Test for issue #10704 - check_dim_order=False with Datasets containing mixed dimension orders."""
+    import numpy as np
+
+    # Dataset with variables having different dimension orders
+    dataset_1 = xr.Dataset(
+        {
+            "foo": xr.DataArray(np.zeros([4, 5]), dims=("a", "b")),
+            "bar": xr.DataArray(np.ones([5, 4]), dims=("b", "a")),
+        }
+    )
+
+    dataset_2 = xr.Dataset(
+        {
+            "foo": xr.DataArray(np.zeros([5, 4]), dims=("b", "a")),
+            "bar": xr.DataArray(np.ones([4, 5]), dims=("a", "b")),
+        }
+    )
+
+    # These should be equal when ignoring dimension order
+    xr.testing.assert_equal(dataset_1, dataset_2, check_dim_order=False)
+    xr.testing.assert_allclose(dataset_1, dataset_2, check_dim_order=False)
+
+    # Should also work when comparing dataset to itself
+    xr.testing.assert_equal(dataset_1, dataset_1, check_dim_order=False)
+    xr.testing.assert_allclose(dataset_1, dataset_1, check_dim_order=False)
+
+    # But should fail with check_dim_order=True
+    with pytest.raises(AssertionError):
+        xr.testing.assert_equal(dataset_1, dataset_2, check_dim_order=True)
+    with pytest.raises(AssertionError):
+        xr.testing.assert_allclose(dataset_1, dataset_2, check_dim_order=True)

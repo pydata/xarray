@@ -85,24 +85,31 @@ def assert_isomorphic(a: DataTree, b: DataTree):
 
 
 def maybe_transpose_dims(a, b, check_dim_order: bool):
-    """Helper for assert_equal/allclose/identical"""
+    """Helper for assert_equal/allclose/identical
+
+    Returns (a, b) tuple with dimensions transposed to canonical order if needed.
+    """
 
     __tracebackhide__ = True
 
     def _maybe_transpose_dims(a, b):
         if not isinstance(a, Variable | DataArray | Dataset):
-            return b
-        if set(a.dims) == set(b.dims):
-            # Ensure transpose won't fail if a dimension is missing
-            # If this is the case, the difference will be caught by the caller
-            return b.transpose(*a.dims)
-        return b
+            return a, b
+
+        # Find common dimensions and transpose both to canonical order
+        common_dims = set(a.dims) & set(b.dims)
+        if common_dims:
+            # Use sorted order as canonical, with ellipsis for any unique dims
+            canonical_order = sorted(common_dims) + [...]
+            return a.transpose(*canonical_order), b.transpose(*canonical_order)
+        return a, b
 
     if check_dim_order:
-        return b
+        return a, b
 
     if isinstance(a, DataTree):
-        return map_over_datasets(_maybe_transpose_dims, a, b)
+        # DataTree case needs special handling - only transpose b
+        return a, map_over_datasets(lambda a, b: _maybe_transpose_dims(a, b)[1], a, b)
 
     return _maybe_transpose_dims(a, b)
 
@@ -139,7 +146,7 @@ def assert_equal(a, b, check_dim_order: bool = True):
     assert type(a) is type(b) or (
         isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
-    b = maybe_transpose_dims(a, b, check_dim_order)
+    a, b = maybe_transpose_dims(a, b, check_dim_order)
     if isinstance(a, Variable | DataArray):
         assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
     elif isinstance(a, Dataset):
@@ -227,7 +234,7 @@ def assert_allclose(
     """
     __tracebackhide__ = True
     assert type(a) is type(b)
-    b = maybe_transpose_dims(a, b, check_dim_order)
+    a, b = maybe_transpose_dims(a, b, check_dim_order)
 
     equiv = functools.partial(
         _data_allclose_or_equiv, rtol=rtol, atol=atol, decode_bytes=decode_bytes
