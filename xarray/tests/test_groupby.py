@@ -3319,6 +3319,142 @@ def test_datetime_mean(chunk, use_cftime):
     assert "var1" in ds.mean("x")
 
 
+def test_mean_with_mixed_types():
+    """Test that mean correctly handles datasets with mixed types including strings"""
+    ds = xr.Dataset(
+        {
+            "numbers": (("x",), [1.0, 2.0, 3.0, 4.0]),
+            "integers": (("x",), [10, 20, 30, 40]),
+            "strings": (("x",), ["a", "b", "c", "d"]),
+            "datetime": (
+                ("x",),
+                pd.date_range("2021-01-01", periods=4, freq="D"),
+            ),
+            "timedelta": (
+                ("x",),
+                pd.timedelta_range("1 day", periods=4, freq="D"),
+            ),
+        }
+    )
+
+    # Direct mean should exclude strings but include datetime/timedelta
+    result = ds.mean()
+    assert "numbers" in result.data_vars
+    assert "integers" in result.data_vars
+    assert "strings" not in result.data_vars
+    assert "datetime" in result.data_vars
+    assert "timedelta" in result.data_vars
+
+    # Also test mean with specific dimension
+    result_dim = ds.mean("x")
+    assert "numbers" in result_dim.data_vars
+    assert "integers" in result_dim.data_vars
+    assert "strings" not in result_dim.data_vars
+    assert "datetime" in result_dim.data_vars
+    assert "timedelta" in result_dim.data_vars
+
+
+def test_mean_with_string_coords():
+    """Test that mean works when strings are in coordinates, not data vars"""
+    ds = xr.Dataset(
+        {
+            "temperature": (("city", "time"), np.random.rand(3, 4)),
+            "humidity": (("city", "time"), np.random.rand(3, 4)),
+        },
+        coords={
+            "city": ["New York", "London", "Tokyo"],
+            "time": pd.date_range("2021-01-01", periods=4, freq="D"),
+        },
+    )
+
+    # Mean across string coordinate should work
+    result = ds.mean("city")
+    assert result.sizes == {"time": 4}
+    assert "temperature" in result.data_vars
+    assert "humidity" in result.data_vars
+
+    # Groupby with string coordinate should work
+    grouped = ds.groupby("city")
+    result_grouped = grouped.mean()
+    assert "temperature" in result_grouped.data_vars
+    assert "humidity" in result_grouped.data_vars
+
+
+def test_mean_preserves_non_string_object_arrays():
+    """Test that mean preserves object arrays containing datetime-like objects"""
+    # Create object array with cftime dates
+    import cftime
+
+    dates = np.array(
+        [cftime.DatetimeNoLeap(2021, i, 1) for i in range(1, 5)], dtype=object
+    )
+
+    ds = xr.Dataset(
+        {
+            "cftime_dates": (("x",), dates),
+            "numbers": (("x",), [1.0, 2.0, 3.0, 4.0]),
+            "object_strings": (("x",), np.array(["a", "b", "c", "d"], dtype=object)),
+        }
+    )
+
+    # Mean should include cftime dates but not string objects
+    result = ds.mean()
+    assert "cftime_dates" in result.data_vars
+    assert "numbers" in result.data_vars
+    assert "object_strings" not in result.data_vars
+
+
+def test_mean_datetime_edge_cases():
+    """Test mean with datetime edge cases like NaT"""
+    # Test with NaT values
+    dates_with_nat = pd.date_range("2021-01-01", periods=4, freq="D")
+    dates_with_nat_array = dates_with_nat.values.copy()
+    dates_with_nat_array[1] = np.datetime64("NaT")
+
+    ds = xr.Dataset(
+        {
+            "dates": (("x",), dates_with_nat_array),
+            "values": (("x",), [1.0, 2.0, 3.0, 4.0]),
+        }
+    )
+
+    # Mean should handle NaT properly (skipna behavior)
+    result = ds.mean()
+    assert "dates" in result.data_vars
+    assert "values" in result.data_vars
+    # The mean should skip NaT and compute mean of the other 3 dates
+    assert pd.notna(result["dates"].values)
+
+    # Test with timedelta
+    timedeltas = pd.timedelta_range("1 day", periods=4, freq="D")
+    ds_td = xr.Dataset(
+        {
+            "timedeltas": (("x",), timedeltas),
+            "values": (("x",), [1.0, 2.0, 3.0, 4.0]),
+        }
+    )
+
+    result_td = ds_td.mean()
+    assert "timedeltas" in result_td.data_vars
+    assert result_td["timedeltas"].values == np.timedelta64(
+        216000000000000, "ns"
+    )  # 2.5 days
+
+
+def test_mean_dataarray_datetime():
+    """Test that DataArray.mean() also works with datetime"""
+    dates = pd.date_range("2021-01-01", periods=10, freq="D")
+    da = xr.DataArray(dates, dims="x")
+
+    # Should compute mean without error
+    result = da.mean()
+    assert result.dtype == np.dtype("datetime64[ns]")
+
+    # Test with dimension specified
+    result_dim = da.mean("x")
+    assert result_dim.dtype == np.dtype("datetime64[ns]")
+
+
 # TODO: Possible property tests to add to this module
 # 1. lambda x: x
 # 2. grouped-reduce on unique coords is identical to array

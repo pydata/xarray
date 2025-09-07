@@ -9619,6 +9619,72 @@ class Dataset(
             kwargs,
         )
 
+    def mean(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this Dataset's data by applying ``mean`` along some dimension(s).
+
+        This override filters out string variables before computing the mean,
+        while allowing datetime types.
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``mean`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : Dataset
+            New Dataset with ``mean`` applied to its data and the
+            indicated dimension(s) removed
+        """
+        # Filter out string data variables before computing mean
+        # Only filter data variables, keep all coordinates
+        from xarray.core._aggregations import DatasetAggregations
+
+        # Start with all variables, then selectively remove string data variables
+        filtered_vars = dict(self._variables)
+
+        # Only check and filter data variables, not coordinates
+        for name in list(self.data_vars.keys()):
+            var = self._variables[name]
+            # Exclude string data variables from mean calculation
+            if var.dtype.kind in "US":
+                # Skip string variables entirely - they can't be averaged
+                del filtered_vars[name]
+            elif var.dtype.kind == "O" and not _contains_datetime_like_objects(var):
+                # Skip object dtype unless it contains datetime objects
+                del filtered_vars[name]
+            # Otherwise keep the variable (numeric, bool, datetime, timedelta)
+
+        # Create a temporary dataset with filtered variables
+        filtered_ds = self._replace_vars_and_dims(filtered_vars)
+
+        # Call the parent mean implementation
+        return DatasetAggregations.mean(
+            filtered_ds, dim=dim, skipna=skipna, keep_attrs=keep_attrs, **kwargs
+        )
+
     def drop_duplicates(
         self,
         dim: Hashable | Iterable[Hashable],
