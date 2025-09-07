@@ -565,18 +565,16 @@ def _query_slice(index, label, coord_name="", method=None, tolerance=None):
     slice_index_step = _sanitize_slice_element(label.step)
 
     if method is not None or tolerance is not None:
-        # likely slower because it requires two lookups, but pandas.Index.slice_indexer doesn't support method or tolerance
-        # see https://github.com/pydata/xarray/issues/10710
-        slice_index_start = index.get_indexer(
-            [slice_label_start], method=method, tolerance=tolerance
-        )
-        slice_index_stop = index.get_indexer(
-            [slice_label_stop], method=method, tolerance=tolerance
+        # `pandas.Index.slice_indexer` doesn't support method or tolerance (see https://github.com/pydata/xarray/issues/10710)
+        slice_index_bounds = index.get_indexer(
+            [slice_label_start, slice_label_stop], method=method, tolerance=tolerance
         )
 
         # +1 needed to emulate behaviour of xarray sel with slice without method kwarg, which is inclusive of point at stop label
         indexer = slice(
-            slice_index_start.item(), slice_index_stop.item() + 1, slice_index_step
+            slice_index_bounds[0].item(),
+            slice_index_bounds[1].item() + 1,
+            slice_index_step,
         )
     else:
         indexer = index.slice_indexer(
