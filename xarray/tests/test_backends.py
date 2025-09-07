@@ -5175,7 +5175,7 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
 class TestH5NetCDFDataRos3Driver(TestCommon):
     engine: T_NetcdfEngine = "h5netcdf"
     test_remote_dataset: str = (
-        "https://www.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
+        "https://archive.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
     )
 
     @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
