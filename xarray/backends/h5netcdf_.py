@@ -142,10 +142,13 @@ class H5NetCDFStore(WritableCFDataStore):
                 root = manager
             manager = DummyFileManager(root)
 
+        if format == "NETCDF4_CLASSIC" and group is not None:
+            raise ValueError("Cannot create sub-groups in `NETCDF4_CLASSIC` format.")
+
         self._manager = manager
         self._group = group
         self._mode = mode
-        self.format = format
+        self.format = format or "NETCDF4"
         # todo: utilizing find_root_and_group seems a bit clunky
         #  making filename available on h5netcdf.Group seems better
         self._filename = find_root_and_group(self.ds)[0].filename
@@ -169,7 +172,7 @@ class H5NetCDFStore(WritableCFDataStore):
         cls,
         filename,
         mode="r",
-        format=None,
+        format="NETCDF4",
         group=None,
         lock=None,
         autoclose=False,
@@ -202,9 +205,6 @@ class H5NetCDFStore(WritableCFDataStore):
 
         if format not in [None, "NETCDF4", "NETCDF4_CLASSIC"]:
             raise ValueError("invalid format for h5netcdf backend")
-
-        if format == "NETCDF4_CLASSIC" and group is not None:
-            raise ValueError("Cannot create sub-groups in `NETCDF4_CLASSIC` format.")
 
         kwargs = {
             "invalid_netcdf": invalid_netcdf,
@@ -358,7 +358,7 @@ class H5NetCDFStore(WritableCFDataStore):
         _ensure_no_forward_slash_in_name(name)
         attrs = variable.attrs.copy()
         dtype = _get_datatype(
-            variable, self.format, raise_on_invalid_encoding=check_encoding
+            variable, nc_format=self.format, raise_on_invalid_encoding=check_encoding
         )
 
         fillvalue = attrs.pop("_FillValue", None)
@@ -510,7 +510,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        format=None,
+        format="NETCDF4",
         group=None,
         lock=None,
         invalid_netcdf=None,
@@ -570,7 +570,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        format=None,
+        format="NETCDF4",
         group: str | None = None,
         lock=None,
         invalid_netcdf=None,
@@ -613,7 +613,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        format=None,
+        format="NETCDF4",
         group: str | None = None,
         lock=None,
         invalid_netcdf=None,

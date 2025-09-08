@@ -4715,6 +4715,12 @@ class TestNetCDF4ClassicViaH5NetCDFData(TestNetCDF4ClassicViaNetCDF4Data):
                     with open_dataset(tmp_file, engine=read_engine) as actual:
                         assert_identical(data, actual)
 
+    def test_group_fails(self):
+        # Check writing group data fails with CLASSIC format
+        original = create_test_data()
+        with pytest.raises(ValueError):
+            original.to_netcdf(group="sub", format=self.file_format, engine=self.engine)
+
 
 @requires_scipy_or_netCDF4
 class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
