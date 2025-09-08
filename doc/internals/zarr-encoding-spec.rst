@@ -28,29 +28,29 @@ Dimension Encoding in Zarr Formats
 Xarray encodes array dimensions differently depending on the Zarr format version:
 
 **Zarr V2 Format:**
-Xarray uses a special Zarr array attribute: ``_ARRAY_DIMENSIONS``. The value of this 
-attribute is a list of dimension names (strings), for example ``["time", "lon", "lat"]``. 
-When writing data to Zarr V2, Xarray sets this attribute on all variables based on the 
-variable dimensions. This attribute is visible when accessing arrays directly with 
+Xarray uses a special Zarr array attribute: ``_ARRAY_DIMENSIONS``. The value of this
+attribute is a list of dimension names (strings), for example ``["time", "lon", "lat"]``.
+When writing data to Zarr V2, Xarray sets this attribute on all variables based on the
+variable dimensions. This attribute is visible when accessing arrays directly with
 zarr-python.
 
 **Zarr V3 Format:**
-Xarray uses the native ``dimension_names`` field in the array metadata. This is part 
-of the official Zarr V3 specification and is not stored as a regular attribute. 
-When accessing arrays with zarr-python, this information is available in the array's 
+Xarray uses the native ``dimension_names`` field in the array metadata. This is part
+of the official Zarr V3 specification and is not stored as a regular attribute.
+When accessing arrays with zarr-python, this information is available in the array's
 metadata but not in the attributes dictionary.
 
-When reading a Zarr group, Xarray looks for dimension information in the appropriate 
-location based on the format version, raising an error if it can't be found. The 
-dimension information is used to define the variable dimension names and then 
+When reading a Zarr group, Xarray looks for dimension information in the appropriate
+location based on the format version, raising an error if it can't be found. The
+dimension information is used to define the variable dimension names and then
 (for Zarr V2) removed from the attributes dictionary returned to the user.
 
 Coordinate Encoding
 -------------------
 
-In addition to dimension information, Xarray follows CF conventions when encoding 
-coordinate metadata. This results in a ``coordinates`` attribute that lists the 
-names of coordinate variables associated with each data variable. This attribute 
+In addition to dimension information, Xarray follows CF conventions when encoding
+coordinate metadata. This results in a ``coordinates`` attribute that lists the
+names of coordinate variables associated with each data variable. This attribute
 is separate from and complementary to the dimension encoding described above.
 
 The ``coordinates`` attribute:
@@ -68,11 +68,11 @@ Zarr data with valid dimension metadata. Xarray supports:
 
 - Zarr V2 arrays with ``_ARRAY_DIMENSIONS`` attributes
 - Zarr V3 arrays with ``dimension_names`` metadata
-- `NCZarr <https://docs.unidata.ucar.edu/nug/current/nczarr_head.html>`_ format 
+- `NCZarr <https://docs.unidata.ucar.edu/nug/current/nczarr_head.html>`_ format
   (dimension names are defined in the ``.zarray`` file)
 
-After decoding the dimension information and assigning the variable dimensions, 
-Xarray proceeds to [optionally] decode each variable using its standard CF decoding 
+After decoding the dimension information and assigning the variable dimensions,
+Xarray proceeds to [optionally] decode each variable using its standard CF decoding
 machinery used for NetCDF data (see :py:func:`decode_cf`).
 
 Finally, it's worth noting that Xarray writes (and attempts to read)
@@ -87,9 +87,9 @@ for more details.
 Examples: Zarr Format Differences
 ----------------------------------
 
-The following examples demonstrate how dimension and coordinate encoding differs 
-between Zarr format versions. We'll use the same tutorial dataset but write it 
-in different formats to show what users will see when accessing the files directly 
+The following examples demonstrate how dimension and coordinate encoding differs
+between Zarr format versions. We'll use the same tutorial dataset but write it
+in different formats to show what users will see when accessing the files directly
 with zarr-python.
 
 **Example 1: Zarr V2 Format**
@@ -103,7 +103,7 @@ with zarr-python.
     # Load tutorial dataset and write as Zarr V2
     ds = xr.tutorial.load_dataset("rasm")
     ds.to_zarr("rasm_v2.zarr", mode="w", consolidated=False, zarr_format=2)
-    
+
     # Open with zarr-python and examine attributes
     zgroup = zarr.open("rasm_v2.zarr")
     print("Zarr V2 - Tair attributes:")
@@ -123,14 +123,14 @@ with zarr-python.
 
     # Write the same dataset as Zarr V3
     ds.to_zarr("rasm_v3.zarr", mode="w", consolidated=False, zarr_format=3)
-    
+
     # Open with zarr-python and examine attributes
     zgroup = zarr.open("rasm_v3.zarr")
     print("Zarr V3 - Tair attributes:")
     tair_attrs = dict(zgroup["Tair"].attrs)
     for key, value in tair_attrs.items():
         print(f"  '{key}': {repr(value)}")
-    
+
     # For Zarr V3, dimension information is in metadata
     tair_array = zgroup["Tair"]
     print(f"\nZarr V3 - dimension_names in metadata: {tair_array.metadata.dimension_names}")
