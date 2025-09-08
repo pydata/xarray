@@ -33,9 +33,9 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- Fixed Zarr encoding documentation with incorrect examples and added comprehensive 
+- Fixed Zarr encoding documentation with consistent examples and added comprehensive 
   coverage of dimension and coordinate encoding differences between Zarr V2 and V3 formats.
-  The documentation now accurately shows what users will see when accessing Zarr files 
+  The documentation shows what users will see when accessing Zarr files 
   with raw zarr-python, and explains the relationship between ``_ARRAY_DIMENSIONS`` 
   (Zarr V2), ``dimension_names`` metadata (Zarr V3), and CF ``coordinates`` attributes.
   (:pull:`TBD`)
