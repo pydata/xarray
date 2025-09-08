@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+from typing import Any
 from unittest import mock
 
 import numpy as np
@@ -204,7 +205,7 @@ def test_interpolate_unsorted_index_raises():
     vals = np.array([1, 2, 3], dtype=np.float64)
     expected = xr.DataArray(vals, dims="x", coords={"x": [2, 1, 3]})
     with pytest.raises(ValueError, match=r"Index 'x' must be monotonically increasing"):
-        expected.interpolate_na(dim="x", method="index")
+        expected.interpolate_na(dim="x", method="index")  # type: ignore[arg-type]
 
 
 def test_interpolate_no_dim_raises():
@@ -216,14 +217,14 @@ def test_interpolate_no_dim_raises():
 def test_interpolate_invalid_interpolator_raises():
     da = xr.DataArray(np.array([1, 2, np.nan, 5], dtype=np.float64), dims="x")
     with pytest.raises(ValueError, match=r"not a valid"):
-        da.interpolate_na(dim="x", method="foo")
+        da.interpolate_na(dim="x", method="foo")  # type: ignore[arg-type]
 
 
 def test_interpolate_duplicate_values_raises():
     data = np.random.randn(2, 3)
     da = xr.DataArray(data, coords=[("x", ["a", "a"]), ("y", [0, 1, 2])])
     with pytest.raises(ValueError, match=r"Index 'x' has duplicate values"):
-        da.interpolate_na(dim="x", method="foo")
+        da.interpolate_na(dim="x", method="foo")  # type: ignore[arg-type]
 
 
 def test_interpolate_multiindex_raises():
@@ -331,15 +332,15 @@ def test_interpolate_limits():
 @requires_scipy
 def test_interpolate_methods():
     for method in ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]:
-        kwargs = {}
+        kwargs: dict[str, Any] = {}
         da = xr.DataArray(
             np.array([0, 1, 2, np.nan, np.nan, np.nan, 6, 7, 8], dtype=np.float64),
             dims="x",
         )
-        actual = da.interpolate_na("x", method=method, **kwargs)
+        actual = da.interpolate_na("x", method=method, **kwargs)  # type: ignore[arg-type]
         assert actual.isnull().sum() == 0
 
-        actual = da.interpolate_na("x", method=method, limit=2, **kwargs)
+        actual = da.interpolate_na("x", method=method, limit=2, **kwargs)  # type: ignore[arg-type]
         assert actual.isnull().sum() == 1
 
 
