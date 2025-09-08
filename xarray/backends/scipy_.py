@@ -124,7 +124,6 @@ class flush_only_netcdf_file(netcdf_file_base):
     def close(self):
         if hasattr(self, "fp") and not self.fp.closed:
             self.flush()
-            self.fp.seek(0)
 
     def __del__(self):
         # Remove the __del__ method, which in scipy is aliased to close().
