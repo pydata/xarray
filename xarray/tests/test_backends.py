@@ -169,6 +169,70 @@ def skip_if_zarr_format_2(reason: str):
 
 ON_WINDOWS = sys.platform == "win32"
 default_value = object()
+
+
+def _check_compression_codec_available(codec: str | None) -> bool:
+    """Check if a compression codec is available in the netCDF4 library.
+
+    Parameters
+    ----------
+    codec : str or None
+        The compression codec name (e.g., 'zstd', 'blosc_lz', etc.)
+
+    Returns
+    -------
+    bool
+        True if the codec is available, False otherwise.
+    """
+    if codec is None or codec in ("zlib", "szip"):
+        # These are standard and should be available
+        return True
+
+    if not has_netCDF4:
+        return False
+
+    try:
+        import os
+        import tempfile
+
+        import netCDF4
+
+        # Try to create a file with the compression to test availability
+        with tempfile.NamedTemporaryFile(suffix=".nc", delete=False) as tmp:
+            tmp_path = tmp.name
+
+        try:
+            nc = netCDF4.Dataset(tmp_path, "w", format="NETCDF4")
+            nc.createDimension("x", 10)
+
+            # Attempt to create a variable with the compression
+            if codec and codec.startswith("blosc"):
+                nc.createVariable(  # type: ignore[call-overload]
+                    varname="test",
+                    datatype="f4",
+                    dimensions=("x",),
+                    compression=codec,
+                    blosc_shuffle=1,
+                )
+            else:
+                nc.createVariable(  # type: ignore[call-overload]
+                    varname="test", datatype="f4", dimensions=("x",), compression=codec
+                )
+
+            nc.close()
+            os.unlink(tmp_path)
+            return True
+        except (RuntimeError, netCDF4.NetCDF4MissingFeatureException):
+            # Codec not available
+            if os.path.exists(tmp_path):
+                with contextlib.suppress(OSError):
+                    os.unlink(tmp_path)
+            return False
+    except Exception:
+        # Any other error, assume codec is not available
+        return False
+
+
 dask_array_type = array_type("dask")
 
 if TYPE_CHECKING:
@@ -2264,12 +2328,48 @@ class TestNetCDF4Data(NetCDF4Base):
             None,
             "zlib",
             "szip",
-            "zstd",
-            "blosc_lz",
-            "blosc_lz4",
-            "blosc_lz4hc",
-            "blosc_zlib",
-            "blosc_zstd",
+            pytest.param(
+                "zstd",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("zstd"),
+                    reason="zstd codec not available in netCDF4 installation",
+                ),
+            ),
+            pytest.param(
+                "blosc_lz",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("blosc_lz"),
+                    reason="blosc_lz codec not available in netCDF4 installation",
+                ),
+            ),
+            pytest.param(
+                "blosc_lz4",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("blosc_lz4"),
+                    reason="blosc_lz4 codec not available in netCDF4 installation",
+                ),
+            ),
+            pytest.param(
+                "blosc_lz4hc",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("blosc_lz4hc"),
+                    reason="blosc_lz4hc codec not available in netCDF4 installation",
+                ),
+            ),
+            pytest.param(
+                "blosc_zlib",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("blosc_zlib"),
+                    reason="blosc_zlib codec not available in netCDF4 installation",
+                ),
+            ),
+            pytest.param(
+                "blosc_zstd",
+                marks=pytest.mark.xfail(
+                    not _check_compression_codec_available("blosc_zstd"),
+                    reason="blosc_zstd codec not available in netCDF4 installation",
+                ),
+            ),
         ],
     )
     @requires_netCDF4_1_6_2_or_above
@@ -2554,10 +2654,13 @@ class ZarrBase(CFEncodedBase):
                         assert_identical(ds, expected)
 
     def test_non_existent_store(self) -> None:
-        with pytest.raises(
-            FileNotFoundError,
-            match="(No such file or directory|Unable to find group|No group found in store|does not exist)",
-        ):
+        patterns = [
+            "No such file or directory",
+            "Unable to find group",
+            "No group found in store",
+            "does not exist",
+        ]
+        with pytest.raises(FileNotFoundError, match=f"({'|'.join(patterns)})"):
             xr.open_zarr(f"{uuid.uuid4()}")
 
     @pytest.mark.skipif(has_zarr_v3, reason="chunk_store not implemented in zarr v3")
@@ -5072,9 +5175,7 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
 @requires_h5netcdf_ros3
 class TestH5NetCDFDataRos3Driver(TestCommon):
     engine: T_NetcdfEngine = "h5netcdf"
-    test_remote_dataset: str = (
-        "https://www.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
-    )
+    test_remote_dataset: str = "https://archive.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
 
     @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list(self) -> None:
@@ -7074,6 +7175,31 @@ def test_h5netcdf_entrypoint(tmp_path: Path) -> None:
     assert entrypoint.guess_can_open("something-local.nc4")
     assert entrypoint.guess_can_open("something-local.cdf")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
+
+
+@requires_zarr
+def test_zarr_entrypoint(tmp_path: Path) -> None:
+    from xarray.backends.zarr import ZarrBackendEntrypoint
+
+    entrypoint = ZarrBackendEntrypoint()
+    ds = create_test_data()
+
+    path = tmp_path / "foo.zarr"
+    ds.to_zarr(path)
+    _check_guess_can_open_and_open(entrypoint, path, engine="zarr", expected=ds)
+    _check_guess_can_open_and_open(entrypoint, str(path), engine="zarr", expected=ds)
+
+    # add a trailing slash to the path and check again
+    _check_guess_can_open_and_open(
+        entrypoint, str(path) + "/", engine="zarr", expected=ds
+    )
+
+    # Test the new functionality: .zarr with trailing slash
+    assert entrypoint.guess_can_open("something-local.zarr")
+    assert entrypoint.guess_can_open("something-local.zarr/")  # With trailing slash
+    assert not entrypoint.guess_can_open("something-local.nc")
+    assert not entrypoint.guess_can_open("not-found-and-no-extension")
+    assert not entrypoint.guess_can_open("something.zarr.txt")
 
 
 @requires_netCDF4

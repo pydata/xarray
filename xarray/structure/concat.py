@@ -597,6 +597,7 @@ def _dataset_concat(
             "The elements in the input list need to be either all 'Dataset's or all 'DataArray's"
         )
 
+    dim_var: Variable | None
     if isinstance(dim, DataArray):
         dim_var = dim.variable
     elif isinstance(dim, Variable):

@@ -805,6 +805,17 @@ class TestZarrDatatreeIO:
             assert_identical(written_dt, original_dt)
 
     @requires_dask
+    def test_rplus_mode(
+        self, tmp_path: Path, simple_datatree: DataTree, zarr_format: Literal[2, 3]
+    ) -> None:
+        storepath = tmp_path / "test.zarr"
+        original_dt = simple_datatree.chunk()
+        original_dt.to_zarr(storepath, compute=False, zarr_format=zarr_format)
+        original_dt.to_zarr(storepath, mode="r+")
+        with open_datatree(str(storepath), engine="zarr") as written_dt:
+            assert_identical(written_dt, original_dt)
+
+    @requires_dask
     def test_to_zarr_no_redundant_computation(self, tmpdir, zarr_format) -> None:
         import dask.array as da
 
