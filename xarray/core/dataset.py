@@ -40,6 +40,7 @@ from xarray.core._aggregations import DatasetAggregations
 from xarray.core.common import (
     DataWithCoords,
     _contains_datetime_like_objects,
+    _is_numeric_aggregatable_dtype,
     get_chunksizes,
 )
 from xarray.core.coordinates import (
@@ -6846,11 +6847,7 @@ class Dataset(
                 and (
                     not reduce_dims
                     or not numeric_only
-                    or np.issubdtype(var.dtype, np.number)
-                    or (var.dtype == np.bool_)
-                    or np.issubdtype(var.dtype, np.datetime64)
-                    or np.issubdtype(var.dtype, np.timedelta64)
-                    or (var.dtype.kind == "O" and _contains_datetime_like_objects(var))
+                    or _is_numeric_aggregatable_dtype(var)
                 )
             ):
                 # prefer to aggregate over axis=None rather than

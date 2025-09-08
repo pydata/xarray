@@ -2108,3 +2108,21 @@ def _contains_datetime_like_objects(var: T_Variable) -> bool:
     np.datetime64, np.timedelta64, or cftime.datetime)
     """
     return is_np_datetime_like(var.dtype) or contains_cftime_datetimes(var)
+
+
+def _is_numeric_aggregatable_dtype(var: T_Variable) -> bool:
+    """Check if a variable's dtype can be used in numeric aggregations like mean().
+
+    This includes:
+    - Numeric types (int, float, complex)
+    - Boolean type
+    - Datetime types (datetime64, timedelta64)
+    - Object arrays containing datetime-like objects (e.g., cftime)
+    """
+    return (
+        np.issubdtype(var.dtype, np.number)
+        or (var.dtype == np.bool_)
+        or np.issubdtype(var.dtype, np.datetime64)
+        or np.issubdtype(var.dtype, np.timedelta64)
+        or (var.dtype.kind == "O" and _contains_datetime_like_objects(var))
+    )
