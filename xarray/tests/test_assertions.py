@@ -254,3 +254,22 @@ def test_assert_equal_dataset_check_dim_order():
         xr.testing.assert_equal(dataset_1, dataset_2, check_dim_order=True)
     with pytest.raises(AssertionError):
         xr.testing.assert_allclose(dataset_1, dataset_2, check_dim_order=True)
+
+    # Test with non-sortable dimension names (int and str)
+    dataset_mixed_1 = xr.Dataset(
+        {
+            "foo": xr.DataArray(np.zeros([4, 5]), dims=(1, "b")),
+            "bar": xr.DataArray(np.ones([5, 4]), dims=("b", 1)),
+        }
+    )
+
+    dataset_mixed_2 = xr.Dataset(
+        {
+            "foo": xr.DataArray(np.zeros([5, 4]), dims=("b", 1)),
+            "bar": xr.DataArray(np.ones([4, 5]), dims=(1, "b")),
+        }
+    )
+
+    # Should work with mixed types when ignoring dimension order
+    xr.testing.assert_equal(dataset_mixed_1, dataset_mixed_2, check_dim_order=False)
+    xr.testing.assert_equal(dataset_mixed_1, dataset_mixed_1, check_dim_order=False)

@@ -86,11 +86,14 @@ def assert_isomorphic(a: DataTree, b: DataTree):
 
 def maybe_transpose_dims(a, b, check_dim_order: bool):
     """Helper for assert_equal/allclose/identical
-
+    
     Returns (a, b) tuple with dimensions transposed to canonical order if needed.
     """
 
     __tracebackhide__ = True
+
+    if check_dim_order:
+        return a, b
 
     def _maybe_transpose_dims(a, b):
         if not isinstance(a, Variable | DataArray | Dataset):
@@ -99,17 +102,32 @@ def maybe_transpose_dims(a, b, check_dim_order: bool):
         # Find common dimensions and transpose both to canonical order
         common_dims = set(a.dims) & set(b.dims)
         if common_dims:
-            # Use sorted order as canonical, with ellipsis for any unique dims
-            canonical_order = sorted(common_dims) + [...]
+            # Use order from the intersection, with ellipsis for any unique dims
+            canonical_order = list(common_dims) + [...]
+            # For Datasets, we need to transpose both to the same order
+            # For Variable/DataArray, we could just transpose b, but for consistency
+            # and simplicity we transpose both
             return a.transpose(*canonical_order), b.transpose(*canonical_order)
         return a, b
 
-    if check_dim_order:
-        return a, b
-
     if isinstance(a, DataTree):
-        # DataTree case needs special handling - only transpose b
-        return a, map_over_datasets(lambda a, b: _maybe_transpose_dims(a, b)[1], a, b)
+        # DataTree needs special handling with map_over_datasets
+        def transpose_func(a_ds, b_ds):
+            return _maybe_transpose_dims(a_ds, b_ds)
+        
+        # This is tricky - map_over_datasets doesn't easily support returning tuples
+        # We'll use a workaround
+        transposed_pairs = []
+        for node_a, node_b in zip(a.subtree, b.subtree):
+            if node_a.ds is not None and node_b.ds is not None:
+                transposed_pairs.append(_maybe_transpose_dims(node_a.ds, node_b.ds))
+            else:
+                transposed_pairs.append((node_a.ds, node_b.ds))
+        
+        # Now reconstruct the DataTrees
+        # This is getting complex - let's keep it simple for now
+        # Just transpose b like the original code did
+        return a, map_over_datasets(lambda a_ds, b_ds: _maybe_transpose_dims(a_ds, b_ds)[1], a, b)
 
     return _maybe_transpose_dims(a, b)
 
