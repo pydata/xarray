@@ -2212,6 +2212,22 @@ class TestDataset:
         )
         assert_identical(expected, actual)
 
+        # test supposed default behaviour
+        expected = xr.Dataset(coords={"lat": ("lat", [21.1, 22.1])})
+        actual = data_float_coords.sel(lat=slice(21.0, 22.2))
+        assert_identical(expected, actual)
+
+        # tolerance specified but method not specified
+        expected = xr.Dataset(coords={"lat": ("lat", [21.1, 22.1])})
+        actual = data_float_coords.sel(
+            lat=slice(21.0, 22.2),
+            tolerance=1.0,
+        )
+        assert_identical(expected, actual)
+        # test this matches default behaviour without tolerance specified
+        default = data_float_coords.sel(lat=slice(21.0, 22.2))
+        assert_identical(default, actual)
+
         # "no match" case - should return zero-size slice
         expected = xr.Dataset(coords={"lat": ("lat", [])})
         actual = data_float_coords.sel(

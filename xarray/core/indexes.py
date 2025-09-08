@@ -573,18 +573,31 @@ def _query_slice(index, label, coord_name="", method=None, tolerance=None):
                 "cannot use ``method`` argument with a slice object as an indexer and an index with non-unique values"
             )
 
-        slice_index_bounds = index.get_indexer(
-            [slice_label_start, slice_label_stop], method=method, tolerance=tolerance
-        )
+        if method is None and tolerance is not None:
+            # copies default behaviour of slicing with no tolerance, which is to be exclusive at both ends
+            slice_index_start = index.get_indexer(
+                [slice_label_start], method="backfill", tolerance=tolerance
+            )
+            slice_index_stop = index.get_indexer(
+                [slice_label_stop], method="pad", tolerance=tolerance
+            )
+        else:
+            # minor optimization to only issue a single `.get_indexer` call to get both start and end
+            slice_index_start, slice_index_stop = index.get_indexer(
+                [slice_label_start, slice_label_stop],
+                method=method,
+                tolerance=tolerance,
+            )
 
-        if -1 in slice_index_bounds:
-            # "no match" case - return empty slice
+        if -1 in [slice_index_start, slice_index_stop]:
+            # how pandas indicates the "no match" case - we return empty slice
             indexer = slice(0, 0)
         else:
             # +1 needed to emulate behaviour of xarray sel with slice without method kwarg, which is inclusive of point at stop label
+            # assumes no duplicates, but we have forbidden that case above
             indexer = slice(
-                slice_index_bounds[0].item(),
-                slice_index_bounds[1].item() + 1,
+                slice_index_start.item(),
+                slice_index_stop.item() + 1,
                 slice_index_step,
             )
     else:
