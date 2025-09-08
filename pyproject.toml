@@ -65,6 +65,7 @@ types = [
   "types-openpyxl",
   "types-python-dateutil",
   "types-pytz",
+  "types-requests",
   "types-setuptools",
 ]
 
