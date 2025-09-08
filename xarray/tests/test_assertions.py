@@ -99,21 +99,26 @@ def test_assert_equal_transpose_datatree() -> None:
         xr.testing.assert_equal(a, b)
 
     xr.testing.assert_equal(a, b, check_dim_order=False)
-    
+
     # Test with mixed dimension orders in datasets (the tricky case)
     import numpy as np
-    ds_mixed = xr.Dataset({
-        "foo": xr.DataArray(np.zeros([4, 5]), dims=("a", "b")),
-        "bar": xr.DataArray(np.ones([5, 4]), dims=("b", "a"))
-    })
-    ds_mixed2 = xr.Dataset({
-        "foo": xr.DataArray(np.zeros([5, 4]), dims=("b", "a")),
-        "bar": xr.DataArray(np.ones([4, 5]), dims=("a", "b"))
-    })
-    
+
+    ds_mixed = xr.Dataset(
+        {
+            "foo": xr.DataArray(np.zeros([4, 5]), dims=("a", "b")),
+            "bar": xr.DataArray(np.ones([5, 4]), dims=("b", "a")),
+        }
+    )
+    ds_mixed2 = xr.Dataset(
+        {
+            "foo": xr.DataArray(np.zeros([5, 4]), dims=("b", "a")),
+            "bar": xr.DataArray(np.ones([4, 5]), dims=("a", "b")),
+        }
+    )
+
     tree1 = xr.DataTree.from_dict({"node": ds_mixed})
     tree2 = xr.DataTree.from_dict({"node": ds_mixed2})
-    
+
     # Should work with check_dim_order=False
     xr.testing.assert_equal(tree1, tree2, check_dim_order=False)
 
