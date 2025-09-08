@@ -39,7 +39,7 @@ body:
         - [Minimal Complete Verifiable Examples](https://stackoverflow.com/help/mcve)
         - [Craft Minimal Bug Reports](https://matthewrocklin.com/minimal-bug-reports)
 
-        Consider listing dependencies in [inline script metadata](https://packaging.python.org/en/latest/specifications/inline-script-metadata/#example).
+        Consider listing additional or specific dependencies in [inline script metadata](https://packaging.python.org/en/latest/specifications/inline-script-metadata/#example).
         So that calling `uv run issue.py` shows the issue when copied into `issue.py`. (not required; alternatively feel free to delete the suggestion)
         below.
       value: |
