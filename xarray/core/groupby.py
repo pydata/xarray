@@ -1044,11 +1044,17 @@ class GroupBy(Generic[T_Xarray]):
         # variable will just drop it.
         non_numeric: dict[Hashable, Variable]
         if kwargs.pop("numeric_only", None):
+            from xarray.core.common import _contains_datetime_like_objects
+            
             non_numeric = {
                 name: var
                 for name, var in variables.items()
                 if (
-                    not (np.issubdtype(var.dtype, np.number) or (var.dtype == np.bool_))
+                    not (np.issubdtype(var.dtype, np.number) 
+                         or (var.dtype == np.bool_)
+                         or np.issubdtype(var.dtype, np.datetime64)
+                         or np.issubdtype(var.dtype, np.timedelta64)
+                         or (var.dtype.kind == "O" and _contains_datetime_like_objects(var)))
                     # this avoids dropping any levels of a MultiIndex, which raises
                     # a warning
                     and name not in midx_grouping_vars

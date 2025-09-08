@@ -515,7 +515,7 @@ AGGREGATION_METHODS = (
     Method("any", bool_reduce=True),
     Method("max", extra_kwargs=(skipna,)),
     Method("min", extra_kwargs=(skipna,)),
-    Method("mean", extra_kwargs=(skipna,), numeric_only=False),
+    Method("mean", extra_kwargs=(skipna,), numeric_only=True),
     Method("prod", extra_kwargs=(skipna, min_count), numeric_only=True),
     Method("sum", extra_kwargs=(skipna, min_count), numeric_only=True),
     Method("std", extra_kwargs=(skipna, ddof), numeric_only=True),
