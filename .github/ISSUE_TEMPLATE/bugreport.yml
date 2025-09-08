@@ -40,7 +40,7 @@ body:
         - [Craft Minimal Bug Reports](https://matthewrocklin.com/minimal-bug-reports)
 
         Consider listing dependencies in [inline script metadata](https://packaging.python.org/en/latest/specifications/inline-script-metadata/#example).
-        So that put in a file named `issue.py` calling `uv run issue.py` should show the issue. If you do not feel free to delete the suggestion
+        So that calling `uv run issue.py` shows the issue when copied into `issue.py`. (not required; alternatively feel free to delete the suggestion)
         below.
       value: |
         ```python
