@@ -382,12 +382,6 @@ class TestGenericNetCDFIO(NetCDFIOBase):
     @requires_h5netcdf
     @requires_netCDF4
     def test_memoryview_write_h5netcdf_read_netcdf4(self, simple_datatree) -> None:
-        # This test triggers a warning from pytype, but does not fail:
-        #   PytestUnraisableExceptionWarning: Exception ignored in: <_io.BytesIO object at 0x32ce0c540>
-        #   BufferError: Existing exports of data: object cannot be re-sized
-        # The warning is silenced if _either_ memview is converted into bytes or
-        # the use of PickleableFileManager inside NetCDF4DataStore.open() is
-        # replaced by DummyFileStore. shoyer suspects a netCDF4-python bug.
         original_dt = simple_datatree
         memview = original_dt.to_netcdf(engine="h5netcdf")
         roundtrip_dt = load_datatree(memview, engine="netcdf4")

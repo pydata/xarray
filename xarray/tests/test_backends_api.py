@@ -46,20 +46,17 @@ def test_default_engine_h5netcdf(monkeypatch):
     monkeypatch.delitem(sys.modules, "scipy", raising=False)
     monkeypatch.setattr(sys, "meta_path", [])
 
-    engine = get_default_netcdf_write_engine(
-        format=None, to_fileobject_or_memoryview=False
-    )
+    engine = get_default_netcdf_write_engine(format=None, to_fileobject=False)
     assert engine == "h5netcdf"
 
     with pytest.raises(
         ValueError,
         match=re.escape(
-            "cannot write NetCDF files with format='NETCDF3_CLASSIC' because none of the suitable backend libraries (netCDF4, scipy) are installed"
+            "cannot write NetCDF files with format='NETCDF3_CLASSIC' because "
+            "none of the suitable backend libraries (netCDF4, scipy) are installed"
         ),
     ):
-        get_default_netcdf_write_engine(
-            format="NETCDF3_CLASSIC", to_fileobject_or_memoryview=False
-        )
+        get_default_netcdf_write_engine(format="NETCDF3_CLASSIC", to_fileobject=False)
 
 
 def test_custom_engine() -> None:

@@ -1,31 +1,33 @@
 from __future__ import annotations
 
 import atexit
-import contextlib
-import io
 import threading
 import uuid
 import warnings
-from collections.abc import Hashable, Mapping
-from typing import Any
+from collections.abc import Callable, Hashable, Iterator, Mapping, MutableMapping
+from contextlib import AbstractContextManager, contextmanager
+from typing import Any, Generic, Literal, TypeVar, cast
 
 from xarray.backends.locks import acquire
 from xarray.backends.lru_cache import LRUCache
 from xarray.core import utils
 from xarray.core.options import OPTIONS
+from xarray.core.types import Closable, Lock
 
 # Global cache for storing open files.
-FILE_CACHE: LRUCache[Any, io.IOBase] = LRUCache(
+FILE_CACHE: LRUCache[Any, Closable] = LRUCache(
     maxsize=OPTIONS["file_cache_maxsize"], on_evict=lambda k, v: v.close()
 )
 assert FILE_CACHE.maxsize, "file cache must be at least size one"
 
+T_File = TypeVar("T_File", bound=Closable)
+
 REF_COUNTS: dict[Any, int] = {}
 
-_DEFAULT_MODE = utils.ReprObject("<unused>")
+_OMIT_MODE = utils.ReprObject("<omitted>")
 
 
-class FileManager:
+class FileManager(Generic[T_File]):
     """Manager for acquiring and closing a file object.
 
     Use FileManager subclasses (CachingFileManager in particular) on backend
@@ -33,11 +35,13 @@ class FileManager:
     many open files and transferring them between multiple processes.
     """
 
-    def acquire(self, needs_lock=True):
+    def acquire(self, needs_lock: bool = True) -> T_File:
         """Acquire the file object from this manager."""
         raise NotImplementedError()
 
-    def acquire_context(self, needs_lock=True):
+    def acquire_context(
+        self, needs_lock: bool = True
+    ) -> AbstractContextManager[T_File]:
         """Context manager for acquiring a file. Yields a file object.
 
         The context manager unwinds any actions taken as part of acquisition
@@ -46,12 +50,12 @@ class FileManager:
         """
         raise NotImplementedError()
 
-    def close(self, needs_lock=True):
+    def close(self, needs_lock: bool = True) -> None:
         """Close the file object associated with this manager, if needed."""
         raise NotImplementedError()
 
 
-class CachingFileManager(FileManager):
+class CachingFileManager(FileManager[T_File]):
     """Wrapper for automatically opening and closing file objects.
 
     Unlike files, CachingFileManager objects can be safely pickled and passed
@@ -81,14 +85,14 @@ class CachingFileManager(FileManager):
 
     def __init__(
         self,
-        opener,
+        opener: Callable[..., T_File],
         *args: Any,
-        mode: Any = _DEFAULT_MODE,
+        mode: Any = _OMIT_MODE,
         kwargs: Mapping[str, Any] | None = None,
-        lock=None,
-        cache=None,
+        lock: Lock | None | Literal[False] = None,
+        cache: MutableMapping[Any, T_File] | None = None,
         manager_id: Hashable | None = None,
-        ref_counts=None,
+        ref_counts: dict[Any, int] | None = None,
     ):
         """Initialize a CachingFileManager.
 
@@ -134,13 +138,17 @@ class CachingFileManager(FileManager):
         self._mode = mode
         self._kwargs = {} if kwargs is None else dict(kwargs)
 
-        self._use_default_lock = lock is None or lock is False
-        self._lock = threading.Lock() if self._use_default_lock else lock
+        if lock is None or lock is False:
+            self._use_default_lock = True
+            self._lock: Lock = threading.Lock()
+        else:
+            self._use_default_lock = False
+            self._lock = lock
 
         # cache[self._key] stores the file associated with this object.
         if cache is None:
-            cache = FILE_CACHE
-        self._cache = cache
+            cache = cast(MutableMapping[Any, T_File], FILE_CACHE)
+        self._cache: MutableMapping[Any, T_File] = cache
         if manager_id is None:
             # Each call to CachingFileManager should separately open files.
             manager_id = str(uuid.uuid4())
@@ -155,7 +163,7 @@ class CachingFileManager(FileManager):
         self._ref_counter = _RefCounter(ref_counts)
         self._ref_counter.increment(self._key)
 
-    def _make_key(self):
+    def _make_key(self) -> _HashedSequence:
         """Make a key for caching files in the LRU cache."""
         value = (
             self._opener,
@@ -166,8 +174,8 @@ class CachingFileManager(FileManager):
         )
         return _HashedSequence(value)
 
-    @contextlib.contextmanager
-    def _optional_lock(self, needs_lock):
+    @contextmanager
+    def _optional_lock(self, needs_lock: bool):
         """Context manager for optionally acquiring a lock."""
         if needs_lock:
             with self._lock:
@@ -175,7 +183,7 @@ class CachingFileManager(FileManager):
         else:
             yield
 
-    def acquire(self, needs_lock=True):
+    def acquire(self, needs_lock: bool = True) -> T_File:
         """Acquire a file object from the manager.
 
         A new file is only opened if it has expired from the
@@ -193,8 +201,8 @@ class CachingFileManager(FileManager):
         file, _ = self._acquire_with_cache_info(needs_lock)
         return file
 
-    @contextlib.contextmanager
-    def acquire_context(self, needs_lock=True):
+    @contextmanager
+    def acquire_context(self, needs_lock: bool = True) -> Iterator[T_File]:
         """Context manager for acquiring a file."""
         file, cached = self._acquire_with_cache_info(needs_lock)
         try:
@@ -204,14 +212,14 @@ class CachingFileManager(FileManager):
                 self.close(needs_lock)
             raise
 
-    def _acquire_with_cache_info(self, needs_lock=True):
+    def _acquire_with_cache_info(self, needs_lock: bool = True) -> tuple[T_File, bool]:
         """Acquire a file, returning the file and whether it was cached."""
         with self._optional_lock(needs_lock):
             try:
                 file = self._cache[self._key]
             except KeyError:
                 kwargs = self._kwargs
-                if self._mode is not _DEFAULT_MODE:
+                if self._mode is not _OMIT_MODE:
                     kwargs = kwargs.copy()
                     kwargs["mode"] = self._mode
                 file = self._opener(*self._args, **kwargs)
@@ -223,7 +231,7 @@ class CachingFileManager(FileManager):
             else:
                 return file, True
 
-    def close(self, needs_lock=True):
+    def close(self, needs_lock: bool = True) -> None:
         """Explicitly close any associated file object (if necessary)."""
         # TODO: remove needs_lock if/when we have a reentrant lock in
         # dask.distributed: https://github.com/dask/dask/issues/3832
@@ -282,7 +290,7 @@ class CachingFileManager(FileManager):
 
     def __repr__(self) -> str:
         args_string = ", ".join(map(repr, self._args))
-        if self._mode is not _DEFAULT_MODE:
+        if self._mode is not _OMIT_MODE:
             args_string += f", mode={self._mode!r}"
         return (
             f"{type(self).__name__}({self._opener!r}, {args_string}, "
@@ -325,15 +333,15 @@ class _HashedSequence(list):
         self[:] = tuple_value
         self.hashvalue = hash(tuple_value)
 
-    def __hash__(self):
+    def __hash__(self) -> int:  # type: ignore[override]
         return self.hashvalue
 
 
-def _get_none(*args, **kwargs) -> None:
+def _get_none() -> None:
     return None
 
 
-class PickleableFileManager(FileManager):
+class PickleableFileManager(FileManager[T_File]):
     """File manager that supports pickling by reopening a file object.
 
     Use PickleableFileManager for wrapping file-like objects that do not natively
@@ -344,10 +352,10 @@ class PickleableFileManager(FileManager):
 
     def __init__(
         self,
-        opener,
-        *args,
-        mode=_DEFAULT_MODE,
-        kwargs=None,
+        opener: Callable[..., T_File],
+        *args: Any,
+        mode: Any = _OMIT_MODE,
+        kwargs: Mapping[str, Any] | None = None,
     ):
         kwargs = {} if kwargs is None else dict(kwargs)
         self._opener = opener
@@ -357,34 +365,43 @@ class PickleableFileManager(FileManager):
 
         # Note: No need for locking with PickleableFileManager, because all
         # opening of files happens in the constructor.
-        if mode is not _DEFAULT_MODE:
+        if mode is not _OMIT_MODE:
             kwargs = kwargs.copy()
             kwargs["mode"] = mode
-        self._file = opener(*args, **kwargs)
+        self._file: T_File | None = opener(*args, **kwargs)
 
     @property
     def _closed(self) -> bool:
         # If opener() raised an error in the constructor, _file may not be set
         return getattr(self, "_file", None) is None
 
-    def _assert_open(self):
+    def _get_unclosed_file(self) -> T_File:
         if self._closed:
-            raise ValueError("file is closed")
+            raise RuntimeError("file is closed")
+        file = self._file
+        assert file is not None
+        return file
 
-    def acquire(self, needs_lock=True):
-        self._assert_open()
-        return self._file
+    def acquire(self, needs_lock: bool = True) -> T_File:
+        del needs_lock  # unused
+        return self._get_unclosed_file()
 
-    @contextlib.contextmanager
-    def acquire_context(self, needs_lock=True):
-        self._assert_open()
-        yield self._file
+    @contextmanager
+    def acquire_context(self, needs_lock: bool = True) -> Iterator[T_File]:
+        del needs_lock  # unused
+        yield self._get_unclosed_file()
 
-    def close(self, needs_lock=True):
+    def close(self, needs_lock: bool = True) -> None:
+        del needs_lock  # unused
         if not self._closed:
-            assert self._file is not None
-            self._file.close()
+            file = self._get_unclosed_file()
+            file.close()
             self._file = None
+            # Remove all references to opener arguments, so they can be garbage
+            # collected.
+            self._args = ()
+            self._mode = _OMIT_MODE
+            self._kwargs = {}
 
     def __del__(self) -> None:
         if not self._closed:
@@ -411,15 +428,14 @@ class PickleableFileManager(FileManager):
         if self._closed:
             return f"<closed {type(self).__name__}>"
         args_string = ", ".join(map(repr, self._args))
-        if self._mode is not _DEFAULT_MODE:
+        if self._mode is not _OMIT_MODE:
             args_string += f", mode={self._mode!r}"
-        if "memory" in self._kwargs:
-            kwargs = self._kwargs | {"memory": utils.ReprObject("...")}
-        else:
-            kwargs = self._kwargs
-        return (
-            f"{type(self).__name__}({self._opener!r}, {args_string}, kwargs={kwargs})"
+        kwargs = (
+            self._kwargs | {"memory": utils.ReprObject("...")}
+            if "memory" in self._kwargs
+            else self._kwargs
         )
+        return f"{type(self).__name__}({self._opener!r}, {args_string}, {kwargs=})"
 
 
 @atexit.register
@@ -430,24 +446,24 @@ def _remove_del_methods():
     del PickleableFileManager.__del__
 
 
-class DummyFileManager(FileManager):
+class DummyFileManager(FileManager[T_File]):
     """FileManager that simply wraps an open file in the FileManager interface."""
 
-    def __init__(self, value, *, close=None):
+    def __init__(self, value: T_File, *, close: Callable[[], None] | None = None):
         if close is None:
             close = value.close
         self._value = value
         self._close = close
 
-    def acquire(self, needs_lock=True):
-        del needs_lock  # ignored
+    def acquire(self, needs_lock: bool = True) -> T_File:
+        del needs_lock  # unused
         return self._value
 
-    @contextlib.contextmanager
-    def acquire_context(self, needs_lock=True):
-        del needs_lock
+    @contextmanager
+    def acquire_context(self, needs_lock: bool = True) -> Iterator[T_File]:
+        del needs_lock  # unused
         yield self._value
 
-    def close(self, needs_lock=True):
-        del needs_lock  # ignored
+    def close(self, needs_lock: bool = True) -> None:
+        del needs_lock  # unused
         self._close()

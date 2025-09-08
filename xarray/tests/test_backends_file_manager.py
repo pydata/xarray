@@ -278,3 +278,14 @@ def test_pickleable_file_manager_write_pickle(tmpdir) -> None:
 
     with open(path) as f:
         assert f.read() == "foobar"
+
+
+def test_pickleable_file_manager_preserves_closed(tmpdir) -> None:
+    path = str(tmpdir.join("testing.txt"))
+    manager = PickleableFileManager(open, path, mode="w")
+    f = manager.acquire()
+    f.write("foo")
+    manager.close()
+    manager2 = pickle.loads(pickle.dumps(manager))
+    assert manager2._closed
+    assert repr(manager2) == "<closed PickleableFileManager>"
