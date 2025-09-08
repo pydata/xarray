@@ -460,6 +460,7 @@ class DatasetIOBase:
             save_kwargs = {}
         if open_kwargs is None:
             open_kwargs = {}
+
         with create_tmp_file(allow_cleanup_failure=allow_cleanup_failure) as path:
             self.save(data, path, **save_kwargs)
             with self.open(path, **open_kwargs) as ds:
@@ -4799,7 +4800,7 @@ class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
     @requires_scipy
     def test_roundtrip_via_bytes(self) -> None:
         original = create_test_data()
-        netcdf_bytes = original.to_netcdf()
+        netcdf_bytes = original.to_netcdf(engine="scipy")
         roundtrip = load_dataset(netcdf_bytes)
         assert_identical(roundtrip, original)
 

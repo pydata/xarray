@@ -125,7 +125,7 @@ class H5NetCDFStore(WritableCFDataStore):
         manager: FileManager | h5netcdf.File | h5netcdf.Group,
         group=None,
         mode=None,
-        format=None,
+        format="NETCDF4",
         lock=HDF5_LOCK,
         autoclose=False,
     ):
@@ -145,7 +145,7 @@ class H5NetCDFStore(WritableCFDataStore):
         self._manager = manager
         self._group = group
         self._mode = mode
-        self.format = format or "NETCDF4"
+        self.format = format
         # todo: utilizing find_root_and_group seems a bit clunky
         #  making filename available on h5netcdf.Group seems better
         self._filename = find_root_and_group(self.ds)[0].filename
@@ -229,7 +229,14 @@ class H5NetCDFStore(WritableCFDataStore):
             if isinstance(filename, str)
             else h5netcdf.File(filename, mode=mode, **kwargs)
         )
-        return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
+        return cls(
+            manager,
+            group=group,
+            format=format,
+            mode=mode,
+            lock=lock,
+            autoclose=autoclose,
+        )
 
     def _acquire(self, needs_lock=True):
         with self._manager.acquire_context(needs_lock) as root:
@@ -340,10 +347,8 @@ class H5NetCDFStore(WritableCFDataStore):
     def encode_variable(self, variable, name=None):
         if self.format == "NETCDF4_CLASSIC":
             return encode_nc3_variable(variable, name=name)
-        elif self.format == "NETCDF4":
-            return _encode_nc4_variable(variable, name=name)
-        else:
-            raise ValueError(f"unexpected format: {self.format}")
+
+        return _encode_nc4_variable(variable, name=name)
 
     def prepare_variable(
         self, name, variable, check_encoding=False, unlimited_dims=None
