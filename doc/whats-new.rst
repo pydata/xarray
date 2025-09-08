@@ -13,6 +13,10 @@ v2025.09.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- ``engine='netcdf4'`` now supports reading and writing in-memory netCDF files.
+  All of Xarray's netCDF backends now support in-memory reads and writes
+  (:pull:`10624`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -28,6 +32,17 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+
+- Xarray objects opened from file-like objects with ``engine='h5netcdf'`` can
+  now be pickled, as long as the underlying file-like object also support
+  pickle
+  (:pull:`10624`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+-  Closing Xarray objects opened from file-like objects with ```engine='scipy'``
+  no longer closes the underlying file, consistent the h5netcdf backend
+  (:pull:`10624`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 
 
 Documentation
