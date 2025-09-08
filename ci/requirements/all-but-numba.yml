@@ -4,9 +4,9 @@ channels:
   - nodefaults
 dependencies:
   # Pin a "very new numpy" (updated Sept 24, 2024)
-  - numpy>=2.1.1
+  - numpy>=2.2
   - aiobotocore
-  - array-api-strict
+  - array-api-strict<2.4
   - boto3
   - bottleneck
   - cartopy
@@ -41,6 +41,7 @@ dependencies:
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - pydap
   - pytest
+  - pytest-asyncio
   - pytest-cov
   - pytest-env
   - pytest-mypy-plugins

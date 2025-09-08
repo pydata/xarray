@@ -35,15 +35,7 @@ python -m pip install \
     numpy \
     scipy \
     matplotlib \
-    pandas
-# for some reason pandas depends on pyarrow already.
-# Remove once a `pyarrow` version compiled with `numpy>=2.0` is on `conda-forge`
-python -m pip install \
-    -i https://pypi.fury.io/arrow-nightlies/ \
-    --prefer-binary \
-    --no-deps \
-    --pre \
-    --upgrade \
+    pandas \
     pyarrow
 # manually install `pint`, `donfig`, and `crc32c` to pull in new dependencies
 python -m pip install --upgrade pint donfig crc32c

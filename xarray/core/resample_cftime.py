@@ -45,6 +45,7 @@ import numpy as np
 import pandas as pd
 
 from xarray.coding.cftime_offsets import (
+    CFTIME_TICKS,
     BaseCFTimeOffset,
     MonthEnd,
     QuarterEnd,
@@ -56,6 +57,7 @@ from xarray.coding.cftime_offsets import (
 )
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core.types import SideOptions
+from xarray.core.utils import emit_user_level_warning
 
 if typing.TYPE_CHECKING:
     from xarray.core.types import CFTimeDatetime, ResampleCompatible
@@ -84,7 +86,32 @@ class CFTimeGrouper:
         self.freq = to_offset(freq)
         self.origin = origin
 
-        if isinstance(self.freq, MonthEnd | QuarterEnd | YearEnd):
+        if not isinstance(self.freq, CFTIME_TICKS):
+            if offset is not None:
+                message = (
+                    "The 'offset' keyword does not take effect when "
+                    "resampling with a 'freq' that is not Tick-like (h, m, s, "
+                    "ms, us)"
+                )
+                emit_user_level_warning(message, category=RuntimeWarning)
+            if origin != "start_day":
+                message = (
+                    "The 'origin' keyword does not take effect when "
+                    "resampling with a 'freq' that is not Tick-like (h, m, s, "
+                    "ms, us)"
+                )
+                emit_user_level_warning(message, category=RuntimeWarning)
+
+        if isinstance(self.freq, MonthEnd | QuarterEnd | YearEnd) or self.origin in [
+            "end",
+            "end_day",
+        ]:
+            # The backward resample sets ``closed`` to ``'right'`` by default
+            # since the last value should be considered as the edge point for
+            # the last bin. When origin in "end" or "end_day", the value for a
+            # specific ``cftime.datetime`` index stands for the resample result
+            # from the current ``cftime.datetime`` minus ``freq`` to the current
+            # ``cftime.datetime`` with a right close.
             if closed is None:
                 self.closed = "right"
             else:
@@ -94,30 +121,14 @@ class CFTimeGrouper:
             else:
                 self.label = label
         else:
-            # The backward resample sets ``closed`` to ``'right'`` by default
-            # since the last value should be considered as the edge point for
-            # the last bin. When origin in "end" or "end_day", the value for a
-            # specific ``cftime.datetime`` index stands for the resample result
-            # from the current ``cftime.datetime`` minus ``freq`` to the current
-            # ``cftime.datetime`` with a right close.
-            if self.origin in ["end", "end_day"]:
-                if closed is None:
-                    self.closed = "right"
-                else:
-                    self.closed = closed
-                if label is None:
-                    self.label = "right"
-                else:
-                    self.label = label
+            if closed is None:
+                self.closed = "left"
             else:
-                if closed is None:
-                    self.closed = "left"
-                else:
-                    self.closed = closed
-                if label is None:
-                    self.label = "left"
-                else:
-                    self.label = label
+                self.closed = closed
+            if label is None:
+                self.label = "left"
+            else:
+                self.label = label
 
         if offset is not None:
             try:

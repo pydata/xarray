@@ -14,6 +14,7 @@ Geosciences
 
 - `aospy <https://aospy.readthedocs.io>`_: Automated analysis and management of gridded climate data.
 - `argopy <https://github.com/euroargodev/argopy>`_: xarray-based Argo data access, manipulation and visualisation for standard users as well as Argo experts.
+- `cf_xarray <https://cf-xarray.readthedocs.io/en/latest/>`_: Provides an accessor (DataArray.cf or Dataset.cf) that allows you to interpret Climate and Forecast metadata convention attributes present on xarray objects.
 - `climpred <https://climpred.readthedocs.io>`_: Analysis of ensemble forecast models for climate prediction.
 - `geocube <https://corteva.github.io/geocube>`_: Tool to convert geopandas vector data into rasterized xarray data.
 - `GeoWombat <https://github.com/jgrss/geowombat>`_: Utilities for analysis of remotely sensed and gridded raster data at scale (easily tame Landsat, Sentinel, Quickbird, and PlanetScope).
@@ -44,6 +45,7 @@ Geosciences
   harmonic wind analysis in Python.
 - `wradlib <https://wradlib.org/>`_: An Open Source Library for Weather Radar Data Processing.
 - `wrf-python <https://wrf-python.readthedocs.io/>`_: A collection of diagnostic and interpolation routines for use with output of the Weather Research and Forecasting (WRF-ARW) Model.
+- `xarray-eopf <https://github.com/EOPF-Sample-Service/xarray-eopf>`_: An xarray backend implementation for opening ESA EOPF data products in Zarr format.
 - `xarray-regrid <https://github.com/EXCITED-CO2/xarray-regrid>`_: xarray extension for regridding rectilinear data.
 - `xarray-simlab <https://xarray-simlab.readthedocs.io>`_: xarray extension for computer model simulations.
 - `xarray-spatial <https://xarray-spatial.org/>`_: Numba-accelerated raster-based spatial processing tools (NDVI, curvature, zonal-statistics, proximity, hillshading, viewshed, etc.)
@@ -70,6 +72,7 @@ Other domains
 - `ptsa <https://pennmem.github.io/ptsa/html/index.html>`_: EEG Time Series Analysis
 - `pycalphad <https://pycalphad.org/docs/latest/>`_: Computational Thermodynamics in Python
 - `pyomeca <https://pyomeca.github.io/>`_: Python framework for biomechanical analysis
+- `movement <https://movement.neuroinformatics.dev/>`_: A Python toolbox for analysing animal body movements
 
 Extend xarray capabilities
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -89,6 +92,7 @@ Extend xarray capabilities
 - `X-regression <https://github.com/kuchaale/X-regression>`_: Multiple linear regression from Statsmodels library coupled with Xarray library.
 - `xskillscore <https://github.com/xarray-contrib/xskillscore>`_: Metrics for verifying forecasts.
 - `xyzpy <https://xyzpy.readthedocs.io>`_: Easily generate high dimensional data, including parallelization.
+- `xarray-lmfit <https://github.com/kmnhan/xarray-lmfit>`_: xarray extension for curve fitting using `lmfit <https://lmfit.github.io/lmfit-py/>`_.
 
 Visualization
 ~~~~~~~~~~~~~

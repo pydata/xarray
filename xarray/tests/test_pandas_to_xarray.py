@@ -37,6 +37,7 @@ import numpy as np
 import pandas as pd
 import pandas._testing as tm
 import pytest
+from packaging.version import Version
 from pandas import (
     Categorical,
     CategoricalIndex,
@@ -51,7 +52,7 @@ from pandas import (
     timedelta_range,
 )
 
-indices_dict = {
+indices_dict: dict[str, Index] = {
     "object": Index([f"pandas_{i}" for i in range(10)], dtype=object),
     "string": Index([f"pandas_{i}" for i in range(10)], dtype="str"),
     "datetime": date_range("2020-01-01", periods=10),
@@ -78,7 +79,7 @@ indices_dict = {
         np.arange(10, dtype="complex128") + 1.0j * np.arange(10, dtype="complex128")
     ),
     "categorical": CategoricalIndex(list("abcd") * 2),
-    "interval": IntervalIndex.from_breaks(np.linspace(0, 100, num=11)),
+    "interval": IntervalIndex.from_breaks(np.linspace(0, 100, num=11, dtype="int")),
     "empty": Index([]),
     # "tuples": MultiIndex.from_tuples(zip(["foo", "bar", "baz"], [1, 2, 3])),
     # "mi-with-dt64tz-level": _create_mi_with_dt64tz_level(),
@@ -107,14 +108,6 @@ def index_flat(request):
     return indices_dict[key].copy()
 
 
-@pytest.fixture
-def using_infer_string() -> bool:
-    """
-    Fixture to check if infer string option is enabled.
-    """
-    return pd.options.future.infer_string is True  # type: ignore[union-attr]
-
-
 class TestDataFrameToXArray:
     @pytest.fixture
     def df(self):
@@ -131,8 +124,7 @@ class TestDataFrameToXArray:
             }
         )
 
-    @pytest.mark.xfail(reason="needs some work")
-    def test_to_xarray_index_types(self, index_flat, df, using_infer_string):
+    def test_to_xarray_index_types(self, index_flat, df):
         index = index_flat
         # MultiIndex is tested in test_to_xarray_with_multiindex
         if len(index) == 0:
@@ -154,9 +146,6 @@ class TestDataFrameToXArray:
         # datetimes w/tz are preserved
         # column names are lost
         expected = df.copy()
-        expected["f"] = expected["f"].astype(
-            object if not using_infer_string else "str"
-        )
         expected.columns.name = None
         tm.assert_frame_equal(result.to_dataframe(), expected)
 
@@ -168,7 +157,7 @@ class TestDataFrameToXArray:
         assert result.sizes["foo"] == 0
         assert isinstance(result, Dataset)
 
-    def test_to_xarray_with_multiindex(self, df, using_infer_string):
+    def test_to_xarray_with_multiindex(self, df):
         from xarray import Dataset
 
         # MultiIndex
@@ -184,7 +173,7 @@ class TestDataFrameToXArray:
         result = result.to_dataframe()
         expected = df.copy()
         expected["f"] = expected["f"].astype(
-            object if not using_infer_string else "str"
+            object if Version(pd.__version__) < Version("3.0.0dev0") else str
         )
         expected.columns.name = None
         tm.assert_frame_equal(result, expected)

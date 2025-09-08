@@ -1118,7 +1118,7 @@ class DataWithCoords(AttrAccessMixin):
                 f"Received {type(freq)} instead."
             )
 
-        rgrouper = ResolvedGrouper(grouper, group, self, eagerly_compute_group=False)
+        rgrouper = ResolvedGrouper(grouper, group, self)
 
         return resample_cls(
             self,
@@ -1782,7 +1782,7 @@ def _full_like_variable(
             other.shape,
             fill_value,
             dtype=dtype,
-            chunks=chunks if chunks else other.data.chunks,
+            chunks=chunks or other.data.chunks,
             **from_array_kwargs,
         )
     else:
@@ -2084,7 +2084,7 @@ def is_np_timedelta_like(dtype: DTypeLike) -> bool:
 
 
 def _contains_cftime_datetimes(array: Any) -> bool:
-    """Check if a array inside a Variable contains cftime.datetime objects"""
+    """Check if an array inside a Variable contains cftime.datetime objects"""
     if cftime is None:
         return False
 

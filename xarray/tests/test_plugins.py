@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from importlib.metadata import EntryPoint, EntryPoints
+from itertools import starmap
 from unittest import mock
 
 import pytest
@@ -48,7 +49,7 @@ def dummy_duplicated_entrypoints():
         ["engine2", "xarray.tests.test_plugins:backend_1", "xarray.backends"],
         ["engine2", "xarray.tests.test_plugins:backend_2", "xarray.backends"],
     ]
-    eps = [EntryPoint(name, value, group) for name, value, group in specs]
+    eps = list(starmap(EntryPoint, specs))
     return eps
 
 
@@ -91,7 +92,7 @@ def test_backends_dict_from_pkg() -> None:
         ["engine1", "xarray.tests.test_plugins:backend_1", "xarray.backends"],
         ["engine2", "xarray.tests.test_plugins:backend_2", "xarray.backends"],
     ]
-    entrypoints = [EntryPoint(name, value, group) for name, value, group in specs]
+    entrypoints = list(starmap(EntryPoint, specs))
     engines = plugins.backends_dict_from_pkg(entrypoints)
     assert len(engines) == 2
     assert engines.keys() == {"engine1", "engine2"}
@@ -170,7 +171,7 @@ def test_build_engines_sorted() -> None:
     backend_entrypoints = list(plugins.build_engines(dummy_pkg_entrypoints))
 
     indices = []
-    for be in plugins.STANDARD_BACKENDS_ORDER:
+    for be in plugins.NETCDF_BACKENDS_ORDER:
         try:
             index = backend_entrypoints.index(be)
             backend_entrypoints.pop(index)

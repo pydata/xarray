@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import contextlib
 import re
+import sys
 from collections.abc import Callable, Generator, Hashable
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
@@ -14,20 +16,34 @@ from xarray.core.datatree import DataTree
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
     has_zarr_v3,
+    network,
     parametrize_zarr_format,
     requires_dask,
     requires_h5netcdf,
     requires_netCDF4,
+    requires_pydap,
     requires_zarr,
 )
+from xarray.tests.test_backends import TestNetCDF4Data as _TestNetCDF4Data
 
 if TYPE_CHECKING:
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine
 
-try:
+with contextlib.suppress(ImportError):
     import netCDF4 as nc4
-except ImportError:
-    pass
+
+
+class TestNetCDF4DataTree(_TestNetCDF4Data):
+    @contextlib.contextmanager
+    def open(self, path, **kwargs):
+        with open_datatree(path, engine=self.engine, **kwargs) as ds:
+            yield ds.to_dataset()
+
+    def test_child_group_with_inconsistent_dimensions(self) -> None:
+        with pytest.raises(
+            ValueError, match=r"group '/child' is not aligned with its parents"
+        ):
+            super().test_child_group_with_inconsistent_dimensions()
 
 
 def diff_chunks(
@@ -214,7 +230,7 @@ class DatatreeIOBase:
         ) as roundtrip_dt:
             assert original_dt["test"].dtype == roundtrip_dt["test"].dtype
 
-    def test_to_netcdf_inherited_coords(self, tmpdir):
+    def test_to_netcdf_inherited_coords(self, tmpdir) -> None:
         filepath = tmpdir / "test.nc"
         original_dt = DataTree.from_dict(
             {
@@ -229,7 +245,7 @@ class DatatreeIOBase:
             subtree = cast(DataTree, roundtrip_dt["/sub"])
             assert "x" not in subtree.to_dataset(inherit=False).coords
 
-    def test_netcdf_encoding(self, tmpdir, simple_datatree):
+    def test_netcdf_encoding(self, tmpdir, simple_datatree) -> None:
         filepath = tmpdir / "test.nc"
         original_dt = simple_datatree
 
@@ -246,7 +262,7 @@ class DatatreeIOBase:
             with pytest.raises(ValueError, match="unexpected encoding group.*"):
                 original_dt.to_netcdf(filepath, encoding=enc, engine=self.engine)
 
-    def test_write_subgroup(self, tmpdir):
+    def test_write_subgroup(self, tmpdir) -> None:
         original_dt = DataTree.from_dict(
             {
                 "/": xr.Dataset(coords={"x": [1, 2, 3]}),
@@ -263,6 +279,47 @@ class DatatreeIOBase:
         with open_datatree(filepath, engine=self.engine) as roundtrip_dt:
             assert_equal(original_dt, roundtrip_dt)
             assert_identical(expected_dt, roundtrip_dt)
+
+    @requires_netCDF4
+    def test_no_redundant_dimensions(self, tmpdir) -> None:
+        # regression test for https://github.com/pydata/xarray/issues/10241
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2, 3]}),
+                "/child": xr.Dataset({"foo": ("x", [4, 5, 6])}),
+            }
+        )
+        filepath = tmpdir / "test.zarr"
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        root = nc4.Dataset(str(filepath))
+        child = root.groups["child"]
+        assert list(root.dimensions) == ["x"]
+        assert list(child.dimensions) == []
+
+    @requires_dask
+    def test_compute_false(self, tmpdir, simple_datatree):
+        filepath = tmpdir / "test.nc"
+        original_dt = simple_datatree.chunk()
+        result = original_dt.to_netcdf(filepath, engine=self.engine, compute=False)
+
+        with open_datatree(filepath, engine=self.engine) as in_progress_dt:
+            assert in_progress_dt.isomorphic(original_dt)
+            assert not in_progress_dt.equals(original_dt)
+
+        result.compute()
+        with open_datatree(filepath, engine=self.engine) as written_dt:
+            assert_identical(written_dt, original_dt)
+
+    def test_default_write_engine(self, tmpdir, simple_datatree, monkeypatch):
+        # Ensure the other netCDF library are not installed
+        exclude = "netCDF4" if self.engine == "h5netcdf" else "h5netcdf"
+        monkeypatch.delitem(sys.modules, exclude, raising=False)
+        monkeypatch.setattr(sys, "meta_path", [])
+
+        filepath = tmpdir + "/phony_dims.nc"
+        original_dt = simple_datatree
+        original_dt.to_netcdf(filepath)  # should not raise
 
 
 @requires_netCDF4
@@ -418,6 +475,99 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
             assert_equal(subgroup_tree, expected_subtree)
 
 
+@network
+@requires_pydap
+class TestPyDAPDatatreeIO:
+    """Test PyDAP backend for DataTree."""
+
+    engine: T_DataTreeNetcdfEngine | None = "pydap"
+    # you can check these by adding a .dmr to urls, and replacing dap4 with http
+    unaligned_datatree_url = (
+        "dap4://test.opendap.org/opendap/dap4/unaligned_simple_datatree.nc.h5"
+    )
+    all_aligned_child_nodes_url = (
+        "dap4://test.opendap.org/opendap/dap4/all_aligned_child_nodes.nc.h5"
+    )
+    simplegroup_datatree_url = "dap4://test.opendap.org/opendap/dap4/SimpleGroup.nc4.h5"
+
+    def test_open_datatree(self, url=unaligned_datatree_url) -> None:
+        """Test if `open_datatree` fails to open a netCDF4 with an unaligned group hierarchy."""
+
+        with pytest.raises(
+            ValueError,
+            match=(
+                re.escape(
+                    "group '/Group1/subgroup1' is not aligned with its parents:\nGroup:\n"
+                )
+                + ".*"
+            ),
+        ):
+            open_datatree(url, engine=self.engine)
+
+    def test_open_groups(self, url=unaligned_datatree_url) -> None:
+        """Test `open_groups` with a netCDF4/HDF5 file with an unaligned group hierarchy."""
+        unaligned_dict_of_datasets = open_groups(url, engine=self.engine)
+
+        # Check that group names are keys in the dictionary of `xr.Datasets`
+        assert "/" in unaligned_dict_of_datasets.keys()
+        assert "/Group1" in unaligned_dict_of_datasets.keys()
+        assert "/Group1/subgroup1" in unaligned_dict_of_datasets.keys()
+        # Check that group name returns the correct datasets
+        with xr.open_dataset(url, engine=self.engine, group="/") as expected:
+            assert_identical(unaligned_dict_of_datasets["/"], expected)
+        with xr.open_dataset(url, group="Group1", engine=self.engine) as expected:
+            assert_identical(unaligned_dict_of_datasets["/Group1"], expected)
+        with xr.open_dataset(
+            url,
+            group="/Group1/subgroup1",
+            engine=self.engine,
+        ) as expected:
+            assert_identical(unaligned_dict_of_datasets["/Group1/subgroup1"], expected)
+
+    def test_inherited_coords(self, url=simplegroup_datatree_url) -> None:
+        """Test that `open_datatree` inherits coordinates from root tree.
+
+        This particular h5 file is a test file that inherits the time coordinate from the root
+        dataset to the child dataset.
+
+        Group: /
+        │   Dimensions:        (time: 1, Z: 1000, nv: 2)
+        │   Coordinates:
+        |       time: (time)    float32 0.5
+        |       Z:    (Z)       float32 -0.0 -1.0 -2.0 ...
+        │   Data variables:
+        │       Pressure  (Z)   float32 ...
+        |       time_bnds (time, nv) float32 ...
+        └── Group: /SimpleGroup
+            │   Dimensions:      (time: 1, Z: 1000, nv: 2, Y: 40, X: 40)
+            │   Coordinates:
+            |      Y:   (Y)     int16 1 2 3 4 ...
+            |      X:   (X)     int16 1 2 3 4 ...
+            |   Inherited coordinates:
+            |      time: (time)    float32 0.5
+            |      Z:    (Z)       float32 -0.0 -1.0 -2.0 ...
+            │   Data variables:
+            │       Temperature  (time, Z, Y, X) float32 ...
+            |       Salinity     (time, Z, Y, X) float32 ...
+        """
+        tree = open_datatree(url, engine=self.engine)
+        assert set(tree.dims) == {"time", "Z", "nv"}
+        assert tree["/SimpleGroup"].coords["time"].dims == ("time",)
+        assert tree["/SimpleGroup"].coords["Z"].dims == ("Z",)
+        assert tree["/SimpleGroup"].coords["Y"].dims == ("Y",)
+        assert tree["/SimpleGroup"].coords["X"].dims == ("X",)
+        with xr.open_dataset(url, engine=self.engine, group="/SimpleGroup") as expected:
+            assert set(tree["/SimpleGroup"].dims) == set(
+                list(expected.dims) + ["Z", "nv"]
+            )
+
+    def test_open_groups_to_dict(self, url=all_aligned_child_nodes_url) -> None:
+        aligned_dict_of_datasets = open_groups(url, engine=self.engine)
+        aligned_dt = DataTree.from_dict(aligned_dict_of_datasets)
+        with open_datatree(url, engine=self.engine) as opened_tree:
+            assert opened_tree.identical(aligned_dt)
+
+
 @requires_h5netcdf
 class TestH5NetCDFDatatreeIO(DatatreeIOBase):
     engine: T_DataTreeNetcdfEngine | None = "h5netcdf"
@@ -445,13 +595,43 @@ class TestH5NetCDFDatatreeIO(DatatreeIOBase):
                     "phony_dim_3": 25,
                 }
 
+    def test_roundtrip_via_bytes(self, simple_datatree) -> None:
+        original_dt = simple_datatree
+        roundtrip_dt = open_datatree(original_dt.to_netcdf())
+        assert_equal(original_dt, roundtrip_dt)
+
+    def test_roundtrip_via_bytes_engine_specified(self, simple_datatree) -> None:
+        original_dt = simple_datatree
+        roundtrip_dt = open_datatree(original_dt.to_netcdf(engine=self.engine))
+        assert_equal(original_dt, roundtrip_dt)
+
+    def test_to_bytes_compute_false(self, simple_datatree) -> None:
+        original_dt = simple_datatree
+        with pytest.raises(
+            NotImplementedError,
+            match=re.escape("to_netcdf() with compute=False is not yet implemented"),
+        ):
+            original_dt.to_netcdf(compute=False)
+
+    def test_roundtrip_using_filelike_object(self, tmpdir, simple_datatree) -> None:
+        original_dt = simple_datatree
+        filepath = tmpdir + "/test.nc"
+        # h5py requires both read and write access when writing, it will
+        # work with file-like objects provided they support both, and are
+        # seekable.
+        with open(filepath, "wb+") as file:
+            original_dt.to_netcdf(file, engine=self.engine)
+        with open(filepath, "rb") as file:
+            with open_datatree(file, engine=self.engine) as roundtrip_dt:
+                assert_equal(original_dt, roundtrip_dt)
+
 
 @requires_zarr
 @parametrize_zarr_format
 class TestZarrDatatreeIO:
     engine = "zarr"
 
-    def test_to_zarr(self, tmpdir, simple_datatree, zarr_format):
+    def test_to_zarr(self, tmpdir, simple_datatree, zarr_format) -> None:
         filepath = str(tmpdir / "test.zarr")
         original_dt = simple_datatree
         original_dt.to_zarr(filepath, zarr_format=zarr_format)
@@ -459,7 +639,10 @@ class TestZarrDatatreeIO:
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
             assert_equal(original_dt, roundtrip_dt)
 
-    def test_zarr_encoding(self, tmpdir, simple_datatree, zarr_format):
+    @pytest.mark.filterwarnings(
+        "ignore:Numcodecs codecs are not in the Zarr version 3 specification"
+    )
+    def test_zarr_encoding(self, tmpdir, simple_datatree, zarr_format) -> None:
         filepath = str(tmpdir / "test.zarr")
         original_dt = simple_datatree
 
@@ -485,11 +668,11 @@ class TestZarrDatatreeIO:
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
             with pytest.raises(ValueError, match="unexpected encoding group.*"):
-                original_dt.to_zarr(
-                    filepath, encoding=enc, engine="zarr", zarr_format=zarr_format
-                )
+                original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
 
-    def test_to_zarr_zip_store(self, tmpdir, simple_datatree, zarr_format):
+    @pytest.mark.xfail(reason="upstream zarr read-only changes have broken this test")
+    @pytest.mark.filterwarnings("ignore:Duplicate name")
+    def test_to_zarr_zip_store(self, tmpdir, simple_datatree, zarr_format) -> None:
         from zarr.storage import ZipStore
 
         filepath = str(tmpdir / "test.zarr.zip")
@@ -500,7 +683,9 @@ class TestZarrDatatreeIO:
         with open_datatree(store, engine="zarr") as roundtrip_dt:  # type: ignore[arg-type, unused-ignore]
             assert_equal(original_dt, roundtrip_dt)
 
-    def test_to_zarr_not_consolidated(self, tmpdir, simple_datatree, zarr_format):
+    def test_to_zarr_not_consolidated(
+        self, tmpdir, simple_datatree, zarr_format
+    ) -> None:
         filepath = tmpdir / "test.zarr"
         zmetadata = filepath / ".zmetadata"
         s1zmetadata = filepath / "set1" / ".zmetadata"
@@ -514,7 +699,9 @@ class TestZarrDatatreeIO:
             with open_datatree(filepath, engine="zarr") as roundtrip_dt:
                 assert_equal(original_dt, roundtrip_dt)
 
-    def test_to_zarr_default_write_mode(self, tmpdir, simple_datatree, zarr_format):
+    def test_to_zarr_default_write_mode(
+        self, tmpdir, simple_datatree, zarr_format
+    ) -> None:
         simple_datatree.to_zarr(str(tmpdir), zarr_format=zarr_format)
 
         import zarr
@@ -531,12 +718,14 @@ class TestZarrDatatreeIO:
     @requires_dask
     def test_to_zarr_compute_false(
         self, tmp_path: Path, simple_datatree: DataTree, zarr_format: Literal[2, 3]
-    ):
+    ) -> None:
         import dask.array as da
 
         storepath = tmp_path / "test.zarr"
         original_dt = simple_datatree.chunk()
-        original_dt.to_zarr(str(storepath), compute=False, zarr_format=zarr_format)
+        result = original_dt.to_zarr(
+            str(storepath), compute=False, zarr_format=zarr_format
+        )
 
         def assert_expected_zarr_files_exist(
             arr_dir: Path,
@@ -590,7 +779,7 @@ class TestZarrDatatreeIO:
             # inherited variables aren't meant to be written to zarr
             local_node_variables = node.to_dataset(inherit=False).variables
             for name, var in local_node_variables.items():
-                var_dir = storepath / node.path.removeprefix("/") / name
+                var_dir = storepath / node.path.removeprefix("/") / name  # type: ignore[operator]
 
                 assert_expected_zarr_files_exist(
                     arr_dir=var_dir,
@@ -606,6 +795,50 @@ class TestZarrDatatreeIO:
                     is_scalar=not bool(var.dims),
                     zarr_format=zarr_format,
                 )
+
+        with open_datatree(str(storepath), engine="zarr") as in_progress_dt:
+            assert in_progress_dt.isomorphic(original_dt)
+            assert not in_progress_dt.equals(original_dt)
+
+        result.compute()
+        with open_datatree(str(storepath), engine="zarr") as written_dt:
+            assert_identical(written_dt, original_dt)
+
+    @requires_dask
+    def test_rplus_mode(
+        self, tmp_path: Path, simple_datatree: DataTree, zarr_format: Literal[2, 3]
+    ) -> None:
+        storepath = tmp_path / "test.zarr"
+        original_dt = simple_datatree.chunk()
+        original_dt.to_zarr(storepath, compute=False, zarr_format=zarr_format)
+        original_dt.to_zarr(storepath, mode="r+")
+        with open_datatree(str(storepath), engine="zarr") as written_dt:
+            assert_identical(written_dt, original_dt)
+
+    @requires_dask
+    def test_to_zarr_no_redundant_computation(self, tmpdir, zarr_format) -> None:
+        import dask.array as da
+
+        eval_count = 0
+
+        def expensive_func(x):
+            nonlocal eval_count
+            eval_count += 1
+            return x + 1
+
+        base = da.random.random((), chunks=())
+        derived1 = da.map_blocks(expensive_func, base, meta=np.array((), np.float64))
+        derived2 = derived1 + 1  # depends on derived1
+        tree = DataTree.from_dict(
+            {
+                "group1": xr.Dataset({"derived": derived1}),
+                "group2": xr.Dataset({"derived": derived2}),
+            }
+        )
+
+        filepath = str(tmpdir / "test.zarr")
+        tree.to_zarr(filepath, zarr_format=zarr_format)
+        assert eval_count == 1  # not 2
 
     def test_to_zarr_inherited_coords(self, tmpdir, zarr_format):
         original_dt = DataTree.from_dict(
@@ -759,7 +992,7 @@ class TestZarrDatatreeIO:
         for ds in dict_of_datasets.values():
             ds.close()
 
-    def test_write_subgroup(self, tmpdir, zarr_format):
+    def test_write_subgroup(self, tmpdir, zarr_format) -> None:
         original_dt = DataTree.from_dict(
             {
                 "/": xr.Dataset(coords={"x": [1, 2, 3]}),
@@ -780,7 +1013,7 @@ class TestZarrDatatreeIO:
     @pytest.mark.filterwarnings(
         "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
     )
-    def test_write_inherited_coords_false(self, tmpdir, zarr_format):
+    def test_write_inherited_coords_false(self, tmpdir, zarr_format) -> None:
         original_dt = DataTree.from_dict(
             {
                 "/": xr.Dataset(coords={"x": [1, 2, 3]}),
@@ -804,7 +1037,7 @@ class TestZarrDatatreeIO:
     @pytest.mark.filterwarnings(
         "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
     )
-    def test_write_inherited_coords_true(self, tmpdir, zarr_format):
+    def test_write_inherited_coords_true(self, tmpdir, zarr_format) -> None:
         original_dt = DataTree.from_dict(
             {
                 "/": xr.Dataset(coords={"x": [1, 2, 3]}),

@@ -16,24 +16,19 @@ from collections.abc import (
     Iterator,
     Mapping,
     Sequence,
-    Set,
 )
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
+from collections.abc import (
+    Set as AbstractSet,
+)
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
-
-_T = TypeVar("_T", bound=Union["Dataset", "DataArray"])
-_U = TypeVar("_U", bound=Union["Dataset", "DataArray"])
-_V = TypeVar("_V", bound=Union["Dataset", "DataArray"])
 
 from xarray.core import duck_array_ops, utils
 from xarray.core.formatting import limit_lines
 from xarray.core.indexes import Index, filter_indexes_from_coords
 from xarray.core.options import _get_keep_attrs
-from xarray.core.utils import (
-    is_dict_like,
-    result_name,
-)
+from xarray.core.utils import is_dict_like, result_name
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
@@ -146,8 +141,13 @@ class _UFuncSignature:
         return f"{type(self).__name__}({list(self.input_core_dims)!r}, {list(self.output_core_dims)!r})"
 
     def __str__(self):
-        lhs = ",".join("({})".format(",".join(dims)) for dims in self.input_core_dims)
-        rhs = ",".join("({})".format(",".join(dims)) for dims in self.output_core_dims)
+        comma_separated = ",".join
+        lhs = comma_separated(
+            f"({comma_separated(dims)})" for dims in self.input_core_dims
+        )
+        rhs = comma_separated(
+            f"({comma_separated(dims)})" for dims in self.output_core_dims
+        )
         return f"{lhs}->{rhs}"
 
     def to_gufunc_string(self, exclude_dims=frozenset()):
@@ -203,7 +203,7 @@ def _get_coords_list(args: Iterable[Any]) -> list[Coordinates]:
 def build_output_coords_and_indexes(
     args: Iterable[Any],
     signature: _UFuncSignature,
-    exclude_dims: Set = frozenset(),
+    exclude_dims: AbstractSet = frozenset(),
     combine_attrs: CombineAttrsOptions = "override",
 ) -> tuple[list[dict[Any, Variable]], list[dict[Any, Index]]]:
     """Build output coordinates and indexes for an operation.
@@ -448,17 +448,16 @@ def apply_dict_of_variables_vfunc(
         core_dim_present = _check_core_dims(signature, variable_args, name)
         if core_dim_present is True:
             result_vars[name] = func(*variable_args)
+        elif on_missing_core_dim == "raise":
+            raise ValueError(core_dim_present)
+        elif on_missing_core_dim == "copy":
+            result_vars[name] = variable_args[0]
+        elif on_missing_core_dim == "drop":
+            pass
         else:
-            if on_missing_core_dim == "raise":
-                raise ValueError(core_dim_present)
-            elif on_missing_core_dim == "copy":
-                result_vars[name] = variable_args[0]
-            elif on_missing_core_dim == "drop":
-                pass
-            else:
-                raise ValueError(
-                    f"Invalid value for `on_missing_core_dim`: {on_missing_core_dim!r}"
-                )
+            raise ValueError(
+                f"Invalid value for `on_missing_core_dim`: {on_missing_core_dim!r}"
+            )
 
     if signature.num_outputs > 1:
         return _unpack_dict_tuples(result_vars, signature.num_outputs)
@@ -535,8 +534,10 @@ def apply_dataset_vfunc(
     out: Dataset | tuple[Dataset, ...]
     if signature.num_outputs > 1:
         out = tuple(
-            _fast_dataset(*args)
-            for args in zip(result_vars, list_of_coords, list_of_indexes, strict=True)
+            itertools.starmap(
+                _fast_dataset,
+                zip(result_vars, list_of_coords, list_of_indexes, strict=True),
+            )
         )
     else:
         (coord_vars,) = list_of_coords
@@ -573,7 +574,6 @@ def apply_groupby_func(func, *args):
     DataArray, Variable and/or ndarray objects.
     """
     from xarray.core.groupby import GroupBy, peek_at
-    from xarray.core.variable import Variable
 
     groupbys = [arg for arg in args if isinstance(arg, GroupBy)]
     assert groupbys, "must have at least one groupby to iterate over"
@@ -606,9 +606,7 @@ def apply_groupby_func(func, *args):
             iterator = itertools.repeat(arg)
         iterators.append(iterator)
 
-    applied: Iterator = (
-        func(*zipped_args) for zipped_args in zip(*iterators, strict=False)
-    )
+    applied: Iterator = itertools.starmap(func, zip(*iterators, strict=False))
     applied_example, applied = peek_at(applied)
     combine = first_groupby._combine  # type: ignore[attr-defined]
     if isinstance(applied_example, tuple):
@@ -619,7 +617,7 @@ def apply_groupby_func(func, *args):
 
 
 def unified_dim_sizes(
-    variables: Iterable[Variable], exclude_dims: Set = frozenset()
+    variables: Iterable[Variable], exclude_dims: AbstractSet = frozenset()
 ) -> dict[Hashable, int]:
     dim_sizes: dict[Hashable, int] = {}
 
@@ -812,11 +810,10 @@ def apply_variable_ufunc(
             raise ValueError(
                 f"unknown setting for chunked array handling in apply_ufunc: {dask}"
             )
-    else:
-        if vectorize:
-            func = _vectorize(
-                func, signature, output_dtypes=output_dtypes, exclude_dims=exclude_dims
-            )
+    elif vectorize:
+        func = _vectorize(
+            func, signature, output_dtypes=output_dtypes, exclude_dims=exclude_dims
+        )
 
     result_data = func(*input_data)
 
@@ -899,7 +896,7 @@ def apply_ufunc(
     *args: Any,
     input_core_dims: Sequence[Sequence] | None = None,
     output_core_dims: Sequence[Sequence] | None = ((),),
-    exclude_dims: Set = frozenset(),
+    exclude_dims: AbstractSet = frozenset(),
     vectorize: bool = False,
     join: JoinOptions = "exact",
     dataset_join: str = "exact",
@@ -1212,6 +1209,8 @@ def apply_ufunc(
             dask_gufunc_kwargs.setdefault("output_sizes", output_sizes)
 
     if kwargs:
+        if "where" in kwargs and isinstance(kwargs["where"], DataArray):
+            kwargs["where"] = kwargs["where"].data  # type:ignore[index]
         func = functools.partial(func, **kwargs)
 
     if keep_attrs is None:

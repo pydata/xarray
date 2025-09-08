@@ -15,6 +15,7 @@ import pytz
 from xarray import DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
     BasicIndexer,
     CopyOnWriteArray,
@@ -333,7 +334,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         v = self.cls(["x"], pd.period_range(start="2000", periods=20, freq="D"))
         v = v.load()  # for dask-based Variable
         assert v[0] == pd.Period("2000", freq="D")
-        assert "Period('2000-01-01', 'D')" in repr(v)
+        assert "PeriodArray" in repr(v)
 
     @pytest.mark.parametrize("dtype", [float, int])
     def test_1d_math(self, dtype: np.typing.DTypeLike) -> None:
@@ -656,7 +657,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         data = pd.Categorical(np.arange(10, dtype="int64"))
         v = self.cls("x", data)
         print(v)  # should not error
-        assert v.dtype == "int64"
+        assert v.dtype == data.dtype
 
     def test_pandas_datetime64_with_tz(self):
         data = pd.date_range(
@@ -667,9 +668,12 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         )
         v = self.cls("x", data)
         print(v)  # should not error
-        if "America/New_York" in str(data.dtype):
-            # pandas is new enough that it has datetime64 with timezone dtype
-            assert v.dtype == "object"
+        if v.dtype == np.dtype("O"):
+            import dask.array as da
+
+            assert isinstance(v.data, da.Array)
+        else:
+            assert v.dtype == data.dtype
 
     def test_multiindex(self):
         idx = pd.MultiIndex.from_product([list("abc"), [0, 1]])
@@ -1590,15 +1594,7 @@ class TestVariable(VariableSubclassobjects):
         data = pd.Categorical(np.arange(10, dtype="int64"))
         v = self.cls("x", data)
         print(v)  # should not error
-        assert pd.api.types.is_extension_array_dtype(v.dtype)
-
-    def test_pandas_categorical_no_chunk(self):
-        data = pd.Categorical(np.arange(10, dtype="int64"))
-        v = self.cls("x", data)
-        with pytest.raises(
-            ValueError, match=r".*was found to be a Pandas ExtensionArray.*"
-        ):
-            v.chunk((5,))
+        assert isinstance(v.dtype, pd.CategoricalDtype)
 
     def test_squeeze(self):
         v = Variable(["x", "y"], [[1]])
@@ -1657,6 +1653,74 @@ class TestVariable(VariableSubclassobjects):
             exp_values[i] = ("a", 1)
         expected = Variable(["x"], exp_values)
         assert_identical(actual, expected)
+
+    def test_set_dims_without_broadcast(self):
+        class ArrayWithoutBroadcastTo(NDArrayMixin, indexing.ExplicitlyIndexed):
+            def __init__(self, array):
+                self.array = array
+
+            # Broadcasting with __getitem__ is "easier" to implement
+            # especially for dims of 1
+            def __getitem__(self, key):
+                return self.array[key]
+
+            def __array_function__(self, *args, **kwargs):
+                raise NotImplementedError(
+                    "Not we don't want to use broadcast_to here "
+                    "https://github.com/pydata/xarray/issues/9462"
+                )
+
+        arr = ArrayWithoutBroadcastTo(np.zeros((3, 4)))
+        # We should be able to add a new axis without broadcasting
+        assert arr[np.newaxis, :, :].shape == (1, 3, 4)
+        with pytest.raises(NotImplementedError):
+            np.broadcast_to(arr, (1, 3, 4))
+
+        v = Variable(["x", "y"], arr)
+        v_expanded = v.set_dims(["z", "x", "y"])
+        assert v_expanded.dims == ("z", "x", "y")
+        assert v_expanded.shape == (1, 3, 4)
+
+        v_expanded = v.set_dims(["x", "z", "y"])
+        assert v_expanded.dims == ("x", "z", "y")
+        assert v_expanded.shape == (3, 1, 4)
+
+        v_expanded = v.set_dims(["x", "y", "z"])
+        assert v_expanded.dims == ("x", "y", "z")
+        assert v_expanded.shape == (3, 4, 1)
+
+        # Explicitly asking for a shape of 1 triggers a different
+        # codepath in set_dims
+        # https://github.com/pydata/xarray/issues/9462
+        v_expanded = v.set_dims(["z", "x", "y"], shape=(1, 3, 4))
+        assert v_expanded.dims == ("z", "x", "y")
+        assert v_expanded.shape == (1, 3, 4)
+
+        v_expanded = v.set_dims(["x", "z", "y"], shape=(3, 1, 4))
+        assert v_expanded.dims == ("x", "z", "y")
+        assert v_expanded.shape == (3, 1, 4)
+
+        v_expanded = v.set_dims(["x", "y", "z"], shape=(3, 4, 1))
+        assert v_expanded.dims == ("x", "y", "z")
+        assert v_expanded.shape == (3, 4, 1)
+
+        v_expanded = v.set_dims({"z": 1, "x": 3, "y": 4})
+        assert v_expanded.dims == ("z", "x", "y")
+        assert v_expanded.shape == (1, 3, 4)
+
+        v_expanded = v.set_dims({"x": 3, "z": 1, "y": 4})
+        assert v_expanded.dims == ("x", "z", "y")
+        assert v_expanded.shape == (3, 1, 4)
+
+        v_expanded = v.set_dims({"x": 3, "y": 4, "z": 1})
+        assert v_expanded.dims == ("x", "y", "z")
+        assert v_expanded.shape == (3, 4, 1)
+
+        with pytest.raises(NotImplementedError):
+            v.set_dims({"z": 2, "x": 3, "y": 4})
+
+        with pytest.raises(NotImplementedError):
+            v.set_dims(["z", "x", "y"], shape=(2, 3, 4))
 
     def test_stack(self):
         v = Variable(["x", "y"], [[0, 1], [2, 3]], {"foo": "bar"})
@@ -1864,6 +1928,9 @@ class TestVariable(VariableSubclassobjects):
 
         np.testing.assert_allclose(actual.values, expected)
 
+    @pytest.mark.filterwarnings(
+        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
+    )
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_interpolation_deprecation(self, method) -> None:
         v = Variable(["x", "y"], self.d)
@@ -2412,10 +2479,17 @@ class TestVariableWithDask(VariableSubclassobjects):
     def test_pad(self, mode, xr_arg, np_arg):
         super().test_pad(mode, xr_arg, np_arg)
 
+    @pytest.mark.skip(reason="dask doesn't support extension arrays")
+    def test_pandas_period_index(self):
+        super().test_pandas_period_index()
+
+    @pytest.mark.skip(reason="dask doesn't support extension arrays")
+    def test_pandas_datetime64_with_tz(self):
+        super().test_pandas_datetime64_with_tz()
+
+    @pytest.mark.skip(reason="dask doesn't support extension arrays")
     def test_pandas_categorical_dtype(self):
-        data = pd.Categorical(np.arange(10, dtype="int64"))
-        with pytest.raises(ValueError, match="was found to be a Pandas ExtensionArray"):
-            self.cls("x", data)
+        super().test_pandas_categorical_dtype()
 
 
 @requires_sparse
@@ -2444,7 +2518,8 @@ class TestIndexVariable(VariableSubclassobjects):
 
     def test_to_index_multiindex_level(self):
         midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
-        ds = Dataset(coords={"x": midx})
+        with pytest.warns(FutureWarning):
+            ds = Dataset(coords={"x": midx})
         assert ds.one.variable.to_index().equals(midx.get_level_values("one"))
 
     def test_multiindex_default_level_names(self):
@@ -2704,11 +2779,11 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
 
         expect = orig.copy(deep=True)
         # see https://github.com/python/mypy/issues/3004 for why we need to ignore type
-        expect.values = [[2.0, 2.0], [2.0, 2.0]]  # type: ignore[assignment]
+        expect.values = [[2.0, 2.0], [2.0, 2.0]]  # type: ignore[assignment,unused-ignore]
         assert_identical(expect, full_like(orig, 2))
 
         # override dtype
-        expect.values = [[True, True], [True, True]]  # type: ignore[assignment]
+        expect.values = [[True, True], [True, True]]  # type: ignore[assignment,unused-ignore]
         assert expect.dtype == bool
         assert_identical(expect, full_like(orig, True, dtype=bool))
 
@@ -2823,71 +2898,106 @@ class TestBackendIndexing:
     @pytest.fixture(autouse=True)
     def setUp(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
+        self.cat = PandasExtensionArray(pd.Categorical(["a", "b"] * 5))
 
-    def check_orthogonal_indexing(self, v):
-        assert np.allclose(v.isel(x=[8, 3], y=[2, 1]), self.d[[8, 3]][:, [2, 1]])
+    async def check_orthogonal_indexing(self, v, load_async):
+        expected = self.d[[8, 3]][:, [2, 1]]
 
-    def check_vectorized_indexing(self, v):
+        if load_async:
+            result = await v.isel(x=[8, 3], y=[2, 1]).load_async()
+        else:
+            result = v.isel(x=[8, 3], y=[2, 1])
+
+        assert np.allclose(result, expected)
+
+    async def check_vectorized_indexing(self, v, load_async):
         ind_x = Variable("z", [0, 2])
         ind_y = Variable("z", [2, 1])
-        assert np.allclose(v.isel(x=ind_x, y=ind_y), self.d[ind_x, ind_y])
+        expected = self.d[ind_x, ind_y]
 
-    def test_NumpyIndexingAdapter(self):
+        if load_async:
+            result = await v.isel(x=ind_x, y=ind_y).load_async()
+        else:
+            result = v.isel(x=ind_x, y=ind_y).load()
+
+        assert np.allclose(result, expected)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("load_async", [True, False])
+    async def test_NumpyIndexingAdapter(self, load_async):
         v = Variable(dims=("x", "y"), data=NumpyIndexingAdapter(self.d))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
         # could not doubly wrapping
         with pytest.raises(TypeError, match=r"NumpyIndexingAdapter only wraps "):
             v = Variable(
                 dims=("x", "y"), data=NumpyIndexingAdapter(NumpyIndexingAdapter(self.d))
             )
 
-    def test_LazilyIndexedArray(self):
+    def test_extension_array_duck_array(self):
+        lazy = LazilyIndexedArray(self.cat)
+        assert (lazy.get_duck_array().array == self.cat).all()
+
+    def test_extension_array_duck_indexed(self):
+        lazy = Variable(dims=("x"), data=LazilyIndexedArray(self.cat))
+        assert (lazy[[0, 1, 5]] == ["a", "b", "b"]).all()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("load_async", [True, False])
+    async def test_LazilyIndexedArray(self, load_async):
         v = Variable(dims=("x", "y"), data=LazilyIndexedArray(self.d))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
         # doubly wrapping
         v = Variable(
             dims=("x", "y"),
             data=LazilyIndexedArray(LazilyIndexedArray(self.d)),
         )
-        self.check_orthogonal_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
         # hierarchical wrapping
         v = Variable(
             dims=("x", "y"), data=LazilyIndexedArray(NumpyIndexingAdapter(self.d))
         )
-        self.check_orthogonal_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
 
-    def test_CopyOnWriteArray(self):
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("load_async", [True, False])
+    async def test_CopyOnWriteArray(self, load_async):
         v = Variable(dims=("x", "y"), data=CopyOnWriteArray(self.d))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
         # doubly wrapping
         v = Variable(dims=("x", "y"), data=CopyOnWriteArray(LazilyIndexedArray(self.d)))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
 
-    def test_MemoryCachedArray(self):
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("load_async", [True, False])
+    async def test_MemoryCachedArray(self, load_async):
         v = Variable(dims=("x", "y"), data=MemoryCachedArray(self.d))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
         # doubly wrapping
         v = Variable(dims=("x", "y"), data=CopyOnWriteArray(MemoryCachedArray(self.d)))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
 
     @requires_dask
-    def test_DaskIndexingAdapter(self):
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("load_async", [True, False])
+    async def test_DaskIndexingAdapter(self, load_async):
         import dask.array as da
 
-        da = da.asarray(self.d)
-        v = Variable(dims=("x", "y"), data=DaskIndexingAdapter(da))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        dask_array = da.asarray(self.d)
+        v = Variable(dims=("x", "y"), data=DaskIndexingAdapter(dask_array))
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
         # doubly wrapping
-        v = Variable(dims=("x", "y"), data=CopyOnWriteArray(DaskIndexingAdapter(da)))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        v = Variable(
+            dims=("x", "y"), data=CopyOnWriteArray(DaskIndexingAdapter(dask_array))
+        )
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
 
 
 def test_clip(var):
@@ -3020,7 +3130,7 @@ def test_datetime_conversion(values, unit) -> None:
     # todo: check for redundancy (suggested per review)
     dims = ["time"] if isinstance(values, np.ndarray | pd.Index | pd.Series) else []
     var = Variable(dims, values)
-    if var.dtype.kind == "M":
+    if var.dtype.kind == "M" and isinstance(var.dtype, np.dtype):
         assert var.dtype == np.dtype(f"datetime64[{unit}]")
     else:
         # The only case where a non-datetime64 dtype can occur currently is in
@@ -3062,8 +3172,12 @@ def test_pandas_two_only_datetime_conversion_warnings(
     # todo: check for redundancy (suggested per review)
     var = Variable(["time"], data.astype(dtype))  # type: ignore[arg-type]
 
-    if var.dtype.kind == "M":
+    # we internally convert series to numpy representations to avoid too much nastiness with extension arrays
+    # when calling data.array e.g., with NumpyExtensionArrays
+    if isinstance(data, pd.Series):
         assert var.dtype == np.dtype("datetime64[s]")
+    elif var.dtype.kind == "M":
+        assert var.dtype == dtype
     else:
         # The only case where a non-datetime64 dtype can occur currently is in
         # the case that the variable is backed by a timezone-aware

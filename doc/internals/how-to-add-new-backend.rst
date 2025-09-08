@@ -221,21 +221,27 @@ performs the inverse transformation.
 
 In the following an example on how to use the coders ``decode`` method:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import xarray as xr
+    import numpy as np
 
-.. ipython:: python
+.. jupyter-execute::
 
     var = xr.Variable(
         dims=("x",), data=np.arange(10.0), attrs={"scale_factor": 10, "add_offset": 2}
     )
     var
 
+.. jupyter-execute::
+
     coder = xr.coding.variables.CFScaleOffsetCoder()
     decoded_var = coder.decode(var)
     decoded_var
+
+.. jupyter-execute::
+
     decoded_var.encoding
 
 Some of the transformations can be common to more backends, so before
@@ -325,10 +331,12 @@ information on plugins.
 How to support lazy loading
 +++++++++++++++++++++++++++
 
-If you want to make your backend effective with big datasets, then you should
-support lazy loading.
-Basically, you shall replace the :py:class:`numpy.ndarray` inside the
-variables with a custom class that supports lazy loading indexing.
+If you want to make your backend effective with big datasets, then you should take advantage of xarray's
+support for lazy loading and indexing.
+
+Basically, when your backend constructs the ``Variable`` objects,
+you need to replace the :py:class:`numpy.ndarray` inside the
+variables with a custom :py:class:`~xarray.backends.BackendArray` subclass that supports lazy loading and indexing.
 See the example below:
 
 .. code-block:: python
@@ -339,25 +347,27 @@ See the example below:
 
 Where:
 
-- :py:class:`~xarray.core.indexing.LazilyIndexedArray` is a class
-  provided by Xarray that manages the lazy loading.
-- ``MyBackendArray`` shall be implemented by the backend and shall inherit
+- :py:class:`~xarray.core.indexing.LazilyIndexedArray` is a wrapper class
+  provided by Xarray that manages the lazy loading and indexing.
+- ``MyBackendArray`` should be implemented by the backend and must inherit
   from :py:class:`~xarray.backends.BackendArray`.
 
 BackendArray subclassing
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-The BackendArray subclass shall implement the following method and attributes:
+The BackendArray subclass must implement the following method and attributes:
 
-- the ``__getitem__`` method that takes in input an index and returns a
-  `NumPy <https://numpy.org/>`__ array
-- the ``shape`` attribute
+- the ``__getitem__`` method that takes an index as an input and returns a
+  `NumPy <https://numpy.org/>`__ array,
+- the ``shape`` attribute,
 - the ``dtype`` attribute.
 
-Xarray supports different type of :doc:`/user-guide/indexing`, that can be
-grouped in three types of indexes
+It may also optionally implement an additional ``async_getitem`` method.
+
+Xarray supports different types of :doc:`/user-guide/indexing`, that can be
+grouped in three types of indexes:
 :py:class:`~xarray.core.indexing.BasicIndexer`,
-:py:class:`~xarray.core.indexing.OuterIndexer` and
+:py:class:`~xarray.core.indexing.OuterIndexer`, and
 :py:class:`~xarray.core.indexing.VectorizedIndexer`.
 This implies that the implementation of the method ``__getitem__`` can be tricky.
 In order to simplify this task, Xarray provides a helper function,
@@ -413,8 +423,22 @@ input the ``key``, the array ``shape`` and the following parameters:
 For more details see
 :py:class:`~xarray.core.indexing.IndexingSupport` and :ref:`RST indexing`.
 
+Async support
+^^^^^^^^^^^^^
+
+Backends can also optionally support loading data asynchronously via xarray's asynchronous loading methods
+(e.g. ``~xarray.Dataset.load_async``).
+To support async loading the ``BackendArray`` subclass must additionally implement the ``BackendArray.async_getitem`` method.
+
+Note that implementing this method is only necessary if you want to be able to load data from different xarray objects concurrently.
+Even without this method your ``BackendArray`` implementation is still free to concurrently load chunks of data for a single ``Variable`` itself,
+so long as it does so behind the synchronous ``__getitem__`` interface.
+
+Dask support
+^^^^^^^^^^^^
+
 In order to support `Dask Distributed <https://distributed.dask.org/>`__ and
-:py:mod:`multiprocessing`, ``BackendArray`` subclass should be serializable
+:py:mod:`multiprocessing`, the ``BackendArray`` subclass should be serializable
 either with :ref:`io.pickle` or
 `cloudpickle <https://github.com/cloudpipe/cloudpickle>`__.
 That implies that all the reference to open files should be dropped. For
@@ -432,42 +456,61 @@ In the ``BASIC`` indexing support, numbers and slices are supported.
 
 Example:
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [1]: # () shall return the full array
-       ...: backend_array._raw_indexing_method(())
-    Out[1]: array([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
+    # () shall return the full array
+    backend_array._raw_indexing_method(())
 
-    In [2]: # shall support integers
-       ...: backend_array._raw_indexing_method(1, 1)
-    Out[2]: 5
+.. jupyter-output::
 
-    In [3]: # shall support slices
-       ...: backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
-    Out[3]: array([[2, 3], [6, 7], [10, 11]])
+    array([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
+
+.. jupyter-input::
+
+    # shall support integers
+    backend_array._raw_indexing_method(1, 1)
+
+.. jupyter-output::
+
+    5
+
+.. jupyter-input::
+
+   # shall support slices
+   backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
+
+.. jupyter-output::
+
+    array([[2, 3], [6, 7], [10, 11]])
 
 **OUTER**
 
 The ``OUTER`` indexing shall support number, slices and in addition it shall
-support also lists of integers. The the outer indexing is equivalent to
+support also lists of integers. The outer indexing is equivalent to
 combining multiple input list with ``itertools.product()``:
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [1]: backend_array._raw_indexing_method([0, 1], [0, 1, 2])
-    Out[1]: array([[0, 1, 2], [4, 5, 6]])
+    backend_array._raw_indexing_method([0, 1], [0, 1, 2])
+
+.. jupyter-output::
+
+    array([[0, 1, 2], [4, 5, 6]])
+
+.. jupyter-input::
 
     # shall support integers
-    In [2]: backend_array._raw_indexing_method(1, 1)
-    Out[2]: 5
+    backend_array._raw_indexing_method(1, 1)
+
+.. jupyter-output::
+
+    5
 
 
 **OUTER_1VECTOR**
 
 The ``OUTER_1VECTOR`` indexing shall supports number, slices and at most one
-list. The behaviour with the list shall be the same of ``OUTER`` indexing.
+list. The behaviour with the list shall be the same as ``OUTER`` indexing.
 
 If you support more complex indexing as explicit indexing or
 numpy indexing, you can have a look to the implementation of Zarr backend and Scipy backend,

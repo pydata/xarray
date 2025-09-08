@@ -19,7 +19,12 @@ from pandas.errors import OutOfBoundsDatetime
 
 from xarray.core.datatree_render import RenderDataTree
 from xarray.core.duck_array_ops import array_all, array_any, array_equiv, astype, ravel
-from xarray.core.indexing import MemoryCachedArray
+from xarray.core.extension_array import PandasExtensionArray
+from xarray.core.indexing import (
+    BasicIndexer,
+    ExplicitlyIndexed,
+    MemoryCachedArray,
+)
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.treenode import group_subtrees
 from xarray.core.utils import is_duck_array
@@ -86,6 +91,8 @@ def first_n_items(array, n_desired):
 
     if n_desired < array.size:
         indexer = _get_indexer_at_least_n_items(array.shape, n_desired, from_end=False)
+        if isinstance(array, ExplicitlyIndexed):
+            indexer = BasicIndexer(indexer)
         array = array[indexer]
 
     # We pass variable objects in to handle indexing
@@ -110,6 +117,8 @@ def last_n_items(array, n_desired):
 
     if n_desired < array.size:
         indexer = _get_indexer_at_least_n_items(array.shape, n_desired, from_end=True)
+        if isinstance(array, ExplicitlyIndexed):
+            indexer = BasicIndexer(indexer)
         array = array[indexer]
 
     # We pass variable objects in to handle indexing
@@ -176,6 +185,11 @@ def format_timedelta(t, timedelta_format=None):
 
 def format_item(x, timedelta_format=None, quote_strings=True):
     """Returns a succinct summary of an object as a string"""
+    if isinstance(x, PandasExtensionArray):
+        # We want to bypass PandasExtensionArray's repr here
+        # because its __repr__ is PandasExtensionArray(array=[...])
+        # and this function is only for single elements.
+        return str(x.array[0])
     if isinstance(x, np.datetime64 | datetime):
         return format_timestamp(x)
     if isinstance(x, np.timedelta64 | timedelta):
@@ -184,7 +198,7 @@ def format_item(x, timedelta_format=None, quote_strings=True):
         if hasattr(x, "dtype"):
             x = x.item()
         return repr(x) if quote_strings else x
-    elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating):
+    elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating) and x.shape == ():
         return f"{x.item():.4}"
     else:
         return str(x)
@@ -194,7 +208,9 @@ def format_items(x):
     """Returns a succinct summaries of all items in a sequence as strings"""
     x = to_duck_array(x)
     timedelta_format = "datetime"
-    if np.issubdtype(x.dtype, np.timedelta64):
+    if not isinstance(x, PandasExtensionArray) and np.issubdtype(
+        x.dtype, np.timedelta64
+    ):
         x = astype(x, dtype="timedelta64[ns]")
         day_part = x[~pd.isnull(x)].astype("timedelta64[D]").astype("timedelta64[ns]")
         time_needed = x[~pd.isnull(x)] != day_part
@@ -312,7 +328,7 @@ def inline_variable_array_repr(var, max_width):
 def summarize_variable(
     name: Hashable,
     var: Variable,
-    col_width: int,
+    col_width: int | None = None,
     max_width: int | None = None,
     is_index: bool = False,
 ):
@@ -327,20 +343,22 @@ def summarize_variable(
             max_width = max_width_options
 
     marker = "*" if is_index else " "
-    first_col = pretty_print(f"  {marker} {name} ", col_width)
+    first_col = f"  {marker} {name} "
+    if col_width is not None:
+        first_col = pretty_print(first_col, col_width)
 
     if variable.dims:
-        dims_str = "({}) ".format(", ".join(map(str, variable.dims)))
+        dims_str = ", ".join(map(str, variable.dims))
+        dims_str = f"({dims_str}) "
     else:
         dims_str = ""
 
-    nbytes_str = f" {render_human_readable_nbytes(variable.nbytes)}"
-    front_str = f"{first_col}{dims_str}{variable.dtype}{nbytes_str} "
+    front_str = f"{first_col}{dims_str}{variable.dtype} {render_human_readable_nbytes(variable.nbytes)} "
 
     values_width = max_width - len(front_str)
     values_str = inline_variable_array_repr(variable, values_width)
 
-    return front_str + values_str
+    return f"{front_str}{values_str}"
 
 
 def summarize_attr(key, value, col_width=None):
@@ -454,7 +472,7 @@ def inherited_coords_repr(node: DataTree, col_width=None, max_rows=None):
     )
 
 
-def inline_index_repr(index: pd.Index, max_width=None):
+def inline_index_repr(index: pd.Index, max_width: int) -> str:
     if hasattr(index, "_repr_inline_"):
         repr_ = index._repr_inline_(max_width=max_width)
     else:
@@ -624,6 +642,8 @@ def short_array_repr(array):
 
     if isinstance(array, AbstractArray):
         array = array.data
+    if isinstance(array, pd.api.extensions.ExtensionArray):
+        return repr(array)
     array = to_duck_array(array)
 
     # default to lower precision so a full (abbreviated) line can fit on
@@ -647,6 +667,7 @@ def short_array_repr(array):
 def short_data_repr(array):
     """Format "data" for DataArray and Variable."""
     internal_data = getattr(array, "variable", array)._data
+
     if isinstance(array, np.ndarray):
         return short_array_repr(array)
     elif is_duck_array(internal_data):
@@ -882,7 +903,7 @@ def _diff_mapping_repr(
                     attrs_summary.append(attr_s)
 
                 temp = [
-                    "\n".join([var_s, attr_s]) if attr_s else var_s
+                    f"{var_s}\n{attr_s}" if attr_s else var_s
                     for var_s, attr_s in zip(temp, attrs_summary, strict=True)
                 ]
 
@@ -977,9 +998,10 @@ def diff_array_repr(a, b, compat):
         ):
             summary.append(coords_diff)
 
-    if compat == "identical":
-        if attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat):
-            summary.append(attrs_diff)
+    if compat == "identical" and (
+        attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat)
+    ):
+        summary.append(attrs_diff)
 
     return "\n".join(summary)
 
@@ -1017,9 +1039,10 @@ def diff_dataset_repr(a, b, compat):
     ):
         summary.append(data_diff)
 
-    if compat == "identical":
-        if attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat):
-            summary.append(attrs_diff)
+    if compat == "identical" and (
+        attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat)
+    ):
+        summary.append(attrs_diff)
 
     return "\n".join(summary)
 
@@ -1027,15 +1050,13 @@ def diff_dataset_repr(a, b, compat):
 def diff_nodewise_summary(a: DataTree, b: DataTree, compat):
     """Iterates over all corresponding nodes, recording differences between data at each location."""
 
-    compat_str = _compat_to_str(compat)
-
     summary = []
     for path, (node_a, node_b) in group_subtrees(a, b):
         a_ds, b_ds = node_a.dataset, node_b.dataset
 
         if not a_ds._all_compat(b_ds, compat):
             path_str = "root node" if path == "." else f"node {path!r}"
-            dataset_diff = diff_dataset_repr(a_ds, b_ds, compat_str)
+            dataset_diff = diff_dataset_repr(a_ds, b_ds, compat)
             data_diff = indent(
                 "\n".join(dataset_diff.split("\n", 1)[1:]), prefix="    "
             )
@@ -1050,9 +1071,8 @@ def diff_datatree_repr(a: DataTree, b: DataTree, compat):
         f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
 
-    if compat == "identical":
-        if diff_name := diff_name_summary(a, b):
-            summary.append(diff_name)
+    if compat == "identical" and (diff_name := diff_name_summary(a, b)):
+        summary.append(diff_name)
 
     treestructure_diff = diff_treestructure(a, b)
 
@@ -1137,14 +1157,21 @@ def _datatree_node_repr(node: DataTree, show_inherited: bool) -> str:
 
 def datatree_repr(dt: DataTree) -> str:
     """A printable representation of the structure of this entire tree."""
-    renderer = RenderDataTree(dt)
+    max_children = OPTIONS["display_max_children"]
+
+    renderer = RenderDataTree(dt, maxchildren=max_children)
 
     name_info = "" if dt.name is None else f" {dt.name!r}"
     header = f"<xarray.DataTree{name_info}>"
 
     lines = [header]
     show_inherited = True
+
     for pre, fill, node in renderer:
+        if isinstance(node, str):
+            lines.append(f"{fill}{node}")
+            continue
+
         node_repr = _datatree_node_repr(node, show_inherited=show_inherited)
         show_inherited = False  # only show inherited coords on the root
 

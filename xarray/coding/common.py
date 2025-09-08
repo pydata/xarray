@@ -63,6 +63,10 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def dtype(self) -> np.dtype:
         return np.dtype(self._dtype)
 
+    def transpose(self, order):
+        # For elementwise functions, we can compose transpose and function application
+        return type(self)(self.array.transpose(order), self.func, self.dtype)
+
     def _oindex_get(self, key):
         return type(self)(self.array.oindex[key], self.func, self.dtype)
 
@@ -74,6 +78,9 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
     def get_duck_array(self):
         return self.func(self.array.get_duck_array())
+
+    async def async_get_duck_array(self):
+        return self.func(await self.array.async_get_duck_array())
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.array!r}, func={self.func!r}, dtype={self.dtype!r})"
