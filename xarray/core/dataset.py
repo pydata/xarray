@@ -6850,10 +6850,7 @@ class Dataset(
                     or (var.dtype == np.bool_)
                     or np.issubdtype(var.dtype, np.datetime64)
                     or np.issubdtype(var.dtype, np.timedelta64)
-                    or (
-                        var.dtype.kind == "O"
-                        and _contains_datetime_like_objects(var)
-                    )
+                    or (var.dtype.kind == "O" and _contains_datetime_like_objects(var))
                 )
             ):
                 # prefer to aggregate over axis=None rather than
@@ -9746,7 +9743,6 @@ class Dataset(
             errors,
             kwargs,
         )
-
 
     def drop_duplicates(
         self,
