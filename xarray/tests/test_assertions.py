@@ -282,21 +282,25 @@ def test_assert_equal_no_common_dims():
     # DataArrays with completely different dimensions
     da1 = xr.DataArray(np.zeros([4, 5]), dims=("x", "y"))
     da2 = xr.DataArray(np.zeros([3, 2]), dims=("a", "b"))
-    
+
     # Should fail even with check_dim_order=False since dims are different
     with pytest.raises(AssertionError):
         xr.testing.assert_equal(da1, da2, check_dim_order=False)
-    
+
     # Datasets with no common dimensions
-    ds1 = xr.Dataset({
-        "foo": xr.DataArray(np.zeros([4]), dims=("x",)),
-        "bar": xr.DataArray(np.ones([5]), dims=("y",))
-    })
-    ds2 = xr.Dataset({
-        "foo": xr.DataArray(np.zeros([3]), dims=("a",)),
-        "bar": xr.DataArray(np.ones([2]), dims=("b",))
-    })
-    
+    ds1 = xr.Dataset(
+        {
+            "foo": xr.DataArray(np.zeros([4]), dims=("x",)),
+            "bar": xr.DataArray(np.ones([5]), dims=("y",)),
+        }
+    )
+    ds2 = xr.Dataset(
+        {
+            "foo": xr.DataArray(np.zeros([3]), dims=("a",)),
+            "bar": xr.DataArray(np.ones([2]), dims=("b",)),
+        }
+    )
+
     # Should fail since dimensions are completely different
     with pytest.raises(AssertionError):
         xr.testing.assert_equal(ds1, ds2, check_dim_order=False)
@@ -305,15 +309,15 @@ def test_assert_equal_no_common_dims():
 def test_assert_equal_variable_transpose():
     """Test assert_equal with transposed Variable objects."""
     import numpy as np
-    
+
     # Variables with transposed dimensions
     var1 = xr.Variable(("x", "y"), np.zeros([4, 5]))
     var2 = xr.Variable(("y", "x"), np.zeros([5, 4]))
-    
+
     # Should fail with check_dim_order=True
     with pytest.raises(AssertionError):
         xr.testing.assert_equal(var1, var2, check_dim_order=True)
-    
+
     # Should pass with check_dim_order=False
     xr.testing.assert_equal(var1, var2, check_dim_order=False)
     xr.testing.assert_allclose(var1, var2, check_dim_order=False)
