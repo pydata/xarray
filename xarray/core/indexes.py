@@ -570,18 +570,23 @@ def _query_slice(index, label, coord_name="", method=None, tolerance=None):
             [slice_label_start, slice_label_stop], method=method, tolerance=tolerance
         )
 
-        # +1 needed to emulate behaviour of xarray sel with slice without method kwarg, which is inclusive of point at stop label
-        indexer = slice(
-            slice_index_bounds[0].item(),
-            slice_index_bounds[1].item() + 1,
-            slice_index_step,
-        )
+        if -1 in slice_index_bounds:
+            # "no match" case - return empty slice
+            indexer = slice(0, 0)
+        else:
+            # +1 needed to emulate behaviour of xarray sel with slice without method kwarg, which is inclusive of point at stop label
+            indexer = slice(
+                slice_index_bounds[0].item(),
+                slice_index_bounds[1].item() + 1,
+                slice_index_step,
+            )
     else:
         indexer = index.slice_indexer(
             slice_label_start,
             slice_label_stop,
             slice_index_step,
         )
+
         if not isinstance(indexer, slice):
             # unlike pandas, in xarray we never want to silently convert a
             # slice indexer into an array indexer

@@ -2205,6 +2205,13 @@ class TestDataset:
         actual = data_float_coords.sel(lat=slice(21, 22), method="nearest")
         assert_identical(expected, actual)
 
+        # "no match" case - should return zero-size slice
+        expected = xr.Dataset(coords={"lat": ("lat", [])})
+        actual = data_float_coords.sel(
+            lat=slice(21.5, 21.6), method="nearest", tolerance=1e-3
+        )
+        assert_identical(expected, actual)
+
         # check non-zero step
         expected = xr.Dataset(coords={"lat": ("lat", [21.1])})
         actual = data_float_coords.sel(lat=slice(21, 22, 2), method="nearest")
