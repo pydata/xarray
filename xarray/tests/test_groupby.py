@@ -3461,3 +3461,4 @@ def test_mean_dataarray_datetime():
 # 2. grouped-reduce on unique coords is identical to array
 # 3. group_over == groupby-reduce along other dimensions
 # 4. result is equivalent for transposed input
+
