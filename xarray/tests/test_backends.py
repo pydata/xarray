@@ -4581,7 +4581,6 @@ class TestNetCDF4ClassicViaNetCDF4Data(NetCDF3Only, CFEncodedBase):
         with h5netcdf.File(store_path, "r") as ds:
             # Check that the attribute is stored as a char array
             assert ds._h5file.attrs["foo"].dtype == np.dtype("S3")
-            # assert ds._h5file.attrs["_nc3_strict"] == 1
 
 
 @requires_h5netcdf

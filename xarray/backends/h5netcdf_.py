@@ -125,6 +125,7 @@ class H5NetCDFStore(WritableCFDataStore):
         manager: FileManager | h5netcdf.File | h5netcdf.Group,
         group=None,
         mode=None,
+        format=None,
         lock=HDF5_LOCK,
         autoclose=False,
     ):
@@ -138,17 +139,13 @@ class H5NetCDFStore(WritableCFDataStore):
                     raise ValueError(
                         "must supply a h5netcdf.File if the group argument is provided"
                     )
-                if format == "NETCDF4_CLASSIC":
-                    raise ValueError(
-                        "Cannot create sub-groups in `NETCDF4_CLASSIC` format."
-                    )
                 root = manager
             manager = DummyFileManager(root)
 
         self._manager = manager
         self._group = group
         self._mode = mode
-        self.format = None
+        self.format = format or "NETCDF4"
         # todo: utilizing find_root_and_group seems a bit clunky
         #  making filename available on h5netcdf.Group seems better
         self._filename = find_root_and_group(self.ds)[0].filename
@@ -218,7 +215,7 @@ class H5NetCDFStore(WritableCFDataStore):
             kwargs.update(driver_kwds)
         if phony_dims is not None:
             kwargs["phony_dims"] = phony_dims
-        if format is not None and Version(h5netcdf.__version__) > Version("1.6"):
+        if format is not None and Version(h5netcdf.__version__) > Version("1.6.4"):
             kwargs["format"] = format
 
         if lock is None:
@@ -330,7 +327,7 @@ class H5NetCDFStore(WritableCFDataStore):
 
     def convert_string(self, value):
         """If format is NETCDF4_CLASSIC, convert strings to char arrays."""
-        if self.format != "NETCDF4":
+        if self.format == "NETCDF4_CLASSIC":
             value = encode_nc3_attr_value(value)
             if isinstance(value, bytes):
                 value = np.bytes_(value)
@@ -341,10 +338,12 @@ class H5NetCDFStore(WritableCFDataStore):
         self.ds.attrs[key] = value
 
     def encode_variable(self, variable, name=None):
-        if self.format == "NETCDF4":
+        if self.format == "NETCDF4_CLASSIC":
+            return encode_nc3_variable(variable, name=name)
+        elif self.format == "NETCDF4":
             return _encode_nc4_variable(variable, name=name)
-
-        return encode_nc3_variable(variable, name=name)
+        else:
+            raise ValueError(f"unexpected format: {self.format}")
 
     def prepare_variable(
         self, name, variable, check_encoding=False, unlimited_dims=None
