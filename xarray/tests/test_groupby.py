@@ -3380,6 +3380,7 @@ def test_mean_with_string_coords():
     assert "humidity" in result_grouped.data_vars
 
 
+@pytest.mark.skipif(not has_cftime, reason="cftime not available")
 def test_mean_preserves_non_string_object_arrays():
     """Test that mean preserves object arrays containing datetime-like objects"""
     # Create object array with cftime dates
