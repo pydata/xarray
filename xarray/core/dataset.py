@@ -5593,7 +5593,7 @@ class Dataset(
                 result = result._unstack_once(d, stacked_indexes[d], fill_value, sparse)
         return result
 
-    def update(self, other: CoercibleMapping) -> Self:
+    def update(self, other: CoercibleMapping) -> None:
         """Update this dataset's variables with those from another dataset.
 
         Just like :py:meth:`dict.update` this is a in-place operation.
@@ -5610,14 +5610,6 @@ class Dataset(
             - mapping {var name: (dimension name, array-like)}
             - mapping {var name: (tuple of dimension names, array-like)}
 
-        Returns
-        -------
-        updated : Dataset
-            Updated dataset. Note that since the update is in-place this is the input
-            dataset.
-
-            It is deprecated since version 0.17 and scheduled to be removed in 0.21.
-
         Raises
         ------
         ValueError
@@ -5630,7 +5622,7 @@ class Dataset(
         Dataset.merge
         """
         merge_result = dataset_update_method(self, other)
-        return self._replace(inplace=True, **merge_result._asdict())
+        self._replace(inplace=True, **merge_result._asdict())
 
     def merge(
         self,

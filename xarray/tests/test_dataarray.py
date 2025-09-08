@@ -3528,6 +3528,34 @@ class TestDataArray:
         assert len(actual) == 0
         assert_array_equal(actual.index.names, list("ABC"))
 
+    @pytest.mark.parametrize(
+        "x_dtype,y_dtype,v_dtype",
+        [
+            (np.uint32, np.float32, np.uint32),
+            (np.int16, np.float64, np.int64),
+            (np.uint8, np.float32, np.uint16),
+            (np.int32, np.float32, np.int8),
+        ],
+    )
+    def test_to_dataframe_coord_dtypes_2d(self, x_dtype, y_dtype, v_dtype) -> None:
+        x = np.array([1], dtype=x_dtype)
+        y = np.array([1.0], dtype=y_dtype)
+        v = np.array([[42]], dtype=v_dtype)
+
+        da = DataArray(v, dims=["x", "y"], coords={"x": x, "y": y})
+        df = da.to_dataframe(name="v").reset_index()
+
+        # Check that coordinate dtypes are preserved
+        assert df["x"].dtype == np.dtype(x_dtype), (
+            f"x coord: expected {x_dtype}, got {df['x'].dtype}"
+        )
+        assert df["y"].dtype == np.dtype(y_dtype), (
+            f"y coord: expected {y_dtype}, got {df['y'].dtype}"
+        )
+        assert df["v"].dtype == np.dtype(v_dtype), (
+            f"v data: expected {v_dtype}, got {df['v'].dtype}"
+        )
+
     @requires_dask_expr
     @requires_dask
     @pytest.mark.xfail(not has_dask_ge_2025_1_0, reason="dask-expr is broken")
