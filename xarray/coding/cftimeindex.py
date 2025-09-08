@@ -456,7 +456,7 @@ class CFTimeIndex(pd.Index):
         """Needed for .loc based partial-string indexing"""
         return self.__contains__(key)
 
-    def shift(  # type: ignore[override]  # freq is typed Any, we are more precise
+    def shift(  # type: ignore[override,unused-ignore]
         self,
         periods: int | float,
         freq: str | timedelta | BaseCFTimeOffset | None = None,
@@ -490,7 +490,7 @@ class CFTimeIndex(pd.Index):
         >>> index.shift(1, "ME")
         CFTimeIndex([2000-02-29 00:00:00],
                     dtype='object', length=1, calendar='standard', freq=None)
-        >>> index.shift(1.5, "D")
+        >>> index.shift(1.5, "24h")
         CFTimeIndex([2000-02-01 12:00:00],
                     dtype='object', length=1, calendar='standard', freq=None)
         """
@@ -707,16 +707,22 @@ class CFTimeIndex(pd.Index):
 
     def _round_via_method(self, freq, method):
         """Round dates using a specified method."""
-        from xarray.coding.cftime_offsets import CFTIME_TICKS, to_offset
+        from xarray.coding.cftime_offsets import CFTIME_TICKS, Day, to_offset
 
         if not self._data.size:
             return CFTimeIndex(np.array(self))
 
         offset = to_offset(freq)
-        if not isinstance(offset, CFTIME_TICKS):
+        if isinstance(offset, Day):
+            # Following pandas, "In the 'round' context, Day unambiguously
+            # means 24h, not calendar-day"
+            offset_as_timedelta = timedelta(days=offset.n)
+        elif isinstance(offset, CFTIME_TICKS):
+            offset_as_timedelta = offset.as_timedelta()
+        else:
             raise ValueError(f"{offset} is a non-fixed frequency")
 
-        unit = _total_microseconds(offset.as_timedelta())
+        unit = _total_microseconds(offset_as_timedelta)
         values = self.asi8
         rounded = method(values, unit)
         return _cftimeindex_from_i8(rounded, self.date_type, self.name)

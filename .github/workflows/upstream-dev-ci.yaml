@@ -40,8 +40,6 @@ jobs:
     name: upstream-dev
     runs-on: ubuntu-latest
     needs: detect-ci-trigger
-    env:
-      ZARR_V3_EXPERIMENTAL_API: 1
     if: |
       always()
       && (
@@ -140,7 +138,7 @@ jobs:
         run: |
           python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v5.4.3
+        uses: codecov/codecov-action@v5.5.0
         with:
           file: mypy_report/cobertura.xml
           flags: mypy
