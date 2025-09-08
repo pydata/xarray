@@ -17,6 +17,10 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- :py:meth:`Dataset.update` now returns ``None``, instead of the updated dataset. This
+  completes the deprecation cycle started in version 0.17. The method still updates the
+  dataset in-place. (:issue:`10167`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Deprecations
 ~~~~~~~~~~~~
