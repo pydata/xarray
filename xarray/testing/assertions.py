@@ -86,7 +86,7 @@ def assert_isomorphic(a: DataTree, b: DataTree):
 
 def maybe_transpose_dims(a, b, check_dim_order: bool):
     """Helper for assert_equal/allclose/identical
-    
+
     Returns (a, b) tuple with dimensions transposed to canonical order if needed.
     """
 
@@ -114,20 +114,22 @@ def maybe_transpose_dims(a, b, check_dim_order: bool):
         # DataTree needs special handling with map_over_datasets
         def transpose_func(a_ds, b_ds):
             return _maybe_transpose_dims(a_ds, b_ds)
-        
+
         # This is tricky - map_over_datasets doesn't easily support returning tuples
         # We'll use a workaround
         transposed_pairs = []
-        for node_a, node_b in zip(a.subtree, b.subtree):
+        for node_a, node_b in zip(a.subtree, b.subtree, strict=False):
             if node_a.ds is not None and node_b.ds is not None:
                 transposed_pairs.append(_maybe_transpose_dims(node_a.ds, node_b.ds))
             else:
                 transposed_pairs.append((node_a.ds, node_b.ds))
-        
+
         # Now reconstruct the DataTrees
         # This is getting complex - let's keep it simple for now
         # Just transpose b like the original code did
-        return a, map_over_datasets(lambda a_ds, b_ds: _maybe_transpose_dims(a_ds, b_ds)[1], a, b)
+        return a, map_over_datasets(
+            lambda a_ds, b_ds: _maybe_transpose_dims(a_ds, b_ds)[1], a, b
+        )
 
     return _maybe_transpose_dims(a, b)
 
