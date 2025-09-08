@@ -566,6 +566,13 @@ def _query_slice(index, label, coord_name="", method=None, tolerance=None):
 
     if method is not None or tolerance is not None:
         # `pandas.Index.slice_indexer` doesn't support method or tolerance (see https://github.com/pydata/xarray/issues/10710)
+
+        if index.has_duplicates:
+            # `pandas.Index.get_indexer` disallows this, see https://github.com/pydata/xarray/pull/10711#discussion_r2331297608
+            raise NotImplementedError(
+                "cannot use ``method`` argument with a slice object as an indexer and an index with non-unique values"
+            )
+
         slice_index_bounds = index.get_indexer(
             [slice_label_start, slice_label_stop], method=method, tolerance=tolerance
         )

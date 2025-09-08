@@ -2212,7 +2212,28 @@ class TestDataset:
         )
         assert_identical(expected, actual)
 
+        # "no match" case - should return zero-size slice
+        expected = xr.Dataset(coords={"lat": ("lat", [])})
+        actual = data_float_coords.sel(
+            lat=slice(21.5, 21.6), method="nearest", tolerance=1e-3
+        )
+        assert_identical(expected, actual)
+
+        # non-unique coordinate values
+        data_non_unique = xr.Dataset(
+            coords={"lat": ("lat", [20.1, 21.1, 21.1, 22.1, 22.1, 23.1])}
+        )
+        expected = xr.Dataset(coords={"lat": ("lat", [21.1, 21.1, 22.1, 22.1])})
+        with pytest.raises(
+            NotImplementedError,
+            match="slice object as an indexer and an index with non-unique values",
+        ):
+            data_non_unique.sel(lat=slice(21.0, 22.2), method="nearest")
+
         # check non-zero step
+        data_float_coords = xr.Dataset(
+            coords={"lat": ("lat", [20.1, 21.1, 22.1, 23.1])}
+        )
         expected = xr.Dataset(coords={"lat": ("lat", [21.1])})
         actual = data_float_coords.sel(lat=slice(21, 22, 2), method="nearest")
         assert_identical(expected, actual)
