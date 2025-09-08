@@ -17,6 +17,10 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- :py:meth:`Dataset.update` now returns ``None``, instead of the updated dataset. This
+  completes the deprecation cycle started in version 0.17. The method still updates the
+  dataset in-place. (:issue:`10167`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -103,10 +107,6 @@ Bug fixes
   redundant computation of Dask arrays with cross-group dependencies
   (:issue:`10637`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-Documentation
-~~~~~~~~~~~~~
-
 - :py:meth:`DataTree.to_netcdf` had h5netcdf hard-coded as default
   (:issue:`10654`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
