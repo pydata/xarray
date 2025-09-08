@@ -4280,7 +4280,7 @@ class DatasetGroupByAggregations:
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
-                numeric_only=False,
+                numeric_only=True,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
@@ -5776,7 +5776,7 @@ class DatasetResampleAggregations:
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
-                numeric_only=False,
+                numeric_only=True,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
