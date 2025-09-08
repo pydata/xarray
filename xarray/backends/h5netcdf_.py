@@ -462,11 +462,6 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
-        # magic_number = (
-        #     bytes(filename_or_obj[:8])
-        #     if isinstance(filename_or_obj, bytes | memoryview)
-        #     else try_read_magic_number_from_path(filename_or_obj)
-        # )
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None:
             return magic_number.startswith(b"\211HDF\r\n\032\n")

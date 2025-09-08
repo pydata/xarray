@@ -2497,7 +2497,7 @@ class TestNetCDF4AlreadyOpen:
 class InMemoryNetCDF:
     engine: T_NetcdfEngine | None
 
-    def test_roundtrip(self) -> None:
+    def test_roundtrip_via_memoryview(self) -> None:
         original = create_test_data()
         result = original.to_netcdf(engine=self.engine)
         roundtrip = load_dataset(result, engine=self.engine)
@@ -2513,9 +2513,8 @@ class InMemoryNetCDF:
         original = Dataset({"foo": ("x", [1, 2, 3])})
         netcdf_bytes = bytes(original.to_netcdf(engine=self.engine))
         with open_dataset(netcdf_bytes, engine=self.engine) as roundtrip:
-            unpickled = pickle.loads(pickle.dumps(roundtrip))
-            assert_identical(unpickled, original)
-            unpickled.close()
+            with pickle.loads(pickle.dumps(roundtrip)) as unpickled:
+                assert_identical(unpickled, original)
 
     def test_compute_false(self) -> None:
         original = create_test_data()
@@ -2536,16 +2535,6 @@ class InMemoryNetCDFWithGroups(InMemoryNetCDF):
 
 class FileObjectNetCDF:
     engine: T_NetcdfEngine
-
-    def test_open_twice(self) -> None:
-        expected = create_test_data()
-        expected.attrs["foo"] = "bar"
-        with create_tmp_file() as tmp_file:
-            expected.to_netcdf(tmp_file, engine=self.engine)
-            with open(tmp_file, "rb") as f:
-                with open_dataset(f, engine=self.engine):
-                    with open_dataset(f, engine=self.engine):
-                        pass
 
     def test_file_remains_open(self) -> None:
         data = Dataset({"foo": ("x", [1, 2, 3])})
@@ -4629,23 +4618,13 @@ class TestScipyFileObject(CFEncodedBase, NetCDF3Only, FileObjectNetCDF):
     async def test_load_async(self) -> None:
         await super().test_load_async()
 
-    @pytest.mark.xfail(reason="not working yet")
-    def test_open_twice(self):
-        super().test_open_twice()
-
-    @pytest.mark.xfail(
-        reason="scipy.io.netcdf_file closes files upon garbage collection"
-    )
-    def test_file_remains_open(self) -> None:
-        super().test_file_remains_open()
-
     @pytest.mark.skip(reason="cannot pickle file objects")
     def test_pickle(self) -> None:
-        pass
+        super().test_pickle()
 
     @pytest.mark.skip(reason="cannot pickle file objects")
     def test_pickle_dataarray(self) -> None:
-        pass
+        super().test_pickle_dataarray()
 
     @pytest.mark.parametrize("create_default_indexes", [True, False])
     def test_create_default_indexes(self, tmp_path, create_default_indexes) -> None:
@@ -4762,6 +4741,18 @@ class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
             data.to_netcdf(tmp_file)
             with pytest.raises(ValueError, match=r"unrecognized engine"):
                 open_dataset(tmp_file, engine="foobar")
+
+        with pytest.raises(
+            TypeError,
+            match=re.escape("file objects are not supported by the netCDF4 backend"),
+        ):
+            data.to_netcdf(BytesIO(), engine="netcdf4")
+
+        with pytest.raises(
+            TypeError,
+            match=re.escape("file objects are not supported by the netCDF4 backend"),
+        ):
+            open_dataset(BytesIO(), engine="netcdf4")
 
         bytes_io = BytesIO()
         data.to_netcdf(bytes_io, engine="scipy")
@@ -5119,6 +5110,16 @@ class TestH5NetCDFFileObject(TestH5NetCDFData, FileObjectNetCDF):
         ):
             with open_dataset(BytesIO(b"garbage"), engine="h5netcdf"):
                 pass
+
+    def test_open_twice(self) -> None:
+        expected = create_test_data()
+        expected.attrs["foo"] = "bar"
+        with create_tmp_file() as tmp_file:
+            expected.to_netcdf(tmp_file, engine=self.engine)
+            with open(tmp_file, "rb") as f:
+                with open_dataset(f, engine=self.engine):
+                    with open_dataset(f, engine=self.engine):
+                        pass  # should not crash
 
     @requires_scipy
     def test_open_fileobj(self) -> None:

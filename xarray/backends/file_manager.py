@@ -365,9 +365,8 @@ class PickleableFileManager(FileManager[T_File]):
 
         # Note: No need for locking with PickleableFileManager, because all
         # opening of files happens in the constructor.
-        if mode is not _OMIT_MODE:
-            kwargs = kwargs.copy()
-            kwargs["mode"] = mode
+        if mode != _OMIT_MODE:
+            kwargs = kwargs | {"mode": mode}
         self._file: T_File | None = opener(*args, **kwargs)
 
     @property

@@ -122,11 +122,13 @@ class flush_only_netcdf_file(netcdf_file_base):
     # closed when the netcdf_file is garbage collected (via __del__),
     # and will need to be fixed upstream in scipy.
     def close(self):
-        self.flush()
+        if hasattr(self, "fp") and not self.fp.closed:
+            self.flush()
+            self.fp.seek(0)
 
     def __del__(self):
-        # Remove the __del__ method. These files need to be closed explicitly by
-        # xarray.
+        # Remove the __del__ method, which in scipy is aliased to close().
+        # These files need to be closed explicitly by xarray.
         pass
 
 
@@ -211,13 +213,12 @@ class ScipyDataStore(WritableCFDataStore):
         elif hasattr(filename_or_obj, "seek"):  # file object
             # Note: checking for .seek matches the check for file objects
             # in scipy.io.netcdf_file
-            flush_only = mode in "wa"
             scipy_dataset = _open_scipy_netcdf(
                 filename_or_obj,
                 mode=mode,
                 mmap=mmap,
                 version=version,
-                flush_only=flush_only,
+                flush_only=True,
             )
             assert not scipy_dataset.use_mmap  # no mmap for file objects
             manager = DummyFileManager(scipy_dataset)

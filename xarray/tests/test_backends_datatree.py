@@ -395,9 +395,7 @@ class TestGenericNetCDFIO(NetCDFIOBase):
         roundtrip_dt = load_datatree(memview, engine="h5netcdf")
         assert_equal(original_dt, roundtrip_dt)
 
-    def test_open_datatree(self, unaligned_datatree_nc) -> None:
-        """Test if `open_datatree` fails to open a netCDF4 with an unaligned group hierarchy."""
-
+    def test_open_datatree_unaligned_hierarchy(self, unaligned_datatree_nc) -> None:
         with pytest.raises(
             ValueError,
             match=(
@@ -569,9 +567,9 @@ class TestPyDAPDatatreeIO:
     )
     simplegroup_datatree_url = "dap4://test.opendap.org/opendap/dap4/SimpleGroup.nc4.h5"
 
-    def test_open_datatree(self, url=unaligned_datatree_url) -> None:
-        """Test if `open_datatree` fails to open a netCDF4 with an unaligned group hierarchy."""
-
+    def test_open_datatree_unaligned_hierarchy(
+        self, url=unaligned_datatree_url
+    ) -> None:
         with pytest.raises(
             ValueError,
             match=(
@@ -893,8 +891,9 @@ class TestZarrDatatreeIO:
     @pytest.mark.filterwarnings(
         "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
     )
-    def test_open_datatree(self, unaligned_datatree_zarr_factory, zarr_format) -> None:
-        """Test if `open_datatree` fails to open a zarr store with an unaligned group hierarchy."""
+    def test_open_datatree_unaligned_hierarchy(
+        self, unaligned_datatree_zarr_factory, zarr_format
+    ) -> None:
         storepath = unaligned_datatree_zarr_factory(zarr_format=zarr_format)
 
         with pytest.raises(

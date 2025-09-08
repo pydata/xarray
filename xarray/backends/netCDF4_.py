@@ -6,6 +6,7 @@ import os
 from collections.abc import Iterable
 from contextlib import suppress
 from dataclasses import dataclass
+from io import IOBase
 from typing import TYPE_CHECKING, Any, Self
 
 import numpy as np
@@ -460,6 +461,11 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         if isinstance(filename, os.PathLike):
             filename = os.fspath(filename)
+
+        if isinstance(filename, IOBase):
+            raise TypeError(
+                f"file objects are not supported by the netCDF4 backend: {filename}"
+            )
 
         if not isinstance(filename, str | bytes | memoryview | BytesIOProxy):
             raise TypeError(f"invalid filename for netCDF4 backend: {filename}")

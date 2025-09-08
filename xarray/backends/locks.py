@@ -100,7 +100,7 @@ def _get_threaded_lock(key: str) -> threading.Lock:
     return lock
 
 
-def _get_multiprocessing_lock(key: str) -> Lock:
+def _get_multiprocessing_lock(key: str) -> multiprocessing.Lock:
     # TODO: make use of the key -- maybe use locket.py?
     # https://github.com/mwilliamson/locket.py
     del key  # unused
