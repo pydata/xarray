@@ -22,23 +22,58 @@ NetCDF and Zarr is that all NetCDF arrays have *dimension names* while Zarr
 arrays do not. Therefore, in order to store NetCDF data in Zarr, Xarray must
 somehow encode and decode the name of each array's dimensions.
 
-To accomplish this, Xarray developers decided to define a special Zarr array
-attribute: ``_ARRAY_DIMENSIONS``. The value of this attribute is a list of
-dimension names (strings), for example ``["time", "lon", "lat"]``. When writing
-data to Zarr, Xarray sets this attribute on all variables based on the variable
-dimensions. When reading a Zarr group, Xarray looks for this attribute on all
-arrays, raising an error if it can't be found. The attribute is used to define
-the variable dimension names and then removed from the attributes dictionary
-returned to the user.
+Dimension Encoding in Zarr Formats
+-----------------------------------
 
-Because of these choices, Xarray cannot read arbitrary array data, but only
-Zarr data with valid ``_ARRAY_DIMENSIONS`` or
-`NCZarr <https://docs.unidata.ucar.edu/nug/current/nczarr_head.html>`_ attributes
-on each array (NCZarr dimension names are defined in the ``.zarray`` file).
+Xarray encodes array dimensions differently depending on the Zarr format version:
 
-After decoding the ``_ARRAY_DIMENSIONS`` or NCZarr attribute and assigning the variable
-dimensions, Xarray proceeds to [optionally] decode each variable using its
-standard CF decoding machinery used for NetCDF data (see :py:func:`decode_cf`).
+**Zarr V2 Format:**
+Xarray uses a special Zarr array attribute: ``_ARRAY_DIMENSIONS``. The value of this 
+attribute is a list of dimension names (strings), for example ``["time", "lon", "lat"]``. 
+When writing data to Zarr V2, Xarray sets this attribute on all variables based on the 
+variable dimensions. This attribute is visible when accessing arrays directly with 
+zarr-python.
+
+**Zarr V3 Format:**
+Xarray uses the native ``dimension_names`` field in the array metadata. This is part 
+of the official Zarr V3 specification and is not stored as a regular attribute. 
+When accessing arrays with zarr-python, this information is available in the array's 
+metadata but not in the attributes dictionary.
+
+When reading a Zarr group, Xarray looks for dimension information in the appropriate 
+location based on the format version, raising an error if it can't be found. The 
+dimension information is used to define the variable dimension names and then 
+(for Zarr V2) removed from the attributes dictionary returned to the user.
+
+Coordinate Encoding
+-------------------
+
+In addition to dimension information, Xarray follows CF conventions when encoding 
+coordinate metadata. This results in a ``coordinates`` attribute that lists the 
+names of coordinate variables associated with each data variable. This attribute 
+is separate from and complementary to the dimension encoding described above.
+
+The ``coordinates`` attribute:
+
+- Lists coordinate variables (e.g., ``"yc xc"`` for spatial coordinates)
+- Is visible in the attributes when accessing arrays with zarr-python
+- Is present regardless of Zarr format version
+- Follows CF conventions for coordinate metadata
+
+Compatibility and Reading
+-------------------------
+
+Because of these encoding choices, Xarray cannot read arbitrary Zarr arrays, but only
+Zarr data with valid dimension metadata. Xarray supports:
+
+- Zarr V2 arrays with ``_ARRAY_DIMENSIONS`` attributes
+- Zarr V3 arrays with ``dimension_names`` metadata
+- `NCZarr <https://docs.unidata.ucar.edu/nug/current/nczarr_head.html>`_ format 
+  (dimension names are defined in the ``.zarray`` file)
+
+After decoding the dimension information and assigning the variable dimensions, 
+Xarray proceeds to [optionally] decode each variable using its standard CF decoding 
+machinery used for NetCDF data (see :py:func:`decode_cf`).
 
 Finally, it's worth noting that Xarray writes (and attempts to read)
 "consolidated metadata" by default (the ``.zmetadata`` file), which is another
@@ -49,8 +84,15 @@ warning about poor performance when reading non-consolidated stores unless they
 explicitly set ``consolidated=False``. See :ref:`io.zarr.consolidated_metadata`
 for more details.
 
-As a concrete example, here we write a tutorial dataset to Zarr and then
-re-open it directly with Zarr:
+Examples: Zarr Format Differences
+----------------------------------
+
+The following examples demonstrate how dimension and coordinate encoding differs 
+between Zarr format versions. We'll use the same tutorial dataset but write it 
+in different formats to show what users will see when accessing the files directly 
+with zarr-python.
+
+**Example 1: Zarr V2 Format**
 
 .. jupyter-execute::
 
@@ -58,25 +100,47 @@ re-open it directly with Zarr:
     import xarray as xr
     import zarr
 
+    # Load tutorial dataset and write as Zarr V2
     ds = xr.tutorial.load_dataset("rasm")
-    ds.to_zarr("rasm.zarr", mode="w", consolidated=False)
-    os.listdir("rasm.zarr")
-
-.. jupyter-execute::
-
-    zgroup = zarr.open("rasm.zarr")
-    zgroup.tree()
-
-.. jupyter-execute::
-
-    dict(zgroup["Tair"].attrs)
+    ds.to_zarr("rasm_v2.zarr", mode="w", consolidated=False, zarr_format=2)
+    
+    # Open with zarr-python and examine attributes
+    zgroup = zarr.open("rasm_v2.zarr")
+    print("Zarr V2 - Tair attributes:")
+    tair_attrs = dict(zgroup["Tair"].attrs)
+    for key, value in tair_attrs.items():
+        print(f"  '{key}': {repr(value)}")
 
 .. jupyter-execute::
     :hide-code:
 
     import shutil
+    shutil.rmtree("rasm_v2.zarr")
 
-    shutil.rmtree("rasm.zarr")
+**Example 2: Zarr V3 Format**
+
+.. jupyter-execute::
+
+    # Write the same dataset as Zarr V3
+    ds.to_zarr("rasm_v3.zarr", mode="w", consolidated=False, zarr_format=3)
+    
+    # Open with zarr-python and examine attributes
+    zgroup = zarr.open("rasm_v3.zarr")
+    print("Zarr V3 - Tair attributes:")
+    tair_attrs = dict(zgroup["Tair"].attrs)
+    for key, value in tair_attrs.items():
+        print(f"  '{key}': {repr(value)}")
+    
+    # For Zarr V3, dimension information is in metadata
+    tair_array = zgroup["Tair"]
+    print(f"\nZarr V3 - dimension_names in metadata: {tair_array.metadata.dimension_names}")
+
+.. jupyter-execute::
+    :hide-code:
+
+    import shutil
+    shutil.rmtree("rasm_v3.zarr")
+
 
 Chunk Key Encoding
 ------------------
