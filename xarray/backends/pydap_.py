@@ -54,24 +54,34 @@ class PydapArrayWrapper(BackendArray):
         )
 
     def _getitem(self, key):
-        if self._batch and hasattr(self.array, "dataset"):  # is self.array not loaded?
+        if self._batch and hasattr(self.array, "dataset"):
             # this are both True only for pydap>3.5.5
-            from pydap.lib import resolve_batch_for_all_variables
+            # from pydap.lib import resolve_batch_for_all_variables
+            from pydap.lib import get_batch_data
 
             dataset = self.array.dataset
-            resolve_batch_for_all_variables(self.array, key, checksums=self._checksums)
-            result = np.asarray(
-                dataset._current_batch_promise.wait_for_result(self.array.id)
-            )
+            print("[batching]", self.array.id)
+            if not dataset[self.array.id]._is_data_loaded():
+                print("data not loaded", self.array.id)
+                # data has not been deserialized yet
+                # runs only once per store/hierarchy
+                get_batch_data(self.array, checksums=self._checksums, key=key)
+            result = np.asarray(dataset[self.array.id].data)
+            result = robust_getitem(result, key, catch=ValueError)
         else:
+            print("[non-batching]", self.array.id)
             result = robust_getitem(self.array, key, catch=ValueError)
-            # try:
             result = np.asarray(result.data)
-            # except AttributeError:
-            #     result = np.asarray(result)
         axis = tuple(n for n, k in enumerate(key) if isinstance(k, integer_types))
+        print(key)
+        print("axis:", axis)
+        # print("ndim", result.ndim)
+        # print("array.ndim", self.array.ndim)
         if result.ndim + len(axis) != self.array.ndim and axis:
+            # print('here????')
+            # print("squeezed result", np.shape(result))
             result = np.squeeze(result, axis)
+            # print("squeezed result", np.shape(result))
         return result
 
 
@@ -246,9 +256,9 @@ class PydapDataStore(AbstractDataStore):
         from pydap.lib import get_batch_data
 
         if not var._is_data_loaded():
-            # this implies dat has not been deserialized yet
+            # data has not been deserialized yet
             # runs only once per store/hierarchy
-            get_batch_data(var.parent, checksums=self._checksums)
+            get_batch_data(var, checksums=self._checksums)
         return self.dataset[var.id].data
 
 
