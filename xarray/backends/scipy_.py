@@ -35,12 +35,6 @@ from xarray.core.utils import (
 )
 from xarray.core.variable import Variable
 
-try:
-    from scipy.io import netcdf_file as netcdf_file_base
-except ImportError:
-    netcdf_file_base = object
-
-
 if TYPE_CHECKING:
     import scipy.io
 
@@ -110,29 +104,30 @@ class ScipyArrayWrapper(BackendArray):
                     raise
 
 
-class flush_only_netcdf_file(netcdf_file_base):
-    # scipy.io.netcdf_file.close() incorrectly closes file objects that
-    # were passed in as constructor arguments:
-    # https://github.com/scipy/scipy/issues/13905
-
-    # Instead of closing such files, only call flush(), which is
-    # equivalent as long as the netcdf_file object is not mmapped.
-    # This suffices to keep BytesIO objects open long enough to read
-    # their contents from to_netcdf(), but underlying files still get
-    # closed when the netcdf_file is garbage collected (via __del__),
-    # and will need to be fixed upstream in scipy.
-    def close(self):
-        if hasattr(self, "fp") and not self.fp.closed:
-            self.flush()
-
-    def __del__(self):
-        # Remove the __del__ method, which in scipy is aliased to close().
-        # These files need to be closed explicitly by xarray.
-        pass
-
-
 def _open_scipy_netcdf(filename, mode, mmap, version, flush_only=False):
     import scipy.io
+
+    # define inside a helper function to ensure the scipy import is lazy
+    class flush_only_netcdf_file(scipy.io.netcdf_file):
+        # scipy.io.netcdf_file.close() incorrectly closes file objects that
+        # were passed in as constructor arguments:
+        # https://github.com/scipy/scipy/issues/13905
+
+        # Instead of closing such files, only call flush(), which is
+        # equivalent as long as the netcdf_file object is not mmapped.
+        # This suffices to keep BytesIO objects open long enough to read
+        # their contents from to_netcdf(), but underlying files still get
+        # closed when the netcdf_file is garbage collected (via __del__),
+        # and will need to be fixed upstream in scipy.
+        def close(self):
+            if hasattr(self, "fp") and not self.fp.closed:
+                self.flush()
+                self.fp.seek(0)  # allow file to be read again
+
+        def __del__(self):
+            # Remove the __del__ method, which in scipy is aliased to close().
+            # These files need to be closed explicitly by xarray.
+            pass
 
     netcdf_file = flush_only_netcdf_file if flush_only else scipy.io.netcdf_file
 

@@ -116,12 +116,12 @@ from xarray.tests.test_dataset import (
 with contextlib.suppress(ImportError):
     import netCDF4 as nc4
 
-try:
+with contextlib.suppress(ImportError):
     import dask
     import dask.array as da
-except ImportError:
-    pass
 
+with contextlib.suppress(ImportError):
+    import fsspec
 
 if has_zarr:
     import zarr
@@ -633,16 +633,13 @@ class DatasetIOBase:
             with pickle.loads(raw_pickle) as unpickled_ds:
                 assert_identical(expected, unpickled_ds)
 
-    @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
     def test_pickle_dataarray(self) -> None:
         expected = Dataset({"foo": ("x", [42])})
         with self.roundtrip(expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
             with roundtripped:
                 raw_pickle = pickle.dumps(roundtripped["foo"])
-            # TODO: figure out how to explicitly close the file for the
-            # unpickled DataArray?
-            unpickled = pickle.loads(raw_pickle)
-            assert_identical(expected["foo"], unpickled)
+            with pickle.loads(raw_pickle) as unpickled:
+                assert_identical(expected["foo"], unpickled)
 
     def test_dataset_caching(self) -> None:
         expected = Dataset({"foo": ("x", [5, 6, 7])})
@@ -658,7 +655,6 @@ class DatasetIOBase:
             _ = actual.foo.values  # no caching
             assert not actual.foo.variable._in_memory
 
-    @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
     def test_roundtrip_None_variable(self) -> None:
         expected = Dataset({None: (("x", "y"), [[0, 1], [2, 3]])})
         with self.roundtrip(expected) as actual:
@@ -5113,7 +5109,6 @@ class TestH5NetCDFFileObject(TestH5NetCDFData, FileObjectNetCDF):
 
     def test_open_twice(self) -> None:
         expected = create_test_data()
-        expected.attrs["foo"] = "bar"
         with create_tmp_file() as tmp_file:
             expected.to_netcdf(tmp_file, engine=self.engine)
             with open(tmp_file, "rb") as f:
@@ -5153,6 +5148,20 @@ class TestH5NetCDFFileObject(TestH5NetCDFData, FileObjectNetCDF):
                 f.seek(8)
                 with open_dataset(f):  # ensure file gets closed
                     pass
+
+    @requires_fsspec
+    def test_fsspec(self) -> None:
+        expected = create_test_data()
+        with create_tmp_file() as tmp_file:
+            expected.to_netcdf(tmp_file, engine="h5netcdf")
+
+            with fsspec.open(tmp_file, "rb") as f:
+                with open_dataset(f, engine="h5netcdf") as actual:
+                    assert_identical(actual, expected)
+
+                    # fsspec.open() creates a pickleable file, unlike open()
+                    with pickle.loads(pickle.dumps(actual)) as unpickled:
+                        assert_identical(unpickled, expected)
 
 
 @requires_h5netcdf
