@@ -1065,9 +1065,12 @@ def _eagerly_encode_cf_datetime(
             # parse with cftime instead
             raise OutOfBoundsDatetime
         assert np.issubdtype(dates.dtype, "datetime64")
-        if calendar in ["standard", "gregorian"] and np.nanmin(dates).astype(
-            "=M8[us]"
-        ).astype(datetime) < datetime(1582, 10, 15):
+        if (
+            calendar in ["standard", "gregorian"]
+            and dates.size > 0
+            and np.nanmin(dates).astype("=M8[us]").astype(datetime)
+            < datetime(1582, 10, 15)
+        ):
             raise_gregorian_proleptic_gregorian_mismatch_error = True
 
         time_unit, ref_date = _unpack_time_unit_and_ref_date(units)

@@ -2198,3 +2198,24 @@ def test_roundtrip_0size_timedelta(time_unit: PDDatetimeUnitOptions) -> None:
         decoded.load()
     assert decoded.dtype == np.dtype("=m8[s]")
     assert decoded.encoding == encoding
+
+
+def test_roundtrip_empty_datetime64_array(time_unit: PDDatetimeUnitOptions) -> None:
+    # Regression test for GitHub issue #10722.
+    encoding = {
+        "units": "days since 1990-1-1",
+        "dtype": np.dtype("float64"),
+        "calendar": "standard",
+    }
+    times = date_range("2000", periods=0, unit=time_unit)
+    variable = Variable(["time"], times, encoding=encoding)
+
+    encoded = conventions.encode_cf_variable(variable, name="foo")
+    assert encoded.dtype == np.dtype("float64")
+
+    decode_times = CFDatetimeCoder(time_unit=time_unit)
+    roundtripped = conventions.decode_cf_variable(
+        "foo", encoded, decode_times=decode_times
+    )
+    assert_identical(variable, roundtripped)
+    assert roundtripped.dtype == variable.dtype
