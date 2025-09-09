@@ -39,7 +39,7 @@ Bug fixes
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Closing Xarray objects opened from file-like objects with ```engine='scipy'``
-  no longer closes the underlying file, consistent the h5netcdf backend
+  no longer closes the underlying file, consistent with the h5netcdf backend
   (:pull:`10624`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
