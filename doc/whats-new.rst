@@ -35,9 +35,9 @@ Bug fixes
 
 - Xarray objects opened from file-like objects with ``engine='h5netcdf'`` can
   now be pickled, as long as the underlying file-like object also supports
-  pickle
-  (:issue:`10712`).
+  pickle (:issue:`10712`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - Closing Xarray objects opened from file-like objects with ```engine='scipy'``
   no longer closes the underlying file, consistent the h5netcdf backend
   (:pull:`10624`).
