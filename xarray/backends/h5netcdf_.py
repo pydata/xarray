@@ -333,7 +333,11 @@ class H5NetCDFStore(WritableCFDataStore):
             self.ds.dimensions[name] = length
 
     def convert_string(self, value):
-        """If format is NETCDF4_CLASSIC, convert strings to char arrays."""
+        """If format is NETCDF4_CLASSIC, convert strings to fixed width char
+        arrays to ensure they can be read by legacy software.
+
+        CLASSIC attributes are read by third party software as fixed width char arrays
+        """
         if self.format == "NETCDF4_CLASSIC":
             value = encode_nc3_attr_value(value)
             if isinstance(value, bytes):
@@ -347,8 +351,8 @@ class H5NetCDFStore(WritableCFDataStore):
     def encode_variable(self, variable, name=None):
         if self.format == "NETCDF4_CLASSIC":
             return encode_nc3_variable(variable, name=name)
-
-        return _encode_nc4_variable(variable, name=name)
+        else:
+            return _encode_nc4_variable(variable, name=name)
 
     def prepare_variable(
         self, name, variable, check_encoding=False, unlimited_dims=None

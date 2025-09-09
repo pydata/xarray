@@ -4718,7 +4718,9 @@ class TestNetCDF4ClassicViaH5NetCDFData(TestNetCDF4ClassicViaNetCDF4Data):
     def test_group_fails(self):
         # Check writing group data fails with CLASSIC format
         original = create_test_data()
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match=r"Cannot create sub-groups in `NETCDF4_CLASSIC` format."
+        ):
             original.to_netcdf(group="sub", format=self.file_format, engine=self.engine)
 
 
@@ -4806,7 +4808,7 @@ class TestGenericNetCDFData(NetCDF3Only, CFEncodedBase):
     @requires_scipy
     def test_roundtrip_via_bytes(self) -> None:
         original = create_test_data()
-        netcdf_bytes = original.to_netcdf(engine="scipy")
+        netcdf_bytes = original.to_netcdf()
         roundtrip = load_dataset(netcdf_bytes)
         assert_identical(roundtrip, original)
 
