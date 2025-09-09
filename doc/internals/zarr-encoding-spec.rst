@@ -19,8 +19,10 @@ Xarray ``Dataset`` objects.
 
 Second, from Xarray's point of view, the key difference between
 NetCDF and Zarr is that all NetCDF arrays have *dimension names* while Zarr
-arrays do not. Therefore, in order to store NetCDF data in Zarr, Xarray must
-somehow encode and decode the name of each array's dimensions.
+arrays do not. In Zarr v2, Xarray uses an ad-hoc convention to encode and decode
+the name of each array's dimensions. However, starting with Zarr v3, the
+``dimension_names`` attribute provides a formal convention for storing the
+NetCDF data model in Zarr.
 
 Dimension Encoding in Zarr Formats
 -----------------------------------
