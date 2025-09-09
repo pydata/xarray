@@ -1850,15 +1850,24 @@ class TestVariable(VariableSubclassobjects):
 
     def test_reduce(self):
         v = Variable(["x", "y"], self.d, {"ignored": "attributes"})
-        assert_identical(v.reduce(np.std, "x"), Variable(["y"], self.d.std(axis=0)))
+        # Now reduce keeps attrs by default
+        expected = Variable(["y"], self.d.std(axis=0), {"ignored": "attributes"})
+        assert_identical(v.reduce(np.std, "x"), expected)
         assert_identical(v.reduce(np.std, axis=0), v.reduce(np.std, dim="x"))
         assert_identical(
-            v.reduce(np.std, ["y", "x"]), Variable([], self.d.std(axis=(0, 1)))
+            v.reduce(np.std, ["y", "x"]),
+            Variable([], self.d.std(axis=(0, 1)), {"ignored": "attributes"}),
         )
-        assert_identical(v.reduce(np.std), Variable([], self.d.std()))
+        assert_identical(
+            v.reduce(np.std), Variable([], self.d.std(), {"ignored": "attributes"})
+        )
+        # Chained reductions both keep attrs
+        expected_chained = Variable(
+            [], self.d.mean(axis=0).std(), {"ignored": "attributes"}
+        )
         assert_identical(
             v.reduce(np.mean, "x").reduce(np.std, "y"),
-            Variable([], self.d.mean(axis=0).std()),
+            expected_chained,
         )
         assert_allclose(v.mean("x"), v.reduce(np.mean, "x"))
 
@@ -2105,27 +2114,32 @@ class TestVariable(VariableSubclassobjects):
 
         v = Variable(["x", "y"], self.d, _attrs)
 
-        # Test dropped attrs
+        # Test default behavior (now keeps attrs for reduction operations)
         vm = v.mean()
-        assert len(vm.attrs) == 0
-        assert vm.attrs == {}
+        assert len(vm.attrs) == len(_attrs)
+        assert vm.attrs == _attrs
 
-        # Test kept attrs
+        # Test explicitly keeping attrs
         vm = v.mean(keep_attrs=True)
         assert len(vm.attrs) == len(_attrs)
         assert vm.attrs == _attrs
+
+        # Test explicitly dropping attrs
+        vm = v.mean(keep_attrs=False)
+        assert len(vm.attrs) == 0
+        assert vm.attrs == {}
 
     def test_binary_ops_keep_attrs(self):
         _attrs = {"units": "test", "long_name": "testing"}
         a = Variable(["x", "y"], np.random.randn(3, 3), _attrs)
         b = Variable(["x", "y"], np.random.randn(3, 3), _attrs)
-        # Test dropped attrs
+        # Test kept attrs (now default)
         d = a - b  # just one operation
-        assert d.attrs == {}
-        # Test kept attrs
-        with set_options(keep_attrs=True):
-            d = a - b
         assert d.attrs == _attrs
+        # Test dropped attrs
+        with set_options(keep_attrs=False):
+            d = a - b
+        assert d.attrs == {}
 
     def test_count(self):
         expected = Variable([], 3)

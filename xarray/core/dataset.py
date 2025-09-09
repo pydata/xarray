@@ -6773,8 +6773,8 @@ class Dataset(
             Dimension(s) over which to apply `func`. By default `func` is
             applied over all dimensions.
         keep_attrs : bool or None, optional
-            If True, the dataset's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
+            If True (default), the dataset's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False, the new
             object will be returned without attributes.
         keepdims : bool, default: False
             If True, the dimensions which are reduced are left in the result
@@ -6832,7 +6832,7 @@ class Dataset(
         dims = parse_dims_as_set(dim, set(self._dims.keys()))
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         variables: dict[Hashable, Variable] = {}
         for name, var in self._variables.items():
@@ -6924,14 +6924,16 @@ class Dataset(
             bar      (x) float64 16B 1.0 2.0
         """
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
         variables = {
             k: maybe_wrap_array(v, func(v, *args, **kwargs))
             for k, v in self.data_vars.items()
         }
-        if keep_attrs:
-            for k, v in variables.items():
+        for k, v in variables.items():
+            if keep_attrs:
                 v._copy_attrs_from(self.data_vars[k])
+            else:
+                v.attrs = {}
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, attrs=attrs)
 
@@ -7658,7 +7660,7 @@ class Dataset(
             self, other = align(self, other, join=align_type, copy=False)
         g = f if not reflexive else lambda x, y: f(y, x)
         ds = self._calculate_binary_op(g, other, join=align_type)
-        keep_attrs = _get_keep_attrs(default=False)
+        keep_attrs = _get_keep_attrs(default=True)
         if keep_attrs:
             ds.attrs = self.attrs
         return ds
@@ -8254,7 +8256,7 @@ class Dataset(
         coord_names = {k for k in self.coords if k in variables}
         indexes = {k: v for k, v in self._indexes.items() if k in variables}
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
         attrs = self.attrs if keep_attrs else None
         new = self._replace_with_new_dims(
             variables, coord_names=coord_names, attrs=attrs, indexes=indexes
@@ -8316,7 +8318,7 @@ class Dataset(
 
         coord_names = set(self.coords)
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
         attrs = self.attrs if keep_attrs else None
         return self._replace(variables, coord_names, attrs=attrs)
 

@@ -1741,8 +1741,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             the reduction is calculated over the flattened array (by calling
             `func(x)` without an axis argument).
         keep_attrs : bool, optional
-            If True, the variable's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
+            If True (default), the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False, the new
             object will be returned without attributes.
         keepdims : bool, default: False
             If True, the dimensions which are reduced are left in the result
@@ -1757,7 +1757,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             removed.
         """
         keep_attrs_ = (
-            _get_keep_attrs(default=False) if keep_attrs is None else keep_attrs
+            _get_keep_attrs(default=True) if keep_attrs is None else keep_attrs
         )
 
         # Note that the call order for Variable.mean is
@@ -2009,7 +2009,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             _quantile_func = duck_array_ops.quantile
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         scalar = utils.is_scalar(q)
         q = np.atleast_1d(np.asarray(q, dtype=np.float64))
@@ -2350,7 +2350,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
             duck_array_ops.isnull,
@@ -2384,7 +2384,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
             duck_array_ops.notnull,
@@ -2435,7 +2435,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             other_data, self_data, dims = _broadcast_compat_data(other, self)
         else:
             self_data, other_data, dims = _broadcast_compat_data(self, other)
-        keep_attrs = _get_keep_attrs(default=False)
+        keep_attrs = _get_keep_attrs(default=True)
         attrs = self._attrs if keep_attrs else None
         with np.errstate(all="ignore"):
             new_data = (
@@ -2526,7 +2526,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         }
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(
+                default=True
+            )  # Default now keeps attrs for reduction operations
         if keep_attrs:
             for v in result.values():
                 v.attrs = self.attrs

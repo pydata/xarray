@@ -1314,7 +1314,7 @@ class DataWithCoords(AttrAccessMixin):
         from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
             duck_array_ops.isnull,
@@ -1357,7 +1357,7 @@ class DataWithCoords(AttrAccessMixin):
         from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
             duck_array_ops.notnull,

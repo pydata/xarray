@@ -701,7 +701,7 @@ def where(cond, x, y, keep_attrs=None):
       * lon      (lon) int64 24B 10 11 12
 
     >>> xr.where(y.lat < 1, y, -1)
-    <xarray.DataArray (lat: 3, lon: 3)> Size: 72B
+    <xarray.DataArray 'lat' (lat: 3, lon: 3)> Size: 72B
     array([[ 0. ,  0.1,  0.2],
            [-1. , -1. , -1. ],
            [-1. , -1. , -1. ]])
@@ -726,7 +726,7 @@ def where(cond, x, y, keep_attrs=None):
     from xarray.core.dataset import Dataset
 
     if keep_attrs is None:
-        keep_attrs = _get_keep_attrs(default=False)
+        keep_attrs = _get_keep_attrs(default=True)
 
     # alignment for three arguments is complicated, so don't support it yet
     from xarray.computation.apply_ufunc import apply_ufunc
