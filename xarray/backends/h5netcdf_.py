@@ -204,7 +204,7 @@ class H5NetCDFStore(WritableCFDataStore):
                 )
 
         if format not in [None, "NETCDF4", "NETCDF4_CLASSIC"]:
-            raise ValueError("invalid format for h5netcdf backend")
+            raise ValueError(f"invalid format for h5netcdf backend: {format}")
 
         kwargs = {
             "invalid_netcdf": invalid_netcdf,
