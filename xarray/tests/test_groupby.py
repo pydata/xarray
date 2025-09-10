@@ -3756,10 +3756,9 @@ def test_mean_datetime_edge_cases():
     )  # 2.5 days
 
 
+@requires_cftime
 def test_mean_with_cftime_objects():
     """Test mean with cftime objects (issue #5897)"""
-    pytest.importorskip("cftime")
-
     ds = xr.Dataset(
         {
             "var1": (
@@ -3783,10 +3782,9 @@ def test_mean_with_cftime_objects():
 
 
 @requires_dask
+@requires_cftime
 def test_mean_with_cftime_objects_dask():
     """Test mean with cftime objects using dask backend (issue #5897)"""
-    pytest.importorskip("cftime")
-
     ds = xr.Dataset(
         {
             "var1": (
