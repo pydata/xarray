@@ -771,6 +771,17 @@ def test_weighted_operations_keep_attr_da_in_ds(operation):
     assert data.a.attrs == result.a.attrs
 
 
+def test_weighted_mean_keep_attrs_ds():
+    weights = DataArray(np.random.randn(2))
+    data = Dataset(
+        {"a": (["dim_0", "dim_1"], np.random.randn(2, 2), dict(attr="data"))},
+        coords={"dim_1": ("dim_1", ["a", "b"], {"attr1": "value1"})},
+    )
+
+    result = data.weighted(weights).mean(dim="dim_0", keep_attrs=True)
+    assert data.coords["dim_1"].attrs == result.coords["dim_1"].attrs
+
+
 @pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean", "quantile"))
 @pytest.mark.parametrize("as_dataset", (True, False))
 def test_weighted_bad_dim(operation, as_dataset):
