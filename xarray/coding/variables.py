@@ -21,6 +21,7 @@ from xarray.coding.common import (
 )
 from xarray.coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import dtypes, duck_array_ops, indexing
+from xarray.core.types import Self
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
@@ -58,13 +59,19 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return np.dtype(self.array.dtype.kind + str(self.array.dtype.itemsize))
 
     def _oindex_get(self, key):
-        return np.asarray(self.array.oindex[key], dtype=self.dtype)
+        return type(self)(self.array.oindex[key])
 
     def _vindex_get(self, key):
-        return np.asarray(self.array.vindex[key], dtype=self.dtype)
+        return type(self)(self.array.vindex[key])
 
-    def __getitem__(self, key) -> np.ndarray:
-        return np.asarray(self.array[key], dtype=self.dtype)
+    def __getitem__(self, key) -> Self:
+        return type(self)(self.array[key])
+
+    def get_duck_array(self):
+        return duck_array_ops.astype(self.array.get_duck_array(), dtype=self.dtype)
+
+    def transpose(self, order):
+        return type(self)(self.array.transpose(order))
 
 
 class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
@@ -96,13 +103,19 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return np.dtype("bool")
 
     def _oindex_get(self, key):
-        return np.asarray(self.array.oindex[key], dtype=self.dtype)
+        return type(self)(self.array.oindex[key])
 
     def _vindex_get(self, key):
-        return np.asarray(self.array.vindex[key], dtype=self.dtype)
+        return type(self)(self.array.vindex[key])
 
-    def __getitem__(self, key) -> np.ndarray:
-        return np.asarray(self.array[key], dtype=self.dtype)
+    def __getitem__(self, key) -> Self:
+        return type(self)(self.array[key])
+
+    def get_duck_array(self):
+        return duck_array_ops.astype(self.array.get_duck_array(), dtype=self.dtype)
+
+    def transpose(self, order):
+        return type(self)(self.array.transpose(order))
 
 
 def _apply_mask(
@@ -157,10 +170,8 @@ def _check_fill_values(attrs, name, dtype):
     Issue SerializationWarning if appropriate.
     """
     raw_fill_dict = {}
-    [
+    for attr in ("missing_value", "_FillValue"):
         pop_to(attrs, raw_fill_dict, attr, name=name)
-        for attr in ("missing_value", "_FillValue")
-    ]
     encoded_fill_values = set()
     for k in list(raw_fill_dict):
         v = raw_fill_dict[k]
@@ -291,15 +302,12 @@ class CFMaskCoder(VariableCoder):
         if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
             # but not for packed data
-            encoding["_FillValue"] = (
-                _encode_unsigned_fill_value(name, fv, dtype)
-                if has_unsigned
-                else (
-                    dtype.type(fv)
-                    if "add_offset" not in encoding and "scale_factor" not in encoding
-                    else fv
-                )
-            )
+            if has_unsigned:
+                encoding["_FillValue"] = _encode_unsigned_fill_value(name, fv, dtype)
+            elif "add_offset" not in encoding and "scale_factor" not in encoding:
+                encoding["_FillValue"] = dtype.type(fv)
+            else:
+                encoding["_FillValue"] = fv
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
 
         if mv_exists:
@@ -369,11 +377,9 @@ class CFMaskCoder(VariableCoder):
 
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        # Even if _Unsigned is use, retain on-disk _FillValue
-        [
+        # Even if _Unsigned is used, retain on-disk _FillValue
+        for attr, value in raw_fill_dict.items():
             safe_setitem(encoding, attr, value, name=name)
-            for attr, value in raw_fill_dict.items()
-        ]
 
         if "_Unsigned" in attrs:
             unsigned = pop_to(attrs, encoding, "_Unsigned")

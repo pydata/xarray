@@ -235,7 +235,7 @@ class TestPlot(PlotTestCase):
         z = np.arange(10)
         da = DataArray(np.cos(z), dims=["z"], coords=[z], name="f")
 
-        xy: list[list[None | str]] = [[None, None], [None, "z"], ["z", None]]
+        xy: list[list[str | None]] = [[None, None], [None, "z"], ["z", None]]
 
         f, axs = plt.subplots(3, 1, squeeze=False)
         for aa, (x, y) in enumerate(xy):
@@ -331,9 +331,10 @@ class TestPlot(PlotTestCase):
         assert not plt.gca().get_legend()
         plt.cla()
         self.darray[:, :, 0].plot.line(x="dim_0", add_legend=True)
-        assert plt.gca().get_legend()
+        legend = plt.gca().get_legend()
+        assert legend is not None
         # check whether legend title is set
-        assert plt.gca().get_legend().get_title().get_text() == "dim_1"
+        assert legend.get_title().get_text() == "dim_1"
 
     def test_2d_line_accepts_x_kw(self) -> None:
         self.darray[:, :, 0].plot.line(x="dim_0")
@@ -344,10 +345,14 @@ class TestPlot(PlotTestCase):
 
     def test_2d_line_accepts_hue_kw(self) -> None:
         self.darray[:, :, 0].plot.line(hue="dim_0")
-        assert plt.gca().get_legend().get_title().get_text() == "dim_0"
+        legend = plt.gca().get_legend()
+        assert legend is not None
+        assert legend.get_title().get_text() == "dim_0"
         plt.cla()
         self.darray[:, :, 0].plot.line(hue="dim_1")
-        assert plt.gca().get_legend().get_title().get_text() == "dim_1"
+        legend = plt.gca().get_legend()
+        assert legend is not None
+        assert legend.get_title().get_text() == "dim_1"
 
     def test_2d_coords_line_plot(self) -> None:
         lon, lat = np.meshgrid(np.linspace(-20, 20, 5), np.linspace(0, 30, 4))
@@ -595,7 +600,7 @@ class TestPlot(PlotTestCase):
                 [-137.85, -120.99, -103.28, -85.28, -67.62],
             ]
         )
-        data = np.sqrt(lon**2 + lat**2)
+        data = np.hypot(lon, lat)
         da = DataArray(
             data,
             dims=("y", "x"),
@@ -828,7 +833,7 @@ class TestPlot1D(PlotTestCase):
         darray = self.darray.expand_dims({"d": np.array([10.009])})
         darray.plot.line(x="period")
         title = plt.gca().get_title()
-        assert "d = 10.01" == title
+        assert "d = [10.009]" == title
 
 
 class TestPlotStep(PlotTestCase):
@@ -1771,6 +1776,18 @@ class TestContourf(Common2dMixin, PlotTestCase):
         artist = self.plotmethod(levels=3)
         assert artist.extend == "neither"
 
+    def test_colormap_norm(self) -> None:
+        # Using a norm should plot a nice colorbar and look consistent with pcolormesh.
+        norm = mpl.colors.LogNorm(0.1, 1e1)
+
+        with pytest.warns(UserWarning):
+            artist = self.plotmethod(norm=norm, add_colorbar=True)
+
+        actual = artist.colorbar.locator()
+        expected = np.array([0.01, 0.1, 1.0, 10.0])
+
+        np.testing.assert_allclose(actual, expected)
+
 
 @pytest.mark.slow
 class TestContour(Common2dMixin, PlotTestCase):
@@ -1787,16 +1804,18 @@ class TestContour(Common2dMixin, PlotTestCase):
         artist = self.plotmethod(colors="k")
         assert artist.cmap.colors[0] == "k"
 
+        # 2 colors, will repeat every other tick:
         artist = self.plotmethod(colors=["k", "b"])
-        assert self._color_as_tuple(artist.cmap.colors[1]) == (0.0, 0.0, 1.0)
+        assert artist.cmap.colors[:2] == ["k", "b"]
 
+        # 4 colors, will repeat every 4th tick:
         artist = self.darray.plot.contour(
             levels=[-0.5, 0.0, 0.5, 1.0], colors=["k", "r", "w", "b"]
         )
-        assert self._color_as_tuple(artist.cmap.colors[1]) == (1.0, 0.0, 0.0)
-        assert self._color_as_tuple(artist.cmap.colors[2]) == (1.0, 1.0, 1.0)
+        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]  # type: ignore[attr-defined,unused-ignore]
+
         # the last color is now under "over"
-        assert self._color_as_tuple(artist.cmap._rgba_over) == (0.0, 0.0, 1.0)
+        assert self._color_as_tuple(artist.cmap.get_over()) == (0.0, 0.0, 1.0)
 
     def test_colors_np_levels(self) -> None:
         # https://github.com/pydata/xarray/issues/3284
@@ -1804,15 +1823,11 @@ class TestContour(Common2dMixin, PlotTestCase):
         artist = self.darray.plot.contour(levels=levels, colors=["k", "r", "w", "b"])
         cmap = artist.cmap
         assert isinstance(cmap, mpl.colors.ListedColormap)
-        # non-optimal typing in matplotlib (ArrayLike)
-        # https://github.com/matplotlib/matplotlib/blob/84464dd085210fb57cc2419f0d4c0235391d97e6/lib/matplotlib/colors.pyi#L133
-        colors = cast(np.ndarray, cmap.colors)
 
-        assert self._color_as_tuple(colors[1]) == (1.0, 0.0, 0.0)
-        assert self._color_as_tuple(colors[2]) == (1.0, 1.0, 1.0)
+        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]  # type: ignore[attr-defined,unused-ignore]
+
         # the last color is now under "over"
-        assert hasattr(cmap, "_rgba_over")
-        assert self._color_as_tuple(cmap._rgba_over) == (0.0, 0.0, 1.0)
+        assert self._color_as_tuple(cmap.get_over()) == (0.0, 0.0, 1.0)
 
     def test_cmap_and_color_both(self) -> None:
         with pytest.raises(ValueError):
@@ -1835,6 +1850,18 @@ class TestContour(Common2dMixin, PlotTestCase):
         # add_colorbar defaults to false
         self.plotmethod(levels=[0.1])
         self.plotmethod(levels=1)
+
+    def test_colormap_norm(self) -> None:
+        # Using a norm should plot a nice colorbar and look consistent with pcolormesh.
+        norm = mpl.colors.LogNorm(0.1, 1e1)
+
+        with pytest.warns(UserWarning):
+            artist = self.plotmethod(norm=norm, add_colorbar=True)
+
+        actual = artist.colorbar.locator()
+        expected = np.array([0.01, 0.1, 1.0, 10.0])
+
+        np.testing.assert_allclose(actual, expected)
 
 
 class TestPcolormesh(Common2dMixin, PlotTestCase):
@@ -2698,9 +2725,9 @@ class TestDatasetStreamplotPlots(PlotTestCase):
     def setUp(self) -> None:
         das = [
             DataArray(
-                np.random.randn(3, 3, 2, 2),
+                np.random.randn(3, 4, 2, 2),
                 dims=["x", "y", "row", "col"],
-                coords=[range(k) for k in [3, 3, 2, 2]],
+                coords=[range(k) for k in [3, 4, 2, 2]],
             )
             for _ in [1, 2]
         ]
@@ -2789,7 +2816,7 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_add_guide(
         self,
         add_guide: bool | None,
-        hue_style: Literal["continuous", "discrete", None],
+        hue_style: Literal["continuous", "discrete"] | None,
         legend: bool,
         colorbar: bool,
     ) -> None:
@@ -2917,7 +2944,9 @@ class TestDatasetScatterPlots(PlotTestCase):
         pc = ds2.plot.scatter(x="A", y="B", markersize="hue")
         axes = pc.axes
         assert axes is not None
-        actual = [t.get_text() for t in axes.get_legend().texts]
+        legend = axes.get_legend()
+        assert legend is not None
+        actual = [t.get_text() for t in legend.texts]
         expected = ["hue", "a", "b"]
         assert actual == expected
 
@@ -3183,8 +3212,8 @@ def test_plot_transposes_properly(plotfunc) -> None:
 def test_facetgrid_single_contour() -> None:
     # regression test for GH3569
     x, y = np.meshgrid(np.arange(12), np.arange(12))
-    z = xr.DataArray(np.sqrt(x**2 + y**2))
-    z2 = xr.DataArray(np.sqrt(x**2 + y**2) + 1)
+    z = xr.DataArray(np.hypot(x, y))
+    z2 = xr.DataArray(np.hypot(x, y) + 1)
     ds = xr.concat([z, z2], dim="time")
     ds["time"] = [0, 1]
 
@@ -3437,7 +3466,7 @@ def test_plot1d_default_rcparams() -> None:
         fg = ds.plot.scatter(x="A", y="B", col="x", marker="o")
         ax = fg.axs.ravel()[0]
         actual = mpl.colors.to_rgba_array("w")
-        expected = ax.collections[0].get_edgecolor()  # type: ignore[assignment]
+        expected = ax.collections[0].get_edgecolor()  # type: ignore[assignment,unused-ignore]
         np.testing.assert_allclose(actual, expected)
 
         # scatter should not emit any warnings when using unfilled markers:

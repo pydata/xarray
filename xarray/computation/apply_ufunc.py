@@ -141,8 +141,13 @@ class _UFuncSignature:
         return f"{type(self).__name__}({list(self.input_core_dims)!r}, {list(self.output_core_dims)!r})"
 
     def __str__(self):
-        lhs = ",".join("({})".format(",".join(dims)) for dims in self.input_core_dims)
-        rhs = ",".join("({})".format(",".join(dims)) for dims in self.output_core_dims)
+        comma_separated = ",".join
+        lhs = comma_separated(
+            f"({comma_separated(dims)})" for dims in self.input_core_dims
+        )
+        rhs = comma_separated(
+            f"({comma_separated(dims)})" for dims in self.output_core_dims
+        )
         return f"{lhs}->{rhs}"
 
     def to_gufunc_string(self, exclude_dims=frozenset()):
@@ -529,8 +534,10 @@ def apply_dataset_vfunc(
     out: Dataset | tuple[Dataset, ...]
     if signature.num_outputs > 1:
         out = tuple(
-            _fast_dataset(*args)
-            for args in zip(result_vars, list_of_coords, list_of_indexes, strict=True)
+            itertools.starmap(
+                _fast_dataset,
+                zip(result_vars, list_of_coords, list_of_indexes, strict=True),
+            )
         )
     else:
         (coord_vars,) = list_of_coords
@@ -567,7 +574,6 @@ def apply_groupby_func(func, *args):
     DataArray, Variable and/or ndarray objects.
     """
     from xarray.core.groupby import GroupBy, peek_at
-    from xarray.core.variable import Variable
 
     groupbys = [arg for arg in args if isinstance(arg, GroupBy)]
     assert groupbys, "must have at least one groupby to iterate over"
@@ -600,9 +606,7 @@ def apply_groupby_func(func, *args):
             iterator = itertools.repeat(arg)
         iterators.append(iterator)
 
-    applied: Iterator = (
-        func(*zipped_args) for zipped_args in zip(*iterators, strict=False)
-    )
+    applied: Iterator = itertools.starmap(func, zip(*iterators, strict=False))
     applied_example, applied = peek_at(applied)
     combine = first_groupby._combine  # type: ignore[attr-defined]
     if isinstance(applied_example, tuple):

@@ -6,7 +6,6 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -17,9 +16,9 @@ dynamic = ["version"]
 license = "Apache-2.0"
 name = "xarray"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
-dependencies = ["numpy>=1.24", "packaging>=23.2", "pandas>=2.1"]
+dependencies = ["numpy>=1.26", "packaging>=24.1", "pandas>=2.2"]
 
 # We don't encode minimum requirements here (though if we can write a script to
 # generate the text from `min_deps_check.py`, that's welcome...). We do add
@@ -27,21 +26,29 @@ dependencies = ["numpy>=1.24", "packaging>=23.2", "pandas>=2.1"]
 # note that it's not a direct dependency of xarray.
 
 [project.optional-dependencies]
-accel = ["scipy", "bottleneck", "numbagg", "numba>=0.54", "flox", "opt_einsum"]
+accel = [
+  "scipy>=1.13",
+  "bottleneck",
+  "numbagg>=0.8",
+  "numba>=0.59",
+  "flox>=0.9",
+  "opt_einsum",
+  "numpy<2.3",    # numba has not updated yet: https://github.com/numba/numba/issues/10105
+]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
-  "netCDF4",
+  "netCDF4>=1.6.0",
   "h5netcdf",
-  "scipy",
-  'pydap; python_version<"3.10"',
-  "zarr",
+  "pydap",
+  "scipy>=1.13",
+  "zarr>=2.18",
   "fsspec",
   "cftime",
   "pooch",
 ]
-etc = ["sparse"]
+etc = ["sparse>=0.15"]
 parallel = ["dask[complete]"]
-viz = ["cartopy", "matplotlib", "nc-time-axis", "seaborn"]
+viz = ["cartopy>=0.23", "matplotlib", "nc-time-axis", "seaborn"]
 types = [
   "pandas-stubs",
   "scipy-stubs",
@@ -58,6 +65,7 @@ types = [
   "types-openpyxl",
   "types-python-dateutil",
   "types-pytz",
+  "types-requests",
   "types-setuptools",
 ]
 
@@ -73,6 +81,7 @@ dev = [
   "pytest-mypy-plugins",
   "pytest-timeout",
   "pytest-xdist",
+  "pytest-asyncio",
   "ruff>=0.8.0",
   "sphinx",
   "sphinx_autosummary_accessors",
@@ -91,7 +100,7 @@ dask = "xarray.namedarray.daskmanager:DaskManager"
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=42", "setuptools-scm>=7"]
+requires = ["setuptools>=77.0.3", "setuptools-scm>=8"]
 
 [tool.setuptools.packages.find]
 include = ["xarray*"]
@@ -190,12 +199,9 @@ module = [
   "xarray.tests.test_duck_array_ops",
   "xarray.tests.test_indexing",
   "xarray.tests.test_merge",
-  "xarray.tests.test_missing",
-  "xarray.tests.test_parallelcompat",
   "xarray.tests.test_sparse",
   "xarray.tests.test_ufuncs",
   "xarray.tests.test_units",
-  "xarray.tests.test_utils",
   "xarray.tests.test_variable",
   "xarray.tests.test_weighted",
 ]
@@ -249,18 +255,23 @@ extend-exclude = ["doc", "_typed_ops.pyi"]
 
 [tool.ruff.lint]
 extend-select = [
+  "YTT",  # flake8-2020
   "B",    # flake8-bugbear
   "C4",   # flake8-comprehensions
   "ISC",  # flake8-implicit-str-concat
   "PIE",  # flake8-pie
   "TID",  # flake8-tidy-imports (absolute imports)
   "PYI",  # flake8-pyi
+  "SIM",  # flake8-simplify
   "FLY",  # flynt
   "I",    # isort
   "PERF", # Perflint
   "W",    # pycodestyle warnings
   "PGH",  # pygrep-hooks
+  "PLC",  # Pylint Convention
   "PLE",  # Pylint Errors
+  "PLR",  # Pylint Refactor
+  "PLW",  # Pylint Warnings
   "UP",   # pyupgrade
   "FURB", # refurb
   "RUF",
@@ -273,9 +284,22 @@ ignore = [
   "PIE790",  # unnecessary pass statement
   "PYI019",  # use `Self` instead of custom TypeVar
   "PYI041",  # use `float` instead of `int | float`
+  "SIM102",  # use a single `if` statement instead of nested `if` statements
+  "SIM108",  # use ternary operator instead of `if`-`else`-block
+  "SIM117",  # use a single `with` statement instead of nested `with` statements
+  "SIM118",  # use `key in dict` instead of `key in dict.keys()`
+  "SIM300",  # yoda condition detected
   "PERF203", # try-except within a loop incurs performance overhead
   "E402",    # module level import not at top of file
   "E731",    # do not assign a lambda expression, use a def
+  "PLC0415", # `import` should be at the top-level of a file
+  "PLC0206", # extracting value from dictionary without calling `.items()`
+  "PLR091",  # too many arguments / branches / statements
+  "PLR2004", # magic value used in comparison
+  "PLW0603", # using the global statement to update is discouraged
+  "PLW0642", # reassigned `self` variable in instance method
+  "PLW1641", # object does not implement `__hash__` method
+  "PLW2901", # `for` loop variable overwritten by assignment target
   "UP007",   # use X | Y for type annotations
   "FURB105", # unnecessary empty string passed to `print`
   "RUF001",  # string contains ambiguous unicode character
@@ -288,6 +312,8 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # don't enforce absolute imports
 "asv_bench/**" = ["TID252"]
+# comparison with itself in tests
+"xarray/tests/**" = ["PLR0124"]
 # looks like ruff bugs
 "xarray/core/_typed_ops.py" = ["PYI034"]
 "xarray/namedarray/_typing.py" = ["PYI018", "PYI046"]
@@ -298,6 +324,8 @@ known-first-party = ["xarray"]
 [tool.ruff.lint.flake8-tidy-imports]
 # Disallow all relative imports.
 ban-relative-imports = "all"
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"pandas.api.types.is_extension_array_dtype".msg = "Use xarray.core.utils.is_allowed_extension_array{_dtype} instead.  Only use the banend API if the incoming data has already been sanitized by xarray"
 
 [tool.pytest.ini_options]
 addopts = [
@@ -331,32 +359,10 @@ addopts = [
 
 filterwarnings = [
   "error:::xarray.*",
-  "default:No index created:UserWarning:xarray.core.dataset",
-  "default::UserWarning:xarray.tests.test_coding_times",
-  "default::UserWarning:xarray.tests.test_computation",
-  "default::UserWarning:xarray.tests.test_dataset",
-  "default:`ancestors` has been deprecated:DeprecationWarning:xarray.core.treenode",
-  "default:`iter_lineage` has been deprecated:DeprecationWarning:xarray.core.treenode",
-  "default:`lineage` has been deprecated:DeprecationWarning:xarray.core.treenode",
-  "default:coords should be an ndarray:DeprecationWarning:xarray.tests.test_variable",
-  "default:deallocating CachingFileManager:RuntimeWarning:xarray.backends.*",
-  "default:deallocating CachingFileManager:RuntimeWarning:xarray.backends.netCDF4_",
-  "default:deallocating CachingFileManager:RuntimeWarning:xarray.core.indexing",
-  "default:Failed to decode variable.*NumPy will stop allowing conversion of out-of-bound Python integers to integer arrays:DeprecationWarning",
-  "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning:xarray.*",
-  "default:invalid value encountered in cast:RuntimeWarning:xarray.core.duck_array_ops",
-  "default:invalid value encountered in cast:RuntimeWarning:xarray.conventions",
-  "default:invalid value encountered in cast:RuntimeWarning:xarray.tests.test_units",
-  "default:invalid value encountered in cast:RuntimeWarning:xarray.tests.test_array_api",
-  "default:NumPy will stop allowing conversion of:DeprecationWarning",
-  "default:shape should be provided:DeprecationWarning:xarray.tests.test_variable",
-  "default:the `pandas.MultiIndex` object:FutureWarning:xarray.tests.test_variable",
-  "default:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
-  "default:Duplicate dimension names present:UserWarning:xarray.namedarray.core",
   # Zarr 2 V3 implementation
-  "ignore:Zarr-Python is not in alignment with the final V3 specification",
+  "default:Zarr-Python is not in alignment with the final V3 specification",
   # TODO: this is raised for vlen-utf8, consolidated metadata, U1 dtype
-  "ignore:is currently not part .* the Zarr version 3 specification.",
+  "default:is currently not part .* the Zarr version 3 specification.",
   # TODO: remove once we know how to deal with a changed signature in protocols
   "default:::xarray.tests.test_strategies",
 ]

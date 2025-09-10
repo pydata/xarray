@@ -23,7 +23,6 @@ from numpy import (
     take,
     unravel_index,  # noqa: F401
 )
-from pandas.api.types import is_extension_array_dtype
 
 from xarray.compat import dask_array_compat, dask_array_ops
 from xarray.compat.array_api_compat import get_array_namespace
@@ -49,8 +48,6 @@ dask_available = module_available("dask")
 
 
 def einsum(*args, **kwargs):
-    from xarray.core.options import OPTIONS
-
     if OPTIONS["use_opt_einsum"] and module_available("opt_einsum"):
         import opt_einsum
 
@@ -157,7 +154,7 @@ def isna(data: Any) -> bool:
     -------
         Whether or not the data is np.nan or pd.NA
     """
-    return data is pd.NA or data is np.nan
+    return data is pd.NA or data is np.nan  # noqa: PLW0177
 
 
 def isnull(data):
@@ -186,14 +183,14 @@ def isnull(data):
         dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
         return full_like(data, dtype=dtype, fill_value=False)
     # at this point, array should have dtype=object
-    elif isinstance(data, np.ndarray) or is_extension_array_dtype(data):
+    elif isinstance(data, np.ndarray) or pd.api.types.is_extension_array_dtype(data):  # noqa: TID251
         return pandas_isnull(data)
     else:
         # Not reachable yet, but intended for use with other duck array
         # types. For full consistency with pandas, we should accept None as
         # a null value as well as NaN, but it isn't clear how to do this
         # with duck typing.
-        return data != data
+        return data != data  # noqa: PLR0124
 
 
 def notnull(data):
@@ -268,10 +265,12 @@ def asarray(data, xp=np, dtype=None):
 
 def as_shared_dtype(scalars_or_arrays, xp=None):
     """Cast arrays to a shared dtype using xarray's type promotion rules."""
-    if any(is_extension_array_dtype(x) for x in scalars_or_arrays):
-        extension_array_types = [
-            x.dtype for x in scalars_or_arrays if is_extension_array_dtype(x)
-        ]
+    extension_array_types = [
+        x.dtype
+        for x in scalars_or_arrays
+        if pd.api.types.is_extension_array_dtype(x)  # noqa: TID251
+    ]
+    if len(extension_array_types) >= 1:
         non_nans = [x for x in scalars_or_arrays if not isna(x)]
         if len(extension_array_types) == len(non_nans) and all(
             isinstance(x, type(extension_array_types[0])) for x in extension_array_types
@@ -681,9 +680,7 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
         The output data type.
 
     """
-    import datetime as dt
-
-    if isinstance(value, dt.timedelta):
+    if isinstance(value, datetime.timedelta):
         out = py_timedelta_to_float(value, datetime_unit)
     elif isinstance(value, np.timedelta64):
         out = np_timedelta64_to_float(value, datetime_unit)

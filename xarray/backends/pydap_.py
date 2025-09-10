@@ -10,6 +10,7 @@ from xarray.backends.common import (
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
+    T_PathFileOrDataStore,
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
     robust_getitem,
@@ -158,11 +159,12 @@ class PydapDataStore(AbstractDataStore):
         except AttributeError:
             from pydap.model import GroupType
 
-            _vars = list(self.ds.keys())
-            # check the key is a BaseType or GridType
-            for var in _vars:
-                if isinstance(self.ds[var], GroupType):
-                    _vars.remove(var)
+            _vars = [
+                var
+                for var in self.ds.keys()
+                # check the key is not a BaseType or GridType
+                if not isinstance(self.ds[var], GroupType)
+            ]
         return FrozenDict((k, self.open_store_variable(self.ds[k])) for k in _vars)
 
     def get_attrs(self):
@@ -206,15 +208,14 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     description = "Open remote datasets via OPeNDAP using pydap in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.PydapBackendEntrypoint.html"
 
-    def guess_can_open(
-        self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
-    ) -> bool:
+    def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: (
+            str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
+        ),
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -257,7 +258,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -294,7 +295,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,

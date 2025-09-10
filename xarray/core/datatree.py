@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import io
 import itertools
 import textwrap
 from collections import ChainMap
@@ -12,10 +13,12 @@ from collections.abc import (
     Mapping,
 )
 from html import escape
+from os import PathLike
 from typing import (
     TYPE_CHECKING,
     Any,
     Concatenate,
+    Literal,
     NoReturn,
     ParamSpec,
     TypeVar,
@@ -73,7 +76,9 @@ except ImportError:
 if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
+    from dask.delayed import Delayed
 
+    from xarray.backends import ZarrStore
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
     from xarray.core.types import (
         Dims,
@@ -347,9 +352,9 @@ class DatasetView(Dataset):
         variables: dict[Hashable, Variable] | None = None,
         coord_names: set[Hashable] | None = None,
         dims: dict[Any, int] | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         indexes: dict[Hashable, Index] | None = None,
-        encoding: dict | None | Default = _default,
+        encoding: dict | Default | None = _default,
         inplace: bool = False,
     ) -> Dataset:
         """
@@ -437,7 +442,7 @@ class DatasetView(Dataset):
 
 
 class DataTree(
-    NamedNode["DataTree"],
+    NamedNode,
     DataTreeAggregations,
     DataTreeOpsMixin,
     TreeAttrAccessMixin,
@@ -557,9 +562,12 @@ class DataTree(
 
     @property
     def _coord_variables(self) -> ChainMap[Hashable, Variable]:
+        # ChainMap is incorrected typed in typeshed (only the first argument
+        # needs to be mutable)
+        # https://github.com/python/typeshed/issues/8430
         return ChainMap(
             self._node_coord_variables,
-            *(p._node_coord_variables_with_index for p in self.parents),
+            *(p._node_coord_variables_with_index for p in self.parents),  # type: ignore[arg-type]
         )
 
     @property
@@ -1338,7 +1346,7 @@ class DataTree(
         )
 
     def _inherited_coords_set(self) -> set[str]:
-        return set(self.parent.coords if self.parent else [])
+        return set(self.parent.coords if self.parent else [])  # type: ignore[arg-type]
 
     def identical(self, other: DataTree) -> bool:
         """
@@ -1448,6 +1456,73 @@ class DataTree(
         other_keys = {key for key, _ in other.subtree_with_keys}
         return self.filter(lambda node: node.relative_to(self) in other_keys)
 
+    def prune(self, drop_size_zero_vars: bool = False) -> DataTree:
+        """
+        Remove empty nodes from the tree.
+
+        Returns a new tree containing only nodes that contain data variables with actual data.
+        Intermediate nodes are kept if they are required to support non-empty children.
+
+        Parameters
+        ----------
+        drop_size_zero_vars : bool, default False
+            If True, also considers variables with zero size as empty.
+            If False, keeps nodes with data variables even if they have zero size.
+
+        Returns
+        -------
+        DataTree
+            A new tree with empty nodes removed.
+
+        See Also
+        --------
+        filter
+
+        Examples
+        --------
+        >>> dt = xr.DataTree.from_dict(
+        ...     {
+        ...         "/a": xr.Dataset({"foo": ("x", [1, 2])}),
+        ...         "/b": xr.Dataset({"bar": ("x", [])}),
+        ...         "/c": xr.Dataset(),
+        ...     }
+        ... )
+        >>> dt.prune()  # doctest: +ELLIPSIS,+NORMALIZE_WHITESPACE
+        <xarray.DataTree>
+        Group: /
+        ├── Group: /a
+        │       Dimensions:  (x: 2)
+        │       Dimensions without coordinates: x
+        │       Data variables:
+        │           foo      (x) int64 16B 1 2
+        └── Group: /b
+                Dimensions:  (x: 0)
+                Dimensions without coordinates: x
+                Data variables:
+                    bar      (x) float64 0B...
+
+        The ``drop_size_zero_vars`` parameter controls whether variables
+        with zero size are considered empty:
+
+        >>> dt.prune(drop_size_zero_vars=True)
+        <xarray.DataTree>
+        Group: /
+        └── Group: /a
+                Dimensions:  (x: 2)
+                Dimensions without coordinates: x
+                Data variables:
+                    foo      (x) int64 16B 1 2
+        """
+        non_empty_cond: Callable[[DataTree], bool]
+        if drop_size_zero_vars:
+            non_empty_cond = lambda node: len(node.data_vars) > 0 and any(
+                var.size > 0 for var in node.data_vars.values()
+            )
+        else:
+            non_empty_cond = lambda node: len(node.data_vars) > 0
+
+        return self.filter(non_empty_cond)
+
     def match(self, pattern: str) -> DataTree:
         """
         Return nodes with paths matching pattern.
@@ -1494,9 +1569,33 @@ class DataTree(
         }
         return DataTree.from_dict(matching_nodes, name=self.name)
 
+    @overload
     def map_over_datasets(
         self,
-        func: Callable,
+        func: Callable[..., Dataset | None],
+        *args: Any,
+        kwargs: Mapping[str, Any] | None = None,
+    ) -> DataTree: ...
+
+    @overload
+    def map_over_datasets(
+        self,
+        func: Callable[..., tuple[Dataset | None, Dataset | None]],
+        *args: Any,
+        kwargs: Mapping[str, Any] | None = None,
+    ) -> tuple[DataTree, DataTree]: ...
+
+    @overload
+    def map_over_datasets(
+        self,
+        func: Callable[..., tuple[Dataset | None, ...]],
+        *args: Any,
+        kwargs: Mapping[str, Any] | None = None,
+    ) -> tuple[DataTree, ...]: ...
+
+    def map_over_datasets(
+        self,
+        func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
         *args: Any,
         kwargs: Mapping[str, Any] | None = None,
     ) -> DataTree | tuple[DataTree, ...]:
@@ -1531,8 +1630,7 @@ class DataTree(
         map_over_datasets
         """
         # TODO this signature means that func has no way to know which node it is being called upon - change?
-        # TODO fix this typing error
-        return map_over_datasets(func, self, *args, kwargs=kwargs)
+        return map_over_datasets(func, self, *args, kwargs=kwargs)  # type: ignore[arg-type]
 
     @overload
     def pipe(
@@ -1626,10 +1724,9 @@ class DataTree(
 
     def _unary_op(self, f, *args, **kwargs) -> DataTree:
         # TODO do we need to any additional work to avoid duplication etc.? (Similar to aggregations)
-        return self.map_over_datasets(functools.partial(f, **kwargs), *args)  # type: ignore[return-value]
+        return self.map_over_datasets(functools.partial(f, **kwargs), *args)
 
     def _binary_op(self, other, f, reflexive=False, join=None) -> DataTree:
-        from xarray.core.dataset import Dataset
         from xarray.core.groupby import GroupBy
 
         if isinstance(other, GroupBy):
@@ -1660,9 +1757,11 @@ class DataTree(
     def __eq__(self, other: DtCompatible) -> Self:  # type: ignore[override]
         return super().__eq__(other)
 
+    # filepath=None writes to a memoryview
+    @overload
     def to_netcdf(
         self,
-        filepath,
+        filepath: None = None,
         mode: NetcdfWriteModes = "w",
         encoding=None,
         unlimited_dims=None,
@@ -1672,14 +1771,63 @@ class DataTree(
         write_inherited_coords: bool = False,
         compute: bool = True,
         **kwargs,
-    ):
+    ) -> memoryview: ...
+
+    # compute=False returns dask.Delayed
+    @overload
+    def to_netcdf(
+        self,
+        filepath: str | PathLike | io.IOBase,
+        mode: NetcdfWriteModes = "w",
+        encoding=None,
+        unlimited_dims=None,
+        format: T_DataTreeNetcdfTypes | None = None,
+        engine: T_DataTreeNetcdfEngine | None = None,
+        group: str | None = None,
+        write_inherited_coords: bool = False,
+        *,
+        compute: Literal[False],
+        **kwargs,
+    ) -> Delayed: ...
+
+    # default return None
+    @overload
+    def to_netcdf(
+        self,
+        filepath: str | PathLike | io.IOBase,
+        mode: NetcdfWriteModes = "w",
+        encoding=None,
+        unlimited_dims=None,
+        format: T_DataTreeNetcdfTypes | None = None,
+        engine: T_DataTreeNetcdfEngine | None = None,
+        group: str | None = None,
+        write_inherited_coords: bool = False,
+        compute: Literal[True] = True,
+        **kwargs,
+    ) -> None: ...
+
+    def to_netcdf(
+        self,
+        filepath: str | PathLike | io.IOBase | None = None,
+        mode: NetcdfWriteModes = "w",
+        encoding=None,
+        unlimited_dims=None,
+        format: T_DataTreeNetcdfTypes | None = None,
+        engine: T_DataTreeNetcdfEngine | None = None,
+        group: str | None = None,
+        write_inherited_coords: bool = False,
+        compute: bool = True,
+        **kwargs,
+    ) -> None | memoryview | Delayed:
         """
         Write datatree contents to a netCDF file.
 
         Parameters
         ----------
-        filepath : str or Path
-            Path to which to save this datatree.
+        filepath : str or PathLike or file-like object or None
+            Path to which to save this datatree, or a file-like object to write
+            it to (which must support read and write and be seekable) or None
+            to return in-memory bytes as a memoryview.
         mode : {"w", "a"}, default: "w"
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
@@ -1714,9 +1862,14 @@ class DataTree(
         compute : bool, default: True
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later.
-            Currently, ``compute=False`` is not supported.
         kwargs :
             Additional keyword arguments to be passed to ``xarray.Dataset.to_netcdf``
+
+        Returns
+        -------
+            * ``memoryview`` if path is None
+            * ``dask.delayed.Delayed`` if compute is False
+            * ``None`` otherwise
 
         Note
         ----
@@ -1725,7 +1878,7 @@ class DataTree(
         """
         from xarray.core.datatree_io import _datatree_to_netcdf
 
-        _datatree_to_netcdf(
+        return _datatree_to_netcdf(
             self,
             filepath,
             mode=mode,
@@ -1739,6 +1892,35 @@ class DataTree(
             **kwargs,
         )
 
+    # compute=False returns dask.Delayed
+    @overload
+    def to_zarr(
+        self,
+        store,
+        mode: ZarrWriteModes = "w-",
+        encoding=None,
+        consolidated: bool = True,
+        group: str | None = None,
+        write_inherited_coords: bool = False,
+        *,
+        compute: Literal[False],
+        **kwargs,
+    ) -> Delayed: ...
+
+    # default returns ZarrStore
+    @overload
+    def to_zarr(
+        self,
+        store,
+        mode: ZarrWriteModes = "w-",
+        encoding=None,
+        consolidated: bool = True,
+        group: str | None = None,
+        write_inherited_coords: bool = False,
+        compute: Literal[True] = True,
+        **kwargs,
+    ) -> ZarrStore: ...
+
     def to_zarr(
         self,
         store,
@@ -1749,7 +1931,7 @@ class DataTree(
         write_inherited_coords: bool = False,
         compute: bool = True,
         **kwargs,
-    ):
+    ) -> ZarrStore | Delayed:
         """
         Write datatree contents to a Zarr store.
 
@@ -1780,8 +1962,7 @@ class DataTree(
         compute : bool, default: True
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later. Metadata
-            is always updated eagerly. Currently, ``compute=False`` is not
-            supported.
+            is always updated eagerly.
         kwargs :
             Additional keyword arguments to be passed to ``xarray.Dataset.to_zarr``
 
@@ -1792,7 +1973,7 @@ class DataTree(
         """
         from xarray.core.datatree_io import _datatree_to_zarr
 
-        _datatree_to_zarr(
+        return _datatree_to_zarr(
             self,
             store,
             mode=mode,
@@ -1805,7 +1986,7 @@ class DataTree(
         )
 
     def _get_all_dims(self) -> set:
-        all_dims = set()
+        all_dims: set[Any] = set()
         for node in self.subtree:
             all_dims.update(node._node_dims)
         return all_dims
