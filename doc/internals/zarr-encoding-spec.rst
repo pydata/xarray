@@ -47,20 +47,14 @@ location based on the format version, raising an error if it can't be found. The
 dimension information is used to define the variable dimension names and then
 (for Zarr V2) removed from the attributes dictionary returned to the user.
 
-Coordinate Encoding
--------------------
+CF Conventions
+--------------
 
-In addition to dimension information, Xarray follows CF conventions when encoding
-coordinate metadata. This results in a ``coordinates`` attribute that lists the
-names of coordinate variables associated with each data variable. This attribute
-is separate from and complementary to the dimension encoding described above.
-
-The ``coordinates`` attribute:
-
-- Lists coordinate variables (e.g., ``"yc xc"`` for spatial coordinates)
-- Is visible in the attributes when accessing arrays with zarr-python
-- Is present regardless of Zarr format version
-- Follows CF conventions for coordinate metadata
+Xarray uses its standard CF encoding/decoding functionality for handling metadata
+(see :py:func:`decode_cf`). This includes encoding concepts such as dimensions and
+coordinates. The ``coordinates`` attribute, which lists coordinate variables
+(e.g., ``"yc xc"`` for spatial coordinates), is one part of the broader CF conventions
+used to describe metadata in NetCDF and Zarr.
 
 Compatibility and Reading
 -------------------------
@@ -75,7 +69,7 @@ Zarr data with valid dimension metadata. Xarray supports:
 
 After decoding the dimension information and assigning the variable dimensions,
 Xarray proceeds to [optionally] decode each variable using its standard CF decoding
-machinery used for NetCDF data (see :py:func:`decode_cf`).
+machinery used for NetCDF data.
 
 Finally, it's worth noting that Xarray writes (and attempts to read)
 "consolidated metadata" by default (the ``.zmetadata`` file), which is another
