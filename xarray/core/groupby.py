@@ -22,7 +22,11 @@ from xarray.core._aggregations import (
     DataArrayGroupByAggregations,
     DatasetGroupByAggregations,
 )
-from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
+from xarray.core.common import (
+    ImplementsArrayReduce,
+    ImplementsDatasetReduce,
+    _is_numeric_aggregatable_dtype,
+)
 from xarray.core.coordinates import Coordinates, coordinates_from_variable
 from xarray.core.duck_array_ops import where
 from xarray.core.formatting import format_array_flat
@@ -1064,10 +1068,6 @@ class GroupBy(Generic[T_Xarray]):
         # variable will just drop it.
         non_numeric: dict[Hashable, Variable]
         if kwargs.pop("numeric_only", None):
-            from xarray.core.common import (
-                _is_numeric_aggregatable_dtype,
-            )
-
             non_numeric = {
                 name: var
                 for name, var in variables.items()

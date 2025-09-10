@@ -6,53 +6,9 @@ xarray has many optional dependencies that may not be available in all testing e
 
 ### Standard Decorators
 
-**ALWAYS use these decorators** instead of conditional `if` statements:
+**ALWAYS use decorators** like `@requires_dask`, `@requires_cftime`, etc. instead of conditional `if` statements.
 
-```python
-# For dask-specific tests
-@requires_dask
-def test_something_with_dask(): ...
-
-
-# For tests requiring cftime
-@requires_cftime
-def test_datetime_with_cftime(): ...
-
-
-# For tests requiring scipy
-@requires_scipy
-def test_interpolation(): ...
-
-
-# For tests requiring matplotlib
-@requires_matplotlib
-def test_plotting(): ...
-
-
-# For tests requiring numba
-@requires_numba
-def test_numba_acceleration(): ...
-
-
-# For tests requiring pint
-@requires_pint
-def test_units(): ...
-
-
-# For tests requiring sparse
-@requires_sparse
-def test_sparse_arrays(): ...
-
-
-# For tests requiring bottleneck
-@requires_bottleneck
-def test_bottleneck_functions(): ...
-
-
-# For tests requiring flox
-@requires_flox
-def test_flox_groupby(): ...
-```
+All available decorators are defined in `xarray/tests/__init__.py` (look for `requires_*` decorators).
 
 ### DO NOT use conditional imports
 
@@ -100,16 +56,6 @@ def test_cftime_functionality():
     # Now use cftime
 ```
 
-### Testing in CI environments
-
-xarray CI runs tests in various environments:
-
-- `all-but-dask`: Has all dependencies except dask
-- `bare-minimum`: Minimal dependencies only
-- `all-but-numba`: Has all dependencies except numba
-
-Your tests must handle these environments correctly by using the decorators above.
-
 ### Common patterns
 
 1. **Split tests by dependency** - Don't mix optional dependency code with base functionality:
@@ -150,16 +96,8 @@ Your tests must handle these environments correctly by using the decorators abov
    def test_with_available_backends(implementation): ...
    ```
 
-### Finding the decorators
+### Key Points
 
-All test requirement decorators are defined in:
-
-- `xarray/tests/__init__.py` (look for `requires_*` decorators)
-- Import them as: `from . import requires_dask, requires_scipy, ...`
-
-### Remember
-
-- CI environments intentionally exclude certain dependencies to test compatibility
+- CI environments intentionally exclude certain dependencies (e.g., `all-but-dask`, `bare-minimum`)
 - A test failing in "all-but-dask" because it uses dask is a test bug, not a CI issue
-- Always check which decorators already exist before creating new ones
-- When in doubt, look at similar existing tests for patterns to follow
+- Look at similar existing tests for patterns to follow
