@@ -522,7 +522,12 @@ AGGREGATION_METHODS = (
     Method("any", bool_reduce=True),
     Method("max", extra_kwargs=(skipna,)),
     Method("min", extra_kwargs=(skipna,)),
-    Method("mean", extra_kwargs=(skipna,), numeric_only=True),
+    Method(
+        "mean",
+        extra_kwargs=(skipna,),
+        numeric_only=True,
+        additional_notes="Note: datetime64 and timedelta64 are treated as numeric for the purpose of mean calculations.",
+    ),
     Method("prod", extra_kwargs=(skipna, min_count), numeric_only=True),
     Method("sum", extra_kwargs=(skipna, min_count), numeric_only=True),
     Method("std", extra_kwargs=(skipna, ddof), numeric_only=True),

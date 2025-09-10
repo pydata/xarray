@@ -3738,7 +3738,7 @@ def test_mean_datetime_edge_cases():
     assert "dates" in result.data_vars
     assert "values" in result.data_vars
     # The mean should skip NaT and compute mean of the other 3 dates
-    assert pd.notna(result["dates"].values)
+    assert not result.dates.isnull().item()
 
     # Test with timedelta
     timedeltas = pd.timedelta_range("1 day", periods=4, freq="D")
@@ -3756,18 +3756,73 @@ def test_mean_datetime_edge_cases():
     )  # 2.5 days
 
 
-def test_mean_dataarray_datetime():
-    """Test that DataArray.mean() also works with datetime"""
-    dates = pd.date_range("2021-01-01", periods=10, freq="D")
-    da = xr.DataArray(dates, dims="x")
+def test_mean_with_cftime_objects():
+    """Test mean with cftime objects (issue #5897)"""
+    pytest.importorskip("cftime")
 
-    # Should compute mean without error
-    result = da.mean()
-    assert result.dtype == np.dtype("datetime64[ns]")
+    ds = xr.Dataset(
+        {
+            "var1": (
+                ("time",),
+                xr.date_range("2021-10-31", periods=10, freq="D", use_cftime=True),
+            ),
+            "var2": (("x",), list(range(10))),
+        }
+    )
 
-    # Test with dimension specified
-    result_dim = da.mean("x")
-    assert result_dim.dtype == np.dtype("datetime64[ns]")
+    # Test averaging over time dimension - var1 should be included
+    result_time = ds.mean("time")
+    assert "var1" in result_time.data_vars
+    assert "var2" not in result_time.dims
+
+    # Test averaging over x dimension - should work normally
+    result_x = ds.mean("x")
+    assert "var2" in result_x.data_vars
+    assert "var1" in result_x.data_vars
+    assert result_x.var2.item() == 4.5  # mean of 0-9
+
+    # Test with dask backend
+    dsc = ds.chunk({})
+    result_time_dask = dsc.mean("time")
+    assert "var1" in result_time_dask.data_vars
+
+    result_x_dask = dsc.mean("x")
+    assert "var2" in result_x_dask.data_vars
+    assert result_x_dask.var2.compute().item() == 4.5
+
+
+def test_groupby_bins_datetime_mean():
+    """Test groupby_bins with datetime mean (issue #6995)"""
+    times = pd.date_range("2020-01-01", "2020-02-01", freq="1h")
+    index = np.arange(len(times))
+    bins = np.arange(0, len(index), 5)
+
+    ds = xr.Dataset(
+        {"time": ("index", times), "float": ("index", np.linspace(0, 1, len(index)))},
+        coords={"index": index},
+    )
+
+    # The time variable should be preserved and averaged
+    result = ds.groupby_bins("index", bins).mean()
+    assert "time" in result.data_vars
+    assert "float" in result.data_vars
+    assert result.time.dtype == np.dtype("datetime64[ns]")
+
+
+def test_groupby_bins_mean_time_series():
+    """Test groupby_bins mean on time series data (issue #10217)"""
+    ds = xr.Dataset(
+        {
+            "measurement": ("trial", np.arange(0, 100, 10)),
+            "time": ("trial", pd.date_range("20240101T1500", "20240101T1501", 10)),
+        }
+    )
+
+    # Time variable should be preserved in the aggregation
+    ds_agged = ds.groupby_bins("trial", 5).mean()
+    assert "time" in ds_agged.data_vars
+    assert "measurement" in ds_agged.data_vars
+    assert ds_agged.time.dtype == np.dtype("datetime64[ns]")
 
 
 # TODO: Possible property tests to add to this module
