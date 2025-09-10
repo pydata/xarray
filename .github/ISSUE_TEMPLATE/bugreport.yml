@@ -39,6 +39,23 @@ body:
         - [Minimal Complete Verifiable Examples](https://stackoverflow.com/help/mcve)
         - [Craft Minimal Bug Reports](https://matthewrocklin.com/minimal-bug-reports)
 
+        Consider listing additional or specific dependencies in [inline script metadata](https://packaging.python.org/en/latest/specifications/inline-script-metadata/#example)
+        so that calling `uv run issue.py` shows the issue when copied into `issue.py`. (not strictly required)
+      value: |
+        ```python
+        # /// script
+        # requires-python = ">=3.11"
+        # dependencies = [
+        #   "xarray[complete]@git+https://github.com/pydata/xarray.git@main,
+        # ]
+        # ///
+        #
+        # This script automatically imports the development branch of xarray to check for issues
+
+        import xarray as xr
+        xr.show_versions()
+        # your reproducer code ...
+        ```
       options:
         - label: Minimal example — the example is as focused as reasonably possible to demonstrate the underlying issue in xarray.
         - label: Complete example — the example is self-contained, including all data and the text of any traceback.
