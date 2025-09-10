@@ -3,6 +3,8 @@ from __future__ import annotations
 import contextlib
 import inspect
 import math
+import os
+import sys
 from collections.abc import Callable, Generator, Hashable
 from copy import copy
 from datetime import date, timedelta
@@ -11,6 +13,14 @@ from typing import Any, Literal, cast
 import numpy as np
 import pandas as pd
 import pytest
+
+# Skip this entire module on Windows when using pytest-xdist
+# due to worker crashes with matplotlib FacetGrid operations
+pytestmark = pytest.mark.xfail(
+    sys.platform == "win32" and "PYTEST_XDIST_WORKER" in os.environ,
+    reason="matplotlib plotting tests cause xdist worker crashes on Windows",
+    strict=False,  # Don't fail if tests pass
+)
 
 import xarray as xr
 import xarray.plot as xplt
