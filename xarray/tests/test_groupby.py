@@ -3781,15 +3781,30 @@ def test_mean_with_cftime_objects():
     assert "var1" in result_x.data_vars
     assert result_x.var2.item() == 4.5  # mean of 0-9
 
-    # Test with dask backend (only if dask is available)
-    if has_dask:
-        dsc = ds.chunk({})
-        result_time_dask = dsc.mean("time")
-        assert "var1" in result_time_dask.data_vars
 
-        result_x_dask = dsc.mean("x")
-        assert "var2" in result_x_dask.data_vars
-        assert result_x_dask.var2.compute().item() == 4.5
+@requires_dask
+def test_mean_with_cftime_objects_dask():
+    """Test mean with cftime objects using dask backend (issue #5897)"""
+    pytest.importorskip("cftime")
+
+    ds = xr.Dataset(
+        {
+            "var1": (
+                ("time",),
+                xr.date_range("2021-10-31", periods=10, freq="D", use_cftime=True),
+            ),
+            "var2": (("x",), list(range(10))),
+        }
+    )
+
+    # Test with dask backend
+    dsc = ds.chunk({})
+    result_time_dask = dsc.mean("time")
+    assert "var1" in result_time_dask.data_vars
+
+    result_x_dask = dsc.mean("x")
+    assert "var2" in result_x_dask.data_vars
+    assert result_x_dask.var2.compute().item() == 4.5
 
 
 def test_groupby_bins_datetime_mean():
