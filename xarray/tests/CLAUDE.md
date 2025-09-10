@@ -15,7 +15,7 @@ def test_something_with_dask():
     ...
 
 # For tests requiring cftime
-@requires_cftime  
+@requires_cftime
 def test_datetime_with_cftime():
     ...
 
@@ -58,6 +58,7 @@ def test_flox_groupby():
 ### DO NOT use conditional imports
 
 ❌ **WRONG - Do not do this:**
+
 ```python
 def test_mean_with_cftime():
     if has_dask:  # WRONG!
@@ -66,6 +67,7 @@ def test_mean_with_cftime():
 ```
 
 ✅ **CORRECT - Do this instead:**
+
 ```python
 def test_mean_with_cftime():
     # Test without dask
@@ -102,6 +104,7 @@ def test_cftime_functionality():
 ### Testing in CI environments
 
 xarray CI runs tests in various environments:
+
 - `all-but-dask`: Has all dependencies except dask
 - `bare-minimum`: Minimal dependencies only
 - `all-but-numba`: Has all dependencies except numba
@@ -111,16 +114,18 @@ Your tests must handle these environments correctly by using the decorators abov
 ### Common patterns
 
 1. **Split tests by dependency** - Don't mix optional dependency code with base functionality:
+
    ```python
    def test_base_functionality():
        # Core test without optional deps
-       
+
    @requires_dask
    def test_dask_functionality():
        # Dask-specific test
    ```
 
 2. **Use fixtures for dependency-specific setup**:
+
    ```python
    @pytest.fixture
    def dask_array():
@@ -130,9 +135,10 @@ Your tests must handle these environments correctly by using the decorators abov
    ```
 
 3. **Check available implementations**:
+
    ```python
    from xarray.core.duck_array_ops import available_implementations
-   
+
    @pytest.mark.parametrize("implementation", available_implementations())
    def test_with_available_backends(implementation):
        ...
@@ -141,6 +147,7 @@ Your tests must handle these environments correctly by using the decorators abov
 ### Finding the decorators
 
 All test requirement decorators are defined in:
+
 - `xarray/tests/__init__.py` (look for `requires_*` decorators)
 - Import them as: `from . import requires_dask, requires_scipy, ...`
 
