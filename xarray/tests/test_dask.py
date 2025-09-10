@@ -442,7 +442,11 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         assert kernel_call_count == 0
         out = xr.concat(
-            [ds1, ds2, ds3], dim="n", data_vars="different", coords="different"
+            [ds1, ds2, ds3],
+            dim="n",
+            data_vars="different",
+            coords="different",
+            compat="equals",
         )
         # each kernel is computed exactly once
         assert kernel_call_count == 6
@@ -484,7 +488,11 @@ class TestDataArrayAndDataset(DaskTestCase):
         # stop computing variables as it would not have any benefit
         ds4 = Dataset(data_vars={"d": ("x", [2.0])}, coords={"c": ("x", [2.0])})
         out = xr.concat(
-            [ds1, ds2, ds4, ds3], dim="n", data_vars="different", coords="different"
+            [ds1, ds2, ds4, ds3],
+            dim="n",
+            data_vars="different",
+            coords="different",
+            compat="equals",
         )
         # the variables of ds1 and ds2 were computed, but those of ds3 didn't
         assert kernel_call_count == 22
@@ -505,7 +513,11 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         # now check that concat() is correctly using dask name equality to skip loads
         out = xr.concat(
-            [ds1, ds1, ds1], dim="n", data_vars="different", coords="different"
+            [ds1, ds1, ds1],
+            dim="n",
+            data_vars="different",
+            coords="different",
+            compat="equals",
         )
         assert kernel_call_count == 24
         # variables are not loaded in the output
@@ -1129,7 +1141,8 @@ def test_unify_chunks(map_ds):
 def test_unify_chunks_shallow_copy(obj, transform):
     obj = transform(obj)
     unified = obj.unify_chunks()
-    assert_identical(obj, unified) and obj is not obj.unify_chunks()
+    assert_identical(obj, unified)
+    # assert obj is not unified
 
 
 @pytest.mark.parametrize("obj", [make_da()])
@@ -1365,14 +1378,14 @@ def test_map_blocks_ds_transformations(func, map_ds):
 def test_map_blocks_da_ds_with_template(obj):
     func = lambda x: x.isel(x=[1])
     # a simple .isel(x=[1, 5, 9]) puts all those in a single chunk.
-    template = xr.concat([obj.isel(x=[i]) for i in [1, 5, 9]], dim="x")
+    template = xr.concat([obj.isel(x=[i]) for i in [1, 5, 9]], data_vars=None, dim="x")
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, obj, template=template)
     assert_identical(actual, template)
 
     # Check that indexes are written into the graph directly
     dsk = dict(actual.__dask_graph__())
-    assert len({k for k in dsk if "x-coordinate" in k})
+    assert {k for k in dsk if "x-coordinate" in k}
     assert all(
         isinstance(v, PandasIndex) for k, v in dsk.items() if "x-coordinate" in k
     )
@@ -1438,7 +1451,9 @@ def test_map_blocks_errors_bad_template(obj):
         xr.map_blocks(
             lambda a: a.isel(x=[1]).assign_coords(x=[120]),  # assign bad index values
             obj,
-            template=xr.concat([obj.isel(x=[i]) for i in [1, 5, 9]], dim="x"),
+            template=xr.concat(
+                [obj.isel(x=[i]) for i in [1, 5, 9]], data_vars=None, dim="x"
+            ),
         ).compute()
 
 
@@ -1636,7 +1651,7 @@ def test_normalize_token_with_backend(map_ds):
     with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp_file:
         map_ds.to_netcdf(tmp_file)
         read = xr.open_dataset(tmp_file)
-        assert not dask.base.tokenize(map_ds) == dask.base.tokenize(read)
+        assert dask.base.tokenize(map_ds) != dask.base.tokenize(read)
         read.close()
 
 

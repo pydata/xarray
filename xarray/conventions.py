@@ -4,7 +4,7 @@ import itertools
 import warnings
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, cast
 
 import numpy as np
 
@@ -18,7 +18,7 @@ from xarray.core.common import (
 )
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import IndexVariable, Variable
-from xarray.namedarray.utils import is_duck_dask_array
+from xarray.namedarray.utils import is_duck_array
 
 CF_RELATED_DATA = (
     "bounds",
@@ -248,7 +248,15 @@ def decode_cf_variable(
 
     encoding.setdefault("dtype", original_dtype)
 
-    if not is_duck_dask_array(data):
+    if (
+        # we don't need to lazily index duck arrays
+        not is_duck_array(data)
+        # These arrays already support lazy indexing
+        # OR for IndexingAdapters, it makes no sense to wrap them
+        and not isinstance(data, indexing.ExplicitlyIndexedNDArrayMixin)
+    ):
+        # this path applies to bare BackendArray objects.
+        # It is not hit for any internal Xarray backend
         data = indexing.LazilyIndexedArray(data)
 
     return Variable(dimensions, data, attributes, encoding=encoding, fastpath=True)
@@ -406,7 +414,9 @@ def decode_cf_variables(
                 v,
                 concat_characters=_item_or_default(concat_characters, k, True),
                 mask_and_scale=_item_or_default(mask_and_scale, k, True),
-                decode_times=_item_or_default(decode_times, k, True),
+                decode_times=cast(
+                    bool | CFDatetimeCoder, _item_or_default(decode_times, k, True)
+                ),
                 stack_char_dim=stack_char_dim,
                 use_cftime=_item_or_default(use_cftime, k, None),
                 decode_timedelta=_item_or_default(decode_timedelta, k, None),
@@ -784,7 +794,13 @@ def cf_encoder(variables: T_Variables, attributes: T_Attrs):
     # add encoding for time bounds variables if present.
     _update_bounds_encoding(variables)
 
-    new_vars = {k: encode_cf_variable(v, name=k) for k, v in variables.items()}
+    new_vars = {}
+    for k, v in variables.items():
+        try:
+            new_vars[k] = encode_cf_variable(v, name=k)
+        except Exception as e:
+            e.add_note(f"Raised while encoding variable {k!r} with value {v!r}")
+            raise
 
     # Remove attrs from bounds variables (issue #2921)
     for var in new_vars.values():

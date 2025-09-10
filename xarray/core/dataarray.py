@@ -498,7 +498,7 @@ class DataArray(
         self,
         variable: Variable | None = None,
         coords=None,
-        name: Hashable | None | Default = _default,
+        name: Hashable | Default | None = _default,
         attrs=_default,
         indexes=None,
     ) -> Self:
@@ -520,7 +520,7 @@ class DataArray(
     def _replace_maybe_drop_dims(
         self,
         variable: Variable,
-        name: Hashable | None | Default = _default,
+        name: Hashable | Default | None = _default,
     ) -> Self:
         if self.sizes == variable.sizes:
             coords = self._coords.copy()
@@ -581,7 +581,7 @@ class DataArray(
         return self._to_dataset_whole(name=_THIS_ARRAY, shallow_copy=False)
 
     def _from_temp_dataset(
-        self, dataset: Dataset, name: Hashable | None | Default = _default
+        self, dataset: Dataset, name: Hashable | Default | None = _default
     ) -> Self:
         variable = dataset._variables.pop(_THIS_ARRAY)
         coords = dataset._variables
@@ -1135,10 +1135,11 @@ class DataArray(
         return cls(variable, coords, name=name, indexes=indexes, fastpath=True)
 
     def load(self, **kwargs) -> Self:
-        """Manually trigger loading of this array's data from disk or a
-        remote source into memory and return this array.
+        """Trigger loading data into memory and return this dataarray.
 
-        Unlike compute, the original dataset is modified and returned.
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original dataarray is modified and returned.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -1150,9 +1151,18 @@ class DataArray(
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.compute``.
 
+        Returns
+        -------
+        object : DataArray
+            Same object but with lazy data and coordinates as in-memory arrays.
+
         See Also
         --------
         dask.compute
+        DataArray.load_async
+        DataArray.compute
+        Dataset.load
+        Variable.load
         """
         ds = self._to_temp_dataset().load(**kwargs)
         new = self._from_temp_dataset(ds)
@@ -1160,11 +1170,49 @@ class DataArray(
         self._coords = new._coords
         return self
 
-    def compute(self, **kwargs) -> Self:
-        """Manually trigger loading of this array's data from disk or a
-        remote source into memory and return a new array.
+    async def load_async(self, **kwargs) -> Self:
+        """Trigger and await asynchronous loading of data into memory and return this dataarray.
 
-        Unlike load, the original is left unaltered.
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original dataarray is modified and returned.
+
+        Only works when opening data lazily from IO storage backends which support lazy asynchronous loading.
+        Otherwise will raise a NotImplementedError.
+
+        Note users are expected to limit concurrency themselves - xarray does not internally limit concurrency in any way.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.compute``.
+
+        Returns
+        -------
+        object : Dataarray
+            Same object but with lazy data and coordinates as in-memory arrays.
+
+        See Also
+        --------
+        dask.compute
+        DataArray.compute
+        DataArray.load
+        Dataset.load_async
+        Variable.load_async
+        """
+        temp_ds = self._to_temp_dataset()
+        ds = await temp_ds.load_async(**kwargs)
+        new = self._from_temp_dataset(ds)
+        self._variable = new._variable
+        self._coords = new._coords
+        return self
+
+    def compute(self, **kwargs) -> Self:
+        """Trigger loading data into memory and return a new dataarray.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.load``, the original dataarray is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -1184,6 +1232,10 @@ class DataArray(
         See Also
         --------
         dask.compute
+        DataArray.load
+        DataArray.load_async
+        Dataset.compute
+        Variable.compute
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -2609,8 +2661,8 @@ class DataArray(
 
     def expand_dims(
         self,
-        dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
-        axis: None | int | Sequence[int] = None,
+        dim: Hashable | Sequence[Hashable] | Mapping[Any, Any] | None = None,
+        axis: int | Sequence[int] | None = None,
         create_index_for_new_dim: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
@@ -4015,7 +4067,7 @@ class DataArray(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes: ...
+    ) -> memoryview: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -4079,17 +4131,15 @@ class DataArray(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes | Delayed | None:
+    ) -> memoryview | Delayed | None:
         """Write DataArray contents to a netCDF file.
 
         Parameters
         ----------
-        path : str, path-like or None, optional
-            Path to which to save this dataset. File-like objects are only
-            supported by the scipy engine. If no path is provided, this
-            function returns the resulting netCDF file as bytes; in this case,
-            we need to use scipy, which does not support netCDF version 4 (the
-            default format becomes NETCDF3_64BIT).
+        path : str, path-like, file-like or None, optional
+            Path to which to save this datatree, or a file-like object to write
+            it to (which must support read and write and be seekable) or None
+            (default) to return in-memory bytes as a memoryview.
         mode : {"w", "a"}, default: "w"
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
@@ -4149,8 +4199,7 @@ class DataArray(
 
         Returns
         -------
-        store: bytes or Delayed or None
-            * ``bytes`` if path is None
+            * ``memoryview`` if path is None
             * ``dask.delayed.Delayed`` if compute is False
             * None otherwise
 
@@ -4214,6 +4263,7 @@ class DataArray(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -4237,6 +4287,7 @@ class DataArray(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -4258,6 +4309,7 @@ class DataArray(
         append_dim: Hashable | None = None,
         region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
+        align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
         zarr_format: int | None = None,
@@ -4359,6 +4411,16 @@ class DataArray(
             two or more chunked arrays in the same location in parallel if they are
             not writing in independent regions, for those cases it is better to use
             a synchronizer.
+        align_chunks: bool, default False
+            If True, rechunks the Dask array to align with Zarr chunks before writing.
+            This ensures each Dask chunk maps to one or more contiguous Zarr chunks,
+            which avoids race conditions.
+            Internally, the process sets safe_chunks=False and tries to preserve
+            the original Dask chunking as much as possible.
+            Note: While this alignment avoids write conflicts stemming from chunk
+            boundary misalignment, it does not protect against race conditions
+            if multiple uncoordinated processes write to the same
+            Zarr array concurrently.
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
@@ -4450,6 +4512,7 @@ class DataArray(
             append_dim=append_dim,
             region=region,
             safe_chunks=safe_chunks,
+            align_chunks=align_chunks,
             storage_options=storage_options,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
@@ -6901,7 +6964,7 @@ class DataArray(
         :ref:`groupby`
             Users guide explanation of how to group and bin data.
 
-        :doc:`xarray-tutorial:intermediate/01-high-level-computation-patterns`
+        :doc:`xarray-tutorial:intermediate/computation/01-high-level-computation-patterns`
             Tutorial on :py:func:`~xarray.DataArray.Groupby` for windowed computation
 
         :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`

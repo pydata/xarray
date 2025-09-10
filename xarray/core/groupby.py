@@ -540,7 +540,7 @@ class ComposedGrouper:
         _flatcodes = where(mask.data, -1, _flatcodes)
 
         full_index = pd.MultiIndex.from_product(
-            list(grouper.full_index.values for grouper in groupers),
+            [list(grouper.full_index.values) for grouper in groupers],
             names=tuple(grouper.name for grouper in groupers),
         )
         if not full_index.is_unique:
@@ -1628,7 +1628,14 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         if shortcut:
             combined = self._concat_shortcut(applied, dim, positions)
         else:
-            combined = concat(applied, dim)
+            combined = concat(
+                applied,
+                dim,
+                data_vars="all",
+                coords="different",
+                compat="equals",
+                join="outer",
+            )
             combined = _maybe_reorder(combined, dim, positions, N=self.group1d.size)
 
         if isinstance(combined, type(self._obj)):
@@ -1789,7 +1796,14 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         """Recombine the applied objects like the original."""
         applied_example, applied = peek_at(applied)
         dim, positions = self._infer_concat_args(applied_example)
-        combined = concat(applied, dim)
+        combined = concat(
+            applied,
+            dim,
+            data_vars="all",
+            coords="different",
+            compat="equals",
+            join="outer",
+        )
         combined = _maybe_reorder(combined, dim, positions, N=self.group1d.size)
         # assign coord when the applied function does not return that coord
         if dim not in applied_example.dims:

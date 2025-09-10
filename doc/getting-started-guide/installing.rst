@@ -6,10 +6,10 @@ Installation
 Required dependencies
 ---------------------
 
-- Python (3.10 or later)
-- `numpy <https://www.numpy.org/>`__ (1.23 or later)
-- `packaging <https://packaging.pypa.io/en/latest/#>`__ (23.1 or later)
-- `pandas <https://pandas.pydata.org/>`__ (2.0 or later)
+- Python (3.11 or later)
+- `numpy <https://www.numpy.org/>`__ (1.26 or later)
+- `packaging <https://packaging.pypa.io/en/latest/#>`__ (24.1 or later)
+- `pandas <https://pandas.pydata.org/>`__ (2.2 or later)
 
 .. _optional-dependencies:
 
@@ -57,7 +57,7 @@ For plotting
 ~~~~~~~~~~~~
 
 - `matplotlib <https://matplotlib.org>`__: required for :ref:`plotting`
-- `cartopy <https://scitools.org.uk/cartopy>`__: recommended for :ref:`plot-maps`
+- `cartopy <https://cartopy.readthedocs.io>`__: recommended for :ref:`plot-maps`
 - `seaborn <https://seaborn.pydata.org>`__: for better
   color palettes
 - `nc-time-axis <https://nc-time-axis.readthedocs.io>`__: for plotting

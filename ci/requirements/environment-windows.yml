@@ -2,7 +2,7 @@ name: xarray-tests
 channels:
   - conda-forge
 dependencies:
-  - array-api-strict
+  - array-api-strict<2.4
   - boto3
   - bottleneck
   - cartopy
@@ -32,6 +32,7 @@ dependencies:
   - pyarrow # importing dask.dataframe raises an ImportError without this
   - pydap
   - pytest
+  - pytest-asyncio
   - pytest-cov
   - pytest-env
   - pytest-mypy-plugins

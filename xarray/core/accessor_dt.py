@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Generic
 
 import numpy as np
 import pandas as pd
-from typing_extensions import Self
 
 from xarray.coding.calendar_ops import _decimal_year
 from xarray.coding.times import infer_calendar_name
@@ -21,6 +20,8 @@ from xarray.core.variable import IndexVariable, Variable
 from xarray.namedarray.utils import is_duck_dask_array
 
 if TYPE_CHECKING:
+    from typing import Self
+
     from numpy.typing import DTypeLike
 
     from xarray.core.dataarray import DataArray
@@ -205,7 +206,7 @@ def _strftime_through_cftimeindex(values, date_format: str):
     values_as_cftimeindex = CFTimeIndex(duck_array_ops.ravel(values))
 
     field_values = values_as_cftimeindex.strftime(date_format)
-    return field_values.values.reshape(values.shape)
+    return field_values.to_numpy().reshape(values.shape)
 
 
 def _strftime_through_series(values, date_format: str):
@@ -214,7 +215,7 @@ def _strftime_through_series(values, date_format: str):
     """
     values_as_series = pd.Series(duck_array_ops.ravel(values), copy=False)
     strs = values_as_series.dt.strftime(date_format)
-    return strs.values.reshape(values.shape)
+    return strs.to_numpy().reshape(values.shape)
 
 
 def _strftime(values, date_format):

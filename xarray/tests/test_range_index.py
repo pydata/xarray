@@ -121,6 +121,28 @@ def test_range_index_isel() -> None:
     expected = create_dataset_arange(0.0, 1.0, 0.2)
     assert_identical(actual, expected, check_default_indexes=False)
 
+    actual = ds.isel(x=slice(None, None, -1))
+    expected = create_dataset_arange(0.9, -0.1, -0.1)
+    assert_identical(actual, expected, check_default_indexes=False)
+
+    actual = ds.isel(x=slice(None, 4, -1))
+    expected = create_dataset_arange(0.9, 0.4, -0.1)
+    assert_identical(actual, expected, check_default_indexes=False)
+
+    actual = ds.isel(x=slice(8, 4, -1))
+    expected = create_dataset_arange(0.8, 0.4, -0.1)
+    assert_identical(actual, expected, check_default_indexes=False)
+
+    actual = ds.isel(x=slice(8, None, -1))
+    expected = create_dataset_arange(0.8, -0.1, -0.1)
+    assert_identical(actual, expected, check_default_indexes=False)
+
+    # https://github.com/pydata/xarray/issues/10441
+    ds2 = create_dataset_arange(0.0, 3.0, 0.1)
+    actual = ds2.isel(x=slice(4, None, 3))
+    expected = create_dataset_arange(0.4, 3.0, 0.3)
+    assert_identical(actual, expected, check_default_indexes=False)
+
     # scalar
     actual = ds.isel(x=0)
     expected = xr.Dataset(coords={"x": 0.0})
@@ -142,6 +164,62 @@ def test_range_index_isel() -> None:
     actual = ds.isel(x=xr.Variable(("u", "v"), [[0, 0], [2, 2]]))
     expected = xr.Dataset(coords={"x": (("u", "v"), [[0.0, 0.0], [0.2, 0.2]])})
     assert_identical(actual, expected)
+
+
+def test_range_index_empty_slice() -> None:
+    """Test that empty slices of RangeIndex are printable and preserve step.
+
+    Regression test for https://github.com/pydata/xarray/issues/10547
+    """
+    # Test with linspace
+    n = 30
+    step = 1
+    da = xr.DataArray(np.zeros(n), dims=["x"])
+    da = da.assign_coords(
+        xr.Coordinates.from_xindex(RangeIndex.linspace(0, (n - 1) * step, n, dim="x"))
+    )
+
+    # This should not raise ZeroDivisionError
+    sub = da.isel(x=slice(0))
+    assert sub.sizes["x"] == 0
+
+    # Test that it's printable
+    repr_str = repr(sub)
+    assert "RangeIndex" in repr_str
+    assert "step=1" in repr_str
+
+    # Test with different step values
+    index = RangeIndex.arange(0, 10, 2.5, dim="y")
+    da2 = xr.DataArray(np.zeros(4), dims=["y"])
+    da2 = da2.assign_coords(xr.Coordinates.from_xindex(index))
+    empty = da2.isel(y=slice(0))
+
+    # Should preserve step
+    assert empty.sizes["y"] == 0
+    range_index_y = empty._indexes["y"]
+    assert isinstance(range_index_y, RangeIndex)
+    assert range_index_y.step == 2.5
+
+    # Test that it's printable
+    repr_str2 = repr(empty)
+    assert "RangeIndex" in repr_str2
+    assert "step=2.5" in repr_str2
+
+    # Test negative step
+    index3 = RangeIndex.arange(10, 0, -1, dim="z")
+    da3 = xr.DataArray(np.zeros(10), dims=["z"])
+    da3 = da3.assign_coords(xr.Coordinates.from_xindex(index3))
+    empty3 = da3.isel(z=slice(0))
+
+    assert empty3.sizes["z"] == 0
+    range_index_z = empty3._indexes["z"]
+    assert isinstance(range_index_z, RangeIndex)
+    assert range_index_z.step == -1.0
+
+    # Test that it's printable
+    repr_str3 = repr(empty3)
+    assert "RangeIndex" in repr_str3
+    assert "step=-1" in repr_str3
 
 
 def test_range_index_sel() -> None:
@@ -220,6 +298,6 @@ def test_range_index_repr() -> None:
 
 def test_range_index_repr_inline() -> None:
     index = RangeIndex.arange(0.0, 1.0, 0.1, dim="x")
-    actual = index._repr_inline_(max_width=None)
+    actual = index._repr_inline_(max_width=70)
     expected = "RangeIndex (start=0, stop=1, step=0.1)"
     assert actual == expected

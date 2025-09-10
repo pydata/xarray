@@ -5,17 +5,18 @@ import operator
 import os
 from collections.abc import Iterable
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
 import numpy as np
 
-from xarray import coding
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
+    T_PathFileOrDataStore,
     WritableCFDataStore,
     _normalize_path,
+    collect_ancestor_dimensions,
     datatree_from_dict_with_io_cleanup,
     find_root_and_group,
     robust_getitem,
@@ -30,6 +31,12 @@ from xarray.backends.locks import (
 )
 from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 from xarray.backends.store import StoreBackendEntrypoint
+from xarray.coding.strings import (
+    CharacterArrayCoder,
+    EncodedStringCoder,
+    create_vlen_dtype,
+    is_unicode_dtype,
+)
 from xarray.coding.variables import pop_to
 from xarray.core import indexing
 from xarray.core.utils import (
@@ -44,10 +51,8 @@ if TYPE_CHECKING:
     from h5netcdf.core import EnumType as h5EnumType
     from netCDF4 import EnumType as ncEnumType
 
-    from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
-    from xarray.core.types import ReadBuffer
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -73,7 +78,7 @@ class BaseNetCDF4Array(BackendArray):
             # check vlen string dtype in further steps
             # it also prevents automatic string concatenation via
             # conventions.decode_cf_variable
-            dtype = coding.strings.create_vlen_dtype(str)
+            dtype = create_vlen_dtype(str)
         self.dtype = dtype
 
     def __setitem__(self, key, value):
@@ -127,12 +132,12 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
         return array
 
 
-def _encode_nc4_variable(var):
+def _encode_nc4_variable(var, name=None):
     for coder in [
-        coding.strings.EncodedStringCoder(allows_unicode=True),
-        coding.strings.CharacterArrayCoder(),
+        EncodedStringCoder(allows_unicode=True),
+        CharacterArrayCoder(),
     ]:
-        var = coder.encode(var)
+        var = coder.encode(var, name=name)
     return var
 
 
@@ -164,7 +169,7 @@ def _nc4_dtype(var):
     if "dtype" in var.encoding:
         dtype = var.encoding.pop("dtype")
         _check_encoding_dtype_is_vlen_string(dtype)
-    elif coding.strings.is_unicode_dtype(var.dtype):
+    elif is_unicode_dtype(var.dtype):
         dtype = str
     elif var.dtype.kind in ["i", "u", "f", "c", "S"]:
         dtype = var.dtype
@@ -396,6 +401,17 @@ class NetCDF4DataStore(WritableCFDataStore):
         self.lock = ensure_lock(lock)
         self.autoclose = autoclose
 
+    def get_child_store(self, group: str) -> Self:
+        if self._group is not None:
+            group = os.path.join(self._group, group)
+        return type(self)(
+            self._manager,
+            group=group,
+            mode=self._mode,
+            lock=self.lock,
+            autoclose=self.autoclose,
+        )
+
     @classmethod
     def open(
         cls,
@@ -514,6 +530,9 @@ class NetCDF4DataStore(WritableCFDataStore):
     def get_dimensions(self):
         return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
 
+    def get_parent_dimensions(self):
+        return FrozenDict(collect_ancestor_dimensions(self.ds))
+
     def get_encoding(self):
         return {
             "unlimited_dims": {
@@ -535,12 +554,12 @@ class NetCDF4DataStore(WritableCFDataStore):
         else:
             self.ds.setncattr(key, value)
 
-    def encode_variable(self, variable):
+    def encode_variable(self, variable, name=None):
         variable = _force_native_endianness(variable)
         if self.format == "NETCDF4":
-            variable = _encode_nc4_variable(variable)
+            variable = _encode_nc4_variable(variable, name=name)
         else:
-            variable = encode_nc3_variable(variable)
+            variable = encode_nc3_variable(variable, name=name)
         return variable
 
     def prepare_variable(
@@ -624,10 +643,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     )
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.NetCDF4BackendEntrypoint.html"
 
-    def guess_can_open(
-        self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
-    ) -> bool:
+    def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
             return True
         magic_number = try_read_magic_number_from_path(filename_or_obj)
@@ -643,7 +659,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -692,7 +708,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -725,6 +741,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             clobber=clobber,
             diskless=diskless,
             persist=persist,
+            auto_complex=auto_complex,
             lock=lock,
             autoclose=autoclose,
             **kwargs,
@@ -734,7 +751,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -764,6 +781,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             clobber=clobber,
             diskless=diskless,
             persist=persist,
+            auto_complex=auto_complex,
             lock=lock,
             autoclose=autoclose,
         )

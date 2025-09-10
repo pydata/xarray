@@ -565,6 +565,9 @@ def test_ds_groupby_quantile() -> None:
     assert_identical(expected, actual)
 
 
+@pytest.mark.filterwarnings(
+    "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
+)
 @pytest.mark.parametrize("as_dataset", [False, True])
 def test_groupby_quantile_interpolation_deprecated(as_dataset: bool) -> None:
     array = xr.DataArray(data=[1, 2, 3, 4], coords={"x": [1, 1, 2, 2]}, dims="x")
@@ -1321,8 +1324,7 @@ class TestDataArrayGroupBy:
         grouped = self.da.groupby("abc")
         expected_groups = {"a": range(9), "c": [9], "b": range(10, 20)}
         assert expected_groups.keys() == grouped.groups.keys()
-        for key in expected_groups:
-            expected_group = expected_groups[key]
+        for key, expected_group in expected_groups.items():
             actual_group = grouped.groups[key]
 
             # TODO: array_api doesn't allow slice:
@@ -2220,7 +2222,7 @@ class TestDataArrayResample:
             f = interp1d(
                 np.arange(len(times)),
                 data,
-                kind=kwargs["order"] if kind == "polynomial" else kind,
+                kind=kwargs["order"] if kind == "polynomial" else kind,  # type: ignore[arg-type,unused-ignore]
                 axis=-1,
                 bounds_error=True,
                 assume_sorted=True,
@@ -2298,7 +2300,7 @@ class TestDataArrayResample:
             f = interp1d(
                 np.arange(len(times)),
                 data,
-                kind=kwargs["order"] if kind == "polynomial" else kind,
+                kind=kwargs["order"] if kind == "polynomial" else kind,  # type: ignore[arg-type,unused-ignore]
                 axis=-1,
                 bounds_error=True,
                 assume_sorted=True,
@@ -2439,6 +2441,7 @@ class TestDatasetResample:
                 for i in range(3)
             ],
             dim=actual["time"],
+            data_vars="all",
         )
         assert_allclose(expected, actual)
 
@@ -3236,7 +3239,7 @@ def test_shuffle_simple() -> None:
     da = xr.DataArray(
         dims="x",
         data=dask.array.from_array([1, 2, 3, 4, 5, 6], chunks=2),
-        coords={"label": ("x", "a b c a b c".split(" "))},
+        coords={"label": ("x", ["a", "b", "c", "a", "b", "c"])},
     )
     actual = da.groupby(label=UniqueGrouper()).shuffle_to_chunks()
     expected = da.isel(x=[0, 3, 1, 4, 2, 5])
@@ -3256,8 +3259,6 @@ def test_shuffle_simple() -> None:
 )
 def test_shuffle_by(chunks, expected_chunks):
     import dask.array
-
-    from xarray.groupers import UniqueGrouper
 
     da = xr.DataArray(
         dims="x",
