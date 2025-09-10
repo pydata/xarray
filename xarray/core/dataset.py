@@ -6940,11 +6940,15 @@ class Dataset(
             else:
                 v.attrs = {}
 
-        for k, v in coords.items():
-            if keep_attrs:
+        # Handle coordinate attributes:
+        # - When keep_attrs=True: restore attrs from original coords (func may have dropped them)
+        # - When keep_attrs=False: clear all attrs
+        if keep_attrs:
+            for k, v in coords.items():
                 if k in self.coords:
                     v._copy_attrs_from(self.coords[k])
-            else:
+        else:
+            for v in coords.values():
                 v.attrs = {}
 
         attrs = self.attrs if keep_attrs else None
