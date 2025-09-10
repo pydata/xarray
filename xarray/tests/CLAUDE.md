@@ -11,48 +11,47 @@ xarray has many optional dependencies that may not be available in all testing e
 ```python
 # For dask-specific tests
 @requires_dask
-def test_something_with_dask():
-    ...
+def test_something_with_dask(): ...
+
 
 # For tests requiring cftime
 @requires_cftime
-def test_datetime_with_cftime():
-    ...
+def test_datetime_with_cftime(): ...
+
 
 # For tests requiring scipy
 @requires_scipy
-def test_interpolation():
-    ...
+def test_interpolation(): ...
+
 
 # For tests requiring matplotlib
 @requires_matplotlib
-def test_plotting():
-    ...
+def test_plotting(): ...
+
 
 # For tests requiring numba
 @requires_numba
-def test_numba_acceleration():
-    ...
+def test_numba_acceleration(): ...
+
 
 # For tests requiring pint
 @requires_pint
-def test_units():
-    ...
+def test_units(): ...
+
 
 # For tests requiring sparse
 @requires_sparse
-def test_sparse_arrays():
-    ...
+def test_sparse_arrays(): ...
+
 
 # For tests requiring bottleneck
 @requires_bottleneck
-def test_bottleneck_functions():
-    ...
+def test_bottleneck_functions(): ...
+
 
 # For tests requiring flox
 @requires_flox
-def test_flox_groupby():
-    ...
+def test_flox_groupby(): ...
 ```
 
 ### DO NOT use conditional imports
@@ -73,6 +72,7 @@ def test_mean_with_cftime():
     # Test without dask
     result = ds.mean()
 
+
 @requires_dask
 def test_mean_with_cftime_dask():
     # Separate test for dask functionality
@@ -87,8 +87,7 @@ When a test requires multiple optional dependencies:
 ```python
 @requires_dask
 @requires_scipy
-def test_interpolation_with_dask():
-    ...
+def test_interpolation_with_dask(): ...
 ```
 
 ### Importing optional dependencies in tests
@@ -118,10 +117,16 @@ Your tests must handle these environments correctly by using the decorators abov
    ```python
    def test_base_functionality():
        # Core test without optional deps
+       result = ds.mean()
+       assert result is not None
+
 
    @requires_dask
    def test_dask_functionality():
        # Dask-specific test
+       ds_chunked = ds.chunk({})
+       result = ds_chunked.mean()
+       assert result is not None
    ```
 
 2. **Use fixtures for dependency-specific setup**:
@@ -131,6 +136,7 @@ Your tests must handle these environments correctly by using the decorators abov
    def dask_array():
        pytest.importorskip("dask.array")
        import dask.array as da
+
        return da.from_array([1, 2, 3], chunks=2)
    ```
 
@@ -139,9 +145,9 @@ Your tests must handle these environments correctly by using the decorators abov
    ```python
    from xarray.core.duck_array_ops import available_implementations
 
+
    @pytest.mark.parametrize("implementation", available_implementations())
-   def test_with_available_backends(implementation):
-       ...
+   def test_with_available_backends(implementation): ...
    ```
 
 ### Finding the decorators
