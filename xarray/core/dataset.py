@@ -6934,20 +6934,15 @@ class Dataset(
         )
         coords = Coordinates._construct_direct(coords=coord_vars, indexes=indexes)
 
-        for k, v in variables.items():
-            if keep_attrs:
-                v._copy_attrs_from(self.data_vars[k])
-            else:
-                v.attrs = {}
-
-        # Handle coordinate attributes:
-        # - When keep_attrs=True: restore attrs from original coords (func may have dropped them)
-        # - When keep_attrs=False: clear all attrs
         if keep_attrs:
+            for k, v in variables.items():
+                v._copy_attrs_from(self.data_vars[k])
             for k, v in coords.items():
                 if k in self.coords:
                     v._copy_attrs_from(self.coords[k])
         else:
+            for v in variables.values():
+                v.attrs = {}
             for v in coords.values():
                 v.attrs = {}
 
