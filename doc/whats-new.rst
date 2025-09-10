@@ -34,6 +34,9 @@ Bug fixes
 - Fix error when encoding an empty :py:class:`numpy.datetime64` array
   (:issue:`10722`, :pull:`10723`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- Fix error from ``to_netcdf(..., compute=False)`` when using Dask Distributed
+  (:issue:`10725`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
