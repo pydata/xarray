@@ -6940,11 +6940,12 @@ class Dataset(
             else:
                 v.attrs = {}
 
-        if keep_attrs:
-            for k, v in coords.items():
-                if k not in self.coords:
-                    continue
-                v._copy_attrs_from(self.coords[k])
+        for k, v in coords.items():
+            if keep_attrs:
+                if k in self.coords:
+                    v._copy_attrs_from(self.coords[k])
+            else:
+                v.attrs = {}
 
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, coords=coords, attrs=attrs)
