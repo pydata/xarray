@@ -1763,7 +1763,7 @@ def test_encode_cf_timedelta_via_dask(
 ) -> None:
     import dask.array
 
-    times_pd = pd.timedelta_range(start="0D", freq="D", periods=3, unit=time_unit)  # type: ignore[call-arg]
+    times_pd = pd.timedelta_range(start="0D", freq="D", periods=3, unit=time_unit)  # type: ignore[call-arg,unused-ignore]
     times = dask.array.from_array(times_pd, chunks=1)
     encoded_times, encoding_units = encode_cf_timedelta(times, units, dtype)
 
@@ -1934,7 +1934,7 @@ _DECODE_TIMEDELTA_VIA_DTYPE_TESTS = {
 def test_decode_timedelta_via_dtype(
     decode_times, decode_timedelta, original_unit, expected_dtype
 ) -> None:
-    timedeltas = pd.timedelta_range(0, freq="D", periods=3, unit=original_unit)  # type: ignore[call-arg]
+    timedeltas = pd.timedelta_range(0, freq="D", periods=3, unit=original_unit)  # type: ignore[call-arg,unused-ignore]
     encoding = {"units": "days"}
     var = Variable(["time"], timedeltas, encoding=encoding)
     encoded = conventions.encode_cf_variable(var)
@@ -2198,3 +2198,24 @@ def test_roundtrip_0size_timedelta(time_unit: PDDatetimeUnitOptions) -> None:
         decoded.load()
     assert decoded.dtype == np.dtype("=m8[s]")
     assert decoded.encoding == encoding
+
+
+def test_roundtrip_empty_datetime64_array(time_unit: PDDatetimeUnitOptions) -> None:
+    # Regression test for GitHub issue #10722.
+    encoding = {
+        "units": "days since 1990-1-1",
+        "dtype": np.dtype("float64"),
+        "calendar": "standard",
+    }
+    times = date_range("2000", periods=0, unit=time_unit)
+    variable = Variable(["time"], times, encoding=encoding)
+
+    encoded = conventions.encode_cf_variable(variable, name="foo")
+    assert encoded.dtype == np.dtype("float64")
+
+    decode_times = CFDatetimeCoder(time_unit=time_unit)
+    roundtripped = conventions.decode_cf_variable(
+        "foo", encoded, decode_times=decode_times
+    )
+    assert_identical(variable, roundtripped)
+    assert roundtripped.dtype == variable.dtype

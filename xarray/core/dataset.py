@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import copy
 import datetime
 import io
@@ -34,12 +35,7 @@ from xarray.compat.array_api_compat import to_like_array
 from xarray.computation import ops
 from xarray.computation.arithmetic import DatasetArithmetic
 from xarray.core import dtypes as xrdtypes
-from xarray.core import (
-    duck_array_ops,
-    formatting,
-    formatting_html,
-    utils,
-)
+from xarray.core import duck_array_ops, formatting, formatting_html, utils
 from xarray.core._aggregations import DatasetAggregations
 from xarray.core.common import (
     DataWithCoords,
@@ -520,9 +516,11 @@ class Dataset(
         )
 
     def load(self, **kwargs) -> Self:
-        """Manually trigger loading and/or computation of this dataset's data
-        from disk or a remote source into memory and return this dataset.
-        Unlike compute, the original dataset is modified and returned.
+        """Trigger loading data into memory and return this dataset.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original dataset is modified and returned.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -534,29 +532,93 @@ class Dataset(
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.compute``.
 
+        Returns
+        -------
+        object : Dataset
+            Same object but with lazy data variables and coordinates as in-memory arrays.
+
         See Also
         --------
         dask.compute
+        Dataset.compute
+        Dataset.load_async
+        DataArray.load
+        Variable.load
         """
         # access .data to coerce everything to numpy or dask arrays
-        lazy_data = {
+        chunked_data = {
             k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
         }
-        if lazy_data:
-            chunkmanager = get_chunked_array_type(*lazy_data.values())
+        if chunked_data:
+            chunkmanager = get_chunked_array_type(*chunked_data.values())
 
             # evaluate all the chunked arrays simultaneously
             evaluated_data: tuple[np.ndarray[Any, Any], ...] = chunkmanager.compute(
-                *lazy_data.values(), **kwargs
+                *chunked_data.values(), **kwargs
             )
 
-            for k, data in zip(lazy_data, evaluated_data, strict=False):
+            for k, data in zip(chunked_data, evaluated_data, strict=False):
                 self.variables[k].data = data
 
         # load everything else sequentially
-        for k, v in self.variables.items():
-            if k not in lazy_data:
-                v.load()
+        [v.load() for k, v in self.variables.items() if k not in chunked_data]
+
+        return self
+
+    async def load_async(self, **kwargs) -> Self:
+        """Trigger and await asynchronous loading of data into memory and return this dataset.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original dataset is modified and returned.
+
+        Only works when opening data lazily from IO storage backends which support lazy asynchronous loading.
+        Otherwise will raise a NotImplementedError.
+
+        Note users are expected to limit concurrency themselves - xarray does not internally limit concurrency in any way.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.compute``.
+
+        Returns
+        -------
+        object : Dataset
+            Same object but with lazy data variables and coordinates as in-memory arrays.
+
+        See Also
+        --------
+        dask.compute
+        Dataset.compute
+        Dataset.load
+        DataArray.load_async
+        Variable.load_async
+        """
+        # TODO refactor this to pull out the common chunked_data codepath
+
+        # this blocks on chunked arrays but not on lazily indexed arrays
+
+        # access .data to coerce everything to numpy or dask arrays
+        chunked_data = {
+            k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
+        }
+        if chunked_data:
+            chunkmanager = get_chunked_array_type(*chunked_data.values())
+
+            # evaluate all the chunked arrays simultaneously
+            evaluated_data: tuple[np.ndarray[Any, Any], ...] = chunkmanager.compute(
+                *chunked_data.values(), **kwargs
+            )
+
+            for k, data in zip(chunked_data, evaluated_data, strict=False):
+                self.variables[k].data = data
+
+        # load everything else concurrently
+        coros = [
+            v.load_async() for k, v in self.variables.items() if k not in chunked_data
+        ]
+        await asyncio.gather(*coros)
 
         return self
 
@@ -695,9 +757,11 @@ class Dataset(
         )
 
     def compute(self, **kwargs) -> Self:
-        """Manually trigger loading and/or computation of this dataset's data
-        from disk or a remote source into memory and return a new dataset.
-        Unlike load, the original dataset is left unaltered.
+        """Trigger loading data into memory and return a new dataset.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.load``, the original dataset is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -717,6 +781,10 @@ class Dataset(
         See Also
         --------
         dask.compute
+        Dataset.load
+        Dataset.load_async
+        DataArray.compute
+        Variable.compute
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -1885,7 +1953,7 @@ class Dataset(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes | memoryview: ...
+    ) -> memoryview: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -1949,17 +2017,15 @@ class Dataset(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes | memoryview | Delayed | None:
+    ) -> memoryview | Delayed | None:
         """Write dataset contents to a netCDF file.
 
         Parameters
         ----------
-        path : str, path-like or file-like, optional
-            Path to which to save this dataset. File-like objects are only
-            supported by the scipy engine. If no path is provided, this
-            function returns the resulting netCDF file as bytes; in this case,
-            we need to use scipy, which does not support netCDF version 4 (the
-            default format becomes NETCDF3_64BIT).
+        path : str, path-like, file-like or None, optional
+            Path to which to save this datatree, or a file-like object to write
+            it to (which must support read and write and be seekable) or None
+            (default) to return in-memory bytes as a memoryview.
         mode : {"w", "a"}, default: "w"
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
@@ -2021,7 +2087,7 @@ class Dataset(
 
         Returns
         -------
-            * ``bytes`` or ``memoryview`` if path is None
+            * ``memoryview`` if path is None
             * ``dask.delayed.Delayed`` if compute is False
             * ``None`` otherwise
 
@@ -2309,6 +2375,7 @@ class Dataset(
             append_dim=append_dim,
             region=region,
             safe_chunks=safe_chunks,
+            align_chunks=align_chunks,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
             write_empty_chunks=write_empty_chunks,
@@ -2418,13 +2485,16 @@ class Dataset(
         sizes along that dimension will not be updated; non-dask arrays will be
         converted into dask arrays with a single block.
 
-        Along datetime-like dimensions, a :py:class:`groupers.TimeResampler` object is also accepted.
+        Along datetime-like dimensions, a :py:class:`Resampler` object
+        (e.g. :py:class:`groupers.TimeResampler` or :py:class:`groupers.SeasonResampler`)
+        is also accepted.
 
         Parameters
         ----------
-        chunks : int, tuple of int, "auto" or mapping of hashable to int or a TimeResampler, optional
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or a Resampler, optional
             Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, or
-            ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": TimeResampler(freq="YE")}``.
+            ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": TimeResampler(freq="YE")}`` or
+            ``{"time": SeasonResampler(["DJF", "MAM", "JJA", "SON"])}``.
         name_prefix : str, default: "xarray-"
             Prefix for the name of any new dask arrays.
         token : str, optional
@@ -2459,8 +2529,7 @@ class Dataset(
         xarray.unify_chunks
         dask.array.from_array
         """
-        from xarray.core.dataarray import DataArray
-        from xarray.groupers import TimeResampler
+        from xarray.groupers import Resampler
 
         if chunks is None and not chunks_kwargs:
             warnings.warn(
@@ -2488,41 +2557,29 @@ class Dataset(
                 f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.sizes.keys())}"
             )
 
-        def _resolve_frequency(
-            name: Hashable, resampler: TimeResampler
-        ) -> tuple[int, ...]:
+        def _resolve_resampler(name: Hashable, resampler: Resampler) -> tuple[int, ...]:
             variable = self._variables.get(name, None)
             if variable is None:
                 raise ValueError(
-                    f"Cannot chunk by resampler {resampler!r} for virtual variables."
+                    f"Cannot chunk by resampler {resampler!r} for virtual variable {name!r}."
                 )
-            elif not _contains_datetime_like_objects(variable):
+            if variable.ndim != 1:
                 raise ValueError(
-                    f"chunks={resampler!r} only supported for datetime variables. "
-                    f"Received variable {name!r} with dtype {variable.dtype!r} instead."
+                    f"chunks={resampler!r} only supported for 1D variables. "
+                    f"Received variable {name!r} with {variable.ndim} dimensions instead."
                 )
-
-            assert variable.ndim == 1
-            chunks = (
-                DataArray(
-                    np.ones(variable.shape, dtype=int),
-                    dims=(name,),
-                    coords={name: variable},
+            newchunks = resampler.compute_chunks(variable, dim=name)
+            if sum(newchunks) != variable.shape[0]:
+                raise ValueError(
+                    f"Logic bug in rechunking variable {name!r} using {resampler!r}. "
+                    "New chunks tuple does not match size of data. Please open an issue."
                 )
-                .resample({name: resampler})
-                .sum()
-            )
-            # When bins (binning) or time periods are missing (resampling)
-            # we can end up with NaNs. Drop them.
-            if chunks.dtype.kind == "f":
-                chunks = chunks.dropna(name).astype(int)
-            chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
-            return chunks_tuple
+            return newchunks
 
         chunks_mapping_ints: Mapping[Any, T_ChunkDim] = {
             name: (
-                _resolve_frequency(name, chunks)
-                if isinstance(chunks, TimeResampler)
+                _resolve_resampler(name, chunks)
+                if isinstance(chunks, Resampler)
                 else chunks
             )
             for name, chunks in chunks_mapping.items()
@@ -2563,7 +2620,7 @@ class Dataset(
 
         # all indexers should be int, slice, np.ndarrays, or Variable
         for k, v in indexers.items():
-            if isinstance(v, int | slice | Variable):
+            if isinstance(v, int | slice | Variable) and not isinstance(v, bool):
                 yield k, v
             elif isinstance(v, DataArray):
                 yield k, v.variable
@@ -5536,7 +5593,7 @@ class Dataset(
                 result = result._unstack_once(d, stacked_indexes[d], fill_value, sparse)
         return result
 
-    def update(self, other: CoercibleMapping) -> Self:
+    def update(self, other: CoercibleMapping) -> None:
         """Update this dataset's variables with those from another dataset.
 
         Just like :py:meth:`dict.update` this is a in-place operation.
@@ -5553,14 +5610,6 @@ class Dataset(
             - mapping {var name: (dimension name, array-like)}
             - mapping {var name: (tuple of dimension names, array-like)}
 
-        Returns
-        -------
-        updated : Dataset
-            Updated dataset. Note that since the update is in-place this is the input
-            dataset.
-
-            It is deprecated since version 0.17 and scheduled to be removed in 0.21.
-
         Raises
         ------
         ValueError
@@ -5573,7 +5622,7 @@ class Dataset(
         Dataset.merge
         """
         merge_result = dataset_update_method(self, other)
-        return self._replace(inplace=True, **merge_result._asdict())
+        self._replace(inplace=True, **merge_result._asdict())
 
     def merge(
         self,
@@ -7339,7 +7388,7 @@ class Dataset(
 
         if isinstance(idx, pd.MultiIndex):
             dims = tuple(
-                name if name is not None else f"level_{n}"  # type: ignore[redundant-expr]
+                name if name is not None else f"level_{n}"  # type: ignore[redundant-expr,unused-ignore]
                 for n, name in enumerate(idx.names)
             )
             for dim, lev in zip(dims, idx.levels, strict=True):

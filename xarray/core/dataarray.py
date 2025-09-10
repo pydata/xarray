@@ -1135,10 +1135,11 @@ class DataArray(
         return cls(variable, coords, name=name, indexes=indexes, fastpath=True)
 
     def load(self, **kwargs) -> Self:
-        """Manually trigger loading of this array's data from disk or a
-        remote source into memory and return this array.
+        """Trigger loading data into memory and return this dataarray.
 
-        Unlike compute, the original dataset is modified and returned.
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original dataarray is modified and returned.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -1150,9 +1151,18 @@ class DataArray(
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.compute``.
 
+        Returns
+        -------
+        object : DataArray
+            Same object but with lazy data and coordinates as in-memory arrays.
+
         See Also
         --------
         dask.compute
+        DataArray.load_async
+        DataArray.compute
+        Dataset.load
+        Variable.load
         """
         ds = self._to_temp_dataset().load(**kwargs)
         new = self._from_temp_dataset(ds)
@@ -1160,11 +1170,49 @@ class DataArray(
         self._coords = new._coords
         return self
 
-    def compute(self, **kwargs) -> Self:
-        """Manually trigger loading of this array's data from disk or a
-        remote source into memory and return a new array.
+    async def load_async(self, **kwargs) -> Self:
+        """Trigger and await asynchronous loading of data into memory and return this dataarray.
 
-        Unlike load, the original is left unaltered.
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original dataarray is modified and returned.
+
+        Only works when opening data lazily from IO storage backends which support lazy asynchronous loading.
+        Otherwise will raise a NotImplementedError.
+
+        Note users are expected to limit concurrency themselves - xarray does not internally limit concurrency in any way.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.compute``.
+
+        Returns
+        -------
+        object : Dataarray
+            Same object but with lazy data and coordinates as in-memory arrays.
+
+        See Also
+        --------
+        dask.compute
+        DataArray.compute
+        DataArray.load
+        Dataset.load_async
+        Variable.load_async
+        """
+        temp_ds = self._to_temp_dataset()
+        ds = await temp_ds.load_async(**kwargs)
+        new = self._from_temp_dataset(ds)
+        self._variable = new._variable
+        self._coords = new._coords
+        return self
+
+    def compute(self, **kwargs) -> Self:
+        """Trigger loading data into memory and return a new dataarray.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.load``, the original dataarray is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -1184,6 +1232,10 @@ class DataArray(
         See Also
         --------
         dask.compute
+        DataArray.load
+        DataArray.load_async
+        Dataset.compute
+        Variable.compute
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -4015,7 +4067,7 @@ class DataArray(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes | memoryview: ...
+    ) -> memoryview: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -4079,17 +4131,15 @@ class DataArray(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes | memoryview | Delayed | None:
+    ) -> memoryview | Delayed | None:
         """Write DataArray contents to a netCDF file.
 
         Parameters
         ----------
-        path : str, path-like or None, optional
-            Path to which to save this dataset. File-like objects are only
-            supported by the scipy engine. If no path is provided, this
-            function returns the resulting netCDF file as bytes; in this case,
-            we need to use scipy, which does not support netCDF version 4 (the
-            default format becomes NETCDF3_64BIT).
+        path : str, path-like, file-like or None, optional
+            Path to which to save this datatree, or a file-like object to write
+            it to (which must support read and write and be seekable) or None
+            (default) to return in-memory bytes as a memoryview.
         mode : {"w", "a"}, default: "w"
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
@@ -4149,7 +4199,7 @@ class DataArray(
 
         Returns
         -------
-            * ``bytes`` or ``memoryview`` if path is None
+            * ``memoryview`` if path is None
             * ``dask.delayed.Delayed`` if compute is False
             * None otherwise
 
