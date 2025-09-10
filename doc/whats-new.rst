@@ -34,6 +34,8 @@ Bug fixes
 - Fix error when encoding an empty :py:class:`numpy.datetime64` array
   (:issue:`10722`, :pull:`10723`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- Propagation coordinate attrs in :py:meth:`xarray.Dataset.map` (:issue:`9317`, :pull:`10602`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
