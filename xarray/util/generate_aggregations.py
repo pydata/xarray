@@ -215,7 +215,7 @@ _KWARGS_DOCSTRING = """**kwargs : Any
     function for calculating ``{method}`` on this object's data.
     These could include dask-specific kwargs like ``split_every``."""
 
-_NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
+_NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations."
 
 _FLOX_NOTES_TEMPLATE = """Use the ``flox`` package to significantly speed up {kind} computations,
 especially with dask arrays. Xarray will use flox by default if installed.

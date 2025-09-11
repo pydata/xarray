@@ -22,7 +22,11 @@ from xarray.core._aggregations import (
     DataArrayGroupByAggregations,
     DatasetGroupByAggregations,
 )
-from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
+from xarray.core.common import (
+    ImplementsArrayReduce,
+    ImplementsDatasetReduce,
+    _is_numeric_aggregatable_dtype,
+)
 from xarray.core.coordinates import Coordinates, coordinates_from_variable
 from xarray.core.duck_array_ops import where
 from xarray.core.formatting import format_array_flat
@@ -1068,7 +1072,7 @@ class GroupBy(Generic[T_Xarray]):
                 name: var
                 for name, var in variables.items()
                 if (
-                    not (np.issubdtype(var.dtype, np.number) or (var.dtype == np.bool_))
+                    not _is_numeric_aggregatable_dtype(var)
                     # this avoids dropping any levels of a MultiIndex, which raises
                     # a warning
                     and name not in midx_grouping_vars
