@@ -1130,6 +1130,20 @@ class ZarrStore(AbstractWritableDataStore):
                 if c in encoding:
                     encoding["config"][c] = encoding.pop(c)
 
+        else:
+            from zarr.util import normalize_dtype
+
+            _, object_codec = normalize_dtype(dtype, None)
+
+            if object_codec is not None:
+                existing_filters = encoding.get("filters")
+                if (
+                    existing_filters is not None
+                    and len(existing_filters) == 1
+                    and existing_filters[0] == object_codec
+                ):
+                    del encoding["filters"]
+
         zarr_array = self.zarr_group.create(
             name,
             shape=shape,
