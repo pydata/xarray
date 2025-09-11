@@ -215,7 +215,7 @@ _KWARGS_DOCSTRING = """**kwargs : Any
     function for calculating ``{method}`` on this object's data.
     These could include dask-specific kwargs like ``split_every``."""
 
-_NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
+_NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations."
 
 _FLOX_NOTES_TEMPLATE = """Use the ``flox`` package to significantly speed up {kind} computations,
 especially with dask arrays. Xarray will use flox by default if installed.
@@ -522,12 +522,7 @@ AGGREGATION_METHODS = (
     Method("any", bool_reduce=True),
     Method("max", extra_kwargs=(skipna,)),
     Method("min", extra_kwargs=(skipna,)),
-    Method(
-        "mean",
-        extra_kwargs=(skipna,),
-        numeric_only=True,
-        additional_notes="Note: datetime64 and timedelta64 are treated as numeric for the purpose of mean calculations.",
-    ),
+    Method("mean", extra_kwargs=(skipna,), numeric_only=True),
     Method("prod", extra_kwargs=(skipna, min_count), numeric_only=True),
     Method("sum", extra_kwargs=(skipna, min_count), numeric_only=True),
     Method("std", extra_kwargs=(skipna, ddof), numeric_only=True),

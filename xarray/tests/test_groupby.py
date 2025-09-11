@@ -3694,31 +3694,6 @@ def test_mean_with_string_coords():
     assert "humidity" in result_grouped.data_vars
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not available")
-def test_mean_preserves_non_string_object_arrays():
-    """Test that mean preserves object arrays containing datetime-like objects"""
-    # Create object array with cftime dates
-    import cftime
-
-    dates = np.array(
-        [cftime.DatetimeNoLeap(2021, i, 1) for i in range(1, 5)], dtype=object
-    )
-
-    ds = xr.Dataset(
-        {
-            "cftime_dates": (("x",), dates),
-            "numbers": (("x",), [1.0, 2.0, 3.0, 4.0]),
-            "object_strings": (("x",), np.array(["a", "b", "c", "d"], dtype=object)),
-        }
-    )
-
-    # Mean should include cftime dates but not string objects
-    result = ds.mean()
-    assert "cftime_dates" in result.data_vars
-    assert "numbers" in result.data_vars
-    assert "object_strings" not in result.data_vars
-
-
 def test_mean_datetime_edge_cases():
     """Test mean with datetime edge cases like NaT"""
     # Test with NaT values
@@ -3779,6 +3754,26 @@ def test_mean_with_cftime_objects():
     assert "var2" in result_x.data_vars
     assert "var1" in result_x.data_vars
     assert result_x.var2.item() == 4.5  # mean of 0-9
+
+    # Test that mean preserves object arrays containing datetime-like objects
+    import cftime
+
+    dates = np.array(
+        [cftime.DatetimeNoLeap(2021, i, 1) for i in range(1, 5)], dtype=object
+    )
+    ds2 = xr.Dataset(
+        {
+            "cftime_dates": (("x",), dates),
+            "numbers": (("x",), [1.0, 2.0, 3.0, 4.0]),
+            "object_strings": (("x",), np.array(["a", "b", "c", "d"], dtype=object)),
+        }
+    )
+
+    # Mean should include cftime dates but not string objects
+    result = ds2.mean()
+    assert "cftime_dates" in result.data_vars
+    assert "numbers" in result.data_vars
+    assert "object_strings" not in result.data_vars
 
 
 @requires_dask
