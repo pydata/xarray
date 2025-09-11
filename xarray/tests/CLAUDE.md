@@ -10,7 +10,7 @@ xarray has many optional dependencies that may not be available in all testing e
 
 All available decorators are defined in `xarray/tests/__init__.py` (look for `requires_*` decorators).
 
-### DO NOT use conditional imports
+### DO NOT use conditional imports or skipif
 
 ❌ **WRONG - Do not do this:**
 
@@ -19,6 +19,22 @@ def test_mean_with_cftime():
     if has_dask:  # WRONG!
         ds = ds.chunk({})
         result = ds.mean()
+```
+
+❌ **ALSO WRONG - Avoid pytest.mark.skipif in parametrize:**
+
+```python
+@pytest.mark.parametrize(
+    "chunk",
+    [
+        pytest.param(
+            True, marks=pytest.mark.skipif(not has_dask, reason="requires dask")
+        ),
+        False,
+    ],
+)
+def test_something(chunk):
+    ...
 ```
 
 ✅ **CORRECT - Do this instead:**
@@ -34,6 +50,20 @@ def test_mean_with_cftime_dask():
     # Separate test for dask functionality
     ds = ds.chunk({})
     result = ds.mean()
+```
+
+✅ **OR for parametrized tests, split them:**
+
+```python
+def test_something_without_dask():
+    # Test the False case
+    ...
+
+
+@requires_dask
+def test_something_with_dask():
+    # Test the True case with dask
+    ...
 ```
 
 ### Multiple dependencies
