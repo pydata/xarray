@@ -33,8 +33,7 @@ def test_mean_with_cftime():
         False,
     ],
 )
-def test_something(chunk):
-    ...
+def test_something(chunk): ...
 ```
 
 ✅ **CORRECT - Do this instead:**
