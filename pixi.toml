@@ -3,12 +3,36 @@ preview = ["pixi-build"]
 channels = ["conda-forge", "nodefaults"]
 platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
 
+
 [tasks]
+test = { cmd = "pytest" }
+
+[tasks.test-all]
+depends-on = [
+  { task = "test", environment = "test" },
+  { task = "test", environment = "test-bare-min" },
+]
+
+[environments]
+test = { features = ["test"], solve-group = "test" }
+test-bare-min = { features = ["test", "minimal"], solve-group = "test" }
+pre-commit = { features = ["pre-commit"], no-default-feature = true }
 
 [dependencies]
+python = "*"
+numpy = "*"
+pandas = "*"
+
+packaging = "24.1.*" #? Can be removed?
+git = "*"            # needed for dynamic versioning
+
+[feature.minimal.dependencies]
 python = "3.11.*"
-coveralls = "*"
-pip = "*"
+numpy = "1.26.*"
+pandas = "2.2.*"
+
+
+[feature.test.dependencies]
 pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
@@ -16,11 +40,13 @@ pytest-env = "*"
 pytest-mypy-plugins = "*"
 pytest-timeout = "*"
 pytest-xdist = "*"
-numpy = "1.26.*"
-packaging = "24.1.*"
-pandas = "2.2.*"
+coveralls = "*"
 
-git = "*" # needed for dynamic versioning
+[feature.pre-commit.dependencies]
+pre-commit = "*"
+
+[feature.pre-commit.tasks]
+pre-commit = { cmd = "pre-commit run --all-files" }
 
 
 [package]
