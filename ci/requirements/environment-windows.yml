@@ -22,8 +22,7 @@ dependencies:
   - netcdf4
   - numba
   - numbagg
-  - pandas
-  # - pint>=0.22
+    # - pint>=0.22
   - pre-commit
   - pyarrow # importing dask.dataframe raises an ImportError without this
   - pydap

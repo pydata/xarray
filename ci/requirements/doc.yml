@@ -23,8 +23,7 @@ dependencies:
   - ncdata
   - netcdf4
   - numba
-  - pandas
-  - pooch
+    - pooch
   - pre-commit
   - pyarrow
   - pydata-sphinx-theme

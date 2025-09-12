@@ -31,8 +31,7 @@ dependencies:
   # - numexpr
   # - sparse
   - opt_einsum
-  - pandas
-  # - pint>=0.22
+    # - pint>=0.22
   - pooch
   - pre-commit
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests

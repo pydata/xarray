@@ -21,8 +21,7 @@ dependencies:
   - netcdf4
   - numba
   - numbagg
-  - pandas
-  - pint>=0.22
+    - pint>=0.22
   - pydap
   - rasterio
   - scipy

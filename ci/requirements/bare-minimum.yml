@@ -6,4 +6,3 @@ dependencies:
   - python=3.11
   - coveralls
   - packaging=24.1
-  - pandas=2.2
