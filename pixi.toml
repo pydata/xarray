@@ -30,6 +30,9 @@ pandas = "*"
 packaging = "24.1.*" #? Can be removed?
 git = "*"            # needed for dynamic versioning
 
+[pypi-dependencies]
+xarray = { path = ".", editable = true }
+
 [feature.minimal.dependencies]
 python = "3.11.*"
 numpy = "1.26.*"
