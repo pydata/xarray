@@ -4,5 +4,3 @@ channels:
   - nodefaults
 dependencies:
   # - pint>=0.22
-  - pip:
-      - jax # no way to get cpu-only jaxlib from conda if gpu is present

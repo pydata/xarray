@@ -65,6 +65,10 @@ numba = "*"
 numbagg = "*"
 distributed = "*"
 
+[feature.performance.pypi-dependencies]
+jax = "*"
+
+
 [feature.plotting.dependencies]
 cartopy = "*"
 matplotlib-base = "*"
