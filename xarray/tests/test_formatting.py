@@ -963,7 +963,11 @@ def test_lazy_array_wont_compute() -> None:
 
     class LazilyIndexedArrayNotComputable(LazilyIndexedArray):
         def __array__(
-            self, dtype: np.typing.DTypeLike | None = None, /, *, copy: bool | None = None
+            self,
+            dtype: np.typing.DTypeLike | None = None,
+            /,
+            *,
+            copy: bool | None = None,
         ) -> np.ndarray:
             raise NotImplementedError("Computing this array is not possible.")
 
