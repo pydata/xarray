@@ -127,7 +127,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 Xarray bundles portions of pandas, NumPy and Seaborn, all of which are
-available under a "3-clause CORE_TEAM_GUIDE.mdD" license:
+available under a "3-clause BSD" license:
 
 - pandas: `setup.py`, `xarray/util/print_versions.py`
 - NumPy: `xarray/core/npcompat.py`
