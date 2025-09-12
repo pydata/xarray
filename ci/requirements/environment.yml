@@ -26,7 +26,6 @@ dependencies:
   - numba
   - numbagg
   - numexpr
-  - numpy>=2.2
   - opt_einsum
   - pandas
   - pandas-stubs<=2.2.3.241126 # https://github.com/pydata/xarray/issues/10110

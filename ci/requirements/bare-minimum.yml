@@ -5,6 +5,5 @@ channels:
 dependencies:
   - python=3.11
   - coveralls
-  - numpy=1.26
   - packaging=24.1
   - pandas=2.2

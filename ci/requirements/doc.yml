@@ -23,7 +23,6 @@ dependencies:
   - ncdata
   - netcdf4
   - numba
-  - numpy>=2.2
   - pandas
   - pooch
   - pre-commit

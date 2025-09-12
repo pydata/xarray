@@ -33,7 +33,6 @@ dependencies:
   - netcdf4=1.6
   - numba=0.60
   - numbagg=0.8
-  - numpy=1.26
   - packaging=24.1
   - pandas=2.2
   - pint=0.24

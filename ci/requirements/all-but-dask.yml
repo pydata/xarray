@@ -21,7 +21,6 @@ dependencies:
   - netcdf4
   - numba
   - numbagg
-  - numpy
   - pandas
   - pint>=0.22
   - pydap
