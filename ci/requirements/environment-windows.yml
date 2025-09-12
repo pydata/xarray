@@ -2,6 +2,5 @@ name: xarray-tests
 channels:
   - conda-forge
 dependencies:
-  - iris
-    # - pint>=0.22
+  # - pint>=0.22
   - pip:

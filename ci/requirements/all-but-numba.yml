@@ -4,7 +4,6 @@ channels:
   - nodefaults
 dependencies:
   # Pin a "very new numpy" (updated Sept 24, 2024)
-  - iris
   # numba, sparse, numbagg, numexpr often conflicts with newer versions of numpy.
   # This environment helps us test xarray with the latest versions
   # of numpy
@@ -13,4 +12,3 @@ dependencies:
   # - numexpr
   # - sparse
   # - pint>=0.22
-  - pooch

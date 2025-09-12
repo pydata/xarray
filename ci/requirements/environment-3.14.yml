@@ -3,11 +3,9 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - iris
   # - numba
   # - numbagg
   # - pint>=0.22
-  - pooch
   # - sparse
   - pip:
       - jax # no way to get cpu-only jaxlib from conda if gpu is present

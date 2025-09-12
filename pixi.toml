@@ -80,9 +80,13 @@ sparse = "*"
 scipy = "*"
 toolz = "*"
 
+# tutorial
+pooch = "*"
+
 # other
 cftime = "*"
 pint = "*"
+iris = "*"
 
 [feature.test.dependencies]
 pytest = "*"

@@ -2,7 +2,6 @@ name: xarray-tests
 channels:
   - conda-forge
 dependencies:
-  - iris
   # - numba
   # - numbagg
   # - pint>=0.22
