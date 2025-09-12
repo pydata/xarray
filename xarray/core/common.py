@@ -164,7 +164,7 @@ class AbstractArray:
         return complex(self.values)
 
     def __array__(
-        self: Any, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self: Any, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if not copy:
             if np.lib.NumpyVersion(np.__version__) >= "2.0.0":
@@ -2073,12 +2073,12 @@ def get_chunksizes(
     return Frozen(chunks)
 
 
-def is_np_datetime_like(dtype: DTypeLike) -> bool:
+def is_np_datetime_like(dtype: DTypeLike | None) -> bool:
     """Check if a dtype is a subclass of the numpy datetime types"""
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
-def is_np_timedelta_like(dtype: DTypeLike) -> bool:
+def is_np_timedelta_like(dtype: DTypeLike | None) -> bool:
     """Check whether dtype is of the timedelta64 dtype."""
     return np.issubdtype(dtype, np.timedelta64)
 
