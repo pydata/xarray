@@ -1,6 +1,7 @@
 # xarray: N-D labeled arrays and datasets
 
 [![Xarray](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydata/xarray/refs/heads/main/doc/badge.json)](https://xarray.dev)
+[![Powered by Pixi](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json)](https://pixi.sh)
 [![CI](https://github.com/pydata/xarray/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/pydata/xarray/actions/workflows/ci.yaml?query=branch%3Amain)
 [![Code coverage](https://codecov.io/gh/pydata/xarray/branch/main/graph/badge.svg?flag=unittests)](https://codecov.io/gh/pydata/xarray)
 [![Docs](https://readthedocs.org/projects/xray/badge/?version=latest)](https://docs.xarray.dev/)
