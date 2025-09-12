@@ -2528,7 +2528,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(
                 default=True
-            )  # Default now keeps attrs for reduction operations
+            )  # Default keeps attrs for reduction operations
         if keep_attrs:
             for v in result.values():
                 v.attrs = self.attrs

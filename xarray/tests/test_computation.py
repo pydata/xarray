@@ -731,7 +731,7 @@ def test_keep_attrs() -> None:
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {"a": 1},  # apply_ufunc now keeps attrs by default
+            {"a": 1},  # apply_ufunc keeps attrs by default
             False,
             id="default",
         ),
@@ -800,7 +800,7 @@ def test_keep_attrs_strategies_variable(strategy, attrs, expected, error) -> Non
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {"a": 1},  # apply_ufunc now keeps attrs by default
+            {"a": 1},  # apply_ufunc keeps attrs by default
             False,
             id="default",
         ),
@@ -870,7 +870,7 @@ def test_keep_attrs_strategies_dataarray(strategy, attrs, expected, error) -> No
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {"a": 1},  # apply_ufunc now keeps attrs by default
+            {"a": 1},  # apply_ufunc keeps attrs by default
             False,
             id="default",
         ),
@@ -965,7 +965,7 @@ def test_keep_attrs_strategies_dataarray_variables(
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {"a": 1},  # apply_ufunc now keeps attrs by default
+            {"a": 1},  # apply_ufunc keeps attrs by default
             False,
             id="default",
         ),
@@ -1035,7 +1035,7 @@ def test_keep_attrs_strategies_dataset(strategy, attrs, expected, error) -> None
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {"a": 1},  # apply_ufunc now keeps attrs by default
+            {"a": 1},  # apply_ufunc keeps attrs by default
             False,
             id="default",
         ),

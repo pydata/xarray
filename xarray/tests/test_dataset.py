@@ -6023,7 +6023,7 @@ class TestDataset:
         attrs = dict(_attrs)
         data.attrs = attrs
 
-        # Test default behavior (now keeps attrs for reduction operations)
+        # Test default behavior (keeps attrs for reduction operations)
         ds = data.mean()
         assert ds.attrs == attrs
         for k, v in ds.data_vars.items():
@@ -6223,7 +6223,7 @@ class TestDataset:
         data = create_test_data()
         data.attrs["foo"] = "bar"
 
-        # data.map now keeps all attrs by default
+        # data.map keeps all attrs by default
         assert_identical(data.map(np.mean), data.mean())
 
         expected = data.mean(keep_attrs=True)
@@ -6280,7 +6280,7 @@ class TestDataset:
         data.attrs["foo"] = "bar"
 
         with pytest.warns(PendingDeprecationWarning):
-            # data.apply now keeps all attrs by default
+            # data.apply keeps all attrs by default
             assert_identical(data.apply(np.mean), data.mean())
 
     def make_example_math_dataset(self):

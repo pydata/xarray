@@ -1482,7 +1482,7 @@ class Common2dMixin:
     def test_non_linked_coords(self) -> None:
         # plot with coordinate names that are not dimensions
         newy = self.darray.y + 150
-        newy.attrs = {}  # Clear attrs since binary ops now keep them by default
+        newy.attrs = {}  # Clear attrs since binary ops keep them by default
         self.darray.coords["newy"] = newy
         # Normal case, without transpose
         self.plotfunc(self.darray, x="x", y="newy")
@@ -1499,7 +1499,7 @@ class Common2dMixin:
         # This used to raise an error with pcolormesh and contour
         # https://github.com/pydata/xarray/issues/788
         newy = self.darray.y + 150
-        newy.attrs = {}  # Clear attrs since binary ops now keep them by default
+        newy.attrs = {}  # Clear attrs since binary ops keep them by default
         self.darray.coords["newy"] = newy
         self.plotfunc(self.darray, x="newy", y="x")
         ax = plt.gca()

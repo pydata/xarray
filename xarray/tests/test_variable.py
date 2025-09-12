@@ -1850,7 +1850,7 @@ class TestVariable(VariableSubclassobjects):
 
     def test_reduce(self):
         v = Variable(["x", "y"], self.d, {"ignored": "attributes"})
-        # Now reduce keeps attrs by default
+        # Reduce keeps attrs by default
         expected = Variable(["y"], self.d.std(axis=0), {"ignored": "attributes"})
         assert_identical(v.reduce(np.std, "x"), expected)
         assert_identical(v.reduce(np.std, axis=0), v.reduce(np.std, dim="x"))
@@ -2114,7 +2114,7 @@ class TestVariable(VariableSubclassobjects):
 
         v = Variable(["x", "y"], self.d, _attrs)
 
-        # Test default behavior (now keeps attrs for reduction operations)
+        # Test default behavior (keeps attrs for reduction operations)
         vm = v.mean()
         assert len(vm.attrs) == len(_attrs)
         assert vm.attrs == _attrs

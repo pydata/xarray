@@ -97,14 +97,14 @@ class TestAttrRetention:
         ds = create_test_dataset_attrs()
         original_attrs = ds.attrs
 
-        # Test default behaviour (now keeps attrs for reduction operations)
+        # Test default behaviour (keeps attrs for reduction operations)
         result = ds.mean()
         assert result.attrs == original_attrs
         with xarray.set_options(keep_attrs="default"):
             result = ds.mean()
             assert (
                 result.attrs == original_attrs
-            )  # "default" uses operation's default which is now True for reduce
+            )  # "default" uses operation's default which is True for reduce
 
         with xarray.set_options(keep_attrs=True):
             result = ds.mean()
@@ -119,14 +119,14 @@ class TestAttrRetention:
         da = create_test_dataarray_attrs()
         original_attrs = da.attrs
 
-        # Test default behaviour (now keeps attrs for reduction operations)
+        # Test default behaviour (keeps attrs for reduction operations)
         result = da.mean()
         assert result.attrs == original_attrs
         with xarray.set_options(keep_attrs="default"):
             result = da.mean()
             assert (
                 result.attrs == original_attrs
-            )  # "default" uses operation's default which is now True for reduce
+            )  # "default" uses operation's default which is True for reduce
 
         with xarray.set_options(keep_attrs=True):
             result = da.mean()

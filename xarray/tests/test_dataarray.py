@@ -3054,7 +3054,7 @@ class TestDataArray:
                 da.quantile(q, method=method, interpolation=method)
 
     def test_reduce_keep_attrs(self) -> None:
-        # Test default behavior (now keeps attrs for reduction operations)
+        # Test default behavior (keeps attrs for reduction operations)
         vm = self.va.mean()
         assert len(vm.attrs) == len(self.attrs)
         assert vm.attrs == self.attrs
@@ -4955,7 +4955,7 @@ class TestReduce1D(TestReduce):
         result0 = ar.min(keep_attrs=True)
         assert_identical(result0, expected0)
 
-        # Default now keeps attrs for reduction operations
+        # Default keeps attrs for reduction operations
         result1 = ar.min()
         expected1 = expected0.copy()
         assert_identical(result1, expected1)
@@ -4992,7 +4992,7 @@ class TestReduce1D(TestReduce):
         result0 = ar.max(keep_attrs=True)
         assert_identical(result0, expected0)
 
-        # Default now keeps attrs for reduction operations
+        # Default keeps attrs for reduction operations
         result1 = ar.max()
         expected1 = expected0.copy()
         assert_identical(result1, expected1)
@@ -5032,7 +5032,7 @@ class TestReduce1D(TestReduce):
             return
 
         expected0 = indarr[minindex]
-        expected0.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected0.attrs = self.attrs  # Default keeps attrs for reduction operations
         result0 = ar.argmin()
         assert_identical(result0, expected0)
 
@@ -5046,7 +5046,7 @@ class TestReduce1D(TestReduce):
             expected2 = indarr.isel(x=nanindex, drop=True)
             expected2.attrs = (
                 self.attrs
-            )  # Default now keeps attrs for reduction operations
+            )  # Default keeps attrs for reduction operations
         else:
             expected2 = expected0
 
@@ -5073,7 +5073,7 @@ class TestReduce1D(TestReduce):
             return
 
         expected0 = indarr[maxindex]
-        expected0.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected0.attrs = self.attrs  # Default keeps attrs for reduction operations
         result0 = ar.argmax()
         assert_identical(result0, expected0)
 
@@ -5087,7 +5087,7 @@ class TestReduce1D(TestReduce):
             expected2 = indarr.isel(x=nanindex, drop=True)
             expected2.attrs = (
                 self.attrs
-            )  # Default now keeps attrs for reduction operations
+            )  # Default keeps attrs for reduction operations
         else:
             expected2 = expected0
 
@@ -5145,7 +5145,7 @@ class TestReduce1D(TestReduce):
             (coordarr1 * fill_value_0).isel(x=minindex, drop=True).astype("float")
         )
         expected0.name = "x"
-        expected0.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected0.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         # Default fill value (NaN)
         result0 = ar0.idxmin()
@@ -5167,7 +5167,7 @@ class TestReduce1D(TestReduce):
             expected3.name = "x"
             expected3.attrs = (
                 self.attrs
-            )  # Default now keeps attrs for reduction operations
+            )  # Default keeps attrs for reduction operations
         else:
             expected3 = expected0.copy()
 
@@ -5186,7 +5186,7 @@ class TestReduce1D(TestReduce):
 
         expected5 = (coordarr1 * fill_value_5).isel(x=minindex, drop=True)
         expected5.name = "x"
-        expected5.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected5.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result5 = ar0.idxmin(fill_value=-1.1)
         assert_identical(result5, expected5)
@@ -5199,7 +5199,7 @@ class TestReduce1D(TestReduce):
 
         expected6 = (coordarr1 * fill_value_6).isel(x=minindex, drop=True)
         expected6.name = "x"
-        expected6.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected6.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result6 = ar0.idxmin(fill_value=-1)
         assert_identical(result6, expected6)
@@ -5212,7 +5212,7 @@ class TestReduce1D(TestReduce):
 
         expected7 = (coordarr1 * fill_value_7).isel(x=minindex, drop=True)
         expected7.name = "x"
-        expected7.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected7.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result7 = ar0.idxmin(fill_value=-1j)
         assert_identical(result7, expected7)
@@ -5266,7 +5266,7 @@ class TestReduce1D(TestReduce):
             (coordarr1 * fill_value_0).isel(x=maxindex, drop=True).astype("float")
         )
         expected0.name = "x"
-        expected0.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected0.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         # Default fill value (NaN)
         result0 = ar0.idxmax()
@@ -5288,7 +5288,7 @@ class TestReduce1D(TestReduce):
             expected3.name = "x"
             expected3.attrs = (
                 self.attrs
-            )  # Default now keeps attrs for reduction operations
+            )  # Default keeps attrs for reduction operations
         else:
             expected3 = expected0.copy()
 
@@ -5307,7 +5307,7 @@ class TestReduce1D(TestReduce):
 
         expected5 = (coordarr1 * fill_value_5).isel(x=maxindex, drop=True)
         expected5.name = "x"
-        expected5.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected5.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result5 = ar0.idxmax(fill_value=-1.1)
         assert_identical(result5, expected5)
@@ -5320,7 +5320,7 @@ class TestReduce1D(TestReduce):
 
         expected6 = (coordarr1 * fill_value_6).isel(x=maxindex, drop=True)
         expected6.name = "x"
-        expected6.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected6.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result6 = ar0.idxmax(fill_value=-1)
         assert_identical(result6, expected6)
@@ -5333,7 +5333,7 @@ class TestReduce1D(TestReduce):
 
         expected7 = (coordarr1 * fill_value_7).isel(x=maxindex, drop=True)
         expected7.name = "x"
-        expected7.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected7.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result7 = ar0.idxmax(fill_value=-1j)
         assert_identical(result7, expected7)
@@ -5360,7 +5360,7 @@ class TestReduce1D(TestReduce):
 
         expected0 = {"x": indarr[minindex]}
         for da in expected0.values():
-            da.attrs = self.attrs  # Default now keeps attrs for reduction operations
+            da.attrs = self.attrs  # Default keeps attrs for reduction operations
         result0 = ar.argmin(...)
         for key in expected0:
             assert_identical(result0[key], expected0[key])
@@ -5377,7 +5377,7 @@ class TestReduce1D(TestReduce):
             expected2 = {"x": indarr.isel(x=nanindex, drop=True)}
             expected2[
                 "x"
-            ].attrs = self.attrs  # Default now keeps attrs for reduction operations
+            ].attrs = self.attrs  # Default keeps attrs for reduction operations
         else:
             expected2 = expected0
 
@@ -5406,7 +5406,7 @@ class TestReduce1D(TestReduce):
 
         expected0 = {"x": indarr[maxindex]}
         for da in expected0.values():
-            da.attrs = self.attrs  # Default now keeps attrs for reduction operations
+            da.attrs = self.attrs  # Default keeps attrs for reduction operations
         result0 = ar.argmax(...)
         for key in expected0:
             assert_identical(result0[key], expected0[key])
@@ -5423,7 +5423,7 @@ class TestReduce1D(TestReduce):
             expected2 = {"x": indarr.isel(x=nanindex, drop=True)}
             expected2[
                 "x"
-            ].attrs = self.attrs  # Default now keeps attrs for reduction operations
+            ].attrs = self.attrs  # Default keeps attrs for reduction operations
         else:
             expected2 = expected0
 
@@ -5516,7 +5516,7 @@ class TestReduce2D(TestReduce):
         result0 = ar.min(dim="x", keep_attrs=True)
         assert_identical(result0, expected0)
 
-        # Default now keeps attrs for reduction operations
+        # Default keeps attrs for reduction operations
         result1 = ar.min(dim="x")
         assert_identical(result1, expected0)
 
@@ -5527,7 +5527,7 @@ class TestReduce2D(TestReduce):
         assert_identical(result1_no_attrs, expected1)
 
         result2 = ar.min(axis=1)
-        assert_identical(result2, expected0)  # Default now keeps attrs
+        assert_identical(result2, expected0)  # Default keeps attrs
 
         minindex = [
             x if y is None or ar.dtype.kind == "O" else y
@@ -5537,7 +5537,7 @@ class TestReduce2D(TestReduce):
             ar.isel(y=yi).isel(x=indi, drop=True) for yi, indi in enumerate(minindex)
         ]
         expected2 = xr.concat(expected2list, dim="y")
-        expected2.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected2.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result3 = ar.min(dim="x", skipna=False)
 
@@ -5566,7 +5566,7 @@ class TestReduce2D(TestReduce):
         result0 = ar.max(dim="x", keep_attrs=True)
         assert_identical(result0, expected0)
 
-        # Default now keeps attrs for reduction operations
+        # Default keeps attrs for reduction operations
         result1 = ar.max(dim="x")
         assert_identical(result1, expected0)
 
@@ -5577,7 +5577,7 @@ class TestReduce2D(TestReduce):
         assert_identical(result1_no_attrs, expected1)
 
         result2 = ar.max(axis=1)
-        assert_identical(result2, expected0)  # Default now keeps attrs
+        assert_identical(result2, expected0)  # Default keeps attrs
 
         maxindex = [
             x if y is None or ar.dtype.kind == "O" else y
@@ -5587,7 +5587,7 @@ class TestReduce2D(TestReduce):
             ar.isel(y=yi).isel(x=indi, drop=True) for yi, indi in enumerate(maxindex)
         ]
         expected2 = xr.concat(expected2list, dim="y")
-        expected2.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected2.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result3 = ar.max(dim="x", skipna=False)
 
@@ -5619,7 +5619,7 @@ class TestReduce2D(TestReduce):
             for yi, indi in enumerate(minindex)
         ]
         expected0 = xr.concat(expected0list, dim="y")
-        expected0.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected0.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result0 = ar.argmin(dim="x")
         assert_identical(result0, expected0)
@@ -5641,7 +5641,7 @@ class TestReduce2D(TestReduce):
             for yi, indi in enumerate(minindex)
         ]
         expected2 = xr.concat(expected2list, dim="y")
-        expected2.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected2.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result3 = ar.argmin(dim="x", skipna=False)
 
@@ -5673,7 +5673,7 @@ class TestReduce2D(TestReduce):
             for yi, indi in enumerate(maxindex)
         ]
         expected0 = xr.concat(expected0list, dim="y")
-        expected0.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected0.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result0 = ar.argmax(dim="x")
         assert_identical(result0, expected0)
@@ -5695,7 +5695,7 @@ class TestReduce2D(TestReduce):
             for yi, indi in enumerate(maxindex)
         ]
         expected2 = xr.concat(expected2list, dim="y")
-        expected2.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected2.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result3 = ar.argmax(dim="x", skipna=False)
 
@@ -5763,7 +5763,7 @@ class TestReduce2D(TestReduce):
         ]
         expected0 = xr.concat(expected0list, dim="y")
         expected0.name = "x"
-        expected0.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected0.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         # Default fill value (NaN)
         with raise_if_dask_computes(max_computes=max_computes):
@@ -5793,7 +5793,7 @@ class TestReduce2D(TestReduce):
         ]
         expected3 = xr.concat(expected3list, dim="y")
         expected3.name = "x"
-        expected3.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected3.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         with raise_if_dask_computes(max_computes=max_computes):
             result3 = ar0.idxmin(dim="x", skipna=False)
@@ -5812,7 +5812,7 @@ class TestReduce2D(TestReduce):
         ]
         expected5 = xr.concat(expected5list, dim="y")
         expected5.name = "x"
-        expected5.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected5.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         with raise_if_dask_computes(max_computes=max_computes):
             result5 = ar0.idxmin(dim="x", fill_value=-1.1)
@@ -5826,7 +5826,7 @@ class TestReduce2D(TestReduce):
         ]
         expected6 = xr.concat(expected6list, dim="y")
         expected6.name = "x"
-        expected6.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected6.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         with raise_if_dask_computes(max_computes=max_computes):
             result6 = ar0.idxmin(dim="x", fill_value=-1)
@@ -5840,7 +5840,7 @@ class TestReduce2D(TestReduce):
         ]
         expected7 = xr.concat(expected7list, dim="y")
         expected7.name = "x"
-        expected7.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected7.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         with raise_if_dask_computes(max_computes=max_computes):
             result7 = ar0.idxmin(dim="x", fill_value=-5j)
@@ -5909,7 +5909,7 @@ class TestReduce2D(TestReduce):
         ]
         expected0 = xr.concat(expected0list, dim="y")
         expected0.name = "x"
-        expected0.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected0.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         # Default fill value (NaN)
         with raise_if_dask_computes(max_computes=max_computes):
@@ -5939,7 +5939,7 @@ class TestReduce2D(TestReduce):
         ]
         expected3 = xr.concat(expected3list, dim="y")
         expected3.name = "x"
-        expected3.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected3.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         with raise_if_dask_computes(max_computes=max_computes):
             result3 = ar0.idxmax(dim="x", skipna=False)
@@ -5958,7 +5958,7 @@ class TestReduce2D(TestReduce):
         ]
         expected5 = xr.concat(expected5list, dim="y")
         expected5.name = "x"
-        expected5.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected5.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         with raise_if_dask_computes(max_computes=max_computes):
             result5 = ar0.idxmax(dim="x", fill_value=-1.1)
@@ -5972,7 +5972,7 @@ class TestReduce2D(TestReduce):
         ]
         expected6 = xr.concat(expected6list, dim="y")
         expected6.name = "x"
-        expected6.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected6.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         with raise_if_dask_computes(max_computes=max_computes):
             result6 = ar0.idxmax(dim="x", fill_value=-1)
@@ -5986,7 +5986,7 @@ class TestReduce2D(TestReduce):
         ]
         expected7 = xr.concat(expected7list, dim="y")
         expected7.name = "x"
-        expected7.attrs = self.attrs  # Default now keeps attrs for reduction operations
+        expected7.attrs = self.attrs  # Default keeps attrs for reduction operations
 
         with raise_if_dask_computes(max_computes=max_computes):
             result7 = ar0.idxmax(dim="x", fill_value=-5j)
@@ -6023,7 +6023,7 @@ class TestReduce2D(TestReduce):
         expected0 = {"x": xr.concat(expected0list, dim="y")}
         expected0[
             "x"
-        ].attrs = self.attrs  # Default now keeps attrs for reduction operations
+        ].attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result0 = ar.argmin(dim=["x"])
         for key in expected0:
@@ -6046,7 +6046,7 @@ class TestReduce2D(TestReduce):
         expected2 = {"x": xr.concat(expected2list, dim="y")}
         expected2[
             "x"
-        ].attrs = self.attrs  # Default now keeps attrs for reduction operations
+        ].attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result2 = ar.argmin(dim=["x"], skipna=False)
 
@@ -6095,7 +6095,7 @@ class TestReduce2D(TestReduce):
         expected0 = {"x": xr.concat(expected0list, dim="y")}
         expected0[
             "x"
-        ].attrs = self.attrs  # Default now keeps attrs for reduction operations
+        ].attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result0 = ar.argmax(dim=["x"])
         for key in expected0:
@@ -6118,7 +6118,7 @@ class TestReduce2D(TestReduce):
         expected2 = {"x": xr.concat(expected2list, dim="y")}
         expected2[
             "x"
-        ].attrs = self.attrs  # Default now keeps attrs for reduction operations
+        ].attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result2 = ar.argmax(dim=["x"], skipna=False)
 

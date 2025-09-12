@@ -1029,9 +1029,9 @@ class TestDatasetView:
         expected = dt.mean(keep_attrs=True)
         xr.testing.assert_identical(result, expected)
 
-        # per default DatasetView.map now keeps attrs
+        # DatasetView.map keeps attrs by default
         def func(ds):
-            # ds.map and x.mean() both keep attrs by default now
+            # ds.map and x.mean() both keep attrs by default
             return ds.map(lambda x: x.mean())
 
         result = xr.map_over_datasets(func, dt)
