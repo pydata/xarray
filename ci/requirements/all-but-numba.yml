@@ -4,7 +4,6 @@ channels:
   - nodefaults
 dependencies:
   # Pin a "very new numpy" (updated Sept 24, 2024)
-  - aiobotocore
   - array-api-strict<2.4
   - cartopy
   - cftime

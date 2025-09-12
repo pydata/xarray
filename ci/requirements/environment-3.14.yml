@@ -3,7 +3,6 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - aiobotocore
   - array-api-strict<2.4
   - cartopy
   - cftime

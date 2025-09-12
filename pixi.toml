@@ -50,6 +50,7 @@ pydap-server = "*"
 # s3
 boto3 = "*"
 fsspec = "*"
+aiobotocore = "*"
 
 [feature.performance.dependencies]
 flox = "*"
