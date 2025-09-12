@@ -5032,7 +5032,7 @@ class TestReduce1D(TestReduce):
             return
 
         expected0 = indarr[minindex]
-        expected0.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected0.attrs = self.attrs  # argmin should preserve attrs from input
         result0 = ar.argmin()
         assert_identical(result0, expected0)
 
