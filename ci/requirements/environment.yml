@@ -5,22 +5,16 @@ channels:
 dependencies:
   - aiobotocore
   - array-api-strict<2.4
-  - boto3
   - bottleneck
   - cartopy
   - cftime
   - dask-core
   - distributed
   - flox
-  - fsspec
-  - h5netcdf
-  - h5py
-  - hdf5
   - iris
   - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
-  - netcdf4
   - numba
   - numbagg
   - numexpr
@@ -28,14 +22,11 @@ dependencies:
     # - pint>=0.22
   - pooch
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
-  - pydap
-  - pydap-server
   - rasterio
   - scipy
   - seaborn
   - sparse
   - toolz
   - typing_extensions
-  - zarr
   - pip:
       - jax # no way to get cpu-only jaxlib from conda if gpu is present

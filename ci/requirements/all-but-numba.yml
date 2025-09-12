@@ -6,22 +6,16 @@ dependencies:
   # Pin a "very new numpy" (updated Sept 24, 2024)
   - aiobotocore
   - array-api-strict<2.4
-  - boto3
   - bottleneck
   - cartopy
   - cftime
   - dask-core
   - distributed
   - flox
-  - fsspec
-  - h5netcdf
-  - h5py
-  - hdf5
   - iris
   - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
-  - netcdf4
   # numba, sparse, numbagg, numexpr often conflicts with newer versions of numpy.
   # This environment helps us test xarray with the latest versions
   # of numpy
@@ -33,10 +27,8 @@ dependencies:
     # - pint>=0.22
   - pooch
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
-  - pydap
   - rasterio
   - scipy
   - seaborn
   - toolz
   - typing_extensions
-  - zarr

@@ -4,13 +4,11 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python
   - bottleneck
   - cartopy
   - cfgrib
   - kerchunk
   - dask-core
-    - h5netcdf
   - ipykernel
   - ipywidgets # silence nbsphinx warning
   - ipython
@@ -20,9 +18,8 @@ dependencies:
   - matplotlib-base
   - nbsphinx
   - ncdata
-  - netcdf4
   - numba
-    - pooch
+  - pooch
   - pyarrow
   - pydata-sphinx-theme
   - pyproj
@@ -41,7 +38,6 @@ dependencies:
   - sphinx-remove-toctrees
   - sphinxext-opengraph
   - sphinxext-rediraffe
-  - zarr
   - pip:
       # relative to this file. Needs to be editable to be accepted.
       - -e ../..

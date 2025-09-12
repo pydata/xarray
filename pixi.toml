@@ -14,8 +14,11 @@ depends-on = [
 ]
 
 [environments]
+# Testing
 test = { features = ["test"], solve-group = "test" }
 test-bare-min = { features = ["test", "minimal"], solve-group = "test" }
+
+# Extra
 typing = { features = ["mypy"] }
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
 
@@ -32,6 +35,22 @@ python = "3.11.*"
 numpy = "1.26.*"
 pandas = "2.2.*"
 
+[feature.backends.dependencies]
+# files
+h5netcdf = "*"
+h5py = "*"
+hdf5 = "*"
+netcdf4 = "*"
+zarr = "*"
+
+# opendap
+pydap = "*"
+pydap-server = "*"
+
+# s3
+boto3 = "*"
+fsspec = "*"
+
 
 [feature.test.dependencies]
 pytest = "*"
@@ -42,6 +61,7 @@ pytest-mypy-plugins = "*"
 pytest-timeout = "*"
 pytest-xdist = "*"
 coveralls = "*"
+
 
 [feature.mypy.dependencies]
 mypy = "==1.18.1"
