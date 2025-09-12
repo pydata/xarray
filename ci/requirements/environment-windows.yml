@@ -1,6 +1,0 @@
-name: xarray-tests
-channels:
-  - conda-forge
-dependencies:
-  # - pint>=0.22
-  - pip:

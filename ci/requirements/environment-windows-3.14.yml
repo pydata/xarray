@@ -1,9 +1,0 @@
-name: xarray-tests
-channels:
-  - conda-forge
-dependencies:
-  # - numba
-  # - numbagg
-  # - pint>=0.22
-  # - sparse
-  - pip:
