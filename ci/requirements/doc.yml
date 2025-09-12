@@ -24,7 +24,6 @@ dependencies:
   - netcdf4
   - numba
     - pooch
-  - pre-commit
   - pyarrow
   - pydata-sphinx-theme
   - pyproj

@@ -23,7 +23,6 @@ dependencies:
   # - numba
   # - numbagg
   # - pint>=0.22
-  - pre-commit
   - pyarrow # importing dask.dataframe raises an ImportError without this
   - pydap
   - rasterio

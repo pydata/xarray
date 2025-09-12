@@ -28,7 +28,6 @@ dependencies:
   - opt_einsum
     # - pint>=0.22
   - pooch
-  - pre-commit
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - pydap
   - pydap-server
