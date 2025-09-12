@@ -955,8 +955,11 @@ def test_groupby_dataset_math() -> None:
     actual = grouped + ds.coords["dim1"]
     assert_identical(expected, reorder_dims(actual))
 
+    # Order matters for attrs - coord + grouped will not have attrs
+    # since coord has no attrs and binary ops keep attrs from first operand
+    expected_reversed = reorder_dims(ds.coords["dim1"] + ds)
     actual = ds.coords["dim1"] + grouped
-    assert_identical(expected, reorder_dims(actual))
+    assert_identical(expected_reversed, reorder_dims(actual))
 
     ds2 = 2 * ds
     expected = reorder_dims(ds + ds2)

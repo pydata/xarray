@@ -100,7 +100,7 @@ def test_coarsen_keep_attrs(funcname, argument) -> None:
         attrs=global_attrs,
     )
 
-    # attrs are now kept per default
+    # attrs are kept by default
     func = getattr(ds.coarsen(dim={"coord": 5}), funcname)
     result = func(*argument)
     assert result.attrs == global_attrs
@@ -199,7 +199,7 @@ def test_coarsen_da_keep_attrs(funcname, argument) -> None:
         name="name",
     )
 
-    # attrs are now kept per default
+    # attrs are kept by default
     func = getattr(da.coarsen(dim={"coord": 5}), funcname)
     result = func(*argument)
     assert result.attrs == attrs_da

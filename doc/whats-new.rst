@@ -17,6 +17,90 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- **All xarray operations now preserve attributes by default** (:issue:`3891`, :issue:`2582`).
+  Previously, operations would drop attributes unless explicitly told to preserve them via ``keep_attrs=True``.
+  This aligns xarray with the common scientific workflow where metadata preservation is essential.
+
+  **What changed:**
+
+  .. code-block:: python
+
+      # Before (xarray <2025.09.1):
+      data = xr.DataArray([1, 2, 3], attrs={"units": "meters", "long_name": "height"})
+      result = data.mean()
+      result.attrs  # {}  - Attributes lost!
+
+      # After (xarray ≥2025.09.1):
+      data = xr.DataArray([1, 2, 3], attrs={"units": "meters", "long_name": "height"})
+      result = data.mean()
+      result.attrs  # {"units": "meters", "long_name": "height"}  - Attributes preserved!
+
+  **Affected operations include:**
+
+  *Computational operations:*
+
+  - Reductions: ``mean()``, ``sum()``, ``std()``, ``var()``, ``min()``, ``max()``, ``median()``, ``quantile()``, etc.
+  - Rolling windows: ``rolling().mean()``, ``rolling().sum()``, etc.
+  - Groupby: ``groupby().mean()``, ``groupby().sum()``, etc.
+  - Resampling: ``resample().mean()``, etc.
+  - Weighted: ``weighted().mean()``, ``weighted().sum()``, etc.
+  - ``apply_ufunc()`` and NumPy universal functions
+
+  *Binary operations:*
+
+  - Arithmetic: ``+``, ``-``, ``*``, ``/``, ``**``, ``//``, ``%`` (attributes from left operand)
+  - Comparisons: ``<``, ``>``, ``==``, ``!=``, ``<=``, ``>=`` (attributes from left operand)
+  - With scalars: ``data * 2``, ``10 - data`` (preserves data's attributes)
+
+  *Data manipulation:*
+
+  - Missing data: ``fillna()``, ``dropna()``, ``interpolate_na()``, ``ffill()``, ``bfill()``
+  - Indexing/selection: ``isel()``, ``sel()``, ``where()``, ``clip()``
+  - Alignment: ``interp()``, ``reindex()``, ``align()``
+  - Transformations: ``map()``, ``pipe()``, ``assign()``, ``assign_coords()``
+  - Shape operations: ``expand_dims()``, ``squeeze()``, ``transpose()``, ``stack()``, ``unstack()``
+
+  **Binary operations - attributes from left operand:**
+
+  .. code-block:: python
+
+      a = xr.DataArray([1, 2], attrs={"source": "sensor_a"})
+      b = xr.DataArray([3, 4], attrs={"source": "sensor_b"})
+      (a + b).attrs  # {"source": "sensor_a"}  - Left operand wins
+      (b + a).attrs  # {"source": "sensor_b"}  - Order matters!
+
+  **How to restore previous behavior:**
+
+  1. **Globally for your entire script:**
+
+     .. code-block:: python
+
+         import xarray as xr
+
+         xr.set_options(keep_attrs=False)  # Affects all subsequent operations
+
+  2. **For specific operations:**
+
+     .. code-block:: python
+
+         result = data.mean(dim="time", keep_attrs=False)
+
+  3. **For code blocks:**
+
+     .. code-block:: python
+
+         with xr.set_options(keep_attrs=False):
+             # All operations in this block drop attrs
+             result = data1 + data2
+
+  4. **Remove attributes after operations:**
+
+     .. code-block:: python
+
+         result = data.mean().drop_attrs()
+
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
 - :py:meth:`Dataset.update` now returns ``None``, instead of the updated dataset. This
   completes the deprecation cycle started in version 0.17. The method still updates the
   dataset in-place. (:issue:`10167`)

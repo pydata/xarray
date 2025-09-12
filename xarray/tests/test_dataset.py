@@ -6023,17 +6023,23 @@ class TestDataset:
         attrs = dict(_attrs)
         data.attrs = attrs
 
-        # Test dropped attrs
+        # Test default behavior (keeps attrs for reduction operations)
         ds = data.mean()
-        assert ds.attrs == {}
-        for v in ds.data_vars.values():
-            assert v.attrs == {}
+        assert ds.attrs == attrs
+        for k, v in ds.data_vars.items():
+            assert v.attrs == data[k].attrs
 
-        # Test kept attrs
+        # Test explicitly keeping attrs
         ds = data.mean(keep_attrs=True)
         assert ds.attrs == attrs
         for k, v in ds.data_vars.items():
             assert v.attrs == data[k].attrs
+
+        # Test explicitly dropping attrs
+        ds = data.mean(keep_attrs=False)
+        assert ds.attrs == {}
+        for v in ds.data_vars.values():
+            assert v.attrs == {}
 
     @pytest.mark.filterwarnings(
         "ignore:Once the behaviour of DataArray:DeprecationWarning"
@@ -6217,6 +6223,7 @@ class TestDataset:
         data = create_test_data()
         data.attrs["foo"] = "bar"
 
+        # data.map keeps all attrs by default
         assert_identical(data.map(np.mean), data.mean())
 
         expected = data.mean(keep_attrs=True)
@@ -6273,6 +6280,7 @@ class TestDataset:
         data.attrs["foo"] = "bar"
 
         with pytest.warns(PendingDeprecationWarning):
+            # data.apply keeps all attrs by default
             assert_identical(data.apply(np.mean), data.mean())
 
     def make_example_math_dataset(self):

@@ -1214,7 +1214,7 @@ def apply_ufunc(
         func = functools.partial(func, **kwargs)
 
     if keep_attrs is None:
-        keep_attrs = _get_keep_attrs(default=False)
+        keep_attrs = _get_keep_attrs(default=True)
 
     if isinstance(keep_attrs, bool):
         keep_attrs = "override" if keep_attrs else "drop"
