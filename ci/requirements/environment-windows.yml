@@ -11,5 +11,4 @@ dependencies:
     # - pint>=0.22
   - rasterio
   - seaborn
-  - typing_extensions
   - pip:

@@ -14,5 +14,4 @@ dependencies:
   - rasterio
   - seaborn
   # - sparse
-  - typing_extensions
   - pip:

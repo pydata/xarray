@@ -16,6 +16,5 @@ dependencies:
   - rasterio
   - seaborn
   # - sparse
-  - typing_extensions
   - pip:
       - jax # no way to get cpu-only jaxlib from conda if gpu is present

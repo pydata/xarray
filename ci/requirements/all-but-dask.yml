@@ -9,4 +9,3 @@ dependencies:
   - nc-time-axis
     - rasterio
   - seaborn
-  - typing_extensions
