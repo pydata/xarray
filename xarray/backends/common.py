@@ -309,11 +309,11 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     async def async_getitem(self, key: indexing.ExplicitIndexer) -> np.typing.ArrayLike:
         raise NotImplementedError("Backend does not support asynchronous loading")
 
-    def get_duck_array(self, dtype: np.typing.DTypeLike = None):
+    def get_duck_array(self, dtype: np.typing.DTypeLike | None = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return self[key]  # type: ignore[index]
 
-    async def async_get_duck_array(self, dtype: np.typing.DTypeLike = None):
+    async def async_get_duck_array(self, dtype: np.typing.DTypeLike | None = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return await self.async_getitem(key)
 
@@ -644,7 +644,7 @@ def _infer_dtype(array, name=None):
     )
 
 
-def _copy_with_dtype(data, dtype: np.typing.DTypeLike):
+def _copy_with_dtype(data, dtype: np.typing.DTypeLike | None):
     """Create a copy of an array with the given dtype.
 
     We use this instead of np.array() to ensure that custom object dtypes end

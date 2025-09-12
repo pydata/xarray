@@ -160,7 +160,7 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
         return 1
 
     def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self, dtype: np.typing.DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if Version(np.__version__) >= Version("2.0.0"):
             return np.asarray(self.array, dtype=dtype, copy=copy)

@@ -1383,7 +1383,7 @@ def test_contains_cftime_lazy() -> None:
 def test_roundtrip_datetime64_nanosecond_precision(
     timestr: str,
     format: Literal["ns", "us"],
-    dtype: np.typing.DTypeLike,
+    dtype: np.typing.DTypeLike | None,
     fill_value: int | float | None,
     use_encoding: bool,
     time_unit: PDDatetimeUnitOptions,
@@ -1499,7 +1499,7 @@ def test_roundtrip_datetime64_nanosecond_precision_warning(
     [(np.int64, 20), (np.int64, np.iinfo(np.int64).min), (np.float64, 1e30)],
 )
 def test_roundtrip_timedelta64_nanosecond_precision(
-    dtype: np.typing.DTypeLike,
+    dtype: np.typing.DTypeLike | None,
     fill_value: int | float,
     time_unit: PDDatetimeUnitOptions,
 ) -> None:

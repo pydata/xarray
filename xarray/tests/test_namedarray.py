@@ -55,7 +55,7 @@ class CustomArray(
     CustomArrayBase[_ShapeType_co, _DType_co], Generic[_ShapeType_co, _DType_co]
 ):
     def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray[Any, np.dtype[np.generic]]:
         if Version(np.__version__) >= Version("2.0.0"):
             return np.asarray(self.array, dtype=dtype, copy=copy)
@@ -292,7 +292,7 @@ class TestNamedArray(NamedArraySubclassobjects):
             (b"foo", np.dtype("S3")),
         ],
     )
-    def test_from_array_0d_string(self, data: Any, dtype: DTypeLike) -> None:
+    def test_from_array_0d_string(self, data: Any, dtype: DTypeLike | None) -> None:
         named_array: NamedArray[Any, Any]
         named_array = from_array([], data)
         assert named_array.data == data
