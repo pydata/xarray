@@ -3609,6 +3609,234 @@ class TestSeasonGrouperAndResampler:
         assert_identical(rs, gb)
 
 
+@pytest.mark.parametrize(
+    "chunk",
+    [
+        pytest.param(
+            True, marks=pytest.mark.skipif(not has_dask, reason="requires dask")
+        ),
+        False,
+    ],
+)
+def test_datetime_mean(chunk, use_cftime):
+    ds = xr.Dataset(
+        {
+            "var1": (
+                ("time",),
+                xr.date_range(
+                    "2021-10-31", periods=10, freq="D", use_cftime=use_cftime
+                ),
+            ),
+            "var2": (("x",), list(range(10))),
+        }
+    )
+    if chunk:
+        ds = ds.chunk()
+    assert "var1" in ds.groupby("x").mean("time")
+    assert "var1" in ds.mean("x")
+
+
+def test_mean_with_mixed_types():
+    """Test that mean correctly handles datasets with mixed types including strings"""
+    ds = xr.Dataset(
+        {
+            "numbers": (("x",), [1.0, 2.0, 3.0, 4.0]),
+            "integers": (("x",), [10, 20, 30, 40]),
+            "strings": (("x",), ["a", "b", "c", "d"]),
+            "datetime": (
+                ("x",),
+                pd.date_range("2021-01-01", periods=4, freq="D"),
+            ),
+            "timedelta": (
+                ("x",),
+                pd.timedelta_range("1 day", periods=4, freq="D"),
+            ),
+        }
+    )
+
+    # Direct mean should exclude strings but include datetime/timedelta
+    result = ds.mean()
+    assert "numbers" in result.data_vars
+    assert "integers" in result.data_vars
+    assert "strings" not in result.data_vars
+    assert "datetime" in result.data_vars
+    assert "timedelta" in result.data_vars
+
+    # Also test mean with specific dimension
+    result_dim = ds.mean("x")
+    assert "numbers" in result_dim.data_vars
+    assert "integers" in result_dim.data_vars
+    assert "strings" not in result_dim.data_vars
+    assert "datetime" in result_dim.data_vars
+    assert "timedelta" in result_dim.data_vars
+
+
+def test_mean_with_string_coords():
+    """Test that mean works when strings are in coordinates, not data vars"""
+    ds = xr.Dataset(
+        {
+            "temperature": (("city", "time"), np.random.rand(3, 4)),
+            "humidity": (("city", "time"), np.random.rand(3, 4)),
+        },
+        coords={
+            "city": ["New York", "London", "Tokyo"],
+            "time": pd.date_range("2021-01-01", periods=4, freq="D"),
+        },
+    )
+
+    # Mean across string coordinate should work
+    result = ds.mean("city")
+    assert result.sizes == {"time": 4}
+    assert "temperature" in result.data_vars
+    assert "humidity" in result.data_vars
+
+    # Groupby with string coordinate should work
+    grouped = ds.groupby("city")
+    result_grouped = grouped.mean()
+    assert "temperature" in result_grouped.data_vars
+    assert "humidity" in result_grouped.data_vars
+
+
+def test_mean_datetime_edge_cases():
+    """Test mean with datetime edge cases like NaT"""
+    # Test with NaT values
+    dates_with_nat = pd.date_range("2021-01-01", periods=4, freq="D")
+    dates_with_nat_array = dates_with_nat.values.copy()
+    dates_with_nat_array[1] = np.datetime64("NaT")
+
+    ds = xr.Dataset(
+        {
+            "dates": (("x",), dates_with_nat_array),
+            "values": (("x",), [1.0, 2.0, 3.0, 4.0]),
+        }
+    )
+
+    # Mean should handle NaT properly (skipna behavior)
+    result = ds.mean()
+    assert "dates" in result.data_vars
+    assert "values" in result.data_vars
+    # The mean should skip NaT and compute mean of the other 3 dates
+    assert not result.dates.isnull().item()
+
+    # Test with timedelta
+    timedeltas = pd.timedelta_range("1 day", periods=4, freq="D")
+    ds_td = xr.Dataset(
+        {
+            "timedeltas": (("x",), timedeltas),
+            "values": (("x",), [1.0, 2.0, 3.0, 4.0]),
+        }
+    )
+
+    result_td = ds_td.mean()
+    assert "timedeltas" in result_td.data_vars
+    assert result_td["timedeltas"].values == np.timedelta64(
+        216000000000000, "ns"
+    )  # 2.5 days
+
+
+@requires_cftime
+def test_mean_with_cftime_objects():
+    """Test mean with cftime objects (issue #5897)"""
+    ds = xr.Dataset(
+        {
+            "var1": (
+                ("time",),
+                xr.date_range("2021-10-31", periods=10, freq="D", use_cftime=True),
+            ),
+            "var2": (("x",), list(range(10))),
+        }
+    )
+
+    # Test averaging over time dimension - var1 should be included
+    result_time = ds.mean("time")
+    assert "var1" in result_time.data_vars
+    assert "var2" not in result_time.dims
+
+    # Test averaging over x dimension - should work normally
+    result_x = ds.mean("x")
+    assert "var2" in result_x.data_vars
+    assert "var1" in result_x.data_vars
+    assert result_x.var2.item() == 4.5  # mean of 0-9
+
+    # Test that mean preserves object arrays containing datetime-like objects
+    import cftime
+
+    dates = np.array(
+        [cftime.DatetimeNoLeap(2021, i, 1) for i in range(1, 5)], dtype=object
+    )
+    ds2 = xr.Dataset(
+        {
+            "cftime_dates": (("x",), dates),
+            "numbers": (("x",), [1.0, 2.0, 3.0, 4.0]),
+            "object_strings": (("x",), np.array(["a", "b", "c", "d"], dtype=object)),
+        }
+    )
+
+    # Mean should include cftime dates but not string objects
+    result = ds2.mean()
+    assert "cftime_dates" in result.data_vars
+    assert "numbers" in result.data_vars
+    assert "object_strings" not in result.data_vars
+
+
+@requires_dask
+@requires_cftime
+def test_mean_with_cftime_objects_dask():
+    """Test mean with cftime objects using dask backend (issue #5897)"""
+    ds = xr.Dataset(
+        {
+            "var1": (
+                ("time",),
+                xr.date_range("2021-10-31", periods=10, freq="D", use_cftime=True),
+            ),
+            "var2": (("x",), list(range(10))),
+        }
+    )
+
+    # Test with dask backend
+    dsc = ds.chunk({})
+    result_time_dask = dsc.mean("time")
+    assert "var1" in result_time_dask.data_vars
+
+    result_x_dask = dsc.mean("x")
+    assert "var2" in result_x_dask.data_vars
+    assert result_x_dask.var2.compute().item() == 4.5
+
+
+def test_groupby_bins_datetime_mean():
+    """Test groupby_bins with datetime mean (issue #6995)"""
+    times = pd.date_range("2020-01-01", "2020-02-01", freq="1h")
+    index = np.arange(len(times))
+    bins = np.arange(0, len(index), 5)
+
+    ds = xr.Dataset(
+        {"time": ("index", times), "float": ("index", np.linspace(0, 1, len(index)))},
+        coords={"index": index},
+    )
+
+    # The time variable should be preserved and averaged
+    result = ds.groupby_bins("index", bins).mean()
+    assert "time" in result.data_vars
+    assert "float" in result.data_vars
+    assert result.time.dtype == np.dtype("datetime64[ns]")
+
+
+def test_groupby_bins_mean_time_series():
+    """Test groupby_bins mean on time series data (issue #10217)"""
+    ds = xr.Dataset(
+        {
+            "measurement": ("trial", np.arange(0, 100, 10)),
+            "time": ("trial", pd.date_range("20240101T1500", "20240101T1501", 10)),
+        }
+    )
+
+    # Time variable should be preserved in the aggregation
+    ds_agged = ds.groupby_bins("trial", 5).mean()
+    assert "time" in ds_agged.data_vars
+    assert "measurement" in ds_agged.data_vars
+    assert ds_agged.time.dtype == np.dtype("datetime64[ns]")
+
+
 # TODO: Possible property tests to add to this module
 # 1. lambda x: x
 # 2. grouped-reduce on unique coords is identical to array

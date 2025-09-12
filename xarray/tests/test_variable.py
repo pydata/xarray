@@ -337,7 +337,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         assert "PeriodArray" in repr(v)
 
     @pytest.mark.parametrize("dtype", [float, int])
-    def test_1d_math(self, dtype: np.typing.DTypeLike) -> None:
+    def test_1d_math(self, dtype: np.typing.DTypeLike | None) -> None:
         x = np.arange(5, dtype=dtype)
         y = np.ones(5, dtype=dtype)
 
