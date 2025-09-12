@@ -102,6 +102,31 @@ pytest-timeout = "*"
 pytest-xdist = "*"
 coveralls = "*"
 
+[feature.doc.dependencies]
+cfgrib = "*"
+kerchunk = "*"
+ipykernel = "*"
+ipywidgets = "*"                   # silence nbsphinx warning
+ipython = '*'
+jupyter_client = '*'
+jupyter_sphinx = '*'
+nbsphinx = '*'
+ncdata = '*'
+pydata-sphinx-theme = "*"
+pyproj = "*"
+rich = "*"                         # for Zarr tree()
+setuptools = "*"
+sphinx-autosummary-accessors = "*"
+sphinx-copybutton = "*"
+sphinx-design = "*"
+sphinx-inline-tabs = "*"
+sphinx = ">=6,<8"
+sphinxcontrib-mermaid = "*"
+sphinxcontrib-srclinks = "*"
+sphinx-remove-toctrees = "*"
+sphinxext-opengraph = "*"
+sphinxext-rediraffe = "*"
+
 
 [feature.mypy.dependencies]
 mypy = "==1.18.1"
