@@ -746,3 +746,27 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         cubed.store
         """
         raise NotImplementedError()
+
+    def get_auto_chunk_size(
+        self,
+    ) -> int:
+        """
+        Get the default chunk size for a variable.
+
+        This is used to determine the chunk size when opening a dataset with
+        ``chunks="auto"`` or when rechunking an array with ``chunks="auto"``.
+
+        Parameters
+        ----------
+        target_chunksize : int, optional
+            The target chunk size in bytes. If not provided, a default value is used.
+
+        Returns
+        -------
+        chunk_size : int
+            The chunk size in bytes.
+        """
+
+        raise NotImplementedError(
+            "get_auto_chunk_size must be implemented by the chunk manager."
+        )

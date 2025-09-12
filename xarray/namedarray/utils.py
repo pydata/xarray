@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import sys
 import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
 from functools import lru_cache
@@ -23,7 +24,9 @@ if TYPE_CHECKING:
         DaskArray = NDArray  # type: ignore[assignment, misc]
         DaskCollection: Any = NDArray  # type: ignore[no-redef]
 
+    from xarray.core.variable import Variable
     from xarray.namedarray._typing import _Dim, duckarray
+    from xarray.namedarray.parallelcompat import T_ChunkedArray
 
 
 K = TypeVar("K")
@@ -193,6 +196,31 @@ def either_dict_or_kwargs(
             f"cannot specify both keyword and positional arguments to .{func_name}"
         )
     return pos_kwargs
+
+
+def fake_target_chunksize(
+    data: Variable | T_ChunkedArray,
+    target_chunksize: int,
+) -> tuple[int, np.dtype[Any]]:
+    """
+    Naughty trick - let's get the ratio of our cftime_nbytes, and then compute
+    the ratio of that size to a np.float64. Then we can just adjust our target_chunksize
+    and use the default dask chunking algorithm to get a reasonable chunk size.
+    """
+    from xarray.core.formatting import first_n_items
+
+    output_dtype = np.dtype(np.float64)
+
+    if data.dtype == object:
+        nbytes_approx: int = sys.getsizeof(first_n_items(data, 1))  # type: ignore[no-untyped-call]
+    else:
+        nbytes_approx = data.dtype.itemsize
+
+    f64_nbytes = output_dtype.itemsize
+
+    target_chunksize = int(target_chunksize * (f64_nbytes / nbytes_approx))
+
+    return target_chunksize, output_dtype
 
 
 class ReprObject:
