@@ -211,7 +211,7 @@ class _DummyGroup(Generic[T_Xarray]):
         return np.arange(self.size, dtype=int)
 
     def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self, dtype: np.typing.DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if copy is False:
             raise NotImplementedError(f"An array copy is necessary, got {copy = }.")
