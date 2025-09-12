@@ -9,13 +9,11 @@ dependencies:
   - bottleneck
   - cartopy
   - cftime
-  - coveralls
   - flox
   - h5netcdf
   - h5py
   - hdf5
-  - hypothesis
-  - lxml # Optional dep of pydap
+    - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4

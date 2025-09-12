@@ -10,8 +10,7 @@ dependencies:
   - cfgrib
   - kerchunk
   - dask-core
-  - hypothesis
-  - h5netcdf
+    - h5netcdf
   - ipykernel
   - ipywidgets # silence nbsphinx warning
   - ipython

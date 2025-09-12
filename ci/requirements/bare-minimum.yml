@@ -4,5 +4,4 @@ channels:
   - nodefaults
 dependencies:
   - python=3.11
-  - coveralls
   - packaging=24.1

@@ -45,8 +45,25 @@ coveralls = "*"
 
 [feature.mypy.dependencies]
 mypy = "==1.18.1"
+hypothesis = "*"
 lxml = "*"
 pandas-stubs = "<=2.2.3.241126" # https://github.com/pydata/xarray/issues/10110
+types-colorama = "*"
+types-docutils = "*"
+types-psutil = "*"
+types-Pygments = "*"
+types-python-dateutil = "*"
+types-pytz = "*"
+types-PyYAML = "*"
+types-requests = "*"
+types-setuptools = "*"
+types-openpyxl = "*"
+typing_extensions = "*"
+
+[feature.mypy.pypi-dependencies]
+types-defusedxml = "*"
+types-pexpect = "*"
+
 
 [feature.mypy.tasks]
 mypy = "mypy --install-types --non-interactive --cobertura-xml-report mypy_report"

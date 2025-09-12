@@ -17,7 +17,6 @@ dependencies:
   - h5netcdf
   - h5py
   - hdf5
-  - hypothesis
   - iris
   - lxml # Optional dep of pydap
   - matplotlib-base

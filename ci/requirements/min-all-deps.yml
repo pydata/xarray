@@ -13,7 +13,6 @@ dependencies:
   - bottleneck=1.4
   - cartopy=0.23
   - cftime=1.6
-  - coveralls
   - dask-core=2024.6
   - distributed=2024.6
   - flox=0.9
@@ -23,7 +22,6 @@ dependencies:
   # prioritize bumping other packages instead
   - h5py=3.11
   - hdf5=1.14
-  - hypothesis
   - iris=3.9
   - lxml=5.1 # Optional dep of pydap
   - matplotlib-base=3.8
