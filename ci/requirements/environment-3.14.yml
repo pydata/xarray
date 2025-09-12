@@ -3,9 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - array-api-strict<2.4
   - cartopy
-  - cftime
   - distributed
   - iris
   - lxml # Optional dep of pydap
@@ -16,10 +14,8 @@ dependencies:
   # - pint>=0.22
   - pooch
   - rasterio
-  - scipy
   - seaborn
   # - sparse
-  - toolz
   - typing_extensions
   - pip:
       - jax # no way to get cpu-only jaxlib from conda if gpu is present

@@ -4,4 +4,3 @@ channels:
   - nodefaults
 dependencies:
   - python=3.11
-    - scipy=1.13

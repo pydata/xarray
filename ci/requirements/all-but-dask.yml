@@ -3,16 +3,10 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - array-api-strict<2.4
   - cartopy
-  - cftime
     - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
-    - pint>=0.22
-  - rasterio
-  - scipy
+    - rasterio
   - seaborn
-  - sparse
-  - toolz
   - typing_extensions

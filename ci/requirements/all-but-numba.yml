@@ -4,9 +4,7 @@ channels:
   - nodefaults
 dependencies:
   # Pin a "very new numpy" (updated Sept 24, 2024)
-  - array-api-strict<2.4
   - cartopy
-  - cftime
   - distributed
   - iris
   - lxml # Optional dep of pydap
@@ -22,7 +20,5 @@ dependencies:
   # - pint>=0.22
   - pooch
   - rasterio
-  - scipy
   - seaborn
-  - toolz
   - typing_extensions

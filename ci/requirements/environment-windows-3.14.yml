@@ -2,9 +2,7 @@ name: xarray-tests
 channels:
   - conda-forge
 dependencies:
-  - array-api-strict<2.4
   - cartopy
-  - cftime
   - distributed
   - iris
   - lxml # Optional dep of pydap
@@ -14,9 +12,7 @@ dependencies:
   # - numbagg
   # - pint>=0.22
   - rasterio
-  - scipy
   - seaborn
   # - sparse
-  - toolz
   - typing_extensions
   - pip:

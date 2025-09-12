@@ -62,6 +62,18 @@ opt_einsum = "*"
 numba = "*"
 numbagg = "*"
 
+[feature.extras.dependencies]
+# array
+array-api-strict = "<2.4"
+sparse = "*"
+
+# algorithms
+scipy = "*"
+toolz = "*"
+
+# other
+cftime = "*"
+pint = "*"
 
 [feature.test.dependencies]
 pytest = "*"
