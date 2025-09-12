@@ -623,7 +623,6 @@ class DataWithCoords(AttrAccessMixin):
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
           * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
             reference_time  datetime64[ns] 8B 2014-09-05
-        Dimensions without coordinates: x, y
         Data variables:
             temperature     (x, y, time) float64 128B 20.0 20.8 21.6 ... 30.4 31.2 32.0
             precipitation   (x, y, time) float64 128B 2.0 0.0 0.0 0.0 ... 0.0 0.0 2.0
@@ -637,7 +636,6 @@ class DataWithCoords(AttrAccessMixin):
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
           * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
             reference_time  datetime64[ns] 8B 2014-09-05
-        Dimensions without coordinates: x, y
         Data variables:
             temperature     (x, y, time) float64 128B 20.0 20.8 21.6 ... 30.4 31.2 32.0
             precipitation   (x, y, time) float64 128B 2.0 0.0 0.0 0.0 ... 0.0 0.0 2.0
@@ -1166,7 +1164,6 @@ class DataWithCoords(AttrAccessMixin):
                [10, 11, 12, 13, 14],
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
-        Dimensions without coordinates: x, y
 
         >>> a.where(a.x + a.y < 4)
         <xarray.DataArray (x: 5, y: 5)> Size: 200B
@@ -1175,7 +1172,6 @@ class DataWithCoords(AttrAccessMixin):
                [10., 11., nan, nan, nan],
                [15., nan, nan, nan, nan],
                [nan, nan, nan, nan, nan]])
-        Dimensions without coordinates: x, y
 
         >>> a.where(a.x + a.y < 5, -1)
         <xarray.DataArray (x: 5, y: 5)> Size: 200B
@@ -1184,7 +1180,6 @@ class DataWithCoords(AttrAccessMixin):
                [10, 11, 12, -1, -1],
                [15, 16, -1, -1, -1],
                [20, -1, -1, -1, -1]])
-        Dimensions without coordinates: x, y
 
         >>> a.where(a.x + a.y < 4, drop=True)
         <xarray.DataArray (x: 4, y: 4)> Size: 128B
@@ -1192,7 +1187,6 @@ class DataWithCoords(AttrAccessMixin):
                [ 5.,  6.,  7., nan],
                [10., 11., nan, nan],
                [15., nan, nan, nan]])
-        Dimensions without coordinates: x, y
 
         >>> a.where(lambda x: x.x + x.y < 4, lambda x: -x)
         <xarray.DataArray (x: 5, y: 5)> Size: 200B
@@ -1201,7 +1195,6 @@ class DataWithCoords(AttrAccessMixin):
                [ 10,  11, -12, -13, -14],
                [ 15, -16, -17, -18, -19],
                [-20, -21, -22, -23, -24]])
-        Dimensions without coordinates: x, y
 
         >>> a.where(a.x + a.y < 4, drop=True)
         <xarray.DataArray (x: 4, y: 4)> Size: 128B
@@ -1209,7 +1202,6 @@ class DataWithCoords(AttrAccessMixin):
                [ 5.,  6.,  7., nan],
                [10., 11., nan, nan],
                [15., nan, nan, nan]])
-        Dimensions without coordinates: x, y
 
         See Also
         --------
@@ -1305,11 +1297,9 @@ class DataWithCoords(AttrAccessMixin):
         >>> array
         <xarray.DataArray (x: 3)> Size: 24B
         array([ 1., nan,  3.])
-        Dimensions without coordinates: x
         >>> array.isnull()
         <xarray.DataArray (x: 3)> Size: 3B
         array([False,  True, False])
-        Dimensions without coordinates: x
         """
         from xarray.computation.apply_ufunc import apply_ufunc
 
@@ -1348,11 +1338,9 @@ class DataWithCoords(AttrAccessMixin):
         >>> array
         <xarray.DataArray (x: 3)> Size: 24B
         array([ 1., nan,  3.])
-        Dimensions without coordinates: x
         >>> array.notnull()
         <xarray.DataArray (x: 3)> Size: 3B
         array([ True, False,  True])
-        Dimensions without coordinates: x
         """
         from xarray.computation.apply_ufunc import apply_ufunc
 
@@ -1387,7 +1375,6 @@ class DataWithCoords(AttrAccessMixin):
         >>> array.isin([1, 3])
         <xarray.DataArray (x: 3)> Size: 3B
         array([ True, False,  True])
-        Dimensions without coordinates: x
 
         See Also
         --------

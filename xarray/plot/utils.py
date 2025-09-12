@@ -1506,28 +1506,23 @@ class _Normalize(Sequence):
         >>> _Normalize(a).values
         <xarray.DataArray (dim_0: 5)> Size: 40B
         array([3, 1, 1, 3, 5])
-        Dimensions without coordinates: dim_0
 
         >>> _Normalize(a, width=(18, 36, 72)).values
         <xarray.DataArray (dim_0: 5)> Size: 40B
         array([45., 18., 18., 45., 72.])
-        Dimensions without coordinates: dim_0
 
         >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
         >>> _Normalize(a).values
         <xarray.DataArray (dim_0: 6)> Size: 48B
         array([0.5, 0. , 0. , 0.5, 2. , 3. ])
-        Dimensions without coordinates: dim_0
 
         >>> _Normalize(a, width=(18, 36, 72)).values
         <xarray.DataArray (dim_0: 6)> Size: 48B
         array([27., 18., 18., 27., 54., 72.])
-        Dimensions without coordinates: dim_0
 
         >>> _Normalize(a * 0, width=(18, 36, 72)).values
         <xarray.DataArray (dim_0: 6)> Size: 48B
         array([36., 36., 36., 36., 36., 36.])
-        Dimensions without coordinates: dim_0
 
         """
         if self.data is None:

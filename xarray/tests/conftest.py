@@ -201,7 +201,6 @@ def create_test_datatree():
     <xarray.DataTree>
     Group: /
     │   Dimensions:  (y: 3, x: 2)
-    │   Dimensions without coordinates: y, x
     │   Data variables:
     │       a        (y) int64 24B 6 7 8
     │       set0     (x) int64 16B 9 10
@@ -214,7 +213,6 @@ def create_test_datatree():
     │   └── Group: /set1/set2
     ├── Group: /set2
     │   │   Dimensions:  (x: 2)
-    │   │   Dimensions without coordinates: x
     │   │   Data variables:
     │   │       a        (x) int64 16B 2 3
     │   │       b        (x) float64 16B 0.1 0.2
