@@ -16,6 +16,7 @@ depends-on = [
 [environments]
 test = { features = ["test"], solve-group = "test" }
 test-bare-min = { features = ["test", "minimal"], solve-group = "test" }
+typing = { features = ["mypy"] }
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
 
 [dependencies]
@@ -41,6 +42,14 @@ pytest-mypy-plugins = "*"
 pytest-timeout = "*"
 pytest-xdist = "*"
 coveralls = "*"
+
+[feature.mypy.dependencies]
+mypy = "==1.18.1"
+lxml = "*"
+pandas-stubs = "<=2.2.3.241126" # https://github.com/pydata/xarray/issues/10110
+
+[feature.mypy.tasks]
+mypy = "mypy --install-types --non-interactive --cobertura-xml-report mypy_report"
 
 [feature.pre-commit.dependencies]
 pre-commit = "*"
