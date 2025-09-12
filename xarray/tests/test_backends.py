@@ -121,7 +121,6 @@ try:
 except ImportError:
     pass
 
-
 if has_zarr:
     import zarr
     import zarr.codecs
@@ -3074,6 +3073,17 @@ class ZarrBase(CFEncodedBase):
             np.testing.assert_equal(
                 zarr.open_group(store, **self.version_kwargs)["foo"], data.foo.data
             )
+
+    def test_object_codec(self) -> None:
+        data = xr.DataArray(
+            data=np.zeros((2, 2)),
+            dims=["x", "y"],
+            coords=dict(y=np.array(["a", "b"], dtype=object)),
+        )
+        with create_tmp_file() as path1:
+            data.to_zarr(path1, mode="w")
+            data = xr.open_zarr(path1)
+            data.to_zarr(path1, mode="w")
 
     def test_encoding_kwarg_fixed_width_string(self) -> None:
         # not relevant for zarr, since we don't use EncodedStringCoder
