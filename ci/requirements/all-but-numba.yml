@@ -19,5 +19,4 @@ dependencies:
   # - sparse
   # - pint>=0.22
   - pooch
-  - rasterio
   - seaborn

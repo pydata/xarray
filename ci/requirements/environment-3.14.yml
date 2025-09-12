@@ -13,7 +13,6 @@ dependencies:
   # - numbagg
   # - pint>=0.22
   - pooch
-  - rasterio
   - seaborn
   # - sparse
   - pip:

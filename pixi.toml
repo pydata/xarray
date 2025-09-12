@@ -42,6 +42,7 @@ h5py = "*"
 hdf5 = "*"
 netcdf4 = "*"
 zarr = "*"
+rasterio = "*"
 
 # opendap
 pydap = "*"

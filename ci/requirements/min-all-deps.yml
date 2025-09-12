@@ -19,5 +19,4 @@ dependencies:
   - nc-time-axis=1.4
   # netcdf follows a 1.major.minor[.patch] convention
   # (see https://github.com/Unidata/netcdf4-python/issues/1090)
-  - rasterio=1.3
   - seaborn=0.13

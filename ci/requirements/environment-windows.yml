@@ -9,6 +9,5 @@ dependencies:
   - matplotlib-base
   - nc-time-axis
     # - pint>=0.22
-  - rasterio
   - seaborn
   - pip:
