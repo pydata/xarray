@@ -2,13 +2,9 @@ name: xarray-tests
 channels:
   - conda-forge
 dependencies:
-  - cartopy
   - iris
-  - matplotlib-base
-  - nc-time-axis
   # - numba
   # - numbagg
   # - pint>=0.22
-  - seaborn
   # - sparse
   - pip:

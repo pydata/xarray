@@ -3,7 +3,3 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - cartopy
-  - matplotlib-base
-  - nc-time-axis
-  - seaborn

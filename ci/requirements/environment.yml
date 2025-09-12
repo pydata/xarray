@@ -3,12 +3,8 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - cartopy
   - iris
-  - matplotlib-base
-  - nc-time-axis
     # - pint>=0.22
   - pooch
-  - seaborn
   - pip:
       - jax # no way to get cpu-only jaxlib from conda if gpu is present

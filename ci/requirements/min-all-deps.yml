@@ -8,14 +8,10 @@ dependencies:
   # When upgrading python, numpy, or pandas, must also change
   # doc/user-guide/installing.rst, doc/user-guide/plotting.rst and setup.py.
   - python=3.11
-  - cartopy=0.23
   - distributed=2024.6
   # h5py and hdf5 tend to cause conflicts
   # for e.g. hdf5 1.12 conflicts with h5py=3.1
   # prioritize bumping other packages instead
   - iris=3.9
-  - matplotlib-base=3.8
-  - nc-time-axis=1.4
   # netcdf follows a 1.major.minor[.patch] convention
   # (see https://github.com/Unidata/netcdf4-python/issues/1090)
-  - seaborn=0.13

@@ -4,7 +4,6 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - cartopy
   - cfgrib
   - kerchunk
   - ipykernel
@@ -13,14 +12,12 @@ dependencies:
   - iris
   - jupyter_client
   - jupyter_sphinx
-  - matplotlib-base
   - nbsphinx
   - ncdata
   - pooch
   - pydata-sphinx-theme
   - pyproj
   - rich # for Zarr tree()
-  - seaborn
   - setuptools
   - sphinx-autosummary-accessors
   - sphinx-copybutton

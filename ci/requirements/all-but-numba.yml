@@ -4,10 +4,7 @@ channels:
   - nodefaults
 dependencies:
   # Pin a "very new numpy" (updated Sept 24, 2024)
-  - cartopy
   - iris
-  - matplotlib-base
-  - nc-time-axis
   # numba, sparse, numbagg, numexpr often conflicts with newer versions of numpy.
   # This environment helps us test xarray with the latest versions
   # of numpy
@@ -17,4 +14,3 @@ dependencies:
   # - sparse
   # - pint>=0.22
   - pooch
-  - seaborn

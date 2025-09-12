@@ -65,6 +65,12 @@ numba = "*"
 numbagg = "*"
 distributed = "*"
 
+[feature.plotting.dependencies]
+cartopy = "*"
+matplotlib-base = "*"
+nc-time-axis = "*"
+seaborn = "*"
+
 [feature.extras.dependencies]
 # array
 array-api-strict = "<2.4"
