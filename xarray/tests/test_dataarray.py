@@ -5044,9 +5044,7 @@ class TestReduce1D(TestReduce):
         result2 = ar.argmin(skipna=False)
         if nanindex is not None and ar.dtype.kind != "O":
             expected2 = indarr.isel(x=nanindex, drop=True)
-            expected2.attrs = (
-                self.attrs
-            )  # Default keeps attrs for reduction operations
+            expected2.attrs = self.attrs  # Default keeps attrs for reduction operations
         else:
             expected2 = expected0
 
@@ -5085,9 +5083,7 @@ class TestReduce1D(TestReduce):
         result2 = ar.argmax(skipna=False)
         if nanindex is not None and ar.dtype.kind != "O":
             expected2 = indarr.isel(x=nanindex, drop=True)
-            expected2.attrs = (
-                self.attrs
-            )  # Default keeps attrs for reduction operations
+            expected2.attrs = self.attrs  # Default keeps attrs for reduction operations
         else:
             expected2 = expected0
 
@@ -5165,9 +5161,7 @@ class TestReduce1D(TestReduce):
         if nanindex is not None and ar0.dtype.kind != "O":
             expected3 = coordarr0.isel(x=nanindex, drop=True).astype("float")
             expected3.name = "x"
-            expected3.attrs = (
-                self.attrs
-            )  # Default keeps attrs for reduction operations
+            expected3.attrs = self.attrs  # Default keeps attrs for reduction operations
         else:
             expected3 = expected0.copy()
 
@@ -5286,9 +5280,7 @@ class TestReduce1D(TestReduce):
         if nanindex is not None and ar0.dtype.kind != "O":
             expected3 = coordarr0.isel(x=nanindex, drop=True).astype("float")
             expected3.name = "x"
-            expected3.attrs = (
-                self.attrs
-            )  # Default keeps attrs for reduction operations
+            expected3.attrs = self.attrs  # Default keeps attrs for reduction operations
         else:
             expected3 = expected0.copy()
 
