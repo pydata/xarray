@@ -3,12 +3,9 @@ channels:
   - conda-forge
 dependencies:
   - array-api-strict<2.4
-  - bottleneck
   - cartopy
   - cftime
-  - dask-core
   - distributed
-  - flox
   - iris
   - lxml # Optional dep of pydap
   - matplotlib-base
@@ -16,7 +13,6 @@ dependencies:
   # - numba
   # - numbagg
   # - pint>=0.22
-  - pyarrow # importing dask.dataframe raises an ImportError without this
   - rasterio
   - scipy
   - seaborn

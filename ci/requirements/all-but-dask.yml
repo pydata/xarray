@@ -5,15 +5,11 @@ channels:
 dependencies:
   - aiobotocore
   - array-api-strict<2.4
-  - bottleneck
   - cartopy
   - cftime
-  - flox
     - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
-  - numba
-  - numbagg
     - pint>=0.22
   - rasterio
   - scipy

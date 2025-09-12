@@ -9,12 +9,9 @@ dependencies:
   # doc/user-guide/installing.rst, doc/user-guide/plotting.rst and setup.py.
   - python=3.11
   - array-api-strict=1.1 # dependency for testing the array api compat
-  - bottleneck=1.4
   - cartopy=0.23
   - cftime=1.6
-  - dask-core=2024.6
   - distributed=2024.6
-  - flox=0.9
   # h5py and hdf5 tend to cause conflicts
   # for e.g. hdf5 1.12 conflicts with h5py=3.1
   # prioritize bumping other packages instead
@@ -24,9 +21,7 @@ dependencies:
   - nc-time-axis=1.4
   # netcdf follows a 1.major.minor[.patch] convention
   # (see https://github.com/Unidata/netcdf4-python/issues/1090)
-  - numba=0.60
-  - numbagg=0.8
-    - pint=0.24
+  - pint=0.24
   - rasterio=1.3
   - scipy=1.13
   - seaborn=0.13

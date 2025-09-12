@@ -51,6 +51,16 @@ pydap-server = "*"
 boto3 = "*"
 fsspec = "*"
 
+[feature.performance.dependencies]
+flox = "*"
+bottleneck = "*"
+numexpr = "*"
+pyarrow = "*"
+dask-core = "*"
+opt_einsum = "*"
+numba = "*"
+numbagg = "*"
+
 
 [feature.test.dependencies]
 pytest = "*"

@@ -4,11 +4,9 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - bottleneck
   - cartopy
   - cfgrib
   - kerchunk
-  - dask-core
   - ipykernel
   - ipywidgets # silence nbsphinx warning
   - ipython
@@ -18,9 +16,7 @@ dependencies:
   - matplotlib-base
   - nbsphinx
   - ncdata
-  - numba
   - pooch
-  - pyarrow
   - pydata-sphinx-theme
   - pyproj
   - rich # for Zarr tree()

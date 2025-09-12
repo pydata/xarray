@@ -6,12 +6,9 @@ dependencies:
   # Pin a "very new numpy" (updated Sept 24, 2024)
   - aiobotocore
   - array-api-strict<2.4
-  - bottleneck
   - cartopy
   - cftime
-  - dask-core
   - distributed
-  - flox
   - iris
   - lxml # Optional dep of pydap
   - matplotlib-base
@@ -23,10 +20,8 @@ dependencies:
   # - numbagg
   # - numexpr
   # - sparse
-  - opt_einsum
-    # - pint>=0.22
+  # - pint>=0.22
   - pooch
-  - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - rasterio
   - scipy
   - seaborn

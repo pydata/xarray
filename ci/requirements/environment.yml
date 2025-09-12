@@ -5,23 +5,15 @@ channels:
 dependencies:
   - aiobotocore
   - array-api-strict<2.4
-  - bottleneck
   - cartopy
   - cftime
-  - dask-core
   - distributed
-  - flox
   - iris
   - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
-  - numba
-  - numbagg
-  - numexpr
-  - opt_einsum
     # - pint>=0.22
   - pooch
-  - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - rasterio
   - scipy
   - seaborn
