@@ -9,17 +9,32 @@ test = { cmd = "pytest" }
 
 [tasks.test-all]
 depends-on = [
-  { task = "test", environment = "test" },
+  { task = "test", environment = "test-default" },
   { task = "test", environment = "test-bare-min" },
+  { task = "test", environment = "test-all-deps" },
 ]
 
 [environments]
 # Testing
-test = { features = ["test"], solve-group = "test" }
+test-default = { features = ["test"], solve-group = "test" }
+test-all-deps = { features = [
+  "test",
+  "backends",
+  "performance",
+  "plotting",
+  "extras",
+], solve-group = "test" }
 test-bare-min = { features = ["test", "minimal"], solve-group = "test" }
 
 # Extra
 typing = { features = ["mypy"] }
+doc = { features = [
+  "doc",
+  "backends",
+  "performance",
+  "plotting",
+  "extras",
+], solve-group = "doc" }
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
 
 [dependencies]
@@ -34,6 +49,7 @@ git = "*"            # needed for dynamic versioning
 xarray = { path = ".", editable = true }
 
 [feature.minimal.dependencies]
+# minimal versions
 python = "3.11.*"
 numpy = "1.26.*"
 pandas = "2.2.*"
