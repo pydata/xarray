@@ -32,21 +32,12 @@ dependencies:
   # - numexpr
   # - sparse
   - opt_einsum
-  - packaging
   - pandas
   # - pint>=0.22
-  - pip
   - pooch
   - pre-commit
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - pydap
-  - pytest
-  - pytest-asyncio
-  - pytest-cov
-  - pytest-env
-  - pytest-mypy-plugins
-  - pytest-timeout
-  - pytest-xdist
   - rasterio
   - scipy
   - seaborn
