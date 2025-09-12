@@ -81,7 +81,7 @@ def summarize_variable(name, var, is_index=False, dtype=None) -> str:
     variable = var.variable if hasattr(var, "variable") else var
 
     cssclass_idx = " class='xr-has-index'" if is_index else ""
-    dims_str = f"({', '.join(escape(dim) for dim in var.dims)})"
+    dims_str = f"({', '.join(escape(str(dim)) for dim in var.dims)})"
     name = escape(str(name))
     dtype = dtype or escape(str(var.dtype))
 
