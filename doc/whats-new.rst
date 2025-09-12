@@ -13,6 +13,10 @@ v2025.09.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:func:`DataTree.from_dict` now supports passing in ``DataArray`` and nested
+  dictionary values, and has a ``coords`` argument for specifying coordinates as
+  ``DataArray`` objects (:pull:`10658`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
