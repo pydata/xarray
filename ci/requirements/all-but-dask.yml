@@ -4,7 +4,6 @@ channels:
   - nodefaults
 dependencies:
   - cartopy
-    - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
-    - seaborn
+  - seaborn

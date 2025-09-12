@@ -46,6 +46,7 @@ rasterio = "*"
 
 # opendap
 pydap = "*"
+lxml = "*"         # Optional dep of pydap
 pydap-server = "*"
 
 # s3
@@ -62,6 +63,7 @@ dask-core = "*"
 opt_einsum = "*"
 numba = "*"
 numbagg = "*"
+distributed = "*"
 
 [feature.extras.dependencies]
 # array

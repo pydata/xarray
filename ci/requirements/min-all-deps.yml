@@ -14,7 +14,6 @@ dependencies:
   # for e.g. hdf5 1.12 conflicts with h5py=3.1
   # prioritize bumping other packages instead
   - iris=3.9
-  - lxml=5.1 # Optional dep of pydap
   - matplotlib-base=3.8
   - nc-time-axis=1.4
   # netcdf follows a 1.major.minor[.patch] convention

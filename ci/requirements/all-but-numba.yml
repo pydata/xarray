@@ -5,9 +5,7 @@ channels:
 dependencies:
   # Pin a "very new numpy" (updated Sept 24, 2024)
   - cartopy
-  - distributed
   - iris
-  - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   # numba, sparse, numbagg, numexpr often conflicts with newer versions of numpy.

@@ -4,9 +4,7 @@ channels:
   - nodefaults
 dependencies:
   - cartopy
-  - distributed
   - iris
-  - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
     # - pint>=0.22
