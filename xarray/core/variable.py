@@ -2438,11 +2438,17 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         keep_attrs = _get_keep_attrs(default=True)
         if keep_attrs:
             # Combine attributes from both operands, dropping conflicts
-            # If either operand has no attrs, don't merge (backward compatibility)
-            other_attrs = getattr(other, "attrs", None)
-            if self._attrs is None or other_attrs is None:
-                # Keep left operand's attrs (even if None) for backward compatibility
-                attrs = self._attrs
+            # If either operand has no attrs, result has no attrs (backward compatibility)
+            # Check for empty attrs as well as None (due to attrs property side effect)
+            other_attrs = getattr(other, "_attrs", None)
+            if (
+                self._attrs is None
+                or self._attrs == {}
+                or other_attrs is None
+                or other_attrs == {}
+            ):
+                # If either operand has no attrs, result has no attrs
+                attrs = None
             else:
                 from xarray.structure.merge import merge_attrs
 
