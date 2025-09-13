@@ -540,13 +540,6 @@ def _datatree_from_backend_datatree(
 
 
 async def _maybe_create_default_indexes_async(ds):
-    """Asynchronously create default indexes for a Dataset by preloading
-    coordinate variables that would otherwise trigger one-by-one remote reads.
-
-    This mirrors _maybe_create_default_indexes, but first concurrently loads
-    only the coordinate variables that will back the default indexes. This
-    avoids serial .get requests on cloud stores when building indexes.
-    """
     import asyncio
 
     # Determine which coords need default indexes
@@ -566,8 +559,7 @@ async def _maybe_create_default_indexes_async(ds):
     to_index = {name: ds.coords[name].variable for name in to_index_names}
     if to_index:
         return ds.assign_coords(Coordinates(to_index))
-    else:
-        return ds
+    return ds
 
 
 def open_dataset(
@@ -1371,7 +1363,6 @@ async def open_datatree_async(
     _protect_datatree_variables_inplace(backend_tree, cache)
 
     # For each dataset in the tree, concurrently create default indexes (if requested)
-    coros: list[tuple[str, asyncio.Future]] = []
     results: dict[str, Dataset] = {}
 
     async def process_node(path: str, node_ds: Dataset) -> tuple[str, Dataset]:
@@ -1395,29 +1386,24 @@ async def open_datatree_async(
             )
         return path, ds
 
-    # Build worklist
-    for path, [node] in group_subtrees(backend_tree):
-        coro = process_node(path, node.dataset)
-        coros.append((path, asyncio.ensure_future(coro)))
+    # Build tasks
+    tasks = [
+        process_node(path, node.dataset)
+        for path, [node] in group_subtrees(backend_tree)
+    ]
 
     # Execute concurrently and collect
-    for _path, fut in coros:
-        p, ds = await fut
-        results[p] = ds
+    for fut in asyncio.as_completed(tasks):
+        path, ds = await fut
+        results[path] = ds
 
-    # Rebuild DataTree preserving name
-    tree = DataTree.from_dict(results, name=backend_tree.name)
+    # Build DataTree
+    tree = DataTree.from_dict(results)
 
     # Carry over close handlers from backend tree when needed (mirrors sync path)
     if create_default_indexes or chunks is not None:
-        for path, [node] in group_subtrees(backend_tree):
-            tree[path].set_close(node._close)
-
-    # Ensure source filename always stored in tree object
-    if "source" not in tree.encoding:
-        path_obj = getattr(filename_or_obj, "path", filename_or_obj)
-        if isinstance(path_obj, str | os.PathLike):
-            tree.encoding["source"] = _normalize_path(path_obj)
+        for _path, [node] in group_subtrees(backend_tree):
+            tree[_path].set_close(node._close)
 
     return tree
 
