@@ -2445,6 +2445,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 attrs = self._attrs
             else:
                 from xarray.structure.merge import merge_attrs
+
                 attrs = merge_attrs([self._attrs, other_attrs], "drop_conflicts")
         else:
             attrs = None
