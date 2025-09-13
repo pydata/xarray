@@ -2436,7 +2436,16 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         else:
             self_data, other_data, dims = _broadcast_compat_data(self, other)
         keep_attrs = _get_keep_attrs(default=True)
-        attrs = self._attrs if keep_attrs else None
+        if keep_attrs:
+            # Combine attributes from both operands, dropping conflicts
+            from xarray.structure.merge import merge_attrs
+
+            other_attrs = getattr(other, "attrs", {})
+            # merge_attrs expects dicts, not None
+            self_attrs = self._attrs if self._attrs is not None else {}
+            attrs = merge_attrs([self_attrs, other_attrs], "drop_conflicts")
+        else:
+            attrs = None
         with np.errstate(all="ignore"):
             new_data = (
                 f(self_data, other_data) if not reflexive else f(other_data, self_data)

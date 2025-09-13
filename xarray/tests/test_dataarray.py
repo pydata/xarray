@@ -6822,6 +6822,33 @@ def test_raise_no_warning_for_nan_in_binary_ops() -> None:
         _ = xr.DataArray([1, 2, np.nan]) > 0
 
 
+def test_binary_ops_attrs_drop_conflicts() -> None:
+    # Test that binary operations combine attrs with drop_conflicts behavior
+    attrs_a = {"units": "meters", "long_name": "distance", "source": "sensor_a"}
+    attrs_b = {"units": "feet", "resolution": "high", "source": "sensor_b"}
+    da1 = xr.DataArray([1, 2, 3], attrs=attrs_a)
+    da2 = xr.DataArray([4, 5, 6], attrs=attrs_b)
+
+    # With keep_attrs=True (default), should combine attrs dropping conflicts
+    result = da1 + da2
+    # "units" and "source" conflict, so they're dropped
+    # "long_name" only in da1, "resolution" only in da2, so they're kept
+    assert result.attrs == {"long_name": "distance", "resolution": "high"}
+
+    # Test with identical values for some attrs
+    attrs_c = {"units": "meters", "type": "data", "source": "sensor_c"}
+    da3 = xr.DataArray([7, 8, 9], attrs=attrs_c)
+    result2 = da1 + da3
+    # "units" has same value, so kept; "source" conflicts, so dropped
+    # "long_name" from da1, "type" from da3
+    assert result2.attrs == {"units": "meters", "long_name": "distance", "type": "data"}
+
+    # With keep_attrs=False, attrs should be empty
+    with xr.set_options(keep_attrs=False):
+        result3 = da1 + da2
+        assert result3.attrs == {}
+
+
 @pytest.mark.filterwarnings("error")
 def test_no_warning_for_all_nan() -> None:
     _ = xr.DataArray([np.nan, np.nan]).mean()

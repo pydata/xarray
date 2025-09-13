@@ -19,7 +19,9 @@ Breaking changes
 
 - **All xarray operations now preserve attributes by default** (:issue:`3891`, :issue:`2582`).
   Previously, operations would drop attributes unless explicitly told to preserve them via ``keep_attrs=True``.
-  This aligns xarray with the common scientific workflow where metadata preservation is essential.
+  Additionally, when attributes are preserved in binary operations, they now combine attributes from both
+  operands using ``drop_conflicts`` (keeping matching attributes, dropping conflicts), instead of keeping
+  only the left operand's attributes.
 
   **What changed:**
 
@@ -48,8 +50,8 @@ Breaking changes
 
   *Binary operations:*
 
-  - Arithmetic: ``+``, ``-``, ``*``, ``/``, ``**``, ``//``, ``%`` (attributes from left operand)
-  - Comparisons: ``<``, ``>``, ``==``, ``!=``, ``<=``, ``>=`` (attributes from left operand)
+  - Arithmetic: ``+``, ``-``, ``*``, ``/``, ``**``, ``//``, ``%`` (combines attributes using ``drop_conflicts``)
+  - Comparisons: ``<``, ``>``, ``==``, ``!=``, ``<=``, ``>=`` (combines attributes using ``drop_conflicts``)
   - With scalars: ``data * 2``, ``10 - data`` (preserves data's attributes)
 
   *Data manipulation:*
@@ -60,14 +62,14 @@ Breaking changes
   - Transformations: ``map()``, ``pipe()``, ``assign()``, ``assign_coords()``
   - Shape operations: ``expand_dims()``, ``squeeze()``, ``transpose()``, ``stack()``, ``unstack()``
 
-  **Binary operations - attributes from left operand:**
+  **Binary operations - combines attributes with ``drop_conflicts``:**
 
   .. code-block:: python
 
-      a = xr.DataArray([1, 2], attrs={"source": "sensor_a"})
-      b = xr.DataArray([3, 4], attrs={"source": "sensor_b"})
-      (a + b).attrs  # {"source": "sensor_a"}  - Left operand wins
-      (b + a).attrs  # {"source": "sensor_b"}  - Order matters!
+      a = xr.DataArray([1, 2], attrs={"units": "m", "source": "sensor_a"})
+      b = xr.DataArray([3, 4], attrs={"units": "m", "source": "sensor_b"})
+      (a + b).attrs  # {"units": "m"}  - Matching values kept, conflicts dropped
+      (b + a).attrs  # {"units": "m"}  - Order doesn't matter for drop_conflicts
 
   **How to restore previous behavior:**
 

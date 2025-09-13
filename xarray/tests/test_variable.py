@@ -2141,6 +2141,36 @@ class TestVariable(VariableSubclassobjects):
             d = a - b
         assert d.attrs == {}
 
+    def test_binary_ops_attrs_drop_conflicts(self):
+        # Test that binary operations combine attrs with drop_conflicts behavior
+        attrs_a = {"units": "meters", "long_name": "distance", "source": "sensor_a"}
+        attrs_b = {"units": "feet", "resolution": "high", "source": "sensor_b"}
+        a = Variable(["x"], [1, 2, 3], attrs_a)
+        b = Variable(["x"], [4, 5, 6], attrs_b)
+
+        # With keep_attrs=True (default), should combine attrs dropping conflicts
+        result = a + b
+        # "units" and "source" conflict, so they're dropped
+        # "long_name" only in a, "resolution" only in b, so they're kept
+        assert result.attrs == {"long_name": "distance", "resolution": "high"}
+
+        # Test with identical values for some attrs
+        attrs_c = {"units": "meters", "type": "data", "source": "sensor_c"}
+        c = Variable(["x"], [7, 8, 9], attrs_c)
+        result2 = a + c
+        # "units" has same value, so kept; "source" conflicts, so dropped
+        # "long_name" from a, "type" from c
+        assert result2.attrs == {
+            "units": "meters",
+            "long_name": "distance",
+            "type": "data",
+        }
+
+        # With keep_attrs=False, attrs should be empty
+        with set_options(keep_attrs=False):
+            result3 = a + b
+            assert result3.attrs == {}
+
     def test_count(self):
         expected = Variable([], 3)
         actual = Variable(["x"], [1, 2, 3, np.nan]).count()

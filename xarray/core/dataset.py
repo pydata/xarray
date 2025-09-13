@@ -7674,7 +7674,11 @@ class Dataset(
         ds = self._calculate_binary_op(g, other, join=align_type)
         keep_attrs = _get_keep_attrs(default=True)
         if keep_attrs:
-            ds.attrs = self.attrs
+            # Combine attributes from both operands, dropping conflicts
+            from xarray.structure.merge import merge_attrs
+
+            other_attrs = getattr(other, "attrs", {})
+            ds.attrs = merge_attrs([self.attrs, other_attrs], "drop_conflicts")
         return ds
 
     def _inplace_binary_op(self, other, f) -> Self:
