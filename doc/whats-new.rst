@@ -36,6 +36,9 @@ Bug fixes
   <https://github.com/spencerkclark>`_.
 - Propagation coordinate attrs in :py:meth:`xarray.Dataset.map` (:issue:`9317`, :pull:`10602`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Fix ``combine_attrs="drop_conflicts"`` to handle objects with ``__eq__`` methods that return
+  non-bool values (e.g., numpy arrays) without raising ``ValueError`` (:pull:`10726`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Documentation
 ~~~~~~~~~~~~~
