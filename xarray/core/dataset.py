@@ -40,6 +40,7 @@ from xarray.core._aggregations import DatasetAggregations
 from xarray.core.common import (
     DataWithCoords,
     _contains_datetime_like_objects,
+    _is_numeric_aggregatable_dtype,
     get_chunksizes,
 )
 from xarray.core.coordinates import (
@@ -2375,6 +2376,7 @@ class Dataset(
             append_dim=append_dim,
             region=region,
             safe_chunks=safe_chunks,
+            align_chunks=align_chunks,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
             write_empty_chunks=write_empty_chunks,
@@ -5592,7 +5594,7 @@ class Dataset(
                 result = result._unstack_once(d, stacked_indexes[d], fill_value, sparse)
         return result
 
-    def update(self, other: CoercibleMapping) -> Self:
+    def update(self, other: CoercibleMapping) -> None:
         """Update this dataset's variables with those from another dataset.
 
         Just like :py:meth:`dict.update` this is a in-place operation.
@@ -5609,14 +5611,6 @@ class Dataset(
             - mapping {var name: (dimension name, array-like)}
             - mapping {var name: (tuple of dimension names, array-like)}
 
-        Returns
-        -------
-        updated : Dataset
-            Updated dataset. Note that since the update is in-place this is the input
-            dataset.
-
-            It is deprecated since version 0.17 and scheduled to be removed in 0.21.
-
         Raises
         ------
         ValueError
@@ -5629,7 +5623,7 @@ class Dataset(
         Dataset.merge
         """
         merge_result = dataset_update_method(self, other)
-        return self._replace(inplace=True, **merge_result._asdict())
+        self._replace(inplace=True, **merge_result._asdict())
 
     def merge(
         self,
@@ -6854,8 +6848,7 @@ class Dataset(
                 and (
                     not reduce_dims
                     or not numeric_only
-                    or np.issubdtype(var.dtype, np.number)
-                    or (var.dtype == np.bool_)
+                    or _is_numeric_aggregatable_dtype(var)
                 )
             ):
                 # prefer to aggregate over axis=None rather than
@@ -6936,11 +6929,22 @@ class Dataset(
             k: maybe_wrap_array(v, func(v, *args, **kwargs))
             for k, v in self.data_vars.items()
         }
+        coord_vars, indexes = merge_coordinates_without_align(
+            [v.coords for v in variables.values()]
+        )
+        coords = Coordinates._construct_direct(coords=coord_vars, indexes=indexes)
+
         if keep_attrs:
             for k, v in variables.items():
                 v._copy_attrs_from(self.data_vars[k])
+
+            for k, v in coords.items():
+                if k not in self.coords:
+                    continue
+                v._copy_attrs_from(self.coords[k])
+
         attrs = self.attrs if keep_attrs else None
-        return type(self)(variables, attrs=attrs)
+        return type(self)(variables, coords=coords, attrs=attrs)
 
     def apply(
         self,

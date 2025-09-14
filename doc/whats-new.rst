@@ -17,6 +17,10 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- :py:meth:`Dataset.update` now returns ``None``, instead of the updated dataset. This
+  completes the deprecation cycle started in version 0.17. The method still updates the
+  dataset in-place. (:issue:`10167`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -25,10 +29,24 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix the ``align_chunks`` parameter on the :py:meth:`~xarray.Dataset.to_zarr` method, it was not being
+  passed to the underlying :py:meth:`~xarray.backends.api` method (:issue:`10501`, :pull:`10516`).
+- Fix error when encoding an empty :py:class:`numpy.datetime64` array
+  (:issue:`10722`, :pull:`10723`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Propagation coordinate attrs in :py:meth:`xarray.Dataset.map` (:issue:`9317`, :pull:`10602`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Fixed Zarr encoding documentation with consistent examples and added comprehensive
+  coverage of dimension and coordinate encoding differences between Zarr V2 and V3 formats.
+  The documentation shows what users will see when accessing Zarr files
+  with raw zarr-python, and explains the relationship between ``_ARRAY_DIMENSIONS``
+  (Zarr V2), ``dimension_names`` metadata (Zarr V3), and CF ``coordinates`` attributes.
+  (:pull:`10720`)
+  By `Emmanuel Mathot <https://github.com/emmanuelmathot>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

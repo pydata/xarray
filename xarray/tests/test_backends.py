@@ -5174,9 +5174,7 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
 @requires_h5netcdf_ros3
 class TestH5NetCDFDataRos3Driver(TestCommon):
     engine: T_NetcdfEngine = "h5netcdf"
-    test_remote_dataset: str = (
-        "https://www.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
-    )
+    test_remote_dataset: str = "https://archive.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
 
     @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list(self) -> None:
@@ -7721,6 +7719,54 @@ class TestZarrRegionAuto:
             chunk = ds.isel(region)
             chunk = chunk.chunk()
             self.save(store, chunk.chunk(), region=region)
+
+    @requires_dask
+    def test_dataset_to_zarr_align_chunks_true(self, tmp_store) -> None:
+        # This test is a replica of the one in `test_dataarray_to_zarr_align_chunks_true`
+        # but for datasets
+        with self.create_zarr_target() as store:
+            ds = (
+                DataArray(
+                    np.arange(4).reshape((2, 2)),
+                    dims=["a", "b"],
+                    coords={
+                        "a": np.arange(2),
+                        "b": np.arange(2),
+                    },
+                )
+                .chunk(a=(1, 1), b=(1, 1))
+                .to_dataset(name="foo")
+            )
+
+            self.save(
+                store,
+                ds,
+                align_chunks=True,
+                encoding={"foo": {"chunks": (3, 3)}},
+                mode="w",
+            )
+            assert_identical(ds, xr.open_zarr(store))
+
+            ds = (
+                DataArray(
+                    np.arange(4, 8).reshape((2, 2)),
+                    dims=["a", "b"],
+                    coords={
+                        "a": np.arange(2),
+                        "b": np.arange(2),
+                    },
+                )
+                .chunk(a=(1, 1), b=(1, 1))
+                .to_dataset(name="foo")
+            )
+
+            self.save(
+                store,
+                ds,
+                align_chunks=True,
+                region="auto",
+            )
+            assert_identical(ds, xr.open_zarr(store))
 
 
 @requires_h5netcdf
