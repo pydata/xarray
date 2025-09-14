@@ -655,7 +655,9 @@ def merge_attrs(variable_attrs, combine_attrs, context=None):
                         # Suppress DeprecationWarning about ambiguous truth values
                         # since we handle the resulting ValueError appropriately
                         with warnings.catch_warnings():
-                            warnings.filterwarnings("ignore", category=DeprecationWarning)
+                            warnings.filterwarnings(
+                                "ignore", category=DeprecationWarning
+                            )
                             if equivalent(attrs[key], value):
                                 # Values are equivalent, keep the attribute
                                 filtered_result[key] = value
