@@ -7675,11 +7675,11 @@ class Dataset(
         keep_attrs = _get_keep_attrs(default=True)
         if keep_attrs:
             # Combine attributes from both operands, dropping conflicts
-            # If either operand has no attrs, result has no attrs (backward compatibility)
             self_attrs = self.attrs
             other_attrs = getattr(other, "attrs", {})
             if not self_attrs or not other_attrs:
                 # If either operand has no attrs, result has no attrs
+                # (Dataset.attrs is always a dict, never None)
                 ds.attrs = {}
             else:
                 from xarray.structure.merge import merge_attrs
