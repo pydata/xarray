@@ -550,9 +550,15 @@ async def _maybe_create_default_indexes_async(ds):
     ]
 
     if to_index_names:
-        # Concurrently load only those coordinate variables
+
+        async def load_var(var):
+            try:
+                return await var.load_async()
+            except NotImplementedError:
+                return await asyncio.to_thread(var.load)
+
         await asyncio.gather(
-            *[ds.coords[name].variable.load_async() for name in to_index_names]
+            *[load_var(ds.coords[name].variable) for name in to_index_names]
         )
 
     # Build indexes (now data is in-memory so no remote I/O per coord)
@@ -1306,8 +1312,8 @@ async def open_datatree_async(
 ) -> DataTree:
     """Async version of open_datatree that concurrently builds default indexes.
 
-    Currently supports asynchronous operation with the "zarr" engine only. For
-    other engines, a ValueError is raised.
+    Supports the "zarr" engine (both Zarr v2 and v3). For other engines, a
+    ValueError is raised.
     """
     import asyncio
 
