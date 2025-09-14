@@ -372,7 +372,10 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         # binary ops with all variables
         assert_array_equal(v + v, 2 * v)
         w = self.cls(["x"], y, {"foo": "bar"})
-        assert_identical(v + w, self.cls(["x"], x + y).to_base_variable())
+        # With drop_conflicts, v (no attrs) + w (has attrs) should keep w's attrs
+        # Note: IndexVariable ops return Variable, not IndexVariable
+        expected = self.cls(["x"], x + y, {"foo": "bar"}).to_base_variable()
+        assert_identical(v + w, expected)
         assert_array_equal((v * w).values, x * y)
 
         # something complicated

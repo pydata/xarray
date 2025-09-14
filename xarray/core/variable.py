@@ -2438,17 +2438,15 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         keep_attrs = _get_keep_attrs(default=True)
         if keep_attrs:
             # Combine attributes from both operands, dropping conflicts
+            from xarray.structure.merge import merge_attrs
+
             # Access attrs property to normalize None to {} due to property side effect
             self_attrs = self.attrs
             other_attrs = getattr(other, "attrs", {})
-            if not self_attrs or not other_attrs:
-                # If either operand has no attrs, result has no attrs
-                # (Variable._attrs can be None, which represents no attributes)
+            attrs = merge_attrs([self_attrs, other_attrs], "drop_conflicts")
+            # merge_attrs returns {} for empty attrs, but Variable uses None
+            if not attrs:
                 attrs = None
-            else:
-                from xarray.structure.merge import merge_attrs
-
-                attrs = merge_attrs([self_attrs, other_attrs], "drop_conflicts")
         else:
             attrs = None
         with np.errstate(all="ignore"):
