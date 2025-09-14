@@ -254,6 +254,7 @@ def equivalent(first: T, second: T) -> bool:
     # In numpy 2.0+, this will raise ValueError directly, which we handle in callers
     # Can remove this suppression when minimum numpy version >= 2.0
     import warnings
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=DeprecationWarning)
         return (first == second) or (pd.isnull(first) and pd.isnull(second))  # type: ignore[call-overload]
