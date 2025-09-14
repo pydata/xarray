@@ -244,6 +244,7 @@ class TestMergeFunction:
         than raising an error.
         """
         import numpy as np
+        import warnings
 
         # Test with numpy arrays (which return arrays from ==)
         arr1 = np.array([1, 2, 3])
@@ -288,16 +289,21 @@ class TestMergeFunction:
         ds5 = xr.Dataset(attrs={"custom": obj2, "x": 1})
         ds6 = xr.Dataset(attrs={"custom": obj3, "y": 2})
 
-        # Objects with same value (returning truthy array [True])
-        actual = xr.merge([ds4, ds5], combine_attrs="drop_conflicts")
-        assert "custom" in actual.attrs
-        assert actual.attrs["x"] == 1
+        # Suppress DeprecationWarning from numpy < 2.0 about ambiguous truth values
+        # when our custom __eq__ returns arrays that are evaluated in boolean context
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # Objects with different values (returning falsy array [False])
-        actual = xr.merge([ds4, ds6], combine_attrs="drop_conflicts")
-        assert "custom" not in actual.attrs  # Dropped due to conflict
-        assert actual.attrs["x"] == 1
-        assert actual.attrs["y"] == 2
+            # Objects with same value (returning truthy array [True])
+            actual = xr.merge([ds4, ds5], combine_attrs="drop_conflicts")
+            assert "custom" in actual.attrs
+            assert actual.attrs["x"] == 1
+
+            # Objects with different values (returning falsy array [False])
+            actual = xr.merge([ds4, ds6], combine_attrs="drop_conflicts")
+            assert "custom" not in actual.attrs  # Dropped due to conflict
+            assert actual.attrs["x"] == 1
+            assert actual.attrs["y"] == 2
 
         # Test edge case: object whose __eq__ returns empty array (ambiguous truth value)
         class EmptyArrayEq:
@@ -317,8 +323,10 @@ class TestMergeFunction:
 
         # With new behavior: ambiguous truth values are treated as non-equivalent
         # So the attribute is dropped instead of raising an error
-        actual = xr.merge([ds7, ds8], combine_attrs="drop_conflicts")
-        assert "empty" not in actual.attrs  # Dropped due to ambiguous comparison
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
+            actual = xr.merge([ds7, ds8], combine_attrs="drop_conflicts")
+            assert "empty" not in actual.attrs  # Dropped due to ambiguous comparison
 
         # Test with object that returns multi-element array (also ambiguous)
         class MultiArrayEq:
@@ -337,8 +345,10 @@ class TestMergeFunction:
         ds10 = xr.Dataset(attrs={"multi": multi_obj2})
 
         # With new behavior: ambiguous arrays are treated as non-equivalent
-        actual = xr.merge([ds9, ds10], combine_attrs="drop_conflicts")
-        assert "multi" not in actual.attrs  # Dropped due to ambiguous comparison
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
+            actual = xr.merge([ds9, ds10], combine_attrs="drop_conflicts")
+            assert "multi" not in actual.attrs  # Dropped due to ambiguous comparison
 
         # Test with all-True multi-element array (unambiguous truthy)
         class AllTrueArrayEq:

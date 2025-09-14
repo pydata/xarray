@@ -250,14 +250,7 @@ def equivalent(first: T, second: T) -> bool:
     if isinstance(first, list) or isinstance(second, list):
         return list_equiv(first, second)  # type: ignore[arg-type]
 
-    # Suppress DeprecationWarning about ambiguous truth values from numpy < 2.0
-    # In numpy 2.0+, this will raise ValueError directly, which we handle in callers
-    # Can remove this suppression when minimum numpy version >= 2.0
-    import warnings
-
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=DeprecationWarning)
-        return (first == second) or (pd.isnull(first) and pd.isnull(second))  # type: ignore[call-overload]
+    return (first == second) or (pd.isnull(first) and pd.isnull(second))  # type: ignore[call-overload]
 
 
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
