@@ -7676,14 +7676,15 @@ class Dataset(
         if keep_attrs:
             # Combine attributes from both operands, dropping conflicts
             # If either operand has no attrs, result has no attrs (backward compatibility)
-            other_attrs = getattr(other, "attrs", None)
-            if not self.attrs or other_attrs is None or other_attrs == {}:
+            self_attrs = self.attrs
+            other_attrs = getattr(other, "attrs", {})
+            if not self_attrs or not other_attrs:
                 # If either operand has no attrs, result has no attrs
                 ds.attrs = {}
             else:
                 from xarray.structure.merge import merge_attrs
 
-                ds.attrs = merge_attrs([self.attrs, other_attrs], "drop_conflicts")
+                ds.attrs = merge_attrs([self_attrs, other_attrs], "drop_conflicts")
         return ds
 
     def _inplace_binary_op(self, other, f) -> Self:
