@@ -235,6 +235,131 @@ class TestMergeFunction:
         expected = xr.Dataset(attrs={"a": 0, "d": 0, "e": 0})
         assert_identical(actual, expected)
 
+    def test_merge_attrs_drop_conflicts_non_bool_eq(self):
+        """Test drop_conflicts behavior when __eq__ returns non-bool values.
+
+        When comparing attribute values, the _equivalent_drop_conflicts() function
+        uses == which can return non-bool values. The new behavior treats ambiguous
+        or falsy equality results as non-equivalent, dropping the attribute rather
+        than raising an error.
+        """
+        import numpy as np
+
+        # Test with numpy arrays (which return arrays from ==)
+        arr1 = np.array([1, 2, 3])
+        arr2 = np.array([1, 2, 3])
+        arr3 = np.array([4, 5, 6])
+
+        ds1 = xr.Dataset(attrs={"arr": arr1, "scalar": 1})
+        ds2 = xr.Dataset(attrs={"arr": arr2, "scalar": 1})  # Same array values
+        ds3 = xr.Dataset(attrs={"arr": arr3, "other": 2})  # Different array values
+
+        # Arrays are considered equivalent if they have the same values
+        actual = xr.merge([ds1, ds2], combine_attrs="drop_conflicts")
+        assert "arr" in actual.attrs  # Should keep the array since they're equivalent
+        assert actual.attrs["scalar"] == 1
+
+        # Different arrays cause the attribute to be dropped
+        actual = xr.merge([ds1, ds3], combine_attrs="drop_conflicts")
+        assert "arr" not in actual.attrs  # Should drop due to conflict
+        assert "other" in actual.attrs
+
+        # Test with custom objects that return non-bool from __eq__
+        class CustomEq:
+            """Object whose __eq__ returns a non-bool value."""
+
+            def __init__(self, value):
+                self.value = value
+
+            def __eq__(self, other):
+                if not isinstance(other, CustomEq):
+                    return False
+                # Return a numpy array (truthy if all elements are non-zero)
+                return np.array([self.value == other.value])
+
+            def __repr__(self):
+                return f"CustomEq({self.value})"
+
+        obj1 = CustomEq(42)
+        obj2 = CustomEq(42)  # Same value
+        obj3 = CustomEq(99)  # Different value
+
+        ds4 = xr.Dataset(attrs={"custom": obj1, "x": 1})
+        ds5 = xr.Dataset(attrs={"custom": obj2, "x": 1})
+        ds6 = xr.Dataset(attrs={"custom": obj3, "y": 2})
+
+        # Objects with same value (returning truthy array [True])
+        actual = xr.merge([ds4, ds5], combine_attrs="drop_conflicts")
+        assert "custom" in actual.attrs
+        assert actual.attrs["x"] == 1
+
+        # Objects with different values (returning falsy array [False])
+        actual = xr.merge([ds4, ds6], combine_attrs="drop_conflicts")
+        assert "custom" not in actual.attrs  # Dropped due to conflict
+        assert actual.attrs["x"] == 1
+        assert actual.attrs["y"] == 2
+
+        # Test edge case: object whose __eq__ returns empty array (ambiguous truth value)
+        class EmptyArrayEq:
+            def __eq__(self, other):
+                if not isinstance(other, EmptyArrayEq):
+                    return False
+                return np.array([])  # Empty array has ambiguous truth value
+
+            def __repr__(self):
+                return "EmptyArrayEq()"
+
+        empty_obj1 = EmptyArrayEq()
+        empty_obj2 = EmptyArrayEq()
+
+        ds7 = xr.Dataset(attrs={"empty": empty_obj1})
+        ds8 = xr.Dataset(attrs={"empty": empty_obj2})
+
+        # With new behavior: ambiguous truth values are treated as non-equivalent
+        # So the attribute is dropped instead of raising an error
+        actual = xr.merge([ds7, ds8], combine_attrs="drop_conflicts")
+        assert "empty" not in actual.attrs  # Dropped due to ambiguous comparison
+
+        # Test with object that returns multi-element array (also ambiguous)
+        class MultiArrayEq:
+            def __eq__(self, other):
+                if not isinstance(other, MultiArrayEq):
+                    return False
+                return np.array([True, False])  # Multi-element array is ambiguous
+
+            def __repr__(self):
+                return "MultiArrayEq()"
+
+        multi_obj1 = MultiArrayEq()
+        multi_obj2 = MultiArrayEq()
+
+        ds9 = xr.Dataset(attrs={"multi": multi_obj1})
+        ds10 = xr.Dataset(attrs={"multi": multi_obj2})
+
+        # With new behavior: ambiguous arrays are treated as non-equivalent
+        actual = xr.merge([ds9, ds10], combine_attrs="drop_conflicts")
+        assert "multi" not in actual.attrs  # Dropped due to ambiguous comparison
+
+        # Test with all-True multi-element array (unambiguous truthy)
+        class AllTrueArrayEq:
+            def __eq__(self, other):
+                if not isinstance(other, AllTrueArrayEq):
+                    return False
+                return np.array([True, True, True])  # All True, but still multi-element
+
+            def __repr__(self):
+                return "AllTrueArrayEq()"
+
+        alltrue1 = AllTrueArrayEq()
+        alltrue2 = AllTrueArrayEq()
+
+        ds11 = xr.Dataset(attrs={"alltrue": alltrue1})
+        ds12 = xr.Dataset(attrs={"alltrue": alltrue2})
+
+        # Multi-element arrays are ambiguous even if all True
+        actual = xr.merge([ds11, ds12], combine_attrs="drop_conflicts")
+        assert "alltrue" not in actual.attrs  # Dropped due to ambiguous comparison
+
     def test_merge_attrs_no_conflicts_compat_minimal(self):
         """make sure compat="minimal" does not silence errors"""
         ds1 = xr.Dataset({"a": ("x", [], {"a": 0})})

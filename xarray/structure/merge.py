@@ -641,11 +641,24 @@ def merge_attrs(variable_attrs, combine_attrs, context=None):
                     if key not in result and key not in dropped_keys
                 }
             )
-            result = {
-                key: value
-                for key, value in result.items()
-                if key not in attrs or equivalent(attrs[key], value)
-            }
+            # Filter out attributes that have conflicts
+            filtered_result = {}
+            for key, value in result.items():
+                if key not in attrs:
+                    # No conflict, keep the attribute
+                    filtered_result[key] = value
+                else:
+                    # Check if values are equivalent
+                    try:
+                        if equivalent(attrs[key], value):
+                            # Values are equivalent, keep the attribute
+                            filtered_result[key] = value
+                        # else: Values differ, drop the attribute (don't add to filtered_result)
+                    except ValueError:
+                        # Likely an ambiguous truth value from numpy array comparison
+                        # Treat as non-equivalent and drop the attribute
+                        pass
+            result = filtered_result
             dropped_keys |= {key for key in attrs if key not in result}
         return result
     elif combine_attrs == "identical":
