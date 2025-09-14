@@ -205,8 +205,8 @@ class TestAsyncZarrGroupLoading:
             assert len(list(dtree_async.subtree)) == 3
 
             for node in dtree_async.subtree:
-                if node.ds is not None:
-                    dataset = node.ds
+                dataset = node.dataset
+                if dataset is not None:
                     coord_names = [
                         name
                         for name, coord in dataset.coords.items()
