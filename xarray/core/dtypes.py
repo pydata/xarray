@@ -238,7 +238,7 @@ def preprocess_types(t):
 
 
 def result_type(
-    *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike,
+    *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike | None,
     xp=None,
 ) -> np.dtype:
     """Like np.result_type, but with type promotion rules matching pandas.

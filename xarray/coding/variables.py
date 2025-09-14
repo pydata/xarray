@@ -122,7 +122,7 @@ def _apply_mask(
     data: np.ndarray,
     encoded_fill_values: list,
     decoded_fill_value: Any,
-    dtype: np.typing.DTypeLike,
+    dtype: np.typing.DTypeLike | None,
 ) -> np.ndarray:
     """Mask all matching values in a NumPy arrays."""
     data = np.asarray(data, dtype=dtype)
@@ -426,7 +426,9 @@ class CFMaskCoder(VariableCoder):
         return Variable(dims, data, attrs, encoding, fastpath=True)
 
 
-def _scale_offset_decoding(data, scale_factor, add_offset, dtype: np.typing.DTypeLike):
+def _scale_offset_decoding(
+    data, scale_factor, add_offset, dtype: np.typing.DTypeLike | None
+):
     data = data.astype(dtype=dtype, copy=True)
     if scale_factor is not None:
         data *= scale_factor
