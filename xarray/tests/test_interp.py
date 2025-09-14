@@ -502,7 +502,9 @@ def test_nans(use_dask: bool) -> None:
         pytest.skip("dask is not installed in the environment.")
         da = da.chunk()
 
-    actual = da.interp(x=[0.5, 1.5])
+    with pytest.warns(UserWarning, match=r"^Interpolation behavior"):
+        actual = da.interp(x=[0.5, 1.5])
+
     # not all values are nan
     assert actual.count() > 0
 
