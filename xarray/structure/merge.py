@@ -650,10 +650,16 @@ def merge_attrs(variable_attrs, combine_attrs, context=None):
                 else:
                     # Check if values are equivalent
                     try:
-                        if equivalent(attrs[key], value):
-                            # Values are equivalent, keep the attribute
-                            filtered_result[key] = value
-                        # else: Values differ, drop the attribute (don't add to filtered_result)
+                        import warnings
+
+                        # Suppress DeprecationWarning about ambiguous truth values
+                        # since we handle the resulting ValueError appropriately
+                        with warnings.catch_warnings():
+                            warnings.filterwarnings("ignore", category=DeprecationWarning)
+                            if equivalent(attrs[key], value):
+                                # Values are equivalent, keep the attribute
+                                filtered_result[key] = value
+                            # else: Values differ, drop the attribute (don't add to filtered_result)
                     except ValueError:
                         # Likely an ambiguous truth value from numpy array comparison
                         # Treat as non-equivalent and drop the attribute
