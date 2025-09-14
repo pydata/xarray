@@ -2444,9 +2444,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             self_attrs = self.attrs
             other_attrs = getattr(other, "attrs", {})
             attrs = merge_attrs([self_attrs, other_attrs], "drop_conflicts")
-            # merge_attrs returns {} for empty attrs, but Variable uses None
-            if not attrs:
-                attrs = None
         else:
             attrs = None
         with np.errstate(all="ignore"):
