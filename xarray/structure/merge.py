@@ -633,33 +633,29 @@ def merge_attrs(variable_attrs, combine_attrs, context=None):
     elif combine_attrs == "drop_conflicts":
         result = {}
         dropped_keys = set()
+
         for attrs in variable_attrs:
-            result.update(
-                {
-                    key: value
-                    for key, value in attrs.items()
-                    if key not in result and key not in dropped_keys
-                }
-            )
-            # Filter out attributes that have conflicts
-            filtered_result = {}
-            for key, value in result.items():
-                if key not in attrs:
-                    # No conflict, keep the attribute
-                    filtered_result[key] = value
+            # Process each attribute in the current attrs dict
+            for key, value in attrs.items():
+                if key in dropped_keys:
+                    continue  # Already marked as conflicted
+
+                if key not in result:
+                    # New key, add it
+                    result[key] = value
                 else:
-                    # Check if values are equivalent
+                    # Existing key, check for conflict
                     try:
-                        if equivalent(attrs[key], value):
-                            # Values are equivalent, keep the attribute
-                            filtered_result[key] = value
-                        # else: Values differ, drop the attribute (don't add to filtered_result)
+                        if not equivalent(result[key], value):
+                            # Values are different, drop the key
+                            result.pop(key, None)
+                            dropped_keys.add(key)
                     except ValueError:
-                        # Likely an ambiguous truth value from numpy array comparison
-                        # Treat as non-equivalent and drop the attribute
-                        pass
-            result = filtered_result
-            dropped_keys |= {key for key in attrs if key not in result}
+                        # equivalent() failed (likely ambiguous truth value)
+                        # Treat as conflict and drop
+                        result.pop(key, None)
+                        dropped_keys.add(key)
+
         return result
     elif combine_attrs == "identical":
         result = dict(variable_attrs[0])
