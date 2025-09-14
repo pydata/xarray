@@ -38,7 +38,7 @@ def create_dataset_with_coordinates(n_coords=5):
     if len(coord_names) >= 1:
         data_vars["pressure"] = (coord_names[:1], np.random.random(3))
 
-    data_vars["simple"] = ([], 42.0)
+    data_vars["simple"] = ([], np.array(42.0))
 
     ds = xr.Dataset(data_vars=data_vars, coords=coords)
     return ds
@@ -66,7 +66,7 @@ class TestAsyncZarrGroupLoading:
     def create_zarr_store(self):
         """Create a zarr target for testing."""
         if has_zarr_v3:
-            with MemoryStore() as store:  # type: ignore[attr-defined]
+            with MemoryStore() as store:
                 yield store
         else:
             from zarr.storage import MemoryStore as V2MemoryStore
@@ -206,13 +206,14 @@ class TestAsyncZarrGroupLoading:
 
             for node in dtree_async.subtree:
                 if node.ds is not None:
+                    dataset = node.ds
                     coord_names = [
                         name
-                        for name, coord in node.ds.coords.items()
+                        for name, coord in dataset.coords.items()
                         if coord.dims == (name,)
                     ]
                     for coord_name in coord_names:
-                        assert coord_name not in node.ds.xindexes, (
+                        assert coord_name not in dataset.xindexes, (
                             f"Index should not exist for coordinate '{coord_name}' when create_default_indexes=False"
                         )
 
