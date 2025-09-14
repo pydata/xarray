@@ -243,8 +243,9 @@ class TestMergeFunction:
         or falsy equality results as non-equivalent, dropping the attribute rather
         than raising an error.
         """
-        import numpy as np
         import warnings
+
+        import numpy as np
 
         # Test with numpy arrays (which return arrays from ==)
         arr1 = np.array([1, 2, 3])
