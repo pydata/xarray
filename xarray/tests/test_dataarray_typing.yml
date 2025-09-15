@@ -117,6 +117,7 @@
     da = DataArray().pipe(f, 42, kw=99)
   out: |
     main:7: error: Unexpected keyword argument "kw" for "pipe" of "DataWithCoords"  [call-arg]
+    # Note: mypy 1.18.1 also outputs a "defined here" note that pytest-mypy-plugins can't parse
 
 - case: test_mypy_pipe_tuple_return_type_dataarray
   main: |
