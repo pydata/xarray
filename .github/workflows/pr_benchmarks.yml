@@ -1,9 +1,7 @@
 name: pr_benchmarks
 
 on:
-  pull_request:
-    types: [opened, reopened, synchronize, labeled]
-  workflow_dispatch:
+  workflow_call:
 
 jobs:
   pr_benchmarks:
