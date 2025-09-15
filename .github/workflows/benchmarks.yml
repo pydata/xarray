@@ -79,7 +79,7 @@ jobs:
         working-directory: ${{ env.ASV_DIR }}
 
       - name: Upload the compare log
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: comment_log
           path: benchmark/comment_log/
