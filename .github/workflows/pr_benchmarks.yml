@@ -36,6 +36,7 @@ jobs:
             mamba<=1.5.10
 
       - name: Run benchmarks
+        shell: bash -l {0}
         run: |
           asv machine --config asv.conf.json --yes
           asv continuous origin/${{github.base_ref}} HEAD --config asv.conf.json --quick --strict
