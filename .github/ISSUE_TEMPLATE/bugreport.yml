@@ -26,23 +26,14 @@ body:
     attributes:
       label: Minimal Complete Verifiable Example
       description: |
-        Minimal, self-contained copy-pastable example that demonstrates the issue.         This will be automatically formatted into code, so no need for markdown backticks.
-      render: Python
-
-  - type: checkboxes
-    id: mvce-checkboxes
-    attributes:
-      label: MVCE confirmation
-      description: |
-        Please confirm that the bug report is in an excellent state, so we can understand & fix it quickly & efficiently. For more details, check out:
-
-        - [Minimal Complete Verifiable Examples](https://stackoverflow.com/help/mcve)
-        - [Craft Minimal Bug Reports](https://matthewrocklin.com/minimal-bug-reports)
+        Minimal, self-contained copy-pastable example that demonstrates the issue. 
 
         Consider listing additional or specific dependencies in [inline script metadata](https://packaging.python.org/en/latest/specifications/inline-script-metadata/#example)
         so that calling `uv run issue.py` shows the issue when copied into `issue.py`. (not strictly required)
+
+        This will be automatically formatted into code, so no need for markdown backticks.
+      render: Python
       value: |
-        ```python
         # /// script
         # requires-python = ">=3.11"
         # dependencies = [
@@ -55,7 +46,25 @@ body:
         import xarray as xr
         xr.show_versions()
         # your reproducer code ...
-        ```
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description:
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: mvce-checkboxes
+    attributes:
+      label: MVCE confirmation
+      description: |
+        Please confirm that the bug report is in an excellent state, so we can understand & fix it quickly & efficiently. For more details, check out:
+
+        - [Minimal Complete Verifiable Examples](https://stackoverflow.com/help/mcve)
+        - [Craft Minimal Bug Reports](https://matthewrocklin.com/minimal-bug-reports)
+
       options:
         - label: Minimal example — the example is as focused as reasonably possible to demonstrate the underlying issue in xarray.
         - label: Complete example — the example is self-contained, including all data and the text of any traceback.
