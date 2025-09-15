@@ -295,14 +295,15 @@ class TestMergeFunction:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-            # Objects with same value (returning truthy array [True])
+            # Objects with custom __eq__ that returns non-bool are dropped
+            # even if they're "equal" because the comparison result is ambiguous
             actual = xr.merge([ds4, ds5], combine_attrs="drop_conflicts")
-            assert "custom" in actual.attrs
+            assert "custom" not in actual.attrs  # Dropped due to non-bool comparison
             assert actual.attrs["x"] == 1
 
-            # Objects with different values (returning falsy array [False])
+            # Objects with different values also get dropped
             actual = xr.merge([ds4, ds6], combine_attrs="drop_conflicts")
-            assert "custom" not in actual.attrs  # Dropped due to conflict
+            assert "custom" not in actual.attrs  # Dropped due to non-bool comparison
             assert actual.attrs["x"] == 1
             assert actual.attrs["y"] == 2
 
@@ -370,6 +371,92 @@ class TestMergeFunction:
         # Multi-element arrays are ambiguous even if all True
         actual = xr.merge([ds11, ds12], combine_attrs="drop_conflicts")
         assert "alltrue" not in actual.attrs  # Dropped due to ambiguous comparison
+
+    def test_merge_attrs_drop_conflicts_pathological_cases(self):
+        """Test drop_conflicts with pathological cases suggested by @shoyer.
+
+        These test cases ensure we handle various problematic attribute types
+        that can raise exceptions during equality comparison.
+        """
+        import warnings
+
+        import numpy as np
+        import pandas as pd
+
+        # Test 1: NumPy object arrays with nested arrays
+        # These can have complex comparison behavior
+        x = np.array([None], dtype=object)
+        x[0] = np.arange(3)
+        y = np.array([None], dtype=object)
+        y[0] = np.arange(10, 13)
+
+        ds1 = xr.Dataset(attrs={"nested_array": x, "common": 1})
+        ds2 = xr.Dataset(attrs={"nested_array": y, "common": 1})
+
+        # Different nested arrays should cause attribute to be dropped
+        actual = xr.merge([ds1, ds2], combine_attrs="drop_conflicts")
+        assert (
+            "nested_array" not in actual.attrs
+        )  # Dropped due to different nested arrays
+        assert actual.attrs["common"] == 1
+
+        # Test with identical nested arrays
+        # Note: Even identical nested arrays will be dropped because comparison
+        # raises ValueError due to ambiguous truth value
+        z = np.array([None], dtype=object)
+        z[0] = np.arange(3)  # Same as x
+        ds3 = xr.Dataset(attrs={"nested_array": z, "other": 2})
+
+        actual = xr.merge([ds1, ds3], combine_attrs="drop_conflicts")
+        assert (
+            "nested_array" not in actual.attrs
+        )  # Dropped due to ValueError in comparison
+        assert actual.attrs["other"] == 2
+
+        # Test 2: xarray.Dataset objects as attributes (raises TypeError in equivalent)
+        attr_ds1 = xr.Dataset({"foo": 1})
+        attr_ds2 = xr.Dataset({"bar": 1})  # Different dataset
+        attr_ds3 = xr.Dataset({"foo": 1})  # Same as attr_ds1
+
+        ds4 = xr.Dataset(attrs={"dataset_attr": attr_ds1, "scalar": 42})
+        ds5 = xr.Dataset(attrs={"dataset_attr": attr_ds2, "scalar": 42})
+        ds6 = xr.Dataset(attrs={"dataset_attr": attr_ds3, "other": 99})
+
+        # Different datasets raise TypeError and should be dropped
+        actual = xr.merge([ds4, ds5], combine_attrs="drop_conflicts")
+        assert "dataset_attr" not in actual.attrs  # Dropped due to TypeError
+        assert actual.attrs["scalar"] == 42
+
+        # Even identical datasets cause TypeError in equivalent() and get dropped
+        # because equivalent() tries to convert them to numpy arrays
+        actual = xr.merge([ds4, ds6], combine_attrs="drop_conflicts")
+        assert "dataset_attr" not in actual.attrs  # Dropped due to TypeError
+        assert actual.attrs["other"] == 99
+
+        # Test 3: Pandas Series (raises ValueError due to ambiguous truth value)
+        series1 = pd.Series([1, 2])
+        series2 = pd.Series([3, 4])  # Different values
+        series3 = pd.Series([1, 2])  # Same as series1
+
+        ds7 = xr.Dataset(attrs={"series": series1, "value": "a"})
+        ds8 = xr.Dataset(attrs={"series": series2, "value": "a"})
+        ds9 = xr.Dataset(attrs={"series": series3, "value": "a"})
+
+        # Suppress potential warnings from pandas comparisons
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
+            warnings.filterwarnings("ignore", category=FutureWarning)
+
+            # Different series raise ValueError and get dropped
+            actual = xr.merge([ds7, ds8], combine_attrs="drop_conflicts")
+            assert "series" not in actual.attrs  # Dropped due to ValueError
+            assert actual.attrs["value"] == "a"
+
+            # Even identical series raise ValueError in equivalent() and get dropped
+            # because Series comparison returns another Series with ambiguous truth value
+            actual = xr.merge([ds7, ds9], combine_attrs="drop_conflicts")
+            assert "series" not in actual.attrs  # Dropped due to ValueError
+            assert actual.attrs["value"] == "a"
 
     def test_merge_attrs_no_conflicts_compat_minimal(self):
         """make sure compat="minimal" does not silence errors"""

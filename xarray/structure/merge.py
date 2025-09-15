@@ -610,11 +610,19 @@ def merge_coords(
 def equivalent_attrs(a: Any, b: Any) -> bool:
     """Check if two attribute values are equivalent.
 
-    Returns False if the comparison raises ValueError (e.g., for numpy arrays).
+    Returns False if the comparison raises ValueError or TypeError,
+    or if the result is not a boolean. This handles cases like:
+    - numpy arrays with ambiguous truth values
+    - xarray Datasets which can't be directly converted to numpy arrays
+    - pandas Series which return Series from comparisons
     """
     try:
-        return equivalent(a, b)
-    except ValueError:
+        result = equivalent(a, b)
+        # Ensure we have a boolean result, not an array-like or Dataset
+        if not isinstance(result, bool):
+            return False
+        return result
+    except (ValueError, TypeError):
         return False
 
 
