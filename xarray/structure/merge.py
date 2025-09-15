@@ -614,31 +614,12 @@ def equivalent_attrs(a: Any, b: Any) -> bool:
     This handles cases like numpy arrays with ambiguous truth values
     and xarray Datasets which can't be directly converted to numpy arrays.
 
-    For non-boolean results, we use truthiness (consistent with `if a == b`).
-    This is an imperfect but pragmatic choice:
-
-    Pros of truthiness:
-    - Consistent with Python's normal `if a == b:` behavior
-    - Preserves numpy scalars (np.bool_(True)) and similar types
-    - More permissive for common use cases
-
-    Cons of truthiness:
-    - Keeps attrs when __eq__ returns truthy non-bool (e.g., "error")
-    - Drops attrs when __eq__ returns falsy non-bool (e.g., 0, [])
-
-    The alternative (strict bool checking) would be safer but would drop
-    many legitimate comparisons. We choose consistency with Python's
-    standard behavior, accepting edge cases with pathological __eq__ methods.
-
-    TODO: Revisit this behavior in the future - consider strict type checking
-    or a more sophisticated approach to handling non-boolean comparisons.
+    Since equivalent() now handles non-boolean returns by returning False,
+    this wrapper mainly catches exceptions from comparisons that can't be
+    evaluated at all.
     """
     try:
-        result = equivalent(a, b)
-        # Use truthiness, consistent with `if a == b:` behavior
-        # Note: This means non-boolean returns are interpreted by truthiness,
-        # which can lead to false positives/negatives but is more permissive
-        return bool(result)
+        return equivalent(a, b)
     except (ValueError, TypeError):
         # These exceptions indicate the comparison is truly ambiguous
         # (e.g., numpy arrays that would raise "ambiguous truth value")
