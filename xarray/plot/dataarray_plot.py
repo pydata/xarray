@@ -210,7 +210,9 @@ def _prepare_plot1d_data(
                         d = tuple(dims_filt.keys())[i]
 
                     darray_nan = np.nan * darray.isel({d: -1})
-                    darray = concat([darray, darray_nan], dim=d,                   
+                    darray = concat(
+                        [darray, darray_nan],
+                        dim=d,
                         coords="minimal",
                         compat="override",
                         join="exact",
