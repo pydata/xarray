@@ -1,10 +1,14 @@
 name: pr_benchmarks
 
 on:
-  workflow_call:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
+  workflow_dispatch:
 
 jobs:
   pr_benchmarks:
+    if: ${{ contains( github.event.pull_request.labels.*.name, 'run-benchmark') && github.event_name == 'pull_request' || contains( github.event.pull_request.labels.*.name, 'topic-performance') && github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+
     runs-on: ubuntu-latest
     env:
       ASV_DIR: "./asv_bench"
