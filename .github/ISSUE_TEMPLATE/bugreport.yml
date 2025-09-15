@@ -26,7 +26,7 @@ body:
     attributes:
       label: Minimal Complete Verifiable Example
       description: |
-        Minimal, self-contained copy-pastable example that demonstrates the issue. 
+        Minimal, self-contained copy-pastable example that demonstrates the issue.
 
         Consider listing additional or specific dependencies in [inline script metadata](https://packaging.python.org/en/latest/specifications/inline-script-metadata/#example)
         so that calling `uv run issue.py` shows the issue when copied into `issue.py`. (not strictly required)
