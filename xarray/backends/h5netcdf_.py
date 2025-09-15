@@ -7,6 +7,7 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Self
 
 import numpy as np
+from packaging.version import Version
 
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
@@ -26,6 +27,7 @@ from xarray.backends.file_manager import (
     FileManager,
 )
 from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
+from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 from xarray.backends.netCDF4_ import (
     BaseNetCDF4Array,
     _build_and_get_enum,
@@ -123,6 +125,7 @@ class H5NetCDFStore(WritableCFDataStore):
         manager: FileManager | h5netcdf.File | h5netcdf.Group,
         group=None,
         mode=None,
+        format="NETCDF4",
         lock=HDF5_LOCK,
         autoclose=False,
     ):
@@ -139,10 +142,13 @@ class H5NetCDFStore(WritableCFDataStore):
                 root = manager
             manager = DummyFileManager(root)
 
+        if format == "NETCDF4_CLASSIC" and group is not None:
+            raise ValueError("Cannot create sub-groups in `NETCDF4_CLASSIC` format.")
+
         self._manager = manager
         self._group = group
         self._mode = mode
-        self.format = None
+        self.format = format or "NETCDF4"
         # todo: utilizing find_root_and_group seems a bit clunky
         #  making filename available on h5netcdf.Group seems better
         self._filename = find_root_and_group(self.ds)[0].filename
@@ -166,7 +172,7 @@ class H5NetCDFStore(WritableCFDataStore):
         cls,
         filename,
         mode="r",
-        format=None,
+        format="NETCDF4",
         group=None,
         lock=None,
         autoclose=False,
@@ -197,8 +203,8 @@ class H5NetCDFStore(WritableCFDataStore):
                     f"{magic_number!r} is not the signature of a valid netCDF4 file"
                 )
 
-        if format not in [None, "NETCDF4"]:
-            raise ValueError("invalid format for h5netcdf backend")
+        if format not in [None, "NETCDF4", "NETCDF4_CLASSIC"]:
+            raise ValueError(f"invalid format for h5netcdf backend: {format}")
 
         kwargs = {
             "invalid_netcdf": invalid_netcdf,
@@ -209,6 +215,8 @@ class H5NetCDFStore(WritableCFDataStore):
             kwargs.update(driver_kwds)
         if phony_dims is not None:
             kwargs["phony_dims"] = phony_dims
+        if format is not None and Version(h5netcdf.__version__) > Version("1.6.4"):
+            kwargs["format"] = format
 
         if lock is None:
             if mode == "r":
@@ -221,7 +229,14 @@ class H5NetCDFStore(WritableCFDataStore):
             if isinstance(filename, str)
             else h5netcdf.File(filename, mode=mode, **kwargs)
         )
-        return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
+        return cls(
+            manager,
+            group=group,
+            format=format,
+            mode=mode,
+            lock=lock,
+            autoclose=autoclose,
+        )
 
     def _acquire(self, needs_lock=True):
         with self._manager.acquire_context(needs_lock) as root:
@@ -317,11 +332,27 @@ class H5NetCDFStore(WritableCFDataStore):
         else:
             self.ds.dimensions[name] = length
 
+    def convert_string(self, value):
+        """If format is NETCDF4_CLASSIC, convert strings to fixed width char
+        arrays to ensure they can be read by legacy software.
+
+        CLASSIC attributes are read by third party software as fixed width char arrays
+        """
+        if self.format == "NETCDF4_CLASSIC":
+            value = encode_nc3_attr_value(value)
+            if isinstance(value, bytes):
+                value = np.bytes_(value)
+        return value
+
     def set_attribute(self, key, value):
+        value = self.convert_string(value)
         self.ds.attrs[key] = value
 
     def encode_variable(self, variable, name=None):
-        return _encode_nc4_variable(variable, name=name)
+        if self.format == "NETCDF4_CLASSIC":
+            return encode_nc3_variable(variable, name=name)
+        else:
+            return _encode_nc4_variable(variable, name=name)
 
     def prepare_variable(
         self, name, variable, check_encoding=False, unlimited_dims=None
@@ -330,7 +361,9 @@ class H5NetCDFStore(WritableCFDataStore):
 
         _ensure_no_forward_slash_in_name(name)
         attrs = variable.attrs.copy()
-        dtype = _get_datatype(variable, raise_on_invalid_encoding=check_encoding)
+        dtype = _get_datatype(
+            variable, nc_format=self.format, raise_on_invalid_encoding=check_encoding
+        )
 
         fillvalue = attrs.pop("_FillValue", None)
 
@@ -392,7 +425,7 @@ class H5NetCDFStore(WritableCFDataStore):
             nc4_var = self.ds[name]
 
         for k, v in attrs.items():
-            nc4_var.attrs[k] = v
+            nc4_var.attrs[k] = self.convert_string(v)
 
         target = H5NetCDFArrayWrapper(name, self)
 
@@ -481,7 +514,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        format=None,
+        format="NETCDF4",
         group=None,
         lock=None,
         invalid_netcdf=None,
@@ -541,7 +574,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        format=None,
+        format="NETCDF4",
         group: str | None = None,
         lock=None,
         invalid_netcdf=None,
@@ -584,7 +617,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        format=None,
+        format="NETCDF4",
         group: str | None = None,
         lock=None,
         invalid_netcdf=None,
