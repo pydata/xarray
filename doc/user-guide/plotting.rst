@@ -45,7 +45,7 @@ For more extensive plotting applications consider the following projects:
   dynamic plots (backed by ``Holoviews`` or ``Geoviews``) by adding a ``hvplot``
   accessor to DataArrays.
 
-- `Cartopy <https://scitools.org.uk/cartopy/docs/latest/>`_: Provides cartographic
+- `Cartopy <https://cartopy.readthedocs.io/stable/>`_: Provides cartographic
   tools.
 
 Imports

@@ -210,7 +210,11 @@ def _prepare_plot1d_data(
                         d = tuple(dims_filt.keys())[i]
 
                     darray_nan = np.nan * darray.isel({d: -1})
-                    darray = concat([darray, darray_nan], dim=d)
+                    darray = concat([darray, darray_nan], dim=d,                   
+                        coords="minimal",
+                        compat="override",
+                        join="exact",
+                    )
                     dims_T.append(d)
                     # i += 1
 
@@ -1778,7 +1782,7 @@ artist :
             kwargs["levels"] = cmap_params["levels"]
             # if colors == a single color, matplotlib draws dashed negative
             # contours. we lose this feature if we pass cmap and not colors
-            if isinstance(colors, str):
+            if colors is not None:
                 cmap_params["cmap"] = None
                 kwargs["colors"] = colors
 

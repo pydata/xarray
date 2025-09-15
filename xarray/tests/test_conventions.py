@@ -140,8 +140,17 @@ class TestEncodeCFVariable:
     def test_missing_fillvalue(self) -> None:
         v = Variable(["x"], np.array([np.nan, 1, 2, 3]))
         v.encoding = {"dtype": "int16"}
-        with pytest.warns(Warning, match="floating point data as an integer"):
+        # Expect both the SerializationWarning and the RuntimeWarning from numpy
+        with pytest.warns(Warning) as record:
             conventions.encode_cf_variable(v)
+        # Check we got the expected warnings
+        warning_messages = [str(w.message) for w in record]
+        assert any(
+            "floating point data as an integer" in msg for msg in warning_messages
+        )
+        assert any(
+            "invalid value encountered in cast" in msg for msg in warning_messages
+        )
 
     def test_multidimensional_coordinates(self) -> None:
         # regression test for GH1763
@@ -604,6 +613,10 @@ class TestCFEncodedDataStore(CFEncodedBase):
 
     def test_encoding_kwarg_fixed_width_string(self) -> None:
         # CFEncodedInMemoryStore doesn't support explicit string encodings.
+        pass
+
+    def test_encoding_unlimited_dims(self) -> None:
+        # CFEncodedInMemoryStore doesn't support unlimited_dims.
         pass
 
 

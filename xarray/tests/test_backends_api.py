@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+import re
+import sys
 from numbers import Number
 
 import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.backends.api import _get_default_engine
+from xarray.backends.api import get_default_netcdf_write_engine
 from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     requires_dask,
+    requires_h5netcdf,
     requires_netCDF4,
     requires_scipy,
 )
@@ -18,15 +21,51 @@ from xarray.tests import (
 
 @requires_netCDF4
 @requires_scipy
-def test__get_default_engine() -> None:
-    engine_remote = _get_default_engine("http://example.org/test.nc", allow_remote=True)
-    assert engine_remote == "netcdf4"
+@requires_h5netcdf
+def test_get_default_netcdf_write_engine() -> None:
+    engine = get_default_netcdf_write_engine(
+        format=None, to_fileobject_or_memoryview=False
+    )
+    assert engine == "netcdf4"
 
-    engine_gz = _get_default_engine("/example.gz")
-    assert engine_gz == "scipy"
+    engine = get_default_netcdf_write_engine(
+        format="NETCDF4", to_fileobject_or_memoryview=False
+    )
+    assert engine == "netcdf4"
 
-    engine_default = _get_default_engine("/example")
-    assert engine_default == "netcdf4"
+    engine = get_default_netcdf_write_engine(
+        format="NETCDF4", to_fileobject_or_memoryview=True
+    )
+    assert engine == "h5netcdf"
+
+    engine = get_default_netcdf_write_engine(
+        format="NETCDF3_CLASSIC", to_fileobject_or_memoryview=True
+    )
+    assert engine == "scipy"
+
+
+@requires_h5netcdf
+def test_default_engine_h5netcdf(monkeypatch):
+    """Test the default netcdf engine when h5netcdf is the only importable module."""
+
+    monkeypatch.delitem(sys.modules, "netCDF4", raising=False)
+    monkeypatch.delitem(sys.modules, "scipy", raising=False)
+    monkeypatch.setattr(sys, "meta_path", [])
+
+    engine = get_default_netcdf_write_engine(
+        format=None, to_fileobject_or_memoryview=False
+    )
+    assert engine == "h5netcdf"
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "cannot write NetCDF files with format='NETCDF3_CLASSIC' because none of the suitable backend libraries (netCDF4, scipy) are installed"
+        ),
+    ):
+        get_default_netcdf_write_engine(
+            format="NETCDF3_CLASSIC", to_fileobject_or_memoryview=False
+        )
 
 
 def test_custom_engine() -> None:

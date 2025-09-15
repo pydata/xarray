@@ -70,6 +70,7 @@ DataTree methods
 .. autosummary::
    :toctree: ../generated/
 
+   load_datatree
    open_datatree
    open_groups
    DataTree.to_dict
