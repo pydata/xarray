@@ -33,7 +33,8 @@ body:
     id: reproduce
     attributes:
       label: Steps to reproduce
-      description: Consider listing additional or specific dependencies in [inline script metadata](https://packaging.python.org/en/latest/specifications/inline-script-metadata/#example)
+      description:
+        Consider listing additional or specific dependencies in [inline script metadata](https://packaging.python.org/en/latest/specifications/inline-script-metadata/#example)
         so that calling `uv run issue.py` shows the issue when copied into `issue.py`. (not strictly required)
       value: |
         ```python
