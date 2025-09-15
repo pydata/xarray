@@ -14,10 +14,6 @@ jobs:
       ASV_DIR: "./asv_bench"
       CONDA_ENV_FILE: ci/requirements/environment-benchmark.yml
     steps:
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.13
-
       - name: Set up conda environment
         # uses: mamba-org/setup-micromamba@v2
         uses: conda-incubator/setup-miniconda@v2
