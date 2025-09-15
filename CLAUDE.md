@@ -28,3 +28,5 @@ uv run dmypy run  # Type checking with mypy
   explicitly instructed
 - Never post "update" messages, progress reports, or explanatory comments on
   GitHub issues/PRs unless specifically instructed
+- When creating commits, always include a co-authorship trailer:
+  `Co-authored-by: Claude <claude@anthropic.com>`
