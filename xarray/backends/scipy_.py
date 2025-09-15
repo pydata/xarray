@@ -30,7 +30,6 @@ from xarray.core.utils import (
     Frozen,
     FrozenDict,
     close_on_error,
-    emit_user_level_warning,
     module_available,
     try_read_magic_number_from_file_or_path,
 )
@@ -169,20 +168,9 @@ class ScipyDataStore(WritableCFDataStore):
         self.lock = ensure_lock(lock)
 
         if isinstance(filename_or_obj, BytesIOProxy):
-            emit_user_level_warning(
-                "return value of to_netcdf() without a target for "
-                "engine='scipy' is currently bytes, but will switch to "
-                "memoryview in a future version of Xarray. To silence this "
-                "warning, use the following pattern or switch to "
-                "to_netcdf(engine='h5netcdf'):\n"
-                "    target = io.BytesIO()\n"
-                "    dataset.to_netcdf(target)\n"
-                "    result = target.getbuffer()",
-                FutureWarning,
-            )
             source = filename_or_obj
             filename_or_obj = io.BytesIO()
-            source.getvalue = filename_or_obj.getvalue
+            source.getvalue = filename_or_obj.getbuffer
 
         if isinstance(filename_or_obj, str):  # path
             manager = CachingFileManager(
@@ -278,8 +266,8 @@ class ScipyDataStore(WritableCFDataStore):
 
         data = variable.data
         # nb. this still creates a numpy array in all memory, even though we
-        # don't write the data yet; scipy.io.netcdf does not not support
-        # incremental writes.
+        # don't write the data yet; scipy.io.netcdf does not support incremental
+        # writes.
         if name not in self.ds.variables:
             self.ds.createVariable(name, data.dtype, variable.dims)
         scipy_var = self.ds.variables[name]

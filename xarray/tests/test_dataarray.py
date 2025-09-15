@@ -34,11 +34,7 @@ from xarray.coders import CFDatetimeCoder
 from xarray.core import dtypes
 from xarray.core.common import full_like
 from xarray.core.coordinates import Coordinates, CoordinateValidationError
-from xarray.core.indexes import (
-    Index,
-    PandasIndex,
-    filter_indexes_from_coords,
-)
+from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
 from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.testing import _assert_internal_invariants
@@ -748,6 +744,16 @@ class TestDataArray:
             da.loc[{"y": []}], DataArray(np.zeros((3, 0)), dims=["x", "y"])
         )
         assert_identical(da[[]], DataArray(np.zeros((0, 4)), dims=["x", "y"]))
+
+    def test_getitem_typeerror(self) -> None:
+        with pytest.raises(TypeError, match=r"unexpected indexer type"):
+            self.dv[True]
+        with pytest.raises(TypeError, match=r"unexpected indexer type"):
+            self.dv[np.array(True)]
+        with pytest.raises(TypeError, match=r"invalid indexer array"):
+            self.dv[3.0]
+        with pytest.raises(TypeError, match=r"invalid indexer array"):
+            self.dv[None]
 
     def test_setitem(self) -> None:
         # basic indexing should work as numpy's indexing
@@ -2573,7 +2579,10 @@ class TestDataArray:
         # test GH3000
         a = orig[:0, :1].stack(new_dim=("x", "y")).indexes["new_dim"]
         b = pd.MultiIndex(
-            levels=[pd.Index([], dtype=np.int64), pd.Index([0], dtype=np.int64)],
+            levels=[
+                pd.Index([], dtype=np.int64),  # type: ignore[list-item,unused-ignore]
+                pd.Index([0], dtype=np.int64),  # type: ignore[list-item,unused-ignore]
+            ],
             codes=[[], []],
             names=["x", "y"],
         )
@@ -3022,6 +3031,9 @@ class TestDataArray:
 
         np.testing.assert_allclose(actual.values, expected)
 
+    @pytest.mark.filterwarnings(
+        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
+    )
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_interpolation_deprecated(self, method) -> None:
         da = DataArray(self.va)
@@ -3516,6 +3528,34 @@ class TestDataArray:
         assert len(actual) == 0
         assert_array_equal(actual.index.names, list("ABC"))
 
+    @pytest.mark.parametrize(
+        "x_dtype,y_dtype,v_dtype",
+        [
+            (np.uint32, np.float32, np.uint32),
+            (np.int16, np.float64, np.int64),
+            (np.uint8, np.float32, np.uint16),
+            (np.int32, np.float32, np.int8),
+        ],
+    )
+    def test_to_dataframe_coord_dtypes_2d(self, x_dtype, y_dtype, v_dtype) -> None:
+        x = np.array([1], dtype=x_dtype)
+        y = np.array([1.0], dtype=y_dtype)
+        v = np.array([[42]], dtype=v_dtype)
+
+        da = DataArray(v, dims=["x", "y"], coords={"x": x, "y": y})
+        df = da.to_dataframe(name="v").reset_index()
+
+        # Check that coordinate dtypes are preserved
+        assert df["x"].dtype == np.dtype(x_dtype), (
+            f"x coord: expected {x_dtype}, got {df['x'].dtype}"
+        )
+        assert df["y"].dtype == np.dtype(y_dtype), (
+            f"y coord: expected {y_dtype}, got {df['y'].dtype}"
+        )
+        assert df["v"].dtype == np.dtype(v_dtype), (
+            f"v data: expected {v_dtype}, got {df['v'].dtype}"
+        )
+
     @requires_dask_expr
     @requires_dask
     @pytest.mark.xfail(not has_dask_ge_2025_1_0, reason="dask-expr is broken")
@@ -3607,7 +3647,9 @@ class TestDataArray:
         # regression test for GH4019
         import sparse
 
-        idx = pd.MultiIndex.from_product([np.arange(3), np.arange(5)], names=["a", "b"])
+        idx = pd.MultiIndex.from_product(
+            [list(np.arange(3)), list(np.arange(5))], names=["a", "b"]
+        )
         series: pd.Series = pd.Series(
             np.random.default_rng(0).random(len(idx)), index=idx
         ).sample(n=5, random_state=3)

@@ -165,7 +165,7 @@ def is_datetime_like(
 
 
 def result_type(
-    *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike,
+    *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike | None,
 ) -> np.dtype[np.generic]:
     """Like np.result_type, but with type promotion rules matching pandas.
 

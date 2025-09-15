@@ -65,6 +65,7 @@ types = [
   "types-openpyxl",
   "types-python-dateutil",
   "types-pytz",
+  "types-requests",
   "types-setuptools",
 ]
 
@@ -80,6 +81,7 @@ dev = [
   "pytest-mypy-plugins",
   "pytest-timeout",
   "pytest-xdist",
+  "pytest-asyncio",
   "ruff>=0.8.0",
   "sphinx",
   "sphinx_autosummary_accessors",
@@ -188,7 +190,6 @@ check_untyped_defs = false
 module = [
   "xarray.tests.test_coarsen",
   "xarray.tests.test_coding_times",
-  "xarray.tests.test_combine",
   "xarray.tests.test_computation",
   "xarray.tests.test_concat",
   "xarray.tests.test_coordinates",
@@ -197,12 +198,9 @@ module = [
   "xarray.tests.test_duck_array_ops",
   "xarray.tests.test_indexing",
   "xarray.tests.test_merge",
-  "xarray.tests.test_missing",
-  "xarray.tests.test_parallelcompat",
   "xarray.tests.test_sparse",
   "xarray.tests.test_ufuncs",
   "xarray.tests.test_units",
-  "xarray.tests.test_utils",
   "xarray.tests.test_variable",
   "xarray.tests.test_weighted",
 ]
@@ -360,32 +358,13 @@ addopts = [
 
 filterwarnings = [
   "error:::xarray.*",
-  "default:No index created:UserWarning:xarray.core.dataset",
-  "default::UserWarning:xarray.tests.test_coding_times",
-  "default::UserWarning:xarray.tests.test_computation",
-  "default::UserWarning:xarray.tests.test_dataset",
-  "default:`ancestors` has been deprecated:DeprecationWarning:xarray.core.treenode",
-  "default:`iter_lineage` has been deprecated:DeprecationWarning:xarray.core.treenode",
-  "default:`lineage` has been deprecated:DeprecationWarning:xarray.core.treenode",
-  "default:coords should be an ndarray:DeprecationWarning:xarray.tests.test_variable",
-  "default:deallocating CachingFileManager:RuntimeWarning:xarray.backends.*",
-  "default:deallocating CachingFileManager:RuntimeWarning:xarray.backends.netCDF4_",
-  "default:deallocating CachingFileManager:RuntimeWarning:xarray.core.indexing",
-  "default:Failed to decode variable.*NumPy will stop allowing conversion of out-of-bound Python integers to integer arrays:DeprecationWarning",
-  "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning:xarray.*",
-  "default:invalid value encountered in cast:RuntimeWarning:xarray.core.duck_array_ops",
-  "default:invalid value encountered in cast:RuntimeWarning:xarray.conventions",
-  "default:invalid value encountered in cast:RuntimeWarning:xarray.tests.test_units",
-  "default:invalid value encountered in cast:RuntimeWarning:xarray.tests.test_array_api",
-  "default:NumPy will stop allowing conversion of:DeprecationWarning",
-  "default:shape should be provided:DeprecationWarning:xarray.tests.test_variable",
-  "default:the `pandas.MultiIndex` object:FutureWarning:xarray.tests.test_variable",
-  "default:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
-  "default:Duplicate dimension names present:UserWarning:xarray.namedarray.core",
   # Zarr 2 V3 implementation
-  "ignore:Zarr-Python is not in alignment with the final V3 specification",
+  "default:Zarr-Python is not in alignment with the final V3 specification",
   # TODO: this is raised for vlen-utf8, consolidated metadata, U1 dtype
-  "ignore:is currently not part .* the Zarr version 3 specification.",
+  "default:is currently not part .* the Zarr version 3 specification.",
+  # Zarr V3 data type specifications warnings - very repetitive
+  "ignore:The data type .* does not have a Zarr V3 specification",
+  "ignore:Consolidated metadata is currently not part",
   # TODO: remove once we know how to deal with a changed signature in protocols
   "default:::xarray.tests.test_strategies",
 ]

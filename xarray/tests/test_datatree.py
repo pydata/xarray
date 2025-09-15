@@ -165,7 +165,9 @@ class TestPaths:
                 "/Kate": DataTree(),
             }
         )
-        assert john["/Mary"].same_tree(john["/Kate"])
+        mary = john.children["Mary"]
+        kate = john.children["Kate"]
+        assert mary.same_tree(kate)
 
     def test_relative_paths(self) -> None:
         john = DataTree.from_dict(
@@ -174,14 +176,8 @@ class TestPaths:
                 "/Annie": DataTree(),
             }
         )
-        sue_result = john["Mary/Sue"]
-        if isinstance(sue_result, DataTree):
-            sue: DataTree = sue_result
-
-        annie_result = john["Annie"]
-        if isinstance(annie_result, DataTree):
-            annie: DataTree = annie_result
-
+        sue = john.children["Mary"].children["Sue"]
+        annie = john.children["Annie"]
         assert sue.relative_to(john) == "Mary/Sue"
         assert john.relative_to(sue) == "../.."
         assert annie.relative_to(sue) == "../../Annie"
@@ -208,7 +204,7 @@ class TestStoreDatasets:
     def test_set_data(self) -> None:
         john = DataTree(name="john")
         dat = xr.Dataset({"a": 0})
-        john.dataset = dat  # type: ignore[assignment]
+        john.dataset = dat  # type: ignore[assignment,unused-ignore]
 
         assert_identical(john.to_dataset(), dat)
 
@@ -229,7 +225,7 @@ class TestStoreDatasets:
         eve = DataTree(children={"john": john})
         assert eve.is_hollow
 
-        eve.dataset = xr.Dataset({"a": 1})  # type: ignore[assignment]
+        eve.dataset = xr.Dataset({"a": 1})  # type: ignore[assignment,unused-ignore]
         assert not eve.is_hollow
 
 
@@ -266,13 +262,13 @@ class TestVariablesChildrenNameCollisions:
         )
 
         with pytest.raises(ValueError, match="node already contains a variable"):
-            dt.dataset = xr.Dataset({"a": 0})  # type: ignore[assignment]
+            dt.dataset = xr.Dataset({"a": 0})  # type: ignore[assignment,unused-ignore]
 
-        dt.dataset = xr.Dataset()  # type: ignore[assignment]
+        dt.dataset = xr.Dataset()  # type: ignore[assignment,unused-ignore]
 
         new_ds = dt.to_dataset().assign(a=xr.DataArray(0))
         with pytest.raises(ValueError, match="node already contains a variable"):
-            dt.dataset = new_ds  # type: ignore[assignment]
+            dt.dataset = new_ds  # type: ignore[assignment,unused-ignore]
 
 
 class TestGet: ...
@@ -531,7 +527,7 @@ class TestSetItem:
         john["mary"] = DataTree()
         assert_identical(john["mary"].to_dataset(), xr.Dataset())
 
-        john.dataset = xr.Dataset()  # type: ignore[assignment]
+        john.dataset = xr.Dataset()  # type: ignore[assignment,unused-ignore]
         with pytest.raises(ValueError, match="has no name"):
             john["."] = DataTree()
 
@@ -1572,7 +1568,7 @@ class TestInheritance:
             )
 
         dt = DataTree()
-        dt.dataset = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment]
+        dt.dataset = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment,unused-ignore]
         dt["/b"] = DataTree()
         with pytest.raises(ValueError, match=expected_msg):
             dt["/b"].dataset = xr.Dataset(coords={"x": [2.0]})
@@ -1607,7 +1603,7 @@ class TestInheritance:
             )
 
         dt = DataTree()
-        dt.dataset = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment]
+        dt.dataset = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment,unused-ignore]
         dt["/b/c"] = DataTree()
         with pytest.raises(ValueError, match=expected_msg):
             dt["/b/c"].dataset = xr.Dataset(coords={"x": [2.0]})
@@ -1884,7 +1880,7 @@ class TestIsomorphicEqualsAndIdentical:
         assert not child.identical(new_child)
 
         deeper_root = DataTree(children={"root": root})
-        grandchild = deeper_root["/root/child"]
+        grandchild = deeper_root.children["root"].children["child"]
         assert child.equals(grandchild)
         assert child.identical(grandchild)
 
