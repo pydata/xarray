@@ -107,7 +107,8 @@
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_function_unexpected_keyword
-  skip: True # mypy 1.18.1 adds 'defined here' notes that pytest-mypy-plugins can't parse
+  skip: True  # mypy 1.18.1 outputs "defined here" notes without line numbers that pytest-mypy-plugins can't parse
+  # See: https://github.com/python/mypy/issues/19257 (mypy issue about missing line numbers)
   main: |
     from xarray import Dataset
 
