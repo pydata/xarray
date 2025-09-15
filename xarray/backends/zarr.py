@@ -1249,7 +1249,7 @@ class ZarrStore(AbstractWritableDataStore):
                 # threads
                 shape = zarr_shape or v.shape
                 validate_grid_chunks_alignment(
-                    nd_var_chunks=v.chunks,
+                    nd_v_chunks=v.chunks,
                     enc_chunks=encoding["chunks"],
                     region=region,
                     allow_partial_chunks=self._mode != "r+",
