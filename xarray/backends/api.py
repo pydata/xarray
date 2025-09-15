@@ -1858,6 +1858,20 @@ def open_mfdataset(
     return combined
 
 
+def _get_netcdf_autoclose(dataset: Dataset, engine: T_NetcdfEngine) -> bool:
+    """Should we close files after each write operations?"""
+    scheduler = get_dask_scheduler()
+    have_chunks = any(v.chunks is not None for v in dataset.variables.values())
+
+    autoclose = have_chunks and scheduler in ["distributed", "multiprocessing"]
+    if autoclose and engine == "scipy":
+        raise NotImplementedError(
+            f"Writing netCDF files with the {engine} backend "
+            f"is not currently supported with dask's {scheduler} scheduler"
+        )
+    return autoclose
+
+
 WRITEABLE_STORES: dict[T_NetcdfEngine, Callable] = {
     "netcdf4": backends.NetCDF4DataStore.open,
     "scipy": backends.ScipyDataStore,
@@ -2064,16 +2078,7 @@ def to_netcdf(
     # sanitize unlimited_dims
     unlimited_dims = _sanitize_unlimited_dims(dataset, unlimited_dims)
 
-    # handle scheduler specific logic
-    scheduler = get_dask_scheduler()
-    have_chunks = any(v.chunks is not None for v in dataset.variables.values())
-
-    autoclose = have_chunks and scheduler in ["distributed", "multiprocessing"]
-    if autoclose and engine == "scipy":
-        raise NotImplementedError(
-            f"Writing netCDF files with the {engine} backend "
-            f"is not currently supported with dask's {scheduler} scheduler"
-        )
+    autoclose = _get_netcdf_autoclose(dataset, engine)
 
     if path_or_file is None:
         if not compute:
@@ -2116,7 +2121,7 @@ def to_netcdf(
         writes = writer.sync(compute=compute)
 
     finally:
-        if not multifile:
+        if not multifile and not autoclose:  # type: ignore[redundant-expr,unused-ignore]
             if compute:
                 store.close()
             else:
