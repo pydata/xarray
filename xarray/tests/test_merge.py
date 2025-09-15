@@ -295,15 +295,14 @@ class TestMergeFunction:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-            # Objects with custom __eq__ that returns non-bool are dropped
-            # even if they're "equal" because the comparison result is ambiguous
+            # With truthiness: objects returning [True] are kept (truthy)
             actual = xr.merge([ds4, ds5], combine_attrs="drop_conflicts")
-            assert "custom" not in actual.attrs  # Dropped due to non-bool comparison
+            assert "custom" in actual.attrs  # Kept - [True] is truthy
             assert actual.attrs["x"] == 1
 
-            # Objects with different values also get dropped
+            # Objects with different values: equivalent returns False (bool), dropped
             actual = xr.merge([ds4, ds6], combine_attrs="drop_conflicts")
-            assert "custom" not in actual.attrs  # Dropped due to non-bool comparison
+            assert "custom" not in actual.attrs  # Dropped - different values
             assert actual.attrs["x"] == 1
             assert actual.attrs["y"] == 2
 
@@ -427,10 +426,10 @@ class TestMergeFunction:
         assert "dataset_attr" not in actual.attrs  # Dropped due to TypeError
         assert actual.attrs["scalar"] == 42
 
-        # Even identical datasets cause TypeError in equivalent() and get dropped
-        # because equivalent() tries to convert them to numpy arrays
+        # With truthiness: identical datasets are kept
+        # The comparison returns a truthy Dataset, so they're treated as equal
         actual = xr.merge([ds4, ds6], combine_attrs="drop_conflicts")
-        assert "dataset_attr" not in actual.attrs  # Dropped due to TypeError
+        assert "dataset_attr" in actual.attrs  # Kept with truthiness approach
         assert actual.attrs["other"] == 99
 
         # Test 3: Pandas Series (raises ValueError due to ambiguous truth value)
@@ -457,6 +456,62 @@ class TestMergeFunction:
             actual = xr.merge([ds7, ds9], combine_attrs="drop_conflicts")
             assert "series" not in actual.attrs  # Dropped due to ValueError
             assert actual.attrs["value"] == "a"
+
+    def test_merge_attrs_drop_conflicts_truthiness_edge_cases(self):
+        """Test edge cases demonstrating the truthiness tradeoff.
+
+        We deliberately use truthiness for consistency with Python's `if a == b:`
+        behavior. This test documents the implications of this design choice
+        with objects that have non-standard __eq__ methods.
+        """
+
+        # Case 1: Objects whose __eq__ returns truthy non-booleans
+        # These are kept because we respect truthiness
+        class ReturnsString:
+            def __init__(self, value):
+                self.value = value
+
+            def __eq__(self, other):
+                # Always returns a string (truthy if non-empty)
+                return "comparison result"
+
+        obj1 = ReturnsString("A")
+        obj2 = ReturnsString("B")  # Different object
+
+        ds1 = xr.Dataset(attrs={"obj": obj1})
+        ds2 = xr.Dataset(attrs={"obj": obj2})
+
+        actual = xr.merge([ds1, ds2], combine_attrs="drop_conflicts")
+
+        # Truthiness behavior: keeps attribute because "comparison result" is truthy
+        # This is the expected behavior when respecting truthiness
+        assert "obj" in actual.attrs
+
+        # Case 2: Objects whose __eq__ returns falsy non-booleans
+        # These are dropped because we respect truthiness
+        class ReturnsZero:
+            def __init__(self, value):
+                self.value = value
+
+            def __eq__(self, other):
+                # Always returns 0 (falsy) even if values match
+                return 0
+
+        obj3 = ReturnsZero("same")
+        obj4 = ReturnsZero("same")  # Different object, same value
+
+        ds3 = xr.Dataset(attrs={"zero": obj3})
+        ds4 = xr.Dataset(attrs={"zero": obj4})
+
+        actual = xr.merge([ds3, ds4], combine_attrs="drop_conflicts")
+
+        # Truthiness behavior: drops attribute because 0 is falsy
+        # This is the expected behavior when respecting truthiness
+        assert "zero" not in actual.attrs
+
+        # Note: These edge cases demonstrate the tradeoff of using truthiness.
+        # Well-behaved __eq__ methods return booleans and work correctly.
+        # We accept these edge cases for consistency with Python's standard behavior.
 
     def test_merge_attrs_no_conflicts_compat_minimal(self):
         """make sure compat="minimal" does not silence errors"""
