@@ -622,7 +622,7 @@ def equivalent_attrs(a: Any, b: Any) -> bool:
         return equivalent(a, b)
     except (ValueError, TypeError):
         # These exceptions indicate the comparison is truly ambiguous
-        # (e.g., numpy arrays that would raise "ambiguous truth value")
+        # (e.g., nested numpy arrays that would raise "ambiguous truth value")
         return False
 
 
@@ -661,7 +661,7 @@ def merge_attrs(variable_attrs, combine_attrs, context=None):
                 if key not in result:
                     result[key] = value
                 elif not equivalent_attrs(result[key], value):
-                    result.pop(key, None)
+                    del result[key]
                     dropped_keys.add(key)
 
         return result

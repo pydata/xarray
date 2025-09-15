@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
+import pandas as pd
 import pytest
 
 import xarray as xr
@@ -235,12 +238,8 @@ class TestMergeFunction:
         expected = xr.Dataset(attrs={"a": 0, "d": 0, "e": 0})
         assert_identical(actual, expected)
 
-    def test_merge_attrs_drop_conflicts_non_bool_eq(self):
-        """Test drop_conflicts behavior when __eq__ returns non-bool values."""
-        import warnings
-
-        import numpy as np
-
+    def test_merge_attrs_drop_conflicts_numpy_arrays(self):
+        """Test drop_conflicts with numpy arrays."""
         # Test with numpy arrays (which return arrays from ==)
         arr1 = np.array([1, 2, 3])
         arr2 = np.array([1, 2, 3])
@@ -259,6 +258,9 @@ class TestMergeFunction:
         actual = xr.merge([ds1, ds3], combine_attrs="drop_conflicts")
         assert "arr" not in actual.attrs  # Should drop due to conflict
         assert "other" in actual.attrs
+
+    def test_merge_attrs_drop_conflicts_custom_eq_returns_array(self):
+        """Test drop_conflicts with custom objects that return arrays from __eq__."""
 
         # Test with custom objects that return non-bool from __eq__
         class CustomEq:
@@ -299,6 +301,9 @@ class TestMergeFunction:
             assert "custom" not in actual.attrs  # Dropped - returns non-boolean
             assert actual.attrs["x"] == 1
             assert actual.attrs["y"] == 2
+
+    def test_merge_attrs_drop_conflicts_ambiguous_array_returns(self):
+        """Test drop_conflicts with objects returning ambiguous arrays from __eq__."""
 
         # Test edge case: object whose __eq__ returns empty array (ambiguous truth value)
         class EmptyArrayEq:
@@ -365,17 +370,8 @@ class TestMergeFunction:
         actual = xr.merge([ds11, ds12], combine_attrs="drop_conflicts")
         assert "alltrue" not in actual.attrs  # Dropped due to ambiguous comparison
 
-    def test_merge_attrs_drop_conflicts_pathological_cases(self):
-        """Test drop_conflicts with pathological cases suggested by @shoyer.
-
-        These test cases ensure we handle various problematic attribute types
-        that can raise exceptions during equality comparison.
-        """
-        import warnings
-
-        import numpy as np
-        import pandas as pd
-
+    def test_merge_attrs_drop_conflicts_nested_arrays(self):
+        """Test drop_conflicts with NumPy object arrays containing nested arrays."""
         # Test 1: NumPy object arrays with nested arrays
         # These can have complex comparison behavior
         x = np.array([None], dtype=object)
@@ -406,7 +402,9 @@ class TestMergeFunction:
         )  # Dropped due to ValueError in comparison
         assert actual.attrs["other"] == 2
 
-        # Test 2: xarray.Dataset objects as attributes (raises TypeError in equivalent)
+    def test_merge_attrs_drop_conflicts_dataset_attrs(self):
+        """Test drop_conflicts with xarray.Dataset objects as attributes."""
+        # xarray.Dataset objects as attributes (raises TypeError in equivalent)
         attr_ds1 = xr.Dataset({"foo": 1})
         attr_ds2 = xr.Dataset({"bar": 1})  # Different dataset
         attr_ds3 = xr.Dataset({"foo": 1})  # Same as attr_ds1
@@ -425,7 +423,9 @@ class TestMergeFunction:
         assert "dataset_attr" not in actual.attrs  # Dropped - returns Dataset, not bool
         assert actual.attrs["other"] == 99
 
-        # Test 3: Pandas Series (raises ValueError due to ambiguous truth value)
+    def test_merge_attrs_drop_conflicts_pandas_series(self):
+        """Test drop_conflicts with Pandas Series as attributes."""
+        # Pandas Series (raises ValueError due to ambiguous truth value)
         series1 = pd.Series([1, 2])
         series2 = pd.Series([3, 4])  # Different values
         series3 = pd.Series([1, 2])  # Same as series1
