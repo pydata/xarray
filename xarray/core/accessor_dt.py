@@ -244,7 +244,7 @@ class TimeAccessor(Generic[T_DataArray]):
     def __init__(self, obj: T_DataArray) -> None:
         self._obj = obj
 
-    def _date_field(self, name: str, dtype: DTypeLike) -> T_DataArray:
+    def _date_field(self, name: str, dtype: DTypeLike | None) -> T_DataArray:
         if dtype is None:
             dtype = self._obj.dtype
         result = _get_date_field(_index_or_data(self._obj), name, dtype)

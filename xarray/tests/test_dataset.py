@@ -5303,7 +5303,7 @@ class TestDataset:
     def test_from_dataframe_non_unique_columns(self) -> None:
         # regression test for GH449
         df = pd.DataFrame(np.zeros((2, 2)))
-        df.columns = ["foo", "foo"]  # type: ignore[assignment,unused-ignore]
+        df.columns = ["foo", "foo"]  # type: ignore[assignment,list-item,unused-ignore]
         with pytest.raises(ValueError, match=r"non-unique columns"):
             Dataset.from_dataframe(df)
 
@@ -6235,6 +6235,38 @@ class TestDataset:
         actual = data.map(np.asarray)
         expected = data.drop_vars("time")  # time is not used on a data var
         assert_equal(expected, actual)
+
+    def test_map_coords_attrs(self) -> None:
+        ds = xr.Dataset(
+            {
+                "a": (
+                    ["x", "y", "z"],
+                    np.arange(24).reshape(3, 4, 2),
+                    {"attr1": "value1"},
+                ),
+                "b": ("y", np.arange(4), {"attr2": "value2"}),
+            },
+            coords={
+                "x": ("x", np.array([-1, 0, 1]), {"attr3": "value3"}),
+                "z": ("z", list("ab"), {"attr4": "value4"}),
+            },
+        )
+
+        def func(arr):
+            if "y" not in arr.dims:
+                return arr
+
+            # drop attrs from coords
+            return arr.mean(dim="y").drop_attrs()
+
+        expected = ds.mean(dim="y", keep_attrs=True)
+        actual = ds.map(func, keep_attrs=True)
+
+        assert_identical(actual, expected)
+        assert actual["x"].attrs
+
+        ds["x"].attrs["y"] = "x"
+        assert ds["x"].attrs != actual["x"].attrs
 
     def test_apply_pending_deprecated_map(self) -> None:
         data = create_test_data()
