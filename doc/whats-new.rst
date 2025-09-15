@@ -892,6 +892,7 @@ New Features
   iso8601-parser (:pull:`9885`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - Methods including ``dropna``, ``rank``, ``idxmax``, ``idxmin`` require
