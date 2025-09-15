@@ -122,7 +122,7 @@ def _apply_mask(
     data: np.ndarray,
     encoded_fill_values: list,
     decoded_fill_value: Any,
-    dtype: np.typing.DTypeLike,
+    dtype: np.typing.DTypeLike | None,
 ) -> np.ndarray:
     """Mask all matching values in a NumPy arrays."""
     data = np.asarray(data, dtype=dtype)
@@ -302,15 +302,12 @@ class CFMaskCoder(VariableCoder):
         if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
             # but not for packed data
-            encoding["_FillValue"] = (
-                _encode_unsigned_fill_value(name, fv, dtype)
-                if has_unsigned
-                else (
-                    dtype.type(fv)
-                    if "add_offset" not in encoding and "scale_factor" not in encoding
-                    else fv
-                )
-            )
+            if has_unsigned:
+                encoding["_FillValue"] = _encode_unsigned_fill_value(name, fv, dtype)
+            elif "add_offset" not in encoding and "scale_factor" not in encoding:
+                encoding["_FillValue"] = dtype.type(fv)
+            else:
+                encoding["_FillValue"] = fv
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
 
         if mv_exists:
@@ -429,7 +426,9 @@ class CFMaskCoder(VariableCoder):
         return Variable(dims, data, attrs, encoding, fastpath=True)
 
 
-def _scale_offset_decoding(data, scale_factor, add_offset, dtype: np.typing.DTypeLike):
+def _scale_offset_decoding(
+    data, scale_factor, add_offset, dtype: np.typing.DTypeLike | None
+):
     data = data.astype(dtype=dtype, copy=True)
     if scale_factor is not None:
         data *= scale_factor

@@ -102,7 +102,7 @@ NAMESPACE_ARRAYS = {
 }
 
 try:
-    import jax
+    import jax  # type: ignore[import-not-found,unused-ignore]
 
     # enable double-precision
     jax.config.update("jax_enable_x64", True)
