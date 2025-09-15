@@ -13,6 +13,9 @@ v2025.09.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added new plot method :py:meth:`DataArray.plot.lines` which allows creating line plots efficiently in
+  a similar manner to :py:meth:`DataArray.plot.scatter`, also available for datasets. (:pull:`7173`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -888,10 +891,6 @@ New Features
 - Add ``unit`` - keyword argument to :py:func:`date_range` and ``microsecond`` parsing to
   iso8601-parser (:pull:`9885`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-
-- Added new plot method :py:meth:`DataArray.plot.lines` which allows creating line plots efficiently in
-  a similar manner to :py:meth:`DataArray.plot.scatter`, also available for datasets. (:pull:`7173`)
-  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
