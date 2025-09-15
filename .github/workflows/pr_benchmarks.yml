@@ -1,0 +1,54 @@
+name: pr_benchmarks
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
+  workflow_dispatch:
+
+jobs:
+  pr_benchmarks:
+    if: ${{ contains( github.event.pull_request.labels.*.name, 'run-benchmark') && github.event_name == 'pull_request' || contains( github.event.pull_request.labels.*.name, 'topic-performance') && github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    env:
+      ASV_DIR: "./asv_bench"
+      CONDA_ENV_FILE: ci/requirements/environment-benchmark.yml
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.13
+
+    - name: Set up conda environment
+        # uses: mamba-org/setup-micromamba@v2
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          micromamba-version: "1.5.10-0"
+          environment-file: ${{env.CONDA_ENV_FILE}}
+          environment-name: xarray-benchmark
+          cache-environment: true
+          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}-benchmark"
+          # add "build" because of https://github.com/airspeed-velocity/asv/issues/1385
+          create-args: >-
+            asv
+            python-build
+            mamba<=1.5.10
+
+      - name: Run benchmarks
+        run: |
+          asv machine --config asv_pr.conf.json --yes
+          asv continuous origin/${{github.base_ref}} HEAD --config asv_pr.conf.json --quick --strict
+          asv compare origin/${{github.base_ref}} HEAD --config asv_pr.conf.json --split --sort ratio | tee -a asv_compare.log
+          mkdir comment_log
+          mv asv_compare.log comment_log/
+        working-directory: ${{ env.ASV_DIR }}
+
+      - name: Save PR Number
+        env:
+          PR_NUMBER: ${{github.event.pull_request.number}}
+        run: |
+          echo $PR_NUMBER > ./benchmark/comment_log/pr_number
+
+      - name: Upload the artifact folder
+        uses: actions/upload-artifact@v4
+        with:
+          name: comment_log
+          path: benchmark/comment_log/
