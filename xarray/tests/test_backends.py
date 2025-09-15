@@ -192,7 +192,6 @@ def _check_compression_codec_available(codec: str | None) -> bool:
 
     try:
         import os
-        import tempfile
 
         import netCDF4
 
@@ -5304,11 +5303,9 @@ def test_open_mfdataset_list_attr() -> None:
     """
     Case when an attribute of type list differs across the multiple files
     """
-    from netCDF4 import Dataset
-
     with create_tmp_files(2) as nfiles:
         for i in range(2):
-            with Dataset(nfiles[i], "w") as f:
+            with nc4.Dataset(nfiles[i], "w") as f:
                 f.createDimension("x", 3)
                 vlvar = f.createVariable("test_var", np.int32, ("x"))
                 # here create an attribute as a list
@@ -7269,8 +7266,6 @@ def test_zarr_closing_internal_zip_store():
 @requires_zarr
 @pytest.mark.parametrize("create_default_indexes", [True, False])
 def test_zarr_create_default_indexes(tmp_path, create_default_indexes) -> None:
-    from xarray.core.indexes import PandasIndex
-
     store_path = tmp_path / "tmp.zarr"
     original_ds = xr.Dataset({"data": ("x", np.arange(3))}, coords={"x": [-1, 0, 1]})
     original_ds.to_zarr(store_path, mode="w")
