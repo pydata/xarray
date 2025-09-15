@@ -6,10 +6,10 @@ Installation
 Required dependencies
 ---------------------
 
-- Python (3.9 or later)
-- `numpy <https://www.numpy.org/>`__ (1.21 or later)
-- `packaging <https://packaging.pypa.io/en/latest/#>`__ (21.3 or later)
-- `pandas <https://pandas.pydata.org/>`__ (1.4 or later)
+- Python (3.11 or later)
+- `numpy <https://www.numpy.org/>`__ (1.26 or later)
+- `packaging <https://packaging.pypa.io/en/latest/#>`__ (24.1 or later)
+- `pandas <https://pandas.pydata.org/>`__ (2.2 or later)
 
 .. _optional-dependencies:
 
@@ -31,16 +31,10 @@ For netCDF and IO
 - `pydap <https://www.pydap.org>`__: used as a fallback for accessing OPeNDAP
 - `h5netcdf <https://github.com/h5netcdf/h5netcdf>`__: an alternative library for
   reading and writing netCDF4 files that does not use the netCDF-C libraries
-- `PyNIO <https://www.pyngl.ucar.edu/Nio.shtml>`__: for reading GRIB and other
-  geoscience specific file formats. Note that PyNIO is not available for Windows and
-  that the PyNIO backend may be moved outside of xarray in the future.
 - `zarr <https://zarr.readthedocs.io>`__: for chunked, compressed, N-dimensional arrays.
 - `cftime <https://unidata.github.io/cftime>`__: recommended if you
   want to encode/decode datetimes for non-standard calendars or dates before
   year 1678 or after year 2262.
-- `PseudoNetCDF <http://github.com/barronh/pseudonetcdf/>`__: recommended
-  for accessing CAMx, GEOS-Chem (bpch), NOAA ARL files, ICARTT files
-  (ffi1001) and many other.
 - `iris <https://github.com/scitools/iris>`__: for conversion to and from iris'
   Cube objects
 
@@ -63,7 +57,7 @@ For plotting
 ~~~~~~~~~~~~
 
 - `matplotlib <https://matplotlib.org>`__: required for :ref:`plotting`
-- `cartopy <https://scitools.org.uk/cartopy>`__: recommended for :ref:`plot-maps`
+- `cartopy <https://cartopy.readthedocs.io>`__: recommended for :ref:`plot-maps`
 - `seaborn <https://seaborn.pydata.org>`__: for better
   color palettes
 - `nc-time-axis <https://nc-time-axis.readthedocs.io>`__: for plotting
@@ -135,13 +129,13 @@ We also maintain other dependency sets for different subsets of functionality::
 The above commands should install most of the `optional dependencies`_. However,
 some packages which are either not listed on PyPI or require extra
 installation steps are excluded. To know which dependencies would be
-installed, take a look at the ``[options.extras_require]`` section in
-``setup.cfg``:
+installed, take a look at the ``[project.optional-dependencies]`` section in
+``pyproject.toml``:
 
-.. literalinclude:: ../../setup.cfg
-   :language: ini
-   :start-at: [options.extras_require]
-   :end-before: [options.package_data]
+.. literalinclude:: ../../pyproject.toml
+   :language: toml
+   :start-at: [project.optional-dependencies]
+   :end-before: [build-system]
 
 Development versions
 --------------------

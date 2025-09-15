@@ -4,12 +4,13 @@ How to add a new backend
 ------------------------
 
 Adding a new backend for read support to Xarray does not require
-to integrate any code in Xarray; all you need to do is:
+one to integrate any code in Xarray; all you need to do is:
 
 - Create a class that inherits from Xarray :py:class:`~xarray.backends.BackendEntrypoint`
   and implements the method ``open_dataset`` see :ref:`RST backend_entrypoint`
 
-- Declare this class as an external plugin in your ``setup.py``, see :ref:`RST backend_registration`
+- Declare this class as an external plugin in your project configuration, see :ref:`RST
+  backend_registration`
 
 If you also want to support lazy loading and dask see :ref:`RST lazy_loading`.
 
@@ -113,7 +114,7 @@ The input of ``open_dataset`` method are one argument
 
 - ``filename_or_obj``: can be any object but usually it is a string containing a path or an instance of
   :py:class:`pathlib.Path`.
-- ``drop_variables``: can be `None` or an iterable containing the variable
+- ``drop_variables``: can be ``None`` or an iterable containing the variable
   names to be dropped when reading the data.
 
 If it makes sense for your backend, your ``open_dataset``  method
@@ -220,21 +221,27 @@ performs the inverse transformation.
 
 In the following an example on how to use the coders ``decode`` method:
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import xarray as xr
+    import numpy as np
 
-.. ipython:: python
+.. jupyter-execute::
 
     var = xr.Variable(
         dims=("x",), data=np.arange(10.0), attrs={"scale_factor": 10, "add_offset": 2}
     )
     var
 
+.. jupyter-execute::
+
     coder = xr.coding.variables.CFScaleOffsetCoder()
     decoded_var = coder.decode(var)
     decoded_var
+
+.. jupyter-execute::
+
     decoded_var.encoding
 
 Some of the transformations can be common to more backends, so before
@@ -267,52 +274,69 @@ interface only the boolean keywords related to the supported decoders.
 How to register a backend
 +++++++++++++++++++++++++
 
-Define a new entrypoint in your ``setup.py`` (or ``setup.cfg``) with:
+Define a new entrypoint in your ``pyproject.toml`` (or ``setup.cfg/setup.py`` for older
+configurations), with:
 
 - group: ``xarray.backends``
 - name: the name to be passed to :py:meth:`~xarray.open_dataset`  as ``engine``
 - object reference: the reference of the class that you have implemented.
 
-You can declare the entrypoint in ``setup.py`` using the following syntax:
+You can declare the entrypoint in your project configuration like so:
 
-.. code-block::
+.. tab:: pyproject.toml
 
-    setuptools.setup(
-        entry_points={
-            "xarray.backends": ["my_engine=my_package.my_module:MyBackendEntryClass"],
-        },
-    )
+   .. code:: toml
 
-in ``setup.cfg``:
+      [project.entry-points."xarray.backends"]
+      my_engine = "my_package.my_module:MyBackendEntrypoint"
 
-.. code-block:: cfg
+.. tab:: pyproject.toml [Poetry]
 
-    [options.entry_points]
-    xarray.backends =
-        my_engine = my_package.my_module:MyBackendEntryClass
+   .. code-block:: toml
+
+       [tool.poetry.plugins."xarray.backends"]
+       my_engine = "my_package.my_module:MyBackendEntrypoint"
+
+.. tab:: setup.cfg
+
+   .. code-block:: cfg
+
+       [options.entry_points]
+       xarray.backends =
+           my_engine = my_package.my_module:MyBackendEntrypoint
+
+.. tab:: setup.py
+
+   .. code-block::
+
+       setuptools.setup(
+           entry_points={
+               "xarray.backends": [
+                   "my_engine=my_package.my_module:MyBackendEntrypoint"
+               ],
+           },
+       )
 
 
-See https://packaging.python.org/specifications/entry-points/#data-model
-for more information
+See the `Python Packaging User Guide
+<https://packaging.python.org/specifications/entry-points/#data-model>`_ for more
+information on entrypoints and details of the syntax.
 
-If you are using `Poetry <https://python-poetry.org/>`_ for your build system, you can accomplish the same thing using "plugins". In this case you would need to add the following to your ``pyproject.toml`` file:
-
-.. code-block:: toml
-
-    [tool.poetry.plugins."xarray.backends"]
-    "my_engine" = "my_package.my_module:MyBackendEntryClass"
-
-See https://python-poetry.org/docs/pyproject/#plugins for more information on Poetry plugins.
+If you're using Poetry, note that table name in ``pyproject.toml`` is slightly different.
+See `the Poetry docs <https://python-poetry.org/docs/pyproject/#plugins>`_ for more
+information on plugins.
 
 .. _RST lazy_loading:
 
 How to support lazy loading
 +++++++++++++++++++++++++++
 
-If you want to make your backend effective with big datasets, then you should
-support lazy loading.
-Basically, you shall replace the :py:class:`numpy.ndarray` inside the
-variables with a custom class that supports lazy loading indexing.
+If you want to make your backend effective with big datasets, then you should take advantage of xarray's
+support for lazy loading and indexing.
+
+Basically, when your backend constructs the ``Variable`` objects,
+you need to replace the :py:class:`numpy.ndarray` inside the
+variables with a custom :py:class:`~xarray.backends.BackendArray` subclass that supports lazy loading and indexing.
 See the example below:
 
 .. code-block:: python
@@ -323,30 +347,32 @@ See the example below:
 
 Where:
 
-- :py:class:`~xarray.core.indexing.LazilyIndexedArray` is a class
-  provided by Xarray that manages the lazy loading.
-- ``MyBackendArray`` shall be implemented by the backend and shall inherit
+- :py:class:`~xarray.core.indexing.LazilyIndexedArray` is a wrapper class
+  provided by Xarray that manages the lazy loading and indexing.
+- ``MyBackendArray`` should be implemented by the backend and must inherit
   from :py:class:`~xarray.backends.BackendArray`.
 
 BackendArray subclassing
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-The BackendArray subclass shall implement the following method and attributes:
+The BackendArray subclass must implement the following method and attributes:
 
-- the ``__getitem__`` method that takes in input an index and returns a
-  `NumPy <https://numpy.org/>`__ array
-- the ``shape`` attribute
+- the ``__getitem__`` method that takes an index as an input and returns a
+  `NumPy <https://numpy.org/>`__ array,
+- the ``shape`` attribute,
 - the ``dtype`` attribute.
 
-Xarray supports different type of :doc:`/user-guide/indexing`, that can be
-grouped in three types of indexes
+It may also optionally implement an additional ``async_getitem`` method.
+
+Xarray supports different types of :doc:`/user-guide/indexing`, that can be
+grouped in three types of indexes:
 :py:class:`~xarray.core.indexing.BasicIndexer`,
-:py:class:`~xarray.core.indexing.OuterIndexer` and
+:py:class:`~xarray.core.indexing.OuterIndexer`, and
 :py:class:`~xarray.core.indexing.VectorizedIndexer`.
 This implies that the implementation of the method ``__getitem__`` can be tricky.
 In order to simplify this task, Xarray provides a helper function,
 :py:func:`~xarray.core.indexing.explicit_indexing_adapter`, that transforms
-all the input  ``indexer`` types (`basic`, `outer`, `vectorized`) in a tuple
+all the input indexer types (basic, outer, vectorized) in a tuple
 which is interpreted correctly by your backend.
 
 This is an example ``BackendArray`` subclass implementation:
@@ -397,8 +423,22 @@ input the ``key``, the array ``shape`` and the following parameters:
 For more details see
 :py:class:`~xarray.core.indexing.IndexingSupport` and :ref:`RST indexing`.
 
+Async support
+^^^^^^^^^^^^^
+
+Backends can also optionally support loading data asynchronously via xarray's asynchronous loading methods
+(e.g. ``~xarray.Dataset.load_async``).
+To support async loading the ``BackendArray`` subclass must additionally implement the ``BackendArray.async_getitem`` method.
+
+Note that implementing this method is only necessary if you want to be able to load data from different xarray objects concurrently.
+Even without this method your ``BackendArray`` implementation is still free to concurrently load chunks of data for a single ``Variable`` itself,
+so long as it does so behind the synchronous ``__getitem__`` interface.
+
+Dask support
+^^^^^^^^^^^^
+
 In order to support `Dask Distributed <https://distributed.dask.org/>`__ and
-:py:mod:`multiprocessing`, ``BackendArray`` subclass should be serializable
+:py:mod:`multiprocessing`, the ``BackendArray`` subclass should be serializable
 either with :ref:`io.pickle` or
 `cloudpickle <https://github.com/cloudpipe/cloudpickle>`__.
 That implies that all the reference to open files should be dropped. For
@@ -416,45 +456,64 @@ In the ``BASIC`` indexing support, numbers and slices are supported.
 
 Example:
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [1]: # () shall return the full array
-       ...: backend_array._raw_indexing_method(())
-    Out[1]: array([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
+    # () shall return the full array
+    backend_array._raw_indexing_method(())
 
-    In [2]: # shall support integers
-       ...: backend_array._raw_indexing_method(1, 1)
-    Out[2]: 5
+.. jupyter-output::
 
-    In [3]: # shall support slices
-       ...: backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
-    Out[3]: array([[2, 3], [6, 7], [10, 11]])
+    array([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
+
+.. jupyter-input::
+
+    # shall support integers
+    backend_array._raw_indexing_method(1, 1)
+
+.. jupyter-output::
+
+    5
+
+.. jupyter-input::
+
+   # shall support slices
+   backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
+
+.. jupyter-output::
+
+    array([[2, 3], [6, 7], [10, 11]])
 
 **OUTER**
 
 The ``OUTER`` indexing shall support number, slices and in addition it shall
-support also lists of integers. The the outer indexing is equivalent to
+support also lists of integers. The outer indexing is equivalent to
 combining multiple input list with ``itertools.product()``:
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [1]: backend_array._raw_indexing_method([0, 1], [0, 1, 2])
-    Out[1]: array([[0, 1, 2], [4, 5, 6]])
+    backend_array._raw_indexing_method([0, 1], [0, 1, 2])
+
+.. jupyter-output::
+
+    array([[0, 1, 2], [4, 5, 6]])
+
+.. jupyter-input::
 
     # shall support integers
-    In [2]: backend_array._raw_indexing_method(1, 1)
-    Out[2]: 5
+    backend_array._raw_indexing_method(1, 1)
+
+.. jupyter-output::
+
+    5
 
 
 **OUTER_1VECTOR**
 
 The ``OUTER_1VECTOR`` indexing shall supports number, slices and at most one
-list. The behaviour with the list shall be the same of ``OUTER`` indexing.
+list. The behaviour with the list shall be the same as ``OUTER`` indexing.
 
-If you support more complex indexing as `explicit indexing` or
-`numpy indexing`, you can have a look to the implementation of Zarr backend and Scipy backend,
+If you support more complex indexing as explicit indexing or
+numpy indexing, you can have a look to the implementation of Zarr backend and Scipy backend,
 currently available in :py:mod:`~xarray.backends` module.
 
 .. _RST preferred_chunks:

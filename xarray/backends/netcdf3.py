@@ -42,6 +42,21 @@ _nc3_dtype_coercions = {
 
 # encode all strings as UTF-8
 STRING_ENCODING = "utf-8"
+COERCION_VALUE_ERROR = (
+    "could not safely cast array from {dtype} to {new_dtype}. While it is not "
+    "always the case, a common reason for this is that xarray has deemed it "
+    "safest to encode np.datetime64[ns] or np.timedelta64[ns] values with "
+    "int64 values representing units of 'nanoseconds'. This is either due to "
+    "the fact that the times are known to require nanosecond precision for an "
+    "accurate round trip, or that the times are unknown prior to writing due "
+    "to being contained in a chunked array. Ways to work around this are "
+    "either to use a backend that supports writing int64 values, or to "
+    "manually specify the encoding['units'] and encoding['dtype'] (e.g. "
+    "'seconds since 1970-01-01' and np.dtype('int32')) on the time "
+    "variable(s) such that the times can be serialized in a netCDF3 file "
+    "(note that depending on the situation, however, this latter option may "
+    "result in an inaccurate round trip)."
+)
 
 
 def coerce_nc3_dtype(arr):
@@ -66,7 +81,7 @@ def coerce_nc3_dtype(arr):
         cast_arr = arr.astype(new_dtype)
         if not (cast_arr == arr).all():
             raise ValueError(
-                f"could not safely cast array from dtype {dtype} to {new_dtype}"
+                COERCION_VALUE_ERROR.format(dtype=dtype, new_dtype=new_dtype)
             )
         arr = cast_arr
     return arr
@@ -88,13 +103,29 @@ def encode_nc3_attrs(attrs):
     return {k: encode_nc3_attr_value(v) for k, v in attrs.items()}
 
 
-def encode_nc3_variable(var):
+def _maybe_prepare_times(var):
+    # checks for integer-based time-like and
+    # replaces np.iinfo(np.int64).min with _FillValue or np.nan
+    # this keeps backwards compatibility
+
+    data = var.data
+    if data.dtype.kind in "iu":
+        units = var.attrs.get("units", None)
+        if units is not None and coding.variables._is_time_like(units):
+            mask = data == np.iinfo(np.int64).min
+            if mask.any():
+                data = np.where(mask, var.attrs.get("_FillValue", np.nan), data)
+    return data
+
+
+def encode_nc3_variable(var, name=None):
     for coder in [
         coding.strings.EncodedStringCoder(allows_unicode=False),
         coding.strings.CharacterArrayCoder(),
     ]:
-        var = coder.encode(var)
-    data = coerce_nc3_dtype(var.data)
+        var = coder.encode(var, name=name)
+    data = _maybe_prepare_times(var)
+    data = coerce_nc3_dtype(data)
     attrs = encode_nc3_attrs(var.attrs)
     return Variable(var.dims, data, attrs, var.encoding)
 

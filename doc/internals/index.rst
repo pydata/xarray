@@ -1,6 +1,6 @@
 .. _internals:
 
-xarray Internals
+Xarray Internals
 ================
 
 Xarray builds upon two of the foundational libraries of the scientific Python
@@ -11,17 +11,19 @@ compiled code to :ref:`optional dependencies<installing>`.
 The pages in this section are intended for:
 
 * Contributors to xarray who wish to better understand some of the internals,
-* Developers who wish to extend xarray with domain-specific logic, perhaps to support a new scientific community of users,
-* Developers who wish to interface xarray with their existing tooling, e.g. by creating a plugin for reading a new file format, or wrapping a custom array type.
-
+* Developers from other fields who wish to extend xarray with domain-specific logic, perhaps to support a new scientific community of users,
+* Developers of other packages who wish to interface xarray with their existing tools, e.g. by creating a backend for reading a new file format, or wrapping a custom array type.
 
 .. toctree::
    :maxdepth: 2
    :hidden:
 
-   variable-objects
+   internal-design
+   interoperability
    duck-arrays-integration
    chunked-arrays
    extending-xarray
-   zarr-encoding-spec
    how-to-add-new-backend
+   how-to-create-custom-index
+   zarr-encoding-spec
+   time-coding

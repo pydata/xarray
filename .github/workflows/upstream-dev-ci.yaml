@@ -15,6 +15,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_COLOR: 3
+
 jobs:
   detect-ci-trigger:
     name: detect upstream-dev ci trigger
@@ -25,7 +28,7 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 2
       - uses: xarray-contrib/ci-trigger@v1
@@ -38,32 +41,31 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect-ci-trigger
     if: |
-        always()
-        && (
-            (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-            || needs.detect-ci-trigger.outputs.triggered == 'true'
-            || contains( github.event.pull_request.labels.*.name, 'run-upstream')
-        )
+      always()
+      && (
+          (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+          || needs.detect-ci-trigger.outputs.triggered == 'true'
+          || contains( github.event.pull_request.labels.*.name, 'run-upstream')
+      )
     defaults:
       run:
         shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.12"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Set up conda environment
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: ci/requirements/environment.yml
           environment-name: xarray-tests
           create-args: >-
             python=${{ matrix.python-version }}
             pytest-reportlog
-            conda
       - name: Install upstream versions
         run: |
           bash ci/install-upstream-wheels.sh
@@ -72,8 +74,6 @@ jobs:
           python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          conda info -a
-          conda list
           python xarray/util/print_versions.py
       - name: Import xarray
         run: |
@@ -82,8 +82,7 @@ jobs:
         if: success()
         id: status
         run: |
-          export ZARR_V3_EXPERIMENTAL_API=1
-          python -m pytest --timeout=60 -rf \
+          python -m pytest --timeout=60 -rf -nauto \
             --report-log output-${{ matrix.python-version }}-log.jsonl
       - name: Generate and publish the report
         if: |
@@ -91,7 +90,7 @@ jobs:
           && steps.status.outcome == 'failure'
           && github.event_name == 'schedule'
           && github.repository_owner == 'pydata'
-        uses: xarray-contrib/issue-from-pytest-log@v1
+        uses: scientific-python/issue-from-pytest-log-action@v1
         with:
           log-path: output-${{ matrix.python-version }}-log.jsonl
 
@@ -100,30 +99,29 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect-ci-trigger
     if: |
-        always()
-        && (
-            contains( github.event.pull_request.labels.*.name, 'run-upstream')
-        )
+      always()
+      && (
+          contains( github.event.pull_request.labels.*.name, 'run-upstream')
+      )
     defaults:
       run:
         shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.11"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Set up conda environment
-        uses: mamba-org/provision-with-micromamba@v15
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: ci/requirements/environment.yml
           environment-name: xarray-tests
-          extra-specs: |
+          create-args: >-
             python=${{ matrix.python-version }}
             pytest-reportlog
-            conda
       - name: Install upstream versions
         run: |
           bash ci/install-upstream-wheels.sh
@@ -132,8 +130,6 @@ jobs:
           python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          conda info -a
-          conda list
           python xarray/util/print_versions.py
       - name: Install mypy
         run: |
@@ -142,7 +138,7 @@ jobs:
         run: |
           python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v3.1.4
+        uses: codecov/codecov-action@v5.5.1
         with:
           file: mypy_report/cobertura.xml
           flags: mypy

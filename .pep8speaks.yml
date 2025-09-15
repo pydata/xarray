@@ -1,6 +1,0 @@
-# https://github.com/OrkoHunter/pep8speaks for more info
-# pep8speaks will use the flake8 configs in `setup.cfg`
-
-scanner:
-    diff_only: False
-    linter: flake8

@@ -16,10 +16,10 @@ class DateTimeAccessor:
         self.da = xr.DataArray(data, dims="time", coords={"time": time})
 
     def time_dayofyear(self, calendar):
-        self.da.time.dt.dayofyear
+        _ = self.da.time.dt.dayofyear
 
     def time_year(self, calendar):
-        self.da.time.dt.year
+        _ = self.da.time.dt.year
 
     def time_floor(self, calendar):
-        self.da.time.dt.floor("D")
+        _ = self.da.time.dt.floor("D")

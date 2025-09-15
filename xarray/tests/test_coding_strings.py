@@ -21,19 +21,19 @@ with suppress(ImportError):
 
 def test_vlen_dtype() -> None:
     dtype = strings.create_vlen_dtype(str)
-    assert dtype.metadata["element_type"] == str
+    assert dtype.metadata["element_type"] is str
     assert strings.is_unicode_dtype(dtype)
     assert not strings.is_bytes_dtype(dtype)
     assert strings.check_vlen_dtype(dtype) is str
 
     dtype = strings.create_vlen_dtype(bytes)
-    assert dtype.metadata["element_type"] == bytes
+    assert dtype.metadata["element_type"] is bytes
     assert not strings.is_unicode_dtype(dtype)
     assert strings.is_bytes_dtype(dtype)
     assert strings.check_vlen_dtype(dtype) is bytes
 
     # check h5py variant ("vlen")
-    dtype = np.dtype("O", metadata={"vlen": str})  # type: ignore[call-overload]
+    dtype = np.dtype("O", metadata={"vlen": str})  # type: ignore[call-overload,unused-ignore]
     assert strings.check_vlen_dtype(dtype) is str
 
     assert strings.check_vlen_dtype(np.dtype(object)) is None
@@ -139,6 +139,45 @@ def test_CharacterArrayCoder_char_dim_name(original, expected_char_dim_name) -> 
     assert roundtripped.dims[-1] == original.dims[-1]
 
 
+@pytest.mark.parametrize(
+    [
+        "original",
+        "expected_char_dim_name",
+        "expected_char_dim_length",
+        "warning_message",
+    ],
+    [
+        (
+            Variable(("x",), [b"ab", b"cde"], encoding={"char_dim_name": "foo4"}),
+            "foo3",
+            3,
+            "String dimension naming mismatch",
+        ),
+        (
+            Variable(
+                ("x",),
+                [b"ab", b"cde"],
+                encoding={"original_shape": (2, 4), "char_dim_name": "foo"},
+            ),
+            "foo3",
+            3,
+            "String dimension length mismatch",
+        ),
+    ],
+)
+def test_CharacterArrayCoder_dim_mismatch_warnings(
+    original, expected_char_dim_name, expected_char_dim_length, warning_message
+) -> None:
+    coder = strings.CharacterArrayCoder()
+    with pytest.warns(UserWarning, match=warning_message):
+        encoded = coder.encode(original)
+    roundtripped = coder.decode(encoded)
+    assert encoded.dims[-1] == expected_char_dim_name
+    assert encoded.sizes[expected_char_dim_name] == expected_char_dim_length
+    assert roundtripped.encoding["char_dim_name"] == expected_char_dim_name
+    assert roundtripped.dims[-1] == original.dims[-1]
+
+
 def test_StackedBytesArray() -> None:
     array = np.array([[b"a", b"b", b"c"], [b"d", b"e", b"f"]], dtype="S")
     actual = strings.StackedBytesArray(array)
@@ -181,7 +220,7 @@ def test_StackedBytesArray_vectorized_indexing() -> None:
 
     V = IndexerMaker(indexing.VectorizedIndexer)
     indexer = V[np.array([[0, 1], [1, 0]])]
-    actual = stacked[indexer]
+    actual = stacked.vindex[indexer]
     assert_array_equal(actual, expected)
 
 

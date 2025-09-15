@@ -10,7 +10,6 @@ __pycache__
 doc/*.nc
 doc/auto_gallery
 doc/rasm.zarr
-doc/savefig
 
 # C extensions
 *.so
@@ -40,6 +39,7 @@ pip-log.txt
 .tox
 nosetests.xml
 .cache
+.prettier_cache
 .dmypy.json
 .mypy_cache
 .ropeproject/
@@ -50,7 +50,8 @@ nosetests.xml
 dask-worker-space/
 
 # asv environments
-.asv
+asv_bench/.asv
+asv_bench/pkgs
 
 # Translations
 *.mo
@@ -68,8 +69,12 @@ dask-worker-space/
 
 # xarray specific
 doc/_build
-generated/
+doc/generated/
+doc/api/generated/
 xarray/tests/data/*.grib.*.idx
+
+# Claude Code
+.claude/
 
 # Sync tools
 Icon*
@@ -79,3 +84,10 @@ doc/team-panel.txt
 doc/external-examples-gallery.txt
 doc/notebooks-examples-gallery.txt
 doc/videos-gallery.txt
+
+# Until we support this properly, excluding from gitignore. (adding it to
+# gitignore to make it _easier_ to work with `uv`, not as an indication that I
+# think we shouldn't...)
+uv.lock
+mypy_report/
+xarray-docs/

@@ -24,7 +24,7 @@ def test_weighted_non_DataArray_weights(as_dataset: bool) -> None:
         data = data.to_dataset(name="data")
 
     with pytest.raises(ValueError, match=r"`weights` must be a DataArray"):
-        data.weighted([1, 2])  # type: ignore
+        data.weighted([1, 2])  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("as_dataset", (True, False))
@@ -58,7 +58,7 @@ def test_weighted_weights_nan_raises_dask(as_dataset, weights):
 @requires_cftime
 @requires_dask
 @pytest.mark.parametrize("time_chunks", (1, 5))
-@pytest.mark.parametrize("resample_spec", ("1AS", "5AS", "10AS"))
+@pytest.mark.parametrize("resample_spec", ("1YS", "5YS", "10YS"))
 def test_weighted_lazy_resample(time_chunks, resample_spec):
     # https://github.com/pydata/xarray/issues/4625
 
@@ -67,7 +67,7 @@ def test_weighted_lazy_resample(time_chunks, resample_spec):
         return ds.weighted(ds.weights).mean("time")
 
     # example dataset
-    t = xr.cftime_range(start="2000", periods=20, freq="1AS")
+    t = xr.date_range(start="2000", periods=20, freq="1YS", use_cftime=True)
     weights = xr.DataArray(np.random.rand(len(t)), dims=["time"], coords={"time": t})
     data = xr.DataArray(
         np.random.rand(len(t)), dims=["time"], coords={"time": t, "weights": weights}
@@ -608,7 +608,7 @@ def test_weighted_operations_3D(dim, add_nans, skipna):
     # add approximately 25 % NaNs (https://stackoverflow.com/a/32182680/3010700)
     if add_nans:
         c = int(data.size * 0.25)
-        data.ravel()[np.random.choice(data.size, c, replace=False)] = np.NaN
+        data.ravel()[np.random.choice(data.size, c, replace=False)] = np.nan
 
     data = DataArray(data, dims=dims, coords=coords)
 
@@ -631,7 +631,7 @@ def test_weighted_quantile_3D(dim, q, add_nans, skipna):
     # add approximately 25 % NaNs (https://stackoverflow.com/a/32182680/3010700)
     if add_nans:
         c = int(data.size * 0.25)
-        data.ravel()[np.random.choice(data.size, c, replace=False)] = np.NaN
+        data.ravel()[np.random.choice(data.size, c, replace=False)] = np.nan
 
     da = DataArray(data, dims=dims, coords=coords)
 
@@ -709,7 +709,7 @@ def test_weighted_operations_different_shapes(
     # add approximately 25 % NaNs
     if add_nans:
         c = int(data.size * 0.25)
-        data.ravel()[np.random.choice(data.size, c, replace=False)] = np.NaN
+        data.ravel()[np.random.choice(data.size, c, replace=False)] = np.nan
 
     data = DataArray(data)
 
@@ -770,6 +770,17 @@ def test_weighted_operations_keep_attr_da_in_ds(operation):
     assert data.a.attrs == result.a.attrs
 
 
+def test_weighted_mean_keep_attrs_ds():
+    weights = DataArray(np.random.randn(2))
+    data = Dataset(
+        {"a": (["dim_0", "dim_1"], np.random.randn(2, 2), dict(attr="data"))},
+        coords={"dim_1": ("dim_1", ["a", "b"], {"attr1": "value1"})},
+    )
+
+    result = data.weighted(weights).mean(dim="dim_0", keep_attrs=True)
+    assert data.coords["dim_1"].attrs == result.coords["dim_1"].attrs
+
+
 @pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean", "quantile"))
 @pytest.mark.parametrize("as_dataset", (True, False))
 def test_weighted_bad_dim(operation, as_dataset):
@@ -782,9 +793,12 @@ def test_weighted_bad_dim(operation, as_dataset):
     if operation == "quantile":
         kwargs["q"] = 0.5
 
-    error_msg = (
-        f"{data.__class__.__name__}Weighted"
-        " does not contain the dimensions: {'bad_dim'}"
-    )
-    with pytest.raises(ValueError, match=error_msg):
+    with pytest.raises(
+        ValueError,
+        match=(
+            f"Dimensions \\('bad_dim',\\) not found in {data.__class__.__name__}Weighted "
+            # the order of (dim_0, dim_1) varies
+            "dimensions \\(('dim_0', 'dim_1'|'dim_1', 'dim_0')\\)"
+        ),
+    ):
         getattr(data.weighted(weights), operation)(**kwargs)

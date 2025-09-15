@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import itertools
+from typing import Any
+from unittest import mock
 
 import numpy as np
 import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.core import indexing
 from xarray.core.missing import (
     NumpyInterpolator,
     ScipyInterpolator,
@@ -14,7 +17,7 @@ from xarray.core.missing import (
     _get_nan_block_lengths,
     get_clean_interp_index,
 )
-from xarray.core.pycompat import array_type
+from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     _CFTIME_CALENDARS,
     assert_allclose,
@@ -24,6 +27,8 @@ from xarray.tests import (
     requires_bottleneck,
     requires_cftime,
     requires_dask,
+    requires_numbagg,
+    requires_numbagg_or_bottleneck,
     requires_scipy,
 )
 
@@ -38,8 +43,12 @@ def da():
 @pytest.fixture
 def cf_da():
     def _cf_da(calendar, freq="1D"):
-        times = xr.cftime_range(
-            start="1970-01-01", freq=freq, periods=10, calendar=calendar
+        times = xr.date_range(
+            start="1970-01-01",
+            freq=freq,
+            periods=10,
+            calendar=calendar,
+            use_cftime=True,
         )
         values = np.arange(10)
         return xr.DataArray(values, dims=("time",), coords={"time": times})
@@ -60,7 +69,7 @@ def ds():
 
 
 def make_interpolate_example_data(shape, frac_nan, seed=12345, non_uniform=False):
-    rs = np.random.RandomState(seed)
+    rs = np.random.default_rng(seed)
     vals = rs.normal(size=shape)
     if frac_nan == 1:
         vals[:] = np.nan
@@ -82,7 +91,7 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345, non_uniform=False
 
     if non_uniform:
         # construct a datetime index that has irregular spacing
-        deltas = pd.TimedeltaIndex(unit="d", data=rs.normal(size=shape[0], scale=10))
+        deltas = pd.to_timedelta(rs.normal(size=shape[0], scale=10), unit="D")
         coords = {"time": (pd.Timestamp("2000-01-01") + deltas).sort_values()}
     else:
         coords = {"time": pd.date_range("2000-01-01", freq="D", periods=shape[0])}
@@ -92,36 +101,54 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345, non_uniform=False
     return da, df
 
 
+@pytest.mark.parametrize("fill_value", [None, np.nan, 47.11])
+@pytest.mark.parametrize(
+    "method", ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
+)
 @requires_scipy
-def test_interpolate_pd_compat():
+def test_interpolate_pd_compat(method, fill_value) -> None:
     shapes = [(8, 8), (1, 20), (20, 1), (100, 100)]
     frac_nans = [0, 0.5, 1]
-    methods = ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
 
-    for shape, frac_nan, method in itertools.product(shapes, frac_nans, methods):
+    for shape, frac_nan in itertools.product(shapes, frac_nans):
         da, df = make_interpolate_example_data(shape, frac_nan)
 
         for dim in ["time", "x"]:
-            actual = da.interpolate_na(method=method, dim=dim, fill_value=np.nan)
+            actual = da.interpolate_na(method=method, dim=dim, fill_value=fill_value)
+            # need limit_direction="both" here, to let pandas fill
+            # in both directions instead of default forward direction only
             expected = df.interpolate(
-                method=method, axis=da.get_axis_num(dim), fill_value=(np.nan, np.nan)
+                method=method,
+                axis=da.get_axis_num(dim),
+                limit_direction="both",
+                fill_value=fill_value,
             )
-            # Note, Pandas does some odd things with the left/right fill_value
-            # for the linear methods. This next line inforces the xarray
-            # fill_value convention on the pandas output. Therefore, this test
-            # only checks that interpolated values are the same (not nans)
-            expected.values[pd.isnull(actual.values)] = np.nan
 
-            np.testing.assert_allclose(actual.values, expected.values)
+            if method == "linear":
+                # Note, Pandas does not take left/right fill_value into account
+                # for the numpy linear methods.
+                # see https://github.com/pandas-dev/pandas/issues/55144
+                # This aligns the pandas output with the xarray output
+                fixed = expected.values.copy()
+                fixed[pd.isnull(actual.values)] = np.nan
+                fixed[actual.values == fill_value] = fill_value
+            else:
+                fixed = expected.values
+
+            np.testing.assert_allclose(actual.values, fixed)
 
 
 @requires_scipy
-@pytest.mark.parametrize("method", ["barycentric", "krog", "pchip", "spline", "akima"])
-def test_scipy_methods_function(method):
+@pytest.mark.parametrize("method", ["barycentric", "krogh", "pchip", "spline", "akima"])
+def test_scipy_methods_function(method) -> None:
     # Note: Pandas does some wacky things with these methods and the full
     # integration tests won't work.
     da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
-    actual = da.interpolate_na(method=method, dim="time")
+    if method == "spline":
+        with pytest.warns(PendingDeprecationWarning):
+            actual = da.interpolate_na(method=method, dim="time")
+    else:
+        actual = da.interpolate_na(method=method, dim="time")
     assert (da.count("time") <= actual.count("time")).all()
 
 
@@ -140,16 +167,18 @@ def test_interpolate_pd_compat_non_uniform_index():
                 method="linear", dim=dim, use_coordinate=True, fill_value=np.nan
             )
             expected = df.interpolate(
-                method=method, axis=da.get_axis_num(dim), fill_value=np.nan
+                method=method,
+                axis=da.get_axis_num(dim),
             )
 
             # Note, Pandas does some odd things with the left/right fill_value
             # for the linear methods. This next line inforces the xarray
             # fill_value convention on the pandas output. Therefore, this test
             # only checks that interpolated values are the same (not nans)
-            expected.values[pd.isnull(actual.values)] = np.nan
+            expected_values = expected.values.copy()
+            expected_values[pd.isnull(actual.values)] = np.nan
 
-            np.testing.assert_allclose(actual.values, expected.values)
+            np.testing.assert_allclose(actual.values, expected_values)
 
 
 @requires_scipy
@@ -176,7 +205,7 @@ def test_interpolate_unsorted_index_raises():
     vals = np.array([1, 2, 3], dtype=np.float64)
     expected = xr.DataArray(vals, dims="x", coords={"x": [2, 1, 3]})
     with pytest.raises(ValueError, match=r"Index 'x' must be monotonically increasing"):
-        expected.interpolate_na(dim="x", method="index")
+        expected.interpolate_na(dim="x", method="index")  # type: ignore[arg-type]
 
 
 def test_interpolate_no_dim_raises():
@@ -188,14 +217,14 @@ def test_interpolate_no_dim_raises():
 def test_interpolate_invalid_interpolator_raises():
     da = xr.DataArray(np.array([1, 2, np.nan, 5], dtype=np.float64), dims="x")
     with pytest.raises(ValueError, match=r"not a valid"):
-        da.interpolate_na(dim="x", method="foo")
+        da.interpolate_na(dim="x", method="foo")  # type: ignore[arg-type]
 
 
 def test_interpolate_duplicate_values_raises():
     data = np.random.randn(2, 3)
     da = xr.DataArray(data, coords=[("x", ["a", "a"]), ("y", [0, 1, 2])])
     with pytest.raises(ValueError, match=r"Index 'x' has duplicate values"):
-        da.interpolate_na(dim="x", method="foo")
+        da.interpolate_na(dim="x", method="foo")  # type: ignore[arg-type]
 
 
 def test_interpolate_multiindex_raises():
@@ -303,15 +332,15 @@ def test_interpolate_limits():
 @requires_scipy
 def test_interpolate_methods():
     for method in ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]:
-        kwargs = {}
+        kwargs: dict[str, Any] = {}
         da = xr.DataArray(
             np.array([0, 1, 2, np.nan, np.nan, np.nan, 6, 7, 8], dtype=np.float64),
             dims="x",
         )
-        actual = da.interpolate_na("x", method=method, **kwargs)
+        actual = da.interpolate_na("x", method=method, **kwargs)  # type: ignore[arg-type]
         assert actual.isnull().sum() == 0
 
-        actual = da.interpolate_na("x", method=method, limit=2, **kwargs)
+        actual = da.interpolate_na("x", method=method, limit=2, **kwargs)  # type: ignore[arg-type]
         assert actual.isnull().sum() == 1
 
 
@@ -395,7 +424,7 @@ def test_interpolate_dask_expected_dtype(dtype, method):
     assert da.dtype == da.compute().dtype
 
 
-@requires_bottleneck
+@requires_numbagg_or_bottleneck
 def test_ffill():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
     expected = xr.DataArray(np.array([4, 5, 5], dtype=np.float64), dims="x")
@@ -403,36 +432,37 @@ def test_ffill():
     assert_equal(actual, expected)
 
 
-def test_ffill_use_bottleneck():
+@pytest.mark.parametrize("compute_backend", [None], indirect=True)
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_b_ffill_use_bottleneck_numbagg(method, compute_backend):
+    """
+    bfill & ffill fail if both bottleneck and numba are disabled
+    """
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-    with xr.set_options(use_bottleneck=False):
-        with pytest.raises(RuntimeError):
-            da.ffill("x")
+    with pytest.raises(RuntimeError):
+        getattr(da, method)("x")
 
 
 @requires_dask
-def test_ffill_use_bottleneck_dask():
+@pytest.mark.parametrize("compute_backend", [None], indirect=True)
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_b_ffill_use_bottleneck_dask(method, compute_backend):
+    """
+    ffill fails if both bottleneck and numba are disabled, on dask arrays
+    """
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-    da = da.chunk({"x": 1})
-    with xr.set_options(use_bottleneck=False):
-        with pytest.raises(RuntimeError):
-            da.ffill("x")
+    with pytest.raises(RuntimeError):
+        getattr(da, method)("x")
 
 
-def test_bfill_use_bottleneck():
-    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-    with xr.set_options(use_bottleneck=False):
-        with pytest.raises(RuntimeError):
-            da.bfill("x")
-
-
+@requires_numbagg
 @requires_dask
-def test_bfill_use_bottleneck_dask():
+@pytest.mark.parametrize("compute_backend", ["numbagg"], indirect=True)
+def test_ffill_use_numbagg_dask(compute_backend):
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-    da = da.chunk({"x": 1})
-    with xr.set_options(use_bottleneck=False):
-        with pytest.raises(RuntimeError):
-            da.bfill("x")
+    da = da.chunk(x=-1)
+    # Succeeds with a single chunk:
+    _ = da.ffill("x").compute()
 
 
 @requires_bottleneck
@@ -524,7 +554,7 @@ def test_ffill_limit():
 def test_interpolate_dataset(ds):
     actual = ds.interpolate_na(dim="time")
     # no missing values in var1
-    assert actual["var1"].count("time") == actual.dims["time"]
+    assert actual["var1"].count("time") == actual.sizes["time"]
 
     # var2 should be the same as it was
     assert_array_equal(actual["var2"], ds["var2"])
@@ -581,13 +611,14 @@ def test_get_clean_interp_index_cf_calendar(cf_da, calendar):
 
 
 @requires_cftime
-@pytest.mark.parametrize(
-    ("calendar", "freq"), zip(["gregorian", "proleptic_gregorian"], ["1D", "1M", "1Y"])
-)
-def test_get_clean_interp_index_dt(cf_da, calendar, freq):
+@pytest.mark.parametrize("calendar", ["gregorian", "proleptic_gregorian"])
+@pytest.mark.parametrize("freq", ["1D", "1ME", "1YE"])
+def test_get_clean_interp_index_dt(cf_da, calendar, freq) -> None:
     """In the gregorian case, the index should be proportional to normal datetimes."""
     g = cf_da(calendar, freq=freq)
-    g["stime"] = xr.Variable(data=g.time.to_index().to_datetimeindex(), dims=("time",))
+    g["stime"] = xr.Variable(
+        data=g.time.to_index().to_datetimeindex(time_unit="ns"), dims=("time",)
+    )
 
     gi = get_clean_interp_index(g, "time")
     si = get_clean_interp_index(g, "time", use_coordinate="stime")
@@ -599,7 +630,11 @@ def test_get_clean_interp_index_potential_overflow():
     da = xr.DataArray(
         [0, 1, 2],
         dims=("time",),
-        coords={"time": xr.cftime_range("0000-01-01", periods=3, calendar="360_day")},
+        coords={
+            "time": xr.date_range(
+                "0000-01-01", periods=3, calendar="360_day", use_cftime=True
+            )
+        },
     )
     get_clean_interp_index(da, "time")
 
@@ -633,12 +668,12 @@ def test_interpolate_na_max_gap_errors(da_time):
     with pytest.raises(ValueError, match=r"max_gap must be a scalar."):
         da_time.interpolate_na("t", max_gap=(1,))
 
-    da_time["t"] = pd.date_range("2001-01-01", freq="H", periods=11)
+    da_time["t"] = pd.date_range("2001-01-01", freq="h", periods=11)
     with pytest.raises(TypeError, match=r"Expected value of type str"):
         da_time.interpolate_na("t", max_gap=1)
 
     with pytest.raises(TypeError, match=r"Expected integer or floating point"):
-        da_time.interpolate_na("t", max_gap="1H", use_coordinate=False)
+        da_time.interpolate_na("t", max_gap="1h", use_coordinate=False)
 
     with pytest.raises(ValueError, match=r"Could not convert 'huh' to timedelta64"):
         da_time.interpolate_na("t", max_gap="huh")
@@ -646,17 +681,17 @@ def test_interpolate_na_max_gap_errors(da_time):
 
 @requires_bottleneck
 @pytest.mark.parametrize(
-    "time_range_func",
-    [pd.date_range, pytest.param(xr.cftime_range, marks=requires_cftime)],
+    "use_cftime",
+    [False, pytest.param(True, marks=requires_cftime)],
 )
 @pytest.mark.parametrize("transform", [lambda x: x, lambda x: x.to_dataset(name="a")])
 @pytest.mark.parametrize(
-    "max_gap", ["3H", np.timedelta64(3, "h"), pd.to_timedelta("3H")]
+    "max_gap", ["3h", np.timedelta64(3, "h"), pd.to_timedelta("3h")]
 )
-def test_interpolate_na_max_gap_time_specifier(
-    da_time, max_gap, transform, time_range_func
-):
-    da_time["t"] = time_range_func("2001-01-01", freq="H", periods=11)
+def test_interpolate_na_max_gap_time_specifier(da_time, max_gap, transform, use_cftime):
+    da_time["t"] = xr.date_range(
+        "2001-01-01", freq="h", periods=11, use_cftime=use_cftime
+    )
     expected = transform(
         da_time.copy(data=[np.nan, 1, 2, 3, 4, 5, np.nan, np.nan, np.nan, np.nan, 10])
     )
@@ -740,3 +775,29 @@ def test_interpolators_complex_out_of_bounds():
         f = interpolator(xi, yi, method=method)
         actual = f(x)
         assert_array_equal(actual, expected)
+
+
+@requires_scipy
+def test_indexing_localize():
+    # regression test for GH10287
+    ds = xr.Dataset(
+        {
+            "sigma_a": xr.DataArray(
+                data=np.ones((16, 8, 36811)),
+                dims=["p", "t", "w"],
+                coords={"w": np.linspace(0, 30000, 36811)},
+            )
+        }
+    )
+
+    original_func = indexing.NumpyIndexingAdapter.__getitem__
+
+    def wrapper(self, indexer):
+        return original_func(self, indexer)
+
+    with mock.patch.object(
+        indexing.NumpyIndexingAdapter, "__getitem__", side_effect=wrapper, autospec=True
+    ) as mock_func:
+        ds["sigma_a"].interp(w=15000.5)
+    actual_indexer = mock_func.mock_calls[0].args[1]._key
+    assert actual_indexer == (slice(None), slice(None), slice(18404, 18408))

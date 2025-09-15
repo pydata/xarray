@@ -14,8 +14,8 @@ aware libraries such as `Seaborn`__.
 __ https://pandas.pydata.org/pandas-docs/stable/visualization.html
 __ https://seaborn.pydata.org/
 
-.. ipython:: python
-    :suppress:
+.. jupyter-execute::
+    :hide-code:
 
     import numpy as np
     import pandas as pd
@@ -46,7 +46,7 @@ Dataset and DataFrame
 To convert any dataset to a ``DataFrame`` in tidy form, use the
 :py:meth:`Dataset.to_dataframe()` method:
 
-.. ipython:: python
+.. jupyter-execute::
 
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.randn(2, 3))},
@@ -58,6 +58,9 @@ To convert any dataset to a ``DataFrame`` in tidy form, use the
         },
     )
     ds
+
+.. jupyter-execute::
+
     df = ds.to_dataframe()
     df
 
@@ -74,11 +77,11 @@ To create a ``Dataset`` from a ``DataFrame``, use the
 :py:meth:`Dataset.from_dataframe` class method or the equivalent
 :py:meth:`pandas.DataFrame.to_xarray` method:
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.Dataset.from_dataframe(df)
 
-Notice that that dimensions of variables in the ``Dataset`` have now
+Notice that the dimensions of variables in the ``Dataset`` have now
 expanded after the round-trip conversion to a ``DataFrame``. This is because
 every object in a ``DataFrame`` must have the same indices, so we need to
 broadcast the data of each array to the full size of the new ``MultiIndex``.
@@ -95,20 +98,46 @@ DataArray and Series
 of ``Series``. The methods are very similar to those for working with
 DataFrames:
 
-.. ipython:: python
+.. jupyter-execute::
 
     s = ds["foo"].to_series()
     s
+
+.. jupyter-execute::
+
     # or equivalently, with Series.to_xarray()
     xr.DataArray.from_series(s)
 
 Both the ``from_series`` and ``from_dataframe`` methods use reindexing, so they
-work even if not the hierarchical index is not a full tensor product:
+work even if the hierarchical index is not a full tensor product:
 
-.. ipython:: python
+.. jupyter-execute::
 
     s[::2]
+
+.. jupyter-execute::
+
     s[::2].to_xarray()
+
+Lossless and reversible conversion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The previous ``Dataset`` example shows that the conversion is not reversible (lossy roundtrip) and
+that the size of the ``Dataset`` increases.
+
+Particularly after a roundtrip, the following deviations are noted:
+
+- a non-dimension Dataset ``coordinate`` is converted into ``variable``
+- a non-dimension DataArray ``coordinate`` is not converted
+- ``dtype`` is not always the same (e.g. "str" is converted to "object")
+- ``attrs`` metadata is not conserved
+
+To avoid these problems, the third-party `ntv-pandas <https://github.com/loco-philippe/ntv-pandas>`__ library offers lossless and reversible conversions between
+``Dataset``/ ``DataArray`` and pandas ``DataFrame`` objects.
+
+This solution is particularly interesting for converting any ``DataFrame`` into a ``Dataset`` (the converter finds the multidimensional structure hidden by the tabular structure).
+
+The `ntv-pandas examples <https://github.com/loco-philippe/ntv-pandas/tree/main/example>`__ show how to improve the conversion for the previous ``Dataset`` example and for more complex examples.
 
 Multi-dimensional data
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -121,7 +150,7 @@ DataArray directly into a pandas object with the same dimensionality, if
 available in pandas (i.e., a 1D array is converted to a
 :py:class:`~pandas.Series` and 2D to :py:class:`~pandas.DataFrame`):
 
-.. ipython:: python
+.. jupyter-execute::
 
     arr = xr.DataArray(
         np.random.randn(2, 3), coords=[("x", [10, 20]), ("y", ["a", "b", "c"])]
@@ -133,7 +162,7 @@ To perform the inverse operation of converting any pandas objects into a data
 array with the same shape, simply use the :py:class:`DataArray`
 constructor:
 
-.. ipython:: python
+.. jupyter-execute::
 
     xr.DataArray(df)
 
@@ -141,7 +170,7 @@ Both the ``DataArray`` and ``Dataset`` constructors directly convert pandas
 objects into xarray objects with the same shape. This means that they
 preserve all use of multi-indexes:
 
-.. ipython:: python
+.. jupyter-execute::
 
     index = pd.MultiIndex.from_arrays(
         [["a", "a", "b"], [0, 1, 2]], names=["one", "two"]
@@ -180,20 +209,21 @@ So you can represent a Panel, in two ways:
 
 Let's take a look:
 
-.. ipython:: python
+.. jupyter-execute::
 
-    data = np.random.RandomState(0).rand(2, 3, 4)
+    data = np.random.default_rng(0).random((2, 3, 4))
     items = list("ab")
     major_axis = list("mno")
     minor_axis = pd.date_range(start="2000", periods=4, name="date")
 
 With old versions of pandas (prior to 0.25), this could stored in a ``Panel``:
 
-.. ipython::
-    :verbatim:
+.. jupyter-input::
 
-    In [1]: pd.Panel(data, items, major_axis, minor_axis)
-    Out[1]:
+    pd.Panel(data, items, major_axis, minor_axis)
+
+.. jupyter-output::
+
     <class 'pandas.core.panel.Panel'>
     Dimensions: 2 (items) x 3 (major_axis) x 4 (minor_axis)
     Items axis: a to b
@@ -202,7 +232,7 @@ With old versions of pandas (prior to 0.25), this could stored in a ``Panel``:
 
 To put this data in a ``DataArray``, write:
 
-.. ipython:: python
+.. jupyter-execute::
 
     array = xr.DataArray(data, [items, major_axis, minor_axis])
     array
@@ -213,7 +243,7 @@ respectively, while the third retains its name ``date``.
 
 You can also easily convert this data into ``Dataset``:
 
-.. ipython:: python
+.. jupyter-execute::
 
     array.to_dataset(dim="dim_0")
 

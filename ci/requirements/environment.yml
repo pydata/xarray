@@ -4,45 +4,65 @@ channels:
   - nodefaults
 dependencies:
   - aiobotocore
+  - array-api-strict<2.4
   - boto3
   - bottleneck
   - cartopy
-  - cdms2
   - cftime
   - dask-core
   - distributed
   - flox
-  - fsspec!=2021.7.0
+  - fsspec
   - h5netcdf
   - h5py
   - hdf5
   - hypothesis
   - iris
-  - lxml  # Optional dep of pydap
+  - lxml # Optional dep of pydap
   - matplotlib-base
+  - mypy==1.17.1
   - nc-time-axis
   - netcdf4
   - numba
   - numbagg
   - numexpr
-  - numpy<1.24
+  - numpy>=2.2
+  - opt_einsum
   - packaging
   - pandas
-  - pint<0.21
+  - pandas-stubs<=2.2.3.241126 # https://github.com/pydata/xarray/issues/10110
+  # - pint>=0.22
   - pip
   - pooch
   - pre-commit
-  - pseudonetcdf
+  - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - pydap
+  - pydap-server
   - pytest
+  - pytest-asyncio
   - pytest-cov
   - pytest-env
-  - pytest-xdist
+  - pytest-mypy-plugins
   - pytest-timeout
+  - pytest-xdist
   - rasterio
   - scipy
   - seaborn
   - sparse
   - toolz
+  - types-colorama
+  - types-docutils
+  - types-psutil
+  - types-Pygments
+  - types-python-dateutil
+  - types-pytz
+  - types-PyYAML
+  - types-requests
+  - types-setuptools
+  - types-openpyxl
   - typing_extensions
   - zarr
+  - pip:
+      - jax # no way to get cpu-only jaxlib from conda if gpu is present
+      - types-defusedxml
+      - types-pexpect
