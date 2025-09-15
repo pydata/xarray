@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ASV_DIR: "./asv_bench"
-      CONDA_ENV_FILE: ci/requirements/environment.yml
+      CONDA_ENV_FILE: ci/requirements/environment-benchmark.yml
 
     steps:
       # We need the full repo to avoid this issue
