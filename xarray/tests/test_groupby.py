@@ -3200,7 +3200,7 @@ def test_multiple_grouper_unsorted_order() -> None:
     assert_identical(actual2, expected2)
 
 
-def test_multiple_grouper_groups() -> None:
+def test_multiple_grouper_empty_groups() -> None:
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 3))},
         coords={"x": [10, 20, 30, 40], "letters": ("x", list("abba"))},
