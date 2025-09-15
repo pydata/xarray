@@ -77,7 +77,6 @@ if TYPE_CHECKING:
         ErrorOptionsWithWarn,
         JoinOptions,
         NestedSequence,
-        ReadBuffer,
         T_Chunks,
         ZarrStoreLike,
     )

@@ -30,7 +30,6 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.types import (
         Alignable,
-        JoinOptions,
         T_DataArray,
         T_Dataset,
         T_DuckArray,

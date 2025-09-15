@@ -715,7 +715,7 @@ def apply_variable_ufunc(
 ) -> Variable | tuple[Variable, ...]:
     """Apply a ndarray level function over Variable and/or ndarray objects."""
     from xarray.core.formatting import short_array_repr
-    from xarray.core.variable import Variable, as_compatible_data
+    from xarray.core.variable import as_compatible_data
 
     dim_sizes = unified_dim_sizes(
         (a for a in args if hasattr(a, "dims")), exclude_dims=exclude_dims

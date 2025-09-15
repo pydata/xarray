@@ -547,9 +547,6 @@ class TimeResampler(Resampler):
         return full_index, first_items, codes
 
     def first_items(self) -> tuple[pd.Series, np.ndarray]:
-        from xarray.coding.cftimeindex import CFTimeIndex
-        from xarray.core.resample_cftime import CFTimeGrouper
-
         if isinstance(self.index_grouper, CFTimeGrouper):
             return self.index_grouper.first_items(
                 cast(CFTimeIndex, self.group_as_index)
@@ -605,8 +602,6 @@ class TimeResampler(Resampler):
         tuple[int, ...]
             A tuple of chunk sizes for the dimension.
         """
-        from xarray.core.dataarray import DataArray
-
         if not _contains_datetime_like_objects(variable):
             raise ValueError(
                 f"Computing chunks with {type(self)!r} only supported for datetime variables. "
@@ -1050,8 +1045,6 @@ class SeasonResampler(Resampler):
         tuple[int, ...]
             A tuple of chunk sizes for the dimension.
         """
-        from xarray.core.dataarray import DataArray
-
         if not _contains_datetime_like_objects(variable):
             raise ValueError(
                 f"Computing chunks with {type(self)!r} only supported for datetime variables. "
