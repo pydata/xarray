@@ -828,7 +828,7 @@ class GroupBy(Generic[T_Xarray]):
             self._groups = dict(
                 zip(
                     self.encoded.unique_coord.data,
-                    self.encoded.group_indices,
+                    tuple(g for g in self.encoded.group_indices if g),
                     strict=True,
                 )
             )
