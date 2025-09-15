@@ -14,6 +14,12 @@ jobs:
       ASV_DIR: "./asv_bench"
       CONDA_ENV_FILE: ci/requirements/environment-benchmark.yml
     steps:
+      # We need the full repo to avoid this issue
+      # https://github.com/actions/checkout/issues/23
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
       - name: Set up conda environment
         # uses: mamba-org/setup-micromamba@v2
         uses: conda-incubator/setup-miniconda@v2
