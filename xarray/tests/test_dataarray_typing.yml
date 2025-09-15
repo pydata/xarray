@@ -107,7 +107,7 @@
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_function_unexpected_keyword
-  skip: True  # mypy 1.18+ outputs "defined here" notes without line numbers (e.g., "xarray/core/common.py: note:...")
+  skip: True # mypy 1.18+ outputs "defined here" notes without line numbers (e.g., "xarray/core/common.py: note:...")
   # pytest-mypy-plugins expects all lines to match "file:line: severity: message" format and can't parse these notes.
   # This is a mypy behavior, not a bug. The test would need pytest-mypy-plugins to support notes without line numbers.
   main: |
