@@ -2121,7 +2121,7 @@ def to_netcdf(
         writes = writer.sync(compute=compute)
 
     finally:
-        if not multifile and not autoclose:  # type: ignore[redundant-expr]
+        if not multifile and not autoclose:  # type: ignore[redundant-expr,unused-ignore]
             if compute:
                 store.close()
             else:
