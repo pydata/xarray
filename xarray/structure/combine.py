@@ -405,7 +405,7 @@ DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]
 
 def combine_nested(
     datasets: DATASET_HYPERCUBE,
-    concat_dim: str | DataArray | Sequence[str | DataArray | pd.Index | None],
+    concat_dim: str | DataArray | Sequence[str | DataArray | pd.Index | None] | None,
     compat: str | CombineKwargDefault = _COMPAT_DEFAULT,
     data_vars: str | CombineKwargDefault = _DATA_VARS_DEFAULT,
     coords: str | CombineKwargDefault = _COORDS_DEFAULT,
