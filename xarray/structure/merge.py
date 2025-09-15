@@ -607,6 +607,17 @@ def merge_coords(
     return variables, out_indexes
 
 
+def equivalent_attrs(a: Any, b: Any) -> bool:
+    """Check if two attribute values are equivalent.
+
+    Returns False if the comparison raises ValueError (e.g., for numpy arrays).
+    """
+    try:
+        return equivalent(a, b)
+    except ValueError:
+        return False
+
+
 def merge_attrs(variable_attrs, combine_attrs, context=None):
     """Combine attributes from different variables according to combine_attrs"""
     if not variable_attrs:
@@ -635,26 +646,15 @@ def merge_attrs(variable_attrs, combine_attrs, context=None):
         dropped_keys = set()
 
         for attrs in variable_attrs:
-            # Process each attribute in the current attrs dict
             for key, value in attrs.items():
                 if key in dropped_keys:
-                    continue  # Already marked as conflicted
+                    continue
 
                 if key not in result:
-                    # New key, add it
                     result[key] = value
-                else:
-                    # Existing key, check for conflict
-                    try:
-                        if not equivalent(result[key], value):
-                            # Values are different, drop the key
-                            result.pop(key, None)
-                            dropped_keys.add(key)
-                    except ValueError:
-                        # equivalent() failed (likely ambiguous truth value)
-                        # Treat as conflict and drop
-                        result.pop(key, None)
-                        dropped_keys.add(key)
+                elif not equivalent_attrs(result[key], value):
+                    result.pop(key, None)
+                    dropped_keys.add(key)
 
         return result
     elif combine_attrs == "identical":
