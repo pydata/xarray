@@ -13,6 +13,10 @@ v2025.09.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- ``engine='netcdf4'`` now supports reading and writing in-memory netCDF files.
+  All of Xarray's netCDF backends now support in-memory reads and writes
+  (:pull:`10624`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -22,12 +26,27 @@ Breaking changes
   dataset in-place. (:issue:`10167`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
+- The default ``engine`` when reading/writing netCDF files in-memory is now
+  netCDF4, consistent with Xarray's default ``engine`` when read/writing netCDF
+  files to disk (:pull:`10624`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 Deprecations
 ~~~~~~~~~~~~
 
 
 Bug fixes
 ~~~~~~~~~
+
+- Xarray objects opened from file-like objects with ``engine='h5netcdf'`` can
+  now be pickled, as long as the underlying file-like object also supports
+  pickle (:issue:`10712`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Closing Xarray objects opened from file-like objects with ```engine='scipy'``
+  no longer closes the underlying file, consistent with the h5netcdf backend
+  (:pull:`10624`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Fix the ``align_chunks`` parameter on the :py:meth:`~xarray.Dataset.to_zarr` method, it was not being
   passed to the underlying :py:meth:`~xarray.backends.api` method (:issue:`10501`, :pull:`10516`).
