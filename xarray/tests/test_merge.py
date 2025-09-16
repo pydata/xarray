@@ -350,6 +350,9 @@ class TestMergeFunction:
             actual = xr.merge([ds9, ds10], combine_attrs="drop_conflicts")
             assert "multi" not in actual.attrs  # Dropped due to ambiguous comparison
 
+    def test_merge_attrs_drop_conflicts_all_true_array(self):
+        """Test drop_conflicts with all-True multi-element array from __eq__."""
+
         # Test with all-True multi-element array (unambiguous truthy)
         class AllTrueArrayEq:
             def __eq__(self, other):
@@ -450,8 +453,8 @@ class TestMergeFunction:
             assert "series" not in actual.attrs  # Dropped due to ValueError
             assert actual.attrs["value"] == "a"
 
-    def test_merge_attrs_drop_conflicts_non_boolean_eq_returns(self):
-        """Test objects with non-boolean __eq__ returns are dropped."""
+    def test_merge_attrs_drop_conflicts_eq_returns_string(self):
+        """Test objects whose __eq__ returns strings are dropped."""
 
         # Case 1: Objects whose __eq__ returns non-boolean strings
         class ReturnsString:
@@ -472,6 +475,9 @@ class TestMergeFunction:
 
         # Strict behavior: drops attribute because __eq__ returns non-boolean
         assert "obj" not in actual.attrs
+
+    def test_merge_attrs_drop_conflicts_eq_returns_number(self):
+        """Test objects whose __eq__ returns numbers are dropped."""
 
         # Case 2: Objects whose __eq__ returns numbers
         class ReturnsZero:
