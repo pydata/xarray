@@ -3,10 +3,6 @@ preview = ["pixi-build"]
 channels = ["conda-forge", "nodefaults"]
 platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
 
-
-[tasks]
-test = { cmd = "pytest" }
-
 [tasks.test-all]
 depends-on = [
   { task = "test", environment = "test-default" },
@@ -120,6 +116,9 @@ pytest-mypy-plugins = "*"
 pytest-timeout = "*"
 pytest-xdist = "*"
 coveralls = "*"
+
+[feature.test.tasks]
+test = { cmd = "pytest" }
 
 [feature.doc.dependencies]
 cfgrib = "*"
