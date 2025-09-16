@@ -38,6 +38,7 @@ jobs:
       - name: Run benchmarks
         shell: bash -l {0}
         run: |
+          set -x
           asv machine --config asv.conf.json --yes
           asv continuous origin/${{github.base_ref}} HEAD --config asv.conf.json --quick --strict
           asv compare origin/${{github.base_ref}} HEAD --config asv.conf.json --split --sort ratio | tee -a asv_compare.log
