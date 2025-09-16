@@ -678,9 +678,10 @@ class TestZarrDatatreeIO:
             comp = {"compressors": (codec,)} if has_zarr_v3 else {"compressor": codec}
         elif zarr_format == 3:
             # specifying codecs in zarr_format=3 requires importing from zarr 3 namespace
-            import numcodecs.zarr3
+            from zarr.registry import get_codec_class
 
-            comp = {"compressors": (numcodecs.zarr3.Blosc(cname="zstd", clevel=3),)}
+            Blosc = get_codec_class("numcodecs.blosc")
+            comp = {"compressors": (Blosc(cname="zstd", clevel=3),)}  # type: ignore[call-arg]
 
         enc = {"/set2": dict.fromkeys(original_dt["/set2"].dataset.data_vars, comp)}
         original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
