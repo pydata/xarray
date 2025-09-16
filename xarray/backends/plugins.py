@@ -9,6 +9,7 @@ from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Any
 
 from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
+from xarray.core.options import OPTIONS
 from xarray.core.utils import module_available
 
 if TYPE_CHECKING:
@@ -17,8 +18,6 @@ if TYPE_CHECKING:
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.types import ReadBuffer
-
-NETCDF_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
 
 def remove_duplicates(entrypoints: EntryPoints) -> list[EntryPoint]:
@@ -91,8 +90,8 @@ def set_missing_parameters(
 def sort_backends(
     backend_entrypoints: dict[str, type[BackendEntrypoint]],
 ) -> dict[str, type[BackendEntrypoint]]:
-    ordered_backends_entrypoints = {}
-    for be_name in NETCDF_BACKENDS_ORDER:
+    ordered_backends_entrypoints: dict[str, type[BackendEntrypoint]] = {}
+    for be_name in OPTIONS["netcdf_engine_order"]:
         if backend_entrypoints.get(be_name) is not None:
             ordered_backends_entrypoints[be_name] = backend_entrypoints.pop(be_name)
     ordered_backends_entrypoints.update(

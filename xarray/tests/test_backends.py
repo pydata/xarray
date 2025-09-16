@@ -6775,6 +6775,7 @@ def _assert_no_dates_out_of_range_warning(record):
 
 
 @requires_scipy_or_netCDF4
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
 def test_use_cftime_standard_calendar_default_in_range(calendar) -> None:
     x = [0, 1]

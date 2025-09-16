@@ -45,6 +45,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
+from xarray.core.options import OPTIONS
 from xarray.core.treenode import group_subtrees
 from xarray.core.types import NetcdfWriteModes, ReadBuffer, ZarrWriteModes
 from xarray.core.utils import emit_user_level_warning, is_remote_uri
@@ -108,15 +109,24 @@ def get_default_netcdf_write_engine(
         "h5netcdf": "h5netcdf",
     }
 
-    candidates = list(plugins.NETCDF_BACKENDS_ORDER)
+    candidates = list(OPTIONS["netcdf_engine_order"])
 
     if format is not None:
-        if format.upper().startswith("NETCDF3"):
-            candidates.remove("h5netcdf")
-        elif format.upper().startswith("NETCDF4"):
-            candidates.remove("scipy")
-        else:
+        format = format.upper()  # type: ignore[assignment]
+        if format not in {
+            "NETCDF4",
+            "NETCDF4_CLASSIC",
+            "NETCDF3_64BIT",
+            "NETCDF3_CLASSIC",
+        }:
             raise ValueError(f"unexpected {format=}")
+        # TODO: allow format='NETCDF4_CLASSIC' to default to using h5netcdf,
+        # when the older supported version of h5netcdf supports it:
+        # https://github.com/h5netcdf/h5netcdf/pull/283
+        if format != "NETCDF4":
+            candidates.remove("h5netcdf")
+        if format not in {"NETCDF3_64BIT", "NETCDF3_CLASSIC"}:
+            candidates.remove("scipy")
 
     if to_fileobject:
         candidates.remove("netcdf4")
@@ -124,7 +134,7 @@ def get_default_netcdf_write_engine(
     for engine in candidates:
         module_name = module_names[engine]
         if importlib.util.find_spec(module_name) is not None:
-            return cast(Literal["netcdf4", "h5netcdf", "scipy"], engine)
+            return engine
 
     format_str = f" with {format=}" if format is not None else ""
     libraries = ", ".join(module_names[c] for c in candidates)
@@ -577,9 +587,10 @@ def open_dataset(
         , installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
-        is chosen based on available dependencies, with a preference for
-        "netcdf4". A custom backend class (a subclass of ``BackendEntrypoint``)
-        can also be used.
+        is chosen based on available dependencies, by default preferring
+        "h5netcdf" over "scipy" over "netcdf4" (customizable via
+        ``netcdf_engine_order`` in ``xarray.set_options()``). A custom backend
+        class (a subclass of ``BackendEntrypoint``) can also be used.
     chunks : int, dict, 'auto' or None, default: None
         If provided, used to load the data into dask arrays.
 
@@ -820,8 +831,10 @@ def open_dataarray(
         , installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
-        is chosen based on available dependencies, with a preference for
-        "netcdf4".
+        is chosen based on available dependencies, by default preferring
+        "h5netcdf" over "scipy" over "netcdf4" (customizable via
+        ``netcdf_engine_order`` in ``xarray.set_options()``). A custom backend
+        class (a subclass of ``BackendEntrypoint``) can also be used.
     chunks : int, dict, 'auto' or None, default: None
         If provided, used to load the data into dask arrays.
 
@@ -1044,9 +1057,10 @@ def open_datatree(
     engine : {"netcdf4", "h5netcdf", "zarr", None}, \
              installed backend or xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
-        is chosen based on available dependencies, with a preference for
-        "netcdf4". A custom backend class (a subclass of ``BackendEntrypoint``)
-        can also be used.
+        is chosen based on available dependencies, by default preferring
+        "h5netcdf" over "netcdf4" (customizable via ``netcdf_engine_order`` in
+        ``xarray.set_options()``). A custom backend class (a subclass of
+        ``BackendEntrypoint``) can also be used.
     chunks : int, dict, 'auto' or None, default: None
         If provided, used to load the data into dask arrays.
 
@@ -1288,8 +1302,10 @@ def open_groups(
     engine : {"netcdf4", "h5netcdf", "zarr", None}, \
              installed backend or xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
-        is chosen based on available dependencies, with a preference for
-        "netcdf4". A custom backend class (a subclass of ``BackendEntrypoint``)
+        is chosen based on available dependencies, by default preferring
+        "h5netcdf" over "netcdf4" (customizable via ``netcdf_engine_order`` in
+        ``xarray.set_options()``). A custom backend class (a subclass of
+        ``BackendEntrypoint``) can also be used.
         can also be used.
     chunks : int, dict, 'auto' or None, default: None
         If provided, used to load the data into dask arrays.
@@ -1605,8 +1621,10 @@ def open_mfdataset(
         , installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
-        is chosen based on available dependencies, with a preference for
-        "netcdf4".
+        is chosen based on available dependencies, by default preferring
+        "h5netcdf" over "scipy" over "netcdf4" (customizable via
+        ``netcdf_engine_order`` in ``xarray.set_options()``). A custom backend
+        class (a subclass of ``BackendEntrypoint``) can also be used.
     data_vars : {"minimal", "different", "all"} or list of str, default: "all"
         These data variables will be concatenated together:
           * "minimal": Only data variables in which the dimension already
@@ -2207,9 +2225,9 @@ def save_mfdataset(
         if necessary.
     engine : {"netcdf4", "scipy", "h5netcdf"}, optional
         Engine to use when writing netCDF files. If not provided, the
-        default engine is chosen based on available dependencies, with a
-        preference for "netcdf4" if writing to a file on disk.
-        See `Dataset.to_netcdf` for additional information.
+        default engine is chosen based on available dependencies, by default
+        preferring "h5netcdf" over "scipy" over "netcdf4" (customizable via
+        ``netcdf_engine_order`` in ``xarray.set_options()``).
     compute : bool
         If true compute immediately, otherwise return a
         ``dask.delayed.Delayed`` object that can be computed later.
