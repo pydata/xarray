@@ -53,11 +53,15 @@ Bug fixes
 - Fix error when encoding an empty :py:class:`numpy.datetime64` array
   (:issue:`10722`, :pull:`10723`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- Propagate coordinate attrs in :py:meth:`xarray.Dataset.map` (:issue:`9317`, :pull:`10602`).
 - Fix error from ``to_netcdf(..., compute=False)`` when using Dask Distributed
   (:issue:`10725`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Propagation coordinate attrs in :py:meth:`xarray.Dataset.map` (:issue:`9317`, :pull:`10602`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Allow ``combine_attrs="drop_conflicts"`` to handle objects with ``__eq__`` methods that return
+  non-bool values (e.g., numpy arrays) without raising ``ValueError`` (:pull:`10726`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Documentation
 ~~~~~~~~~~~~~

@@ -607,6 +607,25 @@ def merge_coords(
     return variables, out_indexes
 
 
+def equivalent_attrs(a: Any, b: Any) -> bool:
+    """Check if two attribute values are equivalent.
+
+    Returns False if the comparison raises ValueError or TypeError.
+    This handles cases like numpy arrays with ambiguous truth values
+    and xarray Datasets which can't be directly converted to numpy arrays.
+
+    Since equivalent() now handles non-boolean returns by returning False,
+    this wrapper mainly catches exceptions from comparisons that can't be
+    evaluated at all.
+    """
+    try:
+        return equivalent(a, b)
+    except (ValueError, TypeError):
+        # These exceptions indicate the comparison is truly ambiguous
+        # (e.g., nested numpy arrays that would raise "ambiguous truth value")
+        return False
+
+
 def merge_attrs(variable_attrs, combine_attrs, context=None):
     """Combine attributes from different variables according to combine_attrs"""
     if not variable_attrs:
@@ -633,20 +652,18 @@ def merge_attrs(variable_attrs, combine_attrs, context=None):
     elif combine_attrs == "drop_conflicts":
         result = {}
         dropped_keys = set()
+
         for attrs in variable_attrs:
-            result.update(
-                {
-                    key: value
-                    for key, value in attrs.items()
-                    if key not in result and key not in dropped_keys
-                }
-            )
-            result = {
-                key: value
-                for key, value in result.items()
-                if key not in attrs or equivalent(attrs[key], value)
-            }
-            dropped_keys |= {key for key in attrs if key not in result}
+            for key, value in attrs.items():
+                if key in dropped_keys:
+                    continue
+
+                if key not in result:
+                    result[key] = value
+                elif not equivalent_attrs(result[key], value):
+                    del result[key]
+                    dropped_keys.add(key)
+
         return result
     elif combine_attrs == "identical":
         result = dict(variable_attrs[0])
