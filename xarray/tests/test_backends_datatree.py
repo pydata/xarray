@@ -33,6 +33,9 @@ with contextlib.suppress(ImportError):
     import netCDF4 as nc4
 
 
+ON_WINDOWS = sys.platform == "win32"
+
+
 class TestNetCDF4DataTree(_TestNetCDF4Data):
     @contextlib.contextmanager
     def open(self, path, **kwargs):
@@ -303,9 +306,12 @@ class DatatreeIOBase:
         original_dt = simple_datatree.chunk()
         result = original_dt.to_netcdf(filepath, engine=self.engine, compute=False)
 
-        with open_datatree(filepath, engine=self.engine) as in_progress_dt:
-            assert in_progress_dt.isomorphic(original_dt)
-            assert not in_progress_dt.equals(original_dt)
+        if not ON_WINDOWS:
+            # File at filepath is not closed until .compute() is called. On
+            # Windows, this means we can't open it yet.
+            with open_datatree(filepath, engine=self.engine) as in_progress_dt:
+                assert in_progress_dt.isomorphic(original_dt)
+                assert not in_progress_dt.equals(original_dt)
 
         result.compute()
         with open_datatree(filepath, engine=self.engine) as written_dt:
