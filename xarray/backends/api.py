@@ -77,7 +77,6 @@ if TYPE_CHECKING:
         ErrorOptionsWithWarn,
         JoinOptions,
         NestedSequence,
-        ReadBuffer,
         T_Chunks,
         ZarrStoreLike,
     )
@@ -100,7 +99,7 @@ DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
 
 def get_default_netcdf_write_engine(
     format: T_NetcdfTypes | None,
-    to_fileobject_or_memoryview: bool,
+    to_fileobject: bool,
 ) -> Literal["netcdf4", "h5netcdf", "scipy"]:
     """Return the default netCDF library to use for writing a netCDF file."""
     module_names = {
@@ -119,7 +118,7 @@ def get_default_netcdf_write_engine(
         else:
             raise ValueError(f"unexpected {format=}")
 
-    if to_fileobject_or_memoryview:
+    if to_fileobject:
         candidates.remove("netcdf4")
 
     for engine in candidates:
@@ -546,14 +545,12 @@ def open_dataset(
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool
-    | CFDatetimeCoder
-    | Mapping[str, bool | CFDatetimeCoder]
-    | None = None,
-    decode_timedelta: bool
-    | CFTimedeltaCoder
-    | Mapping[str, bool | CFTimedeltaCoder]
-    | None = None,
+    decode_times: (
+        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None
+    ) = None,
+    decode_timedelta: (
+        bool | CFTimedeltaCoder | Mapping[str, bool | CFTimedeltaCoder] | None
+    ) = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
@@ -789,10 +786,9 @@ def open_dataarray(
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
-    decode_times: bool
-    | CFDatetimeCoder
-    | Mapping[str, bool | CFDatetimeCoder]
-    | None = None,
+    decode_times: (
+        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None
+    ) = None,
     decode_timedelta: bool | CFTimedeltaCoder | None = None,
     use_cftime: bool | None = None,
     concat_characters: bool | None = None,
@@ -1019,14 +1015,12 @@ def open_datatree(
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool
-    | CFDatetimeCoder
-    | Mapping[str, bool | CFDatetimeCoder]
-    | None = None,
-    decode_timedelta: bool
-    | CFTimedeltaCoder
-    | Mapping[str, bool | CFTimedeltaCoder]
-    | None = None,
+    decode_times: (
+        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None
+    ) = None,
+    decode_timedelta: (
+        bool | CFTimedeltaCoder | Mapping[str, bool | CFTimedeltaCoder] | None
+    ) = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
@@ -1261,14 +1255,12 @@ def open_groups(
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool
-    | CFDatetimeCoder
-    | Mapping[str, bool | CFDatetimeCoder]
-    | None = None,
-    decode_timedelta: bool
-    | CFTimedeltaCoder
-    | Mapping[str, bool | CFTimedeltaCoder]
-    | None = None,
+    decode_times: (
+        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None
+    ) = None,
+    decode_timedelta: (
+        bool | CFTimedeltaCoder | Mapping[str, bool | CFTimedeltaCoder] | None
+    ) = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
@@ -1524,10 +1516,9 @@ def _remove_path(
 
 
 def open_mfdataset(
-    paths: str
-    | os.PathLike
-    | ReadBuffer
-    | NestedSequence[str | os.PathLike | ReadBuffer],
+    paths: (
+        str | os.PathLike | ReadBuffer | NestedSequence[str | os.PathLike | ReadBuffer]
+    ),
     chunks: T_Chunks = None,
     concat_dim: (
         str
@@ -1541,10 +1532,9 @@ def open_mfdataset(
     compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
     preprocess: Callable[[Dataset], Dataset] | None = None,
     engine: T_Engine = None,
-    data_vars: Literal["all", "minimal", "different"]
-    | None
-    | list[str]
-    | CombineKwargDefault = _DATA_VARS_DEFAULT,
+    data_vars: (
+        Literal["all", "minimal", "different"] | None | list[str] | CombineKwargDefault
+    ) = _DATA_VARS_DEFAULT,
     coords=_COORDS_DEFAULT,
     combine: Literal["by_coords", "nested"] = "by_coords",
     parallel: bool = False,
@@ -1858,6 +1848,20 @@ def open_mfdataset(
     return combined
 
 
+def _get_netcdf_autoclose(dataset: Dataset, engine: T_NetcdfEngine) -> bool:
+    """Should we close files after each write operations?"""
+    scheduler = get_dask_scheduler()
+    have_chunks = any(v.chunks is not None for v in dataset.variables.values())
+
+    autoclose = have_chunks and scheduler in ["distributed", "multiprocessing"]
+    if autoclose and engine == "scipy":
+        raise NotImplementedError(
+            f"Writing netCDF files with the {engine} backend "
+            f"is not currently supported with dask's {scheduler} scheduler"
+        )
+    return autoclose
+
+
 WRITEABLE_STORES: dict[T_NetcdfEngine, Callable] = {
     "netcdf4": backends.NetCDF4DataStore.open,
     "scipy": backends.ScipyDataStore,
@@ -2055,8 +2059,8 @@ def to_netcdf(
     path_or_file = _normalize_path(path_or_file)
 
     if engine is None:
-        to_fileobject_or_memoryview = not isinstance(path_or_file, str)
-        engine = get_default_netcdf_write_engine(format, to_fileobject_or_memoryview)
+        to_fileobject = isinstance(path_or_file, IOBase)
+        engine = get_default_netcdf_write_engine(format, to_fileobject)
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
@@ -2064,16 +2068,7 @@ def to_netcdf(
     # sanitize unlimited_dims
     unlimited_dims = _sanitize_unlimited_dims(dataset, unlimited_dims)
 
-    # handle scheduler specific logic
-    scheduler = get_dask_scheduler()
-    have_chunks = any(v.chunks is not None for v in dataset.variables.values())
-
-    autoclose = have_chunks and scheduler in ["distributed", "multiprocessing"]
-    if autoclose and engine == "scipy":
-        raise NotImplementedError(
-            f"Writing netCDF files with the {engine} backend "
-            f"is not currently supported with dask's {scheduler} scheduler"
-        )
+    autoclose = _get_netcdf_autoclose(dataset, engine)
 
     if path_or_file is None:
         if not compute:
@@ -2116,7 +2111,7 @@ def to_netcdf(
         writes = writer.sync(compute=compute)
 
     finally:
-        if not multifile:
+        if not multifile and not autoclose:  # type: ignore[redundant-expr,unused-ignore]
             if compute:
                 store.close()
             else:

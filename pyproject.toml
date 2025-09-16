@@ -73,7 +73,7 @@ types = [
 dev = [
   "hypothesis",
   "jinja2",
-  "mypy",
+  "mypy==1.18.1",
   "pre-commit",
   "pytest",
   "pytest-cov",
@@ -190,7 +190,6 @@ check_untyped_defs = false
 module = [
   "xarray.tests.test_coarsen",
   "xarray.tests.test_coding_times",
-  "xarray.tests.test_combine",
   "xarray.tests.test_computation",
   "xarray.tests.test_concat",
   "xarray.tests.test_coordinates",

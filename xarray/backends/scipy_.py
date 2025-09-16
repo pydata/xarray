@@ -35,6 +35,12 @@ from xarray.core.utils import (
 )
 from xarray.core.variable import Variable
 
+try:
+    from scipy.io import netcdf_file as netcdf_file_base
+except ImportError:
+    netcdf_file_base = object
+
+
 if TYPE_CHECKING:
     import scipy.io
 
@@ -104,13 +110,38 @@ class ScipyArrayWrapper(BackendArray):
                     raise
 
 
-def _open_scipy_netcdf(filename, mode, mmap, version):
+# TODO: Make the scipy import lazy again after upstreaming these fixes.
+class flush_only_netcdf_file(netcdf_file_base):
+    # scipy.io.netcdf_file.close() incorrectly closes file objects that
+    # were passed in as constructor arguments:
+    # https://github.com/scipy/scipy/issues/13905
+
+    # Instead of closing such files, only call flush(), which is
+    # equivalent as long as the netcdf_file object is not mmapped.
+    # This suffices to keep BytesIO objects open long enough to read
+    # their contents from to_netcdf(), but underlying files still get
+    # closed when the netcdf_file is garbage collected (via __del__),
+    # and will need to be fixed upstream in scipy.
+    def close(self):
+        if hasattr(self, "fp") and not self.fp.closed:
+            self.flush()
+            self.fp.seek(0)  # allow file to be read again
+
+    def __del__(self):
+        # Remove the __del__ method, which in scipy is aliased to close().
+        # These files need to be closed explicitly by xarray.
+        pass
+
+
+def _open_scipy_netcdf(filename, mode, mmap, version, flush_only=False):
     import scipy.io
+
+    netcdf_file = flush_only_netcdf_file if flush_only else scipy.io.netcdf_file
 
     # if the string ends with .gz, then gunzip and open as netcdf file
     if isinstance(filename, str) and filename.endswith(".gz"):
         try:
-            return scipy.io.netcdf_file(
+            return netcdf_file(
                 gzip.open(filename), mode=mode, mmap=mmap, version=version
             )
         except TypeError as e:
@@ -124,7 +155,7 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
                 raise
 
     try:
-        return scipy.io.netcdf_file(filename, mode=mode, mmap=mmap, version=version)
+        return netcdf_file(filename, mode=mode, mmap=mmap, version=version)
     except TypeError as e:  # netcdf3 message is obscure in this case
         errmsg = e.args[0]
         if "is not a valid NetCDF 3 file" in errmsg:
@@ -184,19 +215,14 @@ class ScipyDataStore(WritableCFDataStore):
             # Note: checking for .seek matches the check for file objects
             # in scipy.io.netcdf_file
             scipy_dataset = _open_scipy_netcdf(
-                filename_or_obj, mode=mode, mmap=mmap, version=version
+                filename_or_obj,
+                mode=mode,
+                mmap=mmap,
+                version=version,
+                flush_only=True,
             )
-            # scipy.io.netcdf_file.close() incorrectly closes file objects that
-            # were passed in as constructor arguments:
-            # https://github.com/scipy/scipy/issues/13905
-            # Instead of closing such files, only call flush(), which is
-            # equivalent as long as the netcdf_file object is not mmapped.
-            # This suffices to keep BytesIO objects open long enough to read
-            # their contents from to_netcdf(), but underlying files still get
-            # closed when the netcdf_file is garbage collected (via __del__),
-            # and will need to be fixed upstream in scipy.
             assert not scipy_dataset.use_mmap  # no mmap for file objects
-            manager = DummyFileManager(scipy_dataset, close=scipy_dataset.flush)
+            manager = DummyFileManager(scipy_dataset)
         else:
             raise ValueError(
                 f"cannot open {filename_or_obj=} with scipy.io.netcdf_file"

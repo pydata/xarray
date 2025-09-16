@@ -3203,6 +3203,16 @@ def test_multiple_grouper_unsorted_order() -> None:
     assert_identical(actual2, expected2)
 
 
+def test_multiple_grouper_empty_groups() -> None:
+    ds = xr.Dataset(
+        {"foo": (("x", "y"), np.random.rand(4, 3))},
+        coords={"x": [10, 20, 30, 40], "letters": ("x", list("abba"))},
+    )
+
+    groups = ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper())
+    assert len(groups.groups) == 2
+
+
 def test_groupby_multiple_bin_grouper_missing_groups() -> None:
     from numpy import nan
 
