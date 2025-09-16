@@ -5796,7 +5796,7 @@ class TestDataset:
             coords={
                 "x": [4, 3],
                 "y": [1, 2],
-                "z": (["x", "y"], [[np.e, np.pi], [np.pi * np.e, np.pi * 3]]),
+                "z": (["x", "y"], [[np.exp(1), np.pi], [np.pi * np.exp(1), np.pi * 3]]),
             },
         )
         expected7 = Dataset(
