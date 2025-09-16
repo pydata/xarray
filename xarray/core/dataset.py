@@ -7178,7 +7178,7 @@ class Dataset(
         # All and only non-index arrays (whether data or coordinates) should
         # become columns in the output DataFrame. Excluding indexes rather
         # than dims handles the case of a MultiIndex along a single dimension.
-        columns_in_order = [k for k in self.variables if k not in self.indexes]
+        columns_in_order = [k for k in self.variables if k not in self.xindexes]
         non_extension_array_columns = [
             k
             for k in columns_in_order
