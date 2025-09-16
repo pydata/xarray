@@ -681,7 +681,7 @@ class TestZarrDatatreeIO:
             from zarr.registry import get_codec_class
 
             Blosc = get_codec_class("numcodecs.blosc")
-            comp = {"compressors": (Blosc(cname="zstd", clevel=3),)}
+            comp = {"compressors": (Blosc(cname="zstd", clevel=3),)}  # type: ignore[call-arg]
 
         enc = {"/set2": dict.fromkeys(original_dt["/set2"].dataset.data_vars, comp)}
         original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
