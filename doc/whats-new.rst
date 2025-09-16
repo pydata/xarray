@@ -26,6 +26,11 @@ Breaking changes
   dataset in-place. (:issue:`10167`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
+- The default ``engine`` when reading/writing netCDF files in-memory is now
+  netCDF4, consistent with Xarray's default ``engine`` when read/writing netCDF
+  files to disk (:pull:`10624`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 Deprecations
 ~~~~~~~~~~~~
 
