@@ -4382,13 +4382,16 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         ) as ds:
             yield ds
 
-    @pytest.mark.parametrize("zarr_format", [2, 3] if has_zarr_v3 else [2])
-    def test_default_zarr_fill_value(self, zarr_format):
-        ds = xr.Dataset({"floats": ("x", [1.0, 2.0]), "ints": ("x", [3, 4])})
+    @requires_dask
+    def test_default_zarr_fill_value(self):
+        if not has_zarr_v3 and zarr.config.config["default_zarr_format"] == 2:
+            pytest.skip("zarr v2 cannot write zarr_format=3")
+        inputs = xr.Dataset({"floats": ("x", [1.0]), "ints": ("x", [1])}).chunk()
+        expected = xr.Dataset({"floats": ("x", [np.nan]), "ints": ("x", [0])})
         with self.temp_dir() as (d, store):
-            ds.to_zarr(store, zarr_format=zarr_format)
+            inputs.to_zarr(store, compute=False)
             with open_dataset(store) as roundtripped:
-                assert_identical(ds, roundtripped)
+                assert_identical(expected, roundtripped)
                 assert np.isnan(roundtripped.variables["floats"].encoding["_FillValue"])
                 assert (
                     "_FillValue" not in roundtripped.variables["ints"].encoding
