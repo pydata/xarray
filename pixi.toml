@@ -44,6 +44,9 @@ git = "*"            # needed for dynamic versioning
 [pypi-dependencies]
 xarray = { path = ".", editable = true }
 
+[target.linux-64.dependencies]
+pydap-server = "*"
+
 [feature.minimal.dependencies]
 # minimal versions
 python = "3.11.*"
@@ -61,8 +64,7 @@ rasterio = "*"
 
 # opendap
 pydap = "*"
-lxml = "*"         # Optional dep of pydap
-pydap-server = "*"
+lxml = "*"  # Optional dep of pydap
 
 # s3
 boto3 = "*"
