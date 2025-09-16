@@ -4382,6 +4382,18 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         ) as ds:
             yield ds
 
+    @pytest.mark.parametrize("zarr_format", [2, 3])
+    def test_default_zarr_fill_value(self, zarr_format):
+        ds = xr.Dataset({"floats": ("x", [1.0, 2.0]), "ints": ("x", [3, 4])})
+        with self.temp_dir() as (d, store):
+            ds.to_zarr(store, zarr_format=zarr_format)
+            with open_dataset(store) as roundtripped:
+                assert_identical(ds, roundtripped)
+                assert np.isnan(roundtripped.variables["floats"].encoding["_FillValue"])
+                assert (
+                    "_FillValue" not in roundtripped.variables["ints"].encoding
+                )  # use default
+
     @pytest.mark.parametrize("consolidated", [True, False, None])
     @pytest.mark.parametrize("write_empty", [True, False, None])
     def test_write_empty(
@@ -4420,14 +4432,13 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 "0.1.1",
             ]
 
+        # use nan for default fill_value behaviour
+        data = np.array([np.nan, np.nan, 1.0, np.nan]).reshape((1, 2, 2))
+
         if zarr_format_3:
-            data = np.array([0.0, 0, 1.0, 0]).reshape((1, 2, 2))
             # transform to the path style of zarr 3
             # e.g. 0/0/1
             expected = [e.replace(".", "/") for e in expected]
-        else:
-            # use nan for default fill_value behaviour
-            data = np.array([np.nan, np.nan, 1.0, np.nan]).reshape((1, 2, 2))
 
         ds = xr.Dataset(data_vars={"test": (("Z", "Y", "X"), data)})
 
