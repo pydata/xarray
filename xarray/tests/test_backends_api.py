@@ -24,18 +24,53 @@ from xarray.tests import (
 @requires_h5netcdf
 def test_get_default_netcdf_write_engine() -> None:
     engine = get_default_netcdf_write_engine(format=None, to_fileobject=False)
-    assert engine == "netcdf4"
+    assert engine == "h5netcdf"
 
     engine = get_default_netcdf_write_engine(format="NETCDF4", to_fileobject=False)
+    assert engine == "h5netcdf"
+
+    engine = get_default_netcdf_write_engine(
+        format="NETCDF4_CLASSIC", to_fileobject=False
+    )
     assert engine == "netcdf4"
 
     engine = get_default_netcdf_write_engine(format="NETCDF4", to_fileobject=True)
     assert engine == "h5netcdf"
 
     engine = get_default_netcdf_write_engine(
+        format="NETCDF3_CLASSIC", to_fileobject=False
+    )
+    assert engine == "scipy"
+
+    engine = get_default_netcdf_write_engine(
         format="NETCDF3_CLASSIC", to_fileobject=True
     )
     assert engine == "scipy"
+
+    with xr.set_options(netcdf_engine_order=["netcdf4", "scipy", "h5netcdf"]):
+        engine = get_default_netcdf_write_engine(format=None, to_fileobject=False)
+        assert engine == "netcdf4"
+
+        engine = get_default_netcdf_write_engine(format="NETCDF4", to_fileobject=False)
+        assert engine == "netcdf4"
+
+        engine = get_default_netcdf_write_engine(
+            format="NETCDF4_CLASSIC", to_fileobject=False
+        )
+        assert engine == "netcdf4"
+
+        engine = get_default_netcdf_write_engine(format="NETCDF4", to_fileobject=True)
+        assert engine == "h5netcdf"
+
+        engine = get_default_netcdf_write_engine(
+            format="NETCDF3_CLASSIC", to_fileobject=False
+        )
+        assert engine == "netcdf4"
+
+        engine = get_default_netcdf_write_engine(
+            format="NETCDF3_CLASSIC", to_fileobject=True
+        )
+        assert engine == "scipy"
 
 
 @requires_h5netcdf

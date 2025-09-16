@@ -7277,7 +7277,7 @@ class TestNCZarr:
         # https://github.com/Unidata/netcdf-c/issues/2259
         ds = ds.drop_vars("dim3")
 
-        ds.to_netcdf(f"file://{filename}#mode=nczarr")
+        ds.to_netcdf(f"file://{filename}#mode=nczarr", engine="netcdf4")
         return ds
 
     def test_open_nczarr(self) -> None:
