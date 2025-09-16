@@ -390,7 +390,6 @@ def _parse_group_and_groupers(
     eagerly_compute_group: Literal[False] | None,
 ) -> tuple[ResolvedGrouper, ...]:
     from xarray.core.dataarray import DataArray
-    from xarray.core.variable import Variable
     from xarray.groupers import Grouper, UniqueGrouper
 
     if group is not None and groupers:
@@ -828,7 +827,7 @@ class GroupBy(Generic[T_Xarray]):
             self._groups = dict(
                 zip(
                     self.encoded.unique_coord.data,
-                    self.encoded.group_indices,
+                    tuple(g for g in self.encoded.group_indices if g),
                     strict=True,
                 )
             )
