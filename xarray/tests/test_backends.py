@@ -4382,7 +4382,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         ) as ds:
             yield ds
 
-    @pytest.mark.parametrize("zarr_format", [2, 3])
+    @pytest.mark.parametrize("zarr_format", [2, 3] if has_zarr_v3 else [2])
     def test_default_zarr_fill_value(self, zarr_format):
         ds = xr.Dataset({"floats": ("x", [1.0, 2.0]), "ints": ("x", [3, 4])})
         with self.temp_dir() as (d, store):
