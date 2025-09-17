@@ -1,0 +1,108 @@
+# This workflow periodically creates new environment lock files based on the newest
+# available packages and dependencies.
+#
+# Environment specifications are given as conda environment.yml files found in
+# `requirements/py**.yml`.  These state the packages required, the conda channels
+# that the packages will be pulled from, and any versions of packages that need to be
+# pinned at specific versions.
+#
+# For environments that have changed, a pull request will be made and submitted
+# to the main branch
+
+name: Refresh Lockfiles
+
+
+on:
+  workflow_call:
+
+jobs:
+  get_python_matrix:
+    # Determines which Python versions should be included in the matrix used in
+    # the gen_lockfiles job.
+    if: "github.repository_owner == 'pydata' || github.event_name == 'workflow_dispatch'"
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.get_py.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: get_py
+        run: echo "MATRIX=$(ls -1 requirements/py*.yml | xargs -n1 basename | sed 's/....$//' | jq -cnR '[inputs]')" >> ${GITHUB_OUTPUT}
+
+  gen_lockfiles:
+    # This is a matrix job: it splits to create new lockfiles for each
+    # of the CI test python versions.
+    if: "github.repository_owner == 'pydata' || github.event_name == 'workflow_dispatch'"
+    runs-on: ubuntu-latest
+    needs: get_python_matrix
+
+    strategy:
+      matrix:
+        python: ${{ fromJSON(needs.get_python_matrix.outputs.MATRIX) }}
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: install requirements
+        run: |
+          source $CONDA/bin/activate base
+          conda update -n base --all
+      - name: generate lockfile
+        run: |
+          pipx run conda-lock -k explicit -p linux-64 -f requirements/${{matrix.python}}.yml
+          mv conda-linux-64.lock ${{matrix.python}}-linux-64.lock
+      - name: output lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: lock-artifacts-${{matrix.python}}
+          path: ${{matrix.python}}-linux-64.lock
+
+  create_pr:
+    # Once the matrix job has completed all the lock files will have been
+    # uploaded as artifacts.
+    # Download the artifacts, add them to the repo, and create a PR.
+    if: "github.repository_owner == 'pydata' || github.event_name == 'workflow_dispatch'"
+    runs-on: ubuntu-latest
+    needs: gen_lockfiles
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: get artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: ${{ github.workspace }}/requirements/locks
+          merge-multiple: true
+
+      - name: "Generate token"
+        uses: actions/create-github-app-token@v2
+        id: generate-token
+        with:
+          app-id: ${{ secrets.AUTH_APP_ID }}
+          private-key: ${{ secrets.AUTH_APP_PRIVATE_KEY }}
+
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+          commit-message: Updated environment lockfiles
+          committer: "Lockfile bot <noreply@github.com>"
+          author: "Lockfile bot <noreply@github.com>"
+          delete-branch: true
+          branch: auto-update-lockfiles
+          title: "[CI Bot] environment lockfiles auto-update"
+          body: |
+            Lockfiles updated to the latest resolvable environment.
+            ### If the CI tasks fail, create a new branch based on this PR and add the required fixes to that branch.
+          labels: |
+            New: Pull Request
+            Bot
+
+      - name: Check Pull Request
+        if: steps.cpr.outputs.pull-request-number != ''
+        run: |
+          echo "### :rocket: Pull-Request Summary" >> ${GITHUB_STEP_SUMMARY}
+          echo "" >> ${GITHUB_STEP_SUMMARY}
+          echo "The following lock-files pull-request has been auto-generated:"
+          echo "- **PR** #${{ steps.cpr.outputs.pull-request-number }}" >> ${GITHUB_STEP_SUMMARY}
+          echo "- **URL** ${{ steps.cpr.outputs.pull-request-url }}" >> ${GITHUB_STEP_SUMMARY}
+          echo "- **Operation** [${{ steps.cpr.outputs.pull-request-operation }}]" >> ${GITHUB_STEP_SUMMARY}
+          echo "- **SHA** ${{ steps.cpr.outputs.pull-request-head-sha }}" >> ${GITHUB_STEP_SUMMARY}
