@@ -53,7 +53,7 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
     Values are computed upon indexing or coercion to a NumPy array.
     """
 
-    def __init__(self, array, func: Callable, dtype: np.typing.DTypeLike):
+    def __init__(self, array, func: Callable, dtype: np.typing.DTypeLike | None):
         assert not is_chunked_array(array)
         self.array = indexing.as_indexable(array)
         self.func = func
@@ -86,7 +86,7 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return f"{type(self).__name__}({self.array!r}, func={self.func!r}, dtype={self.dtype!r})"
 
 
-def lazy_elemwise_func(array, func: Callable, dtype: np.typing.DTypeLike):
+def lazy_elemwise_func(array, func: Callable, dtype: np.typing.DTypeLike | None):
     """Lazily apply an element-wise function to an array.
     Parameters
     ----------

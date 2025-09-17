@@ -831,7 +831,7 @@ class DataTree(
         return itertools.chain(self._data_variables, self._children)  # type: ignore[arg-type]
 
     def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self, dtype: np.typing.DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         raise TypeError(
             "cannot directly convert a DataTree into a "

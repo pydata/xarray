@@ -11,8 +11,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.backends.api import open_datatree, open_groups
-from xarray.core.datatree import DataTree
+from xarray import DataTree, load_datatree, open_datatree, open_groups
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
     has_zarr_v3,
@@ -20,6 +19,7 @@ from xarray.tests import (
     parametrize_zarr_format,
     requires_dask,
     requires_h5netcdf,
+    requires_h5netcdf_or_netCDF4,
     requires_netCDF4,
     requires_pydap,
     requires_zarr,
@@ -31,6 +31,9 @@ if TYPE_CHECKING:
 
 with contextlib.suppress(ImportError):
     import netCDF4 as nc4
+
+
+ON_WINDOWS = sys.platform == "win32"
 
 
 class TestNetCDF4DataTree(_TestNetCDF4Data):
@@ -303,9 +306,12 @@ class DatatreeIOBase:
         original_dt = simple_datatree.chunk()
         result = original_dt.to_netcdf(filepath, engine=self.engine, compute=False)
 
-        with open_datatree(filepath, engine=self.engine) as in_progress_dt:
-            assert in_progress_dt.isomorphic(original_dt)
-            assert not in_progress_dt.equals(original_dt)
+        if not ON_WINDOWS:
+            # File at filepath is not closed until .compute() is called. On
+            # Windows, this means we can't open it yet.
+            with open_datatree(filepath, engine=self.engine) as in_progress_dt:
+                assert in_progress_dt.isomorphic(original_dt)
+                assert not in_progress_dt.equals(original_dt)
 
         result.compute()
         with open_datatree(filepath, engine=self.engine) as written_dt:
@@ -322,26 +328,11 @@ class DatatreeIOBase:
         original_dt.to_netcdf(filepath)  # should not raise
 
 
-@requires_netCDF4
-class TestNetCDF4DatatreeIO(DatatreeIOBase):
-    engine: T_DataTreeNetcdfEngine | None = "netcdf4"
-
-    def test_open_datatree(self, unaligned_datatree_nc) -> None:
-        """Test if `open_datatree` fails to open a netCDF4 with an unaligned group hierarchy."""
-
-        with pytest.raises(
-            ValueError,
-            match=(
-                re.escape(
-                    "group '/Group1/subgroup1' is not aligned with its parents:\nGroup:\n"
-                )
-                + ".*"
-            ),
-        ):
-            open_datatree(unaligned_datatree_nc)
+class NetCDFIOBase(DatatreeIOBase):
+    engine: T_DataTreeNetcdfEngine | None
 
     @requires_dask
-    def test_open_datatree_chunks(self, tmpdir, simple_datatree) -> None:
+    def test_open_datatree_chunks(self, tmpdir) -> None:
         filepath = tmpdir / "test.nc"
 
         chunks = {"x": 2, "y": 1}
@@ -356,12 +347,71 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
                 "/group2": set2_data.chunk(chunks),
             }
         )
-        original_tree.to_netcdf(filepath, engine="netcdf4")
+        original_tree.to_netcdf(filepath, engine=self.engine)
 
-        with open_datatree(filepath, engine="netcdf4", chunks=chunks) as tree:
+        with open_datatree(filepath, engine=self.engine, chunks=chunks) as tree:
             xr.testing.assert_identical(tree, original_tree)
 
             assert_chunks_equal(tree, original_tree, enforce_dask=True)
+
+    # def test_roundtrip_via_memoryview(self, simple_datatree) -> None:
+    #     original_dt = simple_datatree
+    #     memview = original_dt.to_netcdf(engine=self.engine)
+    #     roundtrip_dt = load_datatree(memview, engine=self.engine)
+    #     assert_equal(original_dt, roundtrip_dt)
+
+    def test_to_bytes_compute_false(self, simple_datatree) -> None:
+        original_dt = simple_datatree
+        with pytest.raises(
+            NotImplementedError,
+            match=re.escape("to_netcdf() with compute=False is not yet implemented"),
+        ):
+            original_dt.to_netcdf(engine=self.engine, compute=False)
+
+    def test_open_datatree_specific_group(self, tmpdir, simple_datatree) -> None:
+        """Test opening a specific group within a NetCDF file using `open_datatree`."""
+        filepath = tmpdir / "test.nc"
+        group = "/set1"
+        original_dt = simple_datatree
+        original_dt.to_netcdf(filepath, engine=self.engine)
+        expected_subtree = original_dt[group].copy()
+        expected_subtree.orphan()
+        with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
+            assert subgroup_tree.root.parent is None
+            assert_equal(subgroup_tree, expected_subtree)
+
+
+@requires_h5netcdf_or_netCDF4
+class TestGenericNetCDFIO(NetCDFIOBase):
+    engine: T_DataTreeNetcdfEngine | None = None
+
+    @requires_h5netcdf
+    @requires_netCDF4
+    def test_memoryview_write_h5netcdf_read_netcdf4(self, simple_datatree) -> None:
+        original_dt = simple_datatree
+        memview = original_dt.to_netcdf(engine="h5netcdf")
+        roundtrip_dt = load_datatree(memview, engine="netcdf4")
+        assert_equal(original_dt, roundtrip_dt)
+
+    @requires_h5netcdf
+    @requires_netCDF4
+    def test_memoryview_write_netcdf4_read_h5netcdf(self, simple_datatree) -> None:
+        original_dt = simple_datatree
+        memview = original_dt.to_netcdf(engine="netcdf4")
+        roundtrip_dt = load_datatree(memview, engine="h5netcdf")
+        assert_equal(original_dt, roundtrip_dt)
+
+    def test_open_datatree_unaligned_hierarchy(self, unaligned_datatree_nc) -> None:
+        with pytest.raises(
+            ValueError,
+            match=(
+                re.escape(
+                    "group '/Group1/subgroup1' is not aligned with its parents:\nGroup:\n"
+                )
+                + ".*"
+            ),
+        ):
+            open_datatree(unaligned_datatree_nc)
 
     def test_open_groups(self, unaligned_datatree_nc) -> None:
         """Test `open_groups` with a netCDF4 file with an unaligned group hierarchy."""
@@ -405,7 +455,7 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         )
         original_tree.to_netcdf(filepath, mode="w")
 
-        dict_of_datasets = open_groups(filepath, engine="netcdf4", chunks=chunks)
+        dict_of_datasets = open_groups(filepath, chunks=chunks)
 
         for path, ds in dict_of_datasets.items():
             assert {k: max(vs) for k, vs in ds.chunksizes.items()} == chunks, (
@@ -414,6 +464,11 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
 
         for ds in dict_of_datasets.values():
             ds.close()
+
+
+@requires_netCDF4
+class TestNetCDF4DatatreeIO(NetCDFIOBase):
+    engine: T_DataTreeNetcdfEngine | None = "netcdf4"
 
     def test_open_groups_to_dict(self, tmpdir) -> None:
         """Create an aligned netCDF4 with the following structure to test `open_groups`
@@ -462,17 +517,45 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         for ds in aligned_dict_of_datasets.values():
             ds.close()
 
-    def test_open_datatree_specific_group(self, tmpdir, simple_datatree) -> None:
-        """Test opening a specific group within a NetCDF file using `open_datatree`."""
-        filepath = tmpdir / "test.nc"
-        group = "/set1"
+
+@requires_h5netcdf
+class TestH5NetCDFDatatreeIO(NetCDFIOBase):
+    engine: T_DataTreeNetcdfEngine | None = "h5netcdf"
+
+    def test_phony_dims_warning(self, tmpdir) -> None:
+        filepath = tmpdir + "/phony_dims.nc"
+        import h5py
+
+        foo_data = np.arange(125).reshape(5, 5, 5)
+        bar_data = np.arange(625).reshape(25, 5, 5)
+        var = {"foo1": foo_data, "foo2": bar_data, "foo3": foo_data, "foo4": bar_data}
+        with h5py.File(filepath, "w") as f:
+            grps = ["bar", "baz"]
+            for grp in grps:
+                fx = f.create_group(grp)
+                for k, v in var.items():
+                    fx.create_dataset(k, data=v)
+
+        with pytest.warns(UserWarning, match="The 'phony_dims' kwarg"):
+            with open_datatree(filepath, engine=self.engine) as tree:
+                assert tree.bar.dims == {
+                    "phony_dim_0": 5,
+                    "phony_dim_1": 5,
+                    "phony_dim_2": 5,
+                    "phony_dim_3": 25,
+                }
+
+    def test_roundtrip_using_filelike_object(self, tmpdir, simple_datatree) -> None:
         original_dt = simple_datatree
-        original_dt.to_netcdf(filepath)
-        expected_subtree = original_dt[group].copy()
-        expected_subtree.orphan()
-        with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
-            assert subgroup_tree.root.parent is None
-            assert_equal(subgroup_tree, expected_subtree)
+        filepath = tmpdir + "/test.nc"
+        # h5py requires both read and write access when writing, it will
+        # work with file-like objects provided they support both, and are
+        # seekable.
+        with open(filepath, "wb+") as file:
+            original_dt.to_netcdf(file, engine=self.engine)
+        with open(filepath, "rb") as file:
+            with open_datatree(file, engine=self.engine) as roundtrip_dt:
+                assert_equal(original_dt, roundtrip_dt)
 
 
 @network
@@ -490,9 +573,9 @@ class TestPyDAPDatatreeIO:
     )
     simplegroup_datatree_url = "dap4://test.opendap.org/opendap/dap4/SimpleGroup.nc4.h5"
 
-    def test_open_datatree(self, url=unaligned_datatree_url) -> None:
-        """Test if `open_datatree` fails to open a netCDF4 with an unaligned group hierarchy."""
-
+    def test_open_datatree_unaligned_hierarchy(
+        self, url=unaligned_datatree_url
+    ) -> None:
         with pytest.raises(
             ValueError,
             match=(
@@ -568,64 +651,6 @@ class TestPyDAPDatatreeIO:
             assert opened_tree.identical(aligned_dt)
 
 
-@requires_h5netcdf
-class TestH5NetCDFDatatreeIO(DatatreeIOBase):
-    engine: T_DataTreeNetcdfEngine | None = "h5netcdf"
-
-    def test_phony_dims_warning(self, tmpdir) -> None:
-        filepath = tmpdir + "/phony_dims.nc"
-        import h5py
-
-        foo_data = np.arange(125).reshape(5, 5, 5)
-        bar_data = np.arange(625).reshape(25, 5, 5)
-        var = {"foo1": foo_data, "foo2": bar_data, "foo3": foo_data, "foo4": bar_data}
-        with h5py.File(filepath, "w") as f:
-            grps = ["bar", "baz"]
-            for grp in grps:
-                fx = f.create_group(grp)
-                for k, v in var.items():
-                    fx.create_dataset(k, data=v)
-
-        with pytest.warns(UserWarning, match="The 'phony_dims' kwarg"):
-            with open_datatree(filepath, engine=self.engine) as tree:
-                assert tree.bar.dims == {
-                    "phony_dim_0": 5,
-                    "phony_dim_1": 5,
-                    "phony_dim_2": 5,
-                    "phony_dim_3": 25,
-                }
-
-    def test_roundtrip_via_bytes(self, simple_datatree) -> None:
-        original_dt = simple_datatree
-        roundtrip_dt = open_datatree(original_dt.to_netcdf())
-        assert_equal(original_dt, roundtrip_dt)
-
-    def test_roundtrip_via_bytes_engine_specified(self, simple_datatree) -> None:
-        original_dt = simple_datatree
-        roundtrip_dt = open_datatree(original_dt.to_netcdf(engine=self.engine))
-        assert_equal(original_dt, roundtrip_dt)
-
-    def test_to_bytes_compute_false(self, simple_datatree) -> None:
-        original_dt = simple_datatree
-        with pytest.raises(
-            NotImplementedError,
-            match=re.escape("to_netcdf() with compute=False is not yet implemented"),
-        ):
-            original_dt.to_netcdf(compute=False)
-
-    def test_roundtrip_using_filelike_object(self, tmpdir, simple_datatree) -> None:
-        original_dt = simple_datatree
-        filepath = tmpdir + "/test.nc"
-        # h5py requires both read and write access when writing, it will
-        # work with file-like objects provided they support both, and are
-        # seekable.
-        with open(filepath, "wb+") as file:
-            original_dt.to_netcdf(file, engine=self.engine)
-        with open(filepath, "rb") as file:
-            with open_datatree(file, engine=self.engine) as roundtrip_dt:
-                assert_equal(original_dt, roundtrip_dt)
-
-
 @requires_zarr
 @parametrize_zarr_format
 class TestZarrDatatreeIO:
@@ -653,9 +678,10 @@ class TestZarrDatatreeIO:
             comp = {"compressors": (codec,)} if has_zarr_v3 else {"compressor": codec}
         elif zarr_format == 3:
             # specifying codecs in zarr_format=3 requires importing from zarr 3 namespace
-            import numcodecs.zarr3
+            from zarr.registry import get_codec_class
 
-            comp = {"compressors": (numcodecs.zarr3.Blosc(cname="zstd", clevel=3),)}
+            Blosc = get_codec_class("numcodecs.blosc")
+            comp = {"compressors": (Blosc(cname="zstd", clevel=3),)}  # type: ignore[call-arg]
 
         enc = {"/set2": dict.fromkeys(original_dt["/set2"].dataset.data_vars, comp)}
         original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
@@ -796,13 +822,12 @@ class TestZarrDatatreeIO:
                     zarr_format=zarr_format,
                 )
 
-        with open_datatree(str(storepath), engine="zarr") as in_progress_dt:
-            assert in_progress_dt.isomorphic(original_dt)
-            assert not in_progress_dt.equals(original_dt)
+        in_progress_dt = load_datatree(str(storepath), engine="zarr")
+        assert not in_progress_dt.equals(original_dt)
 
         result.compute()
-        with open_datatree(str(storepath), engine="zarr") as written_dt:
-            assert_identical(written_dt, original_dt)
+        written_dt = load_datatree(str(storepath), engine="zarr")
+        assert_identical(written_dt, original_dt)
 
     @requires_dask
     def test_rplus_mode(
@@ -873,8 +898,9 @@ class TestZarrDatatreeIO:
     @pytest.mark.filterwarnings(
         "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
     )
-    def test_open_datatree(self, unaligned_datatree_zarr_factory, zarr_format) -> None:
-        """Test if `open_datatree` fails to open a zarr store with an unaligned group hierarchy."""
+    def test_open_datatree_unaligned_hierarchy(
+        self, unaligned_datatree_zarr_factory, zarr_format
+    ) -> None:
         storepath = unaligned_datatree_zarr_factory(zarr_format=zarr_format)
 
         with pytest.raises(
