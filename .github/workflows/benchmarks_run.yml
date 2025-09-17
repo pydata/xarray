@@ -36,7 +36,7 @@ jobs:
         uses: marceloprado/has-changed-path@df1b7a3161b8fb9fd8c90403c66a9e66dfde50cb
         with:
           # SEE ALSO .github/labeler.yml .
-          paths: requirements/locks/*.lock
+          paths: ci/requirements/locks/*.lock
       - id: overnight
         name: Check overnight scenario
         if: github.event_name != 'pull_request'
