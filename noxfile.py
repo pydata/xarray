@@ -35,8 +35,8 @@ ENV = dict(NPY_DISABLE_CPU_FEATURES="AVX512F,AVX512CD,AVX512_SKX")
 
 def session_lockfile(session: nox.sessions.Session) -> Path:
     """Return the path of the session lockfile."""
-    # return Path(f"requirements/locks/py{session.python.replace('.', '')}-linux-64.lock")
-    return Path(f"requirements/locks/environment-benchmark-linux-64.lock")
+    # return Path(f"ci/requirements/locks/py{session.python.replace('.', '')}-linux-64.lock")
+    return Path(f"ci/requirements/locks/environment-benchmark-linux-64.lock")
 
 
 def session_cachefile(session: nox.sessions.Session) -> Path:
