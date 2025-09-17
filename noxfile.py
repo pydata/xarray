@@ -129,6 +129,7 @@ def prepare_venv(session: nox.sessions.Session) -> None:
 
     """
     lockfile = session_lockfile(session)
+    print(f"prepare_venv: {lockfile}")
     venv_dir = session.virtualenv.location_name
 
     if not venv_populated(session):
