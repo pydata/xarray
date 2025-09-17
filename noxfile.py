@@ -150,7 +150,7 @@ def prepare_venv(session: nox.sessions.Session) -> None:
 
     logger.debug(f"Environment {venv_dir} is up to date")
 
-    cache_cartopy(session)
+    # cache_cartopy(session)
 
     # Determine whether verbose diagnostics have been requested
     # from the command line.
