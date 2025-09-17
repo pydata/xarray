@@ -123,7 +123,6 @@ coveralls = "*"
 test = { cmd = "pytest" }
 
 [feature.doc.dependencies]
-cfgrib = "*"
 kerchunk = "*"
 ipykernel = "*"
 ipywidgets = "*"                   # silence nbsphinx warning
@@ -146,6 +145,9 @@ sphinxcontrib-srclinks = "*"
 sphinx-remove-toctrees = "*"
 sphinxext-opengraph = "*"
 sphinxext-rediraffe = "*"
+
+[feature.doc.pypi-dependencies]
+cfgrib = "*" # pypi dep because of https://github.com/prefix-dev/pixi/issues/3032#issuecomment-3302638043
 
 
 [feature.mypy.dependencies]
