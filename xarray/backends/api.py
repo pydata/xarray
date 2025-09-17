@@ -99,16 +99,16 @@ DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
 
 
 def get_default_netcdf_write_engine(
-    path_or_file: str | IOBase | None,
     format: T_NetcdfTypes | None,
+    to_fileobject: bool,
 ) -> Literal["netcdf4", "h5netcdf", "scipy"]:
     """Return the default netCDF library to use for writing a netCDF file."""
-
     module_names = {
         "netcdf4": "netCDF4",
         "scipy": "scipy",
         "h5netcdf": "h5netcdf",
     }
+
     candidates = list(OPTIONS["netcdf_engine_order"])
 
     if format is not None:
@@ -128,13 +128,7 @@ def get_default_netcdf_write_engine(
         if format not in {"NETCDF3_64BIT", "NETCDF3_CLASSIC"}:
             candidates.remove("scipy")
 
-    nczarr_mode = isinstance(path_or_file, str) and path_or_file.endswith(
-        "#mode=nczarr"
-    )
-    if nczarr_mode:
-        candidates[:] = ["netcdf4"]
-
-    if isinstance(path_or_file, IOBase):
+    if to_fileobject:
         candidates.remove("netcdf4")
 
     for engine in candidates:
@@ -142,10 +136,7 @@ def get_default_netcdf_write_engine(
         if importlib.util.find_spec(module_name) is not None:
             return engine
 
-    if nczarr_mode:
-        format_str = " in NCZarr format"
-    else:
-        format_str = f" with {format=}" if format is not None else ""
+    format_str = f" with {format=}" if format is not None else ""
     libraries = ", ".join(module_names[c] for c in candidates)
     raise ValueError(
         f"cannot write NetCDF files{format_str} because none of the suitable "
@@ -2086,7 +2077,8 @@ def to_netcdf(
     path_or_file = _normalize_path(path_or_file)
 
     if engine is None:
-        engine = get_default_netcdf_write_engine(path_or_file, format)
+        to_fileobject = isinstance(path_or_file, IOBase)
+        engine = get_default_netcdf_write_engine(format, to_fileobject)
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)

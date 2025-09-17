@@ -55,9 +55,10 @@ def _datatree_to_netcdf(
     filepath = _normalize_path(filepath)
 
     if engine is None:
+        to_fileobject = isinstance(filepath, io.IOBase)
         engine = get_default_netcdf_write_engine(
-            path_or_file=filepath,
             format="NETCDF4",  # required for supporting groups
+            to_fileobject=to_fileobject,
         )  # type: ignore[assignment]
 
     if group is not None:
