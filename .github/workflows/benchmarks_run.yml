@@ -50,6 +50,10 @@ jobs:
             steps.files-changed.outputs.changed == 'true'
             ||
             github.event.label.name == 'benchmark_this'
+            ||
+            github.event.label.name == 'run-benchmarks'
+            ||
+            github.event.label.name == 'topic-performance'
           )
         run: echo "check=true" >> "$GITHUB_OUTPUT"
 
