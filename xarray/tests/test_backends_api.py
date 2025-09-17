@@ -53,7 +53,7 @@ def test_default_engine_h5netcdf(monkeypatch):
         ValueError,
         match=re.escape(
             "cannot write NetCDF files with format='NETCDF3_CLASSIC' because "
-            "none of the suitable backend libraries (scipy, netCDF4) are installed"
+            "none of the suitable backend libraries (netCDF4, scipy) are installed"
         ),
     ):
         get_default_netcdf_write_engine(format="NETCDF3_CLASSIC", to_fileobject=False)
