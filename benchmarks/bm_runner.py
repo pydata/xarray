@@ -647,7 +647,7 @@ class Validate(_SubParserGenerator):
 
         # Find the most recent commit where the lock-files are not
         #  identical to HEAD - will force environment updates.
-        locks_dir = Path(__file__).parents[1] / "requirements" / "locks"
+        locks_dir = Path(__file__).parents[1] / "ci" / "requirements" / "locks"
         assert locks_dir.is_dir()
         git_command = shlex.split(
             f"git log -1 --pretty=format:%P -- {locks_dir.resolve()}"
