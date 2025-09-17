@@ -20,7 +20,7 @@ jobs:
       - name: Download artifact
         id: download-artifact
         # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
@@ -75,7 +75,7 @@ jobs:
 
       - name: Set up Python
         # benchmarks/bm_runner.py only needs builtins to run.
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
 
       - name: Post reports
         env:
