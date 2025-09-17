@@ -1225,7 +1225,7 @@ def open_datatree(
         kwargs.update(backend_kwargs)
 
     if engine is None:
-        engine = plugins.guess_engine(filename_or_obj)
+        engine = plugins.guess_engine(filename_or_obj, must_support_groups=True)
 
     if from_array_kwargs is None:
         from_array_kwargs = {}
@@ -1470,7 +1470,7 @@ def open_groups(
         kwargs.update(backend_kwargs)
 
     if engine is None:
-        engine = plugins.guess_engine(filename_or_obj)
+        engine = plugins.guess_engine(filename_or_obj, must_support_groups=True)
 
     if from_array_kwargs is None:
         from_array_kwargs = {}

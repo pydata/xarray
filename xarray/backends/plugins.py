@@ -143,10 +143,13 @@ def guess_engine(
     | bytes
     | memoryview
     | AbstractDataStore,
+    must_support_groups: bool = False,
 ) -> str | type[BackendEntrypoint]:
     engines = list_engines()
 
     for engine, backend in engines.items():
+        if must_support_groups and not backend.supports_groups:
+            continue
         try:
             if backend.guess_can_open(store_spec):
                 return engine
@@ -161,6 +164,8 @@ def guess_engine(
     for engine, (_, backend_cls) in BACKEND_ENTRYPOINTS.items():
         try:
             backend = backend_cls()
+            if must_support_groups and not backend.supports_groups:
+                continue
             if backend.guess_can_open(store_spec):
                 compatible_engines.append(engine)
         except Exception:
@@ -178,6 +183,15 @@ def guess_engine(
                 "additional IO dependencies, see:\n"
                 "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html\n"
                 "https://docs.xarray.dev/en/stable/user-guide/io.html"
+            )
+        elif must_support_groups:
+            error_msg = (
+                "xarray is unable to open this file because it has no currently "
+                "installed IO backends that support reading groups (e.g., h5netcdf "
+                "or netCDF4-python). Xarray's read/write support requires "
+                "installing optional IO dependencies, see:\n"
+                "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html\n"
+                "https://docs.xarray.dev/en/stable/user-guide/io"
             )
         else:
             error_msg = (

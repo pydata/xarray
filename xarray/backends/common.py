@@ -753,11 +753,15 @@ class BackendEntrypoint:
     url : str, default: ""
         A string with the URL to the backend's documentation.
         The setting of this attribute is not mandatory.
+    supports_groups : bool, default: False
+        Whether the backend supports opening groups (via open_datatree and
+        open_groups_as_dict) or not.
     """
 
     open_dataset_parameters: ClassVar[tuple | None] = None
     description: ClassVar[str] = ""
     url: ClassVar[str] = ""
+    supports_groups: ClassVar[bool] = False
 
     def __repr__(self) -> str:
         txt = f"<{type(self).__name__}>"
@@ -812,6 +816,8 @@ class BackendEntrypoint:
     ) -> DataTree:
         """
         Backend open_datatree method used by Xarray in :py:func:`~xarray.open_datatree`.
+
+        If implemented, set the class variable supports_groups to True.
         """
 
         raise NotImplementedError()
@@ -834,6 +840,8 @@ class BackendEntrypoint:
         This function exists to provide a universal way to open all groups in a file,
         before applying any additional consistency checks or requirements necessary
         to create a `DataTree` object (typically done using :py:meth:`~xarray.DataTree.from_dict`).
+
+        If implemented, set the class variable supports_groups to True.
         """
 
         raise NotImplementedError()
