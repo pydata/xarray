@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - id: get_py
-        run: echo "MATRIX=$(ls -1 requirements/py*.yml | xargs -n1 basename | sed 's/....$//' | jq -cnR '[inputs]')" >> ${GITHUB_OUTPUT}
+        run: echo "MATRIX=$(ls -1 ci/requirements/environment-*.yml | xargs -n1 basename | sed 's/....$//' | jq -cnR '[inputs]')" >> ${GITHUB_OUTPUT}
 
   gen_lockfiles:
     # This is a matrix job: it splits to create new lockfiles for each
@@ -47,7 +47,7 @@ jobs:
           conda update -n base --all
       - name: generate lockfile
         run: |
-          pipx run conda-lock -k explicit -p linux-64 -f requirements/${{matrix.python}}.yml
+          pipx run conda-lock -k explicit -p linux-64 -f ci/requirements/${{matrix.python}}.yml
           mv conda-linux-64.lock ${{matrix.python}}-linux-64.lock
       - name: output lockfile
         uses: actions/upload-artifact@v4
@@ -68,7 +68,7 @@ jobs:
       - name: get artifacts
         uses: actions/download-artifact@v5
         with:
-          path: ${{ github.workspace }}/requirements/locks
+          path: ${{ github.workspace }}/ci/requirements/locks
           merge-multiple: true
 
       - name: "Generate token"
