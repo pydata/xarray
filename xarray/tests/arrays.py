@@ -1,14 +1,14 @@
+"""
+This module contains various lazy array classes which can be wrapped and manipulated by xarray objects but will raise on data access.
+"""
+
 from collections.abc import Callable, Iterable
-from typing import Any
+from typing import Any, Self
 
 import numpy as np
 
 from xarray.core import utils
 from xarray.core.indexing import ExplicitlyIndexed
-
-"""
-This module contains various lazy array classes which can be wrapped and manipulated by xarray objects but will raise on data access.
-"""
 
 
 class UnexpectedDataAccess(Exception):
@@ -25,7 +25,7 @@ class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
         raise UnexpectedDataAccess("Tried accessing data")
 
     def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self, dtype: np.typing.DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         raise UnexpectedDataAccess("Tried accessing data")
 
@@ -56,7 +56,7 @@ class DuckArrayWrapper(utils.NDArrayMixin):
         return self.array
 
     def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self, dtype: np.typing.DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         raise UnexpectedDataAccess("Tried accessing data")
 
@@ -126,6 +126,23 @@ def broadcast_to(
     return ConcatenatableArray(result)
 
 
+@implements(np.full_like)
+def full_like(
+    x: "ConcatenatableArray", /, fill_value, **kwargs
+) -> "ConcatenatableArray":
+    """
+    Broadcasts an array to a specified shape, by either manipulating chunk keys or copying chunk manifest entries.
+    """
+    if not isinstance(x, ConcatenatableArray):
+        raise TypeError
+    return ConcatenatableArray(np.full(x.shape, fill_value=fill_value, **kwargs))
+
+
+@implements(np.all)
+def numpy_all(x: "ConcatenatableArray", **kwargs) -> "ConcatenatableArray":
+    return type(x)(np.all(x._array, **kwargs))
+
+
 class ConcatenatableArray:
     """Disallows loading or coercing to an index but does support concatenation / stacking."""
 
@@ -152,11 +169,11 @@ class ConcatenatableArray:
         raise UnexpectedDataAccess("Tried accessing data")
 
     def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self, dtype: np.typing.DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         raise UnexpectedDataAccess("Tried accessing data")
 
-    def __getitem__(self, key) -> "ConcatenatableArray":
+    def __getitem__(self, key) -> Self:
         """Some cases of concat require supporting expanding dims by dimensions of size 1"""
         # see https://data-apis.org/array-api/2022.12/API_specification/indexing.html#multi-axis-indexing
         arr = self._array
@@ -167,7 +184,10 @@ class ConcatenatableArray:
                 pass
             else:
                 raise UnexpectedDataAccess("Tried accessing data.")
-        return ConcatenatableArray(arr)
+        return type(self)(arr)
+
+    def __eq__(self, other: Self) -> Self:  # type: ignore[override]
+        return type(self)(self._array == other._array)
 
     def __array_function__(self, func, types, args, kwargs) -> Any:
         if func not in CONCATENATABLEARRAY_HANDLED_ARRAY_FUNCTIONS:
@@ -184,9 +204,15 @@ class ConcatenatableArray:
         """We have to define this in order to convince xarray that this class is a duckarray, even though we will never support ufuncs."""
         return NotImplemented
 
-    def astype(self, dtype: np.dtype, /, *, copy: bool = True) -> "ConcatenatableArray":
+    def astype(self, dtype: np.dtype, /, *, copy: bool = True) -> Self:
         """Needed because xarray will call this even when it's a no-op"""
         if dtype != self.dtype:
             raise NotImplementedError()
         else:
             return self
+
+    def __and__(self, other: Self) -> Self:
+        return type(self)(self._array & other._array)
+
+    def __or__(self, other: Self) -> Self:
+        return type(self)(self._array | other._array)

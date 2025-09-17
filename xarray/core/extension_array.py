@@ -8,10 +8,9 @@ from typing import Any, Generic, cast
 import numpy as np
 import pandas as pd
 from packaging.version import Version
-from pandas.api.types import is_extension_array_dtype
 
 from xarray.core.types import DTypeLikeSave, T_ExtensionArray
-from xarray.core.utils import NDArrayMixin
+from xarray.core.utils import NDArrayMixin, is_allowed_extension_array
 
 HANDLED_EXTENSION_ARRAY_FUNCTIONS: dict[Callable, Callable] = {}
 
@@ -66,6 +65,11 @@ def __extension_duck_array__where(
     return cast(T_ExtensionArray, pd.Series(x).where(condition, pd.Series(y)).array)
 
 
+@implements(np.ndim)
+def __extension_duck_array__ndim(x: PandasExtensionArray) -> int:
+    return x.ndim
+
+
 @implements(np.reshape)
 def __extension_duck_array__reshape(
     arr: T_ExtensionArray, shape: tuple
@@ -78,7 +82,7 @@ def __extension_duck_array__reshape(
 
 
 @dataclass(frozen=True)
-class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
+class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
     """NEP-18 compliant wrapper for pandas extension arrays.
 
     Parameters
@@ -93,6 +97,14 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
     def __post_init__(self):
         if not isinstance(self.array, pd.api.extensions.ExtensionArray):
             raise TypeError(f"{self.array} is not an pandas ExtensionArray.")
+        # This does not use the UNSUPPORTED_EXTENSION_ARRAY_TYPES whitelist because
+        # we do support extension arrays from datetime, for example, that need
+        # duck array support internally via this class.  These can appear from `DatetimeIndex`
+        # wrapped by `PandasIndex` internally, for example.
+        if not is_allowed_extension_array(self.array):
+            raise TypeError(
+                f"{self.array.dtype!r} should be converted to a numpy array in `xarray` internally."
+            )
 
     def __array_function__(self, func, types, args, kwargs):
         def replace_duck_with_extension_array(args) -> list:
@@ -114,7 +126,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
         if func not in HANDLED_EXTENSION_ARRAY_FUNCTIONS:
             raise KeyError("Function not registered for pandas extension arrays.")
         res = HANDLED_EXTENSION_ARRAY_FUNCTIONS[func](*args, **kwargs)
-        if is_extension_array_dtype(res):
+        if is_allowed_extension_array(res):
             return PandasExtensionArray(res)
         return res
 
@@ -123,7 +135,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
 
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
         item = self.array[key]
-        if is_extension_array_dtype(item):
+        if is_allowed_extension_array(item):
             return PandasExtensionArray(item)
         if np.isscalar(item) or isinstance(key, int):
             return PandasExtensionArray(type(self.array)._from_sequence([item]))  # type: ignore[call-arg,attr-defined,unused-ignore]
@@ -148,7 +160,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray], NDArrayMixin):
         return 1
 
     def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self, dtype: np.typing.DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if Version(np.__version__) >= Version("2.0.0"):
             return np.asarray(self.array, dtype=dtype, copy=copy)

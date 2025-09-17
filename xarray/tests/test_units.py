@@ -29,6 +29,18 @@ pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
 
 
+def create_nan_array(values, dtype):
+    """Create array with NaN values, handling cast warnings for int dtypes."""
+    import warnings
+
+    # When casting float arrays with NaN to integer, NumPy raises a warning
+    # This is expected behavior when dtype is int
+    with warnings.catch_warnings():
+        if np.issubdtype(dtype, np.integer):
+            warnings.filterwarnings("ignore", "invalid value encountered in cast")
+        return np.array(values).astype(dtype)
+
+
 # make sure scalars are converted to 0d arrays so quantities can
 # always be treated like ndarrays
 unit_registry = pint.UnitRegistry(force_ndarray_like=True)
@@ -234,9 +246,7 @@ def convert_units(obj, to):
     elif isinstance(obj, xr.DataArray):
         name = obj.name
 
-        new_units = (
-            to.get(name, None) or to.get("data", None) or to.get(None, None) or None
-        )
+        new_units = to.get(name) or to.get("data") or to.get(None) or None
         data = convert_units(obj.variable, {None: new_units})
 
         coords = {
@@ -733,6 +743,9 @@ def test_broadcast_dataset(dtype):
         "coords",
     ),
 )
+@pytest.mark.filterwarnings(
+    "ignore:.*the default value for coords will change:FutureWarning"
+)
 def test_combine_by_coords(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
@@ -809,6 +822,12 @@ def test_combine_by_coords(variant, unit, error, dtype):
         ),
         "coords",
     ),
+)
+@pytest.mark.filterwarnings(
+    "ignore:.*the default value for join will change:FutureWarning"
+)
+@pytest.mark.filterwarnings(
+    "ignore:.*the default value for compat will change:FutureWarning"
 )
 def test_combine_nested(variant, unit, error, dtype):
     original_unit = unit_registry.m
@@ -1050,6 +1069,12 @@ def test_concat_dataset(variant, unit, error, dtype):
         "coords",
     ),
 )
+@pytest.mark.filterwarnings(
+    "ignore:.*the default value for join will change:FutureWarning"
+)
+@pytest.mark.filterwarnings(
+    "ignore:.*the default value for compat will change:FutureWarning"
+)
 def test_merge_dataarray(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
@@ -1153,6 +1178,12 @@ def test_merge_dataarray(variant, unit, error, dtype):
         ),
         "coords",
     ),
+)
+@pytest.mark.filterwarnings(
+    "ignore:.*the default value for join will change:FutureWarning"
+)
+@pytest.mark.filterwarnings(
+    "ignore:.*the default value for compat will change:FutureWarning"
 )
 def test_merge_dataset(variant, unit, error, dtype):
     original_unit = unit_registry.m
@@ -2650,7 +2681,7 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         scalar_types = (int, float)
-        args = list(value * unit for value in func.args)
+        args = [value * unit for value in func.args]
         kwargs = {
             key: (value * unit if isinstance(value, scalar_types) else value)
             for key, value in func.kwargs.items()
@@ -2708,7 +2739,7 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         scalar_types = (int, float)
-        args = list(value * unit for value in func.args)
+        args = [value * unit for value in func.args]
         kwargs = {
             key: (value * unit if isinstance(value, scalar_types) else value)
             for key, value in func.kwargs.items()
@@ -2762,7 +2793,7 @@ class TestDataArray:
     @pytest.mark.parametrize("func", (method("ffill"), method("bfill")), ids=repr)
     def test_missing_value_filling(self, func, dtype):
         array = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * unit_registry.degK
         )
         x = np.arange(len(array))
@@ -2799,7 +2830,7 @@ class TestDataArray:
     def test_fillna(self, fill_value, unit, error, dtype):
         original_unit = unit_registry.m
         array = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * original_unit
         )
         data_array = xr.DataArray(data=array)
@@ -2827,7 +2858,7 @@ class TestDataArray:
 
     def test_dropna(self, dtype):
         array = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * unit_registry.m
         )
         x = np.arange(len(array))
@@ -2852,12 +2883,12 @@ class TestDataArray:
     )
     def test_isin(self, unit, dtype):
         array = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * unit_registry.m
         )
         data_array = xr.DataArray(data=array, dims="x")
 
-        raw_values = np.array([1.4, np.nan, 2.3]).astype(dtype)
+        raw_values = create_nan_array([1.4, np.nan, 2.3], dtype)
         values = raw_values * unit
 
         units = {None: unit_registry.m if array.check(unit) else None}
@@ -4248,11 +4279,11 @@ class TestDataset:
     @pytest.mark.parametrize("func", (method("ffill"), method("bfill")), ids=repr)
     def test_missing_value_filling(self, func, dtype):
         array1 = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * unit_registry.degK
         )
         array2 = (
-            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
+            create_nan_array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan], dtype)
             * unit_registry.Pa
         )
 
@@ -4291,11 +4322,11 @@ class TestDataset:
     )
     def test_fillna(self, fill_value, unit, error, dtype):
         array1 = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * unit_registry.m
         )
         array2 = (
-            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
+            create_nan_array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan], dtype)
             * unit_registry.m
         )
         ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
@@ -4321,11 +4352,11 @@ class TestDataset:
 
     def test_dropna(self, dtype):
         array1 = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * unit_registry.degK
         )
         array2 = (
-            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
+            create_nan_array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan], dtype)
             * unit_registry.Pa
         )
         ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
@@ -4349,16 +4380,16 @@ class TestDataset:
     )
     def test_isin(self, unit, dtype):
         array1 = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * unit_registry.m
         )
         array2 = (
-            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
+            create_nan_array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan], dtype)
             * unit_registry.m
         )
         ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
 
-        raw_values = np.array([1.4, np.nan, 2.3]).astype(dtype)
+        raw_values = create_nan_array([1.4, np.nan, 2.3], dtype)
         values = raw_values * unit
 
         converted_values = (
@@ -4434,11 +4465,11 @@ class TestDataset:
     @pytest.mark.xfail(reason="interpolate_na uses numpy.vectorize")
     def test_interpolate_na(self, dtype):
         array1 = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype)
             * unit_registry.degK
         )
         array2 = (
-            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
+            create_nan_array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan], dtype)
             * unit_registry.Pa
         )
         ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
@@ -4483,10 +4514,10 @@ class TestDataset:
         data_unit, other_data_unit, dims_unit, other_dims_unit = variants.get(variant)
 
         array1 = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype) * data_unit
+            create_nan_array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1], dtype) * data_unit
         )
         array2 = (
-            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype) * data_unit
+            create_nan_array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan], dtype) * data_unit
         )
         x = np.arange(len(array1)) * dims_unit
         ds = xr.Dataset(
@@ -5572,6 +5603,12 @@ class TestDataset:
             "coords",
         ),
     )
+    @pytest.mark.filterwarnings(
+        "ignore:.*the default value for join will change:FutureWarning"
+    )
+    @pytest.mark.filterwarnings(
+        "ignore:.*the default value for compat will change:FutureWarning"
+    )
     def test_merge(self, variant, unit, error, dtype):
         left_variants = {
             "data": (unit_registry.m, 1, 1),
@@ -5637,7 +5674,7 @@ class TestPintWrappingDask:
 
         assert_units_equal(expected, actual)
         # Don't use isinstance b/c we don't want to allow subclasses through
-        assert type(expected.data) == type(actual.data)  # noqa: E721
+        assert type(expected.data) is type(actual.data)
 
 
 @requires_matplotlib

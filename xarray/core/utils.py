@@ -104,6 +104,20 @@ V = TypeVar("V")
 T = TypeVar("T")
 
 
+def is_allowed_extension_array_dtype(dtype: Any):
+    return pd.api.types.is_extension_array_dtype(dtype) and not isinstance(  # noqa: TID251
+        dtype, pd.StringDtype
+    )
+
+
+def is_allowed_extension_array(array: Any) -> bool:
+    return (
+        hasattr(array, "dtype")
+        and is_allowed_extension_array_dtype(array.dtype)
+        and not isinstance(array, pd.arrays.NumpyExtensionArray)  # type: ignore[attr-defined]
+    )
+
+
 def alias_message(old_name: str, new_name: str) -> str:
     return f"{old_name} has been deprecated. Use {new_name} instead."
 
@@ -225,23 +239,40 @@ def equivalent(first: T, second: T) -> bool:
     """Compare two objects for equivalence (identity or equality), using
     array_equiv if either object is an ndarray. If both objects are lists,
     equivalent is sequentially called on all the elements.
+
+    Returns False for any comparison that doesn't return a boolean,
+    making this function safer to use with objects that have non-standard
+    __eq__ implementations.
     """
     # TODO: refactor to avoid circular import
     from xarray.core import duck_array_ops
 
     if first is second:
         return True
+
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
+
     if isinstance(first, list) or isinstance(second, list):
         return list_equiv(first, second)  # type: ignore[arg-type]
-    return (first == second) or (pd.isnull(first) and pd.isnull(second))  # type: ignore[call-overload]
+
+    # For non-array/list types, use == but require boolean result
+    result = first == second
+    if not isinstance(result, bool):
+        # Accept numpy bool scalars as well
+        if isinstance(result, np.bool_):
+            return bool(result)
+        # Reject any other non-boolean type (Dataset, Series, custom objects, etc.)
+        return False
+
+    # Check for NaN equivalence
+    return result or (pd.isnull(first) and pd.isnull(second))  # type: ignore[call-overload]
 
 
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    return all(equivalent(f, s) for f, s in zip(first, second, strict=True))
+    return all(itertools.starmap(equivalent, zip(first, second, strict=True)))
 
 
 def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
@@ -680,15 +711,12 @@ def is_remote_uri(path: str) -> bool:
 
 def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
     # check byte header to determine file type
-    if isinstance(filename_or_obj, bytes):
-        magic_number = filename_or_obj[:count]
-    elif isinstance(filename_or_obj, io.IOBase):
-        if filename_or_obj.tell() != 0:
-            filename_or_obj.seek(0)
-        magic_number = filename_or_obj.read(count)
-        filename_or_obj.seek(0)
-    else:
+    if not isinstance(filename_or_obj, io.IOBase):
         raise TypeError(f"cannot read the magic number from {type(filename_or_obj)}")
+    if filename_or_obj.tell() != 0:
+        filename_or_obj.seek(0)
+    magic_number = filename_or_obj.read(count)
+    filename_or_obj.seek(0)
     return magic_number
 
 
@@ -897,7 +925,7 @@ def parse_dims_as_tuple(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | EllipsisType: ...
+) -> tuple[Hashable, ...] | EllipsisType | None: ...
 
 
 def parse_dims_as_tuple(
@@ -906,7 +934,7 @@ def parse_dims_as_tuple(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | EllipsisType:
+) -> tuple[Hashable, ...] | EllipsisType | None:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -958,7 +986,7 @@ def parse_dims_as_set(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> set[Hashable] | None | EllipsisType: ...
+) -> set[Hashable] | EllipsisType | None: ...
 
 
 def parse_dims_as_set(
@@ -967,7 +995,7 @@ def parse_dims_as_set(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> set[Hashable] | None | EllipsisType:
+) -> set[Hashable] | EllipsisType | None:
     """Like parse_dims_as_tuple, but returning a set instead of a tuple."""
     # TODO: Consider removing parse_dims_as_tuple?
     if dim is None or dim is ...:
@@ -999,7 +1027,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | EllipsisType: ...
+) -> tuple[Hashable, ...] | EllipsisType | None: ...
 
 
 def parse_ordered_dims(
@@ -1008,7 +1036,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | EllipsisType:
+) -> tuple[Hashable, ...] | EllipsisType | None:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -1086,7 +1114,7 @@ class UncachedAccessor(Generic[_Accessor]):
     @overload
     def __get__(self, obj: object, cls) -> _Accessor: ...
 
-    def __get__(self, obj: None | object, cls) -> type[_Accessor] | _Accessor:
+    def __get__(self, obj: object | None, cls) -> type[_Accessor] | _Accessor:
         if obj is None:
             return self._accessor
 
@@ -1287,12 +1315,12 @@ def attempt_import(module: str) -> ModuleType:
         matplotlib="for plotting",
         hypothesis="for the `xarray.testing.strategies` submodule",
     )
-    package_name = module.split(".")[0]  # e.g. "zarr" from "zarr.storage"
+    package_name = module.split(".", maxsplit=1)[0]  # e.g. "zarr" from "zarr.storage"
     install_name = install_mapping.get(package_name, package_name)
     reason = package_purpose.get(package_name, "")
     try:
         return importlib.import_module(module)
-    except (ImportError, ModuleNotFoundError) as e:
+    except ImportError as e:
         raise ImportError(
             f"The {install_name} package is required {reason}"
             " but could not be imported."

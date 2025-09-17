@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from itertools import product
+from itertools import product, starmap
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -445,7 +445,6 @@ _MUL_TESTS = [
     (Second(), 3, Second(n=3)),
     (Millisecond(), 3, Millisecond(n=3)),
     (Microsecond(), 3, Microsecond(n=3)),
-    (Day(), 0.5, Hour(n=12)),
     (Hour(), 0.5, Minute(n=30)),
     (Hour(), -0.5, Minute(n=-30)),
     (Minute(), 0.5, Second(n=30)),
@@ -472,7 +471,15 @@ def test_mul_float_multiple_next_higher_resolution():
 
 @pytest.mark.parametrize(
     "offset",
-    [YearBegin(), YearEnd(), QuarterBegin(), QuarterEnd(), MonthBegin(), MonthEnd()],
+    [
+        YearBegin(),
+        YearEnd(),
+        QuarterBegin(),
+        QuarterEnd(),
+        MonthBegin(),
+        MonthEnd(),
+        Day(),
+    ],
     ids=_id_func,
 )
 def test_nonTick_offset_multiplied_float_error(offset):
@@ -531,6 +538,20 @@ def test_add_sub_monthly(offset, expected_date_args, calendar):
     initial = date_type(1, 1, 1)
     expected = date_type(*expected_date_args)
     result = offset + initial
+    assert result == expected
+
+
+def test_add_daily_offsets() -> None:
+    offset = Day(n=2)
+    expected = Day(n=4)
+    result = offset + offset
+    assert result == expected
+
+
+def test_subtract_daily_offsets() -> None:
+    offset = Day(n=2)
+    expected = Day(n=0)
+    result = offset - offset
     assert result == expected
 
 
@@ -1220,7 +1241,7 @@ def test_cftime_range(
     start, end, periods, freq, inclusive, normalize, calendar, expected_date_args
 ):
     date_type = get_date_type(calendar)
-    expected_dates = [date_type(*args) for args in expected_date_args]
+    expected_dates = list(starmap(date_type, expected_date_args))
 
     if isinstance(start, tuple):
         start = date_type(*start)
@@ -1277,7 +1298,7 @@ def test_invalid_date_range_cftime_inputs(
     end: str | None,
     periods: int | None,
     freq: str | None,
-    inclusive: Literal["up", None],
+    inclusive: Literal["up"] | None,
 ) -> None:
     with pytest.raises(ValueError):
         date_range(start, end, periods, freq, inclusive=inclusive, use_cftime=True)  # type: ignore[arg-type]

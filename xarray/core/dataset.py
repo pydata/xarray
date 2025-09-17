@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import copy
 import datetime
+import io
 import math
 import sys
 import warnings
@@ -26,7 +28,6 @@ from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_extension_array_dtype
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
@@ -34,16 +35,12 @@ from xarray.compat.array_api_compat import to_like_array
 from xarray.computation import ops
 from xarray.computation.arithmetic import DatasetArithmetic
 from xarray.core import dtypes as xrdtypes
-from xarray.core import (
-    duck_array_ops,
-    formatting,
-    formatting_html,
-    utils,
-)
+from xarray.core import duck_array_ops, formatting, formatting_html, utils
 from xarray.core._aggregations import DatasetAggregations
 from xarray.core.common import (
     DataWithCoords,
     _contains_datetime_like_objects,
+    _is_numeric_aggregatable_dtype,
     get_chunksizes,
 )
 from xarray.core.coordinates import (
@@ -91,6 +88,7 @@ from xarray.core.utils import (
     either_dict_or_kwargs,
     emit_user_level_warning,
     infix_dims,
+    is_allowed_extension_array,
     is_dict_like,
     is_duck_array,
     is_duck_dask_array,
@@ -99,6 +97,7 @@ from xarray.core.utils import (
     parse_dims_as_set,
 )
 from xarray.core.variable import (
+    UNSUPPORTED_EXTENSION_ARRAY_TYPES,
     IndexVariable,
     Variable,
     as_variable,
@@ -121,7 +120,13 @@ from xarray.structure.merge import (
     merge_coordinates_without_align,
     merge_data_and_coords,
 )
-from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
+from xarray.util.deprecation_helpers import (
+    _COMPAT_DEFAULT,
+    _JOIN_DEFAULT,
+    CombineKwargDefault,
+    _deprecate_positional_args,
+    deprecate_dims,
+)
 
 if TYPE_CHECKING:
     from dask.dataframe import DataFrame as DaskDataFrame
@@ -512,9 +517,11 @@ class Dataset(
         )
 
     def load(self, **kwargs) -> Self:
-        """Manually trigger loading and/or computation of this dataset's data
-        from disk or a remote source into memory and return this dataset.
-        Unlike compute, the original dataset is modified and returned.
+        """Trigger loading data into memory and return this dataset.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original dataset is modified and returned.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -526,29 +533,93 @@ class Dataset(
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.compute``.
 
+        Returns
+        -------
+        object : Dataset
+            Same object but with lazy data variables and coordinates as in-memory arrays.
+
         See Also
         --------
         dask.compute
+        Dataset.compute
+        Dataset.load_async
+        DataArray.load
+        Variable.load
         """
         # access .data to coerce everything to numpy or dask arrays
-        lazy_data = {
+        chunked_data = {
             k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
         }
-        if lazy_data:
-            chunkmanager = get_chunked_array_type(*lazy_data.values())
+        if chunked_data:
+            chunkmanager = get_chunked_array_type(*chunked_data.values())
 
             # evaluate all the chunked arrays simultaneously
             evaluated_data: tuple[np.ndarray[Any, Any], ...] = chunkmanager.compute(
-                *lazy_data.values(), **kwargs
+                *chunked_data.values(), **kwargs
             )
 
-            for k, data in zip(lazy_data, evaluated_data, strict=False):
+            for k, data in zip(chunked_data, evaluated_data, strict=False):
                 self.variables[k].data = data
 
         # load everything else sequentially
-        for k, v in self.variables.items():
-            if k not in lazy_data:
-                v.load()
+        [v.load() for k, v in self.variables.items() if k not in chunked_data]
+
+        return self
+
+    async def load_async(self, **kwargs) -> Self:
+        """Trigger and await asynchronous loading of data into memory and return this dataset.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original dataset is modified and returned.
+
+        Only works when opening data lazily from IO storage backends which support lazy asynchronous loading.
+        Otherwise will raise a NotImplementedError.
+
+        Note users are expected to limit concurrency themselves - xarray does not internally limit concurrency in any way.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.compute``.
+
+        Returns
+        -------
+        object : Dataset
+            Same object but with lazy data variables and coordinates as in-memory arrays.
+
+        See Also
+        --------
+        dask.compute
+        Dataset.compute
+        Dataset.load
+        DataArray.load_async
+        Variable.load_async
+        """
+        # TODO refactor this to pull out the common chunked_data codepath
+
+        # this blocks on chunked arrays but not on lazily indexed arrays
+
+        # access .data to coerce everything to numpy or dask arrays
+        chunked_data = {
+            k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
+        }
+        if chunked_data:
+            chunkmanager = get_chunked_array_type(*chunked_data.values())
+
+            # evaluate all the chunked arrays simultaneously
+            evaluated_data: tuple[np.ndarray[Any, Any], ...] = chunkmanager.compute(
+                *chunked_data.values(), **kwargs
+            )
+
+            for k, data in zip(chunked_data, evaluated_data, strict=False):
+                self.variables[k].data = data
+
+        # load everything else concurrently
+        coros = [
+            v.load_async() for k, v in self.variables.items() if k not in chunked_data
+        ]
+        await asyncio.gather(*coros)
 
         return self
 
@@ -687,9 +758,11 @@ class Dataset(
         )
 
     def compute(self, **kwargs) -> Self:
-        """Manually trigger loading and/or computation of this dataset's data
-        from disk or a remote source into memory and return a new dataset.
-        Unlike load, the original dataset is left unaltered.
+        """Trigger loading data into memory and return a new dataset.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.load``, the original dataset is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -709,6 +782,10 @@ class Dataset(
         See Also
         --------
         dask.compute
+        Dataset.load
+        Dataset.load_async
+        DataArray.compute
+        Variable.compute
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -790,9 +867,9 @@ class Dataset(
         variables: dict[Hashable, Variable] | None = None,
         coord_names: set[Hashable] | None = None,
         dims: dict[Any, int] | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         indexes: dict[Hashable, Index] | None = None,
-        encoding: dict | None | Default = _default,
+        encoding: dict | Default | None = _default,
         inplace: bool = False,
     ) -> Self:
         """Fastpath constructor for internal use.
@@ -839,7 +916,7 @@ class Dataset(
         self,
         variables: dict[Hashable, Variable],
         coord_names: set | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         indexes: dict[Hashable, Index] | None = None,
         inplace: bool = False,
     ) -> Self:
@@ -854,7 +931,7 @@ class Dataset(
         variables: dict[Hashable, Variable],
         coord_names: set | None = None,
         dims: dict[Hashable, int] | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
+        attrs: dict[Hashable, Any] | Default | None = _default,
         inplace: bool = False,
     ) -> Self:
         """Deprecated version of _replace_with_new_dims().
@@ -1358,7 +1435,6 @@ class Dataset(
         to avoid leaving the dataset in a partially updated state when an error occurs.
         """
         from xarray.core.dataarray import DataArray
-        from xarray.structure.alignment import align
 
         if isinstance(value, Dataset):
             missing_vars = [
@@ -1878,7 +1954,7 @@ class Dataset(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes: ...
+    ) -> memoryview: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -1901,7 +1977,7 @@ class Dataset(
     @overload
     def to_netcdf(
         self,
-        path: str | PathLike,
+        path: str | PathLike | io.IOBase,
         mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
@@ -1932,7 +2008,7 @@ class Dataset(
 
     def to_netcdf(
         self,
-        path: str | PathLike | None = None,
+        path: str | PathLike | io.IOBase | None = None,
         mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
@@ -1942,17 +2018,15 @@ class Dataset(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes | Delayed | None:
+    ) -> memoryview | Delayed | None:
         """Write dataset contents to a netCDF file.
 
         Parameters
         ----------
-        path : str, path-like or file-like, optional
-            Path to which to save this dataset. File-like objects are only
-            supported by the scipy engine. If no path is provided, this
-            function returns the resulting netCDF file as bytes; in this case,
-            we need to use scipy, which does not support netCDF version 4 (the
-            default format becomes NETCDF3_64BIT).
+        path : str, path-like, file-like or None, optional
+            Path to which to save this datatree, or a file-like object to write
+            it to (which must support read and write and be seekable) or None
+            (default) to return in-memory bytes as a memoryview.
         mode : {"w", "a"}, default: "w"
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
@@ -2014,9 +2088,9 @@ class Dataset(
 
         Returns
         -------
-            * ``bytes`` if path is None
+            * ``memoryview`` if path is None
             * ``dask.delayed.Delayed`` if compute is False
-            * None otherwise
+            * ``None`` otherwise
 
         See Also
         --------
@@ -2302,6 +2376,7 @@ class Dataset(
             append_dim=append_dim,
             region=region,
             safe_chunks=safe_chunks,
+            align_chunks=align_chunks,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
             write_empty_chunks=write_empty_chunks,
@@ -2333,9 +2408,10 @@ class Dataset(
         if buf is None:  # pragma: no cover
             buf = sys.stdout
 
-        lines = []
-        lines.append("xarray.Dataset {")
-        lines.append("dimensions:")
+        lines = [
+            "xarray.Dataset {",
+            "dimensions:",
+        ]
         for name, size in self.sizes.items():
             lines.append(f"\t{name} = {size} ;")
         lines.append("\nvariables:")
@@ -2410,13 +2486,16 @@ class Dataset(
         sizes along that dimension will not be updated; non-dask arrays will be
         converted into dask arrays with a single block.
 
-        Along datetime-like dimensions, a :py:class:`groupers.TimeResampler` object is also accepted.
+        Along datetime-like dimensions, a :py:class:`Resampler` object
+        (e.g. :py:class:`groupers.TimeResampler` or :py:class:`groupers.SeasonResampler`)
+        is also accepted.
 
         Parameters
         ----------
-        chunks : int, tuple of int, "auto" or mapping of hashable to int or a TimeResampler, optional
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or a Resampler, optional
             Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, or
-            ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": TimeResampler(freq="YE")}``.
+            ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": TimeResampler(freq="YE")}`` or
+            ``{"time": SeasonResampler(["DJF", "MAM", "JJA", "SON"])}``.
         name_prefix : str, default: "xarray-"
             Prefix for the name of any new dask arrays.
         token : str, optional
@@ -2451,8 +2530,7 @@ class Dataset(
         xarray.unify_chunks
         dask.array.from_array
         """
-        from xarray.core.dataarray import DataArray
-        from xarray.groupers import TimeResampler
+        from xarray.groupers import Resampler
 
         if chunks is None and not chunks_kwargs:
             warnings.warn(
@@ -2480,41 +2558,29 @@ class Dataset(
                 f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.sizes.keys())}"
             )
 
-        def _resolve_frequency(
-            name: Hashable, resampler: TimeResampler
-        ) -> tuple[int, ...]:
+        def _resolve_resampler(name: Hashable, resampler: Resampler) -> tuple[int, ...]:
             variable = self._variables.get(name, None)
             if variable is None:
                 raise ValueError(
-                    f"Cannot chunk by resampler {resampler!r} for virtual variables."
+                    f"Cannot chunk by resampler {resampler!r} for virtual variable {name!r}."
                 )
-            elif not _contains_datetime_like_objects(variable):
+            if variable.ndim != 1:
                 raise ValueError(
-                    f"chunks={resampler!r} only supported for datetime variables. "
-                    f"Received variable {name!r} with dtype {variable.dtype!r} instead."
+                    f"chunks={resampler!r} only supported for 1D variables. "
+                    f"Received variable {name!r} with {variable.ndim} dimensions instead."
                 )
-
-            assert variable.ndim == 1
-            chunks = (
-                DataArray(
-                    np.ones(variable.shape, dtype=int),
-                    dims=(name,),
-                    coords={name: variable},
+            newchunks = resampler.compute_chunks(variable, dim=name)
+            if sum(newchunks) != variable.shape[0]:
+                raise ValueError(
+                    f"Logic bug in rechunking variable {name!r} using {resampler!r}. "
+                    "New chunks tuple does not match size of data. Please open an issue."
                 )
-                .resample({name: resampler})
-                .sum()
-            )
-            # When bins (binning) or time periods are missing (resampling)
-            # we can end up with NaNs. Drop them.
-            if chunks.dtype.kind == "f":
-                chunks = chunks.dropna(name).astype(int)
-            chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
-            return chunks_tuple
+            return newchunks
 
         chunks_mapping_ints: Mapping[Any, T_ChunkDim] = {
             name: (
-                _resolve_frequency(name, chunks)
-                if isinstance(chunks, TimeResampler)
+                _resolve_resampler(name, chunks)
+                if isinstance(chunks, Resampler)
                 else chunks
             )
             for name, chunks in chunks_mapping.items()
@@ -2549,14 +2615,13 @@ class Dataset(
         + string indexers are cast to the appropriate date type if the
           associated index is a DatetimeIndex or CFTimeIndex
         """
-        from xarray.coding.cftimeindex import CFTimeIndex
         from xarray.core.dataarray import DataArray
 
         indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
 
         # all indexers should be int, slice, np.ndarrays, or Variable
         for k, v in indexers.items():
-            if isinstance(v, int | slice | Variable):
+            if isinstance(v, int | slice | Variable) and not isinstance(v, bool):
                 yield k, v
             elif isinstance(v, DataArray):
                 yield k, v.variable
@@ -3851,13 +3916,22 @@ class Dataset(
                 var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
                 variables[name] = missing.interp(var, var_indexers, method, **kwargs)
             elif dtype_kind in "ObU" and (use_indexers.keys() & var.dims):
-                # For types that we do not understand do stepwise
-                # interpolation to avoid modifying the elements.
-                # reindex the variable instead because it supports
-                # booleans and objects and retains the dtype but inside
-                # this loop there might be some duplicate code that slows it
-                # down, therefore collect these signals and run it later:
-                reindex_vars.append(name)
+                if all(var.sizes[d] == 1 for d in (use_indexers.keys() & var.dims)):
+                    # Broadcastable, can be handled quickly without reindex:
+                    to_broadcast = (var.squeeze(),) + tuple(
+                        dest for _, dest in use_indexers.values()
+                    )
+                    variables[name] = broadcast_variables(*to_broadcast)[0].copy(
+                        deep=True
+                    )
+                else:
+                    # For types that we do not understand do stepwise
+                    # interpolation to avoid modifying the elements.
+                    # reindex the variable instead because it supports
+                    # booleans and objects and retains the dtype but inside
+                    # this loop there might be some duplicate code that slows it
+                    # down, therefore collect these signals and run it later:
+                    reindex_vars.append(name)
             elif all(d not in indexers for d in var.dims):
                 # For anything else we can only keep variables if they
                 # are not dependent on any coords that are being
@@ -4348,8 +4422,8 @@ class Dataset(
 
     def expand_dims(
         self,
-        dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
-        axis: None | int | Sequence[int] = None,
+        dim: Hashable | Sequence[Hashable] | Mapping[Any, Any] | None = None,
+        axis: int | Sequence[int] | None = None,
         create_index_for_new_dim: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
@@ -4940,6 +5014,20 @@ class Dataset(
         if isinstance(index, PandasMultiIndex):
             coord_names = [index.dim] + list(coord_names)
 
+        # Check for extra variables that don't match the coordinate names
+        extra_vars = set(new_coord_vars) - set(coord_names)
+        if extra_vars:
+            extra_vars_str = ", ".join(f"'{name}'" for name in extra_vars)
+            coord_names_str = ", ".join(f"'{name}'" for name in coord_names)
+            raise ValueError(
+                f"The index created extra variables {extra_vars_str} that are not "
+                f"in the list of coordinates {coord_names_str}. "
+                f"Use a factory method pattern instead:\n"
+                f"  index = {index_cls.__name__}.from_variables(ds, {list(coord_names)!r})\n"
+                f"  coords = xr.Coordinates.from_xindex(index)\n"
+                f"  ds = ds.assign_coords(coords)"
+            )
+
         variables: dict[Hashable, Variable]
         indexes: dict[Hashable, Index]
 
@@ -5298,7 +5386,14 @@ class Dataset(
 
         # concatenate the arrays
         stackable_vars = [stack_dataarray(da) for da in self.data_vars.values()]
-        data_array = concat(stackable_vars, dim=new_dim)
+        data_array = concat(
+            stackable_vars,
+            dim=new_dim,
+            data_vars="all",
+            coords="different",
+            compat="equals",
+            join="outer",
+        )
 
         if name is not None:
             data_array.name = name
@@ -5499,7 +5594,7 @@ class Dataset(
                 result = result._unstack_once(d, stacked_indexes[d], fill_value, sparse)
         return result
 
-    def update(self, other: CoercibleMapping) -> Self:
+    def update(self, other: CoercibleMapping) -> None:
         """Update this dataset's variables with those from another dataset.
 
         Just like :py:meth:`dict.update` this is a in-place operation.
@@ -5516,14 +5611,6 @@ class Dataset(
             - mapping {var name: (dimension name, array-like)}
             - mapping {var name: (tuple of dimension names, array-like)}
 
-        Returns
-        -------
-        updated : Dataset
-            Updated dataset. Note that since the update is in-place this is the input
-            dataset.
-
-            It is deprecated since version 0.17 and scheduled to be removed in 0.21.
-
         Raises
         ------
         ValueError
@@ -5536,14 +5623,14 @@ class Dataset(
         Dataset.merge
         """
         merge_result = dataset_update_method(self, other)
-        return self._replace(inplace=True, **merge_result._asdict())
+        self._replace(inplace=True, **merge_result._asdict())
 
     def merge(
         self,
         other: CoercibleMapping | DataArray,
         overwrite_vars: Hashable | Iterable[Hashable] = frozenset(),
-        compat: CompatOptions = "no_conflicts",
-        join: JoinOptions = "outer",
+        compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
+        join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
         fill_value: Any = xrdtypes.NA,
         combine_attrs: CombineAttrsOptions = "override",
     ) -> Self:
@@ -5793,11 +5880,10 @@ class Dataset(
                 other_names.update(idx_other_names)
         if other_names:
             names_set |= set(other_names)
-            warnings.warn(
+            emit_user_level_warning(
                 f"Deleting a single level of a MultiIndex is deprecated. Previously, this deleted all levels of a MultiIndex. "
                 f"Please also drop the following variables: {other_names!r} to avoid an error in the future.",
                 DeprecationWarning,
-                stacklevel=2,
             )
 
         assert_no_index_corrupted(self.xindexes, names_set)
@@ -6758,12 +6844,11 @@ class Dataset(
             elif (
                 # Some reduction functions (e.g. std, var) need to run on variables
                 # that don't have the reduce dims: PR5393
-                not is_extension_array_dtype(var.dtype)
+                not pd.api.types.is_extension_array_dtype(var.dtype)  # noqa: TID251
                 and (
                     not reduce_dims
                     or not numeric_only
-                    or np.issubdtype(var.dtype, np.number)
-                    or (var.dtype == np.bool_)
+                    or _is_numeric_aggregatable_dtype(var)
                 )
             ):
                 # prefer to aggregate over axis=None rather than
@@ -6844,11 +6929,22 @@ class Dataset(
             k: maybe_wrap_array(v, func(v, *args, **kwargs))
             for k, v in self.data_vars.items()
         }
+        coord_vars, indexes = merge_coordinates_without_align(
+            [v.coords for v in variables.values()]
+        )
+        coords = Coordinates._construct_direct(coords=coord_vars, indexes=indexes)
+
         if keep_attrs:
             for k, v in variables.items():
                 v._copy_attrs_from(self.data_vars[k])
+
+            for k, v in coords.items():
+                if k not in self.coords:
+                    continue
+                v._copy_attrs_from(self.coords[k])
+
         attrs = self.attrs if keep_attrs else None
-        return type(self)(variables, attrs=attrs)
+        return type(self)(variables, coords=coords, attrs=attrs)
 
     def apply(
         self,
@@ -7083,12 +7179,12 @@ class Dataset(
         non_extension_array_columns = [
             k
             for k in columns_in_order
-            if not is_extension_array_dtype(self.variables[k].data)
+            if not pd.api.types.is_extension_array_dtype(self.variables[k].data)  # noqa: TID251
         ]
         extension_array_columns = [
             k
             for k in columns_in_order
-            if is_extension_array_dtype(self.variables[k].data)
+            if pd.api.types.is_extension_array_dtype(self.variables[k].data)  # noqa: TID251
         ]
         extension_array_columns_different_index = [
             k
@@ -7280,8 +7376,8 @@ class Dataset(
         arrays = []
         extension_arrays = []
         for k, v in dataframe.items():
-            if not is_extension_array_dtype(v) or isinstance(
-                v.array, pd.arrays.DatetimeArray | pd.arrays.TimedeltaArray
+            if not is_allowed_extension_array(v) or isinstance(
+                v.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES
             ):
                 arrays.append((k, np.asarray(v)))
             else:
@@ -7292,7 +7388,7 @@ class Dataset(
 
         if isinstance(idx, pd.MultiIndex):
             dims = tuple(
-                name if name is not None else f"level_{n}"  # type: ignore[redundant-expr]
+                name if name is not None else f"level_{n}"  # type: ignore[redundant-expr,unused-ignore]
                 for n, name in enumerate(idx.names)
             )
             for dim, lev in zip(dims, idx.levels, strict=True):
@@ -8266,8 +8362,6 @@ class Dataset(
         --------
         numpy.gradient: corresponding numpy function
         """
-        from xarray.core.variable import Variable
-
         if coord not in self.variables and coord not in self.dims:
             variables_and_dims = tuple(set(self.variables.keys()).union(self.dims))
             raise ValueError(
@@ -8371,8 +8465,6 @@ class Dataset(
         return result
 
     def _integrate_one(self, coord, datetime_unit=None, cumulative=False):
-        from xarray.core.variable import Variable
-
         if coord not in self.variables and coord not in self.dims:
             variables_and_dims = tuple(set(self.variables.keys()).union(self.dims))
             raise ValueError(
@@ -9707,7 +9799,7 @@ class Dataset(
         self,
         calendar: CFCalendar,
         dim: Hashable = "time",
-        align_on: Literal["date", "year", None] = None,
+        align_on: Literal["date", "year"] | None = None,
         missing: Any | None = None,
         use_cftime: bool | None = None,
     ) -> Self:
@@ -9943,7 +10035,7 @@ class Dataset(
         :ref:`groupby`
             Users guide explanation of how to group and bin data.
 
-        :doc:`xarray-tutorial:intermediate/01-high-level-computation-patterns`
+        :doc:`xarray-tutorial:intermediate/computation/01-high-level-computation-patterns`
             Tutorial on :py:func:`~xarray.Dataset.Groupby` for windowed computation.
 
         :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`

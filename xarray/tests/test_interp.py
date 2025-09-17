@@ -124,7 +124,7 @@ def test_interpolate_1d(method: InterpOptions, dim: str, case: int) -> None:
     if not has_scipy:
         pytest.skip("scipy is not installed.")
 
-    if not has_dask and case in [1]:
+    if not has_dask and case == 1:
         pytest.skip("dask is not installed in the environment.")
 
     da = get_example_data(case)
@@ -139,7 +139,7 @@ def test_interpolate_1d(method: InterpOptions, dim: str, case: int) -> None:
             axis=obj.get_axis_num(dim),
             bounds_error=False,
             fill_value=np.nan,
-            kind=method,
+            kind=method,  # type: ignore[arg-type,unused-ignore]
         )(new_x)
 
     if dim == "x":
@@ -170,7 +170,7 @@ def test_interpolate_1d_methods(method: InterpOptions) -> None:
             axis=obj.get_axis_num(dim),
             bounds_error=False,
             fill_value=np.nan,
-            kind=method,
+            kind=method,  # type: ignore[arg-type,unused-ignore]
         )(new_x)
 
     coords = {"x": xdest, "y": da["y"], "x2": ("x", func(da["x2"], xdest))}
@@ -229,7 +229,7 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
                 da[dim],
                 obj.data,
                 axis=obj.get_axis_num(dim),
-                kind=method,
+                kind=method,  # type: ignore[arg-type,unused-ignore]
                 bounds_error=False,
                 fill_value=np.nan,
                 **scipy_kwargs,
@@ -338,7 +338,7 @@ def test_interpolate_nd(case: int, method: InterpnOptions, nd_interp_coords) -> 
     zdest = nd_interp_coords["zdest"]
     grid_oned_points = nd_interp_coords["grid_oned_points"]
     actual = da.interp(x=xdest, y=ydest, z=zdest, method=method)
-    expected_data = scipy.interpolate.interpn(
+    expected_data_1d: np.ndarray = scipy.interpolate.interpn(
         points=(da.x, da.y, da.z),
         values=da.data,
         xi=grid_oned_points,
@@ -346,7 +346,7 @@ def test_interpolate_nd(case: int, method: InterpnOptions, nd_interp_coords) -> 
         bounds_error=False,
     ).reshape([len(xdest), len(zdest)])
     expected = xr.DataArray(
-        expected_data,
+        expected_data_1d,
         dims=["y", "z"],
         coords={
             "y": ydest,
@@ -433,7 +433,7 @@ def test_interpolate_nd_with_nan() -> None:
     "case", [pytest.param(0, id="no_chunk"), pytest.param(1, id="chunk_y")]
 )
 def test_interpolate_scalar(method: InterpOptions, case: int) -> None:
-    if not has_dask and case in [1]:
+    if not has_dask and case == 1:
         pytest.skip("dask is not installed in the environment.")
 
     da = get_example_data(case)
@@ -449,7 +449,7 @@ def test_interpolate_scalar(method: InterpOptions, case: int) -> None:
             axis=obj.get_axis_num("x"),
             bounds_error=False,
             fill_value=np.nan,
-            kind=method,
+            kind=method,  # type: ignore[arg-type,unused-ignore]
         )(new_x)
 
     coords = {"x": xdest, "y": da["y"], "x2": func(da["x2"], xdest)}
@@ -463,7 +463,7 @@ def test_interpolate_scalar(method: InterpOptions, case: int) -> None:
     "case", [pytest.param(3, id="no_chunk"), pytest.param(4, id="chunked")]
 )
 def test_interpolate_nd_scalar(method: InterpOptions, case: int) -> None:
-    if not has_dask and case in [4]:
+    if not has_dask and case == 4:
         pytest.skip("dask is not installed in the environment.")
 
     da = get_example_data(case)
@@ -476,7 +476,7 @@ def test_interpolate_nd_scalar(method: InterpOptions, case: int) -> None:
     expected_data = scipy.interpolate.RegularGridInterpolator(
         (da["x"], da["y"], da["z"]),
         da.transpose("x", "y", "z").values,
-        method=method,
+        method=method,  # type: ignore[arg-type,unused-ignore]
         bounds_error=False,
         fill_value=np.nan,
     )(np.asarray([(xdest, ydest, z_val) for z_val in zdest]))
@@ -1063,6 +1063,28 @@ def test_interp1d_complex_out_of_bounds() -> None:
     expected = da.interp(time=3.5, kwargs=dict(fill_value=np.nan + np.nan * 1j))
     actual = da.interp(time=3.5)
     assert_identical(actual, expected)
+
+
+@requires_scipy
+def test_interp_non_numeric_scalar() -> None:
+    ds = xr.Dataset(
+        {
+            "non_numeric": ("time", np.array(["a"])),
+        },
+        coords={"time": (np.array([0]))},
+    )
+    actual = ds.interp(time=np.linspace(0, 3, 3))
+
+    expected = xr.Dataset(
+        {
+            "non_numeric": ("time", np.array(["a", "a", "a"])),
+        },
+        coords={"time": np.linspace(0, 3, 3)},
+    )
+    xr.testing.assert_identical(actual, expected)
+
+    # Make sure the array is a copy:
+    assert actual["non_numeric"].data.base is None
 
 
 @requires_scipy

@@ -1,9 +1,10 @@
 from importlib.metadata import version as _version
 
-from xarray import coders, groupers, testing, tutorial, ufuncs
+from xarray import coders, groupers, indexes, testing, tutorial, ufuncs
 from xarray.backends.api import (
     load_dataarray,
     load_dataset,
+    load_datatree,
     open_dataarray,
     open_dataset,
     open_datatree,
@@ -70,6 +71,7 @@ __all__ = (  # noqa: RUF022
     # Sub-packages
     "coders",
     "groupers",
+    "indexes",
     "testing",
     "tutorial",
     "ufuncs",
@@ -95,6 +97,7 @@ __all__ = (  # noqa: RUF022
     "infer_freq",
     "load_dataarray",
     "load_dataset",
+    "load_datatree",
     "map_blocks",
     "map_over_datasets",
     "merge",

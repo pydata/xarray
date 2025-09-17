@@ -4,7 +4,7 @@ import functools
 from typing import Any
 
 import numpy as np
-from pandas.api.types import is_extension_array_dtype
+import pandas as pd
 
 from xarray.compat import array_api_compat, npcompat
 from xarray.compat.npcompat import HAS_STRING_DTYPE
@@ -213,7 +213,7 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
 
     if isinstance(dtype, np.dtype):
         return npcompat.isdtype(dtype, kind)
-    elif is_extension_array_dtype(dtype):
+    elif pd.api.types.is_extension_array_dtype(dtype):  # noqa: TID251
         # we never want to match pandas extension array dtypes
         return False
     else:
@@ -238,7 +238,7 @@ def preprocess_types(t):
 
 
 def result_type(
-    *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike,
+    *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike | None,
     xp=None,
 ) -> np.dtype:
     """Like np.result_type, but with type promotion rules matching pandas.

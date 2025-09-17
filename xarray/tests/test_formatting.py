@@ -101,6 +101,9 @@ class TestFormatting:
             (np.float16(1.1234), "1.123"),
             (np.float32(1.0111111), "1.011"),
             (np.float64(22.222222), "22.22"),
+            (np.zeros((1, 1)), "[[0.]]"),
+            (np.zeros(2), "[0. 0.]"),
+            (np.zeros((2, 2)), "[[0. 0.]\n [0. 0.]]"),
         ]
         for item, expected in cases:
             actual = formatting.format_item(item)
@@ -718,6 +721,27 @@ class TestFormatting:
         actual = formatting.diff_datatree_repr(dt_1, dt_2, "identical")
         assert actual == expected
 
+    def test_diff_datatree_repr_equals(self) -> None:
+        ds1 = xr.Dataset(data_vars={"data": ("y", [5, 2])})
+        ds2 = xr.Dataset(data_vars={"data": (("x", "y"), [[5, 2]])})
+        dt1 = xr.DataTree.from_dict({"node": ds1})
+        dt2 = xr.DataTree.from_dict({"node": ds2})
+
+        expected = dedent(
+            """\
+            Left and right DataTree objects are not equal
+
+            Data at node 'node' does not match:
+                Differing dimensions:
+                    (y: 2) != (x: 1, y: 2)
+                Differing data variables:
+                L   data     (y) int64 16B 5 2
+                R   data     (x, y) int64 16B 5 2"""
+        )
+
+        actual = formatting.diff_datatree_repr(dt1, dt2, "equals")
+        assert actual == expected
+
 
 def test_inline_variable_array_repr_custom_repr() -> None:
     class CustomArray:
@@ -939,7 +963,11 @@ def test_lazy_array_wont_compute() -> None:
 
     class LazilyIndexedArrayNotComputable(LazilyIndexedArray):
         def __array__(
-            self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+            self,
+            dtype: np.typing.DTypeLike | None = None,
+            /,
+            *,
+            copy: bool | None = None,
         ) -> np.ndarray:
             raise NotImplementedError("Computing this array is not possible.")
 
@@ -1164,4 +1192,47 @@ Dimensions without coordinates: x
 {array!r}
 Dimensions without coordinates: x
         """.strip()
+    assert actual == expected
+
+
+def test_repr_pandas_range_index() -> None:
+    # lazy data repr but values shown in inline repr
+    xidx = xr.indexes.PandasIndex(pd.RangeIndex(10), "x")
+    ds = xr.Dataset(coords=xr.Coordinates.from_xindex(xidx))
+    actual = repr(ds.x)
+    expected = """
+<xarray.DataArray 'x' (x: 10)> Size: 80B
+[10 values with dtype=int64]
+Coordinates:
+  * x        (x) int64 80B 0 1 2 3 4 5 6 7 8 9
+    """.strip()
+    assert actual == expected
+
+
+def test_repr_pandas_multi_index() -> None:
+    # lazy data repr but values shown in inline repr
+    midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=["foo", "bar"])
+    coords = xr.Coordinates.from_pandas_multiindex(midx, "x")
+    ds = xr.Dataset(coords=coords)
+
+    actual = repr(ds.x)
+    expected = """
+<xarray.DataArray 'x' (x: 4)> Size: 32B
+[4 values with dtype=object]
+Coordinates:
+  * x        (x) object 32B MultiIndex
+  * foo      (x) object 32B 'a' 'a' 'b' 'b'
+  * bar      (x) int64 32B 1 2 1 2
+    """.strip()
+    assert actual == expected
+
+    actual = repr(ds.foo)
+    expected = """
+<xarray.DataArray 'foo' (x: 4)> Size: 32B
+[4 values with dtype=object]
+Coordinates:
+  * x        (x) object 32B MultiIndex
+  * foo      (x) object 32B 'a' 'a' 'b' 'b'
+  * bar      (x) int64 32B 1 2 1 2
+    """.strip()
     assert actual == expected
