@@ -121,7 +121,7 @@ def get_default_netcdf_write_engine(
         }:
             raise ValueError(f"unexpected {format=}")
         # TODO: allow format='NETCDF4_CLASSIC' to default to using h5netcdf,
-        # when the older supported version of h5netcdf supports it:
+        # when the oldest supported version of h5netcdf supports it:
         # https://github.com/h5netcdf/h5netcdf/pull/283
         if format != "NETCDF4":
             candidates.remove("h5netcdf")
