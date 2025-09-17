@@ -129,13 +129,12 @@ def prepare_venv(session: nox.sessions.Session) -> None:
 
     """
     lockfile = session_lockfile(session)
-    print(f"prepare_venv: {lockfile}")
     venv_dir = session.virtualenv.location_name
 
     if not venv_populated(session):
         # environment has been created but packages not yet installed
         # populate the environment from the lockfile
-        logger.debug(f"Populating conda env at {venv_dir}")
+        logger.debug(f"Populating conda env at {venv_dir} using {lockfile}")
         session.conda_install("--file", str(lockfile))
         cache_venv(session)
 
