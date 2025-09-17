@@ -91,7 +91,7 @@ class Delegated(_DelegatedABC):
             # Just NOX for now but the architecture is here for future cases.
             case Mode.NOX:
                 # Need to determine a single Python version to run with.
-                req_dir = build_dir / "requirements"
+                req_dir = build_dir / "ci" / "requirements"
                 lockfile_dir = req_dir / "locks"
                 if not lockfile_dir.is_dir():
                     lockfile_dir = req_dir / "ci" / "nox.lock"
