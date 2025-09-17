@@ -97,12 +97,12 @@ class Delegated(_DelegatedABC):
                     lockfile_dir = req_dir / "ci" / "nox.lock"
 
                 if not lockfile_dir.is_dir():
-                    message = "No lockfile directory found in the expected locations."
+                    message = f"No lockfile directory found in the expected locations, got {lockfile_dir}."
                     raise FileNotFoundError(message)
 
                 def py_ver_from_lockfiles(lockfile: Path) -> str:
                     pattern = re.compile(r"py(\d+)-")
-                    search = pattern.search(lockfile.name)
+                    search = pattern.search(lockfile.name
                     assert search is not None
                     version = search.group(1)
                     return f"{version[0]}.{version[1:]}"
