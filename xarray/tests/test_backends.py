@@ -2165,7 +2165,7 @@ class NetCDF4Base(NetCDFBase):
                     "time",
                     fill_value=255,
                 )
-            with open_dataset(tmp_file) as original:
+            with open_dataset(tmp_file, engine="netcdf4") as original:
                 save_kwargs = {}
                 if self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above:
                     save_kwargs["invalid_netcdf"] = True
