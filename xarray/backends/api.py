@@ -2083,7 +2083,7 @@ def to_netcdf(
     if encoding is None:
         encoding = {}
 
-    path_or_file = _normalize_path(path_or_file)
+    path_or_file: str | IOBase | None = _normalize_path(path_or_file)  # type: ignore[no-redef,arg-type]
 
     if engine is None:
         engine = get_default_netcdf_write_engine(path_or_file, format)

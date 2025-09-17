@@ -52,7 +52,7 @@ def _datatree_to_netcdf(
             "DataTree.to_netcdf only supports the netcdf4 and h5netcdf engines"
         )
 
-    filepath = _normalize_path(filepath)
+    filepath: str | io.IOBase | None = _normalize_path(filepath)  # type: ignore[no-redef,arg-type]
 
     if engine is None:
         engine = get_default_netcdf_write_engine(
