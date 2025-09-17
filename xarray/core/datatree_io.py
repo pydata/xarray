@@ -52,11 +52,11 @@ def _datatree_to_netcdf(
             "DataTree.to_netcdf only supports the netcdf4 and h5netcdf engines"
         )
 
-    filepath: str | io.IOBase | None = _normalize_path(filepath)  # type: ignore[no-redef,arg-type]
+    normalized_path = _normalize_path(filepath)
 
     if engine is None:
         engine = get_default_netcdf_write_engine(
-            path_or_file=filepath,
+            path_or_file=normalized_path,
             format="NETCDF4",  # required for supporting groups
         )  # type: ignore[assignment]
 
@@ -76,7 +76,7 @@ def _datatree_to_netcdf(
             f"unexpected encoding group name(s) provided: {set(encoding) - set(dt.groups)}"
         )
 
-    if filepath is None:
+    if normalized_path is None:
         if not compute:
             raise NotImplementedError(
                 "to_netcdf() with compute=False is not yet implemented when "
@@ -84,7 +84,7 @@ def _datatree_to_netcdf(
             )
         target = BytesIOProxy()
     else:
-        target = filepath  # type: ignore[assignment]
+        target = normalized_path  # type: ignore[assignment]
 
     if unlimited_dims is None:
         unlimited_dims = {}

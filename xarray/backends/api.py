@@ -2083,10 +2083,10 @@ def to_netcdf(
     if encoding is None:
         encoding = {}
 
-    path_or_file: str | IOBase | None = _normalize_path(path_or_file)  # type: ignore[no-redef,arg-type]
+    normalized_path = _normalize_path(path_or_file)
 
     if engine is None:
-        engine = get_default_netcdf_write_engine(path_or_file, format)
+        engine = get_default_netcdf_write_engine(normalized_path, format)
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
@@ -2096,7 +2096,7 @@ def to_netcdf(
 
     autoclose = _get_netcdf_autoclose(dataset, engine)
 
-    if path_or_file is None:
+    if normalized_path is None:
         if not compute:
             raise NotImplementedError(
                 "to_netcdf() with compute=False is not yet implemented when "
@@ -2104,7 +2104,7 @@ def to_netcdf(
             )
         target = BytesIOProxy()
     else:
-        target = path_or_file  # type: ignore[assignment]
+        target = normalized_path  # type: ignore[assignment]
 
     store = get_writable_netcdf_store(
         target,

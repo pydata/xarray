@@ -53,14 +53,18 @@ T = TypeVar("T")
 
 
 @overload
-def _normalize_path(path: str | os.PathLike) -> str: ...
+def _normalize_path(path: os.PathLike) -> str: ...
+
+
+@overload
+def _normalize_path(path: str) -> str: ...
 
 
 @overload
 def _normalize_path(path: T) -> T: ...
 
 
-def _normalize_path(path: str | os.PathLike | T) -> str | T:
+def _normalize_path(path: os.PathLike | str | T) -> str | T:
     """
     Normalize pathlikes to string.
 
@@ -85,7 +89,7 @@ def _normalize_path(path: str | os.PathLike | T) -> str | T:
     if isinstance(path, str) and not is_remote_uri(path):
         path = os.path.abspath(os.path.expanduser(path))
 
-    return path  # type:ignore [return-value]
+    return path  # type: ignore[return-value]
 
 
 @overload
