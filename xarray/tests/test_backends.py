@@ -2214,7 +2214,7 @@ class NetCDF4Base(NetCDFBase):
                     "time",
                     fill_value=255,
                 )
-            with open_dataset(tmp_file) as original:
+            with open_dataset(tmp_file, engine="netcdf4") as original:
                 assert (
                     original.clouds.encoding["dtype"].metadata
                     == original.tifa.encoding["dtype"].metadata
