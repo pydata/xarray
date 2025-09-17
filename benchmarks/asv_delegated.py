@@ -102,16 +102,17 @@ class Delegated(_DelegatedABC):
 
                 def py_ver_from_lockfiles(lockfile: Path) -> str:
                     pattern = re.compile(r"py(\d+)-")
-                    search = pattern.search(lockfile.name
+                    search = pattern.search(lockfile.name)
                     assert search is not None
                     version = search.group(1)
                     return f"{version[0]}.{version[1:]}"
 
-                python_versions = [
-                    py_ver_from_lockfiles(lockfile)
-                    for lockfile in lockfile_dir.glob("*.lock")
-                ]
-                python_version = max(python_versions)
+                # python_versions = [
+                    # py_ver_from_lockfiles(lockfile)
+                    # for lockfile in lockfile_dir.glob("*.lock")
+                # ]
+                # python_version = max(python_versions)
+                python_version = "3.13"
 
                 # Construct and run the environment preparation command.
                 local_envs = dict(environ)
