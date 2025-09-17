@@ -4388,12 +4388,16 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         expected = xr.Dataset({"floats": ("x", [np.nan]), "ints": ("x", [0])})
         with self.temp_dir() as (d, store):
             inputs.to_zarr(store, compute=False)
-            with open_dataset(store) as roundtripped:
-                assert_identical(expected, roundtripped)
-                assert np.isnan(roundtripped.variables["floats"].encoding["_FillValue"])
+            with open_dataset(store) as on_disk:
+                assert np.isnan(on_disk.variables["floats"].encoding["_FillValue"])
                 assert (
-                    "_FillValue" not in roundtripped.variables["ints"].encoding
+                    "_FillValue" not in on_disk.variables["ints"].encoding
                 )  # use default
+                if not has_zarr_v3:
+                    # zarr-python v2 interprets fill_value=None inconsistently
+                    del on_disk["ints"]
+                    del expected["ints"]
+                assert_identical(expected, on_disk)
 
     @pytest.mark.parametrize("consolidated", [True, False, None])
     @pytest.mark.parametrize("write_empty", [True, False, None])
