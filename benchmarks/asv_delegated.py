@@ -91,21 +91,21 @@ class Delegated(_DelegatedABC):
             # Just NOX for now but the architecture is here for future cases.
             case Mode.NOX:
                 # Need to determine a single Python version to run with.
-                req_dir = build_dir / "ci" / "requirements"
-                lockfile_dir = req_dir / "locks"
-                if not lockfile_dir.is_dir():
-                    lockfile_dir = req_dir / "ci" / "nox.lock"
+                # req_dir = build_dir / "ci" / "requirements"
+                # lockfile_dir = req_dir / "locks"
+                # if not lockfile_dir.is_dir():
+                    # lockfile_dir = req_dir / "ci" / "nox.lock"
 
-                if not lockfile_dir.is_dir():
-                    message = f"No lockfile directory found in the expected locations, got {lockfile_dir}."
-                    raise FileNotFoundError(message)
+                # if not lockfile_dir.is_dir():
+                    # message = f"No lockfile directory found in the expected locations, got '{lockfile_dir}'."
+                    # raise FileNotFoundError(message)
 
-                def py_ver_from_lockfiles(lockfile: Path) -> str:
-                    pattern = re.compile(r"py(\d+)-")
-                    search = pattern.search(lockfile.name)
-                    assert search is not None
-                    version = search.group(1)
-                    return f"{version[0]}.{version[1:]}"
+                # def py_ver_from_lockfiles(lockfile: Path) -> str:
+                    # pattern = re.compile(r"py(\d+)-")
+                    # search = pattern.search(lockfile.name)
+                    # assert search is not None
+                    # version = search.group(1)
+                    # return f"{version[0]}.{version[1:]}"
 
                 # python_versions = [
                     # py_ver_from_lockfiles(lockfile)
