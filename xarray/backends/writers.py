@@ -33,8 +33,9 @@ if TYPE_CHECKING:
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.types import ZarrStoreLike
 
-    T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf", "pydap"]
-    T_DataTreeNetcdfTypes = Literal["NETCDF4"]
+
+T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf", "pydap"]
+T_DataTreeNetcdfTypes = Literal["NETCDF4"]
 
 
 WRITEABLE_STORES: dict[T_NetcdfEngine, Callable] = {
