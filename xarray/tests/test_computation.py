@@ -926,7 +926,7 @@ def test_keep_attrs_strategies_dataarray_variables(
     compute_attrs = {
         "dim": lambda attrs, default: (attrs, default),
         "coord": lambda attrs, default: (default, attrs),
-    }.get(variant)
+    }[variant]
 
     dim_attrs, coord_attrs = compute_attrs(attrs, [{}, {}, {}])
 
@@ -1092,7 +1092,8 @@ def test_keep_attrs_strategies_dataset_variables(
         "data": lambda attrs, default: (attrs, default, default),
         "dim": lambda attrs, default: (default, attrs, default),
         "coord": lambda attrs, default: (default, default, attrs),
-    }.get(variant)
+    }[variant]
+
     data_attrs, dim_attrs, coord_attrs = compute_attrs(attrs, [{}, {}, {}])
 
     a = xr.Dataset(
