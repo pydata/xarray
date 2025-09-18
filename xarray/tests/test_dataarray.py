@@ -2206,7 +2206,7 @@ class TestDataArray:
         assert_identical(other_way_expected, other_way)
 
     def test_set_index(self) -> None:
-        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]  # type: ignore[arg-type]
+        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]  # type: ignore[arg-type,unused-ignore]  # pandas-stubs varies
         coords = {idx.name: ("x", idx) for idx in indexes}
         array = DataArray(self.mda.values, coords=coords, dims="x")
         expected = self.mda.copy()
@@ -2237,7 +2237,7 @@ class TestDataArray:
             obj.set_index(x="level_4")
 
     def test_reset_index(self) -> None:
-        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]  # type: ignore[arg-type]
+        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]  # type: ignore[arg-type,unused-ignore]  # pandas-stubs varies
         coords = {idx.name: ("x", idx) for idx in indexes}
         expected = DataArray(self.mda.values, coords=coords, dims="x")
 
