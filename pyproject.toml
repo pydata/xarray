@@ -183,14 +183,6 @@ module = [
   "xarray.indexes.*",
   "xarray.tests.*",
 ]
-# This then excludes some modules from the above list. (So ideally we remove
-# from here in time...)
-[[tool.mypy.overrides]]
-check_untyped_defs = false
-module = [
-  "xarray.tests.test_coding_times",
-  "xarray.tests.test_dask",
-]
 
 # Use strict = true whenever namedarray has become standalone. In the meantime
 # don't forget to add all new files related to namedarray here:
