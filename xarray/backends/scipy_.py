@@ -323,7 +323,7 @@ def _normalize_filename_or_obj(
     if isinstance(filename_or_obj, bytes | memoryview):
         return io.BytesIO(filename_or_obj)
     else:
-        return _normalize_path(filename_or_obj)  # type: ignore[return-value]
+        return _normalize_path(filename_or_obj)
 
 
 class ScipyBackendEntrypoint(BackendEntrypoint):
