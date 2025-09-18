@@ -4,7 +4,7 @@ import functools
 import io
 import itertools
 import textwrap
-from collections import ChainMap
+from collections import ChainMap, defaultdict
 from collections.abc import (
     Callable,
     Hashable,
@@ -12,6 +12,7 @@ from collections.abc import (
     Iterator,
     Mapping,
 )
+from dataclasses import dataclass, field
 from html import escape
 from os import PathLike
 from typing import (
@@ -21,6 +22,7 @@ from typing import (
     Literal,
     NoReturn,
     ParamSpec,
+    TypeAlias,
     TypeVar,
     Union,
     overload,
@@ -85,6 +87,7 @@ if TYPE_CHECKING:
         DtCompatible,
         ErrorOptions,
         ErrorOptionsWithWarn,
+        NestedDict,
         NetcdfWriteModes,
         T_ChunkDimFreq,
         T_ChunksFreq,
@@ -439,6 +442,20 @@ class DatasetView(Dataset):
         attrs = self.attrs if keep_attrs else None
         # return type(self)(variables, attrs=attrs)
         return Dataset(variables, attrs=attrs)
+
+
+FromDictDataValue: TypeAlias = "CoercibleValue | Dataset | DataTree | None"
+
+
+@dataclass
+class _CoordWrapper:
+    value: CoercibleValue
+
+
+@dataclass
+class _DatasetArgs:
+    data_vars: dict[str, CoercibleValue] = field(default_factory=dict)
+    coords: dict[str, CoercibleValue] = field(default_factory=dict)
 
 
 class DataTree(
@@ -1154,51 +1171,215 @@ class DataTree(
         result._replace_node(children=children_to_keep)
         return result
 
+    @overload
     @classmethod
     def from_dict(
         cls,
-        d: Mapping[str, Dataset | DataTree | None],
-        /,
+        data: Mapping[str, FromDictDataValue] | None = ...,
+        coords: Mapping[str, CoercibleValue] | None = ...,
+        *,
+        name: str | None = ...,
+        nested: Literal[False] = ...,
+    ) -> Self: ...
+
+    @overload
+    @classmethod
+    def from_dict(
+        cls,
+        data: (
+            Mapping[str, FromDictDataValue | NestedDict[FromDictDataValue]] | None
+        ) = ...,
+        coords: Mapping[str, CoercibleValue | NestedDict[CoercibleValue]] | None = ...,
+        *,
+        name: str | None = ...,
+        nested: Literal[True] = ...,
+    ) -> Self: ...
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: (
+            Mapping[str, FromDictDataValue | NestedDict[FromDictDataValue]] | None
+        ) = None,
+        coords: Mapping[str, CoercibleValue | NestedDict[CoercibleValue]] | None = None,
+        *,
         name: str | None = None,
+        nested: bool = False,
     ) -> Self:
         """
         Create a datatree from a dictionary of data objects, organised by paths into the tree.
 
         Parameters
         ----------
-        d : dict-like
-            A mapping from path names to xarray.Dataset or DataTree objects.
+        data : dict-like, optional
+            A mapping from path names to ``None`` (indicating an empty node),
+            ``DataTree``, ``Dataset``, objects coercible into a ``DataArray`` or
+            a nested dictionary of any of the above types.
 
-            Path names are to be given as unix-like path. If path names
-            containing more than one part are given, new tree nodes will be
-            constructed as necessary.
+            Path names should be given as unix-like paths, either absolute
+            (/path/to/item) or relative to the root node (path/to/item). If path
+            names containing more than one part are given, new tree nodes will
+            be constructed automatically as necessary.
 
             To assign data to the root node of the tree use "", ".", "/" or "./"
             as the path.
+        coords : dict-like, optional
+            A mapping from path names to objects coercible into a DataArray, or
+            nested dictionaries of coercible objects.
         name : Hashable | None, optional
             Name for the root node of the tree. Default is None.
+        nested : bool, optional
+            If true, nested dictionaries in ``data`` and ``coords`` are
+            automatically flattened.
 
         Returns
         -------
         DataTree
 
+        See also
+        --------
+        Dataset
+
         Notes
         -----
-        If your dictionary is nested you will need to flatten it before using this method.
+        ``DataTree.from_dict`` serves a conceptually different purpose from
+        ``Dataset.from_dict`` and ``DataArray.from_dict``. It converts a
+        hierarchy of Xarray objects into a DataTree, rather than converting pure
+        Python data structures.
+
+        Examples
+        --------
+
+        Construct a tree from a dict of Dataset objects:
+
+        >>> dt = DataTree.from_dict(
+        ...     {
+        ...         "/": Dataset(coords={"time": [1, 2, 3]}),
+        ...         "/ocean": Dataset(
+        ...             {
+        ...                 "temperature": ("time", [4, 5, 6]),
+        ...                 "salinity": ("time", [7, 8, 9]),
+        ...             }
+        ...         ),
+        ...         "/atmosphere": Dataset(
+        ...             {
+        ...                 "temperature": ("time", [2, 3, 4]),
+        ...                 "humidity": ("time", [3, 4, 5]),
+        ...             }
+        ...         ),
+        ...     }
+        ... )
+        >>> dt
+        <xarray.DataTree>
+        Group: /
+        │   Dimensions:  (time: 3)
+        │   Coordinates:
+        │     * time     (time) int64 24B 1 2 3
+        ├── Group: /ocean
+        │       Dimensions:      (time: 3)
+        │       Data variables:
+        │           temperature  (time) int64 24B 4 5 6
+        │           salinity     (time) int64 24B 7 8 9
+        └── Group: /atmosphere
+                Dimensions:      (time: 3)
+                Data variables:
+                    temperature  (time) int64 24B 2 3 4
+                    humidity     (time) int64 24B 3 4 5
+
+        Or equivalently, use a dict of values that can be converted into
+        `DataArray` objects, with syntax similar to the Dataset constructor:
+
+        >>> dt2 = DataTree.from_dict(
+        ...     data={
+        ...         "/ocean/temperature": ("time", [4, 5, 6]),
+        ...         "/ocean/salinity": ("time", [7, 8, 9]),
+        ...         "/atmosphere/temperature": ("time", [2, 3, 4]),
+        ...         "/atmosphere/humidity": ("time", [3, 4, 5]),
+        ...     },
+        ...     coords={"/time": [1, 2, 3]},
+        ... )
+        >>> assert dt.identical(dt2)
+
+        Nested dictionaries are automatically flattened if ``nested=True``:
+
+        >>> DataTree.from_dict({"a": {"b": {"c": {"x": 1, "y": 2}}}}, nested=True)
+        <xarray.DataTree>
+        Group: /
+        └── Group: /a
+            └── Group: /a/b
+                └── Group: /a/b/c
+                        Dimensions:  ()
+                        Data variables:
+                            x        int64 8B 1
+                            y        int64 8B 2
+
         """
-        # Find any values corresponding to the root
-        d_cast = dict(d)
-        root_data = None
-        for key in ("", ".", "/", "./"):
-            if key in d_cast:
-                if root_data is not None:
+        if data is None:
+            data = {}
+
+        if coords is None:
+            coords = {}
+
+        if nested:
+            data_items = utils.flat_items(data)
+            coords_items = utils.flat_items(coords)
+        else:
+            data_items = data.items()
+            coords_items = coords.items()
+            for arg_name, items in [("data", data_items), ("coords", coords_items)]:
+                for key, value in items:
+                    if isinstance(value, dict):
+                        raise TypeError(
+                            f"{arg_name} contains a dict value at {key=}, "
+                            "which is not a valid argument to "
+                            f"DataTree.from_dict() with nested=False: {value}"
+                        )
+
+        # Canonicalize and unify paths between `data` and `coords`
+        flat_data_and_coords = itertools.chain(
+            data_items,
+            ((k, _CoordWrapper(v)) for k, v in coords_items),
+        )
+        nodes: dict[NodePath, _CoordWrapper | FromDictDataValue] = {}
+        for key, value in flat_data_and_coords:
+            path = NodePath(key).absolute()
+            if path in nodes:
+                raise ValueError(
+                    f"multiple entries found corresponding to node {str(path)!r}"
+                )
+            nodes[path] = value
+
+        # Merge nodes corresponding to DataArrays into Datasets
+        dataset_args: defaultdict[NodePath, _DatasetArgs] = defaultdict(_DatasetArgs)
+        for path in list(nodes):
+            node = nodes[path]
+            if node is not None and not isinstance(node, Dataset | DataTree):
+                if path.parent == path:
+                    raise ValueError("cannot set DataArray value at root")
+                if path.parent in nodes:
                     raise ValueError(
-                        "multiple entries found corresponding to the root node"
+                        f"cannot set DataArray value at {str(path)!r} when "
+                        f"parent node at {str(path.parent)!r} is also set"
                     )
-                root_data = d_cast.pop(key)
+                del nodes[path]
+                if isinstance(node, _CoordWrapper):
+                    dataset_args[path.parent].coords[path.name] = node.value
+                else:
+                    dataset_args[path.parent].data_vars[path.name] = node
+        for path, args in dataset_args.items():
+            try:
+                nodes[path] = Dataset(args.data_vars, args.coords)
+            except (ValueError, TypeError) as e:
+                raise type(e)(
+                    "failed to construct xarray.Dataset for DataTree node at "
+                    f"{str(path)!r} with data_vars={args.data_vars} and "
+                    f"coords={args.coords}"
+                ) from e
 
         # Create the root node
-        if isinstance(root_data, DataTree):
+        root_data = nodes.pop(NodePath("/"), None)
+        if isinstance(root_data, cls):
+            # use cls so type-checkers understand this method returns Self
             obj = root_data.copy()
             obj.name = name
         elif root_data is None or isinstance(root_data, Dataset):
@@ -1209,21 +1390,21 @@ class DataTree(
                 f"or DataTree, got {type(root_data)}"
             )
 
-        def depth(item) -> int:
-            pathstr, _ = item
-            return len(NodePath(pathstr).parts)
+        def depth(item: tuple[NodePath, object]) -> int:
+            node_path, _ = item
+            return len(node_path.parts)
 
-        if d_cast:
-            # Populate tree with children determined from data_objects mapping
+        if nodes:
+            # Populate tree with children
             # Sort keys by depth so as to insert nodes from root first (see GH issue #9276)
-            for path, data in sorted(d_cast.items(), key=depth):
+            for path, node in sorted(nodes.items(), key=depth):
                 # Create and set new node
-                if isinstance(data, DataTree):
-                    new_node = data.copy()
-                elif isinstance(data, Dataset) or data is None:
-                    new_node = cls(dataset=data)
+                if isinstance(node, DataTree):
+                    new_node = node.copy()
+                elif isinstance(node, Dataset) or node is None:
+                    new_node = cls(dataset=node)
                 else:
-                    raise TypeError(f"invalid values: {data}")
+                    raise TypeError(f"invalid values: {node}")
                 obj._set_item(
                     path,
                     new_node,
@@ -1231,9 +1412,7 @@ class DataTree(
                     new_nodes_along_path=True,
                 )
 
-        # TODO: figure out why mypy is raising an error here, likely something
-        # to do with the return type of Dataset.copy()
-        return obj  # type: ignore[return-value]
+        return obj
 
     def to_dict(self, relative: bool = False) -> dict[str, Dataset]:
         """

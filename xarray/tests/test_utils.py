@@ -11,6 +11,7 @@ from xarray.core import duck_array_ops, utils
 from xarray.core.utils import (
     attempt_import,
     either_dict_or_kwargs,
+    flat_items,
     infix_dims,
     iterate_nested,
 )
@@ -149,6 +150,13 @@ class TestDictionaries:
         assert len(x) == 1
         assert repr(x) == "FilteredMapping(keys={'a'}, mapping={'a': 1, 'b': 2})"
         assert dict(x) == {"a": 1}
+
+
+def test_flat_items() -> None:
+    mapping = {"x": {"y": 1, "z": 2}, "x/y": 3}
+    actual = list(flat_items(mapping))
+    expected = [("x/y", 1), ("x/z", 2), ("x/y", 3)]
+    assert actual == expected
 
 
 def test_repr_object():

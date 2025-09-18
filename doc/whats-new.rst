@@ -13,6 +13,9 @@ v2025.09.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:func:`DataTree.from_dict` now supports passing in ``DataArray`` and nested
+  dictionary values, and has a ``coords`` argument for specifying coordinates as
+  ``DataArray`` objects (:pull:`10658`).
 - ``engine='netcdf4'`` now supports reading and writing in-memory netCDF files.
   All of Xarray's netCDF backends now support in-memory reads and writes
   (:pull:`10624`).
