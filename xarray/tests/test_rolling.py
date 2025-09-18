@@ -391,7 +391,7 @@ class TestDataArrayRolling:
             data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da, name="name"
         )
 
-        # attrs are now kept per default
+        # attrs are kept by default
         func = getattr(da.rolling(dim={"coord": 5}), funcname)
         result = func(*argument)
         assert result.attrs == attrs_da
@@ -550,7 +550,7 @@ class TestDatasetRolling:
         ds.da.attrs = da_attrs
         ds.da_not_rolled.attrs = da_not_rolled_attrs
 
-        # attrs are now kept per default
+        # attrs are kept by default
         func = getattr(ds.rolling(dim={"coord": 5}), funcname)
         result = func(*argument)
         assert result.attrs == global_attrs

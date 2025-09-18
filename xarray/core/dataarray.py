@@ -3889,8 +3889,8 @@ class DataArray(
             supplied, then the reduction is calculated over the flattened array
             (by calling `f(x)` without an axis argument).
         keep_attrs : bool or None, optional
-            If True, the variable's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
+            If True (default), the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False, the new
             object will be returned without attributes.
         keepdims : bool, default: False
             If True, the dimensions which are reduced are left in the result
