@@ -1072,29 +1072,6 @@ def make_da():
     return da
 
 
-def make_da_cftime():
-    yrs = np.arange(2000, 2120)
-    cftime_dates = xr.date_range(
-        start=f"{yrs[0]}-01-01",
-        end=f"{yrs[-1]}-12-31",
-        freq="1YE",
-        use_cftime=True,
-    )
-    yr_array = np.tile(cftime_dates.values, (10, 1))
-    da = xr.DataArray(
-        yr_array,
-        dims=["x", "t"],
-        coords={"x": np.arange(10), "t": cftime_dates},
-        name="a",
-    ).chunk({"x": 4, "t": 5})
-    da.x.attrs["long_name"] = "x"
-    da.attrs["test"] = "test"
-    da.coords["c2"] = 0.5
-    da.coords["ndcoord"] = da.x * 2
-
-    return da
-
-
 def make_ds():
     map_ds = xr.Dataset()
     map_ds["a"] = make_da()
@@ -1177,31 +1154,16 @@ def test_auto_chunk_da(obj):
 
 
 def test_auto_chunk_da_cftime():
-    def make_da_cftime():
-        yrs = np.arange(2000, 2120)
-        cftime_dates = xr.date_range(
-            start=f"{yrs[0]}-01-01",
-            end=f"{yrs[-1]}-12-31",
-            freq="1YE",
-            use_cftime=True,
-        )
-        yr_array = np.tile(cftime_dates.values, (10, 1))
-        da = xr.DataArray(
-            yr_array,
-            dims=["x", "t"],
-            coords={"x": np.arange(10), "t": cftime_dates},
-            name="a",
-        ).chunk({"x": 4, "t": 5})
-        da.x.attrs["long_name"] = "x"
-        da.attrs["test"] = "test"
-        da.coords["c2"] = 0.5
-        da.coords["ndcoord"] = da.x * 2
-
-        return da
-
-    obj = make_da_cftime()
-    actual = obj.chunk("auto").data
-    expected = obj.data.rechunk({0: 10, 1: 120})
+    yrs = np.arange(2000, 2120)
+    cftime_dates = xr.date_range(
+        start=f"{yrs[0]}-01-01", end=f"{yrs[-1]}-12-31", freq="1YE", use_cftime=True
+    )
+    yr_array = np.tile(cftime_dates.values, (10, 1))
+    da = xr.DataArray(
+        yr_array, dims=["x", "t"], coords={"x": np.arange(10), "t": cftime_dates}
+    ).chunk({"x": 4, "t": 5})
+    actual = da.chunk("auto").data
+    expected = da.data.rechunk({0: 10, 1: 120})
     np.testing.assert_array_equal(actual, expected)
     assert actual.chunks == expected.chunks
 

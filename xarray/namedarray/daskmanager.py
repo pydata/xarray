@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from xarray.core.common import _contains_cftime_datetimes
 from xarray.core.indexing import ImplicitToExplicitIndexingAdapter
 from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray
 from xarray.namedarray.utils import is_duck_dask_array, module_available
@@ -13,12 +12,10 @@ from xarray.namedarray.utils import is_duck_dask_array, module_available
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
         T_Chunks,
-        _Chunks,
         _DType_co,
         _NormalizedChunks,
         duckarray,
     )
-    from xarray.namedarray.parallelcompat import ChunkedArrayMixinProtocol
 
     try:
         from dask.array import Array as DaskArray
@@ -267,54 +264,6 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         if chunks != "auto":
             raise NotImplementedError("Only chunks='auto' is supported at present.")
         return dask.array.shuffle(x, indexer, axis, chunks="auto")
-
-    def rechunk(
-        self,
-        data: ChunkedArrayMixinProtocol,
-        chunks: _NormalizedChunks | tuple[int, ...] | _Chunks,
-        **kwargs: Any,
-    ) -> Any:
-        """
-        Changes the chunking pattern of the given array.
-
-        Called when the .chunk method is called on an xarray object that is already chunked.
-
-        Parameters
-        ----------
-        data : dask array
-            Array to be rechunked.
-        chunks :  int, tuple, dict or str, optional
-            The new block dimensions to create. -1 indicates the full size of the
-            corresponding dimension. Default is "auto" which automatically
-            determines chunk sizes.
-
-        Returns
-        -------
-        chunked array
-
-        See Also
-        --------
-        dask.array.Array.rechunk
-        cubed.Array.rechunk
-        """
-
-        if _contains_cftime_datetimes(data):
-            from dask.array.core import normalize_chunks
-
-            from xarray.namedarray.utils import fake_target_chunksize
-
-            limit = self.get_auto_chunk_size()
-
-            limit, var_dtype = fake_target_chunksize(data, target_chunksize=limit)
-
-            chunks = normalize_chunks(
-                chunks,
-                shape=data.shape,  # type: ignore[attr-defined]
-                dtype=var_dtype,
-                limit=limit,
-            )  # type: ignore[no-untyped-call]
-
-        return data.rechunk(chunks, **kwargs)
 
     def get_auto_chunk_size(self) -> int:
         from dask import config as dask_config
