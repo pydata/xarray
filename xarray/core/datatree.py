@@ -22,6 +22,7 @@ from typing import (
     Literal,
     NoReturn,
     ParamSpec,
+    TypeAlias,
     TypeVar,
     Union,
     overload,
@@ -441,6 +442,9 @@ class DatasetView(Dataset):
         attrs = self.attrs if keep_attrs else None
         # return type(self)(variables, attrs=attrs)
         return Dataset(variables, attrs=attrs)
+
+
+FromDictDataValue: TypeAlias = "CoercibleValue | Dataset | DataTree | None"
 
 
 @dataclass
@@ -1171,7 +1175,7 @@ class DataTree(
     @classmethod
     def from_dict(
         cls,
-        data: Mapping[str, CoercibleValue | Dataset | DataTree | None] | None = ...,
+        data: Mapping[str, FromDictDataValue] | None = ...,
         coords: Mapping[str, CoercibleValue] | None = ...,
         *,
         name: str | None = ...,
@@ -1182,15 +1186,9 @@ class DataTree(
     @classmethod
     def from_dict(
         cls,
-        data: Mapping[
-            str,
-            CoercibleValue
-            | Dataset
-            | DataTree
-            | None
-            | NestedDict[CoercibleValue | Dataset | DataTree | None],
-        ]
-        | None = ...,
+        data: (
+            Mapping[str, FromDictDataValue | NestedDict[FromDictDataValue]] | None
+        ) = ...,
         coords: Mapping[str, CoercibleValue | NestedDict[CoercibleValue]] | None = ...,
         *,
         name: str | None = ...,
@@ -1200,15 +1198,9 @@ class DataTree(
     @classmethod
     def from_dict(
         cls,
-        data: Mapping[
-            str,
-            CoercibleValue
-            | Dataset
-            | DataTree
-            | None
-            | NestedDict[CoercibleValue | Dataset | DataTree | None],
-        ]
-        | None = None,
+        data: (
+            Mapping[str, FromDictDataValue | NestedDict[FromDictDataValue]] | None
+        ) = None,
         coords: Mapping[str, CoercibleValue | NestedDict[CoercibleValue]] | None = None,
         *,
         name: str | None = None,
@@ -1348,9 +1340,7 @@ class DataTree(
             data_items,
             ((k, _CoordWrapper(v)) for k, v in coords_items),
         )
-        nodes: dict[
-            NodePath, _CoordWrapper | CoercibleValue | Dataset | DataTree | None
-        ] = {}
+        nodes: dict[NodePath, _CoordWrapper | FromDictDataValue] = {}
         for key, value in flat_data_and_coords:
             path = NodePath(key).absolute()
             if path in nodes:
@@ -1389,6 +1379,7 @@ class DataTree(
         # Create the root node
         root_data = nodes.pop(NodePath("/"), None)
         if isinstance(root_data, cls):
+            # use cls so type-checkers understand this method returns Self
             obj = root_data.copy()
             obj.name = name
         elif root_data is None or isinstance(root_data, Dataset):
@@ -1399,9 +1390,9 @@ class DataTree(
                 f"or DataTree, got {type(root_data)}"
             )
 
-        def depth(item) -> int:
-            pathstr, _ = item
-            return len(pathstr.parts)
+        def depth(item: tuple[NodePath, object]) -> int:
+            node_path, _ = item
+            return len(node_path.parts)
 
         if nodes:
             # Populate tree with children
