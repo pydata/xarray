@@ -537,12 +537,12 @@ class TestMergeFunction:
 
     def test_merge_wrong_input_error(self):
         with pytest.raises(TypeError, match=r"objects must be an iterable"):
-            xr.merge([1])
+            xr.merge([1])  # type: ignore[list-item]
         ds = xr.Dataset(coords={"x": [1, 2]})
         with pytest.raises(TypeError, match=r"objects must be an iterable"):
-            xr.merge({"a": ds})
+            xr.merge({"a": ds})  # type: ignore[dict-item]
         with pytest.raises(TypeError, match=r"objects must be an iterable"):
-            xr.merge([ds, 1])
+            xr.merge([ds, 1])  # type: ignore[list-item]
 
     def test_merge_no_conflicts_single_var(self):
         ds1 = xr.Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
@@ -667,19 +667,19 @@ class TestMergeMethod:
         ds2 = xr.Dataset({"x": 1})
         for compat in ["broadcast_equals", "equals", "identical", "no_conflicts"]:
             with pytest.raises(xr.MergeError):
-                ds1.merge(ds2, compat=compat)
+                ds1.merge(ds2, compat=compat)  # type: ignore[arg-type]
 
         ds2 = xr.Dataset({"x": [0, 0]})
         for compat in ["equals", "identical"]:
             with pytest.raises(ValueError, match=r"should be coordinates or not"):
-                ds1.merge(ds2, compat=compat)
+                ds1.merge(ds2, compat=compat)  # type: ignore[arg-type]
 
         ds2 = xr.Dataset({"x": ((), 0, {"foo": "bar"})})
         with pytest.raises(xr.MergeError):
             ds1.merge(ds2, compat="identical")
 
         with pytest.raises(ValueError, match=r"compat=.* invalid"):
-            ds1.merge(ds2, compat="foobar")
+            ds1.merge(ds2, compat="foobar")  # type: ignore[arg-type]
 
         assert ds1.identical(ds1.merge(ds2, compat="override"))
 

@@ -188,21 +188,8 @@ module = [
 [[tool.mypy.overrides]]
 check_untyped_defs = false
 module = [
-  "xarray.tests.test_coarsen",
   "xarray.tests.test_coding_times",
-  "xarray.tests.test_computation",
-  "xarray.tests.test_concat",
-  "xarray.tests.test_coordinates",
   "xarray.tests.test_dask",
-  "xarray.tests.test_dataarray",
-  "xarray.tests.test_duck_array_ops",
-  "xarray.tests.test_indexing",
-  "xarray.tests.test_merge",
-  "xarray.tests.test_sparse",
-  "xarray.tests.test_ufuncs",
-  "xarray.tests.test_units",
-  "xarray.tests.test_variable",
-  "xarray.tests.test_weighted",
 ]
 
 # Use strict = true whenever namedarray has become standalone. In the meantime
