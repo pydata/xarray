@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pickle
-from typing import Union
 from unittest.mock import patch
 
 import numpy as np
@@ -35,9 +34,7 @@ def test_unary(a):
 
 
 def test_binary():
-    ArgsType = Union[int, npt.NDArray, xr.Variable, xr.DataArray, xr.Dataset]
-
-    args: list[ArgsType] = [
+    args: list[int | npt.NDArray | xr.Variable | xr.DataArray | xr.Dataset] = [
         0,
         np.zeros(2),
         xr.Variable(["x"], [0, 0]),
@@ -53,9 +50,7 @@ def test_binary():
 
 
 def test_binary_out():
-    ArgsType = Union[int, npt.NDArray, xr.Variable, xr.DataArray, xr.Dataset]
-
-    args: list[ArgsType] = [
+    args: list[int | npt.NDArray | xr.Variable | xr.DataArray | xr.Dataset] = [
         1,
         np.ones(2),
         xr.Variable(["x"], [1, 1]),
