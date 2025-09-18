@@ -545,8 +545,7 @@ class TestFormatting:
         expected = dedent(
             """\
         <xarray.DataArray (1, 2) (test: 1)> Size: 8B
-        array([0], dtype=uint64)
-        Dimensions without coordinates: test"""
+        array([0], dtype=uint64)"""
         )
 
         assert actual == expected
@@ -564,8 +563,7 @@ class TestFormatting:
             expected = dedent(
                 """\
             <xarray.DataArray (1, 2) (test: 1)> Size: 8B
-            0
-            Dimensions without coordinates: test"""
+            0"""
             )
 
             assert actual == expected
@@ -830,8 +828,7 @@ def test_repr_file_collapsed(tmp_path) -> None:
         expected = dedent(
             """\
         <xarray.DataArray (test: 300)> Size: 2kB
-        [300 values with dtype=int64]
-        Dimensions without coordinates: test"""
+        [300 values with dtype=int64]"""
         )
 
         assert actual == expected
@@ -841,8 +838,7 @@ def test_repr_file_collapsed(tmp_path) -> None:
         expected = dedent(
             """\
         <xarray.DataArray (test: 300)> Size: 2kB
-        0 1 2 3 4 5 6 7 8 9 10 11 12 ... 288 289 290 291 292 293 294 295 296 297 298 299
-        Dimensions without coordinates: test"""
+        0 1 2 3 4 5 6 7 8 9 10 11 12 ... 288 289 290 291 292 293 294 295 296 297 298 299"""
         )
 
         assert actual == expected
@@ -928,34 +924,6 @@ def test__mapping_repr_recursive() -> None:
     ds.attrs["ds"] = ds2
     ds2.attrs["ds"] = ds
     formatting.dataset_repr(ds2)
-
-
-def test__element_formatter(n_elements: int = 100) -> None:
-    expected = """\
-    Dimensions without coordinates: dim_0: 3, dim_1: 3, dim_2: 3, dim_3: 3,
-                                    dim_4: 3, dim_5: 3, dim_6: 3, dim_7: 3,
-                                    dim_8: 3, dim_9: 3, dim_10: 3, dim_11: 3,
-                                    dim_12: 3, dim_13: 3, dim_14: 3, dim_15: 3,
-                                    dim_16: 3, dim_17: 3, dim_18: 3, dim_19: 3,
-                                    dim_20: 3, dim_21: 3, dim_22: 3, dim_23: 3,
-                                    ...
-                                    dim_76: 3, dim_77: 3, dim_78: 3, dim_79: 3,
-                                    dim_80: 3, dim_81: 3, dim_82: 3, dim_83: 3,
-                                    dim_84: 3, dim_85: 3, dim_86: 3, dim_87: 3,
-                                    dim_88: 3, dim_89: 3, dim_90: 3, dim_91: 3,
-                                    dim_92: 3, dim_93: 3, dim_94: 3, dim_95: 3,
-                                    dim_96: 3, dim_97: 3, dim_98: 3, dim_99: 3"""
-    expected = dedent(expected)
-
-    intro = "Dimensions without coordinates: "
-    elements = [
-        f"{k}: {v}" for k, v in {f"dim_{k}": 3 for k in np.arange(n_elements)}.items()
-    ]
-    values = xr.core.formatting._element_formatter(
-        elements, col_width=len(intro), max_rows=12
-    )
-    actual = intro + values
-    assert expected == actual
 
 
 def test_lazy_array_wont_compute() -> None:
@@ -1073,7 +1041,6 @@ def test_array_repr_dtypes():
     expected = """
 <xarray.DataArray (x: 1)> Size: 1B
 array([0], dtype=int8)
-Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
@@ -1082,7 +1049,6 @@ Dimensions without coordinates: x
     expected = """
 <xarray.DataArray (x: 1)> Size: 2B
 array([0], dtype=int16)
-Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
@@ -1093,7 +1059,6 @@ Dimensions without coordinates: x
     expected = """
 <xarray.DataArray (x: 1)> Size: 1B
 array([0], dtype=uint8)
-Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
@@ -1102,7 +1067,6 @@ Dimensions without coordinates: x
     expected = """
 <xarray.DataArray (x: 1)> Size: 2B
 array([0], dtype=uint16)
-Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
@@ -1111,7 +1075,6 @@ Dimensions without coordinates: x
     expected = """
 <xarray.DataArray (x: 1)> Size: 4B
 array([0], dtype=uint32)
-Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
@@ -1120,7 +1083,6 @@ Dimensions without coordinates: x
     expected = """
 <xarray.DataArray (x: 1)> Size: 8B
 array([0], dtype=uint64)
-Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
@@ -1131,7 +1093,6 @@ Dimensions without coordinates: x
     expected = """
 <xarray.DataArray (x: 1)> Size: 8B
 array([0.])
-Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
@@ -1140,7 +1101,6 @@ Dimensions without coordinates: x
     expected = """
 <xarray.DataArray (x: 1)> Size: 2B
 array([0.], dtype=float16)
-Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
@@ -1149,7 +1109,6 @@ Dimensions without coordinates: x
     expected = """
 <xarray.DataArray (x: 1)> Size: 4B
 array([0.], dtype=float32)
-Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
@@ -1158,7 +1117,6 @@ Dimensions without coordinates: x
     expected = """
 <xarray.DataArray (x: 1)> Size: 8B
 array([0.])
-Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
@@ -1170,7 +1128,6 @@ Dimensions without coordinates: x
     expected = f"""
 <xarray.DataArray (x: 1)> Size: {array.dtype.itemsize}B
 {array!r}
-Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
@@ -1180,7 +1137,6 @@ Dimensions without coordinates: x
     expected = f"""
 <xarray.DataArray (x: 1)> Size: 4B
 {array!r}
-Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
@@ -1190,7 +1146,6 @@ Dimensions without coordinates: x
     expected = f"""
 <xarray.DataArray (x: 1)> Size: 8B
 {array!r}
-Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 

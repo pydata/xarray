@@ -1198,7 +1198,6 @@ class DataTreeAggregations:
         <xarray.DataTree>
         Group: /
             Dimensions:  (time: 6)
-            Dimensions without coordinates: time
             Data variables:
                 foo      (time) float64 48B 1.0 3.0 6.0 6.0 8.0 8.0
 
@@ -1208,7 +1207,6 @@ class DataTreeAggregations:
         <xarray.DataTree>
         Group: /
             Dimensions:  (time: 6)
-            Dimensions without coordinates: time
             Data variables:
                 foo      (time) float64 48B 1.0 3.0 6.0 6.0 8.0 nan
         """
@@ -1303,7 +1301,6 @@ class DataTreeAggregations:
         <xarray.DataTree>
         Group: /
             Dimensions:  (time: 6)
-            Dimensions without coordinates: time
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 6.0 0.0 0.0 0.0
 
@@ -1313,7 +1310,6 @@ class DataTreeAggregations:
         <xarray.DataTree>
         Group: /
             Dimensions:  (time: 6)
-            Dimensions without coordinates: time
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 6.0 0.0 0.0 nan
         """
@@ -2408,7 +2404,6 @@ class DatasetAggregations:
         >>> ds.cumsum()
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
         Data variables:
             da       (time) float64 48B 1.0 3.0 6.0 6.0 8.0 8.0
 
@@ -2417,7 +2412,6 @@ class DatasetAggregations:
         >>> ds.cumsum(skipna=False)
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
         Data variables:
             da       (time) float64 48B 1.0 3.0 6.0 6.0 8.0 nan
         """
@@ -2506,7 +2500,6 @@ class DatasetAggregations:
         >>> ds.cumprod()
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
         Data variables:
             da       (time) float64 48B 1.0 2.0 6.0 0.0 0.0 0.0
 
@@ -2515,7 +2508,6 @@ class DatasetAggregations:
         >>> ds.cumprod(skipna=False)
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
         Data variables:
             da       (time) float64 48B 1.0 2.0 6.0 0.0 0.0 nan
         """
@@ -5002,7 +4994,6 @@ class DatasetGroupByAggregations:
         >>> ds.groupby("labels").cumsum()
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 3.0 4.0 1.0
 
@@ -5011,7 +5002,6 @@ class DatasetGroupByAggregations:
         >>> ds.groupby("labels").cumsum(skipna=False)
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 3.0 4.0 nan
         """
@@ -5106,7 +5096,6 @@ class DatasetGroupByAggregations:
         >>> ds.groupby("labels").cumprod()
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 4.0 1.0
 
@@ -5115,7 +5104,6 @@ class DatasetGroupByAggregations:
         >>> ds.groupby("labels").cumprod(skipna=False)
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 4.0 nan
         """
@@ -6498,7 +6486,6 @@ class DatasetResampleAggregations:
         >>> ds.resample(time="3ME").cumsum()
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
         Data variables:
             da       (time) float64 48B 1.0 2.0 5.0 5.0 2.0 2.0
 
@@ -6507,7 +6494,6 @@ class DatasetResampleAggregations:
         >>> ds.resample(time="3ME").cumsum(skipna=False)
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
         Data variables:
             da       (time) float64 48B 1.0 2.0 5.0 5.0 2.0 nan
         """
@@ -6602,7 +6588,6 @@ class DatasetResampleAggregations:
         >>> ds.resample(time="3ME").cumprod()
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
         Data variables:
             da       (time) float64 48B 1.0 2.0 6.0 0.0 2.0 2.0
 
@@ -6611,7 +6596,6 @@ class DatasetResampleAggregations:
         >>> ds.resample(time="3ME").cumprod(skipna=False)
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
         Data variables:
             da       (time) float64 48B 1.0 2.0 6.0 0.0 2.0 nan
         """
@@ -9281,7 +9265,6 @@ class DataArrayResampleAggregations:
         array([1., 2., 5., 5., 2., 2.])
         Coordinates:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-        Dimensions without coordinates: time
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -9290,7 +9273,6 @@ class DataArrayResampleAggregations:
         array([ 1.,  2.,  5.,  5.,  2., nan])
         Coordinates:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-        Dimensions without coordinates: time
         """
         return self.reduce(
             duck_array_ops.cumsum,
@@ -9381,7 +9363,6 @@ class DataArrayResampleAggregations:
         array([1., 2., 6., 0., 2., 2.])
         Coordinates:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-        Dimensions without coordinates: time
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -9390,7 +9371,6 @@ class DataArrayResampleAggregations:
         array([ 1.,  2.,  6.,  0.,  2., nan])
         Coordinates:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-        Dimensions without coordinates: time
         """
         return self.reduce(
             duck_array_ops.cumprod,

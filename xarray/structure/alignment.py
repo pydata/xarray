@@ -1260,24 +1260,20 @@ def broadcast(
     >>> a
     <xarray.DataArray (x: 3)> Size: 24B
     array([1, 2, 3])
-    Dimensions without coordinates: x
     >>> b
     <xarray.DataArray (y: 2)> Size: 16B
     array([5, 6])
-    Dimensions without coordinates: y
     >>> a2, b2 = xr.broadcast(a, b)
     >>> a2
     <xarray.DataArray (x: 3, y: 2)> Size: 48B
     array([[1, 1],
            [2, 2],
            [3, 3]])
-    Dimensions without coordinates: x, y
     >>> b2
     <xarray.DataArray (x: 3, y: 2)> Size: 48B
     array([[5, 6],
            [5, 6],
            [5, 6]])
-    Dimensions without coordinates: x, y
 
     Fill out the dimensions of all data variables in a dataset:
 
@@ -1286,7 +1282,6 @@ def broadcast(
     >>> ds2
     <xarray.Dataset> Size: 96B
     Dimensions:  (x: 3, y: 2)
-    Dimensions without coordinates: x, y
     Data variables:
         a        (x, y) int64 48B 1 1 2 2 3 3
         b        (x, y) int64 48B 5 6 5 6 5 6

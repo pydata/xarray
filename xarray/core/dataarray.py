@@ -372,7 +372,6 @@ class DataArray(
         lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
       * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
         reference_time  datetime64[ns] 8B 2014-09-05
-    Dimensions without coordinates: x, y
     Attributes:
         description:  Ambient temperature.
         units:        degC
@@ -1055,7 +1054,6 @@ class DataArray(
             lon       (x) int64 40B 10 11 12 13 14
             lat       (y) int64 40B 20 21 22 23 24
             Pressure  (x, y) int64 200B 50 51 52 53 54 55 56 57 ... 68 69 70 71 72 73 74
-        Dimensions without coordinates: x, y
 
         Return Dataset with target coordinate as a data variable rather than a coordinate variable:
 
@@ -1065,7 +1063,6 @@ class DataArray(
         Coordinates:
             lon          (x) int64 40B 10 11 12 13 14
             lat          (y) int64 40B 20 21 22 23 24
-        Dimensions without coordinates: x, y
         Data variables:
             Pressure     (x, y) int64 200B 50 51 52 53 54 55 56 ... 68 69 70 71 72 73 74
             Temperature  (x, y) int64 200B 0 1 2 3 4 5 6 7 8 ... 17 18 19 20 21 22 23 24
@@ -1082,7 +1079,6 @@ class DataArray(
         Coordinates:
             lon      (x) int64 40B 10 11 12 13 14
             lat      (y) int64 40B 20 21 22 23 24
-        Dimensions without coordinates: x, y
         """
         if names is None:
             names = set(self.coords) - set(self._indexes)
@@ -1556,7 +1552,6 @@ class DataArray(
                [10, 11, 12, 13, 14],
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
-        Dimensions without coordinates: x, y
 
         >>> tgt_x = xr.DataArray(np.arange(0, 5), dims="points")
         >>> tgt_y = xr.DataArray(np.arange(0, 5), dims="points")
@@ -1564,7 +1559,6 @@ class DataArray(
         >>> da
         <xarray.DataArray (points: 5)> Size: 40B
         array([ 0,  6, 12, 18, 24])
-        Dimensions without coordinates: points
         """
 
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
@@ -1711,7 +1705,6 @@ class DataArray(
         Coordinates:
             x        (points) int64 40B 0 1 2 3 4
             y        (points) int64 40B 0 1 2 3 4
-        Dimensions without coordinates: points
         """
         ds = self._to_temp_dataset().sel(
             indexers=indexers,
@@ -1755,18 +1748,15 @@ class DataArray(
                [10, 11, 12, 13, 14],
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
-        Dimensions without coordinates: x, y
 
         >>> da.head(x=1)
         <xarray.DataArray (x: 1, y: 5)> Size: 40B
         array([[0, 1, 2, 3, 4]])
-        Dimensions without coordinates: x, y
 
         >>> da.head({"x": 2, "y": 2})
         <xarray.DataArray (x: 2, y: 2)> Size: 32B
         array([[0, 1],
                [5, 6]])
-        Dimensions without coordinates: x, y
         """
         ds = self._to_temp_dataset().head(indexers, **indexers_kwargs)
         return self._from_temp_dataset(ds)
@@ -1798,7 +1788,6 @@ class DataArray(
                [10, 11, 12, 13, 14],
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
-        Dimensions without coordinates: x, y
 
         >>> da.tail(y=1)
         <xarray.DataArray (x: 5, y: 1)> Size: 40B
@@ -1807,13 +1796,11 @@ class DataArray(
                [14],
                [19],
                [24]])
-        Dimensions without coordinates: x, y
 
         >>> da.tail({"x": 2, "y": 2})
         <xarray.DataArray (x: 2, y: 2)> Size: 32B
         array([[18, 19],
                [23, 24]])
-        Dimensions without coordinates: x, y
         """
         ds = self._to_temp_dataset().tail(indexers, **indexers_kwargs)
         return self._from_temp_dataset(ds)
@@ -2648,7 +2635,6 @@ class DataArray(
         Coordinates:
             x        (z) <U1 8B 'a' 'b'
             y        (z) int64 16B 0 1
-        Dimensions without coordinates: z
 
         See Also
         --------
@@ -2714,7 +2700,6 @@ class DataArray(
         >>> da
         <xarray.DataArray (x: 5)> Size: 40B
         array([0, 1, 2, 3, 4])
-        Dimensions without coordinates: x
 
         Add new dimension of length 2:
 
@@ -2722,7 +2707,6 @@ class DataArray(
         <xarray.DataArray (y: 2, x: 5)> Size: 80B
         array([[0, 1, 2, 3, 4],
                [0, 1, 2, 3, 4]])
-        Dimensions without coordinates: y, x
 
         >>> da.expand_dims(dim={"y": 2}, axis=1)
         <xarray.DataArray (x: 5, y: 2)> Size: 80B
@@ -2731,7 +2715,6 @@ class DataArray(
                [2, 2],
                [3, 3],
                [4, 4]])
-        Dimensions without coordinates: x, y
 
         Add a new dimension with coordinates from array:
 
@@ -2744,7 +2727,6 @@ class DataArray(
                [0, 1, 2, 3, 4]])
         Coordinates:
           * y        (y) int64 40B 0 1 2 3 4
-        Dimensions without coordinates: x
         """
         if isinstance(dim, int):
             raise TypeError("dim should be Hashable or sequence/mapping of Hashables")
@@ -3225,7 +3207,6 @@ class DataArray(
                [ 9, 10, 11]])
         Coordinates:
           * y        (y) int64 24B 70 80 90
-        Dimensions without coordinates: x
 
         Removing a list of variables:
 
@@ -3235,7 +3216,6 @@ class DataArray(
                [ 3,  4,  5],
                [ 6,  7,  8],
                [ 9, 10, 11]])
-        Dimensions without coordinates: x, y
 
         >>> da.drop_vars(lambda x: x.coords)
         <xarray.DataArray (x: 4, y: 3)> Size: 96B
@@ -3243,7 +3223,6 @@ class DataArray(
                [ 3,  4,  5],
                [ 6,  7,  8],
                [ 9, 10, 11]])
-        Dimensions without coordinates: x, y
         """
         if callable(names):
             names = names(self)
@@ -3393,14 +3372,12 @@ class DataArray(
                [10, 11, 12, 13, 14],
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
-        Dimensions without coordinates: X, Y
 
         >>> da.drop_isel(X=[0, 4], Y=2)
         <xarray.DataArray (X: 3, Y: 4)> Size: 96B
         array([[ 5,  6,  8,  9],
                [10, 11, 13, 14],
                [15, 16, 18, 19]])
-        Dimensions without coordinates: X, Y
 
         >>> da.drop_isel({"X": 3, "Y": 3})
         <xarray.DataArray (X: 4, Y: 4)> Size: 128B
@@ -3408,7 +3385,6 @@ class DataArray(
                [ 5,  6,  7,  9],
                [10, 11, 12, 14],
                [20, 21, 22, 24]])
-        Dimensions without coordinates: X, Y
         """
         dataset = self._to_temp_dataset()
         dataset = dataset.drop_isel(indexers=indexers, **indexers_kwargs)
@@ -3465,7 +3441,6 @@ class DataArray(
         Coordinates:
             lat      (Y) float64 32B -20.0 -20.25 -20.5 -20.75
             lon      (X) float64 32B 10.0 10.25 10.5 10.75
-        Dimensions without coordinates: Y, X
 
         >>> da.dropna(dim="Y", how="any")
         <xarray.DataArray (Y: 2, X: 4)> Size: 64B
@@ -3474,7 +3449,6 @@ class DataArray(
         Coordinates:
             lat      (Y) float64 16B -20.0 -20.75
             lon      (X) float64 32B 10.0 10.25 10.5 10.75
-        Dimensions without coordinates: Y, X
 
         Drop values only if all values along the dimension are NaN:
 
@@ -3486,7 +3460,6 @@ class DataArray(
         Coordinates:
             lat      (Y) float64 24B -20.0 -20.5 -20.75
             lon      (X) float64 32B 10.0 10.25 10.5 10.75
-        Dimensions without coordinates: Y, X
         """
         ds = self._to_temp_dataset().dropna(dim, how=how, thresh=thresh)
         return self._from_temp_dataset(ds)
@@ -3726,7 +3699,6 @@ class DataArray(
         Coordinates:
             lat      (Y) float64 40B -20.0 -20.25 -20.5 -20.75 -21.0
             lon      (X) float64 24B 10.0 10.25 10.5
-        Dimensions without coordinates: Y, X
 
         Fill all NaN values:
 
@@ -3740,7 +3712,6 @@ class DataArray(
         Coordinates:
             lat      (Y) float64 40B -20.0 -20.25 -20.5 -20.75 -21.0
             lon      (X) float64 24B 10.0 10.25 10.5
-        Dimensions without coordinates: Y, X
 
         Fill only the first of consecutive NaN values:
 
@@ -3754,7 +3725,6 @@ class DataArray(
         Coordinates:
             lat      (Y) float64 40B -20.0 -20.25 -20.5 -20.75 -21.0
             lon      (X) float64 24B 10.0 10.25 10.5
-        Dimensions without coordinates: Y, X
         """
         from xarray.core.missing import ffill
 
@@ -3810,7 +3780,6 @@ class DataArray(
         Coordinates:
             lat      (Y) float64 40B -20.0 -20.25 -20.5 -20.75 -21.0
             lon      (X) float64 24B 10.0 10.25 10.5
-        Dimensions without coordinates: Y, X
 
         Fill all NaN values:
 
@@ -3824,7 +3793,6 @@ class DataArray(
         Coordinates:
             lat      (Y) float64 40B -20.0 -20.25 -20.5 -20.75 -21.0
             lon      (X) float64 24B 10.0 10.25 10.5
-        Dimensions without coordinates: Y, X
 
         Fill only the first of consecutive NaN values:
 
@@ -3838,7 +3806,6 @@ class DataArray(
         Coordinates:
             lat      (Y) float64 40B -20.0 -20.25 -20.5 -20.75 -21.0
             lon      (X) float64 24B 10.0 10.25 10.5
-        Dimensions without coordinates: Y, X
         """
         from xarray.core.missing import bfill
 
@@ -4586,7 +4553,6 @@ class DataArray(
         >>> da
         <xarray.DataArray (t: 3)> Size: 24B
         array([1, 2, 3])
-        Dimensions without coordinates: t
 
         >>> d = {
         ...     "coords": {
@@ -4707,12 +4673,10 @@ class DataArray(
         >>> a
         <xarray.DataArray (X: 2)> Size: 16B
         array([1, 2])
-        Dimensions without coordinates: X
         >>> b
         <xarray.DataArray (X: 2, Y: 2)> Size: 32B
         array([[1, 1],
                [2, 2]])
-        Dimensions without coordinates: X, Y
 
         .equals returns True if two DataArrays have the same values, dimensions, and coordinates. .broadcast_equals returns True if the results of broadcasting two DataArrays against each other have the same values, dimensions, and coordinates.
 
@@ -4763,21 +4727,17 @@ class DataArray(
         >>> a
         <xarray.DataArray (X: 3)> Size: 24B
         array([1, 2, 3])
-        Dimensions without coordinates: X
         >>> b
         <xarray.DataArray (X: 3)> Size: 24B
         array([1, 2, 3])
-        Dimensions without coordinates: X
         Attributes:
             units:    m
         >>> c
         <xarray.DataArray (Y: 3)> Size: 24B
         array([1, 2, 3])
-        Dimensions without coordinates: Y
         >>> d
         <xarray.DataArray (X: 3)> Size: 24B
         array([3, 2, 1])
-        Dimensions without coordinates: X
 
         >>> a.equals(b)
         True
@@ -4818,19 +4778,16 @@ class DataArray(
         >>> a
         <xarray.DataArray 'Width' (X: 3)> Size: 24B
         array([1, 2, 3])
-        Dimensions without coordinates: X
         Attributes:
             units:    m
         >>> b
         <xarray.DataArray 'Width' (X: 3)> Size: 24B
         array([1, 2, 3])
-        Dimensions without coordinates: X
         Attributes:
             units:    m
         >>> c
         <xarray.DataArray 'Width' (X: 3)> Size: 24B
         array([1, 2, 3])
-        Dimensions without coordinates: X
         Attributes:
             units:    ft
 
@@ -5053,7 +5010,6 @@ class DataArray(
         >>> arr.shift(x=1)
         <xarray.DataArray (x: 3)> Size: 24B
         array([nan,  5.,  6.])
-        Dimensions without coordinates: x
         """
         variable = self.variable.shift(
             shifts=shifts, fill_value=fill_value, **shifts_kwargs
@@ -5102,7 +5058,6 @@ class DataArray(
         >>> arr.roll(x=1)
         <xarray.DataArray (x: 3)> Size: 24B
         array([7, 5, 6])
-        Dimensions without coordinates: x
         """
         ds = self._to_temp_dataset().roll(
             shifts=shifts, roll_coords=roll_coords, **shifts_kwargs
@@ -5425,7 +5380,6 @@ class DataArray(
         >>> arr.rank("x")
         <xarray.DataArray (x: 3)> Size: 24B
         array([1., 2., 3.])
-        Dimensions without coordinates: x
         """
 
         ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
@@ -5479,7 +5433,6 @@ class DataArray(
                [ 9, 10, 11]])
         Coordinates:
           * x        (x) float64 32B 0.0 0.1 1.1 1.2
-        Dimensions without coordinates: y
         >>>
         >>> da.differentiate("x")
         <xarray.DataArray (x: 4, y: 3)> Size: 96B
@@ -5489,7 +5442,6 @@ class DataArray(
                [30.        , 30.        , 30.        ]])
         Coordinates:
           * x        (x) float64 32B 0.0 0.1 1.1 1.2
-        Dimensions without coordinates: y
         """
         ds = self._to_temp_dataset().differentiate(coord, edge_order, datetime_unit)
         return self._from_temp_dataset(ds)
@@ -5538,12 +5490,10 @@ class DataArray(
                [ 9, 10, 11]])
         Coordinates:
           * x        (x) float64 32B 0.0 0.1 1.1 1.2
-        Dimensions without coordinates: y
         >>>
         >>> da.integrate("x")
         <xarray.DataArray (y: 3)> Size: 24B
         array([5.4, 6.6, 7.8])
-        Dimensions without coordinates: y
         """
         ds = self._to_temp_dataset().integrate(coord, datetime_unit)
         return self._from_temp_dataset(ds)
@@ -5595,7 +5545,6 @@ class DataArray(
                [ 9, 10, 11]])
         Coordinates:
           * x        (x) float64 32B 0.0 0.1 1.1 1.2
-        Dimensions without coordinates: y
         >>>
         >>> da.cumulative_integrate("x")
         <xarray.DataArray (x: 4, y: 3)> Size: 96B
@@ -5605,7 +5554,6 @@ class DataArray(
                [5.4 , 6.6 , 7.8 ]])
         Coordinates:
           * x        (x) float64 32B 0.0 0.1 1.1 1.2
-        Dimensions without coordinates: y
         """
         ds = self._to_temp_dataset().cumulative_integrate(coord, datetime_unit)
         return self._from_temp_dataset(ds)
@@ -6226,33 +6174,26 @@ class DataArray(
         array([[ 1,  2,  1],
                [ 2, -5,  1],
                [ 2,  1,  1]])
-        Dimensions without coordinates: y, z
         >>> array.argmin(dim="x")
         <xarray.DataArray (y: 3, z: 3)> Size: 72B
         array([[1, 0, 0],
                [1, 1, 1],
                [0, 0, 1]])
-        Dimensions without coordinates: y, z
         >>> array.argmin(dim=["x"])
         {'x': <xarray.DataArray (y: 3, z: 3)> Size: 72B
         array([[1, 0, 0],
                [1, 1, 1],
-               [0, 0, 1]])
-        Dimensions without coordinates: y, z}
+               [0, 0, 1]])}
         >>> array.min(dim=("x", "z"))
         <xarray.DataArray (y: 3)> Size: 24B
         array([ 1, -5,  1])
-        Dimensions without coordinates: y
         >>> array.argmin(dim=["x", "z"])
         {'x': <xarray.DataArray (y: 3)> Size: 24B
-        array([0, 1, 0])
-        Dimensions without coordinates: y, 'z': <xarray.DataArray (y: 3)> Size: 24B
-        array([2, 1, 1])
-        Dimensions without coordinates: y}
+        array([0, 1, 0]), 'z': <xarray.DataArray (y: 3)> Size: 24B
+        array([2, 1, 1])}
         >>> array.isel(array.argmin(dim=["x", "z"]))
         <xarray.DataArray (y: 3)> Size: 24B
         array([ 1, -5,  1])
-        Dimensions without coordinates: y
         """
         result = self.variable.argmin(dim, axis, keep_attrs, skipna)
         if isinstance(result, dict):
@@ -6327,33 +6268,26 @@ class DataArray(
         array([[3, 3, 2],
                [3, 5, 2],
                [2, 3, 3]])
-        Dimensions without coordinates: y, z
         >>> array.argmax(dim="x")
         <xarray.DataArray (y: 3, z: 3)> Size: 72B
         array([[0, 1, 1],
                [0, 1, 0],
                [0, 1, 0]])
-        Dimensions without coordinates: y, z
         >>> array.argmax(dim=["x"])
         {'x': <xarray.DataArray (y: 3, z: 3)> Size: 72B
         array([[0, 1, 1],
                [0, 1, 0],
-               [0, 1, 0]])
-        Dimensions without coordinates: y, z}
+               [0, 1, 0]])}
         >>> array.max(dim=("x", "z"))
         <xarray.DataArray (y: 3)> Size: 24B
         array([3, 5, 3])
-        Dimensions without coordinates: y
         >>> array.argmax(dim=["x", "z"])
         {'x': <xarray.DataArray (y: 3)> Size: 24B
-        array([0, 1, 0])
-        Dimensions without coordinates: y, 'z': <xarray.DataArray (y: 3)> Size: 24B
-        array([0, 1, 2])
-        Dimensions without coordinates: y}
+        array([0, 1, 0]), 'z': <xarray.DataArray (y: 3)> Size: 24B
+        array([0, 1, 2])}
         >>> array.isel(array.argmax(dim=["x", "z"]))
         <xarray.DataArray (y: 3)> Size: 24B
         array([3, 5, 3])
-        Dimensions without coordinates: y
         """
         result = self.variable.argmax(dim, axis, keep_attrs, skipna)
         if isinstance(result, dict):
@@ -6423,11 +6357,9 @@ class DataArray(
         >>> da
         <xarray.DataArray 'a' (x: 5)> Size: 40B
         array([0, 1, 2, 3, 4])
-        Dimensions without coordinates: x
         >>> da.query(x="a > 2")
         <xarray.DataArray 'a' (x: 2)> Size: 16B
         array([3, 4])
-        Dimensions without coordinates: x
         """
 
         ds = self._to_dataset_whole(shallow_copy=True)
@@ -6933,7 +6865,6 @@ class DataArray(
                [ 9, 11, 13]])
         Coordinates:
           * letters  (letters) object 16B 'a' 'b'
-        Dimensions without coordinates: y
 
         Grouping by multiple variables
 
@@ -6956,7 +6887,6 @@ class DataArray(
         Coordinates:
           * x_bins   (x_bins) interval[int64, right] 32B (5, 15] (15, 25]
           * letters  (letters) object 16B 'a' 'b'
-        Dimensions without coordinates: y
 
 
         See Also

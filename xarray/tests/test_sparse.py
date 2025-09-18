@@ -692,8 +692,7 @@ class TestSparseDataArrayAndDataset:
             <xarray.DataArray (x: 4)> Size: 64B
             <COO: shape=(4,), dtype=float64, nnz=4, fill_value=0.0>
             Coordinates:
-                y        (x) int64 48B <COO: nnz=3, fill_value=0>
-            Dimensions without coordinates: x"""
+                y        (x) int64 48B <COO: nnz=3, fill_value=0>"""
         )
         assert expected == repr(a)
 
@@ -708,7 +707,6 @@ class TestSparseDataArrayAndDataset:
             Dimensions:  (x: 4)
             Coordinates:
                 y        (x) int64 48B <COO: nnz=3, fill_value=0>
-            Dimensions without coordinates: x
             Data variables:
                 a        (x) float64 64B <COO: nnz=4, fill_value=0.0>"""
         )
@@ -727,7 +725,6 @@ class TestSparseDataArrayAndDataset:
             f"""\
             <xarray.Dataset> Size: 32B
             Dimensions:  (x: 4)
-            Dimensions without coordinates: x
             Data variables:
                 a        (x) float64 32B dask.array<chunksize=(4,), meta={meta}>"""
         )

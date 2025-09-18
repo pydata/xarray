@@ -392,7 +392,6 @@ class DataArrayRolling(Rolling["DataArray"]):
                 [nan,  4.,  5.],
                 [ 4.,  5.,  6.],
                 [ 5.,  6.,  7.]]])
-        Dimensions without coordinates: a, b, window_dim
 
         >>> rolling = da.rolling(b=3, center=True)
         >>> rolling.construct("window_dim")
@@ -406,7 +405,6 @@ class DataArrayRolling(Rolling["DataArray"]):
                 [ 4.,  5.,  6.],
                 [ 5.,  6.,  7.],
                 [ 6.,  7., nan]]])
-        Dimensions without coordinates: a, b, window_dim
 
         """
 
@@ -536,20 +534,17 @@ class DataArrayRolling(Rolling["DataArray"]):
                 [nan,  4.,  5.],
                 [ 4.,  5.,  6.],
                 [ 5.,  6.,  7.]]])
-        Dimensions without coordinates: a, b, window_dim
 
         >>> rolling.reduce(np.sum)
         <xarray.DataArray (a: 2, b: 4)> Size: 64B
         array([[nan, nan,  3.,  6.],
                [nan, nan, 15., 18.]])
-        Dimensions without coordinates: a, b
 
         >>> rolling = da.rolling(b=3, min_periods=1)
         >>> rolling.reduce(np.nansum)
         <xarray.DataArray (a: 2, b: 4)> Size: 64B
         array([[ 0.,  1.,  3.,  6.],
                [ 4.,  9., 15., 18.]])
-        Dimensions without coordinates: a, b
         """
 
         keep_attrs = self._get_keep_attrs(keep_attrs)
@@ -1144,7 +1139,6 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
         <xarray.DataArray (year: 2, month: 12)> Size: 192B
         array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11],
                [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]])
-        Dimensions without coordinates: year, month
 
         See Also
         --------
@@ -1299,7 +1293,6 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
         <xarray.DataArray (a: 2, b: 2)> Size: 32B
         array([[ 1,  5],
                [ 9, 13]])
-        Dimensions without coordinates: a, b
         """
         wrapped_func = self._reduce_method(func)
         return wrapped_func(self, keep_attrs=keep_attrs, **kwargs)

@@ -604,18 +604,6 @@ def dim_summary_limited(
     return _element_formatter(elements, col_width, max_rows)
 
 
-def unindexed_dims_repr(dims, coords, max_rows: int | None = None):
-    unindexed_dims = [d for d in dims if d not in coords]
-    if unindexed_dims:
-        dims_start = "Dimensions without coordinates: "
-        dims_str = _element_formatter(
-            unindexed_dims, col_width=len(dims_start), max_rows=max_rows
-        )
-        return dims_start + dims_str
-    else:
-        return None
-
-
 @contextlib.contextmanager
 def set_numpy_options(*args, **kwargs):
     original = np.get_printoptions()
@@ -720,12 +708,6 @@ def array_repr(arr):
                 coords_repr(arr.coords, col_width=col_width, max_rows=max_rows)
             )
 
-        unindexed_dims_str = unindexed_dims_repr(
-            arr.dims, arr.coords, max_rows=max_rows
-        )
-        if unindexed_dims_str:
-            summary.append(unindexed_dims_str)
-
         display_default_indexes = _get_boolean_with_default(
             "display_default_indexes", False
         )
@@ -760,10 +742,6 @@ def dataset_repr(ds):
     if ds.coords:
         summary.append(coords_repr(ds.coords, col_width=col_width, max_rows=max_rows))
 
-    unindexed_dims_str = unindexed_dims_repr(ds.dims, ds.coords, max_rows=max_rows)
-    if unindexed_dims_str:
-        summary.append(unindexed_dims_str)
-
     summary.append(data_vars_repr(ds.data_vars, col_width=col_width, max_rows=max_rows))
 
     display_default_indexes = _get_boolean_with_default(
@@ -796,10 +774,6 @@ def dims_and_coords_repr(ds) -> str:
 
     if ds.coords:
         summary.append(coords_repr(ds.coords, col_width=col_width, max_rows=max_rows))
-
-    unindexed_dims_str = unindexed_dims_repr(ds.dims, ds.coords, max_rows=max_rows)
-    if unindexed_dims_str:
-        summary.append(unindexed_dims_str)
 
     return "\n".join(summary)
 
@@ -1125,13 +1099,6 @@ def _datatree_node_repr(node: DataTree, show_inherited: bool) -> str:
         summary.append(
             inherited_coords_repr(node, col_width=col_width, max_rows=max_rows)
         )
-
-    if show_dims:
-        unindexed_dims_str = unindexed_dims_repr(
-            dim_sizes, node.coords, max_rows=max_rows
-        )
-        if unindexed_dims_str:
-            summary.append(unindexed_dims_str)
 
     if node._data_variables:
         summary.append(

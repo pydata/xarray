@@ -151,7 +151,6 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da.str.len()
         <xarray.DataArray (dim_0: 5)> Size: 40B
         array([4, 4, 2, 2, 5])
-        Dimensions without coordinates: dim_0
 
     It also implements ``+``, ``*``, and ``%``, which operate as elementwise
     versions of the corresponding ``str`` methods. These will automatically
@@ -164,7 +163,6 @@ class StringAccessor(Generic[T_DataArray]):
         array([['first1', 'first2', 'first3'],
                ['second1', 'second2', 'second3'],
                ['third1', 'third2', 'third3']], dtype='<U7')
-        Dimensions without coordinates: X, Y
 
         >>> da1 = xr.DataArray(["a", "b", "c", "d"], dims=["X"])
         >>> reps = xr.DataArray([3, 4], dims=["Y"])
@@ -174,7 +172,6 @@ class StringAccessor(Generic[T_DataArray]):
                ['bbb', 'bbbb'],
                ['ccc', 'cccc'],
                ['ddd', 'dddd']], dtype='<U4')
-        Dimensions without coordinates: X, Y
 
         >>> da1 = xr.DataArray(["%s_%s", "%s-%s", "%s|%s"], dims=["X"])
         >>> da2 = xr.DataArray([1, 2], dims=["Y"])
@@ -189,7 +186,6 @@ class StringAccessor(Generic[T_DataArray]):
         <BLANKLINE>
                [['1|0.1', '1|0.2'],
                 ['2|0.1', '2|0.2']]], dtype='<U5')
-        Dimensions without coordinates: X, Y, Z
 
     .. note::
         When using ``%`` formatting with a dict, the values are always used as a
@@ -199,9 +195,8 @@ class StringAccessor(Generic[T_DataArray]):
             >>> da2 = xr.DataArray([1, 2, 3], dims=["Y"])
             >>> da1 % {"a": da2}
             <xarray.DataArray (X: 1)> Size: 8B
-            array(['<xarray.DataArray (Y: 3)> Size: 24B\narray([1, 2, 3])\nDimensions without coordinates: Y'],
+            array(['<xarray.DataArray (Y: 3)> Size: 24B\narray([1, 2, 3])'],
                   dtype=object)
-            Dimensions without coordinates: X
     """
 
     __slots__ = ("_obj",)
@@ -492,7 +487,6 @@ class StringAccessor(Generic[T_DataArray]):
                [['4 a 3.4  test', '4, a, 3.4, , test'],
                 ['4 bb 3.4  test', '4, bb, 3.4, , test'],
                 ['4 cccc 3.4  test', '4, cccc, 3.4, , test']]], dtype='<U24')
-        Dimensions without coordinates: X, Y, ZZ
 
         See Also
         --------
@@ -560,7 +554,6 @@ class StringAccessor(Generic[T_DataArray]):
         <xarray.DataArray (X: 2, ZZ: 2)> Size: 192B
         array([['a-bab-abc', 'a_bab_abc'],
                ['abcd--abcdef', 'abcd__abcdef']], dtype='<U12')
-        Dimensions without coordinates: X, ZZ
 
         See Also
         --------
@@ -654,7 +647,6 @@ class StringAccessor(Generic[T_DataArray]):
                  'spam and arthur are like a duck'],
                 ['egg and lancelot are like a duck',
                  'egg and arthur are like a duck']]], dtype='<U33')
-        Dimensions without coordinates: X, Y, ZZ
 
         See Also
         --------
@@ -685,13 +677,11 @@ class StringAccessor(Generic[T_DataArray]):
         <xarray.DataArray (x: 4)> Size: 224B
         array(['temperature', 'PRESSURE', 'PreCipiTation', 'daily rainfall'],
               dtype='<U14')
-        Dimensions without coordinates: x
         >>> capitalized = da.str.capitalize()
         >>> capitalized
         <xarray.DataArray (x: 4)> Size: 224B
         array(['Temperature', 'Pressure', 'Precipitation', 'Daily rainfall'],
               dtype='<U14')
-        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.capitalize())
 
@@ -709,12 +699,10 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 2)> Size: 88B
         array(['Temperature', 'PRESSURE'], dtype='<U11')
-        Dimensions without coordinates: x
         >>> lowered = da.str.lower()
         >>> lowered
         <xarray.DataArray (x: 2)> Size: 88B
         array(['temperature', 'pressure'], dtype='<U11')
-        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.lower())
 
@@ -733,12 +721,10 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 3)> Size: 132B
         array(['temperature', 'PRESSURE', 'HuMiDiTy'], dtype='<U11')
-        Dimensions without coordinates: x
         >>> swapcased = da.str.swapcase()
         >>> swapcased
         <xarray.DataArray (x: 3)> Size: 132B
         array(['TEMPERATURE', 'pressure', 'hUmIdItY'], dtype='<U11')
-        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.swapcase())
 
@@ -756,12 +742,10 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 3)> Size: 132B
         array(['temperature', 'PRESSURE', 'HuMiDiTy'], dtype='<U11')
-        Dimensions without coordinates: x
         >>> titled = da.str.title()
         >>> titled
         <xarray.DataArray (x: 3)> Size: 132B
         array(['Temperature', 'Pressure', 'Humidity'], dtype='<U11')
-        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.title())
 
@@ -779,12 +763,10 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 2)> Size: 88B
         array(['temperature', 'HuMiDiTy'], dtype='<U11')
-        Dimensions without coordinates: x
         >>> uppered = da.str.upper()
         >>> uppered
         <xarray.DataArray (x: 2)> Size: 88B
         array(['TEMPERATURE', 'HUMIDITY'], dtype='<U11')
-        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.upper())
 
@@ -809,23 +791,19 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 2)> Size: 88B
         array(['TEMPERATURE', 'HuMiDiTy'], dtype='<U11')
-        Dimensions without coordinates: x
         >>> casefolded = da.str.casefold()
         >>> casefolded
         <xarray.DataArray (x: 2)> Size: 88B
         array(['temperature', 'humidity'], dtype='<U11')
-        Dimensions without coordinates: x
 
         >>> da = xr.DataArray(["ß", "İ"], dims="x")
         >>> da
         <xarray.DataArray (x: 2)> Size: 8B
         array(['ß', 'İ'], dtype='<U1')
-        Dimensions without coordinates: x
         >>> casefolded = da.str.casefold()
         >>> casefolded
         <xarray.DataArray (x: 2)> Size: 16B
         array(['ss', 'i̇'], dtype='<U2')
-        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.casefold())
 
@@ -866,12 +844,10 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 2)> Size: 40B
         array(['H2O', 'NaCl-'], dtype='<U5')
-        Dimensions without coordinates: x
         >>> isalnum = da.str.isalnum()
         >>> isalnum
         <xarray.DataArray (x: 2)> Size: 2B
         array([ True, False])
-        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.isalnum(), dtype=bool)
 
@@ -890,12 +866,10 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 3)> Size: 60B
         array(['Mn', 'H2O', 'NaCl-'], dtype='<U5')
-        Dimensions without coordinates: x
         >>> isalpha = da.str.isalpha()
         >>> isalpha
         <xarray.DataArray (x: 3)> Size: 3B
         array([ True, False, False])
-        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.isalpha(), dtype=bool)
 
@@ -914,12 +888,10 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 3)> Size: 36B
         array(['2.3', '123', '0'], dtype='<U3')
-        Dimensions without coordinates: x
         >>> isdecimal = da.str.isdecimal()
         >>> isdecimal
         <xarray.DataArray (x: 3)> Size: 3B
         array([False,  True,  True])
-        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.isdecimal(), dtype=bool)
 
@@ -938,12 +910,10 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 5)> Size: 80B
         array(['123', '1.2', '0', 'CO2', 'NaCl'], dtype='<U4')
-        Dimensions without coordinates: x
         >>> isdigit = da.str.isdigit()
         >>> isdigit
         <xarray.DataArray (x: 5)> Size: 5B
         array([ True, False,  True, False, False])
-        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.isdigit(), dtype=bool)
 
@@ -963,12 +933,10 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 3)> Size: 156B
         array(['temperature', 'HUMIDITY', 'pREciPiTaTioN'], dtype='<U13')
-        Dimensions without coordinates: x
         >>> islower = da.str.islower()
         >>> islower
         <xarray.DataArray (x: 3)> Size: 3B
         array([ True, False, False])
-        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.islower(), dtype=bool)
 
@@ -987,12 +955,10 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 5)> Size: 100B
         array(['123', '2.3', 'H2O', 'NaCl-', 'Mn'], dtype='<U5')
-        Dimensions without coordinates: x
         >>> isnumeric = da.str.isnumeric()
         >>> isnumeric
         <xarray.DataArray (x: 5)> Size: 5B
         array([ True, False, False, False, False])
-        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.isnumeric(), dtype=bool)
 
@@ -1011,12 +977,10 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 4)> Size: 16B
         array(['', ' ', '\\t', '\\n'], dtype='<U1')
-        Dimensions without coordinates: x
         >>> isspace = da.str.isspace()
         >>> isspace
         <xarray.DataArray (x: 4)> Size: 4B
         array([False,  True,  True,  True])
-        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.isspace(), dtype=bool)
 
@@ -1043,12 +1007,10 @@ class StringAccessor(Generic[T_DataArray]):
         <xarray.DataArray (title: 3)> Size: 360B
         array(['The Evolution Of Species', 'The Theory of relativity',
                'the quantum mechanics of atoms'], dtype='<U30')
-        Dimensions without coordinates: title
         >>> istitle = da.str.istitle()
         >>> istitle
         <xarray.DataArray (title: 3)> Size: 3B
         array([ True, False, False])
-        Dimensions without coordinates: title
         """
         return self._apply(func=lambda x: x.istitle(), dtype=bool)
 
@@ -1067,12 +1029,10 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 3)> Size: 156B
         array(['TEMPERATURE', 'humidity', 'PreCIpiTAtioN'], dtype='<U13')
-        Dimensions without coordinates: x
         >>> isupper = da.str.isupper()
         >>> isupper
         <xarray.DataArray (x: 3)> Size: 3B
         array([ True, False, False])
-        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.isupper(), dtype=bool)
 
@@ -1115,20 +1075,17 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 3)> Size: 108B
         array(['jjklmn', 'opjjqrs', 't-JJ99vwx'], dtype='<U9')
-        Dimensions without coordinates: x
 
         Using a string:
         >>> da.str.count("jj")
         <xarray.DataArray (x: 3)> Size: 24B
         array([1, 1, 0])
-        Dimensions without coordinates: x
 
         Enable case-insensitive matching by setting case to false:
         >>> counts = da.str.count("jj", case=False)
         >>> counts
         <xarray.DataArray (x: 3)> Size: 24B
         array([1, 1, 1])
-        Dimensions without coordinates: x
 
         Using regex:
         >>> pat = "JJ[0-9]{2}[a-z]{3}"
@@ -1136,7 +1093,6 @@ class StringAccessor(Generic[T_DataArray]):
         >>> counts
         <xarray.DataArray (x: 3)> Size: 24B
         array([0, 0, 1])
-        Dimensions without coordinates: x
 
         Using an array of strings (the pattern will be broadcast against the array):
 
@@ -1147,7 +1103,6 @@ class StringAccessor(Generic[T_DataArray]):
         array([[1, 0],
                [1, 0],
                [0, 1]])
-        Dimensions without coordinates: x, y
         """
         pat = self._re_compile(pat=pat, flags=flags, case=case)
 
@@ -1179,12 +1134,10 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 3)> Size: 48B
         array(['$100', '£23', '100'], dtype='<U4')
-        Dimensions without coordinates: x
         >>> startswith = da.str.startswith("$")
         >>> startswith
         <xarray.DataArray (x: 3)> Size: 3B
         array([ True, False, False])
-        Dimensions without coordinates: x
         """
         pat = self._stringify(pat)
         func = lambda x, y: x.startswith(y)
@@ -1215,12 +1168,10 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 3)> Size: 48B
         array(['10C', '10c', '100F'], dtype='<U4')
-        Dimensions without coordinates: x
         >>> endswith = da.str.endswith("C")
         >>> endswith
         <xarray.DataArray (x: 3)> Size: 3B
         array([ True, False, False])
-        Dimensions without coordinates: x
         """
         pat = self._stringify(pat)
         func = lambda x, y: x.endswith(y)
@@ -1265,7 +1216,6 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da
         <xarray.DataArray (x: 4)> Size: 112B
         array(['PAR184', 'TKO65', 'NBO9139', 'NZ39'], dtype='<U7')
-        Dimensions without coordinates: x
 
         Pad the strings
 
@@ -1273,7 +1223,6 @@ class StringAccessor(Generic[T_DataArray]):
         >>> filled
         <xarray.DataArray (x: 4)> Size: 128B
         array(['00PAR184', '000TKO65', '0NBO9139', '0000NZ39'], dtype='<U8')
-        Dimensions without coordinates: x
 
         Pad strings on the right side
 
@@ -1281,7 +1230,6 @@ class StringAccessor(Generic[T_DataArray]):
         >>> filled
         <xarray.DataArray (x: 4)> Size: 128B
         array(['PAR18400', 'TKO65000', 'NBO91390', 'NZ390000'], dtype='<U8')
-        Dimensions without coordinates: x
 
         Pad strings on both sides
 
@@ -1289,7 +1237,6 @@ class StringAccessor(Generic[T_DataArray]):
         >>> filled
         <xarray.DataArray (x: 4)> Size: 128B
         array(['0PAR1840', '0TKO6500', 'NBO91390', '00NZ3900'], dtype='<U8')
-        Dimensions without coordinates: x
 
         Using an array-like width
 
@@ -1301,7 +1248,6 @@ class StringAccessor(Generic[T_DataArray]):
                ['000TKO65', '00000TKO65'],
                ['0NBO9139', '000NBO9139'],
                ['0000NZ39', '000000NZ39']], dtype='<U10')
-        Dimensions without coordinates: x, y
 
         Using an array-like value for fillchar
 
@@ -1313,7 +1259,6 @@ class StringAccessor(Generic[T_DataArray]):
                ['000TKO65', '---TKO65'],
                ['0NBO9139', '-NBO9139'],
                ['0000NZ39', '----NZ39']], dtype='<U8')
-        Dimensions without coordinates: x, y
         """
         if side == "left":
             func = self.rjust
@@ -2034,7 +1979,6 @@ class StringAccessor(Generic[T_DataArray]):
                [['abcd', ''],
                 ['', ''],
                 ['abcdef', '101']]], dtype='<U6')
-        Dimensions without coordinates: X, Y, match
 
         See Also
         --------
@@ -2205,7 +2149,6 @@ class StringAccessor(Generic[T_DataArray]):
                 [['abcdef', '101'],
                  ['fef', '5543210'],
                  ['', '']]]], dtype='<U7')
-        Dimensions without coordinates: X, Y, group, match
 
         See Also
         --------
@@ -2350,7 +2293,6 @@ class StringAccessor(Generic[T_DataArray]):
                [list([('abcd', ''), ('dcd', '33210'), ('dccd', '332210')]),
                 list([]), list([('abcdef', '101'), ('fef', '5543210')])]],
               dtype=object)
-        Dimensions without coordinates: X, Y
 
         See Also
         --------
@@ -2587,7 +2529,6 @@ class StringAccessor(Generic[T_DataArray]):
                [['test0', 'test1\ntest2\n\ntest3'],
                 ['', ''],
                 ['abra', 'ka\nda\tbra']]], dtype='<U18')
-        Dimensions without coordinates: X, Y, splitted
 
         Split as many times as needed and put the results in a new dimension
 
@@ -2600,7 +2541,6 @@ class StringAccessor(Generic[T_DataArray]):
                [['test0', 'test1', 'test2', 'test3'],
                 ['', '', '', ''],
                 ['abra', 'ka', 'da', 'bra']]], dtype='<U8')
-        Dimensions without coordinates: X, Y, splitted
 
         Split once and put the results in lists
 
@@ -2610,7 +2550,6 @@ class StringAccessor(Generic[T_DataArray]):
                 list(['red_blue'])],
                [list(['test0', 'test1\ntest2\n\ntest3']), list([]),
                 list(['abra', 'ka\nda\tbra'])]], dtype=object)
-        Dimensions without coordinates: X, Y
 
         Split as many times as needed and put the results in a list
 
@@ -2620,7 +2559,6 @@ class StringAccessor(Generic[T_DataArray]):
                 list(['red_blue'])],
                [list(['test0', 'test1', 'test2', 'test3']), list([]),
                 list(['abra', 'ka', 'da', 'bra'])]], dtype=object)
-        Dimensions without coordinates: X, Y
 
         Split only on spaces
 
@@ -2633,7 +2571,6 @@ class StringAccessor(Generic[T_DataArray]):
                [['test0\ntest1\ntest2\n\ntest3', '', ''],
                 ['', '', ''],
                 ['abra', '', 'ka\nda\tbra']]], dtype='<U24')
-        Dimensions without coordinates: X, Y, splitted
 
         See Also
         --------
@@ -2705,7 +2642,6 @@ class StringAccessor(Generic[T_DataArray]):
                [['test0\ntest1\ntest2', 'test3'],
                 ['', ''],
                 ['abra  ka\nda', 'bra']]], dtype='<U17')
-        Dimensions without coordinates: X, Y, splitted
 
         Split as many times as needed and put the results in a new dimension
 
@@ -2718,7 +2654,6 @@ class StringAccessor(Generic[T_DataArray]):
                [['test0', 'test1', 'test2', 'test3'],
                 ['', '', '', ''],
                 ['abra', 'ka', 'da', 'bra']]], dtype='<U8')
-        Dimensions without coordinates: X, Y, splitted
 
         Split once and put the results in lists
 
@@ -2728,7 +2663,6 @@ class StringAccessor(Generic[T_DataArray]):
                 list(['red_blue'])],
                [list(['test0\ntest1\ntest2', 'test3']), list([]),
                 list(['abra  ka\nda', 'bra'])]], dtype=object)
-        Dimensions without coordinates: X, Y
 
         Split as many times as needed and put the results in a list
 
@@ -2738,7 +2672,6 @@ class StringAccessor(Generic[T_DataArray]):
                 list(['red_blue'])],
                [list(['test0', 'test1', 'test2', 'test3']), list([]),
                 list(['abra', 'ka', 'da', 'bra'])]], dtype=object)
-        Dimensions without coordinates: X, Y
 
         Split only on spaces
 
@@ -2751,7 +2684,6 @@ class StringAccessor(Generic[T_DataArray]):
                [['', '', 'test0\ntest1\ntest2\n\ntest3'],
                 ['', '', ''],
                 ['abra', '', 'ka\nda\tbra']]], dtype='<U24')
-        Dimensions without coordinates: X, Y, splitted
 
         See Also
         --------
@@ -2820,7 +2752,6 @@ class StringAccessor(Generic[T_DataArray]):
                 [ True, False, False, False, False]]])
         Coordinates:
           * dummies  (dummies) <U6 120B 'a' 'ab' 'abc' 'abcd' 'ab~abc'
-        Dimensions without coordinates: X, Y
 
         See Also
         --------
