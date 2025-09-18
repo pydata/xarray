@@ -264,3 +264,9 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         if chunks != "auto":
             raise NotImplementedError("Only chunks='auto' is supported at present.")
         return dask.array.shuffle(x, indexer, axis, chunks="auto")
+
+    def get_auto_chunk_size(self) -> int:
+        from dask import config as dask_config
+        from dask.utils import parse_bytes
+
+        return parse_bytes(dask_config.get("array.chunk-size"))
