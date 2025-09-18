@@ -95,7 +95,7 @@ class PydapDataStore(AbstractDataStore):
         dataset,
         group=None,
         session=None,
-        batch=False,
+        batch=None,
         protocol=None,
         checksums=True,
     ):
@@ -123,7 +123,7 @@ class PydapDataStore(AbstractDataStore):
         timeout=None,
         verify=None,
         user_charset=None,
-        batch=False,
+        batch=None,
         checksums=True,
     ):
         from pydap.client import open_url
@@ -290,7 +290,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-        batch=False,
+        batch=None,
         checksums=True,
     ) -> Dataset:
         store = PydapDataStore.open(
@@ -336,7 +336,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-        batch=False,
+        batch=None,
         checksums=True,
     ) -> DataTree:
         groups_dict = self.open_groups_as_dict(
@@ -377,7 +377,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-        batch=False,
+        batch=None,
         checksums=True,
     ) -> dict[str, Dataset]:
         from xarray.core.treenode import NodePath
