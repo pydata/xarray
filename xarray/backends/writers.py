@@ -1,37 +1,40 @@
 from __future__ import annotations
 
-import io
-from collections.abc import Hashable, Mapping, MutableMapping, Iterable
-from os import PathLike
-from typing import TYPE_CHECKING, Any, Literal, get_args, overload, cast
-from numbers import Number
-import numpy as np
-from io import IOBase
 import importlib
+import io
+import os
+from collections.abc import Callable, Hashable, Iterable, Mapping, MutableMapping
+from io import IOBase
 from itertools import starmap
+from numbers import Number
+from os import PathLike
+from typing import TYPE_CHECKING, Any, Literal, cast, get_args, overload
 
-from xarray import conventions
+import numpy as np
+
+from xarray import backends, conventions
+from xarray.backends import plugins
 from xarray.backends.api import (
     _normalize_path,
     delayed_close_after_writes,
 )
-from xarray.backends.common import ArrayWriter, BytesIOProxy
+from xarray.backends.common import AbstractWritableDataStore, ArrayWriter, BytesIOProxy
 from xarray.backends.locks import get_dask_scheduler
-import xarray.backends as backends
-from xarray.core.datatree import DataTree
+from xarray.backends.store import AbstractDataStore
 from xarray.core.dataset import Dataset
+from xarray.core.datatree import DataTree
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 from xarray.core.utils import emit_user_level_warning
-from xarray.backends import plugins
-
-T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf", "pydap"]
-T_DataTreeNetcdfTypes = Literal["NETCDF4"]
 
 if TYPE_CHECKING:
     from dask.delayed import Delayed
 
     from xarray.backends import ZarrStore
+    from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.types import ZarrStoreLike
+
+    T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf", "pydap"]
+    T_DataTreeNetcdfTypes = Literal["NETCDF4"]
 
 
 WRITEABLE_STORES: dict[T_NetcdfEngine, Callable] = {
@@ -72,7 +75,6 @@ def get_writable_netcdf_store(
         kwargs["auto_complex"] = auto_complex
 
     return store_open(target, mode=mode, format=format, **kwargs)
-
 
 
 def _validate_dataset_names(dataset: Dataset) -> None:

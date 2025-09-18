@@ -1,17 +1,13 @@
 from __future__ import annotations
 
-import importlib.util
 import os
 from collections.abc import (
     Callable,
-    Hashable,
     Iterable,
     Mapping,
-    MutableMapping,
     Sequence,
 )
 from functools import partial
-from numbers import Number
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -19,23 +15,14 @@ from typing import (
     TypeVar,
     Union,
     cast,
-    overload,
 )
 
-import numpy as np
-
-from xarray import backends
 from xarray.backends import plugins
 from xarray.backends.common import (
-    AbstractDataStore,
-    AbstractWritableDataStore,
-    ArrayWriter,
-    BytesIOProxy,
     T_PathFileOrDataStore,
     _find_absolute_paths,
     _normalize_path,
 )
-from xarray.backends.locks import get_dask_scheduler
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import dtypes, indexing
 from xarray.core.coordinates import Coordinates
@@ -44,7 +31,7 @@ from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees
-from xarray.core.types import NetcdfWriteModes, ReadBuffer, ZarrWriteModes
+from xarray.core.types import ReadBuffer
 from xarray.core.utils import emit_user_level_warning, is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
@@ -76,7 +63,6 @@ if TYPE_CHECKING:
         JoinOptions,
         NestedSequence,
         T_Chunks,
-        ZarrStoreLike,
     )
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
