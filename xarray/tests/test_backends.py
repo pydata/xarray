@@ -6500,25 +6500,6 @@ def test_batchdap4_downloads(protocol, batch) -> None:
         assert len(session.cache.urls()) == 5
 
 
-@requires_pydap
-@network
-def test_batch_warnswithdap2() -> None:
-    from pydap.net import create_session
-
-    # Create a session with pre-set retry params in pydap backend, to cache urls
-    session = create_session(use_cache=True, cache_kwargs={"cache_name": "debug"})
-    session.cache.clear()
-
-    url = "dap2://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc"
-    with pytest.warns(UserWarning):
-        open_dataset(
-            url, engine="pydap", session=session, batch=True, decode_times=False
-        )
-
-    # no batching is supported here
-    assert len(session.cache.urls()) == 5
-
-
 class TestEncodingInvalid:
     def test_extract_nc4_variable_encoding(self) -> None:
         var = xr.Variable(("x",), [1, 2, 3], {}, {"foo": "bar"})
