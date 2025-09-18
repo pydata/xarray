@@ -57,31 +57,17 @@ class PydapArrayWrapper(BackendArray):
         if self._batch and hasattr(self.array, "dataset"):
             # this are both True only for pydap>3.5.5
             # from pydap.lib import resolve_batch_for_all_variables
-            from pydap.lib import get_batch_data
+            from pydap.lib import data_check, get_batch_data
 
             dataset = self.array.dataset
-            print("[batching]", self.array.id)
-            if not dataset[self.array.id]._is_data_loaded():
-                print("data not loaded", self.array.id)
-                # data has not been deserialized yet
-                # runs only once per store/hierarchy
-                get_batch_data(self.array, checksums=self._checksums, key=key)
-            result = np.asarray(dataset[self.array.id].data)
-            result = robust_getitem(result, key, catch=ValueError)
+            get_batch_data(self.array, checksums=self._checksums, key=key)
+            result = data_check(np.asarray(dataset[self.array.id].data), key)
         else:
-            print("[non-batching]", self.array.id)
             result = robust_getitem(self.array, key, catch=ValueError)
             result = np.asarray(result.data)
-        axis = tuple(n for n, k in enumerate(key) if isinstance(k, integer_types))
-        print(key)
-        print("axis:", axis)
-        # print("ndim", result.ndim)
-        # print("array.ndim", self.array.ndim)
-        if result.ndim + len(axis) != self.array.ndim and axis:
-            # print('here????')
-            # print("squeezed result", np.shape(result))
-            result = np.squeeze(result, axis)
-            # print("squeezed result", np.shape(result))
+            axis = tuple(n for n, k in enumerate(key) if isinstance(k, integer_types))
+            if result.ndim + len(axis) != self.array.ndim and axis:
+                result = np.squeeze(result, axis)
         return result
 
 
