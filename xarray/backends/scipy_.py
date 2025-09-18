@@ -38,7 +38,7 @@ from xarray.core.variable import Variable
 try:
     from scipy.io import netcdf_file as netcdf_file_base
 except ImportError:
-    netcdf_file_base = object
+    netcdf_file_base = object  # type: ignore[assignment,misc,unused-ignore]  # scipy is optional
 
 
 if TYPE_CHECKING:
