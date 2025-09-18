@@ -2335,12 +2335,14 @@ class TestDataArray:
         assert_equal(self.dv, np.maximum(self.dv, bar))
 
     def test_astype_attrs(self) -> None:
-        # DataArray and Dataset both support keep_attrs parameter
+        # Split into two loops for mypy - Variable, DataArray, and Dataset
+        # don't share a common base class, so mypy infers type object for v,
+        # which doesn't have the attrs or astype methods
         for v in [self.mda.copy(), self.ds.copy()]:
             v.attrs["foo"] = "bar"
             assert v.attrs == v.astype(float).attrs
             assert not v.astype(float, keep_attrs=False).attrs
-        # Variable has different astype signature without keep_attrs parameter
+        # Test Variable separately to avoid mypy inferring object type
         va = self.va.copy()
         va.attrs["foo"] = "bar"
         assert va.attrs == va.astype(float).attrs
