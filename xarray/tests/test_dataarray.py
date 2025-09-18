@@ -162,7 +162,7 @@ class TestDataArray:
         with pytest.raises(ValueError, match=r"must be 1-dimensional"):
             self.ds["foo"].to_index()
         with pytest.raises(AttributeError):
-            self.dv.variable = self.v  # type: ignore[misc]
+            self.dv.variable = self.v
 
     def test_data_property(self) -> None:
         array = DataArray(np.zeros((3, 4)))
@@ -1243,7 +1243,7 @@ class TestDataArray:
             self.dv.isel({dim: slice(5) for dim in self.dv.dims}), self.dv.head()
         )
         with pytest.raises(TypeError, match=r"either dict-like or a single int"):
-            self.dv.head([3])  # type: ignore[arg-type]
+            self.dv.head([3])
         with pytest.raises(TypeError, match=r"expected integer type"):
             self.dv.head(x=3.1)
         with pytest.raises(ValueError, match=r"expected positive int"):
@@ -1260,7 +1260,7 @@ class TestDataArray:
             self.dv.isel({dim: slice(-5, None) for dim in self.dv.dims}), self.dv.tail()
         )
         with pytest.raises(TypeError, match=r"either dict-like or a single int"):
-            self.dv.tail([3])  # type: ignore[arg-type]
+            self.dv.tail([3])
         with pytest.raises(TypeError, match=r"expected integer type"):
             self.dv.tail(x=3.1)
         with pytest.raises(ValueError, match=r"expected positive int"):
@@ -1273,7 +1273,7 @@ class TestDataArray:
             self.dv.thin(6),
         )
         with pytest.raises(TypeError, match=r"either dict-like or a single int"):
-            self.dv.thin([3])  # type: ignore[arg-type]
+            self.dv.thin([3])
         with pytest.raises(TypeError, match=r"expected integer type"):
             self.dv.thin(x=3.1)
         with pytest.raises(ValueError, match=r"expected positive int"):
