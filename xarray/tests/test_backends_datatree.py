@@ -661,8 +661,8 @@ class TestPyDAPDatatreeIO:
             )
 
         if _version_ > Version("3.5.5"):
-            # Total downloads are: 1 dmr, + 1 dap url for all dimensions across groups
-            assert len(session.cache.urls()) == 2
+            # Total downloads are: 1 dmr, + 1 dap url for all dimensions across groups per group
+            assert len(session.cache.urls()) == 3
         else:
             # 1 dmr + 1 dap url per dimension (total there are 4 dimension arrays)
             assert len(session.cache.urls()) == 5
