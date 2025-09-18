@@ -34,7 +34,7 @@ def test_unary(a):
 
 
 def test_binary():
-    args: list[int | npt.NDArray | xr.Variable | xr.DataArray | xr.Dataset] = [
+    args: list[int | float | npt.NDArray | xr.Variable | xr.DataArray | xr.Dataset] = [
         0,
         np.zeros(2),
         xr.Variable(["x"], [0, 0]),
@@ -50,7 +50,7 @@ def test_binary():
 
 
 def test_binary_out():
-    args: list[int | npt.NDArray | xr.Variable | xr.DataArray | xr.Dataset] = [
+    args: list[int | float | npt.NDArray | xr.Variable | xr.DataArray | xr.Dataset] = [
         1,
         np.ones(2),
         xr.Variable(["x"], [1, 1]),
