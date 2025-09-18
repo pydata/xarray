@@ -742,6 +742,59 @@ And adding the z-axis
 For more advanced scatter plots, we recommend converting the relevant data variables
 to a pandas DataFrame and using the extensive plotting capabilities of ``seaborn``.
 
+Lines
+~~~~~
+
+:py:func:`xarray.plot.lines` calls matplotlib.collections.LineCollection under the hood,
+allowing multiple lines being drawn efficiently. It uses similar arguments as
+:py:func:`xarray.plot.scatter`.
+
+Let's return to the air temperature dataset:
+
+.. jupyter-execute::
+
+    airtemps = xr.tutorial.open_dataset("air_temperature")
+    air = airtemps.air - 273.15
+    air.attrs = airtemps.air.attrs
+    air.attrs["units"] = "deg C"
+
+    air.isel(lon=10).plot.lines(x="time", hue="lat")
+
+Make it a little more transparent:
+
+.. jupyter-execute::
+
+    air.isel(lon=10).plot.lines(x="time", hue="lat", alpha=0.2)
+
+Zoom in a little on the x-axis, and compare a few latitudes and longitudes,
+group them using ``hue`` and ``linewidth``. The  ``linewidth`` kwarg works in
+a similar way as ``markersize`` kwarg for scatter plots, it lets you vary the
+line's size by variable value.
+
+.. jupyter-execute::
+    :stderr:
+
+    air_zoom = air.isel(time=slice(1200, 1500), lat=[5, 10, 15], lon=[10, 15])
+    air_zoom.plot.lines(x="time", hue="lat", linewidth="lon", add_colorbar=False)
+
+Lines can modify the linestyle but does not allow markers. Instead combine :py:func:`xarray.plot.lines`
+with :py:func:`xarray.plot.scatter`:
+
+.. jupyter-execute::
+
+    air.isel(lat=10, lon=10)[:200].plot.lines(x="time", color="k", linestyle="dashed")
+    air.isel(lat=10, lon=10)[:200].plot.scatter(x="time", color="k", marker="^")
+
+
+Switching to another dataset with more variables we can analyse in similar
+fashion as :py:func:`xarray.plot.scatter`:
+
+.. jupyter-execute::
+    :stderr:
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+    ds.plot.lines(x="A", y="B", hue="y", linewidth="x", row="x", col="w")
+
 Quiver
 ~~~~~~
 

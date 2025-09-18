@@ -13,6 +13,9 @@ v2025.09.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added new plot method :py:meth:`DataArray.plot.lines` which allows creating line plots efficiently in
+  a similar manner to :py:meth:`DataArray.plot.scatter`, also available for datasets. (:pull:`7173`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - ``engine='netcdf4'`` now supports reading and writing in-memory netCDF files.
   All of Xarray's netCDF backends now support in-memory reads and writes
   (:pull:`10624`).
