@@ -8,11 +8,14 @@ functions.
 from __future__ import annotations
 
 import operator
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 
 from xarray.core import dtypes, duck_array_ops
+
+if TYPE_CHECKING:
+    pass
 
 try:
     import bottleneck as bn
@@ -158,8 +161,8 @@ def fillna(data, other, join="left", dataset_join="left"):
     )
 
 
-# Unsure why we get a mypy error here
-def where_method(self, cond, other=dtypes.NA):  # type: ignore[has-type]
+# TODO: type this properly
+def where_method(self, cond, other=dtypes.NA):  # type: ignore[unused-ignore,has-type]
     """Return elements from `self` or `other` depending on `cond`.
 
     Parameters
@@ -283,7 +286,7 @@ def inplace_to_noninplace_op(f):
 # _typed_ops.py uses the following wrapped functions as a kind of unary operator
 argsort = _method_wrapper("argsort")
 conj = _method_wrapper("conj")
-conjugate = _method_wrapper("conjugate")
+conjugate = _method_wrapper("conj")
 round_ = _func_slash_method_wrapper(duck_array_ops.around, name="round")
 
 

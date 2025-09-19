@@ -13,19 +13,19 @@ NA = utils.ReprObject("<NA>")
 
 @functools.total_ordering
 class AlwaysGreaterThan:
-    def __gt__(self, other: Any) -> Literal[True]:
+    def __gt__(self, other: object) -> Literal[True]:
         return True
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, type(self))
 
 
 @functools.total_ordering
 class AlwaysLessThan:
-    def __lt__(self, other: Any) -> Literal[True]:
+    def __lt__(self, other: object) -> Literal[True]:
         return True
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, type(self))
 
 
@@ -165,7 +165,7 @@ def is_datetime_like(
 
 
 def result_type(
-    *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike,
+    *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike | None,
 ) -> np.dtype[np.generic]:
     """Like np.result_type, but with type promotion rules matching pandas.
 

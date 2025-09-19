@@ -5,7 +5,7 @@ from abc import ABC
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
-from typing import Generic
+from typing import Any, Generic
 
 import numpy as np
 import pandas as pd
@@ -15,6 +15,7 @@ import pytz
 from xarray import DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
     BasicIndexer,
     CopyOnWriteArray,
@@ -336,7 +337,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         assert "PeriodArray" in repr(v)
 
     @pytest.mark.parametrize("dtype", [float, int])
-    def test_1d_math(self, dtype: np.typing.DTypeLike) -> None:
+    def test_1d_math(self, dtype: np.typing.DTypeLike | None) -> None:
         x = np.arange(5, dtype=dtype)
         y = np.ones(5, dtype=dtype)
 
@@ -721,9 +722,9 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         assert_array_equal(v_new, expected)
 
         # with boolean variable with wrong shape
-        ind = np.array([True, False])
+        ind2: np.ndarray[Any, np.dtype[np.bool_]] = np.array([True, False])
         with pytest.raises(IndexError, match=r"Boolean array size 2 is "):
-            v[Variable(("a", "b"), [[0, 1]]), ind]
+            v[Variable(("a", "b"), [[0, 1]]), ind2]
 
         # boolean indexing with different dimension
         ind = Variable(["a"], [True, False, False])
@@ -1071,11 +1072,11 @@ class TestVariable(VariableSubclassobjects):
 
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
-        assert v.item() == 0
-        assert type(v.item()) is float
+        assert v.item() == 0  # type: ignore[attr-defined]
+        assert type(v.item()) is float  # type: ignore[attr-defined]
 
         v = IndexVariable("x", np.arange(5))
-        assert 2 == v.searchsorted(2)
+        assert 2 == v.searchsorted(2)  # type: ignore[attr-defined]
 
     @pytest.mark.parametrize(
         "values, unit",
@@ -1127,7 +1128,7 @@ class TestVariable(VariableSubclassobjects):
         v = Variable([], pd.Timestamp("2000-01-01"))
         expected_unit = "s" if has_pandas_3 else "ns"
         assert v.dtype == np.dtype(f"datetime64[{expected_unit}]")
-        assert v.values == np.datetime64("2000-01-01", expected_unit)
+        assert v.values == np.datetime64("2000-01-01", expected_unit)  # type: ignore[call-overload]
 
     @pytest.mark.parametrize(
         "values, unit", [(pd.to_timedelta("1s"), "ns"), (np.timedelta64(1, "s"), "s")]
@@ -1238,10 +1239,12 @@ class TestVariable(VariableSubclassobjects):
         expected = Variable([], 0)
         assert_identical(expected, actual)
 
-        data = np.arange(9).reshape((3, 3))
-        expected = Variable(("x", "y"), data)
+        data2: np.ndarray[tuple[int, int], np.dtype[np.signedinteger[Any]]] = np.arange(
+            9
+        ).reshape((3, 3))
+        expected = Variable(("x", "y"), data2)
         with pytest.raises(ValueError, match=r"without explicit dimension names"):
-            as_variable(data, name="x")
+            as_variable(data2, name="x")
 
         # name of nD variable matches dimension name
         actual = as_variable(expected, name="x")
@@ -1400,11 +1403,11 @@ class TestVariable(VariableSubclassobjects):
         # list arguments
         v_new = v[[0]]
         assert v_new.dims == ("x", "y")
-        assert_array_equal(v_new, v._data[[0]])
+        assert_array_equal(v_new, v._data[[0]])  # type: ignore[call-overload]
 
         v_new = v[[]]
         assert v_new.dims == ("x", "y")
-        assert_array_equal(v_new, v._data[[]])
+        assert_array_equal(v_new, v._data[[]])  # type: ignore[call-overload]
 
         # dict arguments
         v_new = v[dict(x=0)]
@@ -1593,7 +1596,7 @@ class TestVariable(VariableSubclassobjects):
         data = pd.Categorical(np.arange(10, dtype="int64"))
         v = self.cls("x", data)
         print(v)  # should not error
-        assert pd.api.types.is_extension_array_dtype(v.dtype)
+        assert isinstance(v.dtype, pd.CategoricalDtype)
 
     def test_squeeze(self):
         v = Variable(["x", "y"], [[1]])
@@ -1927,6 +1930,9 @@ class TestVariable(VariableSubclassobjects):
 
         np.testing.assert_allclose(actual.values, expected)
 
+    @pytest.mark.filterwarnings(
+        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
+    )
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_interpolation_deprecation(self, method) -> None:
         v = Variable(["x", "y"], self.d)
@@ -2362,7 +2368,7 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert blocked.chunks == ((3,), (4,))
         first_dask_name = blocked.data.name
 
-        blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))
+        blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))  # type: ignore[arg-type]
         assert blocked.chunks == ((2, 1), (2, 2))
         assert blocked.data.name != first_dask_name
 
@@ -2523,7 +2529,7 @@ class TestIndexVariable(VariableSubclassobjects):
         v = IndexVariable(["x"], midx, {"foo": "bar"})
         assert v.to_index().names == ("x_level_0", "x_level_1")
 
-    def test_data(self):
+    def test_data(self):  # type: ignore[override]
         x = IndexVariable("x", np.arange(3.0))
         assert isinstance(x._data, PandasIndexingAdapter)
         assert isinstance(x.data, np.ndarray)
@@ -2656,7 +2662,7 @@ class TestIndexVariable(VariableSubclassobjects):
 
     @pytest.mark.skip
     def test_coarsen_2d(self):
-        super().test_coarsen_2d()
+        super().test_coarsen_2d()  # type: ignore[misc]
 
     def test_to_index_variable_copy(self) -> None:
         # to_index_variable should return a copy
@@ -2677,7 +2683,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
                 pd.date_range("2000-01-01", periods=3),
                 pd.date_range("2000-01-01", periods=3).values,
             ]:
-                x = t(data)
+                x = t(data)  # type: ignore[arg-type]
                 assert source_ndarray(x) is source_ndarray(as_compatible_data(x))
 
     def test_converted_types(self):
@@ -2693,51 +2699,51 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
             assert np.asarray(input_array).dtype == actual.dtype
 
     def test_masked_array(self):
-        original = np.ma.MaskedArray(np.arange(5))
+        original: Any = np.ma.MaskedArray(np.arange(5))
         expected = np.arange(5)
-        actual = as_compatible_data(original)
+        actual: Any = as_compatible_data(original)
         assert_array_equal(expected, actual)
         assert np.dtype(int) == actual.dtype
 
-        original = np.ma.MaskedArray(np.arange(5), mask=4 * [False] + [True])
-        expected = np.arange(5.0)
-        expected[-1] = np.nan
-        actual = as_compatible_data(original)
-        assert_array_equal(expected, actual)
+        original1: Any = np.ma.MaskedArray(np.arange(5), mask=4 * [False] + [True])
+        expected1: Any = np.arange(5.0)
+        expected1[-1] = np.nan
+        actual = as_compatible_data(original1)
+        assert_array_equal(expected1, actual)
         assert np.dtype(float) == actual.dtype
 
-        original = np.ma.MaskedArray([1.0, 2.0], mask=[True, False])
-        original.flags.writeable = False
-        expected = [np.nan, 2.0]
-        actual = as_compatible_data(original)
-        assert_array_equal(expected, actual)
+        original2: Any = np.ma.MaskedArray([1.0, 2.0], mask=[True, False])
+        original2.flags.writeable = False
+        expected2: Any = [np.nan, 2.0]
+        actual = as_compatible_data(original2)
+        assert_array_equal(expected2, actual)
         assert np.dtype(float) == actual.dtype
 
         # GH2377
-        actual = Variable(dims=tuple(), data=np.ma.masked)
-        expected = Variable(dims=tuple(), data=np.nan)
-        assert_array_equal(expected, actual)
-        assert actual.dtype == expected.dtype
+        actual_var: Any = Variable(dims=tuple(), data=np.ma.masked)
+        expected_var = Variable(dims=tuple(), data=np.nan)
+        assert_array_equal(expected_var, actual_var)
+        assert actual_var.dtype == expected_var.dtype
 
     def test_datetime(self):
         expected = np.datetime64("2000-01-01")
-        actual = as_compatible_data(expected)
+        actual: Any = as_compatible_data(expected)
         assert expected == actual
         assert np.ndarray is type(actual)
         assert np.dtype("datetime64[s]") == actual.dtype
 
-        expected = np.array([np.datetime64("2000-01-01")])
-        actual = as_compatible_data(expected)
-        assert np.asarray(expected) == actual
+        expected_dt: Any = np.array([np.datetime64("2000-01-01")])
+        actual = as_compatible_data(expected_dt)
+        assert np.asarray(expected_dt) == actual
         assert np.ndarray is type(actual)
         assert np.dtype("datetime64[s]") == actual.dtype
 
-        expected = np.array([np.datetime64("2000-01-01", "ns")])
-        actual = as_compatible_data(expected)
-        assert np.asarray(expected) == actual
+        expected_dt_ns: Any = np.array([np.datetime64("2000-01-01", "ns")])
+        actual = as_compatible_data(expected_dt_ns)
+        assert np.asarray(expected_dt_ns) == actual
         assert np.ndarray is type(actual)
         assert np.dtype("datetime64[ns]") == actual.dtype
-        assert expected is source_ndarray(np.asarray(actual))
+        assert expected_dt_ns is source_ndarray(np.asarray(actual))
 
         expected = np.datetime64(
             "2000-01-01",
@@ -2775,11 +2781,11 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
 
         expect = orig.copy(deep=True)
         # see https://github.com/python/mypy/issues/3004 for why we need to ignore type
-        expect.values = [[2.0, 2.0], [2.0, 2.0]]  # type: ignore[assignment]
+        expect.values = [[2.0, 2.0], [2.0, 2.0]]  # type: ignore[assignment,unused-ignore]
         assert_identical(expect, full_like(orig, 2))
 
         # override dtype
-        expect.values = [[True, True], [True, True]]  # type: ignore[assignment]
+        expect.values = [[True, True], [True, True]]  # type: ignore[assignment,unused-ignore]
         assert expect.dtype == bool
         assert_identical(expect, full_like(orig, True, dtype=bool))
 
@@ -2840,19 +2846,19 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         class SubclassedArray(np.ndarray):
             def __new__(cls, array, foo):
                 obj = np.asarray(array).view(cls)
-                obj.foo = foo
+                obj.foo = foo  # type: ignore[attr-defined]
                 return obj
 
         data = SubclassedArray([1, 2, 3], foo="bar")
-        actual = as_compatible_data(data)
+        actual: Any = as_compatible_data(data)
         assert isinstance(actual, SubclassedArray)
-        assert actual.foo == "bar"
+        assert actual.foo == "bar"  # type: ignore[attr-defined]
         assert_array_equal(data, actual)
 
     def test_numpy_matrix(self):
         with pytest.warns(PendingDeprecationWarning):
             data = np.matrix([[1, 2], [3, 4]])
-        actual = as_compatible_data(data)
+        actual: Any = as_compatible_data(data)
         assert isinstance(actual, np.ndarray)
         assert_array_equal(data, actual)
 
@@ -2878,9 +2884,9 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         orig = Variable(dims=("x"), data=array, attrs={"foo": "bar"})
         assert isinstance(orig._data, CustomIndexable)
 
-        array = CustomWithValuesAttr(np.arange(3))
-        orig = Variable(dims=(), data=array)
-        assert isinstance(orig._data.item(), CustomWithValuesAttr)
+        array2: Any = CustomWithValuesAttr(np.arange(3))
+        orig = Variable(dims=(), data=array2)
+        assert isinstance(orig._data.item(), CustomWithValuesAttr)  # type: ignore[union-attr]
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
@@ -2894,71 +2900,107 @@ class TestBackendIndexing:
     @pytest.fixture(autouse=True)
     def setUp(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
+        self.cat = PandasExtensionArray(pd.Categorical(["a", "b"] * 5))
 
-    def check_orthogonal_indexing(self, v):
-        assert np.allclose(v.isel(x=[8, 3], y=[2, 1]), self.d[[8, 3]][:, [2, 1]])
+    async def check_orthogonal_indexing(self, v, load_async):
+        expected = self.d[[8, 3]][:, [2, 1]]
 
-    def check_vectorized_indexing(self, v):
+        if load_async:
+            result = await v.isel(x=[8, 3], y=[2, 1]).load_async()
+        else:
+            result = v.isel(x=[8, 3], y=[2, 1])
+
+        assert np.allclose(result, expected)
+
+    async def check_vectorized_indexing(self, v, load_async):
         ind_x = Variable("z", [0, 2])
         ind_y = Variable("z", [2, 1])
-        assert np.allclose(v.isel(x=ind_x, y=ind_y), self.d[ind_x, ind_y])
+        expected = self.d[ind_x, ind_y]
 
-    def test_NumpyIndexingAdapter(self):
+        if load_async:
+            result = await v.isel(x=ind_x, y=ind_y).load_async()
+        else:
+            result = v.isel(x=ind_x, y=ind_y).load()
+
+        assert np.allclose(result, expected)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("load_async", [True, False])
+    async def test_NumpyIndexingAdapter(self, load_async):
         v = Variable(dims=("x", "y"), data=NumpyIndexingAdapter(self.d))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
         # could not doubly wrapping
         with pytest.raises(TypeError, match=r"NumpyIndexingAdapter only wraps "):
             v = Variable(
                 dims=("x", "y"), data=NumpyIndexingAdapter(NumpyIndexingAdapter(self.d))
             )
 
-    def test_LazilyIndexedArray(self):
+    def test_extension_array_duck_array(self):
+        lazy = LazilyIndexedArray(self.cat)
+        assert (lazy.get_duck_array().array == self.cat).all()
+
+    def test_extension_array_duck_indexed(self):
+        lazy = Variable(dims=("x"), data=LazilyIndexedArray(self.cat))
+        assert (lazy[[0, 1, 5]] == ["a", "b", "b"]).all()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("load_async", [True, False])
+    async def test_LazilyIndexedArray(self, load_async):
         v = Variable(dims=("x", "y"), data=LazilyIndexedArray(self.d))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
         # doubly wrapping
         v = Variable(
             dims=("x", "y"),
             data=LazilyIndexedArray(LazilyIndexedArray(self.d)),
         )
-        self.check_orthogonal_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
         # hierarchical wrapping
         v = Variable(
             dims=("x", "y"), data=LazilyIndexedArray(NumpyIndexingAdapter(self.d))
         )
-        self.check_orthogonal_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
 
-    def test_CopyOnWriteArray(self):
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("load_async", [True, False])
+    async def test_CopyOnWriteArray(self, load_async):
         v = Variable(dims=("x", "y"), data=CopyOnWriteArray(self.d))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
         # doubly wrapping
-        v = Variable(dims=("x", "y"), data=CopyOnWriteArray(LazilyIndexedArray(self.d)))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        v = Variable(dims=("x", "y"), data=CopyOnWriteArray(LazilyIndexedArray(self.d)))  # type: ignore[arg-type]
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
 
-    def test_MemoryCachedArray(self):
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("load_async", [True, False])
+    async def test_MemoryCachedArray(self, load_async):
         v = Variable(dims=("x", "y"), data=MemoryCachedArray(self.d))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
         # doubly wrapping
-        v = Variable(dims=("x", "y"), data=CopyOnWriteArray(MemoryCachedArray(self.d)))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        v = Variable(dims=("x", "y"), data=CopyOnWriteArray(MemoryCachedArray(self.d)))  # type: ignore[arg-type]
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
 
     @requires_dask
-    def test_DaskIndexingAdapter(self):
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("load_async", [True, False])
+    async def test_DaskIndexingAdapter(self, load_async):
         import dask.array as da
 
-        da = da.asarray(self.d)
-        v = Variable(dims=("x", "y"), data=DaskIndexingAdapter(da))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        dask_array = da.asarray(self.d)
+        v = Variable(dims=("x", "y"), data=DaskIndexingAdapter(dask_array))
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
         # doubly wrapping
-        v = Variable(dims=("x", "y"), data=CopyOnWriteArray(DaskIndexingAdapter(da)))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        v = Variable(
+            dims=("x", "y"),
+            data=CopyOnWriteArray(DaskIndexingAdapter(dask_array)),  # type: ignore[arg-type]
+        )
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
 
 
 def test_clip(var):

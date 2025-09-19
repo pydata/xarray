@@ -13,9 +13,9 @@ while replacing the doctests.
 
 """
 
-import collections
 import textwrap
 from dataclasses import dataclass, field
+from typing import NamedTuple
 
 MODULE_PREAMBLE = '''\
 """Mixin classes with reduction operations."""
@@ -215,7 +215,7 @@ _KWARGS_DOCSTRING = """**kwargs : Any
     function for calculating ``{method}`` on this object's data.
     These could include dask-specific kwargs like ``split_every``."""
 
-_NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
+_NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations."
 
 _FLOX_NOTES_TEMPLATE = """Use the ``flox`` package to significantly speed up {kind} computations,
 especially with dask arrays. Xarray will use flox by default if installed.
@@ -227,7 +227,14 @@ _CUM_NOTES = """Note that the methods on the ``cumulative`` method are more perf
 and better supported. ``cumsum`` and ``cumprod`` may be deprecated
 in the future."""
 
-ExtraKwarg = collections.namedtuple("ExtraKwarg", "docs kwarg call example")
+
+class ExtraKwarg(NamedTuple):
+    docs: str
+    kwarg: str
+    call: str
+    example: str
+
+
 skipna = ExtraKwarg(
     docs=_SKIPNA_DOCSTRING,
     kwarg="skipna: bool | None = None,",
@@ -685,8 +692,7 @@ def write_methods(filepath, generators, preamble):
         f.write(preamble)
         for gen in generators:
             for lines in gen.generate_methods():
-                for line in lines:
-                    f.write(line + "\n")
+                f.writelines(line + "\n" for line in lines)
 
 
 if __name__ == "__main__":

@@ -5,17 +5,19 @@ import json
 import os
 import struct
 from collections.abc import Hashable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
 import numpy as np
 import pandas as pd
 
 from xarray import coding, conventions
+from xarray.backends.chunks import grid_rechunk, validate_grid_chunks_alignment
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractWritableDataStore,
     BackendArray,
     BackendEntrypoint,
+    T_PathFileOrDataStore,
     _encode_variable_name,
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
@@ -38,10 +40,9 @@ from xarray.namedarray.pycompat import integer_types
 from xarray.namedarray.utils import module_available
 
 if TYPE_CHECKING:
-    from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
-    from xarray.core.types import ReadBuffer, ZarrArray, ZarrGroup
+    from xarray.core.types import ZarrArray, ZarrGroup
 
 
 def _get_mappers(*, storage_options, store, chunk_store):
@@ -179,12 +180,23 @@ def encode_zarr_attr_value(value):
     return encoded
 
 
+def has_zarr_async_index() -> bool:
+    try:
+        import zarr
+
+        return hasattr(zarr.AsyncArray, "oindex")
+    except (ImportError, AttributeError):
+        return False
+
+
 class ZarrArrayWrapper(BackendArray):
     __slots__ = ("_array", "dtype", "shape")
 
     def __init__(self, zarr_array):
         # some callers attempt to evaluate an array if an `array` property exists on the object.
         # we prefix with _ to avoid this inference.
+
+        # TODO type hint this?
         self._array = zarr_array
         self.shape = self._array.shape
 
@@ -212,6 +224,33 @@ class ZarrArrayWrapper(BackendArray):
     def _getitem(self, key):
         return self._array[key]
 
+    async def _async_getitem(self, key):
+        if not _zarr_v3():
+            raise NotImplementedError(
+                "For lazy basic async indexing with zarr, zarr-python=>v3.0.0 is required"
+            )
+
+        async_array = self._array._async_array
+        return await async_array.getitem(key)
+
+    async def _async_oindex(self, key):
+        if not has_zarr_async_index():
+            raise NotImplementedError(
+                "For lazy orthogonal async indexing with zarr, zarr-python=>v3.1.2 is required"
+            )
+
+        async_array = self._array._async_array
+        return await async_array.oindex.getitem(key)
+
+    async def _async_vindex(self, key):
+        if not has_zarr_async_index():
+            raise NotImplementedError(
+                "For lazy vectorized async indexing with zarr, zarr-python=>v3.1.2 is required"
+            )
+
+        async_array = self._array._async_array
+        return await async_array.vindex.getitem(key)
+
     def __getitem__(self, key):
         array = self._array
         if isinstance(key, indexing.BasicIndexer):
@@ -227,10 +266,20 @@ class ZarrArrayWrapper(BackendArray):
         # if self.ndim == 0:
         # could possibly have a work-around for 0d data here
 
+    async def async_getitem(self, key):
+        array = self._array
+        if isinstance(key, indexing.BasicIndexer):
+            method = self._async_getitem
+        elif isinstance(key, indexing.VectorizedIndexer):
+            method = self._async_vindex
+        elif isinstance(key, indexing.OuterIndexer):
+            method = self._async_oindex
+        return await indexing.async_explicit_indexing_adapter(
+            key, array.shape, indexing.IndexingSupport.VECTORIZED, method
+        )
 
-def _determine_zarr_chunks(
-    enc_chunks, var_chunks, ndim, name, safe_chunks, region, mode, shape
-):
+
+def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
     """
     Given encoding chunks (possibly None or []) and variable chunks
     (possibly None or []).
@@ -268,7 +317,7 @@ def _determine_zarr_chunks(
         # return the first chunk for each dimension
         return tuple(chunk[0] for chunk in var_chunks)
 
-    # from here on, we are dealing with user-specified chunks in encoding
+    # From here on, we are dealing with user-specified chunks in encoding
     # zarr allows chunks to be an integer, in which case it uses the same chunk
     # size on each dimension.
     # Here we re-implement this expansion ourselves. That makes the logic of
@@ -282,7 +331,10 @@ def _determine_zarr_chunks(
     if len(enc_chunks_tuple) != ndim:
         # throw away encoding chunks, start over
         return _determine_zarr_chunks(
-            None, var_chunks, ndim, name, safe_chunks, region, mode, shape
+            None,
+            var_chunks,
+            ndim,
+            name,
         )
 
     for x in enc_chunks_tuple:
@@ -298,68 +350,6 @@ def _determine_zarr_chunks(
     # we use the specified chunks
     if not var_chunks:
         return enc_chunks_tuple
-
-    # the hard case
-    # DESIGN CHOICE: do not allow multiple dask chunks on a single zarr chunk
-    # this avoids the need to get involved in zarr synchronization / locking
-    # From zarr docs:
-    #  "If each worker in a parallel computation is writing to a
-    #   separate region of the array, and if region boundaries are perfectly aligned
-    #   with chunk boundaries, then no synchronization is required."
-    # TODO: incorporate synchronizer to allow writes from multiple dask
-    # threads
-
-    # If it is possible to write on partial chunks then it is not necessary to check
-    # the last one contained on the region
-    allow_partial_chunks = mode != "r+"
-
-    base_error = (
-        f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
-        f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r} "
-        f"on the region {region}. "
-        f"Writing this array in parallel with dask could lead to corrupted data. "
-        f"Consider either rechunking using `chunk()`, deleting "
-        f"or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
-    )
-
-    for zchunk, dchunks, interval, size in zip(
-        enc_chunks_tuple, var_chunks, region, shape, strict=True
-    ):
-        if not safe_chunks:
-            continue
-
-        for dchunk in dchunks[1:-1]:
-            if dchunk % zchunk:
-                raise ValueError(base_error)
-
-        region_start = interval.start if interval.start else 0
-
-        if len(dchunks) > 1:
-            # The first border size is the amount of data that needs to be updated on the
-            # first chunk taking into account the region slice.
-            first_border_size = zchunk
-            if allow_partial_chunks:
-                first_border_size = zchunk - region_start % zchunk
-
-            if (dchunks[0] - first_border_size) % zchunk:
-                raise ValueError(base_error)
-
-        if not allow_partial_chunks:
-            region_stop = interval.stop if interval.stop else size
-
-            if region_start % zchunk:
-                # The last chunk which can also be the only one is a partial chunk
-                # if it is not aligned at the beginning
-                raise ValueError(base_error)
-
-            if np.ceil(region_stop / zchunk) == np.ceil(size / zchunk):
-                # If the region is covering the last chunk then check
-                # if the reminder with the default chunk size
-                # is equal to the size of the last chunk
-                if dchunks[-1] % zchunk != size % zchunk:
-                    raise ValueError(base_error)
-            elif dchunks[-1] % zchunk:
-                raise ValueError(base_error)
 
     return enc_chunks_tuple
 
@@ -427,10 +417,6 @@ def extract_zarr_variable_encoding(
     name=None,
     *,
     zarr_format: ZarrFormat,
-    safe_chunks=True,
-    region=None,
-    mode=None,
-    shape=None,
 ):
     """
     Extract zarr encoding dictionary from xarray Variable
@@ -440,10 +426,6 @@ def extract_zarr_variable_encoding(
     variable : Variable
     raise_on_invalid : bool, optional
     name: str | Hashable, optional
-    safe_chunks: bool, optional
-    region: tuple[slice, ...], optional
-    mode: str, optional
-    shape: tuple[int, ...], optional
     zarr_format: Literal[2,3]
     Returns
     -------
@@ -451,7 +433,6 @@ def extract_zarr_variable_encoding(
         Zarr encoding for `variable`
     """
 
-    shape = shape if shape else variable.shape
     encoding = variable.encoding.copy()
 
     safe_to_drop = {"source", "original_shape", "preferred_chunks"}
@@ -464,6 +445,7 @@ def extract_zarr_variable_encoding(
         "serializer",
         "cache_metadata",
         "write_empty_chunks",
+        "chunk_key_encoding",
     }
     if zarr_format == 3:
         valid_encodings.add("fill_value")
@@ -493,10 +475,6 @@ def extract_zarr_variable_encoding(
         var_chunks=variable.chunks,
         ndim=variable.ndim,
         name=name,
-        safe_chunks=safe_chunks,
-        region=region,
-        mode=mode,
-        shape=shape,
     )
     if _zarr_v3() and chunks is None:
         chunks = "auto"
@@ -562,7 +540,7 @@ def _validate_datatypes_for_zarr_append(vname, existing_var, new_var):
         # in the dataset, and with dtypes which are not known to be easy-to-append, necessitate
         # exact dtype equality, as checked below.
         pass
-    elif not new_var.dtype == existing_var.dtype:
+    elif new_var.dtype != existing_var.dtype:
         raise ValueError(
             f"Mismatched dtypes for variable {vname} between Zarr store on disk "
             f"and dataset to append. Store has dtype {existing_var.dtype} but "
@@ -621,6 +599,7 @@ class ZarrStore(AbstractWritableDataStore):
     """Store for reading and writing data via zarr"""
 
     __slots__ = (
+        "_align_chunks",
         "_append_dim",
         "_cache_members",
         "_close_store_on_close",
@@ -651,6 +630,7 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
         safe_chunks=True,
+        align_chunks=False,
         zarr_version=None,
         zarr_format=None,
         use_zarr_fill_value_as_mask=None,
@@ -698,6 +678,7 @@ class ZarrStore(AbstractWritableDataStore):
                 write_empty,
                 close_store_on_close,
                 use_zarr_fill_value_as_mask,
+                align_chunks=align_chunks,
                 cache_members=cache_members,
             )
             for group, group_store in group_members.items()
@@ -718,6 +699,7 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
         safe_chunks=True,
+        align_chunks=False,
         zarr_version=None,
         zarr_format=None,
         use_zarr_fill_value_as_mask=None,
@@ -753,7 +735,8 @@ class ZarrStore(AbstractWritableDataStore):
             write_empty,
             close_store_on_close,
             use_zarr_fill_value_as_mask,
-            cache_members,
+            align_chunks=align_chunks,
+            cache_members=cache_members,
         )
 
     def __init__(
@@ -767,8 +750,13 @@ class ZarrStore(AbstractWritableDataStore):
         write_empty: bool | None = None,
         close_store_on_close: bool = False,
         use_zarr_fill_value_as_mask=None,
+        align_chunks: bool = False,
         cache_members: bool = True,
     ):
+        if align_chunks:
+            # Disabled the safe_chunks validations if the alignment is going to be applied
+            safe_chunks = False
+
         self.zarr_group = zarr_group
         self._read_only = self.zarr_group.read_only
         self._synchronizer = self.zarr_group.synchronizer
@@ -777,6 +765,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._consolidate_on_close = consolidate_on_close
         self._append_dim = append_dim
         self._write_region = write_region
+        self._align_chunks = align_chunks
         self._safe_chunks = safe_chunks
         self._write_empty = write_empty
         self._close_store_on_close = close_store_on_close
@@ -795,6 +784,22 @@ class ZarrStore(AbstractWritableDataStore):
             # `cache_members` set to `False` to disable this cache and instead fetch members
             # on demand.
             self._members = self._fetch_members()
+
+    def get_child_store(self, group: str) -> Self:
+        zarr_group = self.zarr_group.require_group(group)
+        return type(self)(
+            zarr_group=zarr_group,
+            mode=self._mode,
+            consolidate_on_close=self._consolidate_on_close,
+            append_dim=self._append_dim,
+            write_region=self._write_region,
+            safe_chunks=self._safe_chunks,
+            write_empty=self._write_empty,
+            close_store_on_close=self._close_store_on_close,
+            use_zarr_fill_value_as_mask=self._use_zarr_fill_value_as_mask,
+            align_chunks=self._align_chunks,
+            cache_members=self._cache_members,
+        )
 
     @property
     def members(self) -> dict[str, ZarrArray | ZarrGroup]:
@@ -877,9 +882,8 @@ class ZarrStore(AbstractWritableDataStore):
             if zarr_array.fill_value is not None:
                 attributes["_FillValue"] = zarr_array.fill_value
         elif "_FillValue" in attributes:
-            original_zarr_dtype = zarr_array.metadata.data_type
             attributes["_FillValue"] = FillValueCoder.decode(
-                attributes["_FillValue"], original_zarr_dtype.value
+                attributes["_FillValue"], zarr_array.dtype
             )
 
         return Variable(dimensions, data, attributes, encoding)
@@ -917,8 +921,8 @@ class ZarrStore(AbstractWritableDataStore):
     def set_attributes(self, attributes):
         _put_attrs(self.zarr_group, attributes)
 
-    def encode_variable(self, variable):
-        variable = encode_zarr_variable(variable)
+    def encode_variable(self, variable, name=None):
+        variable = encode_zarr_variable(variable, name=name)
         return variable
 
     def encode_attribute(self, a):
@@ -1058,9 +1062,6 @@ class ZarrStore(AbstractWritableDataStore):
                 kwargs["zarr_format"] = self.zarr_group.metadata.zarr_format
             zarr.consolidate_metadata(self.zarr_group.store, **kwargs)
 
-    def sync(self):
-        pass
-
     def _open_existing_array(self, *, name) -> ZarrArray:
         import zarr
         from zarr import Array as ZarrArray
@@ -1139,7 +1140,13 @@ class ZarrStore(AbstractWritableDataStore):
         zarr_array = _put_attrs(zarr_array, attrs)
         return zarr_array
 
-    def set_variables(self, variables, check_encoding_set, writer, unlimited_dims=None):
+    def set_variables(
+        self,
+        variables: dict[str, Variable],
+        check_encoding_set,
+        writer,
+        unlimited_dims=None,
+    ):
         """
         This provides a centralized method to set the variables on the data
         store.
@@ -1200,8 +1207,11 @@ class ZarrStore(AbstractWritableDataStore):
                         zarr_array.shape[append_axis], None
                     )
 
-                    new_shape = list(zarr_array.shape)
-                    new_shape[append_axis] += v.shape[append_axis]
+                    new_shape = (
+                        zarr_array.shape[:append_axis]
+                        + (zarr_array.shape[append_axis] + v.shape[append_axis],)
+                        + zarr_array.shape[append_axis + 1 :]
+                    )
                     zarr_array.resize(new_shape)
 
                 zarr_shape = zarr_array.shape
@@ -1217,12 +1227,35 @@ class ZarrStore(AbstractWritableDataStore):
                 v,
                 raise_on_invalid=vn in check_encoding_set,
                 name=vn,
-                safe_chunks=self._safe_chunks,
-                region=region,
-                mode=self._mode,
-                shape=zarr_shape,
                 zarr_format=3 if is_zarr_v3_format else 2,
             )
+
+            if self._align_chunks and isinstance(encoding["chunks"], tuple):
+                v = grid_rechunk(
+                    v=v,
+                    enc_chunks=encoding["chunks"],
+                    region=region,
+                )
+
+            if self._safe_chunks and isinstance(encoding["chunks"], tuple):
+                # the hard case
+                # DESIGN CHOICE: do not allow multiple dask chunks on a single zarr chunk
+                # this avoids the need to get involved in zarr synchronization / locking
+                # From zarr docs:
+                #  "If each worker in a parallel computation is writing to a
+                #   separate region of the array, and if region boundaries are perfectly aligned
+                #   with chunk boundaries, then no synchronization is required."
+                # TODO: incorporate synchronizer to allow writes from multiple dask
+                # threads
+                shape = zarr_shape or v.shape
+                validate_grid_chunks_alignment(
+                    nd_v_chunks=v.chunks,
+                    enc_chunks=encoding["chunks"],
+                    region=region,
+                    allow_partial_chunks=self._mode != "r+",
+                    name=name,
+                    backend_shape=shape,
+                )
 
             if self._mode == "w" or name not in existing_keys:
                 # new variable
@@ -1233,7 +1266,7 @@ class ZarrStore(AbstractWritableDataStore):
                 else:
                     encoded_attrs[DIMENSION_KEY] = dims
 
-                encoding["overwrite"] = True if self._mode == "w" else False
+                encoding["overwrite"] = self._mode == "w"
 
                 zarr_array = self._create_new_array(
                     name=name,
@@ -1245,6 +1278,9 @@ class ZarrStore(AbstractWritableDataStore):
                 )
 
             writer.add(v.data, zarr_array, region)
+
+    def sync(self) -> None:
+        pass
 
     def close(self) -> None:
         if self._close_store_on_close:
@@ -1377,6 +1413,7 @@ def open_zarr(
     use_zarr_fill_value_as_mask=None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
+    create_default_indexes=True,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -1399,8 +1436,10 @@ def open_zarr(
 
         - ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
-        - ``chunks=None`` skips using dask, which is generally faster for
-          small arrays.
+        - ``chunks=None`` skips using dask. This uses xarray's internally private
+          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          but data is eagerly loaded into memory as numpy arrays when accessed.
+          This can be more efficient for smaller arrays, though results may vary.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
         - ``chunks={}`` loads the data with dask using engine preferred chunks if
           exposed by the backend, otherwise with a single chunk for all arrays.
@@ -1487,6 +1526,13 @@ def open_zarr(
         chunked arrays, via whichever chunk manager is specified through the ``chunked_array_type`` kwarg.
         Defaults to ``{'manager': 'dask'}``, meaning additional kwargs will be passed eventually to
         :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+    create_default_indexes : bool, default: True
+        If True, create pandas indexes for :term:`dimension coordinates <dimension coordinate>`,
+        which loads the coordinate data into memory. Set it to False if you want to avoid loading
+        data into memory.
+
+        Note that backends can still choose to create other indexes. If you want to control that,
+        please refer to the backend's documentation.
 
     Returns
     -------
@@ -1543,6 +1589,7 @@ def open_zarr(
         engine="zarr",
         chunks=chunks,
         drop_variables=drop_variables,
+        create_default_indexes=create_default_indexes,
         chunked_array_type=chunked_array_type,
         from_array_kwargs=from_array_kwargs,
         backend_kwargs=backend_kwargs,
@@ -1569,19 +1616,18 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
     description = "Open zarr files (.zarr) using zarr in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ZarrBackendEntrypoint.html"
 
-    def guess_can_open(
-        self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
-    ) -> bool:
+    def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         if isinstance(filename_or_obj, str | os.PathLike):
-            _, ext = os.path.splitext(filename_or_obj)
-            return ext in {".zarr"}
+            # allow a trailing slash to account for an autocomplete
+            # adding it.
+            _, ext = os.path.splitext(str(filename_or_obj).rstrip("/"))
+            return ext in [".zarr"]
 
         return False
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -1636,7 +1682,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -1678,7 +1724,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -1798,6 +1844,11 @@ def _get_open_params(
     else:
         missing_exc = zarr.errors.GroupNotFoundError
 
+    if _zarr_v3():
+        # zarr 3.0.8 and earlier did not support this property - it was effectively assumed true
+        if not getattr(store, "supports_consolidated_metadata", True):
+            consolidated = consolidate_on_close = False
+
     if consolidated in [None, True]:
         # open the root of the store, in case there is metadata consolidated there
         group = open_kwargs.pop("path")
@@ -1855,6 +1906,7 @@ def _get_open_params(
         else:
             # this was the default for v2 and should apply to most existing Zarr data
             use_zarr_fill_value_as_mask = True
+
     return (
         zarr_group,
         consolidate_on_close,

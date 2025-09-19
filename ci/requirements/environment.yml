@@ -4,7 +4,7 @@ channels:
   - nodefaults
 dependencies:
   - aiobotocore
-  - array-api-strict
+  - array-api-strict<2.4
   - boto3
   - bottleneck
   - cartopy
@@ -20,12 +20,13 @@ dependencies:
   - iris
   - lxml # Optional dep of pydap
   - matplotlib-base
+  - mypy==1.18.1
   - nc-time-axis
   - netcdf4
   - numba
   - numbagg
   - numexpr
-  - numpy>=2
+  - numpy>=2.2
   - opt_einsum
   - packaging
   - pandas
@@ -38,6 +39,7 @@ dependencies:
   - pydap
   - pydap-server
   - pytest
+  - pytest-asyncio
   - pytest-cov
   - pytest-env
   - pytest-mypy-plugins
@@ -55,6 +57,7 @@ dependencies:
   - types-python-dateutil
   - types-pytz
   - types-PyYAML
+  - types-requests
   - types-setuptools
   - types-openpyxl
   - typing_extensions

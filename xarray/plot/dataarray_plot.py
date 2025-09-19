@@ -196,7 +196,13 @@ def _prepare_plot1d_data(
                 dim = coords_to_plot.get(v, None)
                 if (dim is not None) and (dim in darray.dims):
                     darray_nan = np.nan * darray.isel({dim: -1})
-                    darray = concat([darray, darray_nan], dim=dim)
+                    darray = concat(
+                        [darray, darray_nan],
+                        dim=dim,
+                        coords="minimal",
+                        compat="override",
+                        join="exact",
+                    )
                     dims_T.append(coords_to_plot[v])
 
         # Lines should never connect to the same coordinate when stacked,
@@ -1479,7 +1485,7 @@ artist :
         if subplot_kws is None:
             subplot_kws = dict()
 
-        if plotfunc.__name__ == "surface" and not kwargs.get("_is_facetgrid", False):
+        if plotfunc.__name__ == "surface" and not kwargs.get("_is_facetgrid"):
             if ax is None:
                 # TODO: Importing Axes3D is no longer necessary in matplotlib >= 3.2.
                 # Remove when minimum requirement of matplotlib is 3.2:
@@ -1511,7 +1517,7 @@ artist :
 
         if (
             plotfunc.__name__ == "surface"
-            and not kwargs.get("_is_facetgrid", False)
+            and not kwargs.get("_is_facetgrid")
             and ax is not None
         ):
             import mpl_toolkits
@@ -1588,7 +1594,7 @@ artist :
             kwargs["levels"] = cmap_params["levels"]
             # if colors == a single color, matplotlib draws dashed negative
             # contours. we lose this feature if we pass cmap and not colors
-            if isinstance(colors, str):
+            if colors is not None:
                 cmap_params["cmap"] = None
                 kwargs["colors"] = colors
 

@@ -88,6 +88,19 @@ def test_assert_allclose_equal_transpose(func) -> None:
     getattr(xr.testing, func)(ds1, ds2, check_dim_order=False)
 
 
+def test_assert_equal_transpose_datatree() -> None:
+    """Ensure `check_dim_order=False` works for transposed DataTree"""
+    ds = xr.Dataset(data_vars={"data": (("x", "y"), [[1, 2]])})
+
+    a = xr.DataTree.from_dict({"node": ds})
+    b = xr.DataTree.from_dict({"node": ds.transpose("y", "x")})
+
+    with pytest.raises(AssertionError):
+        xr.testing.assert_equal(a, b)
+
+    xr.testing.assert_equal(a, b, check_dim_order=False)
+
+
 @pytest.mark.filterwarnings("error")
 @pytest.mark.parametrize(
     "duckarray",
@@ -179,7 +192,11 @@ def test_ensure_warnings_not_elevated(func) -> None:
             return super().dims
 
         def __array__(
-            self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+            self,
+            dtype: np.typing.DTypeLike | None = None,
+            /,
+            *,
+            copy: bool | None = None,
         ) -> np.ndarray:
             warnings.warn("warning in test", stacklevel=2)
             return super().__array__(dtype, copy=copy)

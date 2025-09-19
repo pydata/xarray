@@ -94,8 +94,8 @@ def test_coder_roundtrip() -> None:
     assert_identical(original, roundtripped)
 
 
-@pytest.mark.parametrize("dtype", "u1 u2 i1 i2 f2 f4".split())
-@pytest.mark.parametrize("dtype2", "f4 f8".split())
+@pytest.mark.parametrize("dtype", ["u1", "u2", "i1", "i2", "f2", "f4"])
+@pytest.mark.parametrize("dtype2", ["f4", "f8"])
 def test_scaling_converts_to_float(dtype: str, dtype2: str) -> None:
     dt = np.dtype(dtype2)
     original = xr.Variable(

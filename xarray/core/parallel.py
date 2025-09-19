@@ -351,7 +351,9 @@ def map_blocks(
         result = func(*converted_args, **kwargs)
 
         merged_coordinates = merge(
-            [arg.coords for arg in args if isinstance(arg, Dataset | DataArray)]
+            [arg.coords for arg in args if isinstance(arg, Dataset | DataArray)],
+            join="exact",
+            compat="override",
         ).coords
 
         # check all dims are present
@@ -363,12 +365,14 @@ def map_blocks(
 
         # check that index lengths and values are as expected
         for name, index in result._indexes.items():
-            if name in expected["shapes"]:
-                if result.sizes[name] != expected["shapes"][name]:
-                    raise ValueError(
-                        f"Received dimension {name!r} of length {result.sizes[name]}. "
-                        f"Expected length {expected['shapes'][name]}."
-                    )
+            if (
+                name in expected["shapes"]
+                and result.sizes[name] != expected["shapes"][name]
+            ):
+                raise ValueError(
+                    f"Received dimension {name!r} of length {result.sizes[name]}. "
+                    f"Expected length {expected['shapes'][name]}."
+                )
 
             # ChainMap wants MutableMapping, but xindexes is Mapping
             merged_indexes = collections.ChainMap(
@@ -439,7 +443,11 @@ def map_blocks(
     # rechunk any numpy variables appropriately
     xarray_objs = tuple(arg.chunk(arg.chunksizes) for arg in xarray_objs)
 
-    merged_coordinates = merge([arg.coords for arg in aligned]).coords
+    merged_coordinates = merge(
+        [arg.coords for arg in aligned],
+        join="exact",
+        compat="override",
+    ).coords
 
     _, npargs = unzip(
         sorted(
@@ -472,7 +480,10 @@ def map_blocks(
         )
 
         coordinates = merge(
-            (preserved_coords, template.coords.to_dataset()[new_coord_vars])
+            (preserved_coords, template.coords.to_dataset()[new_coord_vars]),
+            # FIXME: this should be join="exact", but breaks a test
+            join="outer",
+            compat="override",
         ).coords
         output_chunks: Mapping[Hashable, tuple[int, ...]] = {
             dim: input_chunks[dim] for dim in template.dims if dim in input_chunks

@@ -25,7 +25,7 @@ dependencies:
   - ncdata
   - netcdf4
   - numba
-  - numpy>=2
+  - numpy>=2.2
   - packaging
   - pandas
   - pooch

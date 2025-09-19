@@ -25,7 +25,7 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 2
       - uses: xarray-contrib/ci-trigger@v1
@@ -37,8 +37,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: detect-ci-trigger
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
-    env:
-      ZARR_V3_EXPERIMENTAL_API: 1
     defaults:
       run:
         shell: bash -l {0}
@@ -47,15 +45,18 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.10", "3.13"]
+        python-version: ["3.11", "3.13"]
         env: [""]
         include:
           # Minimum python version:
           - env: "bare-minimum"
-            python-version: "3.10"
+            python-version: "3.11"
+            os: ubuntu-latest
+          - env: "bare-min-and-scipy"
+            python-version: "3.11"
             os: ubuntu-latest
           - env: "min-all-deps"
-            python-version: "3.10"
+            python-version: "3.11"
             os: ubuntu-latest
           # Latest python version:
           - env: "all-but-numba"
@@ -70,7 +71,7 @@ jobs:
           # The mypy tests must be executed using only 1 process in order to guarantee
           # predictable mypy output messages for comparison to expectations.
           - env: "mypy"
-            python-version: "3.10"
+            python-version: "3.11"
             numprocesses: 1
             os: ubuntu-latest
           - env: "mypy"
@@ -78,7 +79,7 @@ jobs:
             numprocesses: 1
             os: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Set environment variables
@@ -172,7 +173,7 @@ jobs:
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v5.4.2
+        uses: codecov/codecov-action@v5.5.1
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:

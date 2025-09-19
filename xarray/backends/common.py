@@ -4,9 +4,18 @@ import logging
 import os
 import time
 import traceback
-from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from glob import glob
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Self,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -188,6 +197,19 @@ def _find_absolute_paths(
     return _normalize_path_list(paths)
 
 
+@dataclass
+class BytesIOProxy:
+    """Proxy object for a write that a memoryview."""
+
+    getvalue: Callable[[], memoryview] | None = None
+
+    def getbuffer(self) -> memoryview:
+        """Get the value of this write as bytes or memory."""
+        if self.getvalue is None:
+            raise ValueError("must set getvalue before fetching value")
+        return self.getvalue()
+
+
 def _open_remote_file(file, mode, storage_options=None):
     import fsspec
 
@@ -227,6 +249,20 @@ def find_root_and_group(ds):
         ds = ds.parent
     group = "/" + "/".join(hierarchy)
     return ds, group
+
+
+def collect_ancestor_dimensions(group) -> dict[str, int]:
+    """Returns dimensions defined in parent groups.
+
+    If dimensions are defined in multiple ancestors, use the size of the closest
+    ancestor.
+    """
+    dims = {}
+    while (group := group.parent) is not None:
+        for k, v in group.dimensions.items():
+            if k not in dims:
+                dims[k] = len(v)
+    return dims
 
 
 def datatree_from_dict_with_io_cleanup(groups_dict: Mapping[str, Dataset]) -> DataTree:
@@ -270,16 +306,30 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     __slots__ = ()
 
-    def get_duck_array(self, dtype: np.typing.DTypeLike = None):
+    async def async_getitem(self, key: indexing.ExplicitIndexer) -> np.typing.ArrayLike:
+        raise NotImplementedError("Backend does not support asynchronous loading")
+
+    def get_duck_array(self, dtype: np.typing.DTypeLike | None = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return self[key]  # type: ignore[index]
+
+    async def async_get_duck_array(self, dtype: np.typing.DTypeLike | None = None):
+        key = indexing.BasicIndexer((slice(None),) * self.ndim)
+        return await self.async_getitem(key)
 
 
 class AbstractDataStore:
     __slots__ = ()
 
+    def get_child_store(self, group: str) -> Self:  # pragma: no cover
+        """Get a store corresponding to the indicated child group."""
+        raise NotImplementedError()
+
     def get_dimensions(self):  # pragma: no cover
         raise NotImplementedError()
+
+    def get_parent_dimensions(self):  # pragma: no cover
+        return {}
 
     def get_attrs(self):  # pragma: no cover
         raise NotImplementedError()
@@ -324,6 +374,11 @@ class AbstractDataStore:
         self.close()
 
 
+T_PathFileOrDataStore = (
+    str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
+)
+
+
 class ArrayWriter:
     __slots__ = ("lock", "regions", "sources", "targets")
 
@@ -338,11 +393,10 @@ class ArrayWriter:
             self.sources.append(source)
             self.targets.append(target)
             self.regions.append(region)
+        elif region:
+            target[region] = source
         else:
-            if region:
-                target[region] = source
-            else:
-                target[...] = source
+            target[...] = source
 
     def sync(self, compute=True, chunkmanager_store_kwargs=None):
         if self.sources:
@@ -390,11 +444,25 @@ class AbstractWritableDataStore(AbstractDataStore):
         attributes : dict-like
 
         """
-        variables = {k: self.encode_variable(v) for k, v in variables.items()}
-        attributes = {k: self.encode_attribute(v) for k, v in attributes.items()}
-        return variables, attributes
+        encoded_variables = {}
+        for k, v in variables.items():
+            try:
+                encoded_variables[k] = self.encode_variable(v)
+            except Exception as e:
+                e.add_note(f"Raised while encoding variable {k!r} with value {v!r}")
+                raise
 
-    def encode_variable(self, v):
+        encoded_attributes = {}
+        for k, v in attributes.items():
+            try:
+                encoded_attributes[k] = self.encode_attribute(v)
+            except Exception as e:
+                e.add_note(f"Raised while encoding attribute {k!r} with value {v!r}")
+                raise
+
+        return encoded_variables, encoded_attributes
+
+    def encode_variable(self, v, name=None):
         """encode one variable"""
         return v
 
@@ -402,7 +470,10 @@ class AbstractWritableDataStore(AbstractDataStore):
         """encode one attribute"""
         return a
 
-    def set_dimension(self, dim, length):  # pragma: no cover
+    def prepare_variable(self, name, variable, check_encoding, unlimited_dims):
+        raise NotImplementedError()
+
+    def set_dimension(self, dim, length, is_unlimited):  # pragma: no cover
         raise NotImplementedError()
 
     def set_attribute(self, k, v):  # pragma: no cover
@@ -515,13 +586,14 @@ class AbstractWritableDataStore(AbstractDataStore):
         if unlimited_dims is None:
             unlimited_dims = set()
 
+        parent_dims = self.get_parent_dimensions()
         existing_dims = self.get_dimensions()
 
         dims = {}
         for v in unlimited_dims:  # put unlimited_dims first
             dims[v] = None
         for v in variables.values():
-            dims.update(dict(zip(v.dims, v.shape, strict=True)))
+            dims |= v.sizes
 
         for dim, length in dims.items():
             if dim in existing_dims and length != existing_dims[dim]:
@@ -529,9 +601,13 @@ class AbstractWritableDataStore(AbstractDataStore):
                     "Unable to update size for existing dimension"
                     f"{dim!r} ({length} != {existing_dims[dim]})"
                 )
-            elif dim not in existing_dims:
+            elif dim not in existing_dims and length != parent_dims.get(dim):
                 is_unlimited = dim in unlimited_dims
                 self.set_dimension(dim, length, is_unlimited)
+
+    def sync(self):
+        """Write all buffered data to disk."""
+        raise NotImplementedError()
 
 
 def _infer_dtype(array, name=None):
@@ -544,11 +620,10 @@ def _infer_dtype(array, name=None):
 
     native_dtypes = set(np.vectorize(type, otypes=[object])(array.ravel()))
     if len(native_dtypes) > 1 and native_dtypes != {bytes, str}:
+        native_dtype_names = ", ".join(x.__name__ for x in native_dtypes)
         raise ValueError(
-            "unable to infer dtype on variable {!r}; object array "
-            "contains mixed native types: {}".format(
-                name, ", ".join(x.__name__ for x in native_dtypes)
-            )
+            f"unable to infer dtype on variable {name!r}; object array "
+            f"contains mixed native types: {native_dtype_names}"
         )
 
     element = array[(0,) * array.ndim]
@@ -569,7 +644,7 @@ def _infer_dtype(array, name=None):
     )
 
 
-def _copy_with_dtype(data, dtype: np.typing.DTypeLike):
+def _copy_with_dtype(data, dtype: np.typing.DTypeLike | None):
     """Create a copy of an array with the given dtype.
 
     We use this instead of np.array() to ensure that custom object dtypes end
@@ -639,9 +714,7 @@ class WritableCFDataStore(AbstractWritableDataStore):
         variables = {
             k: ensure_dtype_not_object(v, name=k) for k, v in variables.items()
         }
-        variables = {k: self.encode_variable(v) for k, v in variables.items()}
-        attributes = {k: self.encode_attribute(v) for k, v in attributes.items()}
-        return variables, attributes
+        return super().encode(variables, attributes)
 
 
 class BackendEntrypoint:
@@ -692,7 +765,12 @@ class BackendEntrypoint:
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> Dataset:
@@ -704,7 +782,12 @@ class BackendEntrypoint:
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
     ) -> bool:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
@@ -714,7 +797,12 @@ class BackendEntrypoint:
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> DataTree:
@@ -726,7 +814,12 @@ class BackendEntrypoint:
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: str
+        | os.PathLike[Any]
+        | ReadBuffer
+        | bytes
+        | memoryview
+        | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> dict[str, Dataset]:

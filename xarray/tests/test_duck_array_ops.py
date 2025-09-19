@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import copy
 import datetime as dt
 import pickle
 import warnings
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -63,13 +65,13 @@ try:
 
     @pytest.fixture
     def arrow1():
-        return pd.arrays.ArrowExtensionArray(
+        return pd.arrays.ArrowExtensionArray(  # type: ignore[attr-defined]
             pa.array([{"x": 1, "y": True}, {"x": 2, "y": False}])
         )
 
     @pytest.fixture
     def arrow2():
-        return pd.arrays.ArrowExtensionArray(
+        return pd.arrays.ArrowExtensionArray(  # type: ignore[attr-defined]
             pa.array([{"x": 3, "y": False}, {"x": 4, "y": True}])
         )
 
@@ -199,6 +201,16 @@ class TestOps:
         )
         assert concatenated[2].array[0]["x"] == 3
         assert concatenated[3].array[0]["y"]
+
+    @requires_pyarrow
+    def test_extension_array_copy_arrow_type(self):
+        arr = pd.array([pd.NA, 1, 2], dtype="int64[pyarrow]")
+        # Relying on the `__getattr__` of `PandasExtensionArray` to do the deep copy
+        # recursively only fails for `int64[pyarrow]` and similar types so this
+        # test ensures that copying still works there.
+        assert isinstance(
+            copy.deepcopy(PandasExtensionArray(arr), memo=None).array, type(arr)
+        )
 
     def test___getitem__extension_duck_array(self, categorical1):
         extension_duck_array = PandasExtensionArray(categorical1)
@@ -576,7 +588,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
     if dask and not has_dask:
         pytest.skip("requires dask")
 
-    if dask and skipna is False and dtype in [np.bool_]:
+    if dask and skipna is False and dtype == np.bool_:
         pytest.skip("dask does not compute object-typed array")
 
     rtol = 1e-04 if dtype == np.float32 else 1e-05
@@ -929,8 +941,8 @@ def test_datetime_to_numeric_cftime(dask):
         result = duck_array_ops.datetime_to_numeric(
             times, datetime_unit="h", dtype=dtype
         )
-    expected = 24 * np.arange(0, 35, 7).astype(dtype)
-    np.testing.assert_array_equal(result, expected)
+    expected2: Any = 24 * np.arange(0, 35, 7).astype(dtype)
+    np.testing.assert_array_equal(result, expected2)
 
     with raise_if_dask_computes():
         if dask:
@@ -940,8 +952,8 @@ def test_datetime_to_numeric_cftime(dask):
         result = duck_array_ops.datetime_to_numeric(
             time, offset=times[0], datetime_unit="h", dtype=int
         )
-    expected = np.array(24 * 7).astype(int)
-    np.testing.assert_array_equal(result, expected)
+    expected3 = np.array(24 * 7).astype(int)
+    np.testing.assert_array_equal(result, expected3)
 
 
 @requires_cftime

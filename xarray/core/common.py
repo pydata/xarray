@@ -164,7 +164,7 @@ class AbstractArray:
         return complex(self.values)
 
     def __array__(
-        self: Any, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self: Any, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if not copy:
             if np.lib.NumpyVersion(np.__version__) >= "2.0.0":
@@ -1782,7 +1782,7 @@ def _full_like_variable(
             other.shape,
             fill_value,
             dtype=dtype,
-            chunks=chunks if chunks else other.data.chunks,
+            chunks=chunks or other.data.chunks,
             **from_array_kwargs,
         )
     else:
@@ -2073,18 +2073,18 @@ def get_chunksizes(
     return Frozen(chunks)
 
 
-def is_np_datetime_like(dtype: DTypeLike) -> bool:
+def is_np_datetime_like(dtype: DTypeLike | None) -> bool:
     """Check if a dtype is a subclass of the numpy datetime types"""
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
-def is_np_timedelta_like(dtype: DTypeLike) -> bool:
+def is_np_timedelta_like(dtype: DTypeLike | None) -> bool:
     """Check whether dtype is of the timedelta64 dtype."""
     return np.issubdtype(dtype, np.timedelta64)
 
 
 def _contains_cftime_datetimes(array: Any) -> bool:
-    """Check if a array inside a Variable contains cftime.datetime objects"""
+    """Check if an array inside a Variable contains cftime.datetime objects"""
     if cftime is None:
         return False
 
@@ -2108,3 +2108,21 @@ def _contains_datetime_like_objects(var: T_Variable) -> bool:
     np.datetime64, np.timedelta64, or cftime.datetime)
     """
     return is_np_datetime_like(var.dtype) or contains_cftime_datetimes(var)
+
+
+def _is_numeric_aggregatable_dtype(var: T_Variable) -> bool:
+    """Check if a variable's dtype can be used in numeric aggregations like mean().
+
+    This includes:
+    - Numeric types (int, float, complex)
+    - Boolean type
+    - Datetime types (datetime64, timedelta64)
+    - Object arrays containing datetime-like objects (e.g., cftime)
+    """
+    return (
+        np.issubdtype(var.dtype, np.number)
+        or (var.dtype == np.bool_)
+        or np.issubdtype(var.dtype, np.datetime64)
+        or np.issubdtype(var.dtype, np.timedelta64)
+        or _contains_cftime_datetimes(var._data)
+    )

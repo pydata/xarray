@@ -112,7 +112,7 @@ def _apply_str_ufunc(
     *,
     func: Callable,
     obj: Any,
-    dtype: DTypeLike = None,
+    dtype: DTypeLike | None = None,
     output_core_dims: list | tuple = ((),),
     output_sizes: Mapping[Any, int] | None = None,
     func_args: tuple = (),
@@ -224,7 +224,7 @@ class StringAccessor(Generic[T_DataArray]):
         self,
         *,
         func: Callable,
-        dtype: DTypeLike = None,
+        dtype: DTypeLike | None = None,
         output_core_dims: list | tuple = ((),),
         output_sizes: Mapping[Any, int] | None = None,
         func_args: tuple = (),
@@ -349,7 +349,7 @@ class StringAccessor(Generic[T_DataArray]):
             islice = slice(-1, None) if iind == -1 else slice(iind, iind + 1)
             item = x[islice]
 
-            return item if item else default
+            return item or default
 
         return self._apply(func=f, func_args=(i,))
 
@@ -662,10 +662,11 @@ class StringAccessor(Generic[T_DataArray]):
         """
         args = tuple(self._stringify(x) for x in args)
         kwargs = {key: self._stringify(val) for key, val in kwargs.items()}
-        func = lambda x, *args, **kwargs: self._obj.dtype.type.format(
-            x, *args, **kwargs
+        return self._apply(
+            func=self._obj.dtype.type.format,
+            func_args=args,
+            func_kwargs={"kwargs": kwargs},
         )
-        return self._apply(func=func, func_args=args, func_kwargs={"kwargs": kwargs})
 
     def capitalize(self) -> T_DataArray:
         """
@@ -1944,7 +1945,7 @@ class StringAccessor(Generic[T_DataArray]):
         if regex:
             pat = self._re_compile(pat=pat, flags=flags, case=case)
             func = lambda x, ipat, irepl, i_n: ipat.sub(
-                repl=irepl, string=x, count=i_n if i_n >= 0 else 0
+                repl=irepl, string=x, count=max(i_n, 0)
             )
         else:
             pat = self._stringify(pat)

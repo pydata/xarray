@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import collections.abc
 import copy
+import inspect
 from collections import defaultdict
-from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -22,6 +23,7 @@ from xarray.core.utils import (
     Frozen,
     emit_user_level_warning,
     get_valid_numpy_dtype,
+    is_allowed_extension_array_dtype,
     is_dict_like,
     is_scalar,
 )
@@ -348,7 +350,15 @@ class Index:
         """
         raise NotImplementedError(f"{self!r} doesn't support re-indexing labels")
 
-    def equals(self, other: Index) -> bool:
+    @overload
+    def equals(self, other: Index) -> bool: ...
+
+    @overload
+    def equals(
+        self, other: Index, *, exclude: frozenset[Hashable] | None = None
+    ) -> bool: ...
+
+    def equals(self, other: Index, **kwargs) -> bool:
         """Compare this index with another index of the same type.
 
         Implementation is optional but required in order to support alignment.
@@ -357,11 +367,22 @@ class Index:
         ----------
         other : Index
             The other Index object to compare with this object.
+        exclude : frozenset of hashable, optional
+            Dimensions excluded from checking. It is None by default, (i.e.,
+            when this method is not called in the context of alignment). For a
+            n-dimensional index this option allows an Index to optionally ignore
+            any dimension in ``exclude`` when comparing ``self`` with ``other``.
+            For a 1-dimensional index this kwarg can be safely ignored, as this
+            method is not called when all of the index's dimensions are also
+            excluded from alignment (note: the index's dimensions correspond to
+            the union of the dimensions of all coordinate variables associated
+            with this index).
 
         Returns
         -------
         is_equal : bool
             ``True`` if the indexes are equal, ``False`` otherwise.
+
         """
         raise NotImplementedError()
 
@@ -459,7 +480,7 @@ class Index:
     def __getitem__(self, indexer: Any) -> Self:
         raise NotImplementedError()
 
-    def _repr_inline_(self, max_width):
+    def _repr_inline_(self, max_width: int) -> str:
         return self.__class__.__name__
 
 
@@ -646,9 +667,8 @@ class PandasIndex(Index):
 
         self.index = index
         self.dim = dim
-
         if coord_dtype is None:
-            if pd.api.types.is_extension_array_dtype(index.dtype):
+            if is_allowed_extension_array_dtype(index.dtype):
                 cast(pd.api.extensions.ExtensionDtype, index.dtype)
                 coord_dtype = index.dtype
             else:
@@ -697,7 +717,7 @@ class PandasIndex(Index):
 
         # preserve wrapped pd.Index (if any)
         # accessing `.data` can load data from disk, so we only access if needed
-        data = var._data.array if hasattr(var._data, "array") else var.data
+        data = var._data if isinstance(var._data, PandasIndexingAdapter) else var.data  # type: ignore[redundant-expr]
         # multi-index level variable: get level index
         if isinstance(var._data, PandasMultiIndexingAdapter):
             level = var._data.level
@@ -748,10 +768,12 @@ class PandasIndex(Index):
 
         if not indexes:
             coord_dtype = None
-        elif len(set(idx.coord_dtype for idx in indexes)) == 1:
-            coord_dtype = indexes[0].coord_dtype
         else:
-            coord_dtype = np.result_type(*[idx.coord_dtype for idx in indexes])
+            indexes_coord_dtypes = {idx.coord_dtype for idx in indexes}
+            if len(indexes_coord_dtypes) == 1:
+                coord_dtype = next(iter(indexes_coord_dtypes))
+            else:
+                coord_dtype = np.result_type(*indexes_coord_dtypes)
 
         return cls(new_pd_index, dim=dim, coord_dtype=coord_dtype)
 
@@ -795,7 +817,7 @@ class PandasIndex(Index):
             # scalar indexer: drop index
             return None
 
-        return self._replace(self.index[indxr])  # type: ignore[index]
+        return self._replace(self.index[indxr])  # type: ignore[index,unused-ignore]
 
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
@@ -830,23 +852,18 @@ class PandasIndex(Index):
                             "'tolerance' is not supported when indexing using a CategoricalIndex."
                         )
                     indexer = self.index.get_loc(label_value)
+                elif method is not None:
+                    indexer = get_indexer_nd(self.index, label_array, method, tolerance)
+                    if np.any(indexer < 0):
+                        raise KeyError(f"not all values found in index {coord_name!r}")
                 else:
-                    if method is not None:
-                        indexer = get_indexer_nd(
-                            self.index, label_array, method, tolerance
-                        )
-                        if np.any(indexer < 0):
-                            raise KeyError(
-                                f"not all values found in index {coord_name!r}"
-                            )
-                    else:
-                        try:
-                            indexer = self.index.get_loc(label_value)
-                        except KeyError as e:
-                            raise KeyError(
-                                f"not all values found in index {coord_name!r}. "
-                                "Try setting the `method` keyword argument (example: method='nearest')."
-                            ) from e
+                    try:
+                        indexer = self.index.get_loc(label_value)
+                    except KeyError as e:
+                        raise KeyError(
+                            f"not all values found in index {coord_name!r}. "
+                            "Try setting the `method` keyword argument (example: method='nearest')."
+                        ) from e
 
             elif label_array.dtype.kind == "b":
                 indexer = label_array
@@ -863,7 +880,7 @@ class PandasIndex(Index):
 
         return IndexSelResult({self.dim: indexer})
 
-    def equals(self, other: Index):
+    def equals(self, other: Index, *, exclude: frozenset[Hashable] | None = None):
         if not isinstance(other, PandasIndex):
             return False
         return self.index.equals(other.index) and self.dim == other.dim
@@ -992,7 +1009,7 @@ class PandasMultiIndex(PandasIndex):
     index: pd.MultiIndex
     dim: Hashable
     coord_dtype: Any
-    level_coords_dtype: dict[str, Any]
+    level_coords_dtype: dict[Hashable | None, Any]
 
     __slots__ = ("coord_dtype", "dim", "index", "level_coords_dtype")
 
@@ -1035,7 +1052,7 @@ class PandasMultiIndex(PandasIndex):
         dim = next(iter(variables.values())).dims[0]
 
         index = pd.MultiIndex.from_arrays(
-            [var.values for var in variables.values()], names=variables.keys()
+            [var.values for var in variables.values()], names=list(variables.keys())
         )
         index.name = dim
         level_coords_dtype = {name: var.dtype for name, var in variables.items()}
@@ -1091,7 +1108,7 @@ class PandasMultiIndex(PandasIndex):
         # https://github.com/pandas-dev/pandas/issues/14672
         if all(index.is_monotonic_increasing for index in level_indexes):
             index = pd.MultiIndex.from_product(
-                level_indexes, sortorder=0, names=variables.keys()
+                level_indexes, sortorder=0, names=list(variables.keys())
             )
         else:
             split_labels, levels = zip(
@@ -1101,7 +1118,7 @@ class PandasMultiIndex(PandasIndex):
             labels = [x.ravel().tolist() for x in labels_mesh]
 
             index = pd.MultiIndex(
-                levels=levels, codes=labels, sortorder=0, names=variables.keys()
+                levels=levels, codes=labels, sortorder=0, names=list(variables.keys())
             )
         level_coords_dtype = {k: var.dtype for k, var in variables.items()}
 
@@ -1175,7 +1192,8 @@ class PandasMultiIndex(PandasIndex):
             level_variables[name] = var
 
         codes_as_lists = [list(x) for x in codes]
-        index = pd.MultiIndex(levels=levels, codes=codes_as_lists, names=names)
+        levels_as_lists = [list(level) for level in levels]
+        index = pd.MultiIndex(levels=levels_as_lists, codes=codes_as_lists, names=names)
         level_coords_dtype = {k: var.dtype for k, var in level_variables.items()}
         obj = cls(index, dim, level_coords_dtype=level_coords_dtype)
         index_vars = obj.create_variables(level_variables)
@@ -1230,9 +1248,9 @@ class PandasMultiIndex(PandasIndex):
                 dtype = None
             else:
                 level = name
-                dtype = self.level_coords_dtype[name]  # type: ignore[index]  # TODO: are Hashables ok?
+                dtype = self.level_coords_dtype[name]
 
-            var = variables.get(name, None)
+            var = variables.get(name)
             if var is not None:
                 attrs = var.attrs
                 encoding = var.encoding
@@ -1438,14 +1456,15 @@ class PandasMultiIndex(PandasIndex):
 class CoordinateTransformIndex(Index):
     """Helper class for creating Xarray indexes based on coordinate transforms.
 
-    EXPERIMENTAL (not ready for public use yet).
-
     - wraps a :py:class:`CoordinateTransform` instance
     - takes care of creating the index (lazy) coordinates
     - supports point-wise label-based selection
     - supports exact alignment only, by comparing indexes based on their transform
       (not on their explicit coordinate labels)
 
+    .. caution::
+        This API is experimental and subject to change. Please report any bugs or surprising
+        behaviour you encounter.
     """
 
     transform: CoordinateTransform
@@ -1542,10 +1561,12 @@ class CoordinateTransformIndex(Index):
 
         return IndexSelResult(results)
 
-    def equals(self, other: Index) -> bool:
+    def equals(
+        self, other: Index, *, exclude: frozenset[Hashable] | None = None
+    ) -> bool:
         if not isinstance(other, CoordinateTransformIndex):
             return False
-        return self.transform.equals(other.transform)
+        return self.transform.equals(other.transform, exclude=exclude)
 
     def rename(
         self,
@@ -1635,7 +1656,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
     """
 
-    _index_type: type[Index] | type[pd.Index]
+    _index_type: type[Index | pd.Index]
     _indexes: dict[Any, T_PandasOrXarrayIndex]
     _variables: dict[Any, Variable]
 
@@ -1653,7 +1674,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         self,
         indexes: Mapping[Any, T_PandasOrXarrayIndex] | None = None,
         variables: Mapping[Any, Variable] | None = None,
-        index_type: type[Index] | type[pd.Index] = Index,
+        index_type: type[Index | pd.Index] = Index,
     ):
         """Constructor not for public consumption.
 
@@ -1925,6 +1946,36 @@ def default_indexes(
     return indexes
 
 
+def _wrap_index_equals(
+    index: Index,
+) -> Callable[[Index, frozenset[Hashable]], bool]:
+    # TODO: remove this Index.equals() wrapper (backward compatibility)
+
+    sig = inspect.signature(index.equals)
+
+    if len(sig.parameters) == 1:
+        index_cls_name = type(index).__module__ + "." + type(index).__qualname__
+        emit_user_level_warning(
+            f"the signature ``{index_cls_name}.equals(self, other)`` is deprecated. "
+            f"Please update it to "
+            f"``{index_cls_name}.equals(self, other, *, exclude=None)`` "
+            f"or kindly ask the maintainers of ``{index_cls_name}`` to do it. "
+            "See documentation of xarray.Index.equals() for more info.",
+            FutureWarning,
+        )
+        exclude_kwarg = False
+    else:
+        exclude_kwarg = True
+
+    def equals_wrapper(other: Index, exclude: frozenset[Hashable]) -> bool:
+        if exclude_kwarg:
+            return index.equals(other, exclude=exclude)
+        else:
+            return index.equals(other)
+
+    return equals_wrapper
+
+
 def indexes_equal(
     index: Index,
     other_index: Index,
@@ -1966,6 +2017,7 @@ def indexes_equal(
 
 def indexes_all_equal(
     elements: Sequence[tuple[Index, dict[Hashable, Variable]]],
+    exclude_dims: frozenset[Hashable],
 ) -> bool:
     """Check if indexes are all equal.
 
@@ -1990,9 +2042,11 @@ def indexes_all_equal(
 
     same_type = all(type(indexes[0]) is type(other_idx) for other_idx in indexes[1:])
     if same_type:
+        index_equals_func = _wrap_index_equals(indexes[0])
         try:
             not_equal = any(
-                not indexes[0].equals(other_idx) for other_idx in indexes[1:]
+                not index_equals_func(other_idx, exclude_dims)
+                for other_idx in indexes[1:]
             )
         except NotImplementedError:
             not_equal = check_variables()
