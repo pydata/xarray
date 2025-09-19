@@ -1,0 +1,49 @@
+name: Generate and cache Pixi lockfile
+
+on:
+  workflow_call:
+    outputs:
+      cache-id:
+        description: "The lock file contents"
+        value: ${{ jobs.cache-pixi-lock.outputs.cache-id }}
+
+jobs:
+  cache-pixi-lock:
+    name: Generate output
+    runs-on: ubuntu-latest
+    outputs:
+      cache-id: ${{ steps.restore.outputs.cache-primary-key }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          sparse-checkout: pixi.toml
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        id: restore
+        with:
+          path: |
+            pixi.lock
+          key: ${{ steps.date.outputs.date }}_${{hashFiles('pixi.toml')}}
+      - uses: prefix-dev/setup-pixi@v0.9.0
+        if: ${{ !steps.restore.outputs.cache-hit }}
+        with:
+          pixi-version: v0.49.0
+          run-install: false
+      - name: Run pixi lock
+        if: ${{ !steps.restore.outputs.cache-hit }}
+        run: pixi lock
+      - uses: actions/cache/save@v4
+        if: ${{ !steps.restore.outputs.cache-hit }}
+        id: cache
+        with:
+          path: |
+            pixi.lock
+          key: ${{ steps.restore.outputs.cache-primary-key }}
+      - name: Upload pixi.lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: pixi-lock
+          path: pixi.lock
