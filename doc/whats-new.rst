@@ -79,6 +79,10 @@ Internal Changes
 
 - Refactor structure of ``backends`` module to separate code for reading data from code for writing data (:pull:`10771`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- All test files now have full mypy type checking enabled (``check_untyped_defs = true``),
+  improving type safety and making the test suite a better reference for type annotations.
+  (:pull:`10768`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.2025.09.0:
 
