@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 
 class PydapArrayWrapper(BackendArray):
-    def __init__(self, array, batch=False, checksums=True):
+    def __init__(self, array, batch=None, checksums=True):
         self.array = array
         self._batch = batch
         self._checksums = checksums
@@ -167,11 +167,11 @@ class PydapDataStore(AbstractDataStore):
         return cls(**args)
 
     def open_store_variable(self, var):
-        try:
+        if hasattr(var, "dims"):
             dimensions = [
                 dim.split("/")[-1] if dim.startswith("/") else dim for dim in var.dims
             ]
-        except AttributeError:
+        else:
             # GridType does not have a dims attribute - instead get `dimensions`
             # see https://github.com/pydap/pydap/issues/485
             dimensions = var.dimensions
