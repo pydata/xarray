@@ -77,6 +77,8 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Refactor structure of `backends` module to separate code for reading data from code for writing data (:pull:`10771`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 .. _whats-new.2025.09.0:
 
