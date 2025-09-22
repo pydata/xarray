@@ -25,6 +25,7 @@ from xarray.backends.file_manager import (
     CachingFileManager,
     DummyFileManager,
     FileManager,
+    PickleableFileManager,
 )
 from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
@@ -224,11 +225,13 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
-        manager = (
-            CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
-            if isinstance(filename, str)
-            else h5netcdf.File(filename, mode=mode, **kwargs)
+        manager_cls = (
+            CachingFileManager
+            if isinstance(filename, str) and not is_remote_uri(filename)
+            else PickleableFileManager
         )
+        manager = manager_cls(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
+        
         return cls(
             manager,
             group=group,
@@ -680,7 +683,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         # only warn if phony_dims exist in file
         # remove together with the above check
         # after some versions
-        if store.ds._phony_dim_count > 0 and emit_phony_dims_warning:
+        if store.ds._root._phony_dim_count > 0 and emit_phony_dims_warning:
             _emit_phony_dims_warning()
 
         return groups_dict
