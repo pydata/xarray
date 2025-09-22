@@ -5,6 +5,7 @@ import pickle
 import sys
 from contextlib import suppress
 from textwrap import dedent
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -94,13 +95,14 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(self.eager_var, self.lazy_var.copy(deep=True))
 
     def test_chunk(self):
-        for chunks, expected in [
+        test_cases: list[tuple[int | dict[str, Any], tuple[tuple[int, ...], ...]]] = [
             ({}, ((2, 2), (2, 2, 2))),
             (3, ((3, 1), (3, 3))),
             ({"x": 3, "y": 3}, ((3, 1), (3, 3))),
             ({"x": 3}, ((3, 1), (2, 2, 2))),
             ({"x": (3, 1)}, ((3, 1), (2, 2, 2))),
-        ]:
+        ]
+        for chunks, expected in test_cases:
             rechunked = self.lazy_var.chunk(chunks)
             assert rechunked.chunks == expected
             self.assertLazyAndIdentical(self.eager_var, rechunked)
@@ -258,7 +260,7 @@ class TestVariable(DaskTestCase):
         with pytest.raises(NotImplementedError, match="dask"):
             v.argsort()
         with pytest.raises(NotImplementedError, match="dask"):
-            v[0].item()
+            v[0].item()  # type: ignore[attr-defined]
 
     def test_univariate_ufunc(self):
         u = self.eager_var
@@ -298,7 +300,7 @@ class TestVariable(DaskTestCase):
 
         (v2,) = dask.persist(v)
         assert v is not v2
-        assert len(v2.__dask_graph__()) < len(v.__dask_graph__())
+        assert len(v2.__dask_graph__()) < len(v.__dask_graph__())  # type: ignore[arg-type]
         assert v2.__dask_keys__() == v.__dask_keys__()
         assert dask.is_dask_collection(v)
         assert dask.is_dask_collection(v2)
@@ -345,7 +347,9 @@ class TestDataArrayAndDataset(DaskTestCase):
         )
 
     def test_chunk(self) -> None:
-        for chunks, expected in [
+        test_cases: list[
+            tuple[int | str | dict[str, Any], tuple[tuple[int, ...], ...]]
+        ] = [
             ({}, ((2, 2), (2, 2, 2))),
             (3, ((3, 1), (3, 3))),
             ({"x": 3, "y": 3}, ((3, 1), (3, 3))),
@@ -354,7 +358,8 @@ class TestDataArrayAndDataset(DaskTestCase):
             ({"x": "16B"}, ((1, 1, 1, 1), (2, 2, 2))),
             ("16B", ((1, 1, 1, 1), (1,) * 6)),
             ("16MB", ((4,), (6,))),
-        ]:
+        ]
+        for chunks, expected in test_cases:
             # Test DataArray
             rechunked = self.lazy_array.chunk(chunks)
             assert rechunked.chunks == expected
@@ -367,7 +372,7 @@ class TestDataArrayAndDataset(DaskTestCase):
             lazy_dataset = self.lazy_array.to_dataset()
             eager_dataset = self.eager_array.to_dataset()
             expected_chunksizes = dict(zip(lazy_dataset.dims, expected, strict=True))
-            rechunked = lazy_dataset.chunk(chunks)
+            rechunked = lazy_dataset.chunk(chunks)  # type: ignore[assignment]
 
             # Dataset.chunks has a different return type to DataArray.chunks - see issue #5843
             assert rechunked.chunks == expected_chunksizes
@@ -601,11 +606,12 @@ class TestDataArrayAndDataset(DaskTestCase):
         u = self.eager_array.assign_coords(y=range(6))
         v = self.lazy_array.assign_coords(y=range(6))
 
-        for kwargs in [
+        kwargs_list: list[dict[str, Any]] = [
             {"x": [2, 3, 4]},
             {"x": [1, 100, 2, 101, 3]},
             {"x": [2.5, 3, 3.5], "y": [2, 2.5, 3]},
-        ]:
+        ]
+        for kwargs in kwargs_list:
             expected = u.reindex(**kwargs)
             actual = v.reindex(**kwargs)
             self.assertLazyAndAllClose(expected, actual)
@@ -666,7 +672,9 @@ class TestDataArrayAndDataset(DaskTestCase):
         data = da.random.normal(size=(2, 3, 4), chunks=(1, 3, 4))
         arr = DataArray(data, dims=("w", "x", "y"))
         stacked = arr.stack(z=("x", "y"))
-        z = pd.MultiIndex.from_product([np.arange(3), np.arange(4)], names=["x", "y"])
+        z = pd.MultiIndex.from_product(
+            [list(range(3)), list(range(4))], names=["x", "y"]
+        )
         expected = DataArray(data.reshape(2, -1), {"z": z}, dims=["w", "z"])
         assert stacked.data.chunks == expected.data.chunks
         self.assertLazyAndEqual(expected, stacked)
@@ -1182,10 +1190,10 @@ def test_map_blocks_error(map_da, map_ds):
         xr.map_blocks(returns_numpy, map_da)
 
     with pytest.raises(TypeError, match=r"args must be"):
-        xr.map_blocks(operator.add, map_da, args=10)
+        xr.map_blocks(operator.add, map_da, args=10)  # type: ignore[arg-type]
 
     with pytest.raises(TypeError, match=r"kwargs must be"):
-        xr.map_blocks(operator.add, map_da, args=[10], kwargs=[20])
+        xr.map_blocks(operator.add, map_da, args=[10], kwargs=[20])  # type: ignore[arg-type]
 
     def really_bad_func(darray):
         raise ValueError("couldn't do anything.")
@@ -1457,7 +1465,7 @@ def test_map_blocks_errors_bad_template(obj):
     with pytest.raises(ValueError, match=r"Received dimension 'x' of length 1"):
         xr.map_blocks(lambda x: x.isel(x=[1]), obj, template=obj).compute()
     with pytest.raises(TypeError, match=r"must be a DataArray"):
-        xr.map_blocks(lambda x: x.isel(x=[1]), obj, template=(obj,)).compute()
+        xr.map_blocks(lambda x: x.isel(x=[1]), obj, template=(obj,)).compute()  # type: ignore[arg-type]
     with pytest.raises(ValueError, match=r"map_blocks requires that one block"):
         xr.map_blocks(
             lambda x: x.isel(x=[1]).assign_coords(x=10), obj, template=obj.isel(x=[1])
@@ -1793,10 +1801,10 @@ def test_graph_manipulation():
     for a, b in ((v, v2), (da, da2), (ds, ds2)):
         assert a.__dask_layers__() != b.__dask_layers__()
         assert len(a.__dask_layers__()) == len(b.__dask_layers__())
-        assert a.__dask_graph__().keys() != b.__dask_graph__().keys()
-        assert len(a.__dask_graph__()) == len(b.__dask_graph__())
-        assert a.__dask_graph__().layers.keys() != b.__dask_graph__().layers.keys()
-        assert len(a.__dask_graph__().layers) == len(b.__dask_graph__().layers)
+        assert a.__dask_graph__().keys() != b.__dask_graph__().keys()  # type: ignore[union-attr]
+        assert len(a.__dask_graph__()) == len(b.__dask_graph__())  # type: ignore[arg-type]
+        assert a.__dask_graph__().layers.keys() != b.__dask_graph__().layers.keys()  # type: ignore[union-attr]
+        assert len(a.__dask_graph__().layers) == len(b.__dask_graph__().layers)  # type: ignore[union-attr]
 
     # Above we performed a slice operation; adding the two slices back together creates
     # a diamond-shaped dependency graph, which in turn will trigger a collision in layer

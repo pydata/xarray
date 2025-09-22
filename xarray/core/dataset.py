@@ -40,6 +40,7 @@ from xarray.core._aggregations import DatasetAggregations
 from xarray.core.common import (
     DataWithCoords,
     _contains_datetime_like_objects,
+    _is_numeric_aggregatable_dtype,
     get_chunksizes,
 )
 from xarray.core.coordinates import (
@@ -1933,7 +1934,7 @@ class Dataset(
 
     def dump_to_store(self, store: AbstractDataStore, **kwargs) -> None:
         """Store dataset contents to a backends.*DataStore object."""
-        from xarray.backends.api import dump_to_store
+        from xarray.backends.writers import dump_to_store
 
         # TODO: rename and/or cleanup this method to make it more consistent
         # with to_netcdf()
@@ -2097,7 +2098,7 @@ class Dataset(
         """
         if encoding is None:
             encoding = {}
-        from xarray.backends.api import to_netcdf
+        from xarray.backends.writers import to_netcdf
 
         return to_netcdf(  # type: ignore[return-value]  # mypy cannot resolve the overloads:(
             self,
@@ -2359,7 +2360,7 @@ class Dataset(
         :ref:`io.zarr`
             The I/O user guide, with more details and examples.
         """
-        from xarray.backends.api import to_zarr
+        from xarray.backends.writers import to_zarr
 
         return to_zarr(  # type: ignore[call-overload,misc]
             self,
@@ -6847,8 +6848,7 @@ class Dataset(
                 and (
                     not reduce_dims
                     or not numeric_only
-                    or np.issubdtype(var.dtype, np.number)
-                    or (var.dtype == np.bool_)
+                    or _is_numeric_aggregatable_dtype(var)
                 )
             ):
                 # prefer to aggregate over axis=None rather than
@@ -8465,8 +8465,6 @@ class Dataset(
         return result
 
     def _integrate_one(self, coord, datetime_unit=None, cumulative=False):
-        from xarray.core.variable import Variable
-
         if coord not in self.variables and coord not in self.dims:
             variables_and_dims = tuple(set(self.variables.keys()).union(self.dims))
             raise ValueError(
