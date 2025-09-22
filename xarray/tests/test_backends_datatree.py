@@ -27,7 +27,7 @@ from xarray.tests import (
 from xarray.tests.test_backends import TestNetCDF4Data as _TestNetCDF4Data
 
 if TYPE_CHECKING:
-    from xarray.core.datatree_io import T_DataTreeNetcdfEngine
+    from xarray.backends.writers import T_DataTreeNetcdfEngine
 
 with contextlib.suppress(ImportError):
     import netCDF4 as nc4

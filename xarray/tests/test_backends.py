@@ -626,17 +626,15 @@ class DatasetIOBase:
     def test_pickle(self) -> None:
         expected = Dataset({"foo": ("x", [42])})
         with self.roundtrip(expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
-            with roundtripped:
-                # Windows doesn't like reopening an already open file
-                raw_pickle = pickle.dumps(roundtripped)
+            # Windows doesn't like reopening an already open file
+            raw_pickle = pickle.dumps(roundtripped)
             with pickle.loads(raw_pickle) as unpickled_ds:
                 assert_identical(expected, unpickled_ds)
 
     def test_pickle_dataarray(self) -> None:
         expected = Dataset({"foo": ("x", [42])})
         with self.roundtrip(expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
-            with roundtripped:
-                raw_pickle = pickle.dumps(roundtripped["foo"])
+            raw_pickle = pickle.dumps(roundtripped["foo"])
             with pickle.loads(raw_pickle) as unpickled:
                 assert_identical(expected["foo"], unpickled)
 
@@ -6898,6 +6896,7 @@ def test_use_cftime_false_standard_calendar_in_range(calendar) -> None:
 
 
 @requires_scipy_or_netCDF4
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
 @pytest.mark.parametrize("calendar", ["standard", "gregorian"])
 def test_use_cftime_false_standard_calendar_out_of_range(calendar) -> None:
     x = [0, 1]
@@ -6910,12 +6909,13 @@ def test_use_cftime_false_standard_calendar_out_of_range(calendar) -> None:
 
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
+        decoder = CFDatetimeCoder(use_cftime=False)
         with pytest.raises((OutOfBoundsDatetime, ValueError)):
-            decoder = CFDatetimeCoder(use_cftime=False)
             open_dataset(tmp_file, decode_times=decoder)
 
 
 @requires_scipy_or_netCDF4
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
 @pytest.mark.parametrize("calendar", _NON_STANDARD_CALENDARS)
 @pytest.mark.parametrize("units_year", [1500, 2000, 2500])
 def test_use_cftime_false_nonstandard_calendar(calendar, units_year) -> None:
@@ -6929,8 +6929,8 @@ def test_use_cftime_false_nonstandard_calendar(calendar, units_year) -> None:
 
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
+        decoder = CFDatetimeCoder(use_cftime=False)
         with pytest.raises((OutOfBoundsDatetime, ValueError)):
-            decoder = CFDatetimeCoder(use_cftime=False)
             open_dataset(tmp_file, decode_times=decoder)
 
 

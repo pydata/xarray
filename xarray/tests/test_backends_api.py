@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.backends.api import get_default_netcdf_write_engine
+from xarray.backends.writers import get_default_netcdf_write_engine
 from xarray.tests import (
     assert_identical,
     assert_no_warnings,

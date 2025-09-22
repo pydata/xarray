@@ -4219,7 +4219,8 @@ class DataArray(
         --------
         Dataset.to_netcdf
         """
-        from xarray.backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE, to_netcdf
+        from xarray.backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE
+        from xarray.backends.writers import to_netcdf
 
         if self.name is None:
             # If no name is set then use a generic xarray name
@@ -4486,7 +4487,8 @@ class DataArray(
         :ref:`io.zarr`
             The I/O user guide, with more details and examples.
         """
-        from xarray.backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE, to_zarr
+        from xarray.backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE
+        from xarray.backends.writers import to_zarr
 
         if self.name is None:
             # If no name is set then use a generic xarray name
