@@ -143,9 +143,6 @@ class H5NetCDFStore(WritableCFDataStore):
                 root = manager
             manager = DummyFileManager(root)
 
-        if format == "NETCDF4_CLASSIC" and group is not None:
-            raise ValueError("Cannot create sub-groups in `NETCDF4_CLASSIC` format.")
-
         self._manager = manager
         self._group = group
         self._mode = mode
@@ -158,6 +155,9 @@ class H5NetCDFStore(WritableCFDataStore):
         self.autoclose = autoclose
 
     def get_child_store(self, group: str) -> Self:
+        if self.format == "NETCDF4_CLASSIC":
+            raise ValueError("Cannot create sub-groups in `NETCDF4_CLASSIC` format.")
+
         if self._group is not None:
             group = os.path.join(self._group, group)
         return type(self)(
@@ -231,7 +231,7 @@ class H5NetCDFStore(WritableCFDataStore):
             else PickleableFileManager
         )
         manager = manager_cls(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
-        
+
         return cls(
             manager,
             group=group,
