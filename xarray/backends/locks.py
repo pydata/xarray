@@ -49,7 +49,7 @@ class SerializableLock(Lock):
     lock: threading.Lock
 
     def __init__(self, token: Hashable | None = None):
-        with threading.Lock() :
+        with threading.Lock():
             self.token = token or str(uuid.uuid4())
             if self.token in SerializableLock._locks:
                 self.lock = SerializableLock._locks[self.token]
