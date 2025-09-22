@@ -79,7 +79,7 @@ if TYPE_CHECKING:
     from dask.delayed import Delayed
 
     from xarray.backends import ZarrStore
-    from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
+    from xarray.backends.writers import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
     from xarray.core.types import (
         Dims,
         DtCompatible,
@@ -1876,7 +1876,7 @@ class DataTree(
             Due to file format specifications the on-disk root group name
             is always ``"/"`` overriding any given ``DataTree`` root node name.
         """
-        from xarray.core.datatree_io import _datatree_to_netcdf
+        from xarray.backends.writers import _datatree_to_netcdf
 
         return _datatree_to_netcdf(
             self,
@@ -1971,7 +1971,7 @@ class DataTree(
             Due to file format specifications the on-disk root group name
             is always ``"/"`` overriding any given ``DataTree`` root node name.
         """
-        from xarray.core.datatree_io import _datatree_to_zarr
+        from xarray.backends.writers import _datatree_to_zarr
 
         return _datatree_to_zarr(
             self,
