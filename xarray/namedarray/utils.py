@@ -201,7 +201,11 @@ def either_dict_or_kwargs(
 
 
 def _get_chunk(  # type: ignore[no-untyped-def]
-    var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint
+    var: Variable | T_ChunkedArray,
+    chunks,
+    chunkmanager: ChunkManagerEntrypoint,
+    *,
+    preferred_chunks,
 ) -> Mapping[Any, T_ChunkDim]:
     """
     Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
@@ -214,11 +218,15 @@ def _get_chunk(  # type: ignore[no-untyped-def]
 
     if isinstance(var, IndexVariable):
         return {}
-    dims = var.dims
+
+    if not is_duck_array(var):
+        dims = var.dims
+    else:
+        dims = chunks.keys()
+
     shape = var.shape
 
     # Determine the explicit requested chunks.
-    preferred_chunks = var.encoding.get("preferred_chunks", {})
     preferred_chunk_shape = tuple(
         itertools.starmap(preferred_chunks.get, zip(dims, shape, strict=True))
     )
@@ -281,7 +289,7 @@ def fake_target_chunksize(
     """
 
     # Short circuit for non-object dtypes
-    if data.dtype != object:
+    if not data.dtype.hasobject:
         return limit, data.dtype
 
     from xarray.core.formatting import first_n_items

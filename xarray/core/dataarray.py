@@ -1489,8 +1489,6 @@ class DataArray(
         else:
             chunk_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
-        breakpoint()
-
         ds = self._to_temp_dataset().chunk(
             chunk_mapping,
             name_prefix=name_prefix,

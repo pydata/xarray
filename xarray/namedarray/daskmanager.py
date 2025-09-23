@@ -279,6 +279,6 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     ) -> DaskArray:
         from xarray.namedarray.utils import _get_chunk
 
-        if data.dtype == object:
-            chunks = _get_chunk(data, chunks, self)
+        if data.dtype.hasobject:
+            chunks = _get_chunk(data, chunks, self, preferred_chunks={})
         return data.rechunk(chunks, **kwargs)
