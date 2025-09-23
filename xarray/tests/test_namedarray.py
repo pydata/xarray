@@ -619,7 +619,6 @@ def test_repr() -> None:
     [
         (np.arange(100).reshape(10, 10), 1024, np.int64),
         (np.arange(100).reshape(10, 10).astype(np.float32), 1024, np.float32),
-        (np.arange(100).reshape(10, 10).astype(object), 73, np.float64),
     ],
 )
 def test_fake_target_chunksize(

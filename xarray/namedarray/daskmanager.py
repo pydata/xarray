@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
+from xarray.core.common import _contains_cftime_datetimes
 from xarray.core.indexing import ImplicitToExplicitIndexingAdapter
 from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray
 from xarray.namedarray.utils import is_duck_dask_array, module_available
@@ -279,6 +280,6 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     ) -> DaskArray:
         from xarray.namedarray.utils import _get_chunk
 
-        if data.dtype.hasobject:
+        if _contains_cftime_datetimes(data):
             chunks = _get_chunk(data, chunks, self, preferred_chunks={})
         return data.rechunk(chunks, **kwargs)

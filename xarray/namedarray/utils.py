@@ -289,7 +289,9 @@ def fake_target_chunksize(
     """
 
     # Short circuit for non-object dtypes
-    if not data.dtype.hasobject:
+    from xarray.core.common import _contains_cftime_datetimes
+
+    if not _contains_cftime_datetimes(data):
         return limit, data.dtype
 
     from xarray.core.formatting import first_n_items
