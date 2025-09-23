@@ -200,7 +200,7 @@ def either_dict_or_kwargs(
     return pos_kwargs
 
 
-def _get_chunk(
+def _get_chunk(  # type: ignore[no-untyped-def]
     var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint
 ) -> Mapping[Any, T_ChunkDim]:
     """
@@ -265,27 +265,36 @@ def _get_chunk(
 
 def fake_target_chunksize(
     data: Variable | T_ChunkedArray,
-    target_chunksize: int,
+    limit: int,
 ) -> tuple[int, np.dtype[Any]]:
     """
-    Naughty trick - let's get the ratio of our cftime_nbytes, and then compute
-    the ratio of that size to a np.float64. Then we can just adjust our target_chunksize
-    and use the default dask chunking algorithm to get a reasonable chunk size.
+    The `normalize_chunks` algorithm takes a size `limit` in bytes, but will not
+    work for object dtypes.  So we rescale the `limit` to an appropriate one based
+    on `float64` dtype, and pass that to `normalize_chunks`.
+
+    Arguments
+    ---------
+    data : Variable or ChunkedArray
+        The data for which we want to determine chunk sizes.
+    limit : int
+        The target chunk size in bytes. Passed to the chunk manager's `normalize_chunks` method.
     """
+
+    # Short circuit for non-object dtypes
+    if data.dtype != object:
+        return limit, data.dtype
+
     from xarray.core.formatting import first_n_items
 
     output_dtype = np.dtype(np.float64)
 
-    if data.dtype == object:
-        nbytes_approx: int = sys.getsizeof(first_n_items(data, 1))  # type: ignore[no-untyped-call]
-    else:
-        nbytes_approx = data.dtype.itemsize
+    nbytes_approx: int = sys.getsizeof(first_n_items(data, 1))  # type: ignore[no-untyped-call]
 
     f64_nbytes = output_dtype.itemsize
 
-    target_chunksize = int(target_chunksize * (f64_nbytes / nbytes_approx))
+    limit = int(limit * (f64_nbytes / nbytes_approx))
 
-    return target_chunksize, output_dtype
+    return limit, output_dtype
 
 
 class ReprObject:

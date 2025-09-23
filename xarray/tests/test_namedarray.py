@@ -615,14 +615,17 @@ def test_repr() -> None:
 
 
 @pytest.mark.parametrize(
-    "input_array, expected_chunksize_faked",
+    "input_array, expected_chunksize_faked, expected_dtype",
     [
-        (np.arange(100).reshape(10, 10), 1024),
-        (np.arange(100).reshape(10, 10).astype(np.float32), 2048),
+        (np.arange(100).reshape(10, 10), 1024, np.int64),
+        (np.arange(100).reshape(10, 10).astype(np.float32), 1024, np.float32),
+        (np.arange(100).reshape(10, 10).astype(object), 73, np.float64),
     ],
 )
 def test_fake_target_chunksize(
-    input_array: DuckArray[Any], expected_chunksize_faked: int
+    input_array: DuckArray[Any],
+    expected_chunksize_faked: int,
+    expected_dtype: DTypeLike,
 ) -> None:
     """
     Check that `fake_target_chunksize` returns the expected chunksize and dtype.
@@ -637,7 +640,7 @@ def test_fake_target_chunksize(
     faked_chunksize, dtype = fake_target_chunksize(input_array, target_chunksize)  # type: ignore[arg-type]
 
     assert faked_chunksize == expected_chunksize_faked
-    assert dtype == np.float64
+    assert dtype == expected_dtype
 
 
 @requires_cftime
