@@ -213,7 +213,7 @@ def _get_chunk(  # type: ignore[no-untyped-def]
     import itertools
 
     from xarray.core.utils import emit_user_level_warning
-    from xarray.core.variable import IndexVariable
+    from xarray.core.variable import IndexVariable, Variable
     from xarray.structure.chunks import _get_breaks_cached
 
     if isinstance(var, IndexVariable):
