@@ -27,8 +27,8 @@ if TYPE_CHECKING:
 
     from xarray.core.types import T_ChunkDim
     from xarray.core.variable import Variable
-    from xarray.namedarray._typing import _Dim, duckarray
-    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray
+    from xarray.namedarray._typing import DuckArray, _Dim, duckarray
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
 K = TypeVar("K")
@@ -201,9 +201,9 @@ def either_dict_or_kwargs(
 
 
 def _get_chunk(  # type: ignore[no-untyped-def]
-    var: Variable | T_ChunkedArray,
+    var: Variable | DuckArray[Any],
     chunks,
-    chunkmanager: ChunkManagerEntrypoint,
+    chunkmanager: ChunkManagerEntrypoint[Any],
     *,
     preferred_chunks,
 ) -> Mapping[Any, T_ChunkDim]:
@@ -219,7 +219,7 @@ def _get_chunk(  # type: ignore[no-untyped-def]
     if isinstance(var, IndexVariable):
         return {}
 
-    if not is_duck_array(var):
+    if isinstance(var, Variable):
         dims = var.dims
     else:
         dims = chunks.keys()
@@ -250,7 +250,7 @@ def _get_chunk(  # type: ignore[no-untyped-def]
 
     # Warn where requested chunks break preferred chunks, provided that the variable
     # contains data.
-    if var.size:
+    if var.size:  # type: ignore[union-attr]  # DuckArray protocol doesn't include 'size' - should it?
         for dim, size, chunk_sizes in zip(dims, shape, chunk_shape, strict=True):
             try:
                 preferred_chunk_sizes = preferred_chunks[dim]
@@ -272,7 +272,7 @@ def _get_chunk(  # type: ignore[no-untyped-def]
 
 
 def fake_target_chunksize(
-    data: Variable | T_ChunkedArray,
+    data: Variable | DuckArray[Any],
     limit: int,
 ) -> tuple[int, np.dtype[Any]]:
     """

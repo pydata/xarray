@@ -636,7 +636,7 @@ def test_fake_target_chunksize(
     """
     target_chunksize = 1024
 
-    faked_chunksize, dtype = fake_target_chunksize(input_array, target_chunksize)  # type: ignore[arg-type]
+    faked_chunksize, dtype = fake_target_chunksize(input_array, target_chunksize)
 
     assert faked_chunksize == expected_chunksize_faked
     assert dtype == expected_dtype
