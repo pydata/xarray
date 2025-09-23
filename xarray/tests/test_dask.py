@@ -1161,9 +1161,6 @@ def test_auto_chunk_da(obj):
     assert actual.chunks == expected.chunks
 
 
-@pytest.mark.xfail(
-    reason="Mid refactoring - https://github.com/pydata/xarray/pull/10527#issuecomment-3308246670"
-)
 def test_auto_chunk_da_cftime():
     yrs = np.arange(2000, 2120)
     cftime_dates = xr.date_range(

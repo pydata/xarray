@@ -270,3 +270,15 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         from dask.utils import parse_bytes
 
         return parse_bytes(dask_config.get("array.chunk-size"))
+
+    def rechunk(
+        self,
+        data: DaskArray,
+        chunks: T_Chunks | _NormalizedChunks,
+        **kwargs: Any,
+    ) -> DaskArray:
+        from xarray.namedarray.utils import _get_chunk
+
+        if data.dtype == object:
+            chunks = _get_chunk(data, chunks, self)
+        return data.rechunk(chunks, **kwargs)
