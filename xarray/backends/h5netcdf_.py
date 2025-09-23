@@ -237,8 +237,8 @@ class H5NetCDFStore(WritableCFDataStore):
         return self._acquire()
 
     def open_store_variable(self, name, var):
-        import h5netcdf
         import h5py
+        from h5netcdf.core import EnumType
 
         dimensions = var.dimensions
         data = indexing.LazilyIndexedArray(H5NetCDFArrayWrapper(name, self))
@@ -276,7 +276,7 @@ class H5NetCDFStore(WritableCFDataStore):
         # just check if datatype is available and create dtype
         # this check can be removed if h5netcdf >= 1.4.0 for any environment
         elif (datatype := getattr(var, "datatype", None)) and isinstance(
-            datatype, h5netcdf.core.EnumType
+            datatype, EnumType
         ):
             encoding["dtype"] = np.dtype(
                 data.dtype,
