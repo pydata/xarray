@@ -35,7 +35,8 @@ from xarray.core.types import ReadBuffer
 from xarray.core.utils import emit_user_level_warning, is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
-from xarray.structure.chunks import _get_chunk, _maybe_chunk
+from xarray.namedarray.utils import _get_chunk
+from xarray.structure.chunks import _maybe_chunk
 from xarray.structure.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,

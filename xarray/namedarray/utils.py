@@ -5,6 +5,7 @@ import sys
 import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
 from functools import lru_cache
+from numbers import Number
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import numpy as np
@@ -24,9 +25,10 @@ if TYPE_CHECKING:
         DaskArray = NDArray  # type: ignore[assignment, misc]
         DaskCollection: Any = NDArray  # type: ignore[no-redef]
 
+    from xarray.core.types import T_ChunkDim
     from xarray.core.variable import Variable
     from xarray.namedarray._typing import _Dim, duckarray
-    from xarray.namedarray.parallelcompat import T_ChunkedArray
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray
 
 
 K = TypeVar("K")
@@ -196,6 +198,69 @@ def either_dict_or_kwargs(
             f"cannot specify both keyword and positional arguments to .{func_name}"
         )
     return pos_kwargs
+
+
+def _get_chunk(
+    var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint
+) -> Mapping[Any, T_ChunkDim]:
+    """
+    Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
+    """
+    import itertools
+
+    from xarray.core.utils import emit_user_level_warning
+    from xarray.core.variable import IndexVariable
+    from xarray.structure.chunks import _get_breaks_cached
+
+    if isinstance(var, IndexVariable):
+        return {}
+    dims = var.dims
+    shape = var.shape
+
+    # Determine the explicit requested chunks.
+    preferred_chunks = var.encoding.get("preferred_chunks", {})
+    preferred_chunk_shape = tuple(
+        itertools.starmap(preferred_chunks.get, zip(dims, shape, strict=True))
+    )
+    if isinstance(chunks, Number) or (chunks == "auto"):
+        chunks = dict.fromkeys(dims, chunks)
+    chunk_shape = tuple(
+        chunks.get(dim, None) or preferred_chunk_sizes
+        for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape, strict=True)
+    )
+
+    limit = chunkmanager.get_auto_chunk_size()
+    limit, var_dtype = fake_target_chunksize(var, limit)
+
+    chunk_shape = chunkmanager.normalize_chunks(
+        chunk_shape,
+        shape=shape,
+        dtype=var_dtype,
+        limit=limit,
+        previous_chunks=preferred_chunk_shape,
+    )
+
+    # Warn where requested chunks break preferred chunks, provided that the variable
+    # contains data.
+    if var.size:
+        for dim, size, chunk_sizes in zip(dims, shape, chunk_shape, strict=True):
+            try:
+                preferred_chunk_sizes = preferred_chunks[dim]
+            except KeyError:
+                continue
+            disagreement = _get_breaks_cached(
+                size=size,
+                chunk_sizes=chunk_sizes,
+                preferred_chunk_sizes=preferred_chunk_sizes,
+            )
+            if disagreement:
+                emit_user_level_warning(
+                    "The specified chunks separate the stored chunks along "
+                    f'dimension "{dim}" starting at index {disagreement}. This could '
+                    "degrade performance. Instead, consider rechunking after loading.",
+                )
+
+    return dict(zip(dims, chunk_shape, strict=True))
 
 
 def fake_target_chunksize(
