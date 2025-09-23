@@ -97,7 +97,7 @@ from xarray.namedarray.utils import (  # noqa: F401
 )
 
 if TYPE_CHECKING:
-    from xarray.core.types import Dims, ErrorOptionsWithWarn
+    from xarray.core.types import Dims, ErrorOptionsWithWarn, NestedDict
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -333,6 +333,25 @@ def remove_incompatible_items(
     for k in list(first_dict):
         if k not in second_dict or not compat(first_dict[k], second_dict[k]):
             del first_dict[k]
+
+
+def flat_items(
+    nested: Mapping[str, NestedDict[T] | T],
+    prefix: str | None = None,
+    separator: str = "/",
+) -> Iterable[tuple[str, T]]:
+    """Yields flat items from a nested dictionary of dicts.
+
+    Notes:
+    - Only dict subclasses are flattened.
+    - Duplicate items are not removed. These should be checked separately.
+    """
+    for key, value in nested.items():
+        key = prefix + separator + key if prefix is not None else key
+        if isinstance(value, dict):
+            yield from flat_items(value, key, separator)
+        else:
+            yield key, value
 
 
 def is_full_slice(value: Any) -> bool:
