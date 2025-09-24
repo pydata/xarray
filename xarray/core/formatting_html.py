@@ -388,7 +388,6 @@ children_section = partial(
     _mapping_section,
     name="Groups",
     details_func=summarize_datatree_children,
-    max_items_collapse=1,
     max_option_name="display_max_children",
     expand_option_name="display_expand_groups",
 )
@@ -416,20 +415,29 @@ def datatree_node_repr(group_title: str, node: DataTree, show_inherited=False) -
         indexes=inherited_vars(node._indexes),
     )
 
-    sections = [
-        children_section(node.children),
-        dim_section(ds),
-        coord_section(node_coords),
-    ]
+    sections = []
+
+    if node.children:
+        children_max_items = 1 if ds.data_vars else 6
+        sections.append(
+            children_section(node.children, max_items_collapse=children_max_items)
+        )
+
+    if ds.dims:
+        sections.append(dim_section(ds))
+
+    if node_coords:
+        sections.append(coord_section(node_coords))
 
     # only show inherited coordinates on the root
-    if show_inherited:
+    if show_inherited and inherited_coords:
         sections.append(inherited_coord_section(inherited_coords))
 
-    sections += [
-        datavar_section(ds.data_vars),
-        attr_section(ds.attrs),
-    ]
+    if ds.data_vars:
+        sections.append(datavar_section(ds.data_vars))
+
+    if ds.attrs:
+        sections.append(attr_section(ds.attrs))
 
     return _obj_repr(ds, header_components, sections)
 
