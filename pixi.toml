@@ -13,10 +13,30 @@ depends-on = [
 [environments]
 # Testing
 test-default = { features = ["test"], solve-group = "test" }
+test-all-but-numba = { features = [
+  "py313",
+  "test",
+  "backends",
+  "performance",
+  "dask",
+  "plotting",
+  "extras",
+], solve-group = "test" }
+test-all-but-dask = { features = [
+  "py312",
+  "test",
+  "backends",
+  "performance",
+  "numba",
+  "plotting",
+  "extras",
+], solve-group = "test" }
 test-all-deps = { features = [
   "test",
   "backends",
   "performance",
+  "numba",
+  "dask",
   "plotting",
   "extras",
 ], solve-group = "test" }
@@ -54,6 +74,15 @@ python = "3.11.*"
 numpy = "1.26.*"
 pandas = "2.2.*"
 
+[feature.py311.dependencies]
+python = "3.11.*"
+
+[feature.py312.dependencies]
+python = "3.12.*"
+
+[feature.py313.dependencies]
+python = "3.13.*"
+
 [feature.backends.dependencies]
 # files
 h5netcdf = "*"
@@ -72,16 +101,20 @@ boto3 = "*"
 fsspec = "*"
 aiobotocore = "*"
 
+[feature.numba.dependencies]
+numba = "*"
+numbagg = "*"
+
+[feature.dask.dependencies]
+dask = "*"
+distributed = "*"
+
 [feature.performance.dependencies]
 flox = "*"
 bottleneck = "*"
 numexpr = "*"
 pyarrow = "*"
-dask-core = "*"
 opt_einsum = "*"
-numba = "*"
-numbagg = "*"
-distributed = "*"
 
 [feature.performance.pypi-dependencies]
 jax = "*"
@@ -92,6 +125,9 @@ cartopy = "*"
 matplotlib-base = "*"
 nc-time-axis = "*"
 seaborn = "*"
+
+[feature.annotate-ci-failures.pypi-dependencies]
+pytest-github-actions-annotate-failures = "*"
 
 [feature.extras.dependencies]
 # array
