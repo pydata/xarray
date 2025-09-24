@@ -32,6 +32,7 @@ from xarray.backends.file_manager import (
 from xarray.backends.locks import (
     HDF5_LOCK,
     NETCDFC_LOCK,
+    NETCDF4_PYTHON_LOCK,
     combine_locks,
     ensure_lock,
     get_write_lock,
@@ -65,8 +66,6 @@ if TYPE_CHECKING:
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
 _endian_lookup = {"=": "native", ">": "big", "<": "little", "|": "native"}
-
-NETCDF4_PYTHON_LOCK = combine_locks([NETCDFC_LOCK, HDF5_LOCK])
 
 
 class BaseNetCDF4Array(BackendArray):
