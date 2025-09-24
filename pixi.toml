@@ -184,7 +184,7 @@ mypy = "mypy --install-types --non-interactive --cobertura-xml-report mypy_repor
 pre-commit = "*"
 
 [feature.pre-commit.tasks]
-pre-commit = { cmd = "pre-commit run --all-files" }
+pre-commit = { cmd = "pre-commit" }
 
 
 [package]
