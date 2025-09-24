@@ -2028,8 +2028,9 @@ class DataTree(
             * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API features.
         engine : {"netcdf4", "h5netcdf"}, optional
             Engine to use when writing netCDF files. If not provided, the
-            default engine is chosen based on available dependencies, with a
-            preference for "netcdf4" if writing to a file on disk.
+            default engine is chosen based on available dependencies, by default
+            preferring "h5netcdf" over "netcdf4" (customizable via
+            ``netcdf_engine_order`` in ``xarray.set_options()``).
         group : str, optional
             Path to the netCDF4 group in the given file to open as the root group
             of the ``DataTree``. Currently, specifying a group is not supported.

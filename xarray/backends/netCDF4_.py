@@ -698,6 +698,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using netCDF4 in Xarray"
     )
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.NetCDF4BackendEntrypoint.html"
+    supports_groups = True
 
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):

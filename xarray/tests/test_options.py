@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 
 import xarray
@@ -67,6 +69,19 @@ def test_nested_options() -> None:
             assert OPTIONS["display_width"] == 2
         assert OPTIONS["display_width"] == 1
     assert OPTIONS["display_width"] == original
+
+
+def test_netcdf_engine_order() -> None:
+    original = OPTIONS["netcdf_engine_order"]
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "option 'netcdf_engine_order' given an invalid value: ['invalid']. "
+            "Expected a subset of ['h5netcdf', 'netcdf4', 'scipy']"
+        ),
+    ):
+        xarray.set_options(netcdf_engine_order=["invalid"])
+    assert OPTIONS["netcdf_engine_order"] == original
 
 
 def test_display_style() -> None:

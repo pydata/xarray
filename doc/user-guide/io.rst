@@ -591,8 +591,8 @@ The library ``h5netcdf`` allows writing some dtypes that aren't
 allowed in netCDF4 (see
 `h5netcdf documentation <https://github.com/h5netcdf/h5netcdf#invalid-netcdf-files>`_).
 This feature is available through :py:meth:`DataArray.to_netcdf` and
-:py:meth:`Dataset.to_netcdf` when used with ``engine="h5netcdf"``
-and currently raises a warning unless ``invalid_netcdf=True`` is set.
+:py:meth:`Dataset.to_netcdf` when used with ``engine="h5netcdf"``, only if
+``invalid_netcdf=True`` is explicitly set.
 
 .. warning::
 
