@@ -27,6 +27,7 @@ typing = { features = ["mypy"] }
 doc = { features = [
   "doc",
   "backends",
+  "test",
   "performance",
   "plotting",
   "extras",
@@ -117,6 +118,7 @@ pytest-env = "*"
 pytest-mypy-plugins = "*"
 pytest-timeout = "*"
 pytest-xdist = "*"
+hypothesis = "*"
 coveralls = "*"
 
 [feature.test.tasks]
@@ -148,6 +150,9 @@ sphinxext-rediraffe = "*"
 
 [feature.doc.pypi-dependencies]
 cfgrib = "*" # pypi dep because of https://github.com/prefix-dev/pixi/issues/3032#issuecomment-3302638043
+
+[feature.doc.tasks]
+doc = { cmd = "make clean && make html", cwd = "doc" }
 
 
 [feature.mypy.dependencies]
