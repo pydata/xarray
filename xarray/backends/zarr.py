@@ -1182,7 +1182,7 @@ class ZarrStore(AbstractWritableDataStore):
                     # For floating point data, Xarray defaults to a fill_value
                     # of NaN (unlike Zarr, which uses zero):
                     # https://github.com/pydata/xarray/issues/10646
-                    fill_value = v.dtype.type(np.nan)
+                    fill_value = np.nan
                 if "_FillValue" in attrs:
                     # replace with encoded fill value
                     fv = attrs.pop("_FillValue")
