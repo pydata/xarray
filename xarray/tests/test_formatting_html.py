@@ -370,12 +370,12 @@ class TestDataTreeInheritance:
     def test_inherited_section_present(self) -> None:
         dt = xr.DataTree.from_dict(
             {
-                "/": None,
-                "a": None,
+                "/": xr.Dataset(coords={"x": [1]}),
+                "child": None,
             }
         )
         with xr.set_options(display_style="html"):
-            html = dt._repr_html_().strip()
+            html = dt["child"]._repr_html_().strip()
         # checks that the section appears somewhere
         assert "Inherited coordinates" in html
 
