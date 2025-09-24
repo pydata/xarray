@@ -152,13 +152,17 @@ class TestCoordinates:
         coords = Coordinates(coords={"x": [0, 1, 2]})
 
         assert coords.equals(coords)
-        assert not coords.equals("not_a_coords")
+        # Test with a different Coordinates object instead of a string
+        other_coords = Coordinates(coords={"x": [3, 4, 5]})
+        assert not coords.equals(other_coords)
 
     def test_identical(self):
         coords = Coordinates(coords={"x": [0, 1, 2]})
 
         assert coords.identical(coords)
-        assert not coords.identical("not_a_coords")
+        # Test with a different Coordinates object instead of a string
+        other_coords = Coordinates(coords={"x": [3, 4, 5]})
+        assert not coords.identical(other_coords)
 
     def test_assign(self) -> None:
         coords = Coordinates(coords={"x": [0, 1, 2]})

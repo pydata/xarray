@@ -13,6 +13,9 @@ v2025.09.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:func:`DataTree.from_dict` now supports passing in ``DataArray`` and nested
+  dictionary values, and has a ``coords`` argument for specifying coordinates as
+  ``DataArray`` objects (:pull:`10658`).
 - ``engine='netcdf4'`` now supports reading and writing in-memory netCDF files.
   All of Xarray's netCDF backends now support in-memory reads and writes
   (:pull:`10624`).
@@ -60,11 +63,15 @@ Bug fixes
 - Fix error when encoding an empty :py:class:`numpy.datetime64` array
   (:issue:`10722`, :pull:`10723`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- Propagate coordinate attrs in :py:meth:`xarray.Dataset.map` (:issue:`9317`, :pull:`10602`).
 - Fix error from ``to_netcdf(..., compute=False)`` when using Dask Distributed
   (:issue:`10725`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Propagation coordinate attrs in :py:meth:`xarray.Dataset.map` (:issue:`9317`, :pull:`10602`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Allow ``combine_attrs="drop_conflicts"`` to handle objects with ``__eq__`` methods that return
+  non-bool values (e.g., numpy arrays) without raising ``ValueError`` (:pull:`10726`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -80,6 +87,12 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Refactor structure of ``backends`` module to separate code for reading data from code for writing data (:pull:`10771`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- All test files now have full mypy type checking enabled (``check_untyped_defs = true``),
+  improving type safety and making the test suite a better reference for type annotations.
+  (:pull:`10768`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.2025.09.0:
 
