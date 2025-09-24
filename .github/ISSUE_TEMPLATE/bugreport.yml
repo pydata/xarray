@@ -37,11 +37,12 @@ body:
         # /// script
         # requires-python = ">=3.11"
         # dependencies = [
-        #   "xarray[complete]@git+https://github.com/pydata/xarray.git@main,
+        #   "xarray[complete]@git+https://github.com/pydata/xarray.git@main",
         # ]
         # ///
         #
-        # This script automatically imports the development branch of xarray to check for issues
+        # This script automatically imports the development branch of xarray to check for issues.
+        # Please delete this header if you have _not_ tested this script with `uv run`!
 
         import xarray as xr
         xr.show_versions()
