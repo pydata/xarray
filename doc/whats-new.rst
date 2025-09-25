@@ -20,6 +20,9 @@ New Features
   All of Xarray's netCDF backends now support in-memory reads and writes
   (:pull:`10624`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- :py:func:`merge` now supports merging :py:class:`DataTree` objects
+  (:issue:`9790`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

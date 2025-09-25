@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import warnings
 
 import numpy as np
@@ -867,3 +868,84 @@ class TestNewDefaults:
         with set_options(use_new_combine_kwarg_defaults=True):
             with pytest.raises(ValueError, match="might be related to new default"):
                 expected.identical(ds2.merge(ds1))
+
+
+class TestMergeDataTree:
+    def test_mixed(self) -> None:
+        tree = xr.DataTree()
+        ds = xr.Dataset()
+        with pytest.raises(
+            TypeError,
+            match="merge does not support mixed type arguments when one argument is a DataTree",
+        ):
+            xr.merge([tree, ds])  # type: ignore[list-item]
+
+    def test_distinct(self) -> None:
+        tree1 = xr.DataTree.from_dict({"/a/b/c": 1})
+        tree2 = xr.DataTree.from_dict({"/a/d/e": 2})
+        expected = xr.DataTree.from_dict({"/a/b/c": 1, "/a/d/e": 2})
+        merged = xr.merge([tree1, tree2])
+        assert_equal(merged, expected)
+
+    def test_overlap(self) -> None:
+        tree1 = xr.DataTree.from_dict({"/a/b": 1})
+        tree2 = xr.DataTree.from_dict({"/a/c": 2})
+        tree3 = xr.DataTree.from_dict({"/a/d": 3})
+        expected = xr.DataTree.from_dict({"/a/b": 1, "/a/c": 2, "/a/d": 3})
+        merged = xr.merge([tree1, tree2, tree3])
+        assert_equal(merged, expected)
+
+    def test_inherited(self) -> None:
+        tree1 = xr.DataTree.from_dict({"/a/b": ("x", [1])}, coords={"x": [0]})
+        tree2 = xr.DataTree.from_dict({"/a/c": ("x", [2])})
+        expected = xr.DataTree.from_dict(
+            {"/a/b": ("x", [1]), "a/c": ("x", [2])}, coords={"x": [0]}
+        )
+        merged = xr.merge([tree1, tree2])
+        assert_equal(merged, expected)
+
+    def test_inherited_join(self) -> None:
+        tree1 = xr.DataTree.from_dict({"/a/b": ("x", [0, 1])}, coords={"x": [0, 1]})
+        tree2 = xr.DataTree.from_dict({"/a/c": ("x", [1, 2])}, coords={"x": [1, 2]})
+
+        expected = xr.DataTree.from_dict(
+            {"/a/b": ("x", [0, 1]), "a/c": ("x", [np.nan, 1])}, coords={"x": [0, 1]}
+        )
+        merged = xr.merge([tree1, tree2], join="left")
+        assert_equal(merged, expected)
+
+        expected = xr.DataTree.from_dict(
+            {"/a/b": ("x", [1, np.nan]), "a/c": ("x", [1, 2])}, coords={"x": [1, 2]}
+        )
+        merged = xr.merge([tree1, tree2], join="right")
+        assert_equal(merged, expected)
+
+        expected = xr.DataTree.from_dict(
+            {"/a/b": ("x", [1]), "a/c": ("x", [1])}, coords={"x": [1]}
+        )
+        merged = xr.merge([tree1, tree2], join="inner")
+        assert_equal(merged, expected)
+
+        expected = xr.DataTree.from_dict(
+            {"/a/b": ("x", [0, 1, np.nan]), "a/c": ("x", [np.nan, 1, 2])},
+            coords={"x": [0, 1, 2]},
+        )
+        merged = xr.merge([tree1, tree2], join="outer")
+        assert_equal(merged, expected)
+
+        with pytest.raises(
+            xr.AlignmentError,
+            match=re.escape("cannot align objects with join='exact'"),
+        ):
+            xr.merge([tree1, tree2], join="exact")
+
+    def test_fill_value_errors(self) -> None:
+        trees = [xr.DataTree(), xr.DataTree()]
+
+        with pytest.raises(
+            NotImplementedError,
+            match=re.escape(
+                "fill_value is not yet supported for DataTree objects in merge"
+            ),
+        ):
+            xr.merge(trees, fill_value=None)
