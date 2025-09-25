@@ -239,11 +239,6 @@ class CachingFileManager(FileManager[T_File]):
             default = None
             file = self._cache.pop(self._key, default)
             if file is not None:
-                # Check for string so we do not have to import it
-                if str(type(file)) == "<class 'netCDF4._netCDF4.Dataset'>":
-                    with NETCDF4_PYTHON_LOCK:
-                        file.close()
-                        return
                 file.close()
 
     def __del__(self) -> None:
