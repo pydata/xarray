@@ -7176,7 +7176,10 @@ class Dataset(
     def _to_dataframe(self, ordered_dims: Mapping[Any, int]):
         from xarray.core.extension_array import PandasExtensionArray
 
-        columns_in_order = [k for k in self.variables if k not in self.dims]
+        # All and only non-index arrays (whether data or coordinates) should
+        # become columns in the output DataFrame. Excluding indexes rather
+        # than dims handles the case of a MultiIndex along a single dimension.
+        columns_in_order = [k for k in self.variables if k not in self.xindexes]
         non_extension_array_columns = [
             k
             for k in columns_in_order
