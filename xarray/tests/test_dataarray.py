@@ -162,7 +162,7 @@ class TestDataArray:
         with pytest.raises(ValueError, match=r"must be 1-dimensional"):
             self.ds["foo"].to_index()
         with pytest.raises(AttributeError):
-            self.dv.variable = self.v
+            self.dv.variable = self.v  # type: ignore[misc]
 
     def test_data_property(self) -> None:
         array = DataArray(np.zeros((3, 4)))
@@ -1243,7 +1243,7 @@ class TestDataArray:
             self.dv.isel({dim: slice(5) for dim in self.dv.dims}), self.dv.head()
         )
         with pytest.raises(TypeError, match=r"either dict-like or a single int"):
-            self.dv.head([3])
+            self.dv.head([3])  # type: ignore[arg-type]
         with pytest.raises(TypeError, match=r"expected integer type"):
             self.dv.head(x=3.1)
         with pytest.raises(ValueError, match=r"expected positive int"):
@@ -1260,7 +1260,7 @@ class TestDataArray:
             self.dv.isel({dim: slice(-5, None) for dim in self.dv.dims}), self.dv.tail()
         )
         with pytest.raises(TypeError, match=r"either dict-like or a single int"):
-            self.dv.tail([3])
+            self.dv.tail([3])  # type: ignore[arg-type]
         with pytest.raises(TypeError, match=r"expected integer type"):
             self.dv.tail(x=3.1)
         with pytest.raises(ValueError, match=r"expected positive int"):
@@ -1273,7 +1273,7 @@ class TestDataArray:
             self.dv.thin(6),
         )
         with pytest.raises(TypeError, match=r"either dict-like or a single int"):
-            self.dv.thin([3])
+            self.dv.thin([3])  # type: ignore[arg-type]
         with pytest.raises(TypeError, match=r"expected integer type"):
             self.dv.thin(x=3.1)
         with pytest.raises(ValueError, match=r"expected positive int"):
@@ -2206,7 +2206,7 @@ class TestDataArray:
         assert_identical(other_way_expected, other_way)
 
     def test_set_index(self) -> None:
-        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
+        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]  # type: ignore[arg-type,unused-ignore]  # pandas-stubs varies
         coords = {idx.name: ("x", idx) for idx in indexes}
         array = DataArray(self.mda.values, coords=coords, dims="x")
         expected = self.mda.copy()
@@ -2237,7 +2237,7 @@ class TestDataArray:
             obj.set_index(x="level_4")
 
     def test_reset_index(self) -> None:
-        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
+        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]  # type: ignore[arg-type,unused-ignore]  # pandas-stubs varies
         coords = {idx.name: ("x", idx) for idx in indexes}
         expected = DataArray(self.mda.values, coords=coords, dims="x")
 
@@ -2335,10 +2335,18 @@ class TestDataArray:
         assert_equal(self.dv, np.maximum(self.dv, bar))
 
     def test_astype_attrs(self) -> None:
-        for v in [self.va.copy(), self.mda.copy(), self.ds.copy()]:
+        # Split into two loops for mypy - Variable, DataArray, and Dataset
+        # don't share a common base class, so mypy infers type object for v,
+        # which doesn't have the attrs or astype methods
+        for v in [self.mda.copy(), self.ds.copy()]:
             v.attrs["foo"] = "bar"
             assert v.attrs == v.astype(float).attrs
             assert not v.astype(float, keep_attrs=False).attrs
+        # Test Variable separately to avoid mypy inferring object type
+        va = self.va.copy()
+        va.attrs["foo"] = "bar"
+        assert va.attrs == va.astype(float).attrs
+        assert not va.astype(float, keep_attrs=False).attrs
 
     def test_astype_dtype(self) -> None:
         original = DataArray([-1, 1, 2, 3, 1000])

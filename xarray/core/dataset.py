@@ -1934,7 +1934,7 @@ class Dataset(
 
     def dump_to_store(self, store: AbstractDataStore, **kwargs) -> None:
         """Store dataset contents to a backends.*DataStore object."""
-        from xarray.backends.api import dump_to_store
+        from xarray.backends.writers import dump_to_store
 
         # TODO: rename and/or cleanup this method to make it more consistent
         # with to_netcdf()
@@ -2057,8 +2057,9 @@ class Dataset(
             format='NETCDF4'). The group(s) will be created if necessary.
         engine : {"netcdf4", "scipy", "h5netcdf"}, optional
             Engine to use when writing netCDF files. If not provided, the
-            default engine is chosen based on available dependencies, with a
-            preference for 'netcdf4' if writing to a file on disk.
+            default engine is chosen based on available dependencies, by default
+            preferring "h5netcdf" over "scipy" over "netcdf4" (customizable via
+            ``netcdf_engine_order`` in ``xarray.set_options()``).
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
@@ -2098,7 +2099,7 @@ class Dataset(
         """
         if encoding is None:
             encoding = {}
-        from xarray.backends.api import to_netcdf
+        from xarray.backends.writers import to_netcdf
 
         return to_netcdf(  # type: ignore[return-value]  # mypy cannot resolve the overloads:(
             self,
@@ -2360,7 +2361,7 @@ class Dataset(
         :ref:`io.zarr`
             The I/O user guide, with more details and examples.
         """
-        from xarray.backends.api import to_zarr
+        from xarray.backends.writers import to_zarr
 
         return to_zarr(  # type: ignore[call-overload,misc]
             self,

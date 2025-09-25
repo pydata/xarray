@@ -13,6 +13,9 @@ v2025.09.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:func:`DataTree.from_dict` now supports passing in ``DataArray`` and nested
+  dictionary values, and has a ``coords`` argument for specifying coordinates as
+  ``DataArray`` objects (:pull:`10658`).
 - ``engine='netcdf4'`` now supports reading and writing in-memory netCDF files.
   All of Xarray's netCDF backends now support in-memory reads and writes
   (:pull:`10624`).
@@ -26,9 +29,12 @@ Breaking changes
   dataset in-place. (:issue:`10167`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
-- The default ``engine`` when reading/writing netCDF files in-memory is now
-  netCDF4, consistent with Xarray's default ``engine`` when read/writing netCDF
-  files to disk (:pull:`10624`).
+- The default ``engine`` when reading/writing netCDF files is now h5netcdf
+  or scipy, which are typically faster than the prior default of netCDF4-python.
+  You can control this default behavior explicitly via the new
+  ``netcdf_engine_order`` parameter in :py:func:`~xarray.set_options`, e.g.,
+  ``xr.set_options(netcdf_engine_order=['netcdf4', 'scipy', 'h5netcdf'])`` to
+  restore the prior defaults (:issue:`10657`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Deprecations
@@ -77,6 +83,12 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Refactor structure of ``backends`` module to separate code for reading data from code for writing data (:pull:`10771`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- All test files now have full mypy type checking enabled (``check_untyped_defs = true``),
+  improving type safety and making the test suite a better reference for type annotations.
+  (:pull:`10768`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.2025.09.0:
 

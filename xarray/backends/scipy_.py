@@ -38,7 +38,7 @@ from xarray.core.variable import Variable
 try:
     from scipy.io import netcdf_file as netcdf_file_base
 except ImportError:
-    netcdf_file_base = object
+    netcdf_file_base = object  # type: ignore[assignment,misc,unused-ignore]  # scipy is optional
 
 
 if TYPE_CHECKING:
@@ -323,7 +323,7 @@ def _normalize_filename_or_obj(
     if isinstance(filename_or_obj, bytes | memoryview):
         return io.BytesIO(filename_or_obj)
     else:
-        return _normalize_path(filename_or_obj)  # type: ignore[return-value]
+        return _normalize_path(filename_or_obj)
 
 
 class ScipyBackendEntrypoint(BackendEntrypoint):
