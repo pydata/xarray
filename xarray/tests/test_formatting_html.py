@@ -123,22 +123,12 @@ def test_repr_of_dataarray(dataarray: xr.DataArray) -> None:
 
 def test_repr_coords_order_of_datarray() -> None:
     da1 = xr.DataArray(
-        np.empty(
-            (
-                2,
-                2
-            )
-        ),
+        np.empty((2, 2)),
         coords={"foo": [0, 1], "bar": [0, 1]},
         dims=["foo", "bar"],
     )
     da2 = xr.DataArray(
-        np.empty(
-            (
-                2,
-                2
-            )
-        ),
+        np.empty((2, 2)),
         coords={"bar": [0, 1], "foo": [0, 1]},
         dims=["bar", "foo"],
     )
