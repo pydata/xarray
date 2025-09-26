@@ -30,9 +30,8 @@ from xarray.backends.file_manager import (
     PickleableFileManager,
 )
 from xarray.backends.locks import (
-    HDF5_LOCK,
-    NETCDFC_LOCK,
     NETCDF4_PYTHON_LOCK,
+    NETCDFC_LOCK,
     combine_locks,
     ensure_lock,
     get_write_lock,
@@ -514,8 +513,11 @@ class NetCDF4DataStore(WritableCFDataStore):
             assert mode == "r"
             kwargs["memory"] = filename
             manager = PickleableFileManager(
-                netCDF4.Dataset, "<xarray-in-memory-read>", mode=mode, kwargs=kwargs,
-                lock=lock
+                netCDF4.Dataset,
+                "<xarray-in-memory-read>",
+                mode=mode,
+                kwargs=kwargs,
+                lock=lock,
             )
         else:
             manager = CachingFileManager(

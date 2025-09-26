@@ -282,4 +282,5 @@ def ensure_lock(lock: Lock | None | Literal[False]) -> Lock:
         return DummyLock()
     return lock
 
+
 NETCDF4_PYTHON_LOCK = combine_locks([NETCDFC_LOCK, HDF5_LOCK])
