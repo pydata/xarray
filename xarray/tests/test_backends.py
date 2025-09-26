@@ -6469,14 +6469,15 @@ class TestPydapOnline(TestPydap):
 @network
 @pytest.mark.parametrize("protocol", ["dap2", "dap4"])
 @pytest.mark.parametrize("batch", [False, True])
-def test_batchdap4_downloads(protocol, batch) -> None:
+def test_batchdap4_downloads(tmpdir, protocol, batch) -> None:
     """Test that in dap4, all dimensions are downloaded at once"""
     import pydap
     from pydap.net import create_session
 
     _version_ = Version(pydap.__version__)
     # Create a session with pre-set params in pydap backend, to cache urls
-    session = create_session(use_cache=True, cache_kwargs={"cache_name": "debug"})
+    cache_name = tmpdir / "debug"
+    session = create_session(use_cache=True, cache_kwargs={"cache_name": cache_name})
     session.cache.clear()
     url = "https://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc"
 
