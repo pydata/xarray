@@ -3871,7 +3871,7 @@ class TestDataArray:
         v = range(N)
         da = DataArray(v)
         ma = da.to_masked_array()
-        assert len(ma.mask) == N
+        assert isinstance(ma.mask, np.ndarray) and len(ma.mask) == N
 
     def test_to_dataset_whole(self) -> None:
         unnamed = DataArray([1, 2], dims="x")
