@@ -30,7 +30,7 @@ from xarray.backends.file_manager import (
     PickleableFileManager,
 )
 from xarray.backends.locks import (
-    NETCDF4_PYTHON_LOCK,
+    HDF5_LOCK,
     NETCDFC_LOCK,
     combine_locks,
     ensure_lock,
@@ -66,6 +66,7 @@ if TYPE_CHECKING:
 # string used by netCDF4.
 _endian_lookup = {"=": "native", ">": "big", "<": "little", "|": "native"}
 
+NETCDF4_PYTHON_LOCK = combine_locks([NETCDFC_LOCK, HDF5_LOCK])
 
 class BaseNetCDF4Array(BackendArray):
     __slots__ = ("datastore", "dtype", "shape", "variable_name")
