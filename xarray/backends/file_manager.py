@@ -238,7 +238,10 @@ class CachingFileManager(FileManager[T_File]):
         with self._optional_lock(needs_lock):
             default = None
             file = self._cache.pop(self._key, default)
-            if file is not None:
+            if needs_lock and self._lock:
+                with self._lock:
+                    file.close()
+            else:
                 file.close()
 
     def __del__(self) -> None:
@@ -396,7 +399,11 @@ class PickleableFileManager(FileManager[T_File]):
         del needs_lock  # unused
         if not self._closed:
             file = self._get_unclosed_file()
-            file.close()
+            if needs_lock and self._lock:
+                with self._lock:
+                    file.close()
+            else:
+                file.close()
             self._file = None
             # Remove all references to opener arguments, so they can be garbage
             # collected.
