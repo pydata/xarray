@@ -85,11 +85,13 @@ ENGINES_AND_FORMATS = [
 
 
 @pytest.mark.parametrize("engine,nc_format", ENGINES_AND_FORMATS)
+@pytest.mark.parametrize("compute", [True, False])
 def test_dask_distributed_netcdf_roundtrip(
     loop,  # noqa: F811
     tmp_netcdf_filename,
     engine,
     nc_format,
+    compute,
 ):
     if engine not in ENGINES:
         pytest.skip("engine not available")
@@ -107,7 +109,11 @@ def test_dask_distributed_netcdf_roundtrip(
                     )
                 return
 
-            original.to_netcdf(tmp_netcdf_filename, engine=engine, format=nc_format)
+            result = original.to_netcdf(
+                tmp_netcdf_filename, engine=engine, format=nc_format, compute=compute
+            )
+            if not compute:
+                result.compute()
 
             with xr.open_dataset(
                 tmp_netcdf_filename, chunks=chunks, engine=engine

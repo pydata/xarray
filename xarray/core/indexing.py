@@ -570,7 +570,7 @@ class ExplicitlyIndexed:
     __slots__ = ()
 
     def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         # Leave casting to an array up to the underlying array type.
         if Version(np.__version__) >= Version("2.0.0"):
@@ -653,7 +653,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
         self.indexer_cls = indexer_cls
 
     def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if Version(np.__version__) >= Version("2.0.0"):
             return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)

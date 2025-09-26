@@ -73,7 +73,7 @@ types = [
 dev = [
   "hypothesis",
   "jinja2",
-  "mypy",
+  "mypy==1.18.1",
   "pre-commit",
   "pytest",
   "pytest-cov",
@@ -182,28 +182,6 @@ module = [
   "xarray.computation.*",
   "xarray.indexes.*",
   "xarray.tests.*",
-]
-# This then excludes some modules from the above list. (So ideally we remove
-# from here in time...)
-[[tool.mypy.overrides]]
-check_untyped_defs = false
-module = [
-  "xarray.tests.test_coarsen",
-  "xarray.tests.test_coding_times",
-  "xarray.tests.test_combine",
-  "xarray.tests.test_computation",
-  "xarray.tests.test_concat",
-  "xarray.tests.test_coordinates",
-  "xarray.tests.test_dask",
-  "xarray.tests.test_dataarray",
-  "xarray.tests.test_duck_array_ops",
-  "xarray.tests.test_indexing",
-  "xarray.tests.test_merge",
-  "xarray.tests.test_sparse",
-  "xarray.tests.test_ufuncs",
-  "xarray.tests.test_units",
-  "xarray.tests.test_variable",
-  "xarray.tests.test_weighted",
 ]
 
 # Use strict = true whenever namedarray has become standalone. In the meantime
@@ -363,6 +341,9 @@ filterwarnings = [
   "default:Zarr-Python is not in alignment with the final V3 specification",
   # TODO: this is raised for vlen-utf8, consolidated metadata, U1 dtype
   "default:is currently not part .* the Zarr version 3 specification.",
+  # Zarr V3 data type specifications warnings - very repetitive
+  "ignore:The data type .* does not have a Zarr V3 specification",
+  "ignore:Consolidated metadata is currently not part",
   # TODO: remove once we know how to deal with a changed signature in protocols
   "default:::xarray.tests.test_strategies",
 ]
