@@ -939,6 +939,17 @@ class TestMergeDataTree:
         ):
             xr.merge([tree1, tree2], join="exact")
 
+    def test_merge_error_includes_path(self) -> None:
+        tree1 = xr.DataTree.from_dict({"/a/b": ("x", [0, 1])})
+        tree2 = xr.DataTree.from_dict({"/a/b": ("x", [1, 2])})
+        with pytest.raises(
+            xr.MergeError,
+            match=re.escape(
+                "Raised whilst mapping function over node(s) with path 'a'"
+            ),
+        ):
+            xr.merge([tree1, tree2], join="exact")
+
     def test_fill_value_errors(self) -> None:
         trees = [xr.DataTree(), xr.DataTree()]
 

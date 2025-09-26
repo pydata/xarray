@@ -804,6 +804,7 @@ def merge_trees(
     """Merge specialized to DataTree objects."""
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
+    from xarray.core.datatree_mapping import add_path_context_to_errors
 
     if fill_value is not dtypes.NA:
         # fill_value support dicts, which probably should be mapped to sub-groups?
@@ -817,9 +818,10 @@ def merge_trees(
             node_lists[key].append(node)
 
     root_datasets = [node.dataset for node in node_lists.pop(".")]
-    root_ds = merge(
-        root_datasets, compat=compat, join=join, combine_attrs=combine_attrs
-    )
+    with add_path_context_to_errors("."):
+        root_ds = merge(
+            root_datasets, compat=compat, join=join, combine_attrs=combine_attrs
+        )
     result = DataTree(dataset=root_ds)
 
     def depth(kv):
@@ -828,12 +830,13 @@ def merge_trees(
     for key, nodes in sorted(node_lists.items(), key=depth):
         # Merge datasets, including inherited indexes to ensure alignment.
         datasets = [node.dataset for node in nodes]
-        merge_result = merge_core(
-            datasets,
-            compat=compat,
-            join=join,
-            combine_attrs=combine_attrs,
-        )
+        with add_path_context_to_errors(key):
+            merge_result = merge_core(
+                datasets,
+                compat=compat,
+                join=join,
+                combine_attrs=combine_attrs,
+            )
         # Remove inherited coordinates/indexes/dimensions.
         for var_name in list(merge_result.coord_names):
             if not any(var_name in node._coord_variables for node in nodes):

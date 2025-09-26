@@ -2219,13 +2219,13 @@ class TestIndexing:
 
         with pytest.raises(
             KeyError,
-            match="Raised whilst mapping function over node with path 'second'",
+            match="Raised whilst mapping function over node(s) with path 'second'",
         ):
             tree.sel(x=1)
 
         with pytest.raises(
             IndexError,
-            match="Raised whilst mapping function over node with path 'first'",
+            match="Raised whilst mapping function over node(s) with path 'first'",
         ):
             tree.isel(x=4)
 
