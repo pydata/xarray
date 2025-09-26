@@ -446,8 +446,12 @@ attrs_repr = functools.partial(
 def coords_repr(coords: AbstractCoordinates, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(coords)
+    dims = tuple(coords._data.dims)
+    dim_ordered_coords = sorted(
+        coords.items(), key=lambda x: dims.index(x[0]) if x[0] in dims else len(dims)
+    )
     return _mapping_repr(
-        coords,
+        dict(dim_ordered_coords),
         title="Coordinates",
         summarizer=summarize_variable,
         expand_option_name="display_expand_coords",
