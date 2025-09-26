@@ -90,7 +90,7 @@ class DummyChunkManager(ChunkManagerEntrypoint):
     def rechunk(self, data: DummyChunkedArray, chunks, **kwargs) -> DummyChunkedArray:
         return data.rechunk(chunks, **kwargs)
 
-    def compute(self, *data: DummyChunkedArray, **kwargs) -> tuple[np.ndarray, ...]:
+    def compute(self, *data: DummyChunkedArray, **kwargs) -> tuple[np.ndarray, ...]:  # type: ignore[override]
         from dask.array import compute
 
         return compute(*data, **kwargs)
