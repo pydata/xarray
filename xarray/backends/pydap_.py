@@ -57,7 +57,7 @@ class PydapArrayWrapper(BackendArray):
         if self._batch and hasattr(self.array, "dataset"):
             # this are both True only for pydap>3.5.5
             # from pydap.lib import resolve_batch_for_all_variables
-            from pydap.lib import data_check, get_batch_data
+            from pydap.client import data_check, get_batch_data
 
             dataset = self.array.dataset
             get_batch_data(self.array, checksums=self._checksums, key=key)
@@ -239,7 +239,7 @@ class PydapDataStore(AbstractDataStore):
 
     def _get_data_array(self, var):
         """gets dimension data all at once"""
-        from pydap.lib import get_batch_data
+        from pydap.client import get_batch_data
 
         if not var._is_data_loaded():
             # data has not been deserialized yet
