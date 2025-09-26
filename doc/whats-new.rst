@@ -37,8 +37,10 @@ Breaking changes
   restore the prior defaults (:issue:`10657`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
-- The HTML repr for :py:class:`DataTree` has been tweaked to hide empty
-  sections, and automatically expand sub-groups (:pull:`10785`).
+- The HTML reprs for :py:class:`DataArray`, :py:class:`Dataset` and
+  :py:class:`DataTree` have been tweaked to hide empty sections, consistent
+  with the text reprs. The ``DataTree`` HTML repr also now automatically expands
+  sub-groups (:pull:`10785`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Deprecations

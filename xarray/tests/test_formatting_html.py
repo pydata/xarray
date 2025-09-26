@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -9,6 +10,66 @@ import pytest
 import xarray as xr
 from xarray.core import formatting_html as fh
 from xarray.core.coordinates import Coordinates
+
+
+def drop_fallback_text_repr(html: str) -> str:
+    pattern = (
+        re.escape("<pre class='xr-text-repr-fallback'>") + "[^<]*" + re.escape("</pre>")
+    )
+    return re.sub(pattern, "", html)
+
+
+XarrayTypes = xr.DataTree | xr.Dataset | xr.DataArray | xr.Variable
+
+
+def xarray_html_only_repr(obj: XarrayTypes) -> str:
+    return drop_fallback_text_repr(obj._repr_html_())
+
+
+def assert_consistent_text_and_html(
+    obj: XarrayTypes, section_headers: list[str]
+) -> None:
+    actual_html = xarray_html_only_repr(obj)
+    actual_text = repr(obj)
+    for section_header in section_headers:
+        assert actual_html.count(section_header) == actual_text.count(section_header), (
+            section_header
+        )
+
+
+assert_consistent_text_and_html_dataarray = partial(
+    assert_consistent_text_and_html,
+    section_headers=[
+        "Coordinates",
+        "Indexes",
+        "Attributes",
+    ],
+)
+
+
+assert_consistent_text_and_html_dataset = partial(
+    assert_consistent_text_and_html,
+    section_headers=[
+        "Dimensions",
+        "Coordinates",
+        "Data variables",
+        "Indexes",
+        "Attributes",
+    ],
+)
+
+
+assert_consistent_text_and_html_datatree = partial(
+    assert_consistent_text_and_html,
+    section_headers=[
+        "Dimensions",
+        "Coordinates",
+        "Inherited coordinates",
+        "Data variables",
+        "Indexes",
+        "Attributes",
+    ],
+)
 
 
 @pytest.fixture
@@ -101,56 +162,64 @@ def test_summarize_attrs_with_unsafe_attr_name_and_value() -> None:
     assert "<dd>&lt;pd.DataFrame&gt;</dd>" in formatted
 
 
-def test_repr_of_dataarray(dataarray: xr.DataArray) -> None:
-    formatted = fh.array_repr(dataarray)
+def test_repr_of_dataarray() -> None:
+    dataarray = xr.DataArray(np.random.default_rng(0).random((4, 6)))
+    formatted = xarray_html_only_repr(dataarray)
     assert "dim_0" in formatted
     # has an expanded data section
     assert formatted.count("class='xr-array-in' type='checkbox' checked>") == 1
-    # coords, indexes and attrs don't have an items so they'll be be disabled and collapsed
-    assert (
-        formatted.count("class='xr-section-summary-in' type='checkbox' disabled >") == 3
-    )
+    # coords, indexes and attrs don't have an items so they'll be omitted
+    assert "Coordinates" not in formatted
+    assert "Indexes" not in formatted
+    assert "Attributes" not in formatted
+
+    assert_consistent_text_and_html_dataarray(dataarray)
 
     with xr.set_options(display_expand_data=False):
-        formatted = fh.array_repr(dataarray)
+        formatted = xarray_html_only_repr(dataarray)
         assert "dim_0" in formatted
         # has a collapsed data section
         assert formatted.count("class='xr-array-in' type='checkbox' checked>") == 0
-        # coords, indexes and attrs don't have an items so they'll be be disabled and collapsed
-        assert (
-            formatted.count("class='xr-section-summary-in' type='checkbox' disabled >")
-            == 3
-        )
+        # coords, indexes and attrs don't have an items so they'll be omitted
+        assert "Coordinates" not in formatted
+        assert "Indexes" not in formatted
+        assert "Attributes" not in formatted
 
 
 def test_repr_of_multiindex(multiindex: xr.Dataset) -> None:
     formatted = fh.dataset_repr(multiindex)
     assert "(x)" in formatted
 
+    assert_consistent_text_and_html_dataset(multiindex)
+
 
 def test_repr_of_dataset(dataset: xr.Dataset) -> None:
-    formatted = fh.dataset_repr(dataset)
+    formatted = xarray_html_only_repr(dataset)
     # coords, attrs, and data_vars are expanded
     assert (
         formatted.count("class='xr-section-summary-in' type='checkbox'  checked>") == 3
     )
-    # indexes is collapsed
-    assert formatted.count("class='xr-section-summary-in' type='checkbox'  >") == 1
+    # indexes is omitted
+    assert "Indexes" not in formatted
     assert "&lt;U4" in formatted or "&gt;U4" in formatted
     assert "&lt;IA&gt;" in formatted
+
+    assert_consistent_text_and_html_dataset(dataset)
 
     with xr.set_options(
         display_expand_coords=False,
         display_expand_data_vars=False,
         display_expand_attrs=False,
         display_expand_indexes=True,
+        display_default_indexes=True,
     ):
-        formatted = fh.dataset_repr(dataset)
-        # coords, attrs, and data_vars are collapsed, indexes is expanded
+        formatted = xarray_html_only_repr(dataset)
+        # coords, attrs, and data_vars are collapsed, indexes is shown & expanded
         assert (
             formatted.count("class='xr-section-summary-in' type='checkbox'  checked>")
             == 1
         )
+        assert "Indexes" in formatted
         assert "&lt;U4" in formatted or "&gt;U4" in formatted
         assert "&lt;IA&gt;" in formatted
 
@@ -246,21 +315,22 @@ class TestDataTreeTruncatesNodes:
                 assert f"group_{i}</div>" not in result
 
 
-def _drop_fallback_text_repr(html: str) -> str:
-    pattern = (
-        re.escape("<pre class='xr-text-repr-fallback'>") + "[^<]*" + re.escape("</pre>")
-    )
-    return re.sub(pattern, "", html)
-
-
 class TestDataTreeInheritance:
     def test_inherited_section_present(self) -> None:
         dt = xr.DataTree.from_dict(data={"a/b/c": None}, coords={"x": [1]})
+
         root_html = dt._repr_html_()
         assert "Inherited coordinates" not in root_html
 
-        child_html = _drop_fallback_text_repr(dt["a"]._repr_html_())
+        child_html = xarray_html_only_repr(dt["a"])
         assert child_html.count("Inherited coordinates") == 1
+
+    def test_repr_consistency(self) -> None:
+        dt = xr.DataTree.from_dict({"/a/b/c": None})
+        assert_consistent_text_and_html_datatree(dt)
+        assert_consistent_text_and_html_datatree(dt["a"])
+        assert_consistent_text_and_html_datatree(dt["a/b"])
+        assert_consistent_text_and_html_datatree(dt["a/b/c"])
 
     def test_no_repeated_style_or_fallback_text(self) -> None:
         dt = xr.DataTree.from_dict({"/a/b/c": None})

@@ -10,6 +10,7 @@ from math import ceil
 from typing import TYPE_CHECKING, Literal
 
 from xarray.core.formatting import (
+    filter_nondefault_indexes,
     inherited_vars,
     inline_index_repr,
     inline_variable_array_repr,
@@ -334,13 +335,22 @@ def array_repr(arr) -> str:
     sections = [array_section(arr)]
 
     if hasattr(arr, "coords"):
-        sections.append(coord_section(arr.coords))
+        if arr.coords:
+            sections.append(coord_section(arr.coords))
 
     if hasattr(arr, "xindexes"):
-        indexes = _get_indexes_dict(arr.xindexes)
-        sections.append(index_section(indexes))
+        display_default_indexes = _get_boolean_with_default(
+            "display_default_indexes", False
+        )
+        xindexes = filter_nondefault_indexes(
+            _get_indexes_dict(arr.xindexes), not display_default_indexes
+        )
+        if xindexes:
+            indexes = _get_indexes_dict(arr.xindexes)
+            sections.append(index_section(indexes))
 
-    sections.append(attr_section(arr.attrs))
+    if arr.attrs:
+        sections.append(attr_section(arr.attrs))
 
     return _obj_repr(arr, header_components, sections)
 
@@ -350,13 +360,26 @@ def dataset_repr(ds) -> str:
 
     header_components = [f"<div class='xr-obj-type'>{escape(obj_type)}</div>"]
 
-    sections = [
-        dim_section(ds),
-        coord_section(ds.coords),
-        datavar_section(ds.data_vars),
-        index_section(_get_indexes_dict(ds.xindexes)),
-        attr_section(ds.attrs),
-    ]
+    sections = []
+
+    sections.append(dim_section(ds))
+
+    if ds.coords:
+        sections.append(coord_section(ds.coords))
+
+    sections.append(datavar_section(ds.data_vars))
+
+    display_default_indexes = _get_boolean_with_default(
+        "display_default_indexes", False
+    )
+    xindexes = filter_nondefault_indexes(
+        _get_indexes_dict(ds.xindexes), not display_default_indexes
+    )
+    if xindexes:
+        sections.append(index_section(xindexes))
+
+    if ds.attrs:
+        sections.append(attr_section(ds.attrs))
 
     return _obj_repr(ds, header_components, sections)
 
@@ -373,6 +396,13 @@ def datatree_node_sections(node: DataTree, root: bool = False) -> list[str]:
         indexes=inherited_vars(node._indexes),
     )
 
+    # Only show dimensions if also showing a variable or coordinates section.
+    show_dims = (
+        node._node_coord_variables
+        or (root and inherited_coords)
+        or node._data_variables
+    )
+
     sections = []
 
     if node.children:
@@ -381,7 +411,7 @@ def datatree_node_sections(node: DataTree, root: bool = False) -> list[str]:
             children_section(node.children, max_items_collapse=children_max_items)
         )
 
-    if ds.dims:
+    if show_dims:
         sections.append(dim_section(ds))
 
     if node_coords:
