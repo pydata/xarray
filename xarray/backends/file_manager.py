@@ -355,6 +355,7 @@ class PickleableFileManager(FileManager[T_File]):
         opener: Callable[..., T_File],
         *args: Any,
         mode: Any = _OMIT_MODE,
+        lock: Lock | None | Literal[False] = None,
         kwargs: Mapping[str, Any] | None = None,
     ):
         kwargs = {} if kwargs is None else dict(kwargs)
@@ -362,6 +363,7 @@ class PickleableFileManager(FileManager[T_File]):
         self._args = args
         self._mode = "a" if mode == "w" else mode
         self._kwargs = kwargs
+        self._lock = lock
 
         # Note: No need for locking with PickleableFileManager, because all
         # opening of files happens in the constructor.
