@@ -451,7 +451,10 @@ class DummyFileManager(FileManager[T_File]):
     """FileManager that simply wraps an open file in the FileManager interface."""
 
     def __init__(
-        self, value: T_File, *, close: Callable[[], None] | None = None
+        self,
+        value: T_File,
+        *,
+        close: Callable[[], None] | None = None,
         lock: Lock | None | Literal[False] = None,
     ):
         if close is None:
