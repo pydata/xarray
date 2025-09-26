@@ -10,6 +10,7 @@ from math import ceil
 from typing import TYPE_CHECKING, Literal
 
 from xarray.core.formatting import (
+    filter_nondefault_indexes,
     inherited_vars,
     inline_index_repr,
     inline_variable_array_repr,
@@ -323,24 +324,33 @@ def array_repr(arr) -> str:
         indexed_dims = {}
 
     obj_type = f"xarray.{type(arr).__name__}"
-    arr_name = f"'{arr.name}'" if getattr(arr, "name", None) else ""
+    arr_name = escape(repr(arr.name)) if getattr(arr, "name", None) else ""
 
     header_components = [
         f"<div class='xr-obj-type'>{obj_type}</div>",
-        f"<div class='xr-array-name'>{arr_name}</div>",
+        f"<div class='xr-obj-name'>{arr_name}</div>",
         format_dims(dims, indexed_dims),
     ]
 
     sections = [array_section(arr)]
 
     if hasattr(arr, "coords"):
-        sections.append(coord_section(arr.coords))
+        if arr.coords:
+            sections.append(coord_section(arr.coords))
 
     if hasattr(arr, "xindexes"):
-        indexes = _get_indexes_dict(arr.xindexes)
-        sections.append(index_section(indexes))
+        display_default_indexes = _get_boolean_with_default(
+            "display_default_indexes", False
+        )
+        xindexes = filter_nondefault_indexes(
+            _get_indexes_dict(arr.xindexes), not display_default_indexes
+        )
+        if xindexes:
+            indexes = _get_indexes_dict(arr.xindexes)
+            sections.append(index_section(indexes))
 
-    sections.append(attr_section(arr.attrs))
+    if arr.attrs:
+        sections.append(attr_section(arr.attrs))
 
     return _obj_repr(arr, header_components, sections)
 
@@ -350,15 +360,74 @@ def dataset_repr(ds) -> str:
 
     header_components = [f"<div class='xr-obj-type'>{escape(obj_type)}</div>"]
 
-    sections = [
-        dim_section(ds),
-        coord_section(ds.coords),
-        datavar_section(ds.data_vars),
-        index_section(_get_indexes_dict(ds.xindexes)),
-        attr_section(ds.attrs),
-    ]
+    sections = []
+
+    sections.append(dim_section(ds))
+
+    if ds.coords:
+        sections.append(coord_section(ds.coords))
+
+    sections.append(datavar_section(ds.data_vars))
+
+    display_default_indexes = _get_boolean_with_default(
+        "display_default_indexes", False
+    )
+    xindexes = filter_nondefault_indexes(
+        _get_indexes_dict(ds.xindexes), not display_default_indexes
+    )
+    if xindexes:
+        sections.append(index_section(xindexes))
+
+    if ds.attrs:
+        sections.append(attr_section(ds.attrs))
 
     return _obj_repr(ds, header_components, sections)
+
+
+def datatree_node_sections(node: DataTree, root: bool = False) -> list[str]:
+    from xarray.core.coordinates import Coordinates
+
+    ds = node._to_dataset_view(rebuild_dims=False, inherit=True)
+    node_coords = node.to_dataset(inherit=False).coords
+
+    # use this class to get access to .xindexes property
+    inherited_coords = Coordinates(
+        coords=inherited_vars(node._coord_variables),
+        indexes=inherited_vars(node._indexes),
+    )
+
+    # Only show dimensions if also showing a variable or coordinates section.
+    show_dims = (
+        node._node_coord_variables
+        or (root and inherited_coords)
+        or node._data_variables
+    )
+
+    sections = []
+
+    if node.children:
+        children_max_items = 1 if ds.data_vars else 6
+        sections.append(
+            children_section(node.children, max_items_collapse=children_max_items)
+        )
+
+    if show_dims:
+        sections.append(dim_section(ds))
+
+    if node_coords:
+        sections.append(coord_section(node_coords))
+
+    # only show inherited coordinates on the root
+    if root and inherited_coords:
+        sections.append(inherited_coord_section(inherited_coords))
+
+    if ds.data_vars:
+        sections.append(datavar_section(ds.data_vars))
+
+    if ds.attrs:
+        sections.append(attr_section(ds.attrs))
+
+    return sections
 
 
 def summarize_datatree_children(children: Mapping[str, DataTree]) -> str:
@@ -366,12 +435,10 @@ def summarize_datatree_children(children: Mapping[str, DataTree]) -> str:
     n_children = len(children)
 
     children_html = []
-    for i, (n, c) in enumerate(children.items()):
+    for i, child in enumerate(children.values()):
         if i < ceil(MAX_CHILDREN / 2) or i >= ceil(n_children - MAX_CHILDREN / 2):
             is_last = i == (n_children - 1)
-            children_html.append(
-                _wrap_datatree_repr(datatree_node_repr(n, c), end=is_last)
-            )
+            children_html.append(datatree_child_repr(child, end=is_last))
         elif n_children > MAX_CHILDREN and i == ceil(MAX_CHILDREN / 2):
             children_html.append("<div>...</div>")
 
@@ -388,7 +455,6 @@ children_section = partial(
     _mapping_section,
     name="Groups",
     details_func=summarize_datatree_children,
-    max_items_collapse=1,
     max_option_name="display_max_children",
     expand_option_name="display_expand_groups",
 )
@@ -402,108 +468,58 @@ inherited_coord_section = partial(
 )
 
 
-def datatree_node_repr(group_title: str, node: DataTree, show_inherited=False) -> str:
-    from xarray.core.coordinates import Coordinates
-
-    header_components = [f"<div class='xr-obj-type'>{escape(group_title)}</div>"]
-
-    ds = node._to_dataset_view(rebuild_dims=False, inherit=True)
-    node_coords = node.to_dataset(inherit=False).coords
-
-    # use this class to get access to .xindexes property
-    inherited_coords = Coordinates(
-        coords=inherited_vars(node._coord_variables),
-        indexes=inherited_vars(node._indexes),
-    )
-
-    sections = [
-        children_section(node.children),
-        dim_section(ds),
-        coord_section(node_coords),
-    ]
-
-    # only show inherited coordinates on the root
-    if show_inherited:
-        sections.append(inherited_coord_section(inherited_coords))
-
-    sections += [
-        datavar_section(ds.data_vars),
-        attr_section(ds.attrs),
-    ]
-
-    return _obj_repr(ds, header_components, sections)
-
-
-def _wrap_datatree_repr(r: str, end: bool = False) -> str:
-    """
-    Wrap HTML representation with a tee to the left of it.
-
-    Enclosing HTML tag is a <div> with :code:`display: inline-grid` style.
-
-    Turns:
-    [    title    ]
-    |   details   |
-    |_____________|
-
-    into (A):
-    |─ [    title    ]
-    |  |   details   |
-    |  |_____________|
-
-    or (B):
-    └─ [    title    ]
-       |   details   |
-       |_____________|
-
-    Parameters
-    ----------
-    r: str
-        HTML representation to wrap.
-    end: bool
-        Specify if the line on the left should continue or end.
-
-        Default is True.
-
-    Returns
-    -------
-    str
-        Wrapped HTML representation.
-
-        Tee color is set to the variable :code:`--xr-border-color`.
-    """
-    # height of line
+def datatree_child_repr(node: DataTree, end: bool = False) -> str:
+    # Wrap DataTree HTML representation with a tee to the left of it.
+    #
+    # Enclosing HTML tag is a <div> with :code:`display: inline-grid` style.
+    #
+    # Turns:
+    # [    title    ]
+    # |   details   |
+    # |_____________|
+    #
+    # into (A):
+    # |─ [    title    ]
+    # |  |   details   |
+    # |  |_____________|
+    #
+    # or (B):
+    # └─ [    title    ]
+    #    |   details   |
+    #    |_____________|
     end = bool(end)
-    height = "100%" if end is False else "1.2em"
-    return "".join(
-        [
-            "<div style='display: inline-grid; grid-template-columns: 0px 20px auto; width: 100%;'>",
-            "<div style='",
-            "grid-column-start: 1;",
-            "border-right: 0.2em solid;",
-            "border-color: var(--xr-border-color);",
-            f"height: {height};",
-            "width: 0px;",
-            "'>",
-            "</div>",
-            "<div style='",
-            "grid-column-start: 2;",
-            "grid-row-start: 1;",
-            "height: 1em;",
-            "width: 20px;",
-            "border-bottom: 0.2em solid;",
-            "border-color: var(--xr-border-color);",
-            "'>",
-            "</div>",
-            "<div style='",
-            "grid-column-start: 3;",
-            "'>",
-            r,
-            "</div>",
-            "</div>",
-        ]
-    )
+    height = "100%" if end is False else "1.2em"  # height of line
+
+    path = escape(node.path)
+    sections = datatree_node_sections(node, root=False)
+    section_items = "".join(f"<li class='xr-section-item'>{s}</li>" for s in sections)
+
+    # TODO: Can we make the group name clickable to toggle the sections below?
+    # This looks like it would require the input/label pattern used above.
+    html = f"""
+        <div class='xr-group-box'>
+            <div class='xr-group-box-vline' style='height: {height}'></div>
+            <div class='xr-group-box-hline'></div>
+            <div class='xr-group-box-contents'>
+                <div class='xr-header'>
+                    <div class='xr-group-name'>{path}</div>
+                </div>
+                <ul class='xr-sections'>
+                    {section_items}
+                </ul>
+            </div>
+        </div>
+    """
+    return "".join(t.strip() for t in html.split("\n"))
 
 
-def datatree_repr(dt: DataTree) -> str:
-    obj_type = f"xarray.{type(dt).__name__}"
-    return datatree_node_repr(obj_type, dt, show_inherited=True)
+def datatree_repr(node: DataTree) -> str:
+    header_components = [
+        f"<div class='xr-obj-type'>xarray.{type(node).__name__}</div>",
+    ]
+    if node.name is not None:
+        name = escape(repr(node.name))
+        header_components.append(f"<div class='xr-obj-name'>{name}</div>")
+
+    sections = datatree_node_sections(node, root=True)
+    return _obj_repr(node, header_components, sections)
