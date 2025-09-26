@@ -8,7 +8,7 @@ from collections.abc import Callable, Hashable, Iterator, Mapping, MutableMappin
 from contextlib import AbstractContextManager, contextmanager
 from typing import Any, Generic, Literal, TypeVar, cast
 
-from xarray.backends.locks import acquire, NETCDF4_PYTHON_LOCK
+from xarray.backends.locks import acquire
 from xarray.backends.lru_cache import LRUCache
 from xarray.core import utils
 from xarray.core.options import OPTIONS
