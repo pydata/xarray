@@ -694,8 +694,8 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         """
         if isinstance(array, type(self)) and key is None:
             # unwrap
-            key = array.key
-            array = array.array
+            key = array.key  # type: ignore[has-type, unused-ignore]
+            array = array.array  # type: ignore[has-type, unused-ignore]
 
         if key is None:
             key = BasicIndexer((slice(None),) * array.ndim)
