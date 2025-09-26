@@ -126,7 +126,7 @@ def test_repr_coords_order_of_datarray() -> None:
         np.empty(
             (
                 2,
-                2,
+                2
             )
         ),
         coords={"foo": [0, 1], "bar": [0, 1]},
@@ -136,7 +136,7 @@ def test_repr_coords_order_of_datarray() -> None:
         np.empty(
             (
                 2,
-                2,
+                2
             )
         ),
         coords={"bar": [0, 1], "foo": [0, 1]},
