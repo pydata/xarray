@@ -3524,6 +3524,18 @@ class TestDataArray:
         assert_array_equal(index_pd.levels[1], ["a", "b"])
         assert_array_equal(index_pd.levels[2], [5, 6, 7])
 
+        # test converting a dataframe MultiIndexed along a single dimension
+        mindex_single = pd.MultiIndex.from_product(
+            [list(range(6)), list("ab")], names=["A", "B"]
+        )
+
+        arr_multi_single = DataArray(
+            arr_np.flatten(), [("MI", mindex_single)], dims="MI", name="test"
+        )
+        actual_df = arr_multi_single.to_dataframe()
+        expected_df = arr_multi_single.to_series().to_frame()
+        assert expected_df.equals(actual_df)
+
     def test_to_dataframe_0length(self) -> None:
         # regression test for #3008
         arr_np = np.random.randn(4, 0)
@@ -3871,7 +3883,7 @@ class TestDataArray:
         v = range(N)
         da = DataArray(v)
         ma = da.to_masked_array()
-        assert len(ma.mask) == N
+        assert isinstance(ma.mask, np.ndarray) and len(ma.mask) == N
 
     def test_to_dataset_whole(self) -> None:
         unnamed = DataArray([1, 2], dims="x")
