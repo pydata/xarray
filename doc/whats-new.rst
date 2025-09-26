@@ -49,6 +49,9 @@ Claude, Deepak Cherian, Dimitri Papadopoulos Orfanos, Dylan H. Morris, Emmanuel 
 New Features
 ~~~~~~~~~~~~
 
+- Improved ``pydap`` backend behavior and performance when using :py:func:`open_dataset`, :py:func:`open_datatree` when downloading dap4 (opendap) data (:issue:`10628`, :pull:`10629`).
+  ``batch=True|False`` is a new  ``backend_kwarg`` that further enables downloading multiple arrays in single response. In addition ``checksums`` is added as optional argument to be passed to ``pydap`` backend.
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 - :py:func:`DataTree.from_dict` now supports passing in ``DataArray`` and nested
   dictionary values, and has a ``coords`` argument for specifying coordinates as
   ``DataArray`` objects (:pull:`10658`).
@@ -229,9 +232,6 @@ Alfonso Ladino, Brigitta Sipőcz, Claude, Deepak Cherian, Dimitri Papadopoulos O
 New Features
 ~~~~~~~~~~~~
 
-- Improved ``pydap`` backend behavior and performance when using :py:func:`open_dataset`, :py:func:`open_datatree` when downloading dap4 (opendap) data (:issue:`10628`, :pull:`10629`).
-  ``batch=True|False`` is a new  ``backend_kwarg`` that further enables downloading multiple arrays in single response. In addition ``checksums`` is added as optional argument to be passed to ``pydap`` backend.
-  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 - Added :py:meth:`DataTree.prune` method to remove empty nodes while preserving tree structure.
   Useful for cleaning up DataTree after time-based filtering operations (:issue:`10590`, :pull:`10598`).
   By `Alfonso Ladino <https://github.com/aladinor>`_.
