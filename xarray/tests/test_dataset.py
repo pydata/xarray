@@ -5120,7 +5120,6 @@ class TestDataset:
         # from_dataframe attempts to broadcast across because it doesn't know better, so cat must be converted
         ds["cat"] = (("x", "y"), np.stack((ds["cat"].to_numpy(), ds["cat"].to_numpy())))
         assert_identical(ds.assign_coords(x=[0, 1]), Dataset.from_dataframe(actual))
-
         # Check multiindex reordering
         new_order = ["x", "y"]
         # revert broadcasting fix above for 1d arrays
@@ -5153,6 +5152,41 @@ class TestDataset:
             ValueError, match="does not match the set of dimensions of this"
         ):
             ds.to_dataframe(dim_order=invalid_order)
+
+        # test a case with a MultiIndex along a single dimension
+        data_dict = dict(
+            x=[1, 2, 1, 2, 1], y=["a", "a", "b", "b", "b"], z=[5, 10, 15, 20, 25]
+        )
+        data_dict_w_dims = {k: ("single_dim", v) for k, v in data_dict.items()}
+
+        # Dataset multi-indexed along "single_dim" by "x" and "y"
+        ds = Dataset(data_dict_w_dims).set_coords(["x", "y"]).set_xindex(["x", "y"])
+        expected = pd.DataFrame(data_dict).set_index(["x", "y"])
+        actual = ds.to_dataframe()
+        assert expected.equals(actual)
+        # should be possible to reset index, as there should be no duplication
+        # between index and columns, and dataframes should still be equal
+        assert expected.reset_index().equals(actual.reset_index())
+
+        # MultiIndex deduplication should not affect other coordinates.
+        mindex_single = pd.MultiIndex.from_product(
+            [list(range(6)), list("ab")], names=["A", "B"]
+        )
+        ds = DataArray(
+            range(12), [("MI", mindex_single)], dims="MI", name="test"
+        )._to_dataset_whole()
+        ds.coords["C"] = "a single value"
+        ds.coords["D"] = ds.coords["A"] ** 2
+        expected = pd.DataFrame(
+            dict(
+                test=range(12),
+                C="a single value",
+                D=[0, 0, 1, 1, 4, 4, 9, 9, 16, 16, 25, 25],
+            )
+        ).set_index(mindex_single)
+        actual = ds.to_dataframe()
+        assert expected.equals(actual)
+        assert expected.reset_index().equals(actual.reset_index())
 
         # check pathological cases
         df = pd.DataFrame([1])
@@ -5796,7 +5830,7 @@ class TestDataset:
             coords={
                 "x": [4, 3],
                 "y": [1, 2],
-                "z": (["x", "y"], [[np.e, np.pi], [np.pi * np.e, np.pi * 3]]),
+                "z": (["x", "y"], [[np.exp(1), np.pi], [np.pi * np.exp(1), np.pi * 3]]),
             },
         )
         expected7 = Dataset(

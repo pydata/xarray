@@ -304,6 +304,10 @@ class NestedSequence(Protocol[_T_co]):
     def __reversed__(self, /) -> Iterator[_T_co | NestedSequence[_T_co]]: ...
 
 
+_T = TypeVar("_T")
+NestedDict = dict[str, "NestedDict[_T] | _T"]
+
+
 AnyStr_co = TypeVar("AnyStr_co", str, bytes, covariant=True)
 
 
@@ -364,3 +368,14 @@ Bins = Union[
 ]
 
 ResampleCompatible: TypeAlias = str | datetime.timedelta | pd.Timedelta | pd.DateOffset
+
+
+class Closable(Protocol):
+    def close(self) -> None: ...
+
+
+class Lock(Protocol):
+    def acquire(self, *args, **kwargs) -> Any: ...
+    def release(self) -> None: ...
+    def __enter__(self) -> Any: ...
+    def __exit__(self, *args, **kwargs) -> None: ...
