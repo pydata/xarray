@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import os
@@ -1784,6 +1785,80 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
         return groups_dict
+
+    async def open_groups_as_dict_async(
+        self,
+        filename_or_obj: T_PathFileOrDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group: str | None = None,
+        mode="r",
+        synchronizer=None,
+        consolidated=None,
+        chunk_store=None,
+        storage_options=None,
+        zarr_version=None,
+        zarr_format=None,
+    ) -> dict[str, Dataset]:
+        """Asynchronously open each group into a Dataset concurrently.
+
+        This mirrors open_groups_as_dict but parallelizes per-group Dataset opening,
+        which can significantly reduce latency on high-RTT object stores.
+        """
+        filename_or_obj = _normalize_path(filename_or_obj)
+
+        # Determine parent group path context
+        if group:
+            parent = str(NodePath("/") / NodePath(group))
+        else:
+            parent = str(NodePath("/"))
+
+        # Discover group stores (synchronous metadata step)
+        stores = ZarrStore.open_store(
+            filename_or_obj,
+            group=parent,
+            mode=mode,
+            synchronizer=synchronizer,
+            consolidated=consolidated,
+            consolidate_on_close=False,
+            chunk_store=chunk_store,
+            storage_options=storage_options,
+            zarr_version=zarr_version,
+            zarr_format=zarr_format,
+        )
+
+        async def open_one(path_group: str, store) -> tuple[str, Dataset]:
+            store_entrypoint = StoreBackendEntrypoint()
+
+            def _load_sync():
+                with close_on_error(store):
+                    return store_entrypoint.open_dataset(
+                        store,
+                        mask_and_scale=mask_and_scale,
+                        decode_times=decode_times,
+                        concat_characters=concat_characters,
+                        decode_coords=decode_coords,
+                        drop_variables=drop_variables,
+                        use_cftime=use_cftime,
+                        decode_timedelta=decode_timedelta,
+                    )
+
+            ds = await asyncio.to_thread(_load_sync)
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
+            return group_name, ds
+
+        tasks = [open_one(path_group, store) for path_group, store in stores.items()]
+        results = await asyncio.gather(*tasks)
+        return dict(results)
 
 
 def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
