@@ -1,6 +1,4 @@
-/* CSS stylesheet for displaying xarray objects in jupyterlab.
- *
- */
+/* CSS stylesheet for displaying xarray objects in notebooks */
 
 :root {
   --xr-font-color0: var(
@@ -79,6 +77,7 @@ body.vscode-dark {
   display: block !important;
   min-width: 300px;
   max-width: 700px;
+  line-height: 1.6;
 }
 
 .xr-text-repr-fallback {
