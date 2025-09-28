@@ -7521,8 +7521,8 @@ class TestZarrRegionAuto:
                 )
 
     @pytest.mark.xfail(
-        ON_WINDOWS and sys.version_info[:2] <= (3, 11),
-        reason="Permission errors from Zarr v3.1.3+. Not clear why this happens.",
+        ON_WINDOWS,
+        reason="Permission errors from Zarr: https://github.com/pydata/xarray/pull/10793",
     )
     @requires_dask
     def test_zarr_region_chunk_partial_offset(self):
