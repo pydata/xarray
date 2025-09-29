@@ -16,6 +16,7 @@ if TYPE_CHECKING:
         "cmap_sequential",
         "display_max_children",
         "display_max_rows",
+        "display_max_items",
         "display_values_threshold",
         "display_style",
         "display_width",
@@ -46,6 +47,7 @@ if TYPE_CHECKING:
         cmap_sequential: str | Colormap
         display_max_children: int
         display_max_rows: int
+        display_max_items: int
         display_values_threshold: int
         display_style: Literal["text", "html"]
         display_width: int
@@ -74,8 +76,9 @@ OPTIONS: T_Options = {
     "chunk_manager": "dask",
     "cmap_divergent": "RdBu_r",
     "cmap_sequential": "viridis",
-    "display_max_children": 6,
+    "display_max_children": 12,
     "display_max_rows": 12,
+    "display_max_items": 30,
     "display_values_threshold": 200,
     "display_style": "html",
     "display_width": 80,
@@ -112,6 +115,7 @@ _VALIDATORS = {
     "arithmetic_join": _JOIN_OPTIONS.__contains__,
     "display_max_children": _positive_integer,
     "display_max_rows": _positive_integer,
+    "display_max_items": _positive_integer,
     "display_values_threshold": _positive_integer,
     "display_style": _DISPLAY_OPTIONS.__contains__,
     "display_width": _positive_integer,
@@ -236,10 +240,12 @@ class set_options:
         * ``True`` : to always expand indexes
         * ``False`` : to always collapse indexes
         * ``default`` : to expand unless over a pre-defined limit (always collapse for html style)
-    display_max_children : int, default: 6
+    display_max_children : int, default: 12
         Maximum number of children to display for each node in a DataTree.
     display_max_rows : int, default: 12
         Maximum display rows.
+    display_max_items : int, default 30
+        Maximum number of items to display for a DataTree, across all levels.
     display_values_threshold : int, default: 200
         Total number of array elements which trigger summarization rather
         than full repr for variable data views (numpy arrays).
