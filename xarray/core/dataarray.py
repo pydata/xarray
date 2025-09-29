@@ -4170,8 +4170,9 @@ class DataArray(
             format='NETCDF4'). The group(s) will be created if necessary.
         engine : {"netcdf4", "scipy", "h5netcdf"}, optional
             Engine to use when writing netCDF files. If not provided, the
-            default engine is chosen based on available dependencies, with a
-            preference for 'netcdf4' if writing to a file on disk.
+            default engine is chosen based on available dependencies, by default
+            preferring "h5netcdf" over "scipy" over "netcdf4" (customizable via
+            ``netcdf_engine_order`` in ``xarray.set_options()``).
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,

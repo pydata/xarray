@@ -2111,7 +2111,7 @@ class NetCDF4Base(NetCDFBase):
                     fill_value=None,
                 )
                 v[:] = 1
-            with open_dataset(tmp_file) as original:
+            with open_dataset(tmp_file, engine="netcdf4") as original:
                 save_kwargs = {}
                 # We don't expect any errors.
                 # This is effectively a void context manager
@@ -2163,7 +2163,7 @@ class NetCDF4Base(NetCDFBase):
                     "time",
                     fill_value=255,
                 )
-            with open_dataset(tmp_file) as original:
+            with open_dataset(tmp_file, engine="netcdf4") as original:
                 save_kwargs = {}
                 if self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above:
                     save_kwargs["invalid_netcdf"] = True
@@ -2212,7 +2212,7 @@ class NetCDF4Base(NetCDFBase):
                     "time",
                     fill_value=255,
                 )
-            with open_dataset(tmp_file) as original:
+            with open_dataset(tmp_file, engine="netcdf4") as original:
                 assert (
                     original.clouds.encoding["dtype"].metadata
                     == original.tifa.encoding["dtype"].metadata
@@ -6773,6 +6773,7 @@ def _assert_no_dates_out_of_range_warning(record):
 
 
 @requires_scipy_or_netCDF4
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
 def test_use_cftime_standard_calendar_default_in_range(calendar) -> None:
     x = [0, 1]
@@ -7276,6 +7277,7 @@ class TestNCZarr:
         # https://github.com/Unidata/netcdf-c/issues/2259
         ds = ds.drop_vars("dim3")
 
+        # engine="netcdf4" is not required for backwards compatibility
         ds.to_netcdf(f"file://{filename}#mode=nczarr")
         return ds
 
@@ -7518,6 +7520,10 @@ class TestZarrRegionAuto:
                     mode="a",
                 )
 
+    @pytest.mark.xfail(
+        ON_WINDOWS,
+        reason="Permission errors from Zarr: https://github.com/pydata/xarray/pull/10793",
+    )
     @requires_dask
     def test_zarr_region_chunk_partial_offset(self):
         # https://github.com/pydata/xarray/pull/8459#issuecomment-1819417545

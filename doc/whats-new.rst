@@ -32,9 +32,18 @@ Breaking changes
   dataset in-place. (:issue:`10167`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
-- The default ``engine`` when reading/writing netCDF files in-memory is now
-  netCDF4, consistent with Xarray's default ``engine`` when read/writing netCDF
-  files to disk (:pull:`10624`).
+- The default ``engine`` when reading/writing netCDF files is now h5netcdf
+  or scipy, which are typically faster than the prior default of netCDF4-python.
+  You can control this default behavior explicitly via the new
+  ``netcdf_engine_order`` parameter in :py:func:`~xarray.set_options`, e.g.,
+  ``xr.set_options(netcdf_engine_order=['netcdf4', 'scipy', 'h5netcdf'])`` to
+  restore the prior defaults (:issue:`10657`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- The HTML reprs for :py:class:`DataArray`, :py:class:`Dataset` and
+  :py:class:`DataTree` have been tweaked to hide empty sections, consistent
+  with the text reprs. The ``DataTree`` HTML repr also now automatically expands
+  sub-groups (:pull:`10785`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Deprecations

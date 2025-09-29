@@ -1096,7 +1096,7 @@ def inherited_vars(mapping: ChainMap) -> dict:
     return {k: v for k, v in mapping.parents.items() if k not in mapping.maps[0]}
 
 
-def _datatree_node_repr(node: DataTree, show_inherited: bool) -> str:
+def _datatree_node_repr(node: DataTree, root: bool) -> str:
     summary = [f"Group: {node.path}"]
 
     col_width = _calculate_col_width(node.variables)
@@ -1107,11 +1107,11 @@ def _datatree_node_repr(node: DataTree, show_inherited: bool) -> str:
     # Only show dimensions if also showing a variable or coordinates section.
     show_dims = (
         node._node_coord_variables
-        or (show_inherited and inherited_coords)
+        or (root and inherited_coords)
         or node._data_variables
     )
 
-    dim_sizes = node.sizes if show_inherited else node._node_dims
+    dim_sizes = node.sizes if root else node._node_dims
 
     if show_dims:
         # Includes inherited dimensions.
@@ -1125,7 +1125,7 @@ def _datatree_node_repr(node: DataTree, show_inherited: bool) -> str:
         node_coords = node.to_dataset(inherit=False).coords
         summary.append(coords_repr(node_coords, col_width=col_width, max_rows=max_rows))
 
-    if show_inherited and inherited_coords:
+    if root and inherited_coords:
         summary.append(
             inherited_coords_repr(node, col_width=col_width, max_rows=max_rows)
         )
@@ -1143,7 +1143,7 @@ def _datatree_node_repr(node: DataTree, show_inherited: bool) -> str:
         )
 
     # TODO: only show indexes defined at this node, with a separate section for
-    # inherited indexes (if show_inherited=True)
+    # inherited indexes (if root=True)
     display_default_indexes = _get_boolean_with_default(
         "display_default_indexes", False
     )
@@ -1169,16 +1169,19 @@ def datatree_repr(dt: DataTree) -> str:
     header = f"<xarray.DataTree{name_info}>"
 
     lines = [header]
-    show_inherited = True
+    root = True
 
     for pre, fill, node in renderer:
         if isinstance(node, str):
             lines.append(f"{fill}{node}")
             continue
 
-        node_repr = _datatree_node_repr(node, show_inherited=show_inherited)
-        show_inherited = False  # only show inherited coords on the root
+        node_repr = _datatree_node_repr(node, root=root)
+        root = False  # only the first node is the root
 
+        # TODO: figure out if we can restructure this logic to move child groups
+        # up higher in the repr, directly below the <xarray.DataTree> header.
+        # This would be more consistent with the HTML repr.
         raw_repr_lines = node_repr.splitlines()
 
         node_line = f"{pre}{raw_repr_lines[0]}"
