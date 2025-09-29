@@ -2057,8 +2057,9 @@ class Dataset(
             format='NETCDF4'). The group(s) will be created if necessary.
         engine : {"netcdf4", "scipy", "h5netcdf"}, optional
             Engine to use when writing netCDF files. If not provided, the
-            default engine is chosen based on available dependencies, with a
-            preference for 'netcdf4' if writing to a file on disk.
+            default engine is chosen based on available dependencies, by default
+            preferring "h5netcdf" over "scipy" over "netcdf4" (customizable via
+            ``netcdf_engine_order`` in ``xarray.set_options()``).
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
@@ -7180,7 +7181,10 @@ class Dataset(
     def _to_dataframe(self, ordered_dims: Mapping[Any, int]):
         from xarray.core.extension_array import PandasExtensionArray
 
-        columns_in_order = [k for k in self.variables if k not in self.dims]
+        # All and only non-index arrays (whether data or coordinates) should
+        # become columns in the output DataFrame. Excluding indexes rather
+        # than dims handles the case of a MultiIndex along a single dimension.
+        columns_in_order = [k for k in self.variables if k not in self.xindexes]
         non_extension_array_columns = [
             k
             for k in columns_in_order

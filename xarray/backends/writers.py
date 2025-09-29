@@ -8,12 +8,11 @@ from io import IOBase
 from itertools import starmap
 from numbers import Number
 from os import PathLike
-from typing import TYPE_CHECKING, Any, Literal, cast, get_args, overload
+from typing import TYPE_CHECKING, Any, Literal, get_args, overload
 
 import numpy as np
 
 from xarray import backends, conventions
-from xarray.backends import plugins
 from xarray.backends.api import (
     _normalize_path,
     delayed_close_after_writes,
@@ -23,6 +22,7 @@ from xarray.backends.locks import get_dask_scheduler
 from xarray.backends.store import AbstractDataStore
 from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
+from xarray.core.options import OPTIONS
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 from xarray.core.utils import emit_user_level_warning
 
@@ -163,35 +163,53 @@ def _validate_attrs(dataset, engine, invalid_netcdf=False):
 
 
 def get_default_netcdf_write_engine(
+    path_or_file: str | IOBase | None,
     format: T_NetcdfTypes | None,
-    to_fileobject: bool,
 ) -> Literal["netcdf4", "h5netcdf", "scipy"]:
     """Return the default netCDF library to use for writing a netCDF file."""
+
     module_names = {
         "netcdf4": "netCDF4",
         "scipy": "scipy",
         "h5netcdf": "h5netcdf",
     }
-
-    candidates = list(plugins.NETCDF_BACKENDS_ORDER)
+    candidates = list(OPTIONS["netcdf_engine_order"])
 
     if format is not None:
-        if format.upper().startswith("NETCDF3"):
-            candidates.remove("h5netcdf")
-        elif format.upper().startswith("NETCDF4"):
-            candidates.remove("scipy")
-        else:
+        format = format.upper()  # type: ignore[assignment]
+        if format not in {
+            "NETCDF4",
+            "NETCDF4_CLASSIC",
+            "NETCDF3_64BIT",
+            "NETCDF3_CLASSIC",
+        }:
             raise ValueError(f"unexpected {format=}")
+        # TODO: allow format='NETCDF4_CLASSIC' to default to using h5netcdf,
+        # when the oldest supported version of h5netcdf supports it:
+        # https://github.com/h5netcdf/h5netcdf/pull/283
+        if format != "NETCDF4":
+            candidates.remove("h5netcdf")
+        if format not in {"NETCDF3_64BIT", "NETCDF3_CLASSIC"}:
+            candidates.remove("scipy")
 
-    if to_fileobject:
+    nczarr_mode = isinstance(path_or_file, str) and path_or_file.endswith(
+        "#mode=nczarr"
+    )
+    if nczarr_mode:
+        candidates[:] = ["netcdf4"]
+
+    if isinstance(path_or_file, IOBase):
         candidates.remove("netcdf4")
 
     for engine in candidates:
         module_name = module_names[engine]
         if importlib.util.find_spec(module_name) is not None:
-            return cast(Literal["netcdf4", "h5netcdf", "scipy"], engine)
+            return engine
 
-    format_str = f" with {format=}" if format is not None else ""
+    if nczarr_mode:
+        format_str = " in NCZarr format"
+    else:
+        format_str = f" with {format=}" if format is not None else ""
     libraries = ", ".join(module_names[c] for c in candidates)
     raise ValueError(
         f"cannot write NetCDF files{format_str} because none of the suitable "
@@ -378,11 +396,10 @@ def to_netcdf(
     if encoding is None:
         encoding = {}
 
-    path_or_file = _normalize_path(path_or_file)
+    normalized_path = _normalize_path(path_or_file)
 
     if engine is None:
-        to_fileobject = isinstance(path_or_file, IOBase)
-        engine = get_default_netcdf_write_engine(format, to_fileobject)
+        engine = get_default_netcdf_write_engine(normalized_path, format)
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
@@ -392,7 +409,7 @@ def to_netcdf(
 
     autoclose = _get_netcdf_autoclose(dataset, engine)
 
-    if path_or_file is None:
+    if normalized_path is None:
         if not compute:
             raise NotImplementedError(
                 "to_netcdf() with compute=False is not yet implemented when "
@@ -400,7 +417,7 @@ def to_netcdf(
             )
         target = BytesIOProxy()
     else:
-        target = path_or_file  # type: ignore[assignment]
+        target = normalized_path  # type: ignore[assignment]
 
     store = get_writable_netcdf_store(
         target,
@@ -529,9 +546,9 @@ def save_mfdataset(
         if necessary.
     engine : {"netcdf4", "scipy", "h5netcdf"}, optional
         Engine to use when writing netCDF files. If not provided, the
-        default engine is chosen based on available dependencies, with a
-        preference for "netcdf4" if writing to a file on disk.
-        See `Dataset.to_netcdf` for additional information.
+        default engine is chosen based on available dependencies, by default
+        preferring "h5netcdf" over "scipy" over "netcdf4" (customizable via
+        ``netcdf_engine_order`` in ``xarray.set_options()``).
     compute : bool
         If true compute immediately, otherwise return a
         ``dask.delayed.Delayed`` object that can be computed later.
@@ -815,13 +832,12 @@ def _datatree_to_netcdf(
             "DataTree.to_netcdf only supports the netcdf4 and h5netcdf engines"
         )
 
-    filepath = _normalize_path(filepath)
+    normalized_path = _normalize_path(filepath)
 
     if engine is None:
-        to_fileobject = isinstance(filepath, io.IOBase)
         engine = get_default_netcdf_write_engine(
+            path_or_file=normalized_path,
             format="NETCDF4",  # required for supporting groups
-            to_fileobject=to_fileobject,
         )  # type: ignore[assignment]
 
     if group is not None:
@@ -840,7 +856,7 @@ def _datatree_to_netcdf(
             f"unexpected encoding group name(s) provided: {set(encoding) - set(dt.groups)}"
         )
 
-    if filepath is None:
+    if normalized_path is None:
         if not compute:
             raise NotImplementedError(
                 "to_netcdf() with compute=False is not yet implemented when "
@@ -848,7 +864,7 @@ def _datatree_to_netcdf(
             )
         target = BytesIOProxy()
     else:
-        target = filepath  # type: ignore[assignment]
+        target = normalized_path  # type: ignore[assignment]
 
     if unlimited_dims is None:
         unlimited_dims = {}
