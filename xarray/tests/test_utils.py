@@ -11,6 +11,7 @@ from xarray.core import duck_array_ops, utils
 from xarray.core.utils import (
     attempt_import,
     either_dict_or_kwargs,
+    flat_items,
     infix_dims,
     iterate_nested,
 )
@@ -23,7 +24,7 @@ class TestAlias:
             pass
 
         old_method = utils.alias(new_method, "old_method")
-        assert "deprecated" in old_method.__doc__
+        assert "deprecated" in old_method.__doc__  # type: ignore[operator]
         with pytest.warns(Warning, match="deprecated"):
             old_method()
 
@@ -102,10 +103,10 @@ class TestDictionaries:
             utils.compat_dict_union(self.x, self.z)
 
     def test_dict_equiv(self):
-        x = {}
+        x: dict = {}
         x["a"] = 3
         x["b"] = np.array([1, 2, 3])
-        y = {}
+        y: dict = {}
         y["b"] = np.array([1.0, 2.0, 3.0])
         y["a"] = 3
         assert utils.dict_equiv(x, y)  # two nparrays are equal
@@ -129,11 +130,11 @@ class TestDictionaries:
     def test_frozen(self):
         x = utils.Frozen(self.x)
         with pytest.raises(TypeError):
-            x["foo"] = "bar"
+            x["foo"] = "bar"  # type: ignore[index]
         with pytest.raises(TypeError):
-            del x["a"]
+            del x["a"]  # type: ignore[attr-defined]
         with pytest.raises(AttributeError):
-            x.update(self.y)
+            x.update(self.y)  # type: ignore[attr-defined]
         assert x.mapping == self.x
         assert repr(x) in (
             "Frozen({'a': 'A', 'b': 'B'})",
@@ -149,6 +150,13 @@ class TestDictionaries:
         assert len(x) == 1
         assert repr(x) == "FilteredMapping(keys={'a'}, mapping={'a': 1, 'b': 2})"
         assert dict(x) == {"a": 1}
+
+
+def test_flat_items() -> None:
+    mapping = {"x": {"y": 1, "z": 2}, "x/y": 3}
+    actual = list(flat_items(mapping))
+    expected = [("x/y", 1), ("x/z", 2), ("x/y", 3)]
+    assert actual == expected
 
 
 def test_repr_object():
@@ -231,11 +239,11 @@ def test_hidden_key_dict():
 
 
 def test_either_dict_or_kwargs():
-    result = either_dict_or_kwargs(dict(a=1), None, "foo")
+    result = either_dict_or_kwargs(dict(a=1), {}, "foo")
     expected = dict(a=1)
     assert result == expected
 
-    result = either_dict_or_kwargs(None, dict(a=1), "foo")
+    result = either_dict_or_kwargs({}, dict(a=1), "foo")
     expected = dict(a=1)
     assert result == expected
 

@@ -591,8 +591,8 @@ The library ``h5netcdf`` allows writing some dtypes that aren't
 allowed in netCDF4 (see
 `h5netcdf documentation <https://github.com/h5netcdf/h5netcdf#invalid-netcdf-files>`_).
 This feature is available through :py:meth:`DataArray.to_netcdf` and
-:py:meth:`Dataset.to_netcdf` when used with ``engine="h5netcdf"``
-and currently raises a warning unless ``invalid_netcdf=True`` is set.
+:py:meth:`Dataset.to_netcdf` when used with ``engine="h5netcdf"``, only if
+``invalid_netcdf=True`` is explicitly set.
 
 .. warning::
 
@@ -1209,7 +1209,7 @@ Ncdata can also adjust file data within load and save operations, to fix data lo
 problems or provide exact save formatting without needing to modify files on disk.
 See for example : `ncdata usage examples`_
 
-.. _Iris: https://scitools.org.uk/iris
+.. _Iris: https://scitools-iris.readthedocs.io
 .. _Ncdata: https://ncdata.readthedocs.io/en/latest/index.html
 .. _ncdata usage examples: https://github.com/pp-mo/ncdata/tree/v0.1.2?tab=readme-ov-file#correct-a-miscoded-attribute-in-iris-input
 

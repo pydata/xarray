@@ -196,7 +196,13 @@ def _prepare_plot1d_data(
                 dim = coords_to_plot.get(v, None)
                 if (dim is not None) and (dim in darray.dims):
                     darray_nan = np.nan * darray.isel({dim: -1})
-                    darray = concat([darray, darray_nan], dim=dim)
+                    darray = concat(
+                        [darray, darray_nan],
+                        dim=dim,
+                        coords="minimal",
+                        compat="override",
+                        join="exact",
+                    )
                     dims_T.append(coords_to_plot[v])
 
         # Lines should never connect to the same coordinate when stacked,
@@ -1588,7 +1594,7 @@ artist :
             kwargs["levels"] = cmap_params["levels"]
             # if colors == a single color, matplotlib draws dashed negative
             # contours. we lose this feature if we pass cmap and not colors
-            if isinstance(colors, str):
+            if colors is not None:
                 cmap_params["cmap"] = None
                 kwargs["colors"] = colors
 

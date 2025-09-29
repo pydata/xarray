@@ -13,6 +13,7 @@ from typing import Any, Literal, cast
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 from pandas.core.indexes.datetimes import DatetimeIndex
 
 # remove once numpy 2.0 is the oldest supported version
@@ -46,7 +47,7 @@ from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.types import ArrayLike
 from xarray.core.utils import is_scalar
-from xarray.groupers import TimeResampler
+from xarray.groupers import SeasonResampler, TimeResampler
 from xarray.namedarray.pycompat import array_type, integer_types
 from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
@@ -300,7 +301,7 @@ class TestDataset:
                 var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
                 var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
                 var3     (dim3, dim1) float64 640B 0.4107 0.9941 0.1665 ... 0.716 1.555
-                var4     (dim1) category 32B b c b a c a c a{var5}
+                var4     (dim1) category 3{6 if Version(pd.__version__) >= Version("3.0.0dev0") else 2}B b c b a c a c a{var5}
             Attributes:
                 foo:      bar"""
         )
@@ -1135,6 +1136,111 @@ class TestDataset:
         create_test_data().dump_to_store(store)
         ds = open_dataset(store)
         assert ds.chunks == {}
+
+    @requires_dask
+    @pytest.mark.parametrize(
+        "use_cftime,calendar",
+        [
+            (False, "standard"),
+            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "standard"),
+            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "noleap"),
+            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "360_day"),
+        ],
+    )
+    def test_chunk_by_season_resampler(self, use_cftime: bool, calendar: str) -> None:
+        import dask.array
+
+        N = 365 + 365  # 2 years - 1 day
+        time = xr.date_range(
+            "2000-01-01", periods=N, freq="D", use_cftime=use_cftime, calendar=calendar
+        )
+
+        ds = Dataset(
+            {
+                "pr": ("time", dask.array.random.random((N), chunks=(20))),
+                "pr2d": (("x", "time"), dask.array.random.random((10, N), chunks=(20))),
+                "ones": ("time", np.ones((N,))),
+            },
+            coords={"time": time},
+        )
+
+        # Standard seasons
+        rechunked = ds.chunk(
+            {"x": 2, "time": SeasonResampler(["DJF", "MAM", "JJA", "SON"])}
+        )
+        assert rechunked.chunksizes["x"] == (2,) * 5
+        assert len(rechunked.chunksizes["time"]) == 9
+        assert rechunked.chunksizes["x"] == (2,) * 5
+        assert sum(rechunked.chunksizes["time"]) == ds.sizes["time"]
+
+        if calendar == "standard":
+            assert rechunked.chunksizes["time"] == (60, 92, 92, 91, 90, 92, 92, 91, 30)
+        elif calendar == "noleap":
+            assert rechunked.chunksizes["time"] == (59, 92, 92, 91, 90, 92, 92, 91, 31)
+        elif calendar == "360_day":
+            assert rechunked.chunksizes["time"] == (60, 90, 90, 90, 90, 90, 90, 90, 40)
+        else:
+            raise AssertionError("unreachable")
+
+        # Custom seasons
+        rechunked = ds.chunk(
+            {"x": 2, "time": SeasonResampler(["DJFM", "AM", "JJA", "SON"])}
+        )
+        assert len(rechunked.chunksizes["time"]) == 9
+        assert sum(rechunked.chunksizes["time"]) == ds.sizes["time"]
+        assert rechunked.chunksizes["x"] == (2,) * 5
+
+        if calendar == "standard":
+            assert rechunked.chunksizes["time"] == (91, 61, 92, 91, 121, 61, 92, 91, 30)
+        elif calendar == "noleap":
+            assert rechunked.chunksizes["time"] == (90, 61, 92, 91, 121, 61, 92, 91, 31)
+        elif calendar == "360_day":
+            assert rechunked.chunksizes["time"] == (90, 60, 90, 90, 120, 60, 90, 90, 40)
+        else:
+            raise AssertionError("unreachable")
+
+        # Test that drop_incomplete doesn't affect chunking
+        rechunked_drop_true = ds.chunk(
+            time=SeasonResampler(["DJF", "MAM", "JJA", "SON"], drop_incomplete=True)
+        )
+        rechunked_drop_false = ds.chunk(
+            time=SeasonResampler(["DJF", "MAM", "JJA", "SON"], drop_incomplete=False)
+        )
+        assert (
+            rechunked_drop_true.chunksizes["time"]
+            == rechunked_drop_false.chunksizes["time"]
+        )
+
+    @requires_dask
+    def test_chunk_by_season_resampler_errors(self):
+        """Test error handling for SeasonResampler chunking."""
+        # Test error on missing season (should fail with incomplete seasons)
+        ds = Dataset(
+            {"x": ("time", np.arange(12))},
+            coords={"time": pd.date_range("2000-01-01", periods=12, freq="MS")},
+        )
+        with pytest.raises(ValueError, match="does not cover all 12 months"):
+            ds.chunk(time=SeasonResampler(["DJF", "MAM", "SON"]))
+
+        ds = Dataset({"foo": ("x", [1, 2, 3])})
+        # Test error on virtual variable
+        with pytest.raises(ValueError, match="virtual variable"):
+            ds.chunk(x=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
+
+        # Test error on non-datetime variable
+        ds["x"] = ("x", [1, 2, 3])
+        with pytest.raises(ValueError, match="datetime variables"):
+            ds.chunk(x=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
+
+        # Test successful case with 1D datetime variable
+        ds["x"] = ("x", xr.date_range("2001-01-01", periods=3, freq="D"))
+        # This should work
+        result = ds.chunk(x=SeasonResampler(["DJF", "MAM", "JJA", "SON"]))
+        assert result.chunks is not None
+
+        # Test error on missing season (should fail with incomplete seasons)
+        with pytest.raises(ValueError):
+            ds.chunk(x=SeasonResampler(["DJF", "MAM", "SON"]))
 
     @requires_dask
     def test_chunk(self) -> None:
@@ -3705,7 +3811,7 @@ class TestDataset:
     def test_set_index(self) -> None:
         expected = create_test_multiindex()
         mindex = expected["x"].to_index()
-        indexes = [mindex.get_level_values(n) for n in mindex.names]
+        indexes = [mindex.get_level_values(str(n)) for n in mindex.names]
         coords = {idx.name: ("x", idx) for idx in indexes}
         ds = Dataset({}, coords=coords)
 
@@ -3766,7 +3872,7 @@ class TestDataset:
     def test_reset_index(self) -> None:
         ds = create_test_multiindex()
         mindex = ds["x"].to_index()
-        indexes = [mindex.get_level_values(n) for n in mindex.names]
+        indexes = [mindex.get_level_values(str(n)) for n in mindex.names]
         coords = {idx.name: ("x", idx) for idx in indexes}
         expected = Dataset({}, coords=coords)
 
@@ -5035,7 +5141,6 @@ class TestDataset:
         # from_dataframe attempts to broadcast across because it doesn't know better, so cat must be converted
         ds["cat"] = (("x", "y"), np.stack((ds["cat"].to_numpy(), ds["cat"].to_numpy())))
         assert_identical(ds.assign_coords(x=[0, 1]), Dataset.from_dataframe(actual))
-
         # Check multiindex reordering
         new_order = ["x", "y"]
         # revert broadcasting fix above for 1d arrays
@@ -5068,6 +5173,41 @@ class TestDataset:
             ValueError, match="does not match the set of dimensions of this"
         ):
             ds.to_dataframe(dim_order=invalid_order)
+
+        # test a case with a MultiIndex along a single dimension
+        data_dict = dict(
+            x=[1, 2, 1, 2, 1], y=["a", "a", "b", "b", "b"], z=[5, 10, 15, 20, 25]
+        )
+        data_dict_w_dims = {k: ("single_dim", v) for k, v in data_dict.items()}
+
+        # Dataset multi-indexed along "single_dim" by "x" and "y"
+        ds = Dataset(data_dict_w_dims).set_coords(["x", "y"]).set_xindex(["x", "y"])
+        expected = pd.DataFrame(data_dict).set_index(["x", "y"])
+        actual = ds.to_dataframe()
+        assert expected.equals(actual)
+        # should be possible to reset index, as there should be no duplication
+        # between index and columns, and dataframes should still be equal
+        assert expected.reset_index().equals(actual.reset_index())
+
+        # MultiIndex deduplication should not affect other coordinates.
+        mindex_single = pd.MultiIndex.from_product(
+            [list(range(6)), list("ab")], names=["A", "B"]
+        )
+        ds = DataArray(
+            range(12), [("MI", mindex_single)], dims="MI", name="test"
+        )._to_dataset_whole()
+        ds.coords["C"] = "a single value"
+        ds.coords["D"] = ds.coords["A"] ** 2
+        expected = pd.DataFrame(
+            dict(
+                test=range(12),
+                C="a single value",
+                D=[0, 0, 1, 1, 4, 4, 9, 9, 16, 16, 25, 25],
+            )
+        ).set_index(mindex_single)
+        actual = ds.to_dataframe()
+        assert expected.equals(actual)
+        assert expected.reset_index().equals(actual.reset_index())
 
         # check pathological cases
         df = pd.DataFrame([1])
@@ -5218,7 +5358,7 @@ class TestDataset:
     def test_from_dataframe_non_unique_columns(self) -> None:
         # regression test for GH449
         df = pd.DataFrame(np.zeros((2, 2)))
-        df.columns = ["foo", "foo"]  # type: ignore[assignment]
+        df.columns = ["foo", "foo"]  # type: ignore[assignment,list-item,unused-ignore]
         with pytest.raises(ValueError, match=r"non-unique columns"):
             Dataset.from_dataframe(df)
 
@@ -5756,7 +5896,7 @@ class TestDataset:
             coords={
                 "x": [4, 3],
                 "y": [1, 2],
-                "z": (["x", "y"], [[np.e, np.pi], [np.pi * np.e, np.pi * 3]]),
+                "z": (["x", "y"], [[np.exp(1), np.pi], [np.pi * np.exp(1), np.pi * 3]]),
             },
         )
         expected7 = Dataset(
@@ -6121,16 +6261,19 @@ class TestDataset:
         assert_identical(result.var2, ds.var2.quantile(q, method=method))
         assert_identical(result.var3, ds.var3.quantile(q, method=method))
 
+    @pytest.mark.filterwarnings(
+        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
+    )
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_interpolation_deprecated(self, method) -> None:
         ds = create_test_data(seed=123)
         q = [0.25, 0.5, 0.75]
 
-        with warnings.catch_warnings(record=True) as w:
+        with pytest.warns(
+            FutureWarning,
+            match="`interpolation` argument to quantile was renamed to `method`",
+        ):
             ds.quantile(q, interpolation=method)
-
-            # ensure the warning is only raised once
-            assert len(w) == 1
 
         with warnings.catch_warnings(record=True):
             with pytest.raises(TypeError, match="interpolation and method keywords"):
@@ -6192,6 +6335,38 @@ class TestDataset:
         actual = data.map(np.asarray)
         expected = data.drop_vars("time")  # time is not used on a data var
         assert_equal(expected, actual)
+
+    def test_map_coords_attrs(self) -> None:
+        ds = xr.Dataset(
+            {
+                "a": (
+                    ["x", "y", "z"],
+                    np.arange(24).reshape(3, 4, 2),
+                    {"attr1": "value1"},
+                ),
+                "b": ("y", np.arange(4), {"attr2": "value2"}),
+            },
+            coords={
+                "x": ("x", np.array([-1, 0, 1]), {"attr3": "value3"}),
+                "z": ("z", list("ab"), {"attr4": "value4"}),
+            },
+        )
+
+        def func(arr):
+            if "y" not in arr.dims:
+                return arr
+
+            # drop attrs from coords
+            return arr.mean(dim="y").drop_attrs()
+
+        expected = ds.mean(dim="y", keep_attrs=True)
+        actual = ds.map(func, keep_attrs=True)
+
+        assert_identical(actual, expected)
+        assert actual["x"].attrs
+
+        ds["x"].attrs["y"] = "x"
+        assert ds["x"].attrs != actual["x"].attrs
 
     def test_apply_pending_deprecated_map(self) -> None:
         data = create_test_data()
@@ -6305,7 +6480,7 @@ class TestDataset:
         assert_equal(actual, expected)
 
         actual = ds + ds[["bar"]]
-        expected = (2 * ds[["bar"]]).merge(ds.coords)
+        expected = (2 * ds[["bar"]]).merge(ds.coords, compat="override")
         assert_identical(expected, actual)
 
         assert_identical(ds + Dataset(), ds.coords.to_dataset())
@@ -6702,8 +6877,8 @@ class TestDataset:
 
         expected = ds.copy(deep=True)
         # https://github.com/python/mypy/issues/3004
-        expected["d1"].values = [2, 2, 2]  # type: ignore[assignment]
-        expected["d2"].values = [2.0, 2.0, 2.0]  # type: ignore[assignment]
+        expected["d1"].values = [2, 2, 2]  # type: ignore[assignment,unused-ignore]
+        expected["d2"].values = [2.0, 2.0, 2.0]  # type: ignore[assignment,unused-ignore]
         assert expected["d1"].dtype == int
         assert expected["d2"].dtype == float
         assert_identical(expected, actual)
@@ -6711,8 +6886,8 @@ class TestDataset:
         # override dtype
         actual = full_like(ds, fill_value=True, dtype=bool)
         expected = ds.copy(deep=True)
-        expected["d1"].values = [True, True, True]  # type: ignore[assignment]
-        expected["d2"].values = [True, True, True]  # type: ignore[assignment]
+        expected["d1"].values = [True, True, True]  # type: ignore[assignment,unused-ignore]
+        expected["d2"].values = [True, True, True]  # type: ignore[assignment,unused-ignore]
         assert expected["d1"].dtype == bool
         assert expected["d2"].dtype == bool
         assert_identical(expected, actual)
@@ -6741,12 +6916,12 @@ class TestDataset:
             coords={"x": ["a", "b", "c"]},
         )
         assert_equal(actual, expected)
-        assert_equal(actual, xr.merge([dsx0, dsx1]))
+        assert_equal(actual, xr.merge([dsx0, dsx1], join="outer"))
 
         # works just like xr.merge([self, other])
         dsy2 = DataArray([2, 2, 2], [("x", ["b", "c", "d"])]).to_dataset(name="dsy2")
         actual = dsx0.combine_first(dsy2)
-        expected = xr.merge([dsy2, dsx0])
+        expected = xr.merge([dsy2, dsx0], join="outer")
         assert_equal(actual, expected)
 
     def test_sortby(self) -> None:
@@ -7621,7 +7796,7 @@ def test_cumulative_integrate(dask) -> None:
     from scipy.integrate import cumulative_trapezoid
 
     expected_x = xr.DataArray(
-        cumulative_trapezoid(da.compute(), da["x"], axis=0, initial=0.0),
+        cumulative_trapezoid(da.compute(), da["x"], axis=0, initial=0.0),  # type: ignore[call-overload,unused-ignore]
         dims=["x", "y"],
         coords=da.coords,
     )
@@ -7637,7 +7812,7 @@ def test_cumulative_integrate(dask) -> None:
     # along y
     actual = da.cumulative_integrate("y")
     expected_y = xr.DataArray(
-        cumulative_trapezoid(da, da["y"], axis=1, initial=0.0),
+        cumulative_trapezoid(da, da["y"], axis=1, initial=0.0),  # type: ignore[call-overload,unused-ignore]
         dims=["x", "y"],
         coords=da.coords,
     )

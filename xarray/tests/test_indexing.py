@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 import pandas as pd
@@ -305,6 +305,22 @@ class TestLazyArray:
                     actual = x[new_slice]
                     assert_array_equal(expected, actual)
 
+    @pytest.mark.parametrize(
+        ["old_slice", "array", "size"],
+        (
+            (slice(None, 8), np.arange(2, 6), 10),
+            (slice(2, None), np.arange(2, 6), 10),
+            (slice(1, 10, 2), np.arange(1, 4), 15),
+            (slice(10, None, -1), np.array([2, 5, 7]), 12),
+            (slice(2, None, 2), np.array([3, -2, 5, -1]), 13),
+            (slice(8, None), np.array([1, -2, 2, -1, -7]), 20),
+        ),
+    )
+    def test_slice_slice_by_array(self, old_slice, array, size):
+        actual = indexing.slice_slice_by_array(old_slice, array, size)
+        expected = np.arange(size)[old_slice][array]
+        assert_array_equal(actual, expected)
+
     def test_lazily_indexed_array(self) -> None:
         original = np.random.rand(10, 20, 30)
         x = indexing.NumpyIndexingAdapter(original)
@@ -490,6 +506,25 @@ class TestMemoryCachedArray:
         assert isinstance(child.array, indexing.NumpyIndexingAdapter)
         assert isinstance(wrapped.array, indexing.LazilyIndexedArray)
 
+    @pytest.mark.asyncio
+    async def test_async_wrapper(self) -> None:
+        original = indexing.LazilyIndexedArray(np.arange(10))
+        wrapped = indexing.MemoryCachedArray(original)
+        await wrapped.async_get_duck_array()
+        assert_array_equal(wrapped, np.arange(10))
+        assert isinstance(wrapped.array, indexing.NumpyIndexingAdapter)
+
+    @pytest.mark.asyncio
+    async def test_async_sub_array(self) -> None:
+        original = indexing.LazilyIndexedArray(np.arange(10))
+        wrapped = indexing.MemoryCachedArray(original)
+        child = wrapped[B[:5]]
+        assert isinstance(child, indexing.MemoryCachedArray)
+        await child.async_get_duck_array()
+        assert_array_equal(child, np.arange(5))
+        assert isinstance(child.array, indexing.NumpyIndexingAdapter)
+        assert isinstance(wrapped.array, indexing.LazilyIndexedArray)
+
     def test_setitem(self) -> None:
         original = np.arange(10)
         wrapped = indexing.MemoryCachedArray(original)
@@ -533,6 +568,10 @@ def test_invalid_for_all(indexer_cls) -> None:
         indexer_cls((slice("foo"),))
     with pytest.raises(TypeError):
         indexer_cls((np.array(["foo"]),))
+    with pytest.raises(TypeError):
+        indexer_cls(True)
+    with pytest.raises(TypeError):
+        indexer_cls(np.array(True))
 
 
 def check_integer(indexer_cls):
@@ -603,7 +642,7 @@ class Test_vectorized_indexer:
 
     def test_arrayize_vectorized_indexer(self) -> None:
         for i, j, k in itertools.product(self.indexers, repeat=3):
-            vindex = indexing.VectorizedIndexer((i, j, k))
+            vindex = indexing.VectorizedIndexer((i, j, k))  # type: ignore[arg-type]
             vindex_array = indexing._arrayize_vectorized_indexer(
                 vindex, self.data.shape
             )
@@ -637,46 +676,58 @@ class Test_vectorized_indexer:
         np.testing.assert_array_equal(b, np.arange(5)[:, np.newaxis])
 
 
-def get_indexers(shape, mode):
+def get_indexers(
+    shape: tuple[int, ...], mode: str
+) -> Union[indexing.VectorizedIndexer, indexing.OuterIndexer, indexing.BasicIndexer]:
     if mode == "vectorized":
         indexed_shape = (3, 4)
-        indexer = tuple(np.random.randint(0, s, size=indexed_shape) for s in shape)
-        return indexing.VectorizedIndexer(indexer)
+        indexer_v = tuple(np.random.randint(0, s, size=indexed_shape) for s in shape)
+        return indexing.VectorizedIndexer(indexer_v)
 
     elif mode == "outer":
-        indexer = tuple(np.random.randint(0, s, s + 2) for s in shape)
-        return indexing.OuterIndexer(indexer)
+        indexer_o = tuple(np.random.randint(0, s, s + 2) for s in shape)
+        return indexing.OuterIndexer(indexer_o)
 
     elif mode == "outer_scalar":
-        indexer = (np.random.randint(0, 3, 4), 0, slice(None, None, 2))
-        return indexing.OuterIndexer(indexer[: len(shape)])
+        indexer_os: tuple[Any, ...] = (
+            np.random.randint(0, 3, 4),
+            0,
+            slice(None, None, 2),
+        )
+        return indexing.OuterIndexer(indexer_os[: len(shape)])
 
     elif mode == "outer_scalar2":
-        indexer = (np.random.randint(0, 3, 4), -2, slice(None, None, 2))
-        return indexing.OuterIndexer(indexer[: len(shape)])
+        indexer_os2: tuple[Any, ...] = (
+            np.random.randint(0, 3, 4),
+            -2,
+            slice(None, None, 2),
+        )
+        return indexing.OuterIndexer(indexer_os2[: len(shape)])
 
     elif mode == "outer1vec":
-        indexer = [slice(2, -3) for s in shape]
-        indexer[1] = np.random.randint(0, shape[1], shape[1] + 2)
-        return indexing.OuterIndexer(tuple(indexer))
+        indexer_o1v: list[Any] = [slice(2, -3) for s in shape]
+        indexer_o1v[1] = np.random.randint(0, shape[1], shape[1] + 2)
+        return indexing.OuterIndexer(tuple(indexer_o1v))
 
     elif mode == "basic":  # basic indexer
-        indexer = [slice(2, -3) for s in shape]
-        indexer[0] = 3
-        return indexing.BasicIndexer(tuple(indexer))
+        indexer_b: list[Any] = [slice(2, -3) for s in shape]
+        indexer_b[0] = 3
+        return indexing.BasicIndexer(tuple(indexer_b))
 
     elif mode == "basic1":  # basic indexer
         return indexing.BasicIndexer((3,))
 
     elif mode == "basic2":  # basic indexer
-        indexer = [0, 2, 4]
-        return indexing.BasicIndexer(tuple(indexer[: len(shape)]))
+        indexer_b2 = [0, 2, 4]
+        return indexing.BasicIndexer(tuple(indexer_b2[: len(shape)]))
 
     elif mode == "basic3":  # basic indexer
-        indexer = [slice(None) for s in shape]
-        indexer[0] = slice(-2, 2, -2)
-        indexer[1] = slice(1, -1, 2)
-        return indexing.BasicIndexer(tuple(indexer[: len(shape)]))
+        indexer_b3: list[Any] = [slice(None) for s in shape]
+        indexer_b3[0] = slice(-2, 2, -2)
+        indexer_b3[1] = slice(1, -1, 2)
+        return indexing.BasicIndexer(tuple(indexer_b3[: len(shape)]))
+
+    raise ValueError(f"Unknown mode: {mode}")
 
 
 @pytest.mark.parametrize("size", [100, 99])

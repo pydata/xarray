@@ -6,12 +6,17 @@ from typing import TypedDict
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 
 import xarray as xr
-from xarray.coding.cftime_offsets import _new_to_legacy_freq
+from xarray.coding.cftime_offsets import (
+    CFTIME_TICKS,
+    Day,
+    _new_to_legacy_freq,
+    to_offset,
+)
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core.resample_cftime import CFTimeGrouper
+from xarray.tests import has_pandas_3
 
 cftime = pytest.importorskip("cftime")
 
@@ -52,6 +57,20 @@ FREQS = [
     ("7YE-MAY", "14YE-MAY"),
     ("7YE-MAY", "85ME"),
 ]
+
+
+def has_tick_resample_freq(freqs):
+    resample_freq, _ = freqs
+    resample_freq_as_offset = to_offset(resample_freq)
+    return isinstance(resample_freq_as_offset, CFTIME_TICKS)
+
+
+def has_non_tick_resample_freq(freqs):
+    return not has_tick_resample_freq(freqs)
+
+
+FREQS_WITH_TICK_RESAMPLE_FREQ = list(filter(has_tick_resample_freq, FREQS))
+FREQS_WITH_NON_TICK_RESAMPLE_FREQ = list(filter(has_non_tick_resample_freq, FREQS))
 
 
 def compare_against_pandas(
@@ -110,24 +129,53 @@ def da(index) -> xr.DataArray:
     )
 
 
-@pytest.mark.parametrize("freqs", FREQS, ids=lambda x: "{}->{}".format(*x))
+@pytest.mark.parametrize(
+    "freqs", FREQS_WITH_TICK_RESAMPLE_FREQ, ids=lambda x: "{}->{}".format(*x)
+)
 @pytest.mark.parametrize("closed", [None, "left", "right"])
 @pytest.mark.parametrize("label", [None, "left", "right"])
 @pytest.mark.parametrize("offset", [None, "5s"], ids=lambda x: f"{x}")
-def test_resample(freqs, closed, label, offset) -> None:
+def test_resample_with_tick_resample_freq(freqs, closed, label, offset) -> None:
     initial_freq, resample_freq = freqs
-    if (
-        resample_freq == "4001D"
-        and closed == "right"
-        and Version(pd.__version__) < Version("2.2")
-    ):
-        pytest.skip(
-            "Pandas fixed a bug in this test case in version 2.2, which we "
-            "ported to xarray, so this test no longer produces the same "
-            "result as pandas for earlier pandas versions."
-        )
     start = "2000-01-01T12:07:01"
     origin = "start"
+
+    datetime_index = pd.date_range(
+        start=start, periods=5, freq=_new_to_legacy_freq(initial_freq)
+    )
+    cftime_index = xr.date_range(
+        start=start, periods=5, freq=initial_freq, use_cftime=True
+    )
+    da_datetimeindex = da(datetime_index)
+    da_cftimeindex = da(cftime_index)
+
+    compare_against_pandas(
+        da_datetimeindex,
+        da_cftimeindex,
+        resample_freq,
+        closed=closed,
+        label=label,
+        offset=offset,
+        origin=origin,
+    )
+
+
+@pytest.mark.parametrize(
+    "freqs", FREQS_WITH_NON_TICK_RESAMPLE_FREQ, ids=lambda x: "{}->{}".format(*x)
+)
+@pytest.mark.parametrize("closed", [None, "left", "right"])
+@pytest.mark.parametrize("label", [None, "left", "right"])
+def test_resample_with_non_tick_resample_freq(freqs, closed, label) -> None:
+    initial_freq, resample_freq = freqs
+    resample_freq_as_offset = to_offset(resample_freq)
+    if isinstance(resample_freq_as_offset, Day) and not has_pandas_3:
+        pytest.skip("Only valid for pandas >= 3.0")
+    start = "2000-01-01T12:07:01"
+
+    # Set offset and origin to their default values since they have no effect
+    # on resampling data with a non-tick resample frequency.
+    offset = None
+    origin = "start_day"
 
     datetime_index = pd.date_range(
         start=start, periods=5, freq=_new_to_legacy_freq(initial_freq)
@@ -228,7 +276,7 @@ def test_invalid_offset_error(offset: str | int) -> None:
     cftime_index = xr.date_range("2000", periods=5, use_cftime=True)
     da_cftime = da(cftime_index)
     with pytest.raises(ValueError, match="offset must be"):
-        da_cftime.resample(time="2D", offset=offset)  # type: ignore[arg-type]
+        da_cftime.resample(time="2h", offset=offset)  # type: ignore[arg-type]
 
 
 def test_timedelta_offset() -> None:
@@ -238,6 +286,15 @@ def test_timedelta_offset() -> None:
     cftime_index = xr.date_range("2000", periods=5, use_cftime=True)
     da_cftime = da(cftime_index)
 
-    timedelta_result = da_cftime.resample(time="2D", offset=timedelta).mean()
-    string_result = da_cftime.resample(time="2D", offset=string).mean()
+    timedelta_result = da_cftime.resample(time="2h", offset=timedelta).mean()
+    string_result = da_cftime.resample(time="2h", offset=string).mean()
     xr.testing.assert_identical(timedelta_result, string_result)
+
+
+@pytest.mark.parametrize(("option", "value"), [("offset", "5s"), ("origin", "start")])
+def test_non_tick_option_warning(option, value) -> None:
+    cftime_index = xr.date_range("2000", periods=5, use_cftime=True)
+    da_cftime = da(cftime_index)
+    kwargs = {option: value}
+    with pytest.warns(RuntimeWarning, match=option):
+        da_cftime.resample(time="ME", **kwargs)

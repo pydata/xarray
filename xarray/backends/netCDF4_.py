@@ -5,7 +5,9 @@ import operator
 import os
 from collections.abc import Iterable
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from io import IOBase
+from typing import TYPE_CHECKING, Any, Self
 
 import numpy as np
 
@@ -13,13 +15,20 @@ from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
+    BytesIOProxy,
+    T_PathFileOrDataStore,
     WritableCFDataStore,
     _normalize_path,
+    collect_ancestor_dimensions,
     datatree_from_dict_with_io_cleanup,
     find_root_and_group,
     robust_getitem,
 )
-from xarray.backends.file_manager import CachingFileManager, DummyFileManager
+from xarray.backends.file_manager import (
+    CachingFileManager,
+    DummyFileManager,
+    PickleableFileManager,
+)
 from xarray.backends.locks import (
     HDF5_LOCK,
     NETCDFC_LOCK,
@@ -46,13 +55,12 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
+    import netCDF4
     from h5netcdf.core import EnumType as h5EnumType
     from netCDF4 import EnumType as ncEnumType
 
-    from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
-    from xarray.core.types import ReadBuffer
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -358,6 +366,28 @@ def _build_and_get_enum(
     return datatype
 
 
+@dataclass
+class _Thunk:
+    """Pickleable equivalent of `lambda: value`."""
+
+    value: Any
+
+    def __call__(self):
+        return self.value
+
+
+@dataclass
+class _CloseWithCopy:
+    """Wrapper around netCDF4's esoteric interface for writing in-memory data."""
+
+    proxy: BytesIOProxy
+    nc4_dataset: netCDF4.Dataset
+
+    def __call__(self):
+        value = self.nc4_dataset.close()
+        self.proxy.getvalue = _Thunk(value)
+
+
 class NetCDF4DataStore(WritableCFDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
@@ -401,6 +431,17 @@ class NetCDF4DataStore(WritableCFDataStore):
         self.lock = ensure_lock(lock)
         self.autoclose = autoclose
 
+    def get_child_store(self, group: str) -> Self:
+        if self._group is not None:
+            group = os.path.join(self._group, group)
+        return type(self)(
+            self._manager,
+            group=group,
+            mode=self._mode,
+            lock=self.lock,
+            autoclose=self.autoclose,
+        )
+
     @classmethod
     def open(
         cls,
@@ -421,27 +462,31 @@ class NetCDF4DataStore(WritableCFDataStore):
         if isinstance(filename, os.PathLike):
             filename = os.fspath(filename)
 
-        if not isinstance(filename, str):
-            raise ValueError(
-                "can only read bytes or file-like objects "
-                "with engine='scipy' or 'h5netcdf'"
+        if isinstance(filename, IOBase):
+            raise TypeError(
+                f"file objects are not supported by the netCDF4 backend: {filename}"
             )
+
+        if not isinstance(filename, str | bytes | memoryview | BytesIOProxy):
+            raise TypeError(f"invalid filename for netCDF4 backend: {filename}")
 
         if format is None:
             format = "NETCDF4"
 
         if lock is None:
             if mode == "r":
-                if is_remote_uri(filename):
+                if isinstance(filename, str) and is_remote_uri(filename):
                     lock = NETCDFC_LOCK
                 else:
                     lock = NETCDF4_PYTHON_LOCK
             else:
                 if format is None or format.startswith("NETCDF4"):
-                    base_lock = NETCDF4_PYTHON_LOCK
+                    lock = NETCDF4_PYTHON_LOCK
                 else:
-                    base_lock = NETCDFC_LOCK
-                lock = combine_locks([base_lock, get_write_lock(filename)])
+                    lock = NETCDFC_LOCK
+
+                if isinstance(filename, str):
+                    lock = combine_locks([lock, get_write_lock(filename)])
 
         kwargs = dict(
             clobber=clobber,
@@ -451,9 +496,31 @@ class NetCDF4DataStore(WritableCFDataStore):
         )
         if auto_complex is not None:
             kwargs["auto_complex"] = auto_complex
-        manager = CachingFileManager(
-            netCDF4.Dataset, filename, mode=mode, kwargs=kwargs
-        )
+
+        if isinstance(filename, BytesIOProxy):
+            assert mode == "w"
+            # Size hint used for creating netCDF3 files. Per the documentation
+            # for nc__create(), the special value NC_SIZEHINT_DEFAULT (which is
+            # the value 0), lets the netcdf library choose a suitable initial
+            # size.
+            memory = 0
+            kwargs["diskless"] = False
+            nc4_dataset = netCDF4.Dataset(
+                "<xarray-in-memory-write>", mode=mode, memory=memory, **kwargs
+            )
+            close = _CloseWithCopy(filename, nc4_dataset)
+            manager = DummyFileManager(nc4_dataset, close=close)
+
+        elif isinstance(filename, bytes | memoryview):
+            assert mode == "r"
+            kwargs["memory"] = filename
+            manager = PickleableFileManager(
+                netCDF4.Dataset, "<xarray-in-memory-read>", mode=mode, kwargs=kwargs
+            )
+        else:
+            manager = CachingFileManager(
+                netCDF4.Dataset, filename, mode=mode, kwargs=kwargs
+            )
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):
@@ -518,6 +585,9 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     def get_dimensions(self):
         return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
+
+    def get_parent_dimensions(self):
+        return FrozenDict(collect_ancestor_dimensions(self.ds))
 
     def get_encoding(self):
         return {
@@ -628,14 +698,17 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using netCDF4 in Xarray"
     )
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.NetCDF4BackendEntrypoint.html"
+    supports_groups = True
 
-    def guess_can_open(
-        self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
-    ) -> bool:
+    def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
             return True
-        magic_number = try_read_magic_number_from_path(filename_or_obj)
+
+        magic_number = (
+            bytes(filename_or_obj[:8])
+            if isinstance(filename_or_obj, bytes | memoryview)
+            else try_read_magic_number_from_path(filename_or_obj)
+        )
         if magic_number is not None:
             # netcdf 3 or HDF5
             return magic_number.startswith((b"CDF", b"\211HDF\r\n\032\n"))
@@ -648,7 +721,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -697,7 +770,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -730,6 +803,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             clobber=clobber,
             diskless=diskless,
             persist=persist,
+            auto_complex=auto_complex,
             lock=lock,
             autoclose=autoclose,
             **kwargs,
@@ -739,7 +813,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -769,6 +843,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             clobber=clobber,
             diskless=diskless,
             persist=persist,
+            auto_complex=auto_complex,
             lock=lock,
             autoclose=autoclose,
         )

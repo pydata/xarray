@@ -165,7 +165,9 @@ class TestPaths:
                 "/Kate": DataTree(),
             }
         )
-        assert john["/Mary"].same_tree(john["/Kate"])
+        mary = john.children["Mary"]
+        kate = john.children["Kate"]
+        assert mary.same_tree(kate)
 
     def test_relative_paths(self) -> None:
         john = DataTree.from_dict(
@@ -174,14 +176,8 @@ class TestPaths:
                 "/Annie": DataTree(),
             }
         )
-        sue_result = john["Mary/Sue"]
-        if isinstance(sue_result, DataTree):
-            sue: DataTree = sue_result
-
-        annie_result = john["Annie"]
-        if isinstance(annie_result, DataTree):
-            annie: DataTree = annie_result
-
+        sue = john.children["Mary"].children["Sue"]
+        annie = john.children["Annie"]
         assert sue.relative_to(john) == "Mary/Sue"
         assert john.relative_to(sue) == "../.."
         assert annie.relative_to(sue) == "../../Annie"
@@ -208,7 +204,7 @@ class TestStoreDatasets:
     def test_set_data(self) -> None:
         john = DataTree(name="john")
         dat = xr.Dataset({"a": 0})
-        john.dataset = dat  # type: ignore[assignment]
+        john.dataset = dat  # type: ignore[assignment,unused-ignore]
 
         assert_identical(john.to_dataset(), dat)
 
@@ -229,7 +225,7 @@ class TestStoreDatasets:
         eve = DataTree(children={"john": john})
         assert eve.is_hollow
 
-        eve.dataset = xr.Dataset({"a": 1})  # type: ignore[assignment]
+        eve.dataset = xr.Dataset({"a": 1})  # type: ignore[assignment,unused-ignore]
         assert not eve.is_hollow
 
 
@@ -266,13 +262,13 @@ class TestVariablesChildrenNameCollisions:
         )
 
         with pytest.raises(ValueError, match="node already contains a variable"):
-            dt.dataset = xr.Dataset({"a": 0})  # type: ignore[assignment]
+            dt.dataset = xr.Dataset({"a": 0})  # type: ignore[assignment,unused-ignore]
 
-        dt.dataset = xr.Dataset()  # type: ignore[assignment]
+        dt.dataset = xr.Dataset()  # type: ignore[assignment,unused-ignore]
 
         new_ds = dt.to_dataset().assign(a=xr.DataArray(0))
         with pytest.raises(ValueError, match="node already contains a variable"):
-            dt.dataset = new_ds  # type: ignore[assignment]
+            dt.dataset = new_ds  # type: ignore[assignment,unused-ignore]
 
 
 class TestGet: ...
@@ -531,7 +527,7 @@ class TestSetItem:
         john["mary"] = DataTree()
         assert_identical(john["mary"].to_dataset(), xr.Dataset())
 
-        john.dataset = xr.Dataset()  # type: ignore[assignment]
+        john.dataset = xr.Dataset()  # type: ignore[assignment,unused-ignore]
         with pytest.raises(ValueError, match="has no name"):
             john["."] = DataTree()
 
@@ -909,10 +905,91 @@ class TestTreeFromDict:
         # despite 'Bart' coming before 'Lisa' when sorted alphabetically
         assert list(reversed["Homer"].children.keys()) == ["Lisa", "Bart"]
 
-    def test_array_values(self) -> None:
+    def test_array_values_dataarray(self) -> None:
+        expected = DataTree(dataset=Dataset({"a": 1}))
+        actual = DataTree.from_dict({"a": DataArray(1)})
+        assert_identical(actual, expected)
+
+    def test_array_values_scalars(self) -> None:
+        expected = DataTree(
+            dataset=Dataset({"a": 1}),
+            children={"b": DataTree(Dataset({"c": 2, "d": 3}))},
+        )
+        actual = DataTree.from_dict({"a": 1, "b/c": 2, "b/d": 3})
+        assert_identical(actual, expected)
+
+    def test_invalid_values(self) -> None:
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                r"failed to construct xarray.Dataset for DataTree node at '/' "
+                r"with data_vars={'a': set()} and coords={}"
+            ),
+        ):
+            DataTree.from_dict({"a": set()})
+
+    def test_array_values_nested_key(self) -> None:
+        expected = DataTree(
+            children={"a": DataTree(children={"b": DataTree(Dataset({"c": 1}))})}
+        )
+        actual = DataTree.from_dict(data={"a/b/c": 1})
+        assert_identical(actual, expected)
+
+    def test_nested_array_values(self) -> None:
+        expected = DataTree(
+            children={"a": DataTree(children={"b": DataTree(Dataset({"c": 1}))})}
+        )
+        actual = DataTree.from_dict({"a": {"b": {"c": 1}}}, nested=True)
+        assert_identical(actual, expected)
+
+    def test_nested_array_values_without_nested_kwarg(self) -> None:
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                r"data contains a dict value at key='a', which is not a valid "
+                r"argument to DataTree.from_dict() with nested=False: "
+                r"{'b': {'c': 1}}"
+            ),
+        ):
+            DataTree.from_dict({"a": {"b": {"c": 1}}})
+
+    def test_nested_array_values_duplicates(self) -> None:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("multiple entries found corresponding to node '/a/b'"),
+        ):
+            DataTree.from_dict({"a": {"b": 1}, "a/b": 2}, nested=True)
+
+    def test_array_values_data_and_coords(self) -> None:
+        expected = DataTree(dataset=Dataset({"a": 1}, coords={"b": 2}))
+        actual = DataTree.from_dict(data={"a": 1}, coords={"b": 2})
+        assert_identical(actual, expected)
+
+    def test_data_and_coords_conflicting(self) -> None:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("multiple entries found corresponding to node '/a'"),
+        ):
+            DataTree.from_dict(data={"a": 1}, coords={"a": 2})
+
+    def test_array_values_new_name(self) -> None:
+        expected = DataTree(dataset=Dataset({"foo": 1}))
         data = {"foo": xr.DataArray(1, name="bar")}
-        with pytest.raises(TypeError):
-            DataTree.from_dict(data)  # type: ignore[arg-type]
+        actual = DataTree.from_dict(data)
+        assert_identical(actual, expected)
+
+    def test_array_values_at_root(self) -> None:
+        with pytest.raises(ValueError, match="cannot set DataArray value at root"):
+            DataTree.from_dict({"/": 1})
+
+    def test_array_values_parent_node_also_set(self) -> None:
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                r"cannot set DataArray value at '/a' when parent node at '/' is also set"
+            ),
+        ):
+            DataTree.from_dict({"/": Dataset(), "/a": 1})
 
     def test_relative_paths(self) -> None:
         tree = DataTree.from_dict({".": None, "foo": None, "./bar": None, "x/y": None})
@@ -941,10 +1018,16 @@ class TestTreeFromDict:
         actual = DataTree.from_dict({"./": ds})
         assert_identical(actual, expected)
 
+    def test_multiple_entries(self):
         with pytest.raises(
-            ValueError, match="multiple entries found corresponding to the root node"
+            ValueError, match="multiple entries found corresponding to node '/'"
         ):
-            DataTree.from_dict({"": ds, "/": ds})
+            DataTree.from_dict({"": None, ".": None})
+
+        with pytest.raises(
+            ValueError, match="multiple entries found corresponding to node '/a'"
+        ):
+            DataTree.from_dict({"a": None, "/a": None})
 
     def test_name(self):
         tree = DataTree.from_dict({"/": None}, name="foo")
@@ -1572,7 +1655,7 @@ class TestInheritance:
             )
 
         dt = DataTree()
-        dt.dataset = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment]
+        dt.dataset = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment,unused-ignore]
         dt["/b"] = DataTree()
         with pytest.raises(ValueError, match=expected_msg):
             dt["/b"].dataset = xr.Dataset(coords={"x": [2.0]})
@@ -1607,7 +1690,7 @@ class TestInheritance:
             )
 
         dt = DataTree()
-        dt.dataset = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment]
+        dt.dataset = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment,unused-ignore]
         dt["/b/c"] = DataTree()
         with pytest.raises(ValueError, match=expected_msg):
             dt["/b/c"].dataset = xr.Dataset(coords={"x": [2.0]})
@@ -1884,7 +1967,7 @@ class TestIsomorphicEqualsAndIdentical:
         assert not child.identical(new_child)
 
         deeper_root = DataTree(children={"root": root})
-        grandchild = deeper_root["/root/child"]
+        grandchild = deeper_root.children["root"].children["child"]
         assert child.equals(grandchild)
         assert child.identical(grandchild)
 
@@ -1941,6 +2024,85 @@ class TestSubset:
             lambda node: node["age"].item() == 10
         )
         assert_identical(actual, expected)
+
+    def test_prune_basic(self) -> None:
+        tree = DataTree.from_dict(
+            {"/a": xr.Dataset({"foo": ("x", [1, 2])}), "/b": xr.Dataset()}
+        )
+
+        pruned = tree.prune()
+
+        assert "a" in pruned.children
+        assert "b" not in pruned.children
+        assert_identical(
+            pruned.children["a"].to_dataset(), tree.children["a"].to_dataset()
+        )
+
+    def test_prune_with_zero_size_vars(self) -> None:
+        tree = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"foo": ("x", [1, 2])}),
+                "/b": xr.Dataset({"empty": ("dim", [])}),
+                "/c": xr.Dataset(),
+            }
+        )
+
+        pruned_default = tree.prune()
+        expected_default = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"foo": ("x", [1, 2])}),
+                "/b": xr.Dataset({"empty": ("dim", [])}),
+            }
+        )
+        assert_identical(pruned_default, expected_default)
+
+        pruned_strict = tree.prune(drop_size_zero_vars=True)
+        expected_strict = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"foo": ("x", [1, 2])}),
+            }
+        )
+        assert_identical(pruned_strict, expected_strict)
+
+    def test_prune_with_intermediate_nodes(self) -> None:
+        tree = DataTree.from_dict(
+            {
+                "/": xr.Dataset(),
+                "/group1": xr.Dataset(),
+                "/group1/subA": xr.Dataset({"temp": ("x", [1, 2])}),
+                "/group1/subB": xr.Dataset(),
+                "/group2": xr.Dataset({"empty": ("dim", [])}),
+            }
+        )
+        pruned = tree.prune()
+        expected_tree = DataTree.from_dict(
+            {
+                "/group1/subA": xr.Dataset({"temp": ("x", [1, 2])}),
+                "/group2": xr.Dataset({"empty": ("dim", [])}),
+            }
+        )
+        assert_identical(pruned, expected_tree)
+
+    def test_prune_after_filtering(self) -> None:
+        from pandas import date_range
+
+        ds1 = xr.Dataset(
+            {"foo": ("time", [1, 2, 3, 4, 5])},
+            coords={"time": date_range("2023-01-01", periods=5, freq="D")},
+        )
+        ds2 = xr.Dataset(
+            {"var": ("time", [1, 2, 3, 4, 5])},
+            coords={"time": date_range("2023-01-04", periods=5, freq="D")},
+        )
+
+        tree = DataTree.from_dict({"a": ds1, "b": ds2})
+        filtered = tree.sel(time=slice("2023-01-01", "2023-01-03"))
+
+        pruned = filtered.prune(drop_size_zero_vars=True)
+        expected_tree = DataTree.from_dict(
+            {"a": ds1.sel(time=slice("2023-01-01", "2023-01-03"))}
+        )
+        assert_identical(pruned, expected_tree)
 
 
 class TestIndexing:

@@ -102,7 +102,7 @@ NAMESPACE_ARRAYS = {
 }
 
 try:
-    import jax
+    import jax  # type: ignore[import-not-found,unused-ignore]
 
     # enable double-precision
     jax.config.update("jax_enable_x64", True)
@@ -163,7 +163,7 @@ class TestTopLevelMethods(_BaseTest):
         assert isinstance(result.data, self.Array)
 
     def test_merge(self):
-        result = xr.merge([self.x1, self.x2], compat="override")
+        result = xr.merge([self.x1, self.x2], compat="override", join="outer")
         assert isinstance(result.foo.data, self.Array)
 
     def test_where(self):

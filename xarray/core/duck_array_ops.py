@@ -23,7 +23,6 @@ from numpy import (
     take,
     unravel_index,  # noqa: F401
 )
-from pandas.api.types import is_extension_array_dtype
 
 from xarray.compat import dask_array_compat, dask_array_ops
 from xarray.compat.array_api_compat import get_array_namespace
@@ -188,7 +187,7 @@ def isnull(data):
         dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
         return full_like(data, dtype=dtype, fill_value=False)
     # at this point, array should have dtype=object
-    elif isinstance(data, np.ndarray) or is_extension_array_dtype(data):
+    elif isinstance(data, np.ndarray) or pd.api.types.is_extension_array_dtype(data):  # noqa: TID251
         return pandas_isnull(data)
     else:
         # Not reachable yet, but intended for use with other duck array

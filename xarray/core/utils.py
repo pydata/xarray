@@ -97,11 +97,25 @@ from xarray.namedarray.utils import (  # noqa: F401
 )
 
 if TYPE_CHECKING:
-    from xarray.core.types import Dims, ErrorOptionsWithWarn
+    from xarray.core.types import Dims, ErrorOptionsWithWarn, NestedDict
 
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
+
+
+def is_allowed_extension_array_dtype(dtype: Any):
+    return pd.api.types.is_extension_array_dtype(dtype) and not isinstance(  # noqa: TID251
+        dtype, pd.StringDtype
+    )
+
+
+def is_allowed_extension_array(array: Any) -> bool:
+    return (
+        hasattr(array, "dtype")
+        and is_allowed_extension_array_dtype(array.dtype)
+        and not isinstance(array, pd.arrays.NumpyExtensionArray)  # type: ignore[attr-defined]
+    )
 
 
 def alias_message(old_name: str, new_name: str) -> str:
@@ -225,17 +239,34 @@ def equivalent(first: T, second: T) -> bool:
     """Compare two objects for equivalence (identity or equality), using
     array_equiv if either object is an ndarray. If both objects are lists,
     equivalent is sequentially called on all the elements.
+
+    Returns False for any comparison that doesn't return a boolean,
+    making this function safer to use with objects that have non-standard
+    __eq__ implementations.
     """
     # TODO: refactor to avoid circular import
     from xarray.core import duck_array_ops
 
     if first is second:
         return True
+
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
+
     if isinstance(first, list) or isinstance(second, list):
         return list_equiv(first, second)  # type: ignore[arg-type]
-    return (first == second) or (pd.isnull(first) and pd.isnull(second))  # type: ignore[call-overload]
+
+    # For non-array/list types, use == but require boolean result
+    result = first == second
+    if not isinstance(result, bool):
+        # Accept numpy bool scalars as well
+        if isinstance(result, np.bool_):
+            return bool(result)
+        # Reject any other non-boolean type (Dataset, Series, custom objects, etc.)
+        return False
+
+    # Check for NaN equivalence
+    return result or (pd.isnull(first) and pd.isnull(second))  # type: ignore[call-overload]
 
 
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
@@ -302,6 +333,25 @@ def remove_incompatible_items(
     for k in list(first_dict):
         if k not in second_dict or not compat(first_dict[k], second_dict[k]):
             del first_dict[k]
+
+
+def flat_items(
+    nested: Mapping[str, NestedDict[T] | T],
+    prefix: str | None = None,
+    separator: str = "/",
+) -> Iterable[tuple[str, T]]:
+    """Yields flat items from a nested dictionary of dicts.
+
+    Notes:
+    - Only dict subclasses are flattened.
+    - Duplicate items are not removed. These should be checked separately.
+    """
+    for key, value in nested.items():
+        key = prefix + separator + key if prefix is not None else key
+        if isinstance(value, dict):
+            yield from flat_items(value, key, separator)
+        else:
+            yield key, value
 
 
 def is_full_slice(value: Any) -> bool:
@@ -680,15 +730,12 @@ def is_remote_uri(path: str) -> bool:
 
 def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
     # check byte header to determine file type
-    if isinstance(filename_or_obj, bytes):
-        magic_number = filename_or_obj[:count]
-    elif isinstance(filename_or_obj, io.IOBase):
-        if filename_or_obj.tell() != 0:
-            filename_or_obj.seek(0)
-        magic_number = filename_or_obj.read(count)
-        filename_or_obj.seek(0)
-    else:
+    if not isinstance(filename_or_obj, io.IOBase):
         raise TypeError(f"cannot read the magic number from {type(filename_or_obj)}")
+    if filename_or_obj.tell() != 0:
+        filename_or_obj.seek(0)
+    magic_number = filename_or_obj.read(count)
+    filename_or_obj.seek(0)
     return magic_number
 
 

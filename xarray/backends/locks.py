@@ -4,15 +4,17 @@ import multiprocessing
 import threading
 import uuid
 import weakref
-from collections.abc import Hashable, MutableMapping
-from typing import Any, ClassVar
+from collections.abc import Callable, Hashable, MutableMapping, Sequence
+from typing import Any, ClassVar, Literal
 from weakref import WeakValueDictionary
+
+from xarray.core.types import Lock
 
 
 # SerializableLock is adapted from Dask:
 # https://github.com/dask/dask/blob/74e898f0ec712e8317ba86cc3b9d18b6b9922be0/dask/utils.py#L1160-L1224
 # Used under the terms of Dask's license, see licenses/DASK_LICENSE.
-class SerializableLock:
+class SerializableLock(Lock):
     """A Serializable per-process Lock
 
     This wraps a normal ``threading.Lock`` object and satisfies the same
@@ -90,7 +92,7 @@ NETCDFC_LOCK = SerializableLock()
 _FILE_LOCKS: MutableMapping[Any, threading.Lock] = weakref.WeakValueDictionary()
 
 
-def _get_threaded_lock(key):
+def _get_threaded_lock(key: str) -> threading.Lock:
     try:
         lock = _FILE_LOCKS[key]
     except KeyError:
@@ -98,14 +100,14 @@ def _get_threaded_lock(key):
     return lock
 
 
-def _get_multiprocessing_lock(key):
+def _get_multiprocessing_lock(key: str) -> Lock:
     # TODO: make use of the key -- maybe use locket.py?
     # https://github.com/mwilliamson/locket.py
     del key  # unused
     return multiprocessing.Lock()
 
 
-def _get_lock_maker(scheduler=None):
+def _get_lock_maker(scheduler: str | None = None) -> Callable[..., Lock]:
     """Returns an appropriate function for creating resource locks.
 
     Parameters
@@ -125,16 +127,14 @@ def _get_lock_maker(scheduler=None):
     elif scheduler == "distributed":
         # Lazy import distributed since it is can add a significant
         # amount of time to import
-        try:
-            from dask.distributed import Lock as DistributedLock
-        except ImportError:
-            DistributedLock = None
+        from dask.distributed import Lock as DistributedLock
+
         return DistributedLock
     else:
         raise KeyError(scheduler)
 
 
-def _get_scheduler(get=None, collection=None) -> str | None:
+def get_dask_scheduler(get=None, collection=None) -> str | None:
     """Determine the dask scheduler that is being used.
 
     None is returned if no dask scheduler is active.
@@ -172,7 +172,7 @@ def _get_scheduler(get=None, collection=None) -> str | None:
     return "threaded"
 
 
-def get_write_lock(key):
+def get_write_lock(key: str) -> Lock:
     """Get a scheduler appropriate lock for writing to the given resource.
 
     Parameters
@@ -184,7 +184,7 @@ def get_write_lock(key):
     -------
     Lock object that can be used like a threading.Lock object.
     """
-    scheduler = _get_scheduler()
+    scheduler = get_dask_scheduler()
     lock_maker = _get_lock_maker(scheduler)
     return lock_maker(key)
 
@@ -207,14 +207,14 @@ def acquire(lock, blocking=True):
         return lock.acquire(blocking)
 
 
-class CombinedLock:
+class CombinedLock(Lock):
     """A combination of multiple locks.
 
     Like a locked door, a CombinedLock is locked if any of its constituent
     locks are locked.
     """
 
-    def __init__(self, locks):
+    def __init__(self, locks: Sequence[Lock]):
         self.locks = tuple(set(locks))  # remove duplicates
 
     def acquire(self, blocking=True):
@@ -239,7 +239,7 @@ class CombinedLock:
         return f"CombinedLock({list(self.locks)!r})"
 
 
-class DummyLock:
+class DummyLock(Lock):
     """DummyLock provides the lock API without any actual locking."""
 
     def acquire(self, blocking=True):
@@ -258,9 +258,9 @@ class DummyLock:
         return False
 
 
-def combine_locks(locks):
+def combine_locks(locks: Sequence[Lock]) -> Lock:
     """Combine a sequence of locks into a single lock."""
-    all_locks = []
+    all_locks: list[Lock] = []
     for lock in locks:
         if isinstance(lock, CombinedLock):
             all_locks.extend(lock.locks)
@@ -276,7 +276,7 @@ def combine_locks(locks):
         return DummyLock()
 
 
-def ensure_lock(lock):
+def ensure_lock(lock: Lock | None | Literal[False]) -> Lock:
     """Ensure that the given object is a lock."""
     if lock is None or lock is False:
         return DummyLock()

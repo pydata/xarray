@@ -37,6 +37,10 @@ class TestBoolTypeArray:
         assert bx.dtype == bool
         assert_array_equal(bx, np.array([True, False, True, True, False], dtype=bool))
 
+        x = np.array([[1, 0, 1], [0, 1, 0]], dtype="i1")
+        bx = coding.variables.BoolTypeArray(x)
+        assert_array_equal(bx.transpose((1, 0)), x.transpose((1, 0)))
+
 
 class TestNativeEndiannessArray:
     def test(self) -> None:
@@ -46,6 +50,11 @@ class TestNativeEndiannessArray:
         assert a.dtype == expected.dtype
         assert a.dtype == expected[:].dtype
         assert_array_equal(a, expected)
+
+        y = np.arange(6, dtype=">i8").reshape((2, 3))
+        b = coding.variables.NativeEndiannessArray(y)
+        expected2 = np.arange(6, dtype="int64").reshape((2, 3))
+        assert_array_equal(b.transpose((1, 0)), expected2.transpose((1, 0)))
 
 
 def test_decode_cf_with_conflicting_fill_missing_value() -> None:
@@ -131,8 +140,17 @@ class TestEncodeCFVariable:
     def test_missing_fillvalue(self) -> None:
         v = Variable(["x"], np.array([np.nan, 1, 2, 3]))
         v.encoding = {"dtype": "int16"}
-        with pytest.warns(Warning, match="floating point data as an integer"):
+        # Expect both the SerializationWarning and the RuntimeWarning from numpy
+        with pytest.warns(Warning) as record:
             conventions.encode_cf_variable(v)
+        # Check we got the expected warnings
+        warning_messages = [str(w.message) for w in record]
+        assert any(
+            "floating point data as an integer" in msg for msg in warning_messages
+        )
+        assert any(
+            "invalid value encountered in cast" in msg for msg in warning_messages
+        )
 
     def test_multidimensional_coordinates(self) -> None:
         # regression test for GH1763
@@ -595,6 +613,10 @@ class TestCFEncodedDataStore(CFEncodedBase):
 
     def test_encoding_kwarg_fixed_width_string(self) -> None:
         # CFEncodedInMemoryStore doesn't support explicit string encodings.
+        pass
+
+    def test_encoding_unlimited_dims(self) -> None:
+        # CFEncodedInMemoryStore doesn't support unlimited_dims.
         pass
 
 

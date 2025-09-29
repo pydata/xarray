@@ -4,20 +4,28 @@ import functools
 import io
 import os
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
 import numpy as np
 
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendEntrypoint,
+    BytesIOProxy,
+    T_PathFileOrDataStore,
     WritableCFDataStore,
     _normalize_path,
     _open_remote_file,
+    collect_ancestor_dimensions,
     datatree_from_dict_with_io_cleanup,
     find_root_and_group,
 )
-from xarray.backends.file_manager import CachingFileManager, DummyFileManager
+from xarray.backends.file_manager import (
+    CachingFileManager,
+    DummyFileManager,
+    FileManager,
+    PickleableFileManager,
+)
 from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from xarray.backends.netCDF4_ import (
     BaseNetCDF4Array,
@@ -40,6 +48,8 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
+    import h5netcdf
+
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
@@ -109,7 +119,14 @@ class H5NetCDFStore(WritableCFDataStore):
         "lock",
     )
 
-    def __init__(self, manager, group=None, mode=None, lock=HDF5_LOCK, autoclose=False):
+    def __init__(
+        self,
+        manager: FileManager | h5netcdf.File | h5netcdf.Group,
+        group=None,
+        mode=None,
+        lock=HDF5_LOCK,
+        autoclose=False,
+    ):
         import h5netcdf
 
         if isinstance(manager, h5netcdf.File | h5netcdf.Group):
@@ -133,6 +150,17 @@ class H5NetCDFStore(WritableCFDataStore):
         self.is_remote = is_remote_uri(self._filename)
         self.lock = ensure_lock(lock)
         self.autoclose = autoclose
+
+    def get_child_store(self, group: str) -> Self:
+        if self._group is not None:
+            group = os.path.join(self._group, group)
+        return type(self)(
+            self._manager,
+            group=group,
+            mode=self._mode,
+            lock=self.lock,
+            autoclose=self.autoclose,
+        )
 
     @classmethod
     def open(
@@ -158,12 +186,12 @@ class H5NetCDFStore(WritableCFDataStore):
                 filename, mode=mode_, storage_options=storage_options
             )
 
-        if isinstance(filename, bytes):
-            raise ValueError(
-                "can't open netCDF4/HDF5 as bytes "
-                "try passing a path or file-like object"
-            )
-        elif isinstance(filename, io.IOBase):
+        if isinstance(filename, BytesIOProxy):
+            source = filename
+            filename = io.BytesIO()
+            source.getvalue = filename.getbuffer
+
+        if isinstance(filename, io.IOBase) and mode == "r":
             magic_number = read_magic_number_from_file(filename)
             if not magic_number.startswith(b"\211HDF\r\n\032\n"):
                 raise ValueError(
@@ -189,7 +217,12 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
-        manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
+        manager_cls = (
+            CachingFileManager
+            if isinstance(filename, str) and not is_remote_uri(filename)
+            else PickleableFileManager
+        )
+        manager = manager_cls(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):
@@ -267,6 +300,9 @@ class H5NetCDFStore(WritableCFDataStore):
 
     def get_dimensions(self):
         return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
+
+    def get_parent_dimensions(self):
+        return FrozenDict(collect_ancestor_dimensions(self.ds))
 
     def get_encoding(self):
         return {
@@ -388,6 +424,15 @@ def _emit_phony_dims_warning():
     )
 
 
+def _normalize_filename_or_obj(
+    filename_or_obj: T_PathFileOrDataStore,
+) -> str | ReadBuffer | AbstractDataStore:
+    if isinstance(filename_or_obj, bytes | memoryview):
+        return io.BytesIO(filename_or_obj)
+    else:
+        return _normalize_path(filename_or_obj)
+
+
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the h5netcdf package.
@@ -414,11 +459,10 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using h5netcdf in Xarray"
     )
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.H5netcdfBackendEntrypoint.html"
+    supports_groups = True
 
-    def guess_can_open(
-        self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
-    ) -> bool:
+    def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
+        filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None:
             return magic_number.startswith(b"\211HDF\r\n\032\n")
@@ -431,7 +475,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -454,7 +498,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         # remove and set phony_dims="access" above
         emit_phony_dims_warning, phony_dims = _check_phony_dims(phony_dims)
 
-        filename_or_obj = _normalize_path(filename_or_obj)
+        filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
             format=format,
@@ -491,7 +535,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -534,7 +578,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -561,7 +605,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         # remove and set phony_dims="access" above
         emit_phony_dims_warning, phony_dims = _check_phony_dims(phony_dims)
 
-        filename_or_obj = _normalize_path(filename_or_obj)
+        filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
             format=format,
@@ -606,7 +650,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         # only warn if phony_dims exist in file
         # remove together with the above check
         # after some versions
-        if store.ds._phony_dim_count > 0 and emit_phony_dims_warning:
+        if store.ds._root._phony_dim_count > 0 and emit_phony_dims_warning:
             _emit_phony_dims_warning()
 
         return groups_dict

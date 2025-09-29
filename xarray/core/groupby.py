@@ -22,7 +22,11 @@ from xarray.core._aggregations import (
     DataArrayGroupByAggregations,
     DatasetGroupByAggregations,
 )
-from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
+from xarray.core.common import (
+    ImplementsArrayReduce,
+    ImplementsDatasetReduce,
+    _is_numeric_aggregatable_dtype,
+)
 from xarray.core.coordinates import Coordinates, coordinates_from_variable
 from xarray.core.duck_array_ops import where
 from xarray.core.formatting import format_array_flat
@@ -207,7 +211,7 @@ class _DummyGroup(Generic[T_Xarray]):
         return np.arange(self.size, dtype=int)
 
     def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self, dtype: np.typing.DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if copy is False:
             raise NotImplementedError(f"An array copy is necessary, got {copy = }.")
@@ -386,7 +390,6 @@ def _parse_group_and_groupers(
     eagerly_compute_group: Literal[False] | None,
 ) -> tuple[ResolvedGrouper, ...]:
     from xarray.core.dataarray import DataArray
-    from xarray.core.variable import Variable
     from xarray.groupers import Grouper, UniqueGrouper
 
     if group is not None and groupers:
@@ -540,7 +543,7 @@ class ComposedGrouper:
         _flatcodes = where(mask.data, -1, _flatcodes)
 
         full_index = pd.MultiIndex.from_product(
-            [grouper.full_index.values for grouper in groupers],
+            [list(grouper.full_index.values) for grouper in groupers],
             names=tuple(grouper.name for grouper in groupers),
         )
         if not full_index.is_unique:
@@ -824,7 +827,7 @@ class GroupBy(Generic[T_Xarray]):
             self._groups = dict(
                 zip(
                     self.encoded.unique_coord.data,
-                    self.encoded.group_indices,
+                    tuple(g for g in self.encoded.group_indices if g),
                     strict=True,
                 )
             )
@@ -1068,7 +1071,7 @@ class GroupBy(Generic[T_Xarray]):
                 name: var
                 for name, var in variables.items()
                 if (
-                    not (np.issubdtype(var.dtype, np.number) or (var.dtype == np.bool_))
+                    not _is_numeric_aggregatable_dtype(var)
                     # this avoids dropping any levels of a MultiIndex, which raises
                     # a warning
                     and name not in midx_grouping_vars
@@ -1628,7 +1631,14 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         if shortcut:
             combined = self._concat_shortcut(applied, dim, positions)
         else:
-            combined = concat(applied, dim)
+            combined = concat(
+                applied,
+                dim,
+                data_vars="all",
+                coords="different",
+                compat="equals",
+                join="outer",
+            )
             combined = _maybe_reorder(combined, dim, positions, N=self.group1d.size)
 
         if isinstance(combined, type(self._obj)):
@@ -1789,7 +1799,14 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         """Recombine the applied objects like the original."""
         applied_example, applied = peek_at(applied)
         dim, positions = self._infer_concat_args(applied_example)
-        combined = concat(applied, dim)
+        combined = concat(
+            applied,
+            dim,
+            data_vars="all",
+            coords="different",
+            compat="equals",
+            join="outer",
+        )
         combined = _maybe_reorder(combined, dim, positions, N=self.group1d.size)
         # assign coord when the applied function does not return that coord
         if dim not in applied_example.dims:

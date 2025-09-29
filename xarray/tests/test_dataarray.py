@@ -34,11 +34,7 @@ from xarray.coders import CFDatetimeCoder
 from xarray.core import dtypes
 from xarray.core.common import full_like
 from xarray.core.coordinates import Coordinates, CoordinateValidationError
-from xarray.core.indexes import (
-    Index,
-    PandasIndex,
-    filter_indexes_from_coords,
-)
+from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
 from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.testing import _assert_internal_invariants
@@ -168,7 +164,7 @@ class TestDataArray:
         with pytest.raises(ValueError, match=r"must be 1-dimensional"):
             self.ds["foo"].to_index()
         with pytest.raises(AttributeError):
-            self.dv.variable = self.v
+            self.dv.variable = self.v  # type: ignore[misc]
 
     def test_data_property(self) -> None:
         array = DataArray(np.zeros((3, 4)))
@@ -751,6 +747,16 @@ class TestDataArray:
         )
         assert_identical(da[[]], DataArray(np.zeros((0, 4)), dims=["x", "y"]))
 
+    def test_getitem_typeerror(self) -> None:
+        with pytest.raises(TypeError, match=r"unexpected indexer type"):
+            self.dv[True]
+        with pytest.raises(TypeError, match=r"unexpected indexer type"):
+            self.dv[np.array(True)]
+        with pytest.raises(TypeError, match=r"invalid indexer array"):
+            self.dv[3.0]
+        with pytest.raises(TypeError, match=r"invalid indexer array"):
+            self.dv[None]
+
     def test_setitem(self) -> None:
         # basic indexing should work as numpy's indexing
         tuples: list[tuple[int | list[int] | slice, int | list[int] | slice]] = [
@@ -1239,7 +1245,7 @@ class TestDataArray:
             self.dv.isel({dim: slice(5) for dim in self.dv.dims}), self.dv.head()
         )
         with pytest.raises(TypeError, match=r"either dict-like or a single int"):
-            self.dv.head([3])
+            self.dv.head([3])  # type: ignore[arg-type]
         with pytest.raises(TypeError, match=r"expected integer type"):
             self.dv.head(x=3.1)
         with pytest.raises(ValueError, match=r"expected positive int"):
@@ -1256,7 +1262,7 @@ class TestDataArray:
             self.dv.isel({dim: slice(-5, None) for dim in self.dv.dims}), self.dv.tail()
         )
         with pytest.raises(TypeError, match=r"either dict-like or a single int"):
-            self.dv.tail([3])
+            self.dv.tail([3])  # type: ignore[arg-type]
         with pytest.raises(TypeError, match=r"expected integer type"):
             self.dv.tail(x=3.1)
         with pytest.raises(ValueError, match=r"expected positive int"):
@@ -1269,7 +1275,7 @@ class TestDataArray:
             self.dv.thin(6),
         )
         with pytest.raises(TypeError, match=r"either dict-like or a single int"):
-            self.dv.thin([3])
+            self.dv.thin([3])  # type: ignore[arg-type]
         with pytest.raises(TypeError, match=r"expected integer type"):
             self.dv.thin(x=3.1)
         with pytest.raises(ValueError, match=r"expected positive int"):
@@ -1441,11 +1447,25 @@ class TestDataArray:
         # GH: 3512
         da = DataArray([0, 1], dims=["x"], coords={"x": [0, 1], "y": "a"})
         db = DataArray([2, 3], dims=["x"], coords={"x": [0, 1], "y": "b"})
-        data = xr.concat([da, db], dim="x").set_index(xy=["x", "y"])
+        data = xr.concat(
+            [da, db], dim="x", coords="different", compat="equals"
+        ).set_index(xy=["x", "y"])
         assert data.dims == ("xy",)
         actual = data.sel(y="a")
         expected = data.isel(xy=[0, 1]).unstack("xy").squeeze("y")
         assert_equal(actual, expected)
+
+    def test_concat_with_default_coords_warns(self) -> None:
+        da = DataArray([0, 1], dims=["x"], coords={"x": [0, 1], "y": "a"})
+        db = DataArray([2, 3], dims=["x"], coords={"x": [0, 1], "y": "b"})
+
+        with pytest.warns(FutureWarning):
+            original = xr.concat([da, db], dim="x")
+            assert original.y.size == 4
+        with set_options(use_new_combine_kwarg_defaults=True):
+            # default compat="override" will pick the first one
+            new = xr.concat([da, db], dim="x")
+            assert new.y.size == 1
 
     def test_virtual_default_coords(self) -> None:
         array = DataArray(np.zeros((5,)), dims="x")
@@ -2269,7 +2289,7 @@ class TestDataArray:
         assert_identical(other_way_expected, other_way)
 
     def test_set_index(self) -> None:
-        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
+        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]  # type: ignore[arg-type,unused-ignore]  # pandas-stubs varies
         coords = {idx.name: ("x", idx) for idx in indexes}
         array = DataArray(self.mda.values, coords=coords, dims="x")
         expected = self.mda.copy()
@@ -2300,7 +2320,7 @@ class TestDataArray:
             obj.set_index(x="level_4")
 
     def test_reset_index(self) -> None:
-        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
+        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]  # type: ignore[arg-type,unused-ignore]  # pandas-stubs varies
         coords = {idx.name: ("x", idx) for idx in indexes}
         expected = DataArray(self.mda.values, coords=coords, dims="x")
 
@@ -2398,10 +2418,18 @@ class TestDataArray:
         assert_equal(self.dv, np.maximum(self.dv, bar))
 
     def test_astype_attrs(self) -> None:
-        for v in [self.va.copy(), self.mda.copy(), self.ds.copy()]:
+        # Split into two loops for mypy - Variable, DataArray, and Dataset
+        # don't share a common base class, so mypy infers type object for v,
+        # which doesn't have the attrs or astype methods
+        for v in [self.mda.copy(), self.ds.copy()]:
             v.attrs["foo"] = "bar"
             assert v.attrs == v.astype(float).attrs
             assert not v.astype(float, keep_attrs=False).attrs
+        # Test Variable separately to avoid mypy inferring object type
+        va = self.va.copy()
+        va.attrs["foo"] = "bar"
+        assert va.attrs == va.astype(float).attrs
+        assert not va.astype(float, keep_attrs=False).attrs
 
     def test_astype_dtype(self) -> None:
         original = DataArray([-1, 1, 2, 3, 1000])
@@ -2642,7 +2670,10 @@ class TestDataArray:
         # test GH3000
         a = orig[:0, :1].stack(new_dim=("x", "y")).indexes["new_dim"]
         b = pd.MultiIndex(
-            levels=[pd.Index([], dtype=np.int64), pd.Index([0], dtype=np.int64)],
+            levels=[
+                pd.Index([], dtype=np.int64),  # type: ignore[list-item,unused-ignore]
+                pd.Index([0], dtype=np.int64),  # type: ignore[list-item,unused-ignore]
+            ],
             codes=[[], []],
             names=["x", "y"],
         )
@@ -3091,6 +3122,9 @@ class TestDataArray:
 
         np.testing.assert_allclose(actual.values, expected)
 
+    @pytest.mark.filterwarnings(
+        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
+    )
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_interpolation_deprecated(self, method) -> None:
         da = DataArray(self.va)
@@ -3573,6 +3607,18 @@ class TestDataArray:
         assert_array_equal(index_pd.levels[1], ["a", "b"])
         assert_array_equal(index_pd.levels[2], [5, 6, 7])
 
+        # test converting a dataframe MultiIndexed along a single dimension
+        mindex_single = pd.MultiIndex.from_product(
+            [list(range(6)), list("ab")], names=["A", "B"]
+        )
+
+        arr_multi_single = DataArray(
+            arr_np.flatten(), [("MI", mindex_single)], dims="MI", name="test"
+        )
+        actual_df = arr_multi_single.to_dataframe()
+        expected_df = arr_multi_single.to_series().to_frame()
+        assert expected_df.equals(actual_df)
+
     def test_to_dataframe_0length(self) -> None:
         # regression test for #3008
         arr_np = np.random.randn(4, 0)
@@ -3584,6 +3630,34 @@ class TestDataArray:
         actual = arr.to_dataframe()
         assert len(actual) == 0
         assert_array_equal(actual.index.names, list("ABC"))
+
+    @pytest.mark.parametrize(
+        "x_dtype,y_dtype,v_dtype",
+        [
+            (np.uint32, np.float32, np.uint32),
+            (np.int16, np.float64, np.int64),
+            (np.uint8, np.float32, np.uint16),
+            (np.int32, np.float32, np.int8),
+        ],
+    )
+    def test_to_dataframe_coord_dtypes_2d(self, x_dtype, y_dtype, v_dtype) -> None:
+        x = np.array([1], dtype=x_dtype)
+        y = np.array([1.0], dtype=y_dtype)
+        v = np.array([[42]], dtype=v_dtype)
+
+        da = DataArray(v, dims=["x", "y"], coords={"x": x, "y": y})
+        df = da.to_dataframe(name="v").reset_index()
+
+        # Check that coordinate dtypes are preserved
+        assert df["x"].dtype == np.dtype(x_dtype), (
+            f"x coord: expected {x_dtype}, got {df['x'].dtype}"
+        )
+        assert df["y"].dtype == np.dtype(y_dtype), (
+            f"y coord: expected {y_dtype}, got {df['y'].dtype}"
+        )
+        assert df["v"].dtype == np.dtype(v_dtype), (
+            f"v data: expected {v_dtype}, got {df['v'].dtype}"
+        )
 
     @requires_dask_expr
     @requires_dask
@@ -3676,7 +3750,9 @@ class TestDataArray:
         # regression test for GH4019
         import sparse
 
-        idx = pd.MultiIndex.from_product([np.arange(3), np.arange(5)], names=["a", "b"])
+        idx = pd.MultiIndex.from_product(
+            [list(np.arange(3)), list(np.arange(5))], names=["a", "b"]
+        )
         series: pd.Series = pd.Series(
             np.random.default_rng(0).random(len(idx)), index=idx
         ).sample(n=5, random_state=3)
@@ -3890,7 +3966,7 @@ class TestDataArray:
         v = range(N)
         da = DataArray(v)
         ma = da.to_masked_array()
-        assert len(ma.mask) == N
+        assert isinstance(ma.mask, np.ndarray) and len(ma.mask) == N
 
     def test_to_dataset_whole(self) -> None:
         unnamed = DataArray([1, 2], dims="x")
