@@ -5,9 +5,9 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, TypeVar, cast
 
 import numpy as np
+import pandas as pd
 from pandas.api.extensions import ExtensionDtype
 from pandas.api.types import is_extension_array_dtype
-import pandas as pd
 
 from xarray.compat import array_api_compat, npcompat
 from xarray.compat.npcompat import HAS_STRING_DTYPE
