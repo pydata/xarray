@@ -49,6 +49,17 @@ Breaking changes
   sub-groups (:pull:`10785`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- Zarr stores written with Xarray now consistently use a default Zarr fill value
+  of ``NaN`` for float variables, for both Zarr v2 and v3 (:issue:`10646``). All
+  other dtypes still use the Zarr default ``fill_value`` of zero. To customize,
+  explicitly set encoding in :py:meth:`~Dataset.to_zarr`, e.g.,
+  ``encoding=dict.fromkey(ds.data_vars, {'fill_value': 0})``.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+
 Bug fixes
 ~~~~~~~~~
 
