@@ -24,7 +24,9 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- ``netcdf`` and ``pydap`` engines no longer incorrectly claim to read all remote URLs preventing
+  the ``zarr`` backend from reading remote zarr stores without an explicit ``engine=`` argument.
+  (:pull:`10804`). By `Ian Hunt-Isaak <https://github.com/ianhi`_.
 
 Documentation
 ~~~~~~~~~~~~~
