@@ -661,16 +661,19 @@ class TestSparseDataArrayAndDataset:
             sparse.concatenate([self.sp_ar, self.sp_ar, self.sp_ar], axis=0),
         )
 
-        out = xr.concat([self.sp_xr, self.sp_xr, self.sp_xr], dim="y")
+        out_concat = xr.concat([self.sp_xr, self.sp_xr, self.sp_xr], dim="y")
         assert_sparse_equal(
-            out.data, sparse.concatenate([self.sp_ar, self.sp_ar, self.sp_ar], axis=1)
+            out_concat.data,
+            sparse.concatenate([self.sp_ar, self.sp_ar, self.sp_ar], axis=1),
         )
 
     def test_stack(self):
         arr = make_xrarray({"w": 2, "x": 3, "y": 4})
         stacked = arr.stack(z=("x", "y"))
 
-        z = pd.MultiIndex.from_product([np.arange(3), np.arange(4)], names=["x", "y"])
+        z = pd.MultiIndex.from_product(
+            [list(range(3)), list(range(4))], names=["x", "y"]
+        )
 
         expected = xr.DataArray(
             arr.data.reshape((2, -1)), {"w": [0, 1], "z": z}, dims=["w", "z"]
@@ -753,8 +756,8 @@ class TestSparseDataArrayAndDataset:
     def test_coarsen(self):
         a1 = self.ds_xr
         a2 = self.sp_xr
-        m1 = a1.coarsen(x=2, boundary="trim").mean()
-        m2 = a2.coarsen(x=2, boundary="trim").mean()
+        m1 = a1.coarsen(x=2, boundary="trim").mean()  # type: ignore[attr-defined]
+        m2 = a2.coarsen(x=2, boundary="trim").mean()  # type: ignore[attr-defined]
 
         assert isinstance(m2.data, sparse.SparseArray)
         assert np.allclose(m1.data, m2.data.todense())
@@ -781,7 +784,7 @@ class TestSparseDataArrayAndDataset:
 
     @pytest.mark.xfail(reason="No implementation of np.einsum")
     def test_dot(self):
-        a1 = self.xp_xr.dot(self.xp_xr[0])
+        a1 = self.sp_xr.dot(self.sp_xr[0])
         a2 = self.sp_ar.dot(self.sp_ar[0])
         assert_equal(a1, a2)
 
@@ -835,8 +838,8 @@ class TestSparseDataArrayAndDataset:
             {"x": [1, 100, 2, 101, 3]},
             {"x": [2.5, 3, 3.5], "y": [2, 2.5, 3]},
         ]:
-            m1 = x1.reindex(**kwargs)
-            m2 = x2.reindex(**kwargs)
+            m1 = x1.reindex(**kwargs)  # type: ignore[arg-type]
+            m2 = x2.reindex(**kwargs)  # type: ignore[arg-type]
             assert np.allclose(m1, m2, equal_nan=True)
 
     @pytest.mark.xfail
@@ -852,12 +855,12 @@ class TestSparseDataArrayAndDataset:
         xr.DataArray(a).where(cond)
 
         s = sparse.COO.from_numpy(a)
-        cond = s > 3
-        xr.DataArray(s).where(cond)
+        cond2 = s > 3
+        xr.DataArray(s).where(cond2)
 
         x = xr.DataArray(s)
-        cond = x > 3
-        x.where(cond)
+        cond3: DataArray = x > 3
+        x.where(cond3)
 
 
 class TestSparseCoords:

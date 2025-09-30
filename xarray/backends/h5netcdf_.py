@@ -24,6 +24,7 @@ from xarray.backends.file_manager import (
     CachingFileManager,
     DummyFileManager,
     FileManager,
+    PickleableFileManager,
 )
 from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from xarray.backends.netCDF4_ import (
@@ -216,11 +217,12 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
-        manager = (
-            CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
-            if isinstance(filename, str)
-            else h5netcdf.File(filename, mode=mode, **kwargs)
+        manager_cls = (
+            CachingFileManager
+            if isinstance(filename, str) and not is_remote_uri(filename)
+            else PickleableFileManager
         )
+        manager = manager_cls(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):
@@ -457,6 +459,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using h5netcdf in Xarray"
     )
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.H5netcdfBackendEntrypoint.html"
+    supports_groups = True
 
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
@@ -647,7 +650,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         # only warn if phony_dims exist in file
         # remove together with the above check
         # after some versions
-        if store.ds._phony_dim_count > 0 and emit_phony_dims_warning:
+        if store.ds._root._phony_dim_count > 0 and emit_phony_dims_warning:
             _emit_phony_dims_warning()
 
         return groups_dict

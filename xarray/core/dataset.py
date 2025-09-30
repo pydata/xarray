@@ -40,6 +40,7 @@ from xarray.core._aggregations import DatasetAggregations
 from xarray.core.common import (
     DataWithCoords,
     _contains_datetime_like_objects,
+    _is_numeric_aggregatable_dtype,
     get_chunksizes,
 )
 from xarray.core.coordinates import (
@@ -1933,7 +1934,7 @@ class Dataset(
 
     def dump_to_store(self, store: AbstractDataStore, **kwargs) -> None:
         """Store dataset contents to a backends.*DataStore object."""
-        from xarray.backends.api import dump_to_store
+        from xarray.backends.writers import dump_to_store
 
         # TODO: rename and/or cleanup this method to make it more consistent
         # with to_netcdf()
@@ -2056,8 +2057,9 @@ class Dataset(
             format='NETCDF4'). The group(s) will be created if necessary.
         engine : {"netcdf4", "scipy", "h5netcdf"}, optional
             Engine to use when writing netCDF files. If not provided, the
-            default engine is chosen based on available dependencies, with a
-            preference for 'netcdf4' if writing to a file on disk.
+            default engine is chosen based on available dependencies, by default
+            preferring "h5netcdf" over "scipy" over "netcdf4" (customizable via
+            ``netcdf_engine_order`` in ``xarray.set_options()``).
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
@@ -2097,7 +2099,7 @@ class Dataset(
         """
         if encoding is None:
             encoding = {}
-        from xarray.backends.api import to_netcdf
+        from xarray.backends.writers import to_netcdf
 
         return to_netcdf(  # type: ignore[return-value]  # mypy cannot resolve the overloads:(
             self,
@@ -2348,10 +2350,15 @@ class Dataset(
             used. Override any existing encodings by providing the ``encoding`` kwarg.
 
         ``fill_value`` handling:
-            There exists a subtlety in interpreting zarr's ``fill_value`` property. For zarr v2 format
-            arrays, ``fill_value`` is *always* interpreted as an invalid value similar to the ``_FillValue`` attribute
-            in CF/netCDF. For Zarr v3 format arrays, only an explicit ``_FillValue`` attribute will be used
-            to mask the data if requested using ``mask_and_scale=True``. See this `Github issue <https://github.com/pydata/xarray/issues/5475>`_
+            There exists a subtlety in interpreting zarr's ``fill_value`` property.
+            For Zarr v2 format arrays, ``fill_value`` is *always* interpreted as an
+            invalid value similar to the ``_FillValue`` attribute in CF/netCDF.
+            For Zarr v3 format arrays, only an explicit ``_FillValue`` attribute
+            will be used to mask the data if requested using ``mask_and_scale=True``.
+            To customize the fill value Zarr uses as a default for unwritten
+            chunks on disk, set ``_FillValue`` in encoding for Zarr v2 or
+            ``fill_value`` for Zarr v3.
+            See this `Github issue <https://github.com/pydata/xarray/issues/5475>`_
             for more.
 
         See Also
@@ -2359,7 +2366,7 @@ class Dataset(
         :ref:`io.zarr`
             The I/O user guide, with more details and examples.
         """
-        from xarray.backends.api import to_zarr
+        from xarray.backends.writers import to_zarr
 
         return to_zarr(  # type: ignore[call-overload,misc]
             self,
@@ -2375,6 +2382,7 @@ class Dataset(
             append_dim=append_dim,
             region=region,
             safe_chunks=safe_chunks,
+            align_chunks=align_chunks,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
             write_empty_chunks=write_empty_chunks,
@@ -6846,8 +6854,7 @@ class Dataset(
                 and (
                     not reduce_dims
                     or not numeric_only
-                    or np.issubdtype(var.dtype, np.number)
-                    or (var.dtype == np.bool_)
+                    or _is_numeric_aggregatable_dtype(var)
                 )
             ):
                 # prefer to aggregate over axis=None rather than
@@ -6928,11 +6935,22 @@ class Dataset(
             k: maybe_wrap_array(v, func(v, *args, **kwargs))
             for k, v in self.data_vars.items()
         }
+        coord_vars, indexes = merge_coordinates_without_align(
+            [v.coords for v in variables.values()]
+        )
+        coords = Coordinates._construct_direct(coords=coord_vars, indexes=indexes)
+
         if keep_attrs:
             for k, v in variables.items():
                 v._copy_attrs_from(self.data_vars[k])
+
+            for k, v in coords.items():
+                if k not in self.coords:
+                    continue
+                v._copy_attrs_from(self.coords[k])
+
         attrs = self.attrs if keep_attrs else None
-        return type(self)(variables, attrs=attrs)
+        return type(self)(variables, coords=coords, attrs=attrs)
 
     def apply(
         self,
@@ -7163,7 +7181,10 @@ class Dataset(
     def _to_dataframe(self, ordered_dims: Mapping[Any, int]):
         from xarray.core.extension_array import PandasExtensionArray
 
-        columns_in_order = [k for k in self.variables if k not in self.dims]
+        # All and only non-index arrays (whether data or coordinates) should
+        # become columns in the output DataFrame. Excluding indexes rather
+        # than dims handles the case of a MultiIndex along a single dimension.
+        columns_in_order = [k for k in self.variables if k not in self.xindexes]
         non_extension_array_columns = [
             k
             for k in columns_in_order
@@ -8453,8 +8474,6 @@ class Dataset(
         return result
 
     def _integrate_one(self, coord, datetime_unit=None, cumulative=False):
-        from xarray.core.variable import Variable
-
         if coord not in self.variables and coord not in self.dims:
             variables_and_dims = tuple(set(self.variables.keys()).union(self.dims))
             raise ValueError(

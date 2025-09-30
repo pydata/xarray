@@ -570,7 +570,7 @@ class ExplicitlyIndexed:
     __slots__ = ()
 
     def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         # Leave casting to an array up to the underlying array type.
         if Version(np.__version__) >= Version("2.0.0"):
@@ -653,7 +653,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
         self.indexer_cls = indexer_cls
 
     def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if Version(np.__version__) >= Version("2.0.0"):
             return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
@@ -694,8 +694,8 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         """
         if isinstance(array, type(self)) and key is None:
             # unwrap
-            key = array.key  # type: ignore[has-type]
-            array = array.array  # type: ignore[has-type]
+            key = array.key  # type: ignore[has-type, unused-ignore]
+            array = array.array  # type: ignore[has-type, unused-ignore]
 
         if key is None:
             key = BasicIndexer((slice(None),) * array.ndim)
@@ -1251,8 +1251,8 @@ def _decompose_vectorized_indexer(
     if indexing_support is IndexingSupport.VECTORIZED:
         return indexer, BasicIndexer(())
 
-    backend_indexer_elems = []
-    np_indexer_elems = []
+    backend_indexer_elems: list[slice | np.ndarray[Any, np.dtype[np.generic]]] = []
+    np_indexer_elems: list[slice | np.ndarray[Any, np.dtype[np.generic]]] = []
     # convert negative indices
     indexer_elems = [
         np.where(k < 0, k + s, k) if isinstance(k, np.ndarray) else k
