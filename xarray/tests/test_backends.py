@@ -7263,7 +7263,7 @@ def test_remote_url_backend_auto_detection() -> None:
     claiming ALL remote URLs, preventing remote Zarr stores from being
     auto-detected.
 
-    See: https://github.com/pydata/xarray/issues/XXXXX
+    See: https://github.com/pydata/xarray/issues/10801
     """
     from xarray.backends.netCDF4_ import NetCDF4BackendEntrypoint
     from xarray.backends.pydap_ import PydapBackendEntrypoint
