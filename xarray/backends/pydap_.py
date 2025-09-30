@@ -55,8 +55,7 @@ class PydapArrayWrapper(BackendArray):
 
     def _getitem(self, key):
         if self._batch and hasattr(self.array, "dataset"):
-            # this are both True only for pydap>3.5.5
-            # from pydap.lib import resolve_batch_for_all_variables
+            # True only for pydap>3.5.5
             from pydap.client import data_check, get_batch_data
 
             dataset = self.array.dataset
