@@ -1109,6 +1109,21 @@ def test_extension_array_repr(int1):
     assert repr(int1) in repr(int_duck_array)
 
 
+def test_extension_array_result_type_categorical(categorical1, categorical2):
+    res = np.result_type(
+        PandasExtensionArray(categorical1), PandasExtensionArray(categorical2)
+    )
+    assert isinstance(res, pd.CategoricalDtype)
+    assert set(res.categories) == set(categorical1.categories) | set(
+        categorical2.categories
+    )
+    assert not res.ordered
+
+    assert categorical1.dtype == np.result_type(
+        PandasExtensionArray(categorical1), pd.CategoricalDtype.na_value
+    )
+
+
 def test_extension_array_attr():
     array = pd.Categorical(["cat2", "cat1", "cat2", "cat3", "cat1"])
     wrapped = PandasExtensionArray(array)
