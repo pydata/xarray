@@ -7,8 +7,14 @@ What's New
 
 .. _whats-new.2025.09.1:
 
-v2025.09.1 (unreleased)
------------------------
+v2025.09.1 (September 29, 2025)
+-------------------------------
+
+This release contains a variety of improvements to netCDF IO and the
+:py:func:`DataTree.from_dict` constructor, as well as a variety of bug fixes.
+
+Thanks to the 17 contributors to this release:
+Claude, Deepak Cherian, Dimitri Papadopoulos Orfanos, Dylan H. Morris, Emmanuel Mathot, Ian Hunt-Isaak, Joren Hammudoglu, Julia Signell, Justus Magin, Maximilian Roos, Nick Hodgskin, Spencer Clark, Stephan Hoyer, Tom Nicholas, gronniger, joseph nowak and pierre-manchon
 
 New Features
 ~~~~~~~~~~~~
@@ -42,10 +48,6 @@ Breaking changes
   with the text reprs. The ``DataTree`` HTML repr also now automatically expands
   sub-groups (:pull:`10785`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-Deprecations
-~~~~~~~~~~~~
-
 
 Bug fixes
 ~~~~~~~~~
