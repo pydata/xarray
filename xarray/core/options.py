@@ -15,6 +15,7 @@ if TYPE_CHECKING:
         "cmap_divergent",
         "cmap_sequential",
         "display_max_children",
+        "display_max_html_elements",
         "display_max_rows",
         "display_max_items",
         "display_values_threshold",
@@ -46,6 +47,7 @@ if TYPE_CHECKING:
         cmap_divergent: str | Colormap
         cmap_sequential: str | Colormap
         display_max_children: int
+        display_max_html_elements: int
         display_max_rows: int
         display_max_items: int
         display_values_threshold: int
@@ -77,8 +79,9 @@ OPTIONS: T_Options = {
     "cmap_divergent": "RdBu_r",
     "cmap_sequential": "viridis",
     "display_max_children": 12,
+    "display_max_html_elements": 500,
     "display_max_rows": 12,
-    "display_max_items": 30,
+    "display_max_items": 20,
     "display_values_threshold": 200,
     "display_style": "html",
     "display_width": 80,
@@ -114,6 +117,7 @@ _VALIDATORS = {
     "arithmetic_broadcast": lambda value: isinstance(value, bool),
     "arithmetic_join": _JOIN_OPTIONS.__contains__,
     "display_max_children": _positive_integer,
+    "display_max_html_elements": _positive_integer,
     "display_max_rows": _positive_integer,
     "display_max_items": _positive_integer,
     "display_values_threshold": _positive_integer,
@@ -242,10 +246,14 @@ class set_options:
         * ``default`` : to expand unless over a pre-defined limit (always collapse for html style)
     display_max_children : int, default: 12
         Maximum number of children to display for each node in a DataTree.
+    display_max_html_elements : int, default: 500
+        Maximum number of HTML elements to include in DataTree HTML displays.
+        Additional items are truncated.
     display_max_rows : int, default: 12
         Maximum display rows.
-    display_max_items : int, default 30
-        Maximum number of items to display for a DataTree, across all levels.
+    display_max_items : int, default 20
+        Maximum number of items to display for a DataTree before collapsing
+        child nodes, across all levels.
     display_values_threshold : int, default: 200
         Total number of array elements which trigger summarization rather
         than full repr for variable data views (numpy arrays).

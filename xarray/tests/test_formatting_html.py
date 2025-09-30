@@ -197,7 +197,7 @@ def test_repr_of_dataset(dataset: xr.Dataset) -> None:
     formatted = xarray_html_only_repr(dataset)
     # coords, attrs, and data_vars are expanded
     assert (
-        formatted.count("class='xr-section-summary-in' type='checkbox'  checked>") == 3
+        formatted.count("class='xr-section-summary-in' type='checkbox' checked />") == 3
     )
     # indexes is omitted
     assert "Indexes" not in formatted
@@ -216,7 +216,7 @@ def test_repr_of_dataset(dataset: xr.Dataset) -> None:
         formatted = xarray_html_only_repr(dataset)
         # coords, attrs, and data_vars are collapsed, indexes is shown & expanded
         assert (
-            formatted.count("class='xr-section-summary-in' type='checkbox'  checked>")
+            formatted.count("class='xr-section-summary-in' type='checkbox' checked />")
             == 1
         )
         assert "Indexes" in formatted
