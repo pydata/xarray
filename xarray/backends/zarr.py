@@ -1359,7 +1359,7 @@ class ZarrStore(AbstractWritableDataStore):
         non_matching_vars = [
             k for k, v in ds.variables.items() if not set(region).intersection(v.dims)
         ]
-        if non_matching_vars:
+        if region and non_matching_vars:
             raise ValueError(
                 f"when setting `region` explicitly in to_zarr(), all "
                 f"variables in the dataset to write must have at least "
