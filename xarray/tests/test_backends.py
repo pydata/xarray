@@ -7253,6 +7253,77 @@ def test_zarr_entrypoint(tmp_path: Path) -> None:
 
 
 @requires_netCDF4
+@requires_pydap
+@requires_zarr
+def test_remote_url_backend_auto_detection() -> None:
+    """
+    Test that remote URLs are correctly claimed by appropriate backends.
+
+    This tests the fix for issue where netCDF4 and pydap backends were
+    claiming ALL remote URLs, preventing remote Zarr stores from being
+    auto-detected.
+
+    See: https://github.com/pydata/xarray/issues/XXXXX
+    """
+    from xarray.backends.netCDF4_ import NetCDF4BackendEntrypoint
+    from xarray.backends.pydap_ import PydapBackendEntrypoint
+    from xarray.backends.zarr import ZarrBackendEntrypoint
+
+    netcdf4_entrypoint = NetCDF4BackendEntrypoint()
+    pydap_entrypoint = PydapBackendEntrypoint()
+    zarr_entrypoint = ZarrBackendEntrypoint()
+
+    # Remote Zarr URLs should be claimed by Zarr backend, not netCDF4/pydap
+    remote_zarr_urls = [
+        "https://example.com/store.zarr",
+        "http://example.com/data.zarr/",
+        "s3://bucket/path/to/data.zarr",
+    ]
+
+    for url in remote_zarr_urls:
+        assert zarr_entrypoint.guess_can_open(url), f"Zarr should claim {url}"
+        assert not netcdf4_entrypoint.guess_can_open(url), (
+            f"NetCDF4 should not claim {url}"
+        )
+        assert not pydap_entrypoint.guess_can_open(url), f"Pydap should not claim {url}"
+
+    # Remote netCDF URLs with extensions should be claimed by netCDF4, not Zarr
+    remote_netcdf_urls_with_ext = [
+        "https://example.com/file.nc",
+        "http://example.com/data.nc4",
+        "https://example.com/test.cdf",
+    ]
+
+    for url in remote_netcdf_urls_with_ext:
+        assert not zarr_entrypoint.guess_can_open(url), f"Zarr should not claim {url}"
+        assert netcdf4_entrypoint.guess_can_open(url), f"NetCDF4 should claim {url}"
+
+    # OPeNDAP endpoints (no extension) should be claimed by both netCDF4 and pydap
+    opendap_urls = [
+        "http://opendap.example.com/data",
+        "https://test.opendap.org/dataset",
+    ]
+
+    for url in opendap_urls:
+        assert not zarr_entrypoint.guess_can_open(url), f"Zarr should not claim {url}"
+        assert netcdf4_entrypoint.guess_can_open(url), f"NetCDF4 should claim {url}"
+        assert pydap_entrypoint.guess_can_open(url), f"Pydap should claim {url}"
+
+    # Other file types should not be claimed
+    other_urls = [
+        "https://example.com/data.zip",
+        "https://example.com/data.tar.gz",
+    ]
+
+    for url in other_urls:
+        assert not zarr_entrypoint.guess_can_open(url), f"Zarr should not claim {url}"
+        assert not netcdf4_entrypoint.guess_can_open(url), (
+            f"NetCDF4 should not claim {url}"
+        )
+        assert not pydap_entrypoint.guess_can_open(url), f"Pydap should not claim {url}"
+
+
+@requires_netCDF4
 @pytest.mark.parametrize("str_type", (str, np.str_))
 def test_write_file_from_np_str(str_type: type[str | np.str_], tmpdir: str) -> None:
     # https://github.com/pydata/xarray/pull/5264

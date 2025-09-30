@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
@@ -209,7 +210,14 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.PydapBackendEntrypoint.html"
 
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
-        return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
+        if not (isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)):
+            return False
+
+        # Check file extension to avoid claiming non-OPeNDAP URLs (e.g., remote Zarr stores)
+        _, ext = os.path.splitext(filename_or_obj.rstrip("/"))
+        # Pydap handles OPeNDAP endpoints, which typically have no extension or .nc/.nc4
+        # Reject URLs with non-OPeNDAP extensions like .zarr
+        return ext not in {".zarr", ".zip", ".tar", ".gz"}
 
     def open_dataset(
         self,

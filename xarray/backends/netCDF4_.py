@@ -702,7 +702,12 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
-            return True
+            # For remote URIs, check file extension to avoid claiming non-netCDF URLs
+            # (e.g., remote Zarr stores)
+            _, ext = os.path.splitext(filename_or_obj.rstrip("/"))
+            # Accept remote URIs with netCDF extensions or no extension
+            # (OPeNDAP endpoints often have no extension)
+            return ext in {".nc", ".nc4", ".cdf", ""}
 
         magic_number = (
             bytes(filename_or_obj[:8])
