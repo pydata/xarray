@@ -17,6 +17,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_extension_array_dtype
 from numpy import (
     isclose,
     isnat,
