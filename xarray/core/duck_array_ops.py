@@ -17,13 +17,13 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_extension_array_dtype
 from numpy import (
     isclose,
     isnat,
     take,
     unravel_index,  # noqa: F401
 )
+from pandas.api.types import is_extension_array_dtype
 
 from xarray.compat import dask_array_compat, dask_array_ops
 from xarray.compat.array_api_compat import get_array_namespace
