@@ -74,7 +74,8 @@ Bug fixes
 - Allow ``combine_attrs="drop_conflicts"`` to handle objects with ``__eq__`` methods that return
   non-bool values (e.g., numpy arrays) without raising ``ValueError`` (:pull:`10726`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- Fix error raised when writing scalar variables to Zarr with ``region={}``.
+- Fix error raised when writing scalar variables to Zarr with ``region={}``
+  (:pull:`10796`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Documentation
