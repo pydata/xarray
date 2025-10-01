@@ -330,7 +330,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the scipy package.
 
-    It can open ".nc", ".nc4", ".cdf" and ".gz" files but will only be
+    It can open ".nc", ".cdf", and "nc..gz" files but will only be
     selected as the default if the "netcdf4" and "h5netcdf" engines are
     not available. It has the advantage that is is a lightweight engine
     that has no system requirements (unlike netcdf4 and h5netcdf).
@@ -347,7 +347,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
     backends.H5netcdfBackendEntrypoint
     """
 
-    description = "Open netCDF files (.nc, .nc4, .cdf and .gz) using scipy in Xarray"
+    description = "Open netCDF files (.nc, .cdf and .nc.gz) using scipy in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ScipyBackendEntrypoint.html"
 
     def guess_can_open(
@@ -364,7 +364,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
 
         if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
-            return ext in {".nc", ".nc4", ".cdf", ".gz"}
+            return ext in {".nc", ".cdf", ".nc.gz"}
 
         return False
 
