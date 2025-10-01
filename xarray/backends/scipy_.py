@@ -363,8 +363,10 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
             return magic_number.startswith(b"CDF")
 
         if isinstance(filename_or_obj, str | os.PathLike):
-            _, ext = os.path.splitext(filename_or_obj)
-            return ext in {".nc", ".cdf", ".nc.gz"}
+            from pathlib import Path
+
+            suffix = "".join(Path(filename_or_obj).suffixes)
+            return suffix in {".nc", ".cdf", ".nc.gz"}
 
         return False
 
