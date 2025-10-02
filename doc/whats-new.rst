@@ -59,6 +59,9 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- Skip empty nodes in :py:func:`map_over_datasets`. Also affects binary operations.
+  This is a breaking change in xarray, but restores the behavior of the xarray-datatree package (:issue:`9693`, :pull:`10042`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 - :py:meth:`Dataset.update` now returns ``None``, instead of the updated dataset. This
   completes the deprecation cycle started in version 0.17. The method still updates the
