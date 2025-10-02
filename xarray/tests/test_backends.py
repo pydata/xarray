@@ -2112,7 +2112,7 @@ class NetCDF4Base(NetCDFBase):
                     fill_value=None,
                 )
                 v[:] = 1
-            with open_dataset(tmp_file) as original:
+            with open_dataset(tmp_file, engine="netcdf4") as original:
                 save_kwargs = {}
                 # We don't expect any errors.
                 # This is effectively a void context manager
@@ -2164,7 +2164,7 @@ class NetCDF4Base(NetCDFBase):
                     "time",
                     fill_value=255,
                 )
-            with open_dataset(tmp_file) as original:
+            with open_dataset(tmp_file, engine="netcdf4") as original:
                 save_kwargs = {}
                 if self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above:
                     save_kwargs["invalid_netcdf"] = True
@@ -2213,7 +2213,7 @@ class NetCDF4Base(NetCDFBase):
                     "time",
                     fill_value=255,
                 )
-            with open_dataset(tmp_file) as original:
+            with open_dataset(tmp_file, engine="netcdf4") as original:
                 assert (
                     original.clouds.encoding["dtype"].metadata
                     == original.tifa.encoding["dtype"].metadata
@@ -4381,6 +4381,23 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         ) as ds:
             yield ds
 
+    @requires_dask
+    def test_default_zarr_fill_value(self):
+        inputs = xr.Dataset({"floats": ("x", [1.0]), "ints": ("x", [1])}).chunk()
+        expected = xr.Dataset({"floats": ("x", [np.nan]), "ints": ("x", [0])})
+        with self.temp_dir() as (d, store):
+            inputs.to_zarr(store, compute=False)
+            with open_dataset(store) as on_disk:
+                assert np.isnan(on_disk.variables["floats"].encoding["_FillValue"])
+                assert (
+                    "_FillValue" not in on_disk.variables["ints"].encoding
+                )  # use default
+                if not has_zarr_v3:
+                    # zarr-python v2 interprets fill_value=None inconsistently
+                    del on_disk["ints"]
+                    del expected["ints"]
+                assert_identical(expected, on_disk)
+
     @pytest.mark.parametrize("consolidated", [True, False, None])
     @pytest.mark.parametrize("write_empty", [True, False, None])
     def test_write_empty(
@@ -4419,14 +4436,13 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 "0.1.1",
             ]
 
+        # use nan for default fill_value behaviour
+        data = np.array([np.nan, np.nan, 1.0, np.nan]).reshape((1, 2, 2))
+
         if zarr_format_3:
-            data = np.array([0.0, 0, 1.0, 0]).reshape((1, 2, 2))
             # transform to the path style of zarr 3
             # e.g. 0/0/1
             expected = [e.replace(".", "/") for e in expected]
-        else:
-            # use nan for default fill_value behaviour
-            data = np.array([np.nan, np.nan, 1.0, np.nan]).reshape((1, 2, 2))
 
         ds = xr.Dataset(data_vars={"test": (("Z", "Y", "X"), data)})
 
@@ -6800,6 +6816,7 @@ def _assert_no_dates_out_of_range_warning(record):
 
 
 @requires_scipy_or_netCDF4
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
 def test_use_cftime_standard_calendar_default_in_range(calendar) -> None:
     x = [0, 1]
@@ -7303,6 +7320,7 @@ class TestNCZarr:
         # https://github.com/Unidata/netcdf-c/issues/2259
         ds = ds.drop_vars("dim3")
 
+        # engine="netcdf4" is not required for backwards compatibility
         ds.to_netcdf(f"file://{filename}#mode=nczarr")
         return ds
 
@@ -7545,6 +7563,10 @@ class TestZarrRegionAuto:
                     mode="a",
                 )
 
+    @pytest.mark.xfail(
+        ON_WINDOWS,
+        reason="Permission errors from Zarr: https://github.com/pydata/xarray/pull/10793",
+    )
     @requires_dask
     def test_zarr_region_chunk_partial_offset(self):
         # https://github.com/pydata/xarray/pull/8459#issuecomment-1819417545

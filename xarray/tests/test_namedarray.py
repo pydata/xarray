@@ -377,7 +377,7 @@ class TestNamedArray(NamedArraySubclassobjects):
 
         masked_a: np.ma.MaskedArray[Any, np.dtype[np.int64]]
         masked_a = np.ma.asarray([2.1, 4], dtype=np.dtype(np.int64))  # type: ignore[no-untyped-call]
-        check_duck_array_typevar(masked_a)
+        check_duck_array_typevar(masked_a)  # type: ignore[arg-type]  # MaskedArray not in duckarray union
 
         custom_a: CustomArrayIndexable[Any, np.dtype[np.int64]]
         custom_a = CustomArrayIndexable(numpy_a)
