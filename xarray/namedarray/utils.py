@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import importlib
+import sys
 import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
 from functools import lru_cache
+from numbers import Number
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import numpy as np
@@ -23,7 +25,10 @@ if TYPE_CHECKING:
         DaskArray = NDArray  # type: ignore[assignment, misc]
         DaskCollection: Any = NDArray  # type: ignore[no-redef]
 
-    from xarray.namedarray._typing import _Dim, duckarray
+    from xarray.core.types import T_ChunkDim
+    from xarray.core.variable import Variable
+    from xarray.namedarray._typing import DuckArray, _Dim, duckarray
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
 K = TypeVar("K")
@@ -193,6 +198,113 @@ def either_dict_or_kwargs(
             f"cannot specify both keyword and positional arguments to .{func_name}"
         )
     return pos_kwargs
+
+
+def _get_chunk(  # type: ignore[no-untyped-def]
+    var: Variable | DuckArray[Any],
+    chunks,
+    chunkmanager: ChunkManagerEntrypoint[Any],
+    *,
+    preferred_chunks,
+) -> Mapping[Any, T_ChunkDim]:
+    """
+    Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
+    """
+    import itertools
+
+    from xarray.core.utils import emit_user_level_warning
+    from xarray.core.variable import IndexVariable, Variable
+    from xarray.structure.chunks import _get_breaks_cached
+
+    if isinstance(var, IndexVariable):
+        return {}
+
+    if isinstance(var, Variable):
+        dims = var.dims
+    else:
+        dims = chunks.keys()
+
+    shape = var.shape
+
+    # Determine the explicit requested chunks.
+    preferred_chunk_shape = tuple(
+        itertools.starmap(preferred_chunks.get, zip(dims, shape, strict=True))
+    )
+    if isinstance(chunks, Number) or (chunks == "auto"):
+        chunks = dict.fromkeys(dims, chunks)
+    chunk_shape = tuple(
+        chunks.get(dim, None) or preferred_chunk_sizes
+        for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape, strict=True)
+    )
+
+    limit = chunkmanager.get_auto_chunk_size()
+    limit, var_dtype = fake_target_chunksize(var, limit)
+
+    chunk_shape = chunkmanager.normalize_chunks(
+        chunk_shape,
+        shape=shape,
+        dtype=var_dtype,
+        limit=limit,
+        previous_chunks=preferred_chunk_shape,
+    )
+
+    # Warn where requested chunks break preferred chunks, provided that the variable
+    # contains data.
+    if var.size:  # type: ignore[union-attr]  # DuckArray protocol doesn't include 'size' - should it?
+        for dim, size, chunk_sizes in zip(dims, shape, chunk_shape, strict=True):
+            try:
+                preferred_chunk_sizes = preferred_chunks[dim]
+            except KeyError:
+                continue
+            disagreement = _get_breaks_cached(
+                size=size,
+                chunk_sizes=chunk_sizes,
+                preferred_chunk_sizes=preferred_chunk_sizes,
+            )
+            if disagreement:
+                emit_user_level_warning(
+                    "The specified chunks separate the stored chunks along "
+                    f'dimension "{dim}" starting at index {disagreement}. This could '
+                    "degrade performance. Instead, consider rechunking after loading.",
+                )
+
+    return dict(zip(dims, chunk_shape, strict=True))
+
+
+def fake_target_chunksize(
+    data: Variable | DuckArray[Any],
+    limit: int,
+) -> tuple[int, np.dtype[Any]]:
+    """
+    The `normalize_chunks` algorithm takes a size `limit` in bytes, but will not
+    work for object dtypes.  So we rescale the `limit` to an appropriate one based
+    on `float64` dtype, and pass that to `normalize_chunks`.
+
+    Arguments
+    ---------
+    data : Variable or ChunkedArray
+        The data for which we want to determine chunk sizes.
+    limit : int
+        The target chunk size in bytes. Passed to the chunk manager's `normalize_chunks` method.
+    """
+
+    # Short circuit for non-object dtypes
+    from xarray.core.common import _contains_cftime_datetimes
+
+    if not _contains_cftime_datetimes(data):
+        return limit, data.dtype
+
+    from xarray.core.formatting import first_n_items
+
+    output_dtype = np.dtype(np.float64)
+
+    nbytes_approx: int = sys.getsizeof(first_n_items(data, 1))  # type: ignore[no-untyped-call]
+
+    f64_nbytes = output_dtype.itemsize
+
+    limit = int(limit * (f64_nbytes / nbytes_approx))
+
+    return limit, output_dtype
 
 
 class ReprObject:

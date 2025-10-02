@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
+from xarray.core.common import _contains_cftime_datetimes
 from xarray.core.indexing import ImplicitToExplicitIndexingAdapter
 from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray
 from xarray.namedarray.utils import is_duck_dask_array, module_available
@@ -264,3 +265,21 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         if chunks != "auto":
             raise NotImplementedError("Only chunks='auto' is supported at present.")
         return dask.array.shuffle(x, indexer, axis, chunks="auto")
+
+    def get_auto_chunk_size(self) -> int:
+        from dask import config as dask_config
+        from dask.utils import parse_bytes
+
+        return parse_bytes(dask_config.get("array.chunk-size"))
+
+    def rechunk(
+        self,
+        data: DaskArray,
+        chunks: T_Chunks | _NormalizedChunks,
+        **kwargs: Any,
+    ) -> DaskArray:
+        from xarray.namedarray.utils import _get_chunk
+
+        if _contains_cftime_datetimes(data):
+            chunks = _get_chunk(data, chunks, self, preferred_chunks={})
+        return data.rechunk(chunks, **kwargs)
