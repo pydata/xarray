@@ -1178,6 +1178,11 @@ class ZarrStore(AbstractWritableDataStore):
                 fill_value = attrs.pop("_FillValue", None)
             else:
                 fill_value = v.encoding.pop("fill_value", None)
+                if fill_value is None and v.dtype.kind == "f":
+                    # For floating point data, Xarray defaults to a fill_value
+                    # of NaN (unlike Zarr, which uses zero):
+                    # https://github.com/pydata/xarray/issues/10646
+                    fill_value = np.nan
                 if "_FillValue" in attrs:
                     # replace with encoded fill value
                     fv = attrs.pop("_FillValue")
