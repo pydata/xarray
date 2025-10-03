@@ -335,7 +335,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
     not available. It has the advantage that is is a lightweight engine
     that has no system requirements (unlike netcdf4 and h5netcdf).
 
-    Additionally it can open gizp compressed (".gz") files.
+    Additionally it can open gzip compressed (".gz") files.
 
     For more information about the underlying library, visit:
     https://docs.scipy.org/doc/scipy/reference/generated/scipy.io.netcdf_file.html
@@ -354,6 +354,8 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: T_PathFileOrDataStore,
     ) -> bool:
+        from xarray.core.utils import is_remote_uri
+
         filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None and magic_number.startswith(b"\x1f\x8b"):
@@ -364,6 +366,10 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
 
         if isinstance(filename_or_obj, str | os.PathLike):
             from pathlib import Path
+
+            # scipy can only handle local files
+            if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
+                return False
 
             suffix = "".join(Path(filename_or_obj).suffixes)
             return suffix in {".nc", ".cdf", ".nc.gz"}
