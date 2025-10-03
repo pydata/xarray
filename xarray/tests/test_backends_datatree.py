@@ -1090,6 +1090,10 @@ class TestZarrDatatreeIO:
         with open_datatree(filepath, group="child", engine="zarr") as roundtrip_child:
             assert_identical(expected_child, roundtrip_child)
 
+    @pytest.mark.xfail(
+        ON_WINDOWS,
+        reason="Permission errors from Zarr: https://github.com/pydata/xarray/pull/10793",
+    )
     @pytest.mark.filterwarnings(
         "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
     )
