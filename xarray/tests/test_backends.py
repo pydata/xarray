@@ -7159,7 +7159,10 @@ def test_netcdf4_entrypoint(tmp_path: Path) -> None:
     _check_guess_can_open_and_open(entrypoint, path, engine="netcdf4", expected=ds)
     _check_guess_can_open_and_open(entrypoint, str(path), engine="netcdf4", expected=ds)
 
-    assert entrypoint.guess_can_open("http://something/remote")
+    # Remote URLs without extensions are no longer claimed (stricter detection)
+    assert not entrypoint.guess_can_open("http://something/remote")
+    # Remote URLs with netCDF extensions are claimed
+    assert entrypoint.guess_can_open("http://something/remote.nc")
     assert entrypoint.guess_can_open("something-local.nc")
     assert entrypoint.guess_can_open("something-local.nc4")
     assert entrypoint.guess_can_open("something-local.cdf")
@@ -7202,6 +7205,10 @@ def test_scipy_entrypoint(tmp_path: Path) -> None:
     assert entrypoint.guess_can_open("something-local.nc.gz")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
     assert not entrypoint.guess_can_open(b"not-a-netcdf-file")
+    # Should not claim .gz files that aren't netCDF
+    assert not entrypoint.guess_can_open("something.zarr.gz")
+    assert not entrypoint.guess_can_open("something.tar.gz")
+    assert not entrypoint.guess_can_open("something.txt.gz")
 
 
 @requires_h5netcdf
@@ -7252,75 +7259,73 @@ def test_zarr_entrypoint(tmp_path: Path) -> None:
     assert not entrypoint.guess_can_open("something.zarr.txt")
 
 
+@requires_h5netcdf
 @requires_netCDF4
 @requires_pydap
 @requires_zarr
 def test_remote_url_backend_auto_detection() -> None:
     """
-    Test that remote URLs are correctly claimed by appropriate backends.
+    Test that remote URLs are correctly selected by the backend resolution system.
 
-    This tests the fix for issue where netCDF4 and pydap backends were
+    This tests the fix for issue where netCDF4, h5netcdf, and pydap backends were
     claiming ALL remote URLs, preventing remote Zarr stores from being
     auto-detected.
 
     See: https://github.com/pydata/xarray/issues/10801
     """
-    from xarray.backends.netCDF4_ import NetCDF4BackendEntrypoint
-    from xarray.backends.pydap_ import PydapBackendEntrypoint
-    from xarray.backends.zarr import ZarrBackendEntrypoint
+    from xarray.backends.plugins import guess_engine
 
-    netcdf4_entrypoint = NetCDF4BackendEntrypoint()
-    pydap_entrypoint = PydapBackendEntrypoint()
-    zarr_entrypoint = ZarrBackendEntrypoint()
-
-    # Remote Zarr URLs should be claimed by Zarr backend, not netCDF4/pydap
-    remote_zarr_urls = [
-        "https://example.com/store.zarr",
-        "http://example.com/data.zarr/",
-        "s3://bucket/path/to/data.zarr",
+    # Test cases: (url, expected_backend)
+    test_cases = [
+        # Remote Zarr URLs
+        ("https://example.com/store.zarr", "zarr"),
+        ("http://example.com/data.zarr/", "zarr"),
+        ("s3://bucket/path/to/data.zarr", "zarr"),
+        # Remote netCDF URLs (non-DAP) - h5netcdf wins (first in order)
+        ("https://example.com/file.nc", "h5netcdf"),
+        ("http://example.com/data.nc4", "h5netcdf"),
+        ("https://example.com/test.cdf", "h5netcdf"),
+        ("https://example.com/data.nc?var=temperature&time=0", "h5netcdf"),
+        # DAP URLs with query parameters - h5netcdf wins (has .nc4 ext, first in order)
+        (
+            "http://test.opendap.org/opendap/dap4/StaggeredGrid.nc4?dap4.ce=/time[0:1:0]",
+            "h5netcdf",
+        ),
+        # DAP URLs without extensions - pydap wins
+        ("dap2://opendap.earthdata.nasa.gov/collections/dataset", "pydap"),
+        ("dap4://opendap.earthdata.nasa.gov/collections/dataset", "pydap"),
+        ("DAP2://example.com/dataset", "pydap"),  # uppercase scheme
+        ("DAP4://example.com/dataset", "pydap"),  # uppercase scheme
+        ("https://example.com/services/DAP2/dataset", "pydap"),  # uppercase in path
+        # DAP URLs with .nc extensions - h5netcdf wins (first in order)
+        ("http://test.opendap.org/opendap/dap4/StaggeredGrid.nc4", "h5netcdf"),
+        ("https://example.com/DAP4/data.nc", "h5netcdf"),
+        ("http://example.com/data/Dap4/file.nc", "h5netcdf"),
+        ("s3://bucket/path/to/data.nc", "h5netcdf"),
     ]
 
-    for url in remote_zarr_urls:
-        assert zarr_entrypoint.guess_can_open(url), f"Zarr should claim {url}"
-        assert not netcdf4_entrypoint.guess_can_open(url), (
-            f"NetCDF4 should not claim {url}"
+    for url, expected_backend in test_cases:
+        engine = guess_engine(url)
+        assert engine == expected_backend, (
+            f"URL {url!r} should select {expected_backend!r} but got {engine!r}"
         )
-        assert not pydap_entrypoint.guess_can_open(url), f"Pydap should not claim {url}"
 
-    # Remote netCDF URLs with extensions should be claimed by netCDF4, not Zarr
-    remote_netcdf_urls_with_ext = [
-        "https://example.com/file.nc",
-        "http://example.com/data.nc4",
-        "https://example.com/test.cdf",
+    # URLs that should raise ValueError (no backend can open them)
+    invalid_urls = [
+        "http://test.opendap.org/opendap/data/nc/coads_climatology.nc.dap",  # .dap suffix
+        "https://example.com/data.dap",  # .dap suffix
+        "http://opendap.example.com/data",  # no extension, no DAP indicators
+        "https://test.opendap.org/dataset",  # no extension, no DAP indicators
     ]
 
-    for url in remote_netcdf_urls_with_ext:
-        assert not zarr_entrypoint.guess_can_open(url), f"Zarr should not claim {url}"
-        assert netcdf4_entrypoint.guess_can_open(url), f"NetCDF4 should claim {url}"
-
-    # OPeNDAP endpoints (no extension) should be claimed by both netCDF4 and pydap
-    opendap_urls = [
-        "http://opendap.example.com/data",
-        "https://test.opendap.org/dataset",
-    ]
-
-    for url in opendap_urls:
-        assert not zarr_entrypoint.guess_can_open(url), f"Zarr should not claim {url}"
-        assert netcdf4_entrypoint.guess_can_open(url), f"NetCDF4 should claim {url}"
-        assert pydap_entrypoint.guess_can_open(url), f"Pydap should claim {url}"
-
-    # Other file types should not be claimed
-    other_urls = [
-        "https://example.com/data.zip",
-        "https://example.com/data.tar.gz",
-    ]
-
-    for url in other_urls:
-        assert not zarr_entrypoint.guess_can_open(url), f"Zarr should not claim {url}"
-        assert not netcdf4_entrypoint.guess_can_open(url), (
-            f"NetCDF4 should not claim {url}"
-        )
-        assert not pydap_entrypoint.guess_can_open(url), f"Pydap should not claim {url}"
+    for url in invalid_urls:
+        try:
+            engine = guess_engine(url)
+            raise AssertionError(
+                f"URL {url!r} should not be claimed by any backend, but {engine!r} claimed it"
+            )
+        except ValueError:
+            pass  # Expected
 
 
 @requires_netCDF4

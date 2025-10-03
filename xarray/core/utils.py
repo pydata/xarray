@@ -728,6 +728,40 @@ def is_remote_uri(path: str) -> bool:
     return bool(re.search(r"^[a-z][a-z0-9]*(\://|\:\:)", path))
 
 
+def strip_uri_params(uri: str) -> str:
+    """Strip query parameters and fragments from a URI.
+
+    This is useful for extracting the file extension from URLs that
+    contain query parameters (e.g., OPeNDAP constraint expressions).
+
+    Parameters
+    ----------
+    uri : str
+        The URI to strip
+
+    Returns
+    -------
+    str
+        The URI without query parameters (?) or fragments (#)
+
+    Examples
+    --------
+    >>> strip_uri_params("http://example.com/file.nc?var=temp&time=0")
+    'http://example.com/file.nc'
+    >>> strip_uri_params("http://example.com/file.nc#section")
+    'http://example.com/file.nc'
+    >>> strip_uri_params("/local/path/file.nc")
+    '/local/path/file.nc'
+    """
+    from urllib.parse import urlsplit, urlunsplit
+
+    # Use urlsplit to properly parse the URI
+    # This handles both absolute URLs and relative paths
+    parsed = urlsplit(uri)
+    # Reconstruct without query and fragment using urlunsplit
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
+
+
 def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
     # check byte header to determine file type
     if not isinstance(filename_or_obj, io.IOBase):
