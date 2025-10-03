@@ -3446,8 +3446,8 @@ class ZarrBase(CFEncodedBase):
     def test_region_scalar(self) -> None:
         ds = Dataset({"x": 0})
         with self.create_zarr_target() as store:
-            ds.to_zarr(store, compute=False)
-            ds.to_zarr(store, region={}, mode="r+", compute=True)
+            ds.to_zarr(store)
+            ds.to_zarr(store, region={}, mode="r+")
             with xr.open_zarr(store) as actual:
                 assert_identical(actual, ds)
 
