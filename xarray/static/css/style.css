@@ -78,6 +78,7 @@ body.vscode-dark {
   min-width: 300px;
   max-width: 700px;
   line-height: 1.6;
+  padding-bottom: 4px;
 }
 
 .xr-text-repr-fallback {
@@ -136,12 +137,7 @@ body.vscode-dark {
 
 .xr-section-item > input + label {
   color: var(--xr-disabled-color);
-  /* border: 2px solid transparent !important; */
 }
-
-/* .xr-section-item > input:active + label {
-  border: 2px solid var(--xr-font-color0) !important;
-} */
 
 .xr-section-item > input:enabled + label,
 .xr-group-box-contents > input:enabled + label {
@@ -160,14 +156,25 @@ body.vscode-dark {
   font-weight: 500;
 }
 
-.xr-section-summary > span,
-.xr-group-box-contents > input:checked + label > span {
-  display: inline-block;
-  padding-left: 0.5em;
+.xr-section-summary > em {
+  font-weight: normal;
 }
 
-.xr-section-summary-in:disabled + label,
-.xr-group-box-contents > input:disabled + label {
+.xr-span-grid {
+  grid-column-end: -1;
+}
+
+.xr-section-summary > span {
+  display: inline-block;
+  padding-left: 0.3em;
+}
+
+.xr-group-box-contents > input:checked + label > span {
+  display: inline-block;
+  padding-left: 0.6em;
+}
+
+.xr-section-summary-in:disabled + label {
   color: var(--xr-font-color2);
 }
 
@@ -179,8 +186,7 @@ body.vscode-dark {
   text-align: center;
 }
 
-.xr-section-summary-in:disabled + label:before,
-.xr-group-box-contents > input:disabled + label:before {
+.xr-section-summary-in:disabled + label:before {
   color: var(--xr-disabled-color);
 }
 
@@ -220,13 +226,12 @@ body.vscode-dark {
   display: inline-grid;
   grid-template-columns: 100%;
   grid-column: 1 / -1;
-  width: 100%;
+  padding-top: 4px;
 }
 
 .xr-group-box {
   display: inline-grid;
   grid-template-columns: 0px 30px auto;
-  width: 100%;
 }
 
 .xr-group-box-vline {
@@ -247,7 +252,7 @@ body.vscode-dark {
 
 .xr-group-box-contents {
   grid-column-start: 3;
-  width: 100%;
+  padding-bottom: 4px;
 }
 
 .xr-group-box-contents > label::before {

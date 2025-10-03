@@ -172,7 +172,7 @@ def summarize_indexes(indexes) -> str:
 
 
 def collapsible_section(
-    name: str,
+    header: str,
     inline_details="",
     details="",
     n_items=None,
@@ -187,14 +187,17 @@ def collapsible_section(
     enabled = "" if enabled and has_items else " disabled"
     collapsed = "" if collapsed or not has_items else " checked"
     tip = " title='Expand/collapse section'" if enabled else ""
+    span_grid = " xr-span-grid" if not inline_details else ""
 
-    html = f"""
-        <input id='{data_id}' class='xr-section-summary-in' type='checkbox'{enabled}{collapsed} />
-        <label for='{data_id}' class='xr-section-summary' {tip}>{name}:{n_items_span}</label>
-        <div class='xr-section-inline-details'>{inline_details}</div>
-        <div class='xr-section-details'>{details}</div>
-    """
-    return "".join(t.strip() for t in html.split("\n"))
+    html = (
+        f"<input id='{data_id}' class='xr-section-summary-in' type='checkbox'{enabled}{collapsed} />"
+        f"<label for='{data_id}' class='xr-section-summary{span_grid}' {tip}>{header}{n_items_span}</label>"
+    )
+    if inline_details:
+        html += f"<div class='xr-section-inline-details'>{inline_details}</div>"
+    if details:
+        html += f"<div class='xr-section-details'>{details}</div>"
+    return html
 
 
 def _mapping_section(
@@ -220,7 +223,7 @@ def _mapping_section(
             inline_details = f"({max_items}/{n_items})"
 
     return collapsible_section(
-        name,
+        f"{name}:",
         inline_details=inline_details,
         details=details_func(mapping, **kwargs),
         n_items=n_items,
@@ -233,7 +236,7 @@ def dim_section(obj) -> str:
     dim_list = format_dims(obj.sizes, obj.xindexes.dims)
 
     return collapsible_section(
-        "Dimensions", inline_details=dim_list, enabled=False, collapsed=True
+        "Dimensions:", inline_details=dim_list, enabled=False, collapsed=True
     )
 
 
@@ -502,6 +505,16 @@ def _build_datatree_displays(tree: DataTree) -> dict[str, _DataTreeDisplay]:
         )
         root = False
 
+    # If any node is collapsed, ensure its immediate siblings are also collapsed
+    for display in displays.values():
+        if not display.disabled:
+            if any(
+                displays[child.path].collapsed
+                for child in display.node.children.values()
+            ):
+                for child in display.node.children.values():
+                    displays[child.path].collapsed = True
+
     return displays
 
 
@@ -514,12 +527,7 @@ def children_section(
         child_elements.append(datatree_child_repr(child, displays, end=is_last))
 
     children_html = "".join(child_elements)
-    html = f"""
-        <div class='xr-section-details'>
-            <div class='xr-children'>{children_html}</div>
-        </div>
-    """
-    return "".join(t.strip() for t in html.split("\n"))
+    return f"<div class='xr-children'>{children_html}</div>"
 
 
 def datatree_sections(
@@ -564,23 +572,29 @@ def datatree_child_repr(
 
     group_id = "group-" + str(uuid.uuid4())
     collapsed = " checked" if display.collapsed else ""
-    disabled = " disabled" if display.disabled else ""
     tip = " title='Expand/collapse group'" if not display.disabled else ""
 
     sections = datatree_sections(node, displays)
-    sections_html = _sections_repr(sections) if sections else ""
+    if display.disabled:
+        sections.append(
+            collapsible_section(
+                f"<em>Too many items ({display.item_count}) to display</em>",
+                enabled=False,
+                collapsed=True,
+            )
+        )
 
-    item_count = f"{display.item_count}" + (" truncated" if disabled else "")
+    sections_html = _sections_repr(sections) if sections else ""
 
     html = f"""
         <div class='xr-group-box'>
             <div class='xr-group-box-vline' style='height: {vline_height}'></div>
             <div class='xr-group-box-hline'></div>
             <div class='xr-group-box-contents'>
-                <input id='{group_id}' type='checkbox'{collapsed}{disabled} />
+                <input id='{group_id}' type='checkbox'{collapsed} />
                 <label for='{group_id}'{tip}>
                     {path}
-                    <span>({item_count})</span>
+                    <span>({display.item_count})</span>
                 </label>
                 {sections_html}
             </div>
