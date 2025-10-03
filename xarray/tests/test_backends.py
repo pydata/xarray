@@ -7281,15 +7281,18 @@ def test_remote_url_backend_auto_detection() -> None:
         ("https://example.com/store.zarr", "zarr"),
         ("http://example.com/data.zarr/", "zarr"),
         ("s3://bucket/path/to/data.zarr", "zarr"),
-        # Remote netCDF URLs (non-DAP) - h5netcdf wins (first in order)
+        # Remote netCDF URLs (non-DAP) - h5netcdf wins (first in order, no query params)
         ("https://example.com/file.nc", "h5netcdf"),
         ("http://example.com/data.nc4", "h5netcdf"),
         ("https://example.com/test.cdf", "h5netcdf"),
-        ("https://example.com/data.nc?var=temperature&time=0", "h5netcdf"),
-        # DAP URLs with query parameters - h5netcdf wins (has .nc4 ext, first in order)
+        ("s3://bucket/path/to/data.nc", "h5netcdf"),
+        # Remote netCDF URLs with query params - netcdf4 wins
+        # Note: Query params are typically indicative of DAP URLs (e.g., OPeNDAP constraint expressions),
+        # so we prefer netcdf4 (which has DAP support) over h5netcdf (which doesn't)
+        ("https://example.com/data.nc?var=temperature&time=0", "netcdf4"),
         (
             "http://test.opendap.org/opendap/dap4/StaggeredGrid.nc4?dap4.ce=/time[0:1:0]",
-            "h5netcdf",
+            "netcdf4",
         ),
         # DAP URLs without extensions - pydap wins
         ("dap2://opendap.earthdata.nasa.gov/collections/dataset", "pydap"),
@@ -7297,11 +7300,10 @@ def test_remote_url_backend_auto_detection() -> None:
         ("DAP2://example.com/dataset", "pydap"),  # uppercase scheme
         ("DAP4://example.com/dataset", "pydap"),  # uppercase scheme
         ("https://example.com/services/DAP2/dataset", "pydap"),  # uppercase in path
-        # DAP URLs with .nc extensions - h5netcdf wins (first in order)
+        # DAP URLs with .nc extensions (no query params) - h5netcdf wins (first in order)
         ("http://test.opendap.org/opendap/dap4/StaggeredGrid.nc4", "h5netcdf"),
         ("https://example.com/DAP4/data.nc", "h5netcdf"),
         ("http://example.com/data/Dap4/file.nc", "h5netcdf"),
-        ("s3://bucket/path/to/data.nc", "h5netcdf"),
     ]
 
     for url, expected_backend in test_cases:

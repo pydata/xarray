@@ -462,19 +462,13 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     supports_groups = True
 
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
-        from xarray.core.utils import is_remote_uri, strip_uri_params
-
         filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None:
             return magic_number.startswith(b"\211HDF\r\n\032\n")
 
         if isinstance(filename_or_obj, str | os.PathLike):
-            path = str(filename_or_obj)
-            # For remote URIs, strip query parameters and fragments before checking extension
-            if isinstance(filename_or_obj, str) and is_remote_uri(path):
-                path = strip_uri_params(path)
-            _, ext = os.path.splitext(path)
+            _, ext = os.path.splitext(str(filename_or_obj))
             return ext in {".nc", ".nc4", ".cdf"}
 
         return False
