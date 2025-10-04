@@ -7,6 +7,25 @@ from tlz.itertoolz import last, unique
 co_author_re = re.compile(r"Co-authored-by: (?P<name>[^<]+?) <(?P<email>.+)>")
 
 
+ignored = [
+    {"name": "dependabot[bot]"},
+    {"name": "pre-commit-ci[bot]"},
+    {"name": "Claude", "email": "noreply@anthropic.com"},
+]
+
+
+def is_ignored(name, email):
+    # linear search, for now
+    for ignore in ignored:
+        if ignore["name"] != name:
+            continue
+        ignored_email = ignore.get("email")
+        if ignored_email is None or email in ignored_email:
+            return True
+
+    return False
+
+
 def main():
     repo = git.Repo(".")
 
@@ -22,11 +41,8 @@ def main():
 
     # deduplicate and ignore
     # TODO: extract ignores from .github/release.yml
-    ignored = ["dependabot", "pre-commit-ci"]
     unique_contributors = unique(
-        contributor
-        for contributor in contributors.values()
-        if contributor.removesuffix("[bot]") not in ignored
+        name for email, name in contributors.items() if not is_ignored(name, email)
     )
 
     sorted_ = sorted(unique_contributors)
