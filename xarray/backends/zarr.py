@@ -37,7 +37,6 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import guess_chunkmanager
 from xarray.namedarray.pycompat import integer_types
-from xarray.namedarray.utils import module_available
 
 if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
@@ -106,7 +105,14 @@ def _choose_default_mode(
 
 
 def _zarr_v3() -> bool:
-    return module_available("zarr", minversion="3")
+    # don't use the module_available function because it doesn't report zarr v3 correctly.
+    try:
+        import zarr
+        from packaging.version import Version
+
+        return Version(zarr.__version__).major == 3
+    except ImportError:
+        return False
 
 
 # need some special secret attributes to tell us the dimensions
