@@ -238,7 +238,10 @@ class CachingFileManager(FileManager[T_File]):
         with self._optional_lock(needs_lock):
             default = None
             file = self._cache.pop(self._key, default)
-            if file is not None:
+            if needs_lock and self._lock:
+                with self._lock:
+                    file.close()
+            else:
                 file.close()
 
     def __del__(self) -> None:
@@ -355,6 +358,7 @@ class PickleableFileManager(FileManager[T_File]):
         opener: Callable[..., T_File],
         *args: Any,
         mode: Any = _OMIT_MODE,
+        lock: Lock | None | Literal[False] = None,
         kwargs: Mapping[str, Any] | None = None,
     ):
         kwargs = {} if kwargs is None else dict(kwargs)
@@ -362,6 +366,7 @@ class PickleableFileManager(FileManager[T_File]):
         self._args = args
         self._mode = "a" if mode == "w" else mode
         self._kwargs = kwargs
+        self._lock = lock
 
         # Note: No need for locking with PickleableFileManager, because all
         # opening of files happens in the constructor.
@@ -394,7 +399,11 @@ class PickleableFileManager(FileManager[T_File]):
         del needs_lock  # unused
         if not self._closed:
             file = self._get_unclosed_file()
-            file.close()
+            if needs_lock and self._lock:
+                with self._lock:
+                    file.close()
+            else:
+                file.close()
             self._file = None
             # Remove all references to opener arguments, so they can be garbage
             # collected.
@@ -448,9 +457,16 @@ def _remove_del_methods():
 class DummyFileManager(FileManager[T_File]):
     """FileManager that simply wraps an open file in the FileManager interface."""
 
-    def __init__(self, value: T_File, *, close: Callable[[], None] | None = None):
+    def __init__(
+        self,
+        value: T_File,
+        *,
+        close: Callable[[], None] | None = None,
+        lock: Lock | None | Literal[False] = None,
+    ):
         if close is None:
             close = value.close
+        self._lock = lock
         self._value = value
         self._close = close
 
@@ -464,5 +480,8 @@ class DummyFileManager(FileManager[T_File]):
         yield self._value
 
     def close(self, needs_lock: bool = True) -> None:
-        del needs_lock  # unused
-        self._close()
+        if needs_lock and self._lock:
+            with self._lock:
+                self._close()
+        else:
+            self._close()
