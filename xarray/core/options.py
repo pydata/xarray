@@ -79,7 +79,7 @@ OPTIONS: T_Options = {
     "cmap_divergent": "RdBu_r",
     "cmap_sequential": "viridis",
     "display_max_children": 12,
-    "display_max_html_elements": 500,
+    "display_max_html_elements": 300,
     "display_max_rows": 12,
     "display_max_items": 20,
     "display_values_threshold": 200,
@@ -246,7 +246,7 @@ class set_options:
         * ``default`` : to expand unless over a pre-defined limit (always collapse for html style)
     display_max_children : int, default: 12
         Maximum number of children to display for each node in a DataTree.
-    display_max_html_elements : int, default: 500
+    display_max_html_elements : int, default: 300
         Maximum number of HTML elements to include in DataTree HTML displays.
         Additional items are truncated.
     display_max_rows : int, default: 12

@@ -472,10 +472,21 @@ class _DataTreeDisplay:
 
 def _build_datatree_displays(tree: DataTree) -> dict[str, _DataTreeDisplay]:
     displayed_line_count = 0
+    html_line_count = 0
     displays: dict[str, _DataTreeDisplay] = {}
     item_count_cache: dict[int, int] = {}
     root = True
     collapsed = False
+    disabled = False
+
+    html_limit = OPTIONS["display_max_html_elements"]
+    uncollapsed_limit = OPTIONS["display_max_items"]
+
+    too_many_items_section = collapsible_section(
+        "<em>Too many items to display (display_max_html_elements exceeded)</em>",
+        enabled=False,
+        collapsed=True,
+    )
 
     for node in tree.subtree:  # breadth-first
         parent = node.parent
@@ -487,18 +498,19 @@ def _build_datatree_displays(tree: DataTree) -> dict[str, _DataTreeDisplay]:
         item_count = _tree_item_count(node, item_count_cache)
 
         sections, node_line_count = _datatree_node_sections(node, root)
-        new_count = displayed_line_count + node_line_count
+        new_displayed_count = displayed_line_count + node_line_count
+        new_html_count = html_line_count + node_line_count
 
-        disabled = not root and new_count > OPTIONS["display_max_html_elements"]
-
+        disabled = not root and (disabled or new_html_count > html_limit)
         if disabled:
-            sections = []
+            sections = [too_many_items_section]
             collapsed = True
         else:
-            if not root:
-                collapsed = collapsed or new_count > OPTIONS["display_max_items"]
-            if not collapsed:
-                displayed_line_count = new_count
+            html_line_count = new_html_count
+
+        collapsed = not root and (collapsed or new_displayed_count > uncollapsed_limit)
+        if not collapsed:
+            displayed_line_count = new_displayed_count
 
         displays[node.path] = _DataTreeDisplay(
             node, sections, item_count, collapsed, disabled
@@ -575,15 +587,6 @@ def datatree_child_repr(
     tip = " title='Expand/collapse group'" if not display.disabled else ""
 
     sections = datatree_sections(node, displays)
-    if display.disabled:
-        sections.append(
-            collapsible_section(
-                f"<em>Too many items ({display.item_count}) to display</em>",
-                enabled=False,
-                collapsed=True,
-            )
-        )
-
     sections_html = _sections_repr(sections) if sections else ""
 
     html = f"""
