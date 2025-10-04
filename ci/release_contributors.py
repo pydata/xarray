@@ -10,7 +10,14 @@ co_author_re = re.compile(r"Co-authored-by: (?P<name>[^<]+?) <(?P<email>.+)>")
 ignored = [
     {"name": "dependabot[bot]"},
     {"name": "pre-commit-ci[bot]"},
-    {"name": "Claude", "email": "noreply@anthropic.com"},
+    {
+        "name": "Claude",
+        "email": [
+            "noreply@anthropic.com",
+            "claude@anthropic.com",
+            "no-reply@anthropic.com",
+        ],
+    },
 ]
 
 
