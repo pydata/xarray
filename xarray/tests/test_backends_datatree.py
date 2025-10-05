@@ -1089,3 +1089,27 @@ class TestZarrDatatreeIO:
         expected_child.name = None
         with open_datatree(filepath, group="child", engine="zarr") as roundtrip_child:
             assert_identical(expected_child, roundtrip_child)
+
+    @pytest.mark.xfail(
+        ON_WINDOWS,
+        reason="Permission errors from Zarr: https://github.com/pydata/xarray/pull/10793",
+    )
+    @pytest.mark.filterwarnings(
+        "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
+    )
+    def test_zarr_engine_recognised(self, tmpdir, zarr_format) -> None:
+        """Test that xarray can guess the zarr backend when the engine is not specified"""
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2, 3]}),
+                "/child": xr.Dataset({"foo": ("x", [4, 5, 6])}),
+            }
+        )
+
+        filepath = str(tmpdir / "test.zarr")
+        original_dt.to_zarr(
+            filepath, write_inherited_coords=True, zarr_format=zarr_format
+        )
+
+        with open_datatree(filepath) as roundtrip_dt:
+            assert_identical(original_dt, roundtrip_dt)
