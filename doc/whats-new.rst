@@ -5,10 +5,46 @@
 What's New
 ==========
 
+.. _whats-new.2025.10.0:
+
+v2025.10.0 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
 .. _whats-new.2025.09.1:
 
-v2025.09.1 (unreleased)
------------------------
+v2025.09.1 (September 29, 2025)
+-------------------------------
+
+This release contains improvements to netCDF IO and the
+:py:func:`DataTree.from_dict` constructor, as well as a variety of bug fixes.
+In particular, the default netCDF backend has switched from netCDF4 to h5netcdf,
+which is typically faster.
+
+Thanks to the 17 contributors to this release:
+Claude, Deepak Cherian, Dimitri Papadopoulos Orfanos, Dylan H. Morris, Emmanuel Mathot, Ian Hunt-Isaak, Joren Hammudoglu, Julia Signell, Justus Magin, Maximilian Roos, Nick Hodgskin, Spencer Clark, Stephan Hoyer, Tom Nicholas, gronniger, joseph nowak and pierre-manchon
 
 New Features
 ~~~~~~~~~~~~
@@ -35,6 +71,19 @@ Breaking changes
   ``netcdf_engine_order`` parameter in :py:func:`~xarray.set_options`, e.g.,
   ``xr.set_options(netcdf_engine_order=['netcdf4', 'scipy', 'h5netcdf'])`` to
   restore the prior defaults (:issue:`10657`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- The HTML reprs for :py:class:`DataArray`, :py:class:`Dataset` and
+  :py:class:`DataTree` have been tweaked to hide empty sections, consistent
+  with the text reprs. The ``DataTree`` HTML repr also now automatically expands
+  sub-groups (:pull:`10785`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Zarr stores written with Xarray now consistently use a default Zarr fill value
+  of ``NaN`` for float variables, for both Zarr v2 and v3 (:issue:`10646``). All
+  other dtypes still use the Zarr default ``fill_value`` of zero. To customize,
+  explicitly set encoding in :py:meth:`~Dataset.to_zarr`, e.g.,
+  ``encoding=dict.fromkey(ds.data_vars, {'fill_value': 0})``.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Deprecations
@@ -68,6 +117,9 @@ Bug fixes
 - Allow ``combine_attrs="drop_conflicts"`` to handle objects with ``__eq__`` methods that return
   non-bool values (e.g., numpy arrays) without raising ``ValueError`` (:pull:`10726`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Fix error raised when writing scalar variables to Zarr with ``region={}``
+  (:pull:`10796`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Documentation
 ~~~~~~~~~~~~~

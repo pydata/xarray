@@ -3443,6 +3443,14 @@ class ZarrBase(CFEncodedBase):
             ) as actual:
                 assert_identical(actual, nonzeros)
 
+    def test_region_scalar(self) -> None:
+        ds = Dataset({"x": 0})
+        with self.create_zarr_target() as store:
+            ds.to_zarr(store)
+            ds.to_zarr(store, region={}, mode="r+")
+            with xr.open_zarr(store) as actual:
+                assert_identical(actual, ds)
+
     @pytest.mark.parametrize("mode", [None, "r+", "a"])
     def test_write_region_mode(self, mode) -> None:
         zeros = Dataset({"u": (("x",), np.zeros(10))})
@@ -4380,6 +4388,23 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         ) as ds:
             yield ds
 
+    @requires_dask
+    def test_default_zarr_fill_value(self):
+        inputs = xr.Dataset({"floats": ("x", [1.0]), "ints": ("x", [1])}).chunk()
+        expected = xr.Dataset({"floats": ("x", [np.nan]), "ints": ("x", [0])})
+        with self.temp_dir() as (d, store):
+            inputs.to_zarr(store, compute=False)
+            with open_dataset(store) as on_disk:
+                assert np.isnan(on_disk.variables["floats"].encoding["_FillValue"])
+                assert (
+                    "_FillValue" not in on_disk.variables["ints"].encoding
+                )  # use default
+                if not has_zarr_v3:
+                    # zarr-python v2 interprets fill_value=None inconsistently
+                    del on_disk["ints"]
+                    del expected["ints"]
+                assert_identical(expected, on_disk)
+
     @pytest.mark.parametrize("consolidated", [True, False, None])
     @pytest.mark.parametrize("write_empty", [True, False, None])
     def test_write_empty(
@@ -4418,14 +4443,13 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 "0.1.1",
             ]
 
+        # use nan for default fill_value behaviour
+        data = np.array([np.nan, np.nan, 1.0, np.nan]).reshape((1, 2, 2))
+
         if zarr_format_3:
-            data = np.array([0.0, 0, 1.0, 0]).reshape((1, 2, 2))
             # transform to the path style of zarr 3
             # e.g. 0/0/1
             expected = [e.replace(".", "/") for e in expected]
-        else:
-            # use nan for default fill_value behaviour
-            data = np.array([np.nan, np.nan, 1.0, np.nan]).reshape((1, 2, 2))
 
         ds = xr.Dataset(data_vars={"test": (("Z", "Y", "X"), data)})
 
@@ -7520,6 +7544,10 @@ class TestZarrRegionAuto:
                     mode="a",
                 )
 
+    @pytest.mark.xfail(
+        ON_WINDOWS,
+        reason="Permission errors from Zarr: https://github.com/pydata/xarray/pull/10793",
+    )
     @requires_dask
     def test_zarr_region_chunk_partial_offset(self):
         # https://github.com/pydata/xarray/pull/8459#issuecomment-1819417545
