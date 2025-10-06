@@ -59,7 +59,7 @@ if TYPE_CHECKING:
         enable_cftimeindex: bool
         file_cache_maxsize: int
         keep_attrs: Literal["default"] | bool
-        netcdf_engine_order: Sequence[Literal["h5netcdf", "scipy", "netcdf4"]]
+        netcdf_engine_order: Sequence[Literal["netcdf4", "h5netcdf", "scipy"]]
         warn_for_unclosed_files: bool
         use_bottleneck: bool
         use_flox: bool
