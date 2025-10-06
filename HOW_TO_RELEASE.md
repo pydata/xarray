@@ -109,7 +109,7 @@ upstream        https://github.com/pydata/xarray (push)
 
     (Note that repo branch restrictions prevent pushing to `main`, so you have to just-self-merge this.)
 
-13. Update the version available on pyodide:
+13. Consider updating the version available on pyodide:
     - Open the PyPI page for [Xarray downloads](https://pypi.org/project/xarray/#files)
     - Edit [`packages/xarray/meta.yaml`](https://github.com/pyodide/pyodide-recipes/blob/main/packages/xarray/meta.yaml) to update the
       - version number
