@@ -3735,10 +3735,10 @@ class ZarrBase(CFEncodedBase):
             dims=["x", "y"],
             coords=dict(y=np.array(["a", "b"], dtype=object)),
         )
-        with create_tmp_file() as path1:
-            data.to_zarr(path1, mode="w")
-            data = xr.open_zarr(path1)
-            data.to_zarr(path1, mode="w")
+        with self.create_zarr_target() as store_target:
+            data.to_zarr(store_target, **self.version_kwargs)
+            data = xr.open_zarr(store_target, **self.version_kwargs)
+            data.to_zarr(store_target, **self.version_kwargs, mode="w")
 
 
 @requires_zarr
