@@ -7,12 +7,10 @@ What's New
 
 .. _whats-new.2025.10.0:
 
-v2025.10.0 (unreleased)
------------------------
+v2025.10.0 (October 6, 2025)
+----------------------------
 
-New Features
-~~~~~~~~~~~~
-
+This release reverts a breaking change to Xarray's preferred netCDF backend.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -26,20 +24,14 @@ Breaking changes
   ``xr.set_options(netcdf_engine_order=['h5netcdf', 'netcdf4', 'scipy'])``.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
-Deprecations
-~~~~~~~~~~~~
-
 
 Bug fixes
 ~~~~~~~~~
 
+- Fix error raised when writing scalar variables to Zarr with ``region={}``
+  (:pull:`10796`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
-Documentation
-~~~~~~~~~~~~~
-
-
-Internal Changes
-~~~~~~~~~~~~~~~~
 
 .. _whats-new.2025.09.1:
 
@@ -125,9 +117,6 @@ Bug fixes
 - Allow ``combine_attrs="drop_conflicts"`` to handle objects with ``__eq__`` methods that return
   non-bool values (e.g., numpy arrays) without raising ``ValueError`` (:pull:`10726`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- Fix error raised when writing scalar variables to Zarr with ``region={}``
-  (:pull:`10796`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
