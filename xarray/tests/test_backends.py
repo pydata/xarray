@@ -3443,6 +3443,14 @@ class ZarrBase(CFEncodedBase):
             ) as actual:
                 assert_identical(actual, nonzeros)
 
+    def test_region_scalar(self) -> None:
+        ds = Dataset({"x": 0})
+        with self.create_zarr_target() as store:
+            ds.to_zarr(store)
+            ds.to_zarr(store, region={}, mode="r+")
+            with xr.open_zarr(store) as actual:
+                assert_identical(actual, ds)
+
     @pytest.mark.parametrize("mode", [None, "r+", "a"])
     def test_write_region_mode(self, mode) -> None:
         zeros = Dataset({"u": (("x",), np.zeros(10))})

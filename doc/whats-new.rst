@@ -2,40 +2,46 @@
 
 .. _whats-new:
 
-What's New
-==========
-
-.. _whats-new.2025.10.0:
-
-v2025.10.0 (unreleased)
------------------------
-
-New Features
-~~~~~~~~~~~~
-
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-
-Deprecations
-~~~~~~~~~~~~
-
-
 Bug fixes
 ~~~~~~~~~
+
 - ``netcdf4`` and ``pydap`` backends now use stricter URL detection to avoid incorrectly claiming
   remote URLs. The ``pydap`` backend now only claims URLs with explicit DAP protocol indicators
   (``dap2://`` or ``dap4://`` schemes, or ``/dap2/`` or ``/dap4/`` in the URL path). This prevents
   both backends from claiming remote Zarr stores and other non-DAP URLs without an explicit
   ``engine=`` argument. (:pull:`10804`). By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
-Documentation
-~~~~~~~~~~~~~
 
+What's New
+==========
 
-Internal Changes
+.. _whats-new.2025.10.0:
+
+v2025.10.0 (October 6, 2025)
+----------------------------
+
+This release reverts a breaking change to Xarray's preferred netCDF backend.
+
+Breaking changes
 ~~~~~~~~~~~~~~~~
+
+- Xarray's default engine for reading/writing netCDF files has been reverted to
+  prefer netCDF4, which was the default before v2025.09.1. This change
+  had larger implications for the ecosystem than we anticipated. We are still
+  considering changing the default in the future, but will be a bit more careful
+  about the implications. See :issue:`10657` and linked issues for discussion.
+  The behavior can still be customized, e.g., with
+  ``xr.set_options(netcdf_engine_order=['h5netcdf', 'netcdf4', 'scipy'])``.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+
+Bug fixes
+~~~~~~~~~
+- Fix error raised when writing scalar variables to Zarr with ``region={}``
+  (:pull:`10796`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+
 
 .. _whats-new.2025.09.1:
 
