@@ -13,6 +13,9 @@ v2025.10.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Improved ``pydap`` backend behavior and performance when using :py:func:`open_dataset`, :py:func:`open_datatree` when downloading dap4 (opendap) data (:issue:`10628`, :pull:`10629`).
+  ``batch=True|False`` is a new  ``backend_kwarg`` that further enables downloading multiple arrays in single response. In addition ``checksums`` is added as optional argument to be passed to ``pydap`` backend.
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
