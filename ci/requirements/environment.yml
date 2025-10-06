@@ -20,7 +20,7 @@ dependencies:
   - iris
   - lxml # Optional dep of pydap
   - matplotlib-base
-  - mypy==1.17.1
+  - mypy==1.18.1
   - nc-time-axis
   - netcdf4
   - numba

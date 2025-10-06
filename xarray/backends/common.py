@@ -53,14 +53,18 @@ T = TypeVar("T")
 
 
 @overload
-def _normalize_path(path: str | os.PathLike) -> str: ...
+def _normalize_path(path: os.PathLike) -> str: ...
+
+
+@overload
+def _normalize_path(path: str) -> str: ...
 
 
 @overload
 def _normalize_path(path: T) -> T: ...
 
 
-def _normalize_path(path: str | os.PathLike | T) -> str | T:
+def _normalize_path(path: os.PathLike | str | T) -> str | T:
     """
     Normalize pathlikes to string.
 
@@ -85,7 +89,7 @@ def _normalize_path(path: str | os.PathLike | T) -> str | T:
     if isinstance(path, str) and not is_remote_uri(path):
         path = os.path.abspath(os.path.expanduser(path))
 
-    return path  # type:ignore [return-value]
+    return path  # type: ignore[return-value]
 
 
 @overload
@@ -309,11 +313,11 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     async def async_getitem(self, key: indexing.ExplicitIndexer) -> np.typing.ArrayLike:
         raise NotImplementedError("Backend does not support asynchronous loading")
 
-    def get_duck_array(self, dtype: np.typing.DTypeLike = None):
+    def get_duck_array(self, dtype: np.typing.DTypeLike | None = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return self[key]  # type: ignore[index]
 
-    async def async_get_duck_array(self, dtype: np.typing.DTypeLike = None):
+    async def async_get_duck_array(self, dtype: np.typing.DTypeLike | None = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return await self.async_getitem(key)
 
@@ -644,7 +648,7 @@ def _infer_dtype(array, name=None):
     )
 
 
-def _copy_with_dtype(data, dtype: np.typing.DTypeLike):
+def _copy_with_dtype(data, dtype: np.typing.DTypeLike | None):
     """Create a copy of an array with the given dtype.
 
     We use this instead of np.array() to ensure that custom object dtypes end
@@ -749,11 +753,15 @@ class BackendEntrypoint:
     url : str, default: ""
         A string with the URL to the backend's documentation.
         The setting of this attribute is not mandatory.
+    supports_groups : bool, default: False
+        Whether the backend supports opening groups (via open_datatree and
+        open_groups_as_dict) or not.
     """
 
     open_dataset_parameters: ClassVar[tuple | None] = None
     description: ClassVar[str] = ""
     url: ClassVar[str] = ""
+    supports_groups: ClassVar[bool] = False
 
     def __repr__(self) -> str:
         txt = f"<{type(self).__name__}>"
@@ -808,6 +816,8 @@ class BackendEntrypoint:
     ) -> DataTree:
         """
         Backend open_datatree method used by Xarray in :py:func:`~xarray.open_datatree`.
+
+        If implemented, set the class variable supports_groups to True.
         """
 
         raise NotImplementedError()
@@ -830,6 +840,8 @@ class BackendEntrypoint:
         This function exists to provide a universal way to open all groups in a file,
         before applying any additional consistency checks or requirements necessary
         to create a `DataTree` object (typically done using :py:meth:`~xarray.DataTree.from_dict`).
+
+        If implemented, set the class variable supports_groups to True.
         """
 
         raise NotImplementedError()

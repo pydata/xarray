@@ -55,7 +55,7 @@ class CustomArray(
     CustomArrayBase[_ShapeType_co, _DType_co], Generic[_ShapeType_co, _DType_co]
 ):
     def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray[Any, np.dtype[np.generic]]:
         if Version(np.__version__) >= Version("2.0.0"):
             return np.asarray(self.array, dtype=dtype, copy=copy)
@@ -292,7 +292,7 @@ class TestNamedArray(NamedArraySubclassobjects):
             (b"foo", np.dtype("S3")),
         ],
     )
-    def test_from_array_0d_string(self, data: Any, dtype: DTypeLike) -> None:
+    def test_from_array_0d_string(self, data: Any, dtype: DTypeLike | None) -> None:
         named_array: NamedArray[Any, Any]
         named_array = from_array([], data)
         assert named_array.data == data
@@ -374,7 +374,7 @@ class TestNamedArray(NamedArraySubclassobjects):
 
         masked_a: np.ma.MaskedArray[Any, np.dtype[np.int64]]
         masked_a = np.ma.asarray([2.1, 4], dtype=np.dtype(np.int64))  # type: ignore[no-untyped-call]
-        check_duck_array_typevar(masked_a)
+        check_duck_array_typevar(masked_a)  # type: ignore[arg-type]  # MaskedArray not in duckarray union
 
         custom_a: CustomArrayIndexable[Any, np.dtype[np.int64]]
         custom_a = CustomArrayIndexable(numpy_a)

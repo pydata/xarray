@@ -42,6 +42,10 @@ class NodePath(PurePosixPath):
             )
         # TODO should we also forbid suffixes to avoid node names with dots in them?
 
+    def absolute(self) -> Self:
+        """Convert into an absolute path."""
+        return type(self)("/", *self.parts)
+
 
 class TreeNode:
     """
