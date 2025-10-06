@@ -462,10 +462,16 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     supports_groups = True
 
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
+        from xarray.core.utils import is_remote_uri
+
         filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
-        magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
-        if magic_number is not None:
-            return magic_number.startswith(b"\211HDF\r\n\032\n")
+
+        # Try to read magic number for local files only
+        is_remote = isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
+        if not is_remote:
+            magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
+            if magic_number is not None:
+                return magic_number.startswith(b"\211HDF\r\n\032\n")
 
         if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(str(filename_or_obj))
