@@ -5,6 +5,34 @@
 What's New
 ==========
 
+.. _whats-new.2025.10.2:
+
+v2025.10.2 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug Fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
 .. _whats-new.2025.10.1:
 
 v2025.10.1 (October 7, 2025)

@@ -78,7 +78,7 @@ upstream        https://github.com/pydata/xarray (push)
     ~~~~~~~~~~~~
 
 
-    Breaking changes
+    Breaking Changes
     ~~~~~~~~~~~~~~~~
 
 
@@ -86,7 +86,7 @@ upstream        https://github.com/pydata/xarray (push)
     ~~~~~~~~~~~~
 
 
-    Bug fixes
+    Bug Fixes
     ~~~~~~~~~
 
 
