@@ -57,6 +57,9 @@ New Features
   (:pull:`10624`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- Coordinates are ordered to match dims when displaying Xarray objects. (:pull:`10778`).
+  By `Julia Signell <https://github.com/jsignell>`_.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 

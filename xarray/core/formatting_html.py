@@ -117,7 +117,11 @@ def summarize_variable(name, var, is_index=False, dtype=None) -> str:
 
 def summarize_coords(variables) -> str:
     li_items = []
-    for k, v in variables.items():
+    dims = tuple(variables._data.dims)
+    dim_ordered_coords = sorted(
+        variables.items(), key=lambda x: dims.index(x[0]) if x[0] in dims else len(dims)
+    )
+    for k, v in dim_ordered_coords:
         li_content = summarize_variable(k, v, is_index=k in variables.xindexes)
         li_items.append(f"<li class='xr-var-item'>{li_content}</li>")
 

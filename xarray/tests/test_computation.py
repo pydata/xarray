@@ -1550,7 +1550,7 @@ def test_vectorize_exclude_dims_dask() -> None:
 
 
 def test_corr_only_dataarray() -> None:
-    with pytest.raises(TypeError, match="Only xr.DataArray is supported"):
+    with pytest.raises(TypeError, match=r"Only xr.DataArray is supported"):
         xr.corr(xr.Dataset(), xr.Dataset())  # type: ignore[type-var]
 
 

@@ -1325,7 +1325,7 @@ class TestVariable(VariableSubclassobjects):
         v = Variable(["x", "y"], data)
 
         def assert_indexer_type(key, object_type):
-            dims, index_tuple, new_order = v._broadcast_indexes(key)
+            _dims, index_tuple, _new_order = v._broadcast_indexes(key)
             assert isinstance(index_tuple, object_type)
 
         # should return BasicIndexer
