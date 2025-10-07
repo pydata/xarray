@@ -106,7 +106,7 @@ def dataset() -> xr.Dataset:
             "tmin": (("time", "location"), tmin_values),
             "tmax": (("time", "location"), tmax_values),
         },
-        {"time": times, "location": ["<IA>", "IN", "IL"]},
+        {"location": ["<IA>", "IN", "IL"], "time": times},
         attrs={"description": "Test data."},
     )
 
@@ -186,6 +186,33 @@ def test_repr_of_dataarray() -> None:
         assert "Attributes" not in formatted
 
 
+def test_repr_coords_order_of_datarray() -> None:
+    da1 = xr.DataArray(
+        np.empty((2, 2)),
+        coords={"foo": [0, 1], "bar": [0, 1]},
+        dims=["foo", "bar"],
+    )
+    da2 = xr.DataArray(
+        np.empty((2, 2)),
+        coords={"bar": [0, 1], "foo": [0, 1]},
+        dims=["bar", "foo"],
+    )
+    ds = xr.Dataset({"da1": da1, "da2": da2})
+
+    bar_line = (
+        "<span class='xr-has-index'>bar</span></div><div class='xr-var-dims'>(bar)"
+    )
+    foo_line = (
+        "<span class='xr-has-index'>foo</span></div><div class='xr-var-dims'>(foo)"
+    )
+
+    formatted_da1 = fh.array_repr(ds.da1)
+    assert formatted_da1.index(foo_line) < formatted_da1.index(bar_line)
+
+    formatted_da2 = fh.array_repr(ds.da2)
+    assert formatted_da2.index(bar_line) < formatted_da2.index(foo_line)
+
+
 def test_repr_of_multiindex(multiindex: xr.Dataset) -> None:
     formatted = fh.dataset_repr(multiindex)
     assert "(x)" in formatted
@@ -229,6 +256,17 @@ def test_repr_text_fallback(dataset: xr.Dataset) -> None:
 
     # Just test that the "pre" block used for fallback to plain text is present.
     assert "<pre class='xr-text-repr-fallback'>" in formatted
+
+
+def test_repr_coords_order_of_dataset() -> None:
+    ds = xr.Dataset()
+    ds.coords["as"] = 10
+    ds["var"] = xr.DataArray(np.ones((10,)), dims="x", coords={"x": np.arange(10)})
+    formatted = fh.dataset_repr(ds)
+
+    x_line = "<span class='xr-has-index'>x</span></div><div class='xr-var-dims'>(x)"
+    as_line = "<span>as</span></div><div class='xr-var-dims'>()"
+    assert formatted.index(x_line) < formatted.index(as_line)
 
 
 def test_variable_repr_html() -> None:
