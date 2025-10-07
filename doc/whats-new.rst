@@ -24,6 +24,11 @@ Breaking changes
   ``xr.set_options(netcdf_engine_order=['h5netcdf', 'netcdf4', 'scipy'])``.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+New features
+~~~~~~~~~~~~
+
+- Coordinates are ordered to match dims when displaying Xarray objects. (:pull:`10778`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -56,9 +61,6 @@ New Features
   All of Xarray's netCDF backends now support in-memory reads and writes
   (:pull:`10624`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-- Coordinates are ordered to match dims when displaying Xarray objects. (:pull:`10778`).
-  By `Julia Signell <https://github.com/jsignell>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
