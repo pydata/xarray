@@ -1955,14 +1955,14 @@ class TestDataArray:
         da = DataArray([0, 0], coords={"x": ("y", [0, 1])}, dims="y")
 
         with pytest.warns(
-            UserWarning, match="rename 'x' to 'y' does not create an index.*"
+            UserWarning, match=r"rename 'x' to 'y' does not create an index.*"
         ):
             da.rename(x="y")
 
         da = xr.DataArray([0, 0], coords={"y": ("x", [0, 1])}, dims="x")
 
         with pytest.warns(
-            UserWarning, match="rename 'x' to 'y' does not create an index.*"
+            UserWarning, match=r"rename 'x' to 'y' does not create an index.*"
         ):
             da.rename(x="y")
 
@@ -3149,7 +3149,7 @@ class TestDataArray:
         x2 = np.arange(5, 35)
         a = DataArray(np.random.random((30,)).astype(np.float32), [("x", x1)])
         b = DataArray(np.random.random((30,)).astype(np.float32), [("x", x2)])
-        c, d = align(a, b, join="outer")
+        c, _d = align(a, b, join="outer")
         assert c.dtype == np.float32
 
     def test_align_copy(self) -> None:
@@ -4298,7 +4298,7 @@ class TestDataArray:
         missing_0 = xr.DataArray(coords_r, [(dim, coords_r)])
         with xr.set_options(arithmetic_join=align_type):
             actual = missing_0 + missing_3
-        missing_0_aligned, missing_3_aligned = xr.align(
+        _missing_0_aligned, _missing_3_aligned = xr.align(
             missing_0, missing_3, join=align_type
         )
         expected = xr.DataArray([np.nan, 2, 4, np.nan], [(dim, [0, 1, 2, 3])])
@@ -7164,7 +7164,7 @@ def test_clip(da: DataArray) -> None:
     assert_array_equal(result.isel(time=[0, 1]), with_nans.isel(time=[0, 1]))
 
     # Unclear whether we want this work, OK to adjust the test when we have decided.
-    with pytest.raises(ValueError, match="cannot reindex or align along dimension.*"):
+    with pytest.raises(ValueError, match=r"cannot reindex or align along dimension.*"):
         result = da.clip(min=da.mean("x"), max=da.mean("a").isel(x=[0, 1]))
 
 
