@@ -1159,7 +1159,7 @@ class TestAccess:
         var_keys = list(dt.variables.keys())
         assert all(var_key in key_completions for var_key in var_keys)
 
-    def test_ipython_key_completitions_subnode(self) -> None:
+    def test_ipython_key_completions_subnode(self) -> None:
         tree = xr.DataTree.from_dict({"/": None, "/a": None, "/a/b/": None})
         expected = ["b"]
         actual = tree["a"]._ipython_key_completions_()
@@ -1743,7 +1743,7 @@ class TestRestructuring:
         assert "Ashley" in dropped.children
 
         # test raise
-        with pytest.raises(KeyError, match="nodes {'Mary'} not present"):
+        with pytest.raises(KeyError, match=r"nodes {'Mary'} not present"):
             dropped.drop_nodes(names=["Mary", "Ashley"])
 
         # test ignore

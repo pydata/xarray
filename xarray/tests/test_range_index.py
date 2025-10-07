@@ -40,7 +40,7 @@ def test_range_index_arange(args, kwargs) -> None:
 
 
 def test_range_index_arange_error() -> None:
-    with pytest.raises(TypeError, match=".*requires stop to be specified"):
+    with pytest.raises(TypeError, match=r".*requires stop to be specified"):
         RangeIndex.arange(dim="x")
 
 
@@ -93,7 +93,7 @@ def test_range_index_set_xindex() -> None:
     ds = xr.Dataset(coords=coords)
 
     with pytest.raises(
-        NotImplementedError, match="cannot create.*RangeIndex.*existing coordinate"
+        NotImplementedError, match=r"cannot create.*RangeIndex.*existing coordinate"
     ):
         ds.set_xindex("x", RangeIndex)
 
@@ -257,10 +257,10 @@ def test_range_index_sel() -> None:
     expected = xr.Dataset(coords={"x": ("y", [0.5, 0.6])}).set_xindex("x")
     assert_allclose(actual, expected, check_default_indexes=False)
 
-    with pytest.raises(ValueError, match="RangeIndex only supports.*method.*nearest"):
+    with pytest.raises(ValueError, match=r"RangeIndex only supports.*method.*nearest"):
         ds.sel(x=0.1)
 
-    with pytest.raises(ValueError, match="RangeIndex doesn't support.*tolerance"):
+    with pytest.raises(ValueError, match=r"RangeIndex doesn't support.*tolerance"):
         ds.sel(x=0.1, method="nearest", tolerance=1e-3)
 
 

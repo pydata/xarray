@@ -1959,7 +1959,7 @@ class NetCDF4Base(NetCDFBase):
                 (1, y_chunksize, x_chunksize),
                 open_kwargs={"chunks": "auto"},
             ) as ds:
-                t_chunks, y_chunks, x_chunks = ds["image"].data.chunks
+                _t_chunks, y_chunks, x_chunks = ds["image"].data.chunks
                 assert all(np.asanyarray(y_chunks) == y_chunksize)
                 # Check that the chunk size is a multiple of the file chunk size
                 assert all(np.asanyarray(x_chunks) % x_chunksize == 0)
@@ -2228,8 +2228,8 @@ class NetCDF4Base(NetCDFBase):
                     with pytest.raises(
                         ValueError,
                         match=(
-                            "Cannot save variable .*"
-                            " because an enum `cloud_type` already exists in the Dataset .*"
+                            r"Cannot save variable .*"
+                            r" because an enum `cloud_type` already exists in the Dataset .*"
                         ),
                     ):
                         with self.roundtrip(original):
@@ -4392,7 +4392,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
     def test_default_zarr_fill_value(self):
         inputs = xr.Dataset({"floats": ("x", [1.0]), "ints": ("x", [1])}).chunk()
         expected = xr.Dataset({"floats": ("x", [np.nan]), "ints": ("x", [0])})
-        with self.temp_dir() as (d, store):
+        with self.temp_dir() as (_d, store):
             inputs.to_zarr(store, compute=False)
             with open_dataset(store) as on_disk:
                 assert np.isnan(on_disk.variables["floats"].encoding["_FillValue"])
@@ -4459,7 +4459,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         else:
             encoding = {"test": {"chunks": (1, 1, 1)}}
 
-        with self.temp_dir() as (d, store):
+        with self.temp_dir() as (_d, store):
             ds.to_zarr(
                 store,
                 mode="w",
@@ -5504,7 +5504,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         expected,
         expect_error,
     ):
-        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+        with self.setup_files_and_datasets() as (files, [_ds1, _ds2]):
             # Give the files an inconsistent attribute
             for i, f in enumerate(files):
                 ds = open_dataset(f).load()
@@ -5539,7 +5539,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         """
         Case when an attribute differs across the multiple files
         """
-        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+        with self.setup_files_and_datasets() as (files, [_ds1, _ds2]):
             # Give the files an inconsistent attribute
             for i, f in enumerate(files):
                 ds = open_dataset(f).load()
@@ -5557,7 +5557,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         """
         with self.setup_files_and_datasets(new_combine_kwargs=True) as (
             files,
-            [ds1, ds2],
+            [_ds1, _ds2],
         ):
             # Give the files an inconsistent attribute
             for i, f in enumerate(files):
@@ -5905,7 +5905,7 @@ class TestDask(DatasetIOBase):
 
     def test_open_mfdataset_with_warn(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
-        with pytest.warns(UserWarning, match="Ignoring."):
+        with pytest.warns(UserWarning, match=r"Ignoring."):
             with create_tmp_files(2) as (tmp1, tmp2):
                 ds1 = original.isel(x=slice(5))
                 ds2 = original.isel(x=slice(5, 10))
@@ -5936,7 +5936,7 @@ class TestDask(DatasetIOBase):
 
     def test_open_mfdataset_2d_with_warn(self) -> None:
         original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
-        with pytest.warns(UserWarning, match="Ignoring."):
+        with pytest.warns(UserWarning, match=r"Ignoring."):
             with create_tmp_files(4) as (tmp1, tmp2, tmp3, tmp4):
                 original.isel(x=slice(5), y=slice(4)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10), y=slice(4)).to_netcdf(tmp2)

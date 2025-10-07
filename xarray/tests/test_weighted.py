@@ -34,7 +34,7 @@ def test_weighted_weights_nan_raises(as_dataset: bool, weights: list[float]) -> 
     if as_dataset:
         data = data.to_dataset(name="data")
 
-    with pytest.raises(ValueError, match="`weights` cannot contain missing values."):
+    with pytest.raises(ValueError, match=r"`weights` cannot contain missing values."):
         data.weighted(DataArray(weights))
 
 
@@ -51,7 +51,7 @@ def test_weighted_weights_nan_raises_dask(as_dataset, weights):
     with raise_if_dask_computes():
         weighted = data.weighted(weights)
 
-    with pytest.raises(ValueError, match="`weights` cannot contain missing values."):
+    with pytest.raises(ValueError, match=r"`weights` cannot contain missing values."):
         weighted.sum().load()
 
 

@@ -1509,7 +1509,7 @@ def test_date_range_like_errors():
 
     with pytest.raises(
         ValueError,
-        match="`date_range_like` was unable to generate a range as the source frequency was not inferable.",
+        match=r"`date_range_like` was unable to generate a range as the source frequency was not inferable.",
     ):
         date_range_like(src, "gregorian")
 
@@ -1522,14 +1522,14 @@ def test_date_range_like_errors():
     )
     with pytest.raises(
         ValueError,
-        match="'source' must be a 1D array of datetime objects for inferring its range.",
+        match=r"'source' must be a 1D array of datetime objects for inferring its range.",
     ):
         date_range_like(src, "noleap")
 
     da = DataArray([1, 2, 3, 4], dims=("time",))
     with pytest.raises(
         ValueError,
-        match="'source' must be a 1D array of datetime objects for inferring its range.",
+        match=r"'source' must be a 1D array of datetime objects for inferring its range.",
     ):
         date_range_like(da, "noleap")
 

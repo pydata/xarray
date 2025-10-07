@@ -5751,7 +5751,7 @@ class TestPlots(PlotTestCase):
         arr = np.ones((2, 3)) * unit_registry.Pa
         da = xr.DataArray(data=arr, dims=["x", "y"], name="pressure")
 
-        fig, (ax, cax) = plt.subplots(1, 2)
+        _fig, (ax, cax) = plt.subplots(1, 2)
         ax = da.plot.contourf(ax=ax, cbar_ax=cax, add_colorbar=True)
 
         assert cax.get_ylabel() == "pressure [pascal]"
@@ -5760,7 +5760,7 @@ class TestPlots(PlotTestCase):
         arr = np.ones((2, 3)) * unit_registry.Pa
         da = xr.DataArray(data=arr, dims=["x", "y"], name="pressure")
 
-        fig, (ax, cax) = plt.subplots(1, 2)
+        _fig, (_ax, _cax) = plt.subplots(1, 2)
         fgrid = da.plot.line(x="x", col="y")
 
         assert fgrid.axs[0, 0].get_ylabel() == "pressure [pascal]"
@@ -5775,7 +5775,7 @@ class TestPlots(PlotTestCase):
         arr = np.ones((2, 3, 4)) * unit_registry.Pa
         da = xr.DataArray(data=arr, dims=["x", "y", "z"], name="pressure")
 
-        fig, (ax1, ax2, ax3, cax) = plt.subplots(1, 4)
+        _fig, (_ax1, _ax2, _ax3, _cax) = plt.subplots(1, 4)
         fgrid = da.plot.contourf(x="x", y="y", col="z")
 
         assert fgrid.cbar.ax.get_ylabel() == "pressure [pascal]"  # type: ignore[union-attr]

@@ -295,7 +295,7 @@ def as_compatible_data(
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)
         if mask.any():
-            dtype, fill_value = dtypes.maybe_promote(data.dtype)
+            _dtype, fill_value = dtypes.maybe_promote(data.dtype)
             data = duck_array_ops.where_method(data, ~mask, fill_value)
         else:
             data = np.asarray(data)

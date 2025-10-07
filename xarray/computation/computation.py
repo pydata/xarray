@@ -930,7 +930,7 @@ def _calc_idxminmax(
         array = array.where(~allna, 0)
 
     # This will run argmin or argmax.
-    indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
+    index = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
 
     # Handle chunked arrays (e.g. dask).
     coord = array[dim]._variable.to_base_variable()
@@ -943,13 +943,13 @@ def _calc_idxminmax(
     else:
         coord = coord.copy(data=to_like_array(array[dim].data, array.data))
 
-    res = indx._replace(coord[(indx.variable,)]).rename(dim)
+    res = index._replace(coord[(index.variable,)]).rename(dim)
 
     if skipna or (skipna is None and array.dtype.kind in na_dtypes):
         # Put the NaN values back in after removing them
         res = res.where(~allna, fill_value)
 
     # Copy attributes from argmin/argmax, if any
-    res.attrs = indx.attrs
+    res.attrs = index.attrs
 
     return res

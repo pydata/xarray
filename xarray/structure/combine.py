@@ -354,7 +354,7 @@ def _combine_1d(
 
 
 def _new_tile_id(single_id_ds_pair):
-    tile_id, ds = single_id_ds_pair
+    tile_id, _ds = single_id_ds_pair
     return tile_id[1:]
 
 

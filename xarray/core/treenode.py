@@ -447,7 +447,7 @@ class TreeNode:
         DataTree.subtree
         """
         all_nodes = tuple(self.subtree)
-        this_node, *descendants = all_nodes
+        _this_node, *descendants = all_nodes
         return tuple(descendants)
 
     @property
@@ -546,7 +546,7 @@ class TreeNode:
 
         if path.root:
             current_node = self.root
-            root, *parts = list(path.parts)
+            _root, *parts = list(path.parts)
         else:
             current_node = self
             parts = list(path.parts)
@@ -614,7 +614,7 @@ class TreeNode:
         if path.root:
             # absolute path
             current_node = self.root
-            root, *parts, name = path.parts
+            _root, *parts, name = path.parts
         else:
             # relative path
             current_node = self
@@ -738,7 +738,7 @@ class NamedNode(TreeNode):
         if self.is_root:
             return "/"
         else:
-            root, *ancestors = tuple(reversed(self.parents))
+            _root, *ancestors = tuple(reversed(self.parents))
             # don't include name of root because (a) root might not have a name & (b) we want path relative to root.
             names = [*(node.name for node in ancestors), self.name]
             return "/" + "/".join(names)  # type: ignore[arg-type]

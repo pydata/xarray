@@ -50,7 +50,7 @@ class TestCoordinates:
 
         # coords + indexes not supported
         with pytest.raises(
-            ValueError, match="passing both.*Coordinates.*indexes.*not allowed"
+            ValueError, match=r"passing both.*Coordinates.*indexes.*not allowed"
         ):
             coords = Coordinates(
                 coords=expected.coords, indexes={"x": PandasIndex([0, 1, 2], "x")}
@@ -65,7 +65,7 @@ class TestCoordinates:
         with pytest.raises(ValueError, match="no coordinate variables found"):
             Coordinates(indexes={"x": idx})
 
-        with pytest.raises(TypeError, match=".* is not an `xarray.indexes.Index`"):
+        with pytest.raises(TypeError, match=r".* is not an `xarray.indexes.Index`"):
             Coordinates(
                 coords={"x": ("x", [1, 2, 3])},
                 indexes={"x": "not_an_xarray_index"},  # type: ignore[dict-item]
@@ -93,7 +93,7 @@ class TestCoordinates:
 
         idx = CustomIndexNoCoordsGenerated()
 
-        with pytest.raises(ValueError, match=".*index.*did not create any coordinate"):
+        with pytest.raises(ValueError, match=r".*index.*did not create any coordinate"):
             Coordinates.from_xindex(idx)
 
     def test_from_pandas_multiindex(self) -> None:

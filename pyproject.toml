@@ -392,6 +392,7 @@ aso = "aso"
 # Technical terms
 nd = "nd"
 nin = "nin"
+nclusive = "nclusive" # part of "inclusive" in error messages
 
 # Variable names
 ba = "ba"

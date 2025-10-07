@@ -1334,7 +1334,7 @@ def _parse_size(
     else:
         levels = numbers = np.sort(np.unique(flatdata))
 
-    min_width, default_width, max_width = _MARKERSIZE_RANGE
+    min_width, _default_width, max_width = _MARKERSIZE_RANGE
     # width_range = min_width, max_width
 
     if norm is None:

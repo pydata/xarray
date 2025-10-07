@@ -1210,7 +1210,7 @@ def test_should_cftime_be_used_source_outside_range():
         "1000-01-01", periods=100, freq="MS", calendar="noleap", use_cftime=True
     )
     with pytest.raises(
-        ValueError, match="Source time range is not valid for numpy datetimes."
+        ValueError, match=r"Source time range is not valid for numpy datetimes."
     ):
         _should_cftime_be_used(src, "standard", False)
 
@@ -1221,7 +1221,7 @@ def test_should_cftime_be_used_target_not_npable():
         "2000-01-01", periods=100, freq="MS", calendar="noleap", use_cftime=True
     )
     with pytest.raises(
-        ValueError, match="Calendar 'noleap' is only valid with cftime."
+        ValueError, match=r"Calendar 'noleap' is only valid with cftime."
     ):
         _should_cftime_be_used(src, "noleap", False)
 

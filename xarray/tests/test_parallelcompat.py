@@ -164,7 +164,7 @@ class TestGetChunkManager:
     ) -> None:
         monkeypatch.setitem(KNOWN_CHUNKMANAGERS, "test", "test-package")
         with pytest.raises(
-            ImportError, match="chunk manager 'test' is not available.+test-package"
+            ImportError, match=r"chunk manager 'test' is not available.+test-package"
         ):
             guess_chunkmanager("test")
 
