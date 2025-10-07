@@ -315,10 +315,10 @@ class Dataset(
     <xarray.Dataset> Size: 552B
     Dimensions:         (loc: 2, instrument: 3, time: 4)
     Coordinates:
-        lon             (loc) float64 16B -99.83 -99.32
-        lat             (loc) float64 16B 42.25 42.21
       * instrument      (instrument) <U8 96B 'manufac1' 'manufac2' 'manufac3'
       * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
+        lon             (loc) float64 16B -99.83 -99.32
+        lat             (loc) float64 16B 42.25 42.21
         reference_time  datetime64[ns] 8B 2014-09-05
     Dimensions without coordinates: loc
     Data variables:
@@ -1806,8 +1806,8 @@ class Dataset(
         <xarray.Dataset> Size: 48B
         Dimensions:   (time: 3)
         Coordinates:
-            pressure  (time) float64 24B 1.013 1.2 3.5
           * time      (time) datetime64[ns] 24B 2023-01-01 2023-01-02 2023-01-03
+            pressure  (time) float64 24B 1.013 1.2 3.5
         Data variables:
             *empty*
 
@@ -3805,8 +3805,8 @@ class Dataset(
         <xarray.Dataset> Size: 224B
         Dimensions:  (x: 4, y: 4)
         Coordinates:
-          * y        (y) int64 32B 10 12 14 16
           * x        (x) float64 32B 0.0 0.75 1.25 1.75
+          * y        (y) int64 32B 10 12 14 16
         Data variables:
             a        (x) float64 32B 5.0 6.5 6.25 4.75
             b        (x, y) float64 128B 1.0 4.0 2.0 nan 1.75 ... nan 5.0 nan 5.25 nan
@@ -3817,8 +3817,8 @@ class Dataset(
         <xarray.Dataset> Size: 224B
         Dimensions:  (x: 4, y: 4)
         Coordinates:
-          * y        (y) int64 32B 10 12 14 16
           * x        (x) float64 32B 0.0 0.75 1.25 1.75
+          * y        (y) int64 32B 10 12 14 16
         Data variables:
             a        (x) float64 32B 5.0 7.0 7.0 4.0
             b        (x, y) float64 128B 1.0 4.0 2.0 9.0 2.0 7.0 ... nan 6.0 nan 5.0 8.0
@@ -3833,8 +3833,8 @@ class Dataset(
         <xarray.Dataset> Size: 224B
         Dimensions:  (x: 4, y: 4)
         Coordinates:
-          * y        (y) int64 32B 10 12 14 16
           * x        (x) float64 32B 1.0 1.5 2.5 3.5
+          * y        (y) int64 32B 10 12 14 16
         Data variables:
             a        (x) float64 32B 7.0 5.5 2.5 -0.5
             b        (x, y) float64 128B 2.0 7.0 6.0 nan 4.0 ... nan 12.0 nan 3.5 nan
@@ -4358,8 +4358,8 @@ class Dataset(
         <xarray.Dataset> Size: 56B
         Dimensions:  (y: 2)
         Coordinates:
-            x        (y) <U1 8B 'a' 'b'
           * y        (y) int64 16B 0 1
+            x        (y) <U1 8B 'a' 'b'
         Data variables:
             a        (y) int64 16B 5 7
             b        (y) float64 16B 0.1 2.4
@@ -8208,8 +8208,8 @@ class Dataset(
         <xarray.Dataset> Size: 152B
         Dimensions:   (quantile: 3, y: 4)
         Coordinates:
-          * y         (y) float64 32B 1.0 1.5 2.0 2.5
           * quantile  (quantile) float64 24B 0.0 0.5 1.0
+          * y         (y) float64 32B 1.0 1.5 2.0 2.5
         Data variables:
             a         (quantile, y) float64 96B 0.7 4.2 2.6 1.5 3.6 ... 6.5 7.3 9.4 1.9
 
@@ -8682,9 +8682,9 @@ class Dataset(
         <xarray.Dataset> Size: 192B
         Dimensions:         (x: 2, y: 2, time: 3)
         Coordinates:
+          * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
-          * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
             reference_time  datetime64[ns] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
@@ -8697,9 +8697,9 @@ class Dataset(
         <xarray.Dataset> Size: 288B
         Dimensions:         (x: 2, y: 2, time: 3)
         Coordinates:
+          * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
-          * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
             reference_time  datetime64[ns] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
@@ -9370,8 +9370,8 @@ class Dataset(
         <xarray.DataArray 'student' (test: 3)> Size: 84B
         array(['Bob', 'Bob', 'Alice'], dtype='<U7')
         Coordinates:
-            student  (test) <U7 84B 'Bob' 'Bob' 'Alice'
           * test     (test) <U6 72B 'Test 1' 'Test 2' 'Test 3'
+            student  (test) <U7 84B 'Bob' 'Bob' 'Alice'
 
         >>> min_score_in_english = dataset["student"].isel(
         ...     student=argmin_indices["english_scores"]
@@ -9380,8 +9380,8 @@ class Dataset(
         <xarray.DataArray 'student' (test: 3)> Size: 84B
         array(['Charlie', 'Bob', 'Charlie'], dtype='<U7')
         Coordinates:
-            student  (test) <U7 84B 'Charlie' 'Bob' 'Charlie'
           * test     (test) <U6 72B 'Test 1' 'Test 2' 'Test 3'
+            student  (test) <U7 84B 'Charlie' 'Bob' 'Charlie'
 
         See Also
         --------
