@@ -29,12 +29,14 @@ repos:
       - id: ruff-check
         args: ["--fix", "--show-fixes"]
       - id: ruff-format
-  - repo: https://github.com/keewis/blackdoc
-    rev: v0.4.3
-    hooks:
-      - id: blackdoc
-        exclude: "generate_aggregations.py"
-        additional_dependencies: ["black==24.8.0"]
+  # Disabled: blackdoc v0.4.3 has compatibility issues with Python 3.13
+  # Re-enable when blackdoc is updated to support Python 3.13
+  # - repo: https://github.com/keewis/blackdoc
+  #   rev: v0.4.3
+  #   hooks:
+  #     - id: blackdoc
+  #       exclude: "generate_aggregations.py"
+  #       additional_dependencies: ["black==24.8.0"]
   - repo: https://github.com/rbubley/mirrors-prettier
     rev: v3.6.2
     hooks:
