@@ -16,11 +16,11 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Xarray's default engine for reading/writing netCDF files has been reverted to
-  prefer netCDF4, which was the default before v2025.09.1. This change
-  had larger implications for the ecosystem than we anticipated. We are still
-  considering changing the default in the future, but will be a bit more careful
-  about the implications. See :issue:`10657` and linked issues for discussion.
-  The behavior can still be customized, e.g., with
+  prefer netCDF4 over h5netcdf over scipy, which was the default before
+  v2025.09.1. This change had larger implications for the ecosystem than we
+  anticipated. We are still considering changing the default in the future, but
+  will be a bit more careful about the implications. See :issue:`10657` and
+  linked issues for discussion. The behavior can still be customized, e.g., with
   ``xr.set_options(netcdf_engine_order=['h5netcdf', 'netcdf4', 'scipy'])``.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
