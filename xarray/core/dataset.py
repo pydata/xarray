@@ -2055,10 +2055,10 @@ class Dataset(
         group : str, optional
             Path to the netCDF4 group in the given file to open (only works for
             format='NETCDF4'). The group(s) will be created if necessary.
-        engine : {"netcdf4", "scipy", "h5netcdf"}, optional
+        engine : {"netcdf4", "h5netcdf", "scipy"}, optional
             Engine to use when writing netCDF files. If not provided, the
             default engine is chosen based on available dependencies, by default
-            preferring "h5netcdf" over "scipy" over "netcdf4" (customizable via
+            preferring "netcdf4" over "h5netcdf" over "scipy" (customizable via
             ``netcdf_engine_order`` in ``xarray.set_options()``).
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of

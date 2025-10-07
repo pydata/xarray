@@ -7,36 +7,7 @@ What's New
 
 .. _whats-new.2025.10.1:
 
-v2025.10.1 (unreleased)
------------------------
-
-New Features
-~~~~~~~~~~~~
-
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-
-Deprecations
-~~~~~~~~~~~~
-
-
-Bug fixes
-~~~~~~~~~
-
-
-Documentation
-~~~~~~~~~~~~~
-
-
-Internal Changes
-~~~~~~~~~~~~~~~~
-
-
-.. _whats-new.2025.10.0:
-
-v2025.10.0 (October 6, 2025)
+v2025.10.1 (October 7, 2025)
 ----------------------------
 
 This release reverts a breaking change to Xarray's preferred netCDF backend.
@@ -45,14 +16,19 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Xarray's default engine for reading/writing netCDF files has been reverted to
-  prefer netCDF4, which was the default before v2025.09.1. This change
-  had larger implications for the ecosystem than we anticipated. We are still
-  considering changing the default in the future, but will be a bit more careful
-  about the implications. See :issue:`10657` and linked issues for discussion.
-  The behavior can still be customized, e.g., with
+  prefer netCDF4 over h5netcdf over scipy, which was the default before
+  v2025.09.1. This change had larger implications for the ecosystem than we
+  anticipated. We are still considering changing the default in the future, but
+  will be a bit more careful about the implications. See :issue:`10657` and
+  linked issues for discussion. The behavior can still be customized, e.g., with
   ``xr.set_options(netcdf_engine_order=['h5netcdf', 'netcdf4', 'scipy'])``.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+New features
+~~~~~~~~~~~~
+
+- Coordinates are ordered to match dims when displaying Xarray objects. (:pull:`10778`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -85,9 +61,6 @@ New Features
   All of Xarray's netCDF backends now support in-memory reads and writes
   (:pull:`10624`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-- Coordinates are ordered to match dims when displaying Xarray objects. (:pull:`10778`).
-  By `Julia Signell <https://github.com/jsignell>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

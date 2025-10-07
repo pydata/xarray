@@ -24,20 +24,25 @@ from xarray.tests import (
 @requires_scipy
 @requires_h5netcdf
 def test_get_default_netcdf_write_engine() -> None:
+    assert xr.get_options()["netcdf_engine_order"] == ("netcdf4", "h5netcdf", "scipy")
+
     engine = get_default_netcdf_write_engine("", format=None)
-    assert engine == "h5netcdf"
+    assert engine == "netcdf4"
 
     engine = get_default_netcdf_write_engine("", format="NETCDF4")
-    assert engine == "h5netcdf"
+    assert engine == "netcdf4"
 
     engine = get_default_netcdf_write_engine("", format="NETCDF4_CLASSIC")
     assert engine == "netcdf4"
 
-    engine = get_default_netcdf_write_engine(io.BytesIO(), format="NETCDF4")
+    engine = get_default_netcdf_write_engine("", format="NETCDF3_CLASSIC")
+    assert engine == "netcdf4"
+
+    engine = get_default_netcdf_write_engine(io.BytesIO(), format=None)
     assert engine == "h5netcdf"
 
-    engine = get_default_netcdf_write_engine("", format="NETCDF3_CLASSIC")
-    assert engine == "scipy"
+    engine = get_default_netcdf_write_engine(io.BytesIO(), format="NETCDF4")
+    assert engine == "h5netcdf"
 
     engine = get_default_netcdf_write_engine(io.BytesIO(), format="NETCDF3_CLASSIC")
     assert engine == "scipy"
@@ -46,11 +51,21 @@ def test_get_default_netcdf_write_engine() -> None:
     assert engine == "netcdf4"
 
     with xr.set_options(netcdf_engine_order=["netcdf4", "scipy", "h5netcdf"]):
+        engine = get_default_netcdf_write_engine(io.BytesIO(), format=None)
+        assert engine == "scipy"
+
+        engine = get_default_netcdf_write_engine(io.BytesIO(), format="NETCDF4")
+        assert engine == "h5netcdf"
+
+        engine = get_default_netcdf_write_engine(io.BytesIO(), format="NETCDF3_CLASSIC")
+        assert engine == "scipy"
+
+    with xr.set_options(netcdf_engine_order=["h5netcdf", "scipy", "netcdf4"]):
         engine = get_default_netcdf_write_engine("", format=None)
-        assert engine == "netcdf4"
+        assert engine == "h5netcdf"
 
         engine = get_default_netcdf_write_engine("", format="NETCDF4")
-        assert engine == "netcdf4"
+        assert engine == "h5netcdf"
 
         engine = get_default_netcdf_write_engine("", format="NETCDF4_CLASSIC")
         assert engine == "netcdf4"
@@ -59,7 +74,7 @@ def test_get_default_netcdf_write_engine() -> None:
         assert engine == "h5netcdf"
 
         engine = get_default_netcdf_write_engine("", format="NETCDF3_CLASSIC")
-        assert engine == "netcdf4"
+        assert engine == "scipy"
 
         engine = get_default_netcdf_write_engine(io.BytesIO(), format="NETCDF3_CLASSIC")
         assert engine == "scipy"
@@ -80,8 +95,8 @@ def test_default_engine_h5netcdf(monkeypatch):
         ValueError,
         match=re.escape(
             "cannot write NetCDF files with format='NETCDF3_CLASSIC' because "
-            "none of the suitable backend libraries (scipy, netCDF4) are installed"
-        ),
+            "none of the suitable backend libraries (SUITABLE_BACKENDS) are installed"
+        ).replace("SUITABLE_BACKENDS", r"(scipy, netCDF4)|(netCDF4, scipy)"),
     ):
         get_default_netcdf_write_engine("", format="NETCDF3_CLASSIC")
 

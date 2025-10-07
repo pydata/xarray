@@ -416,7 +416,7 @@ def open_dataset(
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, by default preferring
-        "h5netcdf" over "scipy" over "netcdf4" (customizable via
+        "netcdf4" over "h5netcdf" over "scipy" (customizable via
         ``netcdf_engine_order`` in ``xarray.set_options()``). A custom backend
         class (a subclass of ``BackendEntrypoint``) can also be used.
     chunks : int, dict, 'auto' or None, default: None
@@ -660,7 +660,7 @@ def open_dataarray(
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, by default preferring
-        "h5netcdf" over "scipy" over "netcdf4" (customizable via
+        "netcdf4" over "h5netcdf" over "scipy" (customizable via
         ``netcdf_engine_order`` in ``xarray.set_options()``). A custom backend
         class (a subclass of ``BackendEntrypoint``) can also be used.
     chunks : int, dict, 'auto' or None, default: None
@@ -1450,7 +1450,7 @@ def open_mfdataset(
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, by default preferring
-        "h5netcdf" over "scipy" over "netcdf4" (customizable via
+        "netcdf4" over "h5netcdf" over "scipy" (customizable via
         ``netcdf_engine_order`` in ``xarray.set_options()``). A custom backend
         class (a subclass of ``BackendEntrypoint``) can also be used.
     data_vars : {"minimal", "different", "all"} or list of str, default: "all"
