@@ -1116,14 +1116,14 @@ class TestDatasetView:
         expected = dt.mean(keep_attrs=True)
         xr.testing.assert_identical(result, expected)
 
-        # per default DatasetView.map does not keep attrs
+        # DatasetView.map keeps attrs by default
         def func(ds):
-            # x.mean() removes the attrs of the data_vars
+            # ds.map and x.mean() both keep attrs by default
             return ds.map(lambda x: x.mean())
 
         result = xr.map_over_datasets(func, dt)
         expected = dt.mean()
-        xr.testing.assert_identical(result, expected.mean())
+        xr.testing.assert_identical(result, expected)
 
 
 class TestAccess:
@@ -1159,7 +1159,7 @@ class TestAccess:
         var_keys = list(dt.variables.keys())
         assert all(var_key in key_completions for var_key in var_keys)
 
-    def test_ipython_key_completitions_subnode(self) -> None:
+    def test_ipython_key_completions_subnode(self) -> None:
         tree = xr.DataTree.from_dict({"/": None, "/a": None, "/a/b/": None})
         expected = ["b"]
         actual = tree["a"]._ipython_key_completions_()
@@ -1743,7 +1743,7 @@ class TestRestructuring:
         assert "Ashley" in dropped.children
 
         # test raise
-        with pytest.raises(KeyError, match="nodes {'Mary'} not present"):
+        with pytest.raises(KeyError, match=r"nodes {'Mary'} not present"):
             dropped.drop_nodes(names=["Mary", "Ashley"])
 
         # test ignore
