@@ -63,14 +63,14 @@ def test_coarsen_coords(ds, dask):
         dims="time",
         coords={"time": pd.date_range("1999-12-15", periods=364)},
     )
-    actual = da.coarsen(time=2).mean()
+    actual = da.coarsen(time=2).mean()  # type: ignore[attr-defined]
 
 
 @requires_cftime
 def test_coarsen_coords_cftime():
     times = xr.date_range("2000", periods=6, use_cftime=True)
     da = xr.DataArray(range(6), [("time", times)])
-    actual = da.coarsen(time=3).mean()
+    actual = da.coarsen(time=3).mean()  # type: ignore[attr-defined]
     expected_times = xr.date_range("2000-01-02", freq="3D", periods=2, use_cftime=True)
     np.testing.assert_array_equal(actual.time, expected_times)
 
@@ -345,5 +345,5 @@ class TestCoarsenConstruct:
         assert list(da.coords) == list(result.coords)
 
         ds = da.to_dataset(name="T")
-        result = ds.coarsen(time=12).construct(time=("year", "month"))
-        assert list(da.coords) == list(result.coords)
+        ds_result = ds.coarsen(time=12).construct(time=("year", "month"))
+        assert list(da.coords) == list(ds_result.coords)

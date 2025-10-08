@@ -354,7 +354,7 @@ def _combine_1d(
 
 
 def _new_tile_id(single_id_ds_pair):
-    tile_id, ds = single_id_ds_pair
+    tile_id, _ds = single_id_ds_pair
     return tile_id[1:]
 
 
@@ -405,7 +405,7 @@ DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]
 
 def combine_nested(
     datasets: DATASET_HYPERCUBE,
-    concat_dim: str | DataArray | Sequence[str | DataArray | pd.Index | None],
+    concat_dim: str | DataArray | Sequence[str | DataArray | pd.Index | None] | None,
     compat: str | CombineKwargDefault = _COMPAT_DEFAULT,
     data_vars: str | CombineKwargDefault = _DATA_VARS_DEFAULT,
     coords: str | CombineKwargDefault = _COORDS_DEFAULT,
