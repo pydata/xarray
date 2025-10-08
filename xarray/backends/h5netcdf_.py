@@ -474,7 +474,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
                 return magic_number.startswith(b"\211HDF\r\n\032\n")
 
         if isinstance(filename_or_obj, str | os.PathLike):
-            _, ext = os.path.splitext(str(filename_or_obj))
+            _, ext = os.path.splitext(filename_or_obj)
             return ext in {".nc", ".nc4", ".cdf"}
 
         return False

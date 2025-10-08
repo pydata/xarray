@@ -7289,11 +7289,11 @@ def test_remote_url_backend_auto_detection() -> None:
         ("https://example.com/store.zarr", "zarr"),
         ("http://example.com/data.zarr/", "zarr"),
         ("s3://bucket/path/to/data.zarr", "zarr"),
-        # Remote netCDF URLs (non-DAP) - h5netcdf wins (first in order, no query params)
-        ("https://example.com/file.nc", "h5netcdf"),
-        ("http://example.com/data.nc4", "h5netcdf"),
-        ("https://example.com/test.cdf", "h5netcdf"),
-        ("s3://bucket/path/to/data.nc", "h5netcdf"),
+        # Remote netCDF URLs (non-DAP) - netcdf4 wins (first in order, no query params)
+        ("https://example.com/file.nc", "netcdf4"),
+        ("http://example.com/data.nc4", "netcdf4"),
+        ("https://example.com/test.cdf", "netcdf4"),
+        ("s3://bucket/path/to/data.nc", "netcdf4"),
         # Remote netCDF URLs with query params - netcdf4 wins
         # Note: Query params are typically indicative of DAP URLs (e.g., OPeNDAP constraint expressions),
         # so we prefer netcdf4 (which has DAP support) over h5netcdf (which doesn't)
@@ -7308,10 +7308,10 @@ def test_remote_url_backend_auto_detection() -> None:
         ("DAP2://example.com/dataset", "pydap"),  # uppercase scheme
         ("DAP4://example.com/dataset", "pydap"),  # uppercase scheme
         ("https://example.com/services/DAP2/dataset", "pydap"),  # uppercase in path
-        # DAP URLs with .nc extensions (no query params) - h5netcdf wins (first in order)
-        ("http://test.opendap.org/opendap/dap4/StaggeredGrid.nc4", "h5netcdf"),
-        ("https://example.com/DAP4/data.nc", "h5netcdf"),
-        ("http://example.com/data/Dap4/file.nc", "h5netcdf"),
+        # DAP URLs with .nc extensions (no query params) - netcdf4 wins (first in order)
+        ("http://test.opendap.org/opendap/dap4/StaggeredGrid.nc4", "netcdf4"),
+        ("https://example.com/DAP4/data.nc", "netcdf4"),
+        ("http://example.com/data/Dap4/file.nc", "netcdf4"),
     ]
 
     for url, expected_backend in test_cases:
@@ -7329,13 +7329,11 @@ def test_remote_url_backend_auto_detection() -> None:
     ]
 
     for url in invalid_urls:
-        try:
-            engine = guess_engine(url)
-            raise AssertionError(
-                f"URL {url!r} should not be claimed by any backend, but {engine!r} claimed it"
-            )
-        except ValueError:
-            pass  # Expected
+        with pytest.raises(
+            ValueError,
+            match=r"did not find a match in any of xarray's currently installed IO backends",
+        ):
+            guess_engine(url)
 
 
 @requires_netCDF4
