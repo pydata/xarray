@@ -4,11 +4,7 @@ import collections
 import sys
 from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from xarray.core.types import Self
 from xarray.core.utils import Frozen, is_dict_like
