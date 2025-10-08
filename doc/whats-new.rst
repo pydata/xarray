@@ -5,14 +5,90 @@
 What's New
 ==========
 
-.. _whats-new.2025.09.1:
+.. _whats-new.2025.10.2:
 
-v2025.09.1 (unreleased)
+v2025.10.2 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
 
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug Fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+.. _whats-new.2025.10.1:
+
+v2025.10.1 (October 7, 2025)
+----------------------------
+
+This release reverts a breaking change to Xarray's preferred netCDF backend.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Xarray's default engine for reading/writing netCDF files has been reverted to
+  prefer netCDF4 over h5netcdf over scipy, which was the default before
+  v2025.09.1. This change had larger implications for the ecosystem than we
+  anticipated. We are still considering changing the default in the future, but
+  will be a bit more careful about the implications. See :issue:`10657` and
+  linked issues for discussion. The behavior can still be customized, e.g., with
+  ``xr.set_options(netcdf_engine_order=['h5netcdf', 'netcdf4', 'scipy'])``.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+New features
+~~~~~~~~~~~~
+
+- Coordinates are ordered to match dims when displaying Xarray objects. (:pull:`10778`).
+  By `Julia Signell <https://github.com/jsignell>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Fix error raised when writing scalar variables to Zarr with ``region={}``
+  (:pull:`10796`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+
+.. _whats-new.2025.09.1:
+
+v2025.09.1 (September 29, 2025)
+-------------------------------
+
+This release contains improvements to netCDF IO and the
+:py:func:`DataTree.from_dict` constructor, as well as a variety of bug fixes.
+In particular, the default netCDF backend has switched from netCDF4 to h5netcdf,
+which is typically faster.
+
+Thanks to the 17 contributors to this release:
+Claude, Deepak Cherian, Dimitri Papadopoulos Orfanos, Dylan H. Morris, Emmanuel Mathot, Ian Hunt-Isaak, Joren Hammudoglu, Julia Signell, Justus Magin, Maximilian Roos, Nick Hodgskin, Spencer Clark, Stephan Hoyer, Tom Nicholas, gronniger, joseph nowak and pierre-manchon
+
+New Features
+~~~~~~~~~~~~
+
+- :py:func:`DataTree.from_dict` now supports passing in ``DataArray`` and nested
+  dictionary values, and has a ``coords`` argument for specifying coordinates as
+  ``DataArray`` objects (:pull:`10658`).
+- ``engine='netcdf4'`` now supports reading and writing in-memory netCDF files.
+  All of Xarray's netCDF backends now support in-memory reads and writes
+  (:pull:`10624`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -22,6 +98,27 @@ Breaking changes
   dataset in-place. (:issue:`10167`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
+- The default ``engine`` when reading/writing netCDF files is now h5netcdf
+  or scipy, which are typically faster than the prior default of netCDF4-python.
+  You can control this default behavior explicitly via the new
+  ``netcdf_engine_order`` parameter in :py:func:`~xarray.set_options`, e.g.,
+  ``xr.set_options(netcdf_engine_order=['netcdf4', 'scipy', 'h5netcdf'])`` to
+  restore the prior defaults (:issue:`10657`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- The HTML reprs for :py:class:`DataArray`, :py:class:`Dataset` and
+  :py:class:`DataTree` have been tweaked to hide empty sections, consistent
+  with the text reprs. The ``DataTree`` HTML repr also now automatically expands
+  sub-groups (:pull:`10785`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Zarr stores written with Xarray now consistently use a default Zarr fill value
+  of ``NaN`` for float variables, for both Zarr v2 and v3 (:issue:`10646``). All
+  other dtypes still use the Zarr default ``fill_value`` of zero. To customize,
+  explicitly set encoding in :py:meth:`~Dataset.to_zarr`, e.g.,
+  ``encoding=dict.fromkey(ds.data_vars, {'fill_value': 0})``.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 Deprecations
 ~~~~~~~~~~~~
 
@@ -29,13 +126,30 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Xarray objects opened from file-like objects with ``engine='h5netcdf'`` can
+  now be pickled, as long as the underlying file-like object also supports
+  pickle (:issue:`10712`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Closing Xarray objects opened from file-like objects with ```engine='scipy'``
+  no longer closes the underlying file, consistent with the h5netcdf backend
+  (:pull:`10624`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - Fix the ``align_chunks`` parameter on the :py:meth:`~xarray.Dataset.to_zarr` method, it was not being
   passed to the underlying :py:meth:`~xarray.backends.api` method (:issue:`10501`, :pull:`10516`).
 - Fix error when encoding an empty :py:class:`numpy.datetime64` array
   (:issue:`10722`, :pull:`10723`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- Propagate coordinate attrs in :py:meth:`xarray.Dataset.map` (:issue:`9317`, :pull:`10602`).
+- Fix error from ``to_netcdf(..., compute=False)`` when using Dask Distributed
+  (:issue:`10725`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Propagation coordinate attrs in :py:meth:`xarray.Dataset.map` (:issue:`9317`, :pull:`10602`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Allow ``combine_attrs="drop_conflicts"`` to handle objects with ``__eq__`` methods that return
+  non-bool values (e.g., numpy arrays) without raising ``ValueError`` (:pull:`10726`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -51,6 +165,12 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Refactor structure of ``backends`` module to separate code for reading data from code for writing data (:pull:`10771`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- All test files now have full mypy type checking enabled (``check_untyped_defs = true``),
+  improving type safety and making the test suite a better reference for type annotations.
+  (:pull:`10768`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.2025.09.0:
 

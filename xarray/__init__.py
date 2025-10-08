@@ -10,8 +10,8 @@ from xarray.backends.api import (
     open_datatree,
     open_groups,
     open_mfdataset,
-    save_mfdataset,
 )
+from xarray.backends.writers import save_mfdataset
 from xarray.backends.zarr import open_zarr
 from xarray.coding.cftime_offsets import cftime_range, date_range, date_range_like
 from xarray.coding.cftimeindex import CFTimeIndex

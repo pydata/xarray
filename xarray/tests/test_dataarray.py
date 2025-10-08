@@ -162,7 +162,7 @@ class TestDataArray:
         with pytest.raises(ValueError, match=r"must be 1-dimensional"):
             self.ds["foo"].to_index()
         with pytest.raises(AttributeError):
-            self.dv.variable = self.v
+            self.dv.variable = self.v  # type: ignore[misc]
 
     def test_data_property(self) -> None:
         array = DataArray(np.zeros((3, 4)))
@@ -1243,7 +1243,7 @@ class TestDataArray:
             self.dv.isel({dim: slice(5) for dim in self.dv.dims}), self.dv.head()
         )
         with pytest.raises(TypeError, match=r"either dict-like or a single int"):
-            self.dv.head([3])
+            self.dv.head([3])  # type: ignore[arg-type]
         with pytest.raises(TypeError, match=r"expected integer type"):
             self.dv.head(x=3.1)
         with pytest.raises(ValueError, match=r"expected positive int"):
@@ -1260,7 +1260,7 @@ class TestDataArray:
             self.dv.isel({dim: slice(-5, None) for dim in self.dv.dims}), self.dv.tail()
         )
         with pytest.raises(TypeError, match=r"either dict-like or a single int"):
-            self.dv.tail([3])
+            self.dv.tail([3])  # type: ignore[arg-type]
         with pytest.raises(TypeError, match=r"expected integer type"):
             self.dv.tail(x=3.1)
         with pytest.raises(ValueError, match=r"expected positive int"):
@@ -1273,7 +1273,7 @@ class TestDataArray:
             self.dv.thin(6),
         )
         with pytest.raises(TypeError, match=r"either dict-like or a single int"):
-            self.dv.thin([3])
+            self.dv.thin([3])  # type: ignore[arg-type]
         with pytest.raises(TypeError, match=r"expected integer type"):
             self.dv.thin(x=3.1)
         with pytest.raises(ValueError, match=r"expected positive int"):
@@ -1955,14 +1955,14 @@ class TestDataArray:
         da = DataArray([0, 0], coords={"x": ("y", [0, 1])}, dims="y")
 
         with pytest.warns(
-            UserWarning, match="rename 'x' to 'y' does not create an index.*"
+            UserWarning, match=r"rename 'x' to 'y' does not create an index.*"
         ):
             da.rename(x="y")
 
         da = xr.DataArray([0, 0], coords={"y": ("x", [0, 1])}, dims="x")
 
         with pytest.warns(
-            UserWarning, match="rename 'x' to 'y' does not create an index.*"
+            UserWarning, match=r"rename 'x' to 'y' does not create an index.*"
         ):
             da.rename(x="y")
 
@@ -2206,7 +2206,7 @@ class TestDataArray:
         assert_identical(other_way_expected, other_way)
 
     def test_set_index(self) -> None:
-        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
+        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]  # type: ignore[arg-type,unused-ignore]  # pandas-stubs varies
         coords = {idx.name: ("x", idx) for idx in indexes}
         array = DataArray(self.mda.values, coords=coords, dims="x")
         expected = self.mda.copy()
@@ -2237,7 +2237,7 @@ class TestDataArray:
             obj.set_index(x="level_4")
 
     def test_reset_index(self) -> None:
-        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
+        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]  # type: ignore[arg-type,unused-ignore]  # pandas-stubs varies
         coords = {idx.name: ("x", idx) for idx in indexes}
         expected = DataArray(self.mda.values, coords=coords, dims="x")
 
@@ -2335,10 +2335,18 @@ class TestDataArray:
         assert_equal(self.dv, np.maximum(self.dv, bar))
 
     def test_astype_attrs(self) -> None:
-        for v in [self.va.copy(), self.mda.copy(), self.ds.copy()]:
+        # Split into two loops for mypy - Variable, DataArray, and Dataset
+        # don't share a common base class, so mypy infers type object for v,
+        # which doesn't have the attrs or astype methods
+        for v in [self.mda.copy(), self.ds.copy()]:
             v.attrs["foo"] = "bar"
             assert v.attrs == v.astype(float).attrs
             assert not v.astype(float, keep_attrs=False).attrs
+        # Test Variable separately to avoid mypy inferring object type
+        va = self.va.copy()
+        va.attrs["foo"] = "bar"
+        assert va.attrs == va.astype(float).attrs
+        assert not va.astype(float, keep_attrs=False).attrs
 
     def test_astype_dtype(self) -> None:
         original = DataArray([-1, 1, 2, 3, 1000])
@@ -3141,7 +3149,7 @@ class TestDataArray:
         x2 = np.arange(5, 35)
         a = DataArray(np.random.random((30,)).astype(np.float32), [("x", x1)])
         b = DataArray(np.random.random((30,)).astype(np.float32), [("x", x2)])
-        c, d = align(a, b, join="outer")
+        c, _d = align(a, b, join="outer")
         assert c.dtype == np.float32
 
     def test_align_copy(self) -> None:
@@ -3516,6 +3524,18 @@ class TestDataArray:
         assert_array_equal(index_pd.levels[1], ["a", "b"])
         assert_array_equal(index_pd.levels[2], [5, 6, 7])
 
+        # test converting a dataframe MultiIndexed along a single dimension
+        mindex_single = pd.MultiIndex.from_product(
+            [list(range(6)), list("ab")], names=["A", "B"]
+        )
+
+        arr_multi_single = DataArray(
+            arr_np.flatten(), [("MI", mindex_single)], dims="MI", name="test"
+        )
+        actual_df = arr_multi_single.to_dataframe()
+        expected_df = arr_multi_single.to_series().to_frame()
+        assert expected_df.equals(actual_df)
+
     def test_to_dataframe_0length(self) -> None:
         # regression test for #3008
         arr_np = np.random.randn(4, 0)
@@ -3863,7 +3883,7 @@ class TestDataArray:
         v = range(N)
         da = DataArray(v)
         ma = da.to_masked_array()
-        assert len(ma.mask) == N
+        assert isinstance(ma.mask, np.ndarray) and len(ma.mask) == N
 
     def test_to_dataset_whole(self) -> None:
         unnamed = DataArray([1, 2], dims="x")
@@ -4278,7 +4298,7 @@ class TestDataArray:
         missing_0 = xr.DataArray(coords_r, [(dim, coords_r)])
         with xr.set_options(arithmetic_join=align_type):
             actual = missing_0 + missing_3
-        missing_0_aligned, missing_3_aligned = xr.align(
+        _missing_0_aligned, _missing_3_aligned = xr.align(
             missing_0, missing_3, join=align_type
         )
         expected = xr.DataArray([np.nan, 2, 4, np.nan], [(dim, [0, 1, 2, 3])])
@@ -7144,7 +7164,7 @@ def test_clip(da: DataArray) -> None:
     assert_array_equal(result.isel(time=[0, 1]), with_nans.isel(time=[0, 1]))
 
     # Unclear whether we want this work, OK to adjust the test when we have decided.
-    with pytest.raises(ValueError, match="cannot reindex or align along dimension.*"):
+    with pytest.raises(ValueError, match=r"cannot reindex or align along dimension.*"):
         result = da.clip(min=da.mean("x"), max=da.mean("a").isel(x=[0, 1]))
 
 

@@ -828,7 +828,7 @@ def test_groupby_getitem(dataset) -> None:
     assert_identical(dataset.cat.sel(y=[1]), dataset.cat.groupby("y")[1])
 
     with pytest.raises(
-        NotImplementedError, match="Cannot broadcast 1d-only pandas extension array."
+        NotImplementedError, match=r"Cannot broadcast 1d-only pandas extension array."
     ):
         dataset.groupby("boo")
     dataset = dataset.drop_vars(["cat"])
@@ -3198,6 +3198,16 @@ def test_multiple_grouper_unsorted_order() -> None:
     ).sum()
     expected2 = b.reindex(x=[1, 0], y=[2, 0, 1]).transpose("z", ...)
     assert_identical(actual2, expected2)
+
+
+def test_multiple_grouper_empty_groups() -> None:
+    ds = xr.Dataset(
+        {"foo": (("x", "y"), np.random.rand(4, 3))},
+        coords={"x": [10, 20, 30, 40], "letters": ("x", list("abba"))},
+    )
+
+    groups = ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper())
+    assert len(groups.groups) == 2
 
 
 def test_groupby_multiple_bin_grouper_missing_groups() -> None:

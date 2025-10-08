@@ -97,7 +97,7 @@ from xarray.namedarray.utils import (  # noqa: F401
 )
 
 if TYPE_CHECKING:
-    from xarray.core.types import Dims, ErrorOptionsWithWarn
+    from xarray.core.types import Dims, ErrorOptionsWithWarn, NestedDict
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -239,17 +239,34 @@ def equivalent(first: T, second: T) -> bool:
     """Compare two objects for equivalence (identity or equality), using
     array_equiv if either object is an ndarray. If both objects are lists,
     equivalent is sequentially called on all the elements.
+
+    Returns False for any comparison that doesn't return a boolean,
+    making this function safer to use with objects that have non-standard
+    __eq__ implementations.
     """
     # TODO: refactor to avoid circular import
     from xarray.core import duck_array_ops
 
     if first is second:
         return True
+
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
+
     if isinstance(first, list) or isinstance(second, list):
         return list_equiv(first, second)  # type: ignore[arg-type]
-    return (first == second) or (pd.isnull(first) and pd.isnull(second))  # type: ignore[call-overload]
+
+    # For non-array/list types, use == but require boolean result
+    result = first == second
+    if not isinstance(result, bool):
+        # Accept numpy bool scalars as well
+        if isinstance(result, np.bool_):
+            return bool(result)
+        # Reject any other non-boolean type (Dataset, Series, custom objects, etc.)
+        return False
+
+    # Check for NaN equivalence
+    return result or (pd.isnull(first) and pd.isnull(second))  # type: ignore[call-overload]
 
 
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
@@ -316,6 +333,25 @@ def remove_incompatible_items(
     for k in list(first_dict):
         if k not in second_dict or not compat(first_dict[k], second_dict[k]):
             del first_dict[k]
+
+
+def flat_items(
+    nested: Mapping[str, NestedDict[T] | T],
+    prefix: str | None = None,
+    separator: str = "/",
+) -> Iterable[tuple[str, T]]:
+    """Yields flat items from a nested dictionary of dicts.
+
+    Notes:
+    - Only dict subclasses are flattened.
+    - Duplicate items are not removed. These should be checked separately.
+    """
+    for key, value in nested.items():
+        key = prefix + separator + key if prefix is not None else key
+        if isinstance(value, dict):
+            yield from flat_items(value, key, separator)
+        else:
+            yield key, value
 
 
 def is_full_slice(value: Any) -> bool:
