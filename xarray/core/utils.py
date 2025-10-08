@@ -725,7 +725,7 @@ def is_remote_uri(path: str) -> bool:
     This also matches for http[s]://, which were the only remote URLs
     supported in <=v0.16.2.
     """
-    return bool(re.search(r"^[a-z][a-z0-9]*(\://|\:\:)", path))
+    return bool(re.search(r"^[a-zA-Z][a-zA-Z0-9]*(\://|\:\:)", path))
 
 
 def strip_uri_params(uri: str) -> str:
