@@ -372,7 +372,10 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         # binary ops with all variables
         assert_array_equal(v + v, 2 * v)
         w = self.cls(["x"], y, {"foo": "bar"})
-        assert_identical(v + w, self.cls(["x"], x + y).to_base_variable())
+        # With drop_conflicts, v (no attrs) + w (has attrs) should keep w's attrs
+        # Note: IndexVariable ops return Variable, not IndexVariable
+        expected = self.cls(["x"], x + y, {"foo": "bar"}).to_base_variable()
+        assert_identical(v + w, expected)
         assert_array_equal((v * w).values, x * y)
 
         # something complicated
@@ -1852,15 +1855,24 @@ class TestVariable(VariableSubclassobjects):
 
     def test_reduce(self):
         v = Variable(["x", "y"], self.d, {"ignored": "attributes"})
-        assert_identical(v.reduce(np.std, "x"), Variable(["y"], self.d.std(axis=0)))
+        # Reduce keeps attrs by default
+        expected = Variable(["y"], self.d.std(axis=0), {"ignored": "attributes"})
+        assert_identical(v.reduce(np.std, "x"), expected)
         assert_identical(v.reduce(np.std, axis=0), v.reduce(np.std, dim="x"))
         assert_identical(
-            v.reduce(np.std, ["y", "x"]), Variable([], self.d.std(axis=(0, 1)))
+            v.reduce(np.std, ["y", "x"]),
+            Variable([], self.d.std(axis=(0, 1)), {"ignored": "attributes"}),
         )
-        assert_identical(v.reduce(np.std), Variable([], self.d.std()))
+        assert_identical(
+            v.reduce(np.std), Variable([], self.d.std(), {"ignored": "attributes"})
+        )
+        # Chained reductions both keep attrs
+        expected_chained = Variable(
+            [], self.d.mean(axis=0).std(), {"ignored": "attributes"}
+        )
         assert_identical(
             v.reduce(np.mean, "x").reduce(np.std, "y"),
-            Variable([], self.d.mean(axis=0).std()),
+            expected_chained,
         )
         assert_allclose(v.mean("x"), v.reduce(np.mean, "x"))
 
@@ -2107,27 +2119,62 @@ class TestVariable(VariableSubclassobjects):
 
         v = Variable(["x", "y"], self.d, _attrs)
 
-        # Test dropped attrs
+        # Test default behavior (keeps attrs for reduction operations)
         vm = v.mean()
-        assert len(vm.attrs) == 0
-        assert vm.attrs == {}
+        assert len(vm.attrs) == len(_attrs)
+        assert vm.attrs == _attrs
 
-        # Test kept attrs
+        # Test explicitly keeping attrs
         vm = v.mean(keep_attrs=True)
         assert len(vm.attrs) == len(_attrs)
         assert vm.attrs == _attrs
+
+        # Test explicitly dropping attrs
+        vm = v.mean(keep_attrs=False)
+        assert len(vm.attrs) == 0
+        assert vm.attrs == {}
 
     def test_binary_ops_keep_attrs(self):
         _attrs = {"units": "test", "long_name": "testing"}
         a = Variable(["x", "y"], np.random.randn(3, 3), _attrs)
         b = Variable(["x", "y"], np.random.randn(3, 3), _attrs)
-        # Test dropped attrs
+        # Test kept attrs (now default)
         d = a - b  # just one operation
-        assert d.attrs == {}
-        # Test kept attrs
-        with set_options(keep_attrs=True):
-            d = a - b
         assert d.attrs == _attrs
+        # Test dropped attrs
+        with set_options(keep_attrs=False):
+            d = a - b
+        assert d.attrs == {}
+
+    def test_binary_ops_attrs_drop_conflicts(self):
+        # Test that binary operations combine attrs with drop_conflicts behavior
+        attrs_a = {"units": "meters", "long_name": "distance", "source": "sensor_a"}
+        attrs_b = {"units": "feet", "resolution": "high", "source": "sensor_b"}
+        a = Variable(["x"], [1, 2, 3], attrs_a)
+        b = Variable(["x"], [4, 5, 6], attrs_b)
+
+        # With keep_attrs=True (default), should combine attrs dropping conflicts
+        result = a + b
+        # "units" and "source" conflict, so they're dropped
+        # "long_name" only in a, "resolution" only in b, so they're kept
+        assert result.attrs == {"long_name": "distance", "resolution": "high"}
+
+        # Test with identical values for some attrs
+        attrs_c = {"units": "meters", "type": "data", "source": "sensor_c"}
+        c = Variable(["x"], [7, 8, 9], attrs_c)
+        result2 = a + c
+        # "units" has same value, so kept; "source" conflicts, so dropped
+        # "long_name" from a, "type" from c
+        assert result2.attrs == {
+            "units": "meters",
+            "long_name": "distance",
+            "type": "data",
+        }
+
+        # With keep_attrs=False, attrs should be empty
+        with set_options(keep_attrs=False):
+            result3 = a + b
+            assert result3.attrs == {}
 
     def test_count(self):
         expected = Variable([], 3)

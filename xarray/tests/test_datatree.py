@@ -1116,14 +1116,14 @@ class TestDatasetView:
         expected = dt.mean(keep_attrs=True)
         xr.testing.assert_identical(result, expected)
 
-        # per default DatasetView.map does not keep attrs
+        # DatasetView.map keeps attrs by default
         def func(ds):
-            # x.mean() removes the attrs of the data_vars
+            # ds.map and x.mean() both keep attrs by default
             return ds.map(lambda x: x.mean())
 
         result = xr.map_over_datasets(func, dt)
         expected = dt.mean()
-        xr.testing.assert_identical(result, expected.mean())
+        xr.testing.assert_identical(result, expected)
 
 
 class TestAccess:
