@@ -13,6 +13,9 @@ v2025.10.2 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:func:`merge` now supports merging :py:class:`DataTree` objects
+  (:issue:`9790`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -88,9 +91,6 @@ New Features
 - ``engine='netcdf4'`` now supports reading and writing in-memory netCDF files.
   All of Xarray's netCDF backends now support in-memory reads and writes
   (:pull:`10624`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
-- :py:func:`merge` now supports merging :py:class:`DataTree` objects
-  (:issue:`9790`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
