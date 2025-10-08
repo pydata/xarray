@@ -137,8 +137,7 @@ The following tables show which backend will be selected for different types of 
 .. important::
     ✅ means the backend will **guess it can open** the URL or file based on its path, extension,
     or magic number, but this doesn't guarantee success. For example, not all Zarr stores are
-    xarray-compatible, and not all ``.nc`` files are valid netCDF. If opening fails, xarray will
-    try the next backend in the order.
+    xarray-compatible.
 
     ❌ means the backend will not attempt to open it.
 
