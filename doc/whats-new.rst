@@ -13,6 +13,9 @@ v2025.10.2 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:func:`merge` now supports merging :py:class:`DataTree` objects
+  (:issue:`9790`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
