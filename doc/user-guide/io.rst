@@ -173,7 +173,7 @@ Remote URL Resolution
      - ❌
      - ❌
      - ❌
-   * - ``http://test.opendap.org/dap4/file.nc4?dap4.ce=/time[0]``
+   * - ``http://example.com/dap4/data.nc?var=x``
      - ✅
      - ❌
      - ❌
@@ -208,7 +208,9 @@ Local File Resolution
 ~~~~~~~~~~~~~~~~~~~~~
 
 For local files, backends first try to read the file's **magic number** (first few bytes).
-If the magic number cannot be read, they fall back to checking the file **extension**.
+If the magic number **cannot be read** (e.g., file doesn't exist, no permissions), they fall
+back to checking the file **extension**. If the magic number is readable but invalid, the
+backend returns False (does not fall back to extension).
 
 .. list-table::
    :header-rows: 1
