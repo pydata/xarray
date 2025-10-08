@@ -30,10 +30,9 @@ accel = [
   "scipy>=1.13",
   "bottleneck",
   "numbagg>=0.8",
-  "numba>=0.59",
+  "numba>=0.62",  # numba 0.62 added support for numpy 2.3
   "flox>=0.9",
   "opt_einsum",
-  "numpy<2.3",    # numba has not updated yet: https://github.com/numba/numba/issues/10105
 ]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
@@ -393,6 +392,7 @@ aso = "aso"
 # Technical terms
 nd = "nd"
 nin = "nin"
+nclusive = "nclusive" # part of "inclusive" in error messages
 
 # Variable names
 ba = "ba"
