@@ -824,10 +824,12 @@ def merge_trees(
         )
     result = DataTree(dataset=root_ds)
 
-    def depth(kv):
-        return kv[0].count("/")
+    def level(kv):
+        # all trees with the same path have the same level
+        _, trees = kv
+        return trees[0].level
 
-    for key, nodes in sorted(node_lists.items(), key=depth):
+    for key, nodes in sorted(node_lists.items(), key=level):
         # Merge datasets, including inherited indexes to ensure alignment.
         datasets = [node.dataset for node in nodes]
         with add_path_context_to_errors(key):
