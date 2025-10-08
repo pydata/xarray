@@ -173,6 +173,12 @@ Remote URL Resolution
      - ❌
      - ❌
      - ❌
+   * - ``http://test.opendap.org/dap4/file.nc4?dap4.ce=/time[0]``
+     - ✅
+     - ❌
+     - ❌
+     - ✅
+     - ❌
    * - ``dap2://opendap.nasa.gov/dataset``
      - ❌
      - ❌
@@ -185,9 +191,24 @@ Remote URL Resolution
      - ❌
      - ✅
      - ❌
+   * - ``http://test.opendap.org/dap4/file.nc4``
+     - ✅
+     - ✅
+     - ❌
+     - ✅
+     - ❌
+   * - ``https://example.com/DAP4/data.nc``
+     - ✅
+     - ✅
+     - ❌
+     - ✅
+     - ❌
 
 Local File Resolution
 ~~~~~~~~~~~~~~~~~~~~~
+
+For local files, backends first try to read the file's **magic number** (first few bytes).
+If the magic number cannot be read, they fall back to checking the file **extension**.
 
 .. list-table::
    :header-rows: 1
@@ -202,7 +223,7 @@ Local File Resolution
    * - ``/path/to/file.nc``
      - ``CDF\x01`` (netCDF3)
      - ✅
-     - ✅
+     - ❌
      - ✅
      - ❌
    * - ``/path/to/file.nc4``
@@ -223,6 +244,30 @@ Local File Resolution
      - ❌
      - ❌
      - ✅
+   * - ``/path/to/file.nc``
+     - *(no magic number)*
+     - ✅
+     - ✅
+     - ✅
+     - ❌
+   * - ``/path/to/file.xyz``
+     - ``CDF\x01`` (netCDF3)
+     - ✅
+     - ❌
+     - ✅
+     - ❌
+   * - ``/path/to/file.xyz``
+     - ``\x89HDF\r\n\x1a\n`` (HDF5/netCDF4)
+     - ✅
+     - ✅
+     - ❌
+     - ❌
+   * - ``/path/to/file.xyz``
+     - *(no magic number)*
+     - ❌
+     - ❌
+     - ❌
+     - ❌
 
 .. note::
     Remote URLs ending in ``.nc`` are **ambiguous**:
