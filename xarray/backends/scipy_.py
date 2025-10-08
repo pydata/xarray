@@ -357,6 +357,11 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         from xarray.core.utils import is_remote_uri
 
         filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
+
+        # scipy can only handle local files - check this before trying to read magic number
+        if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
+            return False
+
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None and magic_number.startswith(b"\x1f\x8b"):
             with gzip.open(filename_or_obj) as f:  # type: ignore[arg-type]
@@ -366,10 +371,6 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
 
         if isinstance(filename_or_obj, str | os.PathLike):
             from pathlib import Path
-
-            # scipy can only handle local files
-            if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
-                return False
 
             suffix = "".join(Path(filename_or_obj).suffixes)
             return suffix in {".nc", ".cdf", ".nc.gz"}
