@@ -2,15 +2,6 @@
 
 .. _whats-new:
 
-Bug fixes
-~~~~~~~~~
-
-- ``netcdf4`` and ``pydap`` backends now use stricter URL detection to avoid incorrectly claiming
-  remote URLs. The ``pydap`` backend now only claims URLs with explicit DAP protocol indicators
-  (``dap2://`` or ``dap4://`` schemes, or ``/dap2/`` or ``/dap4/`` in the URL path). This prevents
-  both backends from claiming remote Zarr stores and other non-DAP URLs without an explicit
-  ``engine=`` argument. (:pull:`10804`). By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
-
 
 What's New
 ==========
@@ -38,6 +29,11 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- ``netcdf4`` and ``pydap`` backends now use stricter URL detection to avoid incorrectly claiming
+  remote URLs. The ``pydap`` backend now only claims URLs with explicit DAP protocol indicators
+  (``dap2://`` or ``dap4://`` schemes, or ``/dap2/`` or ``/dap4/`` in the URL path). This prevents
+  both backends from claiming remote Zarr stores and other non-DAP URLs without an explicit
+  ``engine=`` argument. (:pull:`10804`). By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
 Documentation
 ~~~~~~~~~~~~~
