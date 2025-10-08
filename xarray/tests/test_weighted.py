@@ -746,12 +746,13 @@ def test_weighted_operations_keep_attr(operation, as_dataset, keep_attrs):
 
     result = getattr(data.weighted(weights), operation)(**kwargs)
 
+    # When keep_attrs is None, it defaults to True
+    expected_keep = keep_attrs if keep_attrs is not None else True
+
     if operation == "sum_of_weights":
-        assert result.attrs == (weights.attrs if keep_attrs else {})
-        assert result.attrs == (weights.attrs if keep_attrs else {})
+        assert result.attrs == (weights.attrs if expected_keep else {})
     else:
-        assert result.attrs == (weights.attrs if keep_attrs else {})
-        assert result.attrs == (data.attrs if keep_attrs else {})
+        assert result.attrs == (data.attrs if expected_keep else {})
 
 
 @pytest.mark.parametrize(
