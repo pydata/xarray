@@ -154,7 +154,7 @@ class PlotTestCase:
         plt.close("all")
 
     def pass_in_axis(self, plotmethod, subplot_kw=None) -> None:
-        fig, axs = plt.subplots(ncols=2, subplot_kw=subplot_kw, squeeze=False)
+        _fig, axs = plt.subplots(ncols=2, subplot_kw=subplot_kw, squeeze=False)
         ax = axs[0, 0]
         plotmethod(ax=ax)
         assert ax.has_data()
@@ -237,7 +237,7 @@ class TestPlot(PlotTestCase):
 
         xy: list[list[str | None]] = [[None, None], [None, "z"], ["z", None]]
 
-        f, axs = plt.subplots(3, 1, squeeze=False)
+        _f, axs = plt.subplots(3, 1, squeeze=False)
         for aa, (x, y) in enumerate(xy):
             da.plot(x=x, y=y, ax=axs.flat[aa])  # type: ignore[call-arg]
 
@@ -1575,7 +1575,7 @@ class Common2dMixin:
         assert "MyLabel" in alltxt
         assert "testvar" not in alltxt
         # change cbar ax
-        fig, axs = plt.subplots(1, 2, squeeze=False)
+        _fig, axs = plt.subplots(1, 2, squeeze=False)
         ax = axs[0, 0]
         cax = axs[0, 1]
         self.plotmethod(
@@ -1587,7 +1587,7 @@ class Common2dMixin:
         assert "MyBar" in alltxt
         assert "testvar" not in alltxt
         # note that there are two ways to achieve this
-        fig, axs = plt.subplots(1, 2, squeeze=False)
+        _fig, axs = plt.subplots(1, 2, squeeze=False)
         ax = axs[0, 0]
         cax = axs[0, 1]
         self.plotmethod(
@@ -2995,7 +2995,7 @@ class TestDatetimePlot(PlotTestCase):
 
     def test_datetime_units(self) -> None:
         # test that matplotlib-native datetime works:
-        fig, ax = plt.subplots()
+        _fig, ax = plt.subplots()
         ax.plot(self.darray["time"], self.darray)
 
         # Make sure only mpl converters are used, use type() so only
@@ -3460,7 +3460,7 @@ def test_plot1d_default_rcparams() -> None:
     with figure_context():
         # scatter markers should by default have white edgecolor to better
         # see overlapping markers:
-        fig, ax = plt.subplots(1, 1)
+        _fig, ax = plt.subplots(1, 1)
         ds.plot.scatter(x="A", y="B", marker="o", ax=ax)
         actual: np.ndarray = mpl.colors.to_rgba_array("w")
         expected: np.ndarray = ax.collections[0].get_edgecolor()  # type: ignore[assignment]
@@ -3475,11 +3475,11 @@ def test_plot1d_default_rcparams() -> None:
 
         # scatter should not emit any warnings when using unfilled markers:
         with assert_no_warnings():
-            fig, ax = plt.subplots(1, 1)
+            _fig, ax = plt.subplots(1, 1)
             ds.plot.scatter(x="A", y="B", ax=ax, marker="x")
 
         # Prioritize edgecolor argument over default plot1d values:
-        fig, ax = plt.subplots(1, 1)
+        _fig, ax = plt.subplots(1, 1)
         ds.plot.scatter(x="A", y="B", marker="o", ax=ax, edgecolor="k")
         actual = mpl.colors.to_rgba_array("k")
         expected = ax.collections[0].get_edgecolor()  # type: ignore[assignment]
@@ -3505,7 +3505,7 @@ def test_9155() -> None:
 
     with figure_context():
         data = xr.DataArray([1, 2, 3], dims=["x"])
-        fig, ax = plt.subplots(ncols=1, nrows=1)
+        _fig, ax = plt.subplots(ncols=1, nrows=1)
         data.plot(ax=ax)  # type: ignore[call-arg]
 
 

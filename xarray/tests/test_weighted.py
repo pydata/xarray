@@ -34,7 +34,7 @@ def test_weighted_weights_nan_raises(as_dataset: bool, weights: list[float]) -> 
     if as_dataset:
         data = data.to_dataset(name="data")
 
-    with pytest.raises(ValueError, match="`weights` cannot contain missing values."):
+    with pytest.raises(ValueError, match=r"`weights` cannot contain missing values."):
         data.weighted(DataArray(weights))
 
 
@@ -42,7 +42,7 @@ def test_weighted_weights_nan_raises(as_dataset: bool, weights: list[float]) -> 
 @pytest.mark.parametrize("as_dataset", (True, False))
 @pytest.mark.parametrize("weights", ([np.nan, 2], [np.nan, np.nan]))
 def test_weighted_weights_nan_raises_dask(as_dataset, weights):
-    data = DataArray([1, 2]).chunk({"dim_0": -1})
+    data: DataArray | Dataset = DataArray([1, 2]).chunk({"dim_0": -1})
     if as_dataset:
         data = data.to_dataset(name="data")
 
@@ -51,7 +51,7 @@ def test_weighted_weights_nan_raises_dask(as_dataset, weights):
     with raise_if_dask_computes():
         weighted = data.weighted(weights)
 
-    with pytest.raises(ValueError, match="`weights` cannot contain missing values."):
+    with pytest.raises(ValueError, match=r"`weights` cannot contain missing values."):
         weighted.sum().load()
 
 
@@ -603,19 +603,21 @@ def test_weighted_operations_3D(dim, add_nans, skipna):
 
     weights = DataArray(np.random.randn(4, 4, 4), dims=dims, coords=coords)
 
-    data = np.random.randn(4, 4, 4)
+    data_values = np.random.randn(4, 4, 4)
 
     # add approximately 25 % NaNs (https://stackoverflow.com/a/32182680/3010700)
     if add_nans:
-        c = int(data.size * 0.25)
-        data.ravel()[np.random.choice(data.size, c, replace=False)] = np.nan
+        c = int(data_values.size * 0.25)
+        data_values.ravel()[np.random.choice(data_values.size, c, replace=False)] = (
+            np.nan
+        )
 
-    data = DataArray(data, dims=dims, coords=coords)
+    data = DataArray(data_values, dims=dims, coords=coords)
 
     check_weighted_operations(data, weights, dim, skipna)
 
-    data = data.to_dataset(name="data")
-    check_weighted_operations(data, weights, dim, skipna)
+    ds = data.to_dataset(name="data")
+    check_weighted_operations(ds, weights, dim, skipna)
 
 
 @pytest.mark.parametrize("dim", ("a", "b", "c", ("a", "b"), ("a", "b", "c"), None))
@@ -704,21 +706,23 @@ def test_weighted_operations_different_shapes(
 ):
     weights = DataArray(np.random.randn(*shape_weights))
 
-    data = np.random.randn(*shape_data)
+    data_values = np.random.randn(*shape_data)
 
     # add approximately 25 % NaNs
     if add_nans:
-        c = int(data.size * 0.25)
-        data.ravel()[np.random.choice(data.size, c, replace=False)] = np.nan
+        c = int(data_values.size * 0.25)
+        data_values.ravel()[np.random.choice(data_values.size, c, replace=False)] = (
+            np.nan
+        )
 
-    data = DataArray(data)
+    data = DataArray(data_values)
 
     check_weighted_operations(data, weights, "dim_0", skipna)
     check_weighted_operations(data, weights, None, skipna)
 
-    data = data.to_dataset(name="data")
-    check_weighted_operations(data, weights, "dim_0", skipna)
-    check_weighted_operations(data, weights, None, skipna)
+    ds = data.to_dataset(name="data")
+    check_weighted_operations(ds, weights, "dim_0", skipna)
+    check_weighted_operations(ds, weights, None, skipna)
 
 
 @pytest.mark.parametrize(
@@ -729,7 +733,7 @@ def test_weighted_operations_different_shapes(
 @pytest.mark.parametrize("keep_attrs", (True, False, None))
 def test_weighted_operations_keep_attr(operation, as_dataset, keep_attrs):
     weights = DataArray(np.random.randn(2, 2), attrs=dict(attr="weights"))
-    data = DataArray(np.random.randn(2, 2))
+    data: DataArray | Dataset = DataArray(np.random.randn(2, 2))
 
     if as_dataset:
         data = data.to_dataset(name="data")
@@ -759,10 +763,10 @@ def test_weighted_operations_keep_attr_da_in_ds(operation):
     # GH #3595
 
     weights = DataArray(np.random.randn(2, 2))
-    data = DataArray(np.random.randn(2, 2), attrs=dict(attr="data"))
-    data = data.to_dataset(name="a")
+    da = DataArray(np.random.randn(2, 2), attrs=dict(attr="data"))
+    data = da.to_dataset(name="a")
 
-    kwargs = {"keep_attrs": True}
+    kwargs: dict[str, Any] = {"keep_attrs": True}
     if operation == "quantile":
         kwargs["q"] = 0.5
 
@@ -785,12 +789,13 @@ def test_weighted_mean_keep_attrs_ds():
 @pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean", "quantile"))
 @pytest.mark.parametrize("as_dataset", (True, False))
 def test_weighted_bad_dim(operation, as_dataset):
-    data = DataArray(np.random.randn(2, 2))
-    weights = xr.ones_like(data)
+    data_array = DataArray(np.random.randn(2, 2))
+    weights = xr.ones_like(data_array)
+    data: DataArray | Dataset = data_array
     if as_dataset:
-        data = data.to_dataset(name="data")
+        data = data_array.to_dataset(name="data")
 
-    kwargs = {"dim": "bad_dim"}
+    kwargs: dict[str, Any] = {"dim": "bad_dim"}
     if operation == "quantile":
         kwargs["q"] = 0.5
 

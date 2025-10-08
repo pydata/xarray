@@ -905,10 +905,91 @@ class TestTreeFromDict:
         # despite 'Bart' coming before 'Lisa' when sorted alphabetically
         assert list(reversed["Homer"].children.keys()) == ["Lisa", "Bart"]
 
-    def test_array_values(self) -> None:
+    def test_array_values_dataarray(self) -> None:
+        expected = DataTree(dataset=Dataset({"a": 1}))
+        actual = DataTree.from_dict({"a": DataArray(1)})
+        assert_identical(actual, expected)
+
+    def test_array_values_scalars(self) -> None:
+        expected = DataTree(
+            dataset=Dataset({"a": 1}),
+            children={"b": DataTree(Dataset({"c": 2, "d": 3}))},
+        )
+        actual = DataTree.from_dict({"a": 1, "b/c": 2, "b/d": 3})
+        assert_identical(actual, expected)
+
+    def test_invalid_values(self) -> None:
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                r"failed to construct xarray.Dataset for DataTree node at '/' "
+                r"with data_vars={'a': set()} and coords={}"
+            ),
+        ):
+            DataTree.from_dict({"a": set()})
+
+    def test_array_values_nested_key(self) -> None:
+        expected = DataTree(
+            children={"a": DataTree(children={"b": DataTree(Dataset({"c": 1}))})}
+        )
+        actual = DataTree.from_dict(data={"a/b/c": 1})
+        assert_identical(actual, expected)
+
+    def test_nested_array_values(self) -> None:
+        expected = DataTree(
+            children={"a": DataTree(children={"b": DataTree(Dataset({"c": 1}))})}
+        )
+        actual = DataTree.from_dict({"a": {"b": {"c": 1}}}, nested=True)
+        assert_identical(actual, expected)
+
+    def test_nested_array_values_without_nested_kwarg(self) -> None:
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                r"data contains a dict value at key='a', which is not a valid "
+                r"argument to DataTree.from_dict() with nested=False: "
+                r"{'b': {'c': 1}}"
+            ),
+        ):
+            DataTree.from_dict({"a": {"b": {"c": 1}}})
+
+    def test_nested_array_values_duplicates(self) -> None:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("multiple entries found corresponding to node '/a/b'"),
+        ):
+            DataTree.from_dict({"a": {"b": 1}, "a/b": 2}, nested=True)
+
+    def test_array_values_data_and_coords(self) -> None:
+        expected = DataTree(dataset=Dataset({"a": 1}, coords={"b": 2}))
+        actual = DataTree.from_dict(data={"a": 1}, coords={"b": 2})
+        assert_identical(actual, expected)
+
+    def test_data_and_coords_conflicting(self) -> None:
+        with pytest.raises(
+            ValueError,
+            match=re.escape("multiple entries found corresponding to node '/a'"),
+        ):
+            DataTree.from_dict(data={"a": 1}, coords={"a": 2})
+
+    def test_array_values_new_name(self) -> None:
+        expected = DataTree(dataset=Dataset({"foo": 1}))
         data = {"foo": xr.DataArray(1, name="bar")}
-        with pytest.raises(TypeError):
-            DataTree.from_dict(data)  # type: ignore[arg-type]
+        actual = DataTree.from_dict(data)
+        assert_identical(actual, expected)
+
+    def test_array_values_at_root(self) -> None:
+        with pytest.raises(ValueError, match="cannot set DataArray value at root"):
+            DataTree.from_dict({"/": 1})
+
+    def test_array_values_parent_node_also_set(self) -> None:
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                r"cannot set DataArray value at '/a' when parent node at '/' is also set"
+            ),
+        ):
+            DataTree.from_dict({"/": Dataset(), "/a": 1})
 
     def test_relative_paths(self) -> None:
         tree = DataTree.from_dict({".": None, "foo": None, "./bar": None, "x/y": None})
@@ -937,10 +1018,16 @@ class TestTreeFromDict:
         actual = DataTree.from_dict({"./": ds})
         assert_identical(actual, expected)
 
+    def test_multiple_entries(self):
         with pytest.raises(
-            ValueError, match="multiple entries found corresponding to the root node"
+            ValueError, match="multiple entries found corresponding to node '/'"
         ):
-            DataTree.from_dict({"": ds, "/": ds})
+            DataTree.from_dict({"": None, ".": None})
+
+        with pytest.raises(
+            ValueError, match="multiple entries found corresponding to node '/a'"
+        ):
+            DataTree.from_dict({"a": None, "/a": None})
 
     def test_name(self):
         tree = DataTree.from_dict({"/": None}, name="foo")
@@ -1072,7 +1159,7 @@ class TestAccess:
         var_keys = list(dt.variables.keys())
         assert all(var_key in key_completions for var_key in var_keys)
 
-    def test_ipython_key_completitions_subnode(self) -> None:
+    def test_ipython_key_completions_subnode(self) -> None:
         tree = xr.DataTree.from_dict({"/": None, "/a": None, "/a/b/": None})
         expected = ["b"]
         actual = tree["a"]._ipython_key_completions_()
@@ -1656,7 +1743,7 @@ class TestRestructuring:
         assert "Ashley" in dropped.children
 
         # test raise
-        with pytest.raises(KeyError, match="nodes {'Mary'} not present"):
+        with pytest.raises(KeyError, match=r"nodes {'Mary'} not present"):
             dropped.drop_nodes(names=["Mary", "Ashley"])
 
         # test ignore

@@ -626,17 +626,15 @@ class DatasetIOBase:
     def test_pickle(self) -> None:
         expected = Dataset({"foo": ("x", [42])})
         with self.roundtrip(expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
-            with roundtripped:
-                # Windows doesn't like reopening an already open file
-                raw_pickle = pickle.dumps(roundtripped)
+            # Windows doesn't like reopening an already open file
+            raw_pickle = pickle.dumps(roundtripped)
             with pickle.loads(raw_pickle) as unpickled_ds:
                 assert_identical(expected, unpickled_ds)
 
     def test_pickle_dataarray(self) -> None:
         expected = Dataset({"foo": ("x", [42])})
         with self.roundtrip(expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
-            with roundtripped:
-                raw_pickle = pickle.dumps(roundtripped["foo"])
+            raw_pickle = pickle.dumps(roundtripped["foo"])
             with pickle.loads(raw_pickle) as unpickled:
                 assert_identical(expected["foo"], unpickled)
 
@@ -1961,7 +1959,7 @@ class NetCDF4Base(NetCDFBase):
                 (1, y_chunksize, x_chunksize),
                 open_kwargs={"chunks": "auto"},
             ) as ds:
-                t_chunks, y_chunks, x_chunks = ds["image"].data.chunks
+                _t_chunks, y_chunks, x_chunks = ds["image"].data.chunks
                 assert all(np.asanyarray(y_chunks) == y_chunksize)
                 # Check that the chunk size is a multiple of the file chunk size
                 assert all(np.asanyarray(x_chunks) % x_chunksize == 0)
@@ -2113,7 +2111,7 @@ class NetCDF4Base(NetCDFBase):
                     fill_value=None,
                 )
                 v[:] = 1
-            with open_dataset(tmp_file) as original:
+            with open_dataset(tmp_file, engine="netcdf4") as original:
                 save_kwargs = {}
                 # We don't expect any errors.
                 # This is effectively a void context manager
@@ -2165,7 +2163,7 @@ class NetCDF4Base(NetCDFBase):
                     "time",
                     fill_value=255,
                 )
-            with open_dataset(tmp_file) as original:
+            with open_dataset(tmp_file, engine="netcdf4") as original:
                 save_kwargs = {}
                 if self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above:
                     save_kwargs["invalid_netcdf"] = True
@@ -2214,7 +2212,7 @@ class NetCDF4Base(NetCDFBase):
                     "time",
                     fill_value=255,
                 )
-            with open_dataset(tmp_file) as original:
+            with open_dataset(tmp_file, engine="netcdf4") as original:
                 assert (
                     original.clouds.encoding["dtype"].metadata
                     == original.tifa.encoding["dtype"].metadata
@@ -2230,8 +2228,8 @@ class NetCDF4Base(NetCDFBase):
                     with pytest.raises(
                         ValueError,
                         match=(
-                            "Cannot save variable .*"
-                            " because an enum `cloud_type` already exists in the Dataset .*"
+                            r"Cannot save variable .*"
+                            r" because an enum `cloud_type` already exists in the Dataset .*"
                         ),
                     ):
                         with self.roundtrip(original):
@@ -3445,6 +3443,14 @@ class ZarrBase(CFEncodedBase):
             ) as actual:
                 assert_identical(actual, nonzeros)
 
+    def test_region_scalar(self) -> None:
+        ds = Dataset({"x": 0})
+        with self.create_zarr_target() as store:
+            ds.to_zarr(store)
+            ds.to_zarr(store, region={}, mode="r+")
+            with xr.open_zarr(store) as actual:
+                assert_identical(actual, ds)
+
     @pytest.mark.parametrize("mode", [None, "r+", "a"])
     def test_write_region_mode(self, mode) -> None:
         zeros = Dataset({"u": (("x",), np.zeros(10))})
@@ -4382,6 +4388,23 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         ) as ds:
             yield ds
 
+    @requires_dask
+    def test_default_zarr_fill_value(self):
+        inputs = xr.Dataset({"floats": ("x", [1.0]), "ints": ("x", [1])}).chunk()
+        expected = xr.Dataset({"floats": ("x", [np.nan]), "ints": ("x", [0])})
+        with self.temp_dir() as (_d, store):
+            inputs.to_zarr(store, compute=False)
+            with open_dataset(store) as on_disk:
+                assert np.isnan(on_disk.variables["floats"].encoding["_FillValue"])
+                assert (
+                    "_FillValue" not in on_disk.variables["ints"].encoding
+                )  # use default
+                if not has_zarr_v3:
+                    # zarr-python v2 interprets fill_value=None inconsistently
+                    del on_disk["ints"]
+                    del expected["ints"]
+                assert_identical(expected, on_disk)
+
     @pytest.mark.parametrize("consolidated", [True, False, None])
     @pytest.mark.parametrize("write_empty", [True, False, None])
     def test_write_empty(
@@ -4420,14 +4443,13 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 "0.1.1",
             ]
 
+        # use nan for default fill_value behaviour
+        data = np.array([np.nan, np.nan, 1.0, np.nan]).reshape((1, 2, 2))
+
         if zarr_format_3:
-            data = np.array([0.0, 0, 1.0, 0]).reshape((1, 2, 2))
             # transform to the path style of zarr 3
             # e.g. 0/0/1
             expected = [e.replace(".", "/") for e in expected]
-        else:
-            # use nan for default fill_value behaviour
-            data = np.array([np.nan, np.nan, 1.0, np.nan]).reshape((1, 2, 2))
 
         ds = xr.Dataset(data_vars={"test": (("Z", "Y", "X"), data)})
 
@@ -4437,7 +4459,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         else:
             encoding = {"test": {"chunks": (1, 1, 1)}}
 
-        with self.temp_dir() as (d, store):
+        with self.temp_dir() as (_d, store):
             ds.to_zarr(
                 store,
                 mode="w",
@@ -5482,7 +5504,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         expected,
         expect_error,
     ):
-        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+        with self.setup_files_and_datasets() as (files, [_ds1, _ds2]):
             # Give the files an inconsistent attribute
             for i, f in enumerate(files):
                 ds = open_dataset(f).load()
@@ -5517,7 +5539,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         """
         Case when an attribute differs across the multiple files
         """
-        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+        with self.setup_files_and_datasets() as (files, [_ds1, _ds2]):
             # Give the files an inconsistent attribute
             for i, f in enumerate(files):
                 ds = open_dataset(f).load()
@@ -5535,7 +5557,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         """
         with self.setup_files_and_datasets(new_combine_kwargs=True) as (
             files,
-            [ds1, ds2],
+            [_ds1, _ds2],
         ):
             # Give the files an inconsistent attribute
             for i, f in enumerate(files):
@@ -5883,7 +5905,7 @@ class TestDask(DatasetIOBase):
 
     def test_open_mfdataset_with_warn(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
-        with pytest.warns(UserWarning, match="Ignoring."):
+        with pytest.warns(UserWarning, match=r"Ignoring."):
             with create_tmp_files(2) as (tmp1, tmp2):
                 ds1 = original.isel(x=slice(5))
                 ds2 = original.isel(x=slice(5, 10))
@@ -5914,7 +5936,7 @@ class TestDask(DatasetIOBase):
 
     def test_open_mfdataset_2d_with_warn(self) -> None:
         original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
-        with pytest.warns(UserWarning, match="Ignoring."):
+        with pytest.warns(UserWarning, match=r"Ignoring."):
             with create_tmp_files(4) as (tmp1, tmp2, tmp3, tmp4):
                 original.isel(x=slice(5), y=slice(4)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10), y=slice(4)).to_netcdf(tmp2)
@@ -6775,6 +6797,7 @@ def _assert_no_dates_out_of_range_warning(record):
 
 
 @requires_scipy_or_netCDF4
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
 def test_use_cftime_standard_calendar_default_in_range(calendar) -> None:
     x = [0, 1]
@@ -6897,6 +6920,7 @@ def test_use_cftime_false_standard_calendar_in_range(calendar) -> None:
 
 
 @requires_scipy_or_netCDF4
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
 @pytest.mark.parametrize("calendar", ["standard", "gregorian"])
 def test_use_cftime_false_standard_calendar_out_of_range(calendar) -> None:
     x = [0, 1]
@@ -6909,12 +6933,13 @@ def test_use_cftime_false_standard_calendar_out_of_range(calendar) -> None:
 
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
+        decoder = CFDatetimeCoder(use_cftime=False)
         with pytest.raises((OutOfBoundsDatetime, ValueError)):
-            decoder = CFDatetimeCoder(use_cftime=False)
             open_dataset(tmp_file, decode_times=decoder)
 
 
 @requires_scipy_or_netCDF4
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
 @pytest.mark.parametrize("calendar", _NON_STANDARD_CALENDARS)
 @pytest.mark.parametrize("units_year", [1500, 2000, 2500])
 def test_use_cftime_false_nonstandard_calendar(calendar, units_year) -> None:
@@ -6928,8 +6953,8 @@ def test_use_cftime_false_nonstandard_calendar(calendar, units_year) -> None:
 
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
+        decoder = CFDatetimeCoder(use_cftime=False)
         with pytest.raises((OutOfBoundsDatetime, ValueError)):
-            decoder = CFDatetimeCoder(use_cftime=False)
             open_dataset(tmp_file, decode_times=decoder)
 
 
@@ -7276,6 +7301,7 @@ class TestNCZarr:
         # https://github.com/Unidata/netcdf-c/issues/2259
         ds = ds.drop_vars("dim3")
 
+        # engine="netcdf4" is not required for backwards compatibility
         ds.to_netcdf(f"file://{filename}#mode=nczarr")
         return ds
 
@@ -7518,6 +7544,10 @@ class TestZarrRegionAuto:
                     mode="a",
                 )
 
+    @pytest.mark.xfail(
+        ON_WINDOWS,
+        reason="Permission errors from Zarr: https://github.com/pydata/xarray/pull/10793",
+    )
     @requires_dask
     def test_zarr_region_chunk_partial_offset(self):
         # https://github.com/pydata/xarray/pull/8459#issuecomment-1819417545

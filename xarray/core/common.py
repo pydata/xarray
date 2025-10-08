@@ -619,9 +619,9 @@ class DataWithCoords(AttrAccessMixin):
         <xarray.Dataset> Size: 360B
         Dimensions:         (x: 2, y: 2, time: 4)
         Coordinates:
+          * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
             lon             (x, y) float64 32B 260.2 260.7 260.2 260.8
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
-          * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
             reference_time  datetime64[ns] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
@@ -633,9 +633,9 @@ class DataWithCoords(AttrAccessMixin):
         <xarray.Dataset> Size: 360B
         Dimensions:         (x: 2, y: 2, time: 4)
         Coordinates:
+          * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
-          * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
             reference_time  datetime64[ns] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
