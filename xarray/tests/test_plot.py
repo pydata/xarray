@@ -484,7 +484,7 @@ class TestPlot(PlotTestCase):
 
         # make a copy using with_extremes because we want a local cmap:
         cmap_expected = mpl.colormaps["viridis"].with_extremes(
-            bad="W", under="r", over="g"
+            bad="w", under="r", over="g"
         )
 
         # check we actually changed the set_bad color
