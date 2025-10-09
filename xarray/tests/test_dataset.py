@@ -635,7 +635,7 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
             with pytest.warns(
                 FutureWarning,
-                match=".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
+                match=r".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
             ):
                 Dataset({}, {"x": mindex, "y": mindex})
                 Dataset({}, {"x": mindex, "level_1": range(4)})
@@ -655,13 +655,13 @@ class TestDataset:
 
         with pytest.warns(
             FutureWarning,
-            match=".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
+            match=r".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
         ):
             Dataset(data_vars={"x": midx})
 
         with pytest.warns(
             FutureWarning,
-            match=".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
+            match=r".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
         ):
             Dataset(coords={"x": midx})
 
@@ -690,7 +690,7 @@ class TestDataset:
         assert type(ds.dims.mapping) is dict
         with pytest.warns(
             FutureWarning,
-            match=" To access a mapping from dimension names to lengths, please use `Dataset.sizes`",
+            match=r" To access a mapping from dimension names to lengths, please use `Dataset.sizes`",
         ):
             assert ds.dims == ds.sizes
         assert ds.sizes == {"dim1": 8, "dim2": 9, "dim3": 10, "time": 20}
@@ -1084,7 +1084,7 @@ class TestDataset:
 
         # https://github.com/pydata/xarray/issues/7588
         with pytest.raises(
-            AssertionError, match="something is wrong with Dataset._coord_names"
+            AssertionError, match=r"something is wrong with Dataset._coord_names"
         ):
             ds._coord_names = {"w", "x", "y", "z"}
             len(ds.data_vars)
@@ -2675,7 +2675,7 @@ class TestDataset:
 
         c = Dataset(coords={"x": [1, 3], "xb": ("x", [2, 4])}).set_xindex("xb")
 
-        with pytest.raises(AlignmentError, match=".*conflicting re-indexers"):
+        with pytest.raises(AlignmentError, match=r".*conflicting re-indexers"):
             align(a, c)
 
     def test_align_conflicting_indexes(self) -> None:
@@ -2684,7 +2684,7 @@ class TestDataset:
         a = Dataset(coords={"xb": ("x", [3, 4])}).set_xindex("xb")
         b = Dataset(coords={"xb": ("x", [3])}).set_xindex("xb", CustomIndex)
 
-        with pytest.raises(AlignmentError, match="cannot align.*conflicting indexes"):
+        with pytest.raises(AlignmentError, match=r"cannot align.*conflicting indexes"):
             align(a, b)
 
     def test_align_non_unique(self) -> None:
@@ -2763,7 +2763,7 @@ class TestDataset:
             assert_identical(actual[1], ds2, check_default_indexes=False)
 
         with pytest.raises(
-            AlignmentError, match="cannot align objects.*index.*not equal"
+            AlignmentError, match=r"cannot align objects.*index.*not equal"
         ):
             xr.align(ds1, ds2, join="exact")
 
@@ -2782,7 +2782,7 @@ class TestDataset:
             .set_xindex("x", DeprecatedEqualsSignatureIndex)
         )
 
-        with pytest.warns(FutureWarning, match="signature.*deprecated"):
+        with pytest.warns(FutureWarning, match=r"signature.*deprecated"):
             xr.align(ds, ds.copy(), join="exact")
 
     def test_broadcast(self) -> None:
@@ -2823,7 +2823,7 @@ class TestDataset:
         assert_identical(x, actual_x)
         assert source_ndarray(actual_x["foo"].data) is source_ndarray(x["foo"].data)
 
-        actual_x, actual_y = broadcast(x, y)
+        actual_x, _actual_y = broadcast(x, y)
         assert_identical(x, actual_x)
         assert source_ndarray(actual_x["foo"].data) is source_ndarray(x["foo"].data)
 
@@ -3126,7 +3126,7 @@ class TestDataset:
         midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         ds = Dataset(coords=midx_coords)
 
-        with pytest.raises(ValueError, match=".*would corrupt the following index.*"):
+        with pytest.raises(ValueError, match=r".*would corrupt the following index.*"):
             ds.drop_indexes("a")
 
     def test_drop_dims(self) -> None:
@@ -3397,14 +3397,14 @@ class TestDataset:
         ds = Dataset(coords={"x": ("y", [0, 1])})
 
         with pytest.warns(
-            UserWarning, match="rename 'x' to 'y' does not create an index.*"
+            UserWarning, match=r"rename 'x' to 'y' does not create an index.*"
         ):
             ds.rename(x="y")
 
         ds = Dataset(coords={"y": ("x", [0, 1])})
 
         with pytest.warns(
-            UserWarning, match="rename 'x' to 'y' does not create an index.*"
+            UserWarning, match=r"rename 'x' to 'y' does not create an index.*"
         ):
             ds.rename(x="y")
 
@@ -3946,7 +3946,7 @@ class TestDataset:
 
         class NotAnIndex: ...
 
-        with pytest.raises(TypeError, match=".*not a subclass of xarray.Index"):
+        with pytest.raises(TypeError, match=r".*not a subclass of xarray.Index"):
             ds.set_xindex("foo", NotAnIndex)  # type: ignore[arg-type]
 
         with pytest.raises(ValueError, match="those variables don't exist"):
@@ -4864,7 +4864,7 @@ class TestDataset:
 
         with pytest.warns(
             FutureWarning,
-            match=".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
+            match=r".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
         ):
             actual = ds.assign(x=midx)
         assert_identical(actual, expected)
@@ -4881,7 +4881,7 @@ class TestDataset:
 
         with pytest.warns(
             FutureWarning,
-            match=".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
+            match=r".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
         ):
             actual = ds.assign_coords({"x": midx})
         assert_identical(actual, expected)
@@ -6057,17 +6057,23 @@ class TestDataset:
         attrs = dict(_attrs)
         data.attrs = attrs
 
-        # Test dropped attrs
+        # Test default behavior (keeps attrs for reduction operations)
         ds = data.mean()
-        assert ds.attrs == {}
-        for v in ds.data_vars.values():
-            assert v.attrs == {}
+        assert ds.attrs == attrs
+        for k, v in ds.data_vars.items():
+            assert v.attrs == data[k].attrs
 
-        # Test kept attrs
+        # Test explicitly keeping attrs
         ds = data.mean(keep_attrs=True)
         assert ds.attrs == attrs
         for k, v in ds.data_vars.items():
             assert v.attrs == data[k].attrs
+
+        # Test explicitly dropping attrs
+        ds = data.mean(keep_attrs=False)
+        assert ds.attrs == {}
+        for v in ds.data_vars.values():
+            assert v.attrs == {}
 
     @pytest.mark.filterwarnings(
         "ignore:Once the behaviour of DataArray:DeprecationWarning"
@@ -6251,6 +6257,7 @@ class TestDataset:
         data = create_test_data()
         data.attrs["foo"] = "bar"
 
+        # data.map keeps all attrs by default
         assert_identical(data.map(np.mean), data.mean())
 
         expected = data.mean(keep_attrs=True)
@@ -6307,6 +6314,7 @@ class TestDataset:
         data.attrs["foo"] = "bar"
 
         with pytest.warns(PendingDeprecationWarning):
+            # data.apply keeps all attrs by default
             assert_identical(data.apply(np.mean), data.mean())
 
     def make_example_math_dataset(self):
@@ -6786,7 +6794,9 @@ class TestDataset:
         ["keep_attrs", "expected"],
         (
             pytest.param(False, {}, id="False"),
-            pytest.param(True, {"foo": "a", "bar": "b"}, id="True"),
+            pytest.param(
+                True, {"foo": "a", "bar": "b", "baz": "c"}, id="True"
+            ),  # drop_conflicts combines non-conflicting attrs
         ),
     )
     def test_binary_ops_keep_attrs(self, keep_attrs, expected) -> None:
@@ -6796,6 +6806,36 @@ class TestDataset:
             ds_result = ds1 + ds2
 
         assert ds_result.attrs == expected
+
+    def test_binary_ops_attrs_drop_conflicts(self) -> None:
+        # Test that binary operations combine attrs with drop_conflicts behavior
+        attrs1 = {"units": "meters", "long_name": "distance", "source": "sensor_a"}
+        attrs2 = {"units": "feet", "resolution": "high", "source": "sensor_b"}
+        ds1 = xr.Dataset({"a": 1}, attrs=attrs1)
+        ds2 = xr.Dataset({"a": 2}, attrs=attrs2)
+
+        # With keep_attrs=True (default), should combine attrs dropping conflicts
+        result = ds1 + ds2
+        # "units" and "source" conflict, so they're dropped
+        # "long_name" only in ds1, "resolution" only in ds2, so they're kept
+        assert result.attrs == {"long_name": "distance", "resolution": "high"}
+
+        # Test with identical values for some attrs
+        attrs3 = {"units": "meters", "type": "data", "source": "sensor_c"}
+        ds3 = xr.Dataset({"a": 3}, attrs=attrs3)
+        result2 = ds1 + ds3
+        # "units" has same value, so kept; "source" conflicts, so dropped
+        # "long_name" from ds1, "type" from ds3
+        assert result2.attrs == {
+            "units": "meters",
+            "long_name": "distance",
+            "type": "data",
+        }
+
+        # With keep_attrs=False, attrs should be empty
+        with xr.set_options(keep_attrs=False):
+            result3 = ds1 + ds2
+            assert result3.attrs == {}
 
     def test_full_like(self) -> None:
         # For more thorough tests, see test_variable.py

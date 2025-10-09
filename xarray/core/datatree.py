@@ -37,7 +37,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.dataset_variables import DataVariables
 from xarray.core.datatree_mapping import (
-    _handle_errors_with_path_context,
+    add_path_context_to_errors,
     map_over_datasets,
 )
 from xarray.core.formatting import (
@@ -431,7 +431,7 @@ class DatasetView(Dataset):
         # Copied from xarray.Dataset so as not to call type(self), which causes problems (see https://github.com/xarray-contrib/datatree/issues/188).
         # TODO Refactor xarray upstream to avoid needing to overwrite this.
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
         variables = {
             k: maybe_wrap_array(v, func(v, *args, **kwargs))
             for k, v in self.data_vars.items()
@@ -2213,8 +2213,8 @@ class DataTree(
         result = {}
         for path, node in self.subtree_with_keys:
             node_indexers = {k: v for k, v in indexers.items() if k in node.dims}
-            func_with_error_context = _handle_errors_with_path_context(path)(func)
-            node_result = func_with_error_context(node.dataset, node_indexers)
+            with add_path_context_to_errors(path):
+                node_result = func(node.dataset, node_indexers)
             # Indexing datasets corresponding to each node results in redundant
             # coordinates when indexes from a parent node are inherited.
             # Ideally, we would avoid creating such coordinates in the first

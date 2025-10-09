@@ -750,8 +750,8 @@ class GroupBy(Generic[T_Xarray]):
         <xarray.DataArray 'a' (x: 4)> Size: 32B
         array([9., 3., 4., 5.])
         Coordinates:
-            quantile  float64 8B 0.5
           * x         (x) int64 32B 0 1 2 3
+            quantile  float64 8B 0.5
 
         See Also
         --------
@@ -1313,15 +1313,15 @@ class GroupBy(Generic[T_Xarray]):
         array([[0.7, 4.2, 0.7, 1.5],
                [6.5, 7.3, 2.6, 1.9]])
         Coordinates:
+          * x         (x) int64 16B 0 1
           * y         (y) int64 32B 1 1 2 2
             quantile  float64 8B 0.0
-          * x         (x) int64 16B 0 1
         >>> ds.groupby("y").quantile(0, dim=...)
         <xarray.Dataset> Size: 40B
         Dimensions:   (y: 2)
         Coordinates:
-            quantile  float64 8B 0.0
           * y         (y) int64 16B 1 2
+            quantile  float64 8B 0.0
         Data variables:
             a         (y) float64 16B 0.7 0.7
         >>> da.groupby("x").quantile([0, 0.5, 1])
@@ -1336,15 +1336,15 @@ class GroupBy(Generic[T_Xarray]):
                 [2.6 , 2.6 , 2.6 ],
                 [1.9 , 1.9 , 1.9 ]]])
         Coordinates:
+          * x         (x) int64 16B 0 1
           * y         (y) int64 32B 1 1 2 2
           * quantile  (quantile) float64 24B 0.0 0.5 1.0
-          * x         (x) int64 16B 0 1
         >>> ds.groupby("y").quantile([0, 0.5, 1], dim=...)
         <xarray.Dataset> Size: 88B
         Dimensions:   (y: 2, quantile: 3)
         Coordinates:
-          * quantile  (quantile) float64 24B 0.0 0.5 1.0
           * y         (y) int64 16B 1 2
+          * quantile  (quantile) float64 24B 0.0 0.5 1.0
         Data variables:
             a         (y, quantile) float64 48B 0.7 5.35 8.4 0.7 2.25 9.4
 
