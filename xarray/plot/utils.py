@@ -101,8 +101,7 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
     # copy colors to use for bad, under, and over values in case they have been
     # set to non-default values
     if isinstance(cmap, mpl.colors.Colormap):
-        # matplotlib<3.2 only uses bad color for masked values
-        bad = cmap(np.ma.masked_invalid([np.nan]))[0]
+        bad = cmap(np.nan)
 
         # Only update under and over if they were explicitly changed by the user
         # (i.e. are different from the lowest or highest values in cmap). Otherwise
