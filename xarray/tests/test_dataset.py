@@ -6268,6 +6268,31 @@ class TestDataset:
         ds["x"].attrs["y"] = "x"
         assert ds["x"].attrs != actual["x"].attrs
 
+    def test_map_non_dataarray_outputs(self) -> None:
+        # Test that map handles non-DataArray outputs by converting them
+        # Regression test for GH10835
+        ds = xr.Dataset({"foo": ("x", [1, 2, 3]), "bar": ("y", [4, 5])})
+
+        # Scalar output
+        result = ds.map(lambda x: 1)
+        expected = xr.Dataset({"foo": 1, "bar": 1})
+        assert_identical(result, expected)
+
+        # Numpy array output with same shape
+        result = ds.map(lambda x: x.values)
+        expected = ds.copy()
+        assert_identical(result, expected)
+
+        # Mixed: some return scalars, some return arrays
+        def mixed_func(x):
+            if "x" in x.dims:
+                return 42
+            return x
+
+        result = ds.map(mixed_func)
+        expected = xr.Dataset({"foo": 42, "bar": ("y", [4, 5])})
+        assert_identical(result, expected)
+
     def test_apply_pending_deprecated_map(self) -> None:
         data = create_test_data()
         data.attrs["foo"] = "bar"
