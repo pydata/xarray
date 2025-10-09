@@ -31,6 +31,7 @@ from xarray.tests import (
     assert_identical,
     requires_dask,
     requires_pyarrow,
+    requires_scipy_or_netCDF4,
 )
 from xarray.tests.indexes import XYIndex
 from xarray.tests.test_dataset import create_test_data
@@ -1127,6 +1128,7 @@ class TestConcatDataset:
         assert_identical(actual, expected, check_default_indexes=False)
         assert actual.indexes == {}
 
+    @requires_scipy_or_netCDF4
     def test_concat_combine_attrs_nan_after_netcdf_roundtrip(self, tmp_path) -> None:
         # Test for issue #10833: NaN attributes should be preserved
         # with combine_attrs="drop_conflicts" after NetCDF roundtrip
