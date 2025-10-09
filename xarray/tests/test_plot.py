@@ -485,7 +485,9 @@ class TestPlot(PlotTestCase):
         # make a copy here because we want a local cmap that we will modify.
         cmap_expected = copy(mpl.colormaps["viridis"])
 
-        cmap_expected.set_bad("w")
+        # cmap_expected.set_bad("w")
+        cmap_expected.set_extremes(bad="w")
+
         # check we actually changed the set_bad color
         assert np.all(
             cmap_expected(np.ma.masked_invalid([np.nan]))[0]
