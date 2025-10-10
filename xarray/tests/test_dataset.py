@@ -892,6 +892,11 @@ class TestDataset:
             "b": np.dtype("int64"),
         }
 
+    def test_coords_dims(self) -> None:
+        # https://github.com/pydata/xarray/issues/9466
+        ds_no_coord = Dataset(data_vars={"a": ("x", [0, 1])})
+        assert not len(ds_no_coord.coords.dims)
+
     def test_coords_modify(self) -> None:
         data = Dataset(
             {
