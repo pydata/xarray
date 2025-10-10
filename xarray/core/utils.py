@@ -256,6 +256,11 @@ def equivalent(first: T, second: T) -> bool:
     if isinstance(first, list) or isinstance(second, list):
         return list_equiv(first, second)  # type: ignore[arg-type]
 
+    # Check for NaN equivalence early (before equality comparison)
+    # This handles both Python float NaN and NumPy scalar NaN (issue #10833)
+    if pd.isnull(first) and pd.isnull(second):  # type: ignore[call-overload]
+        return True
+
     # For non-array/list types, use == but require boolean result
     result = first == second
     if not isinstance(result, bool):
@@ -265,8 +270,7 @@ def equivalent(first: T, second: T) -> bool:
         # Reject any other non-boolean type (Dataset, Series, custom objects, etc.)
         return False
 
-    # Check for NaN equivalence
-    return result or (pd.isnull(first) and pd.isnull(second))  # type: ignore[call-overload]
+    return result
 
 
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
