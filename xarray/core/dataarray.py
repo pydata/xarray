@@ -147,6 +147,8 @@ def _infer_coords_and_dims(
             "data"
         )
 
+    original_dims = dims  # Keep reference for error messages
+
     if isinstance(dims, str):
         dims = (dims,)
     elif dims is None:
@@ -161,12 +163,27 @@ def _infer_coords_and_dims(
                         coord, name=dim, auto_convert=False
                     ).to_index_variable()
                     dims[n] = coord.name
-    dims_tuple = tuple(dims)
+    elif isinstance(dims, Iterable):
+        dims = tuple(dims)
+    else:
+        # Single non-string, non-iterable hashable (int, UUID, etc.)
+        dims = (dims,)
+    dims_tuple = dims
     if len(dims_tuple) != len(shape):
-        raise ValueError(
-            "different number of dimensions on data "
-            f"and dims: {len(shape)} vs {len(dims_tuple)}"
-        )
+        # Provide helpful error message for tuple ambiguity case
+        if isinstance(original_dims, tuple) and len(dims_tuple) > 1 and len(shape) == 1:
+            raise ValueError(
+                f"You passed dims={original_dims} for 1-dimensional data. "
+                f"This is ambiguous: did you mean {len(dims_tuple)} separate dimensions, "
+                f"or a single dimension with tuple name {original_dims}? "
+                f"For a single tuple-named dimension, use dims=[{original_dims}]. "
+                f"For multiple dimensions, use {len(dims_tuple)}-dimensional data."
+            )
+        else:
+            raise ValueError(
+                "different number of dimensions on data "
+                f"and dims: {len(shape)} vs {len(dims_tuple)}"
+            )
     for d in dims_tuple:
         if not hashable(d):
             raise TypeError(f"Dimension {d} is not hashable")
@@ -321,6 +338,10 @@ class DataArray(
         to the number of dimensions. If this argument is omitted,
         dimension names are taken from ``coords`` (if possible) and
         otherwise default to ``['dim_0', ... 'dim_n']``.
+
+        Note: Tuples are treated as sequences, so ('a', 'b') means two
+        dimensions named 'a' and 'b'. To use a tuple as a single dimension
+        name, wrap it in a list: [('a', 'b')].
     name : str or None, optional
         Name of this array.
     attrs : dict_like or None, optional
