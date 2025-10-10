@@ -6929,11 +6929,18 @@ class Dataset(
             foo      (dim_0, dim_1) float64 48B 1.764 0.4002 0.9787 2.241 1.868 0.9773
             bar      (x) float64 16B 1.0 2.0
         """
+        from xarray.core.dataarray import DataArray
+
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
         variables = {
             k: maybe_wrap_array(v, func(v, *args, **kwargs))
             for k, v in self.data_vars.items()
+        }
+        # Convert non-DataArray values to DataArrays
+        variables = {
+            k: v if isinstance(v, DataArray) else DataArray(v)
+            for k, v in variables.items()
         }
         coord_vars, indexes = merge_coordinates_without_align(
             [v.coords for v in variables.values()]
