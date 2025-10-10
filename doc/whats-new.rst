@@ -285,6 +285,8 @@ New Features
 - ``compute=False`` is now supported by :py:meth:`DataTree.to_netcdf` and
   :py:meth:`DataTree.to_zarr`.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- The ``h5netcdf`` engine has support for pseudo ``NETCDF4_CLASSIC`` files, meaning variables and attributes are cast to supported types. Note that the saved files won't be recognized as genuine ``NETCDF4_CLASSIC`` files until ``h5netcdf`` adds support.   (:issue:`10676`, :pull:`10686`).
+  By `David Huard <https://github.com/huard>`_.
 - ``open_dataset`` will now correctly infer a path ending in ``.zarr/`` as zarr
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
