@@ -224,7 +224,7 @@ def test_repr_of_dataset(dataset: xr.Dataset) -> None:
     formatted = xarray_html_only_repr(dataset)
     # coords, attrs, and data_vars are expanded
     assert (
-        formatted.count("class='xr-section-summary-in' type='checkbox'  checked>") == 3
+        formatted.count("class='xr-section-summary-in' type='checkbox' checked />") == 3
     )
     # indexes is omitted
     assert "Indexes" not in formatted
@@ -243,7 +243,7 @@ def test_repr_of_dataset(dataset: xr.Dataset) -> None:
         formatted = xarray_html_only_repr(dataset)
         # coords, attrs, and data_vars are collapsed, indexes is shown & expanded
         assert (
-            formatted.count("class='xr-section-summary-in' type='checkbox'  checked>")
+            formatted.count("class='xr-section-summary-in' type='checkbox' checked />")
             == 1
         )
         assert "Indexes" in formatted
@@ -309,48 +309,24 @@ def test_nonstr_variable_repr_html() -> None:
 
 class TestDataTreeTruncatesNodes:
     def test_many_nodes(self) -> None:
-        # construct a datatree with 500 nodes
-        number_of_files = 20
-        number_of_groups = 25
+        number_of_files = 10
+        number_of_groups = 10
         tree_dict = {}
         for f in range(number_of_files):
             for g in range(number_of_groups):
                 tree_dict[f"file_{f}/group_{g}"] = xr.Dataset({"g": f * g})
 
         tree = xr.DataTree.from_dict(tree_dict)
-        with xr.set_options(display_style="html"):
-            result = tree._repr_html_()
 
-        assert "6/20" in result
-        for i in range(number_of_files):
-            if i < 3 or i >= (number_of_files - 3):
-                assert f"file_{i}</div>" in result
-            else:
-                assert f"file_{i}</div>" not in result
+        with xr.set_options(display_max_html_elements=25):
+            result = xarray_html_only_repr(tree)
+        assert result.count("file_0/group_9") == 1
+        assert result.count("file_1/group_0") == 0  # disabled
+        assert result.count("Too many items to display") == 9 + 10
 
-        assert "6/25" in result
-        for i in range(number_of_groups):
-            if i < 3 or i >= (number_of_groups - 3):
-                assert f"group_{i}</div>" in result
-            else:
-                assert f"group_{i}</div>" not in result
-
-        with xr.set_options(display_style="html", display_max_children=3):
-            result = tree._repr_html_()
-
-        assert "3/20" in result
-        for i in range(number_of_files):
-            if i < 2 or i >= (number_of_files - 1):
-                assert f"file_{i}</div>" in result
-            else:
-                assert f"file_{i}</div>" not in result
-
-        assert "3/25" in result
-        for i in range(number_of_groups):
-            if i < 2 or i >= (number_of_groups - 1):
-                assert f"group_{i}</div>" in result
-            else:
-                assert f"group_{i}</div>" not in result
+        with xr.set_options(display_max_html_elements=1000):
+            result = xarray_html_only_repr(tree)
+        assert result.count("Too many items to display") == 0
 
 
 class TestDataTreeInheritance:
