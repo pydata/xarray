@@ -813,7 +813,7 @@ def merge_trees(
         )
 
     node_lists: defaultdict[str, list[DataTree]] = defaultdict(list)
-    for tree in trees:
+    for tree in list(trees):
         for key, node in tree.subtree_with_keys:
             node_lists[key].append(node)
 
@@ -839,18 +839,6 @@ def merge_trees(
                 join=join,
                 combine_attrs=combine_attrs,
             )
-        # Remove inherited coordinates/indexes/dimensions.
-        for var_name in list(merge_result.coord_names):
-            if not any(var_name in node._coord_variables for node in nodes):
-                del merge_result.variables[var_name]
-                merge_result.coord_names.remove(var_name)
-        for index_name in list(merge_result.indexes):
-            if not any(index_name in node._node_indexes for node in nodes):
-                del merge_result.indexes[index_name]
-        for dim in list(merge_result.dims):
-            if not any(dim in node._node_dims for node in nodes):
-                del merge_result.dims[dim]
-
         merged_ds = Dataset._construct_direct(**merge_result._asdict())
         result[key] = DataTree(dataset=merged_ds)
 
