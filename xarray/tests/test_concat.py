@@ -13,7 +13,6 @@ from xarray import AlignmentError, DataArray, Dataset, Variable, concat, set_opt
 from xarray.core import dtypes, types
 from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import PandasIndex
-from xarray.datatree import DataTree
 from xarray.structure import merge
 from xarray.tests import (
     ConcatenatableArray,
@@ -1440,22 +1439,6 @@ def test_concat_index_not_same_dim() -> None:
         match=r"Cannot concatenate along dimension 'x' indexes with dimensions.*",
     ):
         concat([ds1, ds2], dim="x")
-
-
-class TestConcatDataTree:
-    def test_concat_simple(self) -> None:
-        ds1 = Dataset({"a": ("x", [1])})
-        dt1 = DataTree.from_dict({"foo": ds1})
-
-        ds2 = Dataset({"a": ("x", [2])})
-        dt2 = DataTree.from_dict({"foo": ds2})
-
-        actual = concat([dt1, dt2], dim="x")
-
-        expected_ds = Dataset({"a": ("x", [1, 2])})
-        expected = DataTree.from_dict({"foo": expected_ds})
-
-        assert_identical(actual, expected)
 
 
 class TestNewDefaults:

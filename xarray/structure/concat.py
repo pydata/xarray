@@ -10,7 +10,6 @@ from xarray.core import dtypes, utils
 from xarray.core.coordinates import Coordinates
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import Index, PandasIndex
-from xarray.core.treenode import group_subtrees
 from xarray.core.types import T_DataArray, T_Dataset, T_Variable
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
@@ -31,7 +30,6 @@ from xarray.util.deprecation_helpers import (
 )
 
 if TYPE_CHECKING:
-    from xarray.core.datatree import DataTree
     from xarray.core.types import (
         CombineAttrsOptions,
         CompatOptions,
@@ -43,21 +41,6 @@ if TYPE_CHECKING:
 
 
 # TODO: replace dim: Any by 1D array_likes
-@overload
-def concat(
-    objs: Iterable[DataTree],
-    dim: Hashable | T_Variable | T_DataArray | pd.Index | Any,
-    data_vars: T_DataVars | CombineKwargDefault = "minimal",
-    coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault = "minimal",
-    compat: CompatOptions = "override",
-    positions: Iterable[Iterable[int]] | None = None,
-    fill_value: object = dtypes.NA,
-    join: JoinOptions = "exact",
-    combine_attrs: CombineAttrsOptions = "override",
-    create_index_for_new_dim: bool = True,
-) -> DataTree: ...
-
-
 @overload
 def concat(
     objs: Iterable[T_Dataset],
@@ -282,7 +265,6 @@ def concat(
     # dimension already exists
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.datatree import DataTree
 
     try:
         first_obj, objs = utils.peek_at(objs)
@@ -296,20 +278,7 @@ def concat(
             f"compat={compat!r} invalid: must be 'broadcast_equals', 'equals', 'identical', 'no_conflicts' or 'override'"
         )
 
-    if isinstance(first_obj, DataTree):
-        return _datatree_concat(
-            objs,  # type: ignore[arg-type]
-            dim=dim,
-            data_vars=data_vars,
-            coords=coords,
-            compat=compat,
-            positions=positions,
-            fill_value=fill_value,
-            join=join,
-            combine_attrs=combine_attrs,
-            create_index_for_new_dim=create_index_for_new_dim,
-        )
-    elif isinstance(first_obj, DataArray):
+    if isinstance(first_obj, DataArray):
         return _dataarray_concat(
             objs,
             dim=dim,
@@ -340,82 +309,6 @@ def concat(
             "can only concatenate xarray Dataset and DataArray "
             f"objects, got {type(first_obj)}"
         )
-
-
-def _datatree_concat(
-    trees: Iterable[DataTree],
-    dim: Hashable | T_Variable | T_DataArray | pd.Index | Any,
-    data_vars: T_DataVars | CombineKwargDefault,
-    coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault,
-    compat: CompatOptions,
-    positions: Iterable[Iterable[int]] | None,
-    fill_value: object,
-    join: JoinOptions,
-    combine_attrs: CombineAttrsOptions,
-    create_index_for_new_dim: bool,
-) -> DataTree:
-    """Concatenate DataTree objects."""
-    from xarray.core.datatree import DataTree
-
-    if join != "exact":
-        raise NotImplementedError(
-            "Only `join='exact'` is supported for DataTree concat"
-        )
-    if data_vars != "minimal":
-        raise NotImplementedError(
-            "Only `data_vars='minimal'` is supported for DataTree concat"
-        )
-    if coords != "minimal":
-        raise NotImplementedError(
-            "Only `coords='minimal'` is supported for DataTree concat"
-        )
-    if fill_value is not dtypes.NA:
-        raise NotImplementedError("`fill_value` is not supported for DataTree concat")
-    if positions is not None:
-        raise NotImplementedError("`positions` is not supported for DataTree concat")
-
-    trees = list(trees)
-    if not all(isinstance(obj, DataTree) for obj in trees):
-        raise TypeError(
-            "concat does not support mixed type arguments when one argument "
-            f"is a DataTree: {trees}"
-        )
-
-    first_tree = trees[0]
-    for other_tree in trees[1:]:
-        if not first_tree.isomorphic(other_tree):
-            raise ValueError("All DataTree objects must be isomorphic")
-
-    dim_name, _ = _calc_concat_dim_index(dim)
-
-    all_dims = set()
-    for tree in trees:
-        for node in tree.subtree:
-            all_dims.update(node.dims)
-
-    if dim_name not in all_dims:
-        raise ValueError(
-            f"Dimension {dim_name!r} does not exist on any of the DataTree objects being concatenated."
-        )
-
-    concatenated = {}
-    for path, nodes in group_subtrees(*trees):
-        datasets = [node.to_dataset(inherit=False) for node in nodes]
-        concatenated_ds = concat(
-            datasets,
-            dim=dim,
-            data_vars=data_vars,
-            coords=coords,
-            compat=compat,
-            positions=positions,
-            fill_value=fill_value,
-            join=join,
-            combine_attrs=combine_attrs,
-            create_index_for_new_dim=create_index_for_new_dim,
-        )
-        concatenated[path] = concatenated_ds
-
-    return DataTree.from_dict(concatenated)
 
 
 def _calc_concat_dim_index(
