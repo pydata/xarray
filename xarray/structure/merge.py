@@ -795,7 +795,7 @@ def merge_core(
 
 
 def merge_trees(
-    trees: Iterable[DataTree],
+    trees: Sequence[DataTree],
     compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
     join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     fill_value: object = dtypes.NA,
@@ -813,7 +813,7 @@ def merge_trees(
         )
 
     node_lists: defaultdict[str, list[DataTree]] = defaultdict(list)
-    for tree in list(trees):
+    for tree in trees:
         for key, node in tree.subtree_with_keys:
             node_lists[key].append(node)
 
