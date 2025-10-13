@@ -229,6 +229,7 @@ def _get_chunk(  # type: ignore[no-untyped-def]
         for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape, strict=True)
     )
 
+    limit: int | None
     if _contains_cftime_datetimes(data):
         limit, dtype = fake_target_chunksize(data, chunkmanager.get_auto_chunk_size())
     else:
@@ -245,7 +246,7 @@ def _get_chunk(  # type: ignore[no-untyped-def]
 
     # Warn where requested chunks break preferred chunks, provided that the variable
     # contains data.
-    if data.size:  # type: ignore[union-attr]  # DuckArray protocol doesn't include 'size' - should it?
+    if data.size:  # type: ignore[unused-ignore,attr-defined]  # DuckArray protocol doesn't include 'size' - should it?
         for dim, size, chunk_sizes in zip(dims, shape, chunk_shape, strict=True):
             if preferred_chunk_sizes := preferred_chunks.get(dim):
                 disagreement = _get_breaks_cached(
