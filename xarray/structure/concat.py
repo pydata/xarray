@@ -603,7 +603,7 @@ def _parse_datasets(
 
 def _dataset_concat(
     datasets: Iterable[T_Dataset],
-    dim: str | T_Variable | T_DataArray | pd.Index,
+    dim: Hashable | T_Variable | T_DataArray | pd.Index,
     data_vars: T_DataVars | CombineKwargDefault,
     coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault,
     compat: CompatOptions | CombineKwargDefault,
@@ -851,7 +851,7 @@ def _dataset_concat(
 
 def _dataarray_concat(
     arrays: Iterable[T_DataArray],
-    dim: str | T_Variable | T_DataArray | pd.Index,
+    dim: Hashable | T_Variable | T_DataArray | pd.Index,
     data_vars: T_DataVars | Iterable[Hashable] | CombineKwargDefault,
     coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault,
     compat: CompatOptions | CombineKwargDefault,
