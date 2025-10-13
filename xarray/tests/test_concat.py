@@ -1796,3 +1796,10 @@ class TestConcatDataTree:
             data={"/child/a": ("x", [1, 2])}, coords={"/child/x": [0, 1]}
         )
         assert actual.identical(expected)
+
+    def test_concat_different_dims_in_different_child(self):
+        dt1 = DataTree.from_dict(coords={"/first/x": [1], "/second/x": [2]})
+        dt2 = DataTree.from_dict(coords={"/first/x": [3], "/second/x": [4]})
+        actual = concat([dt1, dt2], dim="x")
+        expected = DataTree.from_dict(coords={"/first/x": [1, 3], "/second/x": [2, 4]})
+        assert actual.identical(expected)
