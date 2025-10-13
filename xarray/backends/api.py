@@ -245,6 +245,9 @@ def _chunk_ds(
 
     variables = {}
     for name, var in backend_ds.variables.items():
+        if var._in_memory:
+            variables[name] = var
+            continue
         var_chunks = _get_chunk(
             var._data,
             chunks,

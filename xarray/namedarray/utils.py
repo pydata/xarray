@@ -215,7 +215,7 @@ def _get_chunk(  # type: ignore[no-untyped-def]
     from xarray.core.utils import emit_user_level_warning
     from xarray.structure.chunks import _get_breaks_cached
 
-    dims = dims or chunks.keys()
+    dims = chunks.keys() if dims is None else dims
     shape = data.shape
 
     # Determine the explicit requested chunks.
