@@ -211,6 +211,7 @@ def _get_chunk(  # type: ignore[no-untyped-def]
     """
     Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
     """
+    from xarray.core.common import _contains_cftime_datetimes
     from xarray.core.utils import emit_user_level_warning
     from xarray.structure.chunks import _get_breaks_cached
 
@@ -228,7 +229,11 @@ def _get_chunk(  # type: ignore[no-untyped-def]
         for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape, strict=True)
     )
 
-    limit, dtype = fake_target_chunksize(data, chunkmanager.get_auto_chunk_size())
+    if _contains_cftime_datetimes(data):
+        limit, dtype = fake_target_chunksize(data, chunkmanager.get_auto_chunk_size())
+    else:
+        limit = None
+        dtype = data.dtype
 
     chunk_shape = chunkmanager.normalize_chunks(
         chunk_shape,

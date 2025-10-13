@@ -346,6 +346,11 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         dask.array.Array.rechunk
         cubed.Array.rechunk
         """
+        from xarray.core.common import _contains_cftime_datetimes
+        from xarray.namedarray.utils import _get_chunk
+
+        if _contains_cftime_datetimes(data):
+            chunks = _get_chunk(data, chunks, self, preferred_chunks={})
         return data.rechunk(chunks, **kwargs)
 
     @abstractmethod
@@ -768,5 +773,5 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         """
 
         raise NotImplementedError(
-            "get_auto_chunk_size must be implemented by the chunk manager."
+            "For 'auto' rechunking of cftime arrays, get_auto_chunk_size must be implemented by the chunk manager"
         )
