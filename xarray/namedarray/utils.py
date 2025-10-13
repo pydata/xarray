@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import itertools
 import sys
 import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
@@ -210,8 +211,6 @@ def _get_chunk(  # type: ignore[no-untyped-def]
     """
     Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
     """
-    import itertools
-
     from xarray.core.utils import emit_user_level_warning
     from xarray.core.variable import IndexVariable, Variable
     from xarray.structure.chunks import _get_breaks_cached
@@ -237,8 +236,7 @@ def _get_chunk(  # type: ignore[no-untyped-def]
         for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape, strict=True)
     )
 
-    limit = chunkmanager.get_auto_chunk_size()
-    limit, var_dtype = fake_target_chunksize(var, limit)
+    limit, var_dtype = fake_target_chunksize(var, chunkmanager.get_auto_chunk_size())
 
     chunk_shape = chunkmanager.normalize_chunks(
         chunk_shape,
@@ -252,21 +250,18 @@ def _get_chunk(  # type: ignore[no-untyped-def]
     # contains data.
     if var.size:  # type: ignore[union-attr]  # DuckArray protocol doesn't include 'size' - should it?
         for dim, size, chunk_sizes in zip(dims, shape, chunk_shape, strict=True):
-            try:
-                preferred_chunk_sizes = preferred_chunks[dim]
-            except KeyError:
-                continue
-            disagreement = _get_breaks_cached(
-                size=size,
-                chunk_sizes=chunk_sizes,
-                preferred_chunk_sizes=preferred_chunk_sizes,
-            )
-            if disagreement:
-                emit_user_level_warning(
-                    "The specified chunks separate the stored chunks along "
-                    f'dimension "{dim}" starting at index {disagreement}. This could '
-                    "degrade performance. Instead, consider rechunking after loading.",
+            if preferred_chunk_sizes := preferred_chunks.get(dim):
+                disagreement = _get_breaks_cached(
+                    size=size,
+                    chunk_sizes=chunk_sizes,
+                    preferred_chunk_sizes=preferred_chunk_sizes,
                 )
+                if disagreement:
+                    emit_user_level_warning(
+                        "The specified chunks separate the stored chunks along "
+                        f'dimension "{dim}" starting at index {disagreement}. This could '
+                        "degrade performance. Instead, consider rechunking after loading.",
+                    )
 
     return dict(zip(dims, chunk_shape, strict=True))
 
