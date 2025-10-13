@@ -2118,7 +2118,7 @@ class DataTree(
 
         Parameters
         ----------
-        store : MutableMapping, str or Path, optional
+        store : zarr.storage.StoreLike
             Store or path to directory in file system
         mode : {{"w", "w-", "a", "r+", None}, default: "w-"
             Persistence mode: “w” means create (overwrite if exists); “w-” means create (fail if exists);
