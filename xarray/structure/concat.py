@@ -650,6 +650,9 @@ def _dataset_concat(
         _parse_datasets(datasets)
     )
     if preexisting_dim:
+        # When concatenating DataTree objects, a dimension may be pre-existing
+        # because it exists elsewhere on the trees, even if it does not exist
+        # on the dataset objects at this node.
         all_dims.add(dim_name)
     indexed_dim_names = set(dim_coords)
 
