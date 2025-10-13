@@ -20,6 +20,7 @@ from xarray import (
 )
 from xarray.core import dtypes, types
 from xarray.core.coordinates import Coordinates
+from xarray.core.datatree import DataTree
 from xarray.core.indexes import PandasIndex
 from xarray.structure import merge
 from xarray.tests import (
@@ -1636,3 +1637,162 @@ def test_concat_multi_dim_index() -> None:
         joins_lr: list[types.JoinOptions] = ["left", "right"]
         for join in joins_lr:
             actual = concat([ds1, ds2], dim="x", join=join)
+
+
+class TestConcatDataTree:
+    def test_concat_datatree_along_existing_dim(self):
+        dt1 = DataTree.from_dict(data={"/a": ("x", [1]), "/b": 3}, coords={"/x": [0]})
+        dt2 = DataTree.from_dict(data={"/a": ("x", [2]), "/b": 3}, coords={"/x": [1]})
+        expected = DataTree.from_dict(
+            data={"/a": ("x", [1, 2]), "/b": 3}, coords={"/x": [0, 1]}
+        )
+        actual = concat([dt1, dt2], dim="x", data_vars="minimal", coords="minimal")
+        assert actual.identical(expected)
+
+    def test_concat_datatree_along_existing_dim_defaults(self):
+        # scalar coordinate
+        dt1 = DataTree.from_dict(data={"/a": ("x", [1])}, coords={"/x": [0], "/b": 3})
+        dt2 = DataTree.from_dict(data={"/a": ("x", [2])}, coords={"/x": [1], "/b": 3})
+        expected = DataTree.from_dict(
+            data={"/a": ("x", [1, 2])}, coords={"/x": [0, 1], "b": 3}
+        )
+        actual = concat([dt1, dt2], dim="x")
+        assert actual.identical(expected)
+
+        # scalar data variable
+        dt1 = DataTree.from_dict(data={"/a": ("x", [1]), "/b": 3}, coords={"/x": [0]})
+        dt2 = DataTree.from_dict(data={"/a": ("x", [2]), "/b": 3}, coords={"/x": [1]})
+        expected = DataTree.from_dict(
+            data={"/a": ("x", [1, 2]), "/b": ("x", [3, 3])}, coords={"/x": [0, 1]}
+        )
+        with pytest.warns(
+            FutureWarning, match="will change from data_vars='all' to data_vars=None"
+        ):
+            actual = concat([dt1, dt2], dim="x")
+        assert actual.identical(expected)
+
+    def test_concat_datatree_isomorphic_error(self):
+        dt1 = DataTree.from_dict(data={"/data": ("x", [1]), "/a": None})
+        dt2 = DataTree.from_dict(data={"/data": ("x", [2]), "/b": None})
+        with pytest.raises(
+            ValueError, match="All trees must be isomorphic to be concatenated"
+        ):
+            concat([dt1, dt2], dim="x", data_vars="minimal", coords="minimal")
+
+    def test_concat_datatree_datavars_all(self):
+        dt1 = DataTree.from_dict(data={"/a": 1, "/c/b": ("y", [10])})
+        dt2 = DataTree.from_dict(data={"/a": 2, "/c/b": ("y", [20])})
+        dim = pd.Index([100, 200], name="x")
+        actual = concat([dt1, dt2], dim=dim, data_vars="all", coords="minimal")
+        expected = DataTree.from_dict(
+            data={
+                "/a": (("x",), [1, 2]),
+                "/c/b": (("x", "y"), [[10], [20]]),
+            },
+            coords={"/x": dim},
+        )
+        assert actual.identical(expected)
+
+    def test_concat_datatree_coords_all(self):
+        dt1 = DataTree.from_dict(data={"/child/d": ("y", [10])}, coords={"/c": 1})
+        dt2 = DataTree.from_dict(data={"/child/d": ("y", [10])}, coords={"/c": 2})
+        dim = pd.Index([0, 1], name="x")
+        actual = concat(
+            [dt1, dt2], dim=dim, data_vars="minimal", coords="all", compat="equals"
+        )
+        expected = DataTree.from_dict(
+            data={"/child/d": ("y", [10])},
+            coords={
+                "/c": (("x",), [1, 2]),
+                "/x": dim,
+                "/child/x": dim,
+            },
+        )
+        assert actual.identical(expected)
+
+    def test_concat_datatree_datavars_different(self):
+        dt1 = DataTree.from_dict(data={"/a": 0, "/b": 1})
+        dt2 = DataTree.from_dict(data={"/a": 0, "/b": 2})
+        dim = pd.Index([0, 1], name="x")
+        actual = concat(
+            [dt1, dt2],
+            dim=dim,
+            data_vars="different",
+            coords="minimal",
+            compat="equals",
+        )
+        expected = DataTree.from_dict(
+            data={"/a": 0, "/b": (("x",), [1, 2])}, coords={"/x": dim}
+        )
+        assert actual.identical(expected)
+
+    def test_concat_datatree_nodes(self):
+        dt1 = DataTree.from_dict(data={"/a/d": ("x", [1])}, coords={"/x": [0]})
+        dt2 = DataTree.from_dict(data={"/a/d": ("x", [2])}, coords={"/x": [1]})
+        actual = concat([dt1, dt2], dim="x", data_vars="minimal", coords="minimal")
+        expected = DataTree.from_dict(
+            data={"/a/d": ("x", [1, 2])}, coords={"/x": [0, 1]}
+        )
+        assert actual.identical(expected)
+
+    def test_concat_datatree_names(self):
+        dt1 = DataTree(Dataset({"a": ("x", [1])}), name="a")
+        dt2 = DataTree(Dataset({"a": ("x", [2])}), name="b")
+        result = concat(
+            [dt1, dt2], dim="x", data_vars="minimal", coords="minimal", compat="equals"
+        )
+        assert result.name == "a"
+        expected = DataTree(Dataset({"a": ("x", [1, 2])}), name="a")
+        assert result.identical(expected)
+
+        with pytest.raises(ValueError, match="DataTree names not identical"):
+            concat(
+                [dt1, dt2],
+                dim="x",
+                data_vars="minimal",
+                coords="minimal",
+                compat="identical",
+            )
+
+    def test_concat_along_new_dim_raises_for_minimal(self):
+        dt1 = DataTree.from_dict({"/a/d": 1})
+        dt2 = DataTree.from_dict({"/a/d": 2})
+        with pytest.raises(
+            ValueError, match="data_vars='minimal' and coords='minimal'"
+        ):
+            concat([dt1, dt2], dim="y", data_vars="minimal", coords="minimal")
+
+    def test_concat_data_in_child_only(self):
+        dt1 = DataTree.from_dict(
+            data={"/child/a": ("x", [1])}, coords={"/child/x": [0]}
+        )
+        dt2 = DataTree.from_dict(
+            data={"/child/a": ("x", [2])}, coords={"/child/x": [1]}
+        )
+        actual = concat([dt1, dt2], dim="x", data_vars="minimal", coords="minimal")
+        expected = DataTree.from_dict(
+            data={"/child/a": ("x", [1, 2])}, coords={"/child/x": [0, 1]}
+        )
+        assert actual.identical(expected)
+
+    def test_concat_data_in_child_only_defaults(self):
+        dt1 = DataTree.from_dict(
+            data={"/child/a": ("x", [1])}, coords={"/child/x": [0]}
+        )
+        dt2 = DataTree.from_dict(
+            data={"/child/a": ("x", [2])}, coords={"/child/x": [1]}
+        )
+        actual = concat([dt1, dt2], dim="x")
+        expected = DataTree.from_dict(
+            data={"/child/a": ("x", [1, 2])}, coords={"/child/x": [0, 1]}
+        )
+        assert actual.identical(expected)
+
+    def test_concat_data_in_child_new_dim(self):
+        dt1 = DataTree.from_dict(data={"/child/a": 1}, coords={"/child/x": 0})
+        dt2 = DataTree.from_dict(data={"/child/a": 2}, coords={"/child/x": 1})
+        actual = concat([dt1, dt2], dim="x")
+        expected = DataTree.from_dict(
+            data={"/child/a": ("x", [1, 2])}, coords={"/child/x": [0, 1]}
+        )
+        assert actual.identical(expected)
