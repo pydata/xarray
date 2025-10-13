@@ -246,10 +246,11 @@ def _chunk_ds(
     variables = {}
     for name, var in backend_ds.variables.items():
         var_chunks = _get_chunk(
-            var,
+            var._data,
             chunks,
             chunkmanager,
             preferred_chunks=var.encoding.get("preferred_chunks", {}),
+            dims=var.dims,
         )
         variables[name] = _maybe_chunk(
             name,
