@@ -103,7 +103,7 @@ def concat(
 
     Parameters
     ----------
-    objs : sequence of Dataset and DataArray
+    objs : sequence of DataArray, Dataset or DataTree
         xarray objects to concatenate together. Each object is expected to
         consist of variables and coordinates with matching shapes except for
         along the concatenated dimension.
@@ -194,7 +194,8 @@ def concat(
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
     create_index_for_new_dim : bool, default: True
-        Whether to create a new ``PandasIndex`` object when the objects being concatenated contain scalar variables named ``dim``.
+        Whether to create a new ``PandasIndex`` object when the objects being
+        concatenated contain scalar variables named ``dim``.
 
     Returns
     -------
