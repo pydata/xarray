@@ -76,6 +76,7 @@ from xarray.tests import (
     has_h5netcdf_1_4_0_or_above,
     has_netCDF4,
     has_numpy_2,
+    has_pydap,
     has_scipy,
     has_zarr,
     has_zarr_v3,
@@ -7269,7 +7270,6 @@ def test_zarr_entrypoint(tmp_path: Path) -> None:
 
 @requires_h5netcdf
 @requires_netCDF4
-@requires_pydap
 @requires_zarr
 def test_remote_url_backend_auto_detection() -> None:
     """
@@ -7302,12 +7302,6 @@ def test_remote_url_backend_auto_detection() -> None:
             "http://test.opendap.org/opendap/dap4/StaggeredGrid.nc4?dap4.ce=/time[0:1:0]",
             "netcdf4",
         ),
-        # DAP URLs without extensions - pydap wins
-        ("dap2://opendap.earthdata.nasa.gov/collections/dataset", "pydap"),
-        ("dap4://opendap.earthdata.nasa.gov/collections/dataset", "pydap"),
-        ("DAP2://example.com/dataset", "pydap"),  # uppercase scheme
-        ("DAP4://example.com/dataset", "pydap"),  # uppercase scheme
-        ("https://example.com/services/DAP2/dataset", "pydap"),  # uppercase in path
         # DAP URLs with .nc extensions (no query params) - netcdf4 wins (first in order)
         ("http://test.opendap.org/opendap/dap4/StaggeredGrid.nc4", "netcdf4"),
         ("https://example.com/DAP4/data.nc", "netcdf4"),
@@ -7318,6 +7312,23 @@ def test_remote_url_backend_auto_detection() -> None:
         engine = guess_engine(url)
         assert engine == expected_backend, (
             f"URL {url!r} should select {expected_backend!r} but got {engine!r}"
+        )
+
+    # DAP URLs without extensions - pydap wins if available, netcdf4 otherwise
+    # When pydap is not installed, netCDF4 should handle these DAP URLs
+    expected_dap_backend = "pydap" if has_pydap else "netcdf4"
+    dap_urls = [
+        "dap2://opendap.earthdata.nasa.gov/collections/dataset",
+        "dap4://opendap.earthdata.nasa.gov/collections/dataset",
+        "DAP2://example.com/dataset",  # uppercase scheme
+        "DAP4://example.com/dataset",  # uppercase scheme
+        "https://example.com/services/DAP2/dataset",  # uppercase in path
+    ]
+
+    for url in dap_urls:
+        engine = guess_engine(url)
+        assert engine == expected_dap_backend, (
+            f"URL {url!r} should select {expected_dap_backend!r} but got {engine!r}"
         )
 
     # URLs that should raise ValueError (no backend can open them)
