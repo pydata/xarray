@@ -50,6 +50,7 @@ from xarray.core.utils import (
     FrozenDict,
     close_on_error,
     is_remote_uri,
+    strip_uri_params,
     try_read_magic_number_from_path,
 )
 from xarray.core.variable import Variable
@@ -707,8 +708,6 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         # Helper to check if extension is netCDF
         def _has_netcdf_ext(path: str | os.PathLike, is_remote: bool = False) -> bool:
-            from xarray.core.utils import strip_uri_params
-
             path = str(path).rstrip("/")
             # For remote URIs, strip query parameters and fragments
             if is_remote:
