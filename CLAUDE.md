@@ -20,6 +20,18 @@ pre-commit run --all-files  # Includes ruff and other checks
 uv run dmypy run  # Type checking with mypy
 ```
 
+## Code Style Guidelines
+
+### Import Organization
+
+- **Always place imports at the top of the file** in the standard import section
+- Never add imports inside functions or nested scopes unless there's a specific
+  reason (e.g., circular import avoidance, optional dependencies in TYPE_CHECKING)
+- Group imports following PEP 8 conventions:
+  1. Standard library imports
+  2. Related third-party imports
+  3. Local application/library specific imports
+
 ## GitHub Interaction Guidelines
 
 - **NEVER impersonate the user on GitHub**, always sign off with something like
