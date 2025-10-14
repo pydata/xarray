@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
-from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Literal, TypeAlias, TypeVar, cast, overload
 
 import pandas as pd
 
 from xarray.core import dtypes
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
+from xarray.core.datatree import DataTree
 from xarray.core.utils import iterate_nested
 from xarray.structure.alignment import AlignmentError
 from xarray.structure.concat import concat
@@ -96,7 +97,7 @@ def _ensure_same_types(series, dim):
             raise TypeError(error_msg)
 
 
-def _infer_concat_order_from_coords(datasets):
+def _infer_concat_order_from_coords(datasets: list[Dataset] | list[DataTree]):
     concat_dims = []
     tile_ids = [() for ds in datasets]
 
@@ -163,10 +164,16 @@ def _infer_concat_order_from_coords(datasets):
                 ]
 
     if len(datasets) > 1 and not concat_dims:
-        raise ValueError(
-            "Could not find any dimension coordinates to use to "
-            "order the datasets for concatenation"
-        )
+        if any(isinstance(data, DataTree) for data in datasets):
+            raise ValueError(
+                "Did not find any dimension coordinates at root nodes "
+                "to order the DataTree objects for concatenation"
+            )
+        else:
+            raise ValueError(
+                "Could not find any dimension coordinates to use to "
+                "order the Dataset objects for concatenation"
+            )
 
     combined_ids = dict(zip(tile_ids, datasets, strict=True))
 
@@ -224,7 +231,7 @@ def _combine_nd(
 
     Parameters
     ----------
-    combined_ids : Dict[Tuple[int, ...]], xarray.Dataset]
+    combined_ids : Dict[Tuple[int, ...]], xarray.Dataset | xarray.DataTree]
         Structure containing all datasets to be concatenated with "tile_IDs" as
         keys, which specify position within the desired final combined result.
     concat_dims : sequence of str
@@ -235,7 +242,7 @@ def _combine_nd(
 
     Returns
     -------
-    combined_ds : xarray.Dataset
+    combined_ds : xarray.Dataset | xarray.DataTree
     """
 
     example_tile_id = next(iter(combined_ids.keys()))
@@ -399,12 +406,39 @@ def _nested_combine(
     return combined
 
 
-# Define type for arbitrarily-nested list of lists recursively:
-DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]
+# Define types for arbitrarily-nested list of lists
+DatasetHyperCube: TypeAlias = Dataset | Sequence["DatasetHyperCube"]
+DataTreeHyperCube: TypeAlias = DataTree | Sequence["DataTreeHyperCube"]
+
+
+@overload
+def combine_nested(
+    datasets: DatasetHyperCube,
+    concat_dim: str | DataArray | Sequence[str | DataArray | pd.Index | None] | None,
+    compat: str | CombineKwargDefault = ...,
+    data_vars: str | CombineKwargDefault = ...,
+    coords: str | CombineKwargDefault = ...,
+    fill_value: object = ...,
+    join: JoinOptions | CombineKwargDefault = ...,
+    combine_attrs: CombineAttrsOptions = ...,
+) -> Dataset: ...
+
+
+@overload
+def combine_nested(
+    datasets: DataTreeHyperCube,
+    concat_dim: str | DataArray | Sequence[str | DataArray | pd.Index | None] | None,
+    compat: str | CombineKwargDefault = ...,
+    data_vars: str | CombineKwargDefault = ...,
+    coords: str | CombineKwargDefault = ...,
+    fill_value: object = ...,
+    join: JoinOptions | CombineKwargDefault = ...,
+    combine_attrs: CombineAttrsOptions = ...,
+) -> DataTree: ...
 
 
 def combine_nested(
-    datasets: DATASET_HYPERCUBE,
+    datasets: DatasetHyperCube | DataTreeHyperCube,
     concat_dim: str | DataArray | Sequence[str | DataArray | pd.Index | None] | None,
     compat: str | CombineKwargDefault = _COMPAT_DEFAULT,
     data_vars: str | CombineKwargDefault = _DATA_VARS_DEFAULT,
@@ -412,7 +446,7 @@ def combine_nested(
     fill_value: object = dtypes.NA,
     join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     combine_attrs: CombineAttrsOptions = "drop",
-) -> Dataset:
+) -> Dataset | DataTree:
     """
     Explicitly combine an N-dimensional grid of datasets into one by using a
     succession of concat and merge operations along each dimension of the grid.
@@ -433,7 +467,7 @@ def combine_nested(
 
     Parameters
     ----------
-    datasets : list or nested list of Dataset
+    datasets : list or nested list of Dataset or DataTree
         Dataset objects to combine.
         If concatenation or merging along more than one dimension is desired,
         then datasets must be supplied in a nested list-of-lists.
@@ -527,7 +561,7 @@ def combine_nested(
 
     Returns
     -------
-    combined : xarray.Dataset
+    combined : xarray.Dataset or xarray.DataTree
 
     Examples
     --------
@@ -621,14 +655,18 @@ def combine_nested(
     concat
     merge
     """
-    mixed_datasets_and_arrays = any(
-        isinstance(obj, Dataset) for obj in iterate_nested(datasets)
-    ) and any(
+    any_datasets = any(isinstance(obj, Dataset) for obj in iterate_nested(datasets))
+    any_unnamed_arrays = any(
         isinstance(obj, DataArray) and obj.name is None
         for obj in iterate_nested(datasets)
     )
-    if mixed_datasets_and_arrays:
+    if any_datasets and any_unnamed_arrays:
         raise ValueError("Can't combine datasets with unnamed arrays.")
+
+    any_datatrees = any(isinstance(obj, DataTree) for obj in iterate_nested(datasets))
+    all_datatrees = all(isinstance(obj, DataTree) for obj in iterate_nested(datasets))
+    if any_datatrees and not all_datatrees:
+        raise ValueError("Can't combine a mix of DataTree and non-DataTree objects.")
 
     if isinstance(concat_dim, str | DataArray) or concat_dim is None:
         concat_dim = [concat_dim]
@@ -988,6 +1026,10 @@ def combine_by_coords(
     Finally, if you attempt to combine a mix of unnamed DataArrays with either named
     DataArrays or Datasets, a ValueError will be raised (as this is an ambiguous operation).
     """
+    if any(isinstance(data_object, DataTree) for data_object in data_objects):
+        raise NotImplementedError(
+            "combine_by_coords() does not yet support DataTree objects."
+        )
 
     if not data_objects:
         return Dataset()
@@ -1018,7 +1060,7 @@ def combine_by_coords(
             # Must be a mix of unnamed dataarrays with either named dataarrays or with datasets
             # Can't combine these as we wouldn't know whether to merge or concatenate the arrays
             raise ValueError(
-                "Can't automatically combine unnamed DataArrays with either named DataArrays or Datasets."
+                "Can't automatically combine unnamed DataArrays with named DataArrays or Datasets."
             )
     else:
         # Promote any named DataArrays to single-variable Datasets to simplify combining

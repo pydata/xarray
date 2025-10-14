@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from itertools import product
 
 import numpy as np
@@ -8,6 +9,7 @@ import pytest
 from xarray import (
     DataArray,
     Dataset,
+    DataTree,
     MergeError,
     combine_by_coords,
     combine_nested,
@@ -766,6 +768,20 @@ class TestNestedCombine:
         ):
             combine_nested(objs, "x")
 
+    def test_nested_combine_mixed_datatrees_and_datasets(self):
+        objs = [DataTree.from_dict({"foo": 0}), Dataset({"foo": 1})]
+        with pytest.raises(
+            ValueError,
+            match=r"Can't combine a mix of DataTree and non-DataTree objects.",
+        ):
+            combine_nested(objs, concat_dim="x")
+
+    def test_datatree(self):
+        objs = [DataTree.from_dict({"foo": 0}), DataTree.from_dict({"foo": 1})]
+        expected = DataTree.from_dict({"foo": ("x", [0, 1])})
+        actual = combine_nested(objs, concat_dim="x")
+        assert expected.identical(actual)
+
 
 class TestCombineDatasetsbyCoords:
     def test_combine_by_coords(self):
@@ -1209,6 +1225,16 @@ class TestCombineMixedObjectsbyCoords:
         actual = combine_by_coords([named_da1, named_da2], join="outer")
         expected = merge([named_da1, named_da2], compat="no_conflicts", join="outer")
         assert_identical(expected, actual)
+
+    def test_combine_by_coords_datatree(self):
+        tree = DataTree.from_dict({"/nested/foo": ("x", [10])}, coords={"x": [1]})
+        with pytest.raises(
+            NotImplementedError,
+            match=re.escape(
+                "combine_by_coords() does not yet support DataTree objects."
+            ),
+        ):
+            combine_by_coords([tree])
 
 
 class TestNewDefaults:
