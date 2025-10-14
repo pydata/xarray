@@ -728,7 +728,7 @@ class NamedNode(TreeNode):
 
         Raises a KeyError if there is no object at the given path.
         """
-        path = TreePath(self.path).joinpath(path)
+        path = TreePath(self.path) / path
         assert path.root
         current_node = self.root
         _, *parts = path.parts
@@ -769,7 +769,7 @@ class NamedNode(TreeNode):
             If node cannot be reached, and new_nodes_along_path=False.
             Or if a node already exists at the specified path, and allow_overwrite=False.
         """
-        path = TreePath(self.path).joinpath(path)
+        path = TreePath(self.path) / path
 
         if not path.name:
             raise ValueError("Can't set an item under a path which has no name")
