@@ -224,7 +224,9 @@ class PydapBackendEntrypoint(BackendEntrypoint):
 
         # For standard remote URIs, check for DAP indicators in path
         if is_remote_uri(filename_or_obj):
-            return "/dap2/" in url_lower or "/dap4/" in url_lower
+            return (
+                "/dap2/" in url_lower or "/dap4/" in url_lower or "/dodsC/" in url_lower
+            )
 
         return False
 
