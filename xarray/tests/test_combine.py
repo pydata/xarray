@@ -626,8 +626,8 @@ class TestNestedCombine:
                 datasets,
                 concat_dim=["dim1", "dim2"],
                 data_vars="all",
-                combine_attrs=combine_attrs,  # type: ignore[arg-type]
-            )
+                combine_attrs=combine_attrs,
+            )  # type: ignore[call-overload]
             assert_identical(result, expected)
 
     def test_combine_nested_missing_data_new_dim(self):
@@ -766,7 +766,7 @@ class TestNestedCombine:
         with pytest.raises(
             ValueError, match=r"Can't combine datasets with unnamed arrays."
         ):
-            combine_nested(objs, "x")
+            combine_nested(objs, "x")  # type: ignore[arg-type]
 
     def test_nested_combine_mixed_datatrees_and_datasets(self):
         objs = [DataTree.from_dict({"foo": 0}), Dataset({"foo": 1})]
@@ -774,7 +774,7 @@ class TestNestedCombine:
             ValueError,
             match=r"Can't combine a mix of DataTree and non-DataTree objects.",
         ):
-            combine_nested(objs, concat_dim="x")
+            combine_nested(objs, concat_dim="x")  # type: ignore[arg-type]
 
     def test_datatree(self):
         objs = [DataTree.from_dict({"foo": 0}), DataTree.from_dict({"foo": 1})]
@@ -1234,7 +1234,7 @@ class TestCombineMixedObjectsbyCoords:
                 "combine_by_coords() does not yet support DataTree objects."
             ),
         ):
-            combine_by_coords([tree])
+            combine_by_coords([tree])  # type: ignore[list-item]
 
 
 class TestNewDefaults:

@@ -13,8 +13,9 @@ v2025.10.2 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
-- :py:func:`merge` and :py:func:`concat` now support :py:class:`DataTree`
-  objects (:issue:`9790`, :issue:`9778`).
+- :py:func:`merge`, :py:func:`concat` and  :py:func:`combine_nested` now
+  support :py:class:`DataTree` objects (:issue:`9790`, :issue:`9778`,
+  :pull:`10849`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking Changes

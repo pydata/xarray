@@ -99,7 +99,7 @@ def _ensure_same_types(series, dim):
 
 def _infer_concat_order_from_coords(datasets: list[Dataset] | list[DataTree]):
     concat_dims = []
-    tile_ids = [() for ds in datasets]
+    tile_ids: list[tuple[int, ...]] = [() for ds in datasets]
 
     # All datasets have same variables because they've been grouped as such
     ds0 = datasets[0]
@@ -107,17 +107,18 @@ def _infer_concat_order_from_coords(datasets: list[Dataset] | list[DataTree]):
         # Check if dim is a coordinate dimension
         if dim in ds0:
             # Need to read coordinate values to do ordering
-            indexes = [ds._indexes.get(dim) for ds in datasets]
-            if any(index is None for index in indexes):
-                error_msg = (
-                    f"Every dimension requires a corresponding 1D coordinate "
-                    f"and index for inferring concatenation order but the "
-                    f"coordinate '{dim}' has no corresponding index"
-                )
-                raise ValueError(error_msg)
-
-            # TODO (benbovy, flexible indexes): support flexible indexes?
-            indexes = [index.to_pandas_index() for index in indexes]
+            indexes: list[pd.Index] = []
+            for ds in datasets:
+                index = ds._indexes.get(dim)
+                if index is None:
+                    error_msg = (
+                        f"Every dimension requires a corresponding 1D coordinate "
+                        f"and index for inferring concatenation order but the "
+                        f"coordinate '{dim}' has no corresponding index"
+                    )
+                    raise ValueError(error_msg)
+                # TODO (benbovy, flexible indexes): support flexible indexes?
+                indexes.append(index.to_pandas_index())
 
             # If dimension coordinate values are same on every dataset then
             # should be leaving this dimension alone (it's just a "bystander")
@@ -154,7 +155,7 @@ def _infer_concat_order_from_coords(datasets: list[Dataset] | list[DataTree]):
                 rank = series.rank(
                     method="dense", ascending=ascending, numeric_only=False
                 )
-                order = rank.astype(int).values - 1
+                order = (rank.astype(int).values - 1).tolist()
 
                 # Append positions along extra dimension to structure which
                 # encodes the multi-dimensional concatenation order
@@ -406,15 +407,34 @@ def _nested_combine(
     return combined
 
 
-# Define types for arbitrarily-nested list of lists
-DatasetHyperCube: TypeAlias = Dataset | Sequence["DatasetHyperCube"]
-DataTreeHyperCube: TypeAlias = DataTree | Sequence["DataTreeHyperCube"]
+# Define types for arbitrarily-nested list of lists.
+# Mypy doesn't seem to handle overloads properly with recursive types, so we
+# explicitly expand the first handful of levels of recursion.
+DatasetLike: TypeAlias = DataArray | Dataset
+DatasetHyperCube: TypeAlias = (
+    DatasetLike
+    | Sequence[DatasetLike]
+    | Sequence[Sequence[DatasetLike]]
+    | Sequence[Sequence[Sequence[DatasetLike]]]
+    | Sequence[Sequence[Sequence[Sequence[DatasetLike]]]]
+)
+DataTreeHyperCube: TypeAlias = (
+    DataTree
+    | Sequence[DataTree]
+    | Sequence[Sequence[DataTree]]
+    | Sequence[Sequence[Sequence[DataTree]]]
+    | Sequence[Sequence[Sequence[Sequence[DataTree]]]]
+)
 
 
 @overload
 def combine_nested(
     datasets: DatasetHyperCube,
-    concat_dim: str | DataArray | Sequence[str | DataArray | pd.Index | None] | None,
+    concat_dim: str
+    | DataArray
+    | list[str]
+    | Sequence[str | DataArray | pd.Index | None]
+    | None,
     compat: str | CombineKwargDefault = ...,
     data_vars: str | CombineKwargDefault = ...,
     coords: str | CombineKwargDefault = ...,
@@ -427,7 +447,11 @@ def combine_nested(
 @overload
 def combine_nested(
     datasets: DataTreeHyperCube,
-    concat_dim: str | DataArray | Sequence[str | DataArray | pd.Index | None] | None,
+    concat_dim: str
+    | DataArray
+    | list[str]
+    | Sequence[str | DataArray | pd.Index | None]
+    | None,
     compat: str | CombineKwargDefault = ...,
     data_vars: str | CombineKwargDefault = ...,
     coords: str | CombineKwargDefault = ...,
@@ -439,7 +463,11 @@ def combine_nested(
 
 def combine_nested(
     datasets: DatasetHyperCube | DataTreeHyperCube,
-    concat_dim: str | DataArray | Sequence[str | DataArray | pd.Index | None] | None,
+    concat_dim: str
+    | DataArray
+    | list[str]
+    | Sequence[str | DataArray | pd.Index | None]
+    | None,
     compat: str | CombineKwargDefault = _COMPAT_DEFAULT,
     data_vars: str | CombineKwargDefault = _DATA_VARS_DEFAULT,
     coords: str | CombineKwargDefault = _COORDS_DEFAULT,
@@ -467,7 +495,7 @@ def combine_nested(
 
     Parameters
     ----------
-    datasets : list or nested list of Dataset or DataTree
+    datasets : list or nested list of Dataset, DataArray or DataTree
         Dataset objects to combine.
         If concatenation or merging along more than one dimension is desired,
         then datasets must be supplied in a nested list-of-lists.
@@ -668,13 +696,16 @@ def combine_nested(
     if any_datatrees and not all_datatrees:
         raise ValueError("Can't combine a mix of DataTree and non-DataTree objects.")
 
-    if isinstance(concat_dim, str | DataArray) or concat_dim is None:
-        concat_dim = [concat_dim]
+    concat_dims = (
+        [concat_dim]
+        if isinstance(concat_dim, str | DataArray) or concat_dim is None
+        else concat_dim
+    )
 
     # The IDs argument tells _nested_combine that datasets aren't yet sorted
     return _nested_combine(
         datasets,
-        concat_dims=concat_dim,
+        concat_dims=concat_dims,
         compat=compat,
         data_vars=data_vars,
         coords=coords,
