@@ -216,8 +216,12 @@ class H5NetCDFStore(WritableCFDataStore):
             kwargs.update(driver_kwds)
         if phony_dims is not None:
             kwargs["phony_dims"] = phony_dims
-        if format is not None and Version(h5netcdf.__version__) > Version("1.6.4"):
+        if Version(h5netcdf.__version__) > Version("1.6.4"):
             kwargs["format"] = format
+        elif format == "NETCDF4_CLASSIC":
+            raise ValueError(
+                "h5netcdf >= 1.7.0 is required to save output in NETCDF4_CLASSIC format."
+            )
 
         if lock is None:
             if mode == "r":
@@ -343,8 +347,6 @@ class H5NetCDFStore(WritableCFDataStore):
         """
         if self.format == "NETCDF4_CLASSIC":
             value = encode_nc3_attr_value(value)
-            if isinstance(value, bytes):
-                value = np.bytes_(value)
         return value
 
     def set_attribute(self, key, value):

@@ -89,6 +89,7 @@ from xarray.tests import (
     requires_fsspec,
     requires_h5netcdf,
     requires_h5netcdf_1_4_0_or_above,
+    requires_h5netcdf_1_7_0_or_above,
     requires_h5netcdf_or_netCDF4,
     requires_h5netcdf_ros3,
     requires_iris,
@@ -4748,7 +4749,7 @@ class TestNetCDF4ClassicViaNetCDF4Data(NetCDF3Only, CFEncodedBase):
             assert ds._h5file.attrs["foo"].dtype == np.dtype("S3")
 
 
-@requires_h5netcdf
+@requires_h5netcdf_1_7_0_or_above
 class TestNetCDF4ClassicViaH5NetCDFData(TestNetCDF4ClassicViaNetCDF4Data):
     engine: T_NetcdfEngine = "h5netcdf"
     file_format: T_NetcdfTypes = "NETCDF4_CLASSIC"
