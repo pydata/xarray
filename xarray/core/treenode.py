@@ -21,8 +21,40 @@ class NotFoundInTreeError(ValueError):
     """Raised when operation can't be completed because one node is not part of the expected tree."""
 
 
-class NodePath(PurePosixPath):
+class TreePath(PurePosixPath):
     """Represents a path from one node to another within a tree."""
+
+    def __new__(cls, *pathsegments):
+        unnormalized = super().__new__(cls)
+        unnormalized.__init__(*pathsegments)
+
+        # TreePath does not support symlinks, so we can resolve segments like
+        # "." and ".."
+        if unnormalized.is_absolute():
+            parts_without_root = unnormalized.parts[1:]
+        else:
+            parts_without_root = unnormalized.parts
+        parts = []
+        for part in parts_without_root:
+            if part == "..":
+                if not parts or parts[-1] == "..":
+                    if unnormalized.is_absolute():
+                        raise ValueError(
+                            f"path accesses node before root: {unnormalized}"
+                        )
+                    parts.append(part)
+                else:
+                    parts.pop()  # remove parent
+            elif part not in ("", "."):
+                parts.append(part)
+
+        if unnormalized.is_absolute():
+            parts = ["/"] + parts
+
+        normalized = super().__new__(cls)
+        normalized.__init__(*parts)
+
+        return normalized
 
     def __init__(self, *pathsegments):
         if sys.version_info >= (3, 12):
@@ -30,11 +62,11 @@ class NodePath(PurePosixPath):
         else:
             super().__new__(PurePosixPath, *pathsegments)
         if self.drive:
-            raise ValueError("NodePaths cannot have drives")
+            raise ValueError("TreePaths cannot have drives")
 
         if self.root not in ["/", ""]:
             raise ValueError(
-                'Root of NodePath can only be either "/" or "", with "" meaning the path is relative.'
+                'Root of TreePath can only be either "/" or "", with "" meaning the path is relative.'
             )
         # TODO should we also forbid suffixes to avoid node names with dots in them?
 
@@ -90,7 +122,8 @@ class TreeNode:
     @parent.setter
     def parent(self, new_parent: Self) -> None:
         raise AttributeError(
-            "Cannot set parent attribute directly, you must modify the children of the other node instead using dict-like syntax"
+            "Cannot set parent attribute directly, you must modify the children of "
+            "the other node instead using dict-like syntax"
         )
 
     def _set_parent(
@@ -425,7 +458,7 @@ class TreeNode:
         DataTree.descendants
         group_subtrees
         """
-        queue = collections.deque([(NodePath(), self)])
+        queue = collections.deque([(TreePath(), self)])
         while queue:
             path, node = queue.popleft()
             yield str(path), node
@@ -529,39 +562,6 @@ class TreeNode:
         else:
             return default
 
-    # TODO `._walk` method to be called by both `_get_item` and `_set_item`
-
-    def _get_item(self, path: str | NodePath) -> Self | DataArray:
-        """
-        Returns the object lying at the given path.
-
-        Raises a KeyError if there is no object at the given path.
-        """
-        if isinstance(path, str):
-            path = NodePath(path)
-
-        if path.root:
-            current_node = self.root
-            _root, *parts = list(path.parts)
-        else:
-            current_node = self
-            parts = list(path.parts)
-
-        for part in parts:
-            if part == "..":
-                if current_node.parent is None:
-                    raise KeyError(f"Could not find node at {path}")
-                else:
-                    current_node = current_node.parent
-            elif part in ("", "."):
-                pass
-            else:
-                child = current_node.get(part)
-                if child is None:
-                    raise KeyError(f"Could not find node at {path}")
-                current_node = child
-        return current_node
-
     def _set(self, key: str, val: Any) -> None:
         """
         Set the child node with the specified key to value.
@@ -570,81 +570,6 @@ class TreeNode:
         """
         new_children = {**self.children, key: val}
         self.children = new_children
-
-    def _set_item(
-        self,
-        path: str | NodePath,
-        item: Any,
-        new_nodes_along_path: bool = False,
-        allow_overwrite: bool = True,
-    ) -> None:
-        """
-        Set a new item in the tree, overwriting anything already present at that path.
-
-        The given value either forms a new node of the tree or overwrites an
-        existing item at that location.
-
-        Parameters
-        ----------
-        path
-        item
-        new_nodes_along_path : bool
-            If true, then if necessary new nodes will be created along the
-            given path, until the tree can reach the specified location.
-        allow_overwrite : bool
-            Whether or not to overwrite any existing node at the location given
-            by path.
-
-        Raises
-        ------
-        KeyError
-            If node cannot be reached, and new_nodes_along_path=False.
-            Or if a node already exists at the specified path, and allow_overwrite=False.
-        """
-        if isinstance(path, str):
-            path = NodePath(path)
-
-        if not path.name:
-            raise ValueError("Can't set an item under a path which has no name")
-
-        if path.root:
-            # absolute path
-            current_node = self.root
-            _root, *parts, name = path.parts
-        else:
-            # relative path
-            current_node = self
-            *parts, name = path.parts
-
-        if parts:
-            # Walk to location of new node, creating intermediate node objects as we go if necessary
-            for part in parts:
-                if part == "..":
-                    if current_node.parent is None:
-                        # We can't create a parent if `new_nodes_along_path=True` as we wouldn't know what to name it
-                        raise KeyError(f"Could not reach node at path {path}")
-                    else:
-                        current_node = current_node.parent
-                elif part in ("", "."):
-                    pass
-                elif part in current_node.children:
-                    current_node = current_node.children[part]
-                elif new_nodes_along_path:
-                    # Want child classes (i.e. DataTree) to populate tree with their own types
-                    new_node = type(self)()
-                    current_node._set(part, new_node)
-                    current_node = current_node.children[part]
-                else:
-                    raise KeyError(f"Could not reach node at path {path}")
-
-        if name in current_node.children:
-            # Deal with anything already existing at this location
-            if allow_overwrite:
-                current_node._set(name, item)
-            else:
-                raise KeyError(f"Already a node object at path {path}")
-        else:
-            current_node._set(name, item)
 
     def __delitem__(self, key: str) -> None:
         """Remove a child node from this tree object."""
@@ -750,7 +675,7 @@ class NamedNode(TreeNode):
                 "Cannot find relative path because nodes do not lie within the same tree"
             )
 
-        this_path = NodePath(self.path)
+        this_path = TreePath(self.path)
         if any(other.path == parent.path for parent in (self, *self.parents)):
             return str(this_path.relative_to(other.path))
         else:
@@ -778,7 +703,7 @@ class NamedNode(TreeNode):
             "Cannot find common ancestor because nodes do not lie within the same tree"
         )
 
-    def _path_to_ancestor(self, ancestor: Self) -> NodePath:
+    def _path_to_ancestor(self, ancestor: Self) -> TreePath:
         """Return the relative path from this node to the given ancestor node"""
 
         if not self.same_tree(ancestor):
@@ -793,7 +718,87 @@ class NamedNode(TreeNode):
         parents_paths = [parent.path for parent in (self, *self.parents)]
         generation_gap = list(parents_paths).index(ancestor.path)
         path_upwards = "../" * generation_gap if generation_gap > 0 else "."
-        return NodePath(path_upwards)
+        return TreePath(path_upwards)
+
+    # TODO `._walk` method to be called by both `_get_item` and `_set_item`
+
+    def _get_item(self, path: str | TreePath) -> Self | DataArray:
+        """
+        Returns the object lying at the given path.
+
+        Raises a KeyError if there is no object at the given path.
+        """
+        path = TreePath(self.path).joinpath(path)
+        assert path.root
+        current_node = self.root
+        _, *parts = path.parts
+        for part in parts:
+            child = current_node.get(part)
+            if child is None:
+                raise KeyError(f"Could not find node at {path}")
+            current_node = child
+        return current_node
+
+    def _set_item(
+        self,
+        path: str | TreePath,
+        item: Any,
+        new_nodes_along_path: bool = False,
+        allow_overwrite: bool = True,
+    ) -> None:
+        """
+        Set a new item in the tree, overwriting anything already present at that path.
+
+        The given value either forms a new node of the tree or overwrites an
+        existing item at that location.
+
+        Parameters
+        ----------
+        path
+        item
+        new_nodes_along_path : bool
+            If true, then if necessary new nodes will be created along the
+            given path, until the tree can reach the specified location.
+        allow_overwrite : bool
+            Whether or not to overwrite any existing node at the location given
+            by path.
+
+        Raises
+        ------
+        KeyError
+            If node cannot be reached, and new_nodes_along_path=False.
+            Or if a node already exists at the specified path, and allow_overwrite=False.
+        """
+        path = TreePath(self.path).joinpath(path)
+
+        if not path.name:
+            raise ValueError("Can't set an item under a path which has no name")
+
+        assert path.root
+        current_node = self.root
+        _, *parts, name = path.parts
+
+        if parts:
+            # Walk to location of new node, creating intermediate node objects as we go if necessary
+            for part in parts:
+                if part in current_node.children:
+                    current_node = current_node.children[part]
+                elif new_nodes_along_path:
+                    # Want child classes (i.e. DataTree) to populate tree with their own types
+                    new_node = type(self)()
+                    current_node._set(part, new_node)
+                    current_node = current_node.children[part]
+                else:
+                    raise KeyError(f"Could not reach node at path {path}")
+
+        if name in current_node.children:
+            # Deal with anything already existing at this location
+            if allow_overwrite:
+                current_node._set(name, item)
+            else:
+                raise KeyError(f"Already a node object at path {path}")
+        else:
+            current_node._set(name, item)
 
 
 class TreeIsomorphismError(ValueError):
@@ -839,7 +844,7 @@ def group_subtrees(
         raise TypeError("must pass at least one tree object")
 
     # https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
-    queue = collections.deque([(NodePath(), trees)])
+    queue = collections.deque([(TreePath(), trees)])
 
     while queue:
         path, active_nodes = queue.popleft()

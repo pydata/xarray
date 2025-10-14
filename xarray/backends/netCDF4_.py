@@ -833,7 +833,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.backends.common import _iter_nc_groups
-        from xarray.core.treenode import NodePath
+        from xarray.core.treenode import TreePath
 
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
@@ -850,9 +850,9 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         # Check for a group and make it a parent if it exists
         if group:
-            parent = NodePath("/") / NodePath(group)
+            parent = TreePath("/") / TreePath(group)
         else:
-            parent = NodePath("/")
+            parent = TreePath("/")
 
         manager = store._manager
         groups_dict = {}
@@ -871,9 +871,9 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                     decode_timedelta=decode_timedelta,
                 )
             if group:
-                group_name = str(NodePath(path_group).relative_to(parent))
+                group_name = str(TreePath(path_group).relative_to(parent))
             else:
-                group_name = str(NodePath(path_group))
+                group_name = str(TreePath(path_group))
             groups_dict[group_name] = group_ds
 
         return groups_dict

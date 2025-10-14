@@ -311,7 +311,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         verify=None,
         user_charset=None,
     ) -> dict[str, Dataset]:
-        from xarray.core.treenode import NodePath
+        from xarray.core.treenode import TreePath
 
         filename_or_obj = _normalize_path(filename_or_obj)
         store = PydapDataStore.open(
@@ -325,9 +325,9 @@ class PydapBackendEntrypoint(BackendEntrypoint):
 
         # Check for a group and make it a parent if it exists
         if group:
-            parent = str(NodePath("/") / NodePath(group))
+            parent = str(TreePath("/") / TreePath(group))
         else:
-            parent = str(NodePath("/"))
+            parent = str(TreePath("/"))
 
         groups_dict = {}
         group_names = [parent]
@@ -365,7 +365,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
 
             Groups = group_fqn(store.ds)
         group_names += [
-            str(NodePath(path_to_group) / NodePath(group))
+            str(TreePath(path_to_group) / TreePath(group))
             for group, path_to_group in Groups.items()
         ]
         for path_group in group_names:
@@ -384,9 +384,9 @@ class PydapBackendEntrypoint(BackendEntrypoint):
                     decode_timedelta=decode_timedelta,
                 )
             if group:
-                group_name = str(NodePath(path_group).relative_to(parent))
+                group_name = str(TreePath(path_group).relative_to(parent))
             else:
-                group_name = str(NodePath(path_group))
+                group_name = str(TreePath(path_group))
             groups_dict[group_name] = group_ds
 
         return groups_dict

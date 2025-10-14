@@ -598,7 +598,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.backends.common import _iter_nc_groups
-        from xarray.core.treenode import NodePath
+        from xarray.core.treenode import TreePath
         from xarray.core.utils import close_on_error
 
         # Keep this message for some versions
@@ -620,9 +620,9 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         # Check for a group and make it a parent if it exists
         if group:
-            parent = NodePath("/") / NodePath(group)
+            parent = TreePath("/") / TreePath(group)
         else:
-            parent = NodePath("/")
+            parent = TreePath("/")
 
         manager = store._manager
         groups_dict = {}
@@ -642,9 +642,9 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
                 )
 
             if group:
-                group_name = str(NodePath(path_group).relative_to(parent))
+                group_name = str(TreePath(path_group).relative_to(parent))
             else:
-                group_name = str(NodePath(path_group))
+                group_name = str(TreePath(path_group))
             groups_dict[group_name] = group_ds
 
         # only warn if phony_dims exist in file
