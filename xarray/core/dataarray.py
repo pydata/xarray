@@ -118,6 +118,7 @@ if TYPE_CHECKING:
         T_ChunkDimFreq,
         T_ChunksFreq,
         T_Xarray,
+        ZarrStoreLike,
     )
     from xarray.groupers import Grouper, Resampler
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
@@ -4253,7 +4254,7 @@ class DataArray(
     @overload
     def to_zarr(
         self,
-        store: MutableMapping | str | PathLike[str] | None = None,
+        store: ZarrStoreLike | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
         synchronizer=None,
@@ -4277,7 +4278,7 @@ class DataArray(
     @overload
     def to_zarr(
         self,
-        store: MutableMapping | str | PathLike[str] | None = None,
+        store: ZarrStoreLike | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
         synchronizer=None,
@@ -4299,7 +4300,7 @@ class DataArray(
 
     def to_zarr(
         self,
-        store: MutableMapping | str | PathLike[str] | None = None,
+        store: ZarrStoreLike | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
         synchronizer=None,
@@ -4336,7 +4337,7 @@ class DataArray(
 
         Parameters
         ----------
-        store : MutableMapping, str or path-like, optional
+        store : zarr.storage.StoreLike, optional
             Store or path to directory in local or remote file system.
         chunk_store : MutableMapping, str or path-like, optional
             Store or path to directory in local or remote file system only for Zarr
