@@ -233,6 +233,10 @@ has_h5netcdf_1_4_0_or_above, requires_h5netcdf_1_4_0_or_above = _importorskip(
     "h5netcdf", "1.4.0.dev"
 )
 
+has_h5netcdf_1_7_0_or_above, requires_h5netcdf_1_7_0_or_above = _importorskip(
+    "h5netcdf", "1.7.0.dev"
+)
+
 has_netCDF4_1_7_0_or_above, requires_netCDF4_1_7_0_or_above = _importorskip(
     "netCDF4", "1.7.0"
 )

@@ -90,6 +90,7 @@ from xarray.tests import (
     requires_fsspec,
     requires_h5netcdf,
     requires_h5netcdf_1_4_0_or_above,
+    requires_h5netcdf_1_7_0_or_above,
     requires_h5netcdf_or_netCDF4,
     requires_h5netcdf_ros3,
     requires_iris,
@@ -461,6 +462,7 @@ class DatasetIOBase:
             save_kwargs = {}
         if open_kwargs is None:
             open_kwargs = {}
+
         with create_tmp_file(allow_cleanup_failure=allow_cleanup_failure) as path:
             self.save(data, path, **save_kwargs)
             with self.open(path, **open_kwargs) as ds:
@@ -4735,6 +4737,54 @@ class TestNetCDF4ClassicViaNetCDF4Data(NetCDF3Only, CFEncodedBase):
                 tmp_file, mode="w", format="NETCDF4_CLASSIC"
             ) as store:
                 yield store
+
+    @requires_h5netcdf
+    def test_string_attributes_stored_as_char(self, tmp_path):
+        import h5netcdf
+
+        original = Dataset(attrs={"foo": "bar"})
+        store_path = tmp_path / "tmp.nc"
+        original.to_netcdf(store_path, engine=self.engine, format=self.file_format)
+        with h5netcdf.File(store_path, "r") as ds:
+            # Check that the attribute is stored as a char array
+            assert ds._h5file.attrs["foo"].dtype == np.dtype("S3")
+
+
+@requires_h5netcdf_1_7_0_or_above
+class TestNetCDF4ClassicViaH5NetCDFData(TestNetCDF4ClassicViaNetCDF4Data):
+    engine: T_NetcdfEngine = "h5netcdf"
+    file_format: T_NetcdfTypes = "NETCDF4_CLASSIC"
+
+    @contextlib.contextmanager
+    def create_store(self):
+        with create_tmp_file() as tmp_file:
+            with backends.H5NetCDFStore.open(
+                tmp_file, mode="w", format="NETCDF4_CLASSIC"
+            ) as store:
+                yield store
+
+    @requires_netCDF4
+    def test_cross_engine_read_write_netcdf4(self) -> None:
+        # Drop dim3, because its labels include strings. These appear to be
+        # not properly read with python-netCDF4, which converts them into
+        # unicode instead of leaving them as bytes.
+        data = create_test_data().drop_vars("dim3")
+        data.attrs["foo"] = "bar"
+        valid_engines: list[T_NetcdfEngine] = ["netcdf4", "h5netcdf"]
+        for write_engine in valid_engines:
+            with create_tmp_file() as tmp_file:
+                data.to_netcdf(tmp_file, engine=write_engine, format=self.file_format)
+                for read_engine in valid_engines:
+                    with open_dataset(tmp_file, engine=read_engine) as actual:
+                        assert_identical(data, actual)
+
+    def test_group_fails(self):
+        # Check writing group data fails with CLASSIC format
+        original = create_test_data()
+        with pytest.raises(
+            ValueError, match=r"Cannot create sub-groups in `NETCDF4_CLASSIC` format."
+        ):
+            original.to_netcdf(group="sub", format=self.file_format, engine=self.engine)
 
 
 @requires_scipy_or_netCDF4
