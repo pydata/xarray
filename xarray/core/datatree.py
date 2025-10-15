@@ -967,7 +967,13 @@ class DataTree(
             nodes[target] = self.root[target].dataset[names]
         return self.from_dict(nodes, name=self.name)
 
-    def __getitem__(self: DataTree, key: str) -> DataTree | DataArray:
+    @overload
+    def __getitem__(self, key: list[str]) -> Self: ...
+
+    @overload
+    def __getitem__(self, key: str) -> Self | DataArray: ...
+
+    def __getitem__(self, key: str | list[str]) -> Self | DataArray:
         """
         Access child nodes, variables, or coordinates stored anywhere in this tree.
 

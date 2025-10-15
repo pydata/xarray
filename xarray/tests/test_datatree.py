@@ -354,7 +354,7 @@ class TestGetItem:
     def test_getitem_dict_like_selection_access_to_dataset(self) -> None:
         data = xr.Dataset({"temp": [0, 50]})
         results = DataTree(name="results", dataset=data)
-        assert_identical(results[{"temp": 1}], data[{"temp": 1}])  # type: ignore[index]
+        assert_identical(results[{"temp": 1}], data[{"temp": 1}])  # type: ignore[call-overload]
 
 
 class TestUpdate:
