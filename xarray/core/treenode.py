@@ -25,7 +25,8 @@ class TreePath(PurePosixPath):
     """Represents a path from one node to another within a tree."""
 
     def __new__(cls, *pathsegments):
-        unnormalized = super().__new__(cls)
+        # Passing *pathsegments to __new__ only required for Python 3.11
+        unnormalized = super().__new__(cls, *pathsegments)
         unnormalized.__init__(*pathsegments)
 
         # TreePath does not support symlinks, so we can resolve segments like
@@ -51,16 +52,21 @@ class TreePath(PurePosixPath):
         if unnormalized.is_absolute():
             parts = ["/"] + parts
 
-        normalized = super().__new__(cls)
+        normalized = super().__new__(cls, *parts)
         normalized.__init__(*parts)
 
         return normalized
 
+    # Implementing _from_parsed_parts is required for __div__ on Python 3.11
+    @classmethod
+    def _from_parsed_parts(cls, drv, root, parts):
+        return cls(*parts)
+
     def __init__(self, *pathsegments):
         if sys.version_info >= (3, 12):
-            super().__init__(*pathsegments)
-        else:
-            super().__new__(PurePosixPath, *pathsegments)
+            # No __init__ method on base-class in Python 3.11
+            super().__init__(self, *pathsegments)
+
         if self.drive:
             raise ValueError("TreePaths cannot have drives")
 

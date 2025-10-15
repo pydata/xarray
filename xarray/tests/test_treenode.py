@@ -74,6 +74,11 @@ class TestTreePath:
         with pytest.raises(ValueError, match="path accesses node before root"):
             TreePath(path_str)
 
+    def test_div(self):
+        actual = str(TreePath("/a/b") / "..")
+        expected = "/a"
+        assert expected == actual
+
 
 class TestFamilyTree:
     def test_lonely(self) -> None:
