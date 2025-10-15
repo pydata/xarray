@@ -943,17 +943,42 @@ class DataTree(
         else:
             return default
 
+    def _copy_listed(self, keys: list[str]) -> Self:
+        """Get multiple items as a DataTree."""
+        base = TreePath(self.path)
+        nodes: dict[str, DataTree | Dataset] = {}
+        keys_by_node: defaultdict[str, list[str]] = defaultdict(list)
+        for key in keys:
+            path = base / key
+            assert path.root
+            _, *parts, name = path.parts
+            current_node = self.root
+            for part in parts:
+                current_node = current_node.children[part]
+            if name in current_node.children:
+                target = str(path.relative_to(base))
+                nodes[target] = current_node.children[name]
+            elif name in current_node.variables:
+                target = str(base.joinpath(*parts).relative_to(base))
+                keys_by_node[target].append(name)  # DataArray
+            else:
+                raise KeyError(key)
+        for target, names in keys_by_node.items():
+            nodes[target] = self.root[target].dataset[names]
+        return self.from_dict(nodes, name=self.name)
+
     def __getitem__(self: DataTree, key: str) -> DataTree | DataArray:
         """
         Access child nodes, variables, or coordinates stored anywhere in this tree.
 
-        Returned object will be either a DataTree or DataArray object depending on whether the key given points to a
-        child or variable.
+        Returned object will be either a DataTree or DataArray object depending on
+        whether the key given points to a child or variable.
 
         Parameters
         ----------
         key : str
-            Name of variable / child within this node, or unix-like path to variable / child within another node.
+            Name of variable / child within this node, unix-like path to variable
+            / child within another node, or a list of names/paths.
 
         Returns
         -------
@@ -967,14 +992,9 @@ class DataTree(
         elif isinstance(key, str):
             # TODO should possibly deal with hashables in general?
             # path-like: a name of a node/variable, or path to a node/variable
-            path = TreePath(key)
-            return self._get_item(path)
-        elif utils.is_list_like(key):
-            # iterable of variable names
-            raise NotImplementedError(
-                "Selecting via tags is deprecated, and selecting multiple items should be "
-                "implemented via .subset"
-            )
+            return self._get_item(key)
+        elif isinstance(key, list):
+            return self._copy_listed(key)
         else:
             raise ValueError(f"Invalid format for key: {key}")
 
