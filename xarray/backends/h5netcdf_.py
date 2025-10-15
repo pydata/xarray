@@ -339,16 +339,6 @@ class H5NetCDFStore(WritableCFDataStore):
         else:
             self.ds.dimensions[name] = length
 
-    def convert_string(self, value):
-        """If format is NETCDF4_CLASSIC, convert strings to fixed width char
-        arrays to ensure they can be read by legacy software.
-
-        CLASSIC attributes are read by third party software as fixed width char arrays
-        """
-        if self.format == "NETCDF4_CLASSIC":
-            value = encode_nc3_attr_value(value)
-        return value
-
     def set_attribute(self, key, value):
         value = self.convert_string(value)
         self.ds.attrs[key] = value
