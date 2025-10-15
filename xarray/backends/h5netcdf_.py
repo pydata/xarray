@@ -204,7 +204,10 @@ class H5NetCDFStore(WritableCFDataStore):
                     f"{magic_number!r} is not the signature of a valid netCDF4 file"
                 )
 
-        if format not in [None, "NETCDF4", "NETCDF4_CLASSIC"]:
+        if format is None:
+            format = "NETCDF4"
+
+        if format not in ["NETCDF4", "NETCDF4_CLASSIC"]:
             raise ValueError(f"invalid format for h5netcdf backend: {format}")
 
         kwargs = {
