@@ -421,7 +421,9 @@ class H5NetCDFStore(WritableCFDataStore):
             nc4_var = self.ds[name]
 
         for k, v in attrs.items():
-            nc4_var.attrs[k] = self.convert_string(v)
+            if self.format == "NETCDF4_CLASSIC":
+                v = encode_nc3_attr_value(v)
+            nc4_var.attrs[k] = v
 
         target = H5NetCDFArrayWrapper(name, self)
 
