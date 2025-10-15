@@ -91,6 +91,7 @@ if TYPE_CHECKING:
         NetcdfWriteModes,
         T_ChunkDimFreq,
         T_ChunksFreq,
+        ZarrStoreLike,
         ZarrWriteModes,
     )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
@@ -2076,7 +2077,7 @@ class DataTree(
     @overload
     def to_zarr(
         self,
-        store,
+        store: ZarrStoreLike,
         mode: ZarrWriteModes = "w-",
         encoding=None,
         consolidated: bool = True,
@@ -2091,7 +2092,7 @@ class DataTree(
     @overload
     def to_zarr(
         self,
-        store,
+        store: ZarrStoreLike,
         mode: ZarrWriteModes = "w-",
         encoding=None,
         consolidated: bool = True,
@@ -2103,7 +2104,7 @@ class DataTree(
 
     def to_zarr(
         self,
-        store,
+        store: ZarrStoreLike,
         mode: ZarrWriteModes = "w-",
         encoding=None,
         consolidated: bool = True,
@@ -2117,7 +2118,7 @@ class DataTree(
 
         Parameters
         ----------
-        store : MutableMapping, str or Path, optional
+        store : zarr.storage.StoreLike
             Store or path to directory in file system
         mode : {{"w", "w-", "a", "r+", None}, default: "w-"
             Persistence mode: “w” means create (overwrite if exists); “w-” means create (fail if exists);
