@@ -63,9 +63,11 @@ class TreePath(PurePosixPath):
         return normalized
 
     # Implementing _from_parsed_parts is required for __div__ on Python 3.11
-    @classmethod
-    def _from_parsed_parts(cls, drv, root, parts):
-        return cls(*parts)
+    if sys.version_info < (3, 12):
+
+        @classmethod
+        def _from_parsed_parts(cls, drv, root, parts):
+            return cls(*parts)
 
     def __init__(self, *pathsegments):
         if sys.version_info >= (3, 12):

@@ -79,6 +79,11 @@ class TestTreePath:
         expected = "/a"
         assert expected == actual
 
+    def test_parent(self):
+        actual = str(TreePath("/a").parent)
+        expected = "/"
+        assert expected == actual
+
 
 class TestFamilyTree:
     def test_lonely(self) -> None:
