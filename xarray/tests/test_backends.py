@@ -60,6 +60,7 @@ from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
+from xarray.core.common import _contains_cftime_datetimes
 from xarray.core.indexes import PandasIndex
 from xarray.core.options import set_options
 from xarray.core.types import PDDatetimeUnitOptions
@@ -6237,6 +6238,32 @@ class TestDask(DatasetIOBase):
                 [tmp1, tmp2], concat_dim=dim, data_vars="all", combine="nested"
             ) as actual:
                 assert_identical(expected, actual)
+
+    @requires_cftime
+    def test_open_dataset_cftime_autochunk(self) -> None:
+        """Create a dataset with cftime datetime objects and
+        ensure that auto-chunking works correctly."""
+        import cftime
+
+        original = xr.Dataset(
+            {
+                "foo": ("time", [0.0]),
+                "time_bnds": (
+                    ("time", "bnds"),
+                    [
+                        [
+                            cftime.Datetime360Day(2005, 12, 1, 0, 0, 0, 0),
+                            cftime.Datetime360Day(2005, 12, 2, 0, 0, 0, 0),
+                        ]
+                    ],
+                ),
+            },
+            {"time": [cftime.Datetime360Day(2005, 12, 1, 12, 0, 0, 0)]},
+        )
+        with self.roundtrip(original, open_kwargs={"chunks": "auto"}) as actual:
+            assert isinstance(actual.time_bnds.variable.data, da.Array)
+            assert _contains_cftime_datetimes(actual.time)
+            assert_identical(original, actual)
 
     # Flaky test. Very open to contributions on fixing this
     @pytest.mark.flaky
