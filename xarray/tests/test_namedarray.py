@@ -18,6 +18,8 @@ from xarray.namedarray._typing import (
     _ShapeType_co,
 )
 from xarray.namedarray.core import NamedArray, from_array
+from xarray.namedarray.utils import fake_target_chunksize
+from xarray.tests import requires_cftime
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -26,6 +28,7 @@ if TYPE_CHECKING:
 
     from xarray.namedarray._typing import (
         Default,
+        DuckArray,
         _AttrsLike,
         _Dim,
         _DimsLike,
@@ -609,3 +612,57 @@ def test_repr() -> None:
 
     # Basic comparison:
     assert r == "<xarray.NamedArray (x: 1)> Size: 8B\narray([0], dtype=uint64)"
+
+
+@pytest.mark.parametrize(
+    "input_array, expected_chunksize_faked, expected_dtype",
+    [
+        (np.arange(100).reshape(10, 10), 1024, np.int64),
+        (np.arange(100).reshape(10, 10).astype(np.float32), 1024, np.float32),
+    ],
+)
+def test_fake_target_chunksize(
+    input_array: DuckArray[Any],
+    expected_chunksize_faked: int,
+    expected_dtype: DTypeLike,
+) -> None:
+    """
+    Check that `fake_target_chunksize` returns the expected chunksize and dtype.
+    - It pretends to dask we are chunking an array with an 8-byte dtype, ie. a float64.
+    As such, it will *double* the amount of memory a 4-byte dtype (like float32) would try to use,
+    fooling it into actually using the correct amount of memory. For object dtypes, which are
+    generally larger, it will reduce the effective dask configuration chunksize, reducing the size of
+    the arrays per chunk such that we get the same amount of memory used.
+    """
+    target_chunksize = 1024
+
+    faked_chunksize, dtype = fake_target_chunksize(input_array, target_chunksize)
+
+    assert faked_chunksize == expected_chunksize_faked
+    assert dtype == expected_dtype
+
+
+@requires_cftime
+def test_fake_target_chunksize_cftime() -> None:
+    """
+    Check that `fake_target_chunksize` returns the expected chunksize and dtype.
+    - It pretends to dask we are chunking an array with an 8-byte dtype, ie. a float64.
+    - This is the same as the above test, but specifically for a CFTime array case - split for testing reasons
+    """
+    import cftime
+
+    target_chunksize = 1024
+
+    input_array = np.array(
+        [
+            cftime.Datetime360Day(2000, month, day, 0, 0, 0, 0)
+            for month in range(1, 11)
+            for day in range(1, 11)
+        ],
+        dtype=object,
+    ).reshape(10, 10)
+
+    faked_chunksize, dtype = fake_target_chunksize(input_array, target_chunksize)  # type: ignore[arg-type,unused-ignore]
+
+    assert faked_chunksize == 73
+    assert dtype == np.float64
