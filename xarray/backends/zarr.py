@@ -25,7 +25,7 @@ from xarray.backends.common import (
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
-from xarray.core.treenode import NodePath
+from xarray.core.treenode import TreePath
 from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
@@ -1752,9 +1752,9 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
         # Check for a group and make it a parent if it exists
         if group:
-            parent = str(NodePath("/") / NodePath(group))
+            parent = str(TreePath("/") / TreePath(group))
         else:
-            parent = str(NodePath("/"))
+            parent = str(TreePath("/"))
 
         stores = ZarrStore.open_store(
             filename_or_obj,
@@ -1785,18 +1785,18 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                     decode_timedelta=decode_timedelta,
                 )
             if group:
-                group_name = str(NodePath(path_group).relative_to(parent))
+                group_name = str(TreePath(path_group).relative_to(parent))
             else:
-                group_name = str(NodePath(path_group))
+                group_name = str(TreePath(path_group))
             groups_dict[group_name] = group_ds
         return groups_dict
 
 
 def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
-    parent_nodepath = NodePath(parent)
-    yield str(parent_nodepath)
+    parent_TreePath = TreePath(parent)
+    yield str(parent_TreePath)
     for path, group in root.groups():
-        gpath = parent_nodepath / path
+        gpath = parent_TreePath / path
         yield from _iter_zarr_groups(group, parent=str(gpath))
 
 
