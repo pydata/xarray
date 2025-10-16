@@ -40,6 +40,7 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
+    continue-on-error: ${{ matrix.allowed-failure }}
     strategy:
       fail-fast: false
       matrix:
@@ -47,6 +48,7 @@ jobs:
         # Bookend python versions
         python-version: ["3.11", "3.13"]
         env: [""]
+        allowed-failure: [false]
         include:
           # Minimum python version:
           - env: "bare-minimum"
@@ -68,6 +70,7 @@ jobs:
           - env: "flaky"
             python-version: "3.13"
             os: ubuntu-latest
+            allowed-failure: true
           # The mypy tests must be executed using only 1 process in order to guarantee
           # predictable mypy output messages for comparison to expectations.
           - env: "mypy"
