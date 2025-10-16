@@ -1,0 +1,27 @@
+{
+    "version": 1,
+    "project": "scitools-iris",
+    "project_url": "https://github.com/SciTools/iris",
+    "repo": "..",
+    "environment_type": "delegated",
+    "show_commit_url": "https://github.com/scitools/iris/commit/",
+    "branches": ["upstream/main"],
+
+    "benchmark_dir": "./benchmarks",
+    "env_dir": ".asv/env",
+    "results_dir": ".asv/results",
+    "html_dir": ".asv/html",
+    "plugins": [".asv_delegated"],
+
+    "command_comment": [
+        "The inherited setup of the Iris test environment takes care of ",
+        "Iris-installation too, and in the case of Iris no specialised ",
+        "uninstall or build commands are needed to get it working either.",
+
+        "We do however need to install the custom benchmarks for them to be",
+        "usable."
+    ],
+    "install_command": [],
+    "uninstall_command": [],
+    "build_command": ["python {conf_dir}/custom_bms/install.py"]
+}

@@ -1,0 +1,175 @@
+# Use ASV to check for performance regressions, either:
+#  - In the last 24 hours' commits.
+#  - Introduced by this pull request.
+
+name: benchmarks-run
+run-name: Run benchmarks
+
+on:
+  schedule:
+    # Runs every day at 23:00.
+    - cron: "0 23 * * *"
+  workflow_dispatch:
+    inputs:
+      first_commit:
+        description: "First commit to benchmark (see bm_runner.py > Overnight)."
+        required: false
+        type: string
+  pull_request:
+    # Add the `labeled` type to the default list.
+    types: [labeled, opened, synchronize, reopened]
+
+jobs:
+  pre-checks:
+    # This workflow supports two different scenarios (overnight and branch).
+    #  The pre-checks job determines which scenario is being run.
+    runs-on: ubuntu-latest
+    if: github.repository == 'pydata/xarray'
+    outputs:
+      overnight: ${{ steps.overnight.outputs.check }}
+      branch: ${{ steps.branch.outputs.check }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+      - id: files-changed
+        uses: marceloprado/has-changed-path@df1b7a3161b8fb9fd8c90403c66a9e66dfde50cb
+        with:
+          # SEE ALSO .github/labeler.yml .
+          paths: ci/requirements/locks/*.lock
+      - id: overnight
+        name: Check overnight scenario
+        if: github.event_name != 'pull_request'
+        run: echo "check=true" >> "$GITHUB_OUTPUT"
+      - id: branch
+        name: Check branch scenario
+        if: >
+          github.event_name == 'pull_request'
+          &&
+          (
+            steps.files-changed.outputs.changed == 'true'
+            ||
+            github.event.label.name == 'benchmark_this'
+            ||
+            github.event.label.name == 'run-benchmarks'
+            ||
+            github.event.label.name == 'topic-performance'
+          )
+        run: echo "check=true" >> "$GITHUB_OUTPUT"
+
+
+  benchmark:
+    runs-on: ubuntu-latest
+    needs: pre-checks
+    if: >
+      needs.pre-checks.outputs.overnight == 'true' ||
+      needs.pre-checks.outputs.branch == 'true'
+
+    env:
+      IRIS_TEST_DATA_LOC_PATH: benchmarks
+      IRIS_TEST_DATA_PATH: benchmarks/iris-test-data
+      IRIS_TEST_DATA_VERSION: "2.28"
+      # Lets us manually bump the cache to rebuild
+      ENV_CACHE_BUILD: "0"
+      TEST_DATA_CACHE_BUILD: "2"
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout repo
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install run dependencies
+        run: pip install asv nox!=2025.05.01
+
+      - name: Cache environment directories
+        id: cache-env-dir
+        uses: actions/cache@v4
+        with:
+          path: |
+            .nox
+            benchmarks/.asv/env
+            $CONDA/pkgs
+          key: ${{ runner.os }}-${{ hashFiles('requirements/') }}-${{ env.ENV_CACHE_BUILD }}
+
+      - name: Cache test data directory
+        id: cache-test-data
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.IRIS_TEST_DATA_PATH }}
+          key:
+            test-data-${{ env.IRIS_TEST_DATA_VERSION }}-${{ env.TEST_DATA_CACHE_BUILD }}
+
+      - name: Fetch the test data
+        if: steps.cache-test-data.outputs.cache-hit != 'true'
+        run: |
+          wget --quiet https://github.com/SciTools/iris-test-data/archive/v${IRIS_TEST_DATA_VERSION}.zip -O iris-test-data.zip
+          unzip -q iris-test-data.zip
+          mkdir --parents ${GITHUB_WORKSPACE}/${IRIS_TEST_DATA_LOC_PATH}
+          mv iris-test-data-${IRIS_TEST_DATA_VERSION} ${GITHUB_WORKSPACE}/${IRIS_TEST_DATA_PATH}
+
+      - name: Set test data var
+        run: |
+          echo "OVERRIDE_TEST_DATA_REPOSITORY=${GITHUB_WORKSPACE}/${IRIS_TEST_DATA_PATH}/test_data" >> $GITHUB_ENV
+
+      - name: Benchmark this pull request
+        # If the 'branch' condition(s) are met: use the bm_runner to compare
+        #  the proposed merge with the base branch.
+        if: needs.pre-checks.outputs.branch == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.number }}
+        run: |
+          nox -s benchmarks -- branch origin/${{ github.base_ref }}
+
+      - name: Run overnight benchmarks
+        # If the 'overnight' condition(s) are met: use the bm_runner to compare
+        #  each of the last 24 hours' commits to their parents.
+        id: overnight
+        if: needs.pre-checks.outputs.overnight == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # The first_commit argument allows a custom starting point - useful
+        #  for manual re-running.
+        run: |
+          first_commit=${{ inputs.first_commit }}
+          if [ "$first_commit" == "" ]
+          then
+            first_commit=$(git log --after="$(date -d "1 day ago" +"%Y-%m-%d") 23:00:00" --pretty=format:"%h" | tail -n 1)
+          fi
+
+          if [ "$first_commit" != "" ]
+          then
+            nox -s benchmarks -- overnight $first_commit
+          fi
+
+      - name: Warn of failure
+        # The overnight run is not on a pull request, so a failure could go
+        #  unnoticed without being actively advertised.
+        if: >
+          failure() &&
+          steps.overnight.outcome == 'failure'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          title="Overnight benchmark workflow failed: \`${{ github.run_id }}\`"
+          body="Generated by GHA run [\`${{github.run_id}}\`](https://github.com/${{github.repository}}/actions/runs/${{github.run_id}})"
+          gh issue create --title "$title" --body "$body" --label "Bot" --label "Type: Performance" --repo $GITHUB_REPOSITORY
+
+      - name: Upload any benchmark reports
+        # Uploading enables more downstream processing e.g. posting a PR comment.
+        if: success() || steps.overnight.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark_reports
+          path: .github/workflows/benchmark_reports
+
+      - name: Archive asv results
+        # Store the raw ASV database(s) to help manual investigations.
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: asv-raw-results
+          path: benchmarks/.asv/results
