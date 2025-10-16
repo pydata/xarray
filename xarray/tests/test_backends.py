@@ -77,6 +77,7 @@ from xarray.tests import (
     has_h5netcdf_1_4_0_or_above,
     has_netCDF4,
     has_numpy_2,
+    has_pydap,
     has_scipy,
     has_zarr,
     has_zarr_v3,
@@ -7244,7 +7245,10 @@ def test_netcdf4_entrypoint(tmp_path: Path) -> None:
     _check_guess_can_open_and_open(entrypoint, path, engine="netcdf4", expected=ds)
     _check_guess_can_open_and_open(entrypoint, str(path), engine="netcdf4", expected=ds)
 
-    assert entrypoint.guess_can_open("http://something/remote")
+    # Remote URLs without extensions are no longer claimed (stricter detection)
+    assert not entrypoint.guess_can_open("http://something/remote")
+    # Remote URLs with netCDF extensions are claimed
+    assert entrypoint.guess_can_open("http://something/remote.nc")
     assert entrypoint.guess_can_open("something-local.nc")
     assert entrypoint.guess_can_open("something-local.nc4")
     assert entrypoint.guess_can_open("something-local.cdf")
@@ -7287,6 +7291,10 @@ def test_scipy_entrypoint(tmp_path: Path) -> None:
     assert entrypoint.guess_can_open("something-local.nc.gz")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
     assert not entrypoint.guess_can_open(b"not-a-netcdf-file")
+    # Should not claim .gz files that aren't netCDF
+    assert not entrypoint.guess_can_open("something.zarr.gz")
+    assert not entrypoint.guess_can_open("something.tar.gz")
+    assert not entrypoint.guess_can_open("something.txt.gz")
 
 
 @requires_h5netcdf
@@ -7335,6 +7343,85 @@ def test_zarr_entrypoint(tmp_path: Path) -> None:
     assert not entrypoint.guess_can_open("something-local.nc")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
     assert not entrypoint.guess_can_open("something.zarr.txt")
+
+
+@requires_h5netcdf
+@requires_netCDF4
+@requires_zarr
+def test_remote_url_backend_auto_detection() -> None:
+    """
+    Test that remote URLs are correctly selected by the backend resolution system.
+
+    This tests the fix for issue where netCDF4, h5netcdf, and pydap backends were
+    claiming ALL remote URLs, preventing remote Zarr stores from being
+    auto-detected.
+
+    See: https://github.com/pydata/xarray/issues/10801
+    """
+    from xarray.backends.plugins import guess_engine
+
+    # Test cases: (url, expected_backend)
+    test_cases = [
+        # Remote Zarr URLs
+        ("https://example.com/store.zarr", "zarr"),
+        ("http://example.com/data.zarr/", "zarr"),
+        ("s3://bucket/path/to/data.zarr", "zarr"),
+        # Remote netCDF URLs (non-DAP) - netcdf4 wins (first in order, no query params)
+        ("https://example.com/file.nc", "netcdf4"),
+        ("http://example.com/data.nc4", "netcdf4"),
+        ("https://example.com/test.cdf", "netcdf4"),
+        ("s3://bucket/path/to/data.nc", "netcdf4"),
+        # Remote netCDF URLs with query params - netcdf4 wins
+        # Note: Query params are typically indicative of DAP URLs (e.g., OPeNDAP constraint expressions),
+        # so we prefer netcdf4 (which has DAP support) over h5netcdf (which doesn't)
+        ("https://example.com/data.nc?var=temperature&time=0", "netcdf4"),
+        (
+            "http://test.opendap.org/opendap/dap4/StaggeredGrid.nc4?dap4.ce=/time[0:1:0]",
+            "netcdf4",
+        ),
+        # DAP URLs with .nc extensions (no query params) - netcdf4 wins (first in order)
+        ("http://test.opendap.org/opendap/dap4/StaggeredGrid.nc4", "netcdf4"),
+        ("https://example.com/DAP4/data.nc", "netcdf4"),
+        ("http://example.com/data/Dap4/file.nc", "netcdf4"),
+    ]
+
+    for url, expected_backend in test_cases:
+        engine = guess_engine(url)
+        assert engine == expected_backend, (
+            f"URL {url!r} should select {expected_backend!r} but got {engine!r}"
+        )
+
+    # DAP URLs without extensions - pydap wins if available, netcdf4 otherwise
+    # When pydap is not installed, netCDF4 should handle these DAP URLs
+    expected_dap_backend = "pydap" if has_pydap else "netcdf4"
+    dap_urls = [
+        "dap2://opendap.earthdata.nasa.gov/collections/dataset",
+        "dap4://opendap.earthdata.nasa.gov/collections/dataset",
+        "DAP2://example.com/dataset",  # uppercase scheme
+        "DAP4://example.com/dataset",  # uppercase scheme
+        "https://example.com/services/DAP2/dataset",  # uppercase in path
+    ]
+
+    for url in dap_urls:
+        engine = guess_engine(url)
+        assert engine == expected_dap_backend, (
+            f"URL {url!r} should select {expected_dap_backend!r} but got {engine!r}"
+        )
+
+    # URLs that should raise ValueError (no backend can open them)
+    invalid_urls = [
+        "http://test.opendap.org/opendap/data/nc/coads_climatology.nc.dap",  # .dap suffix
+        "https://example.com/data.dap",  # .dap suffix
+        "http://opendap.example.com/data",  # no extension, no DAP indicators
+        "https://test.opendap.org/dataset",  # no extension, no DAP indicators
+    ]
+
+    for url in invalid_urls:
+        with pytest.raises(
+            ValueError,
+            match=r"did not find a match in any of xarray's currently installed IO backends",
+        ):
+            guess_engine(url)
 
 
 @requires_netCDF4

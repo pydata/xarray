@@ -50,6 +50,7 @@ from xarray.core.utils import (
     FrozenDict,
     close_on_error,
     is_remote_uri,
+    strip_uri_params,
     try_read_magic_number_from_path,
 )
 from xarray.core.variable import Variable
@@ -701,21 +702,34 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     supports_groups = True
 
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
-        if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
-            return True
+        # Helper to check if magic number is netCDF or HDF5
+        def _is_netcdf_magic(magic: bytes) -> bool:
+            return magic.startswith((b"CDF", b"\211HDF\r\n\032\n"))
 
-        magic_number = (
-            bytes(filename_or_obj[:8])
-            if isinstance(filename_or_obj, bytes | memoryview)
-            else try_read_magic_number_from_path(filename_or_obj)
-        )
-        if magic_number is not None:
-            # netcdf 3 or HDF5
-            return magic_number.startswith((b"CDF", b"\211HDF\r\n\032\n"))
+        # Helper to check if extension is netCDF
+        def _has_netcdf_ext(path: str | os.PathLike, is_remote: bool = False) -> bool:
+            path = str(path).rstrip("/")
+            # For remote URIs, strip query parameters and fragments
+            if is_remote:
+                path = strip_uri_params(path)
+            _, ext = os.path.splitext(path)
+            return ext in {".nc", ".nc4", ".cdf"}
+
+        if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
+            # For remote URIs, check extension (accounting for query params/fragments)
+            # Remote netcdf-c can handle both regular URLs and DAP URLs
+            return _has_netcdf_ext(filename_or_obj, is_remote=True)
 
         if isinstance(filename_or_obj, str | os.PathLike):
-            _, ext = os.path.splitext(filename_or_obj)
-            return ext in {".nc", ".nc4", ".cdf"}
+            # For local paths, check magic number first, then extension
+            magic_number = try_read_magic_number_from_path(filename_or_obj)
+            if magic_number is not None:
+                return _is_netcdf_magic(magic_number)
+            # No magic number available, fallback to extension
+            return _has_netcdf_ext(filename_or_obj)
+
+        if isinstance(filename_or_obj, bytes | memoryview):
+            return _is_netcdf_magic(bytes(filename_or_obj[:8]))
 
         return False
 

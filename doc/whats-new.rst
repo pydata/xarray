@@ -2,6 +2,7 @@
 
 .. _whats-new:
 
+
 What's New
 ==========
 
@@ -32,6 +33,11 @@ Bug Fixes
 - Fix h5netcdf backend for format=None, use same rule as netcdf4 backend (:pull:`10859`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
 
+- ``netcdf4`` and ``pydap`` backends now use stricter URL detection to avoid incorrectly claiming
+  remote URLs. The ``pydap`` backend now only claims URLs with explicit DAP protocol indicators
+  (``dap2://`` or ``dap4://`` schemes, or ``/dap2/`` or ``/dap4/`` in the URL path). This prevents
+  both backends from claiming remote Zarr stores and other non-DAP URLs without an explicit
+  ``engine=`` argument. (:pull:`10804`). By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -67,10 +73,10 @@ New features
 
 Bug fixes
 ~~~~~~~~~
-
 - Fix error raised when writing scalar variables to Zarr with ``region={}``
   (:pull:`10796`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 
 
 .. _whats-new.2025.09.1:
