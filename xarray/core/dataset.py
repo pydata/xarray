@@ -6065,6 +6065,8 @@ class Dataset(
         Data variables:
             A        (x, y) int64 32B 0 2 3 5
         """
+        from xarray.core.dataarray import DataArray
+
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
 
@@ -6076,7 +6078,11 @@ class Dataset(
             # is a large numpy array
             if utils.is_scalar(labels_for_dim):
                 labels_for_dim = [labels_for_dim]
-            labels_for_dim = np.asarray(labels_for_dim)
+            # Most conversion to arrays is better handled in the indexer, however
+            # DataArrays are a special case where the underlying libraries don't provide
+            # a good conversition.
+            if isinstance(labels_for_dim, DataArray):
+                labels_for_dim = np.asarray(labels_for_dim)
             try:
                 index = self.get_index(dim)
             except KeyError as err:
