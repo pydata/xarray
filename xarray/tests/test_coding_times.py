@@ -1210,7 +1210,7 @@ def test_should_cftime_be_used_source_outside_range():
         "1000-01-01", periods=100, freq="MS", calendar="noleap", use_cftime=True
     )
     with pytest.raises(
-        ValueError, match="Source time range is not valid for numpy datetimes."
+        ValueError, match=r"Source time range is not valid for numpy datetimes."
     ):
         _should_cftime_be_used(src, "standard", False)
 
@@ -1221,7 +1221,7 @@ def test_should_cftime_be_used_target_not_npable():
         "2000-01-01", periods=100, freq="MS", calendar="noleap", use_cftime=True
     )
     with pytest.raises(
-        ValueError, match="Calendar 'noleap' is only valid with cftime."
+        ValueError, match=r"Calendar 'noleap' is only valid with cftime."
     ):
         _should_cftime_be_used(src, "noleap", False)
 
@@ -1383,7 +1383,7 @@ def test_contains_cftime_lazy() -> None:
 def test_roundtrip_datetime64_nanosecond_precision(
     timestr: str,
     format: Literal["ns", "us"],
-    dtype: np.typing.DTypeLike,
+    dtype: np.typing.DTypeLike | None,
     fill_value: int | float | None,
     use_encoding: bool,
     time_unit: PDDatetimeUnitOptions,
@@ -1499,7 +1499,7 @@ def test_roundtrip_datetime64_nanosecond_precision_warning(
     [(np.int64, 20), (np.int64, np.iinfo(np.int64).min), (np.float64, 1e30)],
 )
 def test_roundtrip_timedelta64_nanosecond_precision(
-    dtype: np.typing.DTypeLike,
+    dtype: np.typing.DTypeLike | None,
     fill_value: int | float,
     time_unit: PDDatetimeUnitOptions,
 ) -> None:
@@ -2198,3 +2198,24 @@ def test_roundtrip_0size_timedelta(time_unit: PDDatetimeUnitOptions) -> None:
         decoded.load()
     assert decoded.dtype == np.dtype("=m8[s]")
     assert decoded.encoding == encoding
+
+
+def test_roundtrip_empty_datetime64_array(time_unit: PDDatetimeUnitOptions) -> None:
+    # Regression test for GitHub issue #10722.
+    encoding = {
+        "units": "days since 1990-1-1",
+        "dtype": np.dtype("float64"),
+        "calendar": "standard",
+    }
+    times = date_range("2000", periods=0, unit=time_unit)
+    variable = Variable(["time"], times, encoding=encoding)
+
+    encoded = conventions.encode_cf_variable(variable, name="foo")
+    assert encoded.dtype == np.dtype("float64")
+
+    decode_times = CFDatetimeCoder(time_unit=time_unit)
+    roundtripped = conventions.decode_cf_variable(
+        "foo", encoded, decode_times=decode_times
+    )
+    assert_identical(variable, roundtripped)
+    assert roundtripped.dtype == variable.dtype

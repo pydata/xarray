@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import re
+import warnings
+
 import numpy as np
+import pandas as pd
 import pytest
 
 import xarray as xr
@@ -235,6 +239,267 @@ class TestMergeFunction:
         expected = xr.Dataset(attrs={"a": 0, "d": 0, "e": 0})
         assert_identical(actual, expected)
 
+    def test_merge_attrs_drop_conflicts_numpy_arrays(self):
+        """Test drop_conflicts with numpy arrays."""
+        # Test with numpy arrays (which return arrays from ==)
+        arr1 = np.array([1, 2, 3])
+        arr2 = np.array([1, 2, 3])
+        arr3 = np.array([4, 5, 6])
+
+        ds1 = xr.Dataset(attrs={"arr": arr1, "scalar": 1})
+        ds2 = xr.Dataset(attrs={"arr": arr2, "scalar": 1})  # Same array values
+        ds3 = xr.Dataset(attrs={"arr": arr3, "other": 2})  # Different array values
+
+        # Arrays are considered equivalent if they have the same values
+        actual = xr.merge([ds1, ds2], combine_attrs="drop_conflicts")
+        assert "arr" in actual.attrs  # Should keep the array since they're equivalent
+        assert actual.attrs["scalar"] == 1
+
+        # Different arrays cause the attribute to be dropped
+        actual = xr.merge([ds1, ds3], combine_attrs="drop_conflicts")
+        assert "arr" not in actual.attrs  # Should drop due to conflict
+        assert "other" in actual.attrs
+
+    def test_merge_attrs_drop_conflicts_custom_eq_returns_array(self):
+        """Test drop_conflicts with custom objects that return arrays from __eq__."""
+
+        # Test with custom objects that return non-bool from __eq__
+        class CustomEq:
+            """Object whose __eq__ returns a non-bool value."""
+
+            def __init__(self, value):
+                self.value = value
+
+            def __eq__(self, other):
+                if not isinstance(other, CustomEq):
+                    return False
+                # Return a numpy array (truthy if all elements are non-zero)
+                return np.array([self.value == other.value])
+
+            def __repr__(self):
+                return f"CustomEq({self.value})"
+
+        obj1 = CustomEq(42)
+        obj2 = CustomEq(42)  # Same value
+        obj3 = CustomEq(99)  # Different value
+
+        ds4 = xr.Dataset(attrs={"custom": obj1, "x": 1})
+        ds5 = xr.Dataset(attrs={"custom": obj2, "x": 1})
+        ds6 = xr.Dataset(attrs={"custom": obj3, "y": 2})
+
+        # Suppress DeprecationWarning from numpy < 2.0 about ambiguous truth values
+        # when our custom __eq__ returns arrays that are evaluated in boolean context
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+            # Objects returning arrays are dropped (non-boolean return)
+            actual = xr.merge([ds4, ds5], combine_attrs="drop_conflicts")
+            assert "custom" not in actual.attrs  # Dropped - returns array, not bool
+            assert actual.attrs["x"] == 1
+
+            # Different values also dropped (returns array, not bool)
+            actual = xr.merge([ds4, ds6], combine_attrs="drop_conflicts")
+            assert "custom" not in actual.attrs  # Dropped - returns non-boolean
+            assert actual.attrs["x"] == 1
+            assert actual.attrs["y"] == 2
+
+    def test_merge_attrs_drop_conflicts_ambiguous_array_returns(self):
+        """Test drop_conflicts with objects returning ambiguous arrays from __eq__."""
+
+        # Test edge case: object whose __eq__ returns empty array (ambiguous truth value)
+        class EmptyArrayEq:
+            def __eq__(self, other):
+                if not isinstance(other, EmptyArrayEq):
+                    return False
+                return np.array([])  # Empty array has ambiguous truth value
+
+            def __repr__(self):
+                return "EmptyArrayEq()"
+
+        empty_obj1 = EmptyArrayEq()
+        empty_obj2 = EmptyArrayEq()
+
+        ds7 = xr.Dataset(attrs={"empty": empty_obj1})
+        ds8 = xr.Dataset(attrs={"empty": empty_obj2})
+
+        # With new behavior: ambiguous truth values are treated as non-equivalent
+        # So the attribute is dropped instead of raising an error
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
+            actual = xr.merge([ds7, ds8], combine_attrs="drop_conflicts")
+            assert "empty" not in actual.attrs  # Dropped due to ambiguous comparison
+
+        # Test with object that returns multi-element array (also ambiguous)
+        class MultiArrayEq:
+            def __eq__(self, other):
+                if not isinstance(other, MultiArrayEq):
+                    return False
+                return np.array([True, False])  # Multi-element array is ambiguous
+
+            def __repr__(self):
+                return "MultiArrayEq()"
+
+        multi_obj1 = MultiArrayEq()
+        multi_obj2 = MultiArrayEq()
+
+        ds9 = xr.Dataset(attrs={"multi": multi_obj1})
+        ds10 = xr.Dataset(attrs={"multi": multi_obj2})
+
+        # With new behavior: ambiguous arrays are treated as non-equivalent
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
+            actual = xr.merge([ds9, ds10], combine_attrs="drop_conflicts")
+            assert "multi" not in actual.attrs  # Dropped due to ambiguous comparison
+
+    def test_merge_attrs_drop_conflicts_all_true_array(self):
+        """Test drop_conflicts with all-True multi-element array from __eq__."""
+
+        # Test with all-True multi-element array (unambiguous truthy)
+        class AllTrueArrayEq:
+            def __eq__(self, other):
+                if not isinstance(other, AllTrueArrayEq):
+                    return False
+                return np.array([True, True, True])  # All True, but still multi-element
+
+            def __repr__(self):
+                return "AllTrueArrayEq()"
+
+        alltrue1 = AllTrueArrayEq()
+        alltrue2 = AllTrueArrayEq()
+
+        ds11 = xr.Dataset(attrs={"alltrue": alltrue1})
+        ds12 = xr.Dataset(attrs={"alltrue": alltrue2})
+
+        # Multi-element arrays are ambiguous even if all True
+        actual = xr.merge([ds11, ds12], combine_attrs="drop_conflicts")
+        assert "alltrue" not in actual.attrs  # Dropped due to ambiguous comparison
+
+    def test_merge_attrs_drop_conflicts_nested_arrays(self):
+        """Test drop_conflicts with NumPy object arrays containing nested arrays."""
+        # Test 1: NumPy object arrays with nested arrays
+        # These can have complex comparison behavior
+        x = np.array([None], dtype=object)
+        x[0] = np.arange(3)
+        y = np.array([None], dtype=object)
+        y[0] = np.arange(10, 13)
+
+        ds1 = xr.Dataset(attrs={"nested_array": x, "common": 1})
+        ds2 = xr.Dataset(attrs={"nested_array": y, "common": 1})
+
+        # Different nested arrays should cause attribute to be dropped
+        actual = xr.merge([ds1, ds2], combine_attrs="drop_conflicts")
+        assert (
+            "nested_array" not in actual.attrs
+        )  # Dropped due to different nested arrays
+        assert actual.attrs["common"] == 1
+
+        # Test with identical nested arrays
+        # Note: Even identical nested arrays will be dropped because comparison
+        # raises ValueError due to ambiguous truth value
+        z = np.array([None], dtype=object)
+        z[0] = np.arange(3)  # Same as x
+        ds3 = xr.Dataset(attrs={"nested_array": z, "other": 2})
+
+        actual = xr.merge([ds1, ds3], combine_attrs="drop_conflicts")
+        assert (
+            "nested_array" not in actual.attrs
+        )  # Dropped due to ValueError in comparison
+        assert actual.attrs["other"] == 2
+
+    def test_merge_attrs_drop_conflicts_dataset_attrs(self):
+        """Test drop_conflicts with xarray.Dataset objects as attributes."""
+        # xarray.Dataset objects as attributes (raises TypeError in equivalent)
+        attr_ds1 = xr.Dataset({"foo": 1})
+        attr_ds2 = xr.Dataset({"bar": 1})  # Different dataset
+        attr_ds3 = xr.Dataset({"foo": 1})  # Same as attr_ds1
+
+        ds4 = xr.Dataset(attrs={"dataset_attr": attr_ds1, "scalar": 42})
+        ds5 = xr.Dataset(attrs={"dataset_attr": attr_ds2, "scalar": 42})
+        ds6 = xr.Dataset(attrs={"dataset_attr": attr_ds3, "other": 99})
+
+        # Different datasets raise TypeError and should be dropped
+        actual = xr.merge([ds4, ds5], combine_attrs="drop_conflicts")
+        assert "dataset_attr" not in actual.attrs  # Dropped due to TypeError
+        assert actual.attrs["scalar"] == 42
+
+        # Identical datasets are also dropped (comparison returns Dataset, not bool)
+        actual = xr.merge([ds4, ds6], combine_attrs="drop_conflicts")
+        assert "dataset_attr" not in actual.attrs  # Dropped - returns Dataset, not bool
+        assert actual.attrs["other"] == 99
+
+    def test_merge_attrs_drop_conflicts_pandas_series(self):
+        """Test drop_conflicts with Pandas Series as attributes."""
+        # Pandas Series (raises ValueError due to ambiguous truth value)
+        series1 = pd.Series([1, 2])
+        series2 = pd.Series([3, 4])  # Different values
+        series3 = pd.Series([1, 2])  # Same as series1
+
+        ds7 = xr.Dataset(attrs={"series": series1, "value": "a"})
+        ds8 = xr.Dataset(attrs={"series": series2, "value": "a"})
+        ds9 = xr.Dataset(attrs={"series": series3, "value": "a"})
+
+        # Suppress potential warnings from pandas comparisons
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
+            warnings.filterwarnings("ignore", category=FutureWarning)
+
+            # Different series raise ValueError and get dropped
+            actual = xr.merge([ds7, ds8], combine_attrs="drop_conflicts")
+            assert "series" not in actual.attrs  # Dropped due to ValueError
+            assert actual.attrs["value"] == "a"
+
+            # Even identical series raise ValueError in equivalent() and get dropped
+            # because Series comparison returns another Series with ambiguous truth value
+            actual = xr.merge([ds7, ds9], combine_attrs="drop_conflicts")
+            assert "series" not in actual.attrs  # Dropped due to ValueError
+            assert actual.attrs["value"] == "a"
+
+    def test_merge_attrs_drop_conflicts_eq_returns_string(self):
+        """Test objects whose __eq__ returns strings are dropped."""
+
+        # Case 1: Objects whose __eq__ returns non-boolean strings
+        class ReturnsString:
+            def __init__(self, value):
+                self.value = value
+
+            def __eq__(self, other):
+                # Always returns a string (non-boolean)
+                return "comparison result"
+
+        obj1 = ReturnsString("A")
+        obj2 = ReturnsString("B")  # Different object
+
+        ds1 = xr.Dataset(attrs={"obj": obj1})
+        ds2 = xr.Dataset(attrs={"obj": obj2})
+
+        actual = xr.merge([ds1, ds2], combine_attrs="drop_conflicts")
+
+        # Strict behavior: drops attribute because __eq__ returns non-boolean
+        assert "obj" not in actual.attrs
+
+    def test_merge_attrs_drop_conflicts_eq_returns_number(self):
+        """Test objects whose __eq__ returns numbers are dropped."""
+
+        # Case 2: Objects whose __eq__ returns numbers
+        class ReturnsZero:
+            def __init__(self, value):
+                self.value = value
+
+            def __eq__(self, other):
+                # Always returns 0 (non-boolean)
+                return 0
+
+        obj3 = ReturnsZero("same")
+        obj4 = ReturnsZero("same")  # Different object, same value
+
+        ds3 = xr.Dataset(attrs={"zero": obj3})
+        ds4 = xr.Dataset(attrs={"zero": obj4})
+
+        actual = xr.merge([ds3, ds4], combine_attrs="drop_conflicts")
+
+        # Strict behavior: drops attribute because __eq__ returns non-boolean
+        assert "zero" not in actual.attrs
+
     def test_merge_attrs_no_conflicts_compat_minimal(self):
         """make sure compat="minimal" does not silence errors"""
         ds1 = xr.Dataset({"a": ("x", [], {"a": 0})})
@@ -273,12 +538,12 @@ class TestMergeFunction:
 
     def test_merge_wrong_input_error(self):
         with pytest.raises(TypeError, match=r"objects must be an iterable"):
-            xr.merge([1])
+            xr.merge([1])  # type: ignore[list-item]
         ds = xr.Dataset(coords={"x": [1, 2]})
         with pytest.raises(TypeError, match=r"objects must be an iterable"):
-            xr.merge({"a": ds})
+            xr.merge({"a": ds})  # type: ignore[dict-item]
         with pytest.raises(TypeError, match=r"objects must be an iterable"):
-            xr.merge([ds, 1])
+            xr.merge([ds, 1])  # type: ignore[list-item]
 
     def test_merge_no_conflicts_single_var(self):
         ds1 = xr.Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
@@ -403,19 +668,19 @@ class TestMergeMethod:
         ds2 = xr.Dataset({"x": 1})
         for compat in ["broadcast_equals", "equals", "identical", "no_conflicts"]:
             with pytest.raises(xr.MergeError):
-                ds1.merge(ds2, compat=compat)
+                ds1.merge(ds2, compat=compat)  # type: ignore[arg-type]
 
         ds2 = xr.Dataset({"x": [0, 0]})
         for compat in ["equals", "identical"]:
             with pytest.raises(ValueError, match=r"should be coordinates or not"):
-                ds1.merge(ds2, compat=compat)
+                ds1.merge(ds2, compat=compat)  # type: ignore[arg-type]
 
         ds2 = xr.Dataset({"x": ((), 0, {"foo": "bar"})})
         with pytest.raises(xr.MergeError):
             ds1.merge(ds2, compat="identical")
 
         with pytest.raises(ValueError, match=r"compat=.* invalid"):
-            ds1.merge(ds2, compat="foobar")
+            ds1.merge(ds2, compat="foobar")  # type: ignore[arg-type]
 
         assert ds1.identical(ds1.merge(ds2, compat="override"))
 
@@ -603,3 +868,95 @@ class TestNewDefaults:
         with set_options(use_new_combine_kwarg_defaults=True):
             with pytest.raises(ValueError, match="might be related to new default"):
                 expected.identical(ds2.merge(ds1))
+
+
+class TestMergeDataTree:
+    def test_mixed(self) -> None:
+        tree = xr.DataTree()
+        ds = xr.Dataset()
+        with pytest.raises(
+            TypeError,
+            match="merge does not support mixed type arguments when one argument is a DataTree",
+        ):
+            xr.merge([tree, ds])  # type: ignore[list-item]
+
+    def test_distinct(self) -> None:
+        tree1 = xr.DataTree.from_dict({"/a/b/c": 1})
+        tree2 = xr.DataTree.from_dict({"/a/d/e": 2})
+        expected = xr.DataTree.from_dict({"/a/b/c": 1, "/a/d/e": 2})
+        merged = xr.merge([tree1, tree2])
+        assert_equal(merged, expected)
+
+    def test_overlap(self) -> None:
+        tree1 = xr.DataTree.from_dict({"/a/b": 1})
+        tree2 = xr.DataTree.from_dict({"/a/c": 2})
+        tree3 = xr.DataTree.from_dict({"/a/d": 3})
+        expected = xr.DataTree.from_dict({"/a/b": 1, "/a/c": 2, "/a/d": 3})
+        merged = xr.merge([tree1, tree2, tree3])
+        assert_equal(merged, expected)
+
+    def test_inherited(self) -> None:
+        tree1 = xr.DataTree.from_dict({"/a/b": ("x", [1])}, coords={"x": [0]})
+        tree2 = xr.DataTree.from_dict({"/a/c": ("x", [2])})
+        expected = xr.DataTree.from_dict(
+            {"/a/b": ("x", [1]), "a/c": ("x", [2])}, coords={"x": [0]}
+        )
+        merged = xr.merge([tree1, tree2])
+        assert_equal(merged, expected)
+
+    def test_inherited_join(self) -> None:
+        tree1 = xr.DataTree.from_dict({"/a/b": ("x", [0, 1])}, coords={"x": [0, 1]})
+        tree2 = xr.DataTree.from_dict({"/a/c": ("x", [1, 2])}, coords={"x": [1, 2]})
+
+        expected = xr.DataTree.from_dict(
+            {"/a/b": ("x", [0, 1]), "a/c": ("x", [np.nan, 1])}, coords={"x": [0, 1]}
+        )
+        merged = xr.merge([tree1, tree2], join="left")
+        assert_equal(merged, expected)
+
+        expected = xr.DataTree.from_dict(
+            {"/a/b": ("x", [1, np.nan]), "a/c": ("x", [1, 2])}, coords={"x": [1, 2]}
+        )
+        merged = xr.merge([tree1, tree2], join="right")
+        assert_equal(merged, expected)
+
+        expected = xr.DataTree.from_dict(
+            {"/a/b": ("x", [1]), "a/c": ("x", [1])}, coords={"x": [1]}
+        )
+        merged = xr.merge([tree1, tree2], join="inner")
+        assert_equal(merged, expected)
+
+        expected = xr.DataTree.from_dict(
+            {"/a/b": ("x", [0, 1, np.nan]), "a/c": ("x", [np.nan, 1, 2])},
+            coords={"x": [0, 1, 2]},
+        )
+        merged = xr.merge([tree1, tree2], join="outer")
+        assert_equal(merged, expected)
+
+        with pytest.raises(
+            xr.AlignmentError,
+            match=re.escape("cannot align objects with join='exact'"),
+        ):
+            xr.merge([tree1, tree2], join="exact")
+
+    def test_merge_error_includes_path(self) -> None:
+        tree1 = xr.DataTree.from_dict({"/a/b": ("x", [0, 1])})
+        tree2 = xr.DataTree.from_dict({"/a/b": ("x", [1, 2])})
+        with pytest.raises(
+            xr.MergeError,
+            match=re.escape(
+                "Raised whilst mapping function over node(s) with path 'a'"
+            ),
+        ):
+            xr.merge([tree1, tree2], join="exact")
+
+    def test_fill_value_errors(self) -> None:
+        trees = [xr.DataTree(), xr.DataTree()]
+
+        with pytest.raises(
+            NotImplementedError,
+            match=re.escape(
+                "fill_value is not yet supported for DataTree objects in merge"
+            ),
+        ):
+            xr.merge(trees, fill_value=None)

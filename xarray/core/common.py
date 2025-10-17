@@ -164,7 +164,7 @@ class AbstractArray:
         return complex(self.values)
 
     def __array__(
-        self: Any, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self: Any, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if not copy:
             if np.lib.NumpyVersion(np.__version__) >= "2.0.0":
@@ -619,9 +619,9 @@ class DataWithCoords(AttrAccessMixin):
         <xarray.Dataset> Size: 360B
         Dimensions:         (x: 2, y: 2, time: 4)
         Coordinates:
+          * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
             lon             (x, y) float64 32B 260.2 260.7 260.2 260.8
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
-          * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
             reference_time  datetime64[ns] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
@@ -633,9 +633,9 @@ class DataWithCoords(AttrAccessMixin):
         <xarray.Dataset> Size: 360B
         Dimensions:         (x: 2, y: 2, time: 4)
         Coordinates:
+          * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
-          * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
             reference_time  datetime64[ns] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
@@ -1314,7 +1314,7 @@ class DataWithCoords(AttrAccessMixin):
         from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
             duck_array_ops.isnull,
@@ -1357,7 +1357,7 @@ class DataWithCoords(AttrAccessMixin):
         from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
             duck_array_ops.notnull,
@@ -2073,12 +2073,12 @@ def get_chunksizes(
     return Frozen(chunks)
 
 
-def is_np_datetime_like(dtype: DTypeLike) -> bool:
+def is_np_datetime_like(dtype: DTypeLike | None) -> bool:
     """Check if a dtype is a subclass of the numpy datetime types"""
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
-def is_np_timedelta_like(dtype: DTypeLike) -> bool:
+def is_np_timedelta_like(dtype: DTypeLike | None) -> bool:
     """Check whether dtype is of the timedelta64 dtype."""
     return np.issubdtype(dtype, np.timedelta64)
 
@@ -2108,3 +2108,21 @@ def _contains_datetime_like_objects(var: T_Variable) -> bool:
     np.datetime64, np.timedelta64, or cftime.datetime)
     """
     return is_np_datetime_like(var.dtype) or contains_cftime_datetimes(var)
+
+
+def _is_numeric_aggregatable_dtype(var: T_Variable) -> bool:
+    """Check if a variable's dtype can be used in numeric aggregations like mean().
+
+    This includes:
+    - Numeric types (int, float, complex)
+    - Boolean type
+    - Datetime types (datetime64, timedelta64)
+    - Object arrays containing datetime-like objects (e.g., cftime)
+    """
+    return (
+        np.issubdtype(var.dtype, np.number)
+        or (var.dtype == np.bool_)
+        or np.issubdtype(var.dtype, np.datetime64)
+        or np.issubdtype(var.dtype, np.timedelta64)
+        or _contains_cftime_datetimes(var._data)
+    )

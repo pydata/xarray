@@ -695,7 +695,7 @@ def where(cond, x, y, keep_attrs=None):
       * lon      (lon) int64 24B 10 11 12
 
     >>> xr.where(y.lat < 1, y, -1)
-    <xarray.DataArray (lat: 3, lon: 3)> Size: 72B
+    <xarray.DataArray 'lat' (lat: 3, lon: 3)> Size: 72B
     array([[ 0. ,  0.1,  0.2],
            [-1. , -1. , -1. ],
            [-1. , -1. , -1. ]])
@@ -720,7 +720,7 @@ def where(cond, x, y, keep_attrs=None):
     from xarray.core.dataset import Dataset
 
     if keep_attrs is None:
-        keep_attrs = _get_keep_attrs(default=False)
+        keep_attrs = _get_keep_attrs(default=True)
 
     # alignment for three arguments is complicated, so don't support it yet
     from xarray.computation.apply_ufunc import apply_ufunc
@@ -931,13 +931,13 @@ def _calc_idxminmax(
         array = array.where(~allna, 0)
 
     # This will run argmin or argmax.
-    indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
+    index = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
     # Force dictionary format in case of single dim so that we can iterate over it in for loop below
     if dim_is_str:
-        indx = {dim: indx}
+        index = {dim: index}
 
     res = {}
-    for _dim, _da_idx in zip(dims, indx.values(), strict=False):
+    for _dim, _da_idx in zip(dims, index.values(), strict=False):
         # Handle chunked arrays (e.g. dask).
         coord = array[_dim]._variable.to_base_variable()
         if is_chunked_array(array.data):

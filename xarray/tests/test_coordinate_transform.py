@@ -217,16 +217,16 @@ def test_coordinate_transform_sel() -> None:
     # doesn't work with coordinate transform index coordinate variables)
     assert actual.equals(expected)
 
-    with pytest.raises(ValueError, match=".*only supports selection.*nearest"):
+    with pytest.raises(ValueError, match=r".*only supports selection.*nearest"):
         ds.sel(x=xr.Variable("z", [0.5, 5.5]), y=xr.Variable("z", [0.0, 0.5]))
 
-    with pytest.raises(ValueError, match="missing labels for coordinate.*y"):
+    with pytest.raises(ValueError, match=r"missing labels for coordinate.*y"):
         ds.sel(x=[0.5, 5.5], method="nearest")
 
-    with pytest.raises(TypeError, match=".*only supports advanced.*indexing"):
+    with pytest.raises(TypeError, match=r".*only supports advanced.*indexing"):
         ds.sel(x=[0.5, 5.5], y=[0.0, 0.5], method="nearest")
 
-    with pytest.raises(ValueError, match=".*only supports advanced.*indexing"):
+    with pytest.raises(ValueError, match=r".*only supports advanced.*indexing"):
         ds.sel(
             x=xr.Variable("z", [0.5, 5.5]),
             y=xr.Variable("z", [0.0, 0.5, 1.5]),

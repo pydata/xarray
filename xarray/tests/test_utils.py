@@ -11,6 +11,7 @@ from xarray.core import duck_array_ops, utils
 from xarray.core.utils import (
     attempt_import,
     either_dict_or_kwargs,
+    flat_items,
     infix_dims,
     iterate_nested,
 )
@@ -79,6 +80,15 @@ class TestDictionaries:
         assert utils.equivalent(np.array([0]), [0])
         assert utils.equivalent(np.arange(3), 1.0 * np.arange(3))
         assert not utils.equivalent(0, np.zeros(3))
+        # Test NaN comparisons (issue #10833)
+        # Python float NaN
+        assert utils.equivalent(float("nan"), float("nan"))
+        # NumPy scalar NaN (various dtypes)
+        assert utils.equivalent(np.float64(np.nan), np.float64(np.nan))
+        assert utils.equivalent(np.float32(np.nan), np.float32(np.nan))
+        # Mixed: Python float NaN vs NumPy scalar NaN
+        assert utils.equivalent(float("nan"), np.float64(np.nan))
+        assert utils.equivalent(np.float64(np.nan), float("nan"))
 
     def test_safe(self):
         # should not raise exception:
@@ -149,6 +159,13 @@ class TestDictionaries:
         assert len(x) == 1
         assert repr(x) == "FilteredMapping(keys={'a'}, mapping={'a': 1, 'b': 2})"
         assert dict(x) == {"a": 1}
+
+
+def test_flat_items() -> None:
+    mapping = {"x": {"y": 1, "z": 2}, "x/y": 3}
+    actual = list(flat_items(mapping))
+    expected = [("x/y", 1), ("x/z", 2), ("x/y", 3)]
+    assert actual == expected
 
 
 def test_repr_object():
