@@ -10371,6 +10371,7 @@ class Dataset(
         offset: pd.Timedelta | datetime.timedelta | str | None = None,
         origin: str | DatetimeLike = "start_day",
         restore_coord_dims: bool | None = None,
+        boundaries: Literal["exact", "trim"] | None = None,
         **indexer_kwargs: ResampleCompatible | Resampler,
     ) -> DatasetResample:
         """Returns a Resample object for performing resampling operations.
@@ -10406,6 +10407,11 @@ class Dataset(
         restore_coord_dims : bool, optional
             If True, also restore the dimension order of multi-dimensional
             coordinates.
+        boundaries : {"exact", "trim"}, optional
+            How to handle boundaries when the data doesn't evenly fit the resampling
+            frequency. If 'exact', a ValueError will be raised if the data doesn't
+            evenly fit. If 'trim', incomplete periods are dropped. If None (default),
+            uses the current behavior (includes incomplete periods).
         **indexer_kwargs : str, datetime.timedelta, pd.Timedelta, pd.DateOffset, or Resampler
             The keyword arguments form of ``indexer``.
             One of indexer or indexer_kwargs must be provided.
@@ -10438,6 +10444,7 @@ class Dataset(
             offset=offset,
             origin=origin,
             restore_coord_dims=restore_coord_dims,
+            boundaries=boundaries,
             **indexer_kwargs,
         )
 

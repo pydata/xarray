@@ -6,7 +6,16 @@ from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Concatenate,
+    Literal,
+    ParamSpec,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -925,6 +934,7 @@ class DataWithCoords(AttrAccessMixin):
         offset: pd.Timedelta | datetime.timedelta | str | None,
         origin: str | DatetimeLike,
         restore_coord_dims: bool | None,
+        boundaries: Literal["exact", "trim"] | None = None,
         **indexer_kwargs: ResampleCompatible | Resampler,
     ) -> T_Resample:
         """Returns a Resample object for performing resampling operations.
@@ -960,6 +970,11 @@ class DataWithCoords(AttrAccessMixin):
         restore_coord_dims : bool, optional
             If True, also restore the dimension order of multi-dimensional
             coordinates.
+        boundaries : {"exact", "trim"}, optional
+            How to handle boundaries when the data doesn't evenly fit the resampling
+            frequency. If 'exact', a ValueError will be raised if the data doesn't
+            evenly fit. If 'trim', incomplete periods are dropped. If None (default),
+            uses the current behavior (includes incomplete periods).
         **indexer_kwargs : {dim: freq}
             The keyword arguments form of ``indexer``.
             One of indexer or indexer_kwargs must be provided.
@@ -1107,8 +1122,45 @@ class DataWithCoords(AttrAccessMixin):
         grouper: Resampler
         if isinstance(freq, ResampleCompatible):
             grouper = TimeResampler(
-                freq=freq, closed=closed, label=label, origin=origin, offset=offset
+                freq=freq,
+                closed=closed,
+                label=label,
+                origin=origin,
+                offset=offset,
+                boundaries=boundaries,
             )
+
+            # Apply trim logic at the resample level if needed
+            if boundaries == "trim":
+                # First, get the resampling periods to identify incomplete ones
+                from xarray.core.groupby import ResolvedGrouper
+
+                temp_grouper = ResolvedGrouper(grouper, group, self)
+                temp_encoded = temp_grouper.encoded
+
+                # Count data points in each period
+                codes = temp_encoded.codes
+                counts = np.bincount(codes.values)
+
+                if len(counts) > 0:
+                    # Find the most common count (expected points per period)
+                    unique_counts, count_frequencies = np.unique(
+                        counts, return_counts=True
+                    )
+                    most_common_count = unique_counts[np.argmax(count_frequencies)]
+
+                    # Identify incomplete periods
+                    incomplete_periods = counts < most_common_count
+
+                    if np.any(incomplete_periods):
+                        # Find which data points belong to incomplete periods
+                        incomplete_codes = np.where(incomplete_periods)[0]
+                        valid_mask = ~np.isin(codes.values, incomplete_codes)
+
+                        # Filter the data to exclude incomplete periods
+                        group = group.isel({group.dims[0]: valid_mask})
+                        # Also update the object to match the filtered group
+                        self = self.isel({group.dims[0]: valid_mask})
         elif isinstance(freq, Resampler):
             grouper = freq
         else:
