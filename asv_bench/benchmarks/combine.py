@@ -5,6 +5,22 @@ import xarray as xr
 from . import requires_dask
 
 
+class Concat1d:
+    """Benchmark concatenating large datasets"""
+
+    def setup(self) -> None:
+        self.data_arrays = [
+            xr.DataArray(data=np.zeros(25 * 1024 * 1024, dtype=np.int8), dims=["x"])
+            for _ in range(10)
+        ]
+
+    def time_concat(self) -> None:
+        xr.concat(self.data_arrays, dim="x")
+
+    def peakmem_concat(self) -> None:
+        xr.concat(self.data_arrays, dim="x")
+
+
 class Combine1d:
     """Benchmark concatenating and merging large datasets"""
 
