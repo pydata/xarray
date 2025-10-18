@@ -140,11 +140,13 @@ def guess_chunkmanager(
         )
 
 
-def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
+def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any] | None:
     """
     Detects which parallel backend should be used for given set of arrays.
 
     Also checks that all arrays are of same chunking type (i.e. not a mix of cubed and dask).
+
+    Returns None if no matching ChunkManager is found.
     """
 
     # TODO this list is probably redundant with something inside xarray.apply_ufunc
@@ -174,9 +176,7 @@ def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
         if chunkmanager.is_chunked_array(chunked_arr)
     ]
     if not selected:
-        raise TypeError(
-            f"Could not find a Chunk Manager which recognises type {type(chunked_arr)}"
-        )
+        return None
     elif len(selected) >= 2:
         raise TypeError(f"Multiple ChunkManagers recognise type {type(chunked_arr)}")
     else:

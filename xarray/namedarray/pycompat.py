@@ -114,7 +114,8 @@ def to_numpy(
     # TODO first attempt to call .to_numpy() once some libraries implement it
     if is_chunked_array(data):
         chunkmanager = get_chunked_array_type(data)
-        data, *_ = chunkmanager.compute(data, **kwargs)
+        if chunkmanager is not None:
+            data, *_ = chunkmanager.compute(data, **kwargs)
     if isinstance(data, array_type("cupy")):
         data = data.get()
     # pint has to be imported dynamically as pint imports xarray
@@ -136,8 +137,9 @@ def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, 
 
     if is_chunked_array(data):
         chunkmanager = get_chunked_array_type(data)
-        loaded_data, *_ = chunkmanager.compute(data, **kwargs)  # type: ignore[var-annotated]
-        return loaded_data
+        if chunkmanager is not None:
+            loaded_data, *_ = chunkmanager.compute(data, **kwargs)  # type: ignore[var-annotated]
+            return loaded_data
 
     if isinstance(data, ExplicitlyIndexed | ImplicitToExplicitIndexingAdapter):
         return data.get_duck_array()  # type: ignore[no-untyped-call, no-any-return]
