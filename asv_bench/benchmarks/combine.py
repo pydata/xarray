@@ -10,7 +10,7 @@ class Concat1d:
 
     def setup(self) -> None:
         self.data_arrays = [
-            xr.DataArray(data=np.zeros(25 * 1024 * 1024, dtype=np.int8), dims=["x"])
+            xr.DataArray(data=np.zeros(4 * 1024 * 1024, dtype=np.int8), dims=["x"])
             for _ in range(10)
         ]
 
