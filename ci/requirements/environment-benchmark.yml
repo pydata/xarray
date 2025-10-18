@@ -8,6 +8,8 @@ dependencies:
   - dask-core
   - distributed
   - flox
+  - libmambapy
+  - conda-build
   - netcdf4
   - numba
   - numbagg
