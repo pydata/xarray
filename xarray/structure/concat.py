@@ -746,9 +746,9 @@ def _dataset_concat(
 
     # create concatenation index, needed for later reindexing
     file_start_indexes = np.append(0, np.cumsum(concat_dim_lengths))
-    concat_index = np.arange(file_start_indexes[-1])
-    concat_index_size = concat_index.size
+    concat_index_size = np.sum(concat_dim_lengths)
     variable_index_mask = np.ones(concat_index_size, dtype=bool)
+    variable_reindexer = None
 
     # stack up each variable and/or index to fill-out the dataset (in order)
     # n.b. this loop preserves variable order, needed for groupby.
@@ -776,7 +776,6 @@ def _dataset_concat(
                     end = file_start_indexes[i + 1]
                     variable_index_mask[slice(start, end)] = False
 
-            variable_index = concat_index[variable_index_mask]
             vars = ensure_common_dims(variables, var_concat_dim_length)
 
             # Try to concatenate the indexes, concatenate the variables when no index
@@ -807,12 +806,18 @@ def _dataset_concat(
                     vars, dim_name, positions, combine_attrs=combine_attrs
                 )
                 # reindex if variable is not present in all datasets
-                if len(variable_index) < concat_index_size:
+                if not variable_index_mask.all():
+                    if variable_reindexer is None:
+                        variable_reindexer = np.empty(
+                            concat_index_size,
+                            dtype=np.min_scalar_type(-concat_index_size),
+                        )
+                    np.cumsum(variable_index_mask, out=variable_reindexer)
+                    variable_reindexer -= 1
+                    variable_reindexer[~variable_index_mask] = -1
                     combined_var = reindex_variables(
                         variables={name: combined_var},
-                        dim_pos_indexers={
-                            dim_name: pd.Index(variable_index).get_indexer(concat_index)
-                        },
+                        dim_pos_indexers={dim_name: variable_reindexer},
                         fill_value=fill_value,
                     )[name]
                 result_vars[name] = combined_var
