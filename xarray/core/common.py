@@ -1129,38 +1129,6 @@ class DataWithCoords(AttrAccessMixin):
                 offset=offset,
                 boundaries=boundaries,
             )
-
-            # Apply trim logic at the resample level if needed
-            if boundaries == "trim":
-                # First, get the resampling periods to identify incomplete ones
-                from xarray.core.groupby import ResolvedGrouper
-
-                temp_grouper = ResolvedGrouper(grouper, group, self)
-                temp_encoded = temp_grouper.encoded
-
-                # Count data points in each period
-                codes = temp_encoded.codes
-                counts = np.bincount(codes.values)
-
-                if len(counts) > 0:
-                    # Find the most common count (expected points per period)
-                    unique_counts, count_frequencies = np.unique(
-                        counts, return_counts=True
-                    )
-                    most_common_count = unique_counts[np.argmax(count_frequencies)]
-
-                    # Identify incomplete periods
-                    incomplete_periods = counts < most_common_count
-
-                    if np.any(incomplete_periods):
-                        # Find which data points belong to incomplete periods
-                        incomplete_codes = np.where(incomplete_periods)[0]
-                        valid_mask = ~np.isin(codes.values, incomplete_codes)
-
-                        # Filter the data to exclude incomplete periods
-                        group = group.isel({group.dims[0]: valid_mask})
-                        # Also update the object to match the filtered group
-                        self = self.isel({group.dims[0]: valid_mask})
         elif isinstance(freq, Resampler):
             grouper = freq
         else:

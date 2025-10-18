@@ -574,7 +574,7 @@ class TimeResampler(Resampler):
         full_index, first_items, codes_ = self._get_index_and_items()
         sbins = first_items.values.astype(np.int64)
 
-        # Handle boundaries parameter for exact checking
+        # Handle boundaries parameter for exact checking and trim logic
         if self.boundaries == "exact":
             # Check if data evenly fits the resampling frequency
             counts = np.bincount(codes_)
@@ -588,6 +588,23 @@ class TimeResampler(Resampler):
                     f"{counts[incomplete_periods]} points. Use boundaries='trim' "
                     f"to handle incomplete periods."
                 )
+        elif self.boundaries == "trim":
+            # Apply trim logic: set codes to -1 for incomplete periods
+            counts = np.bincount(codes_)
+
+            if len(counts) > 0:
+                # Find the most common count (expected points per period)
+                unique_counts, count_frequencies = np.unique(counts, return_counts=True)
+                most_common_count = unique_counts[np.argmax(count_frequencies)]
+
+                # Identify incomplete periods
+                incomplete_periods = counts < most_common_count
+
+                if np.any(incomplete_periods):
+                    # Find which data points belong to incomplete periods
+                    incomplete_codes = np.where(incomplete_periods)[0]
+                    # Set codes to -1 for points in incomplete periods
+                    codes_[np.isin(codes_, incomplete_codes)] = -1
 
         group_indices: GroupIndices = tuple(
             list(itertools.starmap(slice, pairwise(sbins))) + [slice(sbins[-1], None)]
