@@ -931,9 +931,6 @@ def _process_cmap_cbar_kwargs(
 
     cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
 
-    if "contour" in func.__name__ and levels is None:
-        levels = 7  # this is the matplotlib default
-
     # colors is mutually exclusive with cmap
     if cmap and colors:
         raise ValueError("Can't specify both cmap and colors.")
@@ -1337,7 +1334,7 @@ def _parse_size(
     else:
         levels = numbers = np.sort(np.unique(flatdata))
 
-    min_width, default_width, max_width = _MARKERSIZE_RANGE
+    min_width, _default_width, max_width = _MARKERSIZE_RANGE
     # width_range = min_width, max_width
 
     if norm is None:

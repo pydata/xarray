@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from collections.abc import Set as AbstractSet
-from typing import TYPE_CHECKING, Any, NamedTuple, Union
+from typing import TYPE_CHECKING, Any, NamedTuple, Union, cast, overload
 
 import pandas as pd
 
@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
     from xarray.core.types import (
         CombineAttrsOptions,
         CompatOptions,
@@ -276,6 +277,7 @@ def merge_collected(
             if index is not None:
                 merged_indexes[name] = index
         else:
+            attrs: dict[Any, Any] = {}
             indexed_elements = [
                 (variable, index)
                 for variable, index in elements_list
@@ -306,13 +308,7 @@ def merge_collected(
                     [var.attrs for var, _ in indexed_elements],
                     combine_attrs=combine_attrs,
                 )
-                if variable.attrs or attrs:
-                    # Make a shallow copy to so that assigning merged_vars[name].attrs
-                    # does not affect the original input variable.
-                    merged_vars[name] = variable.copy(deep=False)
-                    merged_vars[name].attrs = attrs
-                else:
-                    merged_vars[name] = variable
+                merged_vars[name] = variable
                 merged_indexes[name] = index
             else:
                 variables = [variable for variable, _ in elements_list]
@@ -342,9 +338,14 @@ def merge_collected(
                         raise
 
                 if name in merged_vars:
-                    merged_vars[name].attrs = merge_attrs(
+                    attrs = merge_attrs(
                         [var.attrs for var in variables], combine_attrs=combine_attrs
                     )
+
+            if name in merged_vars and (merged_vars[name].attrs or attrs):
+                # Ensure that assigning attrs does not affect the original input variable.
+                merged_vars[name] = merged_vars[name].copy(deep=False)
+                merged_vars[name].attrs = attrs
 
     return merged_vars, merged_indexes
 
@@ -607,6 +608,25 @@ def merge_coords(
     return variables, out_indexes
 
 
+def equivalent_attrs(a: Any, b: Any) -> bool:
+    """Check if two attribute values are equivalent.
+
+    Returns False if the comparison raises ValueError or TypeError.
+    This handles cases like numpy arrays with ambiguous truth values
+    and xarray Datasets which can't be directly converted to numpy arrays.
+
+    Since equivalent() now handles non-boolean returns by returning False,
+    this wrapper mainly catches exceptions from comparisons that can't be
+    evaluated at all.
+    """
+    try:
+        return equivalent(a, b)
+    except (ValueError, TypeError):
+        # These exceptions indicate the comparison is truly ambiguous
+        # (e.g., nested numpy arrays that would raise "ambiguous truth value")
+        return False
+
+
 def merge_attrs(variable_attrs, combine_attrs, context=None):
     """Combine attributes from different variables according to combine_attrs"""
     if not variable_attrs:
@@ -633,20 +653,18 @@ def merge_attrs(variable_attrs, combine_attrs, context=None):
     elif combine_attrs == "drop_conflicts":
         result = {}
         dropped_keys = set()
+
         for attrs in variable_attrs:
-            result.update(
-                {
-                    key: value
-                    for key, value in attrs.items()
-                    if key not in result and key not in dropped_keys
-                }
-            )
-            result = {
-                key: value
-                for key, value in result.items()
-                if key not in attrs or equivalent(attrs[key], value)
-            }
-            dropped_keys |= {key for key in attrs if key not in result}
+            for key, value in attrs.items():
+                if key in dropped_keys:
+                    continue
+
+                if key not in result:
+                    result[key] = value
+                elif not equivalent_attrs(result[key], value):
+                    del result[key]
+                    dropped_keys.add(key)
+
         return result
     elif combine_attrs == "identical":
         result = dict(variable_attrs[0])
@@ -776,18 +794,101 @@ def merge_core(
     return _MergeResult(variables, coord_names, dims, out_indexes, attrs)
 
 
-def merge(
-    objects: Iterable[DataArray | CoercibleMapping],
+def merge_trees(
+    trees: Iterable[DataTree],
     compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
     join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     fill_value: object = dtypes.NA,
     combine_attrs: CombineAttrsOptions = "override",
-) -> Dataset:
+) -> DataTree:
+    """Merge specialized to DataTree objects."""
+    from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
+    from xarray.core.datatree_mapping import add_path_context_to_errors
+
+    if fill_value is not dtypes.NA:
+        # fill_value support dicts, which probably should be mapped to sub-groups?
+        raise NotImplementedError(
+            "fill_value is not yet supported for DataTree objects in merge"
+        )
+
+    node_lists: defaultdict[str, list[DataTree]] = defaultdict(list)
+    for tree in trees:
+        for key, node in tree.subtree_with_keys:
+            node_lists[key].append(node)
+
+    root_datasets = [node.dataset for node in node_lists.pop(".")]
+    with add_path_context_to_errors("."):
+        root_ds = merge(
+            root_datasets, compat=compat, join=join, combine_attrs=combine_attrs
+        )
+    result = DataTree(dataset=root_ds)
+
+    def level(kv):
+        # all trees with the same path have the same level
+        _, trees = kv
+        return trees[0].level
+
+    for key, nodes in sorted(node_lists.items(), key=level):
+        # Merge datasets, including inherited indexes to ensure alignment.
+        datasets = [node.dataset for node in nodes]
+        with add_path_context_to_errors(key):
+            merge_result = merge_core(
+                datasets,
+                compat=compat,
+                join=join,
+                combine_attrs=combine_attrs,
+            )
+        # Remove inherited coordinates/indexes/dimensions.
+        for var_name in list(merge_result.coord_names):
+            if not any(var_name in node._coord_variables for node in nodes):
+                del merge_result.variables[var_name]
+                merge_result.coord_names.remove(var_name)
+        for index_name in list(merge_result.indexes):
+            if not any(index_name in node._node_indexes for node in nodes):
+                del merge_result.indexes[index_name]
+        for dim in list(merge_result.dims):
+            if not any(dim in node._node_dims for node in nodes):
+                del merge_result.dims[dim]
+
+        merged_ds = Dataset._construct_direct(**merge_result._asdict())
+        result[key] = DataTree(dataset=merged_ds)
+
+    return result
+
+
+@overload
+def merge(
+    objects: Iterable[DataTree],
+    compat: CompatOptions | CombineKwargDefault = ...,
+    join: JoinOptions | CombineKwargDefault = ...,
+    fill_value: object = ...,
+    combine_attrs: CombineAttrsOptions = ...,
+) -> DataTree: ...
+
+
+@overload
+def merge(
+    objects: Iterable[DataArray | Dataset | Coordinates | dict],
+    compat: CompatOptions | CombineKwargDefault = ...,
+    join: JoinOptions | CombineKwargDefault = ...,
+    fill_value: object = ...,
+    combine_attrs: CombineAttrsOptions = ...,
+) -> Dataset: ...
+
+
+def merge(
+    objects: Iterable[DataTree | DataArray | Dataset | Coordinates | dict],
+    compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
+    join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
+    fill_value: object = dtypes.NA,
+    combine_attrs: CombineAttrsOptions = "override",
+) -> DataTree | Dataset:
     """Merge any number of xarray objects into a single Dataset as variables.
 
     Parameters
     ----------
-    objects : iterable of Dataset or iterable of DataArray or iterable of dict-like
+    objects : iterable of DataArray, Dataset, DataTree or dict
         Merge together all variables from these objects. If any of them are
         DataArray objects, they must have a name.
     compat : {"identical", "equals", "broadcast_equals", "no_conflicts", \
@@ -842,8 +943,9 @@ def merge(
 
     Returns
     -------
-    Dataset
-        Dataset with combined variables from each object.
+    Dataset or DataTree
+        Objects with combined variables from the inputs. If any inputs are a
+        DataTree, this will also be a DataTree. Otherwise it will be a Dataset.
 
     Examples
     --------
@@ -1006,13 +1108,31 @@ def merge(
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
+
+    objects = list(objects)
+
+    if any(isinstance(obj, DataTree) for obj in objects):
+        if not all(isinstance(obj, DataTree) for obj in objects):
+            raise TypeError(
+                "merge does not support mixed type arguments when one argument "
+                f"is a DataTree: {objects}"
+            )
+        trees = cast(list[DataTree], objects)
+        return merge_trees(
+            trees,
+            compat=compat,
+            join=join,
+            combine_attrs=combine_attrs,
+            fill_value=fill_value,
+        )
 
     dict_like_objects = []
     for obj in objects:
         if not isinstance(obj, DataArray | Dataset | Coordinates | dict):
             raise TypeError(
-                "objects must be an iterable containing only "
-                "Dataset(s), DataArray(s), and dictionaries."
+                "objects must be an iterable containing only DataTree(s), "
+                f"Dataset(s), DataArray(s), and dictionaries: {objects}"
             )
 
         if isinstance(obj, DataArray):

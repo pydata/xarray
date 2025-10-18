@@ -32,6 +32,7 @@ dependencies:
   - pyarrow # importing dask.dataframe raises an ImportError without this
   - pydap
   - pytest
+  - pytest-asyncio
   - pytest-cov
   - pytest-env
   - pytest-mypy-plugins

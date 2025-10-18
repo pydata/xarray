@@ -50,6 +50,7 @@ from xarray.core.utils import (
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import (
+    async_to_duck_array,
     integer_types,
     is_0d_dask_array,
     is_chunked_array,
@@ -294,7 +295,7 @@ def as_compatible_data(
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)
         if mask.any():
-            dtype, fill_value = dtypes.maybe_promote(data.dtype)
+            _dtype, fill_value = dtypes.maybe_promote(data.dtype)
             data = duck_array_ops.where_method(data, ~mask, fill_value)
         else:
             data = np.asarray(data)
@@ -399,7 +400,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             dims=dims, data=as_compatible_data(data, fastpath=fastpath), attrs=attrs
         )
 
-        self._encoding = None
+        self._encoding: dict[Any, Any] | None = None
         if encoding is not None:
             self.encoding = encoding
 
@@ -464,7 +465,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             return duck_array.array
         return duck_array
 
-    @data.setter
+    @data.setter  # type: ignore[override,unused-ignore]
     def data(self, data: T_DuckArray | ArrayLike) -> None:
         data = as_compatible_data(data)
         self._check_shape(data)
@@ -646,7 +647,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             k.item() if isinstance(k, np.ndarray) and k.ndim == 0 else k for k in key
         )
 
-        if all(isinstance(k, BASIC_INDEXING_TYPES) for k in key):
+        if all(
+            (isinstance(k, BASIC_INDEXING_TYPES) and not isinstance(k, bool))
+            for k in key
+        ):
             return self._broadcast_indexes_basic(key)
 
         self._validate_indexers(key)
@@ -902,7 +906,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def encoding(self) -> dict[Any, Any]:
         """Dictionary of encodings on this variable."""
         if self._encoding is None:
-            self._encoding = {}
+            encoding: dict[Any, Any] = {}
+            self._encoding = encoding
         return self._encoding
 
     @encoding.setter
@@ -944,9 +949,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         else:
             ndata = as_compatible_data(data)
-            if self.shape != ndata.shape:  # type: ignore[attr-defined]
+            if self.shape != ndata.shape:
                 raise ValueError(
-                    f"Data shape {ndata.shape} must match shape of object {self.shape}"  # type: ignore[attr-defined]
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
                 )
 
         attrs = copy.deepcopy(self._attrs, memo) if deep else copy.copy(self._attrs)
@@ -970,14 +975,16 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             data = copy.copy(self.data)
         if attrs is _default:
             attrs = copy.copy(self._attrs)
-
         if encoding is _default:
             encoding = copy.copy(self._encoding)
         return type(self)(dims, data, attrs, encoding, fastpath=True)
 
-    def load(self, **kwargs):
-        """Manually trigger loading of this variable's data from disk or a
-        remote source into memory and return this variable.
+    def load(self, **kwargs) -> Self:
+        """Trigger loading data into memory and return this variable.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original variable is modified and returned.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -988,17 +995,61 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.array.compute``.
 
+        Returns
+        -------
+        object : Variable
+            Same object but with lazy data as an in-memory array.
+
         See Also
         --------
         dask.array.compute
+        Variable.compute
+        Variable.load_async
+        DataArray.load
+        Dataset.load
         """
         self._data = to_duck_array(self._data, **kwargs)
         return self
 
-    def compute(self, **kwargs):
-        """Manually trigger loading of this variable's data from disk or a
-        remote source into memory and return a new variable. The original is
-        left unaltered.
+    async def load_async(self, **kwargs) -> Self:
+        """Trigger and await asynchronous loading of data into memory and return this variable.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original variable is modified and returned.
+
+        Only works when opening data lazily from IO storage backends which support lazy asynchronous loading.
+        Otherwise will raise a NotImplementedError.
+
+        Note users are expected to limit concurrency themselves - xarray does not internally limit concurrency in any way.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        Returns
+        -------
+        object : Variable
+            Same object but with lazy data as an in-memory array.
+
+        See Also
+        --------
+        dask.array.compute
+        Variable.load
+        Variable.compute
+        DataArray.load_async
+        Dataset.load_async
+        """
+        self._data = await async_to_duck_array(self._data, **kwargs)
+        return self
+
+    def compute(self, **kwargs) -> Self:
+        """Trigger loading data into memory and return a new variable.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        The original variable is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -1009,9 +1060,18 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.array.compute``.
 
+        Returns
+        -------
+        object : Variable
+            New object with the data as an in-memory array.
+
         See Also
         --------
         dask.array.compute
+        Variable.load
+        Variable.load_async
+        DataArray.compute
+        Dataset.compute
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -1681,8 +1741,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             the reduction is calculated over the flattened array (by calling
             `func(x)` without an axis argument).
         keep_attrs : bool, optional
-            If True, the variable's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
+            If True (default), the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False, the new
             object will be returned without attributes.
         keepdims : bool, default: False
             If True, the dimensions which are reduced are left in the result
@@ -1697,7 +1757,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             removed.
         """
         keep_attrs_ = (
-            _get_keep_attrs(default=False) if keep_attrs is None else keep_attrs
+            _get_keep_attrs(default=True) if keep_attrs is None else keep_attrs
         )
 
         # Note that the call order for Variable.mean is
@@ -1949,7 +2009,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             _quantile_func = duck_array_ops.quantile
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         scalar = utils.is_scalar(q)
         q = np.atleast_1d(np.asarray(q, dtype=np.float64))
@@ -2290,7 +2350,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
             duck_array_ops.isnull,
@@ -2324,7 +2384,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
             duck_array_ops.notnull,
@@ -2375,8 +2435,17 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             other_data, self_data, dims = _broadcast_compat_data(other, self)
         else:
             self_data, other_data, dims = _broadcast_compat_data(self, other)
-        keep_attrs = _get_keep_attrs(default=False)
-        attrs = self._attrs if keep_attrs else None
+        keep_attrs = _get_keep_attrs(default=True)
+        if keep_attrs:
+            # Combine attributes from both operands, dropping conflicts
+            from xarray.structure.merge import merge_attrs
+
+            # Access attrs property to normalize None to {} due to property side effect
+            self_attrs = self.attrs
+            other_attrs = getattr(other, "attrs", {})
+            attrs = merge_attrs([self_attrs, other_attrs], "drop_conflicts")
+        else:
+            attrs = None
         with np.errstate(all="ignore"):
             new_data = (
                 f(self_data, other_data) if not reflexive else f(other_data, self_data)
@@ -2466,7 +2535,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         }
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
         if keep_attrs:
             for v in result.values():
                 v.attrs = self.attrs
@@ -2700,6 +2769,10 @@ class IndexVariable(Variable):
         # data is already loaded into memory for IndexVariable
         return self
 
+    async def load_async(self):
+        # data is already loaded into memory for IndexVariable
+        return self
+
     # https://github.com/python/mypy/issues/1465
     @Variable.data.setter  # type: ignore[attr-defined]
     def data(self, data):
@@ -2829,9 +2902,9 @@ class IndexVariable(Variable):
 
         else:
             ndata = as_compatible_data(data)
-            if self.shape != ndata.shape:  # type: ignore[attr-defined]
+            if self.shape != ndata.shape:
                 raise ValueError(
-                    f"Data shape {ndata.shape} must match shape of object {self.shape}"  # type: ignore[attr-defined]
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
                 )
 
         attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
@@ -2890,13 +2963,13 @@ class IndexVariable(Variable):
             return index
 
     @property
-    def level_names(self) -> list[str] | None:
+    def level_names(self) -> list[Hashable | None] | None:
         """Return MultiIndex level names or None if this IndexVariable has no
         MultiIndex.
         """
         index = self.to_index()
         if isinstance(index, pd.MultiIndex):
-            return index.names
+            return list(index.names)
         else:
             return None
 

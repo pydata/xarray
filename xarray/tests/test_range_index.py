@@ -40,7 +40,7 @@ def test_range_index_arange(args, kwargs) -> None:
 
 
 def test_range_index_arange_error() -> None:
-    with pytest.raises(TypeError, match=".*requires stop to be specified"):
+    with pytest.raises(TypeError, match=r".*requires stop to be specified"):
         RangeIndex.arange(dim="x")
 
 
@@ -93,7 +93,7 @@ def test_range_index_set_xindex() -> None:
     ds = xr.Dataset(coords=coords)
 
     with pytest.raises(
-        NotImplementedError, match="cannot create.*RangeIndex.*existing coordinate"
+        NotImplementedError, match=r"cannot create.*RangeIndex.*existing coordinate"
     ):
         ds.set_xindex("x", RangeIndex)
 
@@ -166,6 +166,62 @@ def test_range_index_isel() -> None:
     assert_identical(actual, expected)
 
 
+def test_range_index_empty_slice() -> None:
+    """Test that empty slices of RangeIndex are printable and preserve step.
+
+    Regression test for https://github.com/pydata/xarray/issues/10547
+    """
+    # Test with linspace
+    n = 30
+    step = 1
+    da = xr.DataArray(np.zeros(n), dims=["x"])
+    da = da.assign_coords(
+        xr.Coordinates.from_xindex(RangeIndex.linspace(0, (n - 1) * step, n, dim="x"))
+    )
+
+    # This should not raise ZeroDivisionError
+    sub = da.isel(x=slice(0))
+    assert sub.sizes["x"] == 0
+
+    # Test that it's printable
+    repr_str = repr(sub)
+    assert "RangeIndex" in repr_str
+    assert "step=1" in repr_str
+
+    # Test with different step values
+    index = RangeIndex.arange(0, 10, 2.5, dim="y")
+    da2 = xr.DataArray(np.zeros(4), dims=["y"])
+    da2 = da2.assign_coords(xr.Coordinates.from_xindex(index))
+    empty = da2.isel(y=slice(0))
+
+    # Should preserve step
+    assert empty.sizes["y"] == 0
+    range_index_y = empty._indexes["y"]
+    assert isinstance(range_index_y, RangeIndex)
+    assert range_index_y.step == 2.5
+
+    # Test that it's printable
+    repr_str2 = repr(empty)
+    assert "RangeIndex" in repr_str2
+    assert "step=2.5" in repr_str2
+
+    # Test negative step
+    index3 = RangeIndex.arange(10, 0, -1, dim="z")
+    da3 = xr.DataArray(np.zeros(10), dims=["z"])
+    da3 = da3.assign_coords(xr.Coordinates.from_xindex(index3))
+    empty3 = da3.isel(z=slice(0))
+
+    assert empty3.sizes["z"] == 0
+    range_index_z = empty3._indexes["z"]
+    assert isinstance(range_index_z, RangeIndex)
+    assert range_index_z.step == -1.0
+
+    # Test that it's printable
+    repr_str3 = repr(empty3)
+    assert "RangeIndex" in repr_str3
+    assert "step=-1" in repr_str3
+
+
 def test_range_index_sel() -> None:
     ds = create_dataset_arange(0.0, 1.0, 0.1)
 
@@ -201,10 +257,10 @@ def test_range_index_sel() -> None:
     expected = xr.Dataset(coords={"x": ("y", [0.5, 0.6])}).set_xindex("x")
     assert_allclose(actual, expected, check_default_indexes=False)
 
-    with pytest.raises(ValueError, match="RangeIndex only supports.*method.*nearest"):
+    with pytest.raises(ValueError, match=r"RangeIndex only supports.*method.*nearest"):
         ds.sel(x=0.1)
 
-    with pytest.raises(ValueError, match="RangeIndex doesn't support.*tolerance"):
+    with pytest.raises(ValueError, match=r"RangeIndex doesn't support.*tolerance"):
         ds.sel(x=0.1, method="nearest", tolerance=1e-3)
 
 

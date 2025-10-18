@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import re
+from functools import partial
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -7,6 +10,66 @@ import pytest
 import xarray as xr
 from xarray.core import formatting_html as fh
 from xarray.core.coordinates import Coordinates
+
+
+def drop_fallback_text_repr(html: str) -> str:
+    pattern = (
+        re.escape("<pre class='xr-text-repr-fallback'>") + "[^<]*" + re.escape("</pre>")
+    )
+    return re.sub(pattern, "", html)
+
+
+XarrayTypes = xr.DataTree | xr.Dataset | xr.DataArray | xr.Variable
+
+
+def xarray_html_only_repr(obj: XarrayTypes) -> str:
+    return drop_fallback_text_repr(obj._repr_html_())
+
+
+def assert_consistent_text_and_html(
+    obj: XarrayTypes, section_headers: list[str]
+) -> None:
+    actual_html = xarray_html_only_repr(obj)
+    actual_text = repr(obj)
+    for section_header in section_headers:
+        assert actual_html.count(section_header) == actual_text.count(section_header), (
+            section_header
+        )
+
+
+assert_consistent_text_and_html_dataarray = partial(
+    assert_consistent_text_and_html,
+    section_headers=[
+        "Coordinates",
+        "Indexes",
+        "Attributes",
+    ],
+)
+
+
+assert_consistent_text_and_html_dataset = partial(
+    assert_consistent_text_and_html,
+    section_headers=[
+        "Dimensions",
+        "Coordinates",
+        "Data variables",
+        "Indexes",
+        "Attributes",
+    ],
+)
+
+
+assert_consistent_text_and_html_datatree = partial(
+    assert_consistent_text_and_html,
+    section_headers=[
+        "Dimensions",
+        "Coordinates",
+        "Inherited coordinates",
+        "Data variables",
+        "Indexes",
+        "Attributes",
+    ],
+)
 
 
 @pytest.fixture
@@ -43,7 +106,7 @@ def dataset() -> xr.Dataset:
             "tmin": (("time", "location"), tmin_values),
             "tmax": (("time", "location"), tmax_values),
         },
-        {"time": times, "location": ["<IA>", "IN", "IL"]},
+        {"location": ["<IA>", "IN", "IL"], "time": times},
         attrs={"description": "Test data."},
     )
 
@@ -99,56 +162,91 @@ def test_summarize_attrs_with_unsafe_attr_name_and_value() -> None:
     assert "<dd>&lt;pd.DataFrame&gt;</dd>" in formatted
 
 
-def test_repr_of_dataarray(dataarray: xr.DataArray) -> None:
-    formatted = fh.array_repr(dataarray)
+def test_repr_of_dataarray() -> None:
+    dataarray = xr.DataArray(np.random.default_rng(0).random((4, 6)))
+    formatted = xarray_html_only_repr(dataarray)
     assert "dim_0" in formatted
     # has an expanded data section
     assert formatted.count("class='xr-array-in' type='checkbox' checked>") == 1
-    # coords, indexes and attrs don't have an items so they'll be be disabled and collapsed
-    assert (
-        formatted.count("class='xr-section-summary-in' type='checkbox' disabled >") == 3
-    )
+    # coords, indexes and attrs don't have an items so they'll be omitted
+    assert "Coordinates" not in formatted
+    assert "Indexes" not in formatted
+    assert "Attributes" not in formatted
+
+    assert_consistent_text_and_html_dataarray(dataarray)
 
     with xr.set_options(display_expand_data=False):
-        formatted = fh.array_repr(dataarray)
+        formatted = xarray_html_only_repr(dataarray)
         assert "dim_0" in formatted
         # has a collapsed data section
         assert formatted.count("class='xr-array-in' type='checkbox' checked>") == 0
-        # coords, indexes and attrs don't have an items so they'll be be disabled and collapsed
-        assert (
-            formatted.count("class='xr-section-summary-in' type='checkbox' disabled >")
-            == 3
-        )
+        # coords, indexes and attrs don't have an items so they'll be omitted
+        assert "Coordinates" not in formatted
+        assert "Indexes" not in formatted
+        assert "Attributes" not in formatted
+
+
+def test_repr_coords_order_of_datarray() -> None:
+    da1 = xr.DataArray(
+        np.empty((2, 2)),
+        coords={"foo": [0, 1], "bar": [0, 1]},
+        dims=["foo", "bar"],
+    )
+    da2 = xr.DataArray(
+        np.empty((2, 2)),
+        coords={"bar": [0, 1], "foo": [0, 1]},
+        dims=["bar", "foo"],
+    )
+    ds = xr.Dataset({"da1": da1, "da2": da2})
+
+    bar_line = (
+        "<span class='xr-has-index'>bar</span></div><div class='xr-var-dims'>(bar)"
+    )
+    foo_line = (
+        "<span class='xr-has-index'>foo</span></div><div class='xr-var-dims'>(foo)"
+    )
+
+    formatted_da1 = fh.array_repr(ds.da1)
+    assert formatted_da1.index(foo_line) < formatted_da1.index(bar_line)
+
+    formatted_da2 = fh.array_repr(ds.da2)
+    assert formatted_da2.index(bar_line) < formatted_da2.index(foo_line)
 
 
 def test_repr_of_multiindex(multiindex: xr.Dataset) -> None:
     formatted = fh.dataset_repr(multiindex)
     assert "(x)" in formatted
 
+    assert_consistent_text_and_html_dataset(multiindex)
+
 
 def test_repr_of_dataset(dataset: xr.Dataset) -> None:
-    formatted = fh.dataset_repr(dataset)
+    formatted = xarray_html_only_repr(dataset)
     # coords, attrs, and data_vars are expanded
     assert (
         formatted.count("class='xr-section-summary-in' type='checkbox'  checked>") == 3
     )
-    # indexes is collapsed
-    assert formatted.count("class='xr-section-summary-in' type='checkbox'  >") == 1
+    # indexes is omitted
+    assert "Indexes" not in formatted
     assert "&lt;U4" in formatted or "&gt;U4" in formatted
     assert "&lt;IA&gt;" in formatted
+
+    assert_consistent_text_and_html_dataset(dataset)
 
     with xr.set_options(
         display_expand_coords=False,
         display_expand_data_vars=False,
         display_expand_attrs=False,
         display_expand_indexes=True,
+        display_default_indexes=True,
     ):
-        formatted = fh.dataset_repr(dataset)
-        # coords, attrs, and data_vars are collapsed, indexes is expanded
+        formatted = xarray_html_only_repr(dataset)
+        # coords, attrs, and data_vars are collapsed, indexes is shown & expanded
         assert (
             formatted.count("class='xr-section-summary-in' type='checkbox'  checked>")
             == 1
         )
+        assert "Indexes" in formatted
         assert "&lt;U4" in formatted or "&gt;U4" in formatted
         assert "&lt;IA&gt;" in formatted
 
@@ -158,6 +256,17 @@ def test_repr_text_fallback(dataset: xr.Dataset) -> None:
 
     # Just test that the "pre" block used for fallback to plain text is present.
     assert "<pre class='xr-text-repr-fallback'>" in formatted
+
+
+def test_repr_coords_order_of_dataset() -> None:
+    ds = xr.Dataset()
+    ds.coords["as"] = 10
+    ds["var"] = xr.DataArray(np.ones((10,)), dims="x", coords={"x": np.arange(10)})
+    formatted = fh.dataset_repr(ds)
+
+    x_line = "<span class='xr-has-index'>x</span></div><div class='xr-var-dims'>(x)"
+    as_line = "<span>as</span></div><div class='xr-var-dims'>()"
+    assert formatted.index(x_line) < formatted.index(as_line)
 
 
 def test_variable_repr_html() -> None:
@@ -196,128 +305,6 @@ def test_nonstr_variable_repr_html() -> None:
         html = v._repr_html_().strip()
     assert "<dt><span>22 :</span></dt><dd>bar</dd>" in html
     assert "<li><span>10</span>: 3</li></ul>" in html
-
-
-@pytest.fixture(scope="module", params=["some html", "some other html"])
-def repr(request):
-    return request.param
-
-
-class Test_summarize_datatree_children:
-    """
-    Unit tests for summarize_datatree_children.
-    """
-
-    func = staticmethod(fh.summarize_datatree_children)
-
-    @pytest.fixture(scope="class")
-    def childfree_tree_factory(self):
-        """
-        Fixture for a child-free DataTree factory.
-        """
-        from random import randint
-
-        def _childfree_tree_factory():
-            return xr.DataTree(
-                dataset=xr.Dataset({"z": ("y", [randint(1, 100) for _ in range(3)])})
-            )
-
-        return _childfree_tree_factory
-
-    @pytest.fixture(scope="class")
-    def childfree_tree(self, childfree_tree_factory):
-        """
-        Fixture for a child-free DataTree.
-        """
-        return childfree_tree_factory()
-
-    @pytest.fixture
-    def mock_datatree_node_repr(self, monkeypatch):
-        """
-        Apply mocking for datatree_node_repr.
-        """
-
-        def mock(group_title, dt):
-            """
-            Mock with a simple result
-            """
-            return group_title + " " + str(id(dt))
-
-        monkeypatch.setattr(fh, "datatree_node_repr", mock)
-
-    @pytest.fixture
-    def mock_wrap_datatree_repr(self, monkeypatch):
-        """
-        Apply mocking for _wrap_datatree_repr.
-        """
-
-        def mock(r, *, end, **kwargs):
-            """
-            Mock by appending "end" or "not end".
-            """
-            return r + " " + ("end" if end else "not end") + "//"
-
-        monkeypatch.setattr(fh, "_wrap_datatree_repr", mock)
-
-    def test_empty_mapping(self):
-        """
-        Test with an empty mapping of children.
-        """
-        children: dict[str, xr.DataTree] = {}
-        assert self.func(children) == (
-            "<div style='display: inline-grid; grid-template-columns: 100%; grid-column: 1 / -1'>"
-            "</div>"
-        )
-
-    def test_one_child(
-        self, childfree_tree, mock_wrap_datatree_repr, mock_datatree_node_repr
-    ):
-        """
-        Test with one child.
-
-        Uses a mock of _wrap_datatree_repr and _datatree_node_repr to essentially mock
-        the inline lambda function "lines_callback".
-        """
-        # Create mapping of children
-        children = {"a": childfree_tree}
-
-        # Expect first line to be produced from the first child, and
-        # wrapped as the last child
-        first_line = f"a {id(children['a'])} end//"
-
-        assert self.func(children) == (
-            "<div style='display: inline-grid; grid-template-columns: 100%; grid-column: 1 / -1'>"
-            f"{first_line}"
-            "</div>"
-        )
-
-    def test_two_children(
-        self, childfree_tree_factory, mock_wrap_datatree_repr, mock_datatree_node_repr
-    ):
-        """
-        Test with two level deep children.
-
-        Uses a mock of _wrap_datatree_repr and datatree_node_repr to essentially mock
-        the inline lambda function "lines_callback".
-        """
-
-        # Create mapping of children
-        children = {"a": childfree_tree_factory(), "b": childfree_tree_factory()}
-
-        # Expect first line to be produced from the first child, and
-        # wrapped as _not_ the last child
-        first_line = f"a {id(children['a'])} not end//"
-
-        # Expect second line to be produced from the second child, and
-        # wrapped as the last child
-        second_line = f"b {id(children['b'])} end//"
-
-        assert self.func(children) == (
-            "<div style='display: inline-grid; grid-template-columns: 100%; grid-column: 1 / -1'>"
-            f"{first_line}"
-            f"{second_line}"
-            "</div>"
-        )
 
 
 class TestDataTreeTruncatesNodes:
@@ -368,90 +355,23 @@ class TestDataTreeTruncatesNodes:
 
 class TestDataTreeInheritance:
     def test_inherited_section_present(self) -> None:
-        dt = xr.DataTree.from_dict(
-            {
-                "/": None,
-                "a": None,
-            }
-        )
-        with xr.set_options(display_style="html"):
-            html = dt._repr_html_().strip()
-        # checks that the section appears somewhere
-        assert "Inherited coordinates" in html
+        dt = xr.DataTree.from_dict(data={"a/b/c": None}, coords={"x": [1]})
 
-        # TODO how can we assert that the Inherited coordinates section does not appear in the child group?
-        # with xr.set_options(display_style="html"):
-        #     child_html = dt["a"]._repr_html_().strip()
-        # assert "Inherited coordinates" not in child_html
+        root_html = dt._repr_html_()
+        assert "Inherited coordinates" not in root_html
 
+        child_html = xarray_html_only_repr(dt["a"])
+        assert child_html.count("Inherited coordinates") == 1
 
-class Test__wrap_datatree_repr:
-    """
-    Unit tests for _wrap_datatree_repr.
-    """
+    def test_repr_consistency(self) -> None:
+        dt = xr.DataTree.from_dict({"/a/b/c": None})
+        assert_consistent_text_and_html_datatree(dt)
+        assert_consistent_text_and_html_datatree(dt["a"])
+        assert_consistent_text_and_html_datatree(dt["a/b"])
+        assert_consistent_text_and_html_datatree(dt["a/b/c"])
 
-    func = staticmethod(fh._wrap_datatree_repr)
-
-    def test_end(self, repr):
-        """
-        Test with end=True.
-        """
-        r = self.func(repr, end=True)
-        assert r == (
-            "<div style='display: inline-grid; grid-template-columns: 0px 20px auto; width: 100%;'>"
-            "<div style='"
-            "grid-column-start: 1;"
-            "border-right: 0.2em solid;"
-            "border-color: var(--xr-border-color);"
-            "height: 1.2em;"
-            "width: 0px;"
-            "'>"
-            "</div>"
-            "<div style='"
-            "grid-column-start: 2;"
-            "grid-row-start: 1;"
-            "height: 1em;"
-            "width: 20px;"
-            "border-bottom: 0.2em solid;"
-            "border-color: var(--xr-border-color);"
-            "'>"
-            "</div>"
-            "<div style='"
-            "grid-column-start: 3;"
-            "'>"
-            f"{repr}"
-            "</div>"
-            "</div>"
-        )
-
-    def test_not_end(self, repr):
-        """
-        Test with end=False.
-        """
-        r = self.func(repr, end=False)
-        assert r == (
-            "<div style='display: inline-grid; grid-template-columns: 0px 20px auto; width: 100%;'>"
-            "<div style='"
-            "grid-column-start: 1;"
-            "border-right: 0.2em solid;"
-            "border-color: var(--xr-border-color);"
-            "height: 100%;"
-            "width: 0px;"
-            "'>"
-            "</div>"
-            "<div style='"
-            "grid-column-start: 2;"
-            "grid-row-start: 1;"
-            "height: 1em;"
-            "width: 20px;"
-            "border-bottom: 0.2em solid;"
-            "border-color: var(--xr-border-color);"
-            "'>"
-            "</div>"
-            "<div style='"
-            "grid-column-start: 3;"
-            "'>"
-            f"{repr}"
-            "</div>"
-            "</div>"
-        )
+    def test_no_repeated_style_or_fallback_text(self) -> None:
+        dt = xr.DataTree.from_dict({"/a/b/c": None})
+        html = dt._repr_html_()
+        assert html.count("<style>") == 1
+        assert html.count("<pre class='xr-text-repr-fallback'>") == 1

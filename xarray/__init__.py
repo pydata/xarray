@@ -4,13 +4,14 @@ from xarray import coders, groupers, indexes, testing, tutorial, ufuncs
 from xarray.backends.api import (
     load_dataarray,
     load_dataset,
+    load_datatree,
     open_dataarray,
     open_dataset,
     open_datatree,
     open_groups,
     open_mfdataset,
-    save_mfdataset,
 )
+from xarray.backends.writers import save_mfdataset
 from xarray.backends.zarr import open_zarr
 from xarray.coding.cftime_offsets import cftime_range, date_range, date_range_like
 from xarray.coding.cftimeindex import CFTimeIndex
@@ -96,6 +97,7 @@ __all__ = (  # noqa: RUF022
     "infer_freq",
     "load_dataarray",
     "load_dataset",
+    "load_datatree",
     "map_blocks",
     "map_over_datasets",
     "merge",

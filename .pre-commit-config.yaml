@@ -4,7 +4,7 @@ ci:
   autoupdate_commit_msg: "Update pre-commit hooks"
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -24,24 +24,26 @@ repos:
       - id: rst-inline-touching-normal
       - id: text-unicode-replacement-char
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.2
+    rev: v0.13.3
     hooks:
       - id: ruff-check
         args: ["--fix", "--show-fixes"]
       - id: ruff-format
-  - repo: https://github.com/keewis/blackdoc
-    rev: v0.4.1
-    hooks:
-      - id: blackdoc
-        exclude: "generate_aggregations.py"
-        additional_dependencies: ["black==24.8.0"]
+  # Disabled: blackdoc v0.4.3 has compatibility issues with Python 3.13
+  # Re-enable when blackdoc is updated to support Python 3.13
+  # - repo: https://github.com/keewis/blackdoc
+  #   rev: v0.4.3
+  #   hooks:
+  #     - id: blackdoc
+  #       exclude: "generate_aggregations.py"
+  #       additional_dependencies: ["black==24.8.0"]
   - repo: https://github.com/rbubley/mirrors-prettier
     rev: v3.6.2
     hooks:
       - id: prettier
         args: [--cache-location=.prettier_cache/cache]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.16.1
+    rev: v1.18.2
     hooks:
       - id: mypy
         # Copied from setup.cfg
@@ -73,6 +75,6 @@ repos:
       - id: validate-pyproject
         additional_dependencies: ["validate-pyproject-schema-store[all]"]
   - repo: https://github.com/adhtruong/mirrors-typos
-    rev: v1.34.0
+    rev: v1.37.2
     hooks:
       - id: typos
