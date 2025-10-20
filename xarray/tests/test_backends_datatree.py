@@ -564,6 +564,7 @@ class TestH5NetCDFDatatreeIO(NetCDFIOBase):
                 assert_equal(original_dt, roundtrip_dt)
 
 
+@pytest.xfail("404 error")
 @network
 @requires_pydap
 class TestPyDAPDatatreeIO:
