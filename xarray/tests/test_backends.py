@@ -989,7 +989,7 @@ class DatasetIOBase:
     def test_empty_isel(self) -> None:
         # Make sure isel works lazily with empty indexer.
         # GH:issue:10867
-        in_memory = xr.Dataset({"a": ("x", np.arange(4))})
+        in_memory = xr.Dataset({"a": ("x", np.arange(4))}, coords={"x": np.arange(4)})
         with self.roundtrip(in_memory) as on_disk:
             expected = in_memory.isel(x=[])
             actual = on_disk.isel(x=[])
