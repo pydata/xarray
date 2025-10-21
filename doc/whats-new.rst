@@ -39,6 +39,13 @@ Bug Fixes
   both backends from claiming remote Zarr stores and other non-DAP URLs without an explicit
   ``engine=`` argument. (:pull:`10804`). By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
+Performance
+~~~~~~~~~~~
+
+- Speedup and reduce memory usage of :py:func:`concat`. Magnitude of improvement scales
+  with size of the concatenation dimension. By `Deepak Cherian <https://github.com/dcherian>`_.
+  :issue:`10864` :pull:`10866`.
+
 Documentation
 ~~~~~~~~~~~~~
 
