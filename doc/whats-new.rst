@@ -37,7 +37,7 @@ Bug Fixes
   (``dap2://`` or ``dap4://`` schemes, or ``/dap2/`` or ``/dap4/`` in the URL path). This prevents
   both backends from claiming remote Zarr stores and other non-DAP URLs without an explicit
   ``engine=`` argument. (:pull:`10804`). By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
-- Fix indexing with empty selection for OUTER_1VECTOR which now resolves to empty slices (:issue:`10867`, :pull:`10870`).
+- Fix indexing with empty arrays for scipy & h5netcdf backends which now resolves to empty slices (:issue:`10867`, :pull:`10870`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
 
 Documentation
