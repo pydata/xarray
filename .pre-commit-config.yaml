@@ -68,6 +68,8 @@ repos:
     hooks:
       - id: taplo-format
         args: ["--option", "array_auto_collapse=false"]
+      - id: taplo-lint
+        args: ["--no-schema"]
   - repo: https://github.com/abravalheri/validate-pyproject
     rev: v0.24.1
     hooks:
