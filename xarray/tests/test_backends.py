@@ -986,6 +986,15 @@ class DatasetIOBase:
             actual = on_disk.isel(dim2=on_disk["dim2"] < 3)
             assert_identical(expected, actual)
 
+    def test_empty_isel(self) -> None:
+        # Make sure isel works lazily with empty indexer.
+        # GH:issue:10867
+        in_memory = xr.Dataset({"a": ("x", np.arange(4))})
+        with self.roundtrip(in_memory) as on_disk:
+            expected = in_memory.isel(x=[])
+            actual = on_disk.isel(x=[])
+            assert_identical(expected, actual)
+
     def validate_array_type(self, ds):
         # Make sure that only NumpyIndexingAdapter stores a bare np.ndarray.
         def find_and_validate_array(obj):
