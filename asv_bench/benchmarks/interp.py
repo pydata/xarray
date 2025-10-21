@@ -25,23 +25,37 @@ class Interpolation:
                 "var1": (("x", "y"), randn_xy),
                 "var2": (("x", "t"), randn_xt),
                 "var3": (("t",), randn_t),
+                "var4": (("z",), np.array(["text"])),
+                "var5": (("k",), np.array(["a", "b", "c"])),
             },
             coords={
                 "x": np.arange(nx),
                 "y": np.linspace(0, 1, ny),
                 "t": pd.date_range("1970-01-01", periods=nt, freq="D"),
                 "x_coords": ("x", np.linspace(1.1, 2.1, nx)),
+                "z": np.array([1]),
+                "k": np.linspace(0, nx, 3),
             },
         )
 
     @parameterized(["method", "is_short"], (["linear", "cubic"], [True, False]))
-    def time_interpolation(self, method, is_short):
+    def time_interpolation_numeric_1d(self, method, is_short):
         new_x = new_x_short if is_short else new_x_long
-        self.ds.interp(x=new_x, method=method).load()
+        self.ds.interp(x=new_x, method=method).compute()
 
     @parameterized(["method"], (["linear", "nearest"]))
-    def time_interpolation_2d(self, method):
-        self.ds.interp(x=new_x_long, y=new_y_long, method=method).load()
+    def time_interpolation_numeric_2d(self, method):
+        self.ds.interp(x=new_x_long, y=new_y_long, method=method).compute()
+
+    @parameterized(["is_short"], ([True, False]))
+    def time_interpolation_string_scalar(self, is_short):
+        new_z = new_x_short if is_short else new_x_long
+        self.ds.interp(z=new_z).compute()
+
+    @parameterized(["is_short"], ([True, False]))
+    def time_interpolation_string_1d(self, is_short):
+        new_k = new_x_short if is_short else new_x_long
+        self.ds.interp(k=new_k).compute()
 
 
 class InterpolationDask(Interpolation):

@@ -154,7 +154,7 @@ class PlotTestCase:
         plt.close("all")
 
     def pass_in_axis(self, plotmethod, subplot_kw=None) -> None:
-        fig, axs = plt.subplots(ncols=2, subplot_kw=subplot_kw, squeeze=False)
+        _fig, axs = plt.subplots(ncols=2, subplot_kw=subplot_kw, squeeze=False)
         ax = axs[0, 0]
         plotmethod(ax=ax)
         assert ax.has_data()
@@ -237,7 +237,7 @@ class TestPlot(PlotTestCase):
 
         xy: list[list[str | None]] = [[None, None], [None, "z"], ["z", None]]
 
-        f, axs = plt.subplots(3, 1, squeeze=False)
+        _f, axs = plt.subplots(3, 1, squeeze=False)
         for aa, (x, y) in enumerate(xy):
             da.plot(x=x, y=y, ax=axs.flat[aa])  # type: ignore[call-arg]
 
@@ -331,9 +331,10 @@ class TestPlot(PlotTestCase):
         assert not plt.gca().get_legend()
         plt.cla()
         self.darray[:, :, 0].plot.line(x="dim_0", add_legend=True)
-        assert plt.gca().get_legend()
+        legend = plt.gca().get_legend()
+        assert legend is not None
         # check whether legend title is set
-        assert plt.gca().get_legend().get_title().get_text() == "dim_1"
+        assert legend.get_title().get_text() == "dim_1"
 
     def test_2d_line_accepts_x_kw(self) -> None:
         self.darray[:, :, 0].plot.line(x="dim_0")
@@ -344,10 +345,14 @@ class TestPlot(PlotTestCase):
 
     def test_2d_line_accepts_hue_kw(self) -> None:
         self.darray[:, :, 0].plot.line(hue="dim_0")
-        assert plt.gca().get_legend().get_title().get_text() == "dim_0"
+        legend = plt.gca().get_legend()
+        assert legend is not None
+        assert legend.get_title().get_text() == "dim_0"
         plt.cla()
         self.darray[:, :, 0].plot.line(hue="dim_1")
-        assert plt.gca().get_legend().get_title().get_text() == "dim_1"
+        legend = plt.gca().get_legend()
+        assert legend is not None
+        assert legend.get_title().get_text() == "dim_1"
 
     def test_2d_coords_line_plot(self) -> None:
         lon, lat = np.meshgrid(np.linspace(-20, 20, 5), np.linspace(0, 30, 4))
@@ -595,7 +600,7 @@ class TestPlot(PlotTestCase):
                 [-137.85, -120.99, -103.28, -85.28, -67.62],
             ]
         )
-        data = np.sqrt(lon**2 + lat**2)
+        data = np.hypot(lon, lat)
         da = DataArray(
             data,
             dims=("y", "x"),
@@ -1476,7 +1481,9 @@ class Common2dMixin:
 
     def test_non_linked_coords(self) -> None:
         # plot with coordinate names that are not dimensions
-        self.darray.coords["newy"] = self.darray.y + 150
+        newy = self.darray.y + 150
+        newy.attrs = {}  # Clear attrs since binary ops keep them by default
+        self.darray.coords["newy"] = newy
         # Normal case, without transpose
         self.plotfunc(self.darray, x="x", y="newy")
         ax = plt.gca()
@@ -1491,7 +1498,9 @@ class Common2dMixin:
         # and with transposed y and x axes
         # This used to raise an error with pcolormesh and contour
         # https://github.com/pydata/xarray/issues/788
-        self.darray.coords["newy"] = self.darray.y + 150
+        newy = self.darray.y + 150
+        newy.attrs = {}  # Clear attrs since binary ops keep them by default
+        self.darray.coords["newy"] = newy
         self.plotfunc(self.darray, x="newy", y="x")
         ax = plt.gca()
         assert "newy" == ax.get_xlabel()
@@ -1566,7 +1575,7 @@ class Common2dMixin:
         assert "MyLabel" in alltxt
         assert "testvar" not in alltxt
         # change cbar ax
-        fig, axs = plt.subplots(1, 2, squeeze=False)
+        _fig, axs = plt.subplots(1, 2, squeeze=False)
         ax = axs[0, 0]
         cax = axs[0, 1]
         self.plotmethod(
@@ -1578,7 +1587,7 @@ class Common2dMixin:
         assert "MyBar" in alltxt
         assert "testvar" not in alltxt
         # note that there are two ways to achieve this
-        fig, axs = plt.subplots(1, 2, squeeze=False)
+        _fig, axs = plt.subplots(1, 2, squeeze=False)
         ax = axs[0, 0]
         cax = axs[0, 1]
         self.plotmethod(
@@ -1771,6 +1780,18 @@ class TestContourf(Common2dMixin, PlotTestCase):
         artist = self.plotmethod(levels=3)
         assert artist.extend == "neither"
 
+    def test_colormap_norm(self) -> None:
+        # Using a norm should plot a nice colorbar and look consistent with pcolormesh.
+        norm = mpl.colors.LogNorm(0.1, 1e1)
+
+        with pytest.warns(UserWarning):
+            artist = self.plotmethod(norm=norm, add_colorbar=True)
+
+        actual = artist.colorbar.locator()
+        expected = np.array([0.01, 0.1, 1.0, 10.0])
+
+        np.testing.assert_allclose(actual, expected)
+
 
 @pytest.mark.slow
 class TestContour(Common2dMixin, PlotTestCase):
@@ -1787,16 +1808,18 @@ class TestContour(Common2dMixin, PlotTestCase):
         artist = self.plotmethod(colors="k")
         assert artist.cmap.colors[0] == "k"
 
+        # 2 colors, will repeat every other tick:
         artist = self.plotmethod(colors=["k", "b"])
-        assert self._color_as_tuple(artist.cmap.colors[1]) == (0.0, 0.0, 1.0)
+        assert artist.cmap.colors[:2] == ["k", "b"]
 
+        # 4 colors, will repeat every 4th tick:
         artist = self.darray.plot.contour(
             levels=[-0.5, 0.0, 0.5, 1.0], colors=["k", "r", "w", "b"]
         )
-        assert self._color_as_tuple(artist.cmap.colors[1]) == (1.0, 0.0, 0.0)
-        assert self._color_as_tuple(artist.cmap.colors[2]) == (1.0, 1.0, 1.0)
+        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]  # type: ignore[attr-defined,unused-ignore]
+
         # the last color is now under "over"
-        assert self._color_as_tuple(artist.cmap._rgba_over) == (0.0, 0.0, 1.0)
+        assert self._color_as_tuple(artist.cmap.get_over()) == (0.0, 0.0, 1.0)
 
     def test_colors_np_levels(self) -> None:
         # https://github.com/pydata/xarray/issues/3284
@@ -1804,15 +1827,11 @@ class TestContour(Common2dMixin, PlotTestCase):
         artist = self.darray.plot.contour(levels=levels, colors=["k", "r", "w", "b"])
         cmap = artist.cmap
         assert isinstance(cmap, mpl.colors.ListedColormap)
-        # non-optimal typing in matplotlib (ArrayLike)
-        # https://github.com/matplotlib/matplotlib/blob/84464dd085210fb57cc2419f0d4c0235391d97e6/lib/matplotlib/colors.pyi#L133
-        colors = cast(np.ndarray, cmap.colors)
 
-        assert self._color_as_tuple(colors[1]) == (1.0, 0.0, 0.0)
-        assert self._color_as_tuple(colors[2]) == (1.0, 1.0, 1.0)
+        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]  # type: ignore[attr-defined,unused-ignore]
+
         # the last color is now under "over"
-        assert hasattr(cmap, "_rgba_over")
-        assert self._color_as_tuple(cmap._rgba_over) == (0.0, 0.0, 1.0)
+        assert self._color_as_tuple(cmap.get_over()) == (0.0, 0.0, 1.0)
 
     def test_cmap_and_color_both(self) -> None:
         with pytest.raises(ValueError):
@@ -1835,6 +1854,18 @@ class TestContour(Common2dMixin, PlotTestCase):
         # add_colorbar defaults to false
         self.plotmethod(levels=[0.1])
         self.plotmethod(levels=1)
+
+    def test_colormap_norm(self) -> None:
+        # Using a norm should plot a nice colorbar and look consistent with pcolormesh.
+        norm = mpl.colors.LogNorm(0.1, 1e1)
+
+        with pytest.warns(UserWarning):
+            artist = self.plotmethod(norm=norm, add_colorbar=True)
+
+        actual = artist.colorbar.locator()
+        expected = np.array([0.01, 0.1, 1.0, 10.0])
+
+        np.testing.assert_allclose(actual, expected)
 
 
 class TestPcolormesh(Common2dMixin, PlotTestCase):
@@ -2917,7 +2948,9 @@ class TestDatasetScatterPlots(PlotTestCase):
         pc = ds2.plot.scatter(x="A", y="B", markersize="hue")
         axes = pc.axes
         assert axes is not None
-        actual = [t.get_text() for t in axes.get_legend().texts]
+        legend = axes.get_legend()
+        assert legend is not None
+        actual = [t.get_text() for t in legend.texts]
         expected = ["hue", "a", "b"]
         assert actual == expected
 
@@ -2962,7 +2995,7 @@ class TestDatetimePlot(PlotTestCase):
 
     def test_datetime_units(self) -> None:
         # test that matplotlib-native datetime works:
-        fig, ax = plt.subplots()
+        _fig, ax = plt.subplots()
         ax.plot(self.darray["time"], self.darray)
 
         # Make sure only mpl converters are used, use type() so only
@@ -3183,8 +3216,8 @@ def test_plot_transposes_properly(plotfunc) -> None:
 def test_facetgrid_single_contour() -> None:
     # regression test for GH3569
     x, y = np.meshgrid(np.arange(12), np.arange(12))
-    z = xr.DataArray(np.sqrt(x**2 + y**2))
-    z2 = xr.DataArray(np.sqrt(x**2 + y**2) + 1)
+    z = xr.DataArray(np.hypot(x, y))
+    z2 = xr.DataArray(np.hypot(x, y) + 1)
     ds = xr.concat([z, z2], dim="time")
     ds["time"] = [0, 1]
 
@@ -3427,7 +3460,7 @@ def test_plot1d_default_rcparams() -> None:
     with figure_context():
         # scatter markers should by default have white edgecolor to better
         # see overlapping markers:
-        fig, ax = plt.subplots(1, 1)
+        _fig, ax = plt.subplots(1, 1)
         ds.plot.scatter(x="A", y="B", marker="o", ax=ax)
         actual: np.ndarray = mpl.colors.to_rgba_array("w")
         expected: np.ndarray = ax.collections[0].get_edgecolor()  # type: ignore[assignment]
@@ -3437,16 +3470,16 @@ def test_plot1d_default_rcparams() -> None:
         fg = ds.plot.scatter(x="A", y="B", col="x", marker="o")
         ax = fg.axs.ravel()[0]
         actual = mpl.colors.to_rgba_array("w")
-        expected = ax.collections[0].get_edgecolor()  # type: ignore[assignment]
+        expected = ax.collections[0].get_edgecolor()  # type: ignore[assignment,unused-ignore]
         np.testing.assert_allclose(actual, expected)
 
         # scatter should not emit any warnings when using unfilled markers:
         with assert_no_warnings():
-            fig, ax = plt.subplots(1, 1)
+            _fig, ax = plt.subplots(1, 1)
             ds.plot.scatter(x="A", y="B", ax=ax, marker="x")
 
         # Prioritize edgecolor argument over default plot1d values:
-        fig, ax = plt.subplots(1, 1)
+        _fig, ax = plt.subplots(1, 1)
         ds.plot.scatter(x="A", y="B", marker="o", ax=ax, edgecolor="k")
         actual = mpl.colors.to_rgba_array("k")
         expected = ax.collections[0].get_edgecolor()  # type: ignore[assignment]
@@ -3472,7 +3505,7 @@ def test_9155() -> None:
 
     with figure_context():
         data = xr.DataArray([1, 2, 3], dims=["x"])
-        fig, ax = plt.subplots(ncols=1, nrows=1)
+        _fig, ax = plt.subplots(ncols=1, nrows=1)
         data.plot(ax=ax)  # type: ignore[call-arg]
 
 

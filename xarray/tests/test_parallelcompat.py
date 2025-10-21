@@ -48,7 +48,7 @@ class DummyChunkedArray(np.ndarray):
     def __array_finalize__(self, obj):
         if obj is None:
             return
-        self.chunks = getattr(obj, "chunks", None)
+        self.chunks = getattr(obj, "chunks", None)  # type: ignore[assignment]
 
     def rechunk(self, chunks, **kwargs):
         copied = self.copy()
@@ -90,7 +90,7 @@ class DummyChunkManager(ChunkManagerEntrypoint):
     def rechunk(self, data: DummyChunkedArray, chunks, **kwargs) -> DummyChunkedArray:
         return data.rechunk(chunks, **kwargs)
 
-    def compute(self, *data: DummyChunkedArray, **kwargs) -> tuple[np.ndarray, ...]:
+    def compute(self, *data: DummyChunkedArray, **kwargs) -> tuple[np.ndarray, ...]:  # type: ignore[override]
         from dask.array import compute
 
         return compute(*data, **kwargs)
@@ -164,7 +164,7 @@ class TestGetChunkManager:
     ) -> None:
         monkeypatch.setitem(KNOWN_CHUNKMANAGERS, "test", "test-package")
         with pytest.raises(
-            ImportError, match="chunk manager 'test' is not available.+test-package"
+            ImportError, match=r"chunk manager 'test' is not available.+test-package"
         ):
             guess_chunkmanager("test")
 

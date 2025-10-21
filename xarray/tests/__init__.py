@@ -48,6 +48,7 @@ except ImportError:
 warnings.filterwarnings("ignore", "'urllib3.contrib.pyopenssl' module is deprecated")
 warnings.filterwarnings("ignore", "Deprecated call to `pkg_resources.declare_namespace")
 warnings.filterwarnings("ignore", "pkg_resources is deprecated as an API")
+warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
 
 arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),
@@ -131,6 +132,7 @@ has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
 has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "3.0.0")
 has_zarr_v3_dtypes, requires_zarr_v3_dtypes = _importorskip("zarr", "3.1.0")
+has_zarr_v3_async_oindex, requires_zarr_v3_async_oindex = _importorskip("zarr", "3.1.2")
 if has_zarr_v3:
     import zarr
 
@@ -139,10 +141,15 @@ if has_zarr_v3:
     # installing from git main is giving me a lower version than the
     # most recently released zarr
     has_zarr_v3_dtypes = hasattr(zarr.core, "dtype")
+    has_zarr_v3_async_oindex = hasattr(zarr.AsyncArray, "oindex")
 
     requires_zarr_v3_dtypes = pytest.mark.skipif(
         not has_zarr_v3_dtypes, reason="requires zarr>3.1.0"
     )
+    requires_zarr_v3_async_oindex = pytest.mark.skipif(
+        not has_zarr_v3_async_oindex, reason="requires zarr>3.1.1"
+    )
+
 
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
@@ -171,6 +178,10 @@ has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0.dev0")
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
+)
+has_h5netcdf_or_netCDF4 = has_h5netcdf or has_netCDF4
+requires_h5netcdf_or_netCDF4 = pytest.mark.skipif(
+    not has_h5netcdf_or_netCDF4, reason="requires h5netcdf or netCDF4"
 )
 has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
 requires_numbagg_or_bottleneck = pytest.mark.skipif(
@@ -220,6 +231,10 @@ has_netCDF4_1_6_2_or_above, requires_netCDF4_1_6_2_or_above = _importorskip(
 
 has_h5netcdf_1_4_0_or_above, requires_h5netcdf_1_4_0_or_above = _importorskip(
     "h5netcdf", "1.4.0.dev"
+)
+
+has_h5netcdf_1_7_0_or_above, requires_h5netcdf_1_7_0_or_above = _importorskip(
+    "h5netcdf", "1.7.0.dev"
 )
 
 has_netCDF4_1_7_0_or_above, requires_netCDF4_1_7_0_or_above = _importorskip(
