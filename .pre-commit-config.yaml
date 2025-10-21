@@ -24,13 +24,13 @@ repos:
       - id: rst-inline-touching-normal
       - id: text-unicode-replacement-char
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.13.3
+    rev: v0.14.1
     hooks:
       - id: ruff-check
         args: ["--fix", "--show-fixes"]
       - id: ruff-format
   - repo: https://github.com/keewis/blackdoc
-    rev: v0.4.4
+    rev: v0.4.5
     hooks:
       - id: blackdoc
         exclude: "generate_aggregations.py"
@@ -60,7 +60,7 @@ repos:
             numpy,
           ]
   - repo: https://github.com/citation-file-format/cff-converter-python
-    rev: ebf0b5e44d67f8beaa1cd13a0d0393ea04c6058d
+    rev: 5295f87c0e261da61a7b919fc754e3a77edd98a7
     hooks:
       - id: validate-cff
   - repo: https://github.com/ComPWA/taplo-pre-commit
@@ -76,6 +76,6 @@ repos:
       - id: validate-pyproject
         additional_dependencies: ["validate-pyproject-schema-store[all]"]
   - repo: https://github.com/adhtruong/mirrors-typos
-    rev: v1.37.2
+    rev: v1.38.1
     hooks:
       - id: typos
