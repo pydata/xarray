@@ -745,8 +745,9 @@ def _dataset_concat(
                         yield PandasIndex(data, dim_name, coord_dtype=var.dtype)
 
     # create concatenation index, needed for later reindexing
+    # use np.cumulative_sum(concat_dim_lengths, include_initial=True) when we support numpy>=2
     file_start_indexes = np.append(0, np.cumsum(concat_dim_lengths))
-    concat_index_size = np.sum(concat_dim_lengths)
+    concat_index_size = file_start_indexes[-1]
     variable_index_mask = np.ones(concat_index_size, dtype=bool)
     variable_reindexer = None
 
@@ -808,11 +809,15 @@ def _dataset_concat(
                 # reindex if variable is not present in all datasets
                 if not variable_index_mask.all():
                     if variable_reindexer is None:
+                        # allocate only once
                         variable_reindexer = np.empty(
                             concat_index_size,
+                            # cannot use uint since we need -1 as a sentinel for reindexing
                             dtype=np.min_scalar_type(-concat_index_size),
                         )
                     np.cumsum(variable_index_mask, out=variable_reindexer)
+                    # variable_index_mask is boolean, so the first element is 1.
+                    # offset by 1 to start at 0.
                     variable_reindexer -= 1
                     variable_reindexer[~variable_index_mask] = -1
                     combined_var = reindex_variables(
