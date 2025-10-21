@@ -38,7 +38,7 @@ Bug Fixes
   both backends from claiming remote Zarr stores and other non-DAP URLs without an explicit
   ``engine=`` argument. (:pull:`10804`). By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 - Fix indexing with empty selection for OUTER_1VECTOR which now resolves to empty slices (:issue:`10867`, :pull:`10870`).
-  By By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
 
 Documentation
 ~~~~~~~~~~~~~
