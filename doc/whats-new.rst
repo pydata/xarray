@@ -40,6 +40,13 @@ Bug Fixes
 - Fix indexing with empty arrays for scipy & h5netcdf backends which now resolves to empty slices (:issue:`10867`, :pull:`10870`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
 
+Performance
+~~~~~~~~~~~
+
+- Speedup and reduce memory usage of :py:func:`concat`. Magnitude of improvement scales
+  with size of the concatenation dimension. By `Deepak Cherian <https://github.com/dcherian>`_.
+  :issue:`10864` :pull:`10866`.
+
 Documentation
 ~~~~~~~~~~~~~
 
