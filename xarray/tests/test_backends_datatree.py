@@ -564,7 +564,6 @@ class TestH5NetCDFDatatreeIO(NetCDFIOBase):
                 assert_equal(original_dt, roundtrip_dt)
 
 
-@pytest.xfail(reason="404 error")
 @network
 @requires_pydap
 class TestPyDAPDatatreeIO:
@@ -580,6 +579,7 @@ class TestPyDAPDatatreeIO:
     )
     simplegroup_datatree_url = "dap4://test.opendap.org/opendap/dap4/SimpleGroup.nc4.h5"
 
+    @pytest.xfail(reason="404 error")
     def test_open_datatree_unaligned_hierarchy(
         self, url=unaligned_datatree_url
     ) -> None:
@@ -594,6 +594,7 @@ class TestPyDAPDatatreeIO:
         ):
             open_datatree(url, engine=self.engine)
 
+    @pytest.xfail(reason="404 error")
     def test_open_groups(self, url=unaligned_datatree_url) -> None:
         """Test `open_groups` with a netCDF4/HDF5 file with an unaligned group hierarchy."""
         unaligned_dict_of_datasets = open_groups(url, engine=self.engine)
@@ -614,6 +615,7 @@ class TestPyDAPDatatreeIO:
         ) as expected:
             assert_identical(unaligned_dict_of_datasets["/Group1/subgroup1"], expected)
 
+    @pytest.xfail(reason="404 error")
     def test_inherited_coords(self, url=simplegroup_datatree_url) -> None:
         """Test that `open_datatree` inherits coordinates from root tree.
 
