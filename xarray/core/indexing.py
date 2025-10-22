@@ -1366,7 +1366,7 @@ def _decompose_outer_indexer(
         gains = [
             (
                 (np.max(k) - np.min(k) + 1.0) / len(np.unique(k))
-                if isinstance(k, np.ndarray)
+                if isinstance(k, np.ndarray) and k.size != 0
                 else 0
             )
             for k in indexer_elems
@@ -1374,7 +1374,11 @@ def _decompose_outer_indexer(
         array_index = np.argmax(np.array(gains)) if len(gains) > 0 else None
 
         for i, (k, s) in enumerate(zip(indexer_elems, shape, strict=False)):
-            if isinstance(k, np.ndarray) and i != array_index:
+            if isinstance(k, np.ndarray) and k.size == 0:
+                # empty np.ndarray key is converted to empty slice
+                # see https://github.com/pydata/xarray/issues/10867
+                backend_indexer.append(slice(0, 0))
+            elif isinstance(k, np.ndarray) and i != array_index:
                 # np.ndarray key is converted to slice that covers the entire
                 # entries of this key.
                 backend_indexer.append(slice(np.min(k), np.max(k) + 1))
