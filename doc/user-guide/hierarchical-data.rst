@@ -426,7 +426,7 @@ We can use :py:meth:`xarray.DataTree.match` for this:
 We can also subset trees by the contents of the nodes.
 :py:meth:`xarray.DataTree.filter` retains only the nodes of a tree that meet a certain condition.
 For example, we could recreate the Simpson's family tree with the ages of each individual, then filter for only the adults:
-First lets recreate the tree but with an ``age`` data variable in every node:
+First let's recreate the tree but with an ``age`` data variable in every node:
 
 .. jupyter-execute::
 
