@@ -47,7 +47,7 @@ io = [
 ]
 etc = ["sparse>=0.15"]
 parallel = ["dask[complete]"]
-viz = ["cartopy>=0.23", "matplotlib", "nc-time-axis", "seaborn"]
+viz = ["cartopy>=0.23", "matplotlib>=3.8", "nc-time-axis", "seaborn"]
 types = [
   "pandas-stubs",
   "scipy-stubs",
@@ -392,6 +392,7 @@ aso = "aso"
 # Technical terms
 nd = "nd"
 nin = "nin"
+nclusive = "nclusive" # part of "inclusive" in error messages
 
 # Variable names
 ba = "ba"

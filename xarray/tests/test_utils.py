@@ -80,6 +80,15 @@ class TestDictionaries:
         assert utils.equivalent(np.array([0]), [0])
         assert utils.equivalent(np.arange(3), 1.0 * np.arange(3))
         assert not utils.equivalent(0, np.zeros(3))
+        # Test NaN comparisons (issue #10833)
+        # Python float NaN
+        assert utils.equivalent(float("nan"), float("nan"))
+        # NumPy scalar NaN (various dtypes)
+        assert utils.equivalent(np.float64(np.nan), np.float64(np.nan))
+        assert utils.equivalent(np.float32(np.nan), np.float32(np.nan))
+        # Mixed: Python float NaN vs NumPy scalar NaN
+        assert utils.equivalent(float("nan"), np.float64(np.nan))
+        assert utils.equivalent(np.float64(np.nan), float("nan"))
 
     def test_safe(self):
         # should not raise exception:

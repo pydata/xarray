@@ -235,7 +235,9 @@ def test_convert_calendar_errors():
 
     # Datetime objects
     da = DataArray([0, 1, 2], dims=("x",), name="x")
-    with pytest.raises(ValueError, match="Coordinate x must contain datetime objects."):
+    with pytest.raises(
+        ValueError, match=r"Coordinate x must contain datetime objects."
+    ):
         convert_calendar(da, "standard", dim="x")
 
 
@@ -314,7 +316,7 @@ def test_interp_calendar_errors():
     da2 = da1 + 1
 
     with pytest.raises(
-        ValueError, match="Both 'source.x' and 'target' must contain datetime objects."
+        ValueError, match=r"Both 'source.x' and 'target' must contain datetime objects."
     ):
         interp_calendar(da1, da2, dim="x")
 

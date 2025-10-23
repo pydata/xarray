@@ -60,6 +60,7 @@ from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
+from xarray.core.common import _contains_cftime_datetimes
 from xarray.core.indexes import PandasIndex
 from xarray.core.options import set_options
 from xarray.core.types import PDDatetimeUnitOptions
@@ -76,6 +77,7 @@ from xarray.tests import (
     has_h5netcdf_1_4_0_or_above,
     has_netCDF4,
     has_numpy_2,
+    has_pydap,
     has_scipy,
     has_zarr,
     has_zarr_v3,
@@ -89,6 +91,7 @@ from xarray.tests import (
     requires_fsspec,
     requires_h5netcdf,
     requires_h5netcdf_1_4_0_or_above,
+    requires_h5netcdf_1_7_0_or_above,
     requires_h5netcdf_or_netCDF4,
     requires_h5netcdf_ros3,
     requires_iris,
@@ -460,6 +463,7 @@ class DatasetIOBase:
             save_kwargs = {}
         if open_kwargs is None:
             open_kwargs = {}
+
         with create_tmp_file(allow_cleanup_failure=allow_cleanup_failure) as path:
             self.save(data, path, **save_kwargs)
             with self.open(path, **open_kwargs) as ds:
@@ -980,6 +984,15 @@ class DatasetIOBase:
         with self.roundtrip(in_memory) as on_disk:
             expected = in_memory.isel(dim2=in_memory["dim2"] < 3)
             actual = on_disk.isel(dim2=on_disk["dim2"] < 3)
+            assert_identical(expected, actual)
+
+    def test_empty_isel(self) -> None:
+        # Make sure isel works lazily with empty indexer.
+        # GH:issue:10867
+        in_memory = xr.Dataset({"a": ("x", np.arange(4))}, coords={"x": np.arange(4)})
+        with self.roundtrip(in_memory) as on_disk:
+            expected = in_memory.isel(x=[])
+            actual = on_disk.isel(x=[])
             assert_identical(expected, actual)
 
     def validate_array_type(self, ds):
@@ -1959,7 +1972,7 @@ class NetCDF4Base(NetCDFBase):
                 (1, y_chunksize, x_chunksize),
                 open_kwargs={"chunks": "auto"},
             ) as ds:
-                t_chunks, y_chunks, x_chunks = ds["image"].data.chunks
+                _t_chunks, y_chunks, x_chunks = ds["image"].data.chunks
                 assert all(np.asanyarray(y_chunks) == y_chunksize)
                 # Check that the chunk size is a multiple of the file chunk size
                 assert all(np.asanyarray(x_chunks) % x_chunksize == 0)
@@ -2228,8 +2241,8 @@ class NetCDF4Base(NetCDFBase):
                     with pytest.raises(
                         ValueError,
                         match=(
-                            "Cannot save variable .*"
-                            " because an enum `cloud_type` already exists in the Dataset .*"
+                            r"Cannot save variable .*"
+                            r" because an enum `cloud_type` already exists in the Dataset .*"
                         ),
                     ):
                         with self.roundtrip(original):
@@ -4403,7 +4416,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
     def test_default_zarr_fill_value(self):
         inputs = xr.Dataset({"floats": ("x", [1.0]), "ints": ("x", [1])}).chunk()
         expected = xr.Dataset({"floats": ("x", [np.nan]), "ints": ("x", [0])})
-        with self.temp_dir() as (d, store):
+        with self.temp_dir() as (_d, store):
             inputs.to_zarr(store, compute=False)
             with open_dataset(store) as on_disk:
                 assert np.isnan(on_disk.variables["floats"].encoding["_FillValue"])
@@ -4470,7 +4483,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         else:
             encoding = {"test": {"chunks": (1, 1, 1)}}
 
-        with self.temp_dir() as (d, store):
+        with self.temp_dir() as (_d, store):
             ds.to_zarr(
                 store,
                 mode="w",
@@ -4745,6 +4758,54 @@ class TestNetCDF4ClassicViaNetCDF4Data(NetCDF3Only, CFEncodedBase):
                 tmp_file, mode="w", format="NETCDF4_CLASSIC"
             ) as store:
                 yield store
+
+    @requires_h5netcdf
+    def test_string_attributes_stored_as_char(self, tmp_path):
+        import h5netcdf
+
+        original = Dataset(attrs={"foo": "bar"})
+        store_path = tmp_path / "tmp.nc"
+        original.to_netcdf(store_path, engine=self.engine, format=self.file_format)
+        with h5netcdf.File(store_path, "r") as ds:
+            # Check that the attribute is stored as a char array
+            assert ds._h5file.attrs["foo"].dtype == np.dtype("S3")
+
+
+@requires_h5netcdf_1_7_0_or_above
+class TestNetCDF4ClassicViaH5NetCDFData(TestNetCDF4ClassicViaNetCDF4Data):
+    engine: T_NetcdfEngine = "h5netcdf"
+    file_format: T_NetcdfTypes = "NETCDF4_CLASSIC"
+
+    @contextlib.contextmanager
+    def create_store(self):
+        with create_tmp_file() as tmp_file:
+            with backends.H5NetCDFStore.open(
+                tmp_file, mode="w", format="NETCDF4_CLASSIC"
+            ) as store:
+                yield store
+
+    @requires_netCDF4
+    def test_cross_engine_read_write_netcdf4(self) -> None:
+        # Drop dim3, because its labels include strings. These appear to be
+        # not properly read with python-netCDF4, which converts them into
+        # unicode instead of leaving them as bytes.
+        data = create_test_data().drop_vars("dim3")
+        data.attrs["foo"] = "bar"
+        valid_engines: list[T_NetcdfEngine] = ["netcdf4", "h5netcdf"]
+        for write_engine in valid_engines:
+            with create_tmp_file() as tmp_file:
+                data.to_netcdf(tmp_file, engine=write_engine, format=self.file_format)
+                for read_engine in valid_engines:
+                    with open_dataset(tmp_file, engine=read_engine) as actual:
+                        assert_identical(data, actual)
+
+    def test_group_fails(self):
+        # Check writing group data fails with CLASSIC format
+        original = create_test_data()
+        with pytest.raises(
+            ValueError, match=r"Cannot create sub-groups in `NETCDF4_CLASSIC` format."
+        ):
+            original.to_netcdf(group="sub", format=self.file_format, engine=self.engine)
 
 
 @requires_scipy_or_netCDF4
@@ -5515,7 +5576,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         expected,
         expect_error,
     ):
-        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+        with self.setup_files_and_datasets() as (files, [_ds1, _ds2]):
             # Give the files an inconsistent attribute
             for i, f in enumerate(files):
                 ds = open_dataset(f).load()
@@ -5550,7 +5611,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         """
         Case when an attribute differs across the multiple files
         """
-        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+        with self.setup_files_and_datasets() as (files, [_ds1, _ds2]):
             # Give the files an inconsistent attribute
             for i, f in enumerate(files):
                 ds = open_dataset(f).load()
@@ -5568,7 +5629,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         """
         with self.setup_files_and_datasets(new_combine_kwargs=True) as (
             files,
-            [ds1, ds2],
+            [_ds1, _ds2],
         ):
             # Give the files an inconsistent attribute
             for i, f in enumerate(files):
@@ -5916,7 +5977,7 @@ class TestDask(DatasetIOBase):
 
     def test_open_mfdataset_with_warn(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
-        with pytest.warns(UserWarning, match="Ignoring."):
+        with pytest.warns(UserWarning, match=r"Ignoring."):
             with create_tmp_files(2) as (tmp1, tmp2):
                 ds1 = original.isel(x=slice(5))
                 ds2 = original.isel(x=slice(5, 10))
@@ -5947,7 +6008,7 @@ class TestDask(DatasetIOBase):
 
     def test_open_mfdataset_2d_with_warn(self) -> None:
         original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
-        with pytest.warns(UserWarning, match="Ignoring."):
+        with pytest.warns(UserWarning, match=r"Ignoring."):
             with create_tmp_files(4) as (tmp1, tmp2, tmp3, tmp4):
                 original.isel(x=slice(5), y=slice(4)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10), y=slice(4)).to_netcdf(tmp2)
@@ -6248,6 +6309,32 @@ class TestDask(DatasetIOBase):
                 [tmp1, tmp2], concat_dim=dim, data_vars="all", combine="nested"
             ) as actual:
                 assert_identical(expected, actual)
+
+    @requires_cftime
+    def test_open_dataset_cftime_autochunk(self) -> None:
+        """Create a dataset with cftime datetime objects and
+        ensure that auto-chunking works correctly."""
+        import cftime
+
+        original = xr.Dataset(
+            {
+                "foo": ("time", [0.0]),
+                "time_bnds": (
+                    ("time", "bnds"),
+                    [
+                        [
+                            cftime.Datetime360Day(2005, 12, 1, 0, 0, 0, 0),
+                            cftime.Datetime360Day(2005, 12, 2, 0, 0, 0, 0),
+                        ]
+                    ],
+                ),
+            },
+            {"time": [cftime.Datetime360Day(2005, 12, 1, 12, 0, 0, 0)]},
+        )
+        with self.roundtrip(original, open_kwargs={"chunks": "auto"}) as actual:
+            assert isinstance(actual.time_bnds.variable.data, da.Array)
+            assert _contains_cftime_datetimes(actual.time)
+            assert_identical(original, actual)
 
     # Flaky test. Very open to contributions on fixing this
     @pytest.mark.flaky
@@ -7178,7 +7265,10 @@ def test_netcdf4_entrypoint(tmp_path: Path) -> None:
     _check_guess_can_open_and_open(entrypoint, path, engine="netcdf4", expected=ds)
     _check_guess_can_open_and_open(entrypoint, str(path), engine="netcdf4", expected=ds)
 
-    assert entrypoint.guess_can_open("http://something/remote")
+    # Remote URLs without extensions are no longer claimed (stricter detection)
+    assert not entrypoint.guess_can_open("http://something/remote")
+    # Remote URLs with netCDF extensions are claimed
+    assert entrypoint.guess_can_open("http://something/remote.nc")
     assert entrypoint.guess_can_open("something-local.nc")
     assert entrypoint.guess_can_open("something-local.nc4")
     assert entrypoint.guess_can_open("something-local.cdf")
@@ -7221,6 +7311,10 @@ def test_scipy_entrypoint(tmp_path: Path) -> None:
     assert entrypoint.guess_can_open("something-local.nc.gz")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
     assert not entrypoint.guess_can_open(b"not-a-netcdf-file")
+    # Should not claim .gz files that aren't netCDF
+    assert not entrypoint.guess_can_open("something.zarr.gz")
+    assert not entrypoint.guess_can_open("something.tar.gz")
+    assert not entrypoint.guess_can_open("something.txt.gz")
 
 
 @requires_h5netcdf
@@ -7269,6 +7363,85 @@ def test_zarr_entrypoint(tmp_path: Path) -> None:
     assert not entrypoint.guess_can_open("something-local.nc")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
     assert not entrypoint.guess_can_open("something.zarr.txt")
+
+
+@requires_h5netcdf
+@requires_netCDF4
+@requires_zarr
+def test_remote_url_backend_auto_detection() -> None:
+    """
+    Test that remote URLs are correctly selected by the backend resolution system.
+
+    This tests the fix for issue where netCDF4, h5netcdf, and pydap backends were
+    claiming ALL remote URLs, preventing remote Zarr stores from being
+    auto-detected.
+
+    See: https://github.com/pydata/xarray/issues/10801
+    """
+    from xarray.backends.plugins import guess_engine
+
+    # Test cases: (url, expected_backend)
+    test_cases = [
+        # Remote Zarr URLs
+        ("https://example.com/store.zarr", "zarr"),
+        ("http://example.com/data.zarr/", "zarr"),
+        ("s3://bucket/path/to/data.zarr", "zarr"),
+        # Remote netCDF URLs (non-DAP) - netcdf4 wins (first in order, no query params)
+        ("https://example.com/file.nc", "netcdf4"),
+        ("http://example.com/data.nc4", "netcdf4"),
+        ("https://example.com/test.cdf", "netcdf4"),
+        ("s3://bucket/path/to/data.nc", "netcdf4"),
+        # Remote netCDF URLs with query params - netcdf4 wins
+        # Note: Query params are typically indicative of DAP URLs (e.g., OPeNDAP constraint expressions),
+        # so we prefer netcdf4 (which has DAP support) over h5netcdf (which doesn't)
+        ("https://example.com/data.nc?var=temperature&time=0", "netcdf4"),
+        (
+            "http://test.opendap.org/opendap/dap4/StaggeredGrid.nc4?dap4.ce=/time[0:1:0]",
+            "netcdf4",
+        ),
+        # DAP URLs with .nc extensions (no query params) - netcdf4 wins (first in order)
+        ("http://test.opendap.org/opendap/dap4/StaggeredGrid.nc4", "netcdf4"),
+        ("https://example.com/DAP4/data.nc", "netcdf4"),
+        ("http://example.com/data/Dap4/file.nc", "netcdf4"),
+    ]
+
+    for url, expected_backend in test_cases:
+        engine = guess_engine(url)
+        assert engine == expected_backend, (
+            f"URL {url!r} should select {expected_backend!r} but got {engine!r}"
+        )
+
+    # DAP URLs without extensions - pydap wins if available, netcdf4 otherwise
+    # When pydap is not installed, netCDF4 should handle these DAP URLs
+    expected_dap_backend = "pydap" if has_pydap else "netcdf4"
+    dap_urls = [
+        "dap2://opendap.earthdata.nasa.gov/collections/dataset",
+        "dap4://opendap.earthdata.nasa.gov/collections/dataset",
+        "DAP2://example.com/dataset",  # uppercase scheme
+        "DAP4://example.com/dataset",  # uppercase scheme
+        "https://example.com/services/DAP2/dataset",  # uppercase in path
+    ]
+
+    for url in dap_urls:
+        engine = guess_engine(url)
+        assert engine == expected_dap_backend, (
+            f"URL {url!r} should select {expected_dap_backend!r} but got {engine!r}"
+        )
+
+    # URLs that should raise ValueError (no backend can open them)
+    invalid_urls = [
+        "http://test.opendap.org/opendap/data/nc/coads_climatology.nc.dap",  # .dap suffix
+        "https://example.com/data.dap",  # .dap suffix
+        "http://opendap.example.com/data",  # no extension, no DAP indicators
+        "https://test.opendap.org/dataset",  # no extension, no DAP indicators
+    ]
+
+    for url in invalid_urls:
+        with pytest.raises(
+            ValueError,
+            match=r"did not find a match in any of xarray's currently installed IO backends",
+        ):
+            guess_engine(url)
 
 
 @requires_netCDF4

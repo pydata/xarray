@@ -89,7 +89,7 @@ OPTIONS: T_Options = {
     "enable_cftimeindex": True,
     "file_cache_maxsize": 128,
     "keep_attrs": "default",
-    "netcdf_engine_order": ("h5netcdf", "scipy", "netcdf4"),
+    "netcdf_engine_order": ("netcdf4", "h5netcdf", "scipy"),
     "warn_for_unclosed_files": False,
     "use_bottleneck": True,
     "use_flox": True,
@@ -100,7 +100,7 @@ OPTIONS: T_Options = {
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
 _DISPLAY_OPTIONS = frozenset(["text", "html"])
-_NETCDF_ENGINES = frozenset(["h5netcdf", "scipy", "netcdf4"])
+_NETCDF_ENGINES = frozenset(["netcdf4", "h5netcdf", "scipy"])
 
 
 def _positive_integer(value: Any) -> bool:
@@ -260,11 +260,11 @@ class set_options:
         * ``False`` : to always discard attrs
         * ``default`` : to use original logic that attrs should only
           be kept in unambiguous circumstances
-    netcdf_engine_order : sequence, default ['h5netcdf', 'scipy', 'netcdf4']
+    netcdf_engine_order : sequence, default ['netcdf4', 'h5netcdf', 'scipy']
         Preference order of backend engines to use when reading or writing
         netCDF files with ``open_dataset()`` and ``to_netcdf()`` if ``engine``
         is not explicitly specified. May be any permutation or subset of
-        ``['h5netcdf', 'scipy', 'netcdf4']``.
+        ``['netcdf4', 'h5netcdf', 'scipy']``.
     use_bottleneck : bool, default: True
         Whether to use ``bottleneck`` to accelerate 1D reductions and
         1D rolling reduction operations.
