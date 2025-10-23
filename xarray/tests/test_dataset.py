@@ -2980,6 +2980,21 @@ class TestDataset:
             actual = data.drop_vars("level_1")
         assert_identical(expected, actual)
 
+    def test_drop_multiindex_labels(self) -> None:
+        data = create_test_multiindex()
+        mindex = pd.MultiIndex.from_tuples(
+            [
+                ("a", 2),
+                ("b", 1),
+                ("b", 2),
+            ],
+            names=("level_1", "level_2"),
+        )
+        expected = Dataset({}, Coordinates.from_pandas_multiindex(mindex, "x"))
+
+        actual = data.drop_sel(x=("a", 1))
+        assert_identical(expected, actual)
+
     def test_drop_index_labels(self) -> None:
         data = Dataset({"A": (["x", "y"], np.random.randn(2, 3)), "x": ["a", "b"]})
 
