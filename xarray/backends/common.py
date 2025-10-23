@@ -236,9 +236,9 @@ def _decode_variable_name(name):
 
 
 def _iter_nc_groups(root, parent="/"):
-    from xarray.core.treenode import NodePath
+    from xarray.core.treenode import TreePath
 
-    parent = NodePath(parent)
+    parent = TreePath(parent)
     yield str(parent)
     for path, group in root.groups.items():
         gpath = parent / path
