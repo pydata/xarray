@@ -946,25 +946,15 @@ class DataTree(
     def _copy_listed(self, keys: list[str]) -> Self:
         """Get multiple items as a DataTree."""
         base = TreePath(self.path)
-        nodes: dict[str, DataTree | Dataset] = {}
-        keys_by_node: defaultdict[str, list[str]] = defaultdict(list)
+        nodes: dict[str, DataTree | DataArray] = {}
         for key in keys:
             path = base / key
-            assert path.root
-            _, *parts, name = path.parts
-            current_node = self.root
-            for part in parts:
-                current_node = current_node.children[part]
-            if name in current_node.children:
-                target = str(path.relative_to(base))
-                nodes[target] = current_node.children[name]
-            elif name in current_node.variables:
-                target = str(base.joinpath(*parts).relative_to(base))
-                keys_by_node[target].append(name)  # DataArray
-            else:
-                raise KeyError(key)
-        for target, names in keys_by_node.items():
-            nodes[target] = self.root[target].dataset[names]
+            try:
+                key2 = str(path.relative_to(base))
+            except ValueError as e:
+                raise IndexError(f"cannot subset items from parent nodes: {key}") from e
+            value = self._get_item(key)
+            nodes[key2] = value
         return self.from_dict(nodes, name=self.name)
 
     @overload

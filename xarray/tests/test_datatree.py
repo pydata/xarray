@@ -338,15 +338,27 @@ class TestGetItem:
         actual = data[["a/d", "e"]]
         assert_identical(actual, expected)
 
-        expected = DataTree.from_dict({"e": 2}, name="a")
-        actual = data.children["a"][["../e"]]
-        assert_identical(actual, expected)
-
         with pytest.raises(KeyError, match="Already a node object at path /a/b"):
             data[["a", "a/b"]]
 
-        with pytest.raises(KeyError, match="'not_found'"):
+        with pytest.raises(KeyError, match="'Could not find node at /not_found'"):
             data[["not_found"]]
+
+    def test_getitem_on_child(self) -> None:
+        data = DataTree.from_dict({"a/b/c": 0, "a/d": 1, "e": 2})
+        child = data.children["a"]
+
+        expected = DataTree.from_dict({"b/c": 0, "d": 1}, name="a")
+        actual = child[["b", "d"]]
+        assert_identical(actual, expected)
+
+        actual = child[["."]]
+        assert_identical(actual, expected)
+
+        with pytest.raises(
+            IndexError, match=re.escape("cannot subset items from parent nodes: ../e")
+        ):
+            child[["../e"]]
 
     @pytest.mark.xfail(
         reason="Indexing needs to return whole tree (GH https://github.com/xarray-contrib/datatree/issues/77)"
