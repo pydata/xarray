@@ -279,7 +279,7 @@ class ZarrArrayWrapper(BackendArray):
         )
 
 
-def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
+def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, zarr_format):
     """
     Given encoding chunks (possibly None or []) and variable chunks
     (possibly None or []).
@@ -301,6 +301,9 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
     # while dask chunks can be variable sized
     # https://dask.pydata.org/en/latest/array-design.html#chunks
     if var_chunks and not enc_chunks:
+        if zarr_format == 3:
+            return tuple(var_chunks)
+
         if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
             raise ValueError(
                 "Zarr requires uniform chunk sizes except for final chunk. "
@@ -475,6 +478,7 @@ def extract_zarr_variable_encoding(
         var_chunks=variable.chunks,
         ndim=variable.ndim,
         name=name,
+        zarr_format=zarr_format,
     )
     if _zarr_v3() and chunks is None:
         chunks = "auto"
