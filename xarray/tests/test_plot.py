@@ -529,7 +529,7 @@ class TestPlot(PlotTestCase):
             [-0.5, 0.5, 5.0, 9.5, 10.5], _infer_interval_breaks([0, 1, 9, 10])
         )
         assert_array_equal(
-            pd.date_range("20000101", periods=4) - np.timedelta64(12, "h"),  # type: ignore[operator]
+            pd.date_range("20000101", periods=4) - np.timedelta64(12, "h"),
             _infer_interval_breaks(pd.date_range("20000101", periods=3)),
         )
 

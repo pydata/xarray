@@ -514,12 +514,12 @@ class CFTimeIndex(pd.Index):
             f"'freq' must be of type str or datetime.timedelta, got {type(freq)}."
         )
 
-    def __add__(self, other) -> Self:
+    def __add__(self, other) -> Self:  # type: ignore[override]
         if isinstance(other, pd.TimedeltaIndex):
             other = other.to_pytimedelta()
         return type(self)(np.array(self) + other)
 
-    def __radd__(self, other) -> Self:
+    def __radd__(self, other) -> Self:  # type: ignore[override]
         if isinstance(other, pd.TimedeltaIndex):
             other = other.to_pytimedelta()
         return type(self)(other + np.array(self))
