@@ -35,12 +35,20 @@ Bug Fixes
 ~~~~~~~~~
 - Fix h5netcdf backend for format=None, use same rule as netcdf4 backend (:pull:`10859`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
-
 - ``netcdf4`` and ``pydap`` backends now use stricter URL detection to avoid incorrectly claiming
   remote URLs. The ``pydap`` backend now only claims URLs with explicit DAP protocol indicators
   (``dap2://`` or ``dap4://`` schemes, or ``/dap2/`` or ``/dap4/`` in the URL path). This prevents
   both backends from claiming remote Zarr stores and other non-DAP URLs without an explicit
   ``engine=`` argument. (:pull:`10804`). By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+- Fix indexing with empty arrays for scipy & h5netcdf backends which now resolves to empty slices (:issue:`10867`, :pull:`10870`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
+
+Performance
+~~~~~~~~~~~
+
+- Speedup and reduce memory usage of :py:func:`concat`. Magnitude of improvement scales
+  with size of the concatenation dimension. By `Deepak Cherian <https://github.com/dcherian>`_.
+  :issue:`10864` :pull:`10866`.
 
 Documentation
 ~~~~~~~~~~~~~
