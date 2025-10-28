@@ -83,7 +83,7 @@ def maybe_promote(dtype: np.dtype[np.generic]) -> tuple[np.dtype[np.generic], An
         fill_value = np.nan
 
     dtype_out = np.dtype(dtype_)
-    fill_value = dtype_out.type(fill_value)  # type: ignore[call-arg]
+    fill_value = dtype_out.type(fill_value)
     return dtype_out, fill_value
 
 
