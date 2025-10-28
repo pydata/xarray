@@ -79,7 +79,7 @@ def maybe_promote(dtype: np.dtype[np.generic]) -> tuple[np.dtype[np.generic], An
         dtype_ = dtype
         fill_value = np.datetime64("NaT")
     else:
-        dtype_ = object
+        dtype_ = np.object_
         fill_value = np.nan
 
     dtype_out = np.dtype(dtype_)
