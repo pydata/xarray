@@ -579,10 +579,11 @@ class TestPyDAPDatatreeIO:
     )
     simplegroup_datatree_url = "dap4://test.opendap.org/opendap/dap4/SimpleGroup.nc4.h5"
 
-    @pytest.xfail(reason="404 error")
     def test_open_datatree_unaligned_hierarchy(
         self, url=unaligned_datatree_url
     ) -> None:
+        pytest.xfail(reason="test.opendap.org reports a 404 error")
+
         with pytest.raises(
             ValueError,
             match=(
@@ -594,9 +595,10 @@ class TestPyDAPDatatreeIO:
         ):
             open_datatree(url, engine=self.engine)
 
-    @pytest.xfail(reason="404 error")
     def test_open_groups(self, url=unaligned_datatree_url) -> None:
         """Test `open_groups` with a netCDF4/HDF5 file with an unaligned group hierarchy."""
+        pytest.xfail(reason="test.opendap.org reports a 404 error")
+
         unaligned_dict_of_datasets = open_groups(url, engine=self.engine)
 
         # Check that group names are keys in the dictionary of `xr.Datasets`
@@ -615,7 +617,6 @@ class TestPyDAPDatatreeIO:
         ) as expected:
             assert_identical(unaligned_dict_of_datasets["/Group1/subgroup1"], expected)
 
-    @pytest.xfail(reason="404 error")
     def test_inherited_coords(self, url=simplegroup_datatree_url) -> None:
         """Test that `open_datatree` inherits coordinates from root tree.
 
@@ -642,6 +643,7 @@ class TestPyDAPDatatreeIO:
             │       Temperature  (time, Z, Y, X) float32 ...
             |       Salinity     (time, Z, Y, X) float32 ...
         """
+        pytest.xfail(reason="test.opendap.org reports a 404 error")
         tree = open_datatree(url, engine=self.engine)
         assert set(tree.dims) == {"time", "Z", "nv"}
         assert tree["/SimpleGroup"].coords["time"].dims == ("time",)
@@ -654,6 +656,7 @@ class TestPyDAPDatatreeIO:
             )
 
     def test_open_groups_to_dict(self, url=all_aligned_child_nodes_url) -> None:
+        pytest.xfail(reason="test.opendap.org reports a 404 error")
         aligned_dict_of_datasets = open_groups(url, engine=self.engine)
         aligned_dt = DataTree.from_dict(aligned_dict_of_datasets)
         with open_datatree(url, engine=self.engine) as opened_tree:
