@@ -6087,7 +6087,7 @@ class Dataset(
                         "cannot use drop_sel() with DataArray values with "
                         "along dimensions other than the dimensions being "
                         f"indexed along: {labels_for_dim}"
-                   )
+                    )
                 labels_for_dim = np.asarray(labels_for_dim)
             try:
                 index = self.get_index(dim)
