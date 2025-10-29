@@ -6082,12 +6082,6 @@ class Dataset(
             # DataArrays are a special case where the underlying libraries don't provide
             # a good conversition.
             if isinstance(labels_for_dim, DataArray):
-                if labels_for_dim.dims not in ((), (dim,)):
-                    raise ValueError(
-                        "cannot use drop_sel() with DataArray values with "
-                        "along dimensions other than the dimensions being "
-                        f"indexed along: {labels_for_dim}"
-                   )
                 labels_for_dim = np.asarray(labels_for_dim)
             try:
                 index = self.get_index(dim)
