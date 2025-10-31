@@ -84,6 +84,7 @@ jobs:
         uses: actions/cache/restore@v4
         id: restore-pixi-lock
         with:
+          enableCrossOsArchive: true
           path: |
             pixi.lock
           key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
