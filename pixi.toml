@@ -73,6 +73,7 @@ test-all-mypy-py313 = { features = [
   "dask",
   "plotting",
   "extras",
+  "mypy",
 ] }
 
 test-bare-minimum = { features = ["test", "minimal"] }
@@ -258,6 +259,7 @@ types-requests = "*"
 types-setuptools = "*"
 types-openpyxl = "*"
 typing_extensions = "*"
+pip = "*"
 
 [feature.mypy.pypi-dependencies]
 types-defusedxml = "*"
@@ -265,7 +267,7 @@ types-pexpect = "*"
 
 
 [feature.mypy.tasks]
-mypy = "mypy --install-types --non-interactive --cobertura-xml-report mypy_report"
+typing = "mypy --install-types --non-interactive --cobertura-xml-report mypy_report"
 
 [feature.pre-commit.dependencies]
 pre-commit = "*"
