@@ -180,9 +180,6 @@ matplotlib-base = "*"
 nc-time-axis = "*"
 seaborn = "*"
 
-[feature.annotate-ci-failures.pypi-dependencies]
-pytest-github-actions-annotate-failures = "*"
-
 [feature.extras.dependencies]
 # array
 array-api-strict = "<2.4"
