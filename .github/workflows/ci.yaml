@@ -36,7 +36,7 @@ jobs:
   cache-pixi-lock:
     uses: ./.github/workflows/cache-pixi-lock.yml
   test:
-    name: ${{ matrix.os }} py${{ matrix.python-version }} ${{ matrix.env }}
+    name: ${{ matrix.os }} py${{ matrix.python-version }} ${{ matrix.pixi-env }}
     runs-on: ${{ matrix.os }}
     needs: [detect-ci-trigger, cache-pixi-lock]
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
@@ -49,35 +49,35 @@ jobs:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
         python-version: ["3.11", "3.13"]
-        env: [""]
+        pixi-env: [""]
         include:
           # Minimum python version:
-          - env: "bare-minimum"
+          - pixi-env: "bare-minimum"
             python-version: "3.11"
             os: ubuntu-latest
-          - env: "bare-min-and-scipy"
+          - pixi-env: "bare-min-and-scipy"
             python-version: "3.11"
             os: ubuntu-latest
-          - env: "min-all-deps"
+          - pixi-env: "min-all-deps"
             python-version: "3.11"
             os: ubuntu-latest
           # Latest python version:
-          - env: "all-but-numba"
+          - pixi-env: "all-but-numba"
             python-version: "3.13"
             os: ubuntu-latest
-          - env: "all-but-dask"
+          - pixi-env: "all-but-dask"
             python-version: "3.12"
             os: ubuntu-latest
-          - env: "flaky"
+          - pixi-env: "flaky"
             python-version: "3.13"
             os: ubuntu-latest
           # The mypy tests must be executed using only 1 process in order to guarantee
           # predictable mypy output messages for comparison to expectations.
-          - env: "mypy"
+          - pixi-env: "mypy"
             python-version: "3.11"
             numprocesses: 1
             os: ubuntu-latest
-          - env: "mypy"
+          - pixi-env: "mypy"
             python-version: "3.13"
             numprocesses: 1
             os: ubuntu-latest
@@ -101,20 +101,20 @@ jobs:
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
-          if [[ "${{ matrix.env }}" != "" ]] ;
+          if [[ "${{ matrix.pixi-env }}" != "" ]] ;
           then
-            if [[ "${{ matrix.env }}" == "flaky" ]] ;
+            if [[ "${{ matrix.pixi-env }}" == "flaky" ]] ;
             then
               echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
               echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests -W default" >> $GITHUB_ENV
-            elif [[ "${{ matrix.env }}" == "mypy" ]] ;
+            elif [[ "${{ matrix.pixi-env }}" == "mypy" ]] ;
             then
               echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
               echo "PYTEST_ADDOPTS=-n 1 -m 'mypy' --run-mypy -W default" >> $GITHUB_ENV
             else
-              echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
+              echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.pixi-env }}.yml" >> $GITHUB_ENV
             fi
-            if [[ "${{ matrix.env }}" == "min-all-deps" ]] ;
+            if [[ "${{ matrix.pixi-env }}" == "min-all-deps" ]] ;
             then
               # Don't raise on warnings
               echo "PYTEST_ADDOPTS=-W default" >> $GITHUB_ENV
@@ -171,7 +171,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: Test results for ${{ runner.os }}-${{ matrix.python-version }} ${{ matrix.env }}
+          name: Test results for ${{ runner.os }}-${{ matrix.python-version }} ${{ matrix.pixi-env }}
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
