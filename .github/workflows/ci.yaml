@@ -120,6 +120,10 @@ jobs:
         run: |
           pixi add --pypi pytest-github-actions-annotate-failures
 
+      - name: Enter pixi shell
+        run: |
+          pixi shell -e ${{ matrix.pixi-env }}
+
       - name: Version info
         run: |
           python xarray/util/print_versions.py
