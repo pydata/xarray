@@ -121,17 +121,13 @@ jobs:
         run: |
           pixi add --pypi pytest-github-actions-annotate-failures
 
-      - name: Enter pixi shell
-        run: |
-          pixi shell -e ${{ matrix.pixi-env }}
-
       - name: Version info
         run: |
-          python xarray/util/print_versions.py
+          pixi run python xarray/util/print_versions.py
 
       - name: Import xarray
         run: |
-          python -c "import xarray"
+          pixi run python -c "import xarray"
 
       - name: Restore cached hypothesis directory
         uses: actions/cache@v4
@@ -142,7 +138,7 @@ jobs:
           save-always: true
 
       - name: Run tests
-        run: python -m pytest -n ${{ matrix.numprocesses || 4 }}
+        run: pixi run python -m pytest -n ${{ matrix.numprocesses || 4 }}
           --timeout 180
           --cov=xarray
           --cov-report=xml
