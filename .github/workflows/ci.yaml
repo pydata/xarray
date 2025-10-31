@@ -126,11 +126,11 @@ jobs:
 
       - name: Version info
         run: |
-          pixi run python xarray/util/print_versions.py
+          pixi run -e ${{ matrix.pixi-env }} python xarray/util/print_versions.py
 
       - name: Import xarray
         run: |
-          pixi run python -c "import xarray"
+          pixi run -e ${{ matrix.pixi-env }} python -c "import xarray"
 
       - name: Restore cached hypothesis directory
         uses: actions/cache@v4
@@ -141,7 +141,8 @@ jobs:
           save-always: true
 
       - name: Run tests
-        run: pixi run python -m pytest -n ${{ matrix.numprocesses || 4 }}
+        run:
+          pixi run -e ${{ matrix.pixi-env }} python -m pytest -n ${{ matrix.numprocesses || 4 }}
           --timeout 180
           --cov=xarray
           --cov-report=xml
