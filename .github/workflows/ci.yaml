@@ -48,40 +48,32 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.11", "3.13"]
-        pixi-env: ["test-all-deps"]
+        pixi-env: ["test-all-deps-py311", "test-all-deps-py313"]
         pytest-adopts: [""]
         include:
           # Minimum python version:
           - pixi-env: "test-bare-minimum"
-            python-version: "3.11"
             os: ubuntu-latest
           - pixi-env: "test-bare-min-and-scipy"
-            python-version: "3.11"
             os: ubuntu-latest
           # - pixi-env: "min-all-deps" # TODO: include later by duplicating old workflow and using conda. Not using Pixi for now.
           #   python-version: "3.11"
           #   os: ubuntu-latest
           # Latest python version:
           - pixi-env: "test-all-but-numba"
-            python-version: "3.13"
             os: ubuntu-latest
           - pixi-env: "test-all-but-dask"
-            python-version: "3.12"
             os: ubuntu-latest
           - pixi-env: "test-all-deps"
             pytest-adopts: "flaky"
-            python-version: "3.13"
             os: ubuntu-latest
           # The mypy tests must be executed using only 1 process in order to guarantee
           # predictable mypy output messages for comparison to expectations.
           - pixi-env: "test-all-mypy-py311"
             pytest-adopts: "mypy"
-            python-version: "3.11"
             numprocesses: 1
             os: ubuntu-latest
           - pixi-env: "test-all-mypy-py313"
-            python-version: "3.13"
             numprocesses: 1
             os: ubuntu-latest
     steps:
@@ -123,8 +115,6 @@ jobs:
               echo "PYTEST_ADDOPTS=-W default" >> $GITHUB_ENV
             fi
           fi
-
-          echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
 
       - name: Setup micromamba
         uses: mamba-org/setup-micromamba@v2
@@ -174,7 +164,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: Test results for ${{ runner.os }}-${{ matrix.python-version }} ${{ matrix.pixi-env }}
+          name: Test results for OS ${{ runner.os }} | pixi-env -${{ matrix.pixi-env }}
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
@@ -184,7 +174,7 @@ jobs:
         with:
           file: ./coverage.xml
           flags: unittests
-          env_vars: RUNNER_OS,PYTHON_VERSION
+          env_vars: RUNNER_OS
           name: codecov-umbrella
           fail_ci_if_error: false
 
