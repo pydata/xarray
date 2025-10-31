@@ -6,6 +6,9 @@ sphinx:
 
 build:
   os: ubuntu-lts-latest
+  tools:
+    # just so RTD stops complaining
+    python: "latest"
   jobs:
     create_environment:
       - asdf plugin add pixi
@@ -15,9 +18,12 @@ build:
       - (git --no-pager log --pretty="tformat:%s" -1 | grep -vqF "[skip-rtd]") || exit 183
       - git fetch --unshallow || true
     pre_install:
-      - git update-index --assume-unchanged doc/conf.py ci/requirements/doc.yml
+      - git update-index --assume-unchanged doc/conf.py
     install:
       - pixi install -e doc
+    build:
+      html:
+        - BUILDDIR=$READTHEDOCS_OUTPUT pixi run -e doc make html
 
 formats:
   - htmlzip
