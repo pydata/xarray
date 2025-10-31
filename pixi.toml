@@ -12,7 +12,7 @@ depends-on = [
 
 [environments]
 # Testing
-test-default = { features = ["test"], solve-group = "test" }
+test-default = { features = ["test"] }
 test-all-but-numba = { features = [
   "py313",
   "test",
@@ -21,7 +21,7 @@ test-all-but-numba = { features = [
   "dask",
   "plotting",
   "extras",
-], solve-group = "test" }
+] }
 test-all-but-dask = { features = [
   "py312",
   "test",
@@ -30,7 +30,7 @@ test-all-but-dask = { features = [
   "numba",
   "plotting",
   "extras",
-], solve-group = "test" }
+] }
 test-all-deps = { features = [
   "test",
   "backends",
@@ -39,8 +39,8 @@ test-all-deps = { features = [
   "dask",
   "plotting",
   "extras",
-], solve-group = "test" }
-test-bare-minimum = { features = ["test", "minimal"], solve-group = "test" }
+] }
+test-bare-minimum = { features = ["test", "minimal"] }
 
 # Extra
 typing = { features = ["mypy"] }
