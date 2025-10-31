@@ -101,14 +101,7 @@ jobs:
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
-          if [[ ${{ matrix.os }} == windows* ]] ;
-          then
-            if [[ ${{ matrix.python-version }} != "3.14" ]]; then
-              echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
-            else
-              echo "CONDA_ENV_FILE=ci/requirements/environment-windows-3.14.yml" >> $GITHUB_ENV
-            fi
-          elif [[ "${{ matrix.env }}" != "" ]] ;
+          if [[ "${{ matrix.env }}" != "" ]] ;
           then
             if [[ "${{ matrix.env }}" == "flaky" ]] ;
             then
