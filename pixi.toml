@@ -40,6 +40,30 @@ test-all-deps = { features = [
   "plotting",
   "extras",
 ] }
+
+test-all-mypy-py311 = { features = [
+  "py311",
+  "test",
+  "backends",
+  "performance",
+  "numba",
+  "dask",
+  "plotting",
+  "extras",
+  "mypy",
+] }
+
+test-all-mypy-py313 = { features = [
+  "py313",
+  "test",
+  "backends",
+  "performance",
+  "numba",
+  "dask",
+  "plotting",
+  "extras",
+] }
+
 test-bare-minimum = { features = ["test", "minimal"] }
 
 # Extra
