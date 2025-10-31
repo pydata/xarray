@@ -65,6 +65,11 @@ test-all-mypy-py313 = { features = [
 ] }
 
 test-bare-minimum = { features = ["test", "minimal"] }
+test-bare-min-and-scipy = { features = [
+  "test",
+  "minimal",
+  "minimum-scipy",
+] }
 
 # Extra
 typing = { features = ["mypy"] }
@@ -97,6 +102,9 @@ pydap-server = "*"
 python = "3.11.*"
 numpy = "1.26.*"
 pandas = "2.2.*"
+
+[feature.minimum-scipy.dependencies]
+scipy = "1.13.*"
 
 [feature.py311.dependencies]
 python = "3.11.*"
