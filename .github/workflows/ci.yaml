@@ -91,6 +91,7 @@ jobs:
       - uses: prefix-dev/setup-pixi@v0.9.0
         with:
           cache: true
+          environments: ${{ matrix.pixi-env }}
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
       - name: Set environment variables
