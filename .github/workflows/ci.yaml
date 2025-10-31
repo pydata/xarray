@@ -36,7 +36,7 @@ jobs:
   cache-pixi-lock:
     uses: ./.github/workflows/cache-pixi-lock.yml
   test:
-    name: ${{ matrix.os }} py${{ matrix.python-version }} ${{ matrix.pixi-env }}
+    name: "${{ matrix.os }} | pixi shell -e ${{ matrix.pixi-env }}"
     runs-on: ${{ matrix.os }}
     needs: [detect-ci-trigger, cache-pixi-lock]
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
