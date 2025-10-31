@@ -35,6 +35,8 @@ jobs:
 
   cache-pixi-lock:
     uses: ./.github/workflows/cache-pixi-lock.yml
+    with:
+      pixi-version: "v0.58.0" # keep in sync with jobs
   test:
     name: "${{ matrix.os }} | pixi shell -e ${{ matrix.pixi-env }}"
     runs-on: ${{ matrix.os }}
@@ -90,6 +92,7 @@ jobs:
           key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
       - uses: prefix-dev/setup-pixi@v0.9.0
         with:
+          pixi-version: "v0.58.0" # keep in sync with cache-pixi-lock
           cache: true
           environments: ${{ matrix.pixi-env }}
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}

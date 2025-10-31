@@ -265,7 +265,6 @@ pip = "*"
 types-defusedxml = "*"
 types-pexpect = "*"
 
-
 [feature.mypy.tasks]
 typing = "mypy --install-types --non-interactive --cobertura-xml-report mypy_report"
 
