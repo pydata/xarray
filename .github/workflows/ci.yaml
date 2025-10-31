@@ -93,7 +93,7 @@ jobs:
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
-      - name: Set Pytest adopts
+      - name: Set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
@@ -101,14 +101,10 @@ jobs:
           then
             if [[ "${{ matrix.pytest-adopts }}" == "flaky" ]] ;
             then
-              echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
               echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests -W default" >> $GITHUB_ENV
             elif [[ "${{ matrix.pytest-adopts }}" == "mypy" ]] ;
             then
-              echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
               echo "PYTEST_ADDOPTS=-n 1 -m 'mypy' --run-mypy -W default" >> $GITHUB_ENV
-            else
-              echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.pixi-env }}.yml" >> $GITHUB_ENV
             fi
             if [[ "${{ matrix.pixi-env }}" == "min-all-deps" ]] ;
             then
