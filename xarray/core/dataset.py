@@ -1506,13 +1506,18 @@ class Dataset(
     # https://github.com/python/mypy/issues/4266
     __hash__ = None  # type: ignore[assignment]
 
-    def _all_compat(self, other: Self, compat_str: str) -> bool:
+    def _all_compat(
+        self, other: Self, compat: str | Callable[[Variable, Variable], bool]
+    ) -> bool:
         """Helper function for equals and identical"""
 
-        # some stores (e.g., scipy) do not seem to preserve order, so don't
-        # require matching order for equality
-        def compat(x: Variable, y: Variable) -> bool:
-            return getattr(x, compat_str)(y)
+        if not callable(compat):
+            compat_str = compat
+
+            # some stores (e.g., scipy) do not seem to preserve order, so don't
+            # require matching order for equality
+            def compat(x: Variable, y: Variable) -> bool:
+                return getattr(x, compat_str)(y)
 
         return self._coord_names == other._coord_names and utils.dict_equiv(
             self._variables, other._variables, compat=compat
