@@ -119,12 +119,6 @@ jobs:
               # Don't raise on warnings
               echo "PYTEST_ADDOPTS=-W default" >> $GITHUB_ENV
             fi
-          else
-            if [[ ${{ matrix.python-version }} != "3.14" ]]; then
-              echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
-            else
-              echo "CONDA_ENV_FILE=ci/requirements/environment-3.14.yml" >> $GITHUB_ENV
-            fi
           fi
 
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
