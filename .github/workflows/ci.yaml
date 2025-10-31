@@ -49,31 +49,34 @@ jobs:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
         python-version: ["3.11", "3.13"]
-        pixi-env: [""]
+        pixi-env: ["test-all-deps"]
+        pytest-adopts: [""]
         include:
           # Minimum python version:
-          - pixi-env: "bare-minimum"
+          - pixi-env: "test-bare-minimum"
             python-version: "3.11"
             os: ubuntu-latest
-          - pixi-env: "bare-min-and-scipy"
+          - pixi-env: "test-bare-min-and-scipy"
             python-version: "3.11"
             os: ubuntu-latest
-          - pixi-env: "min-all-deps"
-            python-version: "3.11"
-            os: ubuntu-latest
+          # - pixi-env: "min-all-deps" # TODO: include later by duplicating old workflow and using conda. Not using Pixi for now.
+          #   python-version: "3.11"
+          #   os: ubuntu-latest
           # Latest python version:
-          - pixi-env: "all-but-numba"
+          - pixi-env: "test-all-but-numba"
             python-version: "3.13"
             os: ubuntu-latest
-          - pixi-env: "all-but-dask"
+          - pixi-env: "test-all-but-dask"
             python-version: "3.12"
             os: ubuntu-latest
-          - pixi-env: "flaky"
+          - pixi-env: "test-all-deps"
+            pytest-adopts: "flaky"
             python-version: "3.13"
             os: ubuntu-latest
           # The mypy tests must be executed using only 1 process in order to guarantee
           # predictable mypy output messages for comparison to expectations.
           - pixi-env: "mypy"
+            pytest-adopts: "mypy"
             python-version: "3.11"
             numprocesses: 1
             os: ubuntu-latest
@@ -97,17 +100,17 @@ jobs:
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
-      - name: Set environment variables
+      - name: Set Pytest adopts
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
-          if [[ "${{ matrix.pixi-env }}" != "" ]] ;
+          if [[ "${{ matrix.pytest-adopts }}" != "" ]] ;
           then
-            if [[ "${{ matrix.pixi-env }}" == "flaky" ]] ;
+            if [[ "${{ matrix.pytest-adopts }}" == "flaky" ]] ;
             then
               echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
               echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests -W default" >> $GITHUB_ENV
-            elif [[ "${{ matrix.pixi-env }}" == "mypy" ]] ;
+            elif [[ "${{ matrix.pytest-adopts }}" == "mypy" ]] ;
             then
               echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
               echo "PYTEST_ADDOPTS=-n 1 -m 'mypy' --run-mypy -W default" >> $GITHUB_ENV
