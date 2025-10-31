@@ -40,7 +40,7 @@ test-all-deps = { features = [
   "plotting",
   "extras",
 ], solve-group = "test" }
-test-bare-min = { features = ["test", "minimal"], solve-group = "test" }
+test-bare-minimum = { features = ["test", "minimal"], solve-group = "test" }
 
 # Extra
 typing = { features = ["mypy"] }
