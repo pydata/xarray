@@ -117,16 +117,6 @@ jobs:
             fi
           fi
 
-      - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-file: ${{ env.CONDA_ENV_FILE }}
-          environment-name: xarray-tests
-          cache-environment: true
-          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{matrix.python-version}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
-          create-args: >-
-            python=${{matrix.python-version}}
-
       # We only want to install this on one run, because otherwise we'll have
       # duplicate annotations.
       - name: Install error reporter
