@@ -105,7 +105,7 @@ backend = { name = "pixi-build-python", version = "==0.3.2" }
 setuptools = "*"
 setuptools_scm = "*"
 
-[dependencies]
+[package.run-dependencies]
 python = "*"
 numpy = "*"
 pandas = "*"
@@ -113,8 +113,8 @@ pandas = "*"
 packaging = "24.1.*" #? Can be removed?
 git = "*"            # needed for dynamic versioning
 
-[pypi-dependencies]
-xarray = { path = ".", editable = true }
+[dependencies]
+xarray = { path = "." }
 
 [target.linux-64.dependencies]
 pydap-server = "*"
