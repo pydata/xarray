@@ -1,0 +1,275 @@
+[workspace]
+preview = ["pixi-build"]
+channels = ["conda-forge", "nodefaults"]
+platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
+
+[tasks.test-all]
+depends-on = [
+  { task = "test", environment = "test-default" },
+  { task = "test", environment = "test-bare-min" },
+  { task = "test", environment = "test-all-deps-py313" },
+]
+
+[environments]
+# Testing
+test-default = { features = ["test"] }
+test-all-but-numba = { features = [
+  "py313",
+  "test",
+  "backends",
+  "performance",
+  "dask",
+  "plotting",
+  "extras",
+] }
+test-all-but-dask = { features = [
+  "py312",
+  "test",
+  "backends",
+  "performance",
+  "numba",
+  "plotting",
+  "extras",
+] }
+test-all-deps-py313 = { features = [
+  "py313",
+  "test",
+  "backends",
+  "performance",
+  "numba",
+  "dask",
+  "plotting",
+  "extras",
+] }
+test-all-deps-py311 = { features = [
+  "py311",
+  "test",
+  "backends",
+  "performance",
+  "numba",
+  "dask",
+  "plotting",
+  "extras",
+] }
+
+test-all-mypy-py311 = { features = [
+  "py311",
+  "test",
+  "backends",
+  "performance",
+  "numba",
+  "dask",
+  "plotting",
+  "extras",
+  "mypy",
+] }
+
+test-all-mypy-py313 = { features = [
+  "py313",
+  "test",
+  "backends",
+  "performance",
+  "numba",
+  "dask",
+  "plotting",
+  "extras",
+  "mypy",
+] }
+
+test-bare-minimum = { features = ["test", "minimal"] }
+test-bare-min-and-scipy = { features = [
+  "test",
+  "minimal",
+  "minimum-scipy",
+] }
+
+# Extra
+typing = { features = ["mypy"] }
+doc = { features = [
+  "doc",
+  "backends",
+  "test",
+  "performance",
+  "plotting",
+  "extras",
+], solve-group = "doc" }
+pre-commit = { features = ["pre-commit"], no-default-feature = true }
+
+[package]
+name = "xarray"
+version = "dynamic" # dynamic versioning needs better support in pixi https://github.com/prefix-dev/pixi/issues/2923#issuecomment-2598460666 . Putting `version = "dynamic"` here for now until pixi recommends something else.
+
+[package.build]
+backend = { name = "pixi-build-python", version = "==0.4.0" }
+
+[package.host-dependencies]
+setuptools = "*"
+setuptools_scm = "*"
+
+[package.run-dependencies]
+python = "*"
+numpy = "*"
+pandas = "*"
+
+packaging = "24.1.*" #? Can be removed?
+git = "*"            # needed for dynamic versioning
+
+[dependencies]
+xarray = { path = "." }
+
+[target.linux-64.dependencies]
+pydap-server = "*"
+
+[feature.minimal.dependencies]
+# minimal versions
+python = "3.11.*"
+numpy = "1.26.*"
+pandas = "2.2.*"
+
+[feature.minimum-scipy.dependencies]
+scipy = "1.13.*"
+
+[feature.py311.dependencies]
+python = "3.11.*"
+
+[feature.py312.dependencies]
+python = "3.12.*"
+
+[feature.py313.dependencies]
+python = "3.13.*"
+
+[feature.backends.dependencies]
+# files
+h5netcdf = "*"
+h5py = "*"
+hdf5 = "*"
+netcdf4 = "*"
+zarr = "*"
+rasterio = "*"
+
+# opendap
+pydap = "*"
+lxml = "*"  # Optional dep of pydap
+
+# s3
+boto3 = "*"
+fsspec = "*"
+aiobotocore = "*"
+
+[feature.numba.dependencies]
+numba = "*"
+numbagg = "*"
+
+[feature.dask.dependencies]
+dask = "*"
+distributed = "*"
+
+[feature.performance.dependencies]
+flox = "*"
+bottleneck = "*"
+numexpr = "*"
+pyarrow = "*"
+opt_einsum = "*"
+
+[feature.performance.pypi-dependencies]
+jax = "*"
+
+
+[feature.plotting.dependencies]
+cartopy = "*"
+matplotlib-base = "*"
+nc-time-axis = "*"
+seaborn = "*"
+
+[feature.extras.dependencies]
+# array
+array-api-strict = "<2.4"
+sparse = "*"
+
+# algorithms
+scipy = "*"
+toolz = "*"
+
+# tutorial
+pooch = "*"
+
+# other
+cftime = "*"
+pint = "*"
+iris = "*"
+
+[feature.test.dependencies]
+pytest = "*"
+pytest-asyncio = "*"
+pytest-cov = "*"
+pytest-env = "*"
+pytest-mypy-plugins = "*"
+pytest-timeout = "*"
+pytest-xdist = "*"
+hypothesis = "*"
+coveralls = "*"
+
+[feature.test.tasks]
+test = { cmd = "pytest" }
+
+[feature.doc.dependencies]
+kerchunk = "*"
+ipykernel = "*"
+ipywidgets = "*"                   # silence nbsphinx warning
+ipython = '*'
+jupyter_client = '*'
+jupyter_sphinx = '*'
+nbsphinx = '*'
+ncdata = '*'
+pydata-sphinx-theme = "*"
+pyproj = "*"
+rich = "*"                         # for Zarr tree()
+setuptools = "*"
+sphinx-autosummary-accessors = "*"
+sphinx-copybutton = "*"
+sphinx-design = "*"
+sphinx-inline-tabs = "*"
+sphinx = ">=6,<8"
+sphinxcontrib-mermaid = "*"
+sphinxcontrib-srclinks = "*"
+sphinx-remove-toctrees = "*"
+sphinxext-opengraph = "*"
+sphinxext-rediraffe = "*"
+
+[feature.doc.pypi-dependencies]
+cfgrib = "*" # pypi dep because of https://github.com/prefix-dev/pixi/issues/3032#issuecomment-3302638043
+
+[feature.doc.tasks]
+doc = { cmd = "make clean && make html", cwd = "doc" }
+
+
+[feature.mypy.dependencies]
+mypy = "==1.18.1"
+hypothesis = "*"
+lxml = "*"
+pandas-stubs = "<=2.2.3.241126" # https://github.com/pydata/xarray/issues/10110
+types-colorama = "*"
+types-docutils = "*"
+types-psutil = "*"
+types-Pygments = "*"
+types-python-dateutil = "*"
+types-pytz = "*"
+types-PyYAML = "*"
+types-requests = "*"
+types-setuptools = "*"
+types-openpyxl = "*"
+typing_extensions = "*"
+pip = "*"
+
+[feature.mypy.pypi-dependencies]
+types-defusedxml = "*"
+types-pexpect = "*"
+
+[feature.mypy.tasks]
+typing = "mypy --install-types --non-interactive --cobertura-xml-report mypy_report"
+
+[feature.pre-commit.dependencies]
+pre-commit = "*"
+
+[feature.pre-commit.tasks]
+pre-commit = { cmd = "pre-commit" }

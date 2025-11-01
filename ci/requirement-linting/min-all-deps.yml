@@ -1,4 +1,4 @@
-name: xarray-tests
+name: xarray-tests #! keep this file in sync with pixi.toml
 channels:
   - conda-forge
   - nodefaults
