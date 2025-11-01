@@ -482,21 +482,20 @@ class TestPlot(PlotTestCase):
     def test_contourf_cmap_set_with_bad_under_over(self) -> None:
         a = DataArray(easy_array((4, 4)), dims=["z", "time"])
 
-        # make a copy here because we want a local cmap that we will modify.
-        cmap_expected = copy(mpl.colormaps["viridis"])
+        # make a copy using with_extremes because we want a local cmap:
+        cmap_expected = mpl.colormaps["viridis"].with_extremes(
+            bad="w", under="r", over="g"
+        )
 
-        cmap_expected.set_bad("w")
         # check we actually changed the set_bad color
         assert np.all(
             cmap_expected(np.ma.masked_invalid([np.nan]))[0]
             != mpl.colormaps["viridis"](np.ma.masked_invalid([np.nan]))[0]
         )
 
-        cmap_expected.set_under("r")
         # check we actually changed the set_under color
         assert cmap_expected(-np.inf) != mpl.colormaps["viridis"](-np.inf)
 
-        cmap_expected.set_over("g")
         # check we actually changed the set_over color
         assert cmap_expected(np.inf) != mpl.colormaps["viridis"](-np.inf)
 
