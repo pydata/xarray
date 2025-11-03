@@ -14,6 +14,7 @@ concurrency:
 
 env:
   FORCE_COLOR: 3
+  PIXI_VERSION: "v0.58.0"
 
 jobs:
   detect-ci-trigger:
@@ -36,7 +37,7 @@ jobs:
   cache-pixi-lock:
     uses: ./.github/workflows/cache-pixi-lock.yml
     with:
-      pixi-version: "v0.58.0" # keep in sync with jobs
+      pixi-version: "v0.58.0" # keep in sync with env var above
   test:
     name: "${{ matrix.os }} | pixi shell -e ${{ matrix.pixi-env }}"
     runs-on: ${{ matrix.os }}
@@ -92,7 +93,7 @@ jobs:
           key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
       - uses: prefix-dev/setup-pixi@v0.9.0
         with:
-          pixi-version: "v0.58.0" # keep in sync with cache-pixi-lock
+          pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
           environments: ${{ matrix.pixi-env }}
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
