@@ -66,7 +66,7 @@ jobs:
             os: ubuntu-latest
           - pixi-env: "test-all-but-dask"
             os: ubuntu-latest
-          - pixi-env: "test-all-deps"
+          - pixi-env: "test-all-deps-py313"
             pytest-adopts: "flaky"
             os: ubuntu-latest
           # The mypy tests must be executed using only 1 process in order to guarantee
