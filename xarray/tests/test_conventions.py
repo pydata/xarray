@@ -658,8 +658,11 @@ def test_scalar_units() -> None:
 
 
 def test_decode_cf_error_includes_variable_name():
-    ds = Dataset({"invalid": ([], 1e36, {"units": "days since 2000-01-01"})})
-    with pytest.raises(ValueError, match="Failed to decode variable 'invalid'"):
+    ds = Dataset({"my_invalid_var": ([], 1e36, {"units": "days since 2000-01-01"})})
+    with pytest.raises(
+        ValueError,
+        match=r"unable to decode(?s:.*)my_invalid_var",
+    ):
         decode_cf(ds)
 
 
