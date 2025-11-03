@@ -207,6 +207,7 @@ pytest-mypy-plugins = "*"
 pytest-timeout = "*"
 pytest-xdist = "*"
 hypothesis = "*"
+cftime = "*"              # https://github.com/pydata/xarray/pull/10888#issuecomment-3481432315
 coveralls = "*"
 
 [feature.test.tasks]
