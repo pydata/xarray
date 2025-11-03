@@ -39,6 +39,9 @@ Bug Fixes
   ``engine=`` argument. (:pull:`10804`). By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 - Fix indexing with empty arrays for scipy & h5netcdf backends which now resolves to empty slices (:issue:`10867`, :pull:`10870`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
+- Fix error handling issue in ``decode_cf_variables`` when decoding fails - the exception is now re-raised
+  correctly, with a note added about the variable name that caused the error (:issue:`10873`, :pull:`10886`).
+  By `Jonas L. Bertelsen <https://github.com/jonaslb>`_
 
 Performance
 ~~~~~~~~~~~
