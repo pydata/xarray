@@ -17,7 +17,7 @@ test-all-but-numba = { features = [
   "py313",
   "test",
   "backends",
-  "performance",
+  "accel",
   "dask",
   "plotting",
   "extras",
@@ -26,7 +26,7 @@ test-all-but-dask = { features = [
   "py312",
   "test",
   "backends",
-  "performance",
+  "accel",
   "numba",
   "plotting",
   "extras",
@@ -35,7 +35,7 @@ test-all-deps-py313 = { features = [
   "py313",
   "test",
   "backends",
-  "performance",
+  "accel",
   "numba",
   "dask",
   "plotting",
@@ -45,7 +45,7 @@ test-all-deps-py311 = { features = [
   "py311",
   "test",
   "backends",
-  "performance",
+  "accel",
   "numba",
   "dask",
   "plotting",
@@ -56,7 +56,7 @@ test-all-mypy-py311 = { features = [
   "py311",
   "test",
   "backends",
-  "performance",
+  "accel",
   "numba",
   "dask",
   "plotting",
@@ -68,7 +68,7 @@ test-all-mypy-py313 = { features = [
   "py313",
   "test",
   "backends",
-  "performance",
+  "accel",
   "numba",
   "dask",
   "plotting",
@@ -89,7 +89,7 @@ doc = { features = [
   "doc",
   "backends",
   "test",
-  "performance",
+  "accel",
   "plotting",
   "extras",
 ], solve-group = "doc" }
@@ -164,16 +164,12 @@ numbagg = "*"
 dask = "*"
 distributed = "*"
 
-[feature.performance.dependencies]
+[feature.accel.dependencies]
 flox = "*"
 bottleneck = "*"
 numexpr = "*"
 pyarrow = "*"
 opt_einsum = "*"
-
-[feature.performance.pypi-dependencies]
-jax = "*"
-
 
 [feature.plotting.dependencies]
 cartopy = "*"
@@ -197,6 +193,10 @@ pooch = "*"
 cftime = "*"
 pint = "*"
 iris = "*"
+
+[feature.extras.pypi-dependencies]
+# array
+jax = "*"
 
 [feature.test.dependencies]
 pytest = "*"

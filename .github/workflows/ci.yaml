@@ -51,7 +51,7 @@ jobs:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
         pixi-env: ["test-all-deps-py311", "test-all-deps-py313"]
-        pytest-adopts: [""]
+        pytest-addopts: [""]
         include:
           # Minimum python version:
           - pixi-env: "test-bare-minimum"
@@ -67,12 +67,12 @@ jobs:
           - pixi-env: "test-all-but-dask"
             os: ubuntu-latest
           - pixi-env: "test-all-deps-py313"
-            pytest-adopts: "flaky"
+            pytest-addopts: "flaky"
             os: ubuntu-latest
           # The mypy tests must be executed using only 1 process in order to guarantee
           # predictable mypy output messages for comparison to expectations.
           - pixi-env: "test-all-mypy-py311"
-            pytest-adopts: "mypy"
+            pytest-addopts: "mypy"
             numprocesses: 1
             os: ubuntu-latest
           - pixi-env: "test-all-mypy-py313"
@@ -101,12 +101,12 @@ jobs:
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
-          if [[ "${{ matrix.pytest-adopts }}" != "" ]] ;
+          if [[ "${{ matrix.pytest-addopts }}" != "" ]] ;
           then
-            if [[ "${{ matrix.pytest-adopts }}" == "flaky" ]] ;
+            if [[ "${{ matrix.pytest-addopts }}" == "flaky" ]] ;
             then
               echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests -W default" >> $GITHUB_ENV
-            elif [[ "${{ matrix.pytest-adopts }}" == "mypy" ]] ;
+            elif [[ "${{ matrix.pytest-addopts }}" == "mypy" ]] ;
             then
               echo "PYTEST_ADDOPTS=-n 1 -m 'mypy' --run-mypy -W default" >> $GITHUB_ENV
             fi
