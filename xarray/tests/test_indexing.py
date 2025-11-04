@@ -270,7 +270,7 @@ class TestIndexers:
         )  # Create a 2D DataArray
         arr = arr.expand_dims({"z": 3}, -1)  # New dimension 'z'
         arr["z"] = np.arange(3)  # New coords to dimension 'z'
-        with pytest.raises(ValueError, match="Do you want to .copy()"):
+        with pytest.raises(ValueError, match=r"Do you want to .copy()"):
             arr.loc[0, 0, 0] = 999
 
 

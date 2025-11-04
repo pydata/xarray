@@ -18,4 +18,5 @@ build:
 conda:
   environment: ci/requirements/doc.yml
 
-formats: []
+formats:
+  - htmlzip

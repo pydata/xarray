@@ -2,19 +2,25 @@
 
 .. _whats-new:
 
+
 What's New
 ==========
 
-.. _whats-new.2025.10.0:
+.. _whats-new.2025.10.2:
 
-v2025.10.0 (unreleased)
+v2025.10.2 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
 
+- :py:func:`merge` and :py:func:`concat` now support :py:class:`DataTree`
+  objects (:issue:`9790`, :issue:`9778`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- The ``h5netcdf`` engine has support for pseudo ``NETCDF4_CLASSIC`` files, meaning variables and attributes are cast to supported types. Note that the saved files won't be recognized as genuine ``NETCDF4_CLASSIC`` files until ``h5netcdf`` adds support with version 1.7.0. (:issue:`10676`, :pull:`10686`).
+  By `David Huard <https://github.com/huard>`_.
 
-Breaking changes
+Breaking Changes
 ~~~~~~~~~~~~~~~~
 
 
@@ -22,9 +28,27 @@ Deprecations
 ~~~~~~~~~~~~
 
 
-Bug fixes
+Bug Fixes
 ~~~~~~~~~
+- Fix h5netcdf backend for format=None, use same rule as netcdf4 backend (:pull:`10859`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
+- ``netcdf4`` and ``pydap`` backends now use stricter URL detection to avoid incorrectly claiming
+  remote URLs. The ``pydap`` backend now only claims URLs with explicit DAP protocol indicators
+  (``dap2://`` or ``dap4://`` schemes, or ``/dap2/`` or ``/dap4/`` in the URL path). This prevents
+  both backends from claiming remote Zarr stores and other non-DAP URLs without an explicit
+  ``engine=`` argument. (:pull:`10804`). By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+- Fix indexing with empty arrays for scipy & h5netcdf backends which now resolves to empty slices (:issue:`10867`, :pull:`10870`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
+- Fix error handling issue in ``decode_cf_variables`` when decoding fails - the exception is now re-raised
+  correctly, with a note added about the variable name that caused the error (:issue:`10873`, :pull:`10886`).
+  By `Jonas L. Bertelsen <https://github.com/jonaslb>`_
 
+Performance
+~~~~~~~~~~~
+
+- Speedup and reduce memory usage of :py:func:`concat`. Magnitude of improvement scales
+  with size of the concatenation dimension. By `Deepak Cherian <https://github.com/dcherian>`_.
+  :issue:`10864` :pull:`10866`.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -32,6 +56,39 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+.. _whats-new.2025.10.1:
+
+v2025.10.1 (October 7, 2025)
+----------------------------
+
+This release reverts a breaking change to Xarray's preferred netCDF backend.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Xarray's default engine for reading/writing netCDF files has been reverted to
+  prefer netCDF4 over h5netcdf over scipy, which was the default before
+  v2025.09.1. This change had larger implications for the ecosystem than we
+  anticipated. We are still considering changing the default in the future, but
+  will be a bit more careful about the implications. See :issue:`10657` and
+  linked issues for discussion. The behavior can still be customized, e.g., with
+  ``xr.set_options(netcdf_engine_order=['h5netcdf', 'netcdf4', 'scipy'])``.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+New features
+~~~~~~~~~~~~
+
+- Coordinates are ordered to match dims when displaying Xarray objects. (:pull:`10778`).
+  By `Julia Signell <https://github.com/jsignell>`_.
+
+Bug fixes
+~~~~~~~~~
+- Fix error raised when writing scalar variables to Zarr with ``region={}``
+  (:pull:`10796`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+
 
 .. _whats-new.2025.09.1:
 
@@ -59,6 +116,92 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+
+- **All xarray operations now preserve attributes by default** (:issue:`3891`, :issue:`2582`).
+  Previously, operations would drop attributes unless explicitly told to preserve them via ``keep_attrs=True``.
+  Additionally, when attributes are preserved in binary operations, they now combine attributes from both
+  operands using ``drop_conflicts`` (keeping matching attributes, dropping conflicts), instead of keeping
+  only the left operand's attributes.
+
+  **What changed:**
+
+  .. code-block:: python
+
+      # Before (xarray <2025.09.1):
+      data = xr.DataArray([1, 2, 3], attrs={"units": "meters", "long_name": "height"})
+      result = data.mean()
+      result.attrs  # {}  - Attributes lost!
+
+      # After (xarray ≥2025.09.1):
+      data = xr.DataArray([1, 2, 3], attrs={"units": "meters", "long_name": "height"})
+      result = data.mean()
+      result.attrs  # {"units": "meters", "long_name": "height"}  - Attributes preserved!
+
+  **Affected operations include:**
+
+  *Computational operations:*
+
+  - Reductions: ``mean()``, ``sum()``, ``std()``, ``var()``, ``min()``, ``max()``, ``median()``, ``quantile()``, etc.
+  - Rolling windows: ``rolling().mean()``, ``rolling().sum()``, etc.
+  - Groupby: ``groupby().mean()``, ``groupby().sum()``, etc.
+  - Resampling: ``resample().mean()``, etc.
+  - Weighted: ``weighted().mean()``, ``weighted().sum()``, etc.
+  - ``apply_ufunc()`` and NumPy universal functions
+
+  *Binary operations:*
+
+  - Arithmetic: ``+``, ``-``, ``*``, ``/``, ``**``, ``//``, ``%`` (combines attributes using ``drop_conflicts``)
+  - Comparisons: ``<``, ``>``, ``==``, ``!=``, ``<=``, ``>=`` (combines attributes using ``drop_conflicts``)
+  - With scalars: ``data * 2``, ``10 - data`` (preserves data's attributes)
+
+  *Data manipulation:*
+
+  - Missing data: ``fillna()``, ``dropna()``, ``interpolate_na()``, ``ffill()``, ``bfill()``
+  - Indexing/selection: ``isel()``, ``sel()``, ``where()``, ``clip()``
+  - Alignment: ``interp()``, ``reindex()``, ``align()``
+  - Transformations: ``map()``, ``pipe()``, ``assign()``, ``assign_coords()``
+  - Shape operations: ``expand_dims()``, ``squeeze()``, ``transpose()``, ``stack()``, ``unstack()``
+
+  **Binary operations - combines attributes with ``drop_conflicts``:**
+
+  .. code-block:: python
+
+      a = xr.DataArray([1, 2], attrs={"units": "m", "source": "sensor_a"})
+      b = xr.DataArray([3, 4], attrs={"units": "m", "source": "sensor_b"})
+      (a + b).attrs  # {"units": "m"}  - Matching values kept, conflicts dropped
+      (b + a).attrs  # {"units": "m"}  - Order doesn't matter for drop_conflicts
+
+  **How to restore previous behavior:**
+
+  1. **Globally for your entire script:**
+
+     .. code-block:: python
+
+         import xarray as xr
+
+         xr.set_options(keep_attrs=False)  # Affects all subsequent operations
+
+  2. **For specific operations:**
+
+     .. code-block:: python
+
+         result = data.mean(dim="time", keep_attrs=False)
+
+  3. **For code blocks:**
+
+     .. code-block:: python
+
+         with xr.set_options(keep_attrs=False):
+             # All operations in this block drop attrs
+             result = data1 + data2
+
+  4. **Remove attributes after operations:**
+
+     .. code-block:: python
+
+         result = data.mean().drop_attrs()
+
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 - :py:meth:`Dataset.update` now returns ``None``, instead of the updated dataset. This
   completes the deprecation cycle started in version 0.17. The method still updates the

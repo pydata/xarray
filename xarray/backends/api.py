@@ -35,7 +35,8 @@ from xarray.core.types import ReadBuffer
 from xarray.core.utils import emit_user_level_warning, is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
-from xarray.structure.chunks import _get_chunk, _maybe_chunk
+from xarray.namedarray.utils import _get_chunk
+from xarray.structure.chunks import _maybe_chunk
 from xarray.structure.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
@@ -244,7 +245,16 @@ def _chunk_ds(
 
     variables = {}
     for name, var in backend_ds.variables.items():
-        var_chunks = _get_chunk(var, chunks, chunkmanager)
+        if var._in_memory:
+            variables[name] = var
+            continue
+        var_chunks = _get_chunk(
+            var._data,
+            chunks,
+            chunkmanager,
+            preferred_chunks=var.encoding.get("preferred_chunks", {}),
+            dims=var.dims,
+        )
         variables[name] = _maybe_chunk(
             name,
             var,
@@ -416,7 +426,7 @@ def open_dataset(
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, by default preferring
-        "h5netcdf" over "scipy" over "netcdf4" (customizable via
+        "netcdf4" over "h5netcdf" over "scipy" (customizable via
         ``netcdf_engine_order`` in ``xarray.set_options()``). A custom backend
         class (a subclass of ``BackendEntrypoint``) can also be used.
     chunks : int, dict, 'auto' or None, default: None
@@ -660,7 +670,7 @@ def open_dataarray(
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, by default preferring
-        "h5netcdf" over "scipy" over "netcdf4" (customizable via
+        "netcdf4" over "h5netcdf" over "scipy" (customizable via
         ``netcdf_engine_order`` in ``xarray.set_options()``). A custom backend
         class (a subclass of ``BackendEntrypoint``) can also be used.
     chunks : int, dict, 'auto' or None, default: None
@@ -1410,10 +1420,10 @@ def open_mfdataset(
     chunks : int, dict, 'auto' or None, optional
         Dictionary with keys given by dimension names and values given by chunk sizes.
         In general, these should divide the dimensions of each dataset. If int, chunk
-        each dimension by ``chunks``. By default, chunks will be chosen to load entire
-        input files into memory at once. This has a major impact on performance: please
-        see the full documentation for more details [2]_. This argument is evaluated
-        on a per-file basis, so chunk sizes that span multiple files will be ignored.
+        each dimension by ``chunks``. By default, chunks will be chosen to match the
+        chunks on disk. This may impact performance: please see the full documentation
+        for more details [2]_. This argument is evaluated on a per-file basis, so chunk
+        sizes that span multiple files will be ignored.
     concat_dim : str, DataArray, Index or a Sequence of these or None, optional
         Dimensions to concatenate files along.  You only need to provide this argument
         if ``combine='nested'``, and if any of the dimensions along which you want to
@@ -1450,7 +1460,7 @@ def open_mfdataset(
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, by default preferring
-        "h5netcdf" over "scipy" over "netcdf4" (customizable via
+        "netcdf4" over "h5netcdf" over "scipy" (customizable via
         ``netcdf_engine_order`` in ``xarray.set_options()``). A custom backend
         class (a subclass of ``BackendEntrypoint``) can also be used.
     data_vars : {"minimal", "different", "all"} or list of str, default: "all"

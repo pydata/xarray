@@ -544,10 +544,10 @@ def save_mfdataset(
         Paths to the netCDF4 group in each corresponding file to which to save
         datasets (only works for format="NETCDF4"). The groups will be created
         if necessary.
-    engine : {"netcdf4", "scipy", "h5netcdf"}, optional
+    engine : {"netcdf4", "h5netcdf", "scipy"}, optional
         Engine to use when writing netCDF files. If not provided, the
         default engine is chosen based on available dependencies, by default
-        preferring "h5netcdf" over "scipy" over "netcdf4" (customizable via
+        preferring "netcdf4" over "h5netcdf" over "scipy" (customizable via
         ``netcdf_engine_order`` in ``xarray.set_options()``).
     compute : bool
         If true compute immediately, otherwise return a
