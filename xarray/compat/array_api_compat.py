@@ -42,8 +42,20 @@ def result_type(*arrays_and_dtypes, xp) -> np.dtype:
         hasattr(t, "dtype") and isinstance(t.dtype, np.dtype) for t in arrays_and_dtypes
     ]
     if xp is np or any(is_np_dtype):
-        builtin_types = (bool, int, float, complex, str, bytes, dt.datetime, dt.timedelta)
-        if any(not is_numpy and not isinstance(t, builtin_types) for is_numpy, t in zip(is_np_dtype, arrays_and_types)):
+        builtin_types = (
+            bool,
+            int,
+            float,
+            complex,
+            str,
+            bytes,
+            dt.datetime,
+            dt.timedelta,
+        )
+        if any(
+            not is_numpy and not isinstance(t, builtin_types)
+            for is_numpy, t in zip(is_np_dtype, arrays_and_types)
+        ):
             return np.object_
         return xp.result_type(*arrays_and_dtypes)
     else:
