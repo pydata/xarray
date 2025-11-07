@@ -264,8 +264,8 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
         if (
             isinstance(key, tuple) and len(key) == 1
-        ):  # pyarrow type arrays can't handle since-length tuples
-            key = key[0]
+        ):  # pyarrow type arrays can't handle single-length tuples
+            (key,) = key
         item = self.array[key]
         if is_allowed_extension_array(item):
             return PandasExtensionArray(item)
