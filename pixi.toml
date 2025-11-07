@@ -196,7 +196,7 @@ iris = "*"
 
 [feature.extras.pypi-dependencies]
 # array
-jax = "*"
+jax = "*" # no way to get cpu-only jaxlib from conda if gpu is present
 
 [feature.test.dependencies]
 pytest = "*"

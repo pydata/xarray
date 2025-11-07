@@ -142,7 +142,7 @@ jobs:
           save-always: true
 
       - name: Run tests
-        run:
+        run: |
           pixi run -e ${{ matrix.pixi-env }} python -m pytest -n ${{ matrix.numprocesses || 4 }}
           --timeout 180
           --cov=xarray
