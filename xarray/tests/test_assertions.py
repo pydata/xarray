@@ -62,6 +62,19 @@ def test_allclose_regression() -> None:
             xr.Coordinates({"x": [0, 3]}),
             id="Coordinates",
         ),
+        pytest.param(
+            xr.DataTree.from_dict(
+                {
+                    "/b": xr.Dataset({"a": ("x", [1e-17, 2]), "b": ("y", [-2e-18, 2])}),
+                }
+            ),
+            xr.DataTree.from_dict(
+                {
+                    "/b": xr.Dataset({"a": ("x", [0, 2]), "b": ("y", [0, 1])}),
+                }
+            ),
+            id="DataTree",
+        ),
     ),
 )
 def test_assert_allclose(obj1, obj2) -> None:
