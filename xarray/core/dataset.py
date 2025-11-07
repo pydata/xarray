@@ -5433,7 +5433,7 @@ class Dataset(
             if name not in index_vars:
                 if dim in var.dims:
                     if isinstance(fill_value, Mapping):
-                        fill_value_ = fill_value[name]
+                        fill_value_ = fill_value.get(name, xrdtypes.NA)
                     else:
                         fill_value_ = fill_value
 
