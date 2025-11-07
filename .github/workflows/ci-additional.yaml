@@ -93,7 +93,7 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      PIXI_ENV: test-all-mypy-py313
+      PIXI_ENV: test-with-typing-py313
 
     steps:
       - uses: actions/checkout@v5
@@ -142,7 +142,7 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      PIXI_ENV: test-all-mypy-py311
+      PIXI_ENV: test-with-typing-py311
 
     steps:
       - uses: actions/checkout@v5
@@ -224,9 +224,6 @@ jobs:
       - name: Version info
         run: |
           pixi run -e ${{env.PIXI_ENV}} python xarray/util/print_versions.py
-      - name: Install pyright
-        run: |
-          pixi add -e ${{env.PIXI_ENV}} --pypi pyright
 
       - name: Run pyright
         run: |
@@ -281,9 +278,6 @@ jobs:
       - name: Version info
         run: |
           pixi run -e ${{env.PIXI_ENV}} python xarray/util/print_versions.py
-      - name: Install pyright
-        run: |
-          pixi add -e ${{env.PIXI_ENV}} --pypi pyright
 
       - name: Run pyright
         run: |

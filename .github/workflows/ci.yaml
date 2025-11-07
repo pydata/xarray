@@ -72,11 +72,11 @@ jobs:
             os: ubuntu-latest
           # The mypy tests must be executed using only 1 process in order to guarantee
           # predictable mypy output messages for comparison to expectations.
-          - pixi-env: "test-all-mypy-py311"
+          - pixi-env: "test-with-typing-py311"
             pytest-addopts: "mypy"
             numprocesses: 1
             os: ubuntu-latest
-          - pixi-env: "test-all-mypy-py313"
+          - pixi-env: "test-with-typing-py313"
             numprocesses: 1
             os: ubuntu-latest
     steps:

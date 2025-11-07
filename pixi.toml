@@ -52,7 +52,7 @@ test-all-deps-py311 = { features = [
   "extras",
 ] }
 
-test-all-mypy-py311 = { features = [
+test-with-typing-py311 = { features = [
   "py311",
   "test",
   "backends",
@@ -61,10 +61,10 @@ test-all-mypy-py311 = { features = [
   "dask",
   "plotting",
   "extras",
-  "mypy",
+  "typing",
 ] }
 
-test-all-mypy-py313 = { features = [
+test-with-typing-py313 = { features = [
   "py313",
   "test",
   "backends",
@@ -73,7 +73,7 @@ test-all-mypy-py313 = { features = [
   "dask",
   "plotting",
   "extras",
-  "mypy",
+  "typing",
 ] }
 
 test-bare-minimum = { features = ["test", "minimal"] }
@@ -84,7 +84,7 @@ test-bare-min-and-scipy = { features = [
 ] }
 
 # Extra
-typing = { features = ["mypy"] }
+typing = { features = ["typing"] }
 doc = { features = [
   "doc",
   "backends",
@@ -244,8 +244,9 @@ cfgrib = "*" # pypi dep because of https://github.com/prefix-dev/pixi/issues/303
 doc = { cmd = "make clean && make html", cwd = "doc" }
 
 
-[feature.mypy.dependencies]
+[feature.typing.dependencies]
 mypy = "==1.18.1"
+pyright = "*"
 hypothesis = "*"
 lxml = "*"
 pandas-stubs = "<=2.2.3.241126" # https://github.com/pydata/xarray/issues/10110
@@ -262,12 +263,12 @@ types-openpyxl = "*"
 typing_extensions = "*"
 pip = "*"
 
-[feature.mypy.pypi-dependencies]
+[feature.typing.pypi-dependencies]
 types-defusedxml = "*"
 types-pexpect = "*"
 
-[feature.mypy.tasks]
-typing = "mypy --install-types --non-interactive --cobertura-xml-report mypy_report"
+[feature.typing.tasks]
+mypy = "mypy --install-types --non-interactive --cobertura-xml-report mypy_report"
 
 [feature.pre-commit.dependencies]
 pre-commit = "*"
