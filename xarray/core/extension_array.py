@@ -250,9 +250,9 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
             )
 
     def __array_function__(self, func, types, args, kwargs):
-        args = replace_duck_with_extension_array(args)
         if func not in HANDLED_EXTENSION_ARRAY_FUNCTIONS:
             raise KeyError("Function not registered for pandas extension arrays.")
+        args = replace_duck_with_extension_array(args)
         res = HANDLED_EXTENSION_ARRAY_FUNCTIONS[func](*args, **kwargs)
         if isinstance(res, ExtensionArray):
             return PandasExtensionArray(res)
