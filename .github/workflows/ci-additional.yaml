@@ -296,7 +296,9 @@ jobs:
     name: Minimum Version Policy
     runs-on: "ubuntu-latest"
     needs: detect-ci-trigger
-    if: needs.detect-ci-trigger.outputs.triggered == 'false'
+    # min-version-policy doesn't work with Pixi yet https://github.com/pydata/xarray/pull/10888#discussion_r2504335457
+    if: false
+    # if: needs.detect-ci-trigger.outputs.triggered == 'false'
     defaults:
       run:
         shell: bash -l {0}
