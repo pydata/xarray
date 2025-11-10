@@ -5,14 +5,14 @@ platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
 
 [tasks.test-all]
 depends-on = [
-  { task = "test", environment = "test-just-xarray" },
+  # { task = "test", environment = "test-just-xarray" }, # https://github.com/pydata/xarray/pull/10888/files#r2511336147
   { task = "test", environment = "test-bare-min" },
   { task = "test", environment = "test-all-deps-py313" },
 ]
 
 [environments]
 # Testing
-test-just-xarray = { features = ["test"] }
+# test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
 test-all-but-numba = { features = [
   "py313",
   "test",
