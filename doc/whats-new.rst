@@ -14,6 +14,16 @@ v2025.11.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:func:`merge` and :py:func:`concat` now support :py:class:`DataTree`
+  objects (:issue:`9790`, :issue:`9778`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- The ``h5netcdf`` engine has support for pseudo ``NETCDF4_CLASSIC`` files, meaning variables and attributes are cast to supported types. Note that the saved files won't be recognized as genuine ``NETCDF4_CLASSIC`` files until ``h5netcdf`` adds support with version 1.7.0. (:issue:`10676`, :pull:`10686`).
+  By `David Huard <https://github.com/huard>`_.
+- Support comparing :py:class:`DataTree` objects with :py:func:`testing.assert_allclose` (:pull:`10887`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Improved ``pydap`` backend behavior and performance when using :py:func:`open_dataset`, :py:func:`open_datatree` when downloading dap4 (opendap) data (:issue:`10628`, :pull:`10629`).
+  ``batch=True|False`` is a new  ``backend_kwarg`` that further enables downloading multiple arrays in single response. In addition ``checksums`` is added as optional argument to be passed to ``pydap`` backend.
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -414,9 +424,6 @@ New Features
   By `Matthew Willson <https://github.com/mjwillson>`_.
 - Added exception handling for invalid files in :py:func:`open_mfdataset`. (:issue:`6736`)
   By `Pratiman Patel <https://github.com/pratiman-91>`_.
-- Improved ``pydap`` backend behavior and performance when using :py:func:`open_dataset`, :py:func:`open_datatree` when downloading dap4 (opendap) data (:issue:`10628`, :pull:`10629`).
-  ``batch=True|False`` is a new  ``backend_kwarg`` that further enables downloading multiple arrays in single response. In addition ``checksums`` is added as optional argument to be passed to ``pydap`` backend.
-  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
