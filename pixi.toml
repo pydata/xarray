@@ -82,6 +82,11 @@ test-bare-min-and-scipy = { features = [
   "minimal",
   "minimum-scipy",
 ] }
+test-min-versions = { features = [
+  "test",
+  "min-versions",
+] }
+
 
 # Extra
 typing = { features = ["typing"] }
@@ -197,6 +202,48 @@ iris = "*"
 [feature.extras.pypi-dependencies]
 # array
 jax = "*" # no way to get cpu-only jaxlib from conda if gpu is present
+
+[feature.min-versions.dependencies]
+# minimal versions for all dependencies
+# Note that when you update min-supported versions, you should:
+# - Update the min version lower-bound in the corresponding feature(s) where applicable
+# - Update this section to pin to the min version
+
+python = "3.11.*"
+array-api-strict = "1.1.*" # dependency for testing the array api compat
+boto3 = "1.34.*"
+bottleneck = "1.4.*"
+cartopy = "0.23.*"
+cftime = "1.6.*"
+dask-core = "2024.6.*"
+distributed = "2024.6.*"
+flox = "0.9.*"
+h5netcdf = "1.3.*"
+# h5py and hdf5 tend to cause conflicts
+# for e.g. hdf5 1.12 conflicts with h5py=3.1
+# prioritize bumping other packages instead
+h5py = "3.11.*"
+hdf5 = "1.14.*"
+iris = "3.9.*"
+lxml = "5.1.*"            # Optional dep of pydap
+matplotlib-base = "3.8.*"
+nc-time-axis = "1.4.*"
+# netcdf follows a 1.major.minor[.patch] convention
+# (see https://github.com/Unidata/netcdf4-python/issues/1090)
+netcdf4 = "1.6.*"
+numba = "0.60.*"
+numbagg = "0.8.*"
+numpy = "1.26.*"
+packaging = "24.1.*"
+pandas = "2.2.*"
+pint = "0.24.*"
+pydap = "==3.5.0"
+rasterio = "1.3.*"
+scipy = "1.13.*"
+seaborn = "0.13.*"
+sparse = "0.15.*"
+toolz = "0.12.*"
+zarr = "2.18.*"
 
 [feature.test.dependencies]
 pytest = "*"
