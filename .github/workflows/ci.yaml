@@ -153,7 +153,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: Test results for OS ${{ runner.os }} pixi-env -${{ matrix.pixi-env }}
+          name: Test results for OS ${{ runner.os }} pixi-env ${{ matrix.pixi-env }} pytest-addopts ${{ matrix.pytest-addopts }}
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
