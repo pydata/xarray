@@ -570,8 +570,6 @@ class TestH5NetCDFDatatreeIO(NetCDFIOBase):
 class TestPyDAPDatatreeIO:
     """Test PyDAP backend for DataTree."""
 
-    pytestmark = pytest.mark.xfail(reason="test.opendap.org reports a 404 error")
-
     engine: T_DataTreeNetcdfEngine | None = "pydap"
     # you can check these by adding a .dmr to urls, and replacing dap4 with http
     unaligned_datatree_url = (
