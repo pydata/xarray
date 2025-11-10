@@ -241,7 +241,8 @@ sphinxext-rediraffe = "*"
 cfgrib = "*" # pypi dep because of https://github.com/prefix-dev/pixi/issues/3032#issuecomment-3302638043
 
 [feature.doc.tasks]
-doc = { cmd = "make clean && make html", cwd = "doc" }
+doc = { cmd = "make html", cwd = "doc" }
+doc-clean = { cmd = "make clean && make html", cwd = "doc" }
 
 
 [feature.typing.dependencies]
