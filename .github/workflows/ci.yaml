@@ -59,9 +59,8 @@ jobs:
             os: ubuntu-latest
           - pixi-env: "test-bare-min-and-scipy"
             os: ubuntu-latest
-          # - pixi-env: "min-all-deps" # TODO: include later by duplicating old workflow and using conda. Not using Pixi for now.
-          #   python-version: "3.11"
-          #   os: ubuntu-latest
+          - pixi-env: "test-min-versions"
+            os: ubuntu-latest
           # Latest python version:
           - pixi-env: "test-all-but-numba"
             os: ubuntu-latest
