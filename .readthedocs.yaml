@@ -23,7 +23,7 @@ build:
       - pixi install -e doc
     build:
       html:
-        - BUILDDIR=$READTHEDOCS_OUTPUT pixi run -e doc make html
+        - BUILDDIR=$READTHEDOCS_OUTPUT pixi run doc
 
 formats:
   - htmlzip
