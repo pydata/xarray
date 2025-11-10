@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import warnings
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
@@ -100,7 +101,7 @@ class PydapDataStore(AbstractDataStore):
     be useful if the netCDF4 library is not available.
     """
 
-    def __init__(self, dataset, group=None):
+    def __init__(self, dataset, group=None, session=None, batch=False, protocol=None):
         """
         Parameters
         ----------
@@ -110,6 +111,11 @@ class PydapDataStore(AbstractDataStore):
         """
         self.dataset = dataset
         self.group = group
+        self.session = session
+        self._batch = batch
+        self._batch_done = False
+        self._array_cache = {}  # holds 1D dimension data
+        self._protocol = protocol
 
     @classmethod
     def open(
@@ -122,6 +128,7 @@ class PydapDataStore(AbstractDataStore):
         timeout=None,
         verify=None,
         user_charset=None,
+        batch=False,
     ):
         from pydap.client import open_url
         from pydap.net import DEFAULT_TIMEOUT
@@ -136,6 +143,7 @@ class PydapDataStore(AbstractDataStore):
                 DeprecationWarning,
             )
             output_grid = False  # new default behavior
+
         kwargs = {
             "url": url,
             "application": application,
@@ -153,12 +161,26 @@ class PydapDataStore(AbstractDataStore):
             dataset = url.ds
         args = {"dataset": dataset}
         if group:
-            # only then, change the default
             args["group"] = group
+        if url.startswith(("https", "dap2")):
+            args["protocol"] = "dap2"
+        else:
+            args["protocol"] = "dap4"
+        if batch:
+            if args["protocol"] == "dap2":
+                warnings.warn(
+                    f"`batch={batch}` is currently only compatible with the `DAP4` "
+                    "protocol. Make sue the OPeNDAP server implements the `DAP4` "
+                    "protocol and then replace the scheme of the url with `dap4` "
+                    "to make use of it. Setting `batch=False`.",
+                    stacklevel=2,
+                )
+            else:
+                # only update if dap4
+                args["batch"] = batch
         return cls(**args)
 
     def open_store_variable(self, var):
-        data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
         try:
             dimensions = [
                 dim.split("/")[-1] if dim.startswith("/") else dim for dim in var.dims
@@ -167,6 +189,25 @@ class PydapDataStore(AbstractDataStore):
             # GridType does not have a dims attribute - instead get `dimensions`
             # see https://github.com/pydap/pydap/issues/485
             dimensions = var.dimensions
+        if (
+            self._protocol == "dap4"
+            and var.name in dimensions
+            and hasattr(var, "dataset")  # only True for pydap>3.5.5
+        ):
+            if not var.dataset._batch_mode:
+                # for dap4, always batch all dimensions at once
+                var.dataset.enable_batch_mode()
+            data_array = self._get_data_array(var)
+            data = indexing.LazilyIndexedArray(data_array)
+            if not self._batch and var.dataset._batch_mode:
+                # if `batch=False``, restore it for all other variables
+                var.dataset.disable_batch_mode()
+        else:
+            # all non-dimension variables
+            data = indexing.LazilyIndexedArray(
+                PydapArrayWrapper(var, self._batch, self._array_cache)
+            )
+
         return Variable(dimensions, data, var.attributes)
 
     def get_variables(self):
@@ -184,6 +225,7 @@ class PydapDataStore(AbstractDataStore):
                 # check the key is not a BaseType or GridType
                 if not isinstance(self.ds[var], GroupType)
             ]
+
         return FrozenDict((k, self.open_store_variable(self.ds[k])) for k in _vars)
 
     def get_attrs(self):
@@ -195,9 +237,11 @@ class PydapDataStore(AbstractDataStore):
             "libdap",
             "invocation",
             "dimensions",
+            "path",
+            "Maps",
         )
-        attrs = self.ds.attributes
-        list(map(attrs.pop, opendap_attrs, [None] * 6))
+        attrs = dict(self.ds.attributes)
+        list(map(attrs.pop, opendap_attrs, [None] * 8))
         return Frozen(attrs)
 
     def get_dimensions(self):
@@ -206,6 +250,19 @@ class PydapDataStore(AbstractDataStore):
     @property
     def ds(self):
         return get_group(self.dataset, self.group)
+
+    def _get_data_array(self, var):
+        """gets dimension data all at once, storing the numpy
+        arrays within a cached dictionary
+        """
+        from pydap.lib import get_batch_data
+
+        if not self._batch_done or var.id not in self._array_cache:
+            # store all dim data into a dict for reuse
+            self._array_cache = get_batch_data(var.parent, self._array_cache)
+            self._batch_done = True
+
+        return self._array_cache[var.id]
 
 
 class PydapBackendEntrypoint(BackendEntrypoint):
