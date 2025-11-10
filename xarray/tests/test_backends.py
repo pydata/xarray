@@ -6564,14 +6564,15 @@ class TestPydapOnline(TestPydap):
 @network
 @pytest.mark.parametrize("protocol", ["dap2", "dap4"])
 @pytest.mark.parametrize("batch", [False, True])
-def test_batchdap4_downloads(protocol, batch) -> None:
+def test_batchdap4_downloads(tmpdir, protocol, batch) -> None:
     """Test that in dap4, all dimensions are downloaded at once"""
     import pydap
     from pydap.net import create_session
 
     _version_ = Version(pydap.__version__)
     # Create a session with pre-set params in pydap backend, to cache urls
-    session = create_session(use_cache=True, cache_kwargs={"cache_name": "debug"})
+    cache_name = tmpdir / "debug"
+    session = create_session(use_cache=True, cache_kwargs={"cache_name": cache_name})
     session.cache.clear()
     url = "https://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc"
 
@@ -6609,25 +6610,6 @@ def test_batchdap4_downloads(protocol, batch) -> None:
         )
         # das + dds + 3 dods urls
         assert len(session.cache.urls()) == 5
-
-
-@requires_pydap
-@network
-def test_batch_warnswithdap2() -> None:
-    from pydap.net import create_session
-
-    # Create a session with pre-set retry params in pydap backend, to cache urls
-    session = create_session(use_cache=True, cache_kwargs={"cache_name": "debug"})
-    session.cache.clear()
-
-    url = "dap2://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc"
-    with pytest.warns(UserWarning):
-        open_dataset(
-            url, engine="pydap", session=session, batch=True, decode_times=False
-        )
-
-    # no batching is supported here
-    assert len(session.cache.urls()) == 5
 
 
 class TestEncodingInvalid:

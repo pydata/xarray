@@ -581,7 +581,8 @@ class TestPyDAPDatatreeIO:
     simplegroup_datatree_url = "dap4://test.opendap.org/opendap/dap4/SimpleGroup.nc4.h5"
 
     def test_open_datatree_unaligned_hierarchy(
-        self, url=unaligned_datatree_url
+        self,
+        url=unaligned_datatree_url,
     ) -> None:
         with pytest.raises(
             ValueError,
@@ -614,7 +615,7 @@ class TestPyDAPDatatreeIO:
         ) as expected:
             assert_identical(unaligned_dict_of_datasets["/Group1/subgroup1"], expected)
 
-    def test_inherited_coords(self, url=simplegroup_datatree_url) -> None:
+    def test_inherited_coords(self, tmpdir, url=simplegroup_datatree_url) -> None:
         """Test that `open_datatree` inherits coordinates from root tree.
 
         This particular h5 file is a test file that inherits the time coordinate from the root
@@ -644,7 +645,10 @@ class TestPyDAPDatatreeIO:
         from pydap.net import create_session
 
         # Create a session with pre-set retry params in pydap backend, to cache urls
-        session = create_session(use_cache=True, cache_kwargs={"cache_name": "debug"})
+        cache_name = tmpdir / "debug"
+        session = create_session(
+            use_cache=True, cache_kwargs={"cache_name": cache_name}
+        )
         session.cache.clear()
 
         _version_ = Version(pydap.__version__)
@@ -661,8 +665,8 @@ class TestPyDAPDatatreeIO:
             )
 
         if _version_ > Version("3.5.5"):
-            # Total downloads are: 1 dmr, + 1 dap url for all dimensions across groups
-            assert len(session.cache.urls()) == 2
+            # Total downloads are: 1 dmr, + 1 dap url for all dimensions for each group
+            assert len(session.cache.urls()) == 3
         else:
             # 1 dmr + 1 dap url per dimension (total there are 4 dimension arrays)
             assert len(session.cache.urls()) == 5
