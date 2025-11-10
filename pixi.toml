@@ -19,7 +19,7 @@ test-all-but-numba = { features = [
   "backends",
   "accel",
   "dask",
-  "plotting",
+  "viz",
   "extras",
 ] }
 test-all-but-dask = { features = [
@@ -28,7 +28,7 @@ test-all-but-dask = { features = [
   "backends",
   "accel",
   "numba",
-  "plotting",
+  "viz",
   "extras",
 ] }
 test-all-deps-py313 = { features = [
@@ -38,7 +38,7 @@ test-all-deps-py313 = { features = [
   "accel",
   "numba",
   "dask",
-  "plotting",
+  "viz",
   "extras",
 ] }
 test-all-deps-py311 = { features = [
@@ -48,7 +48,7 @@ test-all-deps-py311 = { features = [
   "accel",
   "numba",
   "dask",
-  "plotting",
+  "viz",
   "extras",
 ] }
 
@@ -59,7 +59,7 @@ test-with-typing-py311 = { features = [
   "accel",
   "numba",
   "dask",
-  "plotting",
+  "viz",
   "extras",
   "typing",
 ] }
@@ -71,7 +71,7 @@ test-with-typing-py313 = { features = [
   "accel",
   "numba",
   "dask",
-  "plotting",
+  "viz",
   "extras",
   "typing",
 ] }
@@ -90,7 +90,7 @@ doc = { features = [
   "backends",
   "test",
   "accel",
-  "plotting",
+  "viz",
   "extras",
 ], solve-group = "doc" }
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
@@ -171,7 +171,7 @@ numexpr = "*"
 pyarrow = "*"
 opt_einsum = "*"
 
-[feature.plotting.dependencies]
+[feature.viz.dependencies]
 cartopy = "*"
 matplotlib-base = "*"
 nc-time-axis = "*"
