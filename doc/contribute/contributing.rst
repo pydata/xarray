@@ -186,11 +186,11 @@ documentation locally before pushing your changes.
 Creating a Python Environment
 -----------------------------
 
-Xarray uses Pixi to manage development environments.
+Xarray uses `Pixi <https://pixi.sh/latest/>`_ to manage development environments.
 Before starting any development, you'll need to create an isolated xarray
 development environment:
 
-- Install `Pixi <https://pixi.sh/dev/installation/>`_
+- Install `Pixi <https://pixi.sh/latest/installation/>`_
 - Make sure your Pixi is up to date (``pixi self-update``)
 - Make sure that you have :ref:`cloned the repository <contributing.dev_workflow>`
 - ``cd`` to the *xarray* source directory
