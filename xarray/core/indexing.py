@@ -977,7 +977,7 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
 
 def as_indexable(array):
     """
-    This function always returns a ExplicitlyIndexed subclass,
+    This function always returns an ExplicitlyIndexed subclass,
     so that the vectorized indexing is always possible with the returned
     object.
     """
@@ -1315,7 +1315,7 @@ def _decompose_outer_indexer(
     arrays that only support basic or outer indexing.
 
     As an example, let us consider to index a few elements from a backend array
-    with a orthogonal indexer ([0, 3, 1], [2, 3, 2]).
+    with an orthogonal indexer ([0, 3, 1], [2, 3, 2]).
     Even if the backend array only supports basic indexing, it is more
     efficient to load a subslice of the array than loading the entire array,
 
