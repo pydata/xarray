@@ -861,7 +861,7 @@ def _push(array, n: int | None = None, axis: int = -1):
             " Call `xr.set_options(use_bottleneck=True)` or `xr.set_options(use_numbagg=True)` to enable one."
         )
     if OPTIONS["use_numbagg"] and module_available("numbagg"):
-        import numbagg
+        import numbagg  # type: ignore[import-not-found, unused-ignore]
 
         return numbagg.ffill(array, limit=n, axis=axis)
 
