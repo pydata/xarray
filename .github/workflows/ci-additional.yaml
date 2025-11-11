@@ -319,10 +319,10 @@ jobs:
         uses: xarray-contrib/minimum-dependency-versions@e2ac8ff0a76e8603d8536ef5d64743a375961ce9 # v0.1.1
         with:
           policy: ci/policy.yaml
-          environment-paths: ci/requirement-linting/min-all-deps.yml
+          environment-paths: ci/requirements/min-all-deps.yml
 
       - name: Bare minimum versions policy
         uses: xarray-contrib/minimum-dependency-versions@e2ac8ff0a76e8603d8536ef5d64743a375961ce9 # v0.1.1
         with:
           policy: ci/policy.yaml
-          environment-paths: ci/requirement-linting/bare-minimum.yml
+          environment-paths: ci/requirements/bare-minimum.yml
