@@ -4779,6 +4779,11 @@ class TestDataset:
         with pytest.raises(ValueError, match=error_regex):
             actual[var_list] = data
 
+    def test_setitem_uses_base_variable_class_even_for_index_variables(self) -> None:
+        ds = Dataset(coords={"x": [1, 2, 3]})
+        ds["y"] = ds["x"]
+        assert not isinstance(ds["y"].variable, IndexVariable)
+
     def test_assign(self) -> None:
         ds = Dataset()
         actual = ds.assign(x=[0, 1, 2], y=2)
