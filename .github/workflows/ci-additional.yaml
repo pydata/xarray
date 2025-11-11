@@ -184,9 +184,13 @@ jobs:
           fail_ci_if_error: false
 
   pyright:
-    name: Pyright
+    name: Pyright | pixi shell -e ${{ matrix.pixi-env }}"
     runs-on: "ubuntu-latest"
     needs: [detect-ci-trigger, cache-pixi-lock]
+    strategy:
+      fail-fast: false
+      matrix:
+        pixi-env: ["test-with-typing-py313", "test-with-typing-py311"]
     if: |
       always()
       && (
@@ -195,8 +199,6 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
-    env:
-      PIXI_ENV: test-with-typing-py313
 
     steps:
       - uses: actions/checkout@v5
@@ -215,79 +217,25 @@ jobs:
         with:
           pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
-          environments: ${{ env.PIXI_ENV }}
+          environments: ${{ matrix.pixi-env }}
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
       - name: set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-          echo "PYTHON_VERSION=$(pixi run -e ${{env.PIXI_ENV}} python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
+          echo "PYTHON_VERSION=$(pixi run -e ${{ matrix.pixi-env }} python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
       - name: Version info
         run: |
-          pixi run -e ${{env.PIXI_ENV}} python xarray/util/print_versions.py
+          pixi run -e ${{ matrix.pixi-env }} python xarray/util/print_versions.py
 
       - name: Run pyright
         run: |
-          pixi run -e ${{env.PIXI_ENV}} python -m pyright xarray/
+          pixi run -e ${{ matrix.pixi-env }} python -m pyright xarray/
 
       - name: Upload pyright coverage to Codecov
         uses: codecov/codecov-action@v5.5.1
         with:
           file: pyright_report/cobertura.xml
           flags: pyright
-          env_vars: PYTHON_VERSION
-          name: codecov-umbrella
-          fail_ci_if_error: false
-
-  pyright39:
-    name: Pyright 3.11
-    runs-on: "ubuntu-latest"
-    needs: [detect-ci-trigger, cache-pixi-lock]
-    if: |
-      always()
-      && (
-          contains( github.event.pull_request.labels.*.name, 'run-pyright')
-      )
-    defaults:
-      run:
-        shell: bash -l {0}
-    env:
-      PIXI_ENV: test-with-typing-py311
-
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0 # Fetch all history for all branches and tags.
-      - name: Restore cached pixi lockfile
-        uses: actions/cache/restore@v4
-        id: restore-pixi-lock
-        with:
-          enableCrossOsArchive: true
-          path: |
-            pixi.lock
-          key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
-      - uses: prefix-dev/setup-pixi@v0.9.0
-        with:
-          pixi-version: ${{ env.PIXI_VERSION }}
-          cache: true
-          environments: ${{ env.PIXI_ENV }}
-          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
-      - name: set environment variables
-        run: |
-          echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-          echo "PYTHON_VERSION=$(pixi run -e ${{env.PIXI_ENV}} python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
-      - name: Version info
-        run: |
-          pixi run -e ${{env.PIXI_ENV}} python xarray/util/print_versions.py
-
-      - name: Run pyright
-        run: |
-          pixi run -e ${{env.PIXI_ENV}} python -m pyright xarray/
-
-      - name: Upload pyright coverage to Codecov
-        uses: codecov/codecov-action@v5.5.1
-        with:
-          file: pyright_report/cobertura.xml
-          flags: pyright39
           env_vars: PYTHON_VERSION
           name: codecov-umbrella
           fail_ci_if_error: false
