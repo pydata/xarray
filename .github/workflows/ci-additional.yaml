@@ -196,7 +196,7 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      PIXI_ENV: test-all-deps-py313
+      PIXI_ENV: test-with-typing-py313
 
     steps:
       - uses: actions/checkout@v5
@@ -251,7 +251,7 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      PIXI_ENV: test-all-deps-py313
+      PIXI_ENV: test-with-typing-py311
 
     steps:
       - uses: actions/checkout@v5
