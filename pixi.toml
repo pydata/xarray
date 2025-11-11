@@ -41,6 +41,13 @@ test-all-deps-py313 = { features = [
   "viz",
   "extras",
 ] }
+test-nightly = { features = [
+  "test",
+  "nightly",
+  "typing",
+], no-default-feature = true }
+
+
 test-all-deps-py311 = { features = [
   "py311",
   "test",
@@ -116,7 +123,7 @@ python = "*"
 numpy = "*"
 pandas = "*"
 
-packaging = "24.1.*" #? Can be removed?
+packaging = "24.1.*"
 git = "*"            # needed for dynamic versioning
 
 [dependencies]
@@ -245,6 +252,45 @@ sparse = "0.15.*"
 toolz = "0.12.*"
 zarr = "2.18.*"
 
+[feature.nightly.pypi-options]
+extra-index-urls = [
+  "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple",
+]
+
+[feature.nightly.dependencies]
+python = "*"
+
+[feature.nightly.pypi-dependencies]
+xarray = { path = ".", editable = true }
+
+numpy = "*"
+scipy = "*"
+matplotlib = "*"
+pandas = "*"
+pyarrow = "*"
+
+# # Dask stuff not working at the moment https://github.com/pydata/xarray/pull/10888#issuecomment-3516452010
+# dask = { git = "https://github.com/dask/dask" }
+# distributed = { git = "https://github.com/dask/distributed"}
+# dask-expr = { git = "https://github.com/dask/dask-expr"}
+dask = "*"
+distributed = "*"
+dask-expr = "*"
+
+zarr = { git = "https://github.com/zarr-developers/zarr-python" }
+numcodecs = { git = "https://github.com/zarr-developers/numcodecs" }
+# cftime = { git = "https://github.com/Unidata/cftime"} # TODO: Enable once this is removed as a test dep
+# packaging = { git = "https://github.com/pypa/packaging"} #? Pixi warns if this is enabled
+pint = { git = "https://github.com/hgrecco/pint" }
+bottleneck = { git = "https://github.com/pydata/bottleneck" }
+fsspec = { git = "https://github.com/intake/filesystem_spec" }
+nc-time-axis = { git = "https://github.com/SciTools/nc-time-axis" }
+flox = { git = "https://github.com/xarray-contrib/flox" }
+h5netcdf = { git = "https://github.com/h5netcdf/h5netcdf" }
+opt_einsum = { git = "https://github.com/dgasmith/opt_einsum" }
+# sparse = { git = "https://github.com/pydata/sparse"}
+
+
 [feature.test.dependencies]
 pytest = "*"
 pytest-asyncio = "*"
@@ -253,6 +299,7 @@ pytest-env = "*"
 pytest-mypy-plugins = "*"
 pytest-timeout = "*"
 pytest-xdist = "*"
+pytz = "*"
 hypothesis = "*"
 cftime = "*"              # https://github.com/pydata/xarray/pull/10888#issuecomment-3481432315
 coveralls = "*"
