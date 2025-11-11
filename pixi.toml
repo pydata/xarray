@@ -260,6 +260,9 @@ extra-index-urls = [
 [feature.nightly.dependencies]
 python = "*"
 
+[feature.nightly.pypi-options.dependency-overrides]
+dask = { git = "https://github.com/dask/dask" }
+
 [feature.nightly.pypi-dependencies]
 xarray = { path = ".", editable = true }
 
@@ -269,14 +272,8 @@ matplotlib = "*"
 pandas = "*"
 pyarrow = "*"
 
-# # Dask stuff not working at the moment https://github.com/pydata/xarray/pull/10888#issuecomment-3516452010
-# dask = { git = "https://github.com/dask/dask" }
-# distributed = { git = "https://github.com/dask/distributed"}
-# dask-expr = { git = "https://github.com/dask/dask-expr"}
-dask = "*"
-distributed = "*"
-dask-expr = "*"
-
+distributed = { git = "https://github.com/dask/distributed" }
+dask-expr = { git = "https://github.com/dask/dask-expr" }
 zarr = { git = "https://github.com/zarr-developers/zarr-python" }
 numcodecs = { git = "https://github.com/zarr-developers/numcodecs" }
 # cftime = { git = "https://github.com/Unidata/cftime"} # TODO: Enable once this is removed as a test dep
