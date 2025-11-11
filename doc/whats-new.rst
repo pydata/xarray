@@ -19,6 +19,8 @@ New Features
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - The ``h5netcdf`` engine has support for pseudo ``NETCDF4_CLASSIC`` files, meaning variables and attributes are cast to supported types. Note that the saved files won't be recognized as genuine ``NETCDF4_CLASSIC`` files until ``h5netcdf`` adds support with version 1.7.0. (:issue:`10676`, :pull:`10686`).
   By `David Huard <https://github.com/huard>`_.
+- Support comparing :py:class:`DataTree` objects with :py:func:`testing.assert_allclose` (:pull:`10887`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -39,6 +41,9 @@ Bug Fixes
   ``engine=`` argument. (:pull:`10804`). By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 - Fix indexing with empty arrays for scipy & h5netcdf backends which now resolves to empty slices (:issue:`10867`, :pull:`10870`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
+- Fix error handling issue in ``decode_cf_variables`` when decoding fails - the exception is now re-raised
+  correctly, with a note added about the variable name that caused the error (:issue:`10873`, :pull:`10886`).
+  By `Jonas L. Bertelsen <https://github.com/jonaslb>`_
 
 Performance
 ~~~~~~~~~~~
