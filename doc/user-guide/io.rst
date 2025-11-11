@@ -128,7 +128,7 @@ The backends are tried in order: **netcdf4 → h5netcdf → scipy → pydap → 
     .. code-block:: python
 
         # Prefer h5netcdf over netcdf4
-        xr.set_options(netcdf_engine_order=['h5netcdf', 'netcdf4', 'scipy'])
+        xr.set_options(netcdf_engine_order=["h5netcdf", "netcdf4", "scipy"])
 
     See :ref:`options` for more details on configuration options.
 

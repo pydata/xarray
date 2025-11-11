@@ -2980,6 +2980,21 @@ class TestDataset:
             actual = data.drop_vars("level_1")
         assert_identical(expected, actual)
 
+    def test_drop_multiindex_labels(self) -> None:
+        data = create_test_multiindex()
+        mindex = pd.MultiIndex.from_tuples(
+            [
+                ("a", 2),
+                ("b", 1),
+                ("b", 2),
+            ],
+            names=("level_1", "level_2"),
+        )
+        expected = Dataset({}, Coordinates.from_pandas_multiindex(mindex, "x"))
+
+        actual = data.drop_sel(x=("a", 1))
+        assert_identical(expected, actual)
+
     def test_drop_index_labels(self) -> None:
         data = Dataset({"A": (["x", "y"], np.random.randn(2, 3)), "x": ["a", "b"]})
 
@@ -4134,6 +4149,10 @@ class TestDataset:
         actual3 = ds.unstack("index", fill_value={"var": -1, "other_var": 1})
         expected3 = ds.unstack("index").fillna({"var": -1, "other_var": 1}).astype(int)
         assert_equal(actual3, expected3)
+
+        actual4 = ds.unstack("index", fill_value={"var": -1})
+        expected4 = ds.unstack("index").fillna({"var": -1, "other_var": np.nan})
+        assert_equal(actual4, expected4)
 
     @requires_sparse
     def test_unstack_sparse(self) -> None:

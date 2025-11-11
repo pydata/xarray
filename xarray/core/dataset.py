@@ -1506,13 +1506,18 @@ class Dataset(
     # https://github.com/python/mypy/issues/4266
     __hash__ = None  # type: ignore[assignment]
 
-    def _all_compat(self, other: Self, compat_str: str) -> bool:
+    def _all_compat(
+        self, other: Self, compat: str | Callable[[Variable, Variable], bool]
+    ) -> bool:
         """Helper function for equals and identical"""
 
-        # some stores (e.g., scipy) do not seem to preserve order, so don't
-        # require matching order for equality
-        def compat(x: Variable, y: Variable) -> bool:
-            return getattr(x, compat_str)(y)
+        if not callable(compat):
+            compat_str = compat
+
+            # some stores (e.g., scipy) do not seem to preserve order, so don't
+            # require matching order for equality
+            def compat(x: Variable, y: Variable) -> bool:
+                return getattr(x, compat_str)(y)
 
         return self._coord_names == other._coord_names and utils.dict_equiv(
             self._variables, other._variables, compat=compat
@@ -5428,7 +5433,7 @@ class Dataset(
             if name not in index_vars:
                 if dim in var.dims:
                     if isinstance(fill_value, Mapping):
-                        fill_value_ = fill_value[name]
+                        fill_value_ = fill_value.get(name, xrdtypes.NA)
                     else:
                         fill_value_ = fill_value
 
@@ -6065,6 +6070,8 @@ class Dataset(
         Data variables:
             A        (x, y) int64 32B 0 2 3 5
         """
+        from xarray.core.dataarray import DataArray
+
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
 
@@ -6076,7 +6083,11 @@ class Dataset(
             # is a large numpy array
             if utils.is_scalar(labels_for_dim):
                 labels_for_dim = [labels_for_dim]
-            labels_for_dim = np.asarray(labels_for_dim)
+            # Most conversion to arrays is better handled in the indexer, however
+            # DataArrays are a special case where the underlying libraries don't provide
+            # a good conversition.
+            if isinstance(labels_for_dim, DataArray):
+                labels_for_dim = np.asarray(labels_for_dim)
             try:
                 index = self.get_index(dim)
             except KeyError as err:

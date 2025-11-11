@@ -20,6 +20,8 @@ New Features
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - The ``h5netcdf`` engine has support for pseudo ``NETCDF4_CLASSIC`` files, meaning variables and attributes are cast to supported types. Note that the saved files won't be recognized as genuine ``NETCDF4_CLASSIC`` files until ``h5netcdf`` adds support with version 1.7.0. (:issue:`10676`, :pull:`10686`).
   By `David Huard <https://github.com/huard>`_.
+- Support comparing :py:class:`DataTree` objects with :py:func:`testing.assert_allclose` (:pull:`10887`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -33,12 +35,23 @@ Bug Fixes
 ~~~~~~~~~
 - Fix h5netcdf backend for format=None, use same rule as netcdf4 backend (:pull:`10859`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
-
 - ``netcdf4`` and ``pydap`` backends now use stricter URL detection to avoid incorrectly claiming
   remote URLs. The ``pydap`` backend now only claims URLs with explicit DAP protocol indicators
   (``dap2://`` or ``dap4://`` schemes, or ``/dap2/`` or ``/dap4/`` in the URL path). This prevents
   both backends from claiming remote Zarr stores and other non-DAP URLs without an explicit
   ``engine=`` argument. (:pull:`10804`). By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+- Fix indexing with empty arrays for scipy & h5netcdf backends which now resolves to empty slices (:issue:`10867`, :pull:`10870`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
+- Fix error handling issue in ``decode_cf_variables`` when decoding fails - the exception is now re-raised
+  correctly, with a note added about the variable name that caused the error (:issue:`10873`, :pull:`10886`).
+  By `Jonas L. Bertelsen <https://github.com/jonaslb>`_
+
+Performance
+~~~~~~~~~~~
+
+- Speedup and reduce memory usage of :py:func:`concat`. Magnitude of improvement scales
+  with size of the concatenation dimension. By `Deepak Cherian <https://github.com/dcherian>`_.
+  :issue:`10864` :pull:`10866`.
 
 Documentation
 ~~~~~~~~~~~~~

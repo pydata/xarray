@@ -650,7 +650,7 @@ def open_dataarray(
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> DataArray:
-    """Open an DataArray from a file or file-like object containing a single
+    """Open a DataArray from a file or file-like object containing a single
     data variable.
 
     This is designed to read netCDF files with only one data variable. If
@@ -1420,10 +1420,10 @@ def open_mfdataset(
     chunks : int, dict, 'auto' or None, optional
         Dictionary with keys given by dimension names and values given by chunk sizes.
         In general, these should divide the dimensions of each dataset. If int, chunk
-        each dimension by ``chunks``. By default, chunks will be chosen to load entire
-        input files into memory at once. This has a major impact on performance: please
-        see the full documentation for more details [2]_. This argument is evaluated
-        on a per-file basis, so chunk sizes that span multiple files will be ignored.
+        each dimension by ``chunks``. By default, chunks will be chosen to match the
+        chunks on disk. This may impact performance: please see the full documentation
+        for more details [2]_. This argument is evaluated on a per-file basis, so chunk
+        sizes that span multiple files will be ignored.
     concat_dim : str, DataArray, Index or a Sequence of these or None, optional
         Dimensions to concatenate files along.  You only need to provide this argument
         if ``combine='nested'``, and if any of the dimensions along which you want to
