@@ -350,7 +350,7 @@ Indexes:
 
 To keep the `repr` compact, we could:
 
-- consolidate entries that map to the same index object, and have an short inline repr for `XarrayIndex` object
+- consolidate entries that map to the same index object, and have a short inline repr for `XarrayIndex` object
 - collapse the index section by default in the HTML `repr`
 - maybe omit all trivial indexes for 1D coordinates that match the dimension name
 
