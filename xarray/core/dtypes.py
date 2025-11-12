@@ -5,7 +5,6 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, TypeVar, cast
 
 import numpy as np
-import pandas as pd
 from pandas.api.extensions import ExtensionDtype
 
 from xarray.compat import array_api_compat, npcompat
@@ -227,7 +226,7 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
 
     if isinstance(dtype, np.dtype):
         return npcompat.isdtype(dtype, kind)
-    elif pd.api.types.is_allowed_extension_array_dtype(dtype):
+    elif utils.is_allowed_extension_array_dtype(dtype):
         # we never want to match pandas extension array dtypes
         return False
     else:
@@ -329,7 +328,7 @@ def result_type(
                 maybe_promote_to_variable_width,
                 # let extension arrays handle their own str/bytes
                 should_return_str_or_bytes=any(
-                    map(utils.is_allowed_extension_array_dtype, arrays_and_dtypes)  # type: ignore[arg-type]
+                    map(utils.is_allowed_extension_array_dtype, arrays_and_dtypes)
                 ),
             ),
             arrays_and_dtypes,
