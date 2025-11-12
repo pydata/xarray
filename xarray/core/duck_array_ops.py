@@ -267,7 +267,7 @@ def asarray(data, xp=np, dtype=None):
         # np.asarray to call our NEP-18 handler; gotta hook it ourselves
         converted = PandasExtensionArray(as_extension_array(data, dtype))
     else:
-        converted = xp.asarray(data, dtype=dtype)
+        converted = xp.asarray(data)
 
     if dtype is None or converted.dtype == dtype:
         return converted
