@@ -56,7 +56,7 @@ def result_type(*arrays_and_dtypes, xp) -> np.dtype:
         )
         if any(
             not is_numpy and not isinstance(t, builtin_types)
-            for is_numpy, t in zip(is_np_dtype, arrays_and_types)
+            for is_numpy, t in zip(is_np_dtype, arrays_and_dtypes)
         ):
             return np.object_
         return xp.result_type(*arrays_and_dtypes)
