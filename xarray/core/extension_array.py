@@ -257,9 +257,9 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
             )
 
     def __array_function__(self, func, types, args, kwargs):
-        args = replace_duck_with_extension_array(args)
         if func not in HANDLED_EXTENSION_ARRAY_FUNCTIONS:
             raise KeyError("Function not registered for pandas extension arrays.")
+        args = replace_duck_with_extension_array(args)
         res = HANDLED_EXTENSION_ARRAY_FUNCTIONS[func](*args, **kwargs)
         if isinstance(res, ExtensionArray):
             return PandasExtensionArray(res)
@@ -271,8 +271,8 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
         if (
             isinstance(key, tuple) and len(key) == 1
-        ):  # pyarrow type arrays can't handle since-length tuples
-            key = key[0]
+        ):  # pyarrow type arrays can't handle single-length tuples
+            (key,) = key
         item = self.array[key]
         if is_allowed_extension_array(item):
             return PandasExtensionArray(item)
