@@ -4,6 +4,17 @@ import numpy as np
 
 from xarray.namedarray.pycompat import array_type
 
+builtin_types = (
+    bool,
+    int,
+    float,
+    complex,
+    str,
+    bytes,
+    dt.datetime,
+    dt.timedelta,
+)
+
 
 def is_weak_scalar_type(t):
     return isinstance(t, bool | int | float | complex | str | bytes)
@@ -39,23 +50,29 @@ def _future_array_api_result_type(*arrays_and_dtypes, xp):
     return xp.result_type(dtype, *dtypes)
 
 
+def is_builtin_type(value):
+    if isinstance(value, type):
+        return issubclass(value, builtin_types)
+    else:
+        return isinstance(value, builtin_types)
+
+
+def is_dtype(value):
+    if isinstance(value, type):
+        return issubclass(value, np.generic)
+    else:
+        return isinstance(value, np.dtype)
+
+
 def result_type(*arrays_and_dtypes, xp) -> np.dtype:
     is_np_dtype = [
-        hasattr(t, "dtype") and isinstance(t.dtype, np.dtype) for t in arrays_and_dtypes
+        is_dtype(getattr(t, "dtype", t) if not isinstance(t, type) else t)
+        for t in arrays_and_dtypes
     ]
+
     if xp is np or any(is_np_dtype):
-        builtin_types = (
-            bool,
-            int,
-            float,
-            complex,
-            str,
-            bytes,
-            dt.datetime,
-            dt.timedelta,
-        )
         if any(
-            not is_numpy and not isinstance(t, builtin_types)
+            not is_numpy and not is_builtin_type(t)
             for is_numpy, t in zip(is_np_dtype, arrays_and_dtypes, strict=True)
         ):
             return np.object_
