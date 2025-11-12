@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, TypeVar, cast
 import numpy as np
 import pandas as pd
 from pandas.api.extensions import ExtensionDtype
-from pandas.api.types import is_extension_array_dtype
 
 from xarray.compat import array_api_compat, npcompat
 from xarray.compat.npcompat import HAS_STRING_DTYPE
@@ -72,7 +71,7 @@ def maybe_promote(dtype: T_dtype) -> tuple[T_dtype, Any]:
     # N.B. these casting rules should match pandas
     dtype_: np.typing.DTypeLike
     fill_value: Any
-    if is_extension_array_dtype(dtype):
+    if utils.is_allowed_extension_array_dtype(dtype):
         return dtype, cast(ExtensionDtype, dtype).na_value  # type: ignore[redundant-cast]
     if not isinstance(dtype, np.dtype):
         raise TypeError(
@@ -228,7 +227,7 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
 
     if isinstance(dtype, np.dtype):
         return npcompat.isdtype(dtype, kind)
-    elif pd.api.types.is_extension_array_dtype(dtype):  # noqa: TID251
+    elif pd.api.types.is_allowed_extension_array_dtype(dtype):
         # we never want to match pandas extension array dtypes
         return False
     else:
@@ -281,8 +280,9 @@ def should_promote_to_object(
             if isinstance(result_type, np.dtype):
                 np_result_types.add(result_type)
         except TypeError:
-            # passing individual objects to xp.result_type means NEP-18 implementations won't have
-            # a chance to intercept special values (such as NA) that numpy core cannot handle
+            # passing individual objects to xp.result_type (i.e., what `array_api_compat.result_type` calls) means NEP-18 implementations won't have
+            # a chance to intercept special values (such as NA) that numpy core cannot handle.
+            # Thus they are considered as types that don't need promotion i.e., the `arr_or_dtype` that rose the `TypeError` will not contribute to `np_result_types`.
             pass
 
     if np_result_types:
@@ -329,7 +329,7 @@ def result_type(
                 maybe_promote_to_variable_width,
                 # let extension arrays handle their own str/bytes
                 should_return_str_or_bytes=any(
-                    map(is_extension_array_dtype, arrays_and_dtypes)  # type: ignore[arg-type]
+                    map(utils.is_allowed_extension_array_dtype, arrays_and_dtypes)  # type: ignore[arg-type]
                 ),
             ),
             arrays_and_dtypes,
