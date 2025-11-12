@@ -192,7 +192,7 @@ def __extension_duck_array__where(
     # pd.where won't broadcast 0-dim arrays across a scalar-like series; scalar y's must be preserved
     if hasattr(y, "shape") and len(y.shape) == 1 and y.shape[0] == 1:
         y = y[0]  # type: ignore[index]
-    return cast(T_ExtensionArray, pd.Series(x).where(condition, y).array)  # type: ignore[call-overload]
+    return cast(T_ExtensionArray, pd.Series(x).where(condition, y).array)  # type: ignore[arg-type]
 
 
 def _replace_duck(args, replacer: Callable[[PandasExtensionArray], list]) -> list:
