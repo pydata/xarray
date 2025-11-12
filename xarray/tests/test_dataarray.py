@@ -1888,7 +1888,6 @@ class TestDataArray:
         x = srs.to_xarray()
         y = x.reindex(index=["f", "g", "z"])
         assert_array_equal(x, extension_array)
-        # TODO: remove .array once the branch is updated with main
         pd.testing.assert_extension_array_equal(
             y.data,
             extension_array._from_sequence(
