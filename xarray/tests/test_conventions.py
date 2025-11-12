@@ -358,20 +358,20 @@ class TestDecodeCF:
         )
 
         original.temp.attrs["grid_mapping"] = "crs: x y"
-        vars, attrs, coords = conventions.decode_cf_variables(
+        _vars, _attrs, coords = conventions.decode_cf_variables(
             original.variables, {}, decode_coords="all"
         )
         assert coords == {"lat", "lon", "crs"}
 
         original.temp.attrs["grid_mapping"] = "crs: x y crs2: lat lon"
-        vars, attrs, coords = conventions.decode_cf_variables(
+        _vars, _attrs, coords = conventions.decode_cf_variables(
             original.variables, {}, decode_coords="all"
         )
         assert coords == {"lat", "lon", "crs", "crs2"}
 
         # stray colon
         original.temp.attrs["grid_mapping"] = "crs: x y crs2 : lat lon"
-        vars, attrs, coords = conventions.decode_cf_variables(
+        _vars, _attrs, coords = conventions.decode_cf_variables(
             original.variables, {}, decode_coords="all"
         )
         assert coords == {"lat", "lon", "crs", "crs2"}
@@ -382,14 +382,14 @@ class TestDecodeCF:
 
         del original.temp.attrs["grid_mapping"]
         original.temp.attrs["formula_terms"] = "A: lat D: lon E: crs2"
-        vars, attrs, coords = conventions.decode_cf_variables(
+        _vars, _attrs, coords = conventions.decode_cf_variables(
             original.variables, {}, decode_coords="all"
         )
         assert coords == {"lat", "lon", "crs2"}
 
         original.temp.attrs["formula_terms"] = "A: lat lon D: crs E: crs2"
         with pytest.warns(UserWarning, match="has malformed content"):
-            vars, attrs, coords = conventions.decode_cf_variables(
+            _vars, _attrs, coords = conventions.decode_cf_variables(
                 original.variables, {}, decode_coords="all"
             )
             assert coords == {"lat", "lon", "crs", "crs2"}
@@ -658,8 +658,11 @@ def test_scalar_units() -> None:
 
 
 def test_decode_cf_error_includes_variable_name():
-    ds = Dataset({"invalid": ([], 1e36, {"units": "days since 2000-01-01"})})
-    with pytest.raises(ValueError, match="Failed to decode variable 'invalid'"):
+    ds = Dataset({"my_invalid_var": ([], 1e36, {"units": "days since 2000-01-01"})})
+    with pytest.raises(
+        ValueError,
+        match=r"unable to decode(?s:.*)my_invalid_var",
+    ):
         decode_cf(ds)
 
 

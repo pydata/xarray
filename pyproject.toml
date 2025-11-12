@@ -30,10 +30,9 @@ accel = [
   "scipy>=1.13",
   "bottleneck",
   "numbagg>=0.8",
-  "numba>=0.59",
+  "numba>=0.62",  # numba 0.62 added support for numpy 2.3
   "flox>=0.9",
   "opt_einsum",
-  "numpy<2.3",    # numba has not updated yet: https://github.com/numba/numba/issues/10105
 ]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
@@ -48,7 +47,7 @@ io = [
 ]
 etc = ["sparse>=0.15"]
 parallel = ["dask[complete]"]
-viz = ["cartopy>=0.23", "matplotlib", "nc-time-axis", "seaborn"]
+viz = ["cartopy>=0.23", "matplotlib>=3.8", "nc-time-axis", "seaborn"]
 types = [
   "pandas-stubs",
   "scipy-stubs",
@@ -182,27 +181,6 @@ module = [
   "xarray.computation.*",
   "xarray.indexes.*",
   "xarray.tests.*",
-]
-# This then excludes some modules from the above list. (So ideally we remove
-# from here in time...)
-[[tool.mypy.overrides]]
-check_untyped_defs = false
-module = [
-  "xarray.tests.test_coarsen",
-  "xarray.tests.test_coding_times",
-  "xarray.tests.test_computation",
-  "xarray.tests.test_concat",
-  "xarray.tests.test_coordinates",
-  "xarray.tests.test_dask",
-  "xarray.tests.test_dataarray",
-  "xarray.tests.test_duck_array_ops",
-  "xarray.tests.test_indexing",
-  "xarray.tests.test_merge",
-  "xarray.tests.test_sparse",
-  "xarray.tests.test_ufuncs",
-  "xarray.tests.test_units",
-  "xarray.tests.test_variable",
-  "xarray.tests.test_weighted",
 ]
 
 # Use strict = true whenever namedarray has become standalone. In the meantime
@@ -414,6 +392,7 @@ aso = "aso"
 # Technical terms
 nd = "nd"
 nin = "nin"
+nclusive = "nclusive" # part of "inclusive" in error messages
 
 # Variable names
 ba = "ba"

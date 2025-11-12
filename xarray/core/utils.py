@@ -97,7 +97,7 @@ from xarray.namedarray.utils import (  # noqa: F401
 )
 
 if TYPE_CHECKING:
-    from xarray.core.types import Dims, ErrorOptionsWithWarn
+    from xarray.core.types import Dims, ErrorOptionsWithWarn, NestedDict
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -256,6 +256,11 @@ def equivalent(first: T, second: T) -> bool:
     if isinstance(first, list) or isinstance(second, list):
         return list_equiv(first, second)  # type: ignore[arg-type]
 
+    # Check for NaN equivalence early (before equality comparison)
+    # This handles both Python float NaN and NumPy scalar NaN (issue #10833)
+    if pd.isnull(first) and pd.isnull(second):  # type: ignore[call-overload]
+        return True
+
     # For non-array/list types, use == but require boolean result
     result = first == second
     if not isinstance(result, bool):
@@ -265,8 +270,7 @@ def equivalent(first: T, second: T) -> bool:
         # Reject any other non-boolean type (Dataset, Series, custom objects, etc.)
         return False
 
-    # Check for NaN equivalence
-    return result or (pd.isnull(first) and pd.isnull(second))  # type: ignore[call-overload]
+    return result
 
 
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
@@ -333,6 +337,25 @@ def remove_incompatible_items(
     for k in list(first_dict):
         if k not in second_dict or not compat(first_dict[k], second_dict[k]):
             del first_dict[k]
+
+
+def flat_items(
+    nested: Mapping[str, NestedDict[T] | T],
+    prefix: str | None = None,
+    separator: str = "/",
+) -> Iterable[tuple[str, T]]:
+    """Yields flat items from a nested dictionary of dicts.
+
+    Notes:
+    - Only dict subclasses are flattened.
+    - Duplicate items are not removed. These should be checked separately.
+    """
+    for key, value in nested.items():
+        key = prefix + separator + key if prefix is not None else key
+        if isinstance(value, dict):
+            yield from flat_items(value, key, separator)
+        else:
+            yield key, value
 
 
 def is_full_slice(value: Any) -> bool:
@@ -706,7 +729,41 @@ def is_remote_uri(path: str) -> bool:
     This also matches for http[s]://, which were the only remote URLs
     supported in <=v0.16.2.
     """
-    return bool(re.search(r"^[a-z][a-z0-9]*(\://|\:\:)", path))
+    return bool(re.search(r"^[a-zA-Z][a-zA-Z0-9]*(\://|\:\:)", path))
+
+
+def strip_uri_params(uri: str) -> str:
+    """Strip query parameters and fragments from a URI.
+
+    This is useful for extracting the file extension from URLs that
+    contain query parameters (e.g., OPeNDAP constraint expressions).
+
+    Parameters
+    ----------
+    uri : str
+        The URI to strip
+
+    Returns
+    -------
+    str
+        The URI without query parameters (?) or fragments (#)
+
+    Examples
+    --------
+    >>> strip_uri_params("http://example.com/file.nc?var=temp&time=0")
+    'http://example.com/file.nc'
+    >>> strip_uri_params("http://example.com/file.nc#section")
+    'http://example.com/file.nc'
+    >>> strip_uri_params("/local/path/file.nc")
+    '/local/path/file.nc'
+    """
+    from urllib.parse import urlsplit, urlunsplit
+
+    # Use urlsplit to properly parse the URI
+    # This handles both absolute URLs and relative paths
+    parsed = urlsplit(uri)
+    # Reconstruct without query and fragment using urlunsplit
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
 
 
 def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
@@ -843,7 +900,7 @@ class HiddenKeyDict(MutableMapping[K, V]):
 
 
 def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
-    """Get an new dimension name based on new_dim, that is not used in dims.
+    """Get a new dimension name based on new_dim, that is not used in dims.
     If the same name exists, we add an underscore(s) in the head.
 
     Example1:

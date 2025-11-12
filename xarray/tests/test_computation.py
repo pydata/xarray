@@ -694,10 +694,7 @@ def test_broadcast_compat_data_2d() -> None:
 
 def test_keep_attrs() -> None:
     def add(a, b, keep_attrs):
-        if keep_attrs:
-            return apply_ufunc(operator.add, a, b, keep_attrs=keep_attrs)
-        else:
-            return apply_ufunc(operator.add, a, b)
+        return apply_ufunc(operator.add, a, b, keep_attrs=keep_attrs)
 
     a = xr.DataArray([0, 1], [("x", [0, 1])])
     a.attrs["attr"] = "da"
@@ -733,7 +730,7 @@ def test_keep_attrs() -> None:
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
+            {"a": 1},
             False,
             id="default",
         ),
@@ -802,7 +799,7 @@ def test_keep_attrs_strategies_variable(strategy, attrs, expected, error) -> Non
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
+            {"a": 1},
             False,
             id="default",
         ),
@@ -872,7 +869,7 @@ def test_keep_attrs_strategies_dataarray(strategy, attrs, expected, error) -> No
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
+            {"a": 1},
             False,
             id="default",
         ),
@@ -926,7 +923,7 @@ def test_keep_attrs_strategies_dataarray_variables(
     compute_attrs = {
         "dim": lambda attrs, default: (attrs, default),
         "coord": lambda attrs, default: (default, attrs),
-    }.get(variant)
+    }[variant]
 
     dim_attrs, coord_attrs = compute_attrs(attrs, [{}, {}, {}])
 
@@ -967,7 +964,7 @@ def test_keep_attrs_strategies_dataarray_variables(
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
+            {"a": 1},
             False,
             id="default",
         ),
@@ -1037,7 +1034,7 @@ def test_keep_attrs_strategies_dataset(strategy, attrs, expected, error) -> None
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
+            {"a": 1},
             False,
             id="default",
         ),
@@ -1092,7 +1089,8 @@ def test_keep_attrs_strategies_dataset_variables(
         "data": lambda attrs, default: (attrs, default, default),
         "dim": lambda attrs, default: (default, attrs, default),
         "coord": lambda attrs, default: (default, default, attrs),
-    }.get(variant)
+    }[variant]
+
     data_attrs, dim_attrs, coord_attrs = compute_attrs(attrs, [{}, {}, {}])
 
     a = xr.Dataset(
@@ -1549,7 +1547,7 @@ def test_vectorize_exclude_dims_dask() -> None:
 
 
 def test_corr_only_dataarray() -> None:
-    with pytest.raises(TypeError, match="Only xr.DataArray is supported"):
+    with pytest.raises(TypeError, match=r"Only xr.DataArray is supported"):
         xr.corr(xr.Dataset(), xr.Dataset())  # type: ignore[type-var]
 
 

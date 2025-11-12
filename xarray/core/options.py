@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from xarray.core.utils import FrozenDict
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
         "enable_cftimeindex",
         "file_cache_maxsize",
         "keep_attrs",
+        "netcdf_engine_order",
         "warn_for_unclosed_files",
         "use_bottleneck",
         "use_new_combine_kwarg_defaults",
@@ -57,6 +59,7 @@ if TYPE_CHECKING:
         enable_cftimeindex: bool
         file_cache_maxsize: int
         keep_attrs: Literal["default"] | bool
+        netcdf_engine_order: Sequence[Literal["netcdf4", "h5netcdf", "scipy"]]
         warn_for_unclosed_files: bool
         use_bottleneck: bool
         use_flox: bool
@@ -86,6 +89,7 @@ OPTIONS: T_Options = {
     "enable_cftimeindex": True,
     "file_cache_maxsize": 128,
     "keep_attrs": "default",
+    "netcdf_engine_order": ("netcdf4", "h5netcdf", "scipy"),
     "warn_for_unclosed_files": False,
     "use_bottleneck": True,
     "use_flox": True,
@@ -96,6 +100,7 @@ OPTIONS: T_Options = {
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
 _DISPLAY_OPTIONS = frozenset(["text", "html"])
+_NETCDF_ENGINES = frozenset(["netcdf4", "h5netcdf", "scipy"])
 
 
 def _positive_integer(value: Any) -> bool:
@@ -119,6 +124,7 @@ _VALIDATORS = {
     "enable_cftimeindex": lambda value: isinstance(value, bool),
     "file_cache_maxsize": _positive_integer,
     "keep_attrs": lambda choice: choice in [True, False, "default"],
+    "netcdf_engine_order": lambda engines: set(engines) <= _NETCDF_ENGINES,
     "use_bottleneck": lambda value: isinstance(value, bool),
     "use_new_combine_kwarg_defaults": lambda value: isinstance(value, bool),
     "use_numbagg": lambda value: isinstance(value, bool),
@@ -254,6 +260,11 @@ class set_options:
         * ``False`` : to always discard attrs
         * ``default`` : to use original logic that attrs should only
           be kept in unambiguous circumstances
+    netcdf_engine_order : sequence, default ['netcdf4', 'h5netcdf', 'scipy']
+        Preference order of backend engines to use when reading or writing
+        netCDF files with ``open_dataset()`` and ``to_netcdf()`` if ``engine``
+        is not explicitly specified. May be any permutation or subset of
+        ``['netcdf4', 'h5netcdf', 'scipy']``.
     use_bottleneck : bool, default: True
         Whether to use ``bottleneck`` to accelerate 1D reductions and
         1D rolling reduction operations.
@@ -311,6 +322,8 @@ class set_options:
                     expected = f"Expected one of {_JOIN_OPTIONS!r}"
                 elif k == "display_style":
                     expected = f"Expected one of {_DISPLAY_OPTIONS!r}"
+                elif k == "netcdf_engine_order":
+                    expected = f"Expected a subset of {sorted(_NETCDF_ENGINES)}"
                 else:
                     expected = ""
                 raise ValueError(

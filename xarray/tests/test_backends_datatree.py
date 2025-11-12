@@ -27,7 +27,7 @@ from xarray.tests import (
 from xarray.tests.test_backends import TestNetCDF4Data as _TestNetCDF4Data
 
 if TYPE_CHECKING:
-    from xarray.core.datatree_io import T_DataTreeNetcdfEngine
+    from xarray.backends.writers import T_DataTreeNetcdfEngine
 
 with contextlib.suppress(ImportError):
     import netCDF4 as nc4
@@ -203,8 +203,8 @@ def unaligned_datatree_zarr_factory(
     yield _unaligned_datatree_zarr
 
 
-class DatatreeIOBase:
-    engine: T_DataTreeNetcdfEngine | None = None
+class NetCDFIOBase:
+    engine: T_DataTreeNetcdfEngine | None
 
     def test_to_netcdf(self, tmpdir, simple_datatree):
         filepath = tmpdir / "test.nc"
@@ -262,7 +262,7 @@ class DatatreeIOBase:
             assert roundtrip_dt["/set2/a"].encoding["complevel"] == comp["complevel"]
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
-            with pytest.raises(ValueError, match="unexpected encoding group.*"):
+            with pytest.raises(ValueError, match=r"unexpected encoding group.*"):
                 original_dt.to_netcdf(filepath, encoding=enc, engine=self.engine)
 
     def test_write_subgroup(self, tmpdir) -> None:
@@ -327,10 +327,6 @@ class DatatreeIOBase:
         original_dt = simple_datatree
         original_dt.to_netcdf(filepath)  # should not raise
 
-
-class NetCDFIOBase(DatatreeIOBase):
-    engine: T_DataTreeNetcdfEngine | None
-
     @requires_dask
     def test_open_datatree_chunks(self, tmpdir) -> None:
         filepath = tmpdir / "test.nc"
@@ -354,13 +350,13 @@ class NetCDFIOBase(DatatreeIOBase):
 
             assert_chunks_equal(tree, original_tree, enforce_dask=True)
 
-    # def test_roundtrip_via_memoryview(self, simple_datatree) -> None:
-    #     original_dt = simple_datatree
-    #     memview = original_dt.to_netcdf(engine=self.engine)
-    #     roundtrip_dt = load_datatree(memview, engine=self.engine)
-    #     assert_equal(original_dt, roundtrip_dt)
+    def test_roundtrip_via_memoryview(self, simple_datatree) -> None:
+        original_dt = simple_datatree
+        memview = original_dt.to_netcdf(engine=self.engine)
+        roundtrip_dt = load_datatree(memview, engine=self.engine)
+        assert_equal(original_dt, roundtrip_dt)
 
-    def test_to_bytes_compute_false(self, simple_datatree) -> None:
+    def test_to_memoryview_compute_false(self, simple_datatree) -> None:
         original_dt = simple_datatree
         with pytest.raises(
             NotImplementedError,
@@ -384,6 +380,16 @@ class NetCDFIOBase(DatatreeIOBase):
 @requires_h5netcdf_or_netCDF4
 class TestGenericNetCDFIO(NetCDFIOBase):
     engine: T_DataTreeNetcdfEngine | None = None
+
+    @requires_netCDF4
+    def test_open_netcdf3(self, tmpdir) -> None:
+        filepath = tmpdir / "test.nc"
+        ds = xr.Dataset({"foo": 1})
+        ds.to_netcdf(filepath, format="NETCDF3_CLASSIC")
+
+        expected_dt = DataTree(ds)
+        roundtrip_dt = load_datatree(filepath)  # must use netCDF4 engine
+        assert_equal(expected_dt, roundtrip_dt)
 
     @requires_h5netcdf
     @requires_netCDF4
@@ -563,6 +569,8 @@ class TestH5NetCDFDatatreeIO(NetCDFIOBase):
 class TestPyDAPDatatreeIO:
     """Test PyDAP backend for DataTree."""
 
+    pytestmark = pytest.mark.xfail(reason="test.opendap.org reports a 404 error")
+
     engine: T_DataTreeNetcdfEngine | None = "pydap"
     # you can check these by adding a .dmr to urls, and replacing dap4 with http
     unaligned_datatree_url = (
@@ -693,7 +701,7 @@ class TestZarrDatatreeIO:
             )
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
-            with pytest.raises(ValueError, match="unexpected encoding group.*"):
+            with pytest.raises(ValueError, match=r"unexpected encoding group.*"):
                 original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
 
     @pytest.mark.xfail(reason="upstream zarr read-only changes have broken this test")
@@ -1083,3 +1091,27 @@ class TestZarrDatatreeIO:
         expected_child.name = None
         with open_datatree(filepath, group="child", engine="zarr") as roundtrip_child:
             assert_identical(expected_child, roundtrip_child)
+
+    @pytest.mark.xfail(
+        ON_WINDOWS,
+        reason="Permission errors from Zarr: https://github.com/pydata/xarray/pull/10793",
+    )
+    @pytest.mark.filterwarnings(
+        "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
+    )
+    def test_zarr_engine_recognised(self, tmpdir, zarr_format) -> None:
+        """Test that xarray can guess the zarr backend when the engine is not specified"""
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2, 3]}),
+                "/child": xr.Dataset({"foo": ("x", [4, 5, 6])}),
+            }
+        )
+
+        filepath = str(tmpdir / "test.zarr")
+        original_dt.to_zarr(
+            filepath, write_inherited_coords=True, zarr_format=zarr_format
+        )
+
+        with open_datatree(filepath) as roundtrip_dt:
+            assert_identical(original_dt, roundtrip_dt)
