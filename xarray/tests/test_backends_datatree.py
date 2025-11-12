@@ -262,7 +262,7 @@ class NetCDFIOBase:
             assert roundtrip_dt["/set2/a"].encoding["complevel"] == comp["complevel"]
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
-            with pytest.raises(ValueError, match="unexpected encoding group.*"):
+            with pytest.raises(ValueError, match=r"unexpected encoding group.*"):
                 original_dt.to_netcdf(filepath, encoding=enc, engine=self.engine)
 
     def test_write_subgroup(self, tmpdir) -> None:
@@ -569,6 +569,8 @@ class TestH5NetCDFDatatreeIO(NetCDFIOBase):
 class TestPyDAPDatatreeIO:
     """Test PyDAP backend for DataTree."""
 
+    pytestmark = pytest.mark.xfail(reason="test.opendap.org reports a 404 error")
+
     engine: T_DataTreeNetcdfEngine | None = "pydap"
     # you can check these by adding a .dmr to urls, and replacing dap4 with http
     unaligned_datatree_url = (
@@ -699,7 +701,7 @@ class TestZarrDatatreeIO:
             )
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
-            with pytest.raises(ValueError, match="unexpected encoding group.*"):
+            with pytest.raises(ValueError, match=r"unexpected encoding group.*"):
                 original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
 
     @pytest.mark.xfail(reason="upstream zarr read-only changes have broken this test")
@@ -1089,3 +1091,27 @@ class TestZarrDatatreeIO:
         expected_child.name = None
         with open_datatree(filepath, group="child", engine="zarr") as roundtrip_child:
             assert_identical(expected_child, roundtrip_child)
+
+    @pytest.mark.xfail(
+        ON_WINDOWS,
+        reason="Permission errors from Zarr: https://github.com/pydata/xarray/pull/10793",
+    )
+    @pytest.mark.filterwarnings(
+        "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
+    )
+    def test_zarr_engine_recognised(self, tmpdir, zarr_format) -> None:
+        """Test that xarray can guess the zarr backend when the engine is not specified"""
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2, 3]}),
+                "/child": xr.Dataset({"foo": ("x", [4, 5, 6])}),
+            }
+        )
+
+        filepath = str(tmpdir / "test.zarr")
+        original_dt.to_zarr(
+            filepath, write_inherited_coords=True, zarr_format=zarr_format
+        )
+
+        with open_datatree(filepath) as roundtrip_dt:
+            assert_identical(original_dt, roundtrip_dt)

@@ -155,7 +155,7 @@ def _name(iris_obj, default="unknown"):
 
 
 def from_iris(cube):
-    """Convert a Iris cube into an DataArray"""
+    """Convert a Iris cube into a DataArray"""
     import iris.exceptions
 
     name = _name(cube)

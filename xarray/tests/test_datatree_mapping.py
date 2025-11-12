@@ -206,7 +206,7 @@ class TestMapOverSubTree:
         with pytest.raises(
             ValueError,
             match=re.escape(
-                r"Raised whilst mapping function over node with path 'set1'"
+                r"Raised whilst mapping function over node(s) with path 'set1'"
             ),
         ):
             dt.map_over_datasets(fail_on_specific_node)
