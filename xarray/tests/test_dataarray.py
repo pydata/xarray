@@ -1705,7 +1705,7 @@ class TestDataArray:
     def test_assign_coords_uses_base_variable_class(self) -> None:
         a = DataArray([0, 1, 2], dims=["x"], coords={"x": [0, 1, 2]})
         a = a.assign_coords(foo=a.x)
-        assert not isinstance(a["foo"].variable, IndexVariable)
+        _assert_internal_invariants(a, check_default_indexes=True)
 
     def test_coords_alignment(self) -> None:
         lhs = DataArray([1, 2, 3], [("x", [0, 1, 2])])
