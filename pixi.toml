@@ -273,7 +273,6 @@ pandas = "*"
 pyarrow = "*"
 
 distributed = { git = "https://github.com/dask/distributed" }
-dask-expr = { git = "https://github.com/dask/dask-expr" }
 zarr = { git = "https://github.com/zarr-developers/zarr-python" }
 numcodecs = { git = "https://github.com/zarr-developers/numcodecs" }
 # cftime = { git = "https://github.com/Unidata/cftime"} # TODO: Enable once this is removed as a test dep
