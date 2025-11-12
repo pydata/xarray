@@ -21,8 +21,8 @@ New Features
   By `David Huard <https://github.com/huard>`_.
 - Support comparing :py:class:`DataTree` objects with :py:func:`testing.assert_allclose` (:pull:`10887`).
   By `Justus Magin <https://github.com/keewis>`_.
-- Improved ``pydap`` backend behavior and performance when using :py:func:`open_dataset`, :py:func:`open_datatree` when downloading dap4 (opendap) data (:issue:`10628`, :pull:`10629`).
-  ``batch=True|False`` is a new  ``backend_kwarg`` that further enables downloading multiple arrays in single response. In addition ``checksums`` is added as optional argument to be passed to ``pydap`` backend.
+- Improved ``pydap`` backend behavior and performance when using :py:func:`open_dataset`, :py:func:`open_datatree` when downloading dap4 (opendap) dimensions data (:issue:`10628`, :pull:`10629`).
+  In addition ``checksums=True|False`` is added as optional argument to be passed to ``pydap`` backend.
   By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
 
 Breaking Changes
