@@ -4171,6 +4171,10 @@ class TestDataset:
         expected3 = ds.unstack("index").fillna({"var": -1, "other_var": 1}).astype(int)
         assert_equal(actual3, expected3)
 
+        actual4 = ds.unstack("index", fill_value={"var": -1})
+        expected4 = ds.unstack("index").fillna({"var": -1, "other_var": np.nan})
+        assert_equal(actual4, expected4)
+
     @requires_sparse
     def test_unstack_sparse(self) -> None:
         ds = xr.Dataset(
