@@ -75,7 +75,7 @@ def result_type(*arrays_and_dtypes, xp) -> np.dtype:
             not is_numpy and not is_builtin_type(t)
             for is_numpy, t in zip(is_np_dtype, arrays_and_dtypes, strict=True)
         ):
-            return np.object_
+            return np.dtype("object")
         return xp.result_type(*arrays_and_dtypes)
     else:
         return _future_array_api_result_type(*arrays_and_dtypes, xp=xp)
