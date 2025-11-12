@@ -186,6 +186,14 @@ documentation locally before pushing your changes.
 Creating a Python Environment
 -----------------------------
 
+.. attention::
+
+   Xarray recently switched development workflows to
+   use `Pixi <https://pixi.sh/latest/>`_ instead of
+   Conda (PR https://github.com/pydata/xarray/pull/10888 ).
+   If there are any edits to the contributing instructions
+   that would improve clarity, please open a PR!
+
 Xarray uses `Pixi <https://pixi.sh/latest/>`_ to manage development environments.
 Before starting any development, you'll need to create an isolated xarray
 development environment:
