@@ -525,14 +525,14 @@ def cftime_datetimes(draw: st.DrawFn):
     calendar = draw(st.sampled_from(calendars))
     date_type = date_types[calendar]
 
-    daysinmonth = date_type(99999, 12, 1).daysinmonth
-    min_value = date_type(-99999, 1, 1)
-    max_value = date_type(99999, 12, daysinmonth, 23, 59, 59, 999999)
-
-    unit_microsecond = datetime.timedelta(microseconds=1)
-    timespan_microseconds = (max_value - min_value) // unit_microsecond
-    microseconds_offset = draw(st.integers(0, timespan_microseconds))
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message=".*date/calendar/year zero.*")
+        daysinmonth = date_type(99999, 12, 1).daysinmonth
+        min_value = date_type(-99999, 1, 1)
+        max_value = date_type(99999, 12, daysinmonth, 23, 59, 59, 999999)
+
+        unit_microsecond = datetime.timedelta(microseconds=1)
+        timespan_microseconds = (max_value - min_value) // unit_microsecond
+        microseconds_offset = draw(st.integers(0, timespan_microseconds))
 
         return min_value + datetime.timedelta(microseconds=microseconds_offset)
