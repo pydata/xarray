@@ -1874,14 +1874,16 @@ class TestDataArray:
         [
             pytest.param(pd.Categorical(["a", "b", "c"]), id="categorical"),
         ]
-        + [
-            pytest.param(
-                pd.array([1, 2, 3], dtype="int64[pyarrow]"),
-                id="int64[pyarrow]",
-            )
-        ]
-        if has_pyarrow
-        else [],
+        + (
+            [
+                pytest.param(
+                    pd.array([1, 2, 3], dtype="int64[pyarrow]"),
+                    id="int64[pyarrow]",
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
     )
     def test_reindex_extension_array(self, extension_array) -> None:
         srs = pd.Series(index=["e", "f", "g"], data=extension_array)
@@ -1902,15 +1904,17 @@ class TestDataArray:
         [
             pytest.param("a", pd.Categorical([pd.NA, "a", "b"]), id="categorical"),
         ]
-        + [
-            pytest.param(
-                0,
-                pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
-                id="int64[pyarrow]",
-            )
-        ]
-        if has_pyarrow
-        else [],
+        + (
+            [
+                pytest.param(
+                    0,
+                    pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
+                    id="int64[pyarrow]",
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
     )
     def test_fillna_extension_array(self, fill_value, extension_array) -> None:
         srs: pd.Series = pd.Series(index=np.array([1, 2, 3]), data=extension_array)
@@ -1934,13 +1938,15 @@ class TestDataArray:
         [
             pytest.param(pd.Categorical([pd.NA, "a", "b"]), id="categorical"),
         ]
-        + [
-            pytest.param(
-                pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"), id="int64[pyarrow]"
-            )
-        ]
-        if has_pyarrow
-        else [],
+        + (
+            [
+                pytest.param(
+                    pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"), id="int64[pyarrow]"
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
     )
     def test_dropna_extension_array(self, extension_array) -> None:
         srs: pd.Series = pd.Series(index=np.array([1, 2, 3]), data=extension_array)

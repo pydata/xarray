@@ -1921,13 +1921,15 @@ class TestDataset:
                 id="categorical",
             ),
         ]
-        + [
-            pytest.param(
-                pd.array([1, 1, None], dtype="int64[pyarrow]"), id="int64[pyarrow]"
-            )
-        ]
-        if has_pyarrow
-        else [],
+        + (
+            [
+                pytest.param(
+                    pd.array([1, 1, None], dtype="int64[pyarrow]"), id="int64[pyarrow]"
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
     )
     def test_extensionarray_negative_reindex(self, fill_value, extension_array) -> None:
         ds = xr.Dataset(
@@ -5671,15 +5673,17 @@ class TestDataset:
         [
             pytest.param("a", pd.Categorical([pd.NA, "a", "b"]), id="category"),
         ]
-        + [
-            pytest.param(
-                0,
-                pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
-                id="int64[pyarrow]",
-            )
-        ]
-        if has_pyarrow
-        else [],
+        + (
+            [
+                pytest.param(
+                    0,
+                    pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
+                    id="int64[pyarrow]",
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
     )
     def test_fillna_extension_array(self, fill_value, extension_array) -> None:
         srs = pd.DataFrame({"data": extension_array}, index=np.array([1, 2, 3]))
@@ -5696,13 +5700,15 @@ class TestDataset:
         [
             pytest.param(pd.Categorical([pd.NA, "a", "b"]), id="category"),
         ]
-        + [
-            pytest.param(
-                pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"), id="int64[pyarrow]"
-            )
-        ]
-        if has_pyarrow
-        else [],
+        + (
+            [
+                pytest.param(
+                    pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"), id="int64[pyarrow]"
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
     )
     def test_dropna_extension_array(self, extension_array) -> None:
         srs = pd.DataFrame({"data": extension_array}, index=np.array([1, 2, 3]))
