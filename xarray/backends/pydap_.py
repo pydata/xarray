@@ -36,10 +36,8 @@ if TYPE_CHECKING:
 
 
 class PydapArrayWrapper(BackendArray):
-    def __init__(self, array, batch=None, checksums=True):
+    def __init__(self, array, checksums=True):
         self.array = array
-        self._batch = batch
-        self._checksums = checksums
 
     @property
     def shape(self) -> tuple[int, ...]:
@@ -55,19 +53,11 @@ class PydapArrayWrapper(BackendArray):
         )
 
     def _getitem(self, key):
-        if self._batch and hasattr(self.array, "dataset"):
-            # this are both True only for pydap>3.5.5
-            from pydap.client import data_check, get_batch_data
-
-            dataset = self.array.dataset
-            get_batch_data(self.array, checksums=self._checksums, key=key)
-            result = data_check(np.asarray(dataset[self.array.id].data), key)
-        else:
-            result = robust_getitem(self.array, key, catch=ValueError)
-            result = np.asarray(result.data)
-            axis = tuple(n for n, k in enumerate(key) if isinstance(k, integer_types))
-            if result.ndim + len(axis) != self.array.ndim and axis:
-                result = np.squeeze(result, axis)
+        result = robust_getitem(self.array, key, catch=ValueError)
+        result = np.asarray(result.data)
+        axis = tuple(n for n, k in enumerate(key) if isinstance(k, integer_types))
+        if result.ndim + len(axis) != self.array.ndim and axis:
+            result = np.squeeze(result, axis)
         return result
 
 
@@ -95,7 +85,6 @@ class PydapDataStore(AbstractDataStore):
         dataset,
         group=None,
         session=None,
-        batch=None,
         protocol=None,
         checksums=True,
     ):
@@ -108,7 +97,6 @@ class PydapDataStore(AbstractDataStore):
         """
         self.dataset = dataset
         self.group = group
-        self._batch = batch
         self._protocol = protocol
         self._checksums = checksums  # true by default
 
@@ -123,7 +111,6 @@ class PydapDataStore(AbstractDataStore):
         timeout=None,
         verify=None,
         user_charset=None,
-        batch=None,
         checksums=True,
     ):
         from pydap.client import open_url
@@ -162,8 +149,6 @@ class PydapDataStore(AbstractDataStore):
             args["protocol"] = "dap2"
         elif url.startswith("dap4"):
             args["protocol"] = "dap4"
-        if batch:
-            args["batch"] = batch
         return cls(**args)
 
     def open_store_variable(self, var):
@@ -180,19 +165,13 @@ class PydapDataStore(AbstractDataStore):
             and var.name in dimensions
             and hasattr(var, "dataset")  # only True for pydap>3.5.5
         ):
-            if not var.dataset._batch_mode:
-                # for dap4, always batch all dimensions at once
-                var.dataset.enable_batch_mode()
+            var.dataset.enable_batch_mode()
             data_array = self._get_data_array(var)
             data = indexing.LazilyIndexedArray(data_array)
-            if not self._batch and var.dataset._batch_mode:
-                # if `batch=False``, restore it for all other variables
-                var.dataset.disable_batch_mode()
+            var.dataset.disable_batch_mode()
         else:
             # all non-dimension variables
-            data = indexing.LazilyIndexedArray(
-                PydapArrayWrapper(var, self._batch, self._checksums)
-            )
+            data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
 
         return Variable(dimensions, data, var.attributes)
 
@@ -311,7 +290,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-        batch=None,
         checksums=True,
     ) -> Dataset:
         store = PydapDataStore.open(
@@ -323,7 +301,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             timeout=timeout,
             verify=verify,
             user_charset=user_charset,
-            batch=batch,
             checksums=checksums,
         )
         store_entrypoint = StoreBackendEntrypoint()
@@ -357,7 +334,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-        batch=None,
         checksums=True,
     ) -> DataTree:
         groups_dict = self.open_groups_as_dict(
@@ -375,7 +351,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             timeout=timeout,
             verify=application,
             user_charset=user_charset,
-            batch=batch,
             checksums=checksums,
         )
 
@@ -398,7 +373,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-        batch=None,
         checksums=True,
     ) -> dict[str, Dataset]:
         from xarray.core.treenode import NodePath
@@ -411,7 +385,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             timeout=timeout,
             verify=verify,
             user_charset=user_charset,
-            batch=batch,
             checksums=checksums,
         )
 
