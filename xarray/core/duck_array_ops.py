@@ -23,7 +23,6 @@ from numpy import (
     take,
     unravel_index,  # noqa: F401
 )
-from pandas.api.types import is_extension_array_dtype
 
 from xarray.compat import dask_array_compat, dask_array_ops
 from xarray.compat.array_api_compat import get_array_namespace
@@ -31,10 +30,14 @@ from xarray.core import dtypes, nputils
 from xarray.core.extension_array import (
     PandasExtensionArray,
     as_extension_array,
-    is_scalar,
 )
 from xarray.core.options import OPTIONS
-from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
+from xarray.core.utils import (
+    is_allowed_extension_array_dtype,
+    is_duck_array,
+    is_duck_dask_array,
+    module_available,
+)
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import array_type, is_chunked_array
 
@@ -259,7 +262,7 @@ def astype(data, dtype, *, xp=None, **kwargs):
 def asarray(data, xp=np, dtype=None):
     if is_duck_array(data):
         converted = data
-    elif is_extension_array_dtype(dtype):
+    elif is_allowed_extension_array_dtype(dtype):
         # data may or may not be an ExtensionArray, so we can't rely on
         # np.asarray to call our NEP-18 handler; gotta hook it ourselves
         converted = PandasExtensionArray(as_extension_array(data, dtype))
@@ -403,10 +406,7 @@ def where(condition, x, y):
 
     promoted_x, promoted_y = as_shared_dtype([x, y], xp=xp)
 
-    # pd.where won't broadcast 0-dim arrays across a series; scalar y's must be preserved
-    maybe_promoted_y = y if is_extension_array_dtype(x) and is_scalar(y) else promoted_y
-
-    return xp.where(condition, promoted_x, maybe_promoted_y)
+    return xp.where(condition, promoted_x, promoted_y)
 
 
 def where_method(data, cond, other=dtypes.NA):

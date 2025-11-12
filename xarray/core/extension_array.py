@@ -9,11 +9,14 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 from pandas.api.extensions import ExtensionArray, ExtensionDtype
-from pandas.api.types import is_extension_array_dtype
 from pandas.api.types import is_scalar as pd_is_scalar
 
 from xarray.core.types import DTypeLikeSave, T_ExtensionArray
-from xarray.core.utils import NDArrayMixin, is_allowed_extension_array
+from xarray.core.utils import (
+    NDArrayMixin,
+    is_allowed_extension_array,
+    is_allowed_extension_array_dtype,
+)
 
 HANDLED_EXTENSION_ARRAY_FUNCTIONS: dict[Callable, Callable] = {}
 
@@ -68,7 +71,8 @@ def __extension_duck_array__astype(
 ) -> ExtensionArray:
     if (
         not (
-            is_extension_array_dtype(array_or_scalar) or is_extension_array_dtype(dtype)
+            is_allowed_extension_array(array_or_scalar)
+            or is_allowed_extension_array_dtype(dtype)
         )
         or casting != "unsafe"
         or not subok
@@ -84,7 +88,7 @@ def __extension_duck_array__asarray(
     array_or_scalar: np.typing.ArrayLike | T_ExtensionArray,
     dtype: DTypeLikeSave | None = None,
 ) -> ExtensionArray:
-    if not is_extension_array_dtype(dtype):
+    if not is_allowed_extension_array(dtype):
         return NotImplemented
 
     return as_extension_array(array_or_scalar, dtype)
@@ -112,7 +116,7 @@ def __extension_duck_array__result_type(
     extension_arrays_and_dtypes: list[ExtensionDtype | ExtensionArray] = [
         cast(ExtensionDtype | ExtensionArray, x)
         for x in arrays_and_dtypes
-        if is_extension_array_dtype(x)
+        if is_allowed_extension_array(x) or is_allowed_extension_array_dtype(x)
     ]
     if not extension_arrays_and_dtypes:
         return NotImplemented
@@ -130,7 +134,7 @@ def __extension_duck_array__result_type(
     other_stuff = [
         x
         for x in arrays_and_dtypes
-        if not is_extension_array_dtype(x) and not is_scalar(x)
+        if not is_allowed_extension_array_dtype(x) and not is_scalar(x)
     ]
     # We implement one special case: when possible, preserve Categoricals (avoid promoting
     # to object) by merging the categories of all given Categoricals + scalars + NA.
@@ -185,6 +189,9 @@ def __extension_duck_array__where(
     x: T_ExtensionArray,
     y: T_ExtensionArray | np.typing.ArrayLike,
 ) -> T_ExtensionArray:
+    # pd.where won't broadcast 0-dim arrays across a scalar-like series; scalar y's must be preserved
+    if len(y.shape) == 1 and y.shape[0] == 1:
+        y = y[0]
     return cast(T_ExtensionArray, pd.Series(x).where(condition, y).array)  # type: ignore[arg-type]
 
 
