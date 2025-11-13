@@ -6,9 +6,9 @@
 What's New
 ==========
 
-.. _whats-new.2025.10.2:
+.. _whats-new.2025.11.0:
 
-v2025.10.2 (unreleased)
+v2025.11.0 (unreleased)
 -----------------------
 
 New Features
