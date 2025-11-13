@@ -100,7 +100,7 @@ jobs:
         id: status
         run: |
           pixi run -e ${{ env.PIXI_ENV }} python -m pytest --hypothesis-show-statistics --run-slow-hypothesis properties/*.py \
-            --report-log output-${{ matrix.python-version }}-log.jsonl
+            --report-log output-${{ env.PIXI_ENV }}-log.jsonl
 
       # explicitly save the cache so it gets updated, also do this even if it fails.
       - name: Save cached hypothesis directory
@@ -119,6 +119,6 @@ jobs:
           && github.repository_owner == 'pydata'
         uses: scientific-python/issue-from-pytest-log-action@v1
         with:
-          log-path: output-${{ matrix.python-version }}-log.jsonl
+          log-path: output-${{ env.PIXI_ENV }}-log.jsonl
           issue-title: "Nightly Hypothesis tests failed"
           issue-label: "topic-hypothesis"
