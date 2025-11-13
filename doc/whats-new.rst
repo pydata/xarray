@@ -143,10 +143,6 @@ Performance
 Documentation
 ~~~~~~~~~~~~~
 
-
-Internal Changes
-~~~~~~~~~~~~~~~~
-
 .. _whats-new.2025.10.1:
 
 v2025.10.1 (October 7, 2025)
