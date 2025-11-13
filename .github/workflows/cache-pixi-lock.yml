@@ -12,7 +12,7 @@ on:
 
 jobs:
   cache-pixi-lock:
-    name: Generate output
+    name: Pixi lock
     runs-on: ubuntu-latest
     outputs:
       cache-id: ${{ steps.restore.outputs.cache-primary-key }}
