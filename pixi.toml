@@ -271,6 +271,7 @@ scipy = "*"
 matplotlib = "*"
 pandas = "*"
 pyarrow = "*"
+netcdf4 = "*"
 
 distributed = { git = "https://github.com/dask/distributed" }
 zarr = { git = "https://github.com/zarr-developers/zarr-python" }
