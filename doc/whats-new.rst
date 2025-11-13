@@ -21,6 +21,8 @@ New Features
   By `David Huard <https://github.com/huard>`_.
 - Support comparing :py:class:`DataTree` objects with :py:func:`testing.assert_allclose` (:pull:`10887`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Add support for ``chunks="auto"`` for cftime datasets (:issue:`9834`, :pull:`10527`).
+  By `Charles Turner <https://github.com/charles-turner-1>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
