@@ -181,7 +181,6 @@ Bug fixes
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 
-
 .. _whats-new.2025.09.1:
 
 v2025.09.1 (September 29, 2025)
