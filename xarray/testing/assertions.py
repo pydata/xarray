@@ -407,7 +407,7 @@ def _assert_variable_invariants(
     name: Hashable = None,
     check_default_indexes: bool = True,
     is_index: bool = False,
-):
+) -> None:
     if name is None:
         name_or_empty: tuple = ()
     else:
