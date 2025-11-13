@@ -130,6 +130,10 @@ Bug Fixes
   By `Jonas L. Bertelsen <https://github.com/jonaslb>`_.
 - Fix ``equivalent`` for numpy scalar nan comparison (:issue:`10833`, :pull:`10838`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Support non-``DataArray`` outputs in :py:meth:`Dataset.map` (:issue:`10835`, :pull:`10839`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Support ``drop_sel`` on ``MultiIndex`` objects (:issue:`10862`, :pull:`10863`).
+  By `Aled Owen <https://github.com/owena11>`_.
 
 Performance
 ~~~~~~~~~~~
