@@ -55,7 +55,6 @@ jobs:
 
     env:
       PIXI_ENV: test-all-deps-py313
-      PYTHON_VERSION: "3.12"
 
     steps:
       - uses: actions/checkout@v5
