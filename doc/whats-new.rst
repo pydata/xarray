@@ -126,6 +126,8 @@ Bug Fixes
 - Fix error handling issue in ``decode_cf_variables`` when decoding fails - the exception is now re-raised
   correctly, with a note added about the variable name that caused the error (:issue:`10873`, :pull:`10886`).
   By `Jonas L. Bertelsen <https://github.com/jonaslb>`_.
+- Fix ``equivalent`` for numpy scalar nan comparison (:issue:`10833`, :pull:`10838`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Performance
 ~~~~~~~~~~~
