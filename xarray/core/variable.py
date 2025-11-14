@@ -2280,6 +2280,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 )
 
         variable = self
+        pad_widths = {}
         for d, window in windows.items():
             # trim or pad the object
             size = variable.shape[self._get_axis_num(d)]
@@ -2300,16 +2301,16 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 pad = window * n - size
                 if pad < 0:
                     pad += window
-                if side[d] == "left":
-                    pad_width = {d: (0, pad)}
-                else:
-                    pad_width = {d: (pad, 0)}
-                variable = variable.pad(pad_width, mode="constant")
+                elif pad == 0:
+                    continue
+                pad_widths[d] = (0, pad) if side[d] == "left" else (pad, 0)
             else:
                 raise TypeError(
                     f"{boundary[d]} is invalid for boundary. Valid option is 'exact', "
                     "'trim' and 'pad'"
                 )
+        if pad_widths:
+            variable = variable.pad(pad_widths, mode="constant")
 
         shape = []
         axes = []
