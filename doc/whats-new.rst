@@ -52,6 +52,8 @@ Performance
 - Speedup and reduce memory usage of :py:func:`concat`. Magnitude of improvement scales
   with size of the concatenation dimension. By `Deepak Cherian <https://github.com/dcherian>`_.
   :issue:`10864` :pull:`10866`.
+- Speedup and reduce memory usage when coarsening along multiple dimensions.
+  By `Deepak Cherian <https://github.com/dcherian>`_. :pull:`10921`.
 
 Documentation
 ~~~~~~~~~~~~~
