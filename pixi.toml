@@ -104,7 +104,7 @@ doc = { features = [
   "accel",
   "viz",
   "extras",
-], solve-group = "doc" }
+] }
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
 
 [package]
