@@ -44,6 +44,9 @@ Bug Fixes
 - Fix error handling issue in ``decode_cf_variables`` when decoding fails - the exception is now re-raised
   correctly, with a note added about the variable name that caused the error (:issue:`10873`, :pull:`10886`).
   By `Jonas L. Bertelsen <https://github.com/jonaslb>`_
+- When assigning an indexed coordinate to a data variable or coordinate, coerce it from
+  ``IndexVariable`` to ``Variable`` (:issue:`9859`, :issue:`10829`, :pull:`10909`)
+  By `Julia Signell <https://github.com/jsignell>`_
 
 Performance
 ~~~~~~~~~~~
