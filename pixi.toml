@@ -1,7 +1,7 @@
 [workspace]
 preview = ["pixi-build"]
 channels = ["conda-forge", "nodefaults"]
-platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
+platforms = ["win-64", "linux-64", "osx-arm64"]
 
 [tasks.test-all]
 depends-on = [
