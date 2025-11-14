@@ -314,11 +314,51 @@ class TestGetItem:
         with pytest.raises(KeyError):
             results["pressure"]
 
-    @pytest.mark.xfail(reason="Should be deprecated in favour of .subset")
-    def test_getitem_multiple_data_variables(self) -> None:
-        data = xr.Dataset({"temp": [0, 50], "p": [5, 8, 7]})
-        results = DataTree(name="results", dataset=data)
-        assert_identical(results[["temp", "p"]], data[["temp", "p"]])  # type: ignore[index]
+    def test_getitem_multiple_variables(self) -> None:
+        data = DataTree.from_dict({"x": 0, "y": 1})
+
+        expected = DataTree.from_dict({"x": 0})
+        actual = data[["x"]]
+        assert_identical(actual, expected)
+
+        expected = data
+        actual = data[["x", "y"]]
+        assert_identical(actual, expected)
+
+    def test_getitem_nested(self) -> None:
+        data = DataTree.from_dict({"a/b/c": 0, "a/d": 1, "e": 2})
+
+        expected = DataTree.from_dict({"a/b/c": 0, "a/d": 1})
+        actual = data[["a"]]
+        assert_identical(actual, expected)
+        actual = data[["a/b", "a/d"]]
+        assert_identical(actual, expected)
+
+        expected = DataTree.from_dict({"a/d": 1, "e": 2})
+        actual = data[["a/d", "e"]]
+        assert_identical(actual, expected)
+
+        with pytest.raises(KeyError, match="Already a node object at path /a/b"):
+            data[["a", "a/b"]]
+
+        with pytest.raises(KeyError, match="'Could not find node at /not_found'"):
+            data[["not_found"]]
+
+    def test_getitem_on_child(self) -> None:
+        data = DataTree.from_dict({"a/b/c": 0, "a/d": 1, "e": 2})
+        child = data.children["a"]
+
+        expected = DataTree.from_dict({"b/c": 0, "d": 1}, name="a")
+        actual = child[["b", "d"]]
+        assert_identical(actual, expected)
+
+        actual = child[["."]]
+        assert_identical(actual, expected)
+
+        with pytest.raises(
+            IndexError, match=re.escape("cannot subset items from parent nodes: ../e")
+        ):
+            child[["../e"]]
 
     @pytest.mark.xfail(
         reason="Indexing needs to return whole tree (GH https://github.com/xarray-contrib/datatree/issues/77)"
@@ -326,7 +366,7 @@ class TestGetItem:
     def test_getitem_dict_like_selection_access_to_dataset(self) -> None:
         data = xr.Dataset({"temp": [0, 50]})
         results = DataTree(name="results", dataset=data)
-        assert_identical(results[{"temp": 1}], data[{"temp": 1}])  # type: ignore[index]
+        assert_identical(results[{"temp": 1}], data[{"temp": 1}])  # type: ignore[call-overload]
 
 
 class TestUpdate:

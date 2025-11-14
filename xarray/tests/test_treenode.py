@@ -7,11 +7,82 @@ import pytest
 from xarray.core.treenode import (
     InvalidTreeError,
     NamedNode,
-    NodePath,
     TreeNode,
+    TreePath,
     group_subtrees,
     zip_subtrees,
 )
+
+
+class TestTreePath:
+    def test_treepath_simple(self):
+        path = TreePath("/Mary")
+        assert path.root == "/"
+        assert path.stem == "Mary"
+
+    @pytest.mark.parametrize(
+        "path_str, expected",
+        [
+            # Test cases with '.', '..', and simple paths
+            ("/", "/"),
+            ("/.", "/"),
+            (".", "."),
+            ("", "."),
+            ("..", ".."),
+            ("../", ".."),
+            ("foo", "foo"),
+            ("/foo", "/foo"),
+            ("foo/", "foo"),
+            ("/foo/", "/foo"),
+            # Test cases with '.'
+            ("/foo/.", "/foo"),
+            ("foo/./bar", "foo/bar"),
+            ("./foo/bar", "foo/bar"),
+            ("foo/bar/.", "foo/bar"),
+            ("/./", "/"),
+            ("./", "."),
+            # Test cases with '..'
+            ("foo/../bar", "bar"),
+            ("/foo/../bar", "/bar"),
+            ("/foo/bar/../..", "/"),
+            ("../bar", "../bar"),
+            ("/a/b/../c/./..", "/a"),
+            ("a/b/../../c", "c"),
+            ("/a/b/../../c", "/c"),
+            ("a/../b", "b"),
+            ("../../a", "../../a"),
+            ("a/b/../c/../d", "a/d"),
+            # Other cases
+            ("foo//bar", "foo/bar"),
+            ("/foo/../...", "/..."),
+        ],
+    )
+    def test_treepath_normalization(self, path_str, expected):
+        assert str(TreePath(path_str)) == expected
+
+    @pytest.mark.parametrize(
+        "path_str",
+        [
+            "/..",
+            "/../",
+            "/foo/../..",
+            "/foo/../../bar",
+            "/a/b/../../../c",
+        ],
+    )
+    def test_treepath_valueerror(self, path_str):
+        with pytest.raises(ValueError, match="path accesses node before root"):
+            TreePath(path_str)
+
+    def test_div(self):
+        actual = str(TreePath("/a/b") / "..")
+        expected = "/a"
+        assert expected == actual
+
+    def test_parent(self):
+        actual = str(TreePath("/a").parent)
+        expected = "/"
+        assert expected == actual
 
 
 class TestFamilyTree:
@@ -140,10 +211,10 @@ class TestFamilyTree:
 
 class TestGetNodes:
     def test_get_child(self) -> None:
-        john: TreeNode = TreeNode(
+        john = NamedNode(
             children={
-                "Mary": TreeNode(
-                    children={"Sue": TreeNode(children={"Steven": TreeNode()})}
+                "Mary": NamedNode(
+                    children={"Sue": NamedNode(children={"Steven": NamedNode()})}
                 )
             }
         )
@@ -169,9 +240,9 @@ class TestGetNodes:
         assert mary._get_item("Sue/Steven") is steven
 
     def test_get_upwards(self) -> None:
-        john: TreeNode = TreeNode(
+        john = NamedNode(
             children={
-                "Mary": TreeNode(children={"Sue": TreeNode(), "Kate": TreeNode()})
+                "Mary": NamedNode(children={"Sue": NamedNode(), "Kate": NamedNode()})
             }
         )
         mary = john.children["Mary"]
@@ -185,9 +256,7 @@ class TestGetNodes:
         assert sue._get_item("../Kate") is kate
 
     def test_get_from_root(self) -> None:
-        john: TreeNode = TreeNode(
-            children={"Mary": TreeNode(children={"Sue": TreeNode()})}
-        )
+        john = NamedNode(children={"Mary": NamedNode(children={"Sue": NamedNode()})})
         mary = john.children["Mary"]
         sue = mary.children["Sue"]
 
@@ -196,38 +265,38 @@ class TestGetNodes:
 
 class TestSetNodes:
     def test_set_child_node(self) -> None:
-        john: TreeNode = TreeNode()
-        mary: TreeNode = TreeNode()
+        john = NamedNode()
+        mary = NamedNode()
         john._set_item("Mary", mary)
 
         assert john.children["Mary"] is mary
-        assert isinstance(mary, TreeNode)
+        assert isinstance(mary, NamedNode)
         assert mary.children == {}
         assert mary.parent is john
 
     def test_child_already_exists(self) -> None:
-        mary: TreeNode = TreeNode()
-        john: TreeNode = TreeNode(children={"Mary": mary})
-        mary_2: TreeNode = TreeNode()
+        mary = NamedNode()
+        john = NamedNode(children={"Mary": mary})
+        mary_2 = NamedNode()
         with pytest.raises(KeyError):
             john._set_item("Mary", mary_2, allow_overwrite=False)
 
     def test_set_grandchild(self) -> None:
-        rose: TreeNode = TreeNode()
-        mary: TreeNode = TreeNode()
-        john: TreeNode = TreeNode()
+        rose = NamedNode()
+        mary = NamedNode()
+        john = NamedNode()
 
         john._set_item("Mary", mary)
         john._set_item("Mary/Rose", rose)
 
         assert john.children["Mary"] is mary
-        assert isinstance(mary, TreeNode)
+        assert isinstance(mary, NamedNode)
         assert "Rose" in mary.children
         assert rose.parent is mary
 
     def test_create_intermediate_child(self) -> None:
-        john: TreeNode = TreeNode()
-        rose: TreeNode = TreeNode()
+        john = NamedNode()
+        rose = NamedNode()
 
         # test intermediate children not allowed
         with pytest.raises(KeyError, match="Could not reach"):
@@ -237,25 +306,25 @@ class TestSetNodes:
         john._set_item("Mary/Rose", rose, new_nodes_along_path=True)
         assert "Mary" in john.children
         mary = john.children["Mary"]
-        assert isinstance(mary, TreeNode)
+        assert isinstance(mary, NamedNode)
         assert mary.children == {"Rose": rose}
         assert rose.parent == mary
         assert rose.parent == mary
 
     def test_overwrite_child(self) -> None:
-        john: TreeNode = TreeNode()
-        mary: TreeNode = TreeNode()
+        john = NamedNode()
+        mary = NamedNode()
         john._set_item("Mary", mary)
 
         # test overwriting not allowed
-        marys_evil_twin: TreeNode = TreeNode()
+        marys_evil_twin = NamedNode()
         with pytest.raises(KeyError, match="Already a node object"):
             john._set_item("Mary", marys_evil_twin, allow_overwrite=False)
         assert john.children["Mary"] is mary
         assert marys_evil_twin.parent is None
 
         # test overwriting allowed
-        marys_evil_twin = TreeNode()
+        marys_evil_twin = NamedNode()
         john._set_item("Mary", marys_evil_twin, allow_overwrite=True)
         assert john.children["Mary"] is marys_evil_twin
         assert marys_evil_twin.parent is john
@@ -263,8 +332,8 @@ class TestSetNodes:
 
 class TestPruning:
     def test_del_child(self) -> None:
-        john: TreeNode = TreeNode()
-        mary: TreeNode = TreeNode()
+        john = NamedNode()
+        mary = NamedNode()
         john._set_item("Mary", mary)
 
         del john["Mary"]
@@ -285,15 +354,15 @@ def create_test_tree() -> tuple[NamedNode, NamedNode]:
     # └── c
     #     └── h
     #         └── i
-    a: NamedNode = NamedNode(name="a")
-    b: NamedNode = NamedNode()
-    c: NamedNode = NamedNode()
-    d: NamedNode = NamedNode()
-    e: NamedNode = NamedNode()
-    f: NamedNode = NamedNode()
-    g: NamedNode = NamedNode()
-    h: NamedNode = NamedNode()
-    i: NamedNode = NamedNode()
+    a = NamedNode(name="a")
+    b = NamedNode()
+    c = NamedNode()
+    d = NamedNode()
+    e = NamedNode()
+    f = NamedNode()
+    g = NamedNode()
+    h = NamedNode()
+    i = NamedNode()
 
     a.children = {"b": b, "c": c}
     b.children = {"d": d, "e": e}
@@ -504,9 +573,3 @@ class TestRenderTree:
         assert len(john_nodes) == len(expected_nodes)
         for expected_node, repr_node in zip(expected_nodes, john_nodes, strict=True):
             assert expected_node == repr_node
-
-
-def test_nodepath():
-    path = NodePath("/Mary")
-    assert path.root == "/"
-    assert path.stem == "Mary"

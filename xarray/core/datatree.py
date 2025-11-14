@@ -51,7 +51,7 @@ from xarray.core.formatting_html import (
 from xarray.core.indexes import Index, Indexes
 from xarray.core.options import OPTIONS as XR_OPTS
 from xarray.core.options import _get_keep_attrs
-from xarray.core.treenode import NamedNode, NodePath, zip_subtrees
+from xarray.core.treenode import NamedNode, TreePath, zip_subtrees
 from xarray.core.types import Self
 from xarray.core.utils import (
     Default,
@@ -114,7 +114,7 @@ if TYPE_CHECKING:
 # """
 
 
-T_Path = Union[str, NodePath]
+T_Path = Union[str, TreePath]
 T = TypeVar("T")
 P = ParamSpec("P")
 
@@ -188,7 +188,7 @@ def check_alignment(
             base_ds = node_ds
 
         for child_name, child in children.items():
-            child_path = str(NodePath(path) / child_name)
+            child_path = str(TreePath(path) / child_name)
             child_ds = child.to_dataset(inherit=False)
             check_alignment(child_path, child_ds, base_ds, child.children)
 
@@ -566,7 +566,7 @@ class DataTree(
             raise KeyError(
                 f"parent {parent.name} already contains a variable named {name}"
             )
-        path = str(NodePath(parent.path) / name)
+        path = str(TreePath(parent.path) / name)
         node_ds = self.to_dataset(inherit=False)
         parent_ds = parent._to_dataset_view(rebuild_dims=False, inherit=True)
         check_alignment(path, node_ds, parent_ds, self.children)
@@ -943,17 +943,38 @@ class DataTree(
         else:
             return default
 
-    def __getitem__(self: DataTree, key: str) -> DataTree | DataArray:
+    def _copy_listed(self, keys: list[str]) -> Self:
+        """Get multiple items as a DataTree."""
+        base = TreePath(self.path)
+        nodes: dict[str, DataTree | DataArray] = {}
+        for key in keys:
+            path = base / key
+            try:
+                key2 = str(path.relative_to(base))
+            except ValueError as e:
+                raise IndexError(f"cannot subset items from parent nodes: {key}") from e
+            value = self._get_item(key)
+            nodes[key2] = value
+        return self.from_dict(nodes, name=self.name)
+
+    @overload
+    def __getitem__(self, key: list[str]) -> Self: ...
+
+    @overload
+    def __getitem__(self, key: str) -> Self | DataArray: ...
+
+    def __getitem__(self, key: str | list[str]) -> Self | DataArray:
         """
         Access child nodes, variables, or coordinates stored anywhere in this tree.
 
-        Returned object will be either a DataTree or DataArray object depending on whether the key given points to a
-        child or variable.
+        Returned object will be either a DataTree or DataArray object depending on
+        whether the key given points to a child or variable.
 
         Parameters
         ----------
         key : str
-            Name of variable / child within this node, or unix-like path to variable / child within another node.
+            Name of variable / child within this node, unix-like path to variable
+            / child within another node, or a list of names/paths.
 
         Returns
         -------
@@ -967,14 +988,9 @@ class DataTree(
         elif isinstance(key, str):
             # TODO should possibly deal with hashables in general?
             # path-like: a name of a node/variable, or path to a node/variable
-            path = NodePath(key)
-            return self._get_item(path)
-        elif utils.is_list_like(key):
-            # iterable of variable names
-            raise NotImplementedError(
-                "Selecting via tags is deprecated, and selecting multiple items should be "
-                "implemented via .subset"
-            )
+            return self._get_item(key)
+        elif isinstance(key, list):
+            return self._copy_listed(key)
         else:
             raise ValueError(f"Invalid format for key: {key}")
 
@@ -1015,7 +1031,7 @@ class DataTree(
         elif isinstance(key, str):
             # TODO should possibly deal with hashables in general?
             # path-like: a name of a node/variable, or path to a node/variable
-            path = NodePath(key)
+            path = TreePath(key)
             if isinstance(value, Dataset):
                 value = DataTree(dataset=value)
             return self._set_item(path, value, new_nodes_along_path=True)
@@ -1341,9 +1357,9 @@ class DataTree(
             data_items,
             ((k, _CoordWrapper(v)) for k, v in coords_items),
         )
-        nodes: dict[NodePath, _CoordWrapper | FromDictDataValue] = {}
+        nodes: dict[TreePath, _CoordWrapper | FromDictDataValue] = {}
         for key, value in flat_data_and_coords:
-            path = NodePath(key).absolute()
+            path = TreePath(key).absolute()
             if path in nodes:
                 raise ValueError(
                     f"multiple entries found corresponding to node {str(path)!r}"
@@ -1351,7 +1367,7 @@ class DataTree(
             nodes[path] = value
 
         # Merge nodes corresponding to DataArrays into Datasets
-        dataset_args: defaultdict[NodePath, _DatasetArgs] = defaultdict(_DatasetArgs)
+        dataset_args: defaultdict[TreePath, _DatasetArgs] = defaultdict(_DatasetArgs)
         for path in list(nodes):
             node = nodes[path]
             if node is not None and not isinstance(node, Dataset | DataTree):
@@ -1378,7 +1394,7 @@ class DataTree(
                 ) from e
 
         # Create the root node
-        root_data = nodes.pop(NodePath("/"), None)
+        root_data = nodes.pop(TreePath("/"), None)
         if isinstance(root_data, cls):
             # use cls so type-checkers understand this method returns Self
             obj = root_data.copy()
@@ -1391,7 +1407,7 @@ class DataTree(
                 f"or DataTree, got {type(root_data)}"
             )
 
-        def depth(item: tuple[NodePath, object]) -> int:
+        def depth(item: tuple[TreePath, object]) -> int:
             node_path, _ = item
             return len(node_path.parts)
 
@@ -1745,7 +1761,7 @@ class DataTree(
         matching_nodes = {
             path: node.dataset
             for path, node in self.subtree_with_keys
-            if NodePath(node.path).match(pattern)
+            if TreePath(node.path).match(pattern)
         }
         return DataTree.from_dict(matching_nodes, name=self.name)
 
