@@ -3563,7 +3563,7 @@ def test_plot1d_lines_color(plotfunc: str, x="z", color="b") -> None:
     darray = ds.A.sel(x=0, y=0)
 
     with figure_context():
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
         getattr(darray.plot, plotfunc)(x=x, color=color)
         coll = ax.collections[0]
 
@@ -3587,7 +3587,7 @@ def test_plot1d_lines_linestyle(plotfunc: str, x="z", linestyle="dashed") -> Non
     darray = ds.A.sel(x=0, y=0)
 
     with figure_context():
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
         getattr(darray.plot, plotfunc)(x=x, linestyle=linestyle)
         coll = ax.collections[0]
 
