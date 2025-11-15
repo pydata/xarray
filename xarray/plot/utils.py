@@ -1942,7 +1942,7 @@ def _line(
     linewidths = s  # Can be different in scatter, but same in line plots.
 
     # add edgecolors and linewidths to kwargs so they
-    # can be processed by normailze_kwargs
+    # can be processed by normalize_kwargs
     if edgecolors is not None:
         kwargs.update({"edgecolors": edgecolors})
     if linewidths is not None:
