@@ -38,7 +38,7 @@ python -m pip install \
     pandas \
     pyarrow
 # manually install `pint`, `donfig`, and `crc32c` to pull in new dependencies
-python -m pip install --upgrade pint donfig crc32c
+python -m pip install --upgrade pint donfig google_crc32c
 python -m pip install \
     --no-deps \
     --upgrade \

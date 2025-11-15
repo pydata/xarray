@@ -1051,7 +1051,7 @@ Then you can do::
 
     git branch -D shiny-new-feature
 
-You need to use a upper-case ``-D`` because the branch was squashed into a
+You need to use an upper-case ``-D`` because the branch was squashed into a
 single commit before merging. Be careful with this because ``git`` won't warn
 you if you accidentally delete an unmerged branch.
 
