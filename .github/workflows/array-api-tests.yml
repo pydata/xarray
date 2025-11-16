@@ -3,7 +3,7 @@ name: NamedArray._array_api
 on: [push, pull_request]
 
 env:
-  PYTEST_ARGS: "-v -rxXfE --ci --hypothesis-disable-deadline --hypothesis-verbosity=verbose --max-examples 2"
+  PYTEST_ARGS: "-v -rxXfE --ci --import-mode importlib --hypothesis-disable-deadline --hypothesis-verbosity=verbose --max-examples 2"
   API_VERSIONS: "2024.12"
 
 jobs:
