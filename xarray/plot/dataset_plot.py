@@ -918,3 +918,180 @@ def scatter(
     da = _temp_dataarray(ds, y, locals_)
 
     return da.plot.scatter(*locals_.pop("args", ()), **locals_)
+
+
+@overload
+def lines(  # type: ignore[misc,unused-ignore]  # None is hashable :(
+    ds: Dataset,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: None = None,  # no wrap -> primitive
+    col: None = None,  # no wrap -> primitive
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs: Any,
+) -> LineCollection: ...
+
+
+@overload
+def lines(
+    ds: Dataset,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    col: Hashable,  # wrap -> FacetGrid
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs: Any,
+) -> FacetGrid[DataArray]: ...
+
+
+@overload
+def lines(
+    ds: Dataset,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable,  # wrap -> FacetGrid
+    col: Hashable | None = None,
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs: Any,
+) -> FacetGrid[DataArray]: ...
+
+
+@_update_doc_to_dataset(dataarray_plot.lines)
+def lines(
+    ds: Dataset,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    col: Hashable | None = None,
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs: Any,
+) -> LineCollection | FacetGrid[DataArray]:
+    """
+    Line plot Dataset data variables against each other.
+
+    Wraps :func:`matplotlib:matplotlib.collections.LineCollection` which allows
+    efficient plotting of many lines in a similar fashion to
+    :py:func:`xarray.plot.scatter`.
+    """
+    locals_ = locals()
+    del locals_["ds"]
+    locals_.update(locals_.pop("kwargs", {}))
+    da = _temp_dataarray(ds, y, locals_)
+
+    return da.plot.lines(*locals_.pop("args", ()), **locals_)

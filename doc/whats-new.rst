@@ -18,6 +18,9 @@ Aled Owen, Charles Turner, Christine P. Chai, David Huard, Deepak Cherian, Grego
 New Features
 ~~~~~~~~~~~~
 
+- Added new plot method :py:meth:`DataArray.plot.lines` which allows creating line plots efficiently in
+  a similar manner to :py:meth:`DataArray.plot.scatter`, also available for datasets. (:pull:`7173`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - :py:func:`merge` and :py:func:`concat` now support :py:class:`DataTree`
   objects (:issue:`9790`, :issue:`9778`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.

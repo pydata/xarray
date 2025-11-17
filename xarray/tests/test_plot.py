@@ -2968,6 +2968,57 @@ class TestDatasetScatterPlots(PlotTestCase):
         )
         assert actual == expected
 
+    def test_legend_labels_facegrid2(self) -> None:
+        ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+        g = ds.plot.scatter(
+            x="A", y="B", hue="y", markersize="x", row="x", col="w", add_colorbar=False
+        )
+
+        legend = g.figlegend
+        assert legend is not None
+        actual_text = [t.get_text() for t in legend.texts]
+        expected_text = [
+            "y [yunits]",
+            "$\\mathdefault{0.0}$",
+            "$\\mathdefault{0.1}$",
+            "$\\mathdefault{0.2}$",
+            "$\\mathdefault{0.3}$",
+            "$\\mathdefault{0.4}$",
+            "$\\mathdefault{0.5}$",
+            "$\\mathdefault{0.6}$",
+            "$\\mathdefault{0.7}$",
+            "$\\mathdefault{0.8}$",
+            "$\\mathdefault{0.9}$",
+            "$\\mathdefault{1.0}$",
+            "x [xunits]",
+            "$\\mathdefault{0}$",
+            "$\\mathdefault{1}$",
+            "$\\mathdefault{2}$",
+        ]
+        assert actual_text == expected_text
+
+        actual_size = [v.get_markersize() for v in legend.get_lines()]
+        expected_size = [
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            4.242640687119285,
+            6.708203932499369,
+            8.48528137423857,
+        ]
+        np.testing.assert_allclose(expected_size, actual_size)
+
     def test_add_legend_by_default(self) -> None:
         sc = self.ds.plot.scatter(x="A", y="B", hue="hue")
         fig = sc.figure
@@ -3337,8 +3388,9 @@ def test_maybe_gca() -> None:
 
 
 @requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["scatter", "lines"])
 @pytest.mark.parametrize(
-    "x, y, z, hue, markersize, row, col, add_legend, add_colorbar",
+    "x, y, z, hue, _size, row, col, add_legend, add_colorbar",
     [
         ("A", "B", None, None, None, None, None, None, None),
         ("B", "A", None, "w", None, None, None, True, None),
@@ -3347,30 +3399,33 @@ def test_maybe_gca() -> None:
         ("B", "A", "z", "w", None, None, None, True, None),
         ("A", "B", "z", "y", "x", None, None, True, True),
         ("A", "B", "z", "y", "x", "w", None, True, True),
+        ("A", "B", "z", "y", "x", "w", "x", True, True),
     ],
 )
-def test_datarray_scatter(
-    x, y, z, hue, markersize, row, col, add_legend, add_colorbar
+def test_plot1d_functions(
+    x: Hashable,
+    y: Hashable,
+    z: Hashable,
+    hue: Hashable,
+    _size: Hashable,
+    row: Hashable,
+    col: Hashable,
+    add_legend: bool | None,
+    add_colorbar: bool | None,
+    plotfunc: str,
 ) -> None:
-    """Test datarray scatter. Merge with TestPlot1D eventually."""
-    ds = xr.tutorial.scatter_example_dataset()
-
-    extra_coords = [v for v in [x, hue, markersize] if v is not None]
-
-    # Base coords:
-    coords = dict(ds.coords)
-
-    # Add extra coords to the DataArray:
-    coords.update({v: ds[v] for v in extra_coords})
-
-    darray = xr.DataArray(ds[y], coords=coords)
+    """Test plot1d function. Merge with TestPlot1D eventually."""
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
 
     with figure_context():
-        darray.plot.scatter(
+        getattr(ds.plot, plotfunc)(
             x=x,
+            y=y,
             z=z,
             hue=hue,
-            markersize=markersize,
+            _size=_size,
+            row=row,
+            col=col,
             add_legend=add_legend,
             add_colorbar=add_colorbar,
         )
@@ -3496,6 +3551,107 @@ def test_plot1d_filtered_nulls() -> None:
         actual = pc.get_offsets().shape[0]
 
         assert expected == actual
+
+
+@requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["lines"])
+def test_plot1d_lines_color(plotfunc: str, x="z", color="b") -> None:
+    from matplotlib.colors import to_rgba_array
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+    darray = ds.A.sel(x=0, y=0)
+
+    with figure_context():
+        _, ax = plt.subplots()
+        getattr(darray.plot, plotfunc)(x=x, color=color)
+        coll = ax.collections[0]
+
+        # Make sure color is respected:
+        expected_color = np.asarray(to_rgba_array(color))
+        actual_color = np.asarray(coll.get_edgecolor())
+        np.testing.assert_allclose(expected_color, actual_color)
+
+
+@requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["lines"])
+def test_plot1d_lines_linestyle(plotfunc: str, x="z", linestyle="dashed") -> None:
+    # TODO: Is there a public function that converts linestyle to dash pattern?
+    from matplotlib.lines import (  # type: ignore[attr-defined]
+        _get_dash_pattern,
+        _scale_dashes,
+    )
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+    darray = ds.A.sel(x=0, y=0)
+
+    with figure_context():
+        _, ax = plt.subplots()
+        getattr(darray.plot, plotfunc)(x=x, linestyle=linestyle)
+        coll = ax.collections[0]
+
+        # Make sure linestyle is respected:
+        w = np.atleast_1d(coll.get_linewidth())[0]
+        expected_linestyle = [_scale_dashes(*_get_dash_pattern(linestyle), w)]
+        actual_linestyle = coll.get_linestyle()
+        assert expected_linestyle == actual_linestyle
+
+
+@requires_matplotlib
+def test_plot1d_lines_facetgrid_legend() -> None:
+    # asserts that order is correct, only unique values, no nans/masked values.
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+    with figure_context():
+        g = ds.plot.lines(
+            x="A", y="B", hue="y", linewidth="x", row="x", col="w", add_colorbar=False
+        )
+
+        legend = g.figlegend
+        assert legend is not None
+        actual_text = [t.get_text() for t in legend.texts]
+        expected_text = [
+            "y [yunits]",
+            "$\\mathdefault{0.0}$",
+            "$\\mathdefault{0.1}$",
+            "$\\mathdefault{0.2}$",
+            "$\\mathdefault{0.3}$",
+            "$\\mathdefault{0.4}$",
+            "$\\mathdefault{0.5}$",
+            "$\\mathdefault{0.6}$",
+            "$\\mathdefault{0.7}$",
+            "$\\mathdefault{0.8}$",
+            "$\\mathdefault{0.9}$",
+            "$\\mathdefault{1.0}$",
+            "x [xunits]",
+            "$\\mathdefault{0}$",
+            "$\\mathdefault{1}$",
+            "$\\mathdefault{2}$",
+        ]
+        assert expected_text == actual_text
+
+        actual_size = [v.get_linewidth() for v in legend.get_lines()]
+        expected_size = [
+            1.5,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            1.5,
+            1.224744871391589,
+            1.9364916731037085,
+            2.449489742783178,
+        ]
+        np.testing.assert_allclose(expected_size, actual_size)
 
 
 @requires_matplotlib

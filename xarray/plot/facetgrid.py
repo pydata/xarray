@@ -486,7 +486,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         func_kwargs["add_title"] = False
 
         add_labels_ = np.zeros(self.axs.shape + (3,), dtype=bool)
-        if kwargs.get("z") is not None:
+        if coords_to_plot["z"] is not None:
             # 3d plots looks better with all labels. 3d plots can't sharex either so it
             # is easy to get lost while rotating the plots:
             add_labels_[:] = True
@@ -499,10 +499,10 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         # Set up the lists of names for the row and column facet variables:
         if self._single_group:
             full = tuple(
-                {self._single_group: x}
-                for x in range(self.data[self._single_group].size)
+                {self._single_group: v}
+                for v in range(self.data[self._single_group].size)
             )
-            empty = tuple(None for x in range(self._nrow * self._ncol - len(full)))
+            empty = (None,) * (self._nrow * self._ncol - len(full))
             name_d = full + empty
         else:
             rowcols = itertools.product(
@@ -525,8 +525,8 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
                 subset = self.data.isel(d)
                 mappable = func(
                     subset,
-                    x=x,
-                    y=y,
+                    x=coords_to_plot["x"],
+                    z=coords_to_plot["z"],
                     ax=ax,
                     hue=hue,
                     _size=size_,
