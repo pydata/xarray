@@ -10,6 +10,10 @@ What's New
 
 v2025.11.0 (Nov 17, 2025)
 -------------------------
+This release changes the default for ``keep_attrs`` such that attributes are preserved by default, adds support for :py:class:`DataTree` in top-level functions, and contains several memory and performance improvements as well as a number of bug fixes.
+
+Thanks to the 21 contributors to this release:
+Aled Owen, Charles Turner, Christine P. Chai, David Huard, Deepak Cherian, Gregorio L. Trevisan, Ian Hunt-Isaak, Ilan Gold, Illviljan, Jan Meischner, Jemma Jeffree, Jonas Lundholm Bertelsen, Justus Magin, Kai Mühlbauer, Kristian Bodolai, Lukas Riedel, Max Jones, Maximilian Roos, Niclas Rieger, Stephan Hoyer and William Andrea
 
 New Features
 ~~~~~~~~~~~~
