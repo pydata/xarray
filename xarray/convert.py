@@ -79,7 +79,7 @@ def _get_iris_args(attrs):
 
 # TODO: Add converting bounds from xarray to Iris and back
 def to_iris(dataarray):
-    """Convert a DataArray into a Iris Cube"""
+    """Convert a DataArray into an Iris Cube"""
     # Iris not a hard dependency
     import iris
     from iris.fileformats.netcdf import parse_cell_methods
@@ -119,7 +119,7 @@ def to_iris(dataarray):
 
 
 def _iris_obj_to_attrs(obj):
-    """Return a dictionary of attrs when given a Iris object"""
+    """Return a dictionary of attrs when given an Iris object"""
     attrs = {"standard_name": obj.standard_name, "long_name": obj.long_name}
     if obj.units.calendar:
         attrs["calendar"] = obj.units.calendar
@@ -130,7 +130,7 @@ def _iris_obj_to_attrs(obj):
 
 
 def _iris_cell_methods_to_str(cell_methods_obj):
-    """Converts a Iris cell methods into a string"""
+    """Converts an Iris cell methods into a string"""
     cell_methods = []
     for cell_method in cell_methods_obj:
         names = "".join(f"{n}: " for n in cell_method.coord_names)
@@ -155,7 +155,7 @@ def _name(iris_obj, default="unknown"):
 
 
 def from_iris(cube):
-    """Convert a Iris cube into a DataArray"""
+    """Convert an Iris cube into a DataArray"""
     import iris.exceptions
 
     name = _name(cube)
