@@ -145,8 +145,8 @@ Performance
 
 .. _whats-new.2025.10.1:
 
-v2025.10.1 (October 7, 2025)
-----------------------------
+v2025.10.1 (Oct 7, 2025)
+------------------------
 
 This release reverts a breaking change to Xarray's preferred netCDF backend.
 
@@ -177,8 +177,8 @@ Bug fixes
 
 .. _whats-new.2025.09.1:
 
-v2025.09.1 (September 29, 2025)
--------------------------------
+v2025.09.1 (Sep 29, 2025)
+-------------------------
 
 This release contains improvements to netCDF IO and the
 :py:func:`DataTree.from_dict` constructor, as well as a variety of bug fixes.
@@ -283,8 +283,8 @@ Internal Changes
 
 .. _whats-new.2025.09.0:
 
-v2025.09.0 (September 2, 2025)
-------------------------------
+v2025.09.0 (Sep 2, 2025)
+------------------------
 
 This release brings a number of small improvements and fixes, especially related
 to writing DataTree objects and netCDF files to disk.
@@ -360,8 +360,8 @@ Internal Changes
 
 .. _whats-new.2025.08.0:
 
-v2025.08.0 (August 14, 2025)
-----------------------------
+v2025.08.0 (Aug 14, 2025)
+-------------------------
 
 This release brings the ability to load xarray objects asynchronously, write netCDF as bytes, fixes a number of bugs, and starts an important deprecation cycle for changing the default values of keyword arguments for various xarray combining functions.
 
@@ -437,8 +437,8 @@ Performance
 
 .. _whats-new.2025.07.1:
 
-v2025.07.1 (July 09, 2025)
---------------------------
+v2025.07.1 (Jul 09, 2025)
+-------------------------
 
 This release brings a lot of improvements to flexible indexes functionality, including new classes
 to ease building of new indexes with custom coordinate transforms (:py:class:`indexes.CoordinateTransformIndex`)
