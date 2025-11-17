@@ -112,7 +112,6 @@ Breaking Changes
 
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
-
 Bug Fixes
 ~~~~~~~~~
 - Fix h5netcdf backend for format=None, use same rule as netcdf4 backend (:pull:`10859`).
