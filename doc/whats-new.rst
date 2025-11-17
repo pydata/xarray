@@ -144,9 +144,6 @@ Performance
 - Speedup and reduce memory usage when coarsening along multiple dimensions (:pull:`10921`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
-Documentation
-~~~~~~~~~~~~~
-
 .. _whats-new.2025.10.1:
 
 v2025.10.1 (October 7, 2025)
