@@ -71,7 +71,7 @@ Breaking Changes
   - Transformations: ``map()``, ``pipe()``, ``assign()``, ``assign_coords()``
   - Shape operations: ``expand_dims()``, ``squeeze()``, ``transpose()``, ``stack()``, ``unstack()``
 
-  **Binary operations - combines attributes with ``drop_conflicts``:**
+  *Binary operations - combines attributes with* ``drop_conflicts``:
 
   .. code-block:: python
 
