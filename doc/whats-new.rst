@@ -6,6 +6,35 @@
 What's New
 ==========
 
+.. _whats-new.2025.11.1:
+
+v2025.11.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug Fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.2025.11.0:
 
 v2025.11.0 (Nov 17, 2025)
