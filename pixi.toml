@@ -283,7 +283,7 @@ bottleneck = { git = "https://github.com/pydata/bottleneck" }
 fsspec = { git = "https://github.com/intake/filesystem_spec" }
 nc-time-axis = { git = "https://github.com/SciTools/nc-time-axis" }
 flox = { git = "https://github.com/xarray-contrib/flox" }
-h5netcdf = { git = "https://github.com/h5netcdf/h5netcdf" }
+# h5netcdf = { git = "https://github.com/h5netcdf/h5netcdf" } # https://github.com/pydata/xarray/pull/10888#issuecomment-3544194835
 opt_einsum = { git = "https://github.com/dgasmith/opt_einsum" }
 # sparse = { git = "https://github.com/pydata/sparse"}
 
