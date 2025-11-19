@@ -42,6 +42,7 @@ test-all-deps-py313 = { features = [
   "extras",
 ] }
 test-nightly = { features = [
+  "py313",
   "nightly",
   "test",
   # "typing",
