@@ -185,7 +185,7 @@ jobs:
           fail_ci_if_error: false
 
   pyright:
-    name: Pyright | pixi shell -e ${{ matrix.pixi-env }}"
+    name: Pyright | ${{ matrix.pixi-env }}"
     runs-on: "ubuntu-latest"
     needs: [detect-ci-trigger, cache-pixi-lock]
     strategy:
