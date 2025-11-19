@@ -206,7 +206,7 @@ class PydapDataStore(AbstractDataStore):
             "Maps",
         )
         attrs = dict(self.ds.attributes)
-        list(map(attrs.pop, opendap_attrs, [None] * 8))
+        list(map(attrs.pop, opendap_attrs, [None] * len(opendap_attrs)))
         return Frozen(attrs)
 
     def get_dimensions(self):
@@ -346,10 +346,10 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             use_cftime=use_cftime,
             decode_timedelta=decode_timedelta,
             group=group,
-            application=None,
+            application=application,
             session=session,
             timeout=timeout,
-            verify=application,
+            verify=verify,
             user_charset=user_charset,
             checksums=checksums,
         )
