@@ -42,9 +42,9 @@ test-all-deps-py313 = { features = [
   "extras",
 ] }
 test-nightly = { features = [
-  "test",
   "nightly",
-  "typing",
+  "test",
+  # "typing",
 ], no-default-feature = true }
 
 
