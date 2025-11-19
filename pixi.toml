@@ -252,27 +252,17 @@ sparse = "0.15.*"
 toolz = "0.12.*"
 zarr = "2.18.*"
 
-[feature.nightly.pypi-options]
-extra-index-urls = [
-  "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple",
-]
-
 [feature.nightly.dependencies]
 python = "*"
 
 [feature.nightly.pypi-options.dependency-overrides]
+numpy = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
+scipy = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
+matplotlib = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
+pandas = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
+pyarrow = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
+
 dask = { git = "https://github.com/dask/dask" }
-
-[feature.nightly.pypi-dependencies]
-xarray = { path = ".", editable = true }
-
-numpy = "*"
-scipy = "*"
-matplotlib = "*"
-pandas = "*"
-pyarrow = "*"
-netcdf4 = "*"
-
 distributed = { git = "https://github.com/dask/distributed" }
 zarr = { git = "https://github.com/zarr-developers/zarr-python" }
 numcodecs = { git = "https://github.com/zarr-developers/numcodecs" }
@@ -283,10 +273,38 @@ bottleneck = { git = "https://github.com/pydata/bottleneck" }
 fsspec = { git = "https://github.com/intake/filesystem_spec" }
 nc-time-axis = { git = "https://github.com/SciTools/nc-time-axis" }
 flox = { git = "https://github.com/xarray-contrib/flox" }
-# h5netcdf = { git = "https://github.com/h5netcdf/h5netcdf" } # https://github.com/pydata/xarray/pull/10888#issuecomment-3544194835
+h5netcdf = { git = "https://github.com/h5netcdf/h5netcdf" }         # https://github.com/pydata/xarray/pull/10888#issuecomment-3544194835
 opt_einsum = { git = "https://github.com/dgasmith/opt_einsum" }
 # sparse = { git = "https://github.com/pydata/sparse"}
 
+[feature.nightly.pypi-dependencies]
+xarray = { path = ".", editable = true }
+
+numpy = "*"
+pandas = "*"
+matplotlib = "*"
+scipy = "*"
+pyarrow = "*"
+
+dask = "*"
+distributed = "*"
+zarr = "*"
+numcodecs = "*"
+cftime = "*"
+packaging = "*"
+pint = "*"
+bottleneck = "*"
+fsspec = "*"
+nc-time-axis = "*"
+flox = "*"
+h5netcdf = "*"
+opt_einsum = "*"
+netcdf4 = "*"
+h5py = "*"
+iris = "*"
+pydap = "*"
+cartopy = "*"
+seaborn = "*"
 
 [feature.test.dependencies]
 pytest = "*"
