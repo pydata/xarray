@@ -12,6 +12,7 @@ from xarray.backends.common import (
     BackendArray,
     BackendEntrypoint,
     T_PathFileOrDataStore,
+    _is_likely_dap_url,
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
     robust_getitem,
@@ -22,7 +23,6 @@ from xarray.core.utils import (
     Frozen,
     FrozenDict,
     close_on_error,
-    is_remote_uri,
 )
 from xarray.core.variable import Variable
 from xarray.namedarray.pycompat import integer_types
@@ -213,22 +213,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         if not isinstance(filename_or_obj, str):
             return False
 
-        # Check for explicit DAP protocol indicators:
-        # 1. DAP scheme: dap2:// or dap4:// (case-insensitive, may not be recognized by is_remote_uri)
-        # 2. Remote URI with /dap2/ or /dap4/ in URL path (case-insensitive)
-        # Note: We intentionally do NOT check for .dap suffix as that would match
-        # file extensions like .dap which trigger downloads of binary data
-        url_lower = filename_or_obj.lower()
-        if url_lower.startswith(("dap2://", "dap4://")):
-            return True
-
-        # For standard remote URIs, check for DAP indicators in path
-        if is_remote_uri(filename_or_obj):
-            return (
-                "/dap2/" in url_lower or "/dap4/" in url_lower or "/dodsC/" in url_lower
-            )
-
-        return False
+        return _is_likely_dap_url(filename_or_obj)
 
     def open_dataset(
         self,

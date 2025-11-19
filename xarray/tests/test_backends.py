@@ -77,7 +77,6 @@ from xarray.tests import (
     has_h5netcdf_1_4_0_or_above,
     has_netCDF4,
     has_numpy_2,
-    has_pydap,
     has_scipy,
     has_zarr,
     has_zarr_v3,
@@ -7254,9 +7253,11 @@ def test_netcdf4_entrypoint(tmp_path: Path) -> None:
     _check_guess_can_open_and_open(entrypoint, path, engine="netcdf4", expected=ds)
     _check_guess_can_open_and_open(entrypoint, str(path), engine="netcdf4", expected=ds)
 
-    # Remote URLs without extensions are no longer claimed (stricter detection)
-    assert not entrypoint.guess_can_open("http://something/remote")
-    # Remote URLs with netCDF extensions are claimed
+    # Remote URLs without extensions emit a deprecation warning but still return True
+    # for backward compatibility
+    with pytest.warns(FutureWarning, match="NetCDF4 backend is guessing"):
+        assert entrypoint.guess_can_open("http://something/remote")
+    # Remote URLs with netCDF extensions are claimed without warning
     assert entrypoint.guess_can_open("http://something/remote.nc")
     assert entrypoint.guess_can_open("something-local.nc")
     assert entrypoint.guess_can_open("something-local.nc4")
@@ -7400,15 +7401,22 @@ def test_remote_url_backend_auto_detection() -> None:
             f"URL {url!r} should select {expected_backend!r} but got {engine!r}"
         )
 
-    # DAP URLs without extensions - pydap wins if available, netcdf4 otherwise
-    # When pydap is not installed, netCDF4 should handle these DAP URLs
-    expected_dap_backend = "pydap" if has_pydap else "netcdf4"
+    # DAP URLs - netcdf4 should handle these (it comes first in backend order)
+    # Both netcdf4 and pydap can open DAP URLs, but netcdf4 has priority
+    expected_dap_backend = "netcdf4"
     dap_urls = [
+        # Explicit DAP protocol schemes
         "dap2://opendap.earthdata.nasa.gov/collections/dataset",
         "dap4://opendap.earthdata.nasa.gov/collections/dataset",
+        "dap://example.com/dataset",
         "DAP2://example.com/dataset",  # uppercase scheme
         "DAP4://example.com/dataset",  # uppercase scheme
+        # DAP path indicators
         "https://example.com/services/DAP2/dataset",  # uppercase in path
+        "http://test.opendap.org/opendap/data/nc/file.nc",  # /opendap/ path
+        "https://coastwatch.pfeg.noaa.gov/erddap/griddap/erdMH1chla8day",  # ERDDAP
+        "http://thredds.ucar.edu/thredds/dodsC/grib/NCEP/GFS/",  # THREDDS dodsC
+        "https://disc2.gesdisc.eosdis.nasa.gov/dods/TRMM_3B42",  # GrADS /dods/
     ]
 
     for url in dap_urls:
@@ -7417,20 +7425,50 @@ def test_remote_url_backend_auto_detection() -> None:
             f"URL {url!r} should select {expected_dap_backend!r} but got {engine!r}"
         )
 
-    # URLs that should raise ValueError (no backend can open them)
-    invalid_urls = [
-        "http://test.opendap.org/opendap/data/nc/coads_climatology.nc.dap",  # .dap suffix
-        "https://example.com/data.dap",  # .dap suffix
-        "http://opendap.example.com/data",  # no extension, no DAP indicators
-        "https://test.opendap.org/dataset",  # no extension, no DAP indicators
+    # URLs with .dap suffix are claimed by netcdf4 (backward compatibility fallback)
+    # Note: .dap suffix is intentionally NOT recognized as a DAP dataset URL
+    # These will emit a deprecation warning (tested in test_netcdf4_remote_url_deprecation_warning)
+    import warnings
+
+    fallback_urls = [
+        ("http://test.opendap.org/opendap/data/nc/coads_climatology.nc.dap", "netcdf4"),
+        ("https://example.com/data.dap", "netcdf4"),
     ]
 
-    for url in invalid_urls:
-        with pytest.raises(
-            ValueError,
-            match=r"did not find a match in any of xarray's currently installed IO backends",
-        ):
-            guess_engine(url)
+    for url, expected_backend in fallback_urls:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            engine = guess_engine(url)
+            assert engine == expected_backend
+
+
+@requires_netCDF4
+def test_netcdf4_remote_url_deprecation_warning() -> None:
+    """
+    Test that NetCDF4 backend emits a deprecation warning for ambiguous remote URLs.
+
+    Remote URLs without .nc extension or DAP indicators should trigger a FutureWarning
+    since in the future they won't be automatically claimed by the netCDF4 backend.
+    """
+    from xarray.backends.netCDF4_ import NetCDF4BackendEntrypoint
+
+    entrypoint = NetCDF4BackendEntrypoint()
+
+    # Remote URLs without extension or DAP indicators should emit warning
+    with pytest.warns(FutureWarning, match="NetCDF4 backend is guessing"):
+        result = entrypoint.guess_can_open("http://example.com/data")
+        assert result is True  # Still returns True for backward compatibility
+
+    # These should NOT emit FutureWarnings (they have clear indicators)
+    # Use warnings.catch_warnings to ensure no FutureWarning is emitted
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        entrypoint.guess_can_open("http://example.com/data.nc")
+        entrypoint.guess_can_open("dap2://example.com/data")
+        entrypoint.guess_can_open("http://example.com/dodsC/data")
+        entrypoint.guess_can_open("http://example.com/erddap/griddap/data")
 
 
 @requires_netCDF4
