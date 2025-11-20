@@ -53,6 +53,8 @@ New Features
 - :py:func:`merge`, :py:func:`concat` and  :py:func:`combine_nested` now
   support :py:class:`DataTree` objects (:issue:`9790`, :issue:`9778`,
   :pull:`10849`).
+- :py:func:`merge` and :py:func:`concat` now support :py:class:`DataTree`
+  objects (:issue:`9790`, :issue:`9778`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - The ``h5netcdf`` engine has support for pseudo ``NETCDF4_CLASSIC`` files, meaning variables and attributes are cast to supported types. Note that the saved files won't be recognized as genuine ``NETCDF4_CLASSIC`` files until ``h5netcdf`` adds support with version 1.7.0 (:issue:`10676`, :pull:`10686`).
   By `David Huard <https://github.com/huard>`_.
