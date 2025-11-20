@@ -19,6 +19,7 @@ class SimpleChunkedArray(np.ndarray):
     A custom array-like structure that exposes chunks as a simple tuple
     instead of a tuple of tuples.
     """
+
     def __new__(cls, input_array, chunks=None):
         obj = np.asarray(input_array).view(cls)
         obj._chunks = chunks
@@ -56,9 +57,7 @@ class SimpleChunkManager(ChunkManagerEntrypoint):
             return tuple((chunk,) for chunk in chunks)
         return chunks or ()
 
-    def from_array(
-        self, data, chunks: _Chunks, **kwargs
-    ) -> SimpleChunkedArray:
+    def from_array(self, data, chunks: _Chunks, **kwargs) -> SimpleChunkedArray:
         arr = np.asarray(data)
         return SimpleChunkedArray(arr, chunks=chunks)
 
@@ -77,16 +76,20 @@ class SimpleChunkManager(ChunkManagerEntrypoint):
         if isinstance(sources, list):
             for source, target in zip(sources, targets):
                 arr = np.asarray(source)
-                if hasattr(target, '__setitem__'):
-                    regions = kwargs.get('regions', [None] * len(sources))
-                    region = regions[sources.index(source)] if sources.index(source) < len(regions) else None
+                if hasattr(target, "__setitem__"):
+                    regions = kwargs.get("regions", [None] * len(sources))
+                    region = (
+                        regions[sources.index(source)]
+                        if sources.index(source) < len(regions)
+                        else None
+                    )
                     if region:
                         target[region] = arr
                     else:
                         target[...] = arr
         else:
             arr = np.asarray(sources)
-            regions = kwargs.get('regions', [None])
+            regions = kwargs.get("regions", [None])
             region = regions[0] if regions else None
             if region:
                 targets[region] = arr
@@ -94,7 +97,7 @@ class SimpleChunkManager(ChunkManagerEntrypoint):
                 targets[...] = arr
         return None
 
-    def apply_gufunc(self, *args,  **kwargs):
+    def apply_gufunc(self, *args, **kwargs):
         raise NotImplementedError("SimpleChunkManager does not support gufunc")
 
 
