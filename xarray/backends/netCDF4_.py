@@ -49,7 +49,6 @@ from xarray.core import indexing
 from xarray.core.utils import (
     FrozenDict,
     close_on_error,
-    emit_user_level_warning,
     is_remote_uri,
     strip_uri_params,
     try_read_magic_number_from_path,
@@ -743,18 +742,11 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                     return True
                 elif "zarr" in url_lower:
                     return False
-                else:
-                    # returning true so we don't have a breaking change for people relying on this
-                    # netcdf backend guessing true for all remote sources. But emitting a deprecation
-                    # warning that this behavior will go away as it presents problems for other backends
-                    emit_user_level_warning(
-                        f"The NetCDF4 backend is guessing that {filename_or_obj!r} is a NetCDF file. "
-                        "In the future, xarray will require remote URLs to either have a .nc, .nc4, or .cdf "
-                        "extension, to explicitly specify a DAP protocol (dap2://, dap4://, or /dap/ in the path), or instead have "
-                        "the backend explicitly specified using the 'engine' parameter (e.g., engine='netcdf4').",
-                        FutureWarning,
-                    )
-                    return True
+                # return true for non-zarr URLs so we don't have a breaking change for people relying on this
+                # netcdf backend guessing true for all remote sources.
+                # TODO: emit a warning here about deprecation of this behavior
+                # https://github.com/pydata/xarray/pull/10931
+                return True
 
         if isinstance(filename_or_obj, str | os.PathLike):
             # For local paths, check magic number first, then extension
