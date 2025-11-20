@@ -26,6 +26,15 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- The NetCDF4 backend now emits a ``FutureWarning`` when opening remote URLs without
+  a ``.nc``/``.nc4``/``.cdf`` extension or DAP protocol indicators (e.g., ``dap2://``,
+  ``/dodsC/``, ``/erddap/``). In the future, xarray will require remote URLs to either
+  have a NetCDF file extension, use a recognized DAP URL pattern, or specify the backend
+  explicitly via ``engine="netcdf4"``. This restores backward compatibility after
+  :pull:`10804` broke workflows that relied on ``xr.open_dataset("http://...")``
+  defaulting to netcdf4, while providing a deprecation path toward stricter URL detection
+  (:pull:`10931`).
+  By `Ian Hunt-Isaak <https://github.com/ianhuntisaak>`_.
 
 Documentation
 ~~~~~~~~~~~~~
