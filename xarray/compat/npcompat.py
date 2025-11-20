@@ -51,7 +51,7 @@ except ImportError:
         "numeric": np.number,
     }
 
-    def isdtype(
+    def isdtype(  # type: ignore[misc]
         dtype: np.dtype[Any] | type[Any], kind: DTypeLike | tuple[DTypeLike, ...]
     ) -> bool:
         kinds = kind if isinstance(kind, tuple) else (kind,)
