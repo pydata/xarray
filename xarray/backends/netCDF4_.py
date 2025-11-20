@@ -750,8 +750,8 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                     emit_user_level_warning(
                         f"The NetCDF4 backend is guessing that {filename_or_obj!r} is a NetCDF file. "
                         "In the future, xarray will require remote URLs to either have a .nc, .nc4, or .cdf "
-                        "extension, use a DAP protocol (dap2://, dap4://, or /dap/ in the path), or specify "
-                        "the backend explicitly using the 'engine' parameter (e.g., engine='netcdf4').",
+                        "extension, to explicitly specify a DAP protocol (dap2://, dap4://, or /dap/ in the path), or instead have "
+                        "the backend explicitly specified using the 'engine' parameter (e.g., engine='netcdf4').",
                         FutureWarning,
                     )
                     return True
