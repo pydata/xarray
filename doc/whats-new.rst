@@ -14,6 +14,9 @@ v2025.11.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:func:`combine_nested` now support :py:class:`DataTree` objects
+  (:pull:`10849`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
