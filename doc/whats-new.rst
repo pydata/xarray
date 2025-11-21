@@ -17,6 +17,9 @@ New Features
 - :py:func:`combine_nested` now support :py:class:`DataTree` objects
   (:pull:`10849`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Added :py:meth:`Dataset.subset` method for type-stable selection of multiple
+  variables. Unlike indexing with ``__getitem__``, this method always returns
+  a Dataset and accepts sequence types (lists and tuples) (:issue:`3894`).
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~

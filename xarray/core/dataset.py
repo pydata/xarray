@@ -1183,6 +1183,8 @@ class Dataset(
     def _copy_listed(self, names: Iterable[Hashable]) -> Self:
         """Create a new Dataset with the listed variables from this dataset and
         the all relevant coordinates. Skips all validation.
+
+        For public API, use Dataset.subset() instead.
         """
         variables: dict[Hashable, Variable] = {}
         coord_names = set()
@@ -1222,6 +1224,100 @@ class Dataset(
         indexes.update(filter_indexes_from_coords(self._indexes, coord_names))
 
         return self._replace(variables, coord_names, dims, indexes=indexes)
+
+    def subset(self, names: Sequence[Hashable]) -> Self:
+        """Return a new Dataset with only the specified variables.
+
+        This is a type-stable method for selecting multiple variables from a
+        Dataset. Unlike indexing with ``__getitem__``, this method always
+        returns a Dataset and accepts sequence types (lists, tuples) of variable
+        names.
+
+        All coordinates needed for the selected variables are automatically
+        included in the returned Dataset.
+
+        Parameters
+        ----------
+        names : sequence of hashable
+            A sequence (list or tuple) of variable names to include in the
+            returned Dataset. The names must exist in the Dataset.
+
+        Returns
+        -------
+        Dataset
+            A new Dataset containing only the specified variables and their
+            required coordinates.
+
+        Raises
+        ------
+        TypeError
+            If ``names`` is not a sequence (e.g., if it's a set, generator, or string).
+        KeyError
+            If any of the variable names do not exist in the Dataset.
+
+        See Also
+        --------
+        Dataset.__getitem__ : Select variables using indexing notation.
+        Dataset.drop_vars : Remove variables from a Dataset.
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {
+        ...         "temperature": (["x", "y"], [[1, 2], [3, 4]]),
+        ...         "pressure": (["x", "y"], [[5, 6], [7, 8]]),
+        ...         "humidity": (["x"], [0.5, 0.6]),
+        ...     },
+        ...     coords={"x": [10, 20], "y": [30, 40]},
+        ... )
+        >>> ds
+        <xarray.Dataset> Size: 112B
+        Dimensions:      (x: 2, y: 2)
+        Coordinates:
+          * x            (x) int64 16B 10 20
+          * y            (y) int64 16B 30 40
+        Data variables:
+            temperature  (x, y) int64 32B 1 2 3 4
+            pressure     (x, y) int64 32B 5 6 7 8
+            humidity     (x) float64 16B 0.5 0.6
+
+        Select a subset of variables using a list:
+
+        >>> ds.subset(["temperature", "humidity"])
+        <xarray.Dataset> Size: 80B
+        Dimensions:      (x: 2, y: 2)
+        Coordinates:
+          * x            (x) int64 16B 10 20
+          * y            (y) int64 16B 30 40
+        Data variables:
+            temperature  (x, y) int64 32B 1 2 3 4
+            humidity     (x) float64 16B 0.5 0.6
+
+        Unlike ``__getitem__``, this method accepts tuples:
+
+        >>> vars_tuple = ("temperature", "pressure")
+        >>> ds.subset(vars_tuple)  # Works with tuples
+        <xarray.Dataset> Size: 96B
+        Dimensions:      (x: 2, y: 2)
+        Coordinates:
+          * x            (x) int64 16B 10 20
+          * y            (y) int64 16B 30 40
+        Data variables:
+            temperature  (x, y) int64 32B 1 2 3 4
+            pressure     (x, y) int64 32B 5 6 7 8
+
+        The method always returns a Dataset, providing type stability:
+
+        >>> result = ds.subset(["temperature"])
+        >>> isinstance(result, xr.Dataset)
+        True
+        """
+        # Validate that names is a sequence (but not a string)
+        if isinstance(names, str) or not isinstance(names, Sequence):
+            raise TypeError(
+                f"names must be a sequence (list or tuple), got {type(names).__name__}"
+            )
+        return self._copy_listed(names)
 
     def _construct_dataarray(self, name: Hashable) -> DataArray:
         """Construct a DataArray by indexing this dataset"""
