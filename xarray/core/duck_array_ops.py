@@ -191,7 +191,7 @@ def isnull(data):
         dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
         return full_like(data, dtype=dtype, fill_value=False)
     # at this point, array should have dtype=object
-    elif isinstance(data, np.ndarray) or pd.api.types.is_extension_array_dtype(data):
+    elif isinstance(data, np.ndarray) or pd.api.types.is_extension_array_dtype(data):  # noqa: TID251
         return pandas_isnull(data)
     else:
         # Not reachable yet, but intended for use with other duck array
