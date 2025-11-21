@@ -217,7 +217,9 @@ def get_backend(engine: str | type[BackendEntrypoint]) -> BackendEntrypoint:
     if isinstance(engine, str):
         if engine in BACKEND_ENTRYPOINTS:
             # fast path for built-in engines
-            backend = BACKEND_ENTRYPOINTS[engine][1]()
+            backend_cls = BACKEND_ENTRYPOINTS[engine][1]
+            set_missing_parameters({engine: backend_cls})
+            backend = backend_cls()
         else:
             engines = list_engines()
             if engine not in engines:
