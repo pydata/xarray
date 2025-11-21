@@ -42,3 +42,4 @@ uv run dmypy run  # Type checking with mypy
   GitHub issues/PRs unless specifically instructed
 - When creating commits, always include a co-authorship trailer:
   `Co-authored-by: Claude <noreply@anthropic.com>`
+- Submit upstream PRs against `main`

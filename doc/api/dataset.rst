@@ -62,6 +62,7 @@ Dataset contents
    Dataset.rename_dims
    Dataset.swap_dims
    Dataset.expand_dims
+   Dataset.subset
    Dataset.drop_vars
    Dataset.drop_indexes
    Dataset.drop_duplicates
