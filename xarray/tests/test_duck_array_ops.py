@@ -24,6 +24,7 @@ from xarray.core.duck_array_ops import (
     least_squares,
     mean,
     np_timedelta64_to_float,
+    nunique,
     pd_timedelta_to_float,
     push,
     py_timedelta_to_float,
@@ -164,6 +165,33 @@ class TestOps:
         assert_array_equal(expected, count(self.x, axis=-1))
 
         assert 1 == count(np.datetime64("2000-01-01"))
+
+    @pytest.mark.parametrize("mixed_type", [True, False])
+    @pytest.mark.parametrize("string_array", [True, False])
+    @pytest.mark.parametrize("skipna", [True, False])
+    @pytest.mark.parametrize("axis", [2, None, (1, 2)])
+    def test_nunique(self, axis, skipna, string_array, mixed_type):
+        expected_results = {
+            (True, 2): np.array([[1, 2, 3], [3, 2, 1]]),
+            (True, None): np.array(12),
+            (True, (1, 2)): np.array([6, 6]),
+            (False, 2): np.array([[2, 3, 4], [4, 3, 2]]),
+            (False, None): np.array(13),
+            (False, (1, 2)): np.array([7, 7]),
+        }
+        x = self.x.copy()
+        if string_array:
+            # Convert to str
+            x = x.astype(str)
+            # Convert to object and put nans back in
+            x = x.astype(object)
+            x[x == "nan"] = np.nan
+        if mixed_type:
+            x = x.astype(object)
+            x[(x == 10.0) | (x == "10.0")] = True
+            x[(x == 2.0) | (x == "2.0")] = np.sum
+        result = nunique(x, axis=axis, skipna=skipna)
+        assert_array_equal(result, expected_results[(skipna, axis)])
 
     def test_where_type_promotion(self):
         result = where(np.array([True, False]), np.array([1, 2]), np.array(["a", "b"]))

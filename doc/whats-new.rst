@@ -17,6 +17,10 @@ New Features
 - :py:func:`combine_nested` now support :py:class:`DataTree` objects
   (:pull:`10849`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Add :py:func:`nunique` reduction function (:issue:`9548`), which behaves like
+  :py:func:`pandas.DataFrame.nunique` applied along specific dimensions.
+  By `Ewan Short <https://github.com/eshort0401>`_.
+
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~

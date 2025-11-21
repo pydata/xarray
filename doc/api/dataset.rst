@@ -169,6 +169,7 @@ Aggregation
    Dataset.min
    Dataset.mean
    Dataset.median
+   Dataset.nunique
    Dataset.prod
    Dataset.sum
    Dataset.std
