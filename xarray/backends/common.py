@@ -867,10 +867,6 @@ def _is_likely_dap_url(url: str) -> bool:
 
     url_lower = url.lower()
 
-    # Check for explicit DAP protocol schemes - these definitively indicate a DAP service
-    if url_lower.startswith(("dap2://", "dap4://", "dap://")):
-        return True
-
     # For remote URIs, check for DAP server software path patterns
     if is_remote_uri(url_lower):
         dap_path_patterns = (

@@ -463,15 +463,6 @@ class NetCDF4DataStore(WritableCFDataStore):
         if isinstance(filename, os.PathLike):
             filename = os.fspath(filename)
 
-        # Replace DAP protocol prefixes with https:// - netCDF4 library can't handle them
-        # These prefixes may be added by users to explicitly indicate DAP protocol
-        # Following pydap's convention, we convert to https://
-        # See: https://github.com/pydap/pydap/blob/0a2b0892611abaf0a9762ffd4f2f082cb8e497c2/src/pydap/handlers/dap.py#L103-L107
-        if isinstance(filename, str):
-            filename_lower = filename.lower()
-            if filename_lower.startswith(("dap2://", "dap4://")):
-                filename = "https://" + filename[7:]
-
         if isinstance(filename, IOBase):
             raise TypeError(
                 f"file objects are not supported by the netCDF4 backend: {filename}"
@@ -724,11 +715,6 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             _, ext = os.path.splitext(path)
             return ext in {".nc", ".nc4", ".cdf"}
 
-        # Check for explicit DAP protocol indicators:
-        # 1. DAP scheme: dap2:// or dap4:// (case-insensitive, may not be recognized by is_remote_uri)
-        # 2. Remote URI with /dap2/ or /dap4/ in URL path (case-insensitive)
-        # Note: We intentionally do NOT check for .dap suffix as that would match
-        # file extensions like .dap which trigger downloads of binary data
         if isinstance(filename_or_obj, str):
             url_lower = filename_or_obj.lower()
             from xarray.backends.common import _is_likely_dap_url
