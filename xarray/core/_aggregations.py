@@ -97,7 +97,6 @@ class DataTreeAggregations:
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> dt.count()
         <xarray.DataTree>
         Group: /
@@ -180,7 +179,6 @@ class DataTreeAggregations:
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) bool 6B True True True True True False
-
 
         >>> dt.all()
         <xarray.DataTree>
@@ -265,7 +263,6 @@ class DataTreeAggregations:
             Data variables:
                 foo      (time) bool 6B True True True True True False
 
-
         >>> dt.any()
         <xarray.DataTree>
         Group: /
@@ -349,7 +346,6 @@ class DataTreeAggregations:
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> dt.max()
         <xarray.DataTree>
@@ -444,7 +440,6 @@ class DataTreeAggregations:
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> dt.min()
         <xarray.DataTree>
@@ -543,7 +538,6 @@ class DataTreeAggregations:
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> dt.mean()
         <xarray.DataTree>
@@ -649,7 +643,6 @@ class DataTreeAggregations:
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> dt.prod()
         <xarray.DataTree>
@@ -766,7 +759,6 @@ class DataTreeAggregations:
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> dt.sum()
         <xarray.DataTree>
         Group: /
@@ -878,7 +870,6 @@ class DataTreeAggregations:
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> dt.std()
         <xarray.DataTree>
@@ -992,7 +983,6 @@ class DataTreeAggregations:
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> dt.var()
         <xarray.DataTree>
         Group: /
@@ -1101,7 +1091,6 @@ class DataTreeAggregations:
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> dt.median()
         <xarray.DataTree>
         Group: /
@@ -1194,7 +1183,6 @@ class DataTreeAggregations:
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> dt.nunique()
         <xarray.DataTree>
@@ -1298,7 +1286,6 @@ class DataTreeAggregations:
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> dt.cumsum()
         <xarray.DataTree>
@@ -1405,7 +1392,6 @@ class DataTreeAggregations:
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> dt.cumprod()
         <xarray.DataTree>
         Group: /
@@ -1507,7 +1493,6 @@ class DatasetAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> ds.count()
         <xarray.Dataset> Size: 8B
         Dimensions:  ()
@@ -1580,7 +1565,6 @@ class DatasetAggregations:
         Data variables:
             da       (time) bool 6B True True True True True False
 
-
         >>> ds.all()
         <xarray.Dataset> Size: 1B
         Dimensions:  ()
@@ -1652,7 +1636,6 @@ class DatasetAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) bool 6B True True True True True False
-
 
         >>> ds.any()
         <xarray.Dataset> Size: 1B
@@ -1731,7 +1714,6 @@ class DatasetAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.max()
         <xarray.Dataset> Size: 8B
@@ -1819,7 +1801,6 @@ class DatasetAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.min()
         <xarray.Dataset> Size: 8B
@@ -1911,7 +1892,6 @@ class DatasetAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.mean()
         <xarray.Dataset> Size: 8B
@@ -2010,7 +1990,6 @@ class DatasetAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.prod()
         <xarray.Dataset> Size: 8B
@@ -2119,7 +2098,6 @@ class DatasetAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> ds.sum()
         <xarray.Dataset> Size: 8B
         Dimensions:  ()
@@ -2223,7 +2201,6 @@ class DatasetAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.std()
         <xarray.Dataset> Size: 8B
@@ -2329,7 +2306,6 @@ class DatasetAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> ds.var()
         <xarray.Dataset> Size: 8B
         Dimensions:  ()
@@ -2430,7 +2406,6 @@ class DatasetAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> ds.median()
         <xarray.Dataset> Size: 8B
         Dimensions:  ()
@@ -2516,7 +2491,6 @@ class DatasetAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.nunique()
         <xarray.Dataset> Size: 8B
@@ -2613,7 +2587,6 @@ class DatasetAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.cumsum()
         <xarray.Dataset> Size: 48B
@@ -2713,7 +2686,6 @@ class DatasetAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> ds.cumprod()
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
@@ -2810,7 +2782,6 @@ class DataArrayAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
-
         >>> da.count()
         <xarray.DataArray ()> Size: 8B
         array(5)
@@ -2877,7 +2848,6 @@ class DataArrayAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
-
         >>> da.all()
         <xarray.DataArray ()> Size: 1B
         array(False)
@@ -2943,7 +2913,6 @@ class DataArrayAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.any()
         <xarray.DataArray ()> Size: 1B
@@ -3016,7 +2985,6 @@ class DataArrayAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.max()
         <xarray.DataArray ()> Size: 8B
@@ -3096,7 +3064,6 @@ class DataArrayAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.min()
         <xarray.DataArray ()> Size: 8B
@@ -3180,7 +3147,6 @@ class DataArrayAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.mean()
         <xarray.DataArray ()> Size: 8B
@@ -3271,7 +3237,6 @@ class DataArrayAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.prod()
         <xarray.DataArray ()> Size: 8B
@@ -3370,7 +3335,6 @@ class DataArrayAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
-
         >>> da.sum()
         <xarray.DataArray ()> Size: 8B
         array(8.)
@@ -3464,7 +3428,6 @@ class DataArrayAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.std()
         <xarray.DataArray ()> Size: 8B
@@ -3560,7 +3523,6 @@ class DataArrayAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
-
         >>> da.var()
         <xarray.DataArray ()> Size: 8B
         array(1.04)
@@ -3651,7 +3613,6 @@ class DataArrayAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
-
         >>> da.median()
         <xarray.DataArray ()> Size: 8B
         array(2.)
@@ -3729,7 +3690,6 @@ class DataArrayAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.nunique()
         <xarray.DataArray ()> Size: 8B
@@ -3818,7 +3778,6 @@ class DataArrayAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.cumsum()
         <xarray.DataArray (time: 6)> Size: 48B
@@ -3913,7 +3872,6 @@ class DataArrayAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.cumprod()
         <xarray.DataArray (time: 6)> Size: 48B
@@ -4028,7 +3986,6 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> ds.groupby("labels").count()
         <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
@@ -4125,7 +4082,6 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (time) bool 6B True True True True True False
 
-
         >>> ds.groupby("labels").all()
         <xarray.Dataset> Size: 27B
         Dimensions:  (labels: 3)
@@ -4221,7 +4177,6 @@ class DatasetGroupByAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) bool 6B True True True True True False
-
 
         >>> ds.groupby("labels").any()
         <xarray.Dataset> Size: 27B
@@ -4324,7 +4279,6 @@ class DatasetGroupByAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.groupby("labels").max()
         <xarray.Dataset> Size: 48B
@@ -4439,7 +4393,6 @@ class DatasetGroupByAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.groupby("labels").min()
         <xarray.Dataset> Size: 48B
@@ -4556,7 +4509,6 @@ class DatasetGroupByAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.groupby("labels").mean()
         <xarray.Dataset> Size: 48B
@@ -4680,7 +4632,6 @@ class DatasetGroupByAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.groupby("labels").prod()
         <xarray.Dataset> Size: 48B
@@ -4817,7 +4768,6 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> ds.groupby("labels").sum()
         <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
@@ -4949,7 +4899,6 @@ class DatasetGroupByAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.groupby("labels").std()
         <xarray.Dataset> Size: 48B
@@ -5083,7 +5032,6 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> ds.groupby("labels").var()
         <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
@@ -5212,7 +5160,6 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> ds.groupby("labels").median()
         <xarray.Dataset> Size: 48B
         Dimensions:  (labels: 3)
@@ -5310,7 +5257,6 @@ class DatasetGroupByAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.groupby("labels").nunique()
         <xarray.Dataset> Size: 48B
@@ -5418,7 +5364,6 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> ds.groupby("labels").cumsum()
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
@@ -5522,7 +5467,6 @@ class DatasetGroupByAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.groupby("labels").cumprod()
         <xarray.Dataset> Size: 48B
@@ -5638,7 +5582,6 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> ds.resample(time="3ME").count()
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
@@ -5735,7 +5678,6 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) bool 6B True True True True True False
 
-
         >>> ds.resample(time="3ME").all()
         <xarray.Dataset> Size: 27B
         Dimensions:  (time: 3)
@@ -5831,7 +5773,6 @@ class DatasetResampleAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) bool 6B True True True True True False
-
 
         >>> ds.resample(time="3ME").any()
         <xarray.Dataset> Size: 27B
@@ -5934,7 +5875,6 @@ class DatasetResampleAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.resample(time="3ME").max()
         <xarray.Dataset> Size: 48B
@@ -6049,7 +5989,6 @@ class DatasetResampleAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.resample(time="3ME").min()
         <xarray.Dataset> Size: 48B
@@ -6166,7 +6105,6 @@ class DatasetResampleAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.resample(time="3ME").mean()
         <xarray.Dataset> Size: 48B
@@ -6290,7 +6228,6 @@ class DatasetResampleAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.resample(time="3ME").prod()
         <xarray.Dataset> Size: 48B
@@ -6427,7 +6364,6 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> ds.resample(time="3ME").sum()
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
@@ -6559,7 +6495,6 @@ class DatasetResampleAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.resample(time="3ME").std()
         <xarray.Dataset> Size: 48B
@@ -6693,7 +6628,6 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> ds.resample(time="3ME").var()
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
@@ -6822,7 +6756,6 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> ds.resample(time="3ME").median()
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
@@ -6920,7 +6853,6 @@ class DatasetResampleAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.resample(time="3ME").nunique()
         <xarray.Dataset> Size: 48B
@@ -7028,7 +6960,6 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
-
         >>> ds.resample(time="3ME").cumsum()
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 6)
@@ -7132,7 +7063,6 @@ class DatasetResampleAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
-
 
         >>> ds.resample(time="3ME").cumprod()
         <xarray.Dataset> Size: 48B
@@ -7245,7 +7175,6 @@ class DataArrayGroupByAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
-
         >>> da.groupby("labels").count()
         <xarray.DataArray (labels: 3)> Size: 24B
         array([1, 2, 2])
@@ -7335,7 +7264,6 @@ class DataArrayGroupByAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
-
         >>> da.groupby("labels").all()
         <xarray.DataArray (labels: 3)> Size: 3B
         array([False,  True,  True])
@@ -7424,7 +7352,6 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.groupby("labels").any()
         <xarray.DataArray (labels: 3)> Size: 3B
@@ -7520,7 +7447,6 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.groupby("labels").max()
         <xarray.DataArray (labels: 3)> Size: 24B
@@ -7626,7 +7552,6 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.groupby("labels").min()
         <xarray.DataArray (labels: 3)> Size: 24B
@@ -7734,7 +7659,6 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.groupby("labels").mean()
         <xarray.DataArray (labels: 3)> Size: 24B
@@ -7849,7 +7773,6 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.groupby("labels").prod()
         <xarray.DataArray (labels: 3)> Size: 24B
@@ -7975,7 +7898,6 @@ class DataArrayGroupByAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
-
         >>> da.groupby("labels").sum()
         <xarray.DataArray (labels: 3)> Size: 24B
         array([1., 4., 3.])
@@ -8096,7 +8018,6 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.groupby("labels").std()
         <xarray.DataArray (labels: 3)> Size: 24B
@@ -8219,7 +8140,6 @@ class DataArrayGroupByAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
-
         >>> da.groupby("labels").var()
         <xarray.DataArray (labels: 3)> Size: 24B
         array([0.  , 0.  , 2.25])
@@ -8337,7 +8257,6 @@ class DataArrayGroupByAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
-
         >>> da.groupby("labels").median()
         <xarray.DataArray (labels: 3)> Size: 24B
         array([1. , 2. , 1.5])
@@ -8427,7 +8346,6 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.groupby("labels").nunique()
         <xarray.DataArray (labels: 3)> Size: 24B
@@ -8526,7 +8444,6 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.groupby("labels").cumsum()
         <xarray.DataArray (time: 6)> Size: 48B
@@ -8627,7 +8544,6 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.groupby("labels").cumprod()
         <xarray.DataArray (time: 6)> Size: 48B
@@ -8739,7 +8655,6 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
-
         >>> da.resample(time="3ME").count()
         <xarray.DataArray (time: 3)> Size: 24B
         array([1, 3, 1])
@@ -8829,7 +8744,6 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
-
         >>> da.resample(time="3ME").all()
         <xarray.DataArray (time: 3)> Size: 3B
         array([ True,  True, False])
@@ -8918,7 +8832,6 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.resample(time="3ME").any()
         <xarray.DataArray (time: 3)> Size: 3B
@@ -9014,7 +8927,6 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.resample(time="3ME").max()
         <xarray.DataArray (time: 3)> Size: 24B
@@ -9120,7 +9032,6 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.resample(time="3ME").min()
         <xarray.DataArray (time: 3)> Size: 24B
@@ -9228,7 +9139,6 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.resample(time="3ME").mean()
         <xarray.DataArray (time: 3)> Size: 24B
@@ -9343,7 +9253,6 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.resample(time="3ME").prod()
         <xarray.DataArray (time: 3)> Size: 24B
@@ -9469,7 +9378,6 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
-
         >>> da.resample(time="3ME").sum()
         <xarray.DataArray (time: 3)> Size: 24B
         array([1., 5., 2.])
@@ -9590,7 +9498,6 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.resample(time="3ME").std()
         <xarray.DataArray (time: 3)> Size: 24B
@@ -9713,7 +9620,6 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
-
         >>> da.resample(time="3ME").var()
         <xarray.DataArray (time: 3)> Size: 24B
         array([0.        , 1.55555556, 0.        ])
@@ -9831,7 +9737,6 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
-
         >>> da.resample(time="3ME").median()
         <xarray.DataArray (time: 3)> Size: 24B
         array([1., 2., 2.])
@@ -9921,7 +9826,6 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.resample(time="3ME").nunique()
         <xarray.DataArray (time: 3)> Size: 24B
@@ -10020,7 +9924,6 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.resample(time="3ME").cumsum()
         <xarray.DataArray (time: 6)> Size: 48B
@@ -10121,7 +10024,6 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-
 
         >>> da.resample(time="3ME").cumprod()
         <xarray.DataArray (time: 6)> Size: 48B

@@ -65,7 +65,6 @@ class NamedArrayAggregations:
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
 
-
         >>> na.count()
         <xarray.NamedArray ()> Size: 8B
         array(5)
@@ -119,7 +118,6 @@ class NamedArrayAggregations:
         <xarray.NamedArray (x: 6)> Size: 6B
         array([ True,  True,  True,  True,  True, False])
 
-
         >>> na.all()
         <xarray.NamedArray ()> Size: 1B
         array(False)
@@ -172,7 +170,6 @@ class NamedArrayAggregations:
         >>> na
         <xarray.NamedArray (x: 6)> Size: 6B
         array([ True,  True,  True,  True,  True, False])
-
 
         >>> na.any()
         <xarray.NamedArray ()> Size: 1B
@@ -231,7 +228,6 @@ class NamedArrayAggregations:
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
-
 
         >>> na.max()
         <xarray.NamedArray ()> Size: 8B
@@ -297,7 +293,6 @@ class NamedArrayAggregations:
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
-
 
         >>> na.min()
         <xarray.NamedArray ()> Size: 8B
@@ -367,7 +362,6 @@ class NamedArrayAggregations:
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
-
 
         >>> na.mean()
         <xarray.NamedArray ()> Size: 8B
@@ -444,7 +438,6 @@ class NamedArrayAggregations:
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
-
 
         >>> na.prod()
         <xarray.NamedArray ()> Size: 8B
@@ -529,7 +522,6 @@ class NamedArrayAggregations:
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
 
-
         >>> na.sum()
         <xarray.NamedArray ()> Size: 8B
         array(8.)
@@ -609,7 +601,6 @@ class NamedArrayAggregations:
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
-
 
         >>> na.std()
         <xarray.NamedArray ()> Size: 8B
@@ -691,7 +682,6 @@ class NamedArrayAggregations:
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
 
-
         >>> na.var()
         <xarray.NamedArray ()> Size: 8B
         array(1.04)
@@ -768,7 +758,6 @@ class NamedArrayAggregations:
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
 
-
         >>> na.median()
         <xarray.NamedArray ()> Size: 8B
         array(2.)
@@ -832,7 +821,6 @@ class NamedArrayAggregations:
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
-
 
         >>> na.nunique()
         <xarray.NamedArray ()> Size: 8B
@@ -908,7 +896,6 @@ class NamedArrayAggregations:
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
 
-
         >>> na.cumsum()
         <xarray.NamedArray (x: 6)> Size: 48B
         array([1., 3., 6., 6., 8., 8.])
@@ -982,7 +969,6 @@ class NamedArrayAggregations:
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
-
 
         >>> na.cumprod()
         <xarray.NamedArray (x: 6)> Size: 48B
