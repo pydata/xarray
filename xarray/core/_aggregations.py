@@ -513,7 +513,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -618,7 +618,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -733,7 +733,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -845,7 +845,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -957,7 +957,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -1065,7 +1065,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -1112,6 +1112,99 @@ class DataTreeAggregations:
             dim=dim,
             skipna=skipna,
             numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def nunique(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this DataTree's data by applying ``nunique`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``nunique``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``nunique`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataTree
+            New DataTree with ``nunique`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        pandas.DataFrame.nunique
+        Dataset.nunique
+        DataArray.nunique
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Examples
+        --------
+        >>> dt = xr.DataTree(
+        ...     xr.Dataset(
+        ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
+        ...         coords=dict(
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
+        ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...         ),
+        ...     ),
+        ... )
+        >>> dt
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  (time: 6)
+            Coordinates:
+              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+            Data variables:
+                foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
+
+        >>> dt.nunique()
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      int64 8B 5
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> dt.nunique(skipna=False)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      int64 8B 5
+        """
+        return self.reduce(
+            duck_array_ops.nunique,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -1164,7 +1257,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -1269,7 +1362,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -1776,6 +1869,10 @@ class DatasetAggregations:
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1872,7 +1969,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -1979,7 +2076,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2083,7 +2180,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2187,7 +2284,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2287,7 +2384,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2328,6 +2425,92 @@ class DatasetAggregations:
             dim=dim,
             skipna=skipna,
             numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def nunique(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this Dataset's data by applying ``nunique`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``nunique``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``nunique`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : Dataset
+            New Dataset with ``nunique`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        pandas.DataFrame.nunique
+        DataArray.nunique
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 0, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset> Size: 120B
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
+
+        >>> ds.nunique()
+        <xarray.Dataset> Size: 8B
+        Dimensions:  ()
+        Data variables:
+            da       int64 8B 5
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> ds.nunique(skipna=False)
+        <xarray.Dataset> Size: 8B
+        Dimensions:  ()
+        Data variables:
+            da       int64 8B 5
+        """
+        return self.reduce(
+            duck_array_ops.nunique,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -2379,7 +2562,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -2477,7 +2660,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -2944,6 +3127,10 @@ class DataArrayAggregations:
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3032,7 +3219,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3129,7 +3316,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3223,7 +3410,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3317,7 +3504,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3407,7 +3594,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3438,6 +3625,84 @@ class DataArrayAggregations:
         """
         return self.reduce(
             duck_array_ops.median,
+            dim=dim,
+            skipna=skipna,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def nunique(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this DataArray's data by applying ``nunique`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``nunique``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``nunique`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray with ``nunique`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        pandas.DataFrame.nunique
+        Dataset.nunique
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 0, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> da
+        <xarray.DataArray (time: 6)> Size: 48B
+        array([ 1.,  2.,  3.,  0.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+
+        >>> da.nunique()
+        <xarray.DataArray ()> Size: 8B
+        array(5)
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> da.nunique(skipna=False)
+        <xarray.DataArray ()> Size: 8B
+        array(5)
+        """
+        return self.reduce(
+            duck_array_ops.nunique,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
@@ -3491,7 +3756,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -3585,7 +3850,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -4223,6 +4488,8 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4344,7 +4611,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4479,7 +4746,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4611,7 +4878,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4743,7 +5010,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4871,7 +5138,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4916,6 +5183,104 @@ class DatasetGroupByAggregations:
             dim=dim,
             skipna=skipna,
             numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def nunique(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
+        """
+        Reduce this Dataset's data by applying ``nunique`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``nunique``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``nunique`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : Dataset
+            New Dataset with ``nunique`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        pandas.DataFrame.nunique
+        Dataset.nunique
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 0, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset> Size: 120B
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
+
+        >>> ds.groupby("labels").nunique()
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 24B 'a' 'b' 'c'
+        Data variables:
+            da       (labels) int64 24B 2 1 2
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> ds.groupby("labels").nunique(skipna=False)
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 24B 'a' 'b' 'c'
+        Data variables:
+            da       (labels) int64 24B 2 1 2
+        """
+        return self.reduce(
+            duck_array_ops.nunique,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -4973,7 +5338,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -5077,7 +5442,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -5719,6 +6084,8 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5840,7 +6207,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -5975,7 +6342,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6107,7 +6474,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6239,7 +6606,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6367,7 +6734,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6412,6 +6779,104 @@ class DatasetResampleAggregations:
             dim=dim,
             skipna=skipna,
             numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def nunique(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
+        """
+        Reduce this Dataset's data by applying ``nunique`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``nunique``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``nunique`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : Dataset
+            New Dataset with ``nunique`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        pandas.DataFrame.nunique
+        Dataset.nunique
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 0, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset> Size: 120B
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
+
+        >>> ds.resample(time="3ME").nunique()
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) int64 24B 1 3 2
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> ds.resample(time="3ME").nunique(skipna=False)
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) int64 24B 1 3 2
+        """
+        return self.reduce(
+            duck_array_ops.nunique,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -6469,7 +6934,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -6573,7 +7038,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -7176,6 +7641,8 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -7288,7 +7755,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7412,7 +7879,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7533,7 +8000,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7654,7 +8121,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7771,7 +8238,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7806,6 +8273,96 @@ class DataArrayGroupByAggregations:
         """
         return self.reduce(
             duck_array_ops.median,
+            dim=dim,
+            skipna=skipna,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def nunique(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
+        """
+        Reduce this DataArray's data by applying ``nunique`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``nunique``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``nunique`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray with ``nunique`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        pandas.DataFrame.nunique
+        DataArray.nunique
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 0, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> da
+        <xarray.DataArray (time: 6)> Size: 48B
+        array([ 1.,  2.,  3.,  0.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+
+        >>> da.groupby("labels").nunique()
+        <xarray.DataArray (labels: 3)> Size: 24B
+        array([2, 1, 2])
+        Coordinates:
+          * labels   (labels) object 24B 'a' 'b' 'c'
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> da.groupby("labels").nunique(skipna=False)
+        <xarray.DataArray (labels: 3)> Size: 24B
+        array([2, 1, 2])
+        Coordinates:
+          * labels   (labels) object 24B 'a' 'b' 'c'
+        """
+        return self.reduce(
+            duck_array_ops.nunique,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
@@ -7865,7 +8422,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -7965,7 +8522,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -8564,6 +9121,8 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -8676,7 +9235,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -8800,7 +9359,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -8921,7 +9480,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -9042,7 +9601,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -9159,7 +9718,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -9194,6 +9753,96 @@ class DataArrayResampleAggregations:
         """
         return self.reduce(
             duck_array_ops.median,
+            dim=dim,
+            skipna=skipna,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def nunique(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
+        """
+        Reduce this DataArray's data by applying ``nunique`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``nunique``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``nunique`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray with ``nunique`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        pandas.DataFrame.nunique
+        DataArray.nunique
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 0, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> da
+        <xarray.DataArray (time: 6)> Size: 48B
+        array([ 1.,  2.,  3.,  0.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+
+        >>> da.resample(time="3ME").nunique()
+        <xarray.DataArray (time: 3)> Size: 24B
+        array([1, 3, 2])
+        Coordinates:
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> da.resample(time="3ME").nunique(skipna=False)
+        <xarray.DataArray (time: 3)> Size: 24B
+        array([1, 3, 2])
+        Coordinates:
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+        """
+        return self.reduce(
+            duck_array_ops.nunique,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
@@ -9253,7 +9902,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -9353,7 +10002,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
