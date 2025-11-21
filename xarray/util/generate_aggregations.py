@@ -434,7 +434,7 @@ class AggregationGenerator:
         return f"""
         Examples
         --------{created}
-        >>> {self.datastructure.example_var_name}\n{blank_line}\n
+        >>> {self.datastructure.example_var_name}\n{blank_line}
         >>> {calculation}(){extra_examples}"""
 
 
