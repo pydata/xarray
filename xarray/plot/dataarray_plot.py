@@ -1000,7 +1000,7 @@ artist :
                 ckw = {vv: cmap_params[vv] for vv in ("vmin", "vmax", "norm", "cmap")}
                 cmap_params_subset.update(**ckw)
 
-        with plt.rc_context(_styles):
+        with plt.rc_context(_styles):  # type: ignore[arg-type, unused-ignore]
             if z is not None:
                 import mpl_toolkits
 

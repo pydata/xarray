@@ -168,7 +168,7 @@ class Rolling(Generic[T_Xarray]):
 
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
         if module_available("numbagg"):
-            import numbagg
+            import numbagg  # type: ignore[import-not-found, unused-ignore]
 
             numbagg_move_func = getattr(numbagg, "move_" + name, None)
         else:
