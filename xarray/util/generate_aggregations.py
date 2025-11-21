@@ -530,6 +530,7 @@ AGGREGATION_METHODS = (
     Method(
         "median", extra_kwargs=(skipna,), numeric_only=True, min_flox_version="0.9.2"
     ),
+    Method("nunique", extra_kwargs=(skipna,), see_also_modules=("pandas.DataFrame",)),
     # Cumulatives:
     Method(
         "cumsum",

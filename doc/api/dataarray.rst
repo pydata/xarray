@@ -162,6 +162,7 @@ Aggregation
    DataArray.min
    DataArray.mean
    DataArray.median
+   DataArray.nunique
    DataArray.prod
    DataArray.sum
    DataArray.std

@@ -191,7 +191,7 @@ def isnull(data):
         dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
         return full_like(data, dtype=dtype, fill_value=False)
     # at this point, array should have dtype=object
-    elif isinstance(data, np.ndarray) or pd.api.types.is_extension_array_dtype(data):  # noqa: TID251
+    elif isinstance(data, np.ndarray) or pd.api.types.is_extension_array_dtype(data):
         return pandas_isnull(data)
     else:
         # Not reachable yet, but intended for use with other duck array
@@ -289,9 +289,11 @@ def as_shared_dtype(scalars_or_arrays, xp=None):
     elif xp is None:
         xp = get_array_namespace(scalars_or_arrays)
     scalars_or_arrays = [
-        PandasExtensionArray(s_or_a)
-        if isinstance(s_or_a, pd.api.extensions.ExtensionArray)
-        else s_or_a
+        (
+            PandasExtensionArray(s_or_a)
+            if isinstance(s_or_a, pd.api.extensions.ExtensionArray)
+            else s_or_a
+        )
         for s_or_a in scalars_or_arrays
     ]
     # Pass arrays directly instead of dtypes to result_type so scalars
@@ -382,6 +384,38 @@ def count(data, axis=None):
     """Count the number of non-NA in this array along the given axis or axes"""
     xp = get_array_namespace(data)
     return xp.sum(xp.logical_not(isnull(data)), axis=axis)
+
+
+def nunique(data, axis=None, skipna=True):
+    """Count the number of unique values in this array along the given axis or axes"""
+    xp = get_array_namespace(data)
+
+    if axis is None:
+        axis = list(range(data.ndim))
+    elif isinstance(axis, (int, tuple)):
+        axis = [axis] if isinstance(axis, int) else list(axis)
+
+    # If axis empty, return unchanged data.
+    if not axis:
+        return data
+
+    # Move axes to be aggregated to the end and stack
+    shape = data.shape
+    new_order = [i for i in range(len(shape)) if i not in axis] + axis
+    new_shape = [s for i, s in enumerate(shape) if i not in axis] + [-1]
+    stacked = xp.reshape(xp.transpose(data, new_order), new_shape)
+
+    # Check if data has type object; if so use pd.factorize for unique integers
+    factorize = bool(is_duck_array(data) and data.dtype == np.object_)
+
+    def _nunique_along_axis(array):
+        if skipna:
+            array = array[notnull(array)]
+        if factorize:
+            array = pd.factorize(array)[0]
+        return len(xp.unique(array))
+
+    return xp.apply_along_axis(_nunique_along_axis, -1, stacked)
 
 
 def sum_where(data, axis=None, dtype=None, where=None):
