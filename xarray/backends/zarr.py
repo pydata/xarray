@@ -279,6 +279,15 @@ class ZarrArrayWrapper(BackendArray):
         )
 
 
+def _normalize_var_chunks(var_chunks, ndim):
+    """Normalize variable chunks to tuple of tuples format."""
+    if not var_chunks:
+        return None
+    if isinstance(var_chunks[0], int):
+        return tuple((chunk,) for chunk in var_chunks)
+    return var_chunks
+
+
 def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
     """
     Given encoding chunks (possibly None or []) and variable chunks
@@ -294,20 +303,23 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
     if not var_chunks and not enc_chunks:
         return None
 
+    # Normalize var_chunks to tuple of tuples format
+    var_chunks_normalized = _normalize_var_chunks(var_chunks, ndim)
+
     # if there are no chunks in encoding but there are dask chunks, we try to
     # use the same chunks in zarr
     # However, zarr chunks needs to be uniform for each array
     # https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html#chunks
     # while dask chunks can be variable sized
     # https://dask.pydata.org/en/latest/array-design.html#chunks
-    if var_chunks and not enc_chunks:
-        if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
+    if var_chunks_normalized and not enc_chunks:
+        if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks_normalized):
             raise ValueError(
                 "Zarr requires uniform chunk sizes except for final chunk. "
                 f"Variable named {name!r} has incompatible dask chunks: {var_chunks!r}. "
                 "Consider rechunking using `chunk()`."
             )
-        if any((chunks[0] < chunks[-1]) for chunks in var_chunks):
+        if any((chunks[0] < chunks[-1]) for chunks in var_chunks_normalized):
             raise ValueError(
                 "Final chunk of Zarr array must be the same size or smaller "
                 f"than the first. Variable named {name!r} has incompatible Dask chunks {var_chunks!r}."
@@ -315,7 +327,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
                 "or modifying `encoding['chunks']`."
             )
         # return the first chunk for each dimension
-        return tuple(chunk[0] for chunk in var_chunks)
+        return tuple(chunk[0] for chunk in var_chunks_normalized)
 
     # From here on, we are dealing with user-specified chunks in encoding
     # zarr allows chunks to be an integer, in which case it uses the same chunk

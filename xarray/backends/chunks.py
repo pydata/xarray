@@ -3,10 +3,21 @@ import numpy as np
 from xarray.core.datatree import Variable
 
 
+def _normalize_nd_chunks(nd_chunks):
+    """Normalize nd_chunks to tuple of tuples format."""
+    if not nd_chunks:
+        return None
+    if isinstance(nd_chunks[0], int):
+        return tuple((chunk,) for chunk in nd_chunks)
+    return nd_chunks
+
+
 def align_nd_chunks(
     nd_v_chunks: tuple[tuple[int, ...], ...],
     nd_backend_chunks: tuple[tuple[int, ...], ...],
 ) -> tuple[tuple[int, ...], ...]:
+    nd_v_chunks = _normalize_nd_chunks(nd_v_chunks) or nd_v_chunks
+
     if len(nd_backend_chunks) != len(nd_v_chunks):
         raise ValueError(
             "The number of dimensions on the backend and the variable must be the same."
@@ -162,6 +173,10 @@ def grid_rechunk(
     if not nd_v_chunks:
         return v
 
+    nd_v_chunks = _normalize_nd_chunks(nd_v_chunks)
+    if not nd_v_chunks:
+        return v
+
     nd_grid_chunks = tuple(
         build_grid_chunks(
             v_size,
@@ -191,6 +206,11 @@ def validate_grid_chunks_alignment(
 ):
     if nd_v_chunks is None:
         return
+
+    nd_v_chunks = _normalize_nd_chunks(nd_v_chunks)
+    if nd_v_chunks is None:
+        return
+
     base_error = (
         "Specified Zarr chunks encoding['chunks']={enc_chunks!r} for "
         "variable named {name!r} would overlap multiple Dask chunks. "
