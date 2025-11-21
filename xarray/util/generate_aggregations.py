@@ -239,28 +239,34 @@ skipna = ExtraKwarg(
     docs=_SKIPNA_DOCSTRING,
     kwarg="skipna: bool | None = None,",
     call="skipna=skipna,",
-    example="""\n
-        Use ``skipna`` to control whether NaNs are ignored.
-
-        >>> {calculation}(skipna=False)""",
+    example=(
+        "\n        \n"
+        "        Use ``skipna`` to control whether NaNs are ignored.\n"
+        "        \n"
+        "        >>> {calculation}(skipna=False)"
+    ),
 )
 min_count = ExtraKwarg(
     docs=_MINCOUNT_DOCSTRING,
     kwarg="min_count: int | None = None,",
     call="min_count=min_count,",
-    example="""\n
-        Specify ``min_count`` for finer control over when NaNs are ignored.
-
-        >>> {calculation}(skipna=True, min_count=2)""",
+    example=(
+        "\n        \n"
+        "        Specify ``min_count`` for finer control over when NaNs are ignored.\n"
+        "        \n"
+        "        >>> {calculation}(skipna=True, min_count=2)"
+    ),
 )
 ddof = ExtraKwarg(
     docs=_DDOF_DOCSTRING,
     kwarg="ddof: int = 0,",
     call="ddof=ddof,",
-    example="""\n
-        Specify ``ddof=1`` for an unbiased estimate.
-
-        >>> {calculation}(skipna=True, ddof=1)""",
+    example=(
+        "\n        \n"
+        "        Specify ``ddof=1`` for an unbiased estimate.\n"
+        "        \n"
+        "        >>> {calculation}(skipna=True, ddof=1)"
+    ),
 )
 
 
@@ -424,11 +430,11 @@ class AggregationGenerator:
         else:
             extra_examples = ""
 
+        blank_line = 8 * " "
         return f"""
         Examples
         --------{created}
-        >>> {self.datastructure.example_var_name}
-
+        >>> {self.datastructure.example_var_name}\n{blank_line}\n
         >>> {calculation}(){extra_examples}"""
 
 
@@ -444,7 +450,12 @@ class GroupByAggregationGenerator(AggregationGenerator):
 
         # median isn't enabled yet, because it would break if a single group was present in multiple
         # chunks. The non-flox code path will just rechunk every group to a single chunk and execute the median
-        method_is_not_flox_supported = method.name in ("median", "cumsum", "cumprod")
+        method_is_not_flox_supported = method.name in (
+            "median",
+            "cumsum",
+            "cumprod",
+            "nunique",
+        )
         if method_is_not_flox_supported:
             indent = 12
         else:
