@@ -856,10 +856,12 @@ def _is_likely_dap_url(url: str) -> bool:
     Determines if a URL is likely an OPeNDAP (DAP) endpoint based on
     known protocols, server software path patterns, and file extensions.
 
-    Args:
-        url: The URL to inspect.
+    Parameters
+    ----------
+    url : str
 
-    Returns:
+    Returns
+    -------
         True if the URL matches common DAP patterns, False otherwise.
     """
     if not url:
