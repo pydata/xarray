@@ -17,6 +17,11 @@ New Features
 - :py:func:`combine_nested` now support :py:class:`DataTree` objects
   (:pull:`10849`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- :py:func:`set_options` now supports an ``arithmetic_compat`` option which determines how non-index coordinates
+  of the same name are compared for potential conflicts when performing binary operations. The default for it is
+  ``arithmetic_compat='minimal'`` which matches the existing behaviour, but it is slated to change to 'override'
+  in future alongside the other defaults for ``compat``, see below.
+  By `Matthew Willson <https://github.com/mjwillson>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -24,6 +29,10 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
+
+- The default for the ``arithmetic_compat`` option will change from 'minimal' to 'override' in a future version,
+  consistent with the existing deprecation cycle which will change the default for ``compat`` to 'override' elsewhere.
+  We log a warning on behaviour which will change when this default changes.
 
 
 Bug Fixes

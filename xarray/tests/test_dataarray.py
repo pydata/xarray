@@ -25,6 +25,7 @@ from xarray import (
     DataArray,
     Dataset,
     IndexVariable,
+    MergeError,
     Variable,
     align,
     broadcast,
@@ -2477,27 +2478,30 @@ class TestDataArray:
         actual = 1 + orig
         assert_identical(expected, actual)
 
-        actual = orig + orig[0, 0]
-        exp_coords = {k: v for k, v in coords.items() if k != "lat"}
-        expected = DataArray(
-            orig.values + orig.values[0, 0], exp_coords, dims=["x", "y"]
-        )
-        assert_identical(expected, actual)
+        with xr.set_options(arithmetic_compat='minimal'):
+            actual = orig + orig[0, 0]
+            exp_coords = {k: v for k, v in coords.items() if k != "lat"}
+            expected = DataArray(
+                orig.values + orig.values[0, 0], exp_coords, dims=["x", "y"]
+            )
+            assert_identical(expected, actual)
 
-        actual = orig[0, 0] + orig
-        assert_identical(expected, actual)
+            actual = orig[0, 0] + orig
+            assert_identical(expected, actual)
 
-        actual = orig[0, 0] + orig[-1, -1]
-        expected = DataArray(orig.values[0, 0] + orig.values[-1, -1], {"c": -999})
-        assert_identical(expected, actual)
+            actual = orig[0, 0] + orig[-1, -1]
+            expected = DataArray(
+                orig.values[0, 0] + orig.values[-1, -1],
+                {"c": -999})
+            assert_identical(expected, actual)
 
-        actual = orig[:, 0] + orig[0, :]
-        exp_values = orig[:, 0].values[:, None] + orig[0, :].values[None, :]
-        expected = DataArray(exp_values, exp_coords, dims=["x", "y"])
-        assert_identical(expected, actual)
+            actual = orig[:, 0] + orig[0, :]
+            exp_values = orig[:, 0].values[:, None] + orig[0, :].values[None, :]
+            expected = DataArray(exp_values, exp_coords, dims=["x", "y"])
+            assert_identical(expected, actual)
 
-        actual = orig[0, :] + orig[:, 0]
-        assert_identical(expected.transpose(transpose_coords=True), actual)
+            actual = orig[0, :] + orig[:, 0]
+            assert_identical(expected.transpose(transpose_coords=True), actual)
 
         actual = orig - orig.transpose(transpose_coords=True)
         expected = DataArray(np.zeros((2, 3)), orig.coords)
@@ -2507,14 +2511,53 @@ class TestDataArray:
         assert_identical(expected.transpose(transpose_coords=True), actual)
 
         alt = DataArray([1, 1], {"x": [-1, -2], "c": "foo", "d": 555}, "x")
-        actual = orig + alt
-        expected = orig + 1
-        expected.coords["d"] = 555
-        del expected.coords["c"]
-        assert_identical(expected, actual)
 
-        actual = alt + orig
-        assert_identical(expected, actual)
+        with xr.set_options(arithmetic_compat='minimal'):
+            actual = orig + alt
+            expected = orig + 1
+            expected.coords["d"] = 555
+            del expected.coords["c"]
+            assert_identical(expected, actual)
+
+            actual = alt + orig
+            assert_identical(expected, actual)
+
+    def test_math_with_arithmetic_compat_options(self) -> None:
+        # Setting up a clash of non-index coordinate 'foo':
+        a = xr.DataArray(
+            data=[0, 0, 0],
+            dims=["x"],
+            coords={
+                "x": [1, 2, 3],
+                "foo": (["x"], [1.0, 2.0, np.nan]),
+            }
+        )
+        b = xr.DataArray(
+            data=[0, 0, 0],
+            dims=["x"],
+            coords={
+                "x": [1, 2, 3],
+                "foo": (["x"], [np.nan, 2.0, 3.0]),
+            }
+        )
+
+        with xr.set_options(arithmetic_compat="minimal"):
+            assert_equal(a + b, a.drop_vars("foo"))
+
+        with xr.set_options(arithmetic_compat="override"):
+            assert_equal(a + b, a)
+            assert_equal(b + a, b)
+
+        with xr.set_options(arithmetic_compat="no_conflicts"):
+            expected = a.assign_coords(foo=(["x"], [1.0, 2.0, 3.0]))
+            assert_equal(a + b, expected)
+            assert_equal(b + a, expected)
+
+        with xr.set_options(arithmetic_compat="equals"):
+            with pytest.raises(MergeError):
+                a + b
+            with pytest.raises(MergeError):
+                b + a
 
     def test_index_math(self) -> None:
         orig = DataArray(range(3), dims="x", name="x")
