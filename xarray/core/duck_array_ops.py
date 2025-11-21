@@ -276,14 +276,10 @@ def as_shared_dtype(scalars_or_arrays, xp=None):
             isinstance(x, type(extension_array_types[0])) for x in extension_array_types
         ):
             return [
-                (
-                    x
-                    if not isna(x)
-                    else PandasExtensionArray(
-                        type(non_nans[0].array)._from_sequence(
-                            [x], dtype=non_nans[0].dtype
-                        )
-                    )
+                x
+                if not isna(x)
+                else PandasExtensionArray(
+                    type(non_nans[0].array)._from_sequence([x], dtype=non_nans[0].dtype)
                 )
                 for x in scalars_or_arrays
             ]
