@@ -37,7 +37,6 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any, Self, TypeVar
 
-from xarray.core.options import OPTIONS
 from xarray.core.utils import emit_user_level_warning
 
 T = TypeVar("T", bound=Callable)
@@ -175,6 +174,8 @@ class CombineKwargDefault:
 
     @property
     def _value(self) -> str | None:
+        from xarray.core.options import OPTIONS  # Break circular dependency.
+
         return self._new if OPTIONS["use_new_combine_kwarg_defaults"] else self._old
 
     def __hash__(self) -> int:
@@ -216,6 +217,9 @@ _DATA_VARS_DEFAULT = CombineKwargDefault(name="data_vars", old="all", new=None)
 _COORDS_DEFAULT = CombineKwargDefault(name="coords", old="different", new="minimal")
 _COMPAT_CONCAT_DEFAULT = CombineKwargDefault(
     name="compat", old="equals", new="override"
+)
+_ARITHMETIC_COMPAT_DEFAULT = CombineKwargDefault(
+    name="arithmetic_compat", old="minimal", new="override"
 )
 _COMPAT_DEFAULT = CombineKwargDefault(name="compat", old="no_conflicts", new="override")
 _JOIN_DEFAULT = CombineKwargDefault(name="join", old="outer", new="exact")
