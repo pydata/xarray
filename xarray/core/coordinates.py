@@ -21,7 +21,14 @@ from xarray.core.indexes import (
     assert_no_index_corrupted,
     create_default_index_implicit,
 )
-from xarray.core.types import CompatOptions, DataVars, ErrorOptions, Self, T_DataArray, T_Xarray
+from xarray.core.types import (
+    CompatOptions,
+    DataVars,
+    ErrorOptions,
+    Self,
+    T_DataArray,
+    T_Xarray,
+)
 from xarray.core.utils import (
     Frozen,
     ReprObject,
@@ -507,7 +514,9 @@ class Coordinates(AbstractCoordinates):
             indexes = dict(self.xindexes)
         else:
             coord_list = [self, other] if not reflexive else [other, self]
-            variables, indexes = merge_coordinates_without_align(coord_list, compat=compat)
+            variables, indexes = merge_coordinates_without_align(
+                coord_list, compat=compat
+            )
         return variables, indexes
 
     @contextmanager
@@ -533,7 +542,7 @@ class Coordinates(AbstractCoordinates):
         self,
         other: Mapping[Any, Any] | None,
         compat: CompatOptions | CombineKwargDefault = "minimal",
-        ) -> Dataset:
+    ) -> Dataset:
         """Merge two sets of coordinates to create a new Dataset
 
         The method implements the logic used for joining coordinates in the

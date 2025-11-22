@@ -940,7 +940,9 @@ def test_interpolate_chunk_1d(
                 for dim in interp_dims:
                     if dim in scalar_dims:
                         # take the middle point
-                        dest[dim] = 0.5 * (da.coords[dim].data[0] + da.coords[dim].data[-1])
+                        dest[dim] = 0.5 * (
+                            da.coords[dim].data[0] + da.coords[dim].data[-1]
+                        )
                     else:
                         # pick some points, including outside the domain
                         before = 2 * da.coords[dim].data[0] - da.coords[dim].data[1]

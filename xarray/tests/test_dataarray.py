@@ -2478,7 +2478,7 @@ class TestDataArray:
         actual = 1 + orig
         assert_identical(expected, actual)
 
-        with xr.set_options(arithmetic_compat='minimal'):
+        with xr.set_options(arithmetic_compat="minimal"):
             actual = orig + orig[0, 0]
             exp_coords = {k: v for k, v in coords.items() if k != "lat"}
             expected = DataArray(
@@ -2490,9 +2490,7 @@ class TestDataArray:
             assert_identical(expected, actual)
 
             actual = orig[0, 0] + orig[-1, -1]
-            expected = DataArray(
-                orig.values[0, 0] + orig.values[-1, -1],
-                {"c": -999})
+            expected = DataArray(orig.values[0, 0] + orig.values[-1, -1], {"c": -999})
             assert_identical(expected, actual)
 
             actual = orig[:, 0] + orig[0, :]
@@ -2512,7 +2510,7 @@ class TestDataArray:
 
         alt = DataArray([1, 1], {"x": [-1, -2], "c": "foo", "d": 555}, "x")
 
-        with xr.set_options(arithmetic_compat='minimal'):
+        with xr.set_options(arithmetic_compat="minimal"):
             actual = orig + alt
             expected = orig + 1
             expected.coords["d"] = 555
@@ -2530,7 +2528,7 @@ class TestDataArray:
             coords={
                 "x": [1, 2, 3],
                 "foo": (["x"], [1.0, 2.0, np.nan]),
-            }
+            },
         )
         b = xr.DataArray(
             data=[0, 0, 0],
@@ -2538,7 +2536,7 @@ class TestDataArray:
             coords={
                 "x": [1, 2, 3],
                 "foo": (["x"], [np.nan, 2.0, 3.0]),
-            }
+            },
         )
 
         with xr.set_options(arithmetic_compat="minimal"):

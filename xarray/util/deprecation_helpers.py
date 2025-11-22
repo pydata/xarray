@@ -175,6 +175,7 @@ class CombineKwargDefault:
     @property
     def _value(self) -> str | None:
         from xarray.core.options import OPTIONS  # Break circular dependency.
+
         return self._new if OPTIONS["use_new_combine_kwarg_defaults"] else self._old
 
     def __hash__(self) -> int:

@@ -6841,14 +6841,14 @@ class TestDataset:
             coords={
                 "x": [1, 2, 3],
                 "foo": (["x"], [1.0, 2.0, np.nan]),
-            }
+            },
         )
         b = xr.Dataset(
             data_vars={"var": (["x"], [0, 0, 0])},
             coords={
                 "x": [1, 2, 3],
                 "foo": (["x"], [np.nan, 2.0, 3.0]),
-            }
+            },
         )
 
         with xr.set_options(arithmetic_compat="minimal"):
@@ -6868,7 +6868,6 @@ class TestDataset:
                 a + b
             with pytest.raises(MergeError):
                 b + a
-
 
     @pytest.mark.parametrize(
         ["keep_attrs", "expected"],

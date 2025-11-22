@@ -4,9 +4,12 @@ import warnings
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, get_args
 
-from xarray.core.utils import FrozenDict
 from xarray.core.types import CompatOptions
-from xarray.util.deprecation_helpers import CombineKwargDefault, _ARITHMETIC_COMPAT_DEFAULT
+from xarray.core.utils import FrozenDict
+from xarray.util.deprecation_helpers import (
+    _ARITHMETIC_COMPAT_DEFAULT,
+    CombineKwargDefault,
+)
 
 if TYPE_CHECKING:
     from matplotlib.colors import Colormap
