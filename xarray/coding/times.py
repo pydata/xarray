@@ -306,7 +306,8 @@ def _cast_timestamp_to_coarsest_resolution(timestamp: pd.Timestamp) -> pd.Timest
     for unit in _ORDERED_PANDAS_TIME_RESOLUTIONS:
         coarsest_timestamp = timestamp.as_unit(unit)
         if coarsest_timestamp == timestamp:
-            return coarsest_timestamp
+            break
+    return coarsest_timestamp
 
 
 def _unpack_time_unit_and_ref_date(
