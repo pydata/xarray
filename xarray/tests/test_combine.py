@@ -618,6 +618,30 @@ class TestCombineAuto:
                                       " along dimension x"):
             combine_by_coords([ds1, ds0])
 
+    def test_combine_by_coords_non_monotonic_non_concat_dim(self):
+        # Test that non-monotonic coordinates are allowed on dimensions
+        # that don't vary between datasets (i.e., not concatenation dims)
+        # Regression test for GH issue
+        yCoord = ['a', 'c', 'b']  # non-monotonic
+
+        ds1 = Dataset(
+            data_vars={'data': (['x', 'y'], np.random.rand(3, 3))},
+            coords={'x': [1, 2, 3], 'y': yCoord}
+        )
+
+        ds2 = Dataset(
+            data_vars={'data': (['x', 'y'], np.random.rand(4, 3))},
+            coords={'x': [4, 5, 6, 7], 'y': yCoord}
+        )
+
+        # Should not raise an error - y is not a concatenation dimension
+        actual = combine_by_coords([ds1, ds2])
+
+        # Verify the result has the expected shape and coordinates
+        assert actual.dims == {'x': 7, 'y': 3}
+        assert list(actual.coords['x'].values) == [1, 2, 3, 4, 5, 6, 7]
+        assert list(actual.coords['y'].values) == yCoord
+
 
 @pytest.mark.filterwarnings("ignore:In xarray version 0.13 `auto_combine` "
                             "will be deprecated")
