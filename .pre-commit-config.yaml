@@ -24,13 +24,13 @@ repos:
       - id: rst-inline-touching-normal
       - id: text-unicode-replacement-char
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.3
+    rev: v0.14.6
     hooks:
       - id: ruff-check
         args: ["--fix", "--show-fixes"]
       - id: ruff-format
   - repo: https://github.com/keewis/blackdoc
-    rev: v0.4.5
+    rev: v0.4.6
     hooks:
       - id: blackdoc
         exclude: "generate_aggregations.py"
@@ -76,6 +76,6 @@ repos:
       - id: validate-pyproject
         additional_dependencies: ["validate-pyproject-schema-store[all]"]
   - repo: https://github.com/adhtruong/mirrors-typos
-    rev: v1.39.0
+    rev: v1.39.2
     hooks:
       - id: typos

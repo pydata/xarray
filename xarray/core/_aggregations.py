@@ -1121,6 +1121,7 @@ class DataTreeAggregations:
         dim: Dims = None,
         *,
         skipna: bool | None = None,
+        equalna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -1137,6 +1138,11 @@ class DataTreeAggregations:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
+        equalna : bool or None, default: True
+            If ``skipna == False``, ``equalna`` determines whether null values
+            are counted as distinct values or not. Set ``equalna = True`` for
+            consistency with ``pandas.DataFrame.nunique``, or ``equalna = False``
+            for consistency with the `Python array API <https://data-apis.org/array-api/latest/API_specification/generated/array_api.unique_counts.html>`_.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -1159,6 +1165,15 @@ class DataTreeAggregations:
         DataArray.nunique
         :ref:`agg`
             User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Note that identifying unique values on very large
+        arrays is slow and memory intensive when there are many unique values.
+        For such arrays, consider lowering the precision, e.g. rounding floats
+        then converting them to integers, before searching for unique values.
+        For dask arrays, performance is improved when chunksizes are largest on
+        the dimension(s) being reduced.
 
         Examples
         --------
@@ -1199,11 +1214,21 @@ class DataTreeAggregations:
             Dimensions:  ()
             Data variables:
                 foo      int64 8B 5
+
+        Use ``equalna`` to control whether NaNs are counted as distinct values.
+
+        >>> dt.nunique(skipna=False, equalna=False)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      int64 8B 5
         """
         return self.reduce(
             duck_array_ops.nunique,
             dim=dim,
             skipna=skipna,
+            equalna=equalna,
             numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
@@ -2434,6 +2459,7 @@ class DatasetAggregations:
         dim: Dims = None,
         *,
         skipna: bool | None = None,
+        equalna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -2450,6 +2476,11 @@ class DatasetAggregations:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
+        equalna : bool or None, default: True
+            If ``skipna == False``, ``equalna`` determines whether null values
+            are counted as distinct values or not. Set ``equalna = True`` for
+            consistency with ``pandas.DataFrame.nunique``, or ``equalna = False``
+            for consistency with the `Python array API <https://data-apis.org/array-api/latest/API_specification/generated/array_api.unique_counts.html>`_.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -2471,6 +2502,15 @@ class DatasetAggregations:
         DataArray.nunique
         :ref:`agg`
             User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Note that identifying unique values on very large
+        arrays is slow and memory intensive when there are many unique values.
+        For such arrays, consider lowering the precision, e.g. rounding floats
+        then converting them to integers, before searching for unique values.
+        For dask arrays, performance is improved when chunksizes are largest on
+        the dimension(s) being reduced.
 
         Examples
         --------
@@ -2505,11 +2545,20 @@ class DatasetAggregations:
         Dimensions:  ()
         Data variables:
             da       int64 8B 5
+
+        Use ``equalna`` to control whether NaNs are counted as distinct values.
+
+        >>> ds.nunique(skipna=False, equalna=False)
+        <xarray.Dataset> Size: 8B
+        Dimensions:  ()
+        Data variables:
+            da       int64 8B 5
         """
         return self.reduce(
             duck_array_ops.nunique,
             dim=dim,
             skipna=skipna,
+            equalna=equalna,
             numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
@@ -3636,6 +3685,7 @@ class DataArrayAggregations:
         dim: Dims = None,
         *,
         skipna: bool | None = None,
+        equalna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -3652,6 +3702,11 @@ class DataArrayAggregations:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
+        equalna : bool or None, default: True
+            If ``skipna == False``, ``equalna`` determines whether null values
+            are counted as distinct values or not. Set ``equalna = True`` for
+            consistency with ``pandas.DataFrame.nunique``, or ``equalna = False``
+            for consistency with the `Python array API <https://data-apis.org/array-api/latest/API_specification/generated/array_api.unique_counts.html>`_.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -3673,6 +3728,15 @@ class DataArrayAggregations:
         Dataset.nunique
         :ref:`agg`
             User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Note that identifying unique values on very large
+        arrays is slow and memory intensive when there are many unique values.
+        For such arrays, consider lowering the precision, e.g. rounding floats
+        then converting them to integers, before searching for unique values.
+        For dask arrays, performance is improved when chunksizes are largest on
+        the dimension(s) being reduced.
 
         Examples
         --------
@@ -3700,11 +3764,18 @@ class DataArrayAggregations:
         >>> da.nunique(skipna=False)
         <xarray.DataArray ()> Size: 8B
         array(5)
+
+        Use ``equalna`` to control whether NaNs are counted as distinct values.
+
+        >>> da.nunique(skipna=False, equalna=False)
+        <xarray.DataArray ()> Size: 8B
+        array(5)
         """
         return self.reduce(
             duck_array_ops.nunique,
             dim=dim,
             skipna=skipna,
+            equalna=equalna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -5192,6 +5263,7 @@ class DatasetGroupByAggregations:
         dim: Dims = None,
         *,
         skipna: bool | None = None,
+        equalna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
@@ -5209,6 +5281,11 @@ class DatasetGroupByAggregations:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
+        equalna : bool or None, default: True
+            If ``skipna == False``, ``equalna`` determines whether null values
+            are counted as distinct values or not. Set ``equalna = True`` for
+            consistency with ``pandas.DataFrame.nunique``, or ``equalna = False``
+            for consistency with the `Python array API <https://data-apis.org/array-api/latest/API_specification/generated/array_api.unique_counts.html>`_.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -5237,6 +5314,13 @@ class DatasetGroupByAggregations:
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
+        Note that identifying unique values on very large
+        arrays is slow and memory intensive when there are many unique values.
+        For such arrays, consider lowering the precision, e.g. rounding floats
+        then converting them to integers, before searching for unique values.
+        For dask arrays, performance is improved when chunksizes are largest on
+        the dimension(s) being reduced.
 
         Examples
         --------
@@ -5275,11 +5359,22 @@ class DatasetGroupByAggregations:
           * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
             da       (labels) int64 24B 2 1 2
+
+        Use ``equalna`` to control whether NaNs are counted as distinct values.
+
+        >>> ds.groupby("labels").nunique(skipna=False, equalna=False)
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 24B 'a' 'b' 'c'
+        Data variables:
+            da       (labels) int64 24B 2 1 2
         """
         return self.reduce(
             duck_array_ops.nunique,
             dim=dim,
             skipna=skipna,
+            equalna=equalna,
             numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
@@ -6788,6 +6883,7 @@ class DatasetResampleAggregations:
         dim: Dims = None,
         *,
         skipna: bool | None = None,
+        equalna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
@@ -6805,6 +6901,11 @@ class DatasetResampleAggregations:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
+        equalna : bool or None, default: True
+            If ``skipna == False``, ``equalna`` determines whether null values
+            are counted as distinct values or not. Set ``equalna = True`` for
+            consistency with ``pandas.DataFrame.nunique``, or ``equalna = False``
+            for consistency with the `Python array API <https://data-apis.org/array-api/latest/API_specification/generated/array_api.unique_counts.html>`_.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -6833,6 +6934,13 @@ class DatasetResampleAggregations:
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
+        Note that identifying unique values on very large
+        arrays is slow and memory intensive when there are many unique values.
+        For such arrays, consider lowering the precision, e.g. rounding floats
+        then converting them to integers, before searching for unique values.
+        For dask arrays, performance is improved when chunksizes are largest on
+        the dimension(s) being reduced.
 
         Examples
         --------
@@ -6871,11 +6979,22 @@ class DatasetResampleAggregations:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) int64 24B 1 3 2
+
+        Use ``equalna`` to control whether NaNs are counted as distinct values.
+
+        >>> ds.resample(time="3ME").nunique(skipna=False, equalna=False)
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) int64 24B 1 3 2
         """
         return self.reduce(
             duck_array_ops.nunique,
             dim=dim,
             skipna=skipna,
+            equalna=equalna,
             numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
@@ -8284,6 +8403,7 @@ class DataArrayGroupByAggregations:
         dim: Dims = None,
         *,
         skipna: bool | None = None,
+        equalna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
@@ -8301,6 +8421,11 @@ class DataArrayGroupByAggregations:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
+        equalna : bool or None, default: True
+            If ``skipna == False``, ``equalna`` determines whether null values
+            are counted as distinct values or not. Set ``equalna = True`` for
+            consistency with ``pandas.DataFrame.nunique``, or ``equalna = False``
+            for consistency with the `Python array API <https://data-apis.org/array-api/latest/API_specification/generated/array_api.unique_counts.html>`_.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -8329,6 +8454,13 @@ class DataArrayGroupByAggregations:
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
+        Note that identifying unique values on very large
+        arrays is slow and memory intensive when there are many unique values.
+        For such arrays, consider lowering the precision, e.g. rounding floats
+        then converting them to integers, before searching for unique values.
+        For dask arrays, performance is improved when chunksizes are largest on
+        the dimension(s) being reduced.
 
         Examples
         --------
@@ -8360,11 +8492,20 @@ class DataArrayGroupByAggregations:
         array([2, 1, 2])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
+
+        Use ``equalna`` to control whether NaNs are counted as distinct values.
+
+        >>> da.groupby("labels").nunique(skipna=False, equalna=False)
+        <xarray.DataArray (labels: 3)> Size: 24B
+        array([2, 1, 2])
+        Coordinates:
+          * labels   (labels) object 24B 'a' 'b' 'c'
         """
         return self.reduce(
             duck_array_ops.nunique,
             dim=dim,
             skipna=skipna,
+            equalna=equalna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -9764,6 +9905,7 @@ class DataArrayResampleAggregations:
         dim: Dims = None,
         *,
         skipna: bool | None = None,
+        equalna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
@@ -9781,6 +9923,11 @@ class DataArrayResampleAggregations:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
+        equalna : bool or None, default: True
+            If ``skipna == False``, ``equalna`` determines whether null values
+            are counted as distinct values or not. Set ``equalna = True`` for
+            consistency with ``pandas.DataFrame.nunique``, or ``equalna = False``
+            for consistency with the `Python array API <https://data-apis.org/array-api/latest/API_specification/generated/array_api.unique_counts.html>`_.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -9809,6 +9956,13 @@ class DataArrayResampleAggregations:
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
+        Note that identifying unique values on very large
+        arrays is slow and memory intensive when there are many unique values.
+        For such arrays, consider lowering the precision, e.g. rounding floats
+        then converting them to integers, before searching for unique values.
+        For dask arrays, performance is improved when chunksizes are largest on
+        the dimension(s) being reduced.
 
         Examples
         --------
@@ -9840,11 +9994,20 @@ class DataArrayResampleAggregations:
         array([1, 3, 2])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+
+        Use ``equalna`` to control whether NaNs are counted as distinct values.
+
+        >>> da.resample(time="3ME").nunique(skipna=False, equalna=False)
+        <xarray.DataArray (time: 3)> Size: 24B
+        array([1, 3, 2])
+        Coordinates:
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         return self.reduce(
             duck_array_ops.nunique,
             dim=dim,
             skipna=skipna,
+            equalna=equalna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
