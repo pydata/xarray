@@ -355,6 +355,17 @@ def slice_slice_by_array(
     return new_indexer
 
 
+def normalize_indexer(indexer, size):
+    if isinstance(indexer, slice):
+        return normalize_slice(indexer, size)
+    elif isinstance(indexer, np.ndarray):
+        return normalize_array(indexer, size)
+    else:
+        if indexer < 0:
+            return size + indexer
+        return indexer
+
+
 def _index_indexer_1d(
     old_indexer: OuterIndexerType,
     applied_indexer: OuterIndexerType,
@@ -365,7 +376,7 @@ def _index_indexer_1d(
         return old_indexer
     if is_full_slice(old_indexer):
         # shortcut for full slices
-        return normalize_slice(applied_indexer, size)
+        return normalize_indexer(applied_indexer, size)
 
     indexer: OuterIndexerType
     if isinstance(old_indexer, slice):
