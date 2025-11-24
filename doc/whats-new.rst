@@ -14,6 +14,14 @@ v2025.11.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Improved ``pydap`` backend behavior and performance when using :py:func:`open_dataset`, :py:func:`open_datatree`
+  when downloading dap4 (opendap) dimensions data (:issue:`10628`, :pull:`10629`). In addition ``checksums=True|False``
+  is added as optional argument to be passed to ``pydap`` backend.
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+
+- :py:func:`combine_nested` now support :py:class:`DataTree` objects
+  (:pull:`10849`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
