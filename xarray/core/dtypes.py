@@ -322,16 +322,11 @@ def result_type(
 
     if should_promote_to_object(arrays_and_dtypes, xp):
         return np.dtype(object)
-    return array_api_compat.result_type(
-        *map(
-            functools.partial(
-                maybe_promote_to_variable_width,
-                # let extension arrays handle their own str/bytes
-                should_return_str_or_bytes=any(
-                    map(utils.is_allowed_extension_array_dtype, arrays_and_dtypes)
-                ),
-            ),
-            arrays_and_dtypes,
+    maybe_promote = functools.partial(
+        maybe_promote_to_variable_width,
+        # let extension arrays handle their own str/bytes
+        should_return_str_or_bytes=any(
+            map(utils.is_allowed_extension_array_dtype, arrays_and_dtypes)
         ),
-        xp=xp,
     )
+    return array_api_compat.result_type(*map(maybe_promote, arrays_and_dtypes), xp=xp)
