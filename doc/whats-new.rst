@@ -33,7 +33,8 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
-
+- Always normalize slices when indexing ``LazilyIndexedArray`` instances (:issue:`10941`, :pull:`10948`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
