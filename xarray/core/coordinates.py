@@ -21,7 +21,14 @@ from xarray.core.indexes import (
     assert_no_index_corrupted,
     create_default_index_implicit,
 )
-from xarray.core.types import DataVars, ErrorOptions, Self, T_DataArray, T_Xarray
+from xarray.core.types import (
+    CompatOptions,
+    DataVars,
+    ErrorOptions,
+    Self,
+    T_DataArray,
+    T_Xarray,
+)
 from xarray.core.utils import (
     Frozen,
     ReprObject,
@@ -31,6 +38,7 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
 from xarray.structure.alignment import Aligner
 from xarray.structure.merge import merge_coordinates_without_align, merge_coords
+from xarray.util.deprecation_helpers import CombineKwargDefault
 
 if TYPE_CHECKING:
     from xarray.core.common import DataWithCoords
@@ -500,18 +508,20 @@ class Coordinates(AbstractCoordinates):
         # redirect to DatasetCoordinates._drop_coords
         self._data.coords._drop_coords(coord_names)
 
-    def _merge_raw(self, other, reflexive):
+    def _merge_raw(self, other, reflexive, compat: CompatOptions | CombineKwargDefault):
         """For use with binary arithmetic."""
         if other is None:
             variables = dict(self.variables)
             indexes = dict(self.xindexes)
         else:
             coord_list = [self, other] if not reflexive else [other, self]
-            variables, indexes = merge_coordinates_without_align(coord_list)
+            variables, indexes = merge_coordinates_without_align(
+                coord_list, compat=compat
+            )
         return variables, indexes
 
     @contextmanager
-    def _merge_inplace(self, other):
+    def _merge_inplace(self, other, compat: CompatOptions | CombineKwargDefault):
         """For use with in-place binary arithmetic."""
         if other is None:
             yield
@@ -524,12 +534,16 @@ class Coordinates(AbstractCoordinates):
                 if k not in self.xindexes
             }
             variables, indexes = merge_coordinates_without_align(
-                [self, other], prioritized
+                [self, other], prioritized, compat=compat
             )
             yield
             self._update_coords(variables, indexes)
 
-    def merge(self, other: Mapping[Any, Any] | None) -> Dataset:
+    def merge(
+        self,
+        other: Mapping[Any, Any] | None,
+        compat: CompatOptions | CombineKwargDefault = "minimal",
+    ) -> Dataset:
         """Merge two sets of coordinates to create a new Dataset
 
         The method implements the logic used for joining coordinates in the
@@ -546,6 +560,8 @@ class Coordinates(AbstractCoordinates):
         other : dict-like, optional
             A :py:class:`Coordinates` object or any mapping that can be turned
             into coordinates.
+        compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override", "minimal"}, default: "minimal"
+            Compatibility checks to use between coordinate variables.
 
         Returns
         -------
@@ -560,7 +576,7 @@ class Coordinates(AbstractCoordinates):
         if not isinstance(other, Coordinates):
             other = Dataset(coords=other).coords
 
-        coords, indexes = merge_coordinates_without_align([self, other])
+        coords, indexes = merge_coordinates_without_align([self, other], compat=compat)
         coord_names = set(coords)
         return Dataset._construct_direct(
             variables=coords, coord_names=coord_names, indexes=indexes
