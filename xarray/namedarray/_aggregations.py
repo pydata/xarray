@@ -780,6 +780,7 @@ class NamedArrayAggregations:
         dim: Dims = None,
         *,
         skipna: bool | None = None,
+        equalna: bool | None = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -795,6 +796,11 @@ class NamedArrayAggregations:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
+        equalna : bool or None, default: True
+            If ``skipna == False``, ``equalna`` determines whether null values
+            are counted as distinct values or not. Set ``equalna = True`` for
+            consistency with ``pandas.DataFrame.nunique``, or ``equalna = False``
+            for consistency with the `Python array API <https://data-apis.org/array-api/latest/API_specification/generated/array_api.unique_counts.html>`_.
         **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``nunique`` on this object's data.
@@ -814,6 +820,15 @@ class NamedArrayAggregations:
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
+        Notes
+        -----
+        Note that identifying unique values on very large
+        arrays is slow and memory intensive when there are many unique values.
+        For such arrays, consider lowering the precision, e.g. rounding floats
+        then converting them to integers, before searching for unique values.
+        For dask arrays, performance is improved when chunksizes are largest on
+        the dimension(s) being reduced.
+
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
@@ -831,11 +846,18 @@ class NamedArrayAggregations:
         >>> na.nunique(skipna=False)
         <xarray.NamedArray ()> Size: 8B
         array(5)
+
+        Use ``equalna`` to control whether NaNs are counted as distinct values.
+
+        >>> na.nunique(skipna=False, equalna=False)
+        <xarray.NamedArray ()> Size: 8B
+        array(5)
         """
         return self.reduce(
             duck_array_ops.nunique,
             dim=dim,
             skipna=skipna,
+            equalna=equalna,
             **kwargs,
         )
 

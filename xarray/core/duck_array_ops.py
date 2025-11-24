@@ -13,6 +13,7 @@ import warnings
 from collections.abc import Callable
 from functools import partial
 from importlib import import_module
+from itertools import product
 from typing import Any
 
 import numpy as np
@@ -388,36 +389,174 @@ def count(data, axis=None):
     return xp.sum(xp.logical_not(isnull(data)), axis=axis)
 
 
-def nunique(data, axis=None, skipna=True):
-    """Count the number of unique values in this array along the given axis or axes"""
+def _dask_nunique(data):
+    """Helper function to get nunique on dask arrays. Assumes reduction axis is -1."""
+    import dask
+
+    xp = get_array_namespace(data)
+
+    # To track unique elements across chunks we will use an object array containing
+    # variable length xp arrays. The idea is that we collect the sorted uniques for each chunk
+    # as we go, speeding up subsequent concatenation and sorting. Another option might
+    # be to use a fixed length (masked) sparse array with an extra dimension, but such
+    # an array would likely use more memory, and the sort and concatenation steps
+    # would likely be slower.
+    def _build_storage_array(shape):
+        size = np.array(shape).prod()
+        storage_array = xp.empty(size, dtype=object)
+        # Assign empty arrays to each element
+        for i in range(size):
+            storage_array[i] = xp.array([], dtype=data.dtype)
+        # Reshape to the desired grid shape
+        return storage_array.reshape(shape)
+
+    # We're going to use dask reduction, so define chunk, combine, aggregate functions.
+    def chunk_uniques(chunk, axis=None, keepdims=False):
+        """
+        Get the unique values along the required axis for a chunk. Adapt the approach
+        described at https://stackoverflow.com/questions/46893369
+        """
+        if data.ndim == 1:
+            uniques = xp.empty([1], dtype=object)
+            uniques[0] = _get_uniques_1d(chunk)
+            return uniques
+        chunk = xp.sort(chunk, axis=-1)
+        if chunk.shape[-1] == 1:
+            uniques_bool = xp.ones_like(chunk, dtype=bool)
+        else:
+            uniques_bool = xp.not_equal(chunk[..., :-1], chunk[..., 1:])
+            # Pad start with true as first element always unique
+            pad = xp.ones_like(uniques_bool[..., :1], dtype=bool)
+            uniques_bool = xp.concatenate([pad, uniques_bool], axis=-1)
+        # Store the uniques in an object array so we can use a dask reduction
+        uniques = _build_storage_array(chunk.shape[:-1])
+
+        for idx in product(*[range(s) for s in chunk.shape[:-1]]):
+            uniques[idx] = chunk[idx][uniques_bool[idx]]
+        return uniques
+
+    def _get_uniques_1d(array):
+        # Use the same vectorized style to get uniques from 1d array.
+        if len(array) < 2:
+            return array
+        array = xp.sort(array)
+        uniques_bool = xp.not_equal(array[:-1], array[1:])
+        # Pad start with true as first element always unique
+        uniques_bool = xp.concatenate([xp.array([True]), uniques_bool])
+        return array[uniques_bool]
+
+    # Sometimes combine will return nested lists of arrays, so we need a flattener.
+    def _flatten_to_arrays(nested):
+        result = []
+
+        def append_arrays(x):
+            if isinstance(x, np.ndarray):
+                result.append(x)
+            elif isinstance(x, (list, tuple)):
+                for y in x:
+                    append_arrays(y)
+            else:
+                raise ValueError(f"Unexpected type in nested structure: {type(x)}")
+
+        append_arrays(nested)
+        return result
+
+    def _merge_unique_arrays(arrays_input):
+        # Sometimes combine will return nested lists of arrays, so flatten first
+        arrays = _flatten_to_arrays(arrays_input)
+        # If single array, return it
+        if len(arrays) == 1:
+            return arrays[0]
+        # Merge multiple arrays
+        result = _build_storage_array(arrays[0].shape)
+        for idx in product(*[range(s) for s in result.shape]):
+            combined_vals = xp.concatenate([arr[idx] for arr in arrays], axis=0)
+            result[idx] = _get_uniques_1d(combined_vals)
+        return result
+
+    def combine_uniques(uniques_list, axis=None, keepdims=False):
+        return _merge_unique_arrays(uniques_list)
+
+    def aggregate_uniques(combined, axis=None, keepdims=False):
+        # First flatten and merge final list
+        combined = _flatten_to_arrays(combined)
+        combined = _merge_unique_arrays(combined)
+        unique_counts = _build_storage_array(combined.shape)
+        for idx in product(*[range(s) for s in combined.shape]):
+            unique_counts[idx] = len(combined[idx])
+        return unique_counts
+
+    meta_shape = (0,) * (data.ndim - 1)
+    meta_array = xp.empty(meta_shape, dtype=object)
+
+    return dask.array.reduction(
+        data,
+        chunk=chunk_uniques,
+        combine=combine_uniques,
+        aggregate=aggregate_uniques,
+        dtype=object,
+        concatenate=False,
+        meta=meta_array,
+        axis=-1,
+        keepdims=False,
+    )
+
+
+def _factorize(data):
+    """Helper function for nunique to factorize mixed type arrays to float."""
+    if not isinstance(data, np.ndarray):
+        message = "nunique with object dtype only implemented for np.ndarray."
+        raise NotImplementedError(message)
+    data = pd.factorize(data.reshape(-1))[0].reshape(data.shape)
+    data = data.astype(float)
+    data[data == -1] = np.nan
+    return data
+
+
+def nunique(data, axis=None, skipna=True, equalna=True):
+    """
+    Count the number of unique values in this array along the given dimensions
+    """
     xp = get_array_namespace(data)
 
     if axis is None:
         axis = list(range(data.ndim))
     elif isinstance(axis, (int, tuple)):
         axis = [axis] if isinstance(axis, int) else list(axis)
-
-    # If axis empty, return unchanged data.
     if not axis:
+        # Return unchanged so downstream aggregation functions work as expected.
         return data
+    # Normalize negative axes
+    axis = [ax % data.ndim for ax in axis]
+    shape = data.shape
+
+    # If mixed type array, convert to float first
+    if is_duck_array(data) and data.dtype == np.object_:
+        data = _factorize(data)
 
     # Move axes to be aggregated to the end and stack
-    shape = data.shape
     new_order = [i for i in range(len(shape)) if i not in axis] + axis
     new_shape = [s for i, s in enumerate(shape) if i not in axis] + [-1]
-    stacked = xp.reshape(xp.transpose(data, new_order), new_shape)
+    data = xp.reshape(xp.permute_dims(data, new_order), new_shape)
 
-    # Check if data has type object; if so use pd.factorize for unique integers
-    factorize = bool(is_duck_array(data) and data.dtype == np.object_)
+    if is_duck_dask_array(data):
+        unique_counts = _dask_nunique(data)
+    else:
+        # If not using dask, get counts using the approach described at
+        # https://stackoverflow.com/questions/46893369
+        sorted_data = xp.sort(data, axis=-1)
+        unique_counts = xp.not_equal(sorted_data[..., :-1], sorted_data[..., 1:])
+        unique_counts = xp.sum(unique_counts, axis=-1) + 1
 
-    def _nunique_along_axis(array):
-        if skipna:
-            array = array[notnull(array)]
-        if factorize:
-            array = pd.factorize(array)[0]
-        return len(xp.unique(array))
+    # Subtract of na values as required
+    if skipna or (not skipna and equalna):
+        na_counts = isnull(data).astype(int)
+        na_counts = xp.sum(na_counts, axis=-1)
+        if not skipna and equalna:
+            na_counts = xp.clip(na_counts - 1, 0, None)
+        unique_counts = unique_counts - na_counts
 
-    return xp.apply_along_axis(_nunique_along_axis, -1, stacked)
+    return unique_counts
 
 
 def sum_where(data, axis=None, dtype=None, where=None):

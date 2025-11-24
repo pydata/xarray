@@ -24,7 +24,11 @@ repos:
       - id: rst-inline-touching-normal
       - id: text-unicode-replacement-char
   - repo: https://github.com/astral-sh/ruff-pre-commit
+<<<<<<< HEAD
     rev: v0.14.7
+=======
+    rev: v0.14.6
+>>>>>>> 456f9536 (implement vectorized method and dask extension)
     hooks:
       - id: ruff-check
         args: ["--fix", "--show-fixes"]
@@ -76,6 +80,10 @@ repos:
       - id: validate-pyproject
         additional_dependencies: ["validate-pyproject-schema-store[all]"]
   - repo: https://github.com/adhtruong/mirrors-typos
+<<<<<<< HEAD
     rev: v1.40.0
+=======
+    rev: v1.39.2
+>>>>>>> 456f9536 (implement vectorized method and dask extension)
     hooks:
       - id: typos

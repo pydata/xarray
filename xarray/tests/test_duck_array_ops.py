@@ -166,18 +166,25 @@ class TestOps:
 
         assert 1 == count(np.datetime64("2000-01-01"))
 
+    @pytest.mark.parametrize("equalna", [True, False])
     @pytest.mark.parametrize("mixed_type", [True, False])
     @pytest.mark.parametrize("string_array", [True, False])
     @pytest.mark.parametrize("skipna", [True, False])
     @pytest.mark.parametrize("axis", [2, None, (1, 2)])
-    def test_nunique(self, axis, skipna, string_array, mixed_type):
+    def test_nunique(self, axis, skipna, equalna, string_array, mixed_type):
         expected_results = {
-            (True, 2): np.array([[1, 2, 3], [3, 2, 1]]),
-            (True, None): np.array(12),
-            (True, (1, 2)): np.array([6, 6]),
-            (False, 2): np.array([[2, 3, 4], [4, 3, 2]]),
-            (False, None): np.array(13),
-            (False, (1, 2)): np.array([7, 7]),
+            (True, True, 2): np.array([[1, 2, 3], [3, 2, 1]]),
+            (True, True, None): np.array(12),
+            (True, True, (1, 2)): np.array([6, 6]),
+            (True, False, 2): np.array([[2, 3, 4], [4, 3, 2]]),
+            (True, False, None): np.array(13),
+            (True, False, (1, 2)): np.array([7, 7]),
+            (False, True, 2): np.array([[1, 2, 3], [3, 2, 1]]),
+            (False, True, None): np.array(12),
+            (False, True, (1, 2)): np.array([6, 6]),
+            (False, False, 2): np.array([[4, 4, 4], [4, 4, 4]]),
+            (False, False, None): np.array(24),
+            (False, False, (1, 2)): np.array([12, 12]),
         }
         x = self.x.copy()
         if string_array:
@@ -190,8 +197,13 @@ class TestOps:
             x = x.astype(object)
             x[(x == 10.0) | (x == "10.0")] = True
             x[(x == 2.0) | (x == "2.0")] = np.sum
-        result = nunique(x, axis=axis, skipna=skipna)
-        assert_array_equal(result, expected_results[(skipna, axis)])
+        # Object arrays currently only supported for np.ndarray
+        if (mixed_type or string_array) and not isinstance(x, np.ndarray):
+            with pytest.raises(NotImplementedError):
+                nunique(x, axis=axis, skipna=skipna, equalna=equalna)
+            return
+        result = nunique(x, axis=axis, skipna=skipna, equalna=equalna)
+        assert_array_equal(result, expected_results[(equalna, skipna, axis)])
 
     def test_where_type_promotion(self):
         result = where(np.array([True, False]), np.array([1, 2]), np.array(["a", "b"]))
@@ -290,6 +302,10 @@ class TestDaskOps(TestOps):
             ],
             chunks=(2, 1, 2),
         )
+
+    def test_nunique_dask_lazy(self):
+        with raise_if_dask_computes():
+            nunique(self.x, axis=0)
 
 
 def test_cumsum_1d():
