@@ -365,7 +365,7 @@ def _index_indexer_1d(
         return old_indexer
     if is_full_slice(old_indexer):
         # shortcut for full slices
-        return applied_indexer
+        return normalize_slice(applied_indexer, size)
 
     indexer: OuterIndexerType
     if isinstance(old_indexer, slice):
