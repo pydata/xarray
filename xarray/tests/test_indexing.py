@@ -321,6 +321,33 @@ class TestLazyArray:
         expected = np.arange(size)[old_slice][array]
         assert_array_equal(actual, expected)
 
+    @pytest.mark.parametrize(
+        ["old_indexer", "indexer", "size", "expected"],
+        (
+            pytest.param(
+                slice(None), slice(None, 3), 5, slice(0, 3, 1), id="full_slice-slice"
+            ),
+            pytest.param(
+                slice(2, 12, 3), slice(1, 3), 16, slice(5, 11, 3), id="slice_step-slice"
+            ),
+            pytest.param(
+                slice(None), np.arange(2, 4), 5, np.arange(2, 4), id="full_slice-range"
+            ),
+            pytest.param(
+                np.arange(5), slice(1, 3), 7, np.arange(1, 3), id="range-slice"
+            ),
+            pytest.param(slice(None), 3, 5, 3, id="full_slice-int"),
+            pytest.param(slice(None), -2, 6, 4, id="full_slice-negative_int"),
+        ),
+    )
+    def test_index_indexer_1d(self, old_indexer, indexer, size, expected):
+        actual = indexing._index_indexer_1d(old_indexer, indexer, size)
+
+        if isinstance(expected, np.ndarray):
+            np.testing.assert_equal(actual, expected)
+        else:
+            assert actual == expected
+
     def test_lazily_indexed_array(self) -> None:
         original = np.random.rand(10, 20, 30)
         x = indexing.NumpyIndexingAdapter(original)
