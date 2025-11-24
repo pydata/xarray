@@ -346,16 +346,30 @@ class TestLazyArray:
                 slice(None), slice(None, 3), 5, slice(0, 3, 1), id="full_slice-slice"
             ),
             pytest.param(
+                slice(None), np.arange(2, 4), 5, np.arange(2, 4), id="full_slice-array"
+            ),
+            pytest.param(slice(None), 3, 5, 3, id="full_slice-int"),
+            pytest.param(
                 slice(2, 12, 3), slice(1, 3), 16, slice(5, 11, 3), id="slice_step-slice"
             ),
             pytest.param(
-                slice(None), np.arange(2, 4), 5, np.arange(2, 4), id="full_slice-range"
+                slice(2, 12, 3),
+                np.array([1, 3]),
+                16,
+                np.array([5, 11]),
+                id="slice_step-array",
             ),
             pytest.param(
-                np.arange(5), slice(1, 3), 7, np.arange(1, 3), id="range-slice"
+                np.arange(5), slice(1, 3), 7, np.arange(1, 3), id="array-slice"
             ),
-            pytest.param(slice(None), 3, 5, 3, id="full_slice-int"),
-            pytest.param(slice(None), -2, 6, 4, id="full_slice-negative_int"),
+            pytest.param(
+                np.arange(0, 8, 2),
+                np.arange(1, 3),
+                9,
+                np.arange(2, 6, 2),
+                id="array-array",
+            ),
+            pytest.param(np.arange(3), 2, 5, 2, id="array-int"),
         ),
     )
     def test_index_indexer_1d(self, old_indexer, indexer, size, expected):
