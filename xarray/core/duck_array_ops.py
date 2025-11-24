@@ -513,6 +513,17 @@ def _factorize(data):
     return data
 
 
+def _permute_dims(data, axes):
+    """Helper function to get a suitable permute dims function."""
+    xp = get_array_namespace(data)
+    if hasattr(xp, "permute_dims"):
+        return xp.permute_dims(data, axes)
+    elif hasattr(xp, "transpose"):
+        return xp.transpose(data, axes)
+    else:
+        raise NotImplementedError(f"Unknown transpose method for namespace {xp}")
+
+
 def nunique(data, axis=None, skipna=True, equalna=True):
     """
     Count the number of unique values in this array along the given dimensions
@@ -537,7 +548,7 @@ def nunique(data, axis=None, skipna=True, equalna=True):
     # Move axes to be aggregated to the end and stack
     new_order = [i for i in range(len(shape)) if i not in axis] + axis
     new_shape = [s for i, s in enumerate(shape) if i not in axis] + [-1]
-    data = xp.reshape(xp.permute_dims(data, new_order), new_shape)
+    data = xp.reshape(_permute_dims(data, new_order), new_shape)
 
     if is_duck_dask_array(data):
         unique_counts = _dask_nunique(data)
