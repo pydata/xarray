@@ -32,6 +32,7 @@ from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
+    IndexableArray,
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -3255,3 +3256,19 @@ def test_timedelta_conversion(values, unit) -> None:
     dims = ["time"] if isinstance(values, np.ndarray | pd.Index) else []
     var = Variable(dims, values)
     assert var.dtype == np.dtype(f"timedelta64[{unit}]")
+
+
+@pytest.mark.parametrize(
+    "method",
+    [
+        lambda v: v.drop_encoding(),
+        lambda v: v.set_dims(["x", "y"]),
+    ],
+    ids=["drop_encoding", "set_dims"],
+)
+def test_explicitly_indexed_array_preserved(method) -> None:
+    """Test that methods using ._data preserve ExplicitlyIndexed arrays."""
+    arr = IndexableArray(np.array([1, 2, 3]))
+    var = Variable(["x"], arr)
+    result = method(var)
+    assert isinstance(result._data, indexing.ExplicitlyIndexed)
