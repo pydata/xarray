@@ -252,10 +252,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         if not isinstance(filename_or_obj, str):
             return False
-        # Check for explicit DAP protocol schemes - these definitively indicate a DAP service
-        if filename_or_obj.lower().startswith(("dap2://", "dap4://", "dap://")):
-            return True
-
         return _is_likely_dap_url(filename_or_obj)
 
     def open_dataset(
