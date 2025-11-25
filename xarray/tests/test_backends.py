@@ -6559,6 +6559,46 @@ class TestPydapOnline(TestPydap):
         )
 
 
+@requires_pydap
+@network
+@pytest.mark.parametrize("protocol", ["dap2", "dap4"])
+def test_batchdap4_downloads(tmpdir, protocol) -> None:
+    """Test that in dap4, all dimensions are downloaded at once"""
+    import pydap
+    from pydap.net import create_session
+
+    _version_ = Version(pydap.__version__)
+    # Create a session with pre-set params in pydap backend, to cache urls
+    cache_name = tmpdir / "debug"
+    session = create_session(use_cache=True, cache_kwargs={"cache_name": cache_name})
+    session.cache.clear()
+    url = "https://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc"
+
+    ds = open_dataset(
+        url.replace("https", protocol),
+        session=session,
+        engine="pydap",
+        decode_times=False,
+    )
+
+    if protocol == "dap4":
+        if _version_ > Version("3.5.5"):
+            # total downloads are:
+            # 1 dmr + 1 dap (all dimensions at once)
+            assert len(session.cache.urls()) == 2
+            # now load the rest of the variables
+            ds.load()
+            # each non-dimension array is downloaded with an individual https requests
+            assert len(session.cache.urls()) == 2 + 4
+        else:
+            assert len(session.cache.urls()) == 4
+            ds.load()
+            assert len(session.cache.urls()) == 4 + 4
+    elif protocol == "dap2":
+        # das + dds + 3 dods urls for dimensions alone
+        assert len(session.cache.urls()) == 5
+
+
 class TestEncodingInvalid:
     def test_extract_nc4_variable_encoding(self) -> None:
         var = xr.Variable(("x",), [1, 2, 3], {}, {"foo": "bar"})
