@@ -849,3 +849,37 @@ class BackendEntrypoint:
 
 # mapping of engine name to (module name, BackendEntrypoint Class)
 BACKEND_ENTRYPOINTS: dict[str, tuple[str | None, type[BackendEntrypoint]]] = {}
+
+
+def _is_likely_dap_url(url: str) -> bool:
+    """
+    Determines if a URL is likely an OPeNDAP (DAP) endpoint based on
+    known protocols, server software path patterns, and file extensions.
+
+    Parameters
+    ----------
+    url : str
+
+    Returns
+    -------
+        True if the URL matches common DAP patterns, False otherwise.
+    """
+    if not url:
+        return False
+
+    url_lower = url.lower()
+
+    # For remote URIs, check for DAP server software path patterns
+    if is_remote_uri(url_lower):
+        dap_path_patterns = (
+            "/dodsc/",  # THREDDS Data Server (TDS) DAP endpoint (case-insensitive)
+            "/dods/",  # GrADS Data Server (GDS) DAP endpoint
+            "/opendap/",  # Generic OPeNDAP/Hyrax server
+            "/erddap/",  # ERDDAP data server
+            "/dap2/",  # Explicit DAP2 version in path
+            "/dap4/",  # Explicit DAP4 version in path
+            "/dap/",
+        )
+        return any(pattern in url_lower for pattern in dap_path_patterns)
+
+    return False
