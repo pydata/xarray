@@ -717,11 +717,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         if isinstance(filename_or_obj, str):
             url_lower = filename_or_obj.lower()
-            from xarray.backends.common import _is_likely_dap_url
-
-            if _is_likely_dap_url(url_lower):
-                return True
-            elif is_remote_uri(filename_or_obj):
+            if is_remote_uri(filename_or_obj):
                 # For remote URIs, check extension (accounting for query params/fragments)
                 # Remote netcdf-c can handle both regular URLs and DAP URLs
                 if _has_netcdf_ext(filename_or_obj, is_remote=True):
