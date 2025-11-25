@@ -222,10 +222,7 @@ class TestGetChunkedArrayType:
     def test_raise_if_no_matching_chunkmanagers(self) -> None:
         dummy_arr = DummyChunkedArray([1, 2, 3])
 
-        with pytest.raises(
-            TypeError, match="Could not find a Chunk Manager which recognises"
-        ):
-            get_chunked_array_type(dummy_arr)
+        assert get_chunked_array_type(dummy_arr) is None
 
     @requires_dask
     def test_detect_dask_if_installed(self) -> None:
