@@ -716,13 +716,12 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             return ext in {".nc", ".nc4", ".cdf"}
 
         if isinstance(filename_or_obj, str):
-            url_lower = filename_or_obj.lower()
             if is_remote_uri(filename_or_obj):
                 # For remote URIs, check extension (accounting for query params/fragments)
                 # Remote netcdf-c can handle both regular URLs and DAP URLs
                 if _has_netcdf_ext(filename_or_obj, is_remote=True):
                     return True
-                elif "zarr" in url_lower:
+                elif "zarr" in filename_or_obj.lower():
                     return False
                 # return true for non-zarr URLs so we don't have a breaking change for people relying on this
                 # netcdf backend guessing true for all remote sources.
