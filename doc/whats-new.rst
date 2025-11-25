@@ -33,6 +33,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+
+- The NetCDF4 backend will now claim to be able to read any URL except for one that contains
+  the substring zarr. This restores backward compatibility after
+  :pull:`10804` broke workflows that relied on ``xr.open_dataset("http://...")``
+  (:pull:`10931`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 - Always normalize slices when indexing ``LazilyIndexedArray`` instances (:issue:`10941`, :pull:`10948`).
   By `Justus Magin <https://github.com/keewis>`_.
 
