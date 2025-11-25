@@ -482,21 +482,20 @@ class TestPlot(PlotTestCase):
     def test_contourf_cmap_set_with_bad_under_over(self) -> None:
         a = DataArray(easy_array((4, 4)), dims=["z", "time"])
 
-        # make a copy here because we want a local cmap that we will modify.
-        cmap_expected = copy(mpl.colormaps["viridis"])
+        # make a copy using with_extremes because we want a local cmap:
+        cmap_expected = mpl.colormaps["viridis"].with_extremes(
+            bad="w", under="r", over="g"
+        )
 
-        cmap_expected.set_bad("w")
         # check we actually changed the set_bad color
         assert np.all(
             cmap_expected(np.ma.masked_invalid([np.nan]))[0]
             != mpl.colormaps["viridis"](np.ma.masked_invalid([np.nan]))[0]
         )
 
-        cmap_expected.set_under("r")
         # check we actually changed the set_under color
         assert cmap_expected(-np.inf) != mpl.colormaps["viridis"](-np.inf)
 
-        cmap_expected.set_over("g")
         # check we actually changed the set_over color
         assert cmap_expected(np.inf) != mpl.colormaps["viridis"](-np.inf)
 
@@ -1481,7 +1480,9 @@ class Common2dMixin:
 
     def test_non_linked_coords(self) -> None:
         # plot with coordinate names that are not dimensions
-        self.darray.coords["newy"] = self.darray.y + 150
+        newy = self.darray.y + 150
+        newy.attrs = {}  # Clear attrs since binary ops keep them by default
+        self.darray.coords["newy"] = newy
         # Normal case, without transpose
         self.plotfunc(self.darray, x="x", y="newy")
         ax = plt.gca()
@@ -1496,7 +1497,9 @@ class Common2dMixin:
         # and with transposed y and x axes
         # This used to raise an error with pcolormesh and contour
         # https://github.com/pydata/xarray/issues/788
-        self.darray.coords["newy"] = self.darray.y + 150
+        newy = self.darray.y + 150
+        newy.attrs = {}  # Clear attrs since binary ops keep them by default
+        self.darray.coords["newy"] = newy
         self.plotfunc(self.darray, x="newy", y="x")
         ax = plt.gca()
         assert "newy" == ax.get_xlabel()

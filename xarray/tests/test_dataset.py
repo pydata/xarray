@@ -2980,6 +2980,21 @@ class TestDataset:
             actual = data.drop_vars("level_1")
         assert_identical(expected, actual)
 
+    def test_drop_multiindex_labels(self) -> None:
+        data = create_test_multiindex()
+        mindex = pd.MultiIndex.from_tuples(
+            [
+                ("a", 2),
+                ("b", 1),
+                ("b", 2),
+            ],
+            names=("level_1", "level_2"),
+        )
+        expected = Dataset({}, Coordinates.from_pandas_multiindex(mindex, "x"))
+
+        actual = data.drop_sel(x=("a", 1))
+        assert_identical(expected, actual)
+
     def test_drop_index_labels(self) -> None:
         data = Dataset({"A": (["x", "y"], np.random.randn(2, 3)), "x": ["a", "b"]})
 
@@ -4134,6 +4149,10 @@ class TestDataset:
         actual3 = ds.unstack("index", fill_value={"var": -1, "other_var": 1})
         expected3 = ds.unstack("index").fillna({"var": -1, "other_var": 1}).astype(int)
         assert_equal(actual3, expected3)
+
+        actual4 = ds.unstack("index", fill_value={"var": -1})
+        expected4 = ds.unstack("index").fillna({"var": -1, "other_var": np.nan})
+        assert_equal(actual4, expected4)
 
     @requires_sparse
     def test_unstack_sparse(self) -> None:
@@ -6057,17 +6076,23 @@ class TestDataset:
         attrs = dict(_attrs)
         data.attrs = attrs
 
-        # Test dropped attrs
+        # Test default behavior (keeps attrs for reduction operations)
         ds = data.mean()
-        assert ds.attrs == {}
-        for v in ds.data_vars.values():
-            assert v.attrs == {}
+        assert ds.attrs == attrs
+        for k, v in ds.data_vars.items():
+            assert v.attrs == data[k].attrs
 
-        # Test kept attrs
+        # Test explicitly keeping attrs
         ds = data.mean(keep_attrs=True)
         assert ds.attrs == attrs
         for k, v in ds.data_vars.items():
             assert v.attrs == data[k].attrs
+
+        # Test explicitly dropping attrs
+        ds = data.mean(keep_attrs=False)
+        assert ds.attrs == {}
+        for v in ds.data_vars.values():
+            assert v.attrs == {}
 
     @pytest.mark.filterwarnings(
         "ignore:Once the behaviour of DataArray:DeprecationWarning"
@@ -6251,6 +6276,7 @@ class TestDataset:
         data = create_test_data()
         data.attrs["foo"] = "bar"
 
+        # data.map keeps all attrs by default
         assert_identical(data.map(np.mean), data.mean())
 
         expected = data.mean(keep_attrs=True)
@@ -6302,11 +6328,37 @@ class TestDataset:
         ds["x"].attrs["y"] = "x"
         assert ds["x"].attrs != actual["x"].attrs
 
+    def test_map_non_dataarray_outputs(self) -> None:
+        # Test that map handles non-DataArray outputs by converting them
+        # Regression test for GH10835
+        ds = xr.Dataset({"foo": ("x", [1, 2, 3]), "bar": ("y", [4, 5])})
+
+        # Scalar output
+        result = ds.map(lambda x: 1)
+        expected = xr.Dataset({"foo": 1, "bar": 1})
+        assert_identical(result, expected)
+
+        # Numpy array output with same shape
+        result = ds.map(lambda x: x.values)
+        expected = ds.copy()
+        assert_identical(result, expected)
+
+        # Mixed: some return scalars, some return arrays
+        def mixed_func(x):
+            if "x" in x.dims:
+                return 42
+            return x
+
+        result = ds.map(mixed_func)
+        expected = xr.Dataset({"foo": 42, "bar": ("y", [4, 5])})
+        assert_identical(result, expected)
+
     def test_apply_pending_deprecated_map(self) -> None:
         data = create_test_data()
         data.attrs["foo"] = "bar"
 
         with pytest.warns(PendingDeprecationWarning):
+            # data.apply keeps all attrs by default
             assert_identical(data.apply(np.mean), data.mean())
 
     def make_example_math_dataset(self):
@@ -6786,7 +6838,9 @@ class TestDataset:
         ["keep_attrs", "expected"],
         (
             pytest.param(False, {}, id="False"),
-            pytest.param(True, {"foo": "a", "bar": "b"}, id="True"),
+            pytest.param(
+                True, {"foo": "a", "bar": "b", "baz": "c"}, id="True"
+            ),  # drop_conflicts combines non-conflicting attrs
         ),
     )
     def test_binary_ops_keep_attrs(self, keep_attrs, expected) -> None:
@@ -6796,6 +6850,36 @@ class TestDataset:
             ds_result = ds1 + ds2
 
         assert ds_result.attrs == expected
+
+    def test_binary_ops_attrs_drop_conflicts(self) -> None:
+        # Test that binary operations combine attrs with drop_conflicts behavior
+        attrs1 = {"units": "meters", "long_name": "distance", "source": "sensor_a"}
+        attrs2 = {"units": "feet", "resolution": "high", "source": "sensor_b"}
+        ds1 = xr.Dataset({"a": 1}, attrs=attrs1)
+        ds2 = xr.Dataset({"a": 2}, attrs=attrs2)
+
+        # With keep_attrs=True (default), should combine attrs dropping conflicts
+        result = ds1 + ds2
+        # "units" and "source" conflict, so they're dropped
+        # "long_name" only in ds1, "resolution" only in ds2, so they're kept
+        assert result.attrs == {"long_name": "distance", "resolution": "high"}
+
+        # Test with identical values for some attrs
+        attrs3 = {"units": "meters", "type": "data", "source": "sensor_c"}
+        ds3 = xr.Dataset({"a": 3}, attrs=attrs3)
+        result2 = ds1 + ds3
+        # "units" has same value, so kept; "source" conflicts, so dropped
+        # "long_name" from ds1, "type" from ds3
+        assert result2.attrs == {
+            "units": "meters",
+            "long_name": "distance",
+            "type": "data",
+        }
+
+        # With keep_attrs=False, attrs should be empty
+        with xr.set_options(keep_attrs=False):
+            result3 = ds1 + ds2
+            assert result3.attrs == {}
 
     def test_full_like(self) -> None:
         # For more thorough tests, see test_variable.py

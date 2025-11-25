@@ -30,6 +30,7 @@ from xarray.util.deprecation_helpers import (
 )
 
 if TYPE_CHECKING:
+    from xarray.core.datatree import DataTree
     from xarray.core.types import (
         CombineAttrsOptions,
         CompatOptions,
@@ -38,6 +39,21 @@ if TYPE_CHECKING:
     )
 
     T_DataVars = Union[ConcatOptions, Iterable[Hashable], None]
+
+
+@overload
+def concat(
+    objs: Iterable[DataTree],
+    dim: Hashable | T_Variable | T_DataArray | pd.Index | Any,
+    data_vars: T_DataVars | CombineKwargDefault = _DATA_VARS_DEFAULT,
+    coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault = _COORDS_DEFAULT,
+    compat: CompatOptions | CombineKwargDefault = _COMPAT_CONCAT_DEFAULT,
+    positions: Iterable[Iterable[int]] | None = None,
+    fill_value: object = dtypes.NA,
+    join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
+    combine_attrs: CombineAttrsOptions = "override",
+    create_index_for_new_dim: bool = True,
+) -> DataTree: ...
 
 
 # TODO: replace dim: Any by 1D array_likes
@@ -87,7 +103,7 @@ def concat(
 
     Parameters
     ----------
-    objs : sequence of Dataset and DataArray
+    objs : sequence of DataArray, Dataset or DataTree
         xarray objects to concatenate together. Each object is expected to
         consist of variables and coordinates with matching shapes except for
         along the concatenated dimension.
@@ -117,9 +133,7 @@ def concat(
     coords : {"minimal", "different", "all"} or list of Hashable, optional
         These coordinate variables will be concatenated together:
           * "minimal": Only coordinates in which the dimension already appears
-            are included. If concatenating over a dimension _not_
-            present in any of the objects, then all data variables will
-            be concatenated along that new dimension.
+            are included.
           * "different": Coordinates which are not equal (ignoring attributes)
             across all datasets are also concatenated (as well as all for which
             dimension already appears). Beware: this option may load the data
@@ -180,7 +194,8 @@ def concat(
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
     create_index_for_new_dim : bool, default: True
-        Whether to create a new ``PandasIndex`` object when the objects being concatenated contain scalar variables named ``dim``.
+        Whether to create a new ``PandasIndex`` object when the objects being
+        concatenated contain scalar variables named ``dim``.
 
     Returns
     -------
@@ -265,6 +280,7 @@ def concat(
     # dimension already exists
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
 
     try:
         first_obj, objs = utils.peek_at(objs)
@@ -278,7 +294,20 @@ def concat(
             f"compat={compat!r} invalid: must be 'broadcast_equals', 'equals', 'identical', 'no_conflicts' or 'override'"
         )
 
-    if isinstance(first_obj, DataArray):
+    if isinstance(first_obj, DataTree):
+        return _datatree_concat(
+            objs,
+            dim=dim,
+            data_vars=data_vars,
+            coords=coords,
+            compat=compat,
+            positions=positions,
+            fill_value=fill_value,
+            join=join,
+            combine_attrs=combine_attrs,
+            create_index_for_new_dim=create_index_for_new_dim,
+        )
+    elif isinstance(first_obj, DataArray):
         return _dataarray_concat(
             objs,
             dim=dim,
@@ -342,7 +371,7 @@ def _calc_concat_over(
     datasets: list[T_Dataset],
     dim: Hashable,
     all_dims: set[Hashable],
-    data_vars: T_DataVars | CombineKwargDefault,
+    data_vars: T_DataVars | Iterable[Hashable] | CombineKwargDefault,
     coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault,
     compat: CompatOptions | CombineKwargDefault,
 ) -> tuple[set[Hashable], dict[Hashable, bool], list[int], set[Hashable]]:
@@ -574,7 +603,7 @@ def _parse_datasets(
 
 def _dataset_concat(
     datasets: Iterable[T_Dataset],
-    dim: str | T_Variable | T_DataArray | pd.Index,
+    dim: Hashable | T_Variable | T_DataArray | pd.Index,
     data_vars: T_DataVars | CombineKwargDefault,
     coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault,
     compat: CompatOptions | CombineKwargDefault,
@@ -583,6 +612,8 @@ def _dataset_concat(
     join: JoinOptions | CombineKwargDefault,
     combine_attrs: CombineAttrsOptions,
     create_index_for_new_dim: bool,
+    *,
+    preexisting_dim: bool = False,
 ) -> T_Dataset:
     """
     Concatenate a sequence of datasets along a new or existing dimension
@@ -618,6 +649,11 @@ def _dataset_concat(
     all_dims, dim_coords, dims_sizes, coord_names, data_names, vars_order = (
         _parse_datasets(datasets)
     )
+    if preexisting_dim:
+        # When concatenating DataTree objects, a dimension may be pre-existing
+        # because it exists elsewhere on the trees, even if it does not exist
+        # on the dataset objects at this node.
+        all_dims.add(dim_name)
     indexed_dim_names = set(dim_coords)
 
     both_data_and_coords = coord_names & data_names
@@ -709,10 +745,11 @@ def _dataset_concat(
                         yield PandasIndex(data, dim_name, coord_dtype=var.dtype)
 
     # create concatenation index, needed for later reindexing
+    # use np.cumulative_sum(concat_dim_lengths, include_initial=True) when we support numpy>=2
     file_start_indexes = np.append(0, np.cumsum(concat_dim_lengths))
-    concat_index = np.arange(file_start_indexes[-1])
-    concat_index_size = concat_index.size
+    concat_index_size = file_start_indexes[-1]
     variable_index_mask = np.ones(concat_index_size, dtype=bool)
+    variable_reindexer = None
 
     # stack up each variable and/or index to fill-out the dataset (in order)
     # n.b. this loop preserves variable order, needed for groupby.
@@ -740,7 +777,6 @@ def _dataset_concat(
                     end = file_start_indexes[i + 1]
                     variable_index_mask[slice(start, end)] = False
 
-            variable_index = concat_index[variable_index_mask]
             vars = ensure_common_dims(variables, var_concat_dim_length)
 
             # Try to concatenate the indexes, concatenate the variables when no index
@@ -771,12 +807,22 @@ def _dataset_concat(
                     vars, dim_name, positions, combine_attrs=combine_attrs
                 )
                 # reindex if variable is not present in all datasets
-                if len(variable_index) < concat_index_size:
+                if not variable_index_mask.all():
+                    if variable_reindexer is None:
+                        # allocate only once
+                        variable_reindexer = np.empty(
+                            concat_index_size,
+                            # cannot use uint since we need -1 as a sentinel for reindexing
+                            dtype=np.min_scalar_type(-concat_index_size),
+                        )
+                    np.cumsum(variable_index_mask, out=variable_reindexer)
+                    # variable_index_mask is boolean, so the first element is 1.
+                    # offset by 1 to start at 0.
+                    variable_reindexer -= 1
+                    variable_reindexer[~variable_index_mask] = -1
                     combined_var = reindex_variables(
                         variables={name: combined_var},
-                        dim_pos_indexers={
-                            dim_name: pd.Index(variable_index).get_indexer(concat_index)
-                        },
+                        dim_pos_indexers={dim_name: variable_reindexer},
                         fill_value=fill_value,
                     )[name]
                 result_vars[name] = combined_var
@@ -818,8 +864,8 @@ def _dataset_concat(
 
 def _dataarray_concat(
     arrays: Iterable[T_DataArray],
-    dim: str | T_Variable | T_DataArray | pd.Index,
-    data_vars: T_DataVars | CombineKwargDefault,
+    dim: Hashable | T_Variable | T_DataArray | pd.Index,
+    data_vars: T_DataVars | Iterable[Hashable] | CombineKwargDefault,
     coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault,
     compat: CompatOptions | CombineKwargDefault,
     positions: Iterable[Iterable[int]] | None,
@@ -877,3 +923,56 @@ def _dataarray_concat(
     result.attrs = merged_attrs
 
     return result
+
+
+def _datatree_concat(
+    objs: Iterable[DataTree],
+    dim: Hashable | Variable | T_DataArray | pd.Index | Any,
+    data_vars: T_DataVars | Iterable[Hashable] | CombineKwargDefault,
+    coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault,
+    compat: CompatOptions | CombineKwargDefault,
+    positions: Iterable[Iterable[int]] | None,
+    fill_value: Any,
+    join: JoinOptions | CombineKwargDefault,
+    combine_attrs: CombineAttrsOptions,
+    create_index_for_new_dim: bool,
+) -> DataTree:
+    """
+    Concatenate a sequence of datatrees along a new or existing dimension
+    """
+    from xarray.core.datatree import DataTree
+    from xarray.core.treenode import TreeIsomorphismError, group_subtrees
+
+    dim_name, _ = _calc_concat_dim_index(dim)
+
+    objs = list(objs)
+    if not all(isinstance(obj, DataTree) for obj in objs):
+        raise TypeError("All objects to concatenate must be DataTree objects")
+
+    if compat == "identical":
+        if any(obj.name != objs[0].name for obj in objs[1:]):
+            raise ValueError("DataTree names not identical")
+
+    dim_in_tree = any(dim_name in node.dims for node in objs[0].subtree)
+
+    results = {}
+    try:
+        for path, nodes in group_subtrees(*objs):
+            datasets_to_concat = [node.to_dataset() for node in nodes]
+            results[path] = _dataset_concat(
+                datasets_to_concat,
+                dim=dim,
+                data_vars=data_vars,
+                coords=coords,
+                compat=compat,
+                positions=positions,
+                fill_value=fill_value,
+                join=join,
+                combine_attrs=combine_attrs,
+                create_index_for_new_dim=create_index_for_new_dim,
+                preexisting_dim=dim_in_tree,
+            )
+    except TreeIsomorphismError as e:
+        raise ValueError("All trees must be isomorphic to be concatenated") from e
+
+    return DataTree.from_dict(results, name=objs[0].name)

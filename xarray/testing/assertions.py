@@ -256,6 +256,11 @@ def assert_allclose(
         b = getattr(b, "variable", b)
         return a.dims == b.dims and (a._data is b._data or equiv(a.data, b.data))
 
+    def compat_node(a, b):
+        return a.ds._coord_names == b.ds._coord_names and utils.dict_equiv(
+            a.variables, b.variables, compat=compat_variable
+        )
+
     if isinstance(a, Variable):
         allclose = compat_variable(a, b)
         assert allclose, formatting.diff_array_repr(a, b, compat=equiv)
@@ -272,6 +277,11 @@ def assert_allclose(
     elif isinstance(a, Coordinates):
         allclose = utils.dict_equiv(a.variables, b.variables, compat=compat_variable)
         assert allclose, formatting.diff_coords_repr(a, b, compat=equiv)
+    elif isinstance(a, DataTree):
+        allclose = utils.dict_equiv(
+            dict(a.subtree_with_keys), dict(b.subtree_with_keys), compat=compat_node
+        )
+        assert allclose, formatting.diff_datatree_repr(a, b, compat=equiv)
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
