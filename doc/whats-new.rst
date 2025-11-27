@@ -14,6 +14,11 @@ v2025.11.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Improved ``pydap`` backend behavior and performance when using :py:func:`open_dataset`, :py:func:`open_datatree`
+  when downloading dap4 (opendap) dimensions data (:issue:`10628`, :pull:`10629`). In addition ``checksums=True|False``
+  is added as optional argument to be passed to ``pydap`` backend.
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+
 - :py:func:`combine_nested` now support :py:class:`DataTree` objects
   (:pull:`10849`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
@@ -29,6 +34,13 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- The NetCDF4 backend will now claim to be able to read any URL except for one that contains
+  the substring zarr. This restores backward compatibility after
+  :pull:`10804` broke workflows that relied on ``xr.open_dataset("http://...")``
+  (:pull:`10931`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+- Always normalize slices when indexing ``LazilyIndexedArray`` instances (:issue:`10941`, :pull:`10948`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~

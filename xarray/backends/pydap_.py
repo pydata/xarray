@@ -12,6 +12,7 @@ from xarray.backends.common import (
     BackendArray,
     BackendEntrypoint,
     T_PathFileOrDataStore,
+    _is_likely_dap_url,
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
     robust_getitem,
@@ -22,7 +23,6 @@ from xarray.core.utils import (
     Frozen,
     FrozenDict,
     close_on_error,
-    is_remote_uri,
 )
 from xarray.core.variable import Variable
 from xarray.namedarray.pycompat import integer_types
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
 
 class PydapArrayWrapper(BackendArray):
-    def __init__(self, array):
+    def __init__(self, array, checksums=True):
         self.array = array
 
     @property
@@ -54,12 +54,10 @@ class PydapArrayWrapper(BackendArray):
 
     def _getitem(self, key):
         result = robust_getitem(self.array, key, catch=ValueError)
-        # in some cases, pydap doesn't squeeze axes automatically like numpy
-        result = np.asarray(result)
+        result = np.asarray(result.data)
         axis = tuple(n for n, k in enumerate(key) if isinstance(k, integer_types))
         if result.ndim + len(axis) != self.array.ndim and axis:
             result = np.squeeze(result, axis)
-
         return result
 
 
@@ -82,7 +80,14 @@ class PydapDataStore(AbstractDataStore):
     be useful if the netCDF4 library is not available.
     """
 
-    def __init__(self, dataset, group=None):
+    def __init__(
+        self,
+        dataset,
+        group=None,
+        session=None,
+        protocol=None,
+        checksums=True,
+    ):
         """
         Parameters
         ----------
@@ -92,6 +97,8 @@ class PydapDataStore(AbstractDataStore):
         """
         self.dataset = dataset
         self.group = group
+        self._protocol = protocol
+        self._checksums = checksums  # true by default
 
     @classmethod
     def open(
@@ -104,6 +111,7 @@ class PydapDataStore(AbstractDataStore):
         timeout=None,
         verify=None,
         user_charset=None,
+        checksums=True,
     ):
         from pydap.client import open_url
         from pydap.net import DEFAULT_TIMEOUT
@@ -118,6 +126,7 @@ class PydapDataStore(AbstractDataStore):
                 DeprecationWarning,
             )
             output_grid = False  # new default behavior
+
         kwargs = {
             "url": url,
             "application": application,
@@ -133,22 +142,37 @@ class PydapDataStore(AbstractDataStore):
         elif hasattr(url, "ds"):
             # pydap dataset
             dataset = url.ds
-        args = {"dataset": dataset}
+        args = {"dataset": dataset, "checksums": checksums}
         if group:
-            # only then, change the default
             args["group"] = group
+        if url.startswith(("http", "dap2")):
+            args["protocol"] = "dap2"
+        elif url.startswith("dap4"):
+            args["protocol"] = "dap4"
         return cls(**args)
 
     def open_store_variable(self, var):
-        data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
-        try:
+        if hasattr(var, "dims"):
             dimensions = [
                 dim.split("/")[-1] if dim.startswith("/") else dim for dim in var.dims
             ]
-        except AttributeError:
+        else:
             # GridType does not have a dims attribute - instead get `dimensions`
             # see https://github.com/pydap/pydap/issues/485
             dimensions = var.dimensions
+        if (
+            self._protocol == "dap4"
+            and var.name in dimensions
+            and hasattr(var, "dataset")  # only True for pydap>3.5.5
+        ):
+            var.dataset.enable_batch_mode()
+            data_array = self._get_data_array(var)
+            data = indexing.LazilyIndexedArray(data_array)
+            var.dataset.disable_batch_mode()
+        else:
+            # all non-dimension variables
+            data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
+
         return Variable(dimensions, data, var.attributes)
 
     def get_variables(self):
@@ -166,6 +190,7 @@ class PydapDataStore(AbstractDataStore):
                 # check the key is not a BaseType or GridType
                 if not isinstance(self.ds[var], GroupType)
             ]
+
         return FrozenDict((k, self.open_store_variable(self.ds[k])) for k in _vars)
 
     def get_attrs(self):
@@ -177,17 +202,32 @@ class PydapDataStore(AbstractDataStore):
             "libdap",
             "invocation",
             "dimensions",
+            "path",
+            "Maps",
         )
-        attrs = self.ds.attributes
-        list(map(attrs.pop, opendap_attrs, [None] * 6))
+        attrs = dict(self.ds.attributes)
+        list(map(attrs.pop, opendap_attrs, [None] * len(opendap_attrs)))
         return Frozen(attrs)
 
     def get_dimensions(self):
-        return Frozen(self.ds.dimensions)
+        return Frozen(sorted(self.ds.dimensions))
 
     @property
     def ds(self):
         return get_group(self.dataset, self.group)
+
+    def _get_data_array(self, var):
+        """gets dimension data all at once, storing the numpy
+        arrays within a cached dictionary
+        """
+        from pydap.client import get_batch_data
+
+        if not var._is_data_loaded():
+            # data has not been deserialized yet
+            # runs only once per store/hierarchy
+            get_batch_data(var, checksums=self._checksums)
+
+        return self.dataset[var.id].data
 
 
 class PydapBackendEntrypoint(BackendEntrypoint):
@@ -212,23 +252,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         if not isinstance(filename_or_obj, str):
             return False
-
-        # Check for explicit DAP protocol indicators:
-        # 1. DAP scheme: dap2:// or dap4:// (case-insensitive, may not be recognized by is_remote_uri)
-        # 2. Remote URI with /dap2/ or /dap4/ in URL path (case-insensitive)
-        # Note: We intentionally do NOT check for .dap suffix as that would match
-        # file extensions like .dap which trigger downloads of binary data
-        url_lower = filename_or_obj.lower()
-        if url_lower.startswith(("dap2://", "dap4://")):
-            return True
-
-        # For standard remote URIs, check for DAP indicators in path
-        if is_remote_uri(filename_or_obj):
-            return (
-                "/dap2/" in url_lower or "/dap4/" in url_lower or "/dodsC/" in url_lower
-            )
-
-        return False
+        return _is_likely_dap_url(filename_or_obj)
 
     def open_dataset(
         self,
@@ -250,6 +274,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
+        checksums=True,
     ) -> Dataset:
         store = PydapDataStore.open(
             url=filename_or_obj,
@@ -260,6 +285,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             timeout=timeout,
             verify=verify,
             user_charset=user_charset,
+            checksums=checksums,
         )
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
@@ -292,6 +318,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
+        checksums=True,
     ) -> DataTree:
         groups_dict = self.open_groups_as_dict(
             filename_or_obj,
@@ -303,11 +330,12 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             use_cftime=use_cftime,
             decode_timedelta=decode_timedelta,
             group=group,
-            application=None,
-            session=None,
-            timeout=None,
-            verify=None,
-            user_charset=None,
+            application=application,
+            session=session,
+            timeout=timeout,
+            verify=verify,
+            user_charset=user_charset,
+            checksums=checksums,
         )
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
@@ -329,6 +357,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
+        checksums=True,
     ) -> dict[str, Dataset]:
         from xarray.core.treenode import NodePath
 
@@ -340,6 +369,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             timeout=timeout,
             verify=verify,
             user_charset=user_charset,
+            checksums=checksums,
         )
 
         # Check for a group and make it a parent if it exists
