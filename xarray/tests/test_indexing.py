@@ -270,11 +270,29 @@ class TestIndexers:
         )  # Create a 2D DataArray
         arr = arr.expand_dims({"z": 3}, -1)  # New dimension 'z'
         arr["z"] = np.arange(3)  # New coords to dimension 'z'
-        with pytest.raises(ValueError, match="Do you want to .copy()"):
+        with pytest.raises(ValueError, match=r"Do you want to .copy()"):
             arr.loc[0, 0, 0] = 999
 
 
 class TestLazyArray:
+    @pytest.mark.parametrize(
+        ["indexer", "size", "expected"],
+        (
+            (4, 5, 4),
+            (-1, 3, 2),
+            (slice(None), 4, slice(0, 4, 1)),
+            (slice(1, -3), 7, slice(1, 4, 1)),
+            (np.array([-1, 3, -2]), 5, np.array([4, 3, 3])),
+        ),
+    )
+    def normalize_indexer(self, indexer, size, expected):
+        actual = indexing.normalize_indexer(indexer, size)
+
+        if isinstance(expected, np.ndarray):
+            np.testing.assert_equal(actual, expected)
+        else:
+            assert actual == expected
+
     def test_slice_slice(self) -> None:
         arr = ReturnItem()
         for size in [100, 99]:
@@ -320,6 +338,47 @@ class TestLazyArray:
         actual = indexing.slice_slice_by_array(old_slice, array, size)
         expected = np.arange(size)[old_slice][array]
         assert_array_equal(actual, expected)
+
+    @pytest.mark.parametrize(
+        ["old_indexer", "indexer", "size", "expected"],
+        (
+            pytest.param(
+                slice(None), slice(None, 3), 5, slice(0, 3, 1), id="full_slice-slice"
+            ),
+            pytest.param(
+                slice(None), np.arange(2, 4), 5, np.arange(2, 4), id="full_slice-array"
+            ),
+            pytest.param(slice(None), 3, 5, 3, id="full_slice-int"),
+            pytest.param(
+                slice(2, 12, 3), slice(1, 3), 16, slice(5, 11, 3), id="slice_step-slice"
+            ),
+            pytest.param(
+                slice(2, 12, 3),
+                np.array([1, 3]),
+                16,
+                np.array([5, 11]),
+                id="slice_step-array",
+            ),
+            pytest.param(
+                np.arange(5), slice(1, 3), 7, np.arange(1, 3), id="array-slice"
+            ),
+            pytest.param(
+                np.arange(0, 8, 2),
+                np.arange(1, 3),
+                9,
+                np.arange(2, 6, 2),
+                id="array-array",
+            ),
+            pytest.param(np.arange(3), 2, 5, 2, id="array-int"),
+        ),
+    )
+    def test_index_indexer_1d(self, old_indexer, indexer, size, expected):
+        actual = indexing._index_indexer_1d(old_indexer, indexer, size)
+
+        if isinstance(expected, np.ndarray):
+            np.testing.assert_equal(actual, expected)
+        else:
+            assert actual == expected
 
     def test_lazily_indexed_array(self) -> None:
         original = np.random.rand(10, 20, 30)

@@ -129,7 +129,7 @@ def test_tree_index_sel_errors() -> None:
         ds.sel(xx=[1.1, 1.9], yy=[3.1, 3.9], method="nearest")
 
     # error while trying to broadcast labels
-    with pytest.raises(xr.AlignmentError, match=".*conflicting dimension sizes"):
+    with pytest.raises(xr.AlignmentError, match=r".*conflicting dimension sizes"):
         ds.sel(
             xx=xr.Variable("u", [1.1, 1.1, 1.1]),
             yy=xr.Variable("u", [3.1, 3.1]),

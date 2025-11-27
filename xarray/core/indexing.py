@@ -355,6 +355,17 @@ def slice_slice_by_array(
     return new_indexer
 
 
+def normalize_indexer(indexer, size):
+    if isinstance(indexer, slice):
+        return normalize_slice(indexer, size)
+    elif isinstance(indexer, np.ndarray):
+        return normalize_array(indexer, size)
+    else:
+        if indexer < 0:
+            return size + indexer
+        return indexer
+
+
 def _index_indexer_1d(
     old_indexer: OuterIndexerType,
     applied_indexer: OuterIndexerType,
@@ -365,7 +376,7 @@ def _index_indexer_1d(
         return old_indexer
     if is_full_slice(old_indexer):
         # shortcut for full slices
-        return applied_indexer
+        return normalize_indexer(applied_indexer, size)
 
     indexer: OuterIndexerType
     if isinstance(old_indexer, slice):
@@ -694,8 +705,8 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         """
         if isinstance(array, type(self)) and key is None:
             # unwrap
-            key = array.key  # type: ignore[has-type]
-            array = array.array  # type: ignore[has-type]
+            key = array.key  # type: ignore[has-type, unused-ignore]
+            array = array.array  # type: ignore[has-type, unused-ignore]
 
         if key is None:
             key = BasicIndexer((slice(None),) * array.ndim)
@@ -977,7 +988,7 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
 
 def as_indexable(array):
     """
-    This function always returns a ExplicitlyIndexed subclass,
+    This function always returns an ExplicitlyIndexed subclass,
     so that the vectorized indexing is always possible with the returned
     object.
     """
@@ -1251,8 +1262,8 @@ def _decompose_vectorized_indexer(
     if indexing_support is IndexingSupport.VECTORIZED:
         return indexer, BasicIndexer(())
 
-    backend_indexer_elems = []
-    np_indexer_elems = []
+    backend_indexer_elems: list[slice | np.ndarray[Any, np.dtype[np.generic]]] = []
+    np_indexer_elems: list[slice | np.ndarray[Any, np.dtype[np.generic]]] = []
     # convert negative indices
     indexer_elems = [
         np.where(k < 0, k + s, k) if isinstance(k, np.ndarray) else k
@@ -1315,7 +1326,7 @@ def _decompose_outer_indexer(
     arrays that only support basic or outer indexing.
 
     As an example, let us consider to index a few elements from a backend array
-    with a orthogonal indexer ([0, 3, 1], [2, 3, 2]).
+    with an orthogonal indexer ([0, 3, 1], [2, 3, 2]).
     Even if the backend array only supports basic indexing, it is more
     efficient to load a subslice of the array than loading the entire array,
 
@@ -1366,7 +1377,7 @@ def _decompose_outer_indexer(
         gains = [
             (
                 (np.max(k) - np.min(k) + 1.0) / len(np.unique(k))
-                if isinstance(k, np.ndarray)
+                if isinstance(k, np.ndarray) and k.size != 0
                 else 0
             )
             for k in indexer_elems
@@ -1374,7 +1385,11 @@ def _decompose_outer_indexer(
         array_index = np.argmax(np.array(gains)) if len(gains) > 0 else None
 
         for i, (k, s) in enumerate(zip(indexer_elems, shape, strict=False)):
-            if isinstance(k, np.ndarray) and i != array_index:
+            if isinstance(k, np.ndarray) and k.size == 0:
+                # empty np.ndarray key is converted to empty slice
+                # see https://github.com/pydata/xarray/issues/10867
+                backend_indexer.append(slice(0, 0))
+            elif isinstance(k, np.ndarray) and i != array_index:
                 # np.ndarray key is converted to slice that covers the entire
                 # entries of this key.
                 backend_indexer.append(slice(np.min(k), np.max(k) + 1))

@@ -112,6 +112,182 @@ You can learn more about using and developing backends in the
         linkStyle default font-size:18pt,stroke-width:4
 
 
+.. _io.backend_resolution:
+
+Backend Selection
+-----------------
+
+When opening a file or URL without explicitly specifying the ``engine`` parameter,
+xarray automatically selects an appropriate backend based on the file path or URL.
+The backends are tried in order: **netcdf4 → h5netcdf → scipy → pydap → zarr**.
+
+.. note::
+    You can customize the order in which netCDF backends are tried using the
+    ``netcdf_engine_order`` option in :py:func:`~xarray.set_options`:
+
+    .. code-block:: python
+
+        # Prefer h5netcdf over netcdf4
+        xr.set_options(netcdf_engine_order=["h5netcdf", "netcdf4", "scipy"])
+
+    See :ref:`options` for more details on configuration options.
+
+The following tables show which backend will be selected for different types of URLs and files.
+
+.. important::
+    ✅ means the backend will **guess it can open** the URL or file based on its path, extension,
+    or magic number, but this doesn't guarantee success. For example, not all Zarr stores are
+    xarray-compatible.
+
+    ❌ means the backend will not attempt to open it.
+
+Remote URL Resolution
+~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 50 10 10 10 10 10
+
+   * - URL
+     - :ref:`netcdf4 <io.netcdf>`
+     - :ref:`h5netcdf <io.hdf5>`
+     - :ref:`scipy <io.netcdf>`
+     - :ref:`pydap <io.opendap>`
+     - :ref:`zarr <io.zarr>`
+   * - ``https://example.com/store.zarr``
+     - ❌
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+   * - ``https://example.com/data.nc``
+     - ✅
+     - ✅
+     - ❌
+     - ❌
+     - ❌
+   * - ``http://example.com/data.nc?var=temp``
+     - ✅
+     - ❌
+     - ❌
+     - ❌
+     - ❌
+   * - ``http://example.com/dap4/data.nc?var=x``
+     - ✅
+     - ❌
+     - ❌
+     - ✅
+     - ❌
+   * - ``dap2://opendap.nasa.gov/dataset``
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+     - ❌
+   * - ``https://example.com/DAP4/data``
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+     - ❌
+   * - ``http://test.opendap.org/dap4/file.nc4``
+     - ✅
+     - ✅
+     - ❌
+     - ✅
+     - ❌
+   * - ``https://example.com/DAP4/data.nc``
+     - ✅
+     - ✅
+     - ❌
+     - ✅
+     - ❌
+
+Local File Resolution
+~~~~~~~~~~~~~~~~~~~~~
+
+For local files, backends first try to read the file's **magic number** (first few bytes).
+If the magic number **cannot be read** (e.g., file doesn't exist, no permissions), they fall
+back to checking the file **extension**. If the magic number is readable but invalid, the
+backend returns False (does not fall back to extension).
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 20 10 10 10 10
+
+   * - File Path
+     - Magic Number
+     - :ref:`netcdf4 <io.netcdf>`
+     - :ref:`h5netcdf <io.hdf5>`
+     - :ref:`scipy <io.netcdf>`
+     - :ref:`zarr <io.zarr>`
+   * - ``/path/to/file.nc``
+     - ``CDF\x01`` (netCDF3)
+     - ✅
+     - ❌
+     - ✅
+     - ❌
+   * - ``/path/to/file.nc4``
+     - ``\x89HDF\r\n\x1a\n`` (HDF5/netCDF4)
+     - ✅
+     - ✅
+     - ❌
+     - ❌
+   * - ``/path/to/file.nc.gz``
+     - ``\x1f\x8b`` + ``CDF`` inside
+     - ❌
+     - ❌
+     - ✅
+     - ❌
+   * - ``/path/to/store.zarr/``
+     - (directory)
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+   * - ``/path/to/file.nc``
+     - *(no magic number)*
+     - ✅
+     - ✅
+     - ✅
+     - ❌
+   * - ``/path/to/file.xyz``
+     - ``CDF\x01`` (netCDF3)
+     - ✅
+     - ❌
+     - ✅
+     - ❌
+   * - ``/path/to/file.xyz``
+     - ``\x89HDF\r\n\x1a\n`` (HDF5/netCDF4)
+     - ✅
+     - ✅
+     - ❌
+     - ❌
+   * - ``/path/to/file.xyz``
+     - *(no magic number)*
+     - ❌
+     - ❌
+     - ❌
+     - ❌
+
+.. note::
+    Remote URLs ending in ``.nc`` are **ambiguous**:
+
+    - They could be netCDF files stored on a remote HTTP server (readable by ``netcdf4`` or ``h5netcdf``)
+    - They could be OPeNDAP/DAP endpoints (readable by ``netcdf4`` with DAP support or ``pydap``)
+
+    These interpretations are fundamentally incompatible. If xarray's automatic
+    selection chooses the wrong backend, you must explicitly specify the ``engine`` parameter:
+
+    .. code-block:: python
+
+        # Force interpretation as a DAP endpoint
+        ds = xr.open_dataset("http://example.com/data.nc", engine="pydap")
+
+        # Force interpretation as a remote netCDF file
+        ds = xr.open_dataset("https://example.com/data.nc", engine="netcdf4")
+
+
 .. _io.netcdf:
 
 netCDF
@@ -591,8 +767,8 @@ The library ``h5netcdf`` allows writing some dtypes that aren't
 allowed in netCDF4 (see
 `h5netcdf documentation <https://github.com/h5netcdf/h5netcdf#invalid-netcdf-files>`_).
 This feature is available through :py:meth:`DataArray.to_netcdf` and
-:py:meth:`Dataset.to_netcdf` when used with ``engine="h5netcdf"``
-and currently raises a warning unless ``invalid_netcdf=True`` is set.
+:py:meth:`Dataset.to_netcdf` when used with ``engine="h5netcdf"``, only if
+``invalid_netcdf=True`` is explicitly set.
 
 .. warning::
 
@@ -1212,6 +1388,8 @@ See for example : `ncdata usage examples`_
 .. _Iris: https://scitools-iris.readthedocs.io
 .. _Ncdata: https://ncdata.readthedocs.io/en/latest/index.html
 .. _ncdata usage examples: https://github.com/pp-mo/ncdata/tree/v0.1.2?tab=readme-ov-file#correct-a-miscoded-attribute-in-iris-input
+
+.. _io.opendap:
 
 OPeNDAP
 -------

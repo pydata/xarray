@@ -323,19 +323,19 @@ def _normalize_filename_or_obj(
     if isinstance(filename_or_obj, bytes | memoryview):
         return io.BytesIO(filename_or_obj)
     else:
-        return _normalize_path(filename_or_obj)  # type: ignore[return-value]
+        return _normalize_path(filename_or_obj)
 
 
 class ScipyBackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the scipy package.
 
-    It can open ".nc", ".nc4", ".cdf" and ".gz" files but will only be
+    It can open ".nc", ".cdf", and "nc..gz" files but will only be
     selected as the default if the "netcdf4" and "h5netcdf" engines are
     not available. It has the advantage that is is a lightweight engine
     that has no system requirements (unlike netcdf4 and h5netcdf).
 
-    Additionally it can open gizp compressed (".gz") files.
+    Additionally it can open gzip compressed (".gz") files.
 
     For more information about the underlying library, visit:
     https://docs.scipy.org/doc/scipy/reference/generated/scipy.io.netcdf_file.html
@@ -347,14 +347,21 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
     backends.H5netcdfBackendEntrypoint
     """
 
-    description = "Open netCDF files (.nc, .nc4, .cdf and .gz) using scipy in Xarray"
+    description = "Open netCDF files (.nc, .cdf and .nc.gz) using scipy in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ScipyBackendEntrypoint.html"
 
     def guess_can_open(
         self,
         filename_or_obj: T_PathFileOrDataStore,
     ) -> bool:
+        from xarray.core.utils import is_remote_uri
+
         filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
+
+        # scipy can only handle local files - check this before trying to read magic number
+        if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
+            return False
+
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None and magic_number.startswith(b"\x1f\x8b"):
             with gzip.open(filename_or_obj) as f:  # type: ignore[arg-type]
@@ -363,8 +370,10 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
             return magic_number.startswith(b"CDF")
 
         if isinstance(filename_or_obj, str | os.PathLike):
-            _, ext = os.path.splitext(filename_or_obj)
-            return ext in {".nc", ".nc4", ".cdf", ".gz"}
+            from pathlib import Path
+
+            suffix = "".join(Path(filename_or_obj).suffixes)
+            return suffix in {".nc", ".cdf", ".nc.gz"}
 
         return False
 

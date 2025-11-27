@@ -21,10 +21,11 @@ jobs:
     if: |
       github.repository == 'pydata/xarray'
       && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'schedule')
+      && !contains(github.event.pull_request.labels.*.name, 'skip-ci')
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
       - uses: xarray-contrib/ci-trigger@v1
@@ -52,7 +53,7 @@ jobs:
       PYTHON_VERSION: "3.12"
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 

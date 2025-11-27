@@ -2,13 +2,239 @@
 
 .. _whats-new:
 
+
 What's New
 ==========
 
+.. _whats-new.2025.11.1:
+
+v2025.11.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+- Improved ``pydap`` backend behavior and performance when using :py:func:`open_dataset`, :py:func:`open_datatree`
+  when downloading dap4 (opendap) dimensions data (:issue:`10628`, :pull:`10629`). In addition ``checksums=True|False``
+  is added as optional argument to be passed to ``pydap`` backend.
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+
+- :py:func:`combine_nested` now support :py:class:`DataTree` objects
+  (:pull:`10849`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug Fixes
+~~~~~~~~~
+
+- The NetCDF4 backend will now claim to be able to read any URL except for one that contains
+  the substring zarr. This restores backward compatibility after
+  :pull:`10804` broke workflows that relied on ``xr.open_dataset("http://...")``
+  (:pull:`10931`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+- Always normalize slices when indexing ``LazilyIndexedArray`` instances (:issue:`10941`, :pull:`10948`).
+  By `Justus Magin <https://github.com/keewis>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2025.11.0:
+
+v2025.11.0 (Nov 17, 2025)
+-------------------------
+This release changes the default for ``keep_attrs`` such that attributes are preserved by default, adds support for :py:class:`DataTree` in top-level functions, and contains several memory and performance improvements as well as a number of bug fixes.
+
+Thanks to the 21 contributors to this release:
+Aled Owen, Charles Turner, Christine P. Chai, David Huard, Deepak Cherian, Gregorio L. Trevisan, Ian Hunt-Isaak, Ilan Gold, Illviljan, Jan Meischner, Jemma Jeffree, Jonas Lundholm Bertelsen, Justus Magin, Kai Mühlbauer, Kristian Bodolai, Lukas Riedel, Max Jones, Maximilian Roos, Niclas Rieger, Stephan Hoyer and William Andrea
+
+New Features
+~~~~~~~~~~~~
+
+- :py:func:`merge` and :py:func:`concat` now support :py:class:`DataTree`
+  objects (:issue:`9790`, :issue:`9778`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- The ``h5netcdf`` engine has support for pseudo ``NETCDF4_CLASSIC`` files, meaning variables and attributes are cast to supported types. Note that the saved files won't be recognized as genuine ``NETCDF4_CLASSIC`` files until ``h5netcdf`` adds support with version 1.7.0 (:issue:`10676`, :pull:`10686`).
+  By `David Huard <https://github.com/huard>`_.
+- Support comparing :py:class:`DataTree` objects with :py:func:`testing.assert_allclose` (:pull:`10887`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Add support for ``chunks="auto"`` for cftime datasets (:issue:`9834`, :pull:`10527`).
+  By `Charles Turner <https://github.com/charles-turner-1>`_.
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- All xarray operations now preserve attributes by default (:issue:`3891`, :issue:`2582`).
+  Previously, operations would drop attributes unless explicitly told to preserve them via ``keep_attrs=True``.
+  Additionally, when attributes are preserved in binary operations, they now combine attributes from both
+  operands using ``drop_conflicts`` (keeping matching attributes, dropping conflicts), instead of keeping
+  only the left operand's attributes.
+
+  **What changed:**
+
+  .. code-block:: python
+
+      # Before (xarray <2025.11.0):
+      data = xr.DataArray([1, 2, 3], attrs={"units": "meters", "long_name": "height"})
+      result = data.mean()
+      result.attrs  # {}  - Attributes lost!
+
+      # After (xarray ≥2025.09.1):
+      data = xr.DataArray([1, 2, 3], attrs={"units": "meters", "long_name": "height"})
+      result = data.mean()
+      result.attrs  # {"units": "meters", "long_name": "height"}  - Attributes preserved!
+
+  **Affected operations include:**
+
+  *Computational operations:*
+
+  - Reductions: ``mean()``, ``sum()``, ``std()``, ``var()``, ``min()``, ``max()``, ``median()``, ``quantile()``, etc.
+  - Rolling windows: ``rolling().mean()``, ``rolling().sum()``, etc.
+  - Groupby: ``groupby().mean()``, ``groupby().sum()``, etc.
+  - Resampling: ``resample().mean()``, etc.
+  - Weighted: ``weighted().mean()``, ``weighted().sum()``, etc.
+  - ``apply_ufunc()`` and NumPy universal functions
+
+  *Binary operations:*
+
+  - Arithmetic: ``+``, ``-``, ``*``, ``/``, ``**``, ``//``, ``%`` (combines attributes using ``drop_conflicts``)
+  - Comparisons: ``<``, ``>``, ``==``, ``!=``, ``<=``, ``>=`` (combines attributes using ``drop_conflicts``)
+  - With scalars: ``data * 2``, ``10 - data`` (preserves data's attributes)
+
+  *Data manipulation:*
+
+  - Missing data: ``fillna()``, ``dropna()``, ``interpolate_na()``, ``ffill()``, ``bfill()``
+  - Indexing/selection: ``isel()``, ``sel()``, ``where()``, ``clip()``
+  - Alignment: ``interp()``, ``reindex()``, ``align()``
+  - Transformations: ``map()``, ``pipe()``, ``assign()``, ``assign_coords()``
+  - Shape operations: ``expand_dims()``, ``squeeze()``, ``transpose()``, ``stack()``, ``unstack()``
+
+  **Binary operations - combines attributes with** ``drop_conflicts``:
+
+  .. code-block:: python
+
+      a = xr.DataArray([1, 2], attrs={"units": "m", "source": "sensor_a"})
+      b = xr.DataArray([3, 4], attrs={"units": "m", "source": "sensor_b"})
+      (a + b).attrs  # {"units": "m"}  - Matching values kept, conflicts dropped
+      (b + a).attrs  # {"units": "m"}  - Order doesn't matter for drop_conflicts
+
+  **How to restore previous behavior:**
+
+  1. **Globally for your entire script:**
+
+     .. code-block:: python
+
+         import xarray as xr
+
+         xr.set_options(keep_attrs=False)  # Affects all subsequent operations
+
+  2. **For specific operations:**
+
+     .. code-block:: python
+
+         result = data.mean(dim="time", keep_attrs=False)
+
+  3. **For code blocks:**
+
+     .. code-block:: python
+
+         with xr.set_options(keep_attrs=False):
+             # All operations in this block drop attrs
+             result = data1 + data2
+
+  4. **Remove attributes after operations:**
+
+     .. code-block:: python
+
+         result = data.mean().drop_attrs()
+
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+Bug Fixes
+~~~~~~~~~
+- Fix h5netcdf backend for format=None, use same rule as netcdf4 backend (:pull:`10859`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- ``netcdf4`` and ``pydap`` backends now use stricter URL detection to avoid incorrectly claiming
+  remote URLs. The ``pydap`` backend now only claims URLs with explicit DAP protocol indicators
+  (``dap2://`` or ``dap4://`` schemes, or ``/dap2/`` or ``/dap4/`` in the URL path). This prevents
+  both backends from claiming remote Zarr stores and other non-DAP URLs without an explicit
+  ``engine=`` argument (:pull:`10804`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+- Fix indexing with empty arrays for scipy & h5netcdf backends which now resolves to empty slices (:issue:`10867`, :pull:`10870`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
+- Fix error handling issue in ``decode_cf_variables`` when decoding fails - the exception is now re-raised
+  correctly, with a note added about the variable name that caused the error (:issue:`10873`, :pull:`10886`).
+  By `Jonas L. Bertelsen <https://github.com/jonaslb>`_.
+- Fix ``equivalent`` for numpy scalar nan comparison (:issue:`10833`, :pull:`10838`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Support non-``DataArray`` outputs in :py:meth:`Dataset.map` (:issue:`10835`, :pull:`10839`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Support ``drop_sel`` on ``MultiIndex`` objects (:issue:`10862`, :pull:`10863`).
+  By `Aled Owen <https://github.com/owena11>`_.
+
+Performance
+~~~~~~~~~~~
+
+- Speedup and reduce memory usage of :py:func:`concat`. Magnitude of improvement scales
+  with size of the concatenation dimension (:issue:`10864`, :pull:`10866`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Speedup and reduce memory usage when coarsening along multiple dimensions (:pull:`10921`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+.. _whats-new.2025.10.1:
+
+v2025.10.1 (Oct 7, 2025)
+------------------------
+
+This release reverts a breaking change to Xarray's preferred netCDF backend.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Xarray's default engine for reading/writing netCDF files has been reverted to
+  prefer netCDF4 over h5netcdf over scipy, which was the default before
+  v2025.09.1. This change had larger implications for the ecosystem than we
+  anticipated. We are still considering changing the default in the future, but
+  will be a bit more careful about the implications. See :issue:`10657` and
+  linked issues for discussion. The behavior can still be customized, e.g., with
+  ``xr.set_options(netcdf_engine_order=['h5netcdf', 'netcdf4', 'scipy'])``.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+New features
+~~~~~~~~~~~~
+
+- Coordinates are ordered to match dims when displaying Xarray objects. (:pull:`10778`).
+  By `Julia Signell <https://github.com/jsignell>`_.
+
+Bug fixes
+~~~~~~~~~
+- Fix error raised when writing scalar variables to Zarr with ``region={}``
+  (:pull:`10796`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+
 .. _whats-new.2025.09.1:
 
-v2025.09.1 (unreleased)
------------------------
+v2025.09.1 (Sep 29, 2025)
+-------------------------
+
+This release contains improvements to netCDF IO and the
+:py:func:`DataTree.from_dict` constructor, as well as a variety of bug fixes.
+In particular, the default netCDF backend has switched from netCDF4 to h5netcdf,
+which is typically faster.
+
+Thanks to the 17 contributors to this release:
+Claude, Deepak Cherian, Dimitri Papadopoulos Orfanos, Dylan H. Morris, Emmanuel Mathot, Ian Hunt-Isaak, Joren Hammudoglu, Julia Signell, Justus Magin, Maximilian Roos, Nick Hodgskin, Spencer Clark, Stephan Hoyer, Tom Nicholas, gronniger, joseph nowak and pierre-manchon
 
 New Features
 ~~~~~~~~~~~~
@@ -29,9 +255,25 @@ Breaking changes
   dataset in-place. (:issue:`10167`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
-- The default ``engine`` when reading/writing netCDF files in-memory is now
-  netCDF4, consistent with Xarray's default ``engine`` when read/writing netCDF
-  files to disk (:pull:`10624`).
+- The default ``engine`` when reading/writing netCDF files is now h5netcdf
+  or scipy, which are typically faster than the prior default of netCDF4-python.
+  You can control this default behavior explicitly via the new
+  ``netcdf_engine_order`` parameter in :py:func:`~xarray.set_options`, e.g.,
+  ``xr.set_options(netcdf_engine_order=['netcdf4', 'scipy', 'h5netcdf'])`` to
+  restore the prior defaults (:issue:`10657`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- The HTML reprs for :py:class:`DataArray`, :py:class:`Dataset` and
+  :py:class:`DataTree` have been tweaked to hide empty sections, consistent
+  with the text reprs. The ``DataTree`` HTML repr also now automatically expands
+  sub-groups (:pull:`10785`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Zarr stores written with Xarray now consistently use a default Zarr fill value
+  of ``NaN`` for float variables, for both Zarr v2 and v3 (:issue:`10646``). All
+  other dtypes still use the Zarr default ``fill_value`` of zero. To customize,
+  explicitly set encoding in :py:meth:`~Dataset.to_zarr`, e.g.,
+  ``encoding=dict.fromkey(ds.data_vars, {'fill_value': 0})``.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Deprecations
@@ -89,8 +331,8 @@ Internal Changes
 
 .. _whats-new.2025.09.0:
 
-v2025.09.0 (September 2, 2025)
-------------------------------
+v2025.09.0 (Sep 2, 2025)
+------------------------
 
 This release brings a number of small improvements and fixes, especially related
 to writing DataTree objects and netCDF files to disk.
@@ -166,8 +408,8 @@ Internal Changes
 
 .. _whats-new.2025.08.0:
 
-v2025.08.0 (August 14, 2025)
-----------------------------
+v2025.08.0 (Aug 14, 2025)
+-------------------------
 
 This release brings the ability to load xarray objects asynchronously, write netCDF as bytes, fixes a number of bugs, and starts an important deprecation cycle for changing the default values of keyword arguments for various xarray combining functions.
 
@@ -243,8 +485,8 @@ Performance
 
 .. _whats-new.2025.07.1:
 
-v2025.07.1 (July 09, 2025)
---------------------------
+v2025.07.1 (Jul 09, 2025)
+-------------------------
 
 This release brings a lot of improvements to flexible indexes functionality, including new classes
 to ease building of new indexes with custom coordinate transforms (:py:class:`indexes.CoordinateTransformIndex`)
