@@ -238,6 +238,8 @@ class CachingFileManager(FileManager[T_File]):
         with self._optional_lock(needs_lock):
             default = None
             file = self._cache.pop(self._key, default)
+            if file is None:
+                return
             if needs_lock and self._lock:
                 with self._lock:
                     file.close()
