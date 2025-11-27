@@ -396,7 +396,6 @@ class PickleableFileManager(FileManager[T_File]):
         yield self._get_unclosed_file()
 
     def close(self, needs_lock: bool = True) -> None:
-        del needs_lock  # unused
         if not self._closed:
             file = self._get_unclosed_file()
             if needs_lock and self._lock:
