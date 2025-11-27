@@ -360,7 +360,7 @@ in the dictionary:
 Where a pandas object is supplied as a value, the names of its indexes are used as dimension
 names, and its data is aligned to any existing dimensions.
 
-You can also create an dataset from:
+You can also create a dataset from:
 
 - A :py:class:`pandas.DataFrame` or ``pandas.Panel`` along its columns and items
   respectively, by passing it into the :py:class:`~xarray.Dataset` directly
@@ -559,7 +559,7 @@ nested dict-like containers of both :py:class:`xarray.DataArray`\s and :py:class
 A single datatree object is known as a "node", and its position relative to
 other nodes is defined by two more key properties:
 
-- ``children``: An dictionary mapping from names to other :py:class:`~xarray.DataTree`
+- ``children``: A dictionary mapping from names to other :py:class:`~xarray.DataTree`
   objects, known as its "child nodes".
 - ``parent``: The single :py:class:`~xarray.DataTree` object whose children this datatree is a
   member of, known as its "parent node".

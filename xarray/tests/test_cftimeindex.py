@@ -1402,17 +1402,17 @@ def test_asi8_empty_cftimeindex():
 
 @requires_cftime
 def test_infer_freq_valid_types(time_unit: PDDatetimeUnitOptions) -> None:
-    cf_indx = xr.date_range("2000-01-01", periods=3, freq="D", use_cftime=True)
-    assert xr.infer_freq(cf_indx) == "D"
-    assert xr.infer_freq(xr.DataArray(cf_indx)) == "D"
+    cf_index = xr.date_range("2000-01-01", periods=3, freq="D", use_cftime=True)
+    assert xr.infer_freq(cf_index) == "D"
+    assert xr.infer_freq(xr.DataArray(cf_index)) == "D"
 
-    pd_indx = pd.date_range("2000-01-01", periods=3, freq="D").as_unit(time_unit)
-    assert xr.infer_freq(pd_indx) == "D"
-    assert xr.infer_freq(xr.DataArray(pd_indx)) == "D"
+    pd_index = pd.date_range("2000-01-01", periods=3, freq="D").as_unit(time_unit)
+    assert xr.infer_freq(pd_index) == "D"
+    assert xr.infer_freq(xr.DataArray(pd_index)) == "D"
 
-    pd_td_indx = pd.timedelta_range(start="1D", periods=3, freq="D").as_unit(time_unit)
-    assert xr.infer_freq(pd_td_indx) == "D"
-    assert xr.infer_freq(xr.DataArray(pd_td_indx)) == "D"
+    pd_td_index = pd.timedelta_range(start="1D", periods=3, freq="D").as_unit(time_unit)
+    assert xr.infer_freq(pd_td_index) == "D"
+    assert xr.infer_freq(xr.DataArray(pd_td_index)) == "D"
 
 
 @requires_cftime
@@ -1421,27 +1421,27 @@ def test_infer_freq_invalid_inputs():
     with pytest.raises(ValueError, match="must contain datetime-like objects"):
         xr.infer_freq(xr.DataArray([0, 1, 2]))
 
-    indx = xr.date_range("1990-02-03", periods=4, freq="MS", use_cftime=True)
+    index = xr.date_range("1990-02-03", periods=4, freq="MS", use_cftime=True)
     # 2D DataArray
     with pytest.raises(ValueError, match="must be 1D"):
-        xr.infer_freq(xr.DataArray([indx, indx]))
+        xr.infer_freq(xr.DataArray([index, index]))
 
     # CFTimeIndex too short
     with pytest.raises(ValueError, match="Need at least 3 dates to infer frequency"):
-        xr.infer_freq(indx[:2])
+        xr.infer_freq(index[:2])
 
     # Non-monotonic input
-    assert xr.infer_freq(indx[np.array([0, 2, 1, 3])]) is None
+    assert xr.infer_freq(index[np.array([0, 2, 1, 3])]) is None
 
     # Non-unique input
-    assert xr.infer_freq(indx[np.array([0, 1, 1, 2])]) is None
+    assert xr.infer_freq(index[np.array([0, 1, 1, 2])]) is None
 
     # No unique frequency (here 1st step is MS, second is 2MS)
-    assert xr.infer_freq(indx[np.array([0, 1, 3])]) is None
+    assert xr.infer_freq(index[np.array([0, 1, 3])]) is None
 
     # Same, but for QS
-    indx = xr.date_range("1990-02-03", periods=4, freq="QS", use_cftime=True)
-    assert xr.infer_freq(indx[np.array([0, 1, 3])]) is None
+    index = xr.date_range("1990-02-03", periods=4, freq="QS", use_cftime=True)
+    assert xr.infer_freq(index[np.array([0, 1, 3])]) is None
 
 
 @requires_cftime
@@ -1465,10 +1465,10 @@ def test_infer_freq_invalid_inputs():
 )
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_infer_freq(freq, calendar):
-    indx = xr.date_range(
+    index = xr.date_range(
         "2000-01-01", periods=3, freq=freq, calendar=calendar, use_cftime=True
     )
-    out = xr.infer_freq(indx)
+    out = xr.infer_freq(index)
     assert out == freq
 
 
