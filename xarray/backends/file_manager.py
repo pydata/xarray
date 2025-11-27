@@ -427,11 +427,11 @@ class PickleableFileManager(FileManager[T_File]):
     def __getstate__(self):
         # file is intentionally omitted: we want to open it again
         opener = _get_none if self._closed else self._opener
-        return (opener, self._args, self._mode, self._kwargs)
+        return (opener, self._args, self._mode, self._lock, self._kwargs)
 
     def __setstate__(self, state) -> None:
-        opener, args, mode, kwargs = state
-        self.__init__(opener, *args, mode=mode, kwargs=kwargs)  # type: ignore[misc]
+        opener, args, mode, lock, kwargs = state
+        self.__init__(opener, *args, mode=mode, lock=lock, kwargs=kwargs)  # type: ignore[misc]
 
     def __repr__(self) -> str:
         if self._closed:
