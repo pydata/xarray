@@ -1818,12 +1818,12 @@ class DataTree(
         """
         # TODO this signature means that func has no way to know which node it is being called upon - change?
         return map_over_datasets(
-            func,
+            func,  # type: ignore[arg-type]
             self,
             *args,
             kwargs=kwargs,
             default_num_return_values=default_num_return_values,
-        )  # type: ignore[arg-type]
+        )
 
     @overload
     def pipe(
