@@ -26,6 +26,10 @@ New Features
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 
+- Skip empty nodes in :py:func:`map_over_datasets`. This is a breaking change in xarray,
+  but restores the behavior of the xarray-datatree package; also affects binary operations with
+  :py:class:`DataTree` objects. (:issue:`9693`, :pull:`10042`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -74,11 +78,6 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
-- Skip empty nodes in :py:func:`map_over_datasets`. Also affects binary operations.
-  This is a breaking change in xarray, but restores the behavior of the xarray-datatree package (:issue:`9693`, :pull:`10042`).
-  By `Mathias Hauser <https://github.com/mathause>`_.
-
-- **All xarray operations now preserve attributes by default** (:issue:`3891`, :issue:`2582`).
 - All xarray operations now preserve attributes by default (:issue:`3891`, :issue:`2582`).
   Previously, operations would drop attributes unless explicitly told to preserve them via ``keep_attrs=True``.
   Additionally, when attributes are preserved in binary operations, they now combine attributes from both
