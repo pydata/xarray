@@ -1805,7 +1805,8 @@ class DataTree(
             Optional keyword arguments passed directly to ``func``.
         num_return_values : int | None, default None
             Number of returned DataTree objects if none of the passed nodes contains any data.
-            Defaults to one if not passed.
+            Ignored if ``func`` returns a ``Dataset`` for at least one of the nodes. A single
+            ``DataTree`` is returned when None is passed, otherwise returns a tuple of ``DataTree`` objects.
 
         Returns
         -------
