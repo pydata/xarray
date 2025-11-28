@@ -542,6 +542,7 @@ class Coordinates(AbstractCoordinates):
     def merge(
         self,
         other: Mapping[Any, Any] | None,
+        *,
         compat: CompatOptions | CombineKwargDefault = "minimal",
     ) -> Dataset:
         """Merge two sets of coordinates to create a new Dataset
