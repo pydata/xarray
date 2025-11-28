@@ -17,6 +17,7 @@ def map_over_datasets(
     func: Callable[..., Dataset | None],
     *args: Any,
     kwargs: Mapping[str, Any] | None = None,
+    default_num_return_values: int | None = None,
 ) -> DataTree: ...
 
 
@@ -27,6 +28,7 @@ def map_over_datasets(
     func: Callable[..., tuple[Dataset | None, Dataset | None]],
     *args: Any,
     kwargs: Mapping[str, Any] | None = None,
+    default_num_return_values: int | None = None,
 ) -> tuple[DataTree, DataTree]: ...
 
 
@@ -35,6 +37,7 @@ def map_over_datasets(
     func: Callable[..., tuple[Dataset | None, ...]],
     *args: Any,
     kwargs: Mapping[str, Any] | None = None,
+    default_num_return_values: int | None = None,
 ) -> tuple[DataTree, ...]: ...
 
 
@@ -42,6 +45,7 @@ def map_over_datasets(
     func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
     *args: Any,
     kwargs: Mapping[str, Any] | None = None,
+    default_num_return_values: int | None = None,
 ) -> DataTree | tuple[DataTree, ...]:
     """
     Applies a function to every non-empty dataset in one or more DataTree objects
@@ -81,8 +85,8 @@ def map_over_datasets(
     kwargs : dict, optional
         Optional keyword arguments passed directly to ``func``.
     num_return_values : int | None, default None
-        Number
-
+        Number of returned DataTree objects if none of the passed nodes contains any data.
+        Defaults to one if not passed.
 
     Returns
     -------
@@ -135,7 +139,9 @@ def map_over_datasets(
 
         out_data_objects[path] = results
 
-    num_return_values = _check_all_return_values(out_data_objects, func_called)
+    num_return_values = _check_all_return_values(
+        out_data_objects, func_called, default_num_return_values
+    )
 
     if num_return_values is None:
         # one return value
@@ -187,7 +193,11 @@ def _check_single_set_return_values(path_to_node: str, obj: Any) -> int | None:
     return len(obj)
 
 
-def _check_all_return_values(returned_objects, func_called) -> int:
+def _check_all_return_values(
+    returned_objects: dict[str, Dataset | tuple[Dataset | None, ...] | None],
+    func_called: dict[str, bool],
+    default_num_return_values: int | None,
+) -> int | None:
     """Walk through all values returned by mapping func over subtrees, raising on any invalid or inconsistent types."""
 
     result_data_objects = list(returned_objects.items())
@@ -233,5 +243,8 @@ def _check_all_return_values(returned_objects, func_called) -> int:
                     f"the nodes at position {first_path} instead returns a tuple of "
                     f"{return_values} datasets."
                 )
+
+    if not func_called_before and default_num_return_values is not None:
+        return default_num_return_values
 
     return return_values

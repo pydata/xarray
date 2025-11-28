@@ -86,6 +86,25 @@ class TestMapOverSubTree:
         expected_max = create_test_datatree(modify=lambda ds: ds.max())
         assert_equal(dt_max, expected_max)
 
+    def test_return_multiple_trees_empty_input(self):
+        dt = expected = xr.DataTree.from_dict({"node": xr.Dataset()})
+
+        # not passing num_return_values
+        result = map_over_datasets(max, dt, dt)
+        assert isinstance(result, xr.DataTree)
+        xr.testing.assert_equal(result, expected)
+
+        result = map_over_datasets(max, dt, dt, default_num_return_values=1)
+        assert isinstance(result, tuple)
+        assert len(result) == 1
+        xr.testing.assert_equal(result[0], expected)
+
+        result = map_over_datasets(max, dt, dt, default_num_return_values=2)
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        xr.testing.assert_equal(result[0], expected)
+        xr.testing.assert_equal(result[1], expected)
+
     def test_return_multiple_trees_empty_first_node(self):
         # check result tree is constructed correctly even if first nodes are empty
         ds = xr.Dataset(data_vars={"a": ("x", [1, 2, 3])})
