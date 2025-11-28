@@ -10099,9 +10099,9 @@ class Dataset(
         >>>
         >>> ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper()).sum()
         <xarray.Dataset> Size: 144B
-        Dimensions:  (x_bins: 2, letters: 2, y: 3)
+        Dimensions:  (y: 3, x_bins: 2, letters: 2)
         Coordinates:
-          * x_bins   (x_bins) object 32B (5, 15] (15, 25]
+          * x_bins   (x_bins) interval[int64, right] 32B (5, 15] (15, 25]
           * letters  (letters) object 16B 'a' 'b'
         Dimensions without coordinates: y
         Data variables:

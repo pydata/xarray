@@ -174,7 +174,7 @@ def load_dataset(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:
         a        (x) ...
 
     Clean up the example file:
-
+    >>> ds_loaded.close()
     >>> import os
     >>> os.remove("example_load_ds.nc")
     """
@@ -217,7 +217,7 @@ def load_dataarray(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataArra
     Dimensions without coordinates: x
 
     Clean up the example file:
-
+    >>> da_loaded.close()
     >>> import os
     >>> os.remove("example_load_da.nc")
     """
@@ -637,7 +637,7 @@ def open_dataset(
     ... )  # doctest: +SKIP
 
     Clean up the example file:
-
+    >>> ds_disk.close()
     >>> import os
     >>> os.remove("example.nc")
     """
@@ -890,7 +890,7 @@ def open_dataarray(
     Dimensions without coordinates: x
 
     Clean up the example file:
-
+    >>> da_disk.close()
     >>> import os
     >>> os.remove("example_da.nc")
     """
@@ -1398,8 +1398,8 @@ def open_groups(
         a        (x) ...
 
     Clean up the example file:
-
-    >>> import os
+    >>> groups.close()  # doctest: +SKIP
+    >>> import os  # doctest: +SKIP
     >>> os.remove("example_groups.nc")  # doctest: +SKIP
     """
     if cache is None:
