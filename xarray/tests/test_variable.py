@@ -1086,7 +1086,7 @@ class TestVariable(VariableSubclassobjects):
         [
             (np.datetime64("2000-01-01"), "s"),
             (
-                pd.Timestamp("2000-01-01T00"),
+                pd.Timestamp("2000-01-01T00").as_unit("s"),
                 "s" if has_pandas_3 else "ns",
             ),
             (
@@ -1128,7 +1128,7 @@ class TestVariable(VariableSubclassobjects):
         assert v.values == "foo".encode("ascii")
 
     def test_0d_datetime(self):
-        v = Variable([], pd.Timestamp("2000-01-01"))
+        v = Variable([], pd.Timestamp("2000-01-01").as_unit("s"))
         expected_unit = "s" if has_pandas_3 else "ns"
         assert v.dtype == np.dtype(f"datetime64[{expected_unit}]")
         assert v.values == np.datetime64("2000-01-01", expected_unit)  # type: ignore[call-overload]
