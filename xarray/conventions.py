@@ -564,6 +564,26 @@ def decode_cf(
     Returns
     -------
     decoded : Dataset
+
+    See Also
+    --------
+    encode_dataset_coordinates
+    decode_cf_variable
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> ds = xr.Dataset({"temp": (("time",), np.arange(5))})
+    >>> ds["time"] = pd.date_range("2000-01-01", periods=5)
+    >>> decoded = xr.conventions.decode_cf(ds)
+    >>> decoded
+    <xarray.Dataset> ...
+    Dimensions:  (time: 5)
+    Coordinates:
+      * time     (time) ...
+    Data variables:
+        temp     (time) ...
     """
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset

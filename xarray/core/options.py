@@ -350,8 +350,16 @@ def get_options():
     Get options for xarray.
 
     See Also
-    ----------
+    --------
     set_options
 
+    Examples
+    --------
+    >>> original_width = xr.get_options()["display_width"]
+    >>> with xr.set_options(display_width=original_width + 10):
+    ...     xr.get_options()["display_width"] == original_width + 10
+    True
+    >>> xr.get_options()["display_width"] == original_width
+    True
     """
     return FrozenDict(OPTIONS)

@@ -787,6 +787,13 @@ class Dataset(
         Dataset.load_async
         DataArray.compute
         Variable.compute
+
+        Examples
+        --------
+        >>> ds = xr.Dataset({"a": (("x",), [1, 2, 3])}).chunk({"x": 1})
+        >>> computed = ds.compute()
+        >>> type(computed["a"].data)
+        <class 'numpy.ndarray'>
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -831,7 +838,13 @@ class Dataset(
         See Also
         --------
         dask.persist
-        """
+
+        Examples
+        --------
+        >>> ds = xr.Dataset({"a": (("x",), [1, 2, 3])}).chunk({"x": 1})
+        >>> persisted = ds.persist()
+        >>> type(persisted["a"].data)
+        <class 'dask.array.core.Array'>"""
         new = self.copy(deep=False)
         return new._persist_inplace(**kwargs)
 
@@ -6185,6 +6198,34 @@ class Dataset(
         obj : Dataset
             The dataset without the given dimensions (or any variables
             containing those dimensions).
+
+        See Also
+        --------
+        Dataset.drop_vars
+        DataArray.drop_vars
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {"a": (("x", "y"), [[1, 2], [3, 4]]), "b": (("x",), [5, 6])},
+        ...     coords={"x": [0, 1], "y": [0, 1]},
+        ... )
+        >>> ds
+        <xarray.Dataset> ...
+        Dimensions:  (x: 2, y: 2)
+        Coordinates:
+          * x        (x) ...
+          * y        (y) ...
+        Data variables:
+            a        (x, y) ...
+            b        (x) ...
+        >>> ds.drop_dims("y")
+        <xarray.Dataset> ...
+        Dimensions:  (x: 2)
+        Coordinates:
+          * x        (x) ...
+        Data variables:
+            b        (x) ...
         """
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
@@ -10058,9 +10099,9 @@ class Dataset(
         >>>
         >>> ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper()).sum()
         <xarray.Dataset> Size: 144B
-        Dimensions:  (y: 3, x_bins: 2, letters: 2)
+        Dimensions:  (x_bins: 2, letters: 2, y: 3)
         Coordinates:
-          * x_bins   (x_bins) interval[int64, right] 32B (5, 15] (15, 25]
+          * x_bins   (x_bins) object 32B (5, 15] (15, 25]
           * letters  (letters) object 16B 'a' 'b'
         Dimensions without coordinates: y
         Data variables:

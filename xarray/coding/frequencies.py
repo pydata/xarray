@@ -79,6 +79,20 @@ def infer_freq(index):
         If the index is not datetime-like.
     ValueError
         If there are fewer than three values or the index is not 1D.
+
+    See Also
+    --------
+    pandas.infer_freq
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> times = pd.date_range("2000-01-01", periods=5, freq="D")
+    >>> xr.infer_freq(times)
+    'D'
+    >>> times = pd.date_range("2000-01-01", periods=5, freq="2h")
+    >>> xr.infer_freq(times)
+    '2h'
     """
     from xarray.core.dataarray import DataArray
     from xarray.core.variable import Variable
