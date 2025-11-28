@@ -150,8 +150,12 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
     Examples
     --------
     >>> import numpy as np  # doctest: +SKIP
-    >>> da1 = xr.DataArray(np.arange(6).reshape(2, 3), dims=("x", "y")).chunk({"x": 1})  # doctest: +SKIP
-    >>> da2 = xr.DataArray(np.arange(6).reshape(2, 3), dims=("x", "y")).chunk({"y": 1})  # doctest: +SKIP
+    >>> da1 = xr.DataArray(np.arange(6).reshape(2, 3), dims=("x", "y")).chunk(
+    ...     {"x": 1}
+    ... )  # doctest: +SKIP
+    >>> da2 = xr.DataArray(np.arange(6).reshape(2, 3), dims=("x", "y")).chunk(
+    ...     {"y": 1}
+    ... )  # doctest: +SKIP
     >>> da1, da2 = xr.unify_chunks(da1, da2)  # doctest: +SKIP
     >>> da1.chunks  # doctest: +SKIP
     ((1, 1), (3,))

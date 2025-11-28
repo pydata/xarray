@@ -1390,7 +1390,7 @@ def open_groups(
     >>> groups = xr.open_groups("example_groups.nc")  # doctest: +SKIP
     >>> sorted(groups.keys())  # doctest: +SKIP
     ['group1', 'group2']
-    >>> groups['group1']  # doctest: +SKIP
+    >>> groups["group1"]  # doctest: +SKIP
     <xarray.Dataset>
     Dimensions:  (x: 3)
     Dimensions without coordinates: x
@@ -1665,7 +1665,7 @@ def open_mfdataset(
     Examples
     --------
     >>> import numpy as np
-    >>> ds1 = xr.Dataset({"a": (("x",), np.arange(3))}, coords={"x": [0, 1, 2]}) 
+    >>> ds1 = xr.Dataset({"a": (("x",), np.arange(3))}, coords={"x": [0, 1, 2]})
     >>> ds2 = xr.Dataset({"a": (("x",), np.arange(3))}, coords={"x": [3, 4, 5]})
     >>> ds1.to_netcdf("example_mf_1.nc")  # doctest: +SKIP
     >>> ds2.to_netcdf("example_mf_2.nc")  # doctest: +SKIP
