@@ -4784,7 +4784,14 @@ class TestDataset:
     def test_setitem_uses_base_variable_class_even_for_index_variables(self) -> None:
         ds = Dataset(coords={"x": [1, 2, 3]})
         ds["y"] = ds["x"]
-        _assert_internal_invariants(ds, check_default_indexes=True)
+        
+        # explicit check
+        assert isintance(ds["x"].variable, IndexVariable)
+        assert not isinstance(ds["y"].variable, IndexVariable)
+        
+        # test internal invariant checks when comparing the datasets
+        expected = Dataset(coords={"x": [1, 2, 3], "y": ("x", [1, 2, 3])})
+        assert_identical(ds, expected)
 
     def test_assign(self) -> None:
         ds = Dataset()
