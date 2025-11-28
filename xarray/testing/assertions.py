@@ -363,13 +363,17 @@ def _assert_indexes_invariants_checks(
             if isinstance(v, IndexVariable)
         }
         assert indexes.keys() <= index_vars, (set(indexes), index_vars)
+        assert all(
+            k in index_vars
+            for k, v in possible_coord_variables.items()
+            if v.dims == (k,)
+        ), {k: type(v) for k, v in possible_coord_variables.items()}
 
-    non_index_dim_vars = (
-        v
+    assert not any(
+        isinstance(v, IndexVariable)
         for k, v in possible_coord_variables.items()
-        if v.dims in (k, (k,)) and k not in indexes.keys()
-    )
-    assert not any(isinstance(var, IndexVariable) for var in non_index_dim_vars)
+        if v.dims == (k,) and k not in indexes.keys()
+    ), {k: type(v) for k, v in possible_coord_variables.items()}
 
     # check pandas index wrappers vs. coordinate data adapters
     for k, index in indexes.items():
@@ -445,10 +449,10 @@ def _assert_dataarray_invariants(da: DataArray, check_default_indexes: bool):
     for k, v in da._coords.items():
         _assert_variable_invariants(v, k)
 
-    if da._indexes is not None:
-        _assert_indexes_invariants_checks(
-            da._indexes, da._coords, da.dims, check_default=check_default_indexes
-        )
+    assert da._indexes is not None
+    _assert_indexes_invariants_checks(
+        da._indexes, da._coords, da.dims, check_default=check_default_indexes
+    )
 
 
 def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
@@ -473,10 +477,10 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
         ds._dims[k] == v.sizes[k] for v in ds._variables.values() for k in v.sizes
     ), (ds._dims, {k: v.sizes for k, v in ds._variables.items()})
 
-    if ds._indexes is not None:
-        _assert_indexes_invariants_checks(
-            ds._indexes, ds._variables, ds._dims, check_default=check_default_indexes
-        )
+    assert ds._indexes is not None
+    _assert_indexes_invariants_checks(
+        ds._indexes, ds._variables, ds._dims, check_default=check_default_indexes
+    )
 
     assert isinstance(ds._encoding, type(None) | dict)
     assert isinstance(ds._attrs, type(None) | dict)
