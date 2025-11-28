@@ -1665,10 +1665,10 @@ def open_mfdataset(
     Examples
     --------
     >>> import numpy as np
-    >>> ds1 = xr.Dataset({"a": (("x",), np.arange(3))}, coords={"x": [0, 1, 2]})
+    >>> ds1 = xr.Dataset({"a": (("x",), np.arange(3))}, coords={"x": [0, 1, 2]}) 
     >>> ds2 = xr.Dataset({"a": (("x",), np.arange(3))}, coords={"x": [3, 4, 5]})
-    >>> ds1.to_netcdf("example_mf_1.nc")
-    >>> ds2.to_netcdf("example_mf_2.nc")
+    >>> ds1.to_netcdf("example_mf_1.nc")  # doctest: +SKIP
+    >>> ds2.to_netcdf("example_mf_2.nc")  # doctest: +SKIP
     >>> ds = xr.open_mfdataset(
     ...     ["example_mf_1.nc", "example_mf_2.nc"], combine="by_coords"
     ... )  # doctest: +SKIP
