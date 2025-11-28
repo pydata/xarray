@@ -1212,7 +1212,6 @@ class TestDiscreteColorMap:
                 np.testing.assert_array_almost_equal(levels, primitive.norm.boundaries)
                 assert max(levels) <= primitive.norm.vmax
                 assert min(levels) == primitive.norm.vmin
-
                 if kind != "contour":
                     assert extend == primitive.cmap.colorbar_extend
                 else:
