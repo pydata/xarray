@@ -14,6 +14,8 @@ build:
       - git fetch --unshallow || true
     pre_install:
       - git update-index --assume-unchanged doc/conf.py ci/requirements/doc.yml
+    pre_build:
+      - git status
 
 conda:
   environment: ci/requirements/doc.yml
