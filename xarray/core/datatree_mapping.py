@@ -80,6 +80,9 @@ def map_over_datasets(
         converted to Dataset objects via `.dataset`.
     kwargs : dict, optional
         Optional keyword arguments passed directly to ``func``.
+    num_return_values : int | None, default None
+        Number
+
 
     Returns
     -------
@@ -110,7 +113,7 @@ def map_over_datasets(
     name = result_name(tree_args)
 
     for path, node_tree_args in group_subtrees(*tree_args):
-        if node_tree_args[0].has_data:
+        if any(node.has_data for node in node_tree_args):
             node_dataset_args = [arg.dataset for arg in node_tree_args]
             for i, arg in enumerate(args):
                 if not isinstance(arg, DataTree):
@@ -184,7 +187,7 @@ def _check_single_set_return_values(path_to_node: str, obj: Any) -> int | None:
     return len(obj)
 
 
-def _check_all_return_values(returned_objects, func_called) -> int | None:
+def _check_all_return_values(returned_objects, func_called) -> int:
     """Walk through all values returned by mapping func over subtrees, raising on any invalid or inconsistent types."""
 
     result_data_objects = list(returned_objects.items())
