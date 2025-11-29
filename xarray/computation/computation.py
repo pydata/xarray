@@ -615,7 +615,7 @@ def dot(
     >>> y = xr.DataArray([10, 20], coords=[("space", ["IA", "IL"])])
     >>> xr.dot(x, y, dim="space")  # time coordinates are preserved
     <xarray.DataArray (time: 2)> Size: 16B
-    array([50, 110])
+    array([ 50, 110])
     Coordinates:
       * time     (time) int64 16B 0 1
     """
