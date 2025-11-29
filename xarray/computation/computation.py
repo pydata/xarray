@@ -515,6 +515,21 @@ def dot(
     We recommend installing the optional ``opt_einsum`` package, or alternatively passing ``optimize=True``,
     which is passed through to ``np.einsum``, and works for most array backends.
 
+    **Coordinate Handling**
+
+    This function aligns input arrays along their coordinates using an inner join by default.
+    This means:
+
+    - Coordinates are aligned based on their **values**, not their order in the arrays
+    - Only **overlapping coordinate values** are included in the computation
+    - Non-overlapping coordinates are excluded (treated as if entries don't exist)
+    - Dimensions that are not summed over retain their coordinates in the output
+
+    With the default ``arithmetic_join="inner"`` option, ``dot(a, b)`` is mathematically
+    equivalent to ``(a * b).sum()`` over the specified dimensions. To require exact
+    coordinate matching, use ``xr.set_options(arithmetic_join="exact")``, which will
+    raise an error if coordinates don't match exactly.
+
     Examples
     --------
     >>> da_a = xr.DataArray(np.arange(3 * 2).reshape(3, 2), dims=["a", "b"])
@@ -572,6 +587,37 @@ def dot(
     >>> xr.dot(da_a, da_b, dim=...)
     <xarray.DataArray ()> Size: 8B
     array(235)
+
+    **Coordinate alignment examples:**
+
+    Coordinates are aligned by their values, not their order:
+
+    >>> x = xr.DataArray([1, 10], coords=[("foo", ["a", "b"])])
+    >>> y = xr.DataArray([2, 20], coords=[("foo", ["b", "a"])])
+    >>> xr.dot(x, y)
+    <xarray.DataArray ()> Size: 8B
+    array(40)
+
+    Non-overlapping coordinates are excluded from the computation:
+
+    >>> x = xr.DataArray([1, 10], coords=[("foo", ["a", "b"])])
+    >>> y = xr.DataArray([2, 30], coords=[("foo", ["b", "c"])])
+    >>> xr.dot(x, y)  # only 'b' overlaps: 10 * 2 = 20
+    <xarray.DataArray ()> Size: 8B
+    array(20)
+
+    Dimensions not involved in the dot product keep their coordinates:
+
+    >>> x = xr.DataArray(
+    ...     [[1, 2], [3, 4]],
+    ...     coords=[("time", [0, 1]), ("space", ["IA", "IL"])],
+    ... )
+    >>> y = xr.DataArray([10, 20], coords=[("space", ["IA", "IL"])])
+    >>> xr.dot(x, y, dim="space")  # time coordinates are preserved
+    <xarray.DataArray (time: 2)> Size: 16B
+    array([50, 110])
+    Coordinates:
+      * time     (time) int64 16B 0 1
     """
     from xarray.core.dataarray import DataArray
 
