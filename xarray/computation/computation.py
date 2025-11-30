@@ -517,18 +517,11 @@ def dot(
 
     **Coordinate Handling**
 
-    This function aligns input arrays along their coordinates using an inner join by default.
-    This means:
-
-    - Coordinates are aligned based on their **values**, not their order in the arrays
-    - Only **overlapping coordinate values** are included in the computation
-    - Non-overlapping coordinates are excluded (treated as if entries don't exist)
-    - Dimensions that are not summed over retain their coordinates in the output
-
-    With the default ``arithmetic_join="inner"`` option, ``dot(a, b)`` is mathematically
-    equivalent to ``(a * b).sum()`` over the specified dimensions. To require exact
-    coordinate matching, use ``xr.set_options(arithmetic_join="exact")``, which will
-    raise an error if coordinates don't match exactly.
+    Like all xarray operations, ``dot`` automatically aligns array coordinates.
+    Coordinates are aligned by their **values**, not their order. By default, xarray uses
+    an inner join, so only overlapping coordinate values are included. With the default
+    ``arithmetic_join="inner"``, ``dot(a, b)`` is mathematically equivalent to ``(a * b).sum()``
+    over the specified dimensions. See :ref:`math automatic alignment` for more details.
 
     Examples
     --------

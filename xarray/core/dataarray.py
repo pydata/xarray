@@ -5165,10 +5165,8 @@ class DataArray(
 
         Notes
         -----
-        This method aligns the input arrays along their coordinates using an inner join.
-        Coordinates are matched by their **values**, not their order. Only overlapping
-        coordinate values are included in the computation. See :py:func:`xarray.dot` for
-        more details on coordinate handling.
+        This method automatically aligns coordinates by their values (not their order).
+        See :ref:`math automatic alignment` and :py:func:`xarray.dot` for more details.
 
         Examples
         --------
