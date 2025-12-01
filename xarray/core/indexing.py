@@ -1651,7 +1651,7 @@ def posify_mask_indexer(indexer: ExplicitIndexer) -> ExplicitIndexer:
 
 
 def is_fancy_indexer(indexer: Any) -> bool:
-    """Return False if indexer is a int, slice, a 1-dimensional list, or a 0 or
+    """Return False if indexer is an int, slice, a 1-dimensional list, or a 0 or
     1-dimensional ndarray; in all other cases return True
     """
     if isinstance(indexer, int | slice) and not isinstance(indexer, bool):

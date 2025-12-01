@@ -44,7 +44,7 @@ def _infer_tile_ids_from_nested_list(
     entry: NestedSequence[T], current_pos: tuple[int, ...]
 ) -> Iterator[tuple[tuple[int, ...], T]]:
     """
-    Given a list of lists (of lists...) of objects, returns a iterator
+    Given a list of lists (of lists...) of objects, returns an iterator
     which returns a tuple containing the index of each object in the nested
     list structure as the key, and the object. This can then be called by the
     dict constructor to create a dictionary of the objects organised by their

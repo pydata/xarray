@@ -713,7 +713,7 @@ def apply_variable_ufunc(
     keep_attrs="override",
     dask_gufunc_kwargs=None,
 ) -> Variable | tuple[Variable, ...]:
-    """Apply a ndarray level function over Variable and/or ndarray objects."""
+    """Apply an ndarray level function over Variable and/or ndarray objects."""
     from xarray.core.formatting import short_array_repr
     from xarray.core.variable import as_compatible_data
 
@@ -869,7 +869,7 @@ def apply_variable_ufunc(
 
 
 def apply_array_ufunc(func, *args, dask="forbidden"):
-    """Apply a ndarray level function over ndarray objects."""
+    """Apply an ndarray level function over ndarray objects."""
     if any(is_chunked_array(arg) for arg in args):
         if dask == "forbidden":
             raise ValueError(

@@ -74,7 +74,7 @@ jobs:
       - name: Run doctests
         run: |
           # Raise an error if there are warnings in the doctests, with `-Werror`.
-          # This is a trial; if it presents an problem, feel free to remove.
+          # This is a trial; if it presents a problem, feel free to remove.
           # See https://github.com/pydata/xarray/issues/7164 for more info.
           #
           # If dependencies emit warnings we can't do anything about, add ignores to

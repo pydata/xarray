@@ -1516,7 +1516,7 @@ class DataArray(
         indexers : dict, optional
             A dict with keys matching dimensions and values given
             by integers, slice objects or arrays.
-            indexer can be a integer, slice, array-like or DataArray.
+            indexer can be an integer, slice, array-like or DataArray.
             If DataArrays are passed as indexers, xarray-style indexing will be
             carried out. See :ref:`indexing` for the details.
             One of indexers or indexers_kwargs must be provided.
@@ -4662,14 +4662,14 @@ class DataArray(
         return result
 
     def to_iris(self) -> iris_Cube:
-        """Convert this array into a iris.cube.Cube"""
+        """Convert this array into an iris.cube.Cube"""
         from xarray.convert import to_iris
 
         return to_iris(self)
 
     @classmethod
     def from_iris(cls, cube: iris_Cube) -> Self:
-        """Convert a iris.cube.Cube into an xarray.DataArray"""
+        """Convert an iris.cube.Cube into an xarray.DataArray"""
         from xarray.convert import from_iris
 
         return from_iris(cube)

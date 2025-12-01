@@ -246,7 +246,7 @@ def zarr(client):  # noqa: F811
     except AttributeError:
         yield zarr_lib
     finally:
-        # Zarr-Python 3 lazily allocates a IO thread, a thread pool executor, and
+        # Zarr-Python 3 lazily allocates an IO thread, a thread pool executor, and
         # an IO loop. Here we clean up these resources to avoid leaking threads
         # In normal operations, this is done as by an atexit handler when Zarr
         # is shutting down.

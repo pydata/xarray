@@ -1669,7 +1669,7 @@ class TestDataArrayGroupBy:
 
         if has_flox:
             # GH9803
-            # reduce over one dim of a nD grouper
+            # reduce over one dim of an nD grouper
             array.coords["labels"] = (("ny", "nx"), np.array([["a", "b"], ["b", "a"]]))
             actual = array.groupby("labels").sum("nx")
             expected_np = np.array([[[0, 1], [3, 2]], [[5, 10], [20, 15]]])

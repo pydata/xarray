@@ -1064,7 +1064,7 @@ def test_array_repr_dtypes():
     # Unsigned integer could be used as easy replacements
     # for tests where the data-type does not matter,
     # but the repr does, including the size
-    # (size of a int == size of an uint)
+    # (size of an int == size of a uint)
 
     # Signed integer dtypes
 
