@@ -194,6 +194,12 @@ _SKIPNA_DOCSTRING = """skipna : bool or None, optional
     have a sentinel missing value (int) or ``skipna=True`` has not been
     implemented (object, datetime64 or timedelta64)."""
 
+_EQUALNA_DOCSTRING = """equalna : bool or None, default: True
+    If ``skipna == False``, ``equalna`` determines whether null values
+    are counted as distinct values or not. Set ``equalna = True`` for
+    consistency with ``pandas.DataFrame.nunique``, or ``equalna = False``
+    for consistency with the `Python array API <https://data-apis.org/array-api/latest/API_specification/generated/array_api.unique_counts.html>`_."""
+
 _MINCOUNT_DOCSTRING = """min_count : int or None, optional
     The required number of valid values to perform the operation. If
     fewer than min_count non-NA values are present the result will be
@@ -226,6 +232,12 @@ _FLOX_RESAMPLE_NOTES = _FLOX_NOTES_TEMPLATE.format(kind="resampling")
 _CUM_NOTES = """Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
 and better supported. ``cumsum`` and ``cumprod`` may be deprecated
 in the future."""
+_NUNIQUE_NOTES = """Note that identifying unique values on very large
+arrays is slow and memory intensive when there are many unique values.
+For such arrays, consider lowering the precision, e.g. rounding floats
+then converting them to integers, before searching for unique values.
+For dask arrays, performance is improved when chunksizes are largest on
+the dimension(s) being reduced."""
 
 
 class ExtraKwarg(NamedTuple):
@@ -239,28 +251,45 @@ skipna = ExtraKwarg(
     docs=_SKIPNA_DOCSTRING,
     kwarg="skipna: bool | None = None,",
     call="skipna=skipna,",
-    example="""\n
-        Use ``skipna`` to control whether NaNs are ignored.
-
-        >>> {calculation}(skipna=False)""",
+    example=(
+        "\n        \n"
+        "        Use ``skipna`` to control whether NaNs are ignored.\n"
+        "        \n"
+        "        >>> {calculation}(skipna=False)"
+    ),
+)
+equalna = ExtraKwarg(
+    docs=_EQUALNA_DOCSTRING,
+    kwarg="equalna: bool | None = True,",
+    call="equalna=equalna,",
+    example=(
+        "\n        \n"
+        "        Use ``equalna`` to control whether NaNs are counted as distinct values.\n"
+        "        \n"
+        "        >>> {calculation}(skipna=False, equalna=False)"
+    ),
 )
 min_count = ExtraKwarg(
     docs=_MINCOUNT_DOCSTRING,
     kwarg="min_count: int | None = None,",
     call="min_count=min_count,",
-    example="""\n
-        Specify ``min_count`` for finer control over when NaNs are ignored.
-
-        >>> {calculation}(skipna=True, min_count=2)""",
+    example=(
+        "\n        \n"
+        "        Specify ``min_count`` for finer control over when NaNs are ignored.\n"
+        "        \n"
+        "        >>> {calculation}(skipna=True, min_count=2)"
+    ),
 )
 ddof = ExtraKwarg(
     docs=_DDOF_DOCSTRING,
     kwarg="ddof: int = 0,",
     call="ddof=ddof,",
-    example="""\n
-        Specify ``ddof=1`` for an unbiased estimate.
-
-        >>> {calculation}(skipna=True, ddof=1)""",
+    example=(
+        "\n        \n"
+        "        Specify ``ddof=1`` for an unbiased estimate.\n"
+        "        \n"
+        "        >>> {calculation}(skipna=True, ddof=1)"
+    ),
 )
 
 
@@ -424,11 +453,11 @@ class AggregationGenerator:
         else:
             extra_examples = ""
 
+        blank_line = 8 * " "
         return f"""
         Examples
         --------{created}
-        >>> {self.datastructure.example_var_name}
-
+        >>> {self.datastructure.example_var_name}\n{blank_line}
         >>> {calculation}(){extra_examples}"""
 
 
@@ -444,7 +473,12 @@ class GroupByAggregationGenerator(AggregationGenerator):
 
         # median isn't enabled yet, because it would break if a single group was present in multiple
         # chunks. The non-flox code path will just rechunk every group to a single chunk and execute the median
-        method_is_not_flox_supported = method.name in ("median", "cumsum", "cumprod")
+        method_is_not_flox_supported = method.name in (
+            "median",
+            "cumsum",
+            "cumprod",
+            "nunique",
+        )
         if method_is_not_flox_supported:
             indent = 12
         else:
@@ -529,6 +563,12 @@ AGGREGATION_METHODS = (
     Method("var", extra_kwargs=(skipna, ddof), numeric_only=True),
     Method(
         "median", extra_kwargs=(skipna,), numeric_only=True, min_flox_version="0.9.2"
+    ),
+    Method(
+        "nunique",
+        extra_kwargs=(skipna, equalna),
+        see_also_modules=("pandas.DataFrame",),
+        additional_notes=_NUNIQUE_NOTES,
     ),
     # Cumulatives:
     Method(

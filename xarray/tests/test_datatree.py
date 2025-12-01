@@ -2312,6 +2312,18 @@ class TestAggregations:
         actual = tree.children["child"].mean()
         assert_identical(expected, actual)
 
+    def test_nunique(self) -> None:
+        arr = np.array([[1, 2, 2], [3, 3, 3]])
+        da = xr.DataArray(arr, coords={"x": [0, 1], "y": [0, 1, 2]})
+        ds = xr.Dataset({"a": da})
+        dt = DataTree.from_dict({"root": ds, "root/child": 2 * ds})
+        expected_da = xr.DataArray(np.array([2, 1]), coords={"x": [0, 1]})
+        expected_ds = xr.Dataset({"a": expected_da})
+        expected_dt = DataTree.from_dict(
+            {"root": expected_ds, "root/child": expected_ds}
+        )
+        assert_identical(expected_dt, dt.nunique(dim="y"))
+
 
 class TestOps:
     def test_unary_op(self) -> None:

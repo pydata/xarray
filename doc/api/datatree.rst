@@ -266,6 +266,7 @@ Aggregate data in all nodes in the subtree simultaneously.
    DataTree.min
    DataTree.mean
    DataTree.median
+   DataTree.nunique
    DataTree.prod
    DataTree.sum
    DataTree.std
