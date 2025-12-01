@@ -7200,7 +7200,7 @@ class Dataset(
             "Please use Dataset.to_dataframe() instead."
         )
 
-    def _to_dataframe(self, ordered_dims: Mapping[Any, int]):
+    def _to_dataframe(self, ordered_dims: Mapping[Any, int], create_index: bool = True):
         from xarray.core.extension_array import PandasExtensionArray
 
         # All and only non-index arrays (whether data or coordinates) should
@@ -7231,7 +7231,13 @@ class Dataset(
             self._variables[k].set_dims(ordered_dims).values.reshape(-1)
             for k in non_extension_array_columns
         ]
-        index = self.coords.to_index([*ordered_dims])
+        if create_index:
+            index = self.coords.to_index([*ordered_dims])
+        else:
+            # Use a simple RangeIndex when create_index=False
+            # Calculate the total size from ordered_dims
+            total_size = np.prod(list(ordered_dims.values())) if ordered_dims else 0
+            index = pd.RangeIndex(total_size)
         broadcasted_df = pd.DataFrame(
             {
                 **dict(zip(non_extension_array_columns, data, strict=True)),
@@ -7259,7 +7265,11 @@ class Dataset(
             broadcasted_df = broadcasted_df.join(extension_array_df)
         return broadcasted_df[columns_in_order]
 
-    def to_dataframe(self, dim_order: Sequence[Hashable] | None = None) -> pd.DataFrame:
+    def to_dataframe(
+        self,
+        dim_order: Sequence[Hashable] | None = None,
+        create_index: bool = True,
+    ) -> pd.DataFrame:
         """Convert this dataset into a pandas.DataFrame.
 
         Non-index variables in this dataset form the columns of the
@@ -7278,6 +7288,11 @@ class Dataset(
 
             If provided, must include all dimensions of this dataset. By
             default, dimensions are in the same order as in `Dataset.sizes`.
+        create_index : bool, default: True
+            If True (default), create a MultiIndex from the Cartesian product
+            of this dataset's indices. If False, use a RangeIndex instead.
+            This can be useful to avoid the potentially expensive MultiIndex
+            creation.
 
         Returns
         -------
@@ -7288,7 +7303,7 @@ class Dataset(
 
         ordered_dims = self._normalize_dim_order(dim_order=dim_order)
 
-        return self._to_dataframe(ordered_dims=ordered_dims)
+        return self._to_dataframe(ordered_dims=ordered_dims, create_index=create_index)
 
     def _set_sparse_data_from_dataframe(
         self, idx: pd.Index, arrays: list[tuple[Hashable, np.ndarray]], dims: tuple
