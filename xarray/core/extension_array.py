@@ -96,7 +96,7 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
 
     def __post_init__(self):
         if not isinstance(self.array, pd.api.extensions.ExtensionArray):
-            raise TypeError(f"{self.array} is not an pandas ExtensionArray.")
+            raise TypeError(f"{self.array} is not a pandas ExtensionArray.")
         # This does not use the UNSUPPORTED_EXTENSION_ARRAY_TYPES whitelist because
         # we do support extension arrays from datetime, for example, that need
         # duck array support internally via this class.  These can appear from `DatetimeIndex`
