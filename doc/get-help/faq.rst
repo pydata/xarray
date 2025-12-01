@@ -63,7 +63,7 @@ if you were using Panels:
 
 - You need to create a new factory type for each dimensionality.
 - You can't do math between NDPanels with different dimensionality.
-- Each dimension in a NDPanel has a name (e.g., 'labels', 'items',
+- Each dimension in an NDPanel has a name (e.g., 'labels', 'items',
   'major_axis', etc.) but the dimension names refer to order, not their
   meaning. You can't specify an operation as to be applied along the "time"
   axis.

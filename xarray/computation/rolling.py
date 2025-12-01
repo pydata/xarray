@@ -491,7 +491,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         func : callable
             Function which can be called in the form
             `func(x, **kwargs)` to return the result of collapsing an
-            np.ndarray over an the rolling dimension.
+            np.ndarray over the rolling dimension.
         keep_attrs : bool, default: None
             If True, the attributes (``attrs``) will be copied from the original
             object to the new one. If False, the new object will be returned
@@ -860,7 +860,7 @@ class DatasetRolling(Rolling["Dataset"]):
         func : callable
             Function which can be called in the form
             `func(x, **kwargs)` to return the result of collapsing an
-            np.ndarray over an the rolling dimension.
+            np.ndarray over the rolling dimension.
         keep_attrs : bool, default: None
             If True, the attributes (``attrs``) will be copied from the original
             object to the new one. If False, the new object will be returned
