@@ -156,7 +156,7 @@ def _advanced_indexer_subspaces(key):
 
 
 class NumpyVIndexAdapter:
-    """Object that implements indexing like vindex on a np.ndarray.
+    """Object that implements indexing like vindex on an np.ndarray.
 
     This is a pure Python implementation of (some of) the logic in this NumPy
     proposal: https://github.com/numpy/numpy/pull/6256
