@@ -4882,6 +4882,19 @@ class TestDataset:
         assert list(result.data_vars) == list(ds.data_vars)
         assert list(result.coords) == list(ds.coords)
 
+    def test_drop_attrs_custom_index(self):
+        class CustomIndex(Index):
+            @classmethod
+            def from_variables(cls, variables, *, options=None):
+                return cls()
+
+        ds = xr.Dataset(coords={"y": ("x", [1, 2])}).set_xindex("y", CustomIndex)
+        # should not raise a TypeError
+        ds.drop_attrs()
+
+        # make sure the index didn't disappear
+        assert "y" in ds.xindexes
+
     def test_assign_multiindex_level(self) -> None:
         data = create_test_multiindex()
         with pytest.raises(ValueError, match=r"cannot drop or update.*corrupt.*index "):

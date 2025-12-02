@@ -56,6 +56,8 @@ Bug Fixes
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 - Always normalize slices when indexing ``LazilyIndexedArray`` instances (:issue:`10941`, :pull:`10948`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Avoid casting custom indexes in ``Dataset.drop_attrs`` (:pull:`10961`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
