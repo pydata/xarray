@@ -372,7 +372,7 @@ def _assert_indexes_invariants_checks(
     assert not any(
         isinstance(v, IndexVariable)
         for k, v in possible_coord_variables.items()
-        if v.dims == (k,) and k not in indexes.keys()
+        if k not in indexes.keys()
     ), {k: type(v) for k, v in possible_coord_variables.items()}
 
     # check pandas index wrappers vs. coordinate data adapters
