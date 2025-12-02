@@ -1704,6 +1704,20 @@ class TestDataArray:
         assert_identical(actual, expected, check_default_indexes=False)
         assert "x_bnds" not in actual.dims
 
+    def test_assign_coords_uses_base_variable_class(self) -> None:
+        a = DataArray([0, 1, 3], dims=["x"], coords={"x": [0, 1, 2]})
+        a = a.assign_coords(foo=a.x)
+
+        # explicit check
+        assert isinstance(a["x"].variable, IndexVariable)
+        assert not isinstance(a["foo"].variable, IndexVariable)
+
+        # test internal invariant checks when comparing the datasets
+        expected = DataArray(
+            [0, 1, 3], dims=["x"], coords={"x": [0, 1, 2], "foo": ("x", [0, 1, 2])}
+        )
+        assert_identical(a, expected)
+
     def test_coords_alignment(self) -> None:
         lhs = DataArray([1, 2, 3], [("x", [0, 1, 2])])
         rhs = DataArray([2, 3, 4], [("x", [1, 2, 3])])
