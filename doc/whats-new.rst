@@ -34,6 +34,9 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- When assigning an indexed coordinate to a data variable or coordinate, coerce it from
+  ``IndexVariable`` to ``Variable`` (:issue:`9859`, :issue:`10829`, :pull:`10909`)
+  By `Julia Signell <https://github.com/jsignell>`_
 - The NetCDF4 backend will now claim to be able to read any URL except for one that contains
   the substring zarr. This restores backward compatibility after
   :pull:`10804` broke workflows that relied on ``xr.open_dataset("http://...")``
