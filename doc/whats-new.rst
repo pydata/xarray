@@ -33,22 +33,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
-- Fix h5netcdf backend for format=None, use same rule as netcdf4 backend (:pull:`10859`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
-- ``netcdf4`` and ``pydap`` backends now use stricter URL detection to avoid incorrectly claiming
-  remote URLs. The ``pydap`` backend now only claims URLs with explicit DAP protocol indicators
-  (``dap2://`` or ``dap4://`` schemes, or ``/dap2/`` or ``/dap4/`` in the URL path). This prevents
-  both backends from claiming remote Zarr stores and other non-DAP URLs without an explicit
-  ``engine=`` argument. (:pull:`10804`). By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
-- Fix indexing with empty arrays for scipy & h5netcdf backends which now resolves to empty slices (:issue:`10867`, :pull:`10870`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
-- Fix error handling issue in ``decode_cf_variables`` when decoding fails - the exception is now re-raised
-  correctly, with a note added about the variable name that caused the error (:issue:`10873`, :pull:`10886`).
-  By `Jonas L. Bertelsen <https://github.com/jonaslb>`_
+
 - When assigning an indexed coordinate to a data variable or coordinate, coerce it from
   ``IndexVariable`` to ``Variable`` (:issue:`9859`, :issue:`10829`, :pull:`10909`)
   By `Julia Signell <https://github.com/jsignell>`_
-
 - The NetCDF4 backend will now claim to be able to read any URL except for one that contains
   the substring zarr. This restores backward compatibility after
   :pull:`10804` broke workflows that relied on ``xr.open_dataset("http://...")``
