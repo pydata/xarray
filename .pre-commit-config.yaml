@@ -24,26 +24,25 @@ repos:
       - id: rst-inline-touching-normal
       - id: text-unicode-replacement-char
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.13.3
+    rev: v0.14.7
     hooks:
       - id: ruff-check
         args: ["--fix", "--show-fixes"]
       - id: ruff-format
-  # Disabled: blackdoc v0.4.3 has compatibility issues with Python 3.13
-  # Re-enable when blackdoc is updated to support Python 3.13
-  # - repo: https://github.com/keewis/blackdoc
-  #   rev: v0.4.3
-  #   hooks:
-  #     - id: blackdoc
-  #       exclude: "generate_aggregations.py"
-  #       additional_dependencies: ["black==24.8.0"]
+  - repo: https://github.com/keewis/blackdoc
+    rev: v0.4.6
+    hooks:
+      - id: blackdoc
+        exclude: "generate_aggregations.py"
+        # make sure this is the most recent version of black
+        additional_dependencies: ["black==25.9.0"]
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: v3.6.2
+    rev: v3.7.3
     hooks:
       - id: prettier
-        args: [--cache-location=.prettier_cache/cache]
+        args: ["--cache-location=.prettier_cache/cache"]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
+    rev: v1.19.0
     hooks:
       - id: mypy
         # Copied from setup.cfg
@@ -61,7 +60,7 @@ repos:
             numpy,
           ]
   - repo: https://github.com/citation-file-format/cff-converter-python
-    rev: ebf0b5e44d67f8beaa1cd13a0d0393ea04c6058d
+    rev: 5295f87c0e261da61a7b919fc754e3a77edd98a7
     hooks:
       - id: validate-cff
   - repo: https://github.com/ComPWA/taplo-pre-commit
@@ -69,12 +68,14 @@ repos:
     hooks:
       - id: taplo-format
         args: ["--option", "array_auto_collapse=false"]
+      - id: taplo-lint
+        args: ["--no-schema"]
   - repo: https://github.com/abravalheri/validate-pyproject
     rev: v0.24.1
     hooks:
       - id: validate-pyproject
         additional_dependencies: ["validate-pyproject-schema-store[all]"]
   - repo: https://github.com/adhtruong/mirrors-typos
-    rev: v1.37.2
+    rev: v1.40.0
     hooks:
       - id: typos

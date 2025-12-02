@@ -77,7 +77,6 @@ from xarray.tests import (
     has_h5netcdf_1_4_0_or_above,
     has_netCDF4,
     has_numpy_2,
-    has_pydap,
     has_scipy,
     has_zarr,
     has_zarr_v3,
@@ -984,6 +983,15 @@ class DatasetIOBase:
         with self.roundtrip(in_memory) as on_disk:
             expected = in_memory.isel(dim2=in_memory["dim2"] < 3)
             actual = on_disk.isel(dim2=on_disk["dim2"] < 3)
+            assert_identical(expected, actual)
+
+    def test_empty_isel(self) -> None:
+        # Make sure isel works lazily with empty indexer.
+        # GH:issue:10867
+        in_memory = xr.Dataset({"a": ("x", np.arange(4))}, coords={"x": np.arange(4)})
+        with self.roundtrip(in_memory) as on_disk:
+            expected = in_memory.isel(x=[])
+            actual = on_disk.isel(x=[])
             assert_identical(expected, actual)
 
     def validate_array_type(self, ds):
@@ -6551,6 +6559,46 @@ class TestPydapOnline(TestPydap):
         )
 
 
+@requires_pydap
+@network
+@pytest.mark.parametrize("protocol", ["dap2", "dap4"])
+def test_batchdap4_downloads(tmpdir, protocol) -> None:
+    """Test that in dap4, all dimensions are downloaded at once"""
+    import pydap
+    from pydap.net import create_session
+
+    _version_ = Version(pydap.__version__)
+    # Create a session with pre-set params in pydap backend, to cache urls
+    cache_name = tmpdir / "debug"
+    session = create_session(use_cache=True, cache_kwargs={"cache_name": cache_name})
+    session.cache.clear()
+    url = "https://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc"
+
+    ds = open_dataset(
+        url.replace("https", protocol),
+        session=session,
+        engine="pydap",
+        decode_times=False,
+    )
+
+    if protocol == "dap4":
+        if _version_ > Version("3.5.5"):
+            # total downloads are:
+            # 1 dmr + 1 dap (all dimensions at once)
+            assert len(session.cache.urls()) == 2
+            # now load the rest of the variables
+            ds.load()
+            # each non-dimension array is downloaded with an individual https requests
+            assert len(session.cache.urls()) == 2 + 4
+        else:
+            assert len(session.cache.urls()) == 4
+            ds.load()
+            assert len(session.cache.urls()) == 4 + 4
+    elif protocol == "dap2":
+        # das + dds + 3 dods urls for dimensions alone
+        assert len(session.cache.urls()) == 5
+
+
 class TestEncodingInvalid:
     def test_extract_nc4_variable_encoding(self) -> None:
         var = xr.Variable(("x",), [1, 2, 3], {}, {"foo": "bar"})
@@ -7245,9 +7293,9 @@ def test_netcdf4_entrypoint(tmp_path: Path) -> None:
     _check_guess_can_open_and_open(entrypoint, path, engine="netcdf4", expected=ds)
     _check_guess_can_open_and_open(entrypoint, str(path), engine="netcdf4", expected=ds)
 
-    # Remote URLs without extensions are no longer claimed (stricter detection)
-    assert not entrypoint.guess_can_open("http://something/remote")
-    # Remote URLs with netCDF extensions are claimed
+    # Remote URLs without extensions return True (backward compatibility)
+    assert entrypoint.guess_can_open("http://something/remote")
+    # Remote URLs with netCDF extensions are also claimed
     assert entrypoint.guess_can_open("http://something/remote.nc")
     assert entrypoint.guess_can_open("something-local.nc")
     assert entrypoint.guess_can_open("something-local.nc4")
@@ -7391,15 +7439,22 @@ def test_remote_url_backend_auto_detection() -> None:
             f"URL {url!r} should select {expected_backend!r} but got {engine!r}"
         )
 
-    # DAP URLs without extensions - pydap wins if available, netcdf4 otherwise
-    # When pydap is not installed, netCDF4 should handle these DAP URLs
-    expected_dap_backend = "pydap" if has_pydap else "netcdf4"
+    # DAP URLs - netcdf4 should handle these (it comes first in backend order)
+    # Both netcdf4 and pydap can open DAP URLs, but netcdf4 has priority
+    expected_dap_backend = "netcdf4"
     dap_urls = [
+        # Explicit DAP protocol schemes
         "dap2://opendap.earthdata.nasa.gov/collections/dataset",
         "dap4://opendap.earthdata.nasa.gov/collections/dataset",
+        "dap://example.com/dataset",
         "DAP2://example.com/dataset",  # uppercase scheme
         "DAP4://example.com/dataset",  # uppercase scheme
+        # DAP path indicators
         "https://example.com/services/DAP2/dataset",  # uppercase in path
+        "http://test.opendap.org/opendap/data/nc/file.nc",  # /opendap/ path
+        "https://coastwatch.pfeg.noaa.gov/erddap/griddap/erdMH1chla8day",  # ERDDAP
+        "http://thredds.ucar.edu/thredds/dodsC/grib/NCEP/GFS/",  # THREDDS dodsC
+        "https://disc2.gesdisc.eosdis.nasa.gov/dods/TRMM_3B42",  # GrADS /dods/
     ]
 
     for url in dap_urls:
@@ -7408,20 +7463,16 @@ def test_remote_url_backend_auto_detection() -> None:
             f"URL {url!r} should select {expected_dap_backend!r} but got {engine!r}"
         )
 
-    # URLs that should raise ValueError (no backend can open them)
-    invalid_urls = [
-        "http://test.opendap.org/opendap/data/nc/coads_climatology.nc.dap",  # .dap suffix
-        "https://example.com/data.dap",  # .dap suffix
-        "http://opendap.example.com/data",  # no extension, no DAP indicators
-        "https://test.opendap.org/dataset",  # no extension, no DAP indicators
+    # URLs with .dap suffix are claimed by netcdf4 (backward compatibility fallback)
+    # Note: .dap suffix is intentionally NOT recognized as a DAP dataset URL
+    fallback_urls = [
+        ("http://test.opendap.org/opendap/data/nc/coads_climatology.nc.dap", "netcdf4"),
+        ("https://example.com/data.dap", "netcdf4"),
     ]
 
-    for url in invalid_urls:
-        with pytest.raises(
-            ValueError,
-            match=r"did not find a match in any of xarray's currently installed IO backends",
-        ):
-            guess_engine(url)
+    for url, expected_backend in fallback_urls:
+        engine = guess_engine(url)
+        assert engine == expected_backend
 
 
 @requires_netCDF4

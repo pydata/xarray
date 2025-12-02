@@ -2980,6 +2980,21 @@ class TestDataset:
             actual = data.drop_vars("level_1")
         assert_identical(expected, actual)
 
+    def test_drop_multiindex_labels(self) -> None:
+        data = create_test_multiindex()
+        mindex = pd.MultiIndex.from_tuples(
+            [
+                ("a", 2),
+                ("b", 1),
+                ("b", 2),
+            ],
+            names=("level_1", "level_2"),
+        )
+        expected = Dataset({}, Coordinates.from_pandas_multiindex(mindex, "x"))
+
+        actual = data.drop_sel(x=("a", 1))
+        assert_identical(expected, actual)
+
     def test_drop_index_labels(self) -> None:
         data = Dataset({"A": (["x", "y"], np.random.randn(2, 3)), "x": ["a", "b"]})
 
@@ -4135,6 +4150,10 @@ class TestDataset:
         expected3 = ds.unstack("index").fillna({"var": -1, "other_var": 1}).astype(int)
         assert_equal(actual3, expected3)
 
+        actual4 = ds.unstack("index", fill_value={"var": -1})
+        expected4 = ds.unstack("index").fillna({"var": -1, "other_var": np.nan})
+        assert_equal(actual4, expected4)
+
     @requires_sparse
     def test_unstack_sparse(self) -> None:
         ds = xr.Dataset(
@@ -4292,9 +4311,11 @@ class TestDataset:
         # coordinate created from variables names should be of string dtype
         data = np.array(["a", "a", "a", "b"], dtype="<U1")
         expected_stacked_variable = DataArray(name="variable", data=data, dims="z")
+
+        # coerce from `IndexVariable` to `Variable` before comparing
         assert_identical(
-            stacked.coords["variable"].drop_vars(["z", "variable", "y"]),
-            expected_stacked_variable,
+            stacked["variable"].variable.to_base_variable(),
+            expected_stacked_variable.variable,
         )
 
     def test_to_stacked_array_transposed(self) -> None:
@@ -4760,6 +4781,18 @@ class TestDataset:
         with pytest.raises(ValueError, match=error_regex):
             actual[var_list] = data
 
+    def test_setitem_uses_base_variable_class_even_for_index_variables(self) -> None:
+        ds = Dataset(coords={"x": [1, 2, 3]})
+        ds["y"] = ds["x"]
+
+        # explicit check
+        assert isinstance(ds["x"].variable, IndexVariable)
+        assert not isinstance(ds["y"].variable, IndexVariable)
+
+        # test internal invariant checks when comparing the datasets
+        expected = Dataset(data_vars={"y": ("x", [1, 2, 3])}, coords={"x": [1, 2, 3]})
+        assert_identical(ds, expected)
+
     def test_assign(self) -> None:
         ds = Dataset()
         actual = ds.assign(x=[0, 1, 2], y=2)
@@ -4848,6 +4881,19 @@ class TestDataset:
         assert result_shallow["y"].attrs != {}
         assert list(result.data_vars) == list(ds.data_vars)
         assert list(result.coords) == list(ds.coords)
+
+    def test_drop_attrs_custom_index(self):
+        class CustomIndex(Index):
+            @classmethod
+            def from_variables(cls, variables, *, options=None):
+                return cls()
+
+        ds = xr.Dataset(coords={"y": ("x", [1, 2])}).set_xindex("y", CustomIndex)
+        # should not raise a TypeError
+        ds.drop_attrs()
+
+        # make sure the index didn't disappear
+        assert "y" in ds.xindexes
 
     def test_assign_multiindex_level(self) -> None:
         data = create_test_multiindex()

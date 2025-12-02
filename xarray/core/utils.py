@@ -900,7 +900,7 @@ class HiddenKeyDict(MutableMapping[K, V]):
 
 
 def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
-    """Get an new dimension name based on new_dim, that is not used in dims.
+    """Get a new dimension name based on new_dim, that is not used in dims.
     If the same name exists, we add an underscore(s) in the head.
 
     Example1:

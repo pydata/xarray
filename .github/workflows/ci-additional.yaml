@@ -22,10 +22,11 @@ jobs:
     if: |
       github.repository == 'pydata/xarray'
       && (github.event_name == 'push' || github.event_name == 'pull_request')
+      && !contains(github.event.pull_request.labels.*.name, 'skip-ci')
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
       - uses: xarray-contrib/ci-trigger@v1
@@ -46,7 +47,7 @@ jobs:
       CONDA_ENV_FILE: ci/requirements/environment.yml
       PYTHON_VERSION: "3.12"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
@@ -73,7 +74,7 @@ jobs:
       - name: Run doctests
         run: |
           # Raise an error if there are warnings in the doctests, with `-Werror`.
-          # This is a trial; if it presents an problem, feel free to remove.
+          # This is a trial; if it presents a problem, feel free to remove.
           # See https://github.com/pydata/xarray/issues/7164 for more info.
           #
           # If dependencies emit warnings we can't do anything about, add ignores to
@@ -92,7 +93,7 @@ jobs:
       PYTHON_VERSION: "3.12"
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
@@ -143,7 +144,7 @@ jobs:
       PYTHON_VERSION: "3.11"
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
@@ -199,7 +200,7 @@ jobs:
       PYTHON_VERSION: "3.12"
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
@@ -255,7 +256,7 @@ jobs:
       PYTHON_VERSION: "3.11"
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
@@ -307,7 +308,7 @@ jobs:
       COLUMNS: 120
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 

@@ -22,7 +22,12 @@ from xarray.core.utils import (
     emit_user_level_warning,
     equivalent,
 )
-from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from xarray.core.variable import (
+    IndexVariable,
+    Variable,
+    as_variable,
+    calculate_dimensions,
+)
 from xarray.structure.alignment import deep_align
 from xarray.util.deprecation_helpers import (
     _COMPAT_DEFAULT,
@@ -795,7 +800,7 @@ def merge_core(
 
 
 def merge_trees(
-    trees: Iterable[DataTree],
+    trees: Sequence[DataTree],
     compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
     join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     fill_value: object = dtypes.NA,
@@ -839,18 +844,6 @@ def merge_trees(
                 join=join,
                 combine_attrs=combine_attrs,
             )
-        # Remove inherited coordinates/indexes/dimensions.
-        for var_name in list(merge_result.coord_names):
-            if not any(var_name in node._coord_variables for node in nodes):
-                del merge_result.variables[var_name]
-                merge_result.coord_names.remove(var_name)
-        for index_name in list(merge_result.indexes):
-            if not any(index_name in node._node_indexes for node in nodes):
-                del merge_result.indexes[index_name]
-        for dim in list(merge_result.dims):
-            if not any(dim in node._node_dims for node in nodes):
-                del merge_result.dims[dim]
-
         merged_ds = Dataset._construct_direct(**merge_result._asdict())
         result[key] = DataTree(dataset=merged_ds)
 
@@ -1218,7 +1211,11 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
                     if c not in value.dims and c in dataset.coords
                 ]
                 if coord_names:
-                    other[key] = value.drop_vars(coord_names)
+                    value = value.drop_vars(coord_names)
+                if isinstance(value.variable, IndexVariable):
+                    variable = value.variable.to_base_variable()
+                    value = value._replace(variable=variable)
+                other[key] = value
 
     return merge_core(
         [dataset, other],

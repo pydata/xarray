@@ -260,7 +260,7 @@ class H5NetCDFStore(WritableCFDataStore):
         return self._acquire()
 
     def open_store_variable(self, name, var):
-        import h5netcdf
+        import h5netcdf.core
         import h5py
 
         dimensions = var.dimensions
