@@ -111,7 +111,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        import numbagg
+        import numbagg  # type: ignore[import-not-found, unused-ignore]
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
