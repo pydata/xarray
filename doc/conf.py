@@ -20,14 +20,6 @@ allowed_failures = set()
 
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
-
-if "CONDA_DEFAULT_ENV" in os.environ or "conda" in sys.executable:
-    print("conda environment:")
-    subprocess.run([os.environ.get("CONDA_EXE", "conda"), "list"])
-else:
-    print("pip environment:")
-    subprocess.run([sys.executable, "-m", "pip", "list"])
-
 print(f"xarray: {xarray.__version__}, {xarray.__file__}")
 
 with suppress(ImportError):

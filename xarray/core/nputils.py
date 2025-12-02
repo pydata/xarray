@@ -208,7 +208,7 @@ def _create_method(name, npmodule=np) -> Callable:
                 )
             )
         ):
-            import numbagg
+            import numbagg  # type: ignore[import-not-found, unused-ignore]
 
             nba_func = getattr(numbagg, name, None)
             if nba_func is not None:
