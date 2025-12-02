@@ -7,13 +7,13 @@ platforms = ["win-64", "linux-64", "osx-arm64"]
 depends-on = [
   # { task = "test", environment = "test-just-xarray" }, # https://github.com/pydata/xarray/pull/10888/files#r2511336147
   { task = "test", environment = "test-bare-min" },
-  { task = "test", environment = "test-all-deps-py313" },
+  { task = "test", environment = "test" },
 ]
 
 [environments]
 # Testing
 # test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
-test-all-but-numba = { features = [
+test-no-numba = { features = [
   "py313",
   "test",
   "backends",
@@ -22,7 +22,7 @@ test-all-but-numba = { features = [
   "viz",
   "extras",
 ] }
-test-all-but-dask = { features = [
+test-no-dask = { features = [
   "py312",
   "test",
   "backends",
@@ -31,7 +31,7 @@ test-all-but-dask = { features = [
   "viz",
   "extras",
 ] }
-test-all-deps-py313 = { features = [
+test = { features = [
   "py313",
   "test",
   "backends",
@@ -49,7 +49,7 @@ test-nightly = { features = [
 ], no-default-feature = true }
 
 
-test-all-deps-py311 = { features = [
+test-py311 = { features = [
   "py311",
   "test",
   "backends",
@@ -60,7 +60,7 @@ test-all-deps-py311 = { features = [
   "extras",
 ] }
 
-test-with-typing-py311 = { features = [
+test-py311-with-typing = { features = [
   "py311",
   "test",
   "backends",
@@ -72,7 +72,7 @@ test-with-typing-py311 = { features = [
   "typing",
 ] }
 
-test-with-typing-py313 = { features = [
+test-with-typing = { features = [
   "py313",
   "test",
   "backends",

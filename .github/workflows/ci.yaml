@@ -52,7 +52,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        pixi-env: ["test-all-deps-py311", "test-all-deps-py313"]
+        pixi-env: ["test-py311", "test"]
         pytest-addopts: [""]
         include:
           # Minimum python version:
@@ -63,20 +63,20 @@ jobs:
           - pixi-env: "test-min-versions"
             os: ubuntu-latest
           # Latest python version:
-          - pixi-env: "test-all-but-numba"
+          - pixi-env: "test-no-numba"
             os: ubuntu-latest
-          - pixi-env: "test-all-but-dask"
+          - pixi-env: "test-no-dask"
             os: ubuntu-latest
-          - pixi-env: "test-all-deps-py313"
+          - pixi-env: "test"
             pytest-addopts: "flaky"
             os: ubuntu-latest
           # The mypy tests must be executed using only 1 process in order to guarantee
           # predictable mypy output messages for comparison to expectations.
-          - pixi-env: "test-with-typing-py311"
+          - pixi-env: "test-py311-with-typing"
             pytest-addopts: "mypy"
             numprocesses: 1
             os: ubuntu-latest
-          - pixi-env: "test-with-typing-py313"
+          - pixi-env: "test-with-typing"
             numprocesses: 1
             os: ubuntu-latest
     steps:
@@ -122,7 +122,7 @@ jobs:
       # We only want to install this on one run, because otherwise we'll have
       # duplicate annotations.
       - name: Install error reporter
-        if: ${{ matrix.os }} == 'ubuntu-latest' and ${{ matrix.pixi-env}} == 'test-all-deps-py313'
+        if: ${{ matrix.os }} == 'ubuntu-latest' and ${{ matrix.pixi-env}} == 'test'
         run: |
           pixi add --pypi pytest-github-actions-annotate-failures
 

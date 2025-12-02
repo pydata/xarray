@@ -55,7 +55,7 @@ jobs:
         shell: bash -l {0}
 
     env:
-      PIXI_ENV: test-all-deps-py313
+      PIXI_ENV: test
 
     steps:
       - uses: actions/checkout@v6
