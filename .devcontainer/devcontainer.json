@@ -4,6 +4,9 @@
     "dockerfile": "Dockerfile",
     "context": ".."
   },
+  "hostRequirements": {
+    "memory": "16gb"
+  },
   "customizations": {
     "vscode": {
       "settings": {},
