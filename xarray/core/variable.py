@@ -1477,7 +1477,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             # This is typically easier for duck arrays to implement
             # than the full "broadcast_to" semantics
             indexer = (None,) * (len(expanded_dims) - self.ndim) + (...,)
-            expanded_data = self._data[indexer]
+            # TODO: switch this to ._data once we teach ExplicitlyIndexed arrays to handle indexers with None.
+            expanded_data = self.data[indexer]
         else:  # elif shape is not None:
             dims_map = dict(zip(dim, shape, strict=True))
             tmp_shape = tuple(dims_map[d] for d in expanded_dims)

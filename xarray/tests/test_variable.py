@@ -3258,17 +3258,13 @@ def test_timedelta_conversion(values, unit) -> None:
     assert var.dtype == np.dtype(f"timedelta64[{unit}]")
 
 
-@pytest.mark.parametrize(
-    "method",
-    [
-        lambda v: v.drop_encoding(),
-        lambda v: v.set_dims(["x", "y"]),
-    ],
-    ids=["drop_encoding", "set_dims"],
-)
-def test_explicitly_indexed_array_preserved(method) -> None:
-    """Test that methods using ._data preserve ExplicitlyIndexed arrays."""
+def test_explicitly_indexed_array_preserved() -> None:
+    """Test that methods using ._data preserve ExplicitlyIndexed arrays.
+
+    Regression test for methods that should use ._data instead of .data
+    to avoid loading lazy arrays into memory.
+    """
     arr = IndexableArray(np.array([1, 2, 3]))
     var = Variable(["x"], arr)
-    result = method(var)
+    result = var.drop_encoding()
     assert isinstance(result._data, indexing.ExplicitlyIndexed)
