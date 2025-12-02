@@ -624,7 +624,7 @@ def _numbers_to_timedelta(
     # keep NaT/nan mask
     if flat_num.dtype.kind == "f":
         nan = np.asarray(np.isnan(flat_num))
-    elif flat_num.dtype.kind == "i":
+    elif flat_num.dtype.kind in "iu":
         nan = np.asarray(flat_num == np.iinfo(np.int64).min)
 
     # in case we need to change the unit, we fix the numbers here

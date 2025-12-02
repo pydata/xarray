@@ -46,6 +46,9 @@ Bug Fixes
   By `Justus Magin <https://github.com/keewis>`_.
 - Avoid casting custom indexes in ``Dataset.drop_attrs`` (:pull:`10961`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Support decoding unsigned integers to ``np.timedelta64``.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
