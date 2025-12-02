@@ -40,7 +40,7 @@ jobs:
     with:
       pixi-version: "v0.58.0" # keep in sync with env var above
   test:
-    name: "${{ matrix.os }} | ${{ matrix.pixi-env }}"
+    name: "${{ matrix.os }} | ${{ matrix.pixi-env }}${{ matrix.pytest-addopts && format(' ({0})', matrix.pytest-addopts) || '' }}"
     runs-on: ${{ matrix.os }}
     needs: [detect-ci-trigger, cache-pixi-lock]
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
