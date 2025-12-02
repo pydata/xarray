@@ -809,7 +809,7 @@ class PandasIndex(Index):
         indxr = indexers[self.dim]
         if isinstance(indxr, Variable):
             if indxr.dims != (self.dim,):
-                # can't preserve a index if result has new dimensions
+                # can't preserve an index if result has new dimensions
                 return None
             else:
                 indxr = indxr.data
