@@ -135,7 +135,7 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
     Data variables:
         *empty*
 
-    Creation of a NDPointIndex from the "xx" and "yy" coordinate variables:
+    Creation of an NDPointIndex from the "xx" and "yy" coordinate variables:
 
     >>> ds = ds.set_xindex(("xx", "yy"), xr.indexes.NDPointIndex)
     >>> ds
