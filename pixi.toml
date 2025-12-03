@@ -3,104 +3,6 @@ preview = ["pixi-build"]
 channels = ["conda-forge", "nodefaults"]
 platforms = ["win-64", "linux-64", "osx-arm64"]
 
-[environments]
-# Testing
-# test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
-test-no-numba = { features = [
-  "py313",
-  "test",
-  "backends",
-  "accel",
-  "dask",
-  "viz",
-  "extras",
-] }
-test-no-dask = { features = [
-  "py312",
-  "test",
-  "backends",
-  "accel",
-  "numba",
-  "viz",
-  "extras",
-] }
-test = { features = [
-  "py313",
-  "test",
-  "backends",
-  "accel",
-  "numba",
-  "dask",
-  "viz",
-  "extras",
-] }
-test-nightly = { features = [
-  "py313",
-  "nightly",
-  "test",
-  # "typing",
-], no-default-feature = true }
-
-
-test-py311 = { features = [
-  "py311",
-  "test",
-  "backends",
-  "accel",
-  "numba",
-  "dask",
-  "viz",
-  "extras",
-] }
-
-test-py311-with-typing = { features = [
-  "py311",
-  "test",
-  "backends",
-  "accel",
-  "numba",
-  "dask",
-  "viz",
-  "extras",
-  "typing",
-] }
-
-test-with-typing = { features = [
-  "py313",
-  "test",
-  "backends",
-  "accel",
-  "numba",
-  "dask",
-  "viz",
-  "extras",
-  "typing",
-] }
-
-test-bare-minimum = { features = ["test", "minimal"] }
-test-bare-min-and-scipy = { features = [
-  "test",
-  "minimal",
-  "minimum-scipy",
-] }
-test-min-versions = { features = [
-  "test",
-  "min-versions",
-] }
-
-
-# Extra
-typing = { features = ["typing"] }
-doc = { features = [
-  "doc",
-  "backends",
-  "test",
-  "accel",
-  "viz",
-  "extras",
-] }
-pre-commit = { features = ["pre-commit"], no-default-feature = true }
-
 [package]
 name = "xarray"
 version = "dynamic" # dynamic versioning needs better support in pixi https://github.com/prefix-dev/pixi/issues/2923#issuecomment-2598460666 . Putting `version = "dynamic"` here for now until pixi recommends something else.
@@ -125,15 +27,6 @@ xarray = { path = "." }
 
 [target.linux-64.dependencies]
 pydap-server = "*"
-
-[feature.minimal.dependencies]
-# minimal versions
-python = "3.11.*"
-numpy = "1.26.*"
-pandas = "2.2.*"
-
-[feature.minimum-scipy.dependencies]
-scipy = "1.13.*"
 
 [feature.py311.dependencies]
 python = "3.11.*"
@@ -203,13 +96,21 @@ iris = "*"
 # array
 jax = "*" # no way to get cpu-only jaxlib from conda if gpu is present
 
+[feature.minimal.dependencies]
+# minimal versions
+python = "3.11.*"
+numpy = "1.26.*"
+pandas = "2.2.*"
+
+[feature.minimum-scipy.dependencies]
+scipy = "1.13.*"
+
 [feature.min-versions.dependencies]
 # minimal versions for all dependencies
 # Note that when you update min-supported versions, you should:
 # - Update the min version lower-bound in the corresponding feature(s) where applicable
 # - Update this section to pin to the min version
 
-python = "3.11.*"
 array-api-strict = "1.1.*" # dependency for testing the array api compat
 boto3 = "1.34.*"
 bottleneck = "1.4.*"
@@ -233,13 +134,10 @@ nc-time-axis = "1.4.*"
 netcdf4 = "1.6.*"
 numba = "0.60.*"
 numbagg = "0.8.*"
-numpy = "1.26.*"
 packaging = "24.1.*"
-pandas = "2.2.*"
 pint = "0.24.*"
 pydap = "3.5.*"
 rasterio = "1.3.*"
-scipy = "1.13.*"
 seaborn = "0.13.*"
 sparse = "0.15.*"
 toolz = "0.12.*"
@@ -320,11 +218,11 @@ test = { cmd = "pytest" }
 kerchunk = "*"
 ipykernel = "*"
 ipywidgets = "*"                   # silence nbsphinx warning
-ipython = '*'
-jupyter_client = '*'
-jupyter_sphinx = '*'
-nbsphinx = '*'
-ncdata = '*'
+ipython = "*"
+jupyter_client = "*"
+jupyter_sphinx = "*"
+nbsphinx = "*"
+ncdata = "*"
 pydata-sphinx-theme = "*"
 pyproj = "*"
 rich = "*"                         # for Zarr tree()
@@ -379,3 +277,103 @@ pre-commit = "*"
 
 [feature.pre-commit.tasks]
 pre-commit = { cmd = "pre-commit" }
+
+[environments]
+# Testing
+# test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
+test-py313-no-numba = { features = [
+  "py313",
+  "test",
+  "backends",
+  "accel",
+  "dask",
+  "viz",
+  "extras",
+] }
+test-py313-no-dask = { features = [
+  "py312",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "viz",
+  "extras",
+] }
+test-py313 = { features = [
+  "py313",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+] }
+test-nightly = { features = [
+  "py313",
+  "nightly",
+  "test",
+  # "typing",
+], no-default-feature = true }
+
+
+test-py311 = { features = [
+  "py311",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+] }
+
+test-py311-with-typing = { features = [
+  "py311",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+  "typing",
+] }
+
+test-py313-with-typing = { features = [
+  "py313",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+  "typing",
+] }
+
+test-py311-bare-minimum = { features = ["test", "minimal"] }
+test-py311-bare-min-and-scipy = { features = [
+  "test",
+  "minimal",
+  "minimum-scipy",
+] }
+test-py311-min-versions = { features = [
+  "test",
+  "minimal",
+  "minimum-scipy",
+  "min-versions",
+] }
+
+
+# Extra
+typing = { features = ["typing"] }
+doc = { features = [
+  "doc",
+  "backends",
+  "test",
+  "accel",
+  "viz",
+  "extras",
+] }
+pre-commit = { features = ["pre-commit"], no-default-feature = true }
