@@ -352,13 +352,13 @@ test-py313-with-typing = { features = [
   "typing",
 ] }
 
-test-bare-minimum = { features = ["test", "minimal"] }
-test-bare-min-and-scipy = { features = [
+test-py311-bare-minimum = { features = ["test", "minimal"] }
+test-py311-bare-min-and-scipy = { features = [
   "test",
   "minimal",
   "minimum-scipy",
 ] }
-test-min-versions = { features = [
+test-py311-min-versions = { features = [
   "test",
   "minimal",
   "minimum-scipy",

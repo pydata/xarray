@@ -56,11 +56,11 @@ jobs:
         pytest-addopts: [""]
         include:
           # Minimum python version:
-          - pixi-env: "test-bare-minimum"
+          - pixi-env: "test-py311-bare-minimum"
             os: ubuntu-latest
-          - pixi-env: "test-bare-min-and-scipy"
+          - pixi-env: "test-py311-bare-min-and-scipy"
             os: ubuntu-latest
-          - pixi-env: "test-min-versions"
+          - pixi-env: "test-py311-min-versions"
             os: ubuntu-latest
           # Latest python version:
           - pixi-env: "test-py313-no-numba"
