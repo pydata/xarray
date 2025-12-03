@@ -144,11 +144,11 @@ jobs:
 
       - name: Run tests
         run: |
-          pixi run -e ${{ matrix.pixi-env }} -- python -m pytest -n ${{ matrix.numprocesses || 4 }}
-          --timeout 180
-          --cov=xarray
-          --cov-report=xml
-          --junitxml=pytest.xml
+          pixi run -e ${{ matrix.pixi-env }} -- python -m pytest -n ${{ matrix.numprocesses || 4 }} \
+            --timeout 180 \
+            --cov=xarray \
+            --cov-report=xml \
+            --junitxml=pytest.xml
 
       - name: Upload test results
         if: always()
