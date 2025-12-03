@@ -24,6 +24,3 @@ build:
     build:
       html:
         - pixi run doc BUILDDIR=$READTHEDOCS_OUTPUT
-
-formats:
-  - htmlzip
