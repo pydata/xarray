@@ -35,7 +35,7 @@ repos:
       - id: blackdoc
         exclude: "generate_aggregations.py"
         # make sure this is the most recent version of black
-        additional_dependencies: ["black==25.9.0"]
+        additional_dependencies: ["black==25.11.0"]
   - repo: https://github.com/rbubley/mirrors-prettier
     rev: v3.7.3
     hooks:
