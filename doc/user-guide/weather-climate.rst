@@ -291,7 +291,7 @@ objects is that they support arithmetic with :py:class:`datetime.timedelta`, but
 This means that certain xarray operations (such as :py:meth:`~xarray.DataArray.diff`)
 may produce ``timedelta64`` results that cannot be directly combined with ``cftime`` coordinates.
 
-For example, lets define a cftime DataArray with a no-leap calendar:
+For example, lets define a time axis using ``cftime`` objects:
 
 .. jupyter-execute::
 
@@ -301,8 +301,8 @@ For example, lets define a cftime DataArray with a no-leap calendar:
     import cftime
 
     time = xr.DataArray(
-        xr.date_range("2000", periods=3, freq="MS", calendar="noleap"),
-        dims="time"
+        xr.date_range("2000", periods=3, freq="MS", use_cftime=True),
+        dims="time",
     )
 
 If you want to compute, e.g., midpoints in the time intervals, this will not work:
@@ -360,6 +360,7 @@ DataArrays via :py:meth:`~xarray.apply_ufunc`:
             output_dtypes=[cftime_da.dtype],
             join=join
         )
+
 
     add_cftime_and_timedelta64(time, 0.5 * time.diff("time"))
 
