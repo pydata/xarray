@@ -50,6 +50,8 @@ Bug Fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Added section on the `limitations of CFtime arithmetics <https://docs.xarray.dev/en/stable/user-guide/weather-climate.html#arithmetic-limitations-with-non-standard-calendars>`_ (:pull:`10653`).
+  By `Lars Buntemeyer <https://github.com/larsbuntemeyer>`_
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
