@@ -1950,6 +1950,15 @@ def test_decode_timedelta_via_dtype(
     assert decoded.dtype == expected_dtype
 
 
+@pytest.mark.parametrize("dtype", [np.uint64, np.int64, np.float64])
+def test_decode_timedelta_dtypes(dtype) -> None:
+    encoded = Variable(["time"], np.arange(10), {"units": "seconds"})
+    coder = CFTimedeltaCoder(time_unit="s")
+    decoded = coder.decode(encoded)
+    assert decoded.dtype.kind == "m"
+    assert_equal(coder.encode(decoded), encoded)
+
+
 def test_lazy_decode_timedelta_unexpected_dtype() -> None:
     attrs = {"units": "seconds"}
     encoded = Variable(["time"], [0, 0.5, 1], attrs=attrs)

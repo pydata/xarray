@@ -626,6 +626,8 @@ def _numbers_to_timedelta(
         nan = np.asarray(np.isnan(flat_num))
     elif flat_num.dtype.kind == "i":
         nan = np.asarray(flat_num == np.iinfo(np.int64).min)
+    elif flat_num.dtype.kind == "u":
+        nan = np.broadcast_to(np.asarray(False), flat_num.shape)
 
     # in case we need to change the unit, we fix the numbers here
     # this should be safe, as errors would have been raised above
