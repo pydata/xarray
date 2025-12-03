@@ -85,6 +85,8 @@ test-bare-min-and-scipy = { features = [
 ] }
 test-min-versions = { features = [
   "test",
+  "minimal",
+  "minimum-scipy",
   "min-versions",
 ] }
 
@@ -209,7 +211,6 @@ jax = "*" # no way to get cpu-only jaxlib from conda if gpu is present
 # - Update the min version lower-bound in the corresponding feature(s) where applicable
 # - Update this section to pin to the min version
 
-python = "3.11.*"
 array-api-strict = "1.1.*" # dependency for testing the array api compat
 boto3 = "1.34.*"
 bottleneck = "1.4.*"
@@ -233,13 +234,10 @@ nc-time-axis = "1.4.*"
 netcdf4 = "1.6.*"
 numba = "0.60.*"
 numbagg = "0.8.*"
-numpy = "1.26.*"
 packaging = "24.1.*"
-pandas = "2.2.*"
 pint = "0.24.*"
 pydap = "3.5.*"
 rasterio = "1.3.*"
-scipy = "1.13.*"
 seaborn = "0.13.*"
 sparse = "0.15.*"
 toolz = "0.12.*"
