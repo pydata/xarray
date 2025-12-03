@@ -48,7 +48,7 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      PIXI_ENV: test
+      PIXI_ENV: "test-py313"
     steps:
       - uses: actions/checkout@v6
         with:
@@ -94,7 +94,7 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      PIXI_ENV: test-with-typing
+      PIXI_ENV: test-py313-with-typing
 
     steps:
       - uses: actions/checkout@v6
@@ -191,7 +191,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pixi-env: ["test-with-typing", "test-py311-with-typing"]
+        pixi-env: ["test-py313-with-typing", "test-py311-with-typing"]
     if: |
       always()
       && (

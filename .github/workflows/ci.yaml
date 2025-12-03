@@ -63,11 +63,11 @@ jobs:
           - pixi-env: "test-min-versions"
             os: ubuntu-latest
           # Latest python version:
-          - pixi-env: "test-no-numba"
+          - pixi-env: "test-py313-no-numba"
             os: ubuntu-latest
-          - pixi-env: "test-no-dask"
+          - pixi-env: "test-py313-no-dask"
             os: ubuntu-latest
-          - pixi-env: "test"
+          - pixi-env: "test-py313"
             pytest-addopts: "flaky"
             os: ubuntu-latest
           # The mypy tests must be executed using only 1 process in order to guarantee
@@ -76,7 +76,7 @@ jobs:
             pytest-addopts: "mypy"
             numprocesses: 1
             os: ubuntu-latest
-          - pixi-env: "test-with-typing"
+          - pixi-env: "test-py313-with-typing"
             numprocesses: 1
             os: ubuntu-latest
     steps:
