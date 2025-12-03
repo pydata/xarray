@@ -10490,7 +10490,7 @@ class Dataset(
         for var in self.variables:
             # variables don't have a `._replace` method, so we copy and then remove
             # attrs. If we added a `._replace` method, we could use that instead.
-            if var not in self.indexes:
+            if var not in self.xindexes:
                 self[var] = self[var].copy()
                 self[var].attrs = {}
 

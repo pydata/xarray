@@ -71,6 +71,7 @@ from xarray.tests import (
     requires_dask,
     requires_numexpr,
     requires_pint,
+    requires_pyarrow,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -1908,28 +1909,50 @@ class TestDataset:
         actual = ds.reindex(cat=["foo"])["cat"].values
         assert (actual == np.array(["foo"])).all()
 
-    @pytest.mark.parametrize("fill_value", [np.nan, pd.NA])
-    def test_extensionarray_negative_reindex(self, fill_value) -> None:
-        cat = pd.Categorical(
-            ["foo", "bar", "baz"],
-            categories=["foo", "bar", "baz", "qux", "quux", "corge"],
-        )
+    @pytest.mark.parametrize("fill_value", [np.nan, pd.NA, None])
+    @pytest.mark.parametrize(
+        "extension_array",
+        [
+            pytest.param(
+                pd.Categorical(
+                    ["foo", "bar", "baz"],
+                    categories=["foo", "bar", "baz", "qux"],
+                ),
+                id="categorical",
+            ),
+        ]
+        + (
+            [
+                pytest.param(
+                    pd.array([1, 1, None], dtype="int64[pyarrow]"), id="int64[pyarrow]"
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
+    )
+    def test_extensionarray_negative_reindex(self, fill_value, extension_array) -> None:
         ds = xr.Dataset(
-            {"cat": ("index", cat)},
+            {"arr": ("index", extension_array)},
             coords={"index": ("index", np.arange(3))},
         )
+        kwargs = {}
+        if fill_value is not None:
+            kwargs["fill_value"] = fill_value
         reindexed_cat = cast(
             pd.api.extensions.ExtensionArray,
-            (
-                ds.reindex(index=[-1, 1, 1], fill_value=fill_value)["cat"]
-                .to_pandas()
-                .values
-            ),
+            (ds.reindex(index=[-1, 1, 1], **kwargs)["arr"].to_pandas().values),
         )
-        assert reindexed_cat.equals(pd.array([pd.NA, "bar", "bar"], dtype=cat.dtype))  # type: ignore[attr-defined]
+        assert reindexed_cat.equals(  # type: ignore[attr-defined]
+            pd.array(
+                [pd.NA, extension_array[1], extension_array[1]],
+                dtype=extension_array.dtype,
+            )
+        )
 
+    @requires_pyarrow
     def test_extension_array_reindex_same(self) -> None:
-        series = pd.Series([1, 2, pd.NA, 3], dtype=pd.Int32Dtype())
+        series = pd.Series([1, 2, pd.NA, 3], dtype="int32[pyarrow]")
         test = xr.Dataset({"test": series})
         res = test.reindex(dim_0=series.index)
         align(res, test, join="exact")
@@ -4343,9 +4366,11 @@ class TestDataset:
         # coordinate created from variables names should be of string dtype
         data = np.array(["a", "a", "a", "b"], dtype="<U1")
         expected_stacked_variable = DataArray(name="variable", data=data, dims="z")
+
+        # coerce from `IndexVariable` to `Variable` before comparing
         assert_identical(
-            stacked.coords["variable"].drop_vars(["z", "variable", "y"]),
-            expected_stacked_variable,
+            stacked["variable"].variable.to_base_variable(),
+            expected_stacked_variable.variable,
         )
 
     def test_to_stacked_array_transposed(self) -> None:
@@ -4811,6 +4836,18 @@ class TestDataset:
         with pytest.raises(ValueError, match=error_regex):
             actual[var_list] = data
 
+    def test_setitem_uses_base_variable_class_even_for_index_variables(self) -> None:
+        ds = Dataset(coords={"x": [1, 2, 3]})
+        ds["y"] = ds["x"]
+
+        # explicit check
+        assert isinstance(ds["x"].variable, IndexVariable)
+        assert not isinstance(ds["y"].variable, IndexVariable)
+
+        # test internal invariant checks when comparing the datasets
+        expected = Dataset(data_vars={"y": ("x", [1, 2, 3])}, coords={"x": [1, 2, 3]})
+        assert_identical(ds, expected)
+
     def test_assign(self) -> None:
         ds = Dataset()
         actual = ds.assign(x=[0, 1, 2], y=2)
@@ -4899,6 +4936,19 @@ class TestDataset:
         assert result_shallow["y"].attrs != {}
         assert list(result.data_vars) == list(ds.data_vars)
         assert list(result.coords) == list(ds.coords)
+
+    def test_drop_attrs_custom_index(self):
+        class CustomIndex(Index):
+            @classmethod
+            def from_variables(cls, variables, *, options=None):
+                return cls()
+
+        ds = xr.Dataset(coords={"y": ("x", [1, 2])}).set_xindex("y", CustomIndex)
+        # should not raise a TypeError
+        ds.drop_attrs()
+
+        # make sure the index didn't disappear
+        assert "y" in ds.xindexes
 
     def test_assign_multiindex_level(self) -> None:
         data = create_test_multiindex()
@@ -5676,6 +5726,55 @@ class TestDataset:
             ds.dropna("a", how="somehow")  # type: ignore[arg-type]
         with pytest.raises(TypeError, match=r"must specify how or thresh"):
             ds.dropna("a", how=None)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize(
+        "fill_value,extension_array",
+        [
+            pytest.param("a", pd.Categorical([pd.NA, "a", "b"]), id="category"),
+        ]
+        + (
+            [
+                pytest.param(
+                    0,
+                    pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
+                    id="int64[pyarrow]",
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
+    )
+    def test_fillna_extension_array(self, fill_value, extension_array) -> None:
+        srs = pd.DataFrame({"data": extension_array}, index=np.array([1, 2, 3]))
+        ds = srs.to_xarray()
+        filled = ds.fillna(fill_value)
+        assert filled["data"].dtype == extension_array.dtype
+        assert (
+            filled["data"].values
+            == np.array([fill_value, *srs["data"].values[1:]], dtype="object")
+        ).all()
+
+    @pytest.mark.parametrize(
+        "extension_array",
+        [
+            pytest.param(pd.Categorical([pd.NA, "a", "b"]), id="category"),
+        ]
+        + (
+            [
+                pytest.param(
+                    pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"), id="int64[pyarrow]"
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
+    )
+    def test_dropna_extension_array(self, extension_array) -> None:
+        srs = pd.DataFrame({"data": extension_array}, index=np.array([1, 2, 3]))
+        ds = srs.to_xarray()
+        dropped = ds.dropna("index")
+        assert dropped["data"].dtype == extension_array.dtype
+        assert (dropped["data"].values == srs["data"].values[1:]).all()
 
     def test_fillna(self) -> None:
         ds = Dataset({"a": ("x", [np.nan, 1, np.nan, 3])}, {"x": [0, 1, 2, 3]})

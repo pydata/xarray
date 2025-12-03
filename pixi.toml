@@ -1,0 +1,379 @@
+[workspace]
+preview = ["pixi-build"]
+channels = ["conda-forge", "nodefaults"]
+platforms = ["win-64", "linux-64", "osx-arm64"]
+
+[package]
+name = "xarray"
+version = "dynamic" # dynamic versioning needs better support in pixi https://github.com/prefix-dev/pixi/issues/2923#issuecomment-2598460666 . Putting `version = "dynamic"` here for now until pixi recommends something else.
+
+[package.build]
+backend = { name = "pixi-build-python", version = "==0.4.0" }
+
+[package.host-dependencies]
+setuptools = "*"
+setuptools_scm = "*"
+
+[package.run-dependencies]
+python = "*"
+numpy = "*"
+pandas = "*"
+
+packaging = "24.1.*"
+git = "*"            # needed for dynamic versioning
+
+[dependencies]
+xarray = { path = "." }
+
+[target.linux-64.dependencies]
+pydap-server = "*"
+
+[feature.py311.dependencies]
+python = "3.11.*"
+
+[feature.py312.dependencies]
+python = "3.12.*"
+
+[feature.py313.dependencies]
+python = "3.13.*"
+
+[feature.backends.dependencies]
+# files
+h5netcdf = "*"
+h5py = "*"
+hdf5 = "*"
+netcdf4 = "*"
+zarr = "*"
+rasterio = "*"
+
+# opendap
+pydap = "*"
+lxml = "*"  # Optional dep of pydap
+
+# s3
+boto3 = "*"
+fsspec = "*"
+aiobotocore = "*"
+
+[feature.numba.dependencies]
+numba = "*"
+numbagg = "*"
+
+[feature.dask.dependencies]
+dask = "*"
+distributed = "*"
+
+[feature.accel.dependencies]
+flox = "*"
+bottleneck = "*"
+numexpr = "*"
+pyarrow = "*"
+opt_einsum = "*"
+
+[feature.viz.dependencies]
+cartopy = "*"
+matplotlib-base = "*"
+nc-time-axis = "*"
+seaborn = "*"
+
+[feature.extras.dependencies]
+# array
+sparse = "*"
+
+# algorithms
+scipy = "*"
+toolz = "*"
+
+# tutorial
+pooch = "*"
+
+# other
+cftime = "*"
+pint = "*"
+iris = "*"
+
+[feature.extras.pypi-dependencies]
+# array
+jax = "*" # no way to get cpu-only jaxlib from conda if gpu is present
+
+[feature.minimal.dependencies]
+# minimal versions
+python = "3.11.*"
+numpy = "1.26.*"
+pandas = "2.2.*"
+
+[feature.minimum-scipy.dependencies]
+scipy = "1.13.*"
+
+[feature.min-versions.dependencies]
+# minimal versions for all dependencies
+# Note that when you update min-supported versions, you should:
+# - Update the min version lower-bound in the corresponding feature(s) where applicable
+# - Update this section to pin to the min version
+
+array-api-strict = "1.1.*" # dependency for testing the array api compat
+boto3 = "1.34.*"
+bottleneck = "1.4.*"
+cartopy = "0.23.*"
+cftime = "1.6.*"
+dask-core = "2024.6.*"
+distributed = "2024.6.*"
+flox = "0.9.*"
+h5netcdf = "1.3.*"
+# h5py and hdf5 tend to cause conflicts
+# for e.g. hdf5 1.12 conflicts with h5py=3.1
+# prioritize bumping other packages instead
+h5py = "3.11.*"
+hdf5 = "1.14.*"
+iris = "3.9.*"
+lxml = "5.1.*"            # Optional dep of pydap
+matplotlib-base = "3.8.*"
+nc-time-axis = "1.4.*"
+# netcdf follows a 1.major.minor[.patch] convention
+# (see https://github.com/Unidata/netcdf4-python/issues/1090)
+netcdf4 = "1.6.*"
+numba = "0.60.*"
+numbagg = "0.8.*"
+packaging = "24.1.*"
+pint = "0.24.*"
+pydap = "3.5.*"
+rasterio = "1.3.*"
+seaborn = "0.13.*"
+sparse = "0.15.*"
+toolz = "0.12.*"
+zarr = "2.18.*"
+
+[feature.nightly.dependencies]
+python = "*"
+
+[feature.nightly.pypi-options.dependency-overrides]
+numpy = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
+scipy = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
+matplotlib = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
+pandas = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
+pyarrow = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
+
+dask = { git = "https://github.com/dask/dask" }
+distributed = { git = "https://github.com/dask/distributed" }
+zarr = { git = "https://github.com/zarr-developers/zarr-python" }
+numcodecs = { git = "https://github.com/zarr-developers/numcodecs" }
+cftime = { git = "https://github.com/Unidata/cftime" }
+# packaging = { git = "https://github.com/pypa/packaging"} #? Pixi warns if this is enabled
+pint = { git = "https://github.com/hgrecco/pint" }
+bottleneck = { git = "https://github.com/pydata/bottleneck" }
+fsspec = { git = "https://github.com/intake/filesystem_spec" }
+nc-time-axis = { git = "https://github.com/SciTools/nc-time-axis" }
+flox = { git = "https://github.com/xarray-contrib/flox" }
+h5netcdf = { git = "https://github.com/h5netcdf/h5netcdf" }
+opt_einsum = { git = "https://github.com/dgasmith/opt_einsum" }
+# sparse = { git = "https://github.com/pydata/sparse"}
+
+[feature.nightly.pypi-dependencies]
+xarray = { path = ".", editable = true }
+
+numpy = "*"
+pandas = "*"
+matplotlib = "*"
+scipy = "*"
+pyarrow = "*"
+
+dask = "*"
+distributed = "*"
+zarr = "*"
+numcodecs = "*"
+cftime = "*"
+packaging = "*"
+pint = "*"
+bottleneck = "*"
+fsspec = "*"
+nc-time-axis = "*"
+flox = "*"
+# h5netcdf = "*"
+# h5py = "*"
+opt_einsum = "*"
+netcdf4 = "*"
+scitools-iris = "*"
+pydap = "*"
+cartopy = "*"
+seaborn = "*"
+
+[feature.test.dependencies]
+array-api-strict = "<2.4"
+pytest = "*"
+pytest-asyncio = "*"
+pytest-cov = "*"
+pytest-env = "*"
+pytest-mypy-plugins = "*"
+pytest-reportlog = "*"
+pytest-timeout = "*"
+pytest-xdist = "*"
+pytz = "*"
+hypothesis = "*"
+coveralls = "*"
+
+[feature.test.tasks]
+test = { cmd = "pytest" }
+
+[feature.doc.dependencies]
+kerchunk = "*"
+ipykernel = "*"
+ipywidgets = "*"                   # silence nbsphinx warning
+ipython = "*"
+jupyter_client = "*"
+jupyter_sphinx = "*"
+nbsphinx = "*"
+ncdata = "*"
+pydata-sphinx-theme = "*"
+pyproj = "*"
+rich = "*"                         # for Zarr tree()
+setuptools = "*"
+sphinx-autosummary-accessors = "*"
+sphinx-copybutton = "*"
+sphinx-design = "*"
+sphinx-inline-tabs = "*"
+sphinx = ">=6,<8"
+sphinxcontrib-mermaid = "*"
+sphinxcontrib-srclinks = "*"
+sphinx-remove-toctrees = "*"
+sphinxext-opengraph = "*"
+sphinxext-rediraffe = "*"
+
+[feature.doc.pypi-dependencies]
+cfgrib = "*" # pypi dep because of https://github.com/prefix-dev/pixi/issues/3032#issuecomment-3302638043
+
+[feature.doc.tasks]
+doc = { cmd = "make html", cwd = "doc" }
+doc-clean = { cmd = "make clean && make html", cwd = "doc" }
+
+
+[feature.typing.dependencies]
+mypy = "==1.18.1"
+pyright = "*"
+hypothesis = "*"
+lxml = "*"
+pandas-stubs = "<=2.2.3.241126" # https://github.com/pydata/xarray/issues/10110
+types-colorama = "*"
+types-docutils = "*"
+types-psutil = "*"
+types-Pygments = "*"
+types-python-dateutil = "*"
+types-pytz = "*"
+types-PyYAML = "*"
+types-requests = "*"
+types-setuptools = "*"
+types-openpyxl = "*"
+typing_extensions = "*"
+pip = "*"
+
+[feature.typing.pypi-dependencies]
+types-defusedxml = "*"
+types-pexpect = "*"
+
+[feature.typing.tasks]
+mypy = "mypy --install-types --non-interactive --cobertura-xml-report mypy_report"
+
+[feature.pre-commit.dependencies]
+pre-commit = "*"
+
+[feature.pre-commit.tasks]
+pre-commit = { cmd = "pre-commit" }
+
+[environments]
+# Testing
+# test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
+test-py313-no-numba = { features = [
+  "py313",
+  "test",
+  "backends",
+  "accel",
+  "dask",
+  "viz",
+  "extras",
+] }
+test-py313-no-dask = { features = [
+  "py312",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "viz",
+  "extras",
+] }
+test-py313 = { features = [
+  "py313",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+] }
+test-nightly = { features = [
+  "py313",
+  "nightly",
+  "test",
+  # "typing",
+], no-default-feature = true }
+
+
+test-py311 = { features = [
+  "py311",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+] }
+
+test-py311-with-typing = { features = [
+  "py311",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+  "typing",
+] }
+
+test-py313-with-typing = { features = [
+  "py313",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+  "typing",
+] }
+
+test-py311-bare-minimum = { features = ["test", "minimal"] }
+test-py311-bare-min-and-scipy = { features = [
+  "test",
+  "minimal",
+  "minimum-scipy",
+] }
+test-py311-min-versions = { features = [
+  "test",
+  "minimal",
+  "minimum-scipy",
+  "min-versions",
+] }
+
+
+# Extra
+typing = { features = ["typing"] }
+doc = { features = [
+  "doc",
+  "backends",
+  "test",
+  "accel",
+  "viz",
+  "extras",
+] }
+pre-commit = { features = ["pre-commit"], no-default-feature = true }
