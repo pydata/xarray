@@ -79,15 +79,15 @@ jobs:
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
       - name: Version info
         run: |
-          pixi run -e ${{matrix.pixi-env}} python xarray/util/print_versions.py
+          pixi run -e ${{matrix.pixi-env}} -- python xarray/util/print_versions.py
       - name: Import xarray
         run: |
-          pixi run -e ${{matrix.pixi-env}} python -c 'import xarray'
+          pixi run -e ${{matrix.pixi-env}} -- python -c 'import xarray'
       - name: Run Tests
         if: success()
         id: status
         run: |
-          pixi run -e ${{matrix.pixi-env}} python -m pytest --timeout=60 -rf -nauto \
+          pixi run -e ${{matrix.pixi-env}} -- python -m pytest --timeout=60 -rf -nauto \
             --report-log output-${{ matrix.pixi-env }}-log.jsonl
       - name: Generate and publish the report
         if: |
@@ -138,13 +138,13 @@ jobs:
       - name: set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-          echo "PYTHON_VERSION=$(pixi run -e ${{matrix.pixi-env}} python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
+          echo "PYTHON_VERSION=$(pixi run -e ${{matrix.pixi-env}} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
       - name: Version info
         run: |
-          pixi run -e ${{matrix.pixi-env}} python xarray/util/print_versions.py
+          pixi run -e ${{matrix.pixi-env}} -- python xarray/util/print_versions.py
       - name: Run mypy
         run: |
-          pixi run -e ${{matrix.pixi-env}} python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
+          pixi run -e ${{matrix.pixi-env}} -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
       - name: Upload mypy coverage to Codecov
         uses: codecov/codecov-action@v5.5.1
         with:

@@ -52,22 +52,22 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        pixi-env: ["test-py311", "test"]
+        pixi-env: ["test-py311", "test-py313"]
         pytest-addopts: [""]
         include:
           # Minimum python version:
-          - pixi-env: "test-bare-minimum"
+          - pixi-env: "test-py311-bare-minimum"
             os: ubuntu-latest
-          - pixi-env: "test-bare-min-and-scipy"
+          - pixi-env: "test-py311-bare-min-and-scipy"
             os: ubuntu-latest
-          - pixi-env: "test-min-versions"
+          - pixi-env: "test-py311-min-versions"
             os: ubuntu-latest
           # Latest python version:
-          - pixi-env: "test-no-numba"
+          - pixi-env: "test-py313-no-numba"
             os: ubuntu-latest
-          - pixi-env: "test-no-dask"
+          - pixi-env: "test-py313-no-dask"
             os: ubuntu-latest
-          - pixi-env: "test"
+          - pixi-env: "test-py313"
             pytest-addopts: "flaky"
             os: ubuntu-latest
           # The mypy tests must be executed using only 1 process in order to guarantee
@@ -76,7 +76,7 @@ jobs:
             pytest-addopts: "mypy"
             numprocesses: 1
             os: ubuntu-latest
-          - pixi-env: "test-with-typing"
+          - pixi-env: "test-py313-with-typing"
             numprocesses: 1
             os: ubuntu-latest
     steps:
@@ -101,7 +101,7 @@ jobs:
       - name: Set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-          echo "PYTHON_VERSION=$(pixi run -e ${{env.PIXI_ENV}} python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
+          echo "PYTHON_VERSION=$(pixi run -e ${{ matrix.pixi-env }} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
 
           if [[ "${{ matrix.pytest-addopts }}" != "" ]] ;
           then
@@ -128,11 +128,11 @@ jobs:
 
       - name: Version info
         run: |
-          pixi run -e ${{ matrix.pixi-env }} python xarray/util/print_versions.py
+          pixi run -e ${{ matrix.pixi-env }} -- python xarray/util/print_versions.py
 
       - name: Import xarray
         run: |
-          pixi run -e ${{ matrix.pixi-env }} python -c "import xarray"
+          pixi run -e ${{ matrix.pixi-env }} -- python -c "import xarray"
 
       - name: Restore cached hypothesis directory
         uses: actions/cache@v4
@@ -143,12 +143,12 @@ jobs:
           save-always: true
 
       - name: Run tests
-        run:
-          pixi run -e ${{ matrix.pixi-env }} python -m pytest -n ${{ matrix.numprocesses || 4 }}
-          --timeout 180
-          --cov=xarray
-          --cov-report=xml
-          --junitxml=pytest.xml
+        run: |
+          pixi run -e ${{ matrix.pixi-env }} -- python -m pytest -n ${{ matrix.numprocesses || 4 }} \
+            --timeout 180 \
+            --cov=xarray \
+            --cov-report=xml \
+            --junitxml=pytest.xml
 
       - name: Upload test results
         if: always()
