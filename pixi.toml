@@ -28,15 +28,6 @@ xarray = { path = "." }
 [target.linux-64.dependencies]
 pydap-server = "*"
 
-[feature.minimal.dependencies]
-# minimal versions
-python = "3.11.*"
-numpy = "1.26.*"
-pandas = "2.2.*"
-
-[feature.minimum-scipy.dependencies]
-scipy = "1.13.*"
-
 [feature.py311.dependencies]
 python = "3.11.*"
 
@@ -104,6 +95,15 @@ iris = "*"
 [feature.extras.pypi-dependencies]
 # array
 jax = "*" # no way to get cpu-only jaxlib from conda if gpu is present
+
+[feature.minimal.dependencies]
+# minimal versions
+python = "3.11.*"
+numpy = "1.26.*"
+pandas = "2.2.*"
+
+[feature.minimum-scipy.dependencies]
+scipy = "1.13.*"
 
 [feature.min-versions.dependencies]
 # minimal versions for all dependencies
