@@ -282,8 +282,8 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
 .. _cftime_arithmetic_limitations:
 
-Arithmetic limitations with non-standard calendars
---------------------------------------------------
+Arithmetic limitations with ``cftime`` objects
+----------------------------------------------
 
 A current limitation when working with non-standard calendars and :py:class:`cftime.datetime`
 objects is that they support arithmetic with :py:class:`datetime.timedelta`, but **not** with :py:class:`numpy.timedelta64`.
@@ -319,7 +319,8 @@ and result in an error like this:
    UFuncTypeError: ufunc 'add' cannot use operands with types dtype('O') and dtype('<m8[ns]')
 
 This is because :py:meth:`~xarray.DataArray.diff` returns ``timedelta64``, which is not
-compatible with ``cftime.datetime``.
+compatible with ``cftime.datetime``. These limitations stem from the ``cftime`` library itself;
+arithmetic between ``cftime.datetime`` and ``numpy.timedelta64`` is not implemented.
 
 **Workarounds**
 
@@ -328,7 +329,7 @@ which returns ``datetime.timedelta`` objects that are compatible:
 
 .. jupyter-execute::
 
-    mids = time[:-1] + 0.5 * np.diff(time.values)
+    time[:-1] + 0.5 * np.diff(time.values)
 
 or you can convert ``timedelta64`` values to Python ``timedelta`` objects explicitly,
 for example via :py:meth:`pandas.to_timedelta`:
@@ -336,7 +337,31 @@ for example via :py:meth:`pandas.to_timedelta`:
 .. jupyter-execute::
 
     td = pd.to_timedelta(time.diff("time").values).to_pytimedelta()
-    mids = time[:-1] + 0.5 * td
+    time[:-1] + 0.5 * td
 
-These limitations stem from the ``cftime`` library itself; arithmetic between
-``cftime.datetime`` and ``numpy.timedelta64`` is not implemented.
+You could also consider a more verbose, but also more robust, workaround that adds the two
+DataArrays via :py:meth:`~xarray.apply_ufunc`:
+
+.. jupyter-execute::
+
+    def add_cftime_and_timedelta64(cftime_da, timedelta64_da, join="inner"):
+        def func(cftime_array, timedelta64_array):
+            shape = cftime_array.shape
+            cftime_array = cftime_array.ravel()
+            timedelta64_array = timedelta64_array.ravel()
+            timedelta_array = pd.to_timedelta(timedelta64_array).to_pytimedelta()
+            return (cftime_array + timedelta_array).reshape(shape)
+
+        return xr.apply_ufunc(
+            func,
+            cftime_da,
+            timedelta64_da,
+            dask="parallelized",
+            output_dtypes=[cftime_da.dtype],
+            join=join
+        )
+
+    add_cftime_and_timedelta64(time, 0.5 * time.diff("time"))
+
+This function has the advantage that it preserves the coordinate alignment, as well as multi-dimensional
+and dask compatibility features of xarray.
