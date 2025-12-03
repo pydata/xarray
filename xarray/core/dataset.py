@@ -7236,7 +7236,9 @@ class Dataset(
         else:
             # Use a simple RangeIndex when create_index=False
             # Calculate the total size from ordered_dims
-            total_size = np.prod(list(ordered_dims.values())) if ordered_dims else 0
+            total_size = (
+                int(np.prod(list(ordered_dims.values()))) if ordered_dims else 0
+            )
             index = pd.RangeIndex(total_size)
         broadcasted_df = pd.DataFrame(
             {
