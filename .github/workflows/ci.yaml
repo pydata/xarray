@@ -101,7 +101,7 @@ jobs:
       - name: Set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-          echo "PYTHON_VERSION=$(pixi run -e ${{env.PIXI_ENV}} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
+          echo "PYTHON_VERSION=$(pixi run -e ${{ matrix.pixi-env }} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
 
           if [[ "${{ matrix.pytest-addopts }}" != "" ]] ;
           then
