@@ -89,3 +89,9 @@ doc/videos-gallery.txt
 # gitignore to make it _easier_ to work with `uv`, not as an indication that I
 # think we shouldn't...)
 uv.lock
+mypy_report/
+xarray-docs/
+
+# pixi environments
+.pixi
+pixi.lock

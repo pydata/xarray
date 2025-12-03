@@ -4,6 +4,7 @@ import copy
 import datetime as dt
 import pickle
 import warnings
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -64,13 +65,13 @@ try:
 
     @pytest.fixture
     def arrow1():
-        return pd.arrays.ArrowExtensionArray(
+        return pd.arrays.ArrowExtensionArray(  # type: ignore[attr-defined]
             pa.array([{"x": 1, "y": True}, {"x": 2, "y": False}])
         )
 
     @pytest.fixture
     def arrow2():
-        return pd.arrays.ArrowExtensionArray(
+        return pd.arrays.ArrowExtensionArray(  # type: ignore[attr-defined]
             pa.array([{"x": 3, "y": False}, {"x": 4, "y": True}])
         )
 
@@ -940,8 +941,8 @@ def test_datetime_to_numeric_cftime(dask):
         result = duck_array_ops.datetime_to_numeric(
             times, datetime_unit="h", dtype=dtype
         )
-    expected = 24 * np.arange(0, 35, 7).astype(dtype)
-    np.testing.assert_array_equal(result, expected)
+    expected2: Any = 24 * np.arange(0, 35, 7).astype(dtype)
+    np.testing.assert_array_equal(result, expected2)
 
     with raise_if_dask_computes():
         if dask:
@@ -951,8 +952,8 @@ def test_datetime_to_numeric_cftime(dask):
         result = duck_array_ops.datetime_to_numeric(
             time, offset=times[0], datetime_unit="h", dtype=int
         )
-    expected = np.array(24 * 7).astype(int)
-    np.testing.assert_array_equal(result, expected)
+    expected3 = np.array(24 * 7).astype(int)
+    np.testing.assert_array_equal(result, expected3)
 
 
 @requires_cftime
@@ -1106,6 +1107,21 @@ def test_extension_array_singleton_equality(categorical1):
 def test_extension_array_repr(int1):
     int_duck_array = PandasExtensionArray(int1)
     assert repr(int1) in repr(int_duck_array)
+
+
+def test_extension_array_result_type_categorical(categorical1, categorical2):
+    res = np.result_type(
+        PandasExtensionArray(categorical1), PandasExtensionArray(categorical2)
+    )
+    assert isinstance(res, pd.CategoricalDtype)
+    assert set(res.categories) == set(categorical1.categories) | set(
+        categorical2.categories
+    )
+    assert not res.ordered
+
+    assert categorical1.dtype == np.result_type(
+        PandasExtensionArray(categorical1), pd.CategoricalDtype.na_value
+    )
 
 
 def test_extension_array_attr():

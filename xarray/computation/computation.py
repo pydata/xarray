@@ -701,7 +701,7 @@ def where(cond, x, y, keep_attrs=None):
       * lon      (lon) int64 24B 10 11 12
 
     >>> xr.where(y.lat < 1, y, -1)
-    <xarray.DataArray (lat: 3, lon: 3)> Size: 72B
+    <xarray.DataArray 'lat' (lat: 3, lon: 3)> Size: 72B
     array([[ 0. ,  0.1,  0.2],
            [-1. , -1. , -1. ],
            [-1. , -1. , -1. ]])
@@ -726,7 +726,7 @@ def where(cond, x, y, keep_attrs=None):
     from xarray.core.dataset import Dataset
 
     if keep_attrs is None:
-        keep_attrs = _get_keep_attrs(default=False)
+        keep_attrs = _get_keep_attrs(default=True)
 
     # alignment for three arguments is complicated, so don't support it yet
     from xarray.computation.apply_ufunc import apply_ufunc
@@ -930,7 +930,7 @@ def _calc_idxminmax(
         array = array.where(~allna, 0)
 
     # This will run argmin or argmax.
-    indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
+    index = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
 
     # Handle chunked arrays (e.g. dask).
     coord = array[dim]._variable.to_base_variable()
@@ -943,13 +943,13 @@ def _calc_idxminmax(
     else:
         coord = coord.copy(data=to_like_array(array[dim].data, array.data))
 
-    res = indx._replace(coord[(indx.variable,)]).rename(dim)
+    res = index._replace(coord[(index.variable,)]).rename(dim)
 
     if skipna or (skipna is None and array.dtype.kind in na_dtypes):
         # Put the NaN values back in after removing them
         res = res.where(~allna, fill_value)
 
     # Copy attributes from argmin/argmax, if any
-    res.attrs = indx.attrs
+    res.attrs = index.attrs
 
     return res

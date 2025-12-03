@@ -9,6 +9,7 @@ from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Any
 
 from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
+from xarray.core.options import OPTIONS
 from xarray.core.utils import module_available
 
 if TYPE_CHECKING:
@@ -17,8 +18,6 @@ if TYPE_CHECKING:
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.types import ReadBuffer
-
-STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
 
 def remove_duplicates(entrypoints: EntryPoints) -> list[EntryPoint]:
@@ -91,8 +90,8 @@ def set_missing_parameters(
 def sort_backends(
     backend_entrypoints: dict[str, type[BackendEntrypoint]],
 ) -> dict[str, type[BackendEntrypoint]]:
-    ordered_backends_entrypoints = {}
-    for be_name in STANDARD_BACKENDS_ORDER:
+    ordered_backends_entrypoints: dict[str, type[BackendEntrypoint]] = {}
+    for be_name in OPTIONS["netcdf_engine_order"]:
         if backend_entrypoints.get(be_name) is not None:
             ordered_backends_entrypoints[be_name] = backend_entrypoints.pop(be_name)
     ordered_backends_entrypoints.update(
@@ -144,10 +143,13 @@ def guess_engine(
     | bytes
     | memoryview
     | AbstractDataStore,
+    must_support_groups: bool = False,
 ) -> str | type[BackendEntrypoint]:
     engines = list_engines()
 
     for engine, backend in engines.items():
+        if must_support_groups and not backend.supports_groups:
+            continue
         try:
             if backend.guess_can_open(store_spec):
                 return engine
@@ -162,6 +164,8 @@ def guess_engine(
     for engine, (_, backend_cls) in BACKEND_ENTRYPOINTS.items():
         try:
             backend = backend_cls()
+            if must_support_groups and not backend.supports_groups:
+                continue
             if backend.guess_can_open(store_spec):
                 compatible_engines.append(engine)
         except Exception:
@@ -179,6 +183,15 @@ def guess_engine(
                 "additional IO dependencies, see:\n"
                 "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html\n"
                 "https://docs.xarray.dev/en/stable/user-guide/io.html"
+            )
+        elif must_support_groups:
+            error_msg = (
+                "xarray is unable to open this file because it has no currently "
+                "installed IO backends that support reading groups (e.g., h5netcdf "
+                "or netCDF4-python). Xarray's read/write support requires "
+                "installing optional IO dependencies, see:\n"
+                "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html\n"
+                "https://docs.xarray.dev/en/stable/user-guide/io"
             )
         else:
             error_msg = (

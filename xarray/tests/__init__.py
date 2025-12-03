@@ -179,6 +179,10 @@ has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
 )
+has_h5netcdf_or_netCDF4 = has_h5netcdf or has_netCDF4
+requires_h5netcdf_or_netCDF4 = pytest.mark.skipif(
+    not has_h5netcdf_or_netCDF4, reason="requires h5netcdf or netCDF4"
+)
 has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
 requires_numbagg_or_bottleneck = pytest.mark.skipif(
     not has_numbagg_or_bottleneck, reason="requires numbagg or bottleneck"
@@ -227,6 +231,10 @@ has_netCDF4_1_6_2_or_above, requires_netCDF4_1_6_2_or_above = _importorskip(
 
 has_h5netcdf_1_4_0_or_above, requires_h5netcdf_1_4_0_or_above = _importorskip(
     "h5netcdf", "1.4.0.dev"
+)
+
+has_h5netcdf_1_7_0_or_above, requires_h5netcdf_1_7_0_or_above = _importorskip(
+    "h5netcdf", "1.7.0.dev"
 )
 
 has_netCDF4_1_7_0_or_above, requires_netCDF4_1_7_0_or_above = _importorskip(

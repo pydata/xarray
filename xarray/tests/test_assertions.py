@@ -16,7 +16,7 @@ except ImportError:
 try:
     import pint
 
-    unit_registry = pint.UnitRegistry(force_ndarray_like=True)
+    unit_registry: pint.UnitRegistry = pint.UnitRegistry(force_ndarray_like=True)
 
     def quantity(x):
         return unit_registry.Quantity(x, "m")
@@ -61,6 +61,19 @@ def test_allclose_regression() -> None:
             xr.Coordinates({"x": [1e-17, 2]}),
             xr.Coordinates({"x": [0, 3]}),
             id="Coordinates",
+        ),
+        pytest.param(
+            xr.DataTree.from_dict(
+                {
+                    "/b": xr.Dataset({"a": ("x", [1e-17, 2]), "b": ("y", [-2e-18, 2])}),
+                }
+            ),
+            xr.DataTree.from_dict(
+                {
+                    "/b": xr.Dataset({"a": ("x", [0, 2]), "b": ("y", [0, 1])}),
+                }
+            ),
+            id="DataTree",
         ),
     ),
 )
@@ -192,7 +205,11 @@ def test_ensure_warnings_not_elevated(func) -> None:
             return super().dims
 
         def __array__(
-            self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+            self,
+            dtype: np.typing.DTypeLike | None = None,
+            /,
+            *,
+            copy: bool | None = None,
         ) -> np.ndarray:
             warnings.warn("warning in test", stacklevel=2)
             return super().__array__(dtype, copy=copy)

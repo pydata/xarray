@@ -100,27 +100,22 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
 
     # copy colors to use for bad, under, and over values in case they have been
     # set to non-default values
-    try:
-        # matplotlib<3.2 only uses bad color for masked values
-        bad = cmap(np.ma.masked_invalid([np.nan]))[0]
-    except TypeError:
-        # cmap was a str or list rather than a color-map object, so there are
-        # no bad, under or over values to check or copy
-        pass
-    else:
-        under = cmap(-np.inf)
-        over = cmap(np.inf)
-
-        new_cmap.set_bad(bad)
+    if isinstance(cmap, mpl.colors.Colormap):
+        bad = cmap(np.nan)
 
         # Only update under and over if they were explicitly changed by the user
         # (i.e. are different from the lowest or highest values in cmap). Otherwise
         # leave unchanged so new_cmap uses its default values (its own lowest and
         # highest values).
-        if under != cmap(0):
-            new_cmap.set_under(under)
-        if over != cmap(cmap.N - 1):
-            new_cmap.set_over(over)
+        under = cmap(-np.inf)
+        if under == cmap(0):
+            under = None
+
+        over = cmap(np.inf)
+        if over == cmap(cmap.N - 1):
+            over = None
+
+        new_cmap = new_cmap.with_extremes(bad=bad, under=under, over=over)
 
     return new_cmap, cnorm
 
@@ -514,7 +509,7 @@ def _maybe_gca(**subplot_kws: Any) -> Axes:
 
 
 def _get_units_from_attrs(da: DataArray) -> str:
-    """Extracts and formats the unit/units from a attributes."""
+    """Extracts and formats the unit/units from their attributes."""
     pint_array_type = DuckArrayModule("pint").type
     units = " [{}]"
     if isinstance(da.data, pint_array_type):
@@ -931,9 +926,6 @@ def _process_cmap_cbar_kwargs(
 
     cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
 
-    if "contour" in func.__name__ and levels is None:
-        levels = 7  # this is the matplotlib default
-
     # colors is mutually exclusive with cmap
     if cmap and colors:
         raise ValueError("Can't specify both cmap and colors.")
@@ -1337,7 +1329,7 @@ def _parse_size(
     else:
         levels = numbers = np.sort(np.unique(flatdata))
 
-    min_width, default_width, max_width = _MARKERSIZE_RANGE
+    min_width, _default_width, max_width = _MARKERSIZE_RANGE
     # width_range = min_width, max_width
 
     if norm is None:

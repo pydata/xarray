@@ -4,11 +4,7 @@ import collections
 import sys
 from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from xarray.core.types import Self
 from xarray.core.utils import Frozen, is_dict_like
@@ -42,6 +38,10 @@ class NodePath(PurePosixPath):
             )
         # TODO should we also forbid suffixes to avoid node names with dots in them?
 
+    def absolute(self) -> Self:
+        """Convert into an absolute path."""
+        return type(self)("/", *self.parts)
+
 
 class TreeNode:
     """
@@ -49,7 +49,7 @@ class TreeNode:
 
     This class stores no data, it has only parents and children attributes, and various methods.
 
-    Stores child nodes in an dict, ensuring that equality checks between trees
+    Stores child nodes in a dict, ensuring that equality checks between trees
     and order of child nodes is preserved (since python 3.7).
 
     Nodes themselves are intrinsically unnamed (do not possess a ._name attribute), but if the node has a parent you can
@@ -443,7 +443,7 @@ class TreeNode:
         DataTree.subtree
         """
         all_nodes = tuple(self.subtree)
-        this_node, *descendants = all_nodes
+        _this_node, *descendants = all_nodes
         return tuple(descendants)
 
     @property
@@ -542,7 +542,7 @@ class TreeNode:
 
         if path.root:
             current_node = self.root
-            root, *parts = list(path.parts)
+            _root, *parts = list(path.parts)
         else:
             current_node = self
             parts = list(path.parts)
@@ -610,7 +610,7 @@ class TreeNode:
         if path.root:
             # absolute path
             current_node = self.root
-            root, *parts, name = path.parts
+            _root, *parts, name = path.parts
         else:
             # relative path
             current_node = self
@@ -734,7 +734,7 @@ class NamedNode(TreeNode):
         if self.is_root:
             return "/"
         else:
-            root, *ancestors = tuple(reversed(self.parents))
+            _root, *ancestors = tuple(reversed(self.parents))
             # don't include name of root because (a) root might not have a name & (b) we want path relative to root.
             names = [*(node.name for node in ancestors), self.name]
             return "/" + "/".join(names)  # type: ignore[arg-type]

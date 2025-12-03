@@ -78,7 +78,7 @@ upstream        https://github.com/pydata/xarray (push)
     ~~~~~~~~~~~~
 
 
-    Breaking changes
+    Breaking Changes
     ~~~~~~~~~~~~~~~~
 
 
@@ -86,7 +86,7 @@ upstream        https://github.com/pydata/xarray (push)
     ~~~~~~~~~~~~
 
 
-    Bug fixes
+    Bug Fixes
     ~~~~~~~~~
 
 
@@ -109,13 +109,13 @@ upstream        https://github.com/pydata/xarray (push)
 
     (Note that repo branch restrictions prevent pushing to `main`, so you have to just-self-merge this.)
 
-13. Update the version available on pyodide:
+13. Consider updating the version available on pyodide:
     - Open the PyPI page for [Xarray downloads](https://pypi.org/project/xarray/#files)
-    - Edit [`pyodide/packages/xarray/meta.yaml`](https://github.com/pyodide/pyodide/blob/main/packages/xarray/meta.yaml) to update the
+    - Edit [`packages/xarray/meta.yaml`](https://github.com/pyodide/pyodide-recipes/blob/main/packages/xarray/meta.yaml) to update the
       - version number
       - link to the wheel (under "Built Distribution" on the PyPI page)
       - SHA256 hash (Click "Show Hashes" next to the link to the wheel)
-    - Open a pull request to pyodide
+    - Open a pull request to pyodide-recipes
 
 14. Issue the release announcement to mailing lists & Twitter (X). For bug fix releases, I
     usually only email xarray@googlegroups.com. For major/feature releases, I will email a broader

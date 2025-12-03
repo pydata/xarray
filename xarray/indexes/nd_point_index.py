@@ -80,7 +80,7 @@ class ScipyKDTreeAdapter(TreeAdapter):
         self._kdtree = KDTree(points, **options)
 
     def query(self, points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        return self._kdtree.query(points)
+        return self._kdtree.query(points)  # type: ignore[return-value,unused-ignore]
 
     def equals(self, other: Self) -> bool:
         return np.array_equal(self._kdtree.data, other._kdtree.data)
@@ -135,7 +135,7 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
     Data variables:
         *empty*
 
-    Creation of a NDPointIndex from the "xx" and "yy" coordinate variables:
+    Creation of an NDPointIndex from the "xx" and "yy" coordinate variables:
 
     >>> ds = ds.set_xindex(("xx", "yy"), xr.indexes.NDPointIndex)
     >>> ds

@@ -118,6 +118,7 @@ if TYPE_CHECKING:
         T_ChunkDimFreq,
         T_ChunksFreq,
         T_Xarray,
+        ZarrStoreLike,
     )
     from xarray.groupers import Grouper, Resampler
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
@@ -368,9 +369,9 @@ class DataArray(
            [[22.60070734, 13.78914233, 14.17424919],
             [18.28478802, 16.15234857, 26.63418806]]])
     Coordinates:
+      * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
         lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
         lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
-      * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
         reference_time  datetime64[ns] 8B 2014-09-05
     Dimensions without coordinates: x, y
     Attributes:
@@ -1515,7 +1516,7 @@ class DataArray(
         indexers : dict, optional
             A dict with keys matching dimensions and values given
             by integers, slice objects or arrays.
-            indexer can be a integer, slice, array-like or DataArray.
+            indexer can be an integer, slice, array-like or DataArray.
             If DataArrays are passed as indexers, xarray-style indexing will be
             carried out. See :ref:`indexing` for the details.
             One of indexers or indexers_kwargs must be provided.
@@ -2139,8 +2140,8 @@ class DataArray(
         <xarray.DataArray (y: 3)> Size: 24B
         array([3, 4, 5])
         Coordinates:
-            x        int64 8B 20
           * y        (y) int64 24B 70 80 90
+            x        int64 8B 20
 
         ...so ``b`` in not added here:
 
@@ -2148,8 +2149,8 @@ class DataArray(
         <xarray.DataArray (y: 3)> Size: 24B
         array([3, 4, 5])
         Coordinates:
-            x        int64 8B 20
           * y        (y) int64 24B 70 80 90
+            x        int64 8B 20
 
         See Also
         --------
@@ -2363,8 +2364,8 @@ class DataArray(
                [3.  ,  nan, 5.75,  nan],
                [5.  ,  nan, 5.25,  nan]])
         Coordinates:
-          * y        (y) int64 32B 10 12 14 16
           * x        (x) float64 32B 0.0 0.75 1.25 1.75
+          * y        (y) int64 32B 10 12 14 16
 
         1D nearest interpolation:
 
@@ -2375,8 +2376,8 @@ class DataArray(
                [ 2.,  7.,  6., nan],
                [ 6., nan,  5.,  8.]])
         Coordinates:
-          * y        (y) int64 32B 10 12 14 16
           * x        (x) float64 32B 0.0 0.75 1.25 1.75
+          * y        (y) int64 32B 10 12 14 16
 
         1D linear extrapolation:
 
@@ -2391,8 +2392,8 @@ class DataArray(
                [ 8. ,  nan,  4.5,  nan],
                [12. ,  nan,  3.5,  nan]])
         Coordinates:
-          * y        (y) int64 32B 10 12 14 16
           * x        (x) float64 32B 1.0 1.5 2.5 3.5
+          * y        (y) int64 32B 10 12 14 16
 
         2D linear interpolation:
 
@@ -2639,8 +2640,8 @@ class DataArray(
         <xarray.DataArray (y: 2)> Size: 16B
         array([0, 1])
         Coordinates:
-            x        (y) <U1 8B 'a' 'b'
           * y        (y) int64 16B 0 1
+            x        (y) <U1 8B 'a' 'b'
 
         >>> arr.swap_dims({"x": "z"})
         <xarray.DataArray (z: 2)> Size: 16B
@@ -3889,8 +3890,8 @@ class DataArray(
             supplied, then the reduction is calculated over the flattened array
             (by calling `f(x)` without an axis argument).
         keep_attrs : bool or None, optional
-            If True, the variable's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
+            If True (default), the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False, the new
             object will be returned without attributes.
         keepdims : bool, default: False
             If True, the dimensions which are reduced are left in the result
@@ -4067,7 +4068,7 @@ class DataArray(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes | memoryview: ...
+    ) -> memoryview: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -4131,17 +4132,15 @@ class DataArray(
         compute: bool = True,
         invalid_netcdf: bool = False,
         auto_complex: bool | None = None,
-    ) -> bytes | memoryview | Delayed | None:
+    ) -> memoryview | Delayed | None:
         """Write DataArray contents to a netCDF file.
 
         Parameters
         ----------
-        path : str, path-like or None, optional
-            Path to which to save this dataset. File-like objects are only
-            supported by the scipy engine. If no path is provided, this
-            function returns the resulting netCDF file as bytes; in this case,
-            we need to use scipy, which does not support netCDF version 4 (the
-            default format becomes NETCDF3_64BIT).
+        path : str, path-like, file-like or None, optional
+            Path to which to save this datatree, or a file-like object to write
+            it to (which must support read and write and be seekable) or None
+            (default) to return in-memory bytes as a memoryview.
         mode : {"w", "a"}, default: "w"
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
@@ -4170,10 +4169,11 @@ class DataArray(
         group : str, optional
             Path to the netCDF4 group in the given file to open (only works for
             format='NETCDF4'). The group(s) will be created if necessary.
-        engine : {"netcdf4", "scipy", "h5netcdf"}, optional
+        engine : {"netcdf4", "h5netcdf", "scipy"}, optional
             Engine to use when writing netCDF files. If not provided, the
-            default engine is chosen based on available dependencies, with a
-            preference for 'netcdf4' if writing to a file on disk.
+            default engine is chosen based on available dependencies, by default
+            preferring "netcdf4" over "h5netcdf" over "scipy" (customizable via
+            ``netcdf_engine_order`` in ``xarray.set_options()``).
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
@@ -4201,7 +4201,7 @@ class DataArray(
 
         Returns
         -------
-            * ``bytes`` or ``memoryview`` if path is None
+            * ``memoryview`` if path is None
             * ``dask.delayed.Delayed`` if compute is False
             * None otherwise
 
@@ -4220,7 +4220,8 @@ class DataArray(
         --------
         Dataset.to_netcdf
         """
-        from xarray.backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE, to_netcdf
+        from xarray.backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE
+        from xarray.backends.writers import to_netcdf
 
         if self.name is None:
             # If no name is set then use a generic xarray name
@@ -4253,7 +4254,7 @@ class DataArray(
     @overload
     def to_zarr(
         self,
-        store: MutableMapping | str | PathLike[str] | None = None,
+        store: ZarrStoreLike | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
         synchronizer=None,
@@ -4277,7 +4278,7 @@ class DataArray(
     @overload
     def to_zarr(
         self,
-        store: MutableMapping | str | PathLike[str] | None = None,
+        store: ZarrStoreLike | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
         synchronizer=None,
@@ -4299,7 +4300,7 @@ class DataArray(
 
     def to_zarr(
         self,
-        store: MutableMapping | str | PathLike[str] | None = None,
+        store: ZarrStoreLike | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
         synchronizer=None,
@@ -4336,7 +4337,7 @@ class DataArray(
 
         Parameters
         ----------
-        store : MutableMapping, str or path-like, optional
+        store : zarr.storage.StoreLike, optional
             Store or path to directory in local or remote file system.
         chunk_store : MutableMapping, str or path-like, optional
             Store or path to directory in local or remote file system only for Zarr
@@ -4487,7 +4488,8 @@ class DataArray(
         :ref:`io.zarr`
             The I/O user guide, with more details and examples.
         """
-        from xarray.backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE, to_zarr
+        from xarray.backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE
+        from xarray.backends.writers import to_zarr
 
         if self.name is None:
             # If no name is set then use a generic xarray name
@@ -4660,14 +4662,14 @@ class DataArray(
         return result
 
     def to_iris(self) -> iris_Cube:
-        """Convert this array into a iris.cube.Cube"""
+        """Convert this array into an iris.cube.Cube"""
         from xarray.convert import to_iris
 
         return to_iris(self)
 
     @classmethod
     def from_iris(cls, cube: iris_Cube) -> Self:
-        """Convert a iris.cube.Cube into an xarray.DataArray"""
+        """Convert an iris.cube.Cube into an xarray.DataArray"""
         from xarray.convert import from_iris
 
         return from_iris(cube)
@@ -5368,8 +5370,8 @@ class DataArray(
                [3.6 , 5.75, 6.  , 1.7 ],
                [6.5 , 7.3 , 9.4 , 1.9 ]])
         Coordinates:
-          * y         (y) float64 32B 1.0 1.5 2.0 2.5
           * quantile  (quantile) float64 24B 0.0 0.5 1.0
+          * y         (y) float64 32B 1.0 1.5 2.0 2.5
 
         References
         ----------

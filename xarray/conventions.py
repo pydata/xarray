@@ -4,7 +4,7 @@ import itertools
 import warnings
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, cast
 
 import numpy as np
 
@@ -414,13 +414,16 @@ def decode_cf_variables(
                 v,
                 concat_characters=_item_or_default(concat_characters, k, True),
                 mask_and_scale=_item_or_default(mask_and_scale, k, True),
-                decode_times=_item_or_default(decode_times, k, True),
+                decode_times=cast(
+                    bool | CFDatetimeCoder, _item_or_default(decode_times, k, True)
+                ),
                 stack_char_dim=stack_char_dim,
                 use_cftime=_item_or_default(use_cftime, k, None),
                 decode_timedelta=_item_or_default(decode_timedelta, k, None),
             )
         except Exception as e:
-            raise type(e)(f"Failed to decode variable {k!r}: {e}") from e
+            e.add_note(f"Raised while decoding variable {k!r} with value {v!r}")
+            raise
         if decode_coords in [True, "coordinates", "all"]:
             var_attrs = new_vars[k].attrs
             if "coordinates" in var_attrs:

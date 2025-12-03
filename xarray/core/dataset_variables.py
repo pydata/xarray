@@ -1,6 +1,5 @@
 import typing
 from collections.abc import Hashable, Iterator, Mapping
-from typing import Any
 
 import numpy as np
 
@@ -13,7 +12,7 @@ if typing.TYPE_CHECKING:
     from xarray.core.dataset import Dataset
 
 
-class DataVariables(Mapping[Any, "DataArray"]):
+class DataVariables(Mapping[Hashable, "DataArray"]):
     __slots__ = ("_dataset",)
 
     def __init__(self, dataset: "Dataset"):

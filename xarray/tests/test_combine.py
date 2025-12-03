@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from itertools import product
 
 import numpy as np
@@ -8,6 +9,7 @@ import pytest
 from xarray import (
     DataArray,
     Dataset,
+    DataTree,
     MergeError,
     combine_by_coords,
     combine_nested,
@@ -28,7 +30,7 @@ from xarray.tests import assert_equal, assert_identical, requires_cftime
 from xarray.tests.test_dataset import create_test_data
 
 
-def assert_combined_tile_ids_equal(dict1, dict2):
+def assert_combined_tile_ids_equal(dict1: dict, dict2: dict) -> None:
     assert len(dict1) == len(dict2)
     for k in dict1.keys():
         assert k in dict2.keys()
@@ -41,7 +43,9 @@ class TestTileIDsFromNestedList:
         input = [ds(0), ds(1)]
 
         expected = {(0,): ds(0), (1,): ds(1)}
-        actual = _infer_concat_order_from_positions(input)
+        actual: dict[tuple[int, ...], Dataset] = _infer_concat_order_from_positions(
+            input
+        )
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_2d(self):
@@ -56,7 +60,9 @@ class TestTileIDsFromNestedList:
             (2, 0): ds(4),
             (2, 1): ds(5),
         }
-        actual = _infer_concat_order_from_positions(input)
+        actual: dict[tuple[int, ...], Dataset] = _infer_concat_order_from_positions(
+            input
+        )
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_3d(self):
@@ -80,7 +86,9 @@ class TestTileIDsFromNestedList:
             (1, 2, 0): ds(10),
             (1, 2, 1): ds(11),
         }
-        actual = _infer_concat_order_from_positions(input)
+        actual: dict[tuple[int, ...], Dataset] = _infer_concat_order_from_positions(
+            input
+        )
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_single_dataset(self):
@@ -88,7 +96,9 @@ class TestTileIDsFromNestedList:
         input = [ds]
 
         expected = {(0,): ds}
-        actual = _infer_concat_order_from_positions(input)
+        actual: dict[tuple[int, ...], Dataset] = _infer_concat_order_from_positions(
+            input
+        )
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_redundant_nesting(self):
@@ -96,24 +106,30 @@ class TestTileIDsFromNestedList:
         input = [[ds(0)], [ds(1)]]
 
         expected = {(0, 0): ds(0), (1, 0): ds(1)}
-        actual = _infer_concat_order_from_positions(input)
+        actual: dict[tuple[int, ...], Dataset] = _infer_concat_order_from_positions(
+            input
+        )
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_ignore_empty_list(self):
         ds = create_test_data(0)
-        input = [ds, []]
+        input: list = [ds, []]
         expected = {(0,): ds}
-        actual = _infer_concat_order_from_positions(input)
+        actual: dict[tuple[int, ...], Dataset] = _infer_concat_order_from_positions(
+            input
+        )
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_uneven_depth_input(self):
         # Auto_combine won't work on ragged input
         # but this is just to increase test coverage
         ds = create_test_data
-        input = [ds(0), [ds(1), ds(2)]]
+        input: list = [ds(0), [ds(1), ds(2)]]
 
         expected = {(0,): ds(0), (1, 0): ds(1), (1, 1): ds(2)}
-        actual = _infer_concat_order_from_positions(input)
+        actual: dict[tuple[int, ...], Dataset] = _infer_concat_order_from_positions(
+            input
+        )
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_uneven_length_input(self):
@@ -123,7 +139,9 @@ class TestTileIDsFromNestedList:
         input = [[ds(0)], [ds(1), ds(2)]]
 
         expected = {(0, 0): ds(0), (1, 0): ds(1), (1, 1): ds(2)}
-        actual = _infer_concat_order_from_positions(input)
+        actual: dict[tuple[int, ...], Dataset] = _infer_concat_order_from_positions(
+            input
+        )
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_infer_from_datasets(self):
@@ -131,7 +149,9 @@ class TestTileIDsFromNestedList:
         input = [ds(0), ds(1)]
 
         expected = {(0,): ds(0), (1,): ds(1)}
-        actual = _infer_concat_order_from_positions(input)
+        actual: dict[tuple[int, ...], Dataset] = _infer_concat_order_from_positions(
+            input
+        )
         assert_combined_tile_ids_equal(expected, actual)
 
 
@@ -581,8 +601,8 @@ class TestNestedCombine:
         expected_dict["override"] = expected.copy(deep=True)
         expected_dict["override"].attrs = {"a": 1}
         f = lambda attrs, context: attrs[0]
-        expected_dict[f] = expected.copy(deep=True)
-        expected_dict[f].attrs = f([{"a": 1}], None)
+        expected_dict[f] = expected.copy(deep=True)  # type: ignore[index]
+        expected_dict[f].attrs = f([{"a": 1}], None)  # type: ignore[index]
 
         datasets = [[ds(0), ds(1), ds(2)], [ds(3), ds(4), ds(5)]]
 
@@ -607,7 +627,7 @@ class TestNestedCombine:
                 concat_dim=["dim1", "dim2"],
                 data_vars="all",
                 combine_attrs=combine_attrs,
-            )
+            )  # type: ignore[call-overload]
             assert_identical(result, expected)
 
     def test_combine_nested_missing_data_new_dim(self):
@@ -632,11 +652,11 @@ class TestNestedCombine:
         ):
             combine_nested(datasets, concat_dim=["dim1", "dim2"])
 
-        datasets = [[ds(0), ds(1)], [[ds(3), ds(4)]]]
+        datasets2: list = [[ds(0), ds(1)], [[ds(3), ds(4)]]]
         with pytest.raises(
             ValueError, match=r"sub-lists do not have consistent depths"
         ):
-            combine_nested(datasets, concat_dim=["dim1", "dim2"])
+            combine_nested(datasets2, concat_dim=["dim1", "dim2"])
 
         datasets = [[ds(0), ds(1)], [ds(3), ds(4)]]
         with pytest.raises(ValueError, match=r"concat_dims has length"):
@@ -746,7 +766,21 @@ class TestNestedCombine:
         with pytest.raises(
             ValueError, match=r"Can't combine datasets with unnamed arrays."
         ):
-            combine_nested(objs, "x")
+            combine_nested(objs, "x")  # type: ignore[arg-type]
+
+    def test_nested_combine_mixed_datatrees_and_datasets(self):
+        objs = [DataTree.from_dict({"foo": 0}), Dataset({"foo": 1})]
+        with pytest.raises(
+            ValueError,
+            match=r"Can't combine a mix of DataTree and non-DataTree objects.",
+        ):
+            combine_nested(objs, concat_dim="x")  # type: ignore[arg-type]
+
+    def test_datatree(self):
+        objs = [DataTree.from_dict({"foo": 0}), DataTree.from_dict({"foo": 1})]
+        expected = DataTree.from_dict({"foo": ("x", [0, 1])})
+        actual = combine_nested(objs, concat_dim="x")
+        assert expected.identical(actual)
 
 
 class TestCombineDatasetsbyCoords:
@@ -1019,7 +1053,7 @@ class TestCombineDatasetsbyCoords:
         objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]
         actual = combine_by_coords(objs, data_vars="all")
         expected = data
-        assert expected.broadcast_equals(actual)
+        assert expected.broadcast_equals(actual)  # type: ignore[arg-type]
 
         with set_options(use_new_combine_kwarg_defaults=True):
             actual = combine_by_coords(objs)
@@ -1067,7 +1101,7 @@ class TestCombineDatasetsbyCoords:
         # https://github.com/pydata/xarray/issues/508
         datasets = [Dataset({"x": 0}, {"y": 0}), Dataset({"x": 1}, {"y": 1, "z": 1})]
         with pytest.raises(ValueError):
-            combine_by_coords(datasets, "y")
+            combine_by_coords(datasets, "y")  # type: ignore[arg-type]
 
     def test_combine_by_coords_no_concat(self):
         objs = [Dataset({"x": 0}), Dataset({"y": 1})]
@@ -1191,6 +1225,16 @@ class TestCombineMixedObjectsbyCoords:
         actual = combine_by_coords([named_da1, named_da2], join="outer")
         expected = merge([named_da1, named_da2], compat="no_conflicts", join="outer")
         assert_identical(expected, actual)
+
+    def test_combine_by_coords_datatree(self):
+        tree = DataTree.from_dict({"/nested/foo": ("x", [10])}, coords={"x": [1]})
+        with pytest.raises(
+            NotImplementedError,
+            match=re.escape(
+                "combine_by_coords() does not yet support DataTree objects."
+            ),
+        ):
+            combine_by_coords([tree])  # type: ignore[list-item]
 
 
 class TestNewDefaults:

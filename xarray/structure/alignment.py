@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
 from itertools import starmap
-from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, cast, get_args, overload
+from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, get_args, overload
 
 import numpy as np
 import pandas as pd
@@ -30,7 +30,6 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.types import (
         Alignable,
-        JoinOptions,
         T_DataArray,
         T_Dataset,
         T_DuckArray,
@@ -1166,9 +1165,9 @@ def _broadcast_helper(
 
     # remove casts once https://github.com/python/mypy/issues/12800 is resolved
     if isinstance(arg, DataArray):
-        return cast(T_Alignable, _broadcast_array(arg))
+        return _broadcast_array(arg)  # type: ignore[return-value,unused-ignore]
     elif isinstance(arg, Dataset):
-        return cast(T_Alignable, _broadcast_dataset(arg))
+        return _broadcast_dataset(arg)  # type: ignore[return-value,unused-ignore]
     else:
         raise ValueError("all input must be Dataset or DataArray objects")
 
