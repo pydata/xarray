@@ -3,106 +3,6 @@ preview = ["pixi-build"]
 channels = ["conda-forge", "nodefaults"]
 platforms = ["win-64", "linux-64", "osx-arm64"]
 
-[environments]
-# Testing
-# test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
-test-py313-no-numba = { features = [
-  "py313",
-  "test",
-  "backends",
-  "accel",
-  "dask",
-  "viz",
-  "extras",
-] }
-test-py313-no-dask = { features = [
-  "py312",
-  "test",
-  "backends",
-  "accel",
-  "numba",
-  "viz",
-  "extras",
-] }
-test-py313 = { features = [
-  "py313",
-  "test",
-  "backends",
-  "accel",
-  "numba",
-  "dask",
-  "viz",
-  "extras",
-] }
-test-nightly = { features = [
-  "py313",
-  "nightly",
-  "test",
-  # "typing",
-], no-default-feature = true }
-
-
-test-py311 = { features = [
-  "py311",
-  "test",
-  "backends",
-  "accel",
-  "numba",
-  "dask",
-  "viz",
-  "extras",
-] }
-
-test-py311-with-typing = { features = [
-  "py311",
-  "test",
-  "backends",
-  "accel",
-  "numba",
-  "dask",
-  "viz",
-  "extras",
-  "typing",
-] }
-
-test-py313-with-typing = { features = [
-  "py313",
-  "test",
-  "backends",
-  "accel",
-  "numba",
-  "dask",
-  "viz",
-  "extras",
-  "typing",
-] }
-
-test-bare-minimum = { features = ["test", "minimal"] }
-test-bare-min-and-scipy = { features = [
-  "test",
-  "minimal",
-  "minimum-scipy",
-] }
-test-min-versions = { features = [
-  "test",
-  "minimal",
-  "minimum-scipy",
-  "min-versions",
-] }
-
-
-# Extra
-typing = { features = ["typing"] }
-doc = { features = [
-  "doc",
-  "backends",
-  "test",
-  "accel",
-  "viz",
-  "extras",
-] }
-pre-commit = { features = ["pre-commit"], no-default-feature = true }
-
 [package]
 name = "xarray"
 version = "dynamic" # dynamic versioning needs better support in pixi https://github.com/prefix-dev/pixi/issues/2923#issuecomment-2598460666 . Putting `version = "dynamic"` here for now until pixi recommends something else.
@@ -377,3 +277,103 @@ pre-commit = "*"
 
 [feature.pre-commit.tasks]
 pre-commit = { cmd = "pre-commit" }
+
+[environments]
+# Testing
+# test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
+test-py313-no-numba = { features = [
+  "py313",
+  "test",
+  "backends",
+  "accel",
+  "dask",
+  "viz",
+  "extras",
+] }
+test-py313-no-dask = { features = [
+  "py312",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "viz",
+  "extras",
+] }
+test-py313 = { features = [
+  "py313",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+] }
+test-nightly = { features = [
+  "py313",
+  "nightly",
+  "test",
+  # "typing",
+], no-default-feature = true }
+
+
+test-py311 = { features = [
+  "py311",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+] }
+
+test-py311-with-typing = { features = [
+  "py311",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+  "typing",
+] }
+
+test-py313-with-typing = { features = [
+  "py313",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+  "typing",
+] }
+
+test-bare-minimum = { features = ["test", "minimal"] }
+test-bare-min-and-scipy = { features = [
+  "test",
+  "minimal",
+  "minimum-scipy",
+] }
+test-min-versions = { features = [
+  "test",
+  "minimal",
+  "minimum-scipy",
+  "min-versions",
+] }
+
+
+# Extra
+typing = { features = ["typing"] }
+doc = { features = [
+  "doc",
+  "backends",
+  "test",
+  "accel",
+  "viz",
+  "extras",
+] }
+pre-commit = { features = ["pre-commit"], no-default-feature = true }
