@@ -6,7 +6,7 @@ platforms = ["win-64", "linux-64", "osx-arm64"]
 [environments]
 # Testing
 # test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
-test-no-numba = { features = [
+test-py313-no-numba = { features = [
   "py313",
   "test",
   "backends",
@@ -15,7 +15,7 @@ test-no-numba = { features = [
   "viz",
   "extras",
 ] }
-test-no-dask = { features = [
+test-py313-no-dask = { features = [
   "py312",
   "test",
   "backends",
@@ -24,7 +24,7 @@ test-no-dask = { features = [
   "viz",
   "extras",
 ] }
-test = { features = [
+test-py313 = { features = [
   "py313",
   "test",
   "backends",
@@ -65,7 +65,7 @@ test-py311-with-typing = { features = [
   "typing",
 ] }
 
-test-with-typing = { features = [
+test-py313-with-typing = { features = [
   "py313",
   "test",
   "backends",
