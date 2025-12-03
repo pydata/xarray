@@ -291,7 +291,7 @@ objects is that they support arithmetic with :py:class:`datetime.timedelta`, but
 This means that certain xarray operations (such as :py:meth:`~xarray.DataArray.diff`)
 may produce ``timedelta64`` results that cannot be directly combined with ``cftime`` coordinates.
 
-For example, lets define a time axis using ``cftime`` objects:
+For example, let's define a time axis using ``cftime`` objects:
 
 .. jupyter-execute::
 
