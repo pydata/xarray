@@ -18,9 +18,7 @@ New Features
   when downloading dap4 (opendap) dimensions data (:issue:`10628`, :pull:`10629`). In addition ``checksums=True|False``
   is added as optional argument to be passed to ``pydap`` backend.
   By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
-
-- :py:func:`combine_nested` now support :py:class:`DataTree` objects
-  (:pull:`10849`).
+- :py:func:`combine_nested` now supports :py:class:`DataTree` objects (:pull:`10849`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking Changes
@@ -35,8 +33,8 @@ Bug Fixes
 ~~~~~~~~~
 
 - When assigning an indexed coordinate to a data variable or coordinate, coerce it from
-  ``IndexVariable`` to ``Variable`` (:issue:`9859`, :issue:`10829`, :pull:`10909`)
-  By `Julia Signell <https://github.com/jsignell>`_
+  ``IndexVariable`` to ``Variable`` (:issue:`9859`, :issue:`10829`, :pull:`10909`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 - The NetCDF4 backend will now claim to be able to read any URL except for one that contains
   the substring zarr. This restores backward compatibility after
   :pull:`10804` broke workflows that relied on ``xr.open_dataset("http://...")``
