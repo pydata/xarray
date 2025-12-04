@@ -25,7 +25,8 @@ jobs:
           fetch-depth: 0
 
       - name: Set up conda environment
-        uses: mamba-org/setup-micromamba@v2
+        # uses: mamba-org/setup-micromamba@v2
+        uses: conda-incubator/setup-miniconda@v2
         with:
           micromamba-version: "1.5.10-0"
           environment-file: ${{env.CONDA_ENV_FILE}}
@@ -55,14 +56,34 @@ jobs:
           echo "Contender: ${GITHUB_SHA} ($PR_HEAD_LABEL)"
           # Run benchmarks for current commit against base
           ASV_OPTIONS="--split --show-stderr --factor $ASV_FACTOR"
-          asv continuous $ASV_OPTIONS ${{ github.event.pull_request.base.sha }} ${GITHUB_SHA} \
+          # asv continuous $ASV_OPTIONS ${{ github.event.pull_request.base.sha }} ${GITHUB_SHA} \
+              # | sed "/Traceback \|failed$\|PERFORMANCE DECREASED/ s/^/::error::/" \
+              # | tee benchmarks.log
+          asv continuous origin/${{github.base_ref}} HEAD $ASV_OPTIONS \
               | sed "/Traceback \|failed$\|PERFORMANCE DECREASED/ s/^/::error::/" \
               | tee benchmarks.log
+          asv compare origin/${{github.base_ref}} HEAD --split --sort ratio \
+              | tee -a asv_compare.log
+          mkdir comment_log
+          mv asv_compare.log comment_log/
           # Report and export results for subsequent steps
           if grep "Traceback \|failed\|PERFORMANCE DECREASED" benchmarks.log > /dev/null ; then
               exit 1
           fi
         working-directory: ${{ env.ASV_DIR }}
+
+      - name: Save PR Number
+        env:
+          PR_NUMBER: ${{github.event.pull_request.number}}
+        run: |
+          echo $PR_NUMBER > ./comment_log/pr_number
+        working-directory: ${{ env.ASV_DIR }}
+
+      - name: Upload the compare log
+        uses: actions/upload-artifact@v4
+        with:
+          name: comment_log
+          path: benchmark/comment_log/
 
       - name: Add instructions to artifact
         if: always()
