@@ -279,6 +279,13 @@ pre-commit = "*"
 [feature.pre-commit.tasks]
 pre-commit = { cmd = "pre-commit" }
 
+[feature.release.dependencies]
+gitpython = "*"
+cytoolz = "*"
+
+[feature.release.tasks]
+release-contributors = "python ci/release_contributors.py"
+
 [environments]
 # Testing
 # test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
@@ -378,3 +385,4 @@ doc = { features = [
   "extras",
 ] }
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
+release = { features = ["release"], no-default-feature = true }
