@@ -56,6 +56,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Change the development workflow to use ``pixi`` (:issue:`10732`, :pull:`10888`).
+  By `Nick Nodgskin <https://github.com/VeckoTheGecko>`_.
 
 
 .. _whats-new.2025.11.0:
