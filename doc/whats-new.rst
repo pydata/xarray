@@ -46,6 +46,8 @@ Bug Fixes
   By `Justus Magin <https://github.com/keewis>`_.
 - Support decoding unsigned integers to ``np.timedelta64``.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Properly handle internal type promotion and ``NA`` objects for extension arrays (:pull:`10423`).
+  By `Ilan Gold <https://github.com/ilan-gold>`_.
 
 
 Documentation
