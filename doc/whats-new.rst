@@ -21,14 +21,6 @@ New Features
 - :py:func:`combine_nested` now supports :py:class:`DataTree` objects (:pull:`10849`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
-Breaking Changes
-~~~~~~~~~~~~~~~~
-
-
-Deprecations
-~~~~~~~~~~~~
-
-
 Bug Fixes
 ~~~~~~~~~
 
@@ -49,7 +41,6 @@ Bug Fixes
 - Properly handle internal type promotion and ``NA`` objects for extension arrays (:pull:`10423`).
   By `Ilan Gold <https://github.com/ilan-gold>`_.
 
-
 Documentation
 ~~~~~~~~~~~~~
 
@@ -60,7 +51,6 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 - Change the development workflow to use ``pixi`` (:issue:`10732`, :pull:`10888`).
   By `Nick Nodgskin <https://github.com/VeckoTheGecko>`_.
-
 
 .. _whats-new.2025.11.0:
 
