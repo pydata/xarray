@@ -626,6 +626,8 @@ def _numbers_to_timedelta(
         nan = np.asarray(np.isnan(flat_num))
     elif flat_num.dtype.kind == "i":
         nan = np.asarray(flat_num == np.iinfo(np.int64).min)
+    elif flat_num.dtype.kind == "u":
+        nan = np.broadcast_to(np.asarray(False), flat_num.shape)
 
     # in case we need to change the unit, we fix the numbers here
     # this should be safe, as errors would have been raised above
@@ -1379,9 +1381,9 @@ class CFDatetimeCoder(VariableCoder):
         self.time_unit = time_unit
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if np.issubdtype(
-            variable.data.dtype, np.datetime64
-        ) or contains_cftime_datetimes(variable):
+        if np.issubdtype(variable.dtype, np.datetime64) or contains_cftime_datetimes(
+            variable
+        ):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
 
             units = encoding.pop("units", None)
@@ -1499,7 +1501,7 @@ class CFTimedeltaCoder(VariableCoder):
         self._emit_decode_timedelta_future_warning = False
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if np.issubdtype(variable.data.dtype, np.timedelta64):
+        if np.issubdtype(variable.dtype, np.timedelta64):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
             dtype = encoding.get("dtype", None)
             units = encoding.pop("units", None)

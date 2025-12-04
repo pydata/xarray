@@ -48,7 +48,7 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      PIXI_ENV: test
+      PIXI_ENV: "test-py313"
     steps:
       - uses: actions/checkout@v6
         with:
@@ -75,7 +75,7 @@ jobs:
 
       - name: Version info
         run: |
-          pixi run -e ${{env.PIXI_ENV}} python xarray/util/print_versions.py
+          pixi run -e ${{env.PIXI_ENV}} -- python xarray/util/print_versions.py
       - name: Run doctests
         run: |
           # Raise an error if there are warnings in the doctests, with `-Werror`.
@@ -84,7 +84,7 @@ jobs:
           #
           # If dependencies emit warnings we can't do anything about, add ignores to
           # `xarray/tests/__init__.py`.
-          pixi run -e ${{env.PIXI_ENV}} python -m pytest --doctest-modules xarray --ignore xarray/tests -Werror
+          pixi run -e ${{env.PIXI_ENV}} -- python -m pytest --doctest-modules xarray --ignore xarray/tests -Werror
 
   mypy:
     name: Mypy
@@ -94,7 +94,7 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      PIXI_ENV: test-with-typing
+      PIXI_ENV: test-py313-with-typing
 
     steps:
       - uses: actions/checkout@v6
@@ -117,14 +117,14 @@ jobs:
       - name: set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-          echo "PYTHON_VERSION=$(pixi run -e ${{env.PIXI_ENV}} python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
+          echo "PYTHON_VERSION=$(pixi run -e ${{env.PIXI_ENV}} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
       - name: Version info
         run: |
-          pixi run -e ${{env.PIXI_ENV}} python xarray/util/print_versions.py
+          pixi run -e ${{env.PIXI_ENV}} -- python xarray/util/print_versions.py
 
       - name: Run mypy
         run: |
-          pixi run -e ${{env.PIXI_ENV}} python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
+          pixi run -e ${{env.PIXI_ENV}} -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
       - name: Upload mypy coverage to Codecov
         uses: codecov/codecov-action@v5.5.1
@@ -166,14 +166,14 @@ jobs:
       - name: set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-          echo "PYTHON_VERSION=$(pixi run -e ${{env.PIXI_ENV}} python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
+          echo "PYTHON_VERSION=$(pixi run -e ${{env.PIXI_ENV}} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
       - name: Version info
         run: |
-          pixi run -e ${{env.PIXI_ENV}} python xarray/util/print_versions.py
+          pixi run -e ${{env.PIXI_ENV}} -- python xarray/util/print_versions.py
 
       - name: Run mypy
         run: |
-          pixi run -e ${{env.PIXI_ENV}} python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
+          pixi run -e ${{env.PIXI_ENV}} -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
       - name: Upload mypy coverage to Codecov
         uses: codecov/codecov-action@v5.5.1
@@ -191,7 +191,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pixi-env: ["test-with-typing", "test-py311-with-typing"]
+        pixi-env: ["test-py313-with-typing", "test-py311-with-typing"]
     if: |
       always()
       && (
@@ -223,14 +223,14 @@ jobs:
       - name: set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-          echo "PYTHON_VERSION=$(pixi run -e ${{ matrix.pixi-env }} python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
+          echo "PYTHON_VERSION=$(pixi run -e ${{ matrix.pixi-env }} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
       - name: Version info
         run: |
-          pixi run -e ${{ matrix.pixi-env }} python xarray/util/print_versions.py
+          pixi run -e ${{ matrix.pixi-env }} -- python xarray/util/print_versions.py
 
       - name: Run pyright
         run: |
-          pixi run -e ${{ matrix.pixi-env }} python -m pyright xarray/
+          pixi run -e ${{ matrix.pixi-env }} -- python -m pyright xarray/
 
       - name: Upload pyright coverage to Codecov
         uses: codecov/codecov-action@v5.5.1
