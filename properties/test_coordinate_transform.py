@@ -50,7 +50,7 @@ def create_transform_da(sizes: dict[str, int]) -> xr.DataArray:
         index = CoordinateTransformIndex(transform)
         ds = ds.assign_coords(xr.Coordinates.from_xindex(index))
 
-        return ds[DATA_VAR_NAME]
+    return ds[DATA_VAR_NAME]
 
 
 def create_pandas_da(sizes: dict[str, int]) -> xr.DataArray:
