@@ -4476,6 +4476,57 @@ class TestDataset:
         dataset = Dataset({key: ("dim0", range(1)) for key in keys})
         assert_identical(dataset, dataset[keys])
 
+    def test_subset(self) -> None:
+        data = create_test_data()
+
+        # Test with list of variables
+        result = data.subset(["var1", "var2"])
+        expected = Dataset({"var1": data["var1"], "var2": data["var2"]})
+        assert_identical(result, expected)
+
+        # Test with tuple (the original issue from #3894)
+        vars_tuple = ("var1", "var2")
+        result_tuple = data.subset(vars_tuple)
+        assert_identical(result_tuple, expected)
+
+        # Test type stability - always returns a Dataset
+        result_single = data.subset(["var1"])
+        expected_single = Dataset({"var1": data["var1"]})
+        assert_identical(result_single, expected_single)
+
+        # Test that coordinates are preserved
+        ds = Dataset(
+            {
+                "temperature": (["x", "y"], [[1, 2], [3, 4]]),
+                "pressure": (["x", "y"], [[5, 6], [7, 8]]),
+                "humidity": (["x"], [0.5, 0.6]),
+            },
+            coords={"x": [10, 20], "y": [30, 40]},
+        )
+        result_coords = ds.subset(["temperature", "humidity"])
+        expected_coords = Dataset(
+            {
+                "temperature": (["x", "y"], [[1, 2], [3, 4]]),
+                "humidity": (["x"], [0.5, 0.6]),
+            },
+            coords={"x": [10, 20], "y": [30, 40]},
+        )
+        assert_identical(result_coords, expected_coords)
+
+        # Test error handling for non-existent variable
+        with pytest.raises(KeyError):
+            data.subset(["var1", "notfound"])
+
+        # Test that non-sequence types raise TypeError
+        with pytest.raises(TypeError, match="names must be a sequence"):
+            data.subset({"var1", "var2"})  # type: ignore[arg-type]  # set
+
+        with pytest.raises(TypeError, match="names must be a sequence"):
+            data.subset(v for v in ["var1", "var2"])  # type: ignore[arg-type]  # generator
+
+        with pytest.raises(TypeError, match="names must be a sequence"):
+            data.subset("var1")  # string (valid Sequence type, but explicitly rejected)
+
     def test_getitem_extra_dim_index_coord(self) -> None:
         class AnyIndex(Index):
             def should_add_coord_to_array(self, name, var, dims):
