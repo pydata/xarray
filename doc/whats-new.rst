@@ -10,6 +10,10 @@ What's New
 
 v2025.12.0 (unreleased)
 -----------------------
+This release rolls back the default engine for HTTP urls, adds support for :py:class:`DataTree` objects in ``combine_nested`` and contains numerous bug fixes.
+
+Thanks to the 16 contributors to this release:
+Benoit Bovy, Christine P. Chai, Deepak Cherian, Dhruva Kumar Kaushal, Ian Hunt-Isaak, Ilan Gold, Illviljan, Julia Signell, Justus Magin, Lars Buntemeyer, Maximilian Roos, Miguel Jimenez, Nick Hodgskin, Richard Berg, Spencer Clark and Stephan Hoyer
 
 New Features
 ~~~~~~~~~~~~
