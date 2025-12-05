@@ -154,7 +154,8 @@ Here is a small example of a meta-index for geospatial, raster datasets (i.e.,
 regularly spaced 2-dimensional data) that internally relies on two
 ``PandasIndex`` instances for the x and y dimensions respectively:
 
-.. code-block:: python
+.. jupyter-execute::
+
 
     from xarray import Index
     from xarray.core.indexes import PandasIndex
@@ -214,7 +215,7 @@ How to use a custom index
 You can use :py:meth:`Dataset.set_xindex` or :py:meth:`DataArray.set_xindex` to assign a
 custom index to a Dataset or DataArray, e.g., using the ``RasterIndex`` above:
 
-.. code-block:: python
+.. jupyter-execute::
 
     import numpy as np
     import xarray as xr
