@@ -8,8 +8,8 @@ What's New
 
 .. _whats-new.2025.12.0:
 
-v2025.12.0 (unreleased)
------------------------
+v2025.12.0 (Dec 5, 2025)
+------------------------
 This release rolls back the default engine for HTTP urls, adds support for :py:class:`DataTree` objects in ``combine_nested`` and contains numerous bug fixes.
 
 Thanks to the 16 contributors to this release:
