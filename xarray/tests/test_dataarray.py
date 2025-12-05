@@ -49,6 +49,7 @@ from xarray.tests import (
     assert_no_warnings,
     has_dask,
     has_dask_ge_2025_1_0,
+    has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -57,6 +58,7 @@ from xarray.tests import (
     requires_iris,
     requires_numexpr,
     requires_pint,
+    requires_pyarrow,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -1702,6 +1704,20 @@ class TestDataArray:
         assert_identical(actual, expected, check_default_indexes=False)
         assert "x_bnds" not in actual.dims
 
+    def test_assign_coords_uses_base_variable_class(self) -> None:
+        a = DataArray([0, 1, 3], dims=["x"], coords={"x": [0, 1, 2]})
+        a = a.assign_coords(foo=a.x)
+
+        # explicit check
+        assert isinstance(a["x"].variable, IndexVariable)
+        assert not isinstance(a["foo"].variable, IndexVariable)
+
+        # test internal invariant checks when comparing the datasets
+        expected = DataArray(
+            [0, 1, 3], dims=["x"], coords={"x": [0, 1, 2], "foo": ("x", [0, 1, 2])}
+        )
+        assert_identical(a, expected)
+
     def test_coords_alignment(self) -> None:
         lhs = DataArray([1, 2, 3], [("x", [0, 1, 2])])
         rhs = DataArray([2, 3, 4], [("x", [1, 2, 3])])
@@ -1866,6 +1882,92 @@ class TestDataArray:
         assert y.dtype == np.float32, (
             "Dtype of reindexed DataArray should remain float32"
         )
+
+    @pytest.mark.parametrize(
+        "extension_array",
+        [
+            pytest.param(pd.Categorical(["a", "b", "c"]), id="categorical"),
+        ]
+        + (
+            [
+                pytest.param(
+                    pd.array([1, 2, 3], dtype="int64[pyarrow]"),
+                    id="int64[pyarrow]",
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
+    )
+    def test_reindex_extension_array(self, extension_array) -> None:
+        srs = pd.Series(index=["e", "f", "g"], data=extension_array)
+        x = srs.to_xarray()
+        y = x.reindex(index=["f", "g", "z"])
+        assert_array_equal(x, extension_array)
+        pd.testing.assert_extension_array_equal(
+            y.data,
+            extension_array._from_sequence(
+                [extension_array[1], extension_array[2], pd.NA],
+                dtype=extension_array.dtype,
+            ),
+        )
+        assert x.dtype == y.dtype == extension_array.dtype
+
+    @pytest.mark.parametrize(
+        "fill_value,extension_array",
+        [
+            pytest.param("a", pd.Categorical([pd.NA, "a", "b"]), id="categorical"),
+        ]
+        + (
+            [
+                pytest.param(
+                    0,
+                    pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
+                    id="int64[pyarrow]",
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
+    )
+    def test_fillna_extension_array(self, fill_value, extension_array) -> None:
+        srs: pd.Series = pd.Series(index=np.array([1, 2, 3]), data=extension_array)
+        da = srs.to_xarray()
+        filled = da.fillna(fill_value)
+        assert filled.dtype == srs.dtype
+        assert (filled.values == np.array([fill_value, *(srs.values[1:])])).all()
+
+    @requires_pyarrow
+    def test_fillna_extension_array_bad_val(self) -> None:
+        srs: pd.Series = pd.Series(
+            index=np.array([1, 2, 3]),
+            data=pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
+        )
+        da = srs.to_xarray()
+        with pytest.raises(ValueError):
+            da.fillna("a")
+
+    @pytest.mark.parametrize(
+        "extension_array",
+        [
+            pytest.param(pd.Categorical([pd.NA, "a", "b"]), id="categorical"),
+        ]
+        + (
+            [
+                pytest.param(
+                    pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"), id="int64[pyarrow]"
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
+    )
+    def test_dropna_extension_array(self, extension_array) -> None:
+        srs: pd.Series = pd.Series(index=np.array([1, 2, 3]), data=extension_array)
+        da = srs.to_xarray()
+        filled = da.dropna("index")
+        assert filled.dtype == srs.dtype
+        assert (filled.values == srs.values[1:]).all()
 
     def test_rename(self) -> None:
         da = xr.DataArray(

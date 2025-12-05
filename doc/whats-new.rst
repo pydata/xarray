@@ -34,6 +34,9 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- When assigning an indexed coordinate to a data variable or coordinate, coerce it from
+  ``IndexVariable`` to ``Variable`` (:issue:`9859`, :issue:`10829`, :pull:`10909`)
+  By `Julia Signell <https://github.com/jsignell>`_
 - The NetCDF4 backend will now claim to be able to read any URL except for one that contains
   the substring zarr. This restores backward compatibility after
   :pull:`10804` broke workflows that relied on ``xr.open_dataset("http://...")``
@@ -41,10 +44,17 @@ Bug Fixes
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 - Always normalize slices when indexing ``LazilyIndexedArray`` instances (:issue:`10941`, :pull:`10948`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Avoid casting custom indexes in ``Dataset.drop_attrs`` (:pull:`10961`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Support decoding unsigned integers to ``np.timedelta64``.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Added section on the `limitations of cftime arithmetic <https://docs.xarray.dev/en/stable/user-guide/weather-climate.html#arithmetic-limitations-with-non-standard-calendars>`_ (:pull:`10653`).
+  By `Lars Buntemeyer <https://github.com/larsbuntemeyer>`_
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
