@@ -172,11 +172,12 @@ regularly spaced 2-dimensional data) that internally relies on two
             self._xy_indexes = xy_indexes
 
         @classmethod
-        def from_variables(cls, variables):
+        def from_variables(cls, variables, *, options):
             assert len(variables) == 2
 
             xy_indexes = {
-                k: PandasIndex.from_variables({k: v}) for k, v in variables.items()
+                k: PandasIndex.from_variables({k: v}, options=options)
+                for k, v in variables.items()
             }
 
             return cls(xy_indexes)
