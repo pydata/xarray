@@ -561,13 +561,13 @@ def save_mfdataset(
 
     >>> ds = xr.Dataset(
     ...     {"a": ("time", np.linspace(0, 1, 48))},
-    ...     coords={"time": pd.date_range("2010-01-01", freq="ME", periods=48)},
+    ...     coords={"time": pd.date_range("2010-01-01", freq="MS", periods=48)},
     ... )
     >>> ds
     <xarray.Dataset> Size: 768B
     Dimensions:  (time: 48)
     Coordinates:
-      * time     (time) datetime64[ns] 384B 2010-01-31 2010-02-28 ... 2013-12-31
+      * time     (time) datetime64[ns] 384B 2010-01-01 2010-02-01 ... 2013-12-01
     Data variables:
         a        (time) float64 384B 0.0 0.02128 0.04255 ... 0.9574 0.9787 1.0
     >>> years, datasets = zip(*ds.groupby("time.year"))

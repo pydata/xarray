@@ -821,6 +821,16 @@ def polyval(
     --------
     xarray.DataArray.polyfit
     numpy.polynomial.polynomial.polyval
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = xr.DataArray(np.arange(5), dims="x")
+    >>> coeffs = xr.DataArray([1, 2, 3], dims="degree", coords={"degree": [0, 1, 2]})
+    >>> xr.polyval(x, coeffs)
+    <xarray.DataArray (x: 5)> ...
+    ...
+    Dimensions without coordinates: x
     """
 
     if degree_dim not in coeffs._indexes:
