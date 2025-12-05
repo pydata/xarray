@@ -63,6 +63,7 @@ extensions = [
     "sphinx_design",
     "sphinx_inline_tabs",
     "sphinx_remove_toctrees",
+    "sphinx_llms_txt",
 ]
 
 
