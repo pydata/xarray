@@ -2897,7 +2897,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2["hue"] = pd.date_range("2000-1-1", periods=4)
         ds2.plot.scatter(x="A", y="B", hue="hue")
 
-        ds2["hue"] = pd.timedelta_range("-1D", periods=4, freq="D", unit="ns")
+        ds2["hue"] = pd.timedelta_range("-1D", periods=4, freq="D", unit="ns")  # type: ignore[call-arg,unused-ignore]
         ds2.plot.scatter(x="A", y="B", hue="hue")
 
     def test_facetgrid_hue_style(self) -> None:

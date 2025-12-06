@@ -624,8 +624,8 @@ def test_cf_timedelta_2d() -> None:
     numbers = np.atleast_2d([1, 2, 3])
 
     timedeltas = pd.to_timedelta(["1D", "2D", "3D"]).as_unit("ns")
-    timedeltas = np.atleast_2d(timedeltas.to_numpy())
-    expected = timedeltas
+    timedeltas_2d = np.atleast_2d(timedeltas.to_numpy())
+    expected = timedeltas_2d
 
     actual = decode_cf_timedelta(numbers, units)
     assert_array_equal(expected, actual)
