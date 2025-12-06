@@ -3655,6 +3655,17 @@ class DatasetGroupByAggregations:
     ) -> Dataset:
         raise NotImplementedError()
 
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
+        raise NotImplementedError()
+
     def count(
         self,
         dim: Dims = None,
@@ -5015,14 +5026,28 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 3.0 4.0 nan
         """
-        return self.reduce(
-            duck_array_ops.cumsum,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and module_available("flox", minversion="0.10.5")
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            return self._flox_scan(
+                func="cumsum",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.cumsum,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def cumprod(
         self,
@@ -7918,6 +7943,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
+            and module_available("flox", minversion="0.10.5")
             and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_scan(

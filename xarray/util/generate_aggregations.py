@@ -15,7 +15,7 @@ while replacing the doctests.
 
 import textwrap
 from dataclasses import dataclass, field
-from typing import NamedTuple
+from typing import NamedTuple, Literal
 
 MODULE_PREAMBLE = '''\
 """Mixin classes with reduction operations."""
@@ -132,6 +132,17 @@ class {obj}{cls}Aggregations:
         dim: Dims,
         **kwargs: Any,
     ) -> {obj}:
+        raise NotImplementedError()
+
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         raise NotImplementedError()"""
 
 TEMPLATE_REDUCTION_SIGNATURE = '''
@@ -284,6 +295,7 @@ class Method:
         see_also_methods=(),
         min_flox_version=None,
         additional_notes="",
+        flox_aggregation_type: Literal["reduce", "scan"] = "reduce",
     ):
         self.name = name
         self.extra_kwargs = extra_kwargs
@@ -292,6 +304,7 @@ class Method:
         self.see_also_methods = see_also_methods
         self.min_flox_version = min_flox_version
         self.additional_notes = additional_notes
+        self.flox_aggregation_type = flox_aggregation_type
         if bool_reduce:
             self.array_method = f"array_{name}"
             self.np_example_array = (
@@ -444,7 +457,7 @@ class GroupByAggregationGenerator(AggregationGenerator):
 
         # median isn't enabled yet, because it would break if a single group was present in multiple
         # chunks. The non-flox code path will just rechunk every group to a single chunk and execute the median
-        method_is_not_flox_supported = method.name in ("median", "cumsum", "cumprod")
+        method_is_not_flox_supported = method.name in ("median", "cumprod")
         if method_is_not_flox_supported:
             indent = 12
         else:
@@ -476,7 +489,7 @@ class GroupByAggregationGenerator(AggregationGenerator):
             + f"""
             and contains_only_chunked_or_numpy(self._obj)
         ):
-            return self._flox_reduce(
+            return self._flox_{method.flox_aggregation_type}(
                 func="{method.name}",
                 dim=dim,{extra_kwargs}
                 # fill_value=fill_value,
@@ -537,6 +550,8 @@ AGGREGATION_METHODS = (
         numeric_only=True,
         see_also_methods=("cumulative",),
         additional_notes=_CUM_NOTES,
+        min_flox_version="0.10.5",
+        flox_aggregation_type="scan",
     ),
     Method(
         "cumprod",
