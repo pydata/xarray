@@ -1223,7 +1223,7 @@ class GroupBy(Generic[T_Xarray]):
 
         parsed_dim = self._parse_dim(dim)
 
-        axis = obj.get_axis_num(parsed_dim)
+        axis = obj.transpose(..., *parsed_dim)
         # axis = (axis_,) if isinstance(axis_, int) else axis_
         codes = tuple(g.codes for g in self.groupers)
 
