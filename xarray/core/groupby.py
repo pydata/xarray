@@ -1214,7 +1214,6 @@ class GroupBy(Generic[T_Xarray]):
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-
         from flox import groupby_scan
 
         # def groupby_scan(
