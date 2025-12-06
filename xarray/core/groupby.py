@@ -253,9 +253,7 @@ class _DummyGroup(Generic[T_Xarray]):
 T_Group = Union["T_DataArray", _DummyGroup]
 
 
-def _ensure_1d(
-    group: T_Group, obj: T_DataWithCoords
-) -> tuple[
+def _ensure_1d(group: T_Group, obj: T_DataWithCoords) -> tuple[
     T_Group,
     T_DataWithCoords,
     Hashable | None,
@@ -1223,14 +1221,12 @@ class GroupBy(Generic[T_Xarray]):
 
         parsed_dim = self._parse_dim(dim)
 
-        axis_ = obj.get_axis_num(parsed_dim)
-        axis = (axis_,) if isinstance(axis_, int) else axis_
+        axis = obj.get_axis_num(parsed_dim)
+        # axis = (axis_,) if isinstance(axis_, int) else axis_
         codes = tuple(g.codes for g in self.groupers)
 
         def wrapper(array, *by, func: str, skipna: bool | None, **kwargs):
-            if skipna or (
-                skipna is None and isinstance(func, str) and obj.dtype.kind in "cfO"
-            ):
+            if skipna or (skipna is None and obj.dtype.kind in "cfO"):
                 if "nan" not in func:
                     func = f"nan{func}"
 
