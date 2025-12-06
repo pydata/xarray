@@ -1028,6 +1028,26 @@ class GroupBy(Generic[T_Xarray]):
 
         return obj
 
+    def _parse_dim(self, dim: Dims) -> tuple[Hashable, ...]:
+        parsed_dim: tuple[Hashable, ...]
+        if isinstance(dim, str):
+            parsed_dim = (dim,)
+        elif dim is None:
+            parsed_dim_list = list()
+            # preserve order
+            for dim_ in itertools.chain(
+                *(grouper.codes.dims for grouper in self.groupers)
+            ):
+                if dim_ not in parsed_dim_list:
+                    parsed_dim_list.append(dim_)
+            parsed_dim = tuple(parsed_dim_list)
+        elif dim is ...:
+            parsed_dim = tuple(obj.dims)
+        else:
+            parsed_dim = tuple(dim)
+
+        return parsed_dim
+
     def _flox_reduce(
         self,
         dim: Dims,
@@ -1088,22 +1108,7 @@ class GroupBy(Generic[T_Xarray]):
                 # set explicitly to avoid unnecessarily accumulating count
                 kwargs["min_count"] = 0
 
-        parsed_dim: tuple[Hashable, ...]
-        if isinstance(dim, str):
-            parsed_dim = (dim,)
-        elif dim is None:
-            parsed_dim_list = list()
-            # preserve order
-            for dim_ in itertools.chain(
-                *(grouper.codes.dims for grouper in self.groupers)
-            ):
-                if dim_ not in parsed_dim_list:
-                    parsed_dim_list.append(dim_)
-            parsed_dim = tuple(parsed_dim_list)
-        elif dim is ...:
-            parsed_dim = tuple(obj.dims)
-        else:
-            parsed_dim = tuple(dim)
+        parsed_dim = self._parse_dim(dim)
 
         # Do this so we raise the same error message whether flox is present or not.
         # Better to control it here than in flox.
@@ -1201,6 +1206,57 @@ class GroupBy(Generic[T_Xarray]):
             result = self._restore_dim_order(result)
 
         return result
+
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
+
+        from flox import groupby_scan
+
+        # def groupby_scan(
+        #     array: np.ndarray | DaskArray,
+        #     *by: T_By,
+        #     func: T_Scan,
+        #     expected_groups: T_ExpectedGroupsOpt = None,
+        #     axis: int | tuple[int] = -1,
+        #     dtype: np.typing.DTypeLike = None,
+        #     method: T_MethodOpt = None,
+        #     engine: T_EngineOpt = None,
+        # ) -> np.ndarray | DaskArray:
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+
+        parsed_dim = self._parse_dim(dim)
+        obj = self._original_obj
+        codes = tuple(g.codes for g in self.groupers)
+        a = 2
+        g = groupby_scan(
+            obj.data,
+            *codes,
+            func=kwargs["func"],
+            expected_groups=None,
+            axis=obj.get_axis_num(parsed_dim),
+            dtype=None,
+            method=None,
+            engine=None,
+        )
+
+        return obj.copy(data=g)
+
+        # xarray_reduce(
+        #     obj.drop_vars(non_numeric.keys()),
+        #     *codes,
+        #     dim=parsed_dim,
+        #     expected_groups=expected_groups,
+        #     isbin=False,
+        #     keep_attrs=keep_attrs,
+        #     **kwargs,
+        # )
 
     def fillna(self, value: Any) -> T_Xarray:
         """Fill missing values in this object by group.

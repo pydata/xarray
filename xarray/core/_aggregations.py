@@ -6647,6 +6647,13 @@ class DataArrayGroupByAggregations:
     ) -> DataArray:
         raise NotImplementedError()
 
+    def _flox_scan(
+        self,
+        dim: Dims,
+        **kwargs: Any,
+    ) -> DataArray:
+        raise NotImplementedError()
+
     def count(
         self,
         dim: Dims = None,
@@ -7904,13 +7911,35 @@ class DataArrayGroupByAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         """
-        return self.reduce(
-            duck_array_ops.cumsum,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        # return self.reduce(
+        #     duck_array_ops.cumsum,
+        #     dim=dim,
+        #     skipna=skipna,
+        #     keep_attrs=keep_attrs,
+        #     **kwargs,
+        # )
+
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            return self._flox_scan(
+                func="cumsum",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.cumsum,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def cumprod(
         self,
