@@ -13,11 +13,11 @@ import pandas as pd
 from packaging.version import Version
 
 from xarray.computation import ops
+from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.computation.arithmetic import (
     DataArrayGroupbyArithmetic,
     DatasetGroupbyArithmetic,
 )
-from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.core import dtypes, duck_array_ops, nputils
 from xarray.core._aggregations import (
     DataArrayGroupByAggregations,
