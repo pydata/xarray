@@ -1228,7 +1228,7 @@ class GroupBy(Generic[T_Xarray]):
         codes = tuple(g.codes for g in self.groupers)
 
         def wrapper(array, *by, func: str, skipna: bool | None, **kwargs):
-            if skipna or (skipna is None and obj.dtype.kind in "cfO"):
+            if skipna or (skipna is None and array.dtype.kind in "cfO"):
                 if "nan" not in func:
                     func = f"nan{func}"
 
