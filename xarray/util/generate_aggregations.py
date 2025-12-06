@@ -142,7 +142,7 @@ class {obj}{cls}Aggregations:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> {obj}:
         raise NotImplementedError()"""
 
 TEMPLATE_REDUCTION_SIGNATURE = '''
