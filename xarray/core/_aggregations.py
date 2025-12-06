@@ -7911,14 +7911,6 @@ class DataArrayGroupByAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         """
-        # return self.reduce(
-        #     duck_array_ops.cumsum,
-        #     dim=dim,
-        #     skipna=skipna,
-        #     keep_attrs=keep_attrs,
-        #     **kwargs,
-        # )
-
         if (
             flox_available
             and OPTIONS["use_flox"]

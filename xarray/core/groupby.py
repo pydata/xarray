@@ -17,6 +17,7 @@ from xarray.computation.arithmetic import (
     DataArrayGroupbyArithmetic,
     DatasetGroupbyArithmetic,
 )
+from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.core import dtypes, duck_array_ops, nputils
 from xarray.core._aggregations import (
     DataArrayGroupByAggregations,
@@ -1224,27 +1225,55 @@ class GroupBy(Generic[T_Xarray]):
             if "nan" not in func and func not in ["all", "any", "count"]:
                 func = f"nan{func}"
 
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=True)
+        # if keep_attrs is None:
+        #     keep_attrs = _get_keep_attrs(default=True)
 
         parsed_dim = self._parse_dim(dim)
 
         axis_ = obj.get_axis_num(parsed_dim)
         axis = (axis_,) if isinstance(axis_, int) else axis_
         codes = tuple(g.codes for g in self.groupers)
-        g = groupby_scan(
-            obj.data,
-            *codes,
-            func=func,
-            expected_groups=None,
-            axis=axis,
-            dtype=None,
-            method=None,
-            engine=None,
-        )
-        result = obj.copy(data=g)
+        # g = groupby_scan(
+        #     obj.data,
+        #     *codes,
+        #     func=func,
+        #     expected_groups=None,
+        #     axis=axis,
+        #     dtype=None,
+        #     method=None,
+        #     engine=None,
+        # )
+        # result = obj.copy(data=g)
 
-        return result
+        # return result
+
+        actual = apply_ufunc(
+            groupby_scan,
+            obj,
+            *codes,
+            # input_core_dims=input_core_dims,
+            # for xarray's test_groupby_duplicate_coordinate_labels
+            # exclude_dims=set(dim_tuple),
+            # output_core_dims=[output_core_dims],
+            dask="allowed",
+            # dask_gufunc_kwargs=dict(
+            #     output_sizes=output_sizes,
+            #     output_dtypes=[dtype] if dtype is not None else None,
+            # ),
+            keep_attrs=(
+                _get_keep_attrs(default=True) if keep_attrs is None else keep_attrs
+            ),
+            kwargs=dict(
+                func=func,
+                expected_groups=None,
+                axis=axis,
+                dtype=None,
+                method=None,
+                engine=None,
+            ),
+        )
+
+        return actual
 
         # xarray_reduce(
         #     obj.drop_vars(non_numeric.keys()),
