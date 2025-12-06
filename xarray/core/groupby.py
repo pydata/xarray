@@ -252,9 +252,7 @@ class _DummyGroup(Generic[T_Xarray]):
 T_Group = Union["T_DataArray", _DummyGroup]
 
 
-def _ensure_1d(
-    group: T_Group, obj: T_DataWithCoords
-) -> tuple[
+def _ensure_1d(group: T_Group, obj: T_DataWithCoords) -> tuple[
     T_Group,
     T_DataWithCoords,
     Hashable | None,
@@ -1213,7 +1211,7 @@ class GroupBy(Generic[T_Xarray]):
         *,
         func: str,
         keep_attrs: bool | None = None,
-        skipna: bool | None = None
+        skipna: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
         from flox import groupby_scan
