@@ -15,7 +15,7 @@ while replacing the doctests.
 
 import textwrap
 from dataclasses import dataclass, field
-from typing import NamedTuple, Literal
+from typing import Literal, NamedTuple
 
 MODULE_PREAMBLE = '''\
 """Mixin classes with reduction operations."""
