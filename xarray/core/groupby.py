@@ -253,9 +253,7 @@ class _DummyGroup(Generic[T_Xarray]):
 T_Group = Union["T_DataArray", _DummyGroup]
 
 
-def _ensure_1d(
-    group: T_Group, obj: T_DataWithCoords
-) -> tuple[
+def _ensure_1d(group: T_Group, obj: T_DataWithCoords) -> tuple[
     T_Group,
     T_DataWithCoords,
     Hashable | None,
@@ -1221,36 +1219,23 @@ class GroupBy(Generic[T_Xarray]):
 
         obj = self._original_obj
 
-        if skipna or (
-            skipna is None and isinstance(func, str) and obj.dtype.kind in "cfO"
-        ):
-            if "nan" not in func and func not in ["all", "any", "count"]:
-                func = f"nan{func}"
-
-        # if keep_attrs is None:
-        #     keep_attrs = _get_keep_attrs(default=True)
-
         parsed_dim = self._parse_dim(dim)
 
         axis_ = obj.get_axis_num(parsed_dim)
         axis = (axis_,) if isinstance(axis_, int) else axis_
         codes = tuple(g.codes for g in self.groupers)
-        # g = groupby_scan(
-        #     obj.data,
-        #     *codes,
-        #     func=func,
-        #     expected_groups=None,
-        #     axis=axis,
-        #     dtype=None,
-        #     method=None,
-        #     engine=None,
-        # )
-        # result = obj.copy(data=g)
 
-        # return result
+        def wrapper(array, *by, func: str, skipna: bool | None, **kwargs):
+            if skipna or (
+                skipna is None and isinstance(func, str) and obj.dtype.kind in "cfO"
+            ):
+                if "nan" not in func:
+                    func = f"nan{func}"
+
+            return groupby_scan(array, *codes, func=func, **kwargs)
 
         actual = apply_ufunc(
-            groupby_scan,
+            wrapper,
             obj,
             *codes,
             # input_core_dims=input_core_dims,
@@ -1267,6 +1252,7 @@ class GroupBy(Generic[T_Xarray]):
             ),
             kwargs=dict(
                 func=func,
+                skipna=skipna,
                 expected_groups=None,
                 axis=axis,
                 dtype=None,
@@ -1276,16 +1262,6 @@ class GroupBy(Generic[T_Xarray]):
         )
 
         return actual
-
-        # xarray_reduce(
-        #     obj.drop_vars(non_numeric.keys()),
-        #     *codes,
-        #     dim=parsed_dim,
-        #     expected_groups=expected_groups,
-        #     isbin=False,
-        #     keep_attrs=keep_attrs,
-        #     **kwargs,
-        # )
 
     def fillna(self, value: Any) -> T_Xarray:
         """Fill missing values in this object by group.
