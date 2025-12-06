@@ -225,7 +225,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             x, np.timedelta64(td), np.dtype("timedelta64[us]")
         )
 
-        x = self.cls(["x"], pd.to_timedelta([td]))
+        x = self.cls(["x"], pd.to_timedelta([td]).as_unit("ns"))
         self._assertIndexedLikeNDArray(x, np.timedelta64(td), "timedelta64[ns]")
 
     def test_index_0d_not_a_time(self):
@@ -311,7 +311,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             (td64_data.values.astype("timedelta64[m]"), "s"),
             (td64_data.values.astype("timedelta64[s]"), "s"),
             (td64_data.values.astype("timedelta64[ps]"), "ns"),
-            (td64_data.to_pytimedelta(), "ns"),
+            (td64_data.to_pytimedelta(), "us" if has_pandas_3 else "ns"),
         ],
     )
     def test_timedelta64_conversion(self, values, unit):
@@ -1110,7 +1110,7 @@ class TestVariable(VariableSubclassobjects):
             (np.timedelta64(1, "D"), "s"),
             (np.timedelta64(1001, "ps"), "ns"),
             (pd.Timedelta("1 day"), "ns"),
-            (timedelta(days=1), "ns"),
+            (timedelta(days=1), "us" if has_pandas_3 else "ns"),
         ],
     )
     def test_timedelta64_conversion_scalar(self, values, unit):
@@ -3252,8 +3252,8 @@ def test_pandas_two_only_datetime_conversion_warnings(
         (np.array([np.timedelta64(10, "ns")]), "ns"),
         (np.array([np.timedelta64(10, "s")]), "s"),
         (pd.timedelta_range("1", periods=1), "ns"),
-        (timedelta(days=1), "ns"),
-        (np.array([timedelta(days=1)]), "ns"),
+        (timedelta(days=1), "us" if has_pandas_3 else "ns"),
+        (np.array([timedelta(days=1)]), "us" if has_pandas_3 else "ns"),
         (pd.timedelta_range("1", periods=1).astype("timedelta64[s]"), "s"),
     ],
     ids=lambda x: f"{x}",
