@@ -252,9 +252,7 @@ class _DummyGroup(Generic[T_Xarray]):
 T_Group = Union["T_DataArray", _DummyGroup]
 
 
-def _ensure_1d(
-    group: T_Group, obj: T_DataWithCoords
-) -> tuple[
+def _ensure_1d(group: T_Group, obj: T_DataWithCoords) -> tuple[
     T_Group,
     T_DataWithCoords,
     Hashable | None,
@@ -1230,14 +1228,16 @@ class GroupBy(Generic[T_Xarray]):
             keep_attrs = _get_keep_attrs(default=True)
 
         parsed_dim = self._parse_dim(dim)
-        codes = tuple(g.codes for g in self.groupers)
 
+        axis_ = obj.get_axis_num(parsed_dim)
+        axis = (axis_,) if isinstance(axis_, int) else axis_
+        codes = tuple(g.codes for g in self.groupers)
         g = groupby_scan(
             obj.data,
             *codes,
             func=func,
             expected_groups=None,
-            axis=obj.get_axis_num(parsed_dim),
+            axis=axis,
             dtype=None,
             method=None,
             engine=None,
