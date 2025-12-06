@@ -1220,10 +1220,11 @@ class GroupBy(Generic[T_Xarray]):
         from flox import groupby_scan
 
         obj = self._original_obj
-
         parsed_dim = self._parse_dim(dim)
 
-        axis = obj.transpose(..., *parsed_dim)
+        obj = obj.transpose(..., *parsed_dim)
+        axis = range(-len(parsed_dim), 0)
+
         # axis = (axis_,) if isinstance(axis_, int) else axis_
         codes = tuple(g.codes for g in self.groupers)
 
