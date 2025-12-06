@@ -279,7 +279,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         expected = np.datetime64("2000-01-01", "ns")
         assert x[0].values == expected
 
-    dt64_data = pd.date_range("1970-01-01", periods=3)
+    dt64_data = pd.date_range("1970-01-01", periods=3, unit="ns")
 
     @pytest.mark.parametrize(
         "values, unit",
@@ -3158,7 +3158,7 @@ class TestNumpyCoercion:
         (np.datetime64("2000-01-01", "s"), "s"),
         (np.array([np.datetime64("2000-01-01", "ns")]), "ns"),
         (np.array([np.datetime64("2000-01-01", "s")]), "s"),
-        (pd.date_range("2000", periods=1), "ns"),
+        (pd.date_range("2000", periods=1, unit="ns"), "ns"),
         (
             datetime(2000, 1, 1),
             "us" if has_pandas_3 else "ns",
@@ -3167,10 +3167,17 @@ class TestNumpyCoercion:
             np.array([datetime(2000, 1, 1)]),
             "us" if has_pandas_3 else "ns",
         ),
-        (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), "ns"),
+        (
+            pd.date_range(
+                "2000", periods=1, tz=pytz.timezone("America/New_York"), unit="ns"
+            ),
+            "ns",
+        ),
         (
             pd.Series(
-                pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
+                pd.date_range(
+                    "2000", periods=1, tz=pytz.timezone("America/New_York"), unit="ns"
+                )
             ),
             "ns",
         ),
