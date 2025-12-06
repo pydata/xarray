@@ -3663,7 +3663,7 @@ class DatasetGroupByAggregations:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> Dataset:
         raise NotImplementedError()
 
     def count(
