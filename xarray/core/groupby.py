@@ -1209,41 +1209,40 @@ class GroupBy(Generic[T_Xarray]):
         self,
         dim: Dims,
         *,
+        func: str,
         keep_attrs: bool | None = None,
+        skipna: bool | None = None
         **kwargs: Any,
     ) -> DataArray:
         from flox import groupby_scan
 
-        # def groupby_scan(
-        #     array: np.ndarray | DaskArray,
-        #     *by: T_By,
-        #     func: T_Scan,
-        #     expected_groups: T_ExpectedGroupsOpt = None,
-        #     axis: int | tuple[int] = -1,
-        #     dtype: np.typing.DTypeLike = None,
-        #     method: T_MethodOpt = None,
-        #     engine: T_EngineOpt = None,
-        # ) -> np.ndarray | DaskArray:
+        obj = self._original_obj
+
+        if skipna or (
+            skipna is None and isinstance(func, str) and obj.dtype.kind in "cfO"
+        ):
+            if "nan" not in func and func not in ["all", "any", "count"]:
+                func = f"nan{func}"
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
 
         parsed_dim = self._parse_dim(dim)
-        obj = self._original_obj
         codes = tuple(g.codes for g in self.groupers)
 
         g = groupby_scan(
             obj.data,
             *codes,
-            func=kwargs["func"],
+            func=func,
             expected_groups=None,
             axis=obj.get_axis_num(parsed_dim),
             dtype=None,
             method=None,
             engine=None,
         )
+        result = obj.copy(data=g)
 
-        return obj.copy(data=g)
+        return result
 
         # xarray_reduce(
         #     obj.drop_vars(non_numeric.keys()),
