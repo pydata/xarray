@@ -35,6 +35,13 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 
 
+Performance
+~~~~~~~~~~~
+
+- Add a fastpath to the backend plugin system for standard engines (:issue:`10178`, :pull:`10937`).
+  By `Sam Levang <https://github.com/slevang>`_.
+
+
 .. _whats-new.2025.12.0:
 
 v2025.12.0 (Dec 5, 2025)
