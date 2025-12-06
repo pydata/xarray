@@ -14,6 +14,7 @@ concurrency:
 
 env:
   FORCE_COLOR: 3
+  PIXI_VERSION: "v0.58.0"
 
 jobs:
   detect-ci-trigger:
@@ -26,28 +27,30 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
       - uses: xarray-contrib/ci-trigger@v1
         id: detect-trigger
         with:
           keyword: "[skip-ci]"
-
+  cache-pixi-lock:
+    uses: ./.github/workflows/cache-pixi-lock.yml
+    with:
+      pixi-version: "v0.58.0" # keep in sync with env var above
   doctest:
     name: Doctests
     runs-on: "ubuntu-latest"
-    needs: detect-ci-trigger
+    needs: [detect-ci-trigger, cache-pixi-lock]
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
 
     defaults:
       run:
         shell: bash -l {0}
     env:
-      CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.12"
+      PIXI_ENV: "test-py313"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
@@ -55,73 +58,73 @@ jobs:
         run: |
           echo "TODAY=$(date  +'%Y-%m-%d')" >> $GITHUB_ENV
 
-      - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v2
+      - name: Restore cached pixi lockfile
+        uses: actions/cache/restore@v4
+        id: restore-pixi-lock
         with:
-          environment-file: ${{env.CONDA_ENV_FILE}}
-          environment-name: xarray-tests
-          create-args: >-
-            python=${{env.PYTHON_VERSION}}
-          cache-environment: true
-          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
+          enableCrossOsArchive: true
+          path: |
+            pixi.lock
+          key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
+      - uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          environments: ${{ env.PIXI_ENV }}
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
-      - name: Install xarray
-        run: |
-          python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          python xarray/util/print_versions.py
+          pixi run -e ${{env.PIXI_ENV}} -- python xarray/util/print_versions.py
       - name: Run doctests
         run: |
           # Raise an error if there are warnings in the doctests, with `-Werror`.
-          # This is a trial; if it presents an problem, feel free to remove.
+          # This is a trial; if it presents a problem, feel free to remove.
           # See https://github.com/pydata/xarray/issues/7164 for more info.
           #
           # If dependencies emit warnings we can't do anything about, add ignores to
           # `xarray/tests/__init__.py`.
-          python -m pytest --doctest-modules xarray --ignore xarray/tests -Werror
+          pixi run -e ${{env.PIXI_ENV}} -- python -m pytest --doctest-modules xarray --ignore xarray/tests -Werror
 
   mypy:
     name: Mypy
     runs-on: "ubuntu-latest"
-    needs: detect-ci-trigger
+    needs: [detect-ci-trigger, cache-pixi-lock]
     defaults:
       run:
         shell: bash -l {0}
     env:
-      CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.12"
+      PIXI_ENV: test-py313-with-typing
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
-
+      - name: Restore cached pixi lockfile
+        uses: actions/cache/restore@v4
+        id: restore-pixi-lock
+        with:
+          enableCrossOsArchive: true
+          path: |
+            pixi.lock
+          key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
+      - uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          environments: ${{ env.PIXI_ENV }}
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
       - name: set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-      - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-file: ${{env.CONDA_ENV_FILE}}
-          environment-name: xarray-tests
-          create-args: >-
-            python=${{env.PYTHON_VERSION}}
-          cache-environment: true
-          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
-      - name: Install xarray
-        run: |
-          python -m pip install --no-deps -e .
+          echo "PYTHON_VERSION=$(pixi run -e ${{env.PIXI_ENV}} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
       - name: Version info
         run: |
-          python xarray/util/print_versions.py
-      - name: Install mypy
-        run: |
-          python -m pip install "mypy==1.18.1" --force-reinstall
+          pixi run -e ${{env.PIXI_ENV}} -- python xarray/util/print_versions.py
 
       - name: Run mypy
         run: |
-          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
+          pixi run -e ${{env.PIXI_ENV}} -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
       - name: Upload mypy coverage to Codecov
         uses: codecov/codecov-action@v5.5.1
@@ -135,44 +138,42 @@ jobs:
   mypy-min:
     name: Mypy 3.11
     runs-on: "ubuntu-latest"
-    needs: detect-ci-trigger
+    needs: [detect-ci-trigger, cache-pixi-lock]
     defaults:
       run:
         shell: bash -l {0}
     env:
-      CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.11"
+      PIXI_ENV: test-py311-with-typing
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
-
+      - name: Restore cached pixi lockfile
+        uses: actions/cache/restore@v4
+        id: restore-pixi-lock
+        with:
+          enableCrossOsArchive: true
+          path: |
+            pixi.lock
+          key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
+      - uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          environments: ${{ env.PIXI_ENV }}
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
       - name: set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-      - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-file: ${{env.CONDA_ENV_FILE}}
-          environment-name: xarray-tests
-          create-args: >-
-            python=${{env.PYTHON_VERSION}}
-          cache-environment: true
-          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
-      - name: Install xarray
-        run: |
-          python -m pip install --no-deps -e .
+          echo "PYTHON_VERSION=$(pixi run -e ${{env.PIXI_ENV}} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
       - name: Version info
         run: |
-          python xarray/util/print_versions.py
-      - name: Install mypy
-        run: |
-          python -m pip install "mypy==1.18.1" --force-reinstall
+          pixi run -e ${{env.PIXI_ENV}} -- python xarray/util/print_versions.py
 
       - name: Run mypy
         run: |
-          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
+          pixi run -e ${{env.PIXI_ENV}} -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
       - name: Upload mypy coverage to Codecov
         uses: codecov/codecov-action@v5.5.1
@@ -184,9 +185,13 @@ jobs:
           fail_ci_if_error: false
 
   pyright:
-    name: Pyright
+    name: Pyright | ${{ matrix.pixi-env }}"
     runs-on: "ubuntu-latest"
-    needs: detect-ci-trigger
+    needs: [detect-ci-trigger, cache-pixi-lock]
+    strategy:
+      fail-fast: false
+      matrix:
+        pixi-env: ["test-py313-with-typing", "test-py311-with-typing"]
     if: |
       always()
       && (
@@ -195,40 +200,37 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
-    env:
-      CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.12"
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
+      - name: Restore cached pixi lockfile
+        uses: actions/cache/restore@v4
+        id: restore-pixi-lock
+        with:
+          enableCrossOsArchive: true
+          path: |
+            pixi.lock
+          key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
+      - uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          environments: ${{ matrix.pixi-env }}
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
       - name: set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-      - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-file: ${{env.CONDA_ENV_FILE}}
-          environment-name: xarray-tests
-          create-args: >-
-            python=${{env.PYTHON_VERSION}}
-          cache-environment: true
-          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
-      - name: Install xarray
-        run: |
-          python -m pip install --no-deps -e .
+          echo "PYTHON_VERSION=$(pixi run -e ${{ matrix.pixi-env }} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
       - name: Version info
         run: |
-          python xarray/util/print_versions.py
-      - name: Install pyright
-        run: |
-          python -m pip install pyright --force-reinstall
+          pixi run -e ${{ matrix.pixi-env }} -- python xarray/util/print_versions.py
 
       - name: Run pyright
         run: |
-          python -m pyright xarray/
+          pixi run -e ${{ matrix.pixi-env }} -- python -m pyright xarray/
 
       - name: Upload pyright coverage to Codecov
         uses: codecov/codecov-action@v5.5.1
@@ -239,67 +241,13 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
 
-  pyright39:
-    name: Pyright 3.11
-    runs-on: "ubuntu-latest"
-    needs: detect-ci-trigger
-    if: |
-      always()
-      && (
-          contains( github.event.pull_request.labels.*.name, 'run-pyright')
-      )
-    defaults:
-      run:
-        shell: bash -l {0}
-    env:
-      CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.11"
-
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0 # Fetch all history for all branches and tags.
-
-      - name: set environment variables
-        run: |
-          echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-      - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-file: ${{env.CONDA_ENV_FILE}}
-          environment-name: xarray-tests
-          create-args: >-
-            python=${{env.PYTHON_VERSION}}
-          cache-environment: true
-          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
-      - name: Install xarray
-        run: |
-          python -m pip install --no-deps -e .
-      - name: Version info
-        run: |
-          python xarray/util/print_versions.py
-      - name: Install pyright
-        run: |
-          python -m pip install pyright --force-reinstall
-
-      - name: Run pyright
-        run: |
-          python -m pyright xarray/
-
-      - name: Upload pyright coverage to Codecov
-        uses: codecov/codecov-action@v5.5.1
-        with:
-          file: pyright_report/cobertura.xml
-          flags: pyright39
-          env_vars: PYTHON_VERSION
-          name: codecov-umbrella
-          fail_ci_if_error: false
-
   min-version-policy:
     name: Minimum Version Policy
     runs-on: "ubuntu-latest"
     needs: detect-ci-trigger
-    if: needs.detect-ci-trigger.outputs.triggered == 'false'
+    # min-version-policy doesn't work with Pixi yet https://github.com/pydata/xarray/pull/10888#discussion_r2504335457
+    if: false
+    # if: needs.detect-ci-trigger.outputs.triggered == 'false'
     defaults:
       run:
         shell: bash -l {0}
@@ -308,7 +256,7 @@ jobs:
       COLUMNS: 120
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 

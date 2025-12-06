@@ -32,6 +32,7 @@ from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
+    IndexableArray,
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -1086,7 +1087,7 @@ class TestVariable(VariableSubclassobjects):
         [
             (np.datetime64("2000-01-01"), "s"),
             (
-                pd.Timestamp("2000-01-01T00"),
+                pd.Timestamp("2000-01-01T00").as_unit("s"),
                 "s" if has_pandas_3 else "ns",
             ),
             (
@@ -1128,7 +1129,7 @@ class TestVariable(VariableSubclassobjects):
         assert v.values == "foo".encode("ascii")
 
     def test_0d_datetime(self):
-        v = Variable([], pd.Timestamp("2000-01-01"))
+        v = Variable([], pd.Timestamp("2000-01-01").as_unit("s"))
         expected_unit = "s" if has_pandas_3 else "ns"
         assert v.dtype == np.dtype(f"datetime64[{expected_unit}]")
         assert v.values == np.datetime64("2000-01-01", expected_unit)  # type: ignore[call-overload]
@@ -3255,3 +3256,15 @@ def test_timedelta_conversion(values, unit) -> None:
     dims = ["time"] if isinstance(values, np.ndarray | pd.Index) else []
     var = Variable(dims, values)
     assert var.dtype == np.dtype(f"timedelta64[{unit}]")
+
+
+def test_explicitly_indexed_array_preserved() -> None:
+    """Test that methods using ._data preserve ExplicitlyIndexed arrays.
+
+    Regression test for methods that should use ._data instead of .data
+    to avoid loading lazy arrays into memory.
+    """
+    arr = IndexableArray(np.array([1, 2, 3]))
+    var = Variable(["x"], arr)
+    result = var.drop_encoding()
+    assert isinstance(result._data, indexing.ExplicitlyIndexed)

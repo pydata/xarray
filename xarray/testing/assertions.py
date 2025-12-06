@@ -3,6 +3,7 @@
 import functools
 import warnings
 from collections.abc import Hashable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -362,6 +363,17 @@ def _assert_indexes_invariants_checks(
             if isinstance(v, IndexVariable)
         }
         assert indexes.keys() <= index_vars, (set(indexes), index_vars)
+        assert all(
+            k in index_vars
+            for k, v in possible_coord_variables.items()
+            if v.dims == (k,)
+        ), {k: type(v) for k, v in possible_coord_variables.items()}
+
+    assert not any(
+        isinstance(v, IndexVariable)
+        for k, v in possible_coord_variables.items()
+        if k not in indexes.keys()
+    ), {k: type(v) for k, v in possible_coord_variables.items()}
 
     # check pandas index wrappers vs. coordinate data adapters
     for k, index in indexes.items():
@@ -401,11 +413,17 @@ def _assert_indexes_invariants_checks(
         )
 
 
-def _assert_variable_invariants(var: Variable, name: Hashable = None):
+def _assert_variable_invariants(
+    var: Variable | Any,
+    name: Hashable = None,
+) -> None:
     if name is None:
         name_or_empty: tuple = ()
     else:
         name_or_empty = (name,)
+
+    assert isinstance(var, Variable), {name: type(var)}
+
     assert isinstance(var._dims, tuple), name_or_empty + (var._dims,)
     assert len(var._dims) == len(var._data.shape), name_or_empty + (
         var._dims,
@@ -418,35 +436,28 @@ def _assert_variable_invariants(var: Variable, name: Hashable = None):
 
 
 def _assert_dataarray_invariants(da: DataArray, check_default_indexes: bool):
-    assert isinstance(da._variable, Variable), da._variable
     _assert_variable_invariants(da._variable)
 
     assert isinstance(da._coords, dict), da._coords
-    assert all(isinstance(v, Variable) for v in da._coords.values()), da._coords
 
     if check_default_indexes:
         assert all(set(v.dims) <= set(da.dims) for v in da._coords.values()), (
             da.dims,
             {k: v.dims for k, v in da._coords.items()},
         )
-        assert all(
-            isinstance(v, IndexVariable)
-            for (k, v) in da._coords.items()
-            if v.dims == (k,)
-        ), {k: type(v) for k, v in da._coords.items()}
 
     for k, v in da._coords.items():
         _assert_variable_invariants(v, k)
 
-    if da._indexes is not None:
-        _assert_indexes_invariants_checks(
-            da._indexes, da._coords, da.dims, check_default=check_default_indexes
-        )
+    assert da._indexes is not None
+    _assert_indexes_invariants_checks(
+        da._indexes, da._coords, da.dims, check_default=check_default_indexes
+    )
 
 
 def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
     assert isinstance(ds._variables, dict), type(ds._variables)
-    assert all(isinstance(v, Variable) for v in ds._variables.values()), ds._variables
+
     for k, v in ds._variables.items():
         _assert_variable_invariants(v, k)
 
@@ -466,17 +477,10 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
         ds._dims[k] == v.sizes[k] for v in ds._variables.values() for k in v.sizes
     ), (ds._dims, {k: v.sizes for k, v in ds._variables.items()})
 
-    if check_default_indexes:
-        assert all(
-            isinstance(v, IndexVariable)
-            for (k, v) in ds._variables.items()
-            if v.dims == (k,)
-        ), {k: type(v) for k, v in ds._variables.items() if v.dims == (k,)}
-
-    if ds._indexes is not None:
-        _assert_indexes_invariants_checks(
-            ds._indexes, ds._variables, ds._dims, check_default=check_default_indexes
-        )
+    assert ds._indexes is not None
+    _assert_indexes_invariants_checks(
+        ds._indexes, ds._variables, ds._dims, check_default=check_default_indexes
+    )
 
     assert isinstance(ds._encoding, type(None) | dict)
     assert isinstance(ds._attrs, type(None) | dict)

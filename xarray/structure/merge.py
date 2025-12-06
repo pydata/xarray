@@ -22,7 +22,12 @@ from xarray.core.utils import (
     emit_user_level_warning,
     equivalent,
 )
-from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from xarray.core.variable import (
+    IndexVariable,
+    Variable,
+    as_variable,
+    calculate_dimensions,
+)
 from xarray.structure.alignment import deep_align
 from xarray.util.deprecation_helpers import (
     _COMPAT_DEFAULT,
@@ -1206,7 +1211,11 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
                     if c not in value.dims and c in dataset.coords
                 ]
                 if coord_names:
-                    other[key] = value.drop_vars(coord_names)
+                    value = value.drop_vars(coord_names)
+                if isinstance(value.variable, IndexVariable):
+                    variable = value.variable.to_base_variable()
+                    value = value._replace(variable=variable)
+                other[key] = value
 
     return merge_core(
         [dataset, other],
