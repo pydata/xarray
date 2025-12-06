@@ -1042,7 +1042,7 @@ class GroupBy(Generic[T_Xarray]):
                     parsed_dim_list.append(dim_)
             parsed_dim = tuple(parsed_dim_list)
         elif dim is ...:
-            parsed_dim = tuple(obj.dims)
+            parsed_dim = tuple(self._original_obj.dims)
         else:
             parsed_dim = tuple(dim)
 
