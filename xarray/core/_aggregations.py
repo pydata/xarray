@@ -6650,6 +6650,10 @@ class DataArrayGroupByAggregations:
     def _flox_scan(
         self,
         dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
         raise NotImplementedError()

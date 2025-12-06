@@ -1211,8 +1211,8 @@ class GroupBy(Generic[T_Xarray]):
         dim: Dims,
         *,
         func: str,
-        keep_attrs: bool | None = None,
         skipna: bool | None = None,
+        keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
         from flox import groupby_scan
