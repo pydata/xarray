@@ -1114,7 +1114,7 @@ class TestVariable(VariableSubclassobjects):
             (np.timedelta64(1, "m"), "s"),
             (np.timedelta64(1, "D"), "s"),
             (np.timedelta64(1001, "ps"), "ns"),
-            (pd.Timedelta("1 day"), "ns"),
+            (pd.Timedelta("1 day").as_unit("ns"), "ns"),
             (timedelta(days=1), "us" if has_pandas_3 else "ns"),
         ],
     )
@@ -1140,7 +1140,8 @@ class TestVariable(VariableSubclassobjects):
         assert v.values == np.datetime64("2000-01-01", expected_unit)  # type: ignore[call-overload]
 
     @pytest.mark.parametrize(
-        "values, unit", [(pd.to_timedelta("1s"), "ns"), (np.timedelta64(1, "s"), "s")]
+        "values, unit",
+        [(pd.to_timedelta("1s").as_unit("ns"), "ns"), (np.timedelta64(1, "s"), "s")],
     )
     def test_0d_timedelta(self, values, unit):
         # todo: check, if this test is OK
