@@ -2568,7 +2568,8 @@ def test_groupby_cumsum() -> None:
     )
     # TODO: Remove drop_vars when GH6528 is fixed
     # when Dataset.cumsum propagates indexes, and the group variable?
-    assert_identical(expected.drop_vars(["x", "group_id"]), actual)
+    # assert_identical(expected.drop_vars(["x", "group_id"]), actual)
+    assert_identical(expected, actual)
 
     actual = ds.foo.groupby("group_id").cumsum(dim="x")
     expected.coords["group_id"] = ds.group_id
