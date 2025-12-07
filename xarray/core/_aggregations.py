@@ -5022,9 +5022,11 @@ class DatasetGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").cumsum(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
+        Coordinates:
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 3.0 4.0 nan
         """
