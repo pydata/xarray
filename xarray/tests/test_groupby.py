@@ -16,6 +16,8 @@ import xarray as xr
 from xarray import DataArray, Dataset, Variable, date_range
 from xarray.core.groupby import _consolidate_slices
 from xarray.core.types import InterpOptions, ResampleCompatible
+from xarray.core.utils import module_available
+
 from xarray.groupers import (
     BinGrouper,
     EncodedGroups,
@@ -2566,10 +2568,13 @@ def test_groupby_cumsum() -> None:
             "group_id": ds.group_id,
         },
     )
-    # TODO: Remove drop_vars when GH6528 is fixed
-    # when Dataset.cumsum propagates indexes, and the group variable?
-    # assert_identical(expected.drop_vars(["x", "group_id"]), actual)
-    assert_identical(expected, actual)
+
+    if xr.get_options()["use_flox"] and module_available("flox", minversion="0.10.5"):
+        assert_identical(expected, actual)
+    else:
+        # TODO: Remove drop_vars when GH6528 is fixed
+        # when Dataset.cumsum propagates indexes, and the group variable?
+        assert_identical(expected.drop_vars(["x", "group_id"]), actual)
 
     actual = ds.foo.groupby("group_id").cumsum(dim="x")
     expected.coords["group_id"] = ds.group_id
