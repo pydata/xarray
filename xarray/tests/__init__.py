@@ -31,6 +31,7 @@ from xarray.tests.arrays import (  # noqa: F401
     DuckArrayWrapper,
     FirstElementAccessibleArray,
     InaccessibleArray,
+    IndexableArray,
     UnexpectedDataAccess,
 )
 

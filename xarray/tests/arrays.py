@@ -41,6 +41,16 @@ class FirstElementAccessibleArray(InaccessibleArray):
         return self.array[tuple_idxr]
 
 
+class IndexableArray(InaccessibleArray):
+    """An InaccessibleArray subclass that supports indexing."""
+
+    def __getitem__(self, key):
+        return type(self)(self.array[key])
+
+    def transpose(self, axes):
+        return type(self)(self.array.transpose(axes))
+
+
 class DuckArrayWrapper(utils.NDArrayMixin):
     """Array-like that prevents casting to array.
     Modeled after cupy."""

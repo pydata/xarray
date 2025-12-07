@@ -3,23 +3,50 @@ from __future__ import annotations
 import copy
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any, Generic, cast
+from typing import TYPE_CHECKING, Generic, cast
 
 import numpy as np
 import pandas as pd
 from packaging.version import Version
+from pandas.api.extensions import ExtensionArray, ExtensionDtype
+from pandas.api.types import is_scalar as pd_is_scalar
 
 from xarray.core.types import DTypeLikeSave, T_ExtensionArray
-from xarray.core.utils import NDArrayMixin, is_allowed_extension_array
+from xarray.core.utils import (
+    NDArrayMixin,
+    is_allowed_extension_array,
+    is_allowed_extension_array_dtype,
+)
 
 HANDLED_EXTENSION_ARRAY_FUNCTIONS: dict[Callable, Callable] = {}
 
 
-def implements(numpy_function):
-    """Register an __array_function__ implementation for MyArray objects."""
+if TYPE_CHECKING:
+    from typing import Any
+
+    from pandas._typing import DtypeObj, Scalar
+
+
+def is_scalar(value: object) -> bool:
+    """Workaround: pandas is_scalar doesn't recognize Categorical nulls for some reason."""
+    return value is pd.CategoricalDtype.na_value or pd_is_scalar(value)
+
+
+def implements(numpy_function_or_name: Callable | str) -> Callable:
+    """Register an __array_function__ implementation.
+
+    Pass a function directly if it's guaranteed to exist in all supported numpy versions, or a
+    string to first check for its existence.
+    """
 
     def decorator(func):
-        HANDLED_EXTENSION_ARRAY_FUNCTIONS[numpy_function] = func
+        if isinstance(numpy_function_or_name, str):
+            numpy_function = getattr(np, numpy_function_or_name, None)
+        else:
+            numpy_function = numpy_function_or_name
+
+        if numpy_function:
+            HANDLED_EXTENSION_ARRAY_FUNCTIONS[numpy_function] = func
         return func
 
     return decorator
@@ -30,6 +57,111 @@ def __extension_duck_array__issubdtype(
     extension_array_dtype: T_ExtensionArray, other_dtype: DTypeLikeSave
 ) -> bool:
     return False  # never want a function to think a pandas extension dtype is a subtype of numpy
+
+
+@implements("astype")  # np.astype was added in 2.1.0, but we only require >=1.24
+def __extension_duck_array__astype(
+    array_or_scalar: T_ExtensionArray,
+    dtype: DTypeLikeSave,
+    order: str = "K",
+    casting: str = "unsafe",
+    subok: bool = True,
+    copy: bool = True,
+    device: str | None = None,
+) -> ExtensionArray:
+    if (
+        not (
+            is_allowed_extension_array(array_or_scalar)
+            or is_allowed_extension_array_dtype(dtype)
+        )
+        or casting != "unsafe"
+        or not subok
+        or order != "K"
+    ):
+        return NotImplemented
+
+    return as_extension_array(array_or_scalar, dtype, copy=copy)
+
+
+@implements(np.asarray)
+def __extension_duck_array__asarray(
+    array_or_scalar: np.typing.ArrayLike | T_ExtensionArray,
+    dtype: DTypeLikeSave | None = None,
+) -> ExtensionArray:
+    if not is_allowed_extension_array(dtype):
+        return NotImplemented
+
+    return as_extension_array(array_or_scalar, dtype)
+
+
+def as_extension_array(
+    array_or_scalar: np.typing.ArrayLike | T_ExtensionArray,
+    dtype: ExtensionDtype | DTypeLikeSave | None,
+    copy: bool = False,
+) -> ExtensionArray:
+    if is_scalar(array_or_scalar):
+        return dtype.construct_array_type()._from_sequence(  # type: ignore[union-attr]
+            [array_or_scalar], dtype=dtype
+        )
+    else:
+        return array_or_scalar.astype(dtype, copy=copy)  # type: ignore[union-attr]
+
+
+@implements(np.result_type)
+def __extension_duck_array__result_type(
+    *arrays_and_dtypes: list[
+        np.typing.ArrayLike | np.typing.DTypeLike | ExtensionDtype | ExtensionArray
+    ],
+) -> DtypeObj:
+    extension_arrays_and_dtypes: list[ExtensionDtype | ExtensionArray] = [
+        cast(ExtensionDtype | ExtensionArray, x)
+        for x in arrays_and_dtypes
+        if is_allowed_extension_array(x) or is_allowed_extension_array_dtype(x)
+    ]
+    if not extension_arrays_and_dtypes:
+        return NotImplemented
+
+    ea_dtypes: list[ExtensionDtype] = [
+        getattr(x, "dtype", cast(ExtensionDtype, x))
+        for x in extension_arrays_and_dtypes
+    ]
+    scalars = [
+        x for x in arrays_and_dtypes if is_scalar(x) and x not in {pd.NA, np.nan}
+    ]
+    # other_stuff could include:
+    # - arrays such as pd.ABCSeries, np.ndarray, or other array-api duck arrays
+    # - dtypes such as pd.DtypeObj, np.dtype, or other array-api duck dtypes
+    other_stuff = [
+        x
+        for x in arrays_and_dtypes
+        if not is_allowed_extension_array_dtype(x) and not is_scalar(x)
+    ]
+    # We implement one special case: when possible, preserve Categoricals (avoid promoting
+    # to object) by merging the categories of all given Categoricals + scalars + NA.
+    # Ideally this could be upstreamed into pandas find_result_type / find_common_type.
+    if not other_stuff and all(
+        isinstance(x, pd.CategoricalDtype) and not x.ordered for x in ea_dtypes
+    ):
+        return union_unordered_categorical_and_scalar(
+            cast(list[pd.CategoricalDtype], ea_dtypes),
+            scalars,  # type: ignore[arg-type]
+        )
+    if not other_stuff and all(
+        isinstance(x, type(ea_type := ea_dtypes[0])) for x in ea_dtypes
+    ):
+        return ea_type
+    raise ValueError(
+        f"Cannot cast values to shared type, found values: {arrays_and_dtypes}"
+    )
+
+
+def union_unordered_categorical_and_scalar(
+    categorical_dtypes: list[pd.CategoricalDtype], scalars: list[Scalar]
+) -> pd.CategoricalDtype:
+    scalars = [x for x in scalars if x is not pd.CategoricalDtype.na_value]
+    all_categories = set().union(*(x.categories for x in categorical_dtypes))
+    all_categories = all_categories.union(scalars)
+    return pd.CategoricalDtype(categories=list(all_categories))
 
 
 @implements(np.broadcast_to)
@@ -53,16 +185,34 @@ def __extension_duck_array__concatenate(
 
 @implements(np.where)
 def __extension_duck_array__where(
-    condition: np.ndarray, x: T_ExtensionArray, y: T_ExtensionArray
+    condition: T_ExtensionArray | np.typing.ArrayLike,
+    x: T_ExtensionArray,
+    y: T_ExtensionArray | np.typing.ArrayLike,
 ) -> T_ExtensionArray:
-    if (
-        isinstance(x, pd.Categorical)
-        and isinstance(y, pd.Categorical)
-        and x.dtype != y.dtype
-    ):
-        x = x.add_categories(set(y.categories).difference(set(x.categories)))  # type: ignore[assignment]
-        y = y.add_categories(set(x.categories).difference(set(y.categories)))  # type: ignore[assignment]
-    return cast(T_ExtensionArray, pd.Series(x).where(condition, pd.Series(y)).array)
+    # pd.where won't broadcast 0-dim arrays across a scalar-like series; scalar y's must be preserved
+    if hasattr(y, "shape") and len(y.shape) == 1 and y.shape[0] == 1:
+        y = y[0]  # type: ignore[index]
+    return cast(T_ExtensionArray, pd.Series(x).where(condition, y).array)  # type: ignore[arg-type]
+
+
+def _replace_duck(args, replacer: Callable[[PandasExtensionArray], list]) -> list:
+    args_as_list = list(args)
+    for index, value in enumerate(args_as_list):
+        if isinstance(value, PandasExtensionArray):
+            args_as_list[index] = replacer(value)
+        elif isinstance(value, tuple):  # should handle more than just tuple? iterable?
+            args_as_list[index] = tuple(_replace_duck(value, replacer))
+        elif isinstance(value, list):
+            args_as_list[index] = _replace_duck(value, replacer)
+    return args_as_list
+
+
+def replace_duck_with_extension_array(args) -> tuple:
+    return tuple(_replace_duck(args, lambda duck: duck.array))
+
+
+def replace_duck_with_series(args) -> tuple:
+    return tuple(_replace_duck(args, lambda duck: pd.Series(duck.array)))
 
 
 @implements(np.ndim)
@@ -96,7 +246,7 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
 
     def __post_init__(self):
         if not isinstance(self.array, pd.api.extensions.ExtensionArray):
-            raise TypeError(f"{self.array} is not an pandas ExtensionArray.")
+            raise TypeError(f"{self.array} is not a pandas ExtensionArray.")
         # This does not use the UNSUPPORTED_EXTENSION_ARRAY_TYPES whitelist because
         # we do support extension arrays from datetime, for example, that need
         # duck array support internally via this class.  These can appear from `DatetimeIndex`
@@ -107,26 +257,11 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
             )
 
     def __array_function__(self, func, types, args, kwargs):
-        def replace_duck_with_extension_array(args) -> list:
-            args_as_list = list(args)
-            for index, value in enumerate(args_as_list):
-                if isinstance(value, PandasExtensionArray):
-                    args_as_list[index] = value.array
-                elif isinstance(
-                    value, tuple
-                ):  # should handle more than just tuple? iterable?
-                    args_as_list[index] = tuple(
-                        replace_duck_with_extension_array(value)
-                    )
-                elif isinstance(value, list):
-                    args_as_list[index] = replace_duck_with_extension_array(value)
-            return args_as_list
-
-        args = tuple(replace_duck_with_extension_array(args))
         if func not in HANDLED_EXTENSION_ARRAY_FUNCTIONS:
             raise KeyError("Function not registered for pandas extension arrays.")
+        args = replace_duck_with_extension_array(args)
         res = HANDLED_EXTENSION_ARRAY_FUNCTIONS[func](*args, **kwargs)
-        if is_allowed_extension_array(res):
+        if isinstance(res, ExtensionArray):
             return PandasExtensionArray(res)
         return res
 
@@ -134,15 +269,22 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
         return ufunc(*inputs, **kwargs)
 
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
+        if (
+            isinstance(key, tuple) and len(key) == 1
+        ):  # pyarrow type arrays can't handle single-length tuples
+            (key,) = key
         item = self.array[key]
         if is_allowed_extension_array(item):
             return PandasExtensionArray(item)
-        if np.isscalar(item) or isinstance(key, int):
+        if is_scalar(item) or isinstance(key, int):
             return PandasExtensionArray(type(self.array)._from_sequence([item]))  # type: ignore[call-arg,attr-defined,unused-ignore]
         return PandasExtensionArray(item)
 
     def __setitem__(self, key, val):
         self.array[key] = val
+
+    def __len__(self):
+        return len(self.array)
 
     def __eq__(self, other):
         if isinstance(other, PandasExtensionArray):
@@ -151,9 +293,6 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
 
     def __ne__(self, other):
         return ~(self == other)
-
-    def __len__(self):
-        return len(self.array)
 
     @property
     def ndim(self) -> int:

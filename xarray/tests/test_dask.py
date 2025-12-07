@@ -312,7 +312,7 @@ class TestVariable(DaskTestCase):
     def test_tokenize_duck_dask_array(self):
         import pint
 
-        unit_registry = pint.UnitRegistry()
+        unit_registry: pint.UnitRegistry = pint.UnitRegistry()
 
         q = unit_registry.Quantity(self.data, "meter")
         variable = xr.Variable(("x", "y"), q)
@@ -791,7 +791,7 @@ class TestDataArrayAndDataset(DaskTestCase):
     def test_tokenize_duck_dask_array(self):
         import pint
 
-        unit_registry = pint.UnitRegistry()
+        unit_registry: pint.UnitRegistry = pint.UnitRegistry()
 
         q = unit_registry.Quantity(self.data, unit_registry.meter)
         data_array = xr.DataArray(

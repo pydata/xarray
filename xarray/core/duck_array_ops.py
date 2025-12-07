@@ -27,9 +27,17 @@ from numpy import (
 from xarray.compat import dask_array_compat, dask_array_ops
 from xarray.compat.array_api_compat import get_array_namespace
 from xarray.core import dtypes, nputils
-from xarray.core.extension_array import PandasExtensionArray
+from xarray.core.extension_array import (
+    PandasExtensionArray,
+    as_extension_array,
+)
 from xarray.core.options import OPTIONS
-from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
+from xarray.core.utils import (
+    is_allowed_extension_array_dtype,
+    is_duck_array,
+    is_duck_dask_array,
+    module_available,
+)
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import array_type, is_chunked_array
 
@@ -252,7 +260,14 @@ def astype(data, dtype, *, xp=None, **kwargs):
 
 
 def asarray(data, xp=np, dtype=None):
-    converted = data if is_duck_array(data) else xp.asarray(data)
+    if is_duck_array(data):
+        converted = data
+    elif is_allowed_extension_array_dtype(dtype):
+        # data may or may not be an ExtensionArray, so we can't rely on
+        # np.asarray to call our NEP-18 handler; gotta hook it ourselves
+        converted = PandasExtensionArray(as_extension_array(data, dtype))
+    else:
+        converted = xp.asarray(data)
 
     if dtype is None or converted.dtype == dtype:
         return converted
@@ -264,29 +279,7 @@ def asarray(data, xp=np, dtype=None):
 
 
 def as_shared_dtype(scalars_or_arrays, xp=None):
-    """Cast arrays to a shared dtype using xarray's type promotion rules."""
-    extension_array_types = [
-        x.dtype
-        for x in scalars_or_arrays
-        if pd.api.types.is_extension_array_dtype(x)  # noqa: TID251
-    ]
-    if len(extension_array_types) >= 1:
-        non_nans = [x for x in scalars_or_arrays if not isna(x)]
-        if len(extension_array_types) == len(non_nans) and all(
-            isinstance(x, type(extension_array_types[0])) for x in extension_array_types
-        ):
-            return [
-                x
-                if not isna(x)
-                else PandasExtensionArray(
-                    type(non_nans[0].array)._from_sequence([x], dtype=non_nans[0].dtype)
-                )
-                for x in scalars_or_arrays
-            ]
-        raise ValueError(
-            f"Cannot cast values to shared type, found values: {scalars_or_arrays}"
-        )
-
+    """Cast a arrays to a shared dtype using xarray's type promotion rules."""
     # Avoid calling array_type("cupy") repeatidely in the any check
     array_type_cupy = array_type("cupy")
     if any(isinstance(x, array_type_cupy) for x in scalars_or_arrays):
@@ -295,7 +288,12 @@ def as_shared_dtype(scalars_or_arrays, xp=None):
         xp = cp
     elif xp is None:
         xp = get_array_namespace(scalars_or_arrays)
-
+    scalars_or_arrays = [
+        PandasExtensionArray(s_or_a)
+        if isinstance(s_or_a, pd.api.extensions.ExtensionArray)
+        else s_or_a
+        for s_or_a in scalars_or_arrays
+    ]
     # Pass arrays directly instead of dtypes to result_type so scalars
     # get handled properly.
     # Note that result_type() safely gets the dtype from dask arrays without
@@ -406,7 +404,9 @@ def where(condition, x, y):
     else:
         condition = astype(condition, dtype=dtype, xp=xp)
 
-    return xp.where(condition, *as_shared_dtype([x, y], xp=xp))
+    promoted_x, promoted_y = as_shared_dtype([x, y], xp=xp)
+
+    return xp.where(condition, promoted_x, promoted_y)
 
 
 def where_method(data, cond, other=dtypes.NA):
@@ -861,7 +861,7 @@ def _push(array, n: int | None = None, axis: int = -1):
             " Call `xr.set_options(use_bottleneck=True)` or `xr.set_options(use_numbagg=True)` to enable one."
         )
     if OPTIONS["use_numbagg"] and module_available("numbagg"):
-        import numbagg
+        import numbagg  # type: ignore[import-not-found, unused-ignore]
 
         return numbagg.ffill(array, limit=n, axis=axis)
 

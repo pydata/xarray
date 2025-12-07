@@ -599,7 +599,7 @@ def test_cf_timedelta(timedeltas, units, numbers) -> None:
     if timedeltas == "NaT":
         timedeltas = np.timedelta64("NaT", "ns")
     else:
-        timedeltas = pd.to_timedelta(timedeltas).to_numpy()
+        timedeltas = pd.to_timedelta(timedeltas).as_unit("ns").to_numpy()
     numbers = np.array(numbers)
 
     expected = numbers
@@ -623,8 +623,9 @@ def test_cf_timedelta_2d() -> None:
     units = "days"
     numbers = np.atleast_2d([1, 2, 3])
 
-    timedeltas = np.atleast_2d(pd.to_timedelta(["1D", "2D", "3D"]).to_numpy())
-    expected = timedeltas
+    timedeltas = pd.to_timedelta(["1D", "2D", "3D"]).as_unit("ns")
+    timedeltas_2d = np.atleast_2d(timedeltas.to_numpy())
+    expected = timedeltas_2d
 
     actual = decode_cf_timedelta(numbers, units)
     assert_array_equal(expected, actual)
@@ -1948,6 +1949,15 @@ def test_decode_timedelta_via_dtype(
     else:
         assert_equal(var, decoded)
     assert decoded.dtype == expected_dtype
+
+
+@pytest.mark.parametrize("dtype", [np.uint64, np.int64, np.float64])
+def test_decode_timedelta_dtypes(dtype) -> None:
+    encoded = Variable(["time"], np.arange(10), {"units": "seconds"})
+    coder = CFTimedeltaCoder(time_unit="s")
+    decoded = coder.decode(encoded)
+    assert decoded.dtype.kind == "m"
+    assert_equal(coder.encode(decoded), encoded)
 
 
 def test_lazy_decode_timedelta_unexpected_dtype() -> None:

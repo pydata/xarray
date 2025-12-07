@@ -1669,7 +1669,7 @@ class TestDataArrayGroupBy:
 
         if has_flox:
             # GH9803
-            # reduce over one dim of a nD grouper
+            # reduce over one dim of an nD grouper
             array.coords["labels"] = (("ny", "nx"), np.array([["a", "b"], ["b", "a"]]))
             actual = array.groupby("labels").sum("nx")
             expected_np = np.array([[[0, 1], [3, 2]], [[5, 10], [20, 15]]])
@@ -3815,7 +3815,7 @@ def test_mean_with_cftime_objects_dask():
 
 def test_groupby_bins_datetime_mean():
     """Test groupby_bins with datetime mean (issue #6995)"""
-    times = pd.date_range("2020-01-01", "2020-02-01", freq="1h")
+    times = pd.date_range("2020-01-01", "2020-02-01", freq="1h", unit="ns")
     index = np.arange(len(times))
     bins = np.arange(0, len(index), 5)
 
@@ -3836,7 +3836,10 @@ def test_groupby_bins_mean_time_series():
     ds = xr.Dataset(
         {
             "measurement": ("trial", np.arange(0, 100, 10)),
-            "time": ("trial", pd.date_range("20240101T1500", "20240101T1501", 10)),
+            "time": (
+                "trial",
+                pd.date_range("20240101T1500", "20240101T1501", 10, unit="ns"),
+            ),
         }
     )
 

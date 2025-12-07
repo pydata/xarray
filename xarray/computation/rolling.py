@@ -168,7 +168,7 @@ class Rolling(Generic[T_Xarray]):
 
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
         if module_available("numbagg"):
-            import numbagg
+            import numbagg  # type: ignore[import-not-found, unused-ignore]
 
             numbagg_move_func = getattr(numbagg, "move_" + name, None)
         else:
@@ -491,7 +491,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         func : callable
             Function which can be called in the form
             `func(x, **kwargs)` to return the result of collapsing an
-            np.ndarray over an the rolling dimension.
+            np.ndarray over the rolling dimension.
         keep_attrs : bool, default: None
             If True, the attributes (``attrs``) will be copied from the original
             object to the new one. If False, the new object will be returned
@@ -860,7 +860,7 @@ class DatasetRolling(Rolling["Dataset"]):
         func : callable
             Function which can be called in the form
             `func(x, **kwargs)` to return the result of collapsing an
-            np.ndarray over an the rolling dimension.
+            np.ndarray over the rolling dimension.
         keep_attrs : bool, default: None
             If True, the attributes (``attrs``) will be copied from the original
             object to the new one. If False, the new object will be returned
