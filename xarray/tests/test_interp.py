@@ -721,7 +721,7 @@ def test_datetime(x_new, expected) -> None:
     da = xr.DataArray(
         np.arange(24),
         dims="time",
-        coords={"time": pd.date_range("2000-01-01", periods=24)},
+        coords={"time": pd.date_range("2000-01-01", periods=24, unit="ns")},
     )
 
     actual = da.interp(time=x_new)
@@ -739,7 +739,7 @@ def test_datetime_single_string() -> None:
     da = xr.DataArray(
         np.arange(24),
         dims="time",
-        coords={"time": pd.date_range("2000-01-01", periods=24)},
+        coords={"time": pd.date_range("2000-01-01", periods=24, unit="ns")},
     )
     actual = da.interp(time="2000-01-01T12:00")
     expected = xr.DataArray(0.5)
