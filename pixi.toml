@@ -290,6 +290,9 @@ release-contributors = "python ci/release_contributors.py"
 ipython = ">=9.8.0,<10"
 black = ">=25.1.0,<26"
 
+[feature.dev.pypi-dependencies]
+pytest-accept = ">=0.2.2, <0.3"
+
 [environments]
 # Testing
 # test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
