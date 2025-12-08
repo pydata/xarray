@@ -1247,9 +1247,9 @@ class GroupBy(Generic[T_Xarray]):
                 skipna=skipna,
                 expected_groups=None,  # TODO: Should be same as _flox_reduce?
                 axis=axis,
-                dtype=kwargs.get("dtype", None),
-                method=kwargs.get("method", None),
-                engine=kwargs.get("engine", None),
+                dtype=kwargs.get("dtype"),
+                method=kwargs.get("method"),
+                engine=kwargs.get("engine"),
             ),
         )
 
