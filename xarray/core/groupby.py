@@ -1047,6 +1047,13 @@ class GroupBy(Generic[T_Xarray]):
         else:
             parsed_dim = tuple(dim)
 
+                d not in grouper.codes.dims and d not in self._original_obj.dims
+                for d in parsed_dim
+            ):
+                # TODO: Not a helpful error, it's a sanity check that dim actually exist
+                # either in self.groupers or self._original_obj
+                raise ValueError(f"cannot reduce over dimensions {dim}.")
+
         return parsed_dim
 
     def _flox_reduce(
@@ -1110,14 +1117,6 @@ class GroupBy(Generic[T_Xarray]):
                 kwargs["min_count"] = 0
 
         parsed_dim = self._parse_dim(dim)
-
-        # Do this so we raise the same error message whether flox is present or not.
-        # Better to control it here than in flox.
-        for grouper in self.groupers:
-            if any(
-                d not in grouper.codes.dims and d not in obj.dims for d in parsed_dim
-            ):
-                raise ValueError(f"cannot reduce over dimensions {dim}.")
 
         has_missing_groups = (
             self.encoded.unique_coord.size != self.encoded.full_index.size
@@ -1224,6 +1223,11 @@ class GroupBy(Generic[T_Xarray]):
         axis = range(-len(parsed_dim), 0)
         codes = tuple(g.codes for g in self.groupers)
 
+        # pass RangeIndex as a hint to flox that `by` is already factorized
+        expected_groups = tuple(
+            pd.RangeIndex(len(grouper)) for grouper in self.groupers
+        )
+
         def wrapper(array, *by, func: str, skipna: bool | None, **kwargs):
             if skipna or (skipna is None and array.dtype.kind in "cfO"):
                 if "nan" not in func:
@@ -1235,26 +1239,18 @@ class GroupBy(Generic[T_Xarray]):
             wrapper,
             obj,
             *codes,
-            # input_core_dims=input_core_dims,
-            # for xarray's test_groupby_duplicate_coordinate_labels
-            # exclude_dims=set(dim_tuple),
-            # output_core_dims=[output_core_dims],
             dask="allowed",
-            # dask_gufunc_kwargs=dict(
-            #     output_sizes=output_sizes,
-            #     output_dtypes=[dtype] if dtype is not None else None,
-            # ),
             keep_attrs=(
                 _get_keep_attrs(default=True) if keep_attrs is None else keep_attrs
             ),
             kwargs=dict(
                 func=func,
                 skipna=skipna,
-                expected_groups=None,
+                expected_groups=expected_groups,
                 axis=axis,
-                dtype=None,
-                method=None,
-                engine=None,
+                dtype=kwargs.get("dtype", None),
+                method=kwargs.get("method", None),
+                engine=kwargs.get("engine", None),
             ),
         )
 
