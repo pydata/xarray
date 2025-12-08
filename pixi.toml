@@ -286,6 +286,9 @@ cytoolz = "*"
 [feature.release.tasks]
 release-contributors = "python ci/release_contributors.py"
 
+[feature.dev.dependencies]
+ipython = ">=9.8.0,<10"
+
 [environments]
 # Testing
 # test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
@@ -386,3 +389,14 @@ doc = { features = [
 ] }
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
 release = { features = ["release"], no-default-feature = true }
+dev = { features = [
+  "py313",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+  "dev",
+] }
