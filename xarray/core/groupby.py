@@ -1227,11 +1227,6 @@ class GroupBy(Generic[T_Xarray]):
         axis = range(-len(parsed_dim), 0)
         codes = tuple(g.codes for g in self.groupers)
 
-        # pass RangeIndex as a hint to flox that `by` is already factorized
-        expected_groups = tuple(
-            pd.RangeIndex(len(grouper)) for grouper in self.groupers
-        )
-
         def wrapper(array, *by, func: str, skipna: bool | None, **kwargs):
             if skipna or (skipna is None and array.dtype.kind in "cfO"):
                 if "nan" not in func:
@@ -1250,7 +1245,7 @@ class GroupBy(Generic[T_Xarray]):
             kwargs=dict(
                 func=func,
                 skipna=skipna,
-                expected_groups=expected_groups,
+                expected_groups=None,  # TODO: Should be same as _flox_reduce?
                 axis=axis,
                 dtype=kwargs.get("dtype", None),
                 method=kwargs.get("method", None),
