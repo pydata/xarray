@@ -1047,6 +1047,10 @@ class GroupBy(Generic[T_Xarray]):
         else:
             parsed_dim = tuple(dim)
 
+        # Do this so we raise the same error message whether flox is present or not.
+        # Better to control it here than in flox.
+        for grouper in self.groupers:
+            if any(
                 d not in grouper.codes.dims and d not in self._original_obj.dims
                 for d in parsed_dim
             ):
