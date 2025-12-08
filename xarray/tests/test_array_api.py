@@ -32,7 +32,7 @@ def test_arithmetic(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     expected = np_arr + 7
     actual = xp_arr + 7
     assert isinstance(actual.data, Array)
-    assert_equal(expected, actual)
+    assert_equal(actual.copy(data=np.asarray(actual.data)), expected)
 
 
 def test_aggregation(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
@@ -40,7 +40,7 @@ def test_aggregation(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     expected = np_arr.sum()
     actual = xp_arr.sum()
     assert isinstance(actual.data, Array)
-    assert_equal(expected, actual)
+    assert_equal(actual.copy(data=np.asarray(actual.data)), expected)
 
 
 def test_aggregation_skipna(arrays) -> None:
@@ -48,7 +48,7 @@ def test_aggregation_skipna(arrays) -> None:
     expected = np_arr.sum(skipna=False)
     actual = xp_arr.sum(skipna=False)
     assert isinstance(actual.data, Array)
-    assert_equal(expected, actual)
+    assert_equal(actual.copy(data=np.asarray(actual.data)), expected)
 
 
 # casting nan warns
@@ -59,7 +59,7 @@ def test_astype(arrays) -> None:
     actual = xp_arr.astype(xp.int64)
     assert actual.dtype == xp.int64
     assert isinstance(actual.data, Array)
-    assert_equal(expected, actual)
+    assert_equal(actual.copy(data=np.asarray(actual.data)), expected)
 
 
 def test_broadcast(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
@@ -72,7 +72,7 @@ def test_broadcast(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     assert len(actual) == len(expected)
     for a, e in zip(actual, expected, strict=True):
         assert isinstance(a.data, Array)
-        assert_equal(e, a)
+        assert_equal(a.copy(data=np.asarray(a.data)), e)
 
 
 def test_broadcast_during_arithmetic(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
@@ -83,12 +83,12 @@ def test_broadcast_during_arithmetic(arrays: tuple[xr.DataArray, xr.DataArray]) 
     expected = np_arr * np_arr2
     actual = xp_arr * xp_arr2
     assert isinstance(actual.data, Array)
-    assert_equal(expected, actual)
+    assert_equal(actual.copy(data=np.asarray(actual.data)), expected)
 
     expected = np_arr2 * np_arr
     actual = xp_arr2 * xp_arr
     assert isinstance(actual.data, Array)
-    assert_equal(expected, actual)
+    assert_equal(actual.copy(data=np.asarray(actual.data)), expected)
 
 
 def test_concat(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
@@ -96,7 +96,7 @@ def test_concat(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     expected = xr.concat((np_arr, np_arr), dim="x")
     actual = xr.concat((xp_arr, xp_arr), dim="x")
     assert isinstance(actual.data, Array)
-    assert_equal(expected, actual)
+    assert_equal(actual.copy(data=np.asarray(actual.data)), expected)
 
 
 def test_indexing(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
@@ -104,7 +104,7 @@ def test_indexing(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     expected = np_arr[:, 0]
     actual = xp_arr[:, 0]
     assert isinstance(actual.data, Array)
-    assert_equal(expected, actual)
+    assert_equal(actual.copy(data=np.asarray(actual.data)), expected)
 
 
 def test_properties(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
@@ -120,7 +120,7 @@ def test_reorganizing_operation(arrays: tuple[xr.DataArray, xr.DataArray]) -> No
     expected = np_arr.transpose()
     actual = xp_arr.transpose()
     assert isinstance(actual.data, Array)
-    assert_equal(expected, actual)
+    assert_equal(actual.copy(data=np.asarray(actual.data)), expected)
 
 
 def test_stack(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
@@ -128,7 +128,7 @@ def test_stack(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     expected = np_arr.stack(z=("x", "y"))
     actual = xp_arr.stack(z=("x", "y"))
     assert isinstance(actual.data, Array)
-    assert_equal(expected, actual)
+    assert_equal(actual.copy(data=np.asarray(actual.data)), expected)
 
 
 def test_unstack(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
@@ -136,7 +136,7 @@ def test_unstack(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     expected = np_arr.stack(z=("x", "y")).unstack()
     actual = xp_arr.stack(z=("x", "y")).unstack()
     assert isinstance(actual.data, Array)
-    assert_equal(expected, actual)
+    assert_equal(actual.copy(data=np.asarray(actual.data)), expected)
 
 
 def test_where() -> None:
@@ -145,4 +145,4 @@ def test_where() -> None:
     expected = xr.where(np_arr, 1, 0)
     actual = xr.where(xp_arr, 1, 0)
     assert isinstance(actual.data, Array)
-    assert_equal(expected, actual)
+    assert_equal(actual.copy(data=np.asarray(actual.data)), expected)
