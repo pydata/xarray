@@ -288,6 +288,7 @@ release-contributors = "python ci/release_contributors.py"
 
 [feature.dev.dependencies]
 ipython = ">=9.8.0,<10"
+black = ">=25.1.0,<26"
 
 [environments]
 # Testing
