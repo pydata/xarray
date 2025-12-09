@@ -5045,13 +5045,14 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.cumsum,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out.assign_coords(self._original_obj.coords)
 
     def cumprod(
         self,
@@ -5148,14 +5149,29 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 4.0 nan
         """
-        return self.reduce(
-            duck_array_ops.cumprod,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and module_available("flox", minversion="0.10.5")
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            return self._flox_scan(
+                func="cumprod",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.cumprod,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out.assign_coords(self.coords)
 
 
 class DatasetResampleAggregations:
@@ -6540,14 +6556,29 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 5.0 5.0 2.0 nan
         """
-        return self.reduce(
-            duck_array_ops.cumsum,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and module_available("flox", minversion="0.10.5")
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            return self._flox_scan(
+                func="cumsum",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.cumsum,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out.assign_coords(self.coords)
 
     def cumprod(
         self,
@@ -6644,14 +6675,29 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 6.0 0.0 2.0 nan
         """
-        return self.reduce(
-            duck_array_ops.cumprod,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and module_available("flox", minversion="0.10.5")
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            return self._flox_scan(
+                func="cumprod",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.cumprod,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out.assign_coords(self.coords)
 
 
 class DataArrayGroupByAggregations:
@@ -7959,13 +8005,14 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.cumsum,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out.assign_coords(self.coords)
 
     def cumprod(
         self,
@@ -8059,13 +8106,29 @@ class DataArrayGroupByAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         """
-        return self.reduce(
-            duck_array_ops.cumprod,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and module_available("flox", minversion="0.10.5")
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            return self._flox_scan(
+                func="cumprod",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.cumprod,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out.assign_coords(self.coords)
 
 
 class DataArrayResampleAggregations:
@@ -9347,13 +9410,29 @@ class DataArrayResampleAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Dimensions without coordinates: time
         """
-        return self.reduce(
-            duck_array_ops.cumsum,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and module_available("flox", minversion="0.10.5")
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            return self._flox_scan(
+                func="cumsum",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.cumsum,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out.assign_coords(self.coords)
 
     def cumprod(
         self,
@@ -9447,10 +9526,26 @@ class DataArrayResampleAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Dimensions without coordinates: time
         """
-        return self.reduce(
-            duck_array_ops.cumprod,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and module_available("flox", minversion="0.10.5")
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            return self._flox_scan(
+                func="cumprod",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.cumprod,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out.assign_coords(self.coords)
