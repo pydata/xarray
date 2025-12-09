@@ -2081,6 +2081,24 @@ class TestDataArrayResample:
         expected = DataArray([np.nan, 1, 1], [("time", times[::4])])
         assert_identical(result, expected)
 
+    def test_resample_boundaries(self) -> None:
+        """Test the boundaries parameter for resample."""
+        # Create 31-day data with predictable values (0-30)
+        times = pd.date_range("2000-01-01", periods=31, freq="D")
+        array = DataArray(np.arange(31), [("time", times)])
+
+        # Test boundaries="trim" - drops incomplete periods
+        result_trim = array.resample(time="7D", boundaries="trim").mean()
+        assert len(result_trim.time) == 4
+        expected_trim = np.array([3.0, 10.0, 17.0, 24.0])
+        np.testing.assert_array_equal(result_trim.values, expected_trim)
+
+        # Test boundaries="exact" - raises error for uneven data
+        with pytest.raises(
+            ValueError, match="Data does not evenly fit the resampling frequency"
+        ):
+            array.resample(time="7D", boundaries="exact").mean()
+
     def test_upsample(self) -> None:
         times = pd.date_range("2000-01-01", freq="6h", periods=5)
         array = DataArray(np.arange(5), [("time", times)])
